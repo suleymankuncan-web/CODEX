@@ -7500,6 +7500,817 @@
           "StoreActionPlan"
         ]
       }
+    },
+    "/api/visual-merchandising/references": {
+      "get": {
+        "operationId": "VmReferenceManagementController_list",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReferenceListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      },
+      "post": {
+        "operationId": "VmReferenceManagementController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVmReferenceDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReference"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}": {
+      "post": {
+        "operationId": "VmReferenceManagementController_upsertItem",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertVmReferenceItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReferenceDraftItemResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads": {
+      "post": {
+        "operationId": "VmReferenceManagementController_upload",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draftItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize": {
+      "post": {
+        "operationId": "VmReferenceManagementController_finalize",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draftItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/publish": {
+      "post": {
+        "operationId": "VmReferenceManagementController_publish",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishVmReferenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReferencePublishResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/mobile/visual-campaigns": {
+      "get": {
+        "operationId": "VmCampaignController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmCampaignAssignmentListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmCampaign"
+        ]
+      }
+    },
+    "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads": {
+      "post": {
+        "operationId": "VmCampaignController_upload",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "VmCampaign"
+        ]
+      }
+    },
+    "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize": {
+      "post": {
+        "operationId": "VmCampaignController_finalize",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmCampaign"
+        ]
+      }
+    },
+    "/api/mobile/visual-campaigns/{assignmentId}/submissions": {
+      "post": {
+        "operationId": "VmCampaignController_submit",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitVmCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmCampaignSubmissionResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmCampaign"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/campaigns": {
+      "get": {
+        "operationId": "VmReferenceManagementController_reviewerCampaigns",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmCampaignAssignmentListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/revisions": {
+      "post": {
+        "operationId": "VmReferenceManagementController_revise",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseVmCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmCampaignRevisionResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands": {
+      "post": {
+        "operationId": "VmReferenceManagementController_changeAssignmentState",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeVmAssignmentStateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmCampaignAssignmentCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/{referenceSetId}/retire": {
+      "post": {
+        "operationId": "VmReferenceManagementController_retire",
+        "parameters": [
+          {
+            "name": "referenceSetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetireVmReferenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReferenceRetireResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/options": {
+      "get": {
+        "operationId": "VmReferenceManagementController_options",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReferencePublisherOptions"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/visual-merchandising/references/managed-campaigns": {
+      "get": {
+        "operationId": "VmReferenceManagementController_managedCampaigns",
+        "parameters": [
+          {
+            "name": "companyId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmCampaignAssignmentListResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmReferenceManagement"
+        ]
+      }
+    },
+    "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url": {
+      "post": {
+        "operationId": "VmCampaignController_readReference",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaReadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VmReferenceSignedRead"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmCampaign"
+        ]
+      }
+    },
+    "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-content/{variant}": {
+      "get": {
+        "operationId": "VmCampaignController_readReferenceContent",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image content",
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "VmCampaign"
+        ]
+      }
     }
   },
   "info": {
@@ -18155,6 +18966,7 @@
               "username",
               "email",
               "roleCodes",
+              "permissionScopes",
               "scope",
               "readScope",
               "actionScope",
@@ -18184,6 +18996,37 @@
                 "type": "array",
                 "items": {
                   "type": "string"
+                }
+              },
+              "permissionScopes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "required": [
+                    "companyIds",
+                    "regionIds",
+                    "storeIds"
+                  ],
+                  "properties": {
+                    "companyIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "regionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "storeIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               },
               "authorizationContextVersion": {
@@ -26451,6 +27294,966 @@
               "type": "object",
               "additionalProperties": true
             }
+          }
+        }
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateVmReferenceDraftDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referenceCode": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "referenceName": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "companyId",
+          "referenceCode",
+          "referenceName",
+          "instructions"
+        ]
+      },
+      "UpsertVmReferenceItemDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemOrder": {
+            "type": "number",
+            "minimum": 0
+          },
+          "expectedVisualIntent": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "reviewInstructions": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "rubricVersion": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "companyId",
+          "templateId",
+          "templateItemId",
+          "itemOrder",
+          "expectedVisualIntent",
+          "reviewInstructions",
+          "rubricVersion",
+          "expectedRevision"
+        ]
+      },
+      "PublishVmReferenceDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsOn": {
+            "type": "string"
+          },
+          "endsOn": {
+            "type": "string"
+          },
+          "storeIds": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "companyId",
+          "expectedRevision",
+          "idempotencyKey",
+          "startsOn",
+          "endsOn",
+          "storeIds",
+          "reason"
+        ]
+      },
+      "VmCampaignSubmissionItemDto": {
+        "type": "object",
+        "properties": {
+          "referenceItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mediaAssetId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "referenceItemId",
+          "mediaAssetId"
+        ]
+      },
+      "SubmitVmCampaignDto": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VmCampaignSubmissionItemDto"
+            }
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "idempotencyKey",
+          "items"
+        ]
+      },
+      "VmReference": {
+        "type": "object",
+        "required": [
+          "referenceSetId",
+          "companyId",
+          "referenceCode",
+          "referenceName",
+          "instructions",
+          "status",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "retiredAt"
+        ],
+        "properties": {
+          "referenceSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referenceCode": {
+            "type": "string"
+          },
+          "referenceName": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "scheduled",
+              "open",
+              "closed",
+              "retired"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "retiredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "VmReferenceListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "referenceSetId",
+                "companyId",
+                "referenceCode",
+                "referenceName",
+                "instructions",
+                "status",
+                "version",
+                "createdAt",
+                "updatedAt",
+                "retiredAt"
+              ],
+              "properties": {
+                "referenceSetId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "companyId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "referenceCode": {
+                  "type": "string"
+                },
+                "referenceName": {
+                  "type": "string"
+                },
+                "instructions": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "scheduled",
+                    "open",
+                    "closed",
+                    "retired"
+                  ]
+                },
+                "version": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "retiredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "VmCampaignAssignment": {
+        "type": "object",
+        "required": [
+          "assignmentId",
+          "storeId",
+          "storeName",
+          "referenceSetId",
+          "referenceName",
+          "deadlineStatus",
+          "reviewStatus",
+          "version",
+          "startsAt",
+          "submissionClosesAt",
+          "items"
+        ],
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "referenceSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referenceName": {
+            "type": "string"
+          },
+          "deadlineStatus": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "open",
+              "on_time",
+              "missed",
+              "exempt",
+              "withdrawn",
+              "operational_hold"
+            ]
+          },
+          "reviewStatus": {
+            "type": "string",
+            "enum": [
+              "not_submitted",
+              "review_pending",
+              "correction_requested",
+              "completed"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submissionClosesAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "referenceItemId",
+                "templateItemId",
+                "expectedVisualIntent",
+                "reviewInstructions",
+                "requiredEvidenceCount",
+                "referenceAssetId"
+              ],
+              "properties": {
+                "referenceItemId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "templateItemId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "expectedVisualIntent": {
+                  "type": "string"
+                },
+                "reviewInstructions": {
+                  "type": "string"
+                },
+                "requiredEvidenceCount": {
+                  "type": "integer",
+                  "enum": [
+                    1
+                  ]
+                },
+                "referenceAssetId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          }
+        }
+      },
+      "VmCampaignAssignmentListResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "assignmentId",
+                "storeId",
+                "storeName",
+                "referenceSetId",
+                "referenceName",
+                "deadlineStatus",
+                "reviewStatus",
+                "version",
+                "startsAt",
+                "submissionClosesAt",
+                "items"
+              ],
+              "properties": {
+                "assignmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "storeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "storeName": {
+                  "type": "string"
+                },
+                "referenceSetId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "referenceName": {
+                  "type": "string"
+                },
+                "deadlineStatus": {
+                  "type": "string",
+                  "enum": [
+                    "scheduled",
+                    "open",
+                    "on_time",
+                    "missed",
+                    "exempt",
+                    "withdrawn",
+                    "operational_hold"
+                  ]
+                },
+                "reviewStatus": {
+                  "type": "string",
+                  "enum": [
+                    "not_submitted",
+                    "review_pending",
+                    "correction_requested",
+                    "completed"
+                  ]
+                },
+                "version": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "startsAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "submissionClosesAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "referenceItemId",
+                      "templateItemId",
+                      "expectedVisualIntent",
+                      "reviewInstructions",
+                      "requiredEvidenceCount",
+                      "referenceAssetId"
+                    ],
+                    "properties": {
+                      "referenceItemId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "templateItemId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "expectedVisualIntent": {
+                        "type": "string"
+                      },
+                      "reviewInstructions": {
+                        "type": "string"
+                      },
+                      "requiredEvidenceCount": {
+                        "type": "integer",
+                        "enum": [
+                          1
+                        ]
+                      },
+                      "referenceAssetId": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ReviseVmCampaignDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "command": {
+            "enum": [
+              "extend",
+              "reopen",
+              "scope_add"
+            ],
+            "type": "string"
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "startsOn": {
+            "type": "string"
+          },
+          "endsOn": {
+            "type": "string"
+          },
+          "storeIds": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "companyId",
+          "command",
+          "expectedRevision",
+          "idempotencyKey",
+          "reason",
+          "startsOn",
+          "endsOn",
+          "storeIds"
+        ]
+      },
+      "ChangeVmAssignmentStateDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "command": {
+            "enum": [
+              "withdraw",
+              "exempt",
+              "hold",
+              "reconcile"
+            ],
+            "type": "string"
+          },
+          "expectedVersion": {
+            "type": "number",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "companyId",
+          "command",
+          "expectedVersion",
+          "idempotencyKey",
+          "reason"
+        ]
+      },
+      "RetireVmReferenceDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedRevision": {
+            "type": "number",
+            "minimum": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "companyId",
+          "expectedRevision",
+          "idempotencyKey",
+          "reason"
+        ]
+      },
+      "VmCampaignCommandResponse": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "VmReferencePublisherOptions": {
+        "type": "object",
+        "required": [
+          "stores",
+          "templates"
+        ],
+        "properties": {
+          "stores": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "storeName"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "storeName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "templateId",
+                "templateName",
+                "items"
+              ],
+              "properties": {
+                "templateId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "templateName": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "templateItemId",
+                      "sectionName",
+                      "itemNo",
+                      "itemText"
+                    ],
+                    "properties": {
+                      "templateItemId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "sectionName": {
+                        "type": "string"
+                      },
+                      "itemNo": {
+                        "type": "integer"
+                      },
+                      "itemText": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "VmReferenceDraftItemResponse": {
+        "type": "object",
+        "required": [
+          "draftItemId",
+          "version"
+        ],
+        "properties": {
+          "draftItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "VmReferenceSignedRead": {
+        "type": "object",
+        "required": [
+          "url",
+          "expiresInSeconds"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresInSeconds": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "VmReferencePublishResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "referenceSetId",
+          "referenceVersionId",
+          "campaignRevisionId",
+          "status",
+          "startsAt",
+          "submissionClosesAt",
+          "assignedStoreCount"
+        ],
+        "properties": {
+          "referenceSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referenceVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "campaignRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "open",
+              "closed"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submissionClosesAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "assignedStoreCount": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "VmCampaignRevisionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "referenceSetId",
+          "campaignRevisionId",
+          "revision",
+          "status",
+          "assignedStoreCount"
+        ],
+        "properties": {
+          "referenceSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "campaignRevisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "open",
+              "closed"
+            ]
+          },
+          "assignedStoreCount": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "VmCampaignAssignmentCommandResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignmentId",
+          "deadlineStatus",
+          "version"
+        ],
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deadlineStatus": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "open",
+              "on_time",
+              "missed",
+              "exempt",
+              "withdrawn",
+              "operational_hold"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "VmReferenceRetireResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "referenceSetId",
+          "status"
+        ],
+        "properties": {
+          "referenceSetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "retired"
+            ]
+          }
+        }
+      },
+      "VmCampaignSubmissionResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assignmentId",
+          "submissionId",
+          "deadlineStatus",
+          "reviewStatus",
+          "version"
+        ],
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submissionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deadlineStatus": {
+            "type": "string",
+            "enum": [
+              "on_time"
+            ]
+          },
+          "reviewStatus": {
+            "type": "string",
+            "enum": [
+              "review_pending"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
           }
         }
       }

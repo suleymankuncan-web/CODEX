@@ -10,11 +10,12 @@ export type CreatePhotoMediaAssetInput = {
   mediaAssetId: string;
   actorUserId: string;
   allowedCompanyIds: string[];
-  storeId: string;
+  storeId?: string;
+  companyId?: string;
   contentType: string;
   contentLength: number;
   captureSource: "system_generated";
-  classification?: "checklist_evidence" | "action_evidence";
+  classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence";
   quota: {
     aggregateBytesHardLimit: number;
     monthlyClassAHardLimit: number;
@@ -32,13 +33,17 @@ export async function createPhotoMediaAsset(
 ): Promise<PhotoMediaAssetRecord> {
   return databaseService.withTransaction(async (client) => {
     await client.query(`SELECT pg_advisory_xact_lock(hashtext('photo-media-r2-eu-quota')::bigint)`);
-    const storeResult = await client.query<{ company_id: string; region_id: string }>(`
-      SELECT company_id, region_id FROM ops.store
-      WHERE store_id = $1::uuid AND company_id = ANY($2::uuid[])
-    `, [input.storeId, input.allowedCompanyIds]);
-    const store = storeResult.rows[0];
-    if (!store) {
-      throw new ForbiddenException("Photo media store is outside actor company scope");
+    const scope = input.storeId
+      ? (await client.query<{ company_id: string; region_id: string }>(`
+          SELECT company_id, region_id FROM ops.store
+          WHERE store_id = $1::uuid AND company_id = ANY($2::uuid[]) AND status = 'active'
+        `, [input.storeId, input.allowedCompanyIds])).rows[0]
+      : (await client.query<{ company_id: string; region_id: null }>(`
+          SELECT company_id, NULL::uuid AS region_id FROM ops.company
+          WHERE company_id = $1::uuid AND company_id = ANY($2::uuid[]) AND status = 'active'
+        `, [input.companyId, input.allowedCompanyIds])).rows[0];
+    if (!scope || (!input.storeId && input.classification !== "vm_reference")) {
+      throw new ForbiddenException("Photo media scope is outside actor company scope");
     }
 
     await client.query(`
@@ -86,39 +91,48 @@ export async function createPhotoMediaAsset(
       retention_policy_id: string;
       version_no: number;
       evidence_retention_days: number;
+      reference_retention_days: number;
     }>(`
-      SELECT retention_policy_id, version_no, evidence_retention_days
+      SELECT retention_policy_id, version_no, evidence_retention_days, reference_retention_days
       FROM ops.evidence_retention_policy
       WHERE company_id = $1::uuid AND effective_from <= NOW()
         AND (effective_to IS NULL OR effective_to > NOW())
       ORDER BY version_no DESC LIMIT 1
-    `, [store.company_id]);
+    `, [scope.company_id]);
     const retention = retentionResult.rows[0];
     if (!retention) {
       throw new ServiceUnavailableException("Photo media retention policy is not configured");
     }
-    if (retention.evidence_retention_days < input.quota.lockSafetyDays) {
+    const retentionDays = input.classification === "vm_reference"
+      ? retention.reference_retention_days
+      : retention.evidence_retention_days;
+    if (retentionDays < input.quota.lockSafetyDays) {
       throw new ServiceUnavailableException("Photo media retention is shorter than the provider lock safety window");
     }
 
     await client.query(`
       INSERT INTO ops.photo_media_daily_usage (usage_date, subject_kind, subject_id, uploaded_bytes)
-      VALUES (CURRENT_DATE, 'user', $1::uuid, 0), (CURRENT_DATE, 'store', $2::uuid, 0)
+      VALUES (CURRENT_DATE, 'user', $1::uuid, 0)
       ON CONFLICT (usage_date, subject_kind, subject_id) DO NOTHING
-    `, [input.actorUserId, input.storeId]);
+    `, [input.actorUserId]);
+    if (input.storeId) await client.query(`
+      INSERT INTO ops.photo_media_daily_usage (usage_date, subject_kind, subject_id, uploaded_bytes)
+      VALUES (CURRENT_DATE, 'store', $1::uuid, 0)
+      ON CONFLICT (usage_date, subject_kind, subject_id) DO NOTHING
+    `, [input.storeId]);
     const dailyUsage = await client.query<{ subject_kind: "user" | "store"; uploaded_bytes: string }>(`
       SELECT subject_kind, uploaded_bytes FROM ops.photo_media_daily_usage
       WHERE usage_date = CURRENT_DATE
         AND ((subject_kind = 'user' AND subject_id = $1::uuid)
-          OR (subject_kind = 'store' AND subject_id = $2::uuid))
+          OR ($2::uuid IS NOT NULL AND subject_kind = 'store' AND subject_id = $2::uuid))
       FOR UPDATE
-    `, [input.actorUserId, input.storeId]);
+    `, [input.actorUserId, input.storeId ?? null]);
     const userBytes = Number(dailyUsage.rows.find((row) => row.subject_kind === "user")?.uploaded_bytes ?? 0);
     const storeBytes = Number(dailyUsage.rows.find((row) => row.subject_kind === "store")?.uploaded_bytes ?? 0);
     if (userBytes + input.contentLength > input.quota.perUserDailyBytesHardLimit) {
       throw new ServiceUnavailableException("Photo media per-user daily byte limit reached");
     }
-    if (storeBytes + input.contentLength > input.quota.perStoreDailyBytesHardLimit) {
+    if (input.storeId && storeBytes + input.contentLength > input.quota.perStoreDailyBytesHardLimit) {
       throw new ServiceUnavailableException("Photo media per-store daily byte limit reached");
     }
     await client.query(`
@@ -126,11 +140,11 @@ export async function createPhotoMediaAsset(
       SET uploaded_bytes = uploaded_bytes + $3::bigint, updated_at = NOW()
       WHERE usage_date = CURRENT_DATE
         AND ((subject_kind = 'user' AND subject_id = $1::uuid)
-          OR (subject_kind = 'store' AND subject_id = $2::uuid))
-    `, [input.actorUserId, input.storeId, input.contentLength]);
+          OR ($2::uuid IS NOT NULL AND subject_kind = 'store' AND subject_id = $2::uuid))
+    `, [input.actorUserId, input.storeId ?? null, input.contentLength]);
 
     const rawObjectKey = buildPhotoMediaObjectKeys({
-      companyId: store.company_id,
+      companyId: scope.company_id,
       mediaAssetId: input.mediaAssetId,
     }).raw;
     await client.query(`
@@ -167,7 +181,7 @@ export async function createPhotoMediaAsset(
       )
       RETURNING media_asset_id, company_id, region_id, store_id, state, raw_object_key
     `, [
-      input.mediaAssetId, store.company_id, store.region_id, input.storeId,
+       input.mediaAssetId, scope.company_id, scope.region_id, input.storeId ?? null,
       input.captureSource, rawObjectKey, input.contentType, input.contentLength,
       input.actorUserId, retention.retention_policy_id, retention.version_no,
       reservedBytes, reservedClassA, reservedClassB,

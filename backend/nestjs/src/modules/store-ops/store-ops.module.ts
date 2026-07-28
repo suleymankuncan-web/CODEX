@@ -9,6 +9,7 @@ import { StoreOpsTaskCommandReadModule } from "./store-ops-task-command-read.mod
 import { StoreOpsPhotoMediaModule } from "./store-ops-photo-media.module";
 import { StoreOpsStoreActionModule } from "./store-ops-store-action.module";
 import { StoreOpsTargetWorkspaceModule } from "./store-ops-target-workspace.module";
+import { StoreOpsVmReferenceModule } from "./store-ops-vm-reference.module";
 
 const storeOpsInternalModules = [
   StoreOpsReportingModule,
@@ -26,6 +27,7 @@ const storeOpsInternalModules = [
     StoreOpsTargetWorkspaceModule,
     StoreOpsTaskCommandReadModule,
     StoreOpsPhotoMediaModule,
+    StoreOpsVmReferenceModule,
   ],
   exports: storeOpsInternalModules,
 })

@@ -351,6 +351,13 @@ export type components = {
         "username": string | null
         "email": string | null
         "roleCodes": string[]
+        "permissionScopes": {
+          [key: string]: {
+            "companyIds": string[]
+            "regionIds": string[]
+            "storeIds": string[]
+          }
+        }
         "authorizationContextVersion"?: string
         "scope": {
           "companyIds": string[]
@@ -480,6 +487,13 @@ export type components = {
     }
     "CancelStoreActionPlanRequest": {
       "cancelReason": string
+    }
+    "ChangeVmAssignmentStateDto": {
+      "companyId": string
+      "command": "withdraw" | "exempt" | "hold" | "reconcile"
+      "expectedVersion": number
+      "idempotencyKey": string
+      "reason": string
     }
     "ChecklistCommandRegionMetrics": {
       "totalStores": number
@@ -980,6 +994,12 @@ export type components = {
       "email": string
       "authProvider": "local" | "oidc" | "sso" | "clerk"
       "providerSubject"?: string
+    }
+    "CreateVmReferenceDraftDto": {
+      "companyId": string
+      "referenceCode": string
+      "referenceName": string
+      "instructions": string
     }
     "DailyClosureStatusResponse": {
       "automationEnabled": boolean
@@ -1642,6 +1662,9 @@ export type components = {
           "label": string
         }>
     }
+    "PhotoMediaReadDto": {
+      "variant": "canonical" | "thumbnail"
+    }
     "PilotFeedback": {
       "feedbackId": string
       "actorUserId": string
@@ -1677,6 +1700,15 @@ export type components = {
         "limit": number
         "offset": number
       }
+    }
+    "PublishVmReferenceDto": {
+      "companyId": string
+      "expectedRevision": number
+      "idempotencyKey": string
+      "startsOn": string
+      "endsOn": string
+      "storeIds": string[]
+      "reason": string
     }
     "ReportingChecklistResponse": {
       "items": Array<{
@@ -2593,6 +2625,12 @@ export type components = {
         "periods": string[]
       }
     }
+    "RetireVmReferenceDto": {
+      "companyId": string
+      "expectedRevision": number
+      "idempotencyKey": string
+      "reason": string
+    }
     "ReviewSalesTargetIncentiveRegionPackageDto": {
       "period": string
       "regionId": string
@@ -2605,6 +2643,16 @@ export type components = {
       "reason"?: string
       "idempotencyKey": string
       "expectedVersion": number
+    }
+    "ReviseVmCampaignDto": {
+      "companyId": string
+      "command": "extend" | "reopen" | "scope_add"
+      "expectedRevision": number
+      "idempotencyKey": string
+      "reason": string
+      "startsOn": string
+      "endsOn": string
+      "storeIds": string[]
     }
     "SalesTargetIncentiveWorkspace": {
       "period": string
@@ -3073,6 +3121,11 @@ export type components = {
       "idempotencyKey": string
       "expectedVersion": number
     }
+    "SubmitVmCampaignDto": {
+      "expectedVersion": number
+      "idempotencyKey": string
+      "items": components['schemas']["VmCampaignSubmissionItemDto"][]
+    }
     "TargetCoverageResponse": {
       "items": Array<{
           "storeId": string
@@ -3385,6 +3438,130 @@ export type components = {
       "employeeId"?: string | null
       "username"?: string
       "email"?: string
+    }
+    "UpsertVmReferenceItemDto": {
+      "companyId": string
+      "templateId": string
+      "templateItemId": string
+      "itemOrder": number
+      "expectedVisualIntent": string
+      "reviewInstructions": string
+      "rubricVersion": string
+      "expectedRevision": number
+    }
+    "VmCampaignAssignmentCommandResponse": {
+      "assignmentId": string
+      "deadlineStatus": "scheduled" | "open" | "on_time" | "missed" | "exempt" | "withdrawn" | "operational_hold"
+      "version": number
+    }
+    "VmCampaignAssignmentListResponse": {
+      "items": Array<{
+          "assignmentId": string
+          "storeId": string
+          "storeName": string
+          "referenceSetId": string
+          "referenceName": string
+          "deadlineStatus": "scheduled" | "open" | "on_time" | "missed" | "exempt" | "withdrawn" | "operational_hold"
+          "reviewStatus": "not_submitted" | "review_pending" | "correction_requested" | "completed"
+          "version": number
+          "startsAt": string
+          "submissionClosesAt": string
+          "items": Array<{
+              "referenceItemId": string
+              "templateItemId": string
+              "expectedVisualIntent": string
+              "reviewInstructions": string
+              "requiredEvidenceCount": 1
+              "referenceAssetId": string
+            }>
+        }>
+      "total": number
+      "limit": number
+      "offset": number
+    }
+    "VmCampaignRevisionResponse": {
+      "referenceSetId": string
+      "campaignRevisionId": string
+      "revision": number
+      "status": "scheduled" | "open" | "closed"
+      "assignedStoreCount": number
+    }
+    "VmCampaignSubmissionItemDto": {
+      "referenceItemId": string
+      "mediaAssetId": string
+    }
+    "VmCampaignSubmissionResponse": {
+      "assignmentId": string
+      "submissionId": string
+      "deadlineStatus": "on_time"
+      "reviewStatus": "review_pending"
+      "version": number
+    }
+    "VmReference": {
+      "referenceSetId": string
+      "companyId": string
+      "referenceCode": string
+      "referenceName": string
+      "instructions": string
+      "status": "draft" | "scheduled" | "open" | "closed" | "retired"
+      "version": number
+      "createdAt": string
+      "updatedAt": string
+      "retiredAt": string | null
+    }
+    "VmReferenceDraftItemResponse": {
+      "draftItemId": string
+      "version": number
+    }
+    "VmReferenceListResponse": {
+      "items": Array<{
+          "referenceSetId": string
+          "companyId": string
+          "referenceCode": string
+          "referenceName": string
+          "instructions": string
+          "status": "draft" | "scheduled" | "open" | "closed" | "retired"
+          "version": number
+          "createdAt": string
+          "updatedAt": string
+          "retiredAt": string | null
+        }>
+      "total": number
+      "limit": number
+      "offset": number
+    }
+    "VmReferencePublishResponse": {
+      "referenceSetId": string
+      "referenceVersionId": string
+      "campaignRevisionId": string
+      "status": "scheduled" | "open" | "closed"
+      "startsAt": string
+      "submissionClosesAt": string
+      "assignedStoreCount": number
+    }
+    "VmReferencePublisherOptions": {
+      "stores": Array<{
+          "storeId": string
+          "storeName": string
+        }>
+      "templates": Array<{
+          "templateId": string
+          "templateName": string
+          "items": Array<{
+              "templateItemId": string
+              "sectionName": string
+              "itemNo": number
+              "itemText": string
+            }>
+        }>
+    }
+    "VmReferenceRetireResponse": {
+      "referenceSetId": string
+      "status": "retired"
+    }
+    "VmReferenceSignedRead": {
+      "url": string
+      "expiresInSeconds": number
     }
     "VoidSalesTargetIncentiveRegionCorrectionDto": {
       "period": string
@@ -4189,6 +4366,227 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/mobile/visual-campaigns": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VmCampaignAssignmentListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads": {
+    post: {
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
+  "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["PhotoMediaReadDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmReferenceSignedRead"]
+          }
+        }
+      }
+    }
+  }
+  "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize": {
+    post: {
+      responses: {
+        "201": {
+          content: {
+            'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
+  "/api/mobile/visual-campaigns/{assignmentId}/submissions": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SubmitVmCampaignDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmCampaignSubmissionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VmReferenceListResponse"]
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateVmReferenceDraftDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmReference"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/options": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VmReferencePublisherOptions"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/campaigns": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VmCampaignAssignmentListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/managed-campaigns": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VmCampaignAssignmentListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["UpsertVmReferenceItemDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmReferenceDraftItemResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads": {
+    post: {
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize": {
+    post: {
+      responses: {
+        "201": {
+          content: {
+            'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/publish": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["PublishVmReferenceDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmReferencePublishResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/revisions": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ReviseVmCampaignDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmCampaignRevisionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ChangeVmAssignmentStateDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmCampaignAssignmentCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-merchandising/references/{referenceSetId}/retire": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["RetireVmReferenceDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VmReferenceRetireResponse"]
           }
         }
       }

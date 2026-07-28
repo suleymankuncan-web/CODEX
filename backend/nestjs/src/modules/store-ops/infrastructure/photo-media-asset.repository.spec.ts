@@ -21,6 +21,7 @@ describe("PhotoMediaAssetRepository", () => {
         evidence_retention_days: 365,
       }] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [
         { subject_kind: "user", uploaded_bytes: "0" },
         { subject_kind: "store", uploaded_bytes: "0" },
@@ -168,6 +169,7 @@ describe("PhotoMediaAssetRepository", () => {
       .mockResolvedValueOnce({ rows: [{
         retention_policy_id: "policy", version_no: 1, evidence_retention_days: 365,
       }] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [
         { subject_kind: "user", uploaded_bytes: "104857600" },

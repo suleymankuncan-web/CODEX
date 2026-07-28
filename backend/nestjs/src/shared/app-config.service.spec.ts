@@ -814,6 +814,23 @@ describe("AppConfigService", () => {
     expect(config.photoMediaStorageConfiguration.enabled).toBe(false);
     expect(config.storeActionPhotoResolutionEnabled).toBe(false);
     expect(config.regionManagerSolutionReviewEnabled).toBe(false);
+    expect(config.vmReferencePublishingEnabled).toBe(false);
+    expect(config.vmCampaignSubmissionEnabled).toBe(false);
+    expect(config.vmCampaignDeadlineSettlementEnabled).toBe(false);
+    expect(config.vmCampaignSettlementPollSeconds).toBe(60);
+  });
+
+  it("keeps VM publishing, submission, and settlement independently drainable", () => {
+    const config = createConfig({
+      VM_REFERENCE_PUBLISHING_ENABLED: "false",
+      VM_CAMPAIGN_SUBMISSION_ENABLED: "true",
+      VM_CAMPAIGN_DEADLINE_SETTLEMENT_ENABLED: "true",
+      VM_CAMPAIGN_SETTLEMENT_POLL_SECONDS: "90",
+    });
+    expect(config.vmReferencePublishingEnabled).toBe(false);
+    expect(config.vmCampaignSubmissionEnabled).toBe(true);
+    expect(config.vmCampaignDeadlineSettlementEnabled).toBe(true);
+    expect(config.vmCampaignSettlementPollSeconds).toBe(90);
   });
 
   it("keeps Store Action submission and Region Manager review independently drainable", () => {

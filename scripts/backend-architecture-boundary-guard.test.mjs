@@ -230,7 +230,7 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-command.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-history.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-visit-plan.module.ts', { controllers: 1, providers: 2, exports: 0 }],
-  ['backend/nestjs/src/modules/store-ops/store-ops-photo-media.module.ts', { controllers: 1, providers: 10, exports: 1 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops-photo-media.module.ts', { controllers: 1, providers: 10, exports: 1 }], ['backend/nestjs/src/modules/store-ops/store-ops-vm-reference.module.ts', { imports: 1, controllers: 2, providers: 4, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-store-action.module.ts', { imports: 1, controllers: 1, providers: 5, exports: 2 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-competition.module.ts', { controllers: 1, providers: 6, exports: 1 }],
   [

@@ -24,7 +24,7 @@
     "VISUAL_MERCHANDISER"
   ],
   "summary": {
-    "routeCount": 54,
+    "routeCount": 55,
     "directMatrixRouteCount": 33,
     "routePreviewDriftCount": 1,
     "endpointDriftCount": 1,
@@ -917,7 +917,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 182
+        "line": 185
       }
     },
     {
@@ -949,7 +949,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 337
+        "line": 360
       }
     },
     {
@@ -983,7 +983,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 200
+        "line": 203
       }
     },
     {
@@ -1013,7 +1013,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 320
+        "line": 343
       }
     },
     {
@@ -1057,7 +1057,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 302
+        "line": 325
       }
     },
     {
@@ -1099,7 +1099,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 181
+        "line": 184
       }
     },
     {
@@ -1134,7 +1134,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 354
+        "line": 377
       }
     },
     {
@@ -1166,7 +1166,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 237
+        "line": 260
       }
     },
     {
@@ -1194,7 +1194,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 254
+        "line": 277
       }
     },
     {
@@ -1228,7 +1228,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 271
+        "line": 294
       }
     },
     {
@@ -1262,7 +1262,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 285
+        "line": 308
       }
     },
     {
@@ -1294,7 +1294,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 425
+        "line": 448
       }
     },
     {
@@ -1338,7 +1338,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 371
+        "line": 394
       }
     },
     {
@@ -1370,7 +1370,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 389
+        "line": 412
       }
     },
     {
@@ -1402,7 +1402,32 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 220
+        "line": 243
+      }
+    },
+    {
+      "id": "route:store:/store/visual-campaigns",
+      "surface": "store",
+      "path": "/store/visual-campaigns",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "missing",
+      "runtimeRoles": [
+        "STORE_MANAGER",
+        "VISUAL_MERCHANDISER"
+      ],
+      "previewRoles": null,
+      "authorization": {
+        "routeAccess": "role_and_scope",
+        "readScope": "role_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 223
       }
     },
     {
@@ -1432,7 +1457,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 408
+        "line": 431
       }
     }
   ],

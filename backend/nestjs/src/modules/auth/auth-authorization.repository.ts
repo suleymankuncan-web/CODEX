@@ -65,20 +65,31 @@ export class AuthAuthorizationRepository {
 
     const result = await this.databaseService.query<{
       role_code: string;
+      role_scope_type?: string;
       scope_type: string;
       company_id: string | null;
       region_id: string | null;
       store_id: string | null;
       store_type?: string | null;
+      permission_codes?: string[];
     }>(
       `
         SELECT
           r.role_code,
+          r.role_scope_type,
           ura.scope_type,
           ura.company_id,
           ura.region_id,
           ura.store_id,
-          store.store_type
+          store.store_type,
+          ARRAY(
+            SELECT permission.permission_code
+            FROM ops.role_permission role_permission
+            INNER JOIN ops.permission permission
+              ON permission.permission_id = role_permission.permission_id
+            WHERE role_permission.role_id = ura.role_id
+            ORDER BY permission.permission_code ASC
+          ) AS permission_codes
         FROM ops.user_account ua
         INNER JOIN ops.user_role_assignment ura
           ON ura.user_id = ua.user_id

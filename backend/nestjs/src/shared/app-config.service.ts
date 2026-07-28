@@ -307,6 +307,22 @@ export class AppConfigService {
     return this.readBoolean("REGION_MANAGER_SOLUTION_REVIEW_ENABLED", false);
   }
 
+  get vmReferencePublishingEnabled(): boolean {
+    return this.readBoolean("VM_REFERENCE_PUBLISHING_ENABLED", false);
+  }
+
+  get vmCampaignSubmissionEnabled(): boolean {
+    return this.readBoolean("VM_CAMPAIGN_SUBMISSION_ENABLED", false);
+  }
+
+  get vmCampaignDeadlineSettlementEnabled(): boolean {
+    return this.readBoolean("VM_CAMPAIGN_DEADLINE_SETTLEMENT_ENABLED", false);
+  }
+
+  get vmCampaignSettlementPollSeconds(): number {
+    return this.readPositiveInteger("VM_CAMPAIGN_SETTLEMENT_POLL_SECONDS", "60");
+  }
+
   get photoMediaSyntheticFixtureSha256Allowlist(): string[] {
     const raw = this.readOptionalString("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST") ?? "";
     const values = [...new Set(raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean))];

@@ -51,6 +51,10 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `CHECKLIST_EVIDENCE_STORAGE_HEALTHY` | Platform owner | Render API env | Internal | Explicit fail-closed storage-health gate for new required policy publication. | `false` |
 | `STORE_ACTION_PHOTO_RESOLUTION_ENABLED` | Project owner | Render API env | Internal | Pins only newly generated trusted checklist-remediation actions to V2 and enables Store Manager synthetic solution submission. Keep `false` until a separate activation gate. | `false` |
 | `REGION_MANAGER_SOLUTION_REVIEW_ENABLED` | Project owner | Render API env | Internal | Enables assigned Region Manager review. During rollback keep this `true` only to drain an already-existing pending queue; otherwise default `false`. | `false` |
+| `VM_REFERENCE_PUBLISHING_ENABLED` | Project owner | Render API env | Internal | Enables scoped synthetic VM draft/publish commands; permission grants remain separately default-denied. | `false` |
+| `VM_CAMPAIGN_SUBMISSION_ENABLED` | Project owner | Render API env | Internal | Enables own-store synthetic VM campaign submissions within an immutable window. | `false` |
+| `VM_CAMPAIGN_DEADLINE_SETTLEMENT_ENABLED` | Project owner | Render worker env | Internal | Enables bounded idempotent VM campaign deadline settlement. | `false` |
+| `VM_CAMPAIGN_SETTLEMENT_POLL_SECONDS` | Project owner | Render worker env | Internal | Poll interval for bounded VM campaign settlement. | `60` |
 | `PHOTO_MEDIA_PRIMARY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Private EU-jurisdiction primary bucket name; never record its value in evidence. | Empty. |
 | `PHOTO_MEDIA_RECOVERY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Distinct private EU-jurisdiction recovery bucket name. | Empty. |
 | `PHOTO_MEDIA_PRIMARY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint; no public delivery endpoint. | Empty. |

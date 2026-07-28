@@ -6,9 +6,12 @@ type ScopeIds = {
   storeIds?: string[];
 };
 
-export function buildAuthorizationContextVersion(roleScopes?: Record<string, ScopeIds>) {
-  const canonical = Object.fromEntries(
-    Object.entries(roleScopes ?? {})
+export function buildAuthorizationContextVersion(
+  roleScopes?: Record<string, ScopeIds>,
+  permissionScopes?: Record<string, ScopeIds>,
+) {
+  const canonicalize = (scopes: Record<string, ScopeIds> | undefined) => Object.fromEntries(
+    Object.entries(scopes ?? {})
       .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
       .map(([roleCode, scope]) => [
         roleCode,
@@ -19,6 +22,11 @@ export function buildAuthorizationContextVersion(roleScopes?: Record<string, Sco
         },
       ]),
   );
+
+  const canonical = {
+    roleScopes: canonicalize(roleScopes),
+    permissionScopes: canonicalize(permissionScopes),
+  };
 
   return `v1:${createHash("sha256").update(JSON.stringify(canonical)).digest("hex")}`;
 }

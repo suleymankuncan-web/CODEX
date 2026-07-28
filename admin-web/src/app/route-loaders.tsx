@@ -45,6 +45,7 @@ const loadStoreSettingsPage = () => import('../pages/StoreSettingsPage').then((m
 const loadStoreTargetsPage = () => import('../pages/StoreTargetsPage').then((module) => ({ default: module.StoreTargetsPage }))
 const loadStoreTasksPage = () => import('../pages/StoreTasksPage').then((module) => ({ default: module.StoreTasksPage }))
 const loadStoreWorkforcePage = () => import('../pages/StoreWorkforcePage').then((module) => ({ default: module.StoreWorkforcePage }))
+const loadStoreVmCampaignsPage = () => import('../pages/StoreVmCampaignsPage').then((module) => ({ default: module.StoreVmCampaignsPage }))
 const loadTargetApprovalQueuePage = () => import('../pages/TargetApprovalQueuePage').then((module) => ({ default: module.TargetApprovalQueuePage }))
 
 export const AuditCenterPage = lazy(loadAuditCenterPage)
@@ -92,4 +93,5 @@ export const StoreSettingsPage = lazy(loadStoreSettingsPage)
 export const StoreTargetsPage = lazy(loadStoreTargetsPage)
 export const StoreTasksPage = lazy(loadStoreTasksPage)
 export const StoreWorkforcePage = lazy(loadStoreWorkforcePage)
+export const StoreVmCampaignsPage = lazy(loadStoreVmCampaignsPage)
 export const TargetApprovalQueuePage = lazy(loadTargetApprovalQueuePage)

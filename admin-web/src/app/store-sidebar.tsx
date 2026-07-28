@@ -15,6 +15,7 @@ import {
   Trophy,
   UserRound,
   UsersRound,
+  Images,
 } from 'lucide-react'
 import { NavLink } from 'react-router'
 import lufianLogoUrl from '../assets/lufian-logo.png'
@@ -46,6 +47,7 @@ const iconById: Record<StoreNavIconId, LucideIcon> = {
   targets: Target,
   tasks: Bell,
   workforce: UsersRound,
+  visualCampaigns: Images,
 }
 
 function getIdentityLabel(authSummary: AuthSessionSummary | null, fallback: string) {
