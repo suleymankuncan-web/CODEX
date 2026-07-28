@@ -21,7 +21,7 @@ describe("resolveTaskCommandWorkspaceScope", () => {
       companyIds: [companyId],
       regionIds: [],
       storeIds: [],
-      capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false },
+      capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false, canReview: false },
     });
   });
 
@@ -40,7 +40,7 @@ describe("resolveTaskCommandWorkspaceScope", () => {
       companyIds: [],
       regionIds: [regionId],
       storeIds: [storeId],
-      capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false },
+      capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false, canReview: true },
     });
   });
 
@@ -56,7 +56,7 @@ describe("resolveTaskCommandWorkspaceScope", () => {
       companyIds: [],
       regionIds: [],
       storeIds: [storeId],
-      capabilities: { canStart: true, canUpdate: true, canComplete: true, canCancel: true },
+      capabilities: { canStart: true, canUpdate: true, canComplete: true, canCancel: true, canReview: false },
     });
   });
 

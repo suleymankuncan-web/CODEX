@@ -7282,6 +7282,224 @@
           "MobileChecklist"
         ]
       }
+    },
+    "/api/store-actions/plans/{actionPlanId}/photo-review": {
+      "get": {
+        "operationId": "StoreActionPlanController_getPhotoReview",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scoped Store Action solution attempt and immutable review history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreActionPhotoReviewProjection"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreActionPlan"
+        ]
+      }
+    },
+    "/api/store-actions/plans/{actionPlanId}/solution/uploads": {
+      "post": {
+        "operationId": "StoreActionPlanController_uploadSolution",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StoreActionPlan"
+        ]
+      }
+    },
+    "/api/store-actions/plans/{actionPlanId}/solution/uploads/{mediaAssetId}/finalize": {
+      "post": {
+        "operationId": "StoreActionPlanController_finalizeSolution",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreActionPlan"
+        ]
+      }
+    },
+    "/api/store-actions/plans/{actionPlanId}/solution-attempts": {
+      "post": {
+        "operationId": "StoreActionPlanController_submitSolution",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitStoreActionSolutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solution submission awaiting Region Manager review.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreActionPhotoReviewProjection"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreActionPlan"
+        ]
+      }
+    },
+    "/api/store-actions/plans/{actionPlanId}/solution-attempts/{solutionAttemptId}/review": {
+      "post": {
+        "operationId": "StoreActionPlanController_reviewSolution",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "solutionAttemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewStoreActionSolutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Region Manager solution review result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreActionPhotoReviewProjection"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreActionPlan"
+        ]
+      }
+    },
+    "/api/store-actions/plans/{actionPlanId}/evidence/{mediaAssetId}/content/{variant}": {
+      "get": {
+        "operationId": "StoreActionPlanController_readSolutionEvidence",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StoreActionPlan"
+        ]
+      }
     }
   },
   "info": {
@@ -20818,7 +21036,10 @@
           "cancelledByUserId",
           "cancelledAt",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "photoEvidenceVersion",
+          "currentSolutionAttemptId",
+          "resolutionWorkflowVersion"
         ],
         "properties": {
           "actionPlanId": {
@@ -20890,6 +21111,8 @@
               "open",
               "in_progress",
               "blocked",
+              "solution_review_pending",
+              "correction_required",
               "closed",
               "cancelled"
             ]
@@ -20926,6 +21149,21 @@
           },
           "updatedAt": {
             "type": "string"
+          },
+          "photoEvidenceVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentSolutionAttemptId": {
+            "type": "string",
+            "nullable": true
+          },
+          "resolutionWorkflowVersion": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ]
           }
         }
       },
@@ -20966,7 +21204,10 @@
                 "cancelledByUserId",
                 "cancelledAt",
                 "createdAt",
-                "updatedAt"
+                "updatedAt",
+                "photoEvidenceVersion",
+                "currentSolutionAttemptId",
+                "resolutionWorkflowVersion"
               ],
               "properties": {
                 "actionPlanId": {
@@ -21038,6 +21279,8 @@
                     "open",
                     "in_progress",
                     "blocked",
+                    "solution_review_pending",
+                    "correction_required",
                     "closed",
                     "cancelled"
                   ]
@@ -21074,6 +21317,21 @@
                 },
                 "updatedAt": {
                   "type": "string"
+                },
+                "photoEvidenceVersion": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "currentSolutionAttemptId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "resolutionWorkflowVersion": {
+                  "type": "integer",
+                  "enum": [
+                    1,
+                    2
+                  ]
                 }
               }
             }
@@ -21147,7 +21405,10 @@
                   "cancelledByUserId",
                   "cancelledAt",
                   "createdAt",
-                  "updatedAt"
+                  "updatedAt",
+                  "photoEvidenceVersion",
+                  "currentSolutionAttemptId",
+                  "resolutionWorkflowVersion"
                 ],
                 "properties": {
                   "actionPlanId": {
@@ -21219,6 +21480,8 @@
                       "open",
                       "in_progress",
                       "blocked",
+                      "solution_review_pending",
+                      "correction_required",
                       "closed",
                       "cancelled"
                     ]
@@ -21255,6 +21518,21 @@
                   },
                   "updatedAt": {
                     "type": "string"
+                  },
+                  "photoEvidenceVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "currentSolutionAttemptId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "resolutionWorkflowVersion": {
+                    "type": "integer",
+                    "enum": [
+                      1,
+                      2
+                    ]
                   }
                 }
               }
@@ -21318,7 +21596,10 @@
                   "cancelledByUserId",
                   "cancelledAt",
                   "createdAt",
-                  "updatedAt"
+                  "updatedAt",
+                  "photoEvidenceVersion",
+                  "currentSolutionAttemptId",
+                  "resolutionWorkflowVersion"
                 ],
                 "properties": {
                   "actionPlanId": {
@@ -21390,6 +21671,8 @@
                       "open",
                       "in_progress",
                       "blocked",
+                      "solution_review_pending",
+                      "correction_required",
                       "closed",
                       "cancelled"
                     ]
@@ -21426,6 +21709,21 @@
                   },
                   "updatedAt": {
                     "type": "string"
+                  },
+                  "photoEvidenceVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "currentSolutionAttemptId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "resolutionWorkflowVersion": {
+                    "type": "integer",
+                    "enum": [
+                      1,
+                      2
+                    ]
                   }
                 }
               }
@@ -25565,7 +25863,8 @@
           "canStart",
           "canUpdate",
           "canComplete",
-          "canCancel"
+          "canCancel",
+          "canReview"
         ],
         "properties": {
           "canStart": {
@@ -25578,6 +25877,9 @@
             "type": "boolean"
           },
           "canCancel": {
+            "type": "boolean"
+          },
+          "canReview": {
             "type": "boolean"
           }
         }
@@ -25714,6 +26016,9 @@
           "updatedAt",
           "completedAt",
           "resultNote",
+          "photoEvidenceVersion",
+          "currentSolutionAttemptId",
+          "resolutionWorkflowVersion",
           "source",
           "events"
         ],
@@ -25751,6 +26056,8 @@
               "open",
               "in_progress",
               "blocked",
+              "solution_review_pending",
+              "correction_required",
               "closed",
               "cancelled"
             ]
@@ -25775,6 +26082,22 @@
           "resultNote": {
             "type": "string",
             "nullable": true
+          },
+          "photoEvidenceVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentSolutionAttemptId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "resolutionWorkflowVersion": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ]
           },
           "source": {
             "$ref": "#/components/schemas/TaskCommandSource"
@@ -26016,6 +26339,120 @@
           "expectedEvidenceVersion",
           "idempotencyKey"
         ]
+      },
+      "SubmitStoreActionSolutionRequest": {
+        "type": "object",
+        "required": [
+          "resolutionNote",
+          "mediaAssetId",
+          "idempotencyKey",
+          "expectedVersion"
+        ],
+        "properties": {
+          "resolutionNote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "mediaAssetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ReviewStoreActionSolutionRequest": {
+        "type": "object",
+        "required": [
+          "solutionAttemptId",
+          "decision",
+          "idempotencyKey",
+          "expectedVersion"
+        ],
+        "properties": {
+          "solutionAttemptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "StoreActionPhotoReviewProjection": {
+        "type": "object",
+        "required": [
+          "actionPlanId",
+          "status",
+          "version",
+          "currentAttemptId",
+          "findingMediaAssetIds",
+          "attempts"
+        ],
+        "properties": {
+          "actionPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "blocked",
+              "solution_review_pending",
+              "correction_required",
+              "closed",
+              "cancelled"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "currentAttemptId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "findingMediaAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
       }
     }
   },

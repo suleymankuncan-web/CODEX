@@ -1,6 +1,6 @@
-import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import type { TestInfo } from '@playwright/test'
 import { expect, test, type Locator, type Page } from './test-fixtures'
+import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { setStoredLocale } from './locale-test-utils'
 import { expectChecklistResultModalNoScoreContract, expectChecklistResultModalVisualContract } from './checklist-result-modal-assertions'
 
@@ -8,7 +8,6 @@ const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
 const vmTemplateId = '99999999-9999-4999-8999-999999999999'
 const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
-const closeoutEvidenceDir = join(process.cwd(), '..', 'docs', 'evidence', 'checklist-command-cutover-v2', 'p7')
 
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
@@ -497,7 +496,7 @@ test('visit plan is not exposed to store manager and plan URL falls back', async
   await expect(page.getByRole('heading', { name: 'Mağaza Kontrol Merkezi' })).toBeVisible()
 })
 
-test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
+test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
@@ -509,7 +508,7 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
     requests,
   })
   await page.goto('/store/checklists')
-  await captureCloseoutRoleEvidence(page, 'visual-merchandiser', 'VM Kontrol Merkezi')
+  await captureCloseoutRoleEvidence(page, testInfo, 'visual-merchandiser', 'VM Kontrol Merkezi')
 
   await expect(page.getByRole('heading', { name: 'VM Kontrol Merkezi' })).toBeVisible()
   await expect(page.getByText('Atanmış mağaza', { exact: true })).toBeVisible()
@@ -625,12 +624,12 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
   ])
 })
 
-test('store checklist surface switches to English copy and persists locale', async ({ page }) => {
+test('store checklist surface switches to English copy and persists locale', async ({ page }, testInfo) => {
   await setupChecklistPage(page, ['SUPER_ADMIN'])
   await page.goto('/store/checklists')
 
   await setStoredLocale(page, 'en')
-  await captureCloseoutRoleEvidence(page, 'super-admin', 'Checklist Administration Center')
+  await captureCloseoutRoleEvidence(page, testInfo, 'super-admin', 'Checklist Administration Center')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Checklist Administration Center', { exact: true }).first()).toBeVisible()
@@ -1461,8 +1460,7 @@ function createChecklistAcknowledgementsFixture(
   }
 }
 
-async function captureCloseoutRoleEvidence(page: Page, role: string, heading: string) {
-  mkdirSync(closeoutEvidenceDir, { recursive: true })
+async function captureCloseoutRoleEvidence(page: Page, testInfo: TestInfo, role: string, heading: string) {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 1024, height: 768 },
@@ -1474,7 +1472,7 @@ async function captureCloseoutRoleEvidence(page: Page, role: string, heading: st
     await expect(page.getByRole('heading', { name: heading })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({
-      path: join(closeoutEvidenceDir, `${role}-${viewport.width}x${viewport.height}.png`),
+      path: checklistEvidenceOutputPath(testInfo, `checklist-command-cutover-v2/p7/${role}-${viewport.width}x${viewport.height}.png`),
       fullPage: true,
     })
   }

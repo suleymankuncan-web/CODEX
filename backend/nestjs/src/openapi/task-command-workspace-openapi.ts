@@ -9,8 +9,8 @@ export function applyTaskCommandWorkspaceOpenApi(document: MutableOpenApiDocumen
   document.components = document.components ?? {};
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
-    TaskCommandCapabilities: object(["canStart", "canUpdate", "canComplete", "canCancel"], {
-      canStart: boolean(), canUpdate: boolean(), canComplete: boolean(), canCancel: boolean(),
+    TaskCommandCapabilities: object(["canStart", "canUpdate", "canComplete", "canCancel", "canReview"], {
+      canStart: boolean(), canUpdate: boolean(), canComplete: boolean(), canCancel: boolean(), canReview: boolean(),
     }),
     TaskCommandAuditEvent: object(
       ["eventId", "eventType", "occurredAt", "actorDisplayName", "actorRoleLabel", "note"],
@@ -34,15 +34,17 @@ export function applyTaskCommandWorkspaceOpenApi(document: MutableOpenApiDocumen
       deepLink: { type: "string", nullable: true, pattern: "^/store/(checklists|kpis)(\\?.*)?$" },
     }),
     TaskCommandWorkspaceItem: object(
-      ["actionPlanId", "storeId", "storeName", "title", "summary", "priority", "status", "dueOn", "createdAt", "updatedAt", "completedAt", "resultNote", "source", "events"],
+      ["actionPlanId", "storeId", "storeName", "title", "summary", "priority", "status", "dueOn", "createdAt", "updatedAt", "completedAt", "resultNote", "photoEvidenceVersion", "currentSolutionAttemptId", "resolutionWorkflowVersion", "source", "events"],
       {
         actionPlanId: uuid(), storeId: uuid(), storeName: nullableString(), title: { type: "string" },
         summary: nullableString(), priority: { type: "string", enum: ["high", "medium", "low"] },
-        status: { type: "string", enum: ["open", "in_progress", "blocked", "closed", "cancelled"] },
+        status: { type: "string", enum: ["open", "in_progress", "blocked", "solution_review_pending", "correction_required", "closed", "cancelled"] },
         dueOn: { type: "string", format: "date" }, createdAt: { type: "string", format: "date-time" },
         updatedAt: { type: "string", format: "date-time" },
         completedAt: { type: "string", format: "date-time", nullable: true },
-        resultNote: nullableString(), source: ref("TaskCommandSource"),
+        resultNote: nullableString(), photoEvidenceVersion: integer(),
+        currentSolutionAttemptId: { type: "string", format: "uuid", nullable: true },
+        resolutionWorkflowVersion: { type: "integer", enum: [1, 2] }, source: ref("TaskCommandSource"),
         events: ref("TaskCommandAuditPreview"),
       },
     ),

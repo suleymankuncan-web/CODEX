@@ -7,6 +7,8 @@ import { StoreOpsReportingModule } from "./store-ops-reporting.module";
 import { StoreOpsTargetsModule } from "./store-ops-targets.module";
 import { StoreOpsTaskCommandReadModule } from "./store-ops-task-command-read.module";
 import { StoreOpsPhotoMediaModule } from "./store-ops-photo-media.module";
+import { StoreOpsStoreActionModule } from "./store-ops-store-action.module";
+import { StoreOpsTargetWorkspaceModule } from "./store-ops-target-workspace.module";
 
 const storeOpsInternalModules = [
   StoreOpsReportingModule,
@@ -20,6 +22,8 @@ const storeOpsInternalModules = [
   imports: [
     AuthModule,
     ...storeOpsInternalModules,
+    StoreOpsStoreActionModule,
+    StoreOpsTargetWorkspaceModule,
     StoreOpsTaskCommandReadModule,
     StoreOpsPhotoMediaModule,
   ],

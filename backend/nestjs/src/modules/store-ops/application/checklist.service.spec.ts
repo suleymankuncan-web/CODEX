@@ -218,6 +218,10 @@ describe("ChecklistService", () => {
         "BM Store Visit - Kasa duzeni standartlara uygun mu? - Not: Kasa alani duzensiz",
       priority: "high",
       dueOn: "2026-05-27",
+      trustedChecklistFinding: {
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+      },
     });
   });
 

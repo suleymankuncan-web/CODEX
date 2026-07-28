@@ -299,6 +299,14 @@ export class AppConfigService {
     return this.readBoolean("CHECKLIST_EVIDENCE_STORAGE_HEALTHY", false);
   }
 
+  get storeActionPhotoResolutionEnabled(): boolean {
+    return this.readBoolean("STORE_ACTION_PHOTO_RESOLUTION_ENABLED", false);
+  }
+
+  get regionManagerSolutionReviewEnabled(): boolean {
+    return this.readBoolean("REGION_MANAGER_SOLUTION_REVIEW_ENABLED", false);
+  }
+
   get photoMediaSyntheticFixtureSha256Allowlist(): string[] {
     const raw = this.readOptionalString("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST") ?? "";
     const values = [...new Set(raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean))];

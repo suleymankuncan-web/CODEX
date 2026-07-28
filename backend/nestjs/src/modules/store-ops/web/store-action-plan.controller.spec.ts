@@ -14,7 +14,7 @@ function createHarness() {
     closePlan: jest.fn(async () => ({ command: { status: "closed" } })),
     cancelPlan: jest.fn(async () => ({ command: { status: "cancelled" } })),
   };
-  const controller = new StoreActionPlanController(storeActionPlanService as never);
+  const controller = new StoreActionPlanController(storeActionPlanService as never, {} as never);
 
   return {
     controller,

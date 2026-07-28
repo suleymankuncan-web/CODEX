@@ -28,6 +28,9 @@ type PlanRow = {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+  photo_evidence_version: number;
+  current_solution_attempt_id: string | null;
+  resolution_workflow_version: 1 | 2;
 };
 
 type AuditRow = {
@@ -68,7 +71,7 @@ export class TaskCommandWorkspaceReadRepository {
       p.due_on BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
       OR (p.closed_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
       OR (p.cancelled_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
-      OR (p.status IN ('open', 'in_progress', 'blocked') AND p.due_on < $${periodStartParam}::date)
+      OR (p.status IN ('open', 'in_progress', 'blocked', 'solution_review_pending', 'correction_required') AND p.due_on < $${periodStartParam}::date)
     )`);
     const whereSql = filters.join(" AND ");
     const countResult = await this.databaseService.query<{ total: number }>(
@@ -98,6 +101,9 @@ export class TaskCommandWorkspaceReadRepository {
           p.cancelled_at,
           p.created_at,
           p.updated_at
+          ,p.photo_evidence_version
+          ,p.current_solution_attempt_id
+          ,p.resolution_workflow_version
         FROM ops.store_action_plan p
         INNER JOIN ops.store s ON s.store_id = p.store_id
         WHERE ${whereSql}
@@ -144,6 +150,10 @@ export class TaskCommandWorkspaceReadRepository {
                 'store_action_plan.status_updated',
                 'store_action_plan.closed',
                 'store_action_plan.cancelled'
+                ,'store_action_solution.submitted'
+                ,'store_action_solution.resubmitted'
+                ,'store_action_solution.approved'
+                ,'store_action_solution.rejected'
               )
           ) AS event_total
         FROM ops.store_action_plan p
@@ -223,6 +233,10 @@ export class TaskCommandWorkspaceReadRepository {
               'store_action_plan.status_updated',
               'store_action_plan.closed',
               'store_action_plan.cancelled'
+              ,'store_action_solution.submitted'
+              ,'store_action_solution.resubmitted'
+              ,'store_action_solution.approved'
+              ,'store_action_solution.rejected'
             )
         )
         SELECT
@@ -284,6 +298,9 @@ export class TaskCommandWorkspaceReadRepository {
       updatedAt: row.updated_at,
       completedAt: row.closed_at ?? row.cancelled_at,
       resultNote: row.resolution_note ?? row.cancel_reason,
+      photoEvidenceVersion: Number(row.photo_evidence_version ?? 0),
+      currentSolutionAttemptId: row.current_solution_attempt_id,
+      resolutionWorkflowVersion: row.resolution_workflow_version ?? 1,
       source: {
         type: row.source_type,
         id: row.source_id,

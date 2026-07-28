@@ -55,6 +55,7 @@ export class PhotoMediaStorageService {
     contentLength: number;
     contentBody: Buffer;
     syntheticFixtureAttestation: boolean;
+    classification?: "checklist_evidence" | "action_evidence";
   }) {
     this.assertEnabled();
     if (
@@ -92,6 +93,7 @@ export class PhotoMediaStorageService {
         contentType: input.contentType,
         contentLength: input.contentLength,
         captureSource: "system_generated",
+        classification: input.classification ?? "checklist_evidence",
         quota: {
           aggregateBytesHardLimit: this.configuration.aggregateBytesHardLimit,
           monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
@@ -180,6 +182,7 @@ export class PhotoMediaStorageService {
     contentType: string;
     contentLength: number;
     contentBody: Buffer;
+    classification?: "checklist_evidence" | "action_evidence";
   }) {
     this.assertEnabled();
     if (!this.configuration.syntheticOnly) {

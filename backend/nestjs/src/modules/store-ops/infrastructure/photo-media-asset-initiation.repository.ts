@@ -14,6 +14,7 @@ export type CreatePhotoMediaAssetInput = {
   contentType: string;
   contentLength: number;
   captureSource: "system_generated";
+  classification?: "checklist_evidence" | "action_evidence";
   quota: {
     aggregateBytesHardLimit: number;
     monthlyClassAHardLimit: number;
@@ -160,7 +161,7 @@ export async function createPhotoMediaAsset(
         uploaded_by_user_id, retention_policy_id, retention_policy_version, expires_at,
         quota_reserved_bytes, quota_reserved_class_a, quota_reserved_class_b
       ) VALUES (
-        $1::uuid, $2::uuid, $3::uuid, $4::uuid, 'checklist_evidence', 'initiated',
+        $1::uuid, $2::uuid, $3::uuid, $4::uuid, $15, 'initiated',
         $5, $6, $7, $8::bigint, $9::uuid, $10::uuid, $11,
         NULL, $12::bigint, $13, $14
       )
@@ -170,6 +171,7 @@ export async function createPhotoMediaAsset(
       input.captureSource, rawObjectKey, input.contentType, input.contentLength,
       input.actorUserId, retention.retention_policy_id, retention.version_no,
       reservedBytes, reservedClassA, reservedClassB,
+      input.classification ?? "checklist_evidence",
     ]);
     const row = assetResult.rows[0];
     if (!row) {

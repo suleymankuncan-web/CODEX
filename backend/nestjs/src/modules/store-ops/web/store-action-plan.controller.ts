@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Header, Param, Patch, Post, Query, Req, StreamableFile, UploadedFile, UseInterceptors, ParseFilePipeBuilder, ParseEnumPipe } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { AuthenticatedUser } from "../../auth/auth-context.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
@@ -9,6 +10,10 @@ import { CloseStoreActionPlanDto } from "./dto/close-store-action-plan.dto";
 import { CreateStoreActionPlanDto } from "./dto/create-store-action-plan.dto";
 import { ListStoreActionPlansQueryDto } from "./dto/list-store-action-plans.query";
 import { UpdateStoreActionPlanStatusDto } from "./dto/update-store-action-plan-status.dto";
+import { SubmitStoreActionSolutionDto } from "./dto/submit-store-action-solution.dto";
+import { ReviewStoreActionSolutionDto } from "./dto/review-store-action-solution.dto";
+import { StoreActionPhotoReviewService } from "../application/store-action-photo-review.service";
+import { PhotoMediaUploadBufferGuardInterceptor } from "./photo-media-upload-buffer-guard.interceptor";
 
 type StoreActionPlanRequest = {
   user: AuthenticatedUser;
@@ -16,7 +21,75 @@ type StoreActionPlanRequest = {
 
 @Controller("store-actions")
 export class StoreActionPlanController {
-  constructor(private readonly storeActionPlanService: StoreActionPlanService) {}
+  constructor(
+    private readonly storeActionPlanService: StoreActionPlanService,
+    private readonly photoReviewService: StoreActionPhotoReviewService,
+  ) {}
+
+  @Get("plans/:actionPlanId/photo-review")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER")
+  getPhotoReview(@Req() request: StoreActionPlanRequest, @Param("actionPlanId") actionPlanId: string) {
+    return this.photoReviewService.get({ ...actorInput(request.user), actionPlanId });
+  }
+
+  @Get("plans/:actionPlanId/evidence/:mediaAssetId/content/:variant")
+  @Header("Cache-Control", "private, no-store")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER")
+  async readSolutionEvidence(@Req() request: StoreActionPlanRequest,
+    @Param("actionPlanId") actionPlanId: string, @Param("mediaAssetId") mediaAssetId: string,
+    @Param("variant", new ParseEnumPipe(["canonical", "thumbnail"])) variant: "canonical" | "thumbnail") {
+    const content = await this.photoReviewService.readContent({
+      ...actorInput(request.user), actionPlanId, mediaAssetId, variant,
+    });
+    return new StreamableFile(content.body, { type: content.contentType });
+  }
+
+  @Post("plans/:actionPlanId/solution/uploads")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER")
+  @UseInterceptors(new PhotoMediaUploadBufferGuardInterceptor(), FileInterceptor("file", {
+    limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 0 },
+  }))
+  uploadSolution(
+    @Req() request: StoreActionPlanRequest,
+    @Param("actionPlanId") actionPlanId: string,
+    @UploadedFile(new ParseFilePipeBuilder()
+      .addFileTypeValidator({ fileType: /^(image\/jpeg|image\/png|image\/webp)$/ })
+      .addMaxSizeValidator({ maxSize: 15 * 1024 * 1024 })
+      .build({ fileIsRequired: true })) file: { buffer: Buffer; mimetype: string; size: number },
+  ) {
+    return this.photoReviewService.upload({ ...actorInput(request.user), actionPlanId,
+      contentType: file.mimetype, contentLength: file.size, contentBody: file.buffer });
+  }
+
+  @Post("plans/:actionPlanId/solution/uploads/:mediaAssetId/finalize")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER")
+  finalizeSolution(@Req() request: StoreActionPlanRequest, @Param("actionPlanId") actionPlanId: string,
+    @Param("mediaAssetId") mediaAssetId: string) {
+    return this.photoReviewService.finalize({ ...actorInput(request.user), actionPlanId, mediaAssetId });
+  }
+
+  @Post("plans/:actionPlanId/solution-attempts")
+  @RequireScope("authenticated")
+  @RequireRoles("STORE_MANAGER")
+  submitSolution(@Req() request: StoreActionPlanRequest, @Param("actionPlanId") actionPlanId: string,
+    @Body() body: SubmitStoreActionSolutionDto) {
+    return this.photoReviewService.submit({ ...actorInput(request.user), actionPlanId, ...body });
+  }
+
+  @Post("plans/:actionPlanId/solution-attempts/:solutionAttemptId/review")
+  @RequireScope("authenticated")
+  @RequireRoles("REGION_MANAGER")
+  reviewSolution(@Req() request: StoreActionPlanRequest, @Param("actionPlanId") actionPlanId: string,
+    @Param("solutionAttemptId") solutionAttemptId: string, @Body() body: ReviewStoreActionSolutionDto) {
+    if (body.solutionAttemptId !== solutionAttemptId) {
+      throw new BadRequestException("Solution attempt path and body identities do not match");
+    }
+    return this.photoReviewService.review({ ...actorInput(request.user), actionPlanId, ...body });
+  }
 
   @Get("plans")
   @RequireScope("authenticated")
@@ -149,8 +222,21 @@ export class StoreActionPlanController {
 function actorRoleLabel(roleCodes: readonly string[]) {
   const labels = roleCodes.flatMap((roleCode) => {
     if (roleCode === "STORE_MANAGER") return ["Mağaza Müdürü"];
+    if (roleCode === "REGION_MANAGER") return ["Bölge Müdürü"];
     if (roleCode === "SUPER_ADMIN") return ["Sistem Yöneticisi"];
     return [];
   });
   return labels.length > 0 ? labels.join(", ") : "Operasyon kullanıcısı";
+}
+
+function actorInput(user: AuthenticatedUser) {
+  return {
+    actorUserId: user.userId,
+    actorRoleCodes: user.roleCodes,
+    actorScope: user.scope,
+    actorActionScope: user.actionScope,
+    actorRoleScopes: user.roleScopes,
+    actorDisplayName: user.displayName ?? "Operasyon kullanıcısı",
+    actorRoleLabel: actorRoleLabel(user.roleCodes),
+  };
 }

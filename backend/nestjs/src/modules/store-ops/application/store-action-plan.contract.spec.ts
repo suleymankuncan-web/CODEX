@@ -13,7 +13,15 @@ import {
 
 describe("store action plan contract", () => {
   it("keeps lifecycle, priority, and source values aligned with the schema contract", () => {
-    expect(storeActionPlanStatuses).toEqual(["open", "in_progress", "blocked", "closed", "cancelled"]);
+    expect(storeActionPlanStatuses).toEqual([
+      "open",
+      "in_progress",
+      "blocked",
+      "solution_review_pending",
+      "correction_required",
+      "closed",
+      "cancelled",
+    ]);
     expect(storeActionPlanPriorities).toEqual(["high", "medium", "low"]);
     expect(storeActionPlanSourceTypes).toEqual(["kpi_exception", "checklist_remediation"]);
   });
@@ -24,6 +32,10 @@ describe("store action plan contract", () => {
       "store_action_plan.status_updated",
       "store_action_plan.closed",
       "store_action_plan.cancelled",
+      "store_action_solution.submitted",
+      "store_action_solution.resubmitted",
+      "store_action_solution.approved",
+      "store_action_solution.rejected",
     ]);
 
     for (const eventType of Object.values(storeActionPlanAuditEventTypes)) {
@@ -44,6 +56,8 @@ describe("store action plan contract", () => {
     ]);
     expect(getAllowedStoreActionPlanStatusTransitions("in_progress")).toEqual(["blocked", "closed", "cancelled"]);
     expect(getAllowedStoreActionPlanStatusTransitions("blocked")).toEqual(["in_progress", "closed", "cancelled"]);
+    expect(getAllowedStoreActionPlanStatusTransitions("solution_review_pending")).toEqual([]);
+    expect(getAllowedStoreActionPlanStatusTransitions("correction_required")).toEqual(["in_progress", "cancelled"]);
     expect(getAllowedStoreActionPlanStatusTransitions("closed")).toEqual([]);
     expect(getAllowedStoreActionPlanStatusTransitions("cancelled")).toEqual([]);
 

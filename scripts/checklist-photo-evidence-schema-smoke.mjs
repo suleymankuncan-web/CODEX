@@ -39,6 +39,12 @@ const checklistItemEvidenceRollbackSqlPath = join(
   "preflight",
   "checklist-item-evidence-pr4-v1-rollback.sql",
 );
+const storeActionPhotoReviewRollbackSqlPath = join(
+  workspaceRoot,
+  "db",
+  "rollback",
+  "065_store_action_photo_review_v2.rollback.sql",
+);
 const backendDir = join(workspaceRoot, "backend", "nestjs");
 const containerName =
   process.env.MIGRATION_SMOKE_POSTGRES_CONTAINER ?? "store-ops-live-postgres";
@@ -58,6 +64,39 @@ if (!/^store_ops_fresh_migration_smoke(_[a-z0-9_]+)?$/.test(databaseName)) {
 
 runNpm(["run", "smoke:migration:fresh-db"]);
 
+runPsql(`
+  INSERT INTO ops.company (company_id, company_code, company_name)
+  VALUES ('81000000-0000-4000-8000-000000000001', 'STORE_ACTION_V2_ROLLBACK', 'Synthetic V2 rollback guard');
+  INSERT INTO ops.region (region_id, company_id, region_code, region_name)
+  VALUES ('82000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000001', 'V2_GUARD', 'Synthetic V2 guard');
+  INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type)
+  VALUES ('83000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000001',
+    '82000000-0000-4000-8000-000000000001', 'V2_GUARD_STORE', 'Synthetic V2 guard store', 'company');
+  INSERT INTO ops.user_account (user_id, username, email)
+  VALUES ('84000000-0000-4000-8000-000000000001', 'v2-rollback-guard', 'v2-rollback-guard@example.invalid');
+  INSERT INTO ops.store_action_plan (
+    store_action_plan_id, company_id, region_id, store_id, owner_user_id, created_by_user_id,
+    source_type, source_id, title, priority, due_on, resolution_workflow_version
+  ) VALUES (
+    '85000000-0000-4000-8000-000000000001', '81000000-0000-4000-8000-000000000001',
+    '82000000-0000-4000-8000-000000000001', '83000000-0000-4000-8000-000000000001',
+    '84000000-0000-4000-8000-000000000001', '84000000-0000-4000-8000-000000000001',
+    'checklist_remediation', 'rollback-guard', 'Synthetic V2 guard', 'high', CURRENT_DATE, 2
+  );
+`);
+expectPsqlFailure(
+  readFileSync(storeActionPhotoReviewRollbackSqlPath, "utf8"),
+  "store_action_photo_review_v2_rows_exist",
+);
+runPsql(`
+  DELETE FROM ops.store_action_plan WHERE store_action_plan_id = '85000000-0000-4000-8000-000000000001';
+  DELETE FROM ops.store WHERE store_id = '83000000-0000-4000-8000-000000000001';
+  DELETE FROM ops.region WHERE region_id = '82000000-0000-4000-8000-000000000001';
+  DELETE FROM ops.company WHERE company_id = '81000000-0000-4000-8000-000000000001';
+  DELETE FROM ops.user_account WHERE user_id = '84000000-0000-4000-8000-000000000001';
+`);
+
+runPsql(readFileSync(storeActionPhotoReviewRollbackSqlPath, "utf8"));
 runPsql(readFileSync(checklistItemEvidenceRollbackSqlPath, "utf8"));
 runPsql(readFileSync(storageRollbackSqlPath, "utf8"));
 runPsql(readFileSync(rollbackSqlPath, "utf8"));
@@ -67,6 +106,7 @@ const rollbackResidual = Number(
     SELECT
       (to_regclass('ops.media_asset') IS NOT NULL)::int
       + (to_regclass('ops.media_asset_replica') IS NOT NULL)::int
+      + (to_regclass('ops.store_action_solution_upload_intent') IS NOT NULL)::int
       + (EXISTS (
           SELECT 1
           FROM information_schema.columns
@@ -88,6 +128,11 @@ const rollbackResidual = Number(
           SELECT 1
           FROM audit.schema_migration
           WHERE migration_name = '064_checklist_item_evidence_v1.sql'
+        ))::int
+      + (EXISTS (
+          SELECT 1
+          FROM audit.schema_migration
+          WHERE migration_name = '065_store_action_photo_review_v2.sql'
         ))::int;
   `),
 );
@@ -102,6 +147,7 @@ const forwardReapply = queryScalar(`
     to_regclass('ops.media_asset') IS NOT NULL
     AND to_regclass('ops.visual_campaign_submission') IS NOT NULL
     AND to_regclass('ops.media_asset_replica') IS NOT NULL
+    AND to_regclass('ops.store_action_solution_upload_intent') IS NOT NULL
     AND to_regclass('audit.photo_media_reconciliation_run') IS NOT NULL
     AND EXISTS (
       SELECT 1
@@ -119,6 +165,12 @@ const forwardReapply = queryScalar(`
       SELECT 1
       FROM audit.schema_migration
       WHERE migration_name = '064_checklist_item_evidence_v1.sql'
+        AND status = 'succeeded'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM audit.schema_migration
+      WHERE migration_name = '065_store_action_photo_review_v2.sql'
         AND status = 'succeeded'
     )
   THEN 'passed' ELSE 'failed' END;
@@ -280,6 +332,19 @@ function runPsql(input) {
     ],
     input,
   );
+}
+
+function expectPsqlFailure(input, expectedMessage) {
+  const result = spawnSync(
+    "docker",
+    ["exec", "-i", containerName, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1",
+      "-U", databaseUser, "-d", databaseName],
+    { cwd: workspaceRoot, encoding: "utf8", input },
+  );
+  if (result.error) fail(`Failed to start docker: ${result.error.message}`);
+  if (result.status === 0 || !result.stderr.includes(expectedMessage)) {
+    fail(`Expected PostgreSQL failure ${expectedMessage} was not observed.`);
+  }
 }
 
 function queryScalar(sql) {

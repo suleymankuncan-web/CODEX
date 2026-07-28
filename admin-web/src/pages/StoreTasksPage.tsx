@@ -53,6 +53,7 @@ import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '../components/
 import { Textarea } from '../components/ui/textarea'
 import { actionToast } from '../lib/action-toast'
 import './store-tasks-command-canvas.css'
+import { StoreActionPhotoReviewControl } from '../features/store-actions/StoreActionPhotoReviewControl'
 
 const PAGE_SIZE = 20
 type Rail = 'all' | 'completed' | 'cancelled' | 'checklist'
@@ -177,7 +178,7 @@ function StoreTasksWorkspace(input: {
       </CommandCanvasMetricRail>
       <CommandCanvasFilterBar
         search={<label className="tasks-command-search"><Search aria-hidden="true" /><Input aria-label="Görev veya mağaza ara" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Görev veya mağaza ara" /></label>}
-        controls={<><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Duruma göre filtrele"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tüm durumlar</SelectItem>{canMutate ? <><SelectItem value="open">Açık</SelectItem><SelectItem value="in_progress">İşlemde</SelectItem><SelectItem value="blocked">Bloke</SelectItem></> : null}<SelectItem value="closed">Çözüm bildirildi</SelectItem><SelectItem value="cancelled">İptal edildi</SelectItem></SelectContent></Select><Select value={`${sort}:${direction}`} onValueChange={selectMobileSort}><SelectTrigger className="tasks-command-mobile-sort" aria-label="Görevleri sırala"><SelectValue /></SelectTrigger><SelectContent>{(['date', 'task', 'store', 'source', 'priority', 'status'] as SortKey[]).flatMap((key) => [<SelectItem key={`${key}:descending`} value={`${key}:descending`}>{sortLabel(key)} · Azalan</SelectItem>, <SelectItem key={`${key}:ascending`} value={`${key}:ascending`}>{sortLabel(key)} · Artan</SelectItem>])}</SelectContent></Select></>}
+        controls={<><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Duruma göre filtrele"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tüm durumlar</SelectItem>{canMutate ? <><SelectItem value="open">Açık</SelectItem><SelectItem value="in_progress">İşlemde</SelectItem><SelectItem value="blocked">Bloke</SelectItem><SelectItem value="correction_required">Düzeltme gerekli</SelectItem></> : null}{workspace?.view === 'region_manager' || canMutate ? <SelectItem value="solution_review_pending">İnceleme bekliyor</SelectItem> : null}<SelectItem value="closed">Kapandı</SelectItem><SelectItem value="cancelled">İptal edildi</SelectItem></SelectContent></Select><Select value={`${sort}:${direction}`} onValueChange={selectMobileSort}><SelectTrigger className="tasks-command-mobile-sort" aria-label="Görevleri sırala"><SelectValue /></SelectTrigger><SelectContent>{(['date', 'task', 'store', 'source', 'priority', 'status'] as SortKey[]).flatMap((key) => [<SelectItem key={`${key}:descending`} value={`${key}:descending`}>{sortLabel(key)} · Azalan</SelectItem>, <SelectItem key={`${key}:ascending`} value={`${key}:ascending`}>{sortLabel(key)} · Artan</SelectItem>])}</SelectContent></Select></>}
         context={<span>{workspace?.page.total ?? 0} kayıt</span>}
         isUpdating={workspaceQuery.isFetching}
         updatingLabel="Görevler güncelleniyor"
@@ -205,6 +206,8 @@ function StoreTasksWorkspace(input: {
         row={selected}
         scopeSignature={scopeSignature}
         canMutate={canMutate}
+        view={workspace?.view ?? 'store_manager'}
+        canReview={Boolean(workspace?.capabilities.canReview)}
         onOpenChange={(open) => { if (!open) setSelection(null) }}
         onChanged={async (close) => {
           if (close) setSelection(null)
@@ -236,6 +239,8 @@ function TaskDrawer(input: {
   row: TaskRow | null
   scopeSignature: string
   canMutate: boolean
+  view: 'store_manager' | 'region_manager' | 'report_viewer'
+  canReview: boolean
   onOpenChange: (open: boolean) => void
   onChanged: (close: boolean) => Promise<void>
 }) {
@@ -290,7 +295,7 @@ function TaskDrawer(input: {
     onError: (error) => actionToast.error(error, 'Görev işlemi kaydedilemedi.'),
   })
   const values = row ? rowValues(row) : null
-  const active = plan && ['open', 'in_progress', 'blocked'].includes(plan.status)
+  const active = plan && ['open', 'in_progress', 'blocked', 'correction_required'].includes(plan.status)
   const sourceLink = plan
     ? plan.source.deepLink
     : candidate
@@ -311,7 +316,8 @@ function TaskDrawer(input: {
             <section className="tasks-command-facts"><Fact label="Durum" value={statusLabel(values.status)} /><Fact label="Öncelik" value={priorityLabel(values.priority)} /><Fact label="Tarih" value={formatDate(values.date)} /></section>
             {!input.canMutate && plan ? <section><h3>Mağaza müdürü notu</h3><p>{plan.resultNote ?? 'Not eklenmemiş.'}</p></section> : null}
             <section><h3>Kaynak ve sonuç</h3><p>{values.summary}</p>{plan?.resultNote ? <p className="tasks-command-result">{plan.resultNote}</p> : null}{sourceLink ? <Button asChild variant="outline"><Link to={sourceLink}>Kaynağı aç</Link></Button> : <p className="tasks-command-source-unavailable">Kaynak artık kullanılamıyor.</p>}</section>
-            {input.canMutate && (active || candidate) ? <section className="tasks-command-actions"><h3>Görev işlemi</h3>{candidate ? <Input aria-label="Termin tarihi" type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} /> : <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="Kısa not yaz" />}<div>{candidate ? <Button disabled={!dueOn || mutation.isPending} onClick={() => mutation.mutate('create')}>Aksiyon planı oluştur</Button> : <><Button disabled={mutation.isPending || plan?.status === 'in_progress'} onClick={() => mutation.mutate('start')}><PlayCircle data-icon="inline-start" />İşleme al</Button><Button variant="outline" disabled={mutation.isPending || plan?.status === 'blocked'} onClick={() => mutation.mutate('block')}><ShieldAlert data-icon="inline-start" />Bloke et</Button><Button disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('complete')}><CheckCircle2 data-icon="inline-start" />Çözüm bildir</Button><Button variant="ghost" disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('cancel')}><Ban data-icon="inline-start" />İptal et</Button></>}</div></section> : null}
+            {input.canMutate && (active || candidate) ? <section className="tasks-command-actions"><h3>Görev işlemi</h3>{candidate ? <Input aria-label="Termin tarihi" type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} /> : <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="Kısa not yaz" />}<div>{candidate ? <Button disabled={!dueOn || mutation.isPending} onClick={() => mutation.mutate('create')}>Aksiyon planı oluştur</Button> : <><Button disabled={mutation.isPending || plan?.status === 'in_progress'} onClick={() => mutation.mutate('start')}><PlayCircle data-icon="inline-start" />İşleme al</Button><Button variant="outline" disabled={mutation.isPending || plan?.status === 'blocked'} onClick={() => mutation.mutate('block')}><ShieldAlert data-icon="inline-start" />Bloke et</Button>{plan?.resolutionWorkflowVersion !== 2 ? <><Button disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('complete')}><CheckCircle2 data-icon="inline-start" />Çözüm bildir</Button><Button variant="ghost" disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('cancel')}><Ban data-icon="inline-start" />İptal et</Button></> : null}</>}</div></section> : null}
+            {plan ? <StoreActionPhotoReviewControl plan={plan} view={input.view} canReview={input.canReview} onChanged={() => input.onChanged(false)} /> : null}
             {plan ? <section><h3>Denetim geçmişi</h3>{eventsQuery.isLoading ? <p>Geçmiş yükleniyor…</p> : null}{eventsQuery.isError ? <div className="tasks-command-history-state" role="alert"><p>Görev geçmişi alınamadı.</p><Button variant="outline" onClick={() => void eventsQuery.refetch()}>Tekrar dene</Button></div> : null}{!eventsQuery.isLoading && !eventsQuery.isError && auditEvents.length === 0 ? <p>Bu görev için henüz geçmiş kaydı yok.</p> : null}<div className="tasks-command-timeline">{auditEvents.map((event) => <article key={event.eventId}><span /><div><b>{eventLabel(event.eventType)}</b><p>{event.actorDisplayName}{event.actorRoleLabel ? ` · ${event.actorRoleLabel}` : ''}</p>{event.note ? <em>{event.note}</em> : null}<time>{formatDateTime(event.occurredAt)}</time></div></article>)}</div>{eventsQuery.hasNextPage ? <Button variant="outline" disabled={eventsQuery.isFetchingNextPage} onClick={() => void eventsQuery.fetchNextPage()}>{eventsQuery.isFetchingNextPage ? 'Yükleniyor…' : 'Daha fazla göster'}</Button> : null}</section> : null}
           </div>
         </> : null}
@@ -393,7 +399,7 @@ function formatDate(value: string) { if (!value) return '—'; return new Intl.D
 function formatDateTime(value: string) { return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) }
 function priorityLabel(value: string) { return value === 'high' ? 'Yüksek' : value === 'medium' ? 'Orta' : 'Düşük' }
 function priorityRank(value: string) { return value === 'high' ? 0 : value === 'medium' ? 1 : 2 }
-function statusLabel(value: string) { return value === 'candidate' ? 'Plan bekliyor' : value === 'open' ? 'Açık' : value === 'in_progress' ? 'İşlemde' : value === 'blocked' ? 'Bloke' : value === 'closed' ? 'Çözüm bildirildi' : 'İptal edildi' }
+function statusLabel(value: string) { return value === 'candidate' ? 'Plan bekliyor' : value === 'open' ? 'Açık' : value === 'in_progress' ? 'İşlemde' : value === 'blocked' ? 'Bloke' : value === 'solution_review_pending' ? 'İnceleme bekliyor' : value === 'correction_required' ? 'Düzeltme gerekli' : value === 'closed' ? 'Kapandı' : 'İptal edildi' }
 function eventLabel(value: string) { return value.endsWith('.created') ? 'Görev oluşturuldu' : value.endsWith('.status_updated') ? 'Durum güncellendi' : value.endsWith('.closed') ? 'Çözüm bildirildi' : value.endsWith('.cancelled') ? 'Görev iptal edildi' : 'Görev güncellendi' }
 function safeSource(value: string | null | undefined, sourceType: 'kpi_exception' | 'checklist_remediation') {
   if (!value?.startsWith('/') || value.startsWith('//')) return null

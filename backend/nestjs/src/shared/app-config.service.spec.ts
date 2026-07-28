@@ -812,6 +812,17 @@ describe("AppConfigService", () => {
     expect(config.photoMediaStorageEnabled).toBe(false);
     expect(config.photoMediaStorageSyntheticOnly).toBe(true);
     expect(config.photoMediaStorageConfiguration.enabled).toBe(false);
+    expect(config.storeActionPhotoResolutionEnabled).toBe(false);
+    expect(config.regionManagerSolutionReviewEnabled).toBe(false);
+  });
+
+  it("keeps Store Action submission and Region Manager review independently drainable", () => {
+    const config = createConfig({
+      STORE_ACTION_PHOTO_RESOLUTION_ENABLED: "false",
+      REGION_MANAGER_SOLUTION_REVIEW_ENABLED: "true",
+    });
+    expect(config.storeActionPhotoResolutionEnabled).toBe(false);
+    expect(config.regionManagerSolutionReviewEnabled).toBe(true);
   });
 
   it("requires the complete private EU two-bucket and single-fixture posture without ClamAV", () => {

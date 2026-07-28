@@ -231,6 +231,7 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-history.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-visit-plan.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-photo-media.module.ts', { controllers: 1, providers: 10, exports: 1 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops-store-action.module.ts', { imports: 1, controllers: 1, providers: 5, exports: 2 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-competition.module.ts', { controllers: 1, providers: 6, exports: 1 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-incentive.module.ts',
@@ -278,10 +279,9 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts',
-    { imports: 1, controllers: 5, providers: 13, exports: 5 },
+    { imports: 1, controllers: 4, providers: 11, exports: 4 },
   ],
 ])
-
 const workerJobsModuleGraphLimits = new Map([
   [
     'backend/nestjs/src/worker-jobs.module.ts',

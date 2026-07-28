@@ -1,18 +1,6 @@
-import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from './test-fixtures'
+import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { installStoreContractSession as installBaseStoreContractSession } from './store-page-contract-fixtures'
-
-const checklistCommandEvidenceDir = fileURLToPath(
-  new URL('../../docs/evidence/checklist-command-canvas-visits-parity-v1-2026-07-14/', import.meta.url),
-)
-const checklistPlanEvidenceDir = fileURLToPath(
-  new URL('../../docs/evidence/checklist-command-canvas-plan-parity-v1-2026-07-14/', import.meta.url),
-)
-const checklistCutoverEvidenceDir = fileURLToPath(
-  new URL('../../docs/evidence/checklist-command-cutover-v2/p7/', import.meta.url),
-)
 
 const checklistActionStoreIds = [
   '11111111-1111-4111-8111-111111111111',
@@ -24,7 +12,7 @@ function installStoreContractSession(page: Page, persona: 'regionManager') {
   return installBaseStoreContractSession(page, persona, { actionStoreIds: checklistActionStoreIds })
 }
 
-test('region manager command canvas reads bounded real rows and applies server controls', async ({ page }) => {
+test('region manager command canvas reads bounded real rows and applies server controls', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
   const requests: URL[] = []
@@ -94,9 +82,8 @@ test('region manager command canvas reads bounded real rows and applies server c
   await page.getByRole('heading', { name: 'Saha Kontrolleri' }).click()
   await expect(page.getByRole('dialog', { name: /Raporlama dönemi/ })).toHaveCount(0)
 
-  mkdirSync(checklistCommandEvidenceDir, { recursive: true })
   await page.screenshot({
-    path: join(checklistCommandEvidenceDir, 'region-manager-command-canvas-desktop.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-canvas-visits-parity-v1-2026-07-14/region-manager-command-canvas-desktop.png'),
     fullPage: true,
   })
 
@@ -127,9 +114,8 @@ test('region manager command canvas reads bounded real rows and applies server c
   expect(workflowGeometry.height).toBeLessThanOrEqual(workflowGeometry.viewportHeight)
   expect(workflowGeometry.left).toBeGreaterThanOrEqual(0)
   expect(workflowGeometry.right).toBeLessThanOrEqual(workflowGeometry.viewportWidth)
-  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
   await page.screenshot({
-    path: join(checklistCutoverEvidenceDir, 'workflow-drawer-desktop.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/workflow-drawer-desktop.png'),
     fullPage: true,
   })
   await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
@@ -156,7 +142,7 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(resultDrawer.getByText('CHECKLIST SONUCU', { exact: true })).toBeVisible()
   await expect(resultDrawer.getByText('Kabul edilmiş checklist sonucu yok.')).toBeVisible()
   await page.screenshot({
-    path: join(checklistCutoverEvidenceDir, 'result-drawer-desktop.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/result-drawer-desktop.png'),
     fullPage: true,
   })
 })
@@ -229,7 +215,7 @@ test('BM-complete and VM-missing region row opens BM history instead of starting
   await expect.poll(() => startRequests).toBe(0)
 })
 
-test('region manager command canvas stays bounded as mobile cards with 30-row pages', async ({ page }) => {
+test('region manager command canvas stays bounded as mobile cards with 30-row pages', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installStoreContractSession(page, 'regionManager')
   await routeChecklistCommand(page, [])
@@ -250,9 +236,8 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 
-  mkdirSync(checklistCommandEvidenceDir, { recursive: true })
   await page.screenshot({
-    path: join(checklistCommandEvidenceDir, 'region-manager-command-canvas-mobile-390.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-canvas-visits-parity-v1-2026-07-14/region-manager-command-canvas-mobile-390.png'),
     fullPage: true,
   })
 
@@ -265,14 +250,13 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
     return { height: rect.height, left: rect.left, top: rect.top, width: rect.width }
   })
   expect(drawerGeometry).toEqual({ height: 844, left: 0, top: 0, width: 390 })
-  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
   await page.screenshot({
-    path: join(checklistCutoverEvidenceDir, 'workflow-drawer-mobile-390.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/workflow-drawer-mobile-390.png'),
     fullPage: true,
   })
 })
 
-test('region manager plans a full Monday-Saturday week and saves one real API snapshot', async ({ page }) => {
+test('region manager plans a full Monday-Saturday week and saves one real API snapshot', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
   const requests: URL[] = []
@@ -306,9 +290,8 @@ test('region manager plans a full Monday-Saturday week and saves one real API sn
     backgroundColor: 'rgb(112, 73, 232)',
     color: 'rgb(255, 255, 255)',
   })
-  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
   await page.screenshot({
-    path: join(checklistCutoverEvidenceDir, 'weekly-plan-dialog-desktop.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/weekly-plan-dialog-desktop.png'),
     fullPage: true,
   })
 
@@ -328,7 +311,7 @@ test('region manager plans a full Monday-Saturday week and saves one real API sn
   })
 })
 
-test('weekly planner pages 35 scoped stores and keeps the save action reachable on mobile', async ({ page }) => {
+test('weekly planner pages 35 scoped stores and keeps the save action reachable on mobile', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installStoreContractSession(page, 'regionManager')
   const requests: URL[] = []
@@ -361,9 +344,8 @@ test('weekly planner pages 35 scoped stores and keeps the save action reachable 
   expect(geometry.width).toBeCloseTo(390, 0)
   expect(geometry.bottom).toBeCloseTo(844, 0)
   expect(geometry.pageOverflow).toBeLessThanOrEqual(1)
-  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
   await page.screenshot({
-    path: join(checklistCutoverEvidenceDir, 'weekly-plan-dialog-mobile-390.png'),
+    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/weekly-plan-dialog-mobile-390.png'),
     fullPage: true,
   })
 })
@@ -710,7 +692,7 @@ for (const viewport of [
   { width: 390, height: 844, contentWidth: 362, titleY: 202.59, titleHeight: 89.5, metricsY: 322.09, metricHeight: 53, weekY: 389.09, weekHeight: 657, surfaceY: 1060.08 },
   { width: 320, height: 844, contentWidth: 292, titleY: 202.59, titleHeight: 89.5, metricsY: 322.09, metricHeight: 53, weekY: 389.09, weekHeight: 657, surfaceY: 1060.08 },
 ] as const) {
-  test(`plan view preserves the accepted prototype frame at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`plan view preserves the accepted prototype frame at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport)
     await page.clock.setFixedTime(new Date('2026-07-14T09:00:00+03:00'))
     await installStoreContractSession(page, 'regionManager')
@@ -761,9 +743,8 @@ for (const viewport of [
       maxDiffPixelRatio: 0.005,
     })
 
-    mkdirSync(checklistPlanEvidenceDir, { recursive: true })
     await page.screenshot({
-      path: join(checklistPlanEvidenceDir, `production-plan-${viewport.width}x${viewport.height}.png`),
+      path: checklistEvidenceOutputPath(testInfo, `checklist-command-canvas-plan-parity-v1-2026-07-14/production-plan-${viewport.width}x${viewport.height}.png`),
       fullPage: true,
     })
   })
@@ -773,7 +754,7 @@ for (const viewport of [
   { width: 1024, height: 768, evidence: 'region-manager-command-canvas-tablet-1024.png' },
   { width: 320, height: 720, evidence: 'region-manager-command-canvas-mobile-320.png' },
 ] as const) {
-  test(`region manager command canvas has no horizontal overflow at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`region manager command canvas has no horizontal overflow at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport)
     await installStoreContractSession(page, 'regionManager')
     await routeChecklistCommand(page, [])
@@ -786,9 +767,8 @@ for (const viewport of [
     const firstActionBox = await page.getByRole('button', { name: /Checklist yap/ }).first().boundingBox()
     expect(firstActionBox).not.toBeNull()
     expect((firstActionBox?.x ?? viewport.width) + (firstActionBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width)
-    mkdirSync(checklistCommandEvidenceDir, { recursive: true })
     await page.screenshot({
-      path: join(checklistCommandEvidenceDir, viewport.evidence),
+      path: checklistEvidenceOutputPath(testInfo, `checklist-command-canvas-visits-parity-v1-2026-07-14/${viewport.evidence}`),
       fullPage: true,
     })
   })

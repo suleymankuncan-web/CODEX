@@ -404,6 +404,10 @@ export class ChecklistService {
           summary: finding.summary,
           priority: finding.priority,
           dueOn,
+          trustedChecklistFinding: {
+            checklistInstanceId: finding.checklistInstanceId,
+            templateItemId: finding.templateItemId,
+          },
         });
       } catch (error) {
         if (isDuplicateStoreActionPlanConflict(error)) {

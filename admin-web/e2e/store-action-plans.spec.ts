@@ -264,6 +264,82 @@ test('store manager can create an action plan from a projection candidate', asyn
   })
 })
 
+test('[FR-05][AC-05] V2 Store Manager uses photo submission instead of direct close', async ({ page }) => {
+  const plan = { ...storeActionPlansFixture[0], resolutionWorkflowVersion: 2 as const,
+    photoEvidenceVersion: 0, currentSolutionAttemptId: null }
+  await routeStoreTasksApi(page, { plans: [plan] })
+  await page.goto('/store/tasks')
+  await getActionPlanRow(page, plan.title).click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await expect(drawer.getByRole('heading', { name: 'Fotoğraflı çözüm bildirimi' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Görevi kapat' })).toHaveCount(0)
+})
+
+test('[FR-06][AC-06] Region Manager compares finding and solution evidence', async ({ page }) => {
+  const plan = { ...storeActionPlansFixture[0], status: 'solution_review_pending' as const,
+    resolutionWorkflowVersion: 2 as const, photoEvidenceVersion: 1,
+    currentSolutionAttemptId: '00000000-0000-4000-8000-00000000d001' }
+  await routeStoreTasksApi(page, { roleCodes: ['REGION_MANAGER'], plans: [plan] })
+  await page.route(`**/api/store-actions/plans/${plan.actionPlanId}/photo-review`, (route) => route.fulfill({ json: {
+    actionPlanId: plan.actionPlanId, status: plan.status, version: 1,
+    currentAttemptId: plan.currentSolutionAttemptId,
+    findingMediaAssetIds: ['00000000-0000-4000-8000-00000000e001'],
+    attempts: [{ attemptId: plan.currentSolutionAttemptId, attemptNo: 1,
+      resolutionNote: 'Düzen tamamlandı', submittedAt: '2026-06-20T08:00:00.000Z',
+      mediaAssetIds: ['00000000-0000-4000-8000-00000000e002'], review: null }],
+  } }))
+  await page.route('**/api/store-actions/plans/*/evidence/*/content/thumbnail', (route) => route.fulfill({
+    contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+  }))
+  await page.goto('/store/tasks')
+  await getActionPlanRow(page, plan.title).click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await expect(drawer.getByText('Denetim bulgusu')).toBeVisible()
+  await expect(drawer.getByText('Çözüm kanıtı')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Onayla ve kapat' })).toBeEnabled()
+  await expect(drawer.getByRole('button', { name: 'Düzeltme iste' })).toBeDisabled()
+})
+
+test('[EC-02] ambiguous Store Manager retry reuses upload and idempotency identity', async ({ page }) => {
+  const plan = { ...storeActionPlansFixture[0], resolutionWorkflowVersion: 2 as const,
+    photoEvidenceVersion: 0, currentSolutionAttemptId: null }
+  await routeStoreTasksApi(page, { plans: [plan] })
+  let uploadCount = 0
+  let finalizeCount = 0
+  const submitKeys: string[] = []
+  await page.route('**/solution/uploads', (route) => {
+    uploadCount += 1
+    return route.fulfill({ status: 201, json: { mediaAssetId: '00000000-0000-4000-8000-00000000e003' } })
+  })
+  await page.route('**/solution/uploads/*/finalize', (route) => {
+    finalizeCount += 1
+    return route.fulfill({ status: 201, json: { state: 'ready' } })
+  })
+  await page.route('**/solution-attempts', async (route) => {
+    submitKeys.push((route.request().postDataJSON() as { idempotencyKey: string }).idempotencyKey)
+    if (submitKeys.length === 1) return route.fulfill({ status: 504, json: { message: 'Ambiguous timeout' } })
+    return route.fulfill({ status: 201, json: { actionPlanId: plan.actionPlanId,
+      status: 'solution_review_pending', version: 1, currentAttemptId: '00000000-0000-4000-8000-00000000d001',
+      findingMediaAssetIds: [], attempts: [] } })
+  })
+  await page.goto('/store/tasks')
+  await getActionPlanRow(page, plan.title).click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await drawer.getByLabel('Çözüm kanıtı').setInputFiles({
+    name: 'approved-synthetic.png', mimeType: 'image/png', buffer: Buffer.from('approved-fixture'),
+  })
+  await drawer.getByLabel('Çözüm notu').fill('Düzen tamamlandı')
+  const submitButton = drawer.getByRole('button', { name: 'İncelemeye gönder' })
+  await submitButton.click()
+  await expect.poll(() => submitKeys.length).toBe(1)
+  await expect(submitButton).toBeEnabled()
+  await submitButton.click()
+  await expect.poll(() => submitKeys.length).toBe(2)
+  expect(uploadCount).toBe(1)
+  expect(finalizeCount).toBe(1)
+  expect(submitKeys[1]).toBe(submitKeys[0])
+})
+
 function getActionPlanRow(page: Page, title: string) {
   return page.getByTestId('store-action-plan-row').filter({ hasText: title })
 }
@@ -350,10 +426,13 @@ async function routeStoreTasksApi(
       await route.fulfill({ status: 403, json: { message: 'Missing required role' } })
       return
     }
-    const resultOnly = roleCodes.includes('REGION_MANAGER') || roleCodes.includes('REPORT_VIEWER')
+    const regionManager = roleCodes.includes('REGION_MANAGER')
+    const reportViewer = roleCodes.includes('REPORT_VIEWER')
+    const resultOnly = regionManager || reportViewer
     const scopedPlans = state.plans.filter((plan) =>
       assignedStoreIds.includes(plan.storeId)
-      && (!resultOnly || plan.status === 'closed' || plan.status === 'cancelled')
+      && (!resultOnly || plan.status === 'closed' || plan.status === 'cancelled'
+        || (regionManager && plan.status === 'solution_review_pending'))
       && (plan.dueOn.startsWith('2026-06') || plan.closedAt?.startsWith('2026-06')),
     )
     const items = scopedPlans.map((plan) => ({
@@ -375,18 +454,24 @@ async function routeStoreTasksApi(
         deepLink: plan.sourceDeepLink ?? (plan.sourceType === 'checklist_remediation' ? '/store/checklists' : '/store/kpis'),
       },
       events: { items: [], total: 0, limit: 0, hasMore: false },
+      photoEvidenceVersion: plan.photoEvidenceVersion ?? 0,
+      currentSolutionAttemptId: plan.currentSolutionAttemptId ?? null,
+      resolutionWorkflowVersion: plan.resolutionWorkflowVersion ?? 1,
     }))
-    const statuses = resultOnly ? ['closed', 'cancelled'] : ['open', 'in_progress', 'blocked', 'closed', 'cancelled']
+    const statuses = regionManager ? ['solution_review_pending', 'closed', 'cancelled']
+      : resultOnly ? ['closed', 'cancelled']
+        : ['open', 'in_progress', 'blocked', 'correction_required', 'closed', 'cancelled']
     state.listStatuses.push(...statuses)
     await route.fulfill({
       json: {
         data: {
-          view: resultOnly ? 'region_manager' : 'store_manager',
+          view: reportViewer ? 'report_viewer' : regionManager ? 'region_manager' : 'store_manager',
           capabilities: {
             canStart: !resultOnly,
             canUpdate: !resultOnly,
             canComplete: !resultOnly,
             canCancel: !resultOnly,
+            canReview: regionManager,
           },
           items,
           summary: {
@@ -601,7 +686,7 @@ type StoreActionPlanFixture = {
   title: string
   summary: string | null
   priority: 'high' | 'medium' | 'low'
-  status: 'open' | 'in_progress' | 'blocked' | 'closed' | 'cancelled'
+  status: 'open' | 'in_progress' | 'blocked' | 'solution_review_pending' | 'correction_required' | 'closed' | 'cancelled'
   dueOn: string
   resolutionNote: string | null
   closedByUserId: string | null
@@ -611,6 +696,9 @@ type StoreActionPlanFixture = {
   cancelledAt: string | null
   createdAt: string
   updatedAt: string
+  photoEvidenceVersion?: number
+  currentSolutionAttemptId?: string | null
+  resolutionWorkflowVersion?: 1 | 2
 }
 
 const storeActionPlansFixture: StoreActionPlanFixture[] = [

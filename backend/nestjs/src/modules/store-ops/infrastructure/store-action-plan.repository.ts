@@ -35,6 +35,9 @@ export type StoreActionPlan = {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  photoEvidenceVersion: number;
+  currentSolutionAttemptId: string | null;
+  resolutionWorkflowVersion: 1 | 2;
 };
 
 type StoreActionPlanRow = {
@@ -64,6 +67,9 @@ type StoreActionPlanRow = {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+  photo_evidence_version: number;
+  current_solution_attempt_id: string | null;
+  resolution_workflow_version: 1 | 2;
 };
 
 type Queryable = {
@@ -102,6 +108,9 @@ const STORE_ACTION_PLAN_COLUMNS = `
   cancelled_at,
   created_at,
   updated_at
+  ,photo_evidence_version
+  ,current_solution_attempt_id
+  ,resolution_workflow_version
 `;
 
 const STORE_ACTION_PLAN_READ_COLUMNS = `
@@ -135,6 +144,9 @@ const STORE_ACTION_PLAN_READ_COLUMNS = `
   p.cancelled_at,
   p.created_at,
   p.updated_at
+  ,p.photo_evidence_version
+  ,p.current_solution_attempt_id
+  ,p.resolution_workflow_version
 `;
 
 const STORE_ACTION_PLAN_READ_JOINS = `
@@ -340,6 +352,8 @@ export class StoreActionPlanRepository {
     dueOn: string;
     actorDisplayName?: string;
     actorRoleLabel?: string;
+    resolutionWorkflowVersion?: 1 | 2;
+    trustedChecklistFinding?: { checklistInstanceId: string; templateItemId: string };
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<StoreActionPlanRow>(
@@ -358,7 +372,8 @@ export class StoreActionPlanRepository {
             title,
             summary,
             priority,
-            due_on
+            due_on,
+            resolution_workflow_version
           )
           VALUES (
             $1::uuid,
@@ -374,7 +389,8 @@ export class StoreActionPlanRepository {
             $11,
             $12,
             $13,
-            $14::date
+            $14::date,
+            $15
           )
           RETURNING ${STORE_ACTION_PLAN_COLUMNS}
         `,
@@ -393,10 +409,31 @@ export class StoreActionPlanRepository {
           input.summary ?? null,
           input.priority,
           input.dueOn,
+          input.resolutionWorkflowVersion ?? 1,
         ],
       );
 
       const plan = this.mapPlan(result.rows[0]);
+      if (input.trustedChecklistFinding) {
+        await client.query(
+          `INSERT INTO ops.store_action_plan_evidence (
+             store_action_plan_id, company_id, region_id, store_id, media_asset_id,
+             solution_attempt_id, purpose, submitted_by_user_id
+           )
+           SELECT $1::uuid, media.company_id, media.region_id, media.store_id,
+                  media.media_asset_id, NULL, 'finding', media.linked_by_user_id
+           FROM ops.checklist_response_media media
+           JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
+           WHERE media.checklist_instance_id = $2::uuid
+             AND media.template_item_id = $3::uuid
+             AND media.store_id = $4::uuid
+             AND media.unlinked_at IS NULL
+             AND asset.state = 'ready'
+           ON CONFLICT DO NOTHING`,
+          [plan.actionPlanId, input.trustedChecklistFinding.checklistInstanceId,
+            input.trustedChecklistFinding.templateItemId, plan.storeId],
+        );
+      }
       await this.insertAuditEvent(client, {
         actorUserId: input.createdByUserId,
         eventType: storeActionPlanAuditEventTypes.created,
@@ -648,6 +685,9 @@ export class StoreActionPlanRepository {
       cancelledAt: row.cancelled_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      photoEvidenceVersion: Number(row.photo_evidence_version ?? 0),
+      currentSolutionAttemptId: row.current_solution_attempt_id,
+      resolutionWorkflowVersion: row.resolution_workflow_version ?? 1,
     };
   }
 }

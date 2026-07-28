@@ -14,7 +14,7 @@ type MutableOpenApiDocument = {
 };
 
 const storeActionPlanSourceTypeEnum = ["kpi_exception", "checklist_remediation"];
-const storeActionPlanStatusEnum = ["open", "in_progress", "blocked", "closed", "cancelled"];
+const storeActionPlanStatusEnum = ["open", "in_progress", "blocked", "solution_review_pending", "correction_required", "closed", "cancelled"];
 
 const storeActionPlanSchema = {
   type: "object",
@@ -45,6 +45,9 @@ const storeActionPlanSchema = {
     "cancelledAt",
     "createdAt",
     "updatedAt",
+    "photoEvidenceVersion",
+    "currentSolutionAttemptId",
+    "resolutionWorkflowVersion",
   ],
   properties: {
     actionPlanId: { type: "string" },
@@ -76,6 +79,9 @@ const storeActionPlanSchema = {
     cancelledAt: { type: "string", nullable: true },
     createdAt: { type: "string" },
     updatedAt: { type: "string" },
+    photoEvidenceVersion: { type: "integer", minimum: 0 },
+    currentSolutionAttemptId: { type: "string", nullable: true },
+    resolutionWorkflowVersion: { type: "integer", enum: [1, 2] },
   },
 };
 
@@ -168,6 +174,39 @@ export function applyStoreActionPlanOpenApi(document: MutableOpenApiDocument) {
         cancelReason: { type: "string" },
       },
     },
+    SubmitStoreActionSolutionRequest: {
+      type: "object",
+      required: ["resolutionNote", "mediaAssetId", "idempotencyKey", "expectedVersion"],
+      properties: {
+        resolutionNote: { type: "string", minLength: 1, maxLength: 500 },
+        mediaAssetId: { type: "string", format: "uuid" },
+        idempotencyKey: { type: "string", format: "uuid" },
+        expectedVersion: { type: "integer", minimum: 0 },
+      },
+    },
+    ReviewStoreActionSolutionRequest: {
+      type: "object",
+      required: ["solutionAttemptId", "decision", "idempotencyKey", "expectedVersion"],
+      properties: {
+        solutionAttemptId: { type: "string", format: "uuid" },
+        decision: { type: "string", enum: ["approve", "reject"] },
+        reason: { type: "string", maxLength: 500 },
+        idempotencyKey: { type: "string", format: "uuid" },
+        expectedVersion: { type: "integer", minimum: 0 },
+      },
+    },
+    StoreActionPhotoReviewProjection: {
+      type: "object",
+      required: ["actionPlanId", "status", "version", "currentAttemptId", "findingMediaAssetIds", "attempts"],
+      properties: {
+        actionPlanId: { type: "string", format: "uuid" },
+        status: { type: "string", enum: storeActionPlanStatusEnum },
+        version: { type: "integer", minimum: 0 },
+        currentAttemptId: { type: "string", format: "uuid", nullable: true },
+        findingMediaAssetIds: { type: "array", items: { type: "string", format: "uuid" } },
+        attempts: { type: "array", items: { type: "object", additionalProperties: true } },
+      },
+    },
   };
 
   setJsonResponseSchema(
@@ -256,6 +295,16 @@ export function applyStoreActionPlanOpenApi(document: MutableOpenApiDocument) {
     "Command result with the cancelled store action plan.",
     "StoreActionPlanCommandResponse",
   );
+  setJsonResponseSchema(document.paths, "/api/store-actions/plans/{actionPlanId}/photo-review", "get",
+    "Scoped Store Action solution attempt and immutable review history.", "StoreActionPhotoReviewProjection");
+  setJsonRequestSchema(document.paths, "/api/store-actions/plans/{actionPlanId}/solution-attempts", "post",
+    "SubmitStoreActionSolutionRequest");
+  setJsonResponseSchema(document.paths, "/api/store-actions/plans/{actionPlanId}/solution-attempts", "post",
+    "Solution submission awaiting Region Manager review.", "StoreActionPhotoReviewProjection", "201");
+  setJsonRequestSchema(document.paths, "/api/store-actions/plans/{actionPlanId}/solution-attempts/{solutionAttemptId}/review", "post",
+    "ReviewStoreActionSolutionRequest");
+  setJsonResponseSchema(document.paths, "/api/store-actions/plans/{actionPlanId}/solution-attempts/{solutionAttemptId}/review", "post",
+    "Region Manager solution review result.", "StoreActionPhotoReviewProjection", "201");
 }
 
 function queryParameter(name: string, schema: Record<string, unknown>) {

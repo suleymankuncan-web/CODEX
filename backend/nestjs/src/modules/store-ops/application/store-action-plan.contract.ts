@@ -1,4 +1,12 @@
-export const storeActionPlanStatuses = ["open", "in_progress", "blocked", "closed", "cancelled"] as const;
+export const storeActionPlanStatuses = [
+  "open",
+  "in_progress",
+  "blocked",
+  "solution_review_pending",
+  "correction_required",
+  "closed",
+  "cancelled",
+] as const;
 
 export type StoreActionPlanStatus = (typeof storeActionPlanStatuses)[number];
 
@@ -15,6 +23,10 @@ export const storeActionPlanAuditEventTypes = {
   statusUpdated: "store_action_plan.status_updated",
   closed: "store_action_plan.closed",
   cancelled: "store_action_plan.cancelled",
+  solutionSubmitted: "store_action_solution.submitted",
+  solutionResubmitted: "store_action_solution.resubmitted",
+  solutionApproved: "store_action_solution.approved",
+  solutionRejected: "store_action_solution.rejected",
 } as const;
 
 export type StoreActionPlanAuditEventType =
@@ -29,6 +41,8 @@ const allowedStoreActionPlanStatusTransitions = {
   open: ["in_progress", "blocked", "closed", "cancelled"],
   in_progress: ["blocked", "closed", "cancelled"],
   blocked: ["in_progress", "closed", "cancelled"],
+  solution_review_pending: [],
+  correction_required: ["in_progress", "cancelled"],
   closed: [],
   cancelled: [],
 } as const satisfies Record<StoreActionPlanStatus, readonly StoreActionPlanStatus[]>;
