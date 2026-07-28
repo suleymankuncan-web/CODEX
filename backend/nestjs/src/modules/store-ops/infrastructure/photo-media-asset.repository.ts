@@ -43,8 +43,9 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       thumbnail_object_key: string | null;
       canonical_sha256: string | null;
       byte_count: string | null;
+      classification: PhotoMediaAssetRecord["classification"];
     }>(`
-      SELECT media_asset_id, company_id, region_id, store_id, state, raw_object_key,
+      SELECT media_asset_id, company_id, region_id, store_id, classification, state, raw_object_key,
              canonical_object_key, thumbnail_object_key, canonical_sha256, byte_count
              , storage_attempt_id, raw_disposed_at
       FROM ops.media_asset

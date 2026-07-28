@@ -28,6 +28,7 @@ const routeContractById = {
   settings: { persona: 'storeManager', visibleText: /Ayarlar|Profil/i },
   targets: { persona: 'regionManager', visibleText: /Hedefler/i },
   tasks: { persona: 'regionManager', visibleText: /Görevler/i },
+  visualCampaigns: { persona: 'storeManager', visibleText: /kampanyalar/i },
   workforce: { persona: 'regionManager', visibleText: /Norm Kadro/i },
 } satisfies Record<StoreRouteId, RouteContract>
 

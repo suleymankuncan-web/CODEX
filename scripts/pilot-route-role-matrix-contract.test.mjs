@@ -65,7 +65,8 @@ test('pilot route matrix locks the visual merchandiser-only route boundary', () 
   for (const expected of [
     '## Authority',
     'A Visual Merchandiser-only session lands on `/store/checklists` and may use',
-    'only `/store/checklists`, `/store/feed`, and `/store/settings`.',
+    'only `/store/checklists`, `/store/visual-campaigns`, `/store/feed`, and `/store/settings`.',
+    '| `/store/visual-campaigns` | store | secondary | `VISUAL_MERCHANDISER` with an explicit company-scoped publisher or reviewer capability; `STORE_MANAGER` with an assigned campaign store |',
     '| `/store/feed` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
     '| `/store/settings` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
     'Catalog inclusion for `VISUAL_MERCHANDISER` does not imply a Store route',
@@ -74,7 +75,7 @@ test('pilot route matrix locks the visual merchandiser-only route boundary', () 
     requireText(matrix, expected, 'route matrix')
   }
 
-  requireText(appRouteSource, "visualMerchandiser: ['checklists', 'feed', 'settings']", 'store route source')
+  requireText(appRouteSource, "visualMerchandiser: ['checklists', 'visualCampaigns', 'feed', 'settings']", 'store route source')
   requireText(
     appRouteSource,
     'if (isVisualMerchandiserOnly(input.authSummary) && !input.allowVm)',
@@ -85,5 +86,5 @@ test('pilot route matrix locks the visual merchandiser-only route boundary', () 
     'return <StoreForbiddenRoute firstAllowedPath="/store/checklists" />',
     'store route guard',
   )
-  assert.equal((appRouteSource.match(/allowVisualMerchandiser: true/g) ?? []).length, 3)
+  assert.equal((appRouteSource.match(/allowVisualMerchandiser: true/g) ?? []).length, 4)
 })

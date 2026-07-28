@@ -186,6 +186,7 @@ function resolveStoreContractApiFallback(method: string, url: URL): JsonBody | n
   }
   if (path === '/competitions') return emptyList(url)
   if (path === '/mobile/checklists/today') return createChecklistTodayFixture()
+  if (path === '/mobile/visual-campaigns') return emptyList(url)
   if (path === '/checklists/acknowledgements/list') return emptyList(url)
   if (path === '/reports/kpi-config') return createKpiConfig()
   if (path === '/reports/rankings') return createRankingsFixture(url)

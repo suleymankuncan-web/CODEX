@@ -124,6 +124,70 @@ describe("AuthContextService", () => {
     });
   });
 
+  it("partitions explicit permissions by the active role assignment scope", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({
+        roleAssignments: [{
+          role_code: "VM_REFERENCE_PUBLISHER",
+          role_scope_type: "company",
+          scope_type: "company",
+          company_id: "company-1",
+          region_id: null,
+          store_id: null,
+          permission_codes: ["VM_REFERENCE_PUBLISHER"],
+        }],
+      }),
+      { resolveUser: jest.fn(async () => ({ userId: "user-1", roleCodes: [], scope: {} })) } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+
+    const user = await service.resolveUser({ headers: { "x-user-id": "user-1" } });
+
+    expect(user?.permissionScopes).toEqual({
+      VM_REFERENCE_PUBLISHER: {
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+      },
+    });
+  });
+
+  it("does not escalate store-scoped permissions into company scope", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({
+        roleAssignments: [{
+          role_code: "VISUAL_MERCHANDISER", scope_type: "store",
+          role_scope_type: "store",
+          company_id: "company-1", region_id: "region-1", store_id: "store-1",
+          permission_codes: ["VM_REFERENCE_PUBLISHER"],
+        }],
+      }),
+      { resolveUser: jest.fn(async () => ({ userId: "user-1", roleCodes: [], scope: {} })) } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+    const user = await service.resolveUser({ headers: { "x-user-id": "user-1" } });
+    expect(user?.permissionScopes?.VM_REFERENCE_PUBLISHER).toEqual({
+      companyIds: [], regionIds: [], storeIds: ["store-1"],
+    });
+  });
+
+  it("ignores explicit permission grants on malformed role/assignment scope pairs", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({ roleAssignments: [{
+        role_code: "VM_REFERENCE_PUBLISHER", role_scope_type: "company", scope_type: "store",
+        company_id: "company-1", region_id: "region-1", store_id: "store-1",
+        permission_codes: ["VM_REFERENCE_PUBLISHER"],
+      }] }),
+      { resolveUser: jest.fn(async () => ({ userId: "user-1", roleCodes: [], scope: {} })) } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+    const user = await service.resolveUser({ headers: { "x-user-id": "user-1" } });
+    expect(user?.permissionScopes).toBeUndefined();
+  });
+
   it("keeps DB read scope separate from assigned action stores", async () => {
     const service = new AuthContextService(
       { authMode: "mock", allowMockAuth: true } as never,

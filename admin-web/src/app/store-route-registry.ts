@@ -33,6 +33,7 @@ export type StoreRouteId =
   | 'targets'
   | 'tasks'
   | 'workforce'
+  | 'visualCampaigns'
 
 export type StoreNavIconId =
   | 'approvals'
@@ -49,6 +50,7 @@ export type StoreNavIconId =
   | 'targets'
   | 'tasks'
   | 'workforce'
+  | 'visualCampaigns'
 
 export type StoreNavigationItem = {
   id: StoreRouteId
@@ -114,6 +116,7 @@ const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPO
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeIncentiveRoles = ['REPORT_VIEWER', 'REGION_MANAGER']
+const vmCampaignRoles = ['STORE_MANAGER', 'VISUAL_MERCHANDISER']
 
 function roleSet(authSummary: AuthSessionSummary | null) {
   return new Set(authSummary?.user.roleCodes ?? [])
@@ -213,6 +216,26 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     access: (authSummary) =>
       resolveStorePersona(authSummary) !== 'personnel' &&
       canOpenStoreChecklists(authSummary),
+  },
+  {
+    id: 'visualCampaigns',
+    path: '/store/visual-campaigns',
+    routePath: '/store/visual-campaigns',
+    nav: { labelKey: 'storeHome.nav.visualCampaigns', icon: 'visualCampaigns' },
+    allowVisualMerchandiser: true,
+    operatingPolicy: {
+      catalogRoles: vmCampaignRoles,
+      routeAccess: 'role_and_scope',
+      readScope: 'role_scoped',
+      actionScope: 'assigned_store',
+    },
+    modulePreload: () => import('../pages/StoreVmCampaignsPage'),
+    access: (authSummary) => {
+      if (hasAnyRole(authSummary, ['STORE_MANAGER'])) return true
+      const permissions = authSummary?.user.permissionScopes ?? {}
+      return (permissions.VM_REFERENCE_PUBLISHER?.companyIds.length ?? 0) > 0 ||
+        (permissions.VM_VISUAL_REVIEWER?.companyIds.length ?? 0) > 0
+    },
   },
   {
     id: 'tasks',
@@ -445,6 +468,7 @@ const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
     'kpis',
     'competitions',
     'checklists',
+    'visualCampaigns',
     'approvals',
     'targets',
     'incentives',
@@ -464,6 +488,7 @@ const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
     'workforce',
     'tasks',
     'checklists',
+    'visualCampaigns',
     'feed',
     'settings',
   ],
@@ -481,7 +506,7 @@ const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
     'feed',
     'settings',
   ],
-  visualMerchandiser: ['checklists', 'feed', 'settings'],
+  visualMerchandiser: ['checklists', 'visualCampaigns', 'feed', 'settings'],
 }
 
 const routeById = new Map(storeRouteDefinitions.map((route) => [route.id, route]))

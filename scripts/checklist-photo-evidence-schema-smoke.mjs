@@ -45,6 +45,18 @@ const storeActionPhotoReviewRollbackSqlPath = join(
   "rollback",
   "065_store_action_photo_review_v2.rollback.sql",
 );
+const vmReferenceManagementRollbackSqlPath = join(
+  workspaceRoot,
+  "db",
+  "rollback",
+  "066_vm_reference_management_v1.rollback.sql",
+);
+const vmReferenceAuthMatrixSqlPath = join(
+  workspaceRoot,
+  "db",
+  "preflight",
+  "vm-reference-auth-matrix-v1.sql",
+);
 const backendDir = join(workspaceRoot, "backend", "nestjs");
 const containerName =
   process.env.MIGRATION_SMOKE_POSTGRES_CONTAINER ?? "store-ops-live-postgres";
@@ -96,6 +108,7 @@ runPsql(`
   DELETE FROM ops.user_account WHERE user_id = '84000000-0000-4000-8000-000000000001';
 `);
 
+runPsql(readFileSync(vmReferenceManagementRollbackSqlPath, "utf8"));
 runPsql(readFileSync(storeActionPhotoReviewRollbackSqlPath, "utf8"));
 runPsql(readFileSync(checklistItemEvidenceRollbackSqlPath, "utf8"));
 runPsql(readFileSync(storageRollbackSqlPath, "utf8"));
@@ -107,6 +120,9 @@ const rollbackResidual = Number(
       (to_regclass('ops.media_asset') IS NOT NULL)::int
       + (to_regclass('ops.media_asset_replica') IS NOT NULL)::int
       + (to_regclass('ops.store_action_solution_upload_intent') IS NOT NULL)::int
+      + (to_regclass('ops.visual_reference_version') IS NOT NULL)::int
+      + (to_regclass('ops.visual_campaign_command_receipt') IS NOT NULL)::int
+      + (to_regclass('ops.checklist_instance_item_visual_reference') IS NOT NULL)::int
       + (EXISTS (
           SELECT 1
           FROM information_schema.columns
@@ -133,6 +149,11 @@ const rollbackResidual = Number(
           SELECT 1
           FROM audit.schema_migration
           WHERE migration_name = '065_store_action_photo_review_v2.sql'
+        ))::int
+      + (EXISTS (
+          SELECT 1
+          FROM audit.schema_migration
+          WHERE migration_name = '066_vm_reference_management_v1.sql'
         ))::int;
   `),
 );
@@ -148,6 +169,9 @@ const forwardReapply = queryScalar(`
     AND to_regclass('ops.visual_campaign_submission') IS NOT NULL
     AND to_regclass('ops.media_asset_replica') IS NOT NULL
     AND to_regclass('ops.store_action_solution_upload_intent') IS NOT NULL
+    AND to_regclass('ops.visual_reference_version') IS NOT NULL
+    AND to_regclass('ops.visual_campaign_command_receipt') IS NOT NULL
+    AND to_regclass('ops.checklist_instance_item_visual_reference') IS NOT NULL
     AND to_regclass('audit.photo_media_reconciliation_run') IS NOT NULL
     AND EXISTS (
       SELECT 1
@@ -173,15 +197,49 @@ const forwardReapply = queryScalar(`
       WHERE migration_name = '065_store_action_photo_review_v2.sql'
         AND status = 'succeeded'
     )
+    AND EXISTS (
+      SELECT 1
+      FROM audit.schema_migration
+      WHERE migration_name = '066_vm_reference_management_v1.sql'
+        AND status = 'succeeded'
+    )
   THEN 'passed' ELSE 'failed' END;
 `);
 if (forwardReapply !== "passed") {
   fail("Photo evidence migration did not reapply cleanly after pre-use rollback.");
 }
 
+runPsql(`
+  INSERT INTO ops.company (company_id, company_code, company_name)
+  VALUES ('91000000-0000-4000-8000-000000000001', 'VM_PR6_ROLLBACK', 'Synthetic PR6 rollback guard');
+  INSERT INTO ops.user_account (user_id, username, email)
+  VALUES ('94000000-0000-4000-8000-000000000001', 'vm-pr6-rollback', 'vm-pr6-rollback@example.invalid');
+  INSERT INTO ops.visual_reference_set (
+    visual_reference_set_id, company_id, reference_code, reference_name,
+    instructions, created_by_user_id
+  ) VALUES (
+    '95000000-0000-4000-8000-000000000001', '91000000-0000-4000-8000-000000000001',
+    'VM_PR6_ROLLBACK', 'Synthetic PR6 rollback guard', 'Synthetic-only guard',
+    '94000000-0000-4000-8000-000000000001'
+  );
+`);
+expectPsqlFailure(
+  readFileSync(vmReferenceManagementRollbackSqlPath, "utf8"),
+  "Migration 066 rollback refused after VM reference management use.",
+);
+runPsql(`
+  DELETE FROM ops.visual_reference_set
+  WHERE visual_reference_set_id = '95000000-0000-4000-8000-000000000001';
+  DELETE FROM ops.user_account
+  WHERE user_id = '94000000-0000-4000-8000-000000000001';
+  DELETE FROM ops.company
+  WHERE company_id = '91000000-0000-4000-8000-000000000001';
+`);
+
 const smokeOutput = runPsql(readFileSync(smokeSqlPath, "utf8"));
 const storageSmokeOutput = runPsql(readFileSync(storageSmokeSqlPath, "utf8"));
 const itemEvidenceSmokeOutput = runPsql(readFileSync(checklistItemEvidenceSmokeSqlPath, "utf8"));
+const vmAuthSmokeOutput = runPsql(readFileSync(vmReferenceAuthMatrixSqlPath, "utf8"));
 
 const receiptLine = smokeOutput
   .split(/\r?\n/)
@@ -210,6 +268,22 @@ if (
   receipt.rolled_back !== true
 ) {
   fail("Photo evidence rollback-only smoke receipt was not exact.");
+}
+
+const vmAuthReceiptLine = vmAuthSmokeOutput.split(/\r?\n/).map((line) => line.trim())
+  .find((line) => line.startsWith("{") && line.includes("vm_reference_auth_matrix.completed"));
+if (!vmAuthReceiptLine) fail("VM reference authorization matrix did not emit its sanitized receipt.");
+const vmAuthReceipt = JSON.parse(vmAuthReceiptLine);
+if (vmAuthReceipt.positive !== true ||
+    vmAuthReceipt.inactive_actor_denied !== true ||
+    vmAuthReceipt.inactive_company_denied !== true ||
+    vmAuthReceipt.inactive_store_denied !== true ||
+    vmAuthReceipt.missing_persona_denied !== true ||
+    vmAuthReceipt.missing_capability_denied !== true ||
+    vmAuthReceipt.wrong_company_denied !== true ||
+    vmAuthReceipt.store_scoped_capability_denied !== true ||
+    vmAuthReceipt.rolled_back !== true) {
+  fail("VM reference authorization matrix receipt was not exact.");
 }
 
 const storageReceiptLine = storageSmokeOutput
@@ -287,11 +361,13 @@ console.log(
     recoveryBeforeReady: "passed",
     reconciliationReceipt: "append-only",
     preUseRollback: "verified",
+    usedSchemaRollbackRefusal: "verified",
     retentionHistory: "immutable",
     residualFixtureRows,
     rollback: "verified",
     tenantIsolation: "passed",
     tenantConstraintCatalog: "passed",
+    vmAuthorizationMatrix: "passed",
   }),
 );
 

@@ -22,7 +22,7 @@ aliases, shell redirects, Auth-flow routes, and wildcard fallbacks are classifie
 explicitly in the generated inventory instead of being treated as product grants.
 
 A Visual Merchandiser-only session lands on `/store/checklists` and may use
-only `/store/checklists`, `/store/feed`, and `/store/settings`. It is denied
+only `/store/checklists`, `/store/visual-campaigns`, `/store/feed`, and `/store/settings`. It is denied
 every other Store route unless a broader role changes its Store persona.
 
 ## Route Matrix
@@ -54,6 +54,7 @@ every other Store route unless a broader role changes its Store persona.
 | `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
 | `/store/targets` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target distribution requests, coverage and approval state by scope | yes |
 | `/store/checklists` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `VISUAL_MERCHANDISER`, `REPORT_VIEWER`, `SUPER_ADMIN` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks/results by store scope; `STORE_PERSONNEL` is forbidden | yes |
+| `/store/visual-campaigns` | store | secondary | `VISUAL_MERCHANDISER` with an explicit company-scoped publisher or reviewer capability; `STORE_MANAGER` with an assigned campaign store | direct navigation only; runtime flags and grants remain fail-closed | must return to same route after auth verification | publisher/reviewer company scope or exact Store Manager campaign assignment; real media remains disabled | yes |
 | `/store/tasks` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` is forbidden | direct navigation only for eligible roles; region manager sees scoped read-only remediation rows | must return to same route after auth verification | workflow inbox and Store Action task visibility by read/action scope; Store Action commands remain assigned-store scoped | yes |
 | `/store/kpis` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` uses `/store/me` for personal KPI | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
 | `/store/feed` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted | direct navigation only | must return to same route after auth verification | store announcements | yes |
@@ -89,7 +90,7 @@ Current landing resolution:
   `docs/architecture/authorization-operating-truth-v1.json`; their presence is
   evidence of a decision gate, not permission to widen runtime access.
 - Catalog inclusion for `VISUAL_MERCHANDISER` does not imply a Store route
-  entitlement. Visual Merchandiser-only behavior is the three-route boundary
+  entitlement. Visual Merchandiser-only behavior is the four-route boundary
   stated in the Authority section; endpoint authorization remains independently
   enforced.
 - `STORE_PERSONNEL` is intentionally excluded from `/store/approvals` until a

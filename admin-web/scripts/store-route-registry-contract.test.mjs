@@ -46,6 +46,7 @@ const expectedRouteIds = [
   'settings',
   'targets',
   'tasks',
+  'visualCampaigns',
   'workforce',
 ]
 

@@ -196,6 +196,7 @@ export type PhotoMediaAssetRecord = {
   companyId: string;
   regionId: string | null;
   storeId: string | null;
+  classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence" | "derived_artifact";
   state: PhotoMediaAssetState;
   rawObjectKey?: string;
   canonicalObjectKey?: string | null;

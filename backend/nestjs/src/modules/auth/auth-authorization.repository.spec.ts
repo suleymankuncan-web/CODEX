@@ -28,6 +28,8 @@ describe("AuthAuthorizationRepository", () => {
     expect(sql).toContain("(ura.scope_type = 'company' AND c.status = 'active')");
     expect(sql).toContain("region.status = 'active'");
     expect(sql).toContain("store.status = 'active'");
+    expect(sql).toContain("ops.role_permission");
+    expect(sql).toContain("permission_codes");
   });
 
   it("filters action store assignments through active organization hierarchy", async () => {

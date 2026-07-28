@@ -27,6 +27,7 @@ function session(input?: {
       username: 'sanitized.user',
       email: input?.email ?? 'sanitized@example.invalid',
       roleCodes: input?.roleCodes ?? ['STORE_MANAGER', 'REPORT_VIEWER'],
+      permissionScopes: {},
       authorizationContextVersion: input?.authorizationContextVersion ?? 'v1:baseline',
       scope: {
         companyIds: ['company-a'],

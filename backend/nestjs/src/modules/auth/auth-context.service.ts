@@ -25,6 +25,7 @@ export interface AuthenticatedUser {
   assignedStoreIds: string[];
   assignedStoreTypes?: string[];
   roleScopes?: Record<string, AuthReadScope>;
+  permissionScopes?: Record<string, AuthReadScope>;
 }
 
 export interface AuthReadScope {
@@ -51,6 +52,7 @@ export function buildAuthenticatedUser(input: {
   assignedStoreIds?: string[];
   assignedStoreTypes?: string[];
   roleScopes?: Record<string, AuthReadScope>;
+  permissionScopes?: Record<string, AuthReadScope>;
 }): AuthenticatedUser {
   const readScope = normalizeReadScope(input.readScope ?? input.scope);
   const assignedStoreIds = uniqueStrings(
@@ -62,7 +64,7 @@ export function buildAuthenticatedUser(input: {
 
   return {
     userId: input.userId,
-    employeeId: input.employeeId,
+    ...(input.employeeId ? { employeeId: input.employeeId } : {}),
     ...(input.displayName ? { displayName: input.displayName } : {}),
     ...(input.username ? { username: input.username } : {}),
     ...(input.email ? { email: input.email } : {}),
@@ -77,6 +79,9 @@ export function buildAuthenticatedUser(input: {
     ...(assignedStoreTypes.length > 0 ? { assignedStoreTypes } : {}),
     ...(input.roleScopes
       ? { roleScopes: normalizeRoleScopes(input.roleScopes) }
+      : {}),
+    ...(input.permissionScopes
+      ? { permissionScopes: normalizeRoleScopes(input.permissionScopes) }
       : {}),
   };
 }
@@ -352,6 +357,7 @@ export class AuthContextService {
       ],
     };
     const roleScopes = this.buildRoleScopes(assignments);
+    const permissionScopes = this.buildPermissionScopes(assignments);
 
     return buildAuthenticatedUser({
       ...appUser,
@@ -362,6 +368,7 @@ export class AuthContextService {
         assignedStoreTypes,
       },
       roleScopes,
+      ...(Object.keys(permissionScopes).length > 0 ? { permissionScopes } : {}),
     });
   }
 
@@ -400,5 +407,36 @@ export class AuthContextService {
     }
 
     return roleScopes;
+  }
+
+  private buildPermissionScopes(
+    assignments: Awaited<
+      ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
+    >,
+  ) {
+    const permissionScopes: Record<string, AuthReadScope> = {};
+
+    for (const assignment of assignments) {
+      if (assignment.role_scope_type !== assignment.scope_type) continue;
+      for (const permissionCode of assignment.permission_codes ?? []) {
+        const scope = permissionScopes[permissionCode] ?? {
+          companyIds: [],
+          regionIds: [],
+          storeIds: [],
+        };
+        if (assignment.scope_type === "company" && assignment.company_id) {
+          scope.companyIds.push(assignment.company_id);
+        }
+        if (assignment.scope_type === "region" && assignment.region_id) {
+          scope.regionIds.push(assignment.region_id);
+        }
+        if (assignment.scope_type === "store" && assignment.store_id) {
+          scope.storeIds.push(assignment.store_id);
+        }
+        permissionScopes[permissionCode] = scope;
+      }
+    }
+
+    return permissionScopes;
   }
 }

@@ -18,6 +18,7 @@ import {
   StoreSettingsPage,
   StoreTargetsPage,
   StoreTasksPage,
+  StoreVmCampaignsPage,
   StoreWorkforcePage,
 } from './route-loaders'
 import { RouteLoadingState, RouteProgressState, StoreRouteGuard } from './route-states'
@@ -179,6 +180,8 @@ function getStoreRouteElement(routeId: StoreRouteId, authSummary: AuthSessionSum
       return <StoreChecklistsPage authSummary={authSummary} />
     case 'tasks':
       return <StoreTasksPage authSummary={authSummary} />
+    case 'visualCampaigns':
+      return <StoreVmCampaignsPage authSummary={authSummary} />
     case 'kpis':
       return <StoreKpiHighlightsPage authSummary={authSummary} />
     case 'me':

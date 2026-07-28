@@ -98,6 +98,16 @@ test('database invariant preflight SQL is read only and covers every required ch
     // PR-5 disposable migration smoke proves the constraint and preserves the
     // digest-locked V1 diagnostic query.
     'ops.store_action_solution_upload_intent',
+    // Migration 066 binds VM versions, revision-store snapshots, upload
+    // intents, receipts, and checklist pins with composite tenant foreign
+    // keys. The disposable photo-evidence schema smoke owns their negative
+    // cross-tenant and rollback proof.
+    'ops.visual_reference_version',
+    'ops.visual_campaign_revision_store',
+    'ops.visual_reference_upload_intent',
+    'ops.visual_campaign_submission_upload_intent',
+    'ops.visual_campaign_command_receipt',
+    'ops.checklist_instance_item_visual_reference',
     'ops.store',
     'ops.user_role_assignment',
   ])

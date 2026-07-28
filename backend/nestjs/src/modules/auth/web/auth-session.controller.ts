@@ -153,7 +153,11 @@ export class AuthSessionController {
         username: user.username ?? null,
         email: user.email ?? null,
         roleCodes: user.roleCodes,
-        authorizationContextVersion: buildAuthorizationContextVersion(user.roleScopes),
+        authorizationContextVersion: buildAuthorizationContextVersion(
+          user.roleScopes,
+          user.permissionScopes,
+        ),
+        permissionScopes: user.permissionScopes ?? {},
         scope: {
           companyIds: user.scope.companyIds,
           regionIds: user.scope.regionIds,

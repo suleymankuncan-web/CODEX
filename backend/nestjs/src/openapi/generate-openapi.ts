@@ -23,7 +23,7 @@ import {
 } from "./openapi-master-data-schemas";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi"; import { applyWorkforceWorkspaceOpenApi } from "./workforce-workspace-openapi"; import { applyTaskCommandWorkspaceOpenApi } from "./task-command-workspace-openapi"; import { applyRankingOpenApi } from "./ranking-openapi";
-import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
+import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi"; import { applyVmReferenceManagementOpenApi } from "./vm-reference-management-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
 const publicOperations = [
@@ -1103,8 +1103,7 @@ const authSessionResponseSchema = {
         "userId",
         "employeeId",
         "displayName", "username", "email",
-        "roleCodes",
-        "scope",
+        "roleCodes", "permissionScopes", "scope",
         "readScope",
         "actionScope",
         "assignedStoreIds",
@@ -1113,10 +1112,9 @@ const authSessionResponseSchema = {
         userId: { type: "string" },
         employeeId: { type: "string", nullable: true },
         displayName: { type: "string", nullable: true }, username: { type: "string", nullable: true }, email: { type: "string", nullable: true },
-        roleCodes: {
-          type: "array",
-          items: { type: "string" },
-        }, authorizationContextVersion: { type: "string", pattern: "^v1:[a-f0-9]{64}$" },
+        roleCodes: { type: "array", items: { type: "string" } },
+        permissionScopes: { type: "object", additionalProperties: authScopeIdListSchema },
+        authorizationContextVersion: { type: "string", pattern: "^v1:[a-f0-9]{64}$" },
         scope: authScopeIdListSchema,
         readScope: authScopeIdListSchema,
         actionScope: authActionScopeSchema,
@@ -5074,7 +5072,7 @@ async function generateOpenApi(): Promise<void> {
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
-  preserveOpenApiBaselineFromFile(document, outputPath); applyTaskCommandWorkspaceOpenApi(document);
+  preserveOpenApiBaselineFromFile(document, outputPath); applyTaskCommandWorkspaceOpenApi(document); applyVmReferenceManagementOpenApi(document);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
 

@@ -50,12 +50,13 @@ export class PhotoMediaStorageService {
     actorUserId: string;
     actorRoleCodes: string[];
     actorScope: PhotoMediaActorScope;
-    storeId: string;
+    storeId?: string;
+    companyId?: string;
     contentType: string;
     contentLength: number;
     contentBody: Buffer;
     syntheticFixtureAttestation: boolean;
-    classification?: "checklist_evidence" | "action_evidence";
+    classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence";
   }) {
     this.assertEnabled();
     if (
@@ -90,6 +91,7 @@ export class PhotoMediaStorageService {
         actorUserId: input.actorUserId,
         allowedCompanyIds: input.actorScope.companyIds,
         storeId: input.storeId,
+        companyId: input.companyId,
         contentType: input.contentType,
         contentLength: input.contentLength,
         captureSource: "system_generated",
@@ -117,7 +119,7 @@ export class PhotoMediaStorageService {
               : message.includes("storage hard limit")
                 ? "storage_hard_limit"
                 : null;
-      if (reasonCode) {
+      if (reasonCode && input.storeId) {
         await this.repository.recordQuotaDenial({
           actorUserId: input.actorUserId,
           allowedCompanyIds: input.actorScope.companyIds,
@@ -178,11 +180,12 @@ export class PhotoMediaStorageService {
   async initiateApprovedSyntheticFixtureUpload(input: {
     actorUserId: string;
     actorScope: PhotoMediaActorScope;
-    storeId: string;
+    storeId?: string;
+    companyId?: string;
     contentType: string;
     contentLength: number;
     contentBody: Buffer;
-    classification?: "checklist_evidence" | "action_evidence";
+    classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence";
   }) {
     this.assertEnabled();
     if (!this.configuration.syntheticOnly) {
@@ -282,6 +285,7 @@ export class PhotoMediaStorageService {
     actorActionScope: { assignedStoreIds: string[] };
     actorRoleCodes?: string[];
     actorScope?: PhotoMediaActorScope;
+    allowCompanyScopedVmReference?: boolean;
   }) {
     this.assertEnabled();
     if (!this.configuration.syntheticOnly) {
@@ -295,8 +299,12 @@ export class PhotoMediaStorageService {
     const superAdminCompanyAccess =
       input.actorRoleCodes?.includes("SUPER_ADMIN") &&
       input.actorScope?.companyIds.includes(existingAsset.companyId);
+    const publisherCompanyAccess = input.allowCompanyScopedVmReference === true &&
+      existingAsset.classification === "vm_reference" &&
+      existingAsset.storeId === null &&
+      Boolean(input.actorScope?.companyIds.includes(existingAsset.companyId));
     if (
-      !superAdminCompanyAccess &&
+      !superAdminCompanyAccess && !publisherCompanyAccess &&
       (!existingAsset.storeId || !input.actorActionScope.assignedStoreIds.includes(existingAsset.storeId))
     ) {
       throw new ForbiddenException("Photo media upload is outside actor action scope");

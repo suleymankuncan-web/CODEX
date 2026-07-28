@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-07-28T08:23:29.028Z",
+  "generatedAt": "2026-07-28T11:57:46.913Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 228,
-    "backendEndpointsWithoutFrontendCallCount": 48,
-    "controllerCount": 32,
-    "frontendApiCallCount": 180,
-    "frontendRouteCount": 54,
-    "matchedFrontendApiCallCount": 180,
-    "openApiEndpointCount": 228,
-    "routeApiEdgeCount": 233,
+    "backendEndpointCount": 246,
+    "backendEndpointsWithoutFrontendCallCount": 50,
+    "controllerCount": 34,
+    "frontendApiCallCount": 196,
+    "frontendRouteCount": 55,
+    "matchedFrontendApiCallCount": 196,
+    "openApiEndpointCount": 246,
+    "routeApiEdgeCount": 249,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -706,7 +706,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 182
+        "line": 185
       }
     },
     {
@@ -731,7 +731,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 337
+        "line": 360
       }
     },
     {
@@ -757,7 +757,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 200
+        "line": 203
       }
     },
     {
@@ -781,7 +781,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 320
+        "line": 343
       }
     },
     {
@@ -812,7 +812,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 302
+        "line": 325
       }
     },
     {
@@ -842,7 +842,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 181
+        "line": 184
       }
     },
     {
@@ -865,7 +865,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 354
+        "line": 377
       }
     },
     {
@@ -890,7 +890,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 237
+        "line": 260
       }
     },
     {
@@ -913,7 +913,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 254
+        "line": 277
       }
     },
     {
@@ -939,7 +939,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 271
+        "line": 294
       }
     },
     {
@@ -965,7 +965,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 285
+        "line": 308
       }
     },
     {
@@ -990,7 +990,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 425
+        "line": 448
       }
     },
     {
@@ -1021,7 +1021,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 371
+        "line": 394
       }
     },
     {
@@ -1046,7 +1046,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 389
+        "line": 412
       }
     },
     {
@@ -1071,7 +1071,30 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 220
+        "line": 243
+      }
+    },
+    {
+      "id": "route:store:/store/visual-campaigns",
+      "path": "/store/visual-campaigns",
+      "surface": "store",
+      "domain": "visual-campaigns",
+      "kind": "page",
+      "component": "StoreVmCampaignsPage",
+      "componentFile": "admin-web/src/pages/StoreVmCampaignsPage.tsx",
+      "guard": "StoreRouteGuard",
+      "roles": [
+        "STORE_MANAGER",
+        "VISUAL_MERCHANDISER"
+      ],
+      "authorization": {
+        "routeAccess": "role_and_scope",
+        "readScope": "role_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 223
       }
     },
     {
@@ -1095,7 +1118,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 408
+        "line": 431
       }
     }
   ],
@@ -3550,6 +3573,246 @@
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
+      "rawPath": "/api/visual-merchandising/references",
+      "path": "/api/visual-merchandising/references",
+      "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references",
+      "openApiCovered": true,
+      "exportedFunction": "getVmReferences",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 16
+      }
+    },
+    {
+      "id": "api:165",
+      "client": "openapi-generated",
+      "functionName": "fetchOpenApiJson",
+      "method": "GET",
+      "rawPath": "/api/visual-merchandising/references/options",
+      "path": "/api/visual-merchandising/references/options",
+      "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references/options",
+      "openApiCovered": true,
+      "exportedFunction": "getVmReferenceOptions",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 22
+      }
+    },
+    {
+      "id": "api:166",
+      "client": "openapi-generated",
+      "functionName": "fetchOpenApiJson",
+      "method": "GET",
+      "rawPath": "/api/visual-merchandising/references/campaigns",
+      "path": "/api/visual-merchandising/references/campaigns",
+      "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references/campaigns",
+      "openApiCovered": true,
+      "exportedFunction": "getVmReviewerCampaigns",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 28
+      }
+    },
+    {
+      "id": "api:167",
+      "client": "openapi-generated",
+      "functionName": "fetchOpenApiJson",
+      "method": "GET",
+      "rawPath": "/api/visual-merchandising/references/managed-campaigns",
+      "path": "/api/visual-merchandising/references/managed-campaigns",
+      "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references/managed-campaigns",
+      "openApiCovered": true,
+      "exportedFunction": "getVmManagedCampaigns",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 34
+      }
+    },
+    {
+      "id": "api:168",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "openApiCovered": true,
+      "exportedFunction": "reviseVmCampaign",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 49
+      }
+    },
+    {
+      "id": "api:169",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "openApiCovered": true,
+      "exportedFunction": "changeVmAssignmentState",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 67
+      }
+    },
+    {
+      "id": "api:170",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references/{referenceSetId}/retire",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/retire",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/retire",
+      "openApiCovered": true,
+      "exportedFunction": "retireVmReference",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 80
+      }
+    },
+    {
+      "id": "api:171",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references",
+      "path": "/api/visual-merchandising/references",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references",
+      "openApiCovered": true,
+      "exportedFunction": "createVmReference",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 89
+      }
+    },
+    {
+      "id": "api:172",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "openApiCovered": true,
+      "exportedFunction": "configureAndPublishVmReference",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 112
+      }
+    },
+    {
+      "id": "api:173",
+      "client": "form-data",
+      "functionName": "sendFormData",
+      "method": "POST",
+      "rawPath": "/visual-merchandising/references/${encodeURIComponent(input.referenceSetId)}/draft/items/${encodeURIComponent(draftItem.draftItemId)}/uploads?companyId=${encodeURIComponent(input.companyId)}",
+      "path": "/api/visual-merchandising/references/{dynamic}/draft/items/{dynamic}/uploads",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads",
+      "openApiCovered": true,
+      "exportedFunction": "configureAndPublishVmReference",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 128
+      }
+    },
+    {
+      "id": "api:174",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "openApiCovered": true,
+      "exportedFunction": "configureAndPublishVmReference",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 132
+      }
+    },
+    {
+      "id": "api:175",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/visual-merchandising/references/{referenceSetId}/publish",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/publish",
+      "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/publish",
+      "openApiCovered": true,
+      "exportedFunction": "configureAndPublishVmReference",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 139
+      }
+    },
+    {
+      "id": "api:176",
+      "client": "openapi-generated",
+      "functionName": "fetchOpenApiJson",
+      "method": "GET",
+      "rawPath": "/api/mobile/visual-campaigns",
+      "path": "/api/mobile/visual-campaigns",
+      "backendEndpointId": "endpoint:GET:/api/mobile/visual-campaigns",
+      "openApiCovered": true,
+      "exportedFunction": "getVmCampaigns",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 149
+      }
+    },
+    {
+      "id": "api:177",
+      "client": "form-data",
+      "functionName": "sendFormData",
+      "method": "POST",
+      "rawPath": "/mobile/visual-campaigns/${encodeURIComponent(input.assignmentId)}/items/${encodeURIComponent(input.referenceItemId)}/uploads",
+      "path": "/api/mobile/visual-campaigns/{dynamic}/items/{dynamic}/uploads",
+      "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
+      "openApiCovered": true,
+      "exportedFunction": "uploadSyntheticVmEvidence",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 166
+      }
+    },
+    {
+      "id": "api:178",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "openApiCovered": true,
+      "exportedFunction": "uploadSyntheticVmEvidence",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 170
+      }
+    },
+    {
+      "id": "api:179",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
+      "method": "POST",
+      "rawPath": "/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "openApiCovered": true,
+      "exportedFunction": "submitVmCampaign",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 186
+      }
+    },
+    {
+      "id": "api:180",
+      "client": "openapi-generated",
+      "functionName": "fetchOpenApiJson",
+      "method": "GET",
       "rawPath": "/api/workflow/inbox",
       "path": "/api/workflow/inbox",
       "backendEndpointId": "endpoint:GET:/api/workflow/inbox",
@@ -3561,7 +3824,7 @@
       }
     },
     {
-      "id": "api:165",
+      "id": "api:181",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3576,7 +3839,7 @@
       }
     },
     {
-      "id": "api:166",
+      "id": "api:182",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3591,7 +3854,7 @@
       }
     },
     {
-      "id": "api:167",
+      "id": "api:183",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3606,7 +3869,7 @@
       }
     },
     {
-      "id": "api:168",
+      "id": "api:184",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3621,7 +3884,7 @@
       }
     },
     {
-      "id": "api:169",
+      "id": "api:185",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3636,7 +3899,7 @@
       }
     },
     {
-      "id": "api:170",
+      "id": "api:186",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3651,7 +3914,7 @@
       }
     },
     {
-      "id": "api:171",
+      "id": "api:187",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3666,7 +3929,7 @@
       }
     },
     {
-      "id": "api:172",
+      "id": "api:188",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -3681,7 +3944,7 @@
       }
     },
     {
-      "id": "api:173",
+      "id": "api:189",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -3696,7 +3959,7 @@
       }
     },
     {
-      "id": "api:174",
+      "id": "api:190",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3711,7 +3974,7 @@
       }
     },
     {
-      "id": "api:175",
+      "id": "api:191",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3726,7 +3989,7 @@
       }
     },
     {
-      "id": "api:176",
+      "id": "api:192",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -3741,7 +4004,7 @@
       }
     },
     {
-      "id": "api:177",
+      "id": "api:193",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -3756,7 +4019,7 @@
       }
     },
     {
-      "id": "api:178",
+      "id": "api:194",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3771,7 +4034,7 @@
       }
     },
     {
-      "id": "api:179",
+      "id": "api:195",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3786,7 +4049,7 @@
       }
     },
     {
-      "id": "api:180",
+      "id": "api:196",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -5890,6 +6153,90 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/mobile/visual-campaigns",
+      "method": "GET",
+      "path": "/api/mobile/visual-campaigns",
+      "rawControllerPath": "mobile/visual-campaigns",
+      "rawMethodPath": "",
+      "controller": "vm-campaign",
+      "domain": "mobile",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
+        "line": 22
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-content/{variant}",
+      "method": "GET",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-content/{variant}",
+      "rawControllerPath": "mobile/visual-campaigns",
+      "rawMethodPath": ":assignmentId/items/:referenceItemId/reference-content/:variant",
+      "controller": "vm-campaign",
+      "domain": "mobile",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
+        "line": 49
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url",
+      "rawControllerPath": "mobile/visual-campaigns",
+      "rawMethodPath": ":assignmentId/items/:referenceItemId/reference-read-url",
+      "controller": "vm-campaign",
+      "domain": "mobile",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
+        "line": 42
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
+      "rawControllerPath": "mobile/visual-campaigns",
+      "rawMethodPath": ":assignmentId/items/:referenceItemId/uploads",
+      "controller": "vm-campaign",
+      "domain": "mobile",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
+        "line": 27
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "rawControllerPath": "mobile/visual-campaigns",
+      "rawMethodPath": ":assignmentId/items/:referenceItemId/uploads/:mediaAssetId/finalize",
+      "controller": "vm-campaign",
+      "domain": "mobile",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
+        "line": 61
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "rawControllerPath": "mobile/visual-campaigns",
+      "rawMethodPath": ":assignmentId/submissions",
+      "controller": "vm-campaign",
+      "domain": "mobile",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
+        "line": 69
+      }
+    },
+    {
       "id": "endpoint:GET:/api/org/stores",
       "method": "GET",
       "path": "/api/org/stores",
@@ -6769,6 +7116,174 @@
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
         "line": 43
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-merchandising/references",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": "",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 25
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": "",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 45
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/assignments/:assignmentId/commands",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 92
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/draft/items/:draftItemId/uploads",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 57
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/draft/items/:draftItemId/uploads/:mediaAssetId/finalize",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 72
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/draft/items/:templateItemId",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 50
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/publish",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/publish",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/publish",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 80
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/retire",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/retire",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/retire",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 101
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": ":referenceSetId/revisions",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 86
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-merchandising/references/campaigns",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references/campaigns",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": "campaigns",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 35
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-merchandising/references/managed-campaigns",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references/managed-campaigns",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": "managed-campaigns",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 40
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-merchandising/references/options",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references/options",
+      "rawControllerPath": "visual-merchandising/references",
+      "rawMethodPath": "options",
+      "controller": "vm-reference-management",
+      "domain": "visual-merchandising",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/vm-reference-management.controller.ts",
+        "line": 30
       }
     },
     {
@@ -7892,6 +8407,42 @@
       "domain": "mobile"
     },
     {
+      "id": "openapi:GET:/api/mobile/visual-campaigns",
+      "method": "GET",
+      "path": "/api/mobile/visual-campaigns",
+      "domain": "mobile"
+    },
+    {
+      "id": "openapi:GET:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-content/{variant}",
+      "method": "GET",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-content/{variant}",
+      "domain": "mobile"
+    },
+    {
+      "id": "openapi:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url",
+      "domain": "mobile"
+    },
+    {
+      "id": "openapi:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
+      "domain": "mobile"
+    },
+    {
+      "id": "openapi:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
+      "domain": "mobile"
+    },
+    {
+      "id": "openapi:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "method": "POST",
+      "path": "/api/mobile/visual-campaigns/{assignmentId}/submissions",
+      "domain": "mobile"
+    },
+    {
       "id": "openapi:GET:/api/org/stores",
       "method": "GET",
       "path": "/api/org/stores",
@@ -8268,6 +8819,78 @@
       "method": "GET",
       "path": "/api/target-distributions/store-personnel",
       "domain": "target-distributions"
+    },
+    {
+      "id": "openapi:GET:/api/visual-merchandising/references",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/publish",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/publish",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/retire",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/retire",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:POST:/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "method": "POST",
+      "path": "/api/visual-merchandising/references/{referenceSetId}/revisions",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:GET:/api/visual-merchandising/references/campaigns",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references/campaigns",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:GET:/api/visual-merchandising/references/managed-campaigns",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references/managed-campaigns",
+      "domain": "visual-merchandising"
+    },
+    {
+      "id": "openapi:GET:/api/visual-merchandising/references/options",
+      "method": "GET",
+      "path": "/api/visual-merchandising/references/options",
+      "domain": "visual-merchandising"
     },
     {
       "id": "openapi:GET:/api/workflow/inbox",
@@ -8659,14 +9282,14 @@
         "apiCallId": "api:136"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:166",
+        "id": "edge:route:admin:/admin/data-quality:api:182",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:166"
+        "apiCallId": "api:182"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:175",
+        "id": "edge:route:admin:/admin/data-quality:api:191",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:175"
+        "apiCallId": "api:191"
       },
       {
         "id": "edge:route:admin:/admin/data-quality:api:86",
@@ -8714,44 +9337,44 @@
         "apiCallId": "api:75"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:164",
+        "id": "edge:route:admin:/admin/inbox:api:180",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:164"
+        "apiCallId": "api:180"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:165",
+        "id": "edge:route:admin:/admin/inbox:api:181",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:165"
+        "apiCallId": "api:181"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:166",
+        "id": "edge:route:admin:/admin/inbox:api:182",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:166"
+        "apiCallId": "api:182"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:167",
+        "id": "edge:route:admin:/admin/inbox:api:183",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:167"
+        "apiCallId": "api:183"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:168",
+        "id": "edge:route:admin:/admin/inbox:api:184",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:168"
+        "apiCallId": "api:184"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:175",
+        "id": "edge:route:admin:/admin/inbox:api:191",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:175"
+        "apiCallId": "api:191"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:178",
+        "id": "edge:route:admin:/admin/inbox:api:194",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:178"
+        "apiCallId": "api:194"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:179",
+        "id": "edge:route:admin:/admin/inbox:api:195",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:179"
+        "apiCallId": "api:195"
       },
       {
         "id": "edge:route:admin:/admin/incentives:api:79",
@@ -9024,19 +9647,19 @@
         "apiCallId": "api:136"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:164",
+        "id": "edge:route:admin:/admin/operations:api:180",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:164"
+        "apiCallId": "api:180"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:166",
+        "id": "edge:route:admin:/admin/operations:api:182",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:166"
+        "apiCallId": "api:182"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:175",
+        "id": "edge:route:admin:/admin/operations:api:191",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:175"
+        "apiCallId": "api:191"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:86",
@@ -9179,9 +9802,9 @@
         "apiCallId": "api:5"
       },
       {
-        "id": "edge:route:store:/store:api:164",
+        "id": "edge:route:store:/store:api:180",
         "routeId": "route:store:/store",
-        "apiCallId": "api:164"
+        "apiCallId": "api:180"
       },
       {
         "id": "edge:route:store:/store:api:33",
@@ -9329,9 +9952,9 @@
         "apiCallId": "api:75"
       },
       {
-        "id": "edge:route:store:/store/home:api:164",
+        "id": "edge:route:store:/store/home:api:180",
         "routeId": "route:store:/store/home",
-        "apiCallId": "api:164"
+        "apiCallId": "api:180"
       },
       {
         "id": "edge:route:store:/store/home:api:33",
@@ -9374,9 +9997,9 @@
         "apiCallId": "api:130"
       },
       {
-        "id": "edge:route:store:/store/kpis:api:173",
+        "id": "edge:route:store:/store/kpis:api:189",
         "routeId": "route:store:/store/kpis",
-        "apiCallId": "api:173"
+        "apiCallId": "api:189"
       },
       {
         "id": "edge:route:store:/store/me:api:118",
@@ -9484,54 +10107,134 @@
         "apiCallId": "api:156"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:164",
+        "id": "edge:route:store:/store/tasks:api:180",
         "routeId": "route:store:/store/tasks",
+        "apiCallId": "api:180"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:164",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:164"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:166",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:165",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:165"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:166",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:166"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:169",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:167",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:167"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:168",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:168"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:169",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:169"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:170",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:170",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:170"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:171",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:171",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:171"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:174",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:172",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:172"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:173",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:173"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:174",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:174"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:175",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:175",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:175"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:176",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:176",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:176"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:177",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:177",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:177"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:180",
+        "id": "edge:route:store:/store/visual-campaigns:api:178",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:178"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:179",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:179"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:182",
         "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:180"
+        "apiCallId": "api:182"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:185",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:185"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:186",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:186"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:187",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:187"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:190",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:190"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:191",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:191"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:192",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:192"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:193",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:193"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:196",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:196"
       }
     ],
     "apiToEndpoint": [
@@ -9896,34 +10599,34 @@
         "backendEndpointId": "endpoint:PATCH:/api/target-distributions/requests/{requestId}/approve"
       },
       {
-        "id": "edge:api:164:endpoint:GET:/api/workflow/inbox",
+        "id": "edge:api:164:endpoint:GET:/api/visual-merchandising/references",
         "apiCallId": "api:164",
-        "backendEndpointId": "endpoint:GET:/api/workflow/inbox"
+        "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references"
       },
       {
-        "id": "edge:api:165:endpoint:GET:/api/workforce/seller-code-reference",
+        "id": "edge:api:165:endpoint:GET:/api/visual-merchandising/references/options",
         "apiCallId": "api:165",
-        "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-reference"
+        "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references/options"
       },
       {
-        "id": "edge:api:166:endpoint:GET:/api/workforce/seller-code-requests",
+        "id": "edge:api:166:endpoint:GET:/api/visual-merchandising/references/campaigns",
         "apiCallId": "api:166",
-        "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-requests"
+        "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references/campaigns"
       },
       {
-        "id": "edge:api:167:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve",
+        "id": "edge:api:167:endpoint:GET:/api/visual-merchandising/references/managed-campaigns",
         "apiCallId": "api:167",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve"
+        "backendEndpointId": "endpoint:GET:/api/visual-merchandising/references/managed-campaigns"
       },
       {
-        "id": "edge:api:168:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject",
+        "id": "edge:api:168:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/revisions",
         "apiCallId": "api:168",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/revisions"
       },
       {
-        "id": "edge:api:169:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit",
+        "id": "edge:api:169:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands",
         "apiCallId": "api:169",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands"
       },
       {
         "id": "edge:api:17:endpoint:POST:/api/auth/pilot-user-bindings",
@@ -9931,54 +10634,54 @@
         "backendEndpointId": "endpoint:POST:/api/auth/pilot-user-bindings"
       },
       {
-        "id": "edge:api:170:endpoint:GET:/api/workforce/position-options",
+        "id": "edge:api:170:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/retire",
         "apiCallId": "api:170",
-        "backendEndpointId": "endpoint:GET:/api/workforce/position-options"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/retire"
       },
       {
-        "id": "edge:api:171:endpoint:GET:/api/workforce/store-employees",
+        "id": "edge:api:171:endpoint:POST:/api/visual-merchandising/references",
         "apiCallId": "api:171",
-        "backendEndpointId": "endpoint:GET:/api/workforce/store-employees"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references"
       },
       {
-        "id": "edge:api:172:endpoint:GET:/api/workforce/headcount-gap",
+        "id": "edge:api:172:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}",
         "apiCallId": "api:172",
-        "backendEndpointId": "endpoint:GET:/api/workforce/headcount-gap"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{templateItemId}"
       },
       {
-        "id": "edge:api:173:endpoint:GET:/api/org/stores",
+        "id": "edge:api:173:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads",
         "apiCallId": "api:173",
-        "backendEndpointId": "endpoint:GET:/api/org/stores"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads"
       },
       {
-        "id": "edge:api:174:endpoint:GET:/api/store/workforce/workspace",
+        "id": "edge:api:174:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize",
         "apiCallId": "api:174",
-        "backendEndpointId": "endpoint:GET:/api/store/workforce/workspace"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/draft/items/{draftItemId}/uploads/{mediaAssetId}/finalize"
       },
       {
-        "id": "edge:api:175:endpoint:GET:/api/workforce/offboarding-requests",
+        "id": "edge:api:175:endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/publish",
         "apiCallId": "api:175",
-        "backendEndpointId": "endpoint:GET:/api/workforce/offboarding-requests"
+        "backendEndpointId": "endpoint:POST:/api/visual-merchandising/references/{referenceSetId}/publish"
       },
       {
-        "id": "edge:api:176:endpoint:POST:/api/workforce/seller-code-requests",
+        "id": "edge:api:176:endpoint:GET:/api/mobile/visual-campaigns",
         "apiCallId": "api:176",
-        "backendEndpointId": "endpoint:POST:/api/workforce/seller-code-requests"
+        "backendEndpointId": "endpoint:GET:/api/mobile/visual-campaigns"
       },
       {
-        "id": "edge:api:177:endpoint:POST:/api/workforce/offboarding-requests",
+        "id": "edge:api:177:endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
         "apiCallId": "api:177",
-        "backendEndpointId": "endpoint:POST:/api/workforce/offboarding-requests"
+        "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads"
       },
       {
-        "id": "edge:api:178:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
+        "id": "edge:api:178:endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
         "apiCallId": "api:178",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve"
+        "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize"
       },
       {
-        "id": "edge:api:179:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
+        "id": "edge:api:179:endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions",
         "apiCallId": "api:179",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject"
+        "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions"
       },
       {
         "id": "edge:api:18:endpoint:POST:/api/auth/role-assignments",
@@ -9986,14 +10689,94 @@
         "backendEndpointId": "endpoint:POST:/api/auth/role-assignments"
       },
       {
-        "id": "edge:api:180:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
+        "id": "edge:api:180:endpoint:GET:/api/workflow/inbox",
         "apiCallId": "api:180",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
+        "backendEndpointId": "endpoint:GET:/api/workflow/inbox"
+      },
+      {
+        "id": "edge:api:181:endpoint:GET:/api/workforce/seller-code-reference",
+        "apiCallId": "api:181",
+        "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-reference"
+      },
+      {
+        "id": "edge:api:182:endpoint:GET:/api/workforce/seller-code-requests",
+        "apiCallId": "api:182",
+        "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-requests"
+      },
+      {
+        "id": "edge:api:183:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve",
+        "apiCallId": "api:183",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve"
+      },
+      {
+        "id": "edge:api:184:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject",
+        "apiCallId": "api:184",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject"
+      },
+      {
+        "id": "edge:api:185:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit",
+        "apiCallId": "api:185",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit"
+      },
+      {
+        "id": "edge:api:186:endpoint:GET:/api/workforce/position-options",
+        "apiCallId": "api:186",
+        "backendEndpointId": "endpoint:GET:/api/workforce/position-options"
+      },
+      {
+        "id": "edge:api:187:endpoint:GET:/api/workforce/store-employees",
+        "apiCallId": "api:187",
+        "backendEndpointId": "endpoint:GET:/api/workforce/store-employees"
+      },
+      {
+        "id": "edge:api:188:endpoint:GET:/api/workforce/headcount-gap",
+        "apiCallId": "api:188",
+        "backendEndpointId": "endpoint:GET:/api/workforce/headcount-gap"
+      },
+      {
+        "id": "edge:api:189:endpoint:GET:/api/org/stores",
+        "apiCallId": "api:189",
+        "backendEndpointId": "endpoint:GET:/api/org/stores"
       },
       {
         "id": "edge:api:19:endpoint:POST:/api/auth/action-store-assignments",
         "apiCallId": "api:19",
         "backendEndpointId": "endpoint:POST:/api/auth/action-store-assignments"
+      },
+      {
+        "id": "edge:api:190:endpoint:GET:/api/store/workforce/workspace",
+        "apiCallId": "api:190",
+        "backendEndpointId": "endpoint:GET:/api/store/workforce/workspace"
+      },
+      {
+        "id": "edge:api:191:endpoint:GET:/api/workforce/offboarding-requests",
+        "apiCallId": "api:191",
+        "backendEndpointId": "endpoint:GET:/api/workforce/offboarding-requests"
+      },
+      {
+        "id": "edge:api:192:endpoint:POST:/api/workforce/seller-code-requests",
+        "apiCallId": "api:192",
+        "backendEndpointId": "endpoint:POST:/api/workforce/seller-code-requests"
+      },
+      {
+        "id": "edge:api:193:endpoint:POST:/api/workforce/offboarding-requests",
+        "apiCallId": "api:193",
+        "backendEndpointId": "endpoint:POST:/api/workforce/offboarding-requests"
+      },
+      {
+        "id": "edge:api:194:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
+        "apiCallId": "api:194",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve"
+      },
+      {
+        "id": "edge:api:195:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
+        "apiCallId": "api:195",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject"
+      },
+      {
+        "id": "edge:api:196:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
+        "apiCallId": "api:196",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
       },
       {
         "id": "edge:api:2:endpoint:GET:/api/auth/lookups/users/search",
@@ -10637,6 +11420,13 @@
         "frontendCallCount": 14
       },
       {
+        "id": "controller:vm-reference-management",
+        "controller": "vm-reference-management",
+        "domain": "visual-merchandising",
+        "endpointCount": 12,
+        "frontendCallCount": 12
+      },
+      {
         "id": "controller:store-action-plan",
         "controller": "store-action-plan",
         "domain": "store-actions",
@@ -10684,6 +11474,13 @@
         "domain": "checklists",
         "endpointCount": 5,
         "frontendCallCount": 5
+      },
+      {
+        "id": "controller:vm-campaign",
+        "controller": "vm-campaign",
+        "domain": "mobile",
+        "endpointCount": 6,
+        "frontendCallCount": 4
       },
       {
         "id": "controller:admin-sales-target-incentive",
@@ -10870,6 +11667,8 @@
       "endpoint:DELETE:/api/mobile/auth/sessions/{sessionId}",
       "endpoint:POST:/api/mobile/checklists/instances/{checklistInstanceId}/acknowledge",
       "endpoint:GET:/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence/{mediaAssetId}/content/{variant}",
+      "endpoint:GET:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-content/{variant}",
+      "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url",
       "endpoint:GET:/api/reports/leaderboards/closed",
       "endpoint:GET:/api/reports/store-monthly-package.xlsx",
       "endpoint:GET:/api/snapshots/lookups",
