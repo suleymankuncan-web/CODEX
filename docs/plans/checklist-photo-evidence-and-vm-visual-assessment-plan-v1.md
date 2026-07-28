@@ -25,6 +25,22 @@ This is a plan, not runtime authority. It authorizes no database change,
 provider activation, staging write, production operation, paid service, or AI
 model selection by itself.
 
+## PR-4 Synthetic Fixture Safety Decision
+
+The owner approved a bounded PR-4 exception on 2026-07-27. Synthetic staging
+may accept exactly one pre-approved, byte-identical fixture through a
+server-side SHA-256 identity check. This is fixture identity verification, not
+malware scanning. A changed byte, an empty or multiple-digest allowlist, client
+attestation, or an elevated role cannot broaden the accepted input.
+
+The fixture digest is checked before the raw provider write and again after the
+raw object is read for finalization. A mismatch fails closed before image
+processing, canonical/recovery writes, evidence linking, or readiness. Camera
+and arbitrary gallery input remain disabled. Real photographs remain `No-Go`
+until a separate R5 owner decision configures and proves a genuine malware-
+scanner adapter, privacy/provider gates, and representative-device evidence.
+No Render ClamAV service is authorized for this synthetic PR-4 proof.
+
 ## Executive Decision
 
 HR Axis will treat photographs as versioned operational evidence, not as
@@ -482,6 +498,9 @@ checklist result and never blocks the manual workflow.
    short-lived upload capability.
 5. Finalization verifies uploaded bytes, detects the real format, decodes with
    bounded pixels, strips metadata, re-encodes, scans, and creates derivatives.
+   During the bounded PR-4 synthetic proof, `scans` means the locked fixture
+   identity check above; it does not authorize or represent real-media malware
+   scanning.
 6. Only `ready` evidence appears in the checklist and can satisfy `required`.
 7. Completion performs a final server-side evidence-policy check in the same
    protected command boundary as checklist completion.
@@ -1208,7 +1227,8 @@ Stop before implementation or merge if:
   from server records;
 - the design needs a public bucket or permanent URL;
 - safe decode/re-encode, quotas, scanning/quarantine, or metadata stripping is
-  unavailable;
+  unavailable; the only exception is the locked single-fixture PR-4 identity
+  proof, which cannot accept real media;
 - rollback requires deleting or rewriting completed checklist history;
 - existing V1 actions would be silently reclassified;
 - AI output can reach any official score, KPI, ranking, competition, action

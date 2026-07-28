@@ -1,4 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
+import { expectNoCriticalAxeViolations } from './axe-test-utils'
+import { resolve } from 'node:path'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
@@ -91,6 +93,32 @@ test('checklist session modal keeps footer usable on mobile width', async ({ pag
   await expectLocatorNoHorizontalOverflow(dialog)
 })
 
+test('synthetic evidence controls stay usable, scoped and accessible at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 })
+  const requests = createRequestLog()
+  await setupChecklistSessionPolicyPage(page, requests)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: '4', exact: true }).click()
+
+  const evidence = dialog.locator('section[aria-label]:has(input[type="file"])')
+  await expect(evidence).toBeVisible()
+  await expect(evidence.getByRole('button', { name: 'Kamera' })).toBeDisabled()
+  await expect(evidence.locator('button', { hasText: 'Onaylı HR Axis test logosunu seç' })).toBeVisible()
+  await evidence.locator('input[type="file"]').setInputFiles(
+    resolve(process.cwd(), 'src/assets/hr-axis-06-mark-transparent.png'),
+  )
+  await expect(evidence.getByText(/1\/2/)).toBeVisible()
+  await evidence.getByRole('button', { name: /nizle/i }).click()
+  await expect(evidence.locator('img')).toBeVisible()
+  await evidence.getByRole('button', { name: /kald/i }).click()
+  await expect(evidence.getByText(/0\/2/)).toBeVisible()
+  await expectPageNoHorizontalOverflow(page)
+  await expectLocatorNoHorizontalOverflow(dialog)
+  await expectNoCriticalAxeViolations(page)
+})
+
 function createRequestLog(): ChecklistRequestLog {
   return {
     completes: [],
@@ -164,6 +192,55 @@ async function setupChecklistSessionPolicyPage(page: Page, requests: ChecklistRe
       },
     })
   })
+  let evidenceVersion = 0
+  let linked = false
+  await page.route('**/api/mobile/checklists/instances/*/items/*/evidence**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+    if (pathname.endsWith('/uploads') && request.method() === 'POST') {
+      await route.fulfill({ json: { mediaAssetId: '77777777-7777-4777-8777-777777777777', state: 'uploaded' } })
+      return
+    }
+    if (pathname.endsWith('/finalize') && request.method() === 'POST') {
+      await route.fulfill({ json: { mediaAssetId: '77777777-7777-4777-8777-777777777777', state: 'ready', rawDisposal: 'verified' } })
+      return
+    }
+    if (pathname.endsWith('/content/thumbnail') && request.method() === 'GET') {
+      await route.fulfill({
+        body: Buffer.from('UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAUAmJaQAA3AA/v89WAAAAA==', 'base64'),
+        contentType: 'image/webp',
+      })
+      return
+    }
+    if (request.method() === 'POST') {
+      linked = true
+      evidenceVersion += 1
+    } else if (request.method() === 'DELETE') {
+      linked = false
+      evidenceVersion += 1
+    }
+    await route.fulfill({
+      json: {
+        command: { message: linked ? 'linked' : 'unlinked', status: linked ? 'linked' : 'unlinked' },
+        data: {
+          evidence: {
+            checklistInstanceId,
+            templateItemId,
+            evidenceVersion,
+            evidencePolicy: 'optional',
+            maxEvidenceCount: 2,
+            idempotent: false,
+            evidence: linked ? [{
+              mediaAssetId: '77777777-7777-4777-8777-777777777777',
+              displayOrder: 0,
+              captureSource: 'system_generated',
+              thumbnailAvailable: true,
+            }] : [],
+          },
+        },
+      },
+    })
+  })
 }
 
 async function routeChecklistCommandShell(page: Page) {
@@ -209,11 +286,18 @@ function createAuthSessionFixture() {
 function createMobileChecklistTodayFixture() {
   return {
     data: {
+      evidenceCapabilities: {
+        captureAvailable: true,
+        syntheticFixtureOnly: true,
+        unavailableReason: null,
+      },
       activeInstances: [
         {
           checklistInstanceId,
           checklistTemplateId: templateId,
           responses: [],
+          evidenceVersion: 0,
+          evidence: [],
           startedAt: '2026-05-20T12:00:00.000Z',
           status: 'in_progress',
           storeId,
@@ -239,6 +323,8 @@ function createMobileChecklistTodayFixture() {
               sectionName: 'Gorsel Sunum',
               templateItemId,
               weight: 100,
+              evidencePolicy: 'optional',
+              maxEvidenceCount: 2,
             },
           ],
           templateCode: 'BM_VISIT_V1',

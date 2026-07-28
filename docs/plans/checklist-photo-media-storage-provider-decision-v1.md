@@ -1,9 +1,24 @@
 # Checklist Photo Media Storage Provider Decision V1
 
-Status: owner-approved for PR-3 synthetic staging foundation only
+Status: owner-approved for PR-3 foundation and PR-4 single-fixture staging proof
 Date: 2026-07-27
 Risk: R5
 Provider: Cloudflare R2 Standard
+
+## PR-4 Scanner Revision
+
+The owner approved a zero-incremental-cost synthetic-only revision on
+2026-07-27. PR-4 staging accepts exactly one server-configured SHA-256 fixture
+digest and re-verifies the raw bytes at finalization. This adapter reports
+`fixture_identity_only`; it is not a malware scanner and cannot satisfy a
+real-media safety capability. Empty, malformed, or multiple fixture digests
+fail enabled startup. Camera and arbitrary gallery input remain disabled.
+
+No Render ClamAV service and no operational `PHOTO_MEDIA_CLAMAV_*` variables
+are part of this bounded proof. Real photographs remain `No-Go` until a
+separate R5 owner decision selects, contracts, configures, and proves a genuine
+malware-scanner adapter. The provider-neutral scanner port is retained so that
+future choice does not rewrite storage or checklist workflow contracts.
 
 ## Locked Decision
 
@@ -88,10 +103,11 @@ not allowed because it would prevent raw and rehearsal cleanup.
 
 The merged code remains disabled by default. Before an authenticated staging
 smoke, the owner must configure and privately verify both EU buckets, separate
-credentials, disabled public delivery, the `locked/` 30-day lock rules,
-ClamAV connectivity and the
-approved hard ceilings. No secret, account ID or real bucket name belongs in
-Git, logs or evidence receipts.
+credentials, disabled public delivery, the `locked/` 30-day lock rules, the
+exact single-fixture identity adapter, and the approved hard ceilings. No
+secret, account ID or real bucket name belongs in Git, logs or evidence
+receipts. A genuine malware scanner remains mandatory before any real-media
+activation.
 
 Only synthetic fixtures are permitted. Real photographs remain No-Go until the
 privacy notice, lawful purpose, provider terms, pilot permission, mobile proof

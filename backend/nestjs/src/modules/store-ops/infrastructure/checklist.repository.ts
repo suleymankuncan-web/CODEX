@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { ChecklistEvidenceRepository } from "./checklist-evidence.repository";
 import {
   ChecklistTemplateDraftForPublish,
   ChecklistTemplateResponseType,
@@ -13,7 +14,11 @@ import { parseChecklistScorePolicy } from "../application/checklist-score-policy
 
 @Injectable()
 export class ChecklistRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly evidenceRepository: ChecklistEvidenceRepository;
+
+  constructor(private readonly databaseService: DatabaseService) {
+    this.evidenceRepository = new ChecklistEvidenceRepository(databaseService);
+  }
 
   async createTemplate(input: CreateChecklistTemplateInput): Promise<ChecklistTemplateSummary> {
     return this.databaseService.withTransaction(async (client) => {
@@ -108,6 +113,8 @@ export class ChecklistRepository {
           weight: string;
           max_score: string;
           expected_value: string | null;
+          evidence_policy: "none" | "optional" | "required";
+          max_evidence_count: number;
         }>(
           `
             INSERT INTO ops.checklist_template_item (
@@ -118,9 +125,11 @@ export class ChecklistRepository {
               response_type,
               weight,
               max_score,
-              expected_value
+              expected_value,
+              evidence_policy,
+              max_evidence_count
             )
-            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING
               template_item_id,
               section_name,
@@ -129,7 +138,9 @@ export class ChecklistRepository {
               response_type,
               weight,
               max_score,
-              expected_value
+              expected_value,
+              evidence_policy,
+              max_evidence_count
           `,
           [
             template.checklist_template_id,
@@ -140,6 +151,8 @@ export class ChecklistRepository {
             item.weight,
             item.maxScore,
             item.expectedValue ?? null,
+            item.evidencePolicy ?? "none",
+            item.maxEvidenceCount ?? 0,
           ],
         );
         const row = itemResult.rows[0];
@@ -152,6 +165,8 @@ export class ChecklistRepository {
           weight: Number(row.weight),
           maxScore: Number(row.max_score),
           expectedValue: row.expected_value ?? undefined,
+          evidencePolicy: row.evidence_policy,
+          maxEvidenceCount: Number(row.max_evidence_count),
         });
       }
 
@@ -196,9 +211,11 @@ export class ChecklistRepository {
     const result = await this.databaseService.query<{
       template_item_id: string;
       weight: string;
+      evidence_policy: "none" | "optional" | "required";
+      max_evidence_count: number;
     }>(
       `
-        SELECT cti.template_item_id, cti.weight
+        SELECT cti.template_item_id, cti.weight, cti.evidence_policy, cti.max_evidence_count
         FROM ops.checklist_template_item cti
         WHERE cti.checklist_template_id = $1::uuid
         ORDER BY cti.item_no ASC
@@ -214,6 +231,8 @@ export class ChecklistRepository {
       items: result.rows.map((row) => ({
         templateItemId: row.template_item_id,
         weight: Number(row.weight),
+        evidencePolicy: row.evidence_policy ?? "none",
+        maxEvidenceCount: Number(row.max_evidence_count ?? 0),
       })),
     };
   }
@@ -466,18 +485,33 @@ export class ChecklistRepository {
       total_score: string;
       compliance_rate: string;
       missing_mandatory_count: string;
+      missing_required_evidence_count: string;
     }>(
       `
         SELECT
           COALESCE(SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight), 0)::numeric(12,2)::text AS total_score,
           COALESCE(AVG(CASE WHEN COALESCE(cr.score_value, 0) > 0 THEN 1 ELSE 0 END), 0)::numeric(7,4)::text AS compliance_rate,
           COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
+          ,COUNT(*) FILTER (
+            WHERE policy.evidence_policy = 'required'
+              AND NOT EXISTS (
+                SELECT 1 FROM ops.checklist_response_media media
+                JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
+                WHERE media.checklist_instance_id = ci.checklist_instance_id
+                  AND media.template_item_id = cti.template_item_id
+                  AND media.unlinked_at IS NULL
+                  AND asset.state = 'ready'
+              )
+          )::text AS missing_required_evidence_count
         FROM ops.checklist_template_item cti
         LEFT JOIN ops.checklist_response cr
           ON cr.template_item_id = cti.template_item_id
          AND cr.checklist_instance_id = $1::uuid
         INNER JOIN ops.checklist_instance ci
           ON ci.checklist_template_id = cti.checklist_template_id
+        LEFT JOIN ops.checklist_instance_item_policy policy
+          ON policy.checklist_instance_id = ci.checklist_instance_id
+         AND policy.template_item_id = cti.template_item_id
         WHERE ci.checklist_instance_id = $1::uuid
       `,
       [checklistInstanceId],
@@ -486,128 +520,58 @@ export class ChecklistRepository {
       total_score: "0.00",
       compliance_rate: "0.0000",
       missing_mandatory_count: "0",
+      missing_required_evidence_count: "0",
     };
 
     return {
       totalScore: row.total_score,
       complianceRate: row.compliance_rate,
       missingMandatoryCount: Number(row.missing_mandatory_count),
+      missingRequiredEvidenceCount: Number(row.missing_required_evidence_count ?? 0),
     };
   }
 
-  async completeMobileChecklistInstance(input: {
-    checklistInstanceId: string;
-    actorUserId: string;
-  }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const instanceResult = await client.query<{
-        checklist_instance_id: string;
-        store_id: string;
-        status: string;
-      }>(
-        `
-          SELECT checklist_instance_id, store_id, status
-          FROM ops.checklist_instance
-          WHERE checklist_instance_id = $1::uuid
-          FOR UPDATE
-        `,
-        [input.checklistInstanceId],
-      );
-      const instance = instanceResult.rows[0];
-
-      if (!instance) {
-        throw new BadRequestException("Checklist instance cannot be completed");
-      }
-
-      if (instance.status === "completed") {
-        throw new BadRequestException("Completed checklist instances are locked");
-      }
-
-      const completion = await this.calculateMobileChecklistCompletionWithClient(
-        client,
-        input.checklistInstanceId,
-      );
-
-      if (completion.missingMandatoryCount > 0) {
-        throw new BadRequestException("Mandatory checklist responses are missing");
-      }
-
-      const result = await client.query<{
-        checklist_instance_id: string;
-        status: string;
-        total_score: string;
-        compliance_rate: string;
-        completed_at: string;
-        locked_at: string;
-      }>(
-        `
-          UPDATE ops.checklist_instance
-          SET
-            completed_by_user_id = $2,
-            completed_at = NOW(),
-            locked_at = NOW(),
-            status = 'completed',
-            total_score = $3::numeric,
-            compliance_rate = $4::numeric
-          WHERE checklist_instance_id = $1::uuid
-            AND status IN ('planned', 'in_progress')
-          RETURNING checklist_instance_id, status, total_score, compliance_rate, completed_at, locked_at
-        `,
-        [
-          input.checklistInstanceId,
-          input.actorUserId,
-          completion.totalScore,
-          completion.complianceRate,
-        ],
-      );
-
-      if (!result.rows[0]) {
-        throw new BadRequestException("Checklist instance cannot be completed");
-      }
-
-      return result.rows[0];
-    });
-  }
-
-  private async calculateMobileChecklistCompletionWithClient(
-    client: {
-      query: DatabaseService["query"];
-    },
-    checklistInstanceId: string,
+  linkMobileChecklistItemEvidence(
+    input: Parameters<ChecklistEvidenceRepository["linkMobileChecklistItemEvidence"]>[0],
   ) {
-    const result = await client.query<{
-      total_score: string;
-      compliance_rate: string;
-      missing_mandatory_count: string;
-    }>(
-      `
-        SELECT
-          COALESCE(SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight), 0)::numeric(12,2)::text AS total_score,
-          COALESCE(AVG(CASE WHEN COALESCE(cr.score_value, 0) > 0 THEN 1 ELSE 0 END), 0)::numeric(7,4)::text AS compliance_rate,
-          COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
-        FROM ops.checklist_template_item cti
-        LEFT JOIN ops.checklist_response cr
-          ON cr.template_item_id = cti.template_item_id
-         AND cr.checklist_instance_id = $1::uuid
-        INNER JOIN ops.checklist_instance ci
-          ON ci.checklist_template_id = cti.checklist_template_id
-        WHERE ci.checklist_instance_id = $1::uuid
-      `,
-      [checklistInstanceId],
-    );
-    const row = result.rows[0] ?? {
-      total_score: "0.00",
-      compliance_rate: "0.0000",
-      missing_mandatory_count: "0",
-    };
-
-    return {
-      totalScore: row.total_score,
-      complianceRate: row.compliance_rate,
-      missingMandatoryCount: Number(row.missing_mandatory_count),
-    };
+    return this.evidenceRepository.linkMobileChecklistItemEvidence(input);
   }
 
+  unlinkMobileChecklistItemEvidence(
+    input: Parameters<ChecklistEvidenceRepository["unlinkMobileChecklistItemEvidence"]>[0],
+  ) {
+    return this.evidenceRepository.unlinkMobileChecklistItemEvidence(input);
+  }
+
+  assertMobileChecklistItemEvidenceLink(
+    input: Parameters<ChecklistEvidenceRepository["assertMobileChecklistItemEvidenceLink"]>[0],
+  ) {
+    return this.evidenceRepository.assertMobileChecklistItemEvidenceLink(input);
+  }
+
+  getMobileChecklistItemEvidenceUploadScope(
+    input: Parameters<ChecklistEvidenceRepository["getMobileChecklistItemEvidenceUploadScope"]>[0],
+  ) {
+    return this.evidenceRepository.getMobileChecklistItemEvidenceUploadScope(input);
+  }
+
+  recordMobileChecklistItemEvidenceUploadIntent(
+    input: Parameters<ChecklistEvidenceRepository["recordMobileChecklistItemEvidenceUploadIntent"]>[0],
+  ) {
+    return this.evidenceRepository.recordMobileChecklistItemEvidenceUploadIntent(input);
+  }
+
+  assertMobileChecklistItemEvidenceUploadIntent(
+    input: Parameters<ChecklistEvidenceRepository["assertMobileChecklistItemEvidenceUploadIntent"]>[0],
+  ) {
+    return this.evidenceRepository.assertMobileChecklistItemEvidenceUploadIntent(input);
+  }
+
+  completeMobileChecklistInstance(
+    input: Parameters<ChecklistEvidenceRepository["completeMobileChecklistInstance"]>[0],
+  ) {
+    return this.evidenceRepository.completeMobileChecklistInstance(input);
+  }
   async getMobileChecklistToday(input: {
     actorUserId: string;
     assignedStoreIds: string[];
@@ -722,6 +686,8 @@ export class ChecklistRepository {
             weight: string;
             max_score: string;
             expected_value: string | null;
+            evidence_policy: "none" | "optional" | "required";
+            max_evidence_count: number;
           }>(
             `
               SELECT
@@ -733,7 +699,9 @@ export class ChecklistRepository {
                 cti.response_type,
                 cti.weight,
                 cti.max_score,
-                cti.expected_value
+                cti.expected_value,
+                cti.evidence_policy,
+                cti.max_evidence_count
               FROM ops.checklist_template_item cti
               WHERE cti.checklist_template_id = ANY($1::uuid[])
               ORDER BY cti.checklist_template_id, cti.item_no ASC
@@ -753,6 +721,8 @@ export class ChecklistRepository {
         minScore?: number;
         lowScoreThreshold?: number | null;
         requiresLowScoreNote?: boolean;
+        evidencePolicy: "none" | "optional" | "required";
+        maxEvidenceCount: number;
       }>
     >();
 
@@ -772,6 +742,8 @@ export class ChecklistRepository {
           : {}),
         lowScoreThreshold: scorePolicy.lowScoreThreshold,
         requiresLowScoreNote: scorePolicy.requiresLowScoreNote,
+        evidencePolicy: item.evidence_policy ?? "none",
+        maxEvidenceCount: Number(item.max_evidence_count ?? 0),
       });
       itemsByTemplateId.set(item.checklist_template_id, items);
     }
@@ -784,6 +756,8 @@ export class ChecklistRepository {
       started_at: string | null;
       updated_at: string | null;
       responses_json: unknown;
+      evidence_version_no: number;
+      evidence_json: unknown;
     }>(
       `
         SELECT
@@ -792,6 +766,7 @@ export class ChecklistRepository {
           ci.store_id,
           ci.status,
           ci.started_at,
+          ci.evidence_version_no,
           COALESCE(MAX(cr.responded_at), ci.created_at) AS updated_at,
           COALESCE(
             jsonb_agg(
@@ -803,7 +778,21 @@ export class ChecklistRepository {
               ORDER BY cr.responded_at ASC
             ) FILTER (WHERE cr.response_id IS NOT NULL),
             '[]'::jsonb
-          ) AS responses_json
+          ) AS responses_json,
+          COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+              'templateItemId', media.template_item_id,
+              'mediaAssetId', media.media_asset_id,
+              'displayOrder', media.display_order,
+              'captureSource', asset.capture_source,
+              'thumbnailAvailable', asset.thumbnail_object_key IS NOT NULL
+            ) ORDER BY media.template_item_id, media.display_order)
+            FROM ops.checklist_response_media media
+            JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
+            WHERE media.checklist_instance_id = ci.checklist_instance_id
+              AND media.unlinked_at IS NULL
+              AND asset.state = 'ready'
+          ), '[]'::jsonb) AS evidence_json
         FROM ops.checklist_instance ci
         INNER JOIN ops.checklist_template ct
           ON ct.checklist_template_id = ci.checklist_template_id
@@ -812,7 +801,8 @@ export class ChecklistRepository {
         WHERE ci.store_id = ANY($1::uuid[])
           AND ct.template_type = ANY($2::text[])
           AND ci.status IN ('planned', 'in_progress')
-        GROUP BY ci.checklist_instance_id, ci.checklist_template_id, ci.store_id, ci.status, ci.started_at, ci.created_at
+        GROUP BY ci.checklist_instance_id, ci.checklist_template_id, ci.store_id, ci.status,
+                 ci.started_at, ci.created_at, ci.evidence_version_no
         ORDER BY ci.created_at DESC
       `,
       [storeIds, input.allowedTemplateTypes],
@@ -889,6 +879,8 @@ export class ChecklistRepository {
         status: row.status,
         startedAt: row.started_at,
         updatedAt: row.updated_at,
+        evidenceVersion: Number(row.evidence_version_no ?? 0),
+        evidence: this.mapMobileChecklistEvidence(row.evidence_json),
         responses: this.mapMobileChecklistDraftResponses(row.responses_json),
       })),
       completedThisMonth: completedThisMonth.rows.map((row) => ({
@@ -941,6 +933,27 @@ export class ChecklistRepository {
           : String(row.commentText),
       };
     }).filter((item) => item.templateItemId.length > 0);
+  }
+
+  private mapMobileChecklistEvidence(
+    value: unknown,
+  ): MobileChecklistToday["activeInstances"][number]["evidence"] {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((item) => {
+      const row = item as Record<string, unknown>;
+      return {
+        templateItemId: String(row.templateItemId ?? ""),
+        mediaAssetId: String(row.mediaAssetId ?? ""),
+        displayOrder: Number(row.displayOrder ?? 0),
+        captureSource: String(row.captureSource ?? "system_generated") as
+          | "camera"
+          | "gallery"
+          | "system_generated",
+        thumbnailAvailable: row.thumbnailAvailable === true,
+      };
+    }).filter((item) => item.templateItemId.length > 0 && item.mediaAssetId.length > 0);
   }
 
   private async queryMobileChecklistStores(input: {

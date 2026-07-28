@@ -76,6 +76,8 @@ describe("PhotoMediaStorageService", () => {
     perUserDailyBytesHardLimit: 100 * 1024 * 1024,
     perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
     concurrentProcessingHardLimit: 2,
+    syntheticFixtureSha256Allowlist: [createHash("sha256").update(Buffer.from("approved-fixture")).digest("hex")],
+    safetyAssurance: "fixture_identity_only" as const,
   };
 
   function createService() {
@@ -119,6 +121,7 @@ describe("PhotoMediaStorageService", () => {
   });
 
   it("initiates only attested synthetic fixtures for a scoped super admin", async () => {
+    const approvedFixture = Buffer.from("approved-fixture");
     repository.createInitiatedAsset.mockImplementationOnce(async (input) => ({
       mediaAssetId: input.mediaAssetId,
       companyId: mediaAsset.companyId,
@@ -135,8 +138,8 @@ describe("PhotoMediaStorageService", () => {
       actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [] },
       storeId: mediaAsset.storeId,
       contentType: "image/jpeg",
-      contentLength: 1024,
-      contentBody: Buffer.alloc(1024),
+      contentLength: approvedFixture.byteLength,
+      contentBody: approvedFixture,
       syntheticFixtureAttestation: true,
     })).resolves.toMatchObject({
       mediaAssetId: expect.any(String),
@@ -178,6 +181,77 @@ describe("PhotoMediaStorageService", () => {
     expect(repository.createInitiatedAsset).not.toHaveBeenCalled();
   });
 
+  it("proxies scoped thumbnail bytes without exposing a provider URL", async () => {
+    const body = Buffer.from("synthetic-thumbnail");
+    primary.getObject.mockResolvedValueOnce(body);
+
+    await expect(createService().readContent({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "thumbnail",
+    })).resolves.toEqual({ body, contentType: "image/webp" });
+
+    expect(primary.getObject).toHaveBeenCalledWith(mediaAsset.thumbnailObjectKey);
+    expect(primary.createSignedRead).not.toHaveBeenCalled();
+    expect(repository.recordAccessEvent).toHaveBeenCalledWith(expect.objectContaining({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      variant: "thumbnail",
+    }));
+  });
+
+  it("accepts only a server-allowlisted synthetic fixture for checklist-scoped upload", async () => {
+    const approvedFixture = Buffer.from("approved-fixture");
+    repository.createInitiatedAsset.mockImplementationOnce(async (input) => ({
+      mediaAssetId: input.mediaAssetId,
+      companyId: mediaAsset.companyId,
+      regionId: mediaAsset.regionId,
+      storeId: mediaAsset.storeId,
+      state: "initiated",
+      rawObjectKey: input.rawObjectKey,
+    }));
+    primary.putObject.mockResolvedValueOnce(undefined);
+
+    await expect(createService().initiateApprovedSyntheticFixtureUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId,
+      contentType: "image/png",
+      contentLength: approvedFixture.byteLength,
+      contentBody: approvedFixture,
+    })).resolves.toMatchObject({ state: "uploaded" });
+  });
+
+  it("rejects a client-attested body whose digest is not on the server allowlist", async () => {
+    const unapproved = Buffer.from("not-approved");
+    await expect(createService().initiateApprovedSyntheticFixtureUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId,
+      contentType: "image/png",
+      contentLength: unapproved.byteLength,
+      contentBody: unapproved,
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.createInitiatedAsset).not.toHaveBeenCalled();
+  });
+
+  it("does not let Super Admin attestation bypass the approved fixture digest", async () => {
+    const unapproved = Buffer.from("unapproved-super-admin-fixture");
+
+    await expect(createService().initiateSyntheticUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorRoleCodes: ["SUPER_ADMIN"],
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [] },
+      storeId: mediaAsset.storeId,
+      contentType: "image/png",
+      contentLength: unapproved.byteLength,
+      contentBody: unapproved,
+      syntheticFixtureAttestation: true,
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.createInitiatedAsset).not.toHaveBeenCalled();
+    expect(primary.putObject).not.toHaveBeenCalled();
+  });
+
   it("leaves an uploaded asset retryable when the safety scanner is unavailable", async () => {
     const uploaded = {
       ...mediaAsset, state: "uploaded" as const, rawObjectKey: "companies/1/media/2/raw",
@@ -186,7 +260,7 @@ describe("PhotoMediaStorageService", () => {
     repository.findAssetForRead.mockResolvedValueOnce(uploaded);
     repository.prepareFinalizeAttempt.mockResolvedValueOnce(uploaded);
     primary.getObject.mockResolvedValue(Buffer.from("synthetic-image"));
-    scanner.scan.mockResolvedValue({ verdict: "unavailable", engine: "clamav" });
+    scanner.scan.mockResolvedValue({ verdict: "unavailable", engine: "synthetic_sha256_allowlist", assurance: "fixture_identity_only" });
 
     await expect(createService().finalizeSyntheticUpload({
       mediaAssetId: mediaAsset.mediaAssetId,
@@ -205,7 +279,7 @@ describe("PhotoMediaStorageService", () => {
     repository.findAssetForRead.mockResolvedValueOnce(uploaded);
     repository.prepareFinalizeAttempt.mockResolvedValueOnce(uploaded);
     primary.getObject.mockResolvedValue(Buffer.from("unsafe-image"));
-    scanner.scan.mockResolvedValue({ verdict: "unsafe", engine: "clamav", reasonCode: "scanner_unsafe" });
+    scanner.scan.mockResolvedValue({ verdict: "unsafe", engine: "synthetic_sha256_allowlist", assurance: "fixture_identity_only", reasonCode: "scanner_unsafe" });
 
     await expect(createService().finalizeSyntheticUpload({
       mediaAssetId: mediaAsset.mediaAssetId,
@@ -216,6 +290,30 @@ describe("PhotoMediaStorageService", () => {
       mediaAssetId: mediaAsset.mediaAssetId, reasonCode: "scanner_unsafe",
     }));
     expect(primary.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it("refuses a scanner result whose assurance does not match synthetic fixture identity", async () => {
+    const uploaded = {
+      ...mediaAsset, state: "uploaded" as const, rawObjectKey: "companies/1/media/2/raw",
+      storageAttemptId: "99999999-9999-4999-8999-999999999999", rawDisposedAt: null,
+    };
+    repository.findAssetForRead.mockResolvedValueOnce(uploaded);
+    repository.prepareFinalizeAttempt.mockResolvedValueOnce(uploaded);
+    primary.getObject.mockResolvedValue(Buffer.from("approved-fixture"));
+    scanner.scan.mockResolvedValue({
+      verdict: "clean",
+      engine: "unexpected-malware-scanner",
+      assurance: "malware_scan",
+    });
+
+    await expect(createService().finalizeSyntheticUpload({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorActionScope: { assignedStoreIds: [mediaAsset.storeId] },
+    })).rejects.toThrow("safety assurance does not match");
+    expect(processor.process).not.toHaveBeenCalled();
+    expect(primary.putObject).not.toHaveBeenCalled();
+    expect(recovery.putObject).not.toHaveBeenCalled();
   });
 
   it("does not finalize when the recovery copy cannot be hash verified", async () => {
@@ -237,7 +335,7 @@ describe("PhotoMediaStorageService", () => {
       .mockResolvedValueOnce(raw)
       .mockResolvedValueOnce(canonical)
       .mockResolvedValueOnce(thumbnail);
-    scanner.scan.mockResolvedValue({ verdict: "clean", engine: "clamav", signatureVersion: "test" });
+    scanner.scan.mockResolvedValue({ verdict: "clean", engine: "synthetic_sha256_allowlist", assurance: "fixture_identity_only", signatureVersion: "test" });
     processor.process.mockResolvedValue({
       canonical,
       thumbnail,
@@ -286,7 +384,7 @@ describe("PhotoMediaStorageService", () => {
       .mockResolvedValueOnce(raw)
       .mockResolvedValueOnce(canonical)
       .mockResolvedValueOnce(thumbnail);
-    scanner.scan.mockResolvedValue({ verdict: "clean", engine: "clamav", signatureVersion: "test" });
+    scanner.scan.mockResolvedValue({ verdict: "clean", engine: "synthetic_sha256_allowlist", assurance: "fixture_identity_only", signatureVersion: "test" });
     processor.process.mockResolvedValue({
       canonical,
       thumbnail,

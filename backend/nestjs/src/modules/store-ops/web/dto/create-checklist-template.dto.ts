@@ -46,6 +46,16 @@ export class CreateChecklistTemplateItemDto {
   @IsOptional()
   @IsString()
   expectedValue?: string;
+
+  @IsOptional()
+  @IsIn(["none", "optional", "required"])
+  evidencePolicy?: "none" | "optional" | "required";
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10)
+  maxEvidenceCount?: number;
 }
 
 export class CreateChecklistTemplateDto {

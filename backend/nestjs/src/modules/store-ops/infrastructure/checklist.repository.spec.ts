@@ -1,4 +1,5 @@
 import { ChecklistRepository } from "./checklist.repository";
+import { createHash } from "node:crypto";
 
 function createQueryMock(overrides?: {
   stores?: Record<string, unknown>[];
@@ -33,6 +34,318 @@ describe("ChecklistRepository", () => {
 
     return { client, databaseService, repository };
   }
+
+  it("links one ready same-store asset to the exact evidence-enabled item", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          checklist_instance_id: "instance-1",
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: "store-1",
+          status: "in_progress",
+          evidence_version_no: 0,
+          evidence_policy: "required",
+          max_evidence_count: 2,
+          response_id: "response-1",
+          media_count: "0",
+          next_display_order: 0,
+          asset_state: "ready",
+          asset_classification: "checklist_evidence",
+          asset_company_id: "company-1",
+          asset_store_id: "store-1",
+          intent_instance_id: "instance-1",
+          intent_item_id: "item-1",
+          intent_actor_user_id: "user-1",
+          canonical_sha256: "a".repeat(64),
+          capture_source: "system_generated",
+        }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ checklist_response_media_id: "link-1", display_order: 0 }],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          evidence_version_no: 1,
+          evidence_policy: "required",
+          max_evidence_count: 2,
+          evidence_json: [{
+            mediaAssetId: "asset-1",
+            displayOrder: 0,
+            captureSource: "system_generated",
+            thumbnailAvailable: true,
+          }],
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).resolves.toMatchObject({
+      evidenceVersion: 1,
+      evidencePolicy: "required",
+      evidence: [expect.objectContaining({ mediaAssetId: "asset-1" })],
+    });
+
+    expect(String(client.query.mock.calls[2][0])).toContain("FOR UPDATE OF ci");
+    expect(String(client.query.mock.calls[3][0])).toContain("ops.checklist_response_media");
+    expect(String(client.query.mock.calls[5][0])).toContain("active_workflow_hold = TRUE");
+    expect(String(client.query.mock.calls[6][0])).toContain("'ready', 'ready'");
+  });
+
+  it("rejects evidence mutation for a cancelled instance", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          checklist_instance_id: "instance-1",
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: "store-1",
+          status: "cancelled",
+          evidence_version_no: 0,
+          evidence_policy: "required",
+          max_evidence_count: 1,
+          response_id: "response-1",
+          media_count: "0",
+          next_display_order: 0,
+          asset_state: "ready",
+          asset_classification: "checklist_evidence",
+          asset_company_id: "company-1",
+          asset_store_id: "store-1",
+          intent_instance_id: "instance-1",
+          intent_item_id: "item-1",
+          intent_actor_user_id: "user-1",
+          canonical_sha256: "a".repeat(64),
+          capture_source: "system_generated",
+        }],
+      });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).rejects.toThrow("instance_locked");
+    expect(client.query).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects evidence for an item whose pinned policy is none", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          checklist_instance_id: "instance-1",
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: "store-1",
+          status: "in_progress",
+          evidence_version_no: 0,
+          evidence_policy: "none",
+          max_evidence_count: 0,
+          response_id: "response-1",
+          media_count: "0",
+          next_display_order: 0,
+          asset_state: "ready",
+          asset_classification: "checklist_evidence",
+          asset_company_id: "company-1",
+          asset_store_id: "store-1",
+          intent_instance_id: "instance-1",
+          intent_item_id: "item-1",
+          intent_actor_user_id: "user-1",
+          canonical_sha256: "a".repeat(64),
+          capture_source: "system_generated",
+        }],
+      });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).rejects.toThrow("policy_forbids");
+
+    expect(client.query).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects a ready asset whose immutable upload intent is for another item", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          checklist_instance_id: "instance-1",
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: "store-1",
+          status: "in_progress",
+          evidence_version_no: 0,
+          evidence_policy: "required",
+          max_evidence_count: 2,
+          response_id: "response-1",
+          media_count: "0",
+          next_display_order: 4,
+          asset_state: "ready",
+          asset_classification: "checklist_evidence",
+          asset_company_id: "company-1",
+          asset_store_id: "store-1",
+          intent_instance_id: "instance-1",
+          intent_item_id: "item-other",
+          intent_actor_user_id: "user-1",
+          canonical_sha256: "a".repeat(64),
+          capture_source: "system_generated",
+        }],
+      });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).rejects.toThrow("asset_intent_mismatch");
+
+    expect(String(client.query.mock.calls[2][0])).toContain("MAX(existing.display_order)");
+  });
+
+  it.each([
+    ["wrong classification", { asset_classification: "profile_photo" }, "asset_intent_mismatch"],
+    ["wrong upload actor", { intent_actor_user_id: "user-other" }, "asset_intent_mismatch"],
+    ["wrong company", { asset_company_id: "company-other" }, "asset_scope_mismatch"],
+    ["wrong store", { asset_store_id: "store-other" }, "asset_scope_mismatch"],
+    ["stale version", { evidence_version_no: 3 }, "stale_version"],
+    ["evidence limit", { media_count: "2", max_evidence_count: 2 }, "evidence_limit_reached"],
+  ])("fails closed for %s", async (_caseName, override, expectedError) => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          checklist_instance_id: "instance-1",
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: "store-1",
+          status: "in_progress",
+          evidence_version_no: 0,
+          evidence_policy: "required",
+          max_evidence_count: 2,
+          response_id: "response-1",
+          media_count: "0",
+          next_display_order: 5,
+          asset_state: "ready",
+          asset_classification: "checklist_evidence",
+          asset_company_id: "company-1",
+          asset_store_id: "store-1",
+          intent_instance_id: "instance-1",
+          intent_item_id: "item-1",
+          intent_actor_user_id: "user-1",
+          canonical_sha256: "a".repeat(64),
+          capture_source: "system_generated",
+          ...override,
+        }],
+      });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).rejects.toThrow(expectedError as string);
+  });
+
+  it("fails closed when the current assignment no longer authorizes the instance", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: [] },
+    })).rejects.toThrow("instance_locked");
+    expect(client.query).toHaveBeenCalledTimes(3);
+  });
+
+  it("replays the original sanitized receipt result without reading current projection state", async () => {
+    const { client, repository } = createTransactionHarness();
+    const command = {
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      mediaAssetId: "asset-1",
+      expectedEvidenceVersion: 0,
+    };
+    const digest = createHash("sha256")
+      .update(JSON.stringify({ commandType: "link", ...command }))
+      .digest("hex");
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          command_digest: digest,
+          result_json: {
+            ...command,
+            evidenceVersion: 1,
+            evidencePolicy: "required",
+            maxEvidenceCount: 2,
+            evidence: [{ mediaAssetId: "asset-1" }],
+          },
+        }],
+      });
+
+    await expect(repository.linkMobileChecklistItemEvidence({
+      ...command,
+      idempotencyKey: "key-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["SUPER_ADMIN"],
+      actorActionScope: { assignedStoreIds: [] },
+    })).resolves.toMatchObject({
+      evidenceVersion: 1,
+      evidence: [{ mediaAssetId: "asset-1" }],
+      idempotent: true,
+    });
+    expect(client.query).toHaveBeenCalledTimes(2);
+  });
 
   it("locks checklist template code before allocating the next draft version", async () => {
     const { client, databaseService, repository } = createTransactionHarness();
@@ -136,8 +449,8 @@ describe("ChecklistRepository", () => {
       effectiveFrom: "2026-05-01",
       effectiveTo: null,
       items: [
-        { templateItemId: "item-1", weight: 60 },
-        { templateItemId: "item-2", weight: 40 },
+        { templateItemId: "item-1", weight: 60, evidencePolicy: "none", maxEvidenceCount: 0 },
+        { templateItemId: "item-2", weight: 40, evidencePolicy: "none", maxEvidenceCount: 0 },
       ],
     });
   });
@@ -427,6 +740,7 @@ describe("ChecklistRepository", () => {
       totalScore: "86.00",
       complianceRate: "1.0000",
       missingMandatoryCount: 0,
+      missingRequiredEvidenceCount: 0,
     });
     expect(query).toHaveBeenCalledWith(
       expect.stringContaining("missing_mandatory_count"),
@@ -472,6 +786,8 @@ describe("ChecklistRepository", () => {
       repository.completeMobileChecklistInstance({
         checklistInstanceId: "instance-1",
         actorUserId: "user-1",
+        actorRoleCodes: ["REGION_MANAGER"],
+        actorActionScope: { assignedStoreIds: ["store-1"] },
       }),
     ).resolves.toEqual({
       checklist_instance_id: "instance-1",
@@ -485,13 +801,36 @@ describe("ChecklistRepository", () => {
     expect(client.query).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("FOR UPDATE"),
-      ["instance-1"],
+      ["instance-1", ["store-1"], ["REGION_MANAGER"]],
     );
     expect(client.query).toHaveBeenNthCalledWith(
       3,
       expect.stringContaining("locked_at = NOW()"),
       ["instance-1", "user-1", "86.00", "1.0000"],
     );
+  });
+
+  it("returns the existing deterministic state for an authorized repeated completion", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query.mockResolvedValueOnce({
+      rows: [{
+        checklist_instance_id: "instance-1",
+        store_id: "store-1",
+        status: "completed",
+        total_score: "86.00",
+        compliance_rate: "1.0000",
+        completed_at: "2026-04-28T10:10:00.000Z",
+        locked_at: "2026-04-28T10:10:00.000Z",
+      }],
+    });
+
+    await expect(repository.completeMobileChecklistInstance({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).resolves.toMatchObject({ status: "completed", total_score: "86.00" });
+    expect(client.query).toHaveBeenCalledTimes(1);
   });
 
   it("returns no mobile today rows when actor has no assigned stores", async () => {
@@ -652,6 +991,8 @@ describe("ChecklistRepository", () => {
             minScore: 1,
             lowScoreThreshold: 2,
             requiresLowScoreNote: true,
+            evidencePolicy: "none",
+            maxEvidenceCount: 0,
           },
         ],
       },
@@ -735,6 +1076,8 @@ describe("ChecklistRepository", () => {
         status: "in_progress",
         startedAt: "2026-04-28T10:00:00.000Z",
         updatedAt: "2026-04-28T10:05:00.000Z",
+        evidenceVersion: 0,
+        evidence: [],
         responses: [
           {
             templateItemId: "item-1",

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 function git(args) {
@@ -9,7 +9,7 @@ function git(args) {
 
 function trackedFiles(prefix = 'backend/nestjs/src/modules') {
   const prefixes = Array.isArray(prefix) ? prefix : [prefix]
-  return git(['ls-files', '-z', ...prefixes]).split('\0').filter(Boolean)
+  return git(['ls-files', '-z', ...prefixes]).split('\0').filter((path) => path && existsSync(path))
 }
 
 function normalizePath(path) {

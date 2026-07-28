@@ -1484,6 +1484,11 @@ export type components = {
     }
     "MobileChecklistTodayResponse": {
       "data": {
+        "evidenceCapabilities": {
+          "captureAvailable": boolean
+          "syntheticFixtureOnly": boolean
+          "unavailableReason": "feature_disabled" | "storage_unavailable" | "synthetic_fixture_unavailable" | null
+        }
         "stores": Array<{
             "storeId": string
             "storeName": string
@@ -1505,6 +1510,8 @@ export type components = {
                 "minScore"?: number
                 "lowScoreThreshold"?: number | null
                 "requiresLowScoreNote"?: boolean
+                "evidencePolicy": "none" | "optional" | "required"
+                "maxEvidenceCount": number
               }>
           }>
         "activeInstances": Array<{
@@ -1514,6 +1521,14 @@ export type components = {
             "status": "planned" | "in_progress" | "completed" | "cancelled"
             "startedAt": string | null
             "updatedAt": string | null
+            "evidenceVersion": number
+            "evidence": Array<{
+                "templateItemId": string
+                "mediaAssetId": string
+                "displayOrder": number
+                "captureSource": "camera" | "gallery" | "system_generated"
+                "thumbnailAvailable": boolean
+              }>
             "responses": Array<{
                 "templateItemId": string
                 "scoreValue": number

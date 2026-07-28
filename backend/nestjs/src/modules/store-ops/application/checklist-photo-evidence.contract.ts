@@ -326,6 +326,7 @@ export const checklistPhotoEvidenceAuditEventTypes = {
   mediaDeletionFailed: "checklist_photo_evidence.media.deletion_failed",
   checklistEvidenceLinked: "checklist_photo_evidence.checklist.linked",
   checklistEvidenceUnlinked: "checklist_photo_evidence.checklist.unlinked",
+  checklistEvidenceCompletedLocked: "checklist_photo_evidence.checklist.completed_locked",
   referenceDraftCreated: "checklist_photo_evidence.reference.draft_created",
   referencePublished: "checklist_photo_evidence.reference.published",
   referenceRetired: "checklist_photo_evidence.reference.retired",

@@ -4,6 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../app.module";
 import { preserveOpenApiBaselineFromFile } from "./openapi-baseline-preservation";
+import { mobileChecklistEvidenceActiveInstanceProperties, mobileChecklistEvidenceTemplateItemProperties, mobileChecklistEvidenceTodayProperties } from "./checklist-evidence-openapi.schemas";
 import {
   commandResponseSchema,
   countProperties,
@@ -46,11 +47,9 @@ const mobileSessionHeader = {
   },
 };
 const mobileChecklistTodayStoreSchema = {
-  type: "object",
-  required: ["storeId", "storeName"],
+  type: "object", required: ["storeId", "storeName"],
   properties: {
-    storeId: { type: "string" },
-    storeName: { type: "string" },
+    storeId: { type: "string" }, storeName: { type: "string" },
   },
 };
 
@@ -63,7 +62,7 @@ const mobileChecklistTodayTemplateItemSchema = {
     "itemText",
     "responseType",
     "weight",
-    "maxScore",
+    "maxScore", "evidencePolicy", "maxEvidenceCount",
   ],
   properties: {
     templateItemId: { type: "string" },
@@ -73,16 +72,15 @@ const mobileChecklistTodayTemplateItemSchema = {
     responseType: { type: "string", enum: ["score", "yes_no", "partial", "text"] },
     weight: { type: "number" },
     maxScore: { type: "number" }, minScore: { type: "number" }, lowScoreThreshold: { type: "number", nullable: true }, requiresLowScoreNote: { type: "boolean" },
+    ...mobileChecklistEvidenceTemplateItemProperties,
   },
 };
 
 const mobileChecklistTodayTemplateSchema = {
   type: "object",
   required: [
-    "checklistTemplateId",
-    "templateCode",
-    "templateType",
-    "templateName",
+    "checklistTemplateId", "templateCode",
+    "templateType", "templateName",
     "versionNo",
     "items",
   ],
@@ -117,7 +115,7 @@ const mobileChecklistTodayActiveInstanceSchema = {
     "storeId",
     "status",
     "startedAt",
-    "updatedAt",
+    "updatedAt", "evidenceVersion", "evidence",
     "responses",
   ],
   properties: {
@@ -130,6 +128,7 @@ const mobileChecklistTodayActiveInstanceSchema = {
     },
     startedAt: { type: "string", nullable: true },
     updatedAt: { type: "string", nullable: true },
+    ...mobileChecklistEvidenceActiveInstanceProperties,
     responses: {
       type: "array",
       items: mobileChecklistTodayDraftResponseSchema,
@@ -196,7 +195,7 @@ const mobileChecklistTodayMonthlySummarySchema = {
 const mobileChecklistTodaySchema = {
   type: "object",
   required: [
-    "stores",
+    "stores", "evidenceCapabilities",
     "templates",
     "activeInstances",
     "completedThisMonth",
@@ -204,6 +203,7 @@ const mobileChecklistTodaySchema = {
     "monthlySummaries",
   ],
   properties: {
+    ...mobileChecklistEvidenceTodayProperties,
     stores: {
       type: "array",
       items: mobileChecklistTodayStoreSchema,

@@ -1,4 +1,4 @@
-import { sendJson } from '../../lib/api'
+import { fetchBlob, sendFormData, sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
@@ -20,6 +20,21 @@ type CommandResponse<T> = {
 }
 
 export type ChecklistTemplateResponseType = 'score' | 'yes_no' | 'partial' | 'text'
+export type ChecklistEvidencePolicy = 'none' | 'optional' | 'required'
+export type ChecklistItemEvidenceProjection = {
+  checklistInstanceId: string
+  templateItemId: string
+  evidenceVersion: number
+  evidencePolicy: ChecklistEvidencePolicy
+  maxEvidenceCount: number
+  evidence: Array<{
+    mediaAssetId: string
+    displayOrder: number
+    captureSource: 'camera' | 'gallery' | 'system_generated'
+    thumbnailAvailable: boolean
+  }>
+  idempotent: boolean
+}
 
 type AdminChecklistTemplateItemInput = {
   sectionName: string
@@ -29,6 +44,8 @@ type AdminChecklistTemplateItemInput = {
   weight: number
   maxScore: number
   expectedValue?: string
+  evidencePolicy?: ChecklistEvidencePolicy
+  maxEvidenceCount?: number
 }
 
 export type AdminChecklistTemplateSummary = {
@@ -104,8 +121,34 @@ export type ChecklistAcknowledgementListInput = {
   storeId?: string
 }
 
-export type MobileChecklistTodayResponse = ApiGetResponse<'/api/mobile/checklists/today'>
-export type MobileChecklistToday = MobileChecklistTodayResponse['data']
+type GeneratedMobileChecklistTodayResponse = ApiGetResponse<'/api/mobile/checklists/today'>
+type GeneratedMobileChecklistToday = GeneratedMobileChecklistTodayResponse['data']
+export type MobileChecklistToday = Omit<GeneratedMobileChecklistToday, 'templates' | 'activeInstances'> & {
+  evidenceCapabilities?: {
+    captureAvailable: boolean
+    syntheticFixtureOnly: boolean
+    unavailableReason: 'feature_disabled' | 'storage_unavailable' | 'synthetic_fixture_unavailable' | null
+  }
+  templates: Array<GeneratedMobileChecklistToday['templates'][number] & {
+    items: Array<GeneratedMobileChecklistToday['templates'][number]['items'][number] & {
+      evidencePolicy: ChecklistEvidencePolicy
+      maxEvidenceCount: number
+    }>
+  }>
+  activeInstances: Array<GeneratedMobileChecklistToday['activeInstances'][number] & {
+    evidenceVersion: number
+    evidence: Array<{
+      templateItemId: string
+      mediaAssetId: string
+      displayOrder: number
+      captureSource: 'camera' | 'gallery' | 'system_generated'
+      thumbnailAvailable: boolean
+    }>
+  }>
+}
+export type MobileChecklistTodayResponse = Omit<GeneratedMobileChecklistTodayResponse, 'data'> & {
+  data: MobileChecklistToday
+}
 export type MobileChecklistInstanceStatus =
   MobileChecklistToday['activeInstances'][number]['status']
 
@@ -116,7 +159,7 @@ export type MobileChecklistInstance = {
 }
 
 export async function getMobileChecklistToday() {
-  return fetchOpenApiJson('/api/mobile/checklists/today')
+  return fetchOpenApiJson('/api/mobile/checklists/today') as Promise<MobileChecklistTodayResponse>
 }
 
 export async function startMobileChecklistInstance(input: {
@@ -169,6 +212,88 @@ export async function completeMobileChecklistInstance(input: {
     method: 'POST',
     body: {},
   })
+}
+
+export async function linkMobileChecklistItemEvidence(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  mediaAssetId: string
+  expectedEvidenceVersion: number
+  idempotencyKey: string
+}) {
+  return sendJson<CommandResponse<{ evidence: ChecklistItemEvidenceProjection }>>(`/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence`, {
+    method: 'POST',
+    body: {
+      mediaAssetId: input.mediaAssetId,
+      expectedEvidenceVersion: input.expectedEvidenceVersion,
+      idempotencyKey: input.idempotencyKey,
+    },
+  })
+}
+
+export async function uploadApprovedSyntheticMobileChecklistItemEvidence(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  file: File
+}) {
+  const body = new FormData()
+  body.append('file', input.file)
+  return sendFormData<{ mediaAssetId: string; state: 'uploaded' }>(
+    `/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence/uploads`,
+    { method: 'POST', body },
+  )
+}
+
+export async function finalizeApprovedSyntheticMobileChecklistItemEvidence(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  mediaAssetId: string
+}) {
+  return sendJson<{ mediaAssetId: string; state: 'ready'; rawDisposal: 'verified' | 'pending' }>(
+    `/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence/uploads/${input.mediaAssetId}/finalize`,
+    { method: 'POST', body: {} },
+  )
+}
+
+export async function unlinkMobileChecklistItemEvidence(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  mediaAssetId: string
+  expectedEvidenceVersion: number
+  idempotencyKey: string
+  reason: string
+}) {
+  return sendJson<CommandResponse<{ evidence: ChecklistItemEvidenceProjection }>>(`/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence/${input.mediaAssetId}`, {
+    method: 'DELETE',
+    body: {
+      expectedEvidenceVersion: input.expectedEvidenceVersion,
+      idempotencyKey: input.idempotencyKey,
+      reason: input.reason,
+    },
+  })
+}
+
+export async function getMobileChecklistItemEvidenceReadUrl(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  mediaAssetId: string
+  variant: 'canonical' | 'thumbnail'
+}) {
+  return sendJson<{ url: string; expiresInSeconds: number }>(
+    `/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence/${input.mediaAssetId}/read-url`,
+    { method: 'POST', body: { variant: input.variant } },
+  )
+}
+
+export async function getMobileChecklistItemEvidenceContent(input: {
+  checklistInstanceId: string
+  templateItemId: string
+  mediaAssetId: string
+  variant: 'canonical' | 'thumbnail'
+}) {
+  return fetchBlob(
+    `/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence/${input.mediaAssetId}/content/${input.variant}`,
+  )
 }
 
 export async function getChecklistAcknowledgements(input: ChecklistAcknowledgementListInput = {}) {

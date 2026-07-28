@@ -17,6 +17,10 @@ const rollback = readFileSync(
   join(workspaceRoot, "db", "preflight", "checklist-photo-evidence-foundation-v1-rollback.sql"),
   "utf8",
 );
+const itemEvidenceRollback = readFileSync(
+  join(workspaceRoot, "db", "preflight", "checklist-item-evidence-pr4-v1-rollback.sql"),
+  "utf8",
+);
 
 test("photo evidence schema exposes one canonical fresh-db and rollback verification command", () => {
   assert.equal(
@@ -28,6 +32,8 @@ test("photo evidence schema exposes one canonical fresh-db and rollback verifica
   assert.match(runner, /residualFixtureRows/);
   assert.match(runner, /preUseRollback/);
   assert.match(runner, /forwardReapply/);
+  assert.match(runner, /checklist-item-evidence-pr4-v1-rollback\.sql/);
+  assert.match(runner, /064_checklist_item_evidence_v1\.sql/);
 });
 
 test("photo evidence schema verification is local-only, synthetic, and rollback-bound", () => {
@@ -50,4 +56,8 @@ test("photo evidence schema verification is local-only, synthetic, and rollback-
   assert.match(rollback, /foundation_row_count <> 0/);
   assert.match(rollback, /062_checklist_photo_evidence_foundation_v1\.sql/);
   assert.match(rollback, /DROP COLUMN IF EXISTS current_solution_attempt_id/);
+  assert.match(itemEvidenceRollback, /rollback refused after feature use/);
+  assert.match(itemEvidenceRollback, /ops\.checklist_item_evidence_upload_intent/);
+  assert.match(itemEvidenceRollback, /DROP CONSTRAINT IF EXISTS ck_photo_evidence_event_type/);
+  assert.match(runner, /checklist_item_evidence_pr4_smoke\.completed/);
 });

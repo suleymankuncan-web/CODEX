@@ -47,6 +47,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
     isLoading,
     isRetrying,
     locale,
+    mobileToday,
     monthOptions,
     openChecklistResult,
     queueResponseAutoSave,
@@ -245,6 +246,9 @@ export function ChecklistWorkflowCommandOverlay(input: {
       <StoreChecklistsModals
         acknowledgementNote={selectedResult ? (ackNotes[selectedResult.checklistInstanceId] ?? '') : ''}
         comments={comments}
+        {...(mobileToday?.evidenceCapabilities
+          ? { evidenceCapabilities: mobileToday.evidenceCapabilities }
+          : {})}
         locale={locale}
         resultState={{
           acknowledging: Boolean(selectedResult) && acknowledgeMutation.isPending,

@@ -9,11 +9,11 @@ import {
   PHOTO_MEDIA_STORAGE_CONFIGURATION,
   PhotoMediaStorageService,
 } from "./application/photo-media-storage.service";
-import { ClamAvPhotoMediaSafetyScanner } from "./infrastructure/clamav-photo-media-safety-scanner";
 import { DisabledPhotoMediaObjectStorage } from "./infrastructure/disabled-photo-media-object-storage";
 import { PhotoMediaAssetRepository } from "./infrastructure/photo-media-asset.repository";
 import { R2PhotoMediaObjectStorage } from "./infrastructure/r2-photo-media-object-storage";
 import { SharpPhotoMediaImageProcessor } from "./infrastructure/sharp-photo-media-image-processor";
+import { SyntheticFixturePhotoMediaSafetyScanner } from "./infrastructure/synthetic-fixture-photo-media-safety-scanner";
 import { PhotoMediaStorageController } from "./web/photo-media-storage.controller";
 import { PhotoMediaMaintenanceService } from "./application/photo-media-maintenance.service";
 
@@ -34,7 +34,12 @@ import { PhotoMediaMaintenanceService } from "./application/photo-media-maintena
     {
       provide: PHOTO_MEDIA_SAFETY_SCANNER,
       inject: [AppConfigService],
-      useFactory: (config: AppConfigService) => new ClamAvPhotoMediaSafetyScanner(config.photoMediaClamAv),
+      useFactory: (config: AppConfigService) => {
+        const runtime = config.photoMediaStorageConfiguration;
+        return new SyntheticFixturePhotoMediaSafetyScanner(
+          runtime.syntheticFixtureSha256Allowlist ?? [],
+        );
+      },
     },
     {
       provide: PHOTO_MEDIA_PRIMARY_STORAGE,
@@ -65,6 +70,6 @@ import { PhotoMediaMaintenanceService } from "./application/photo-media-maintena
       },
     },
   ],
-  exports: [PhotoMediaMaintenanceService],
+  exports: [PhotoMediaStorageService],
 })
 export class StoreOpsPhotoMediaModule {}

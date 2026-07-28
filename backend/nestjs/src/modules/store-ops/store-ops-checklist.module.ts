@@ -10,6 +10,7 @@ import { StoreOpsTargetsModule } from "./store-ops-targets.module";
 import { StoreOpsChecklistCommandModule } from "./store-ops-checklist-command.module";
 import { StoreOpsChecklistVisitPlanModule } from "./store-ops-checklist-visit-plan.module";
 import { StoreOpsChecklistHistoryModule } from "./store-ops-checklist-history.module";
+import { StoreOpsPhotoMediaModule } from "./store-ops-photo-media.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { StoreOpsChecklistHistoryModule } from "./store-ops-checklist-history.mo
     StoreOpsChecklistCommandModule,
     StoreOpsChecklistVisitPlanModule,
     StoreOpsChecklistHistoryModule,
+    StoreOpsPhotoMediaModule,
   ],
   controllers: [
     ChecklistController,

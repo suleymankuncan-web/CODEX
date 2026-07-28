@@ -384,8 +384,50 @@ export class StoreOpsRepository {
     checklistInstanceId: string;
     auditorEmployeeId: string;
     actorUserId: string;
+    actorRoleCodes: string[];
+    actorActionScope?: { assignedStoreIds: string[] };
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const guard = await client.query<{
+        checklist_instance_id: string;
+        status: string;
+        total_score: string | null;
+        compliance_rate: string | null;
+      }>(
+        `SELECT checklist_instance_id, status, total_score, compliance_rate
+         FROM ops.checklist_instance
+         WHERE checklist_instance_id = $1::uuid
+           AND store_id = ANY($2::uuid[])
+           AND 'AUDITOR' = ANY($3::text[])
+         FOR UPDATE`,
+        [input.checklistInstanceId, input.actorActionScope?.assignedStoreIds ?? [], input.actorRoleCodes],
+      );
+      if (guard.rows[0]?.status === "completed") {
+        return guard.rows[0];
+      }
+      if (!guard.rows[0] || !["planned", "in_progress"].includes(guard.rows[0].status)) {
+        throw new Error("Checklist instance cannot be completed");
+      }
+
+      const evidence = await client.query<{ missing_required_evidence_count: string }>(
+        `SELECT COUNT(*)::text AS missing_required_evidence_count
+         FROM ops.checklist_instance_item_policy policy
+         WHERE policy.checklist_instance_id = $1::uuid
+           AND policy.evidence_policy = 'required'
+           AND NOT EXISTS (
+             SELECT 1 FROM ops.checklist_response_media media
+             JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
+             WHERE media.checklist_instance_id = policy.checklist_instance_id
+               AND media.template_item_id = policy.template_item_id
+               AND media.unlinked_at IS NULL
+               AND asset.state = 'ready'
+           )`,
+        [input.checklistInstanceId],
+      );
+      if (Number(evidence.rows[0]?.missing_required_evidence_count ?? 0) > 0) {
+        throw new Error("missing_required_evidence");
+      }
+
       const aggregateResult = await client.query<{
         total_score: string;
         compliance_rate: string;
@@ -423,8 +465,11 @@ export class StoreOpsRepository {
             completed_at = NOW(),
             status = 'completed',
             total_score = $3::numeric,
-            compliance_rate = $4::numeric
+            compliance_rate = $4::numeric,
+            locked_at = NOW(),
+            evidence_version_no = evidence_version_no + 1
           WHERE checklist_instance_id = $1::uuid
+            AND status IN ('planned', 'in_progress')
           RETURNING checklist_instance_id, status, total_score, compliance_rate
         `,
         [
@@ -433,6 +478,43 @@ export class StoreOpsRepository {
           aggregates.total_score,
           aggregates.compliance_rate,
         ],
+      );
+
+      if (!checklistResult.rows[0]) {
+        throw new Error("Checklist instance completion lost its active-state lock");
+      }
+
+      await client.query(
+        `UPDATE ops.checklist_response_media
+         SET locked_at = COALESCE(locked_at, NOW())
+         WHERE checklist_instance_id = $1::uuid AND unlinked_at IS NULL`,
+        [input.checklistInstanceId],
+      );
+
+      await client.query(
+        `INSERT INTO audit.photo_evidence_event (
+           actor_user_id, event_type, entity_name, entity_id, company_id, region_id,
+           store_id, media_asset_id, correlation_id, state_before, state_after, content_sha256
+         )
+         SELECT $2::uuid, 'checklist_photo_evidence.checklist.completed_locked',
+                'checklist_response_media', media.checklist_response_media_id,
+                media.company_id, media.region_id, media.store_id, media.media_asset_id,
+                $1::text, 'ready', 'completed', asset.canonical_sha256
+         FROM ops.checklist_response_media media
+         JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
+         WHERE media.checklist_instance_id = $1::uuid
+           AND media.unlinked_at IS NULL`,
+        [input.checklistInstanceId, input.actorUserId],
+      );
+
+      await client.query(
+        `INSERT INTO audit.event_log (
+           actor_user_id, event_type, entity_name, entity_id, scope_type, metadata_json
+         ) VALUES (
+           $1::uuid, 'checklist_evidence.locked', 'ops.checklist_instance',
+           $2::uuid, 'store', jsonb_build_object('checklistInstanceId', $2::text)
+         )`,
+        [input.actorUserId, input.checklistInstanceId],
       );
 
       await client.query(

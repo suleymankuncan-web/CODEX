@@ -1,4 +1,5 @@
 import { BadRequestException, ServiceUnavailableException } from "@nestjs/common";
+import { isPostgresUuidString } from "../../../shared/validation/postgres-uuid";
 
 export type PhotoMediaStorageProvider = "r2";
 export type PhotoMediaStorageJurisdiction = "eu";
@@ -21,9 +22,10 @@ export type PhotoMediaStorageConfiguration = {
   perUserDailyBytesHardLimit: number;
   perStoreDailyBytesHardLimit: number;
   concurrentProcessingHardLimit: number;
+  syntheticFixtureSha256Allowlist?: string[];
+  safetyAssurance: "fixture_identity_only" | "malware_scan";
 };
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const BUCKET_PATTERN = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
 
 function assertPositiveInteger(name: string, value: number): void {
@@ -67,6 +69,16 @@ export function assertPhotoMediaStorageConfiguration(
   }
   if (!configuration.syntheticOnly) {
     throw new Error("PR-3 photo media storage must remain synthetic-only");
+  }
+  if (configuration.safetyAssurance !== "fixture_identity_only") {
+    throw new Error("Synthetic photo media storage requires fixture identity assurance");
+  }
+  const fixtureDigests = configuration.syntheticFixtureSha256Allowlist ?? [];
+  if (
+    fixtureDigests.length !== 1 ||
+    !/^[a-f0-9]{64}$/.test(fixtureDigests[0])
+  ) {
+    throw new Error("Synthetic photo media storage requires exactly one approved synthetic fixture digest");
   }
   if (configuration.publicDeliveryEnabled) {
     throw new Error("Photo media storage public delivery must remain disabled");
@@ -118,9 +130,9 @@ export function buildPhotoMediaObjectKeys(input: {
   storageAttemptId?: string;
 }) {
   if (
-    !UUID_PATTERN.test(input.companyId) ||
-    !UUID_PATTERN.test(input.mediaAssetId) ||
-    (input.storageAttemptId !== undefined && !UUID_PATTERN.test(input.storageAttemptId))
+    !isPostgresUuidString(input.companyId) ||
+    !isPostgresUuidString(input.mediaAssetId) ||
+    (input.storageAttemptId !== undefined && !isPostgresUuidString(input.storageAttemptId))
   ) {
     throw new BadRequestException("Photo media object scope is invalid");
   }

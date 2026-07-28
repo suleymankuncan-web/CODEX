@@ -39,7 +39,7 @@ function git(args) {
 }
 
 function trackedFiles() {
-  return git(['ls-files', '-z']).split('\0').filter(Boolean)
+  return git(['ls-files', '-z']).split('\0').filter((path) => path && existsSync(path))
 }
 
 function extensionOf(path) {

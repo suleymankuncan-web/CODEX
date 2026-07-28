@@ -6,6 +6,7 @@ import {
   publishAdminChecklistTemplate,
   type AdminChecklistTemplateSummary,
   type ChecklistTemplateResponseType,
+  type ChecklistEvidencePolicy,
   type CreateAdminChecklistTemplateInput,
 } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -24,6 +25,8 @@ export type DraftChecklistItem = {
   lowScoreThreshold: number
   weight: number
   requiresLowScoreNote: boolean
+  evidencePolicy?: ChecklistEvidencePolicy
+  maxEvidenceCount?: number
 }
 
 export type DraftChecklistSection = {
@@ -300,6 +303,10 @@ function createPayload(input: {
         weight: item.weight,
         maxScore: Math.max(1, item.maxScore),
         expectedValue: buildExpectedValue(item),
+        evidencePolicy: item.evidencePolicy ?? 'none',
+        maxEvidenceCount: item.evidencePolicy && item.evidencePolicy !== 'none'
+          ? Math.max(1, item.maxEvidenceCount ?? 1)
+          : 0,
       })),
     ),
   }

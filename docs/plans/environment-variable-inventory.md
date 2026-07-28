@@ -45,6 +45,10 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `UPLOAD_PARSE_TIMEOUT_MS` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `15000` |
 | `PHOTO_MEDIA_STORAGE_ENABLED` | Project owner | Render API env | Internal | Keep `false` until the synthetic-only R2 provider gate is verified. | `false` |
 | `PHOTO_MEDIA_SYNTHETIC_ONLY` | Project owner | Render API env | Internal | PR-3 requires exact `true`; real photographs remain blocked. | `true` |
+| `PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST` | Project owner | Render API env | Secret-like operational control | PR-4 enabled synthetic staging requires exactly one pre-approved SHA-256 digest. Empty, malformed, or multiple values fail enabled startup. Never place image bytes or private payloads here. | Empty. |
+| `CHECKLIST_EVIDENCE_CAPTURE_ENABLED` | Project owner | Render API env | Internal | Independent capture control; remains `false` until PR-4 synthetic device proof is accepted. | `false` |
+| `CHECKLIST_REQUIRED_EVIDENCE_ENFORCEMENT_ENABLED` | Project owner | Render API env | Internal | Allows publishing new required policies only when capture and storage health are also enabled. | `false` |
+| `CHECKLIST_EVIDENCE_STORAGE_HEALTHY` | Platform owner | Render API env | Internal | Explicit fail-closed storage-health gate for new required policy publication. | `false` |
 | `PHOTO_MEDIA_PRIMARY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Private EU-jurisdiction primary bucket name; never record its value in evidence. | Empty. |
 | `PHOTO_MEDIA_RECOVERY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Distinct private EU-jurisdiction recovery bucket name. | Empty. |
 | `PHOTO_MEDIA_PRIMARY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint; no public delivery endpoint. | Empty. |
@@ -61,9 +65,6 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `PHOTO_MEDIA_PER_USER_DAILY_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Fail-closed per-user daily upload byte ceiling. | `104857600` |
 | `PHOTO_MEDIA_PER_STORE_DAILY_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Fail-closed per-store daily upload byte ceiling. | `262144000` |
 | `PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT` | Backend owner | Render API env | Internal | Lease-based concurrent decode/scan ceiling; maximum 4 in synthetic staging. | `2` |
-| `PHOTO_MEDIA_CLAMAV_HOST` | Platform owner | Render API env | Internal | Required private scanner endpoint when photo media is enabled. | Empty. |
-| `PHOTO_MEDIA_CLAMAV_PORT` | Platform owner | Render API env | Internal | Required ClamAV TCP port. | `3310` |
-| `PHOTO_MEDIA_CLAMAV_TIMEOUT_MS` | Backend owner | Render API env | Internal | Fail-closed scanner timeout. | `10000` |
 | `READINESS_PROFILE` | Release operator | Render backend env | Internal | Keep `controlled-pilot` until broad production is approved. | `controlled-pilot` |
 | `JWT_ISSUER` | Auth owner | Render backend env | Public | Must exactly match the Clerk issuer. | Local mock issuer. |
 | `JWT_AUDIENCE` | Auth owner | Render backend env | Public | Must match the backend API audience accepted by Clerk tokens. | `store-ops-api` |

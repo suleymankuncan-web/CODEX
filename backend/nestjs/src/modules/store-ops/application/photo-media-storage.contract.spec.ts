@@ -23,6 +23,8 @@ describe("photo media storage contract", () => {
     perUserDailyBytesHardLimit: 100 * 1024 * 1024,
     perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
     concurrentProcessingHardLimit: 2,
+    syntheticFixtureSha256Allowlist: ["a".repeat(64)],
+    safetyAssurance: "fixture_identity_only" as const,
   };
 
   it("accepts only the owner-approved private EU two-bucket posture", () => {
@@ -47,6 +49,21 @@ describe("photo media storage contract", () => {
     ).toThrow("public delivery");
   });
 
+  it("confines fixture identity assurance to exactly one synthetic digest", () => {
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      syntheticFixtureSha256Allowlist: [],
+    })).toThrow("exactly one approved synthetic fixture digest");
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      syntheticFixtureSha256Allowlist: ["a".repeat(64), "b".repeat(64)],
+    })).toThrow("exactly one approved synthetic fixture digest");
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      safetyAssurance: "malware_scan",
+    })).toThrow("fixture identity assurance");
+  });
+
   it("creates opaque server-owned keys without accepting user path input", () => {
     expect(
       buildPhotoMediaObjectKeys({
@@ -59,6 +76,17 @@ describe("photo media storage contract", () => {
       thumbnail: "derived/companies/11111111-1111-4111-8111-111111111111/media/22222222-2222-4222-8222-222222222222/thumbnail.webp",
       recovery: "locked/companies/11111111-1111-4111-8111-111111111111/media/22222222-2222-4222-8222-222222222222/canonical.webp",
     });
+  });
+
+  it("accepts canonical PostgreSQL UUIDs used by deterministic staging identities", () => {
+    expect(
+      buildPhotoMediaObjectKeys({
+        companyId: "c0000000-0000-0000-0000-000000000001",
+        mediaAssetId: "22222222-2222-4222-8222-222222222222",
+      }).raw,
+    ).toBe(
+      "transient/companies/c0000000-0000-0000-0000-000000000001/media/22222222-2222-4222-8222-222222222222/raw",
+    );
   });
 
   it("fails closed before an upload crosses any owner-approved hard limit", () => {

@@ -82,6 +82,11 @@ describe("Mobile checklist today flow", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data).toEqual({
+      evidenceCapabilities: {
+        captureAvailable: false,
+        syntheticFixtureOnly: true,
+        unavailableReason: "feature_disabled",
+      },
       stores: [{ storeId, storeName: "Marmara Park" }],
       templates: [
         {
@@ -99,6 +104,8 @@ describe("Mobile checklist today flow", () => {
               responseType: "score",
               weight: 100,
               maxScore: 10,
+              evidencePolicy: "none",
+              maxEvidenceCount: 0,
               lowScoreThreshold: null,
               requiresLowScoreNote: false,
             },
@@ -250,9 +257,11 @@ describe("Mobile checklist today flow", () => {
             itemNo: 1,
             itemText: "Vitrin standartlara uygun",
             responseType: "score",
-            weight: 100,
-            maxScore: 10,
-            lowScoreThreshold: null,
+          weight: 100,
+          maxScore: 10,
+          evidencePolicy: "none",
+          maxEvidenceCount: 0,
+          lowScoreThreshold: null,
             requiresLowScoreNote: false,
           },
         ],
@@ -476,6 +485,20 @@ describe("Mobile checklist today flow", () => {
 
   it("saves responses, completes with weighted score, and locks completed instances", async () => {
     const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT instance.checklist_instance_id") && sql.includes("FOR UPDATE OF instance")) {
+        return {
+          rows: [{
+            checklist_instance_id: "33333333-3333-4333-8333-333333333333",
+            store_id: storeId,
+            status: "in_progress",
+            total_score: null,
+            compliance_rate: null,
+            completed_at: null,
+            locked_at: null,
+          }],
+        };
+      }
+
       if (sql.includes("FROM ops.checklist_instance ci") && sql.includes("cti.max_score")) {
         return {
           rows: [
@@ -664,6 +687,20 @@ describe("Mobile checklist today flow", () => {
       acknowledgementNote: null as string | null,
     };
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("SELECT instance.checklist_instance_id") && sql.includes("FOR UPDATE OF instance")) {
+        return {
+          rows: [{
+            checklist_instance_id: checklistInstanceIdForHandoff,
+            store_id: storeId,
+            status: state.completed ? "completed" : "in_progress",
+            total_score: state.completed ? "80.00" : null,
+            compliance_rate: state.completed ? "1.0000" : null,
+            completed_at: state.completed ? "2026-04-28T10:10:00.000Z" : null,
+            locked_at: state.completed ? "2026-04-28T10:10:00.000Z" : null,
+          }],
+        };
+      }
+
       if (sql.includes("SELECT ct.checklist_template_id, ct.template_type")) {
         return {
           rows: [

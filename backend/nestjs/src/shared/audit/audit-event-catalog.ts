@@ -102,6 +102,12 @@ export const AUDIT_EVENT_CATALOG = [
     "store_ops",
     "Checklist instance was acknowledged.",
   ),
+  auditEvent(
+    "checklist_evidence.locked",
+    "ops.checklist_instance",
+    "store_ops",
+    "Checklist evidence was locked when its checklist instance completed.",
+  ),
   auditEvent("checklist_response.upserted", "ops.checklist_response", "store_ops", "Checklist response was upserted."),
   auditEvent(
     "target_distribution_request.created",

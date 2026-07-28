@@ -45,6 +45,7 @@ export class ChecklistController {
     request: {
       user: {
         userId: string;
+        roleCodes: string[];
         actionScope: {
           assignedStoreIds: string[];
         };
@@ -71,6 +72,7 @@ export class ChecklistController {
     request: {
       user: {
         userId: string;
+        roleCodes: string[];
         actionScope: {
           assignedStoreIds: string[];
         };
@@ -85,6 +87,7 @@ export class ChecklistController {
       checklistInstanceId: request.params.checklistInstanceId,
       auditorEmployeeId: body.auditorEmployeeId,
       actorUserId: request.user.userId,
+      actorRoleCodes: request.user.roleCodes,
       actorActionScope: request.user.actionScope,
     });
   }
