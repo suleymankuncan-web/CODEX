@@ -23,7 +23,7 @@ After reading, the implementer should know:
 
 This is a plan, not runtime authority. It authorizes no database change,
 provider activation, staging write, production operation, paid service, or AI
-model selection by itself.
+invocation. Recording an owner-selected model does not open its runtime gates.
 
 ## PR-4 Synthetic Fixture Safety Decision
 
@@ -67,11 +67,16 @@ The second product line is Visual Merchandising reference comparison:
 4. During the first pilot, the result is shadow/advisory evidence only.
 5. It cannot alter checklist scores, store scores, KPI, ranking, competition,
    Store Action creation, or incentives.
-6. Visual Merchandising may accept, override, or reject the advisory result.
+6. The responsible Region Manager may accept, override, reject, or request
+   recapture for the advisory result. Visual Merchandising remains the
+   reference publisher and may receive scoped read-only visibility.
 
-The AI provider and exact model are deliberately deferred. They will be chosen
-later from a labelled benchmark, real cost, latency, residency, privacy, and
-contract evidence.
+The owner selected Alibaba Model Studio Qwen
+`qwen3.7-plus-2026-05-26` as the single comparison provider/model on
+2026-07-28. It runs in non-thinking mode with strict structured output and no
+tools. This selection does not authorize provider access, real-photo transfer,
+paid activation, staging execution, or product integration; those remain
+behind the PR-8 gates.
 
 ## Existing Product Truth To Preserve
 
@@ -131,7 +136,7 @@ Checklist scores already feed store KPI, ranking, and competition. Therefore:
 - No synchronous AI dependency in checklist completion.
 - No production activation in this plan.
 - No broad redesign of checklist, Store Action, or reporting modules.
-- No provider choice before benchmark and contractual evidence.
+- No provider invocation before benchmark and contractual evidence.
 - No retroactive rewriting of completed checklist history.
 
 ## Locked Product Decisions
@@ -270,11 +275,17 @@ for authorized human reviewers. It must never write to or indirectly influence:
 Promoting AI output to an official decision is a future R5 owner decision and
 separate implementation line.
 
-### D-AI-2 — Provider deferred
+### D-AI-2 — Qwen selected behind a provider-neutral port
 
-The provider and model are not locked. Runtime code must depend on a
-provider-neutral comparison port. Selection follows the benchmark and provider
-contract gate defined below.
+The selected provider/model is Alibaba Model Studio Qwen
+`qwen3.7-plus-2026-05-26`, used alone in non-thinking mode. It performs both
+visual comparison and explanation and must return strict structured output.
+Luna, a second interpretation model, repair model, tool use, web access, and
+code execution are not part of the approved path. Runtime code must still
+depend on a provider-neutral comparison port so the provider can be replaced
+without changing product-domain contracts. The blinded benchmark now validates
+or rejects the selected configuration; it does not silently select another
+provider.
 
 ## Roles And Authorization
 
@@ -286,8 +297,8 @@ ownership identifiers.
 | Role | Evidence read | Evidence upload | Reference publish | Resolution review | AI result |
 | --- | --- | --- | --- | --- | --- |
 | Store Manager | own store | own-store solution evidence and own-store VM campaign evidence | no | submit only | own-store advisory read only when exposed |
-| Region Manager | assigned region/stores | authorized BM checklist evidence | no | approve/reject assigned-store submissions | assigned-region advisory read |
-| Visual Merchandiser | assigned stores and relevant references | authorized VM checklist evidence | only with `VM_REFERENCE_PUBLISHER` | no | only with `VM_VISUAL_REVIEWER` and approved scope |
+| Region Manager | assigned region/stores | authorized BM checklist evidence | no | approve/reject assigned-store submissions and final accept/override/reject/recapture for assigned-store AI advisories | assigned-region advisory review |
+| Visual Merchandiser | assigned stores and relevant references | authorized VM checklist evidence | only with `VM_REFERENCE_PUBLISHER` | no | read only with `VM_VISUAL_REVIEWER` and approved scope |
 | Report Viewer | company-wide read only | no | no | no | denied until a later explicit surface decision |
 | HR Admin | company-scoped policy/template administration | no personal execution bypass | no VM reference publish unless separately assigned | no operational bypass | aggregate/read according to policy |
 | Super Admin | company policy and emergency administrative controls | no silent impersonation | administrative recovery only | audited override only if separately implemented | configuration and audit |
@@ -555,8 +566,9 @@ failure, and permits retry. AI availability is never part of this rule.
    provider-neutral port, validates structured output, and stores a shadow run.
 12. Low-quality, unsupported, or low-confidence inputs produce `abstained` or
    `recapture_required`, never a zero score.
-13. Visual Merchandising reviews the result and may accept, override, reject, or
-   request recapture with a reason.
+13. The responsible Region Manager reviews the result and may accept, override,
+   reject, or request recapture with a reason. Visual Merchandising does not
+   receive final review authority from `VM_VISUAL_REVIEWER`.
 14. The official human checklist result and the operational deadline fact
     remain separate and unchanged.
 
@@ -807,11 +819,12 @@ Before a real-photo pilot:
 Real store images must not use a free provider tier whose retention, training,
 privacy, or service terms are not contractually suitable.
 
-## AI Benchmark And Selection Gate
+## Qwen Benchmark And Activation Gate
 
-Provider choice is a later decision. Benchmark candidates may include current
-Gemini and OpenAI multimodal models, but model names, versions, prices, and
-availability must be freshly verified when the gate opens.
+Provider choice is closed for this implementation line: Alibaba Model Studio
+Qwen `qwen3.7-plus-2026-05-26`, non-thinking, is the only approved candidate.
+The benchmark is an activation and exit gate. Failure does not authorize an
+automatic fallback or second model; it returns the decision to the owner.
 
 Prepare:
 
@@ -820,7 +833,7 @@ Prepare:
   close detail, text, and deliberately adversarial content;
 - double-reviewed VM labels and human inter-rater baseline;
 - identical canonical images, rubric, structured schema, and scoring method for
-  every candidate.
+  every run of the pinned Qwen snapshot.
 
 Measure:
 
@@ -833,10 +846,9 @@ Measure:
 - latency, retry rate, and real per-comparison cost;
 - human override and appeal rate.
 
-The owner chooses the provider only after seeing the benchmark, privacy/DPA,
-residency, no-training, retention, operational, and cost evidence. A cheaper
-model may handle normal cases and a stronger model may handle bounded hard
-cases, but routing is not authorized until evidence proves it useful.
+Runtime activation remains closed until the owner sees the benchmark,
+privacy/DPA, residency, no-training, retention, operational, and cost evidence.
+No normal/hard-case model routing or fallback model is authorized.
 
 ## Functional Requirements
 
@@ -918,8 +930,8 @@ cases, but routing is not authorized until evidence proves it useful.
 - **AC-11:** A storage reconciliation/restore rehearsal passes before real-photo
   pilot Go.
 - **AC-12:** The benchmark report contains accuracy, false pass/fail,
-  abstention, subgroup, latency, cost, and provider-contract evidence before a
-  model is selected.
+  abstention, subgroup, latency, cost, and provider-contract evidence before
+  the selected Qwen configuration may enter hidden shadow execution.
 - **AC-13:** Mobile capture and long review flows pass on real representative
   devices before pilot Go.
 - **AC-14:** No production data or broad production runtime is touched by this
@@ -1099,13 +1111,17 @@ Rollback: stop cleanup jobs; never restore deleted bytes by changing DB state.
 
 Gate: restore rehearsal and deletion/legal-hold procedure.
 
-### PR-8 — Blinded benchmark harness and candidate adapters
+### PR-8 — Qwen decision alignment, adapter contract, and blinded harness
 
 Scope:
 
 - freeze double-reviewed human labels before any candidate output is visible;
-- implement the provider-neutral adapter contract and controlled candidate
-  benchmark harness behind disabled product flags;
+- first align the Qwen decision and remaining gates in a docs-only PR;
+- after separate gate evidence, implement the provider-neutral adapter contract
+  and controlled Qwen benchmark harness without product integration;
+- pin `qwen3.7-plus-2026-05-26`, non-thinking mode, strict structured output,
+  disabled tools/function calling/web/code execution, and no second-model
+  repair or interpretation path;
 - require minimum counts for every claimed device, lighting, layout, and store
   subgroup and record uncertainty where sample size is insufficient;
 - validate schemas, privacy redaction, latency, usage, real cost, false pass,
@@ -1115,16 +1131,18 @@ Scope:
 Rollback: stop benchmark invocations and retain only governed evaluation
 evidence according to its retention policy.
 
-Gate: approved candidate sandboxes and data terms. The owner selects a provider
-only after the blinded benchmark, DPA/privacy, no-training/retention, residency,
-budget, and incident evidence is complete.
+Gate: approved Alibaba Model Studio sandbox, exact workspace region/deployment
+scope and endpoint, secret custody, DPA/privacy, no-training/retention,
+subprocessor and deletion terms, budget/cost ceiling, incident owner, frozen
+digest-bound dataset, holdout, and owner-approved acceptance thresholds. The
+benchmark validates or rejects Qwen; it does not select a fallback.
 
-### PR-9 — Selected-provider hidden shadow queue
+### PR-9 — Validated Qwen hidden shadow queue
 
 Scope:
 
 - outbox, dedicated queue/worker, idempotency, retries, circuit breaker, and
-  selected provider adapter;
+  validated Qwen adapter behind the provider-neutral port;
 - structured shadow records only, feature-gated and hidden from ordinary
   product users;
 - repeat a blinded holdout evaluation without changing the frozen labels;
@@ -1133,15 +1151,17 @@ Scope:
 Rollback: kill switch stops enqueue/processing; manual workflows continue and
 shadow data remains inspectable.
 
-Gate: selected provider contract, holdout acceptance thresholds, cost ceiling,
+Gate: Qwen provider contract, holdout acceptance thresholds, cost ceiling,
 queue reliability, and owner shadow Go.
 
 ### PR-10 — Advisory reviewer surface and controlled staging pilot
 
 Scope:
 
-- add `VM_VISUAL_REVIEWER` accept/override/reject/recapture flows only after
-  blinded evaluation closes;
+- add Region Manager accept/override/reject/recapture flows for assigned stores
+  only after blinded evaluation closes;
+- keep `VM_VISUAL_REVIEWER` read-only and preserve Visual Merchandising as the
+  reference publisher rather than final reviewer;
 - show confidence and limitations without implying official scoring;
 - keep Report Viewer AI detail denied unless a later owner decision opens it;
 - execute approved pilot accounts/stores/references;
@@ -1236,7 +1256,8 @@ Stop before implementation or merge if:
 - real photos would be sent without approved privacy/provider terms;
 - storage restore/reconciliation cannot be proven;
 - required mobile evidence is waived without a newer explicit owner decision;
-- a provider/model/cost/residency decision is inferred rather than approved;
+- any still-open provider access, cost, data-term, endpoint-scope, or residency
+  fact is inferred rather than approved;
 - broad production is requested without a new explicit Go decision;
 - required checks, mergeability, or staging evidence fail.
 
@@ -1251,7 +1272,10 @@ These are intentionally unresolved:
 - campaign deadline extension/reopen authority, exemption authority, and
   operational escalation owner;
 - maximum photos per item/visit and company cost ceilings;
-- AI provider/model and any normal/hard-case routing;
+- exact Alibaba workspace region/deployment scope and endpoint, API-key custody,
+  DPA/data terms, no-training/retention/deletion/subprocessor evidence, incident
+  owner, and Qwen cost ceiling;
+- any future normal/hard-case routing or fallback model;
 - benchmark acceptance thresholds, especially false-pass tolerance;
 - whether Report Viewer sees advisory comparison detail or aggregate evidence;
 - whether and when the default retention changes from 365 days;
@@ -1280,6 +1304,7 @@ This plan's authorized product line is complete only when:
 
 ## Related Documents
 
+- `docs/plans/qwen-visual-comparison-pr8-execution-spec-v1.md`
 - `docs/superpowers/specs/2026-04-29-vm-checklist-v1-design.md`
 - `docs/plans/store-action-checklist-remediation-v1.md`
 - `docs/plans/store-action-checklist-remediation-implementation-v1.md`
