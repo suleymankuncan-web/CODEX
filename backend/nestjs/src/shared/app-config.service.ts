@@ -18,7 +18,6 @@ export class AppConfigService {
 
   private readString(key: string, fallback: string): string {
     const value = this.configService.get<string>(key);
-
     if (!value || value === "undefined" || value === "null") {
       return fallback;
     }
@@ -28,7 +27,6 @@ export class AppConfigService {
 
   private readOptionalString(key: string): string | undefined {
     const value = this.configService.get<string>(key);
-
     if (!value || value === "undefined" || value === "null") {
       return undefined;
     }
@@ -392,10 +390,17 @@ export class AppConfigService {
         "PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT",
         "2",
       ),
+      scheduledRetentionCleanupEnabled: this.readBoolean("PHOTO_MEDIA_SCHEDULED_RETENTION_CLEANUP_ENABLED", false),
+      retentionManifestTtlMinutes: this.readPositiveInteger("PHOTO_MEDIA_RETENTION_MANIFEST_TTL_MINUTES", "60"),
+      retentionWarningPercent: this.readPositiveInteger("PHOTO_MEDIA_RETENTION_WARNING_PERCENT", "70"),
+      retentionCriticalPercent: this.readPositiveInteger("PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT", "85"),
       syntheticFixtureSha256Allowlist: this.photoMediaSyntheticFixtureSha256Allowlist,
       safetyAssurance: "fixture_identity_only" as const,
     };
 
+    if (!(configuration.retentionWarningPercent >= 1 && configuration.retentionWarningPercent <
+      configuration.retentionCriticalPercent && configuration.retentionCriticalPercent <= 100))
+      throw new Error("PHOTO_MEDIA_RETENTION thresholds must satisfy 1 <= warning < critical <= 100");
     if (enabled) {
       if (configuration.syntheticFixtureSha256Allowlist.length !== 1) {
         throw new Error(

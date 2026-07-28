@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-28T11:57:46.913Z",
+  "generatedAt": "2026-07-28T14:30:09.658Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 246,
-    "backendEndpointsWithoutFrontendCallCount": 50,
+    "backendEndpointCount": 248,
+    "backendEndpointsWithoutFrontendCallCount": 52,
     "controllerCount": 34,
     "frontendApiCallCount": 196,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 196,
-    "openApiEndpointCount": 246,
+    "openApiEndpointCount": 248,
     "routeApiEdgeCount": 249,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
@@ -5799,7 +5799,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 87
+        "line": 122
       }
     },
     {
@@ -5813,21 +5813,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 111
-      }
-    },
-    {
-      "id": "endpoint:POST:/api/internal/photo-media/maintenance/cleanup-expired",
-      "method": "POST",
-      "path": "/api/internal/photo-media/maintenance/cleanup-expired",
-      "rawControllerPath": "internal/photo-media",
-      "rawMethodPath": "maintenance/cleanup-expired",
-      "controller": "photo-media-storage",
-      "domain": "internal",
-      "openApiCovered": true,
-      "source": {
-        "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 119
+        "line": 146
       }
     },
     {
@@ -5841,7 +5827,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 124
+        "line": 279
       }
     },
     {
@@ -5855,7 +5841,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 129
+        "line": 284
       }
     },
     {
@@ -5869,7 +5855,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 101
+        "line": 136
       }
     },
     {
@@ -5883,7 +5869,49 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 106
+        "line": 141
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/internal/photo-media/maintenance/retention/execute",
+      "method": "POST",
+      "path": "/api/internal/photo-media/maintenance/retention/execute",
+      "rawControllerPath": "internal/photo-media",
+      "rawMethodPath": "maintenance/retention/execute",
+      "controller": "photo-media-storage",
+      "domain": "internal",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
+        "line": 185
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/internal/photo-media/maintenance/retention/preview",
+      "method": "POST",
+      "path": "/api/internal/photo-media/maintenance/retention/preview",
+      "rawControllerPath": "internal/photo-media",
+      "rawMethodPath": "maintenance/retention/preview",
+      "controller": "photo-media-storage",
+      "domain": "internal",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
+        "line": 154
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/internal/photo-media/maintenance/retention/usage",
+      "method": "POST",
+      "path": "/api/internal/photo-media/maintenance/retention/usage",
+      "rawControllerPath": "internal/photo-media",
+      "rawMethodPath": "maintenance/retention/usage",
+      "controller": "photo-media-storage",
+      "domain": "internal",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
+        "line": 215
       }
     },
     {
@@ -5897,7 +5925,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 73
+        "line": 108
       }
     },
     {
@@ -5911,7 +5939,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 59
+        "line": 94
       }
     },
     {
@@ -5925,7 +5953,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 34
+        "line": 69
       }
     },
     {
@@ -8263,12 +8291,6 @@
       "domain": "internal"
     },
     {
-      "id": "openapi:POST:/api/internal/photo-media/maintenance/cleanup-expired",
-      "method": "POST",
-      "path": "/api/internal/photo-media/maintenance/cleanup-expired",
-      "domain": "internal"
-    },
-    {
       "id": "openapi:POST:/api/internal/photo-media/maintenance/cleanup-partials",
       "method": "POST",
       "path": "/api/internal/photo-media/maintenance/cleanup-partials",
@@ -8290,6 +8312,24 @@
       "id": "openapi:POST:/api/internal/photo-media/maintenance/restore-rehearsal",
       "method": "POST",
       "path": "/api/internal/photo-media/maintenance/restore-rehearsal",
+      "domain": "internal"
+    },
+    {
+      "id": "openapi:POST:/api/internal/photo-media/maintenance/retention/execute",
+      "method": "POST",
+      "path": "/api/internal/photo-media/maintenance/retention/execute",
+      "domain": "internal"
+    },
+    {
+      "id": "openapi:POST:/api/internal/photo-media/maintenance/retention/preview",
+      "method": "POST",
+      "path": "/api/internal/photo-media/maintenance/retention/preview",
+      "domain": "internal"
+    },
+    {
+      "id": "openapi:POST:/api/internal/photo-media/maintenance/retention/usage",
+      "method": "POST",
+      "path": "/api/internal/photo-media/maintenance/retention/usage",
       "domain": "internal"
     },
     {
@@ -11605,7 +11645,7 @@
         "id": "controller:photo-media-storage",
         "controller": "photo-media-storage",
         "domain": "internal",
-        "endpointCount": 10,
+        "endpointCount": 12,
         "frontendCallCount": 0
       },
       {
@@ -11652,11 +11692,13 @@
       "endpoint:GET:/api/integrations/sources/due-schedule",
       "endpoint:POST:/api/internal/photo-media/assets/{mediaAssetId}/read-url",
       "endpoint:POST:/api/internal/photo-media/maintenance/assets/{mediaAssetId}/restore",
-      "endpoint:POST:/api/internal/photo-media/maintenance/cleanup-expired",
       "endpoint:POST:/api/internal/photo-media/maintenance/cleanup-partials",
       "endpoint:POST:/api/internal/photo-media/maintenance/cleanup-ready-raw",
       "endpoint:POST:/api/internal/photo-media/maintenance/reconcile",
       "endpoint:POST:/api/internal/photo-media/maintenance/restore-rehearsal",
+      "endpoint:POST:/api/internal/photo-media/maintenance/retention/execute",
+      "endpoint:POST:/api/internal/photo-media/maintenance/retention/preview",
+      "endpoint:POST:/api/internal/photo-media/maintenance/retention/usage",
       "endpoint:POST:/api/internal/photo-media/uploads/{mediaAssetId}/finalize",
       "endpoint:POST:/api/internal/photo-media/uploads/{mediaAssetId}/quarantine/dispose",
       "endpoint:POST:/api/internal/photo-media/uploads/initiate",

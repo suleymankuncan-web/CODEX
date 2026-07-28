@@ -1,8 +1,12 @@
 import {
-  Body, Controller, Param, ParseFilePipeBuilder, ParseUUIDPipe, Post, Req,
+  Body, Controller, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseUUIDPipe, Post, Req,
   UploadedFile, UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import {
+  ApiBadRequestResponse, ApiConflictResponse, ApiForbiddenResponse,
+  ApiNotFoundResponse, ApiOkResponse, ApiServiceUnavailableResponse,
+} from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { PhotoMediaStorageService } from "../application/photo-media-storage.service";
@@ -11,6 +15,8 @@ import {
   InitiateSyntheticPhotoMediaUploadDto,
   DisposeSyntheticPhotoMediaQuarantineDto,
   PhotoMediaMaintenanceBatchDto,
+  PhotoMediaRetentionExecuteDto,
+  PhotoMediaRetentionPreviewDto,
   PhotoMediaReadDto,
 } from "./dto/photo-media-storage.dto";
 import { PhotoMediaMaintenanceService } from "../application/photo-media-maintenance.service";
@@ -21,6 +27,35 @@ type PhotoMediaRequestUser = {
   scope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
   actionScope: { assignedStoreIds: string[] };
 };
+
+const standardErrorSchema = (statusCode: number, errorCodes: string[]) => ({
+  type: "object",
+  additionalProperties: false,
+  required: ["correlationId", "statusCode", "errorCode", "message", "path", "timestamp"],
+  properties: {
+    correlationId: { type: "string" },
+    statusCode: { type: "integer", enum: [statusCode] },
+    errorCode: { type: "string", enum: errorCodes },
+    message: { oneOf: [
+      { type: "string" },
+      { type: "array", items: { type: "string" } },
+    ] },
+    path: { type: "string" },
+    timestamp: { type: "string", format: "date-time" },
+  },
+});
+
+const retentionBadRequestSchema = standardErrorSchema(HttpStatus.BAD_REQUEST, [
+  "VALIDATION_ERROR", "manifest_digest_mismatch", "manifest_reason_invalid",
+]);
+const retentionForbiddenSchema = standardErrorSchema(HttpStatus.FORBIDDEN, ["FORBIDDEN"]);
+const retentionNotFoundSchema = standardErrorSchema(HttpStatus.NOT_FOUND, ["manifest_not_found"]);
+const retentionConflictSchema = standardErrorSchema(HttpStatus.CONFLICT, [
+  "manifest_expired", "manifest_not_executable", "manifest_stale", "asset_held",
+]);
+const retentionUnavailableSchema = standardErrorSchema(HttpStatus.SERVICE_UNAVAILABLE, [
+  "cleanup_disabled", "provider_delete_failed", "SERVICE_UNAVAILABLE",
+]);
 
 @Controller("internal/photo-media")
 @RequireScope("authenticated")
@@ -99,8 +134,8 @@ export class PhotoMediaStorageController {
   }
 
   @Post("maintenance/reconcile")
-  reconcile() {
-    return this.maintenance.reconcile();
+  reconcile(@Req() request: { user: PhotoMediaRequestUser }) {
+    return this.maintenance.reconcile(request.user.scope);
   }
 
   @Post("maintenance/restore-rehearsal")
@@ -116,9 +151,129 @@ export class PhotoMediaStorageController {
     return this.maintenance.restoreAsset({ mediaAssetId, actorUserId: request.user.userId });
   }
 
-  @Post("maintenance/cleanup-expired")
-  cleanupExpired(@Body() body: PhotoMediaMaintenanceBatchDto) {
-    return this.maintenance.cleanupExpired(body.limit);
+  @Post("maintenance/retention/preview")
+  @HttpCode(HttpStatus.OK)
+  @ApiBadRequestResponse({ schema: retentionBadRequestSchema })
+  @ApiConflictResponse({ schema: retentionConflictSchema })
+  @ApiForbiddenResponse({ schema: retentionForbiddenSchema })
+  @ApiServiceUnavailableResponse({ schema: retentionUnavailableSchema })
+  @ApiOkResponse({ schema: {
+    type: "object",
+    required: ["manifestId", "manifestDigest", "candidateCount", "candidateBytes", "expiresAt", "status"],
+    properties: {
+      manifestId: { type: "string", format: "uuid" },
+      manifestDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      candidateCount: { type: "integer", minimum: 0 },
+      candidateBytes: { type: "integer", minimum: 0 },
+      expiresAt: { type: "string", format: "date-time" },
+      status: { type: "string", enum: ["previewed"] },
+    },
+  } })
+  previewRetention(
+    @Req() request: { user: PhotoMediaRequestUser },
+    @Body() body: PhotoMediaRetentionPreviewDto,
+  ) {
+    return this.maintenance.previewRetentionPurge({
+      limit: body.limit,
+      reason: body.reason,
+      source: "manual",
+      actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+    });
+  }
+
+  @Post("maintenance/retention/execute")
+  @HttpCode(HttpStatus.OK)
+  @ApiBadRequestResponse({ schema: retentionBadRequestSchema })
+  @ApiForbiddenResponse({ schema: retentionForbiddenSchema })
+  @ApiNotFoundResponse({ schema: retentionNotFoundSchema })
+  @ApiConflictResponse({ schema: retentionConflictSchema })
+  @ApiServiceUnavailableResponse({ schema: retentionUnavailableSchema })
+  @ApiOkResponse({ schema: {
+    type: "object",
+    required: ["manifestId", "manifestDigest", "claimedCount", "deletedCount", "status"],
+    properties: {
+      manifestId: { type: "string", format: "uuid" },
+      manifestDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      claimedCount: { type: "integer", minimum: 0 },
+      deletedCount: { type: "integer", minimum: 0 },
+      status: { type: "string", enum: ["completed"] },
+    },
+  } })
+  executeRetention(
+    @Req() request: { user: PhotoMediaRequestUser },
+    @Body() body: PhotoMediaRetentionExecuteDto,
+  ) {
+    return this.maintenance.executeRetentionPurge({
+      manifestId: body.manifestId,
+      manifestDigest: body.manifestDigest,
+      actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+    });
+  }
+
+  @Post("maintenance/retention/usage")
+  @HttpCode(HttpStatus.OK)
+  @ApiForbiddenResponse({ schema: retentionForbiddenSchema })
+  @ApiServiceUnavailableResponse({ schema: retentionUnavailableSchema })
+  @ApiOkResponse({ schema: {
+    type: "object",
+    required: [
+      "current", "recentGrowthBytes", "projectedThirtyDayBytes",
+      "classifications", "lifecycle", "alerts",
+    ],
+    properties: {
+      current: {
+        type: "object", additionalProperties: false,
+        required: ["bytes", "classAOperations", "classBOperations"], properties: {
+        bytes: { type: "integer", minimum: 0 },
+        classAOperations: { type: "integer", minimum: 0 },
+        classBOperations: { type: "integer", minimum: 0 },
+      } },
+      recentGrowthBytes: { type: "integer", minimum: 0 },
+      projectedThirtyDayBytes: { type: "integer", minimum: 0 },
+      classifications: { type: "array", items: {
+        type: "object", additionalProperties: false,
+        required: ["classification", "assetCount", "bytes"],
+        properties: {
+          classification: {
+            type: "string", enum: [
+              "checklist_evidence", "action_evidence", "vm_reference",
+              "vm_campaign_evidence", "derived_artifact",
+            ],
+          },
+          assetCount: { type: "integer", minimum: 0 },
+          bytes: { type: "integer", minimum: 0 },
+        },
+      } },
+      lifecycle: {
+        type: "object", additionalProperties: false,
+        required: [
+          "purgeEligibleCount", "protectedExpiredCount", "stuckUploadCount",
+          "stuckPurgeCount", "cleanupFailureCount",
+        ],
+        properties: {
+          purgeEligibleCount: { type: "integer", minimum: 0 },
+          protectedExpiredCount: { type: "integer", minimum: 0 },
+          stuckUploadCount: { type: "integer", minimum: 0 },
+          stuckPurgeCount: { type: "integer", minimum: 0 },
+          cleanupFailureCount: { type: "integer", minimum: 0 },
+        },
+      },
+      alerts: { type: "array", items: {
+        type: "object", additionalProperties: false,
+        required: ["dimension", "used", "limit", "state"],
+        properties: {
+          dimension: { type: "string", enum: ["bytes", "class_a", "class_b"] },
+          used: { type: "integer", minimum: 0 },
+          limit: { type: "integer", minimum: 1 },
+          state: { type: "string", enum: ["normal", "warning", "critical", "limit_reached"] },
+        },
+      } },
+    },
+  } })
+  retentionUsage(@Req() request: { user: PhotoMediaRequestUser }) {
+    return this.maintenance.getRetentionUsage(request.user.scope);
   }
 
   @Post("maintenance/cleanup-partials")

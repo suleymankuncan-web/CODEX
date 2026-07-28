@@ -36,6 +36,18 @@ const TARGET_REVISION_ERROR_CODES = new Set([
   "target_revision_import_replacement_forbidden",
 ]);
 
+const PHOTO_MEDIA_RETENTION_ERROR_CODES = new Set([
+  "cleanup_disabled",
+  "manifest_not_found",
+  "manifest_digest_mismatch",
+  "manifest_expired",
+  "manifest_not_executable",
+  "manifest_stale",
+  "asset_held",
+  "manifest_reason_invalid",
+  "provider_delete_failed",
+]);
+
 @Catch()
 export class StandardErrorFilter implements ExceptionFilter {
   constructor(private readonly observabilityService?: ObservabilityService) {}
@@ -102,6 +114,13 @@ export class StandardErrorFilter implements ExceptionFilter {
   ): string {
     if (statusCode === HttpStatus.BAD_REQUEST && Array.isArray(exceptionBody?.message)) {
       return "VALIDATION_ERROR";
+    }
+
+    if (
+      exceptionBody?.code &&
+      PHOTO_MEDIA_RETENTION_ERROR_CODES.has(exceptionBody.code)
+    ) {
+      return exceptionBody.code;
     }
 
     if (

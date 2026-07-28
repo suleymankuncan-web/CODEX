@@ -16,8 +16,10 @@ import { SharpPhotoMediaImageProcessor } from "./infrastructure/sharp-photo-medi
 import { SyntheticFixturePhotoMediaSafetyScanner } from "./infrastructure/synthetic-fixture-photo-media-safety-scanner";
 import { PhotoMediaStorageController } from "./web/photo-media-storage.controller";
 import { PhotoMediaMaintenanceService } from "./application/photo-media-maintenance.service";
+import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-retention.module";
 
 @Module({
+  imports: [StoreOpsPhotoMediaRetentionModule],
   controllers: [PhotoMediaStorageController],
   providers: [
     PhotoMediaStorageService,

@@ -56,7 +56,7 @@ export class PhotoMediaStorageService {
     contentLength: number;
     contentBody: Buffer;
     syntheticFixtureAttestation: boolean;
-    classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence";
+    classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence" | "derived_artifact";
   }) {
     this.assertEnabled();
     if (
@@ -185,7 +185,7 @@ export class PhotoMediaStorageService {
     contentType: string;
     contentLength: number;
     contentBody: Buffer;
-    classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence";
+    classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence" | "derived_artifact";
   }) {
     this.assertEnabled();
     if (!this.configuration.syntheticOnly) {

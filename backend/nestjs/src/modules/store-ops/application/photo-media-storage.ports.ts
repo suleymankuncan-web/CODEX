@@ -37,15 +37,6 @@ export type PhotoMediaReconciliationInventoryItem = {
   recoveryObjects: Array<{ objectKey: string; sha256?: string; byteCount?: number }>;
 };
 
-export type PhotoMediaCleanupCandidate = {
-  mediaAssetId: string;
-  cleanupLeaseToken: string;
-  canonicalSha256: string;
-  thumbnailObjectKey: string;
-  primaryObjectKeys: string[];
-  recoveryObjectKeys: string[];
-};
-
 export type PhotoMediaPartialCleanupCandidate = {
   mediaAssetId: string;
   cleanupLeaseToken: string;
@@ -106,9 +97,8 @@ export interface PhotoMediaAssetRepositoryPort {
   claimReadyRawDisposal(mediaAssetId: string): Promise<PhotoMediaPartialCleanupCandidate | null>;
   claimReadyRawDisposals(limit: number): Promise<PhotoMediaPartialCleanupCandidate[]>;
   markRawDisposed(input: Record<string, unknown>): Promise<void>;
-  listReconciliationInventory(): Promise<PhotoMediaReconciliationInventoryItem[]>;
+  listReconciliationInventory(allowedCompanyIds?: string[]): Promise<PhotoMediaReconciliationInventoryItem[]>;
   recordReconciliationReceipt(input: Record<string, unknown>): Promise<void>;
-  claimCleanupCandidates(limit: number): Promise<PhotoMediaCleanupCandidate[]>;
   markDeletedTombstone(input: Record<string, unknown>): Promise<void>;
   claimStalePartialUploads(limit: number): Promise<PhotoMediaPartialCleanupCandidate[]>;
   claimQuarantinedDisposal(mediaAssetId: string): Promise<PhotoMediaPartialCleanupCandidate>;

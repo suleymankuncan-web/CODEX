@@ -15,7 +15,7 @@ export type CreatePhotoMediaAssetInput = {
   contentType: string;
   contentLength: number;
   captureSource: "system_generated";
-  classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence";
+  classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence" | "derived_artifact";
   quota: {
     aggregateBytesHardLimit: number;
     monthlyClassAHardLimit: number;
@@ -92,8 +92,10 @@ export async function createPhotoMediaAsset(
       version_no: number;
       evidence_retention_days: number;
       reference_retention_days: number;
+      derived_retention_days: number;
     }>(`
-      SELECT retention_policy_id, version_no, evidence_retention_days, reference_retention_days
+      SELECT retention_policy_id, version_no, evidence_retention_days,
+             reference_retention_days, derived_retention_days
       FROM ops.evidence_retention_policy
       WHERE company_id = $1::uuid AND effective_from <= NOW()
         AND (effective_to IS NULL OR effective_to > NOW())
@@ -105,7 +107,9 @@ export async function createPhotoMediaAsset(
     }
     const retentionDays = input.classification === "vm_reference"
       ? retention.reference_retention_days
-      : retention.evidence_retention_days;
+      : input.classification === "derived_artifact"
+        ? retention.derived_retention_days
+        : retention.evidence_retention_days;
     if (retentionDays < input.quota.lockSafetyDays) {
       throw new ServiceUnavailableException("Photo media retention is shorter than the provider lock safety window");
     }
