@@ -2599,6 +2599,13 @@ export type components = {
       "decision": "approve" | "return"
       "reviewNote"?: string
     }
+    "ReviewStoreActionSolutionRequest": {
+      "solutionAttemptId": string
+      "decision": "approve" | "reject"
+      "reason"?: string
+      "idempotencyKey": string
+      "expectedVersion": number
+    }
     "SalesTargetIncentiveWorkspace": {
       "period": string
       "periodStart": string
@@ -2863,6 +2870,16 @@ export type components = {
           "snapshotType": string
         }>
     }
+    "StoreActionPhotoReviewProjection": {
+      "actionPlanId": string
+      "status": "open" | "in_progress" | "blocked" | "solution_review_pending" | "correction_required" | "closed" | "cancelled"
+      "version": number
+      "currentAttemptId": string | null
+      "findingMediaAssetIds": string[]
+      "attempts": Array<{
+          [key: string]: unknown
+        }>
+    }
     "StoreActionPlanCommandResponse": {
       "command": {
         "status": string
@@ -2886,7 +2903,7 @@ export type components = {
           "title": string
           "summary": string | null
           "priority": "high" | "medium" | "low"
-          "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+          "status": "open" | "in_progress" | "blocked" | "solution_review_pending" | "correction_required" | "closed" | "cancelled"
           "dueOn": string
           "resolutionNote": string | null
           "closedByUserId": string | null
@@ -2896,6 +2913,9 @@ export type components = {
           "cancelledAt": string | null
           "createdAt": string
           "updatedAt": string
+          "photoEvidenceVersion": number
+          "currentSolutionAttemptId": string | null
+          "resolutionWorkflowVersion": 1 | 2
         }
       }
     }
@@ -2918,7 +2938,7 @@ export type components = {
           "title": string
           "summary": string | null
           "priority": "high" | "medium" | "low"
-          "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+          "status": "open" | "in_progress" | "blocked" | "solution_review_pending" | "correction_required" | "closed" | "cancelled"
           "dueOn": string
           "resolutionNote": string | null
           "closedByUserId": string | null
@@ -2928,6 +2948,9 @@ export type components = {
           "cancelledAt": string | null
           "createdAt": string
           "updatedAt": string
+          "photoEvidenceVersion": number
+          "currentSolutionAttemptId": string | null
+          "resolutionWorkflowVersion": 1 | 2
         }
       }
     }
@@ -2949,7 +2972,7 @@ export type components = {
           "title": string
           "summary": string | null
           "priority": "high" | "medium" | "low"
-          "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+          "status": "open" | "in_progress" | "blocked" | "solution_review_pending" | "correction_required" | "closed" | "cancelled"
           "dueOn": string
           "resolutionNote": string | null
           "closedByUserId": string | null
@@ -2959,6 +2982,9 @@ export type components = {
           "cancelledAt": string | null
           "createdAt": string
           "updatedAt": string
+          "photoEvidenceVersion": number
+          "currentSolutionAttemptId": string | null
+          "resolutionWorkflowVersion": 1 | 2
         }>
       "meta": {
         "count": number
@@ -3040,6 +3066,12 @@ export type components = {
       "period": string
       "regionId": string
       "submissionNote"?: string
+    }
+    "SubmitStoreActionSolutionRequest": {
+      "resolutionNote": string
+      "mediaAssetId": string
+      "idempotencyKey": string
+      "expectedVersion": number
     }
     "TargetCoverageResponse": {
       "items": Array<{
@@ -3276,6 +3308,7 @@ export type components = {
       "canUpdate": boolean
       "canComplete": boolean
       "canCancel": boolean
+      "canReview": boolean
     }
     "TaskCommandPage": {
       "total": number
@@ -3310,12 +3343,15 @@ export type components = {
       "title": string
       "summary": string | null
       "priority": "high" | "medium" | "low"
-      "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+      "status": "open" | "in_progress" | "blocked" | "solution_review_pending" | "correction_required" | "closed" | "cancelled"
       "dueOn": string
       "createdAt": string
       "updatedAt": string
       "completedAt": string | null
       "resultNote": string | null
+      "photoEvidenceVersion": number
+      "currentSolutionAttemptId": string | null
+      "resolutionWorkflowVersion": 1 | 2
       "source": components['schemas']["TaskCommandSource"]
       "events": components['schemas']["TaskCommandAuditPreview"]
     }
@@ -4429,6 +4465,49 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["StoreActionPlanCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}/photo-review": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreActionPhotoReviewProjection"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}/solution-attempts": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SubmitStoreActionSolutionRequest"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["StoreActionPhotoReviewProjection"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store-actions/plans/{actionPlanId}/solution-attempts/{solutionAttemptId}/review": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ReviewStoreActionSolutionRequest"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["StoreActionPhotoReviewProjection"]
           }
         }
       }

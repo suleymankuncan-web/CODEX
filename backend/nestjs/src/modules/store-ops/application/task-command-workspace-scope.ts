@@ -18,6 +18,7 @@ export type TaskCommandWorkspaceScope = {
     canUpdate: boolean;
     canComplete: boolean;
     canCancel: boolean;
+    canReview: boolean;
   };
 };
 
@@ -26,6 +27,7 @@ const readOnlyCapabilities = {
   canUpdate: false,
   canComplete: false,
   canCancel: false,
+  canReview: false,
 } as const;
 
 const storeManagerCapabilities = {
@@ -33,6 +35,7 @@ const storeManagerCapabilities = {
   canUpdate: true,
   canComplete: true,
   canCancel: true,
+  canReview: false,
 } as const;
 
 export function resolveTaskCommandWorkspaceScope(input: {
@@ -60,14 +63,18 @@ export function resolveTaskCommandWorkspaceScope(input: {
     const scope = roleScope(input, "REGION_MANAGER");
     if (!scope) return null;
     const regionIds = unique(scope.regionIds);
-    const storeIds = unique(scope.storeIds);
-    if (regionIds.length === 0 && storeIds.length === 0) return null;
+    const actionStores = unique(input.actorActionScope.assignedStoreIds);
+    const scopedStores = unique(scope.storeIds);
+    const storeIds = scopedStores.length === 0
+      ? actionStores
+      : actionStores.filter((storeId) => scopedStores.includes(storeId));
+    if (regionIds.length === 0 || storeIds.length === 0) return null;
     return {
       view: "region_manager",
       companyIds: [],
       regionIds,
       storeIds,
-      capabilities: { ...readOnlyCapabilities },
+      capabilities: { ...readOnlyCapabilities, canReview: true },
     };
   }
 

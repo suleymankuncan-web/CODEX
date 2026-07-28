@@ -83,6 +83,7 @@ describe("StoreActionPlanRepository", () => {
       planRow.summary,
       "high",
       planRow.due_on,
+      1,
     ]);
 
     const auditCall = query.mock.calls[1];
@@ -94,6 +95,25 @@ describe("StoreActionPlanRepository", () => {
       sourceId: planRow.source_id,
     });
     expect(result.actionPlanId).toBe(planRow.store_action_plan_id);
+  });
+
+  it("[FR-05] binds ready checklist finding evidence in the plan creation transaction", async () => {
+    const { query, withTransaction, repository } = createTransactionHarness();
+    query.mockResolvedValueOnce({ rows: [{ ...planRow, source_type: "checklist_remediation",
+      resolution_workflow_version: 2 }] }).mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
+    await repository.createPlan({
+      companyId: planRow.company_id, regionId: planRow.region_id, storeId: planRow.store_id,
+      ownerUserId: planRow.owner_user_id, createdByUserId: planRow.created_by_user_id,
+      sourceType: "checklist_remediation", sourceId: "checklist:instance:item:item",
+      title: "Finding", priority: "high", dueOn: planRow.due_on, resolutionWorkflowVersion: 2,
+      trustedChecklistFinding: { checklistInstanceId: "00000000-0000-4000-8000-000000000501",
+        templateItemId: "00000000-0000-4000-8000-000000000502" },
+    });
+    expect(withTransaction).toHaveBeenCalledTimes(1);
+    expect(String(query.mock.calls[1][0])).toContain("INSERT INTO ops.store_action_plan_evidence");
+    expect(String(query.mock.calls[1][0])).toContain("media.unlinked_at IS NULL");
+    expect(String(query.mock.calls[1][0])).toContain("asset.state = 'ready'");
+    expect(String(query.mock.calls[2][0])).toContain("INSERT INTO audit.event_log");
   });
 
   it("lists plans for assigned action stores with status and pagination filters", async () => {

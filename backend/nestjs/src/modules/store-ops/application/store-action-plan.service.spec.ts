@@ -5,7 +5,7 @@ import { StoreActionPlanService } from "./store-action-plan.service";
 const assignedStoreId = "00000000-0000-4000-8000-000000000201";
 const unassignedStoreId = "00000000-0000-4000-8000-000000000202";
 
-function createHarness() {
+function createHarness(storeActionPhotoResolutionEnabled = false) {
   const storeActionPlanRepository = {
     createPlan: jest.fn(),
     getPlanById: jest.fn(),
@@ -21,6 +21,7 @@ function createHarness() {
   const service = new StoreActionPlanService(
     storeActionPlanRepository as never,
     storeOpsRepository as never,
+    { storeActionPhotoResolutionEnabled } as never,
   );
 
   return {
@@ -122,6 +123,7 @@ describe("StoreActionPlanService", () => {
       summary: "Follow up on KPI exception",
       priority: "high",
       dueOn: "2026-06-01",
+      resolutionWorkflowVersion: 1,
     });
     expect(result.command.status).toBe("created");
     expect(result.data.plan.actionPlanId).toBe("00000000-0000-4000-8000-000000000701");
@@ -176,6 +178,47 @@ describe("StoreActionPlanService", () => {
 
     expect(storeOpsRepository.listStoresByScope).not.toHaveBeenCalled();
     expect(storeActionPlanRepository.createPlan).not.toHaveBeenCalled();
+  });
+
+  it("[EC-12] keeps client-labelled checklist remediation on V1", async () => {
+    const { service, storeActionPlanRepository, storeOpsRepository } = createHarness(true);
+    storeOpsRepository.listStoresByScope.mockResolvedValue([{ company_id: "00000000-0000-4000-8000-000000000001",
+      region_id: "00000000-0000-4000-8000-000000000010", store_id: assignedStoreId }]);
+    storeActionPlanRepository.createPlan.mockResolvedValue(existingPlan());
+    await service.createPlan(createPlanInput({ sourceType: "checklist_remediation", sourceId: "client-label" }));
+    expect(storeActionPlanRepository.createPlan).toHaveBeenCalledWith(expect.objectContaining({
+      resolutionWorkflowVersion: 1,
+    }));
+  });
+
+  it("[FR-05][AC-05] pins V2 only for an exact trusted checklist finding", async () => {
+    const { service, storeActionPlanRepository, storeOpsRepository } = createHarness(true);
+    storeOpsRepository.listStoresByScope.mockResolvedValue([{ company_id: "00000000-0000-4000-8000-000000000001",
+      region_id: "00000000-0000-4000-8000-000000000010", store_id: assignedStoreId }]);
+    storeActionPlanRepository.createPlan.mockResolvedValue(existingPlan({ resolutionWorkflowVersion: 2 }));
+    const checklistInstanceId = "00000000-0000-4000-8000-000000000501";
+    const templateItemId = "00000000-0000-4000-8000-000000000502";
+    const trustedChecklistFinding = { checklistInstanceId, templateItemId };
+    await service.createPlan(createPlanInput({
+      sourceType: "checklist_remediation",
+      sourceId: `checklist:${checklistInstanceId}:item:${templateItemId}`,
+      trustedChecklistFinding,
+    }));
+    expect(storeActionPlanRepository.createPlan).toHaveBeenCalledWith(expect.objectContaining({
+      resolutionWorkflowVersion: 2, trustedChecklistFinding,
+    }));
+  });
+
+  it("[AC-06] forbids Store Manager cancellation of a V2 remediation", async () => {
+    const { service, storeActionPlanRepository } = createHarness(true);
+    storeActionPlanRepository.getPlanById.mockResolvedValue(existingPlan({
+      resolutionWorkflowVersion: 2, status: "correction_required",
+    }));
+    await expect(service.cancelPlan({ actorUserId: "00000000-0000-4000-8000-000000000901",
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actionPlanId: "00000000-0000-4000-8000-000000000701", cancelReason: "Skip",
+    })).rejects.toBeInstanceOf(ConflictException);
+    expect(storeActionPlanRepository.cancelPlan).not.toHaveBeenCalled();
   });
 
   it("passes the observed status as the expected write state", async () => {

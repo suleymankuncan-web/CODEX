@@ -6,7 +6,8 @@ import type { TaskCommandWorkspace } from "./task-command-workspace.contract";
 import { resolveTaskCommandWorkspaceScope } from "./task-command-workspace-scope";
 
 const resultStatuses: StoreActionPlanStatus[] = ["closed", "cancelled"];
-const allStatuses: StoreActionPlanStatus[] = ["open", "in_progress", "blocked", "closed", "cancelled"];
+const regionStatuses: StoreActionPlanStatus[] = ["solution_review_pending", "closed", "cancelled"];
+const allStatuses: StoreActionPlanStatus[] = ["open", "in_progress", "blocked", "solution_review_pending", "correction_required", "closed", "cancelled"];
 
 @Injectable()
 export class TaskCommandWorkspaceReadService {
@@ -21,7 +22,7 @@ export class TaskCommandWorkspaceReadService {
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
     const page = await this.repository.readPage({
       companyIds: scope.companyIds, regionIds: scope.regionIds, storeIds: scope.storeIds,
-      statuses: scope.view === "store_manager" ? allStatuses : resultStatuses,
+      statuses: scope.view === "store_manager" ? allStatuses : scope.view === "region_manager" ? regionStatuses : resultStatuses,
       periodStart: period.periodStart, periodEnd: period.periodEnd,
       limit, offset, eventLimit: 3,
     });
@@ -50,7 +51,7 @@ export class TaskCommandWorkspaceReadService {
     const result = await this.repository.readEvents({
       actionPlanId: input.actionPlanId,
       companyIds: scope.companyIds, regionIds: scope.regionIds, storeIds: scope.storeIds,
-      statuses: scope.view === "store_manager" ? allStatuses : resultStatuses,
+      statuses: scope.view === "store_manager" ? allStatuses : scope.view === "region_manager" ? regionStatuses : resultStatuses,
       limit, offset,
     });
     if (!result) throw new NotFoundException("Task result was not found");

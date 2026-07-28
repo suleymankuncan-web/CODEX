@@ -1,11 +1,9 @@
-import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { expect, test, type Page } from './test-fixtures'
+import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { createStoreContractSession, installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
 
 const storeA = '11111111-1111-4111-8111-111111111111'
 const storeB = '22222222-2222-4222-8222-222222222222'
-const evidenceDir = join(process.cwd(), '..', 'docs', 'evidence', 'checklist-command-cutover-v2', 'p6')
 
 test.beforeEach(async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')
@@ -69,14 +67,13 @@ test('Store Manager opens its scoped Living Store Record and returns focus on cl
   await expect(opener).toBeFocused()
 })
 
-test('Store Manager role surface remains bounded at all acceptance viewports', async ({ page }) => {
+test('Store Manager role surface remains bounded at all acceptance viewports', async ({ page }, testInfo) => {
   for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 320, height: 844 }] as const) {
     await page.setViewportSize(viewport)
     await page.goto('/store/checklists')
     await expect(page.getByRole('heading', { name: 'Mağaza Kontrol Merkezi' })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    mkdirSync(evidenceDir, { recursive: true })
-    await page.screenshot({ path: join(evidenceDir, `store-manager-${viewport.width}x${viewport.height}.png`), fullPage: true })
+    await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, `checklist-command-cutover-v2/p6/store-manager-${viewport.width}x${viewport.height}.png`), fullPage: true })
   }
 })
 

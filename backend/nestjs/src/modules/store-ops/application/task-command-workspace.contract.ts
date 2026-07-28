@@ -27,6 +27,9 @@ export type TaskCommandWorkspaceItem = {
   updatedAt: string;
   completedAt: string | null;
   resultNote: string | null;
+  photoEvidenceVersion: number;
+  currentSolutionAttemptId: string | null;
+  resolutionWorkflowVersion: 1 | 2;
   source: {
     type: StoreActionPlanSourceType;
     id: string;

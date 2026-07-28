@@ -93,6 +93,11 @@ test('database invariant preflight SQL is read only and covers every required ch
     'ops.visual_campaign_submission_media',
     'ops.visual_comparison_run',
     'audit.photo_evidence_event',
+    // Migration 065 binds each solution upload intent to the exact action
+    // plan and media asset through composite tenant/store foreign keys. The
+    // PR-5 disposable migration smoke proves the constraint and preserves the
+    // digest-locked V1 diagnostic query.
+    'ops.store_action_solution_upload_intent',
     'ops.store',
     'ops.user_role_assignment',
   ])

@@ -18,6 +18,7 @@ import {
   StoreActionPlanTransitionConflictError,
 } from "../infrastructure/store-action-plan.repository";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
+import { AppConfigService } from "../../../shared/app-config.service";
 
 type StoreActionPlanActorInput = {
   actorUserId: string;
@@ -48,6 +49,7 @@ export class StoreActionPlanService {
   constructor(
     private readonly storeActionPlanRepository: StoreActionPlanRepository,
     private readonly storeOpsRepository: StoreOpsRepository,
+    private readonly appConfigService: AppConfigService,
   ) {}
 
   async listPlans(input: {
@@ -140,14 +142,26 @@ export class StoreActionPlanService {
     summary?: string;
     priority: StoreActionPlanPriority;
     dueOn?: string;
+    trustedChecklistFinding?: { checklistInstanceId: string; templateItemId: string };
   }) {
     this.assertAssignedActionStore(input.actorActionScope, input.storeId);
     const dueOn = normalizeRequiredText(input.dueOn);
     if (!dueOn) {
       throw new BadRequestException("Due date is required to create a store action plan");
     }
+    if (input.trustedChecklistFinding) {
+      const expectedSourceId = `checklist:${input.trustedChecklistFinding.checklistInstanceId}:item:${input.trustedChecklistFinding.templateItemId}`;
+      if (input.sourceType !== "checklist_remediation" || input.sourceId !== expectedSourceId) {
+        throw new BadRequestException("Trusted checklist finding identity does not match the action source");
+      }
+    }
 
     const storeScope = await this.resolveStoreScope(input.storeId);
+    const resolutionWorkflowVersion = input.sourceType === "checklist_remediation" &&
+      input.trustedChecklistFinding !== undefined &&
+      this.appConfigService.storeActionPhotoResolutionEnabled
+      ? 2 as const
+      : 1 as const;
 
     try {
       const plan = await this.storeActionPlanRepository.createPlan({
@@ -165,6 +179,10 @@ export class StoreActionPlanService {
         summary: input.summary,
         priority: input.priority,
         dueOn,
+        resolutionWorkflowVersion,
+        ...(resolutionWorkflowVersion === 2
+          ? { trustedChecklistFinding: input.trustedChecklistFinding }
+          : {}),
         ...(input.actorDisplayName ? { actorDisplayName: input.actorDisplayName } : {}),
         ...(input.actorRoleLabel ? { actorRoleLabel: input.actorRoleLabel } : {}),
       });
@@ -225,6 +243,9 @@ export class StoreActionPlanService {
     }
 
     const existingPlan = await this.getWritablePlan(input);
+    if (existingPlan.resolutionWorkflowVersion === 2) {
+      throw new ConflictException("V2 store action plans require Region Manager solution review");
+    }
     this.assertTransition(existingPlan, "closed");
 
     const plan = await this.executeLifecycleWrite(() =>
@@ -255,6 +276,9 @@ export class StoreActionPlanService {
     }
 
     const existingPlan = await this.getWritablePlan(input);
+    if (existingPlan.resolutionWorkflowVersion === 2) {
+      throw new ConflictException("V2 store action plans cannot be cancelled outside Region Manager review");
+    }
     this.assertTransition(existingPlan, "cancelled");
 
     const plan = await this.executeLifecycleWrite(() =>

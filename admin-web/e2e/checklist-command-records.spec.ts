@@ -1,13 +1,10 @@
-import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
 import { expect, test, type Page } from './test-fixtures'
+import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { createStoreContractSession, installStoreContractSession } from './store-page-contract-fixtures'
 
 const regionId = '11111111-1111-4111-8111-111111111111'
 const storeId = '22222222-2222-4222-8222-222222222222'
-const recordsEvidenceDir = join(process.cwd(), '..', 'docs', 'evidence', 'checklist-command-cutover-v2', 'p5')
-
-test('Report Viewer expands one region and loads one store history lazily without mutations', async ({ page }) => {
+test('Report Viewer expands one region and loads one store history lazily without mutations', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'reportViewer')
   const requests = { histories: 0, mutations: 0, plans: 0, stores: 0 }
@@ -49,8 +46,7 @@ test('Report Viewer expands one region and loads one store history lazily withou
   await expect.poll(() => requests.histories).toBe(1)
   expect(requests.mutations).toBe(0)
 
-  mkdirSync(recordsEvidenceDir, { recursive: true })
-  await page.screenshot({ path: join(recordsEvidenceDir, 'report-viewer-desktop.png'), fullPage: true })
+  await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/report-viewer-desktop.png'), fullPage: true })
 })
 
 test('Report Viewer presentation wins for a mixed report-viewer and region-manager session', async ({ page }) => {
@@ -70,7 +66,7 @@ test('Report Viewer presentation wins for a mixed report-viewer and region-manag
   await expect(page.getByText('Checklist Komuta Merkezi')).toHaveCount(0)
 })
 
-test('Region Manager opens the third store-record view and history remains lazy', async ({ page }) => {
+test('Region Manager opens the third store-record view and history remains lazy', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
   let historyRequests = 0
@@ -92,11 +88,10 @@ test('Region Manager opens the third store-record view and history remains lazy'
   await expect(page.getByRole('dialog', { name: 'Marmara Park mağaza kaydı' })).toBeVisible()
   await expect.poll(() => historyRequests).toBe(1)
 
-  mkdirSync(recordsEvidenceDir, { recursive: true })
-  await page.screenshot({ path: join(recordsEvidenceDir, 'region-manager-records-desktop.png'), fullPage: true })
+  await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/region-manager-records-desktop.png'), fullPage: true })
 })
 
-test('Store record owns mobile scrolling and appends the next bounded history page', async ({ page }) => {
+test('Store record owns mobile scrolling and appends the next bounded history page', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 844 })
   await installStoreContractSession(page, 'reportViewer')
   await routeReportViewerRecords(page)
@@ -104,8 +99,7 @@ test('Store record owns mobile scrolling and appends the next bounded history pa
   await page.goto('/store/checklists')
   await expect(page.getByRole('heading', { name: 'Şirket Saha Görünümü' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  mkdirSync(recordsEvidenceDir, { recursive: true })
-  await page.screenshot({ path: join(recordsEvidenceDir, 'report-viewer-mobile-320.png'), fullPage: true })
+  await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/report-viewer-mobile-320.png'), fullPage: true })
   await page.getByRole('button', { name: /Onur Kaytan/ }).click()
   await page.getByRole('button', { name: 'Mağaza kaydını aç' }).click()
   const drawer = page.getByRole('dialog', { name: 'Marmara Park mağaza kaydı' })
@@ -117,7 +111,7 @@ test('Store record owns mobile scrolling and appends the next bounded history pa
   await page.getByRole('button', { name: '20 kayıt daha yükle' }).click()
   await expect(page.getByRole('button', { name: /Plan revize edildi 10 Oca/ })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.screenshot({ path: join(recordsEvidenceDir, 'living-store-record-mobile-320.png'), fullPage: true })
+  await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/living-store-record-mobile-320.png'), fullPage: true })
 })
 
 test('Report Viewer exposes a fail-closed company-scope state without retrying forbidden access', async ({ page }) => {
@@ -212,7 +206,7 @@ test('Region Manager three-view command header remains keyboard reachable at 320
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
-test('Report Viewer keeps populated rows during delayed server filters and captures responsive evidence', async ({ page }) => {
+test('Report Viewer keeps populated rows during delayed server filters and captures responsive evidence', async ({ page }, testInfo) => {
   await installStoreContractSession(page, 'reportViewer')
   await routeReportViewerRecords(page)
   await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
@@ -233,12 +227,11 @@ test('Report Viewer keeps populated rows during delayed server filters and captu
     await expect(missingMetric).toBeFocused()
     await filteredResponse
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    mkdirSync(recordsEvidenceDir, { recursive: true })
-    await page.screenshot({ path: join(recordsEvidenceDir, `report-viewer-${viewport.width}x${viewport.height}.png`), fullPage: true })
+    await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, `checklist-command-cutover-v2/p5/report-viewer-${viewport.width}x${viewport.height}.png`), fullPage: true })
   }
 })
 
-test('Region Manager records captures tablet and mobile role evidence without overflow', async ({ page }) => {
+test('Region Manager records captures tablet and mobile role evidence without overflow', async ({ page }, testInfo) => {
   await installStoreContractSession(page, 'regionManager')
   await routeReportViewerRecords(page)
   await page.route('**/api/checklists/command-canvas/visit-plans/regions**', async (route) => {
@@ -251,8 +244,7 @@ test('Region Manager records captures tablet and mobile role evidence without ov
     await page.getByRole('button', { name: 'Mağaza Kayıtları' }).click()
     await expect(page.getByRole('button', { name: 'Kaydı görüntüle' }).first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-    mkdirSync(recordsEvidenceDir, { recursive: true })
-    await page.screenshot({ path: join(recordsEvidenceDir, `region-manager-records-${viewport.width}x${viewport.height}.png`), fullPage: true })
+    await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, `checklist-command-cutover-v2/p5/region-manager-records-${viewport.width}x${viewport.height}.png`), fullPage: true })
   }
 })
 

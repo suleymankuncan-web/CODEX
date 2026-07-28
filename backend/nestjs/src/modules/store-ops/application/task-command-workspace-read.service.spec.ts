@@ -42,7 +42,7 @@ describe("TaskCommandWorkspaceReadService", () => {
       retained: 2, actionable: 0, completed: 1, cancelled: 1, checklist: 1,
     });
     expect(result.capabilities).toEqual({
-      canStart: false, canUpdate: false, canComplete: false, canCancel: false,
+      canStart: false, canUpdate: false, canComplete: false, canCancel: false, canReview: false,
     });
   });
 
@@ -54,7 +54,7 @@ describe("TaskCommandWorkspaceReadService", () => {
       actor: actor(["STORE_MANAGER"], storeScope), periodStart: "2026-07-01", periodEnd: "2026-07-31",
     });
     expect(repository.readPage).toHaveBeenCalledWith(expect.objectContaining({
-      statuses: ["open", "in_progress", "blocked", "closed", "cancelled"],
+      statuses: ["open", "in_progress", "blocked", "solution_review_pending", "correction_required", "closed", "cancelled"],
     }));
     expect(result.capabilities.canComplete).toBe(true);
   });
