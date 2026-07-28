@@ -1,6 +1,31 @@
 import { PhotoMediaAssetRepository } from "./photo-media-asset.repository";
 
 describe("PhotoMediaAssetRepository", () => {
+  it.each([
+    [{ legal_hold: true, operational_hold: false, active_workflow_hold: false, ai_review_hold: false }, "asset_held"],
+    [{ legal_hold: false, operational_hold: false, active_workflow_hold: false, ai_review_hold: false }, "manifest_stale"],
+  ])("returns a typed retention conflict when tombstone ownership is invalid", async (holds, code) => {
+    const query = jest.fn().mockResolvedValueOnce({ rows: [{
+      company_id: "11111111-1111-4111-8111-111111111111",
+      accounted_provider_bytes: "100",
+      state: "purge_pending",
+      cleanup_lease_token: "22222222-2222-4222-8222-222222222222",
+      cleanup_lease_active: false,
+      purge_manifest_id: "33333333-3333-4333-8333-333333333333",
+      ...holds,
+    }] });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never);
+
+    await expect(repository.markDeletedTombstone({
+      mediaAssetId: "44444444-4444-4444-8444-444444444444",
+      cleanupLeaseToken: "22222222-2222-4222-8222-222222222222",
+      purgeManifestId: "33333333-3333-4333-8333-333333333333",
+      tombstoneSha256: "a".repeat(64),
+      reasonCode: "governed_cleanup",
+    })).rejects.toMatchObject({ response: expect.objectContaining({ code }) });
+  });
+
   it("serializes account-wide quota reservation and derives tenant scope from the store", async () => {
     const companyId = "11111111-1111-4111-8111-111111111111";
     const regionId = "22222222-2222-4222-8222-222222222222";
@@ -104,22 +129,6 @@ describe("PhotoMediaAssetRepository", () => {
     expect(sql).toContain("accounted_provider_bytes");
     expect(sql).toContain("state = 'ready'");
     expect(sql).not.toContain("INSERT INTO ops.media_asset_replica");
-  });
-
-  it("claims retention cleanup with all holds denied and concurrent workers skipped", async () => {
-    const query = jest.fn().mockResolvedValue({ rows: [] });
-    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
-    const repository = new PhotoMediaAssetRepository(database as never);
-
-    await repository.claimCleanupCandidates(25);
-
-    const sql = String(query.mock.calls[0]?.[0]);
-    expect(sql).toContain("expires_at <= NOW()");
-    expect(sql).toContain("NOT ma.legal_hold");
-    expect(sql).toContain("NOT ma.operational_hold");
-    expect(sql).toContain("NOT ma.active_workflow_hold");
-    expect(sql).toContain("NOT ma.ai_review_hold");
-    expect(sql).toContain("FOR UPDATE SKIP LOCKED");
   });
 
   it("releases the pre-update reservation when stale partials are disposed", async () => {

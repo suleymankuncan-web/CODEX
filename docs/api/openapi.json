@@ -6570,30 +6570,6 @@
         ]
       }
     },
-    "/api/internal/photo-media/maintenance/cleanup-expired": {
-      "post": {
-        "operationId": "PhotoMediaStorageController_cleanupExpired",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PhotoMediaMaintenanceBatchDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "PhotoMediaStorage"
-        ]
-      }
-    },
     "/api/internal/photo-media/maintenance/cleanup-partials": {
       "post": {
         "operationId": "PhotoMediaStorageController_cleanupPartials",
@@ -8309,6 +8285,934 @@
         },
         "tags": [
           "VmCampaign"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/retention/preview": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_previewRetention",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaRetentionPreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "manifestId",
+                    "manifestDigest",
+                    "candidateCount",
+                    "candidateBytes",
+                    "expiresAt",
+                    "status"
+                  ],
+                  "properties": {
+                    "manifestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "manifestDigest": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "candidateCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "candidateBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "previewed"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_ERROR",
+                        "manifest_digest_mismatch",
+                        "manifest_reason_invalid"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "manifest_expired",
+                        "manifest_not_executable",
+                        "manifest_stale",
+                        "asset_held"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "cleanup_disabled",
+                        "provider_delete_failed",
+                        "SERVICE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/retention/execute": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_executeRetention",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaRetentionExecuteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "manifestId",
+                    "manifestDigest",
+                    "claimedCount",
+                    "deletedCount",
+                    "status"
+                  ],
+                  "properties": {
+                    "manifestId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "manifestDigest": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    },
+                    "claimedCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "deletedCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "completed"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        400
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "VALIDATION_ERROR",
+                        "manifest_digest_mismatch",
+                        "manifest_reason_invalid"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        404
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "manifest_not_found"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        409
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "manifest_expired",
+                        "manifest_not_executable",
+                        "manifest_stale",
+                        "asset_held"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "cleanup_disabled",
+                        "provider_delete_failed",
+                        "SERVICE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/retention/usage": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_retentionUsage",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "current",
+                    "recentGrowthBytes",
+                    "projectedThirtyDayBytes",
+                    "classifications",
+                    "lifecycle",
+                    "alerts"
+                  ],
+                  "properties": {
+                    "current": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "bytes",
+                        "classAOperations",
+                        "classBOperations"
+                      ],
+                      "properties": {
+                        "bytes": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "classAOperations": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "classBOperations": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "recentGrowthBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "projectedThirtyDayBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "classifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "classification",
+                          "assetCount",
+                          "bytes"
+                        ],
+                        "properties": {
+                          "classification": {
+                            "type": "string",
+                            "enum": [
+                              "checklist_evidence",
+                              "action_evidence",
+                              "vm_reference",
+                              "vm_campaign_evidence",
+                              "derived_artifact"
+                            ]
+                          },
+                          "assetCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "bytes": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    },
+                    "lifecycle": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "purgeEligibleCount",
+                        "protectedExpiredCount",
+                        "stuckUploadCount",
+                        "stuckPurgeCount",
+                        "cleanupFailureCount"
+                      ],
+                      "properties": {
+                        "purgeEligibleCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "protectedExpiredCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stuckUploadCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "stuckPurgeCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cleanupFailureCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "alerts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "dimension",
+                          "used",
+                          "limit",
+                          "state"
+                        ],
+                        "properties": {
+                          "dimension": {
+                            "type": "string",
+                            "enum": [
+                              "bytes",
+                              "class_a",
+                              "class_b"
+                            ]
+                          },
+                          "used": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "limit": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "normal",
+                              "warning",
+                              "critical",
+                              "limit_reached"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        403
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "FORBIDDEN"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "correlationId",
+                    "statusCode",
+                    "errorCode",
+                    "message",
+                    "path",
+                    "timestamp"
+                  ],
+                  "properties": {
+                    "correlationId": {
+                      "type": "string"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "enum": [
+                        503
+                      ]
+                    },
+                    "errorCode": {
+                      "type": "string",
+                      "enum": [
+                        "cleanup_disabled",
+                        "provider_delete_failed",
+                        "SERVICE_UNAVAILABLE"
+                      ]
+                    },
+                    "message": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
         ]
       }
     }
@@ -27121,7 +28025,7 @@
         "type": "object",
         "properties": {
           "limit": {
-            "type": "object",
+            "type": "number",
             "default": 25,
             "minimum": 1,
             "maximum": 100
@@ -27305,8 +28209,7 @@
         "type": "object",
         "properties": {
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "referenceCode": {
             "type": "string",
@@ -27332,16 +28235,13 @@
         "type": "object",
         "properties": {
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "templateId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "templateItemId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "itemOrder": {
             "type": "number",
@@ -27379,16 +28279,14 @@
         "type": "object",
         "properties": {
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "expectedRevision": {
             "type": "number",
             "minimum": 0
           },
           "idempotencyKey": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "startsOn": {
             "type": "string"
@@ -27401,8 +28299,7 @@
             "maxItems": 500,
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           },
           "reason": {
@@ -27424,12 +28321,10 @@
         "type": "object",
         "properties": {
           "referenceItemId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "mediaAssetId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           }
         },
         "required": [
@@ -27445,8 +28340,7 @@
             "minimum": 0
           },
           "idempotencyKey": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "items": {
             "minItems": 1,
@@ -27859,8 +28753,7 @@
         "type": "object",
         "properties": {
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "command": {
             "enum": [
@@ -27875,8 +28768,7 @@
             "minimum": 1
           },
           "idempotencyKey": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "reason": {
             "type": "string",
@@ -27892,8 +28784,7 @@
             "maxItems": 500,
             "type": "array",
             "items": {
-              "type": "string",
-              "format": "uuid"
+              "type": "string"
             }
           }
         },
@@ -27912,8 +28803,7 @@
         "type": "object",
         "properties": {
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "command": {
             "enum": [
@@ -27929,8 +28819,7 @@
             "minimum": 0
           },
           "idempotencyKey": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "reason": {
             "type": "string",
@@ -27949,16 +28838,14 @@
         "type": "object",
         "properties": {
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "expectedRevision": {
             "type": "number",
             "minimum": 1
           },
           "idempotencyKey": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "reason": {
             "type": "string",
@@ -28256,6 +29143,44 @@
             "minimum": 1
           }
         }
+      },
+      "PhotoMediaRetentionPreviewDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "manual_retention_cleanup"
+            ]
+          }
+        },
+        "required": [
+          "limit",
+          "reason"
+        ]
+      },
+      "PhotoMediaRetentionExecuteDto": {
+        "type": "object",
+        "properties": {
+          "manifestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "manifestId",
+          "manifestDigest"
+        ]
       }
     }
   },

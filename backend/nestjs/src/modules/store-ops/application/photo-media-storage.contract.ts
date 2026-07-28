@@ -22,6 +22,10 @@ export type PhotoMediaStorageConfiguration = {
   perUserDailyBytesHardLimit: number;
   perStoreDailyBytesHardLimit: number;
   concurrentProcessingHardLimit: number;
+  scheduledRetentionCleanupEnabled?: boolean;
+  retentionManifestTtlMinutes?: number;
+  retentionWarningPercent?: number;
+  retentionCriticalPercent?: number;
   syntheticFixtureSha256Allowlist?: string[];
   safetyAssurance: "fixture_identity_only" | "malware_scan";
 };
@@ -103,6 +107,17 @@ export function assertPhotoMediaStorageConfiguration(
   assertPositiveInteger("PHOTO_MEDIA_PER_USER_DAILY_BYTES_HARD_LIMIT", configuration.perUserDailyBytesHardLimit);
   assertPositiveInteger("PHOTO_MEDIA_PER_STORE_DAILY_BYTES_HARD_LIMIT", configuration.perStoreDailyBytesHardLimit);
   assertPositiveInteger("PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT", configuration.concurrentProcessingHardLimit);
+  assertPositiveInteger(
+    "PHOTO_MEDIA_RETENTION_MANIFEST_TTL_MINUTES",
+    configuration.retentionManifestTtlMinutes ?? 60,
+  );
+  const warningPercent = configuration.retentionWarningPercent ?? 70;
+  const criticalPercent = configuration.retentionCriticalPercent ?? 85;
+  assertPositiveInteger("PHOTO_MEDIA_RETENTION_WARNING_PERCENT", warningPercent);
+  assertPositiveInteger("PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT", criticalPercent);
+  if (warningPercent >= criticalPercent || criticalPercent > 100) {
+    throw new Error("Photo media retention alert thresholds must increase and end at or below 100");
+  }
 
   if (configuration.aggregateBytesHardLimit > 8 * 1024 * 1024 * 1024) {
     throw new Error("Photo media storage hard limit cannot exceed the approved 8 GiB ceiling");

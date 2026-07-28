@@ -1,4 +1,11 @@
-import { Inject, Injectable, ServiceUnavailableException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  Inject,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import {
   PHOTO_MEDIA_ASSET_REPOSITORY,
@@ -11,6 +18,24 @@ import {
   PhotoMediaAssetRepositoryPort,
   PhotoMediaObjectStoragePort,
 } from "./photo-media-storage.ports";
+import {
+  PhotoMediaPurgeManifestSource,
+  PhotoMediaPurgeReason,
+  classifyRetentionUsage,
+} from "./photo-media-retention.contract";
+import { PhotoMediaRetentionRepositoryPort } from "./photo-media-retention.ports";
+
+export const PHOTO_MEDIA_RETENTION_REPOSITORY = Symbol("PHOTO_MEDIA_RETENTION_REPOSITORY");
+const EXECUTION_RETENTION_ERROR_CODES = new Set(["asset_held", "manifest_stale"]);
+
+function isTypedExecutionRetentionFailure(error: unknown): error is HttpException {
+  if (!(error instanceof HttpException)) return false;
+  const response = error.getResponse();
+  return Boolean(
+    response && typeof response === "object" &&
+    "code" in response && EXECUTION_RETENTION_ERROR_CODES.has(String(response.code)),
+  );
+}
 
 type ReconciliationReceipt = {
   expectedAssetCount: number;
@@ -18,6 +43,11 @@ type ReconciliationReceipt = {
   mismatchObjectCount: number;
   orphanPrimaryCount: number;
   orphanRecoveryCount: number;
+  danglingLinkCount: number;
+  stuckUploadCount: number;
+  stuckPurgeCount: number;
+  protectedExpiryCount: number;
+  tombstoneResidueCount: number;
   manifestDigest: string;
 };
 
@@ -26,6 +56,8 @@ export class PhotoMediaMaintenanceService {
   constructor(
     @Inject(PHOTO_MEDIA_ASSET_REPOSITORY)
     private readonly repository: PhotoMediaAssetRepositoryPort,
+    @Inject(PHOTO_MEDIA_RETENTION_REPOSITORY)
+    private readonly retentionRepository: PhotoMediaRetentionRepositoryPort,
     @Inject(PHOTO_MEDIA_PRIMARY_STORAGE)
     private readonly primaryStorage: PhotoMediaObjectStoragePort,
     @Inject(PHOTO_MEDIA_RECOVERY_STORAGE)
@@ -34,10 +66,19 @@ export class PhotoMediaMaintenanceService {
     private readonly configuration: PhotoMediaStorageConfiguration,
   ) {}
 
-  async reconcile(): Promise<ReconciliationReceipt> {
+  async reconcile(actorScope?: { companyIds: string[] }): Promise<ReconciliationReceipt> {
     this.assertSyntheticMaintenanceEnabled();
-    const inventory = await this.repository.listReconciliationInventory();
-    const inventoryPrefixes = ["transient/", "locked/", "derived/", "rehearsals/"];
+    this.assertActorCompanyScope(actorScope);
+    const allowedCompanyIds = actorScope?.companyIds;
+    const inventory = await this.repository.listReconciliationInventory(allowedCompanyIds);
+    const inventoryPrefixes = allowedCompanyIds
+      ? allowedCompanyIds.flatMap((companyId) => [
+        `transient/companies/${companyId}/`,
+        `locked/companies/${companyId}/`,
+        `derived/companies/${companyId}/`,
+        `rehearsals/companies/${companyId}/`,
+      ])
+      : ["transient/", "locked/", "derived/", "rehearsals/"];
     const primaryKeys = new Set((await Promise.all(
       inventoryPrefixes.map((prefix) => this.listAll(this.primaryStorage, prefix)),
     )).flat());
@@ -90,19 +131,38 @@ export class PhotoMediaMaintenanceService {
 
     const orphanPrimaryCount = [...primaryKeys].filter((key) => !expectedPrimary.has(key)).length;
     const orphanRecoveryCount = [...recoveryKeys].filter((key) => !expectedRecovery.has(key)).length;
-    findings.push(`orphan-primary:${orphanPrimaryCount}`, `orphan-recovery:${orphanRecoveryCount}`);
+    const lifecycle = await this.retentionRepository.getLifecycleReconciliationSummary(allowedCompanyIds);
+    findings.push(
+      `orphan-primary:${orphanPrimaryCount}`,
+      `orphan-recovery:${orphanRecoveryCount}`,
+      `dangling-link:${lifecycle.danglingLinkCount}`,
+      `stuck-upload:${lifecycle.stuckUploadCount}`,
+      `stuck-purge:${lifecycle.stuckPurgeCount}`,
+      `protected-expiry:${lifecycle.protectedExpiryCount}`,
+      `tombstone-residue:${lifecycle.tombstoneResidueCount}`,
+    );
     const receipt = {
       expectedAssetCount: inventory.length,
       missingObjectCount,
       mismatchObjectCount,
       orphanPrimaryCount,
       orphanRecoveryCount,
+      danglingLinkCount: lifecycle.danglingLinkCount,
+      stuckUploadCount: lifecycle.stuckUploadCount,
+      stuckPurgeCount: lifecycle.stuckPurgeCount,
+      protectedExpiryCount: lifecycle.protectedExpiryCount,
+      tombstoneResidueCount: lifecycle.tombstoneResidueCount,
       manifestDigest: createHash("sha256").update(findings.sort().join("\n")).digest("hex"),
     };
-    await this.repository.recordReconciliationReceipt({ ...receipt, findingEvents });
+    await this.repository.recordReconciliationReceipt({
+      ...receipt,
+      findingEvents: [...findingEvents, ...lifecycle.findingEvents],
+    });
     if (
       missingObjectCount > 0 || mismatchObjectCount > 0 ||
-      orphanPrimaryCount > 0 || orphanRecoveryCount > 0
+      orphanPrimaryCount > 0 || orphanRecoveryCount > 0 ||
+      lifecycle.danglingLinkCount > 0 || lifecycle.stuckUploadCount > 0 ||
+      lifecycle.stuckPurgeCount > 0 || lifecycle.tombstoneResidueCount > 0
     ) {
       throw new ServiceUnavailableException("Photo media reconciliation found integrity violations");
     }
@@ -148,36 +208,156 @@ export class PhotoMediaMaintenanceService {
     return result!;
   }
 
-  async cleanupExpired(limit: number) {
+  async previewRetentionPurge(input: {
+    limit: number;
+    reason: PhotoMediaPurgeReason;
+    source: PhotoMediaPurgeManifestSource;
+    actorUserId: string | null;
+    actorScope?: { companyIds: string[] };
+  }) {
     this.assertSyntheticMaintenanceEnabled();
-    const candidates = await this.repository.claimCleanupCandidates(this.assertBatchLimit(limit));
+    this.assertActorCompanyScope(input.actorScope);
+    const expectedReason = input.source === "scheduled"
+      ? "scheduled_retention_cleanup"
+      : "manual_retention_cleanup";
+    if (input.reason !== expectedReason) {
+      throw new BadRequestException({
+        code: "manifest_reason_invalid",
+        message: "Photo media purge preview reason does not match its source",
+      });
+    }
+    return this.retentionRepository.createPurgeManifest({
+      ...input,
+      reason: input.reason,
+      limit: this.assertBatchLimit(input.limit),
+      ttlMinutes: this.configuration.retentionManifestTtlMinutes ?? 60,
+      allowedCompanyIds: input.actorScope?.companyIds,
+    });
+  }
+
+  async executeRetentionPurge(input: {
+    manifestId: string;
+    manifestDigest: string;
+    actorUserId: string | null;
+    actorScope?: { companyIds: string[] };
+  }) {
+    this.assertSyntheticMaintenanceEnabled();
+    this.assertActorCompanyScope(input.actorScope);
+    if (!this.configuration.scheduledRetentionCleanupEnabled) {
+      throw new ServiceUnavailableException({
+        code: "cleanup_disabled",
+        message: "Photo media retention cleanup is disabled",
+      });
+    }
+    if (!/^[a-f0-9]{64}$/.test(input.manifestDigest)) {
+      throw new BadRequestException({
+        code: "manifest_digest_mismatch",
+        message: "Photo media purge manifest digest is invalid",
+      });
+    }
+    const claim = await this.retentionRepository.claimPurgeManifest({
+      ...input,
+      allowedCompanyIds: input.actorScope?.companyIds,
+    });
     let deleted = 0;
-    for (const candidate of candidates) {
+    try {
+      for (const candidate of claim.candidates) {
+        try {
+          for (const objectKey of candidate.primaryObjectKeys) {
+            await this.primaryStorage.deleteObject(objectKey);
+          }
+          await this.primaryStorage.deleteObject(candidate.thumbnailObjectKey);
+          for (const objectKey of candidate.recoveryObjectKeys) {
+            await this.recoveryStorage.deleteObject(objectKey);
+          }
+          await this.repository.markDeletedTombstone({
+            mediaAssetId: candidate.mediaAssetId,
+            cleanupLeaseToken: candidate.cleanupLeaseToken,
+            purgeManifestId: input.manifestId,
+            tombstoneSha256: candidate.canonicalSha256,
+            reasonCode: "governed_cleanup",
+          });
+          deleted += 1;
+        } catch (error) {
+          await this.repository.recordCleanupFailure({
+            mediaAssetId: candidate.mediaAssetId,
+            cleanupLeaseToken: candidate.cleanupLeaseToken,
+            reasonCode: "provider_delete_failed",
+          });
+          throw error;
+        }
+      }
+      await this.retentionRepository.markPurgeManifestCompleted({
+        ...input,
+        manifestLeaseToken: claim.manifestLeaseToken,
+      });
+      return {
+        manifestId: claim.manifestId,
+        manifestDigest: claim.manifestDigest,
+        claimedCount: claim.candidates.length,
+        deletedCount: deleted,
+        status: "completed" as const,
+      };
+    } catch (error) {
       try {
-        for (const objectKey of candidate.primaryObjectKeys) {
-          await this.primaryStorage.deleteObject(objectKey);
-        }
-        await this.primaryStorage.deleteObject(candidate.thumbnailObjectKey);
-        for (const objectKey of candidate.recoveryObjectKeys) {
-          await this.recoveryStorage.deleteObject(objectKey);
-        }
-        await this.repository.markDeletedTombstone({
-          mediaAssetId: candidate.mediaAssetId,
-          cleanupLeaseToken: candidate.cleanupLeaseToken,
-          tombstoneSha256: candidate.canonicalSha256,
-          reasonCode: "governed_cleanup",
+        await this.retentionRepository.releasePurgeManifestAssetLeases({
+          manifestId: input.manifestId,
+          manifestLeaseToken: claim.manifestLeaseToken,
         });
-        deleted += 1;
-      } catch (error) {
-        await this.repository.recordCleanupFailure({
-          mediaAssetId: candidate.mediaAssetId,
-          cleanupLeaseToken: candidate.cleanupLeaseToken,
+        await this.retentionRepository.markPurgeManifestRetryableFailure({
+          ...input,
+          manifestLeaseToken: claim.manifestLeaseToken,
           reasonCode: "provider_delete_failed",
         });
-        throw error;
+      } catch {
+        // Preserve the original provider/tombstone failure; stale receipt
+        // handling is independently observable and must not mask it.
       }
+      if (isTypedExecutionRetentionFailure(error)) throw error;
+      throw new ServiceUnavailableException({
+        code: "provider_delete_failed",
+        message: "Photo media provider deletion failed",
+      });
     }
-    return { claimed: candidates.length, deleted };
+  }
+
+  async getRetentionUsage(actorScope?: { companyIds: string[] }) {
+    this.assertSyntheticMaintenanceEnabled();
+    this.assertActorCompanyScope(actorScope);
+    const usage = await this.retentionRepository.getUsageForecast(actorScope?.companyIds);
+    const warningPercent = this.configuration.retentionWarningPercent ?? 70;
+    const criticalPercent = this.configuration.retentionCriticalPercent ?? 85;
+    const alerts = [
+      { dimension: "bytes" as const, used: usage.currentBytes, limit: this.configuration.aggregateBytesHardLimit },
+      { dimension: "class_a" as const, used: usage.classAOperations, limit: this.configuration.monthlyClassAHardLimit },
+      { dimension: "class_b" as const, used: usage.classBOperations, limit: this.configuration.monthlyClassBHardLimit },
+    ].map((item) => ({
+      ...item,
+      state: classifyRetentionUsage({
+        used: item.used,
+        limit: item.limit,
+        warningPercent,
+        criticalPercent,
+      }),
+    }));
+    return {
+      current: {
+        bytes: usage.currentBytes,
+        classAOperations: usage.classAOperations,
+        classBOperations: usage.classBOperations,
+      },
+      recentGrowthBytes: usage.recentGrowthBytes,
+      projectedThirtyDayBytes: usage.projectedThirtyDayBytes,
+      classifications: usage.classifications,
+      lifecycle: {
+        purgeEligibleCount: usage.purgeEligibleCount,
+        protectedExpiredCount: usage.protectedExpiredCount,
+        stuckUploadCount: usage.stuckUploadCount,
+        stuckPurgeCount: usage.stuckPurgeCount,
+        cleanupFailureCount: usage.cleanupFailureCount,
+      },
+      alerts,
+    };
   }
 
   async cleanupStalePartials(limit: number) {
@@ -324,6 +504,12 @@ export class PhotoMediaMaintenanceService {
   private assertSyntheticMaintenanceEnabled(): void {
     if (!this.configuration.enabled || !this.configuration.syntheticOnly) {
       throw new ServiceUnavailableException("Synthetic photo media maintenance is disabled");
+    }
+  }
+
+  private assertActorCompanyScope(actorScope?: { companyIds: string[] }): void {
+    if (actorScope && actorScope.companyIds.length === 0) {
+      throw new ForbiddenException("Photo media maintenance requires company scope");
     }
   }
 

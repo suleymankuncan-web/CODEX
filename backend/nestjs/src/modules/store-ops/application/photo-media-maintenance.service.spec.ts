@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { BadRequestException } from "@nestjs/common";
 import { PhotoMediaMaintenanceService } from "./photo-media-maintenance.service";
 
 describe("PhotoMediaMaintenanceService", () => {
@@ -7,7 +8,6 @@ describe("PhotoMediaMaintenanceService", () => {
   const repository = {
     listReconciliationInventory: jest.fn(),
     recordReconciliationReceipt: jest.fn(),
-    claimCleanupCandidates: jest.fn(),
     markDeletedTombstone: jest.fn(),
     claimStalePartialUploads: jest.fn(),
     claimReadyRawDisposals: jest.fn(),
@@ -21,6 +21,15 @@ describe("PhotoMediaMaintenanceService", () => {
     markRestoreSkipped: jest.fn(),
     reserveProviderOperations: jest.fn(),
   };
+  const retentionRepository = {
+    createPurgeManifest: jest.fn(),
+    claimPurgeManifest: jest.fn(),
+    markPurgeManifestCompleted: jest.fn(),
+    markPurgeManifestRetryableFailure: jest.fn(),
+    releasePurgeManifestAssetLeases: jest.fn(),
+    getLifecycleReconciliationSummary: jest.fn(),
+    getUsageForecast: jest.fn(),
+  };
   const primary = {
     createSignedUpload: jest.fn(), createSignedRead: jest.fn(), getObject: jest.fn(),
     putObject: jest.fn(), headObject: jest.fn(), deleteObject: jest.fn(), listObjectKeys: jest.fn(),
@@ -30,8 +39,9 @@ describe("PhotoMediaMaintenanceService", () => {
     putObject: jest.fn(), headObject: jest.fn(), deleteObject: jest.fn(), listObjectKeys: jest.fn(),
   };
 
-  const service = () => new PhotoMediaMaintenanceService(
+  const service = (configurationOverrides: Record<string, unknown> = {}) => new PhotoMediaMaintenanceService(
     repository as never,
+    retentionRepository as never,
     primary as never,
     recovery as never,
     {
@@ -52,14 +62,32 @@ describe("PhotoMediaMaintenanceService", () => {
       perUserDailyBytesHardLimit: 100 * 1024 * 1024,
       perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
       concurrentProcessingHardLimit: 2,
+      scheduledRetentionCleanupEnabled: false,
+      retentionManifestTtlMinutes: 60,
+      retentionWarningPercent: 70,
+      retentionCriticalPercent: 85,
       safetyAssurance: "fixture_identity_only",
+      ...configurationOverrides,
     },
   );
 
   beforeEach(() => {
-    for (const value of [...Object.values(repository), ...Object.values(primary), ...Object.values(recovery)]) {
+    for (const value of [
+      ...Object.values(repository),
+      ...Object.values(retentionRepository),
+      ...Object.values(primary),
+      ...Object.values(recovery),
+    ]) {
       value.mockReset();
     }
+    retentionRepository.getLifecycleReconciliationSummary.mockResolvedValue({
+      danglingLinkCount: 0,
+      stuckUploadCount: 0,
+      stuckPurgeCount: 0,
+      protectedExpiryCount: 0,
+      tombstoneResidueCount: 0,
+      findingEvents: [],
+    });
   });
 
   it("detects missing, mismatched and orphan objects without returning object keys", async () => {
@@ -211,21 +239,157 @@ describe("PhotoMediaMaintenanceService", () => {
   });
 
   it("purges only repository-claimed hold-safe candidates and writes tombstones after deletes", async () => {
-    repository.claimCleanupCandidates.mockResolvedValue([{
+    retentionRepository.claimPurgeManifest.mockResolvedValue({
+      manifestId: "manifest-1",
+      manifestDigest: "b".repeat(64),
+      manifestLeaseToken: "manifest-lease-1",
+      candidates: [{
       mediaAssetId: "asset-1",
       canonicalSha256: sha,
       cleanupLeaseToken: "lease-1",
       primaryObjectKeys: ["companies/a/media/1/canonical.webp"],
       thumbnailObjectKey: "companies/a/media/1/thumbnail.webp",
       recoveryObjectKeys: ["companies/a/media/1/canonical.webp"],
-    }]);
+      }],
+    });
+    retentionRepository.markPurgeManifestCompleted.mockResolvedValue(undefined);
 
-    await expect(service().cleanupExpired(10)).resolves.toEqual({ claimed: 1, deleted: 1 });
+    await expect(service({ scheduledRetentionCleanupEnabled: true }).executeRetentionPurge({
+      manifestId: "manifest-1",
+      manifestDigest: "b".repeat(64),
+      actorUserId: "actor-1",
+    })).resolves.toEqual(expect.objectContaining({
+      claimedCount: 1,
+      deletedCount: 1,
+      status: "completed",
+    }));
     expect(primary.deleteObject).toHaveBeenCalledTimes(2);
     expect(recovery.deleteObject).toHaveBeenCalledTimes(1);
     expect(repository.markDeletedTombstone).toHaveBeenCalledWith(expect.objectContaining({
       mediaAssetId: "asset-1",
+      purgeManifestId: "manifest-1",
       tombstoneSha256: sha,
+    }));
+  });
+
+  it("releases every unprocessed manifest asset lease before marking a retryable failure", async () => {
+    retentionRepository.claimPurgeManifest.mockResolvedValue({
+      manifestId: "manifest-1",
+      manifestDigest: "b".repeat(64),
+      manifestLeaseToken: "manifest-lease-1",
+      candidates: [{
+        mediaAssetId: "asset-1",
+        canonicalSha256: sha,
+        cleanupLeaseToken: "lease-1",
+        primaryObjectKeys: ["locked/companies/a/media/1/canonical.webp"],
+        thumbnailObjectKey: "derived/companies/a/media/1/thumbnail.webp",
+        recoveryObjectKeys: [],
+      }],
+    });
+    primary.deleteObject.mockRejectedValueOnce(new Error("provider failed"));
+    repository.recordCleanupFailure.mockResolvedValue(undefined);
+    retentionRepository.releasePurgeManifestAssetLeases.mockResolvedValue(undefined);
+    retentionRepository.markPurgeManifestRetryableFailure.mockResolvedValue(undefined);
+
+    await expect(service({ scheduledRetentionCleanupEnabled: true }).executeRetentionPurge({
+      manifestId: "manifest-1",
+      manifestDigest: "b".repeat(64),
+      actorUserId: "actor-1",
+    })).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "provider_delete_failed" }),
+    });
+    expect(retentionRepository.releasePurgeManifestAssetLeases).toHaveBeenCalledWith({
+      manifestId: "manifest-1",
+      manifestLeaseToken: "manifest-lease-1",
+    });
+    expect(retentionRepository.markPurgeManifestRetryableFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails without completion when provider deletion succeeds but tombstone persistence fails", async () => {
+    retentionRepository.claimPurgeManifest.mockResolvedValue({
+      manifestId: "manifest-1",
+      manifestDigest: "b".repeat(64),
+      manifestLeaseToken: "manifest-lease-1",
+      candidates: [{
+        mediaAssetId: "asset-1", canonicalSha256: sha, cleanupLeaseToken: "lease-1",
+        primaryObjectKeys: ["locked/companies/a/media/1/canonical.webp"],
+        thumbnailObjectKey: "derived/companies/a/media/1/thumbnail.webp",
+        recoveryObjectKeys: ["locked/companies/a/media/1/canonical.webp"],
+      }],
+    });
+    primary.deleteObject.mockResolvedValue(undefined);
+    recovery.deleteObject.mockResolvedValue(undefined);
+    repository.markDeletedTombstone.mockRejectedValue(
+      new BadRequestException("tombstone persistence failed"),
+    );
+    repository.recordCleanupFailure.mockResolvedValue(undefined);
+    retentionRepository.releasePurgeManifestAssetLeases.mockResolvedValue(undefined);
+    retentionRepository.markPurgeManifestRetryableFailure.mockResolvedValue(undefined);
+
+    await expect(service({ scheduledRetentionCleanupEnabled: true }).executeRetentionPurge({
+      manifestId: "manifest-1",
+      manifestDigest: "b".repeat(64),
+      actorUserId: "actor-1",
+    })).rejects.toMatchObject({
+      response: expect.objectContaining({ code: "provider_delete_failed" }),
+    });
+    expect(retentionRepository.markPurgeManifestCompleted).not.toHaveBeenCalled();
+    expect(retentionRepository.releasePurgeManifestAssetLeases).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a read-only digest-bound purge preview without provider deletes", async () => {
+    retentionRepository.createPurgeManifest.mockResolvedValue({
+      manifestId: "manifest-1",
+      manifestDigest: "c".repeat(64),
+      candidateCount: 2,
+      candidateBytes: 2048,
+      expiresAt: new Date("2026-07-28T13:00:00.000Z"),
+      status: "previewed",
+    });
+
+    await expect(service().previewRetentionPurge({
+      limit: 25,
+      reason: "manual_retention_cleanup",
+      source: "manual",
+      actorUserId: "actor-1",
+    })).resolves.toEqual(expect.objectContaining({
+      manifestDigest: "c".repeat(64),
+      candidateCount: 2,
+      status: "previewed",
+    }));
+    expect(primary.deleteObject).not.toHaveBeenCalled();
+    expect(recovery.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it("fails closed before claiming a manifest when retention cleanup is disabled", async () => {
+    await expect(service().executeRetentionPurge({
+      manifestId: "manifest-1",
+      manifestDigest: "d".repeat(64),
+      actorUserId: "actor-1",
+    })).rejects.toThrow("disabled");
+    expect(retentionRepository.claimPurgeManifest).not.toHaveBeenCalled();
+  });
+
+  it("returns sanitized usage forecasts and threshold states", async () => {
+    retentionRepository.getUsageForecast.mockResolvedValue({
+      currentBytes: 6 * 1024 * 1024 * 1024,
+      classAOperations: 100,
+      classBOperations: 200,
+      recentGrowthBytes: 512,
+      projectedThirtyDayBytes: 1024,
+      classifications: [],
+      purgeEligibleCount: 0,
+      protectedExpiredCount: 1,
+      stuckUploadCount: 0,
+      stuckPurgeCount: 0,
+      cleanupFailureCount: 0,
+    });
+
+    await expect(service().getRetentionUsage()).resolves.toEqual(expect.objectContaining({
+      current: expect.objectContaining({ bytes: 6 * 1024 * 1024 * 1024 }),
+      alerts: expect.arrayContaining([
+        expect.objectContaining({ dimension: "bytes", state: "warning" }),
+      ]),
     }));
   });
 });

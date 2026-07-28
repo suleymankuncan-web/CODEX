@@ -207,4 +207,20 @@ describe("StandardErrorFilter", () => {
       }),
     );
   });
+
+  it("preserves allowlisted retention codes across non-400 HTTP statuses", () => {
+    const filter = new StandardErrorFilter();
+    const { host, json } = createHost({
+      correlationId: "corr-retention",
+      url: "/api/internal/photo-media/maintenance/retention/execute",
+    });
+    filter.catch(new HttpException({
+      code: "provider_delete_failed",
+      message: "Photo media provider deletion failed",
+    }, HttpStatus.SERVICE_UNAVAILABLE), host);
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({
+      errorCode: "provider_delete_failed",
+      statusCode: 503,
+    }));
+  });
 });

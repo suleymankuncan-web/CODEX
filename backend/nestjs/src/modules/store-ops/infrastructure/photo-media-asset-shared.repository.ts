@@ -31,7 +31,10 @@ export async function recordPhotoMediaAccess(
   `, [input.actorUserId, input.mediaAssetId, input.companyId, input.regionId, input.storeId]);
 }
 
-export async function listPhotoMediaReconciliationInventory(databaseService: DatabaseService) {
+export async function listPhotoMediaReconciliationInventory(
+  databaseService: DatabaseService,
+  allowedCompanyIds?: string[],
+) {
   const result = await databaseService.query<{
     media_asset_id: string; state: PhotoMediaAssetRecord["state"];
     raw_object_key: string | null; raw_disposed_at: Date | null;
@@ -40,16 +43,22 @@ export async function listPhotoMediaReconciliationInventory(databaseService: Dat
   }>(`
     SELECT ma.media_asset_id, ma.state, ma.raw_object_key, ma.raw_disposed_at,
            ma.canonical_sha256, ma.byte_count, ma.canonical_object_key, ma.thumbnail_object_key
-    FROM ops.media_asset ma WHERE ma.state <> 'deleted_tombstone' ORDER BY ma.media_asset_id
-  `);
+    FROM ops.media_asset ma
+    WHERE ma.state <> 'deleted_tombstone'
+      AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
+    ORDER BY ma.media_asset_id
+  `, [allowedCompanyIds ?? null]);
   const replicas = await databaseService.query<{
     media_asset_id: string; replica_role: "primary" | "recovery"; object_key: string;
     content_sha256: string | null; byte_count: string | null; is_active: boolean;
   }>(`
     SELECT media_asset_id, replica_role, object_key, content_sha256, byte_count, is_active
-    FROM ops.media_asset_replica WHERE replica_state IN ('copying', 'verified')
+    FROM ops.media_asset_replica replica
+    JOIN ops.media_asset ma USING (media_asset_id)
+    WHERE replica.replica_state IN ('copying', 'verified')
+      AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
     ORDER BY media_asset_id, replica_role, replica_generation
-  `);
+  `, [allowedCompanyIds ?? null]);
   const replicasByAsset = new Map<string, typeof replicas.rows>();
   for (const replica of replicas.rows) {
     const current = replicasByAsset.get(replica.media_asset_id) ?? [];

@@ -71,6 +71,10 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `PHOTO_MEDIA_PER_USER_DAILY_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Fail-closed per-user daily upload byte ceiling. | `104857600` |
 | `PHOTO_MEDIA_PER_STORE_DAILY_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Fail-closed per-store daily upload byte ceiling. | `262144000` |
 | `PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT` | Backend owner | Render API env | Internal | Lease-based concurrent decode/scan ceiling; maximum 4 in synthetic staging. | `2` |
+| `PHOTO_MEDIA_SCHEDULED_RETENTION_CLEANUP_ENABLED` | Project owner | Render API env | Destructive-operation control | Keep `false`. Setting `true` requires the separately approved retention execution gate and bounded staging run window. | `false` |
+| `PHOTO_MEDIA_RETENTION_MANIFEST_TTL_MINUTES` | Backend owner | Render API env | Internal | Exact preview-to-execute validity window; expired manifests fail closed. | `60` |
+| `PHOTO_MEDIA_RETENTION_WARNING_PERCENT` | Backend owner | Render API env | Internal | Aggregate storage/operation warning boundary; must be below the critical boundary. | `70` |
+| `PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT` | Backend owner | Render API env | Internal | Aggregate storage/operation critical boundary; must be above warning and at most 100. | `85` |
 | `READINESS_PROFILE` | Release operator | Render backend env | Internal | Keep `controlled-pilot` until broad production is approved. | `controlled-pilot` |
 | `JWT_ISSUER` | Auth owner | Render backend env | Public | Must exactly match the Clerk issuer. | Local mock issuer. |
 | `JWT_AUDIENCE` | Auth owner | Render backend env | Public | Must match the backend API audience accepted by Clerk tokens. | `store-ops-api` |

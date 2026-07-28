@@ -51,6 +51,18 @@ const vmReferenceManagementRollbackSqlPath = join(
   "rollback",
   "066_vm_reference_management_v1.rollback.sql",
 );
+const retentionOperationsSmokeSqlPath = join(
+  workspaceRoot,
+  "db",
+  "preflight",
+  "photo-media-retention-operations-v1-smoke.sql",
+);
+const retentionOperationsRollbackSqlPath = join(
+  workspaceRoot,
+  "db",
+  "rollback",
+  "067_photo_media_retention_operations_v1.rollback.sql",
+);
 const vmReferenceAuthMatrixSqlPath = join(
   workspaceRoot,
   "db",
@@ -108,6 +120,7 @@ runPsql(`
   DELETE FROM ops.user_account WHERE user_id = '84000000-0000-4000-8000-000000000001';
 `);
 
+runPsql(readFileSync(retentionOperationsRollbackSqlPath, "utf8"));
 runPsql(readFileSync(vmReferenceManagementRollbackSqlPath, "utf8"));
 runPsql(readFileSync(storeActionPhotoReviewRollbackSqlPath, "utf8"));
 runPsql(readFileSync(checklistItemEvidenceRollbackSqlPath, "utf8"));
@@ -123,6 +136,7 @@ const rollbackResidual = Number(
       + (to_regclass('ops.visual_reference_version') IS NOT NULL)::int
       + (to_regclass('ops.visual_campaign_command_receipt') IS NOT NULL)::int
       + (to_regclass('ops.checklist_instance_item_visual_reference') IS NOT NULL)::int
+      + (to_regclass('ops.photo_media_purge_manifest') IS NOT NULL)::int
       + (EXISTS (
           SELECT 1
           FROM information_schema.columns
@@ -154,6 +168,11 @@ const rollbackResidual = Number(
           SELECT 1
           FROM audit.schema_migration
           WHERE migration_name = '066_vm_reference_management_v1.sql'
+        ))::int
+      + (EXISTS (
+          SELECT 1
+          FROM audit.schema_migration
+          WHERE migration_name = '067_photo_media_retention_operations_v1.sql'
         ))::int;
   `),
 );
@@ -172,6 +191,7 @@ const forwardReapply = queryScalar(`
     AND to_regclass('ops.visual_reference_version') IS NOT NULL
     AND to_regclass('ops.visual_campaign_command_receipt') IS NOT NULL
     AND to_regclass('ops.checklist_instance_item_visual_reference') IS NOT NULL
+    AND to_regclass('ops.photo_media_purge_manifest') IS NOT NULL
     AND to_regclass('audit.photo_media_reconciliation_run') IS NOT NULL
     AND EXISTS (
       SELECT 1
@@ -201,6 +221,12 @@ const forwardReapply = queryScalar(`
       SELECT 1
       FROM audit.schema_migration
       WHERE migration_name = '066_vm_reference_management_v1.sql'
+        AND status = 'succeeded'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM audit.schema_migration
+      WHERE migration_name = '067_photo_media_retention_operations_v1.sql'
         AND status = 'succeeded'
     )
   THEN 'passed' ELSE 'failed' END;
@@ -240,6 +266,7 @@ const smokeOutput = runPsql(readFileSync(smokeSqlPath, "utf8"));
 const storageSmokeOutput = runPsql(readFileSync(storageSmokeSqlPath, "utf8"));
 const itemEvidenceSmokeOutput = runPsql(readFileSync(checklistItemEvidenceSmokeSqlPath, "utf8"));
 const vmAuthSmokeOutput = runPsql(readFileSync(vmReferenceAuthMatrixSqlPath, "utf8"));
+const retentionSmokeOutput = runPsql(readFileSync(retentionOperationsSmokeSqlPath, "utf8"));
 
 const receiptLine = smokeOutput
   .split(/\r?\n/)
@@ -317,6 +344,23 @@ const itemEvidenceReceiptLine = itemEvidenceSmokeOutput
 if (!itemEvidenceReceiptLine) {
   fail("Checklist item evidence smoke did not emit its sanitized receipt.");
 }
+
+const retentionReceiptLine = retentionSmokeOutput
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .find((line) => line.startsWith("{") && line.includes("photo_media_retention_operations_smoke.completed"));
+if (!retentionReceiptLine) fail("Photo media retention operations smoke did not emit its sanitized receipt.");
+const retentionReceipt = JSON.parse(retentionReceiptLine);
+if (
+  retentionReceipt.manifest_identity_immutable !== true ||
+  retentionReceipt.manifest_delete_refused !== true ||
+  retentionReceipt.manifest_transition_guard !== true ||
+  retentionReceipt.expired_execution_reclaim !== true ||
+  retentionReceipt.lifecycle_reconciliation_contract !== true ||
+  retentionReceipt.rolled_back !== true
+) {
+  fail("Photo media retention operations smoke receipt was not exact.");
+}
 const itemEvidenceReceipt = JSON.parse(itemEvidenceReceiptLine);
 if (
   itemEvidenceReceipt.event !== "checklist_item_evidence_pr4_smoke.completed" ||
@@ -368,6 +412,7 @@ console.log(
     tenantIsolation: "passed",
     tenantConstraintCatalog: "passed",
     vmAuthorizationMatrix: "passed",
+    retentionOperations: "passed",
   }),
 );
 

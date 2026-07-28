@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   ServiceUnavailableException,
 } from "@nestjs/common";
@@ -456,8 +457,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     await recordPhotoMediaAccess(this.databaseService, input);
   }
 
-  async listReconciliationInventory() {
-    return listPhotoMediaReconciliationInventory(this.databaseService);
+  async listReconciliationInventory(allowedCompanyIds?: string[]) {
+    return listPhotoMediaReconciliationInventory(this.databaseService, allowedCompanyIds);
   }
 
   async recordReconciliationReceipt(input: Record<string, unknown>): Promise<void> {
@@ -465,14 +466,21 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       await client.query(`
         INSERT INTO audit.photo_media_reconciliation_run (
           expected_asset_count, missing_object_count, mismatch_object_count,
-          orphan_primary_count, orphan_recovery_count, manifest_digest
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          orphan_primary_count, orphan_recovery_count, dangling_link_count,
+          stuck_upload_count, stuck_purge_count, protected_expiry_count,
+          tombstone_residue_count, manifest_digest
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `, [
         input.expectedAssetCount,
         input.missingObjectCount,
         input.mismatchObjectCount,
         input.orphanPrimaryCount,
         input.orphanRecoveryCount,
+        input.danglingLinkCount,
+        input.stuckUploadCount,
+        input.stuckPurgeCount,
+        input.protectedExpiryCount,
+        input.tombstoneResidueCount,
         input.manifestDigest,
       ]);
       for (const finding of (input.findingEvents ?? []) as Array<{ mediaAssetId: string; reasonCode: string }>) {
@@ -489,87 +497,42 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     });
   }
 
-  async claimCleanupCandidates(limit: number) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<{
-        media_asset_id: string;
-        canonical_sha256: string;
-        thumbnail_object_key: string;
-        primary_object_keys: string[];
-        recovery_object_keys: string[];
-        cleanup_lease_token: string;
-      }>(`
-        WITH eligible AS (
-          SELECT ma.media_asset_id
-          FROM ops.media_asset ma
-          WHERE (
-              (ma.state = 'ready' AND ma.expires_at <= NOW())
-              OR (ma.state = 'purge_pending' AND ma.cleanup_origin_state = 'ready')
-            )
-            AND (ma.cleanup_lease_token IS NULL OR ma.cleanup_lease_expires_at <= NOW())
-            AND NOT ma.legal_hold
-            AND NOT ma.operational_hold
-            AND NOT ma.active_workflow_hold
-            AND NOT ma.ai_review_hold
-          ORDER BY ma.expires_at, ma.media_asset_id
-          FOR UPDATE SKIP LOCKED
-          LIMIT $1
-        )
-        UPDATE ops.media_asset ma
-        SET state = 'purge_pending', purge_pending_at = COALESCE(ma.purge_pending_at, NOW()),
-            cleanup_origin_state = COALESCE(ma.cleanup_origin_state, ma.state),
-            cleanup_lease_token = gen_random_uuid(),
-            cleanup_lease_expires_at = NOW() + INTERVAL '15 minutes', updated_at = NOW()
-        FROM eligible,
-             LATERAL (
-               SELECT array_agg(mar.object_key ORDER BY mar.replica_generation) AS object_keys
-               FROM ops.media_asset_replica mar
-               WHERE mar.media_asset_id = eligible.media_asset_id
-                 AND mar.replica_role = 'primary'
-                 AND mar.replica_state IN ('copying', 'verified')
-             ) primary_replicas,
-             LATERAL (
-               SELECT array_agg(mar.object_key ORDER BY mar.replica_generation) AS object_keys
-               FROM ops.media_asset_replica mar
-               WHERE mar.media_asset_id = eligible.media_asset_id
-                 AND mar.replica_role = 'recovery'
-                 AND mar.replica_state IN ('copying', 'verified')
-             ) recovery_replicas
-        WHERE ma.media_asset_id = eligible.media_asset_id
-        RETURNING ma.media_asset_id, ma.canonical_sha256,
-                  ma.thumbnail_object_key, primary_replicas.object_keys AS primary_object_keys,
-                  recovery_replicas.object_keys AS recovery_object_keys,
-                  ma.cleanup_lease_token
-      `, [limit]);
-      return result.rows.map((row) => ({
-        mediaAssetId: row.media_asset_id,
-        cleanupLeaseToken: row.cleanup_lease_token,
-        canonicalSha256: row.canonical_sha256,
-        thumbnailObjectKey: row.thumbnail_object_key,
-        primaryObjectKeys: row.primary_object_keys ?? [],
-        recoveryObjectKeys: row.recovery_object_keys ?? [],
-      }));
-    });
-  }
-
   async markDeletedTombstone(input: Record<string, unknown>): Promise<void> {
     await this.databaseService.withTransaction(async (client) => {
-      const locked = await client.query<{ company_id: string; accounted_provider_bytes: string }>(`
-        SELECT company_id, accounted_provider_bytes
+      const locked = await client.query<{
+        company_id: string; accounted_provider_bytes: string; state: string;
+        cleanup_lease_token: string | null; cleanup_lease_active: boolean;
+        purge_manifest_id: string | null; legal_hold: boolean; operational_hold: boolean;
+        active_workflow_hold: boolean; ai_review_hold: boolean;
+      }>(`
+        SELECT company_id, accounted_provider_bytes, state, cleanup_lease_token,
+               (cleanup_lease_expires_at > NOW()) AS cleanup_lease_active,
+               purge_manifest_id, legal_hold,
+               operational_hold, active_workflow_hold, ai_review_hold
         FROM ops.media_asset
         WHERE media_asset_id = $1::uuid
-          AND state = 'purge_pending'
-          AND cleanup_lease_token = $2::uuid
-          AND cleanup_lease_expires_at > NOW()
-          AND NOT legal_hold
-          AND NOT operational_hold
-          AND NOT active_workflow_hold
-          AND NOT ai_review_hold
         FOR UPDATE
-      `, [input.mediaAssetId, input.cleanupLeaseToken]);
+      `, [input.mediaAssetId]);
       const asset = locked.rows[0];
       if (!asset) {
-        throw new BadRequestException("Photo media cleanup state is stale or held");
+        throw new ConflictException({
+          code: "manifest_stale", message: "Photo media cleanup asset is missing",
+        });
+      }
+      if (asset.legal_hold || asset.operational_hold || asset.active_workflow_hold || asset.ai_review_hold) {
+        throw new ConflictException({
+          code: "asset_held", message: "Photo media cleanup asset is held",
+        });
+      }
+      if (
+        asset.state !== "purge_pending" ||
+        asset.cleanup_lease_token !== input.cleanupLeaseToken ||
+        asset.purge_manifest_id !== input.purgeManifestId ||
+        !asset.cleanup_lease_active
+      ) {
+        throw new ConflictException({
+          code: "manifest_stale", message: "Photo media cleanup state is stale",
+        });
       }
       await client.query(`
         UPDATE ops.media_asset_replica
@@ -578,16 +541,25 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       `, [input.mediaAssetId]);
       const updated = await client.query(`
         UPDATE ops.media_asset
-        SET state = 'deleted_tombstone', deleted_at = NOW(), deletion_reason = $3,
-            tombstone_sha256 = $4, accounted_provider_bytes = 0,
+        SET state = 'deleted_tombstone', deleted_at = NOW(), deletion_reason = $4,
+            tombstone_sha256 = $5, accounted_provider_bytes = 0,
             cleanup_lease_token = NULL, cleanup_lease_expires_at = NULL,
             cleanup_origin_state = NULL, updated_at = NOW()
         WHERE media_asset_id = $1::uuid AND state = 'purge_pending'
           AND cleanup_lease_token = $2::uuid
+          AND purge_manifest_id = $3::uuid
         RETURNING media_asset_id
-      `, [input.mediaAssetId, input.cleanupLeaseToken, input.reasonCode, input.tombstoneSha256]);
+      `, [
+        input.mediaAssetId,
+        input.cleanupLeaseToken,
+        input.purgeManifestId,
+        input.reasonCode,
+        input.tombstoneSha256,
+      ]);
       if (updated.rows.length !== 1) {
-        throw new BadRequestException("Photo media tombstone transition failed");
+        throw new ConflictException({
+          code: "manifest_stale", message: "Photo media tombstone transition failed",
+        });
       }
       await client.query(`
         UPDATE ops.photo_media_usage_state
@@ -714,7 +686,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     await this.databaseService.withTransaction(async (client) => {
       const released = await client.query<{ company_id: string }>(`
         UPDATE ops.media_asset
-        SET cleanup_lease_token = NULL, cleanup_lease_expires_at = NULL, updated_at = NOW()
+        SET cleanup_lease_token = NULL, cleanup_lease_expires_at = NULL,
+            purge_manifest_id = NULL, updated_at = NOW()
         WHERE media_asset_id = $1::uuid
           AND state IN ('purge_pending', 'ready')
           AND cleanup_lease_token = $2::uuid
@@ -822,9 +795,13 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       const asset = await client.query<{
         company_id: string;
         accounted_provider_bytes: string;
-        evidence_retention_days: number;
+        retention_days: number;
       }>(`
-        SELECT ma.company_id, ma.accounted_provider_bytes, policy.evidence_retention_days
+        SELECT ma.company_id, ma.accounted_provider_bytes,
+               CASE WHEN ma.classification = 'derived_artifact'
+                    THEN policy.derived_retention_days
+                    ELSE policy.evidence_retention_days
+               END AS retention_days
         FROM ops.media_asset ma
         JOIN ops.evidence_retention_policy policy
           ON policy.retention_policy_id = ma.retention_policy_id
@@ -880,7 +857,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
             expires_at = GREATEST(expires_at, NOW() + make_interval(days => $4::integer)),
             updated_at = NOW()
         WHERE media_asset_id = $1::uuid AND cleanup_lease_token = $2::uuid
-      `, [input.mediaAssetId, input.cleanupLeaseToken, additionalBytes, row.evidence_retention_days]);
+      `, [input.mediaAssetId, input.cleanupLeaseToken, additionalBytes, row.retention_days]);
     });
   }
 

@@ -931,4 +931,15 @@ describe("AppConfigService", () => {
       PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: `${"a".repeat(64)},${"b".repeat(64)}`,
     }).photoMediaStorageConfiguration).toThrow("exactly one approved synthetic fixture digest");
   });
+
+  it("rejects inverted or out-of-range retention thresholds at configuration time", () => {
+    expect(() => createConfig({
+      PHOTO_MEDIA_RETENTION_WARNING_PERCENT: "85",
+      PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT: "85",
+    }).photoMediaStorageConfiguration).toThrow("1 <= warning < critical <= 100");
+    expect(() => createConfig({
+      PHOTO_MEDIA_RETENTION_WARNING_PERCENT: "70",
+      PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT: "101",
+    }).photoMediaStorageConfiguration).toThrow("1 <= warning < critical <= 100");
+  });
 });
