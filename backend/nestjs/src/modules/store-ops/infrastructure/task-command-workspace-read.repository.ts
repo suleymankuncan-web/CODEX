@@ -68,10 +68,9 @@ export class TaskCommandWorkspaceReadRepository {
     params.push(input.periodEnd);
     const periodEndParam = params.length;
     filters.push(`(
-      p.due_on BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
+      p.status IN ('open', 'in_progress', 'blocked', 'solution_review_pending', 'correction_required')
       OR (p.closed_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
       OR (p.cancelled_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
-      OR (p.status IN ('open', 'in_progress', 'blocked', 'solution_review_pending', 'correction_required') AND p.due_on < $${periodStartParam}::date)
     )`);
     const whereSql = filters.join(" AND ");
     const countResult = await this.databaseService.query<{ total: number }>(

@@ -183,6 +183,7 @@ export function useChecklistWorkflowController(input: {
     onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
       void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
+      void queryClient.invalidateQueries({ queryKey: ['store-tasks-command-workspace'] })
       void queryClient.refetchQueries({ queryKey: checklistCommandQueryKey, type: 'active' })
       dispatchPageState({
         type: 'acknowledgeSucceeded',

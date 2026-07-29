@@ -65,6 +65,7 @@ export class ChecklistCommandReadService {
       regionIds: scope.regionIds,
       storeIds: scope.storeIds,
       allowedTemplateTypes: scope.allowedTemplateTypes,
+      executionTemplateTypes: scope.executionTemplateTypes,
       period: input.period,
       regionId: input.regionId,
       query: input.query,

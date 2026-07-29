@@ -107,6 +107,7 @@ describe("ChecklistCommandReadRepository", () => {
       regionIds: ["region-1"],
       storeIds: [],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
       period: "2026-07",
       status: "all",
       sort: "store_asc",
@@ -135,6 +136,7 @@ describe("ChecklistCommandReadRepository", () => {
       30,
       0,
       "all",
+      ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     ]);
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.lastCompletedVisitAt).toBe("2026-07-10T09:00:00.000Z");
@@ -149,6 +151,7 @@ describe("ChecklistCommandReadRepository", () => {
       regionIds: ["region-1"],
       storeIds: [],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
       period: "2026-07",
       status: "all",
       sort: "status_asc",
@@ -170,6 +173,7 @@ describe("ChecklistCommandReadRepository", () => {
       regionIds: [],
       storeIds: [],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT"],
       period: "2026-07",
       status: "active",
       signal: "missing_visit",
@@ -180,7 +184,13 @@ describe("ChecklistCommandReadRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("command_status = $8::text");
-    expect(sql).toContain("completed_type_count < cardinality($4::text[])");
+    expect(sql).toContain("execution_completed_type_count < cardinality($12::text[])");
+    expect(sql).not.toContain("ci.total_score IS NOT NULL");
+    expect(sql).toContain("execution_pending_acknowledgement_count");
+    expect(sql).toContain("'completed', (SELECT COUNT(*)::int FROM command_base WHERE execution_completed_type_count >= cardinality($12::text[]))");
+    expect(sql).toContain("pc.bm_completed_at IS NULL");
+    expect(sql).toContain("pc.vm_completed_at IS NULL");
+    expect(query.mock.calls[0][1][11]).toEqual(["BM_STORE_VISIT"]);
     expect(query.mock.calls[0][1][10]).toBe("missing_visit");
   });
 });

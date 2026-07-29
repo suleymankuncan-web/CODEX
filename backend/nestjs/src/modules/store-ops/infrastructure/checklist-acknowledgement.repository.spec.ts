@@ -34,8 +34,8 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
           completed_by_user_id: "vm-user-1",
           completed_at: "2026-05-14T08:00:00.000Z",
           status: "completed",
-          total_score: "74.50",
-          compliance_rate: "0.7500",
+          total_score: "0.00",
+          compliance_rate: "0.0000",
           checklist_acknowledgement_id: null,
           acknowledged_by_user_id: null,
           acknowledgement_note: null,
@@ -67,6 +67,8 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
       items: [
         {
           checklistInstanceId: "instance-1",
+          totalScore: 0,
+          complianceRate: 0,
           responses: [],
         },
       ],
@@ -298,6 +300,40 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
       templateItemId: "item-1",
       scoreValue: 2,
       isNonCompliant: true,
+    });
+  });
+
+  it("preserves the original acknowledgement identity and timestamp on retry", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ checklist_instance_id: "instance-1", store_id: "store-1" }] })
+      .mockResolvedValueOnce({ rows: [{
+        checklist_acknowledgement_id: "ack-1",
+        acknowledged_by_user_id: "original-user",
+        acknowledgement_note: "Original note",
+        acknowledged_at: "2026-05-20T12:36:00.000Z",
+      }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const database = {
+      withTransaction: jest.fn(async (callback: (client: { query: jest.Mock }) => unknown) => callback({ query })),
+    };
+    const repository = new ChecklistAcknowledgementRepository(database as never);
+
+    const result = await repository.acknowledgeChecklist({
+      checklistInstanceId: "instance-1",
+      actorUserId: "retry-user",
+      acknowledgementNote: "Retry note",
+    });
+
+    const upsertSql = String(query.mock.calls[1][0]);
+    expect(upsertSql).toContain("SET checklist_instance_id = EXCLUDED.checklist_instance_id");
+    expect(upsertSql).not.toContain("acknowledged_at =");
+    expect(upsertSql).not.toContain("acknowledged_by_user_id =");
+    expect(upsertSql).not.toContain("acknowledgement_note =");
+    expect(result).toEqual({
+      checklistAcknowledgementId: "ack-1",
+      acknowledgedByUserId: "original-user",
+      acknowledgementNote: "Original note",
+      acknowledgedAt: "2026-05-20T12:36:00.000Z",
     });
   });
 });

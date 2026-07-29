@@ -1341,7 +1341,105 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "command",
+                    "data"
+                  ],
+                  "properties": {
+                    "command": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "message"
+                      ],
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "acknowledged"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "acknowledgement",
+                        "remediation"
+                      ],
+                      "properties": {
+                        "acknowledgement": {
+                          "type": "object",
+                          "required": [
+                            "checklistAcknowledgementId",
+                            "acknowledgedByUserId",
+                            "acknowledgementNote",
+                            "acknowledgedAt"
+                          ],
+                          "properties": {
+                            "checklistAcknowledgementId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "acknowledgedByUserId": {
+                              "type": "string"
+                            },
+                            "acknowledgementNote": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "acknowledgedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "remediation": {
+                          "type": "object",
+                          "required": [
+                            "status",
+                            "createdCount",
+                            "duplicateCount",
+                            "blockedCount"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "created",
+                                "duplicate",
+                                "zero_findings",
+                                "blocked"
+                              ]
+                            },
+                            "createdCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "duplicateCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "blockedCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -1556,7 +1654,105 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "command",
+                    "data"
+                  ],
+                  "properties": {
+                    "command": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "message"
+                      ],
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "acknowledged"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "acknowledgement",
+                        "remediation"
+                      ],
+                      "properties": {
+                        "acknowledgement": {
+                          "type": "object",
+                          "required": [
+                            "checklistAcknowledgementId",
+                            "acknowledgedByUserId",
+                            "acknowledgementNote",
+                            "acknowledgedAt"
+                          ],
+                          "properties": {
+                            "checklistAcknowledgementId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "acknowledgedByUserId": {
+                              "type": "string"
+                            },
+                            "acknowledgementNote": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "acknowledgedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        },
+                        "remediation": {
+                          "type": "object",
+                          "required": [
+                            "status",
+                            "createdCount",
+                            "duplicateCount",
+                            "blockedCount"
+                          ],
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "created",
+                                "duplicate",
+                                "zero_findings",
+                                "blocked"
+                              ]
+                            },
+                            "createdCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "duplicateCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "blockedCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -22680,7 +22876,8 @@
                       "type": "string"
                     },
                     "totalScore": {
-                      "type": "number"
+                      "type": "number",
+                      "nullable": true
                     },
                     "acknowledgedAt": {
                       "type": "string",
@@ -22714,7 +22911,8 @@
                       "type": "string"
                     },
                     "totalScore": {
-                      "type": "number"
+                      "type": "number",
+                      "nullable": true
                     }
                   }
                 }
@@ -24910,7 +25108,11 @@
           "lastCompletedVisitAt",
           "elapsedDaysSinceLastVisit",
           "activeChecklistCount",
+          "activeBmChecklistCount",
+          "activeVmChecklistCount",
           "pendingAcknowledgementCount",
+          "pendingBmAcknowledgementCount",
+          "pendingVmAcknowledgementCount",
           "openActionCount",
           "blockedActionCount",
           "status",
@@ -24979,7 +25181,23 @@
             "type": "integer",
             "minimum": 0
           },
+          "activeBmChecklistCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "activeVmChecklistCount": {
+            "type": "integer",
+            "minimum": 0
+          },
           "pendingAcknowledgementCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingBmAcknowledgementCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingVmAcknowledgementCount": {
             "type": "integer",
             "minimum": 0
           },

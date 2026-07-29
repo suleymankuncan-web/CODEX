@@ -272,8 +272,8 @@ export class ChecklistAcknowledgementRepository {
         completedByUserId: row.completed_by_user_id,
         completedAt: row.completed_at,
         status: row.status,
-        totalScore: row.total_score ? Number(row.total_score) : null,
-        complianceRate: row.compliance_rate ? Number(row.compliance_rate) : null,
+        totalScore: row.total_score === null ? null : Number(row.total_score),
+        complianceRate: row.compliance_rate === null ? null : Number(row.compliance_rate),
         responses: this.mapResponseDetails(row.responses_json),
         acknowledgement: row.checklist_acknowledgement_id
           ? {
@@ -445,10 +445,7 @@ export class ChecklistAcknowledgementRepository {
           )
           VALUES ($1::uuid, $2::uuid, $3, $4)
           ON CONFLICT (checklist_instance_id) DO UPDATE
-          SET
-            acknowledged_by_user_id = EXCLUDED.acknowledged_by_user_id,
-            acknowledgement_note = EXCLUDED.acknowledgement_note,
-            acknowledged_at = NOW()
+          SET checklist_instance_id = EXCLUDED.checklist_instance_id
           RETURNING
             checklist_acknowledgement_id,
             acknowledged_by_user_id,

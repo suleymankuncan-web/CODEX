@@ -29,6 +29,7 @@ describe("resolveChecklistCommandReadScope", () => {
       regionIds: [],
       storeIds: [],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });
   });
 
@@ -55,6 +56,7 @@ describe("resolveChecklistCommandReadScope", () => {
       regionIds: ["manager-region"],
       storeIds: ["manager-store"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT"],
     });
   });
 
@@ -84,6 +86,7 @@ describe("resolveChecklistCommandReadScope", () => {
       regionIds: role === "VISUAL_MERCHANDISER" ? ["role-region"] : [],
       storeIds: ["role-store"],
       allowedTemplateTypes: templateTypes,
+      executionTemplateTypes: templateTypes,
     });
   });
 
@@ -103,6 +106,7 @@ describe("resolveChecklistCommandReadScope", () => {
       regionIds: [],
       storeIds: [],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });
   });
 
@@ -129,6 +133,7 @@ describe("resolveChecklistCommandReadScope", () => {
       regionIds: ["admin-region"],
       storeIds: ["admin-store"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });
   });
 });

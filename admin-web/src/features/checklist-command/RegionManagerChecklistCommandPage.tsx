@@ -565,9 +565,12 @@ function ChecklistCommandDesktopTable(input: {
           {input.columnPreset !== 'scores' ? <VisitDate className="visit-date" value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} /> : null}
           {input.columnPreset !== 'scores' ? <ElapsedDays className="elapsed-days" value={row.elapsedDaysSinceLastVisit} t={input.t} /> : null}
           <StatusPill locale={input.locale} row={row} />
-          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row), getDirectChecklist(row, input.actionStoreIds.has(row.storeId)))}>
-            {getRowActionLabel(row, input.locale)} <ChevronRight size={14} />
-          </button>
+          <div className="tw:flex tw:items-center tw:justify-end tw:gap-1">
+            {row.bmCompletedAt ? <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, row.pendingBmAcknowledgementCount > 0 ? 'inbox' : 'history')}>{input.locale === 'tr' ? 'Sonuçlar' : 'Results'}</button> : null}
+            <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getPrimaryWorkflowTab(row, input.actionStoreIds.has(row.storeId)), getDirectChecklist(input.actionStoreIds.has(row.storeId)))}>
+              {getRowActionLabel(row, input.locale, input.actionStoreIds.has(row.storeId))} <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       ))}
     </div>
@@ -595,7 +598,10 @@ function ChecklistCommandMobileCards(input: {
             <ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} />
           </div>
           <StatusPill locale={input.locale} row={row} />
-          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row), getDirectChecklist(row, input.actionStoreIds.has(row.storeId)))}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button>
+          <div className="tw:flex tw:flex-wrap tw:justify-end tw:gap-1">
+            {row.bmCompletedAt ? <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, row.pendingBmAcknowledgementCount > 0 ? 'inbox' : 'history')}>{input.locale === 'tr' ? 'Sonuçlar' : 'Results'}</button> : null}
+            <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getPrimaryWorkflowTab(row, input.actionStoreIds.has(row.storeId)), getDirectChecklist(input.actionStoreIds.has(row.storeId)))}>{getRowActionLabel(row, input.locale, input.actionStoreIds.has(row.storeId))} <ChevronRight size={14} /></button>
+          </div>
         </article>
       ))}
     </div>
@@ -627,26 +633,25 @@ function StatusPill(input: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
 }
 
 function getRowStatusPresentation(row: ChecklistCommandRow, locale: 'tr' | 'en') {
-  if (row.status === 'active') return { label: locale === 'tr' ? 'Aktif taslak' : 'Active draft', tone: 'active' }
+  if (row.pendingBmAcknowledgementCount > 0) return { label: locale === 'tr' ? 'Mağaza Müdürü Onayı Bekliyor' : 'Awaiting Store Manager acknowledgement', tone: 'review' }
+  if (row.activeBmChecklistCount > 0) return { label: locale === 'tr' ? 'Aktif taslak' : 'Active draft', tone: 'active' }
   if (row.status === 'needs_visit') return { label: locale === 'tr' ? 'Bu ay eksik' : 'Missing this month', tone: 'late' }
   if (row.status === 'pending') return { label: locale === 'tr' ? 'Kabul bekliyor' : 'Awaiting acknowledgement', tone: 'review' }
   if (row.openActionCount > 0) return { label: locale === 'tr' ? 'Aksiyon Takipte' : 'Action in progress', tone: 'review' }
   return { label: locale === 'tr' ? 'Aksiyon Yok' : 'No action', tone: 'done' }
 }
 
-function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
-  if (row.bmCompletedAt !== null) return locale === 'tr' ? 'Sonucu gör' : 'View result'
-  if (row.status === 'active' && row.bmCompletedAt === null) return locale === 'tr' ? 'Devam et' : 'Continue'
-  if (row.status === 'needs_visit') return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
-  return locale === 'tr' ? 'Sonucu gör' : 'View result'
+function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en', authorized: boolean) {
+  if (!authorized) return locale === 'tr' ? 'Sonuçları gör' : 'View results'
+  if (row.activeBmChecklistCount > 0) return locale === 'tr' ? 'Devam et' : 'Continue'
+  return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
 }
 
-function getRowWorkflowTab(row: ChecklistCommandRow): 'visits' | 'inbox' | 'history' {
-  if ((row.status === 'active' || row.status === 'needs_visit') && row.bmCompletedAt === null) return 'visits'
-  if (row.status === 'pending') return 'inbox'
-  return 'history'
+function getPrimaryWorkflowTab(row: ChecklistCommandRow, authorized: boolean): 'visits' | 'inbox' | 'history' {
+  if (authorized) return 'visits'
+  return row.pendingBmAcknowledgementCount > 0 ? 'inbox' : 'history'
 }
 
-function getDirectChecklist(row: ChecklistCommandRow, authorized: boolean): 'bm' | undefined {
-  return authorized && (row.status === 'active' || row.status === 'needs_visit') && row.bmCompletedAt === null ? 'bm' : undefined
+function getDirectChecklist(authorized: boolean): 'bm' | undefined {
+  return authorized ? 'bm' : undefined
 }

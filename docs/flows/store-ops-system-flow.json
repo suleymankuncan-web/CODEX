@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-28T14:30:09.658Z",
+  "generatedAt": "2026-07-29T11:41:43.056Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -1785,11 +1785,11 @@
     },
     {
       "id": "api:45",
-      "client": "legacy-json",
-      "functionName": "sendJson",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
       "method": "POST",
-      "rawPath": "/checklists/instances/${input.checklistInstanceId}/acknowledge",
-      "path": "/api/checklists/instances/{dynamic}/acknowledge",
+      "rawPath": "/api/checklists/instances/{checklistInstanceId}/acknowledge",
+      "path": "/api/checklists/instances/{checklistInstanceId}/acknowledge",
       "backendEndpointId": "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/acknowledge",
       "openApiCovered": true,
       "exportedFunction": "acknowledgeChecklist",
@@ -4693,7 +4693,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 121
+        "line": 123
       }
     },
     {
@@ -4819,7 +4819,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 17
+        "line": 18
       }
     },
     {
@@ -4833,7 +4833,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 95
+        "line": 96
       }
     },
     {
@@ -4847,7 +4847,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 67
+        "line": 68
       }
     },
     {
@@ -4861,7 +4861,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 40
+        "line": 41
       }
     },
     {
@@ -6037,7 +6037,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 87
+        "line": 88
       }
     },
     {
@@ -6051,7 +6051,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 331
+        "line": 332
       }
     },
     {
@@ -6065,7 +6065,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 129
+        "line": 130
       }
     },
     {
@@ -6079,7 +6079,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 147
+        "line": 148
       }
     },
     {
@@ -6093,7 +6093,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 247
+        "line": 248
       }
     },
     {
@@ -6107,7 +6107,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 303
+        "line": 304
       }
     },
     {
@@ -6121,7 +6121,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 271
+        "line": 272
       }
     },
     {
@@ -6135,7 +6135,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 169
+        "line": 170
       }
     },
     {
@@ -6149,7 +6149,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 216
+        "line": 217
       }
     },
     {
@@ -6163,7 +6163,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 107
+        "line": 108
       }
     },
     {
@@ -6177,7 +6177,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 70
+        "line": 71
       }
     },
     {

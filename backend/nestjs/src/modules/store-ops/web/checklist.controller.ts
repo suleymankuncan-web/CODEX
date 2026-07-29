@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Req } from "@nestjs/common";
-import { ApiBody } from "@nestjs/swagger";
+import { ApiBody, ApiCreatedResponse } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { ChecklistService } from "../application/checklist.service";
 import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
@@ -9,6 +9,7 @@ import { CompleteChecklistInstanceDto } from "./dto/complete-checklist-instance.
 import { AcknowledgeChecklistInstanceDto } from "./dto/acknowledge-checklist-instance.dto";
 import { ListChecklistAcknowledgementsDto } from "./dto/list-checklist-acknowledgements.dto";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { checklistAcknowledgementCommandResponseSchema } from "../../../openapi/checklist-acknowledgement-openapi";
 
 @Controller("checklists")
 export class ChecklistController {
@@ -93,6 +94,7 @@ export class ChecklistController {
   }
 
   @Post("instances/:checklistInstanceId/acknowledge")
+  @ApiCreatedResponse({ schema: checklistAcknowledgementCommandResponseSchema })
   @RequireScope("authenticated")
   @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
   async acknowledgeChecklist(

@@ -133,6 +133,18 @@ export function StoreChecklistsPage(input: {
               }),
             })
           }}
+          onOpenResult={(checklistInstanceId, storeId, tab, trigger) => {
+            overlayTriggerRef.current = trigger
+            navigate({
+              pathname: location.pathname,
+              search: buildChecklistWorkflowOverlaySearch(location.search, {
+                kind: 'result',
+                checklistInstanceId,
+                returnStoreId: storeId,
+                returnTab: tab,
+              }),
+            })
+          }}
         />
         {workflowRoute.state ? (
           <ChecklistWorkflowCommandOverlay

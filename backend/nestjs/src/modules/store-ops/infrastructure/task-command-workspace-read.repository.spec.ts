@@ -42,11 +42,29 @@ describe("TaskCommandWorkspaceReadRepository", () => {
     expect(pageSql).toContain("LIMIT $5");
     expect(pageSql).toContain("p.closed_at AT TIME ZONE 'Europe/Istanbul'");
     expect(pageSql).toContain("p.cancelled_at AT TIME ZONE 'Europe/Istanbul'");
+    expect(pageSql).toContain("p.status IN ('open', 'in_progress', 'blocked', 'solution_review_pending', 'correction_required')");
+    expect(pageSql).not.toContain("p.due_on BETWEEN");
     expect(auditSql).toContain("ROW_NUMBER() OVER");
     expect(auditSql).toContain("event.event_type IN");
     expect(auditSql).toContain("metadata_json ->> 'actorDisplayName'");
     expect(auditSql).toContain("assignment.start_at <= event.occurred_at");
     expect(auditSql).not.toContain("actor_user_id AS");
+  });
+
+  it("keeps active assigned work visible when its due date is in a later month", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ total: 1 }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const repository = new TaskCommandWorkspaceReadRepository({ query } as never);
+
+    await repository.readPage({
+      companyIds: [], regionIds: [], storeIds: [storeId], statuses: ["open"],
+      periodStart: "2026-07-01", periodEnd: "2026-07-31", limit: 20, offset: 0, eventLimit: 3,
+    });
+
+    const sql = String(query.mock.calls[0]?.[0]);
+    expect(sql).toContain("p.status IN ('open', 'in_progress', 'blocked', 'solution_review_pending', 'correction_required')");
+    expect(sql).not.toContain("p.due_on BETWEEN");
   });
 
   it("checks event detail scope before returning a bounded chronological page", async () => {
