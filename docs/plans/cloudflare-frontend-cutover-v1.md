@@ -1,6 +1,6 @@
 # Cloudflare Frontend Cutover V1
 
-Status: owner-approved execution
+Status: complete
 Date: 2026-07-29
 Risk: R5 provider behavior and live custom-domain cutover, no product behavior change
 
@@ -12,9 +12,9 @@ authorization and the public hostname unchanged.
 
 Cloudflare Pages and Pages Functions are not introduced. The deployment has no
 Worker runtime script: hashed assets and SPA navigations are served from the
-static asset layer. Vercel is retained only during the cutover as the tested
-rollback origin. After Cloudflare live verification, its domain, Git integration
-and project are retired so no permanent Vercel dependency remains.
+static asset layer. Vercel was retained only during the cutover as the tested
+rollback origin and retired from the active frontend path after Cloudflare live
+verification.
 
 ## Locked boundaries
 
@@ -89,3 +89,26 @@ Cloudflare deployment history becomes the rollback source.
 - fresh root `npm.cmd run check:release` when selected
 - Cloudflare preview header/asset/deep-link probes
 - deployed readiness and authenticated staging smoke after cutover
+
+## Closeout evidence
+
+- Worker version `1a23ecad-816c-46c2-a3e7-eae559cdfb38` serves 100% of traffic
+  for merged main `cc9f3463ba209d59425a127f556259c78d33b49c`.
+- `staging.hr-axis.com` resolves through Cloudflare and serves the expected
+  `index-BGWZQ5yi.js` artifact with TLS, SPA deep-link handling and the required
+  security headers.
+- The sanitized Store Manager proof returned
+  `protected_staging_cookie_session_passed`; cookie creation/clear, authenticated
+  session, CSRF rejection and logout all passed.
+- Cloudflare DNS no longer contains the Vercel CNAME or `_vercel` verification
+  TXT. The Vercel `hr-axis-staging` project was permanently deleted after live
+  proof; that deletion removed its custom domains, deployments, environment
+  variables, settings and Git integration. No secret or provider identifier is
+  recorded in this receipt.
+- The cutover caught and corrected a malformed public Clerk build value before
+  closeout. Future uploads fail fast unless the complete public frontend build
+  contract is present; values are never printed or committed.
+- The closeout release reproduced the known 8 GB operator-machine collision
+  between backend proof and Playwright startup. Local `frontend-e2e` now waits
+  for both `frontend-static` and `backend-release`; coverage and the two-worker
+  browser policy are unchanged.

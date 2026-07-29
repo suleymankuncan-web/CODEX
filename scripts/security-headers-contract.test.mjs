@@ -43,39 +43,21 @@ test("container fallback sets baseline browser security headers", () => {
   }
 });
 
-test("temporary Vercel rollback keeps the same browser security boundary", () => {
-  const vercelConfig = JSON.parse(readText("admin-web/vercel.json"));
-  const headerSets = vercelConfig.headers.map((entry) =>
-    Object.fromEntries(entry.headers.map((header) => [header.key, header.value])),
-  );
-
-  for (const headers of headerSets) {
-    assert.equal(headers["X-Content-Type-Options"], "nosniff");
-    assert.equal(headers["Strict-Transport-Security"], "max-age=31536000; includeSubDomains");
-    assert.equal(headers["X-Frame-Options"], "DENY");
-    assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
-    assert.equal(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=(), payment=()");
-    for (const directive of requiredCspDirectives) {
-      assert.match(
-        headers["Content-Security-Policy"],
-        new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-      );
-    }
-  }
-});
-
 test("Cloudflare Workers assets preserve SPA and browser security contracts", () => {
   const wrangler = JSON.parse(readText("admin-web/wrangler.jsonc"));
   assert.equal(wrangler.name, "hr-axis-staging-frontend");
   assert.equal(wrangler.assets.directory, "./dist");
   assert.equal(wrangler.assets.not_found_handling, "single-page-application");
+  assert.deepEqual(wrangler.routes, [
+    { pattern: "staging.hr-axis.com", custom_domain: true },
+  ]);
   assert.equal(wrangler.main, undefined, "static frontend must not add Worker runtime code");
   assert.equal(
     existsSync(join(workspaceRoot, "admin-web/vercel.json")),
-    true,
-    "Vercel rollback config remains until post-cutover live proof",
+    false,
+    "retired Vercel configuration must not remain after Cloudflare live proof",
   );
-  assert.equal(existsSync(join(workspaceRoot, "admin-web/.vercelignore")), true);
+  assert.equal(existsSync(join(workspaceRoot, "admin-web/.vercelignore")), false);
 
   const cloudflareHeaders = readText("admin-web/public/_headers");
   assert.match(cloudflareHeaders, /^\/\*/m);
@@ -106,6 +88,7 @@ test("Cloudflare Workers assets preserve SPA and browser security contracts", ()
 test("Cloudflare upload and promotion are exact-commit separated", () => {
   const packageJson = JSON.parse(readText("admin-web/package.json"));
   const releaseScript = readText("admin-web/scripts/cloudflare-release.mjs");
+  const buildContract = readText("admin-web/scripts/cloudflare-build-contract.mjs");
 
   assert.match(packageJson.scripts["upload:cloudflare:artifact"], /cloudflare-release\.mjs upload/);
   assert.match(packageJson.scripts["promote:cloudflare:version"], /cloudflare-release\.mjs promote/);
@@ -116,7 +99,15 @@ test("Cloudflare upload and promotion are exact-commit separated", () => {
   assert.match(releaseScript, /git-\$\{head\.slice\(0, 12\)\}/);
   assert.match(releaseScript, /\$\{tag\}@100%/);
   assert.match(releaseScript, /npm.*run.*build:cloudflare/s);
-  assert.match(releaseScript, /VITE_SENTRY_RELEASE: head/);
+  assert.match(buildContract, /VITE_SENTRY_RELEASE: head/);
+  assert.match(releaseScript, /createCloudflareBuildEnvironment\(process\.env, head\)/);
+  assert.match(buildContract, /VITE_CLERK_PUBLISHABLE_KEY/);
+  assert.match(buildContract, /pk_test_/);
+  assert.doesNotMatch(buildContract, /pk_live_/);
+  assert.match(buildContract, /VITE_API_BASE_URL/);
+  assert.match(buildContract, /VITE_SENTRY_DSN/);
+  assert.match(buildContract, /blockedLocalBuildVariables/);
+  assert.match(buildContract, /VITE_BEARER_TOKEN/);
   assert.match(releaseScript, /fetch', 'origin', 'main'/);
   assert.match(releaseScript, /branch !== 'main' \|\| head !== originMain/);
   assert.match(releaseScript, /postBuildStatus/);

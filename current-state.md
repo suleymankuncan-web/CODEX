@@ -31,7 +31,7 @@ when the decision needs them.
 
 ## Current Product Position
 
-- Frontend ownership is moving to Cloudflare Workers Static Assets; its isolated preview is verified, and Vercel retires only after exact-main live proof.
+- Frontend ownership is Cloudflare Workers Static Assets. `staging.hr-axis.com` serves the exact merged-main Worker artifact; TLS, deep-link/security-header probes and the real Store Manager cookie-session smoke passed on 2026-07-29. Vercel is retired from the active frontend path.
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
 - Broad production rollout: `No-Go`.
@@ -59,7 +59,7 @@ are locked in `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`:
 execute the company-read/no-action Report Viewer allowlist, incentive closure,
 read-only production Session, honest Norm Kadro projection reversal, and safe
 verify-full preflight in order. Constraints still require live evidence.
-DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Vercel env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
+DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Cloudflare env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929

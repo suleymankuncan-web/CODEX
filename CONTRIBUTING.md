@@ -62,9 +62,8 @@ and record the conflict in the PR.
 - Keep each PR to one review story and one rollback story.
 - Do not batch unrelated domains because the changes are small.
 - Before opening a PR, run the local pre-PR review pass described below.
-- Merge only after local verification, required GitHub checks, and all applicable active
-  frontend-provider checks (Cloudflare plus Vercel during the cutover rollback window)
-  when applicable, and mergeability are clean.
+- Merge only after local verification, required GitHub checks, applicable
+  Cloudflare frontend-provider checks, and mergeability are clean.
 - Use squash merge for controlled PRs so exact-tree post-merge proof can be
   reused; a documented merge-commit/rebase exception accepts the fallback full
   release cost.

@@ -26,8 +26,6 @@ outputs/
 tmp-keycloak-cookie*.txt
 references/design-md/
 
-.vercel
-
 # GSD runtime / ephemeral state
 .gsd/completed-units*.json
 .gsd/state-manifest.json

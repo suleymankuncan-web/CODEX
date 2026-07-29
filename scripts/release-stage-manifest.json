@@ -40,7 +40,7 @@
       "id": "frontend-e2e",
       "cwd": "admin-web",
       "commands": [["npm", "run", "check:release:e2e"]],
-      "dependsOn": ["frontend-static"],
+      "dependsOn": ["frontend-static", "backend-release"],
       "volatile": false
     }
   ]
