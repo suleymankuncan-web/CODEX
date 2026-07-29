@@ -4,6 +4,9 @@
 
 export type components = {
   schemas: {
+    "AcknowledgeChecklistInstanceDto": {
+      "acknowledgementNote"?: string
+    }
     "ApproveTargetDistributionRequestDto": {
       "approvalNote"?: string
       "approvedTotalTargetValue"?: number
@@ -573,7 +576,11 @@ export type components = {
       "lastCompletedVisitAt": string | null
       "elapsedDaysSinceLastVisit": number | null
       "activeChecklistCount": number
+      "activeBmChecklistCount": number
+      "activeVmChecklistCount": number
       "pendingAcknowledgementCount": number
+      "pendingBmAcknowledgementCount": number
+      "pendingVmAcknowledgementCount": number
       "openActionCount": number
       "blockedActionCount": number
       "status": "needs_visit" | "active" | "pending" | "completed"
@@ -1560,7 +1567,7 @@ export type components = {
             "checklistTemplateId": string
             "storeId": string
             "completedAt": string
-            "totalScore": number
+            "totalScore": number | null
             "acknowledgedAt": string | null
           }>
         "pendingAcknowledgements": Array<{
@@ -1568,7 +1575,7 @@ export type components = {
             "checklistTemplateId": string
             "storeId": string
             "completedAt": string
-            "totalScore": number
+            "totalScore": number | null
           }>
         "monthlySummaries": Array<{
             "storeId": string
@@ -4371,6 +4378,41 @@ export type paths = {
       }
     }
   }
+  "/api/mobile/checklists/instances/{checklistInstanceId}/acknowledge": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["AcknowledgeChecklistInstanceDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': {
+              "command": {
+                "status": "acknowledged"
+                "message": string
+              }
+              "data": {
+                "acknowledgement": {
+                  "checklistAcknowledgementId": string
+                  "acknowledgedByUserId": string
+                  "acknowledgementNote": string | null
+                  "acknowledgedAt": string
+                }
+                "remediation": {
+                  "status": "created" | "duplicate" | "zero_findings" | "blocked"
+                  "createdCount": number
+                  "duplicateCount": number
+                  "blockedCount": number
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   "/api/mobile/visual-campaigns": {
     get: {
       responses: {
@@ -4598,6 +4640,41 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/instances/{checklistInstanceId}/acknowledge": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["AcknowledgeChecklistInstanceDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': {
+              "command": {
+                "status": "acknowledged"
+                "message": string
+              }
+              "data": {
+                "acknowledgement": {
+                  "checklistAcknowledgementId": string
+                  "acknowledgedByUserId": string
+                  "acknowledgementNote": string | null
+                  "acknowledgedAt": string
+                }
+                "remediation": {
+                  "status": "created" | "duplicate" | "zero_findings" | "blocked"
+                  "createdCount": number
+                  "duplicateCount": number
+                  "blockedCount": number
+                }
+              }
+            }
           }
         }
       }

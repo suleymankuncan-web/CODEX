@@ -465,7 +465,11 @@ describe("ChecklistRepository", () => {
   });
 
   it("starts a mobile checklist instance with the actor user as starter", async () => {
-    const query = jest.fn().mockResolvedValueOnce({
+    const { client, databaseService, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
       rows: [
         {
           checklist_instance_id: "instance-1",
@@ -474,7 +478,6 @@ describe("ChecklistRepository", () => {
         },
       ],
     });
-    const repository = new ChecklistRepository({ query } as never);
 
     await expect(
       repository.startMobileChecklistInstance({
@@ -488,23 +491,51 @@ describe("ChecklistRepository", () => {
       created_at: "2026-04-28T10:00:00.000Z",
     });
 
-    expect(query).toHaveBeenCalledWith(
+    expect(databaseService.withTransaction).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("pg_advisory_xact_lock"),
+      ["template-1", "store-1"],
+    );
+    expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining("started_by_user_id"),
       ["template-1", "store-1", "user-1"],
     );
-    expect(query).toHaveBeenCalledWith(
+    expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining("ct.status = 'published'"),
       expect.any(Array),
     );
-    expect(query).toHaveBeenCalledWith(
+    expect(client.query).toHaveBeenCalledWith(
       expect.stringContaining("s.company_id = ct.company_id"),
       expect.any(Array),
     );
   });
 
+  it("reuses the latest active checklist instance after taking the start lock", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{
+        checklist_instance_id: "active-instance",
+        status: "in_progress",
+        created_at: "2026-07-29T08:00:00.000Z",
+      }] });
+
+    await expect(repository.startMobileChecklistInstance({
+      checklistTemplateId: "template-1",
+      storeId: "store-1",
+      actorUserId: "user-1",
+    })).resolves.toEqual(expect.objectContaining({ checklist_instance_id: "active-instance" }));
+
+    expect(client.query).toHaveBeenCalledTimes(2);
+    expect(String(client.query.mock.calls[1]?.[0])).toContain("status IN ('planned', 'in_progress')");
+  });
+
   it("rejects starting a mobile checklist when the template is not available for the store", async () => {
-    const query = jest.fn().mockResolvedValueOnce({ rows: [] });
-    const repository = new ChecklistRepository({ query } as never);
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
 
     await expect(
       repository.startMobileChecklistInstance({
@@ -1132,7 +1163,7 @@ describe("ChecklistRepository", () => {
     expect(result.activeInstances[0]?.updatedAt).toBe("2026-04-28T10:12:00.000Z");
   });
 
-  it("excludes completed checklist rows without total scores", async () => {
+  it("keeps completed checklist rows without total scores in completion coverage", async () => {
     const query = createQueryMock({
       stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
     });
@@ -1147,7 +1178,9 @@ describe("ChecklistRepository", () => {
 
     const completedSql = query.mock.calls[3][0] as string;
     const monthlySummarySql = query.mock.calls[4][0] as string;
-    expect(completedSql).toContain("ci.total_score IS NOT NULL");
-    expect(monthlySummarySql).toContain("ci.total_score IS NOT NULL");
+    expect(completedSql).not.toContain("ci.total_score IS NOT NULL");
+    expect(monthlySummarySql).not.toContain("ci.total_score IS NOT NULL");
+    expect(completedSql).toContain("Europe/Istanbul");
+    expect(monthlySummarySql).toContain("Europe/Istanbul");
   });
 });

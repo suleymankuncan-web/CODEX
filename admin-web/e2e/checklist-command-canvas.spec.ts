@@ -133,7 +133,7 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(workflowButton).toBeFocused()
   await expect(page).not.toHaveURL(/overlay=/)
 
-  const resultButton = page.getByRole('button', { name: /Sonucu gör/ }).first()
+  const resultButton = page.getByRole('button', { name: 'Sonuçlar' }).first()
   await resultButton.click()
   await expect(page).toHaveURL(
     /overlay=workflow&storeId=22222222-2222-4222-8222-222222222222&workflowTab=history/,
@@ -196,7 +196,7 @@ test('read-visible but action-unassigned region store cannot auto-start a direct
   await expect.poll(() => startRequests).toBe(0)
 })
 
-test('BM-complete and VM-missing region row opens BM history instead of starting another BM checklist', async ({ page }) => {
+test('BM-complete and VM-missing region row can start another BM checklist in the same month', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await routeChecklistCommand(page, [], [], undefined, 0, { bmCompletedVmMissing: true })
   let startRequests = 0
@@ -208,11 +208,14 @@ test('BM-complete and VM-missing region row opens BM history instead of starting
 
   await page.goto('/store/checklists')
   const row = page.getByTestId('checklist-command-row').filter({ hasText: 'Marmara Park' })
-  await row.getByRole('button', { name: /Sonucu gör/ }).click()
+  await expect(row.getByText('Bu ay eksik')).toHaveCount(0)
+  await expect(row.getByRole('button', { name: 'Sonuçlar' })).toBeVisible()
+  await row.getByRole('button', { name: /Checklist yap/ }).click()
 
-  await expect(page).toHaveURL(/workflowTab=history/)
-  await expect(page).not.toHaveURL(/workflowChecklist=/)
-  await expect.poll(() => startRequests).toBe(0)
+  await expect(page).toHaveURL(/workflowTab=visits/)
+  await expect(page).toHaveURL(/workflowChecklist=bm/)
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
+  await expect.poll(() => startRequests).toBe(1)
 })
 
 test('region manager command canvas stays bounded as mobile cards with 30-row pages', async ({ page }, testInfo) => {
@@ -884,10 +887,10 @@ async function routeChecklistCommand(
           },
           metrics: {
             totalStores: 2,
-            needsVisit: 1,
+            needsVisit: behavior.bmCompletedVmMissing ? 0 : 1,
             active: 0,
             pending: 0,
-            completed: 1,
+            completed: behavior.bmCompletedVmMissing ? 2 : 1,
           },
           items: [
             {
@@ -904,10 +907,14 @@ async function routeChecklistCommand(
               lastCompletedVisitAt: '2026-07-10T09:00:00.000Z',
               elapsedDaysSinceLastVisit: 4,
               activeChecklistCount: 0,
+              activeBmChecklistCount: 0,
+              activeVmChecklistCount: 0,
               pendingAcknowledgementCount: 0,
+              pendingBmAcknowledgementCount: 0,
+              pendingVmAcknowledgementCount: 0,
               openActionCount: 0,
               blockedActionCount: 0,
-              status: 'needs_visit',
+              status: behavior.bmCompletedVmMissing ? 'completed' : 'needs_visit',
               reasonCodes: [behavior.bmCompletedVmMissing ? 'missing_vm_visit' : 'missing_bm_visit'],
               lastOperationalAt: '2026-07-10T09:00:00.000Z',
             },
@@ -925,7 +932,11 @@ async function routeChecklistCommand(
               lastCompletedVisitAt: '2026-07-11T10:00:00.000Z',
               elapsedDaysSinceLastVisit: 3,
               activeChecklistCount: 0,
+              activeBmChecklistCount: 0,
+              activeVmChecklistCount: 0,
               pendingAcknowledgementCount: 0,
+              pendingBmAcknowledgementCount: 0,
+              pendingVmAcknowledgementCount: 0,
               openActionCount: 0,
               blockedActionCount: 0,
               status: 'completed',
@@ -1103,7 +1114,11 @@ function buildPlannerStores(total = 35) {
     lastCompletedVisitAt: null,
     elapsedDaysSinceLastVisit: null,
     activeChecklistCount: 0,
+    activeBmChecklistCount: 0,
+    activeVmChecklistCount: 0,
     pendingAcknowledgementCount: 0,
+    pendingBmAcknowledgementCount: 0,
+    pendingVmAcknowledgementCount: 0,
     openActionCount: 0,
     blockedActionCount: 0,
     status: index % 3 === 0 ? 'needs_visit' : 'completed',

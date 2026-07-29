@@ -18,6 +18,7 @@ import {
   UnlinkChecklistItemEvidenceDto,
 } from "./dto/checklist-item-evidence.dto";
 import { PhotoMediaReadDto } from "./dto/photo-media-storage.dto";
+import { checklistAcknowledgementCommandResponseSchema } from "../../../openapi/checklist-acknowledgement-openapi";
 import { PhotoMediaUploadBufferGuardInterceptor } from "./photo-media-upload-buffer-guard.interceptor";
 
 const checklistEvidenceProjectionSchema: SchemaObject = {
@@ -329,6 +330,7 @@ export class MobileChecklistController {
   }
 
   @Post("instances/:checklistInstanceId/acknowledge")
+  @ApiCreatedResponse({ schema: checklistAcknowledgementCommandResponseSchema })
   @RequireScope("authenticated")
   @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
   async acknowledge(

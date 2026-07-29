@@ -1,5 +1,5 @@
 import { fetchBlob, sendFormData, sendJson } from '../../lib/api'
-import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
+import { fetchOpenApiJson, sendOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type ListResponse<T> = {
   items: T[]
@@ -349,13 +349,11 @@ export async function acknowledgeChecklist(input: {
   checklistInstanceId: string
   acknowledgementNote?: string
 }) {
-  return sendJson<CommandResponse<{ acknowledgement: ChecklistAcknowledgementItem['acknowledgement'] }>>(
-    `/checklists/instances/${input.checklistInstanceId}/acknowledge`,
-    {
-      method: 'POST',
-      body: {
-        acknowledgementNote: input.acknowledgementNote,
-      },
-    },
-  )
+  return sendOpenApiJson('/api/checklists/instances/{checklistInstanceId}/acknowledge', {
+    method: 'POST',
+    params: { checklistInstanceId: input.checklistInstanceId },
+    body: input.acknowledgementNote === undefined
+      ? {}
+      : { acknowledgementNote: input.acknowledgementNote },
+  })
 }

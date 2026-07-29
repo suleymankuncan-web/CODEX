@@ -34,6 +34,8 @@ describe("Checklist Command OpenAPI", () => {
     const rowProperties = document.components?.schemas?.ChecklistCommandRow?.properties;
     expect(rowProperties).toHaveProperty("lastCompletedVisitAt");
     expect(rowProperties).toHaveProperty("elapsedDaysSinceLastVisit");
+    expect(rowProperties).toHaveProperty("activeBmChecklistCount");
+    expect(rowProperties).toHaveProperty("pendingBmAcknowledgementCount");
     expect(rowProperties).not.toHaveProperty("email");
     expect(rowProperties).not.toHaveProperty("username");
     expect(rowProperties).not.toHaveProperty("acknowledgementNote");

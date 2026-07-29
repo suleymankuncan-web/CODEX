@@ -56,7 +56,11 @@ export type ChecklistCommandRow = {
   lastCompletedVisitAt: string | null;
   elapsedDaysSinceLastVisit: number | null;
   activeChecklistCount: number;
+  activeBmChecklistCount: number;
+  activeVmChecklistCount: number;
   pendingAcknowledgementCount: number;
+  pendingBmAcknowledgementCount: number;
+  pendingVmAcknowledgementCount: number;
   openActionCount: number;
   blockedActionCount: number;
   status: ChecklistCommandRowStatus;

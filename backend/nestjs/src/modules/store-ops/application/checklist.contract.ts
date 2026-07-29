@@ -131,7 +131,7 @@ export type MobileChecklistToday = {
     checklistTemplateId: string;
     storeId: string;
     completedAt: string;
-    totalScore: number;
+    totalScore: number | null;
     acknowledgedAt: string | null;
   }>;
   pendingAcknowledgements: Array<{
@@ -139,7 +139,7 @@ export type MobileChecklistToday = {
     checklistTemplateId: string;
     storeId: string;
     completedAt: string;
-    totalScore: number;
+    totalScore: number | null;
   }>;
   monthlySummaries: Array<{
     storeId: string;

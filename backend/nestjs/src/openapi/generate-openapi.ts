@@ -151,7 +151,7 @@ const mobileChecklistTodayCompletedItemSchema = {
     checklistTemplateId: { type: "string" },
     storeId: { type: "string" },
     completedAt: { type: "string" },
-    totalScore: { type: "number" },
+    totalScore: { type: "number", nullable: true },
     acknowledgedAt: { type: "string", nullable: true },
   },
 };
@@ -170,7 +170,7 @@ const mobileChecklistTodayPendingAcknowledgementSchema = {
     checklistTemplateId: { type: "string" },
     storeId: { type: "string" },
     completedAt: { type: "string" },
-    totalScore: { type: "number" },
+    totalScore: { type: "number", nullable: true },
   },
 };
 

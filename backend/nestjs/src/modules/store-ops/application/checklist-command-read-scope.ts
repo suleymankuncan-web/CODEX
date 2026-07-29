@@ -10,6 +10,7 @@ export type ChecklistCommandView =
 export type ChecklistCommandReadScope = AuthReadScope & {
   view: ChecklistCommandView;
   allowedTemplateTypes: Array<"BM_STORE_VISIT" | "VM_STORE_VISIT">;
+  executionTemplateTypes: Array<"BM_STORE_VISIT" | "VM_STORE_VISIT">;
 };
 
 type ResolveChecklistCommandReadScopeInput = {
@@ -31,6 +32,7 @@ export function resolveChecklistCommandReadScope(
       regionIds: [],
       storeIds: [],
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
+      executionTemplateTypes: [...BOTH_VISIT_TYPES],
     };
   }
 
@@ -42,6 +44,7 @@ export function resolveChecklistCommandReadScope(
       regionIds: unique(roleScope?.regionIds ?? []),
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
+      executionTemplateTypes: ["BM_STORE_VISIT"],
     };
   }
 
@@ -52,6 +55,7 @@ export function resolveChecklistCommandReadScope(
       regionIds: unique(input.actorReadScope.regionIds),
       storeIds: unique(input.actorReadScope.storeIds),
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
+      executionTemplateTypes: [...BOTH_VISIT_TYPES],
     };
   }
 
@@ -63,6 +67,7 @@ export function resolveChecklistCommandReadScope(
       regionIds: [],
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
+      executionTemplateTypes: [...BOTH_VISIT_TYPES],
     };
   }
 
@@ -74,6 +79,7 @@ export function resolveChecklistCommandReadScope(
       regionIds: unique(roleScope?.regionIds ?? []),
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: ["VM_STORE_VISIT"],
+      executionTemplateTypes: ["VM_STORE_VISIT"],
     };
   }
 

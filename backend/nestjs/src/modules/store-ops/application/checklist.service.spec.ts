@@ -193,6 +193,9 @@ describe("ChecklistService", () => {
     });
 
     expect(result.command.status).toBe("acknowledged");
+    expect(result.data.remediation).toEqual({
+      status: "created", createdCount: 1, duplicateCount: 0, blockedCount: 0,
+    });
     expect(acknowledgementRepository.acknowledgeChecklist).toHaveBeenCalledWith({
       checklistInstanceId: "instance-1",
       actorUserId: "user-1",
@@ -272,7 +275,7 @@ describe("ChecklistService", () => {
       storeActionPlanService as never,
     );
 
-    await service.acknowledgeChecklist({
+    const result = await service.acknowledgeChecklist({
       checklistInstanceId: "instance-1",
       actorUserId: "user-1",
       actorActionScope: {
@@ -280,6 +283,42 @@ describe("ChecklistService", () => {
       },
     });
 
+    expect(storeActionPlanService.createPlan).not.toHaveBeenCalled();
+    expect(result.data.remediation).toEqual({
+      status: "zero_findings", createdCount: 0, duplicateCount: 0, blockedCount: 0,
+    });
+  });
+
+  it("reports blocked remediation when the acknowledged checklist source is missing", async () => {
+    const acknowledgementRepository = {
+      getChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1", storeId: "store-1",
+      }),
+      acknowledgeChecklist: jest.fn().mockResolvedValue({
+        checklistAcknowledgementId: "ack-1",
+        acknowledgedByUserId: "user-1",
+        acknowledgementNote: null,
+        acknowledgedAt: "2026-05-20T12:36:00.000Z",
+      }),
+      getChecklistRemediationSource: jest.fn().mockResolvedValue(null),
+    };
+    const storeActionPlanService = { createPlan: jest.fn() };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+      storeActionPlanService as never,
+    );
+
+    const result = await service.acknowledgeChecklist({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    });
+
+    expect(result.data.remediation).toEqual({
+      status: "blocked", createdCount: 0, duplicateCount: 0, blockedCount: 1,
+    });
     expect(storeActionPlanService.createPlan).not.toHaveBeenCalled();
   });
 
@@ -334,21 +373,79 @@ describe("ChecklistService", () => {
       storeActionPlanService as never,
     );
 
-    await expect(
+    const result = await (
       service.acknowledgeChecklist({
         checklistInstanceId: "instance-1",
         actorUserId: "user-1",
         actorActionScope: {
           assignedStoreIds: ["store-1"],
         },
-      }),
-    ).resolves.toMatchObject({
-      command: {
-        status: "acknowledged",
-      },
-    });
+      })
+    );
 
     expect(storeActionPlanService.createPlan).toHaveBeenCalledTimes(1);
+    expect(result.data.remediation).toEqual({
+      status: "duplicate", createdCount: 0, duplicateCount: 1, blockedCount: 0,
+    });
+  });
+
+  it("retries partial remediation without due-date drift or duplicate plans", async () => {
+    const acknowledgement = {
+      checklistAcknowledgementId: "ack-1",
+      acknowledgedByUserId: "user-1",
+      acknowledgementNote: null,
+      acknowledgedAt: "2026-05-20T12:36:00.000Z",
+    };
+    const acknowledgementRepository = {
+      getChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1", storeId: "store-1",
+      }),
+      acknowledgeChecklist: jest.fn().mockResolvedValue(acknowledgement),
+      getChecklistRemediationSource: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        checklistTemplateId: "template-1",
+        templateName: "BM Store Visit",
+        templateType: "BM_STORE_VISIT",
+        category: "BM",
+        storeId: "store-1",
+        storeName: "Bursa Marka Park",
+        completedAt: "2026-05-20T12:00:00.000Z",
+        responses: [
+          { templateItemId: "item-1", sectionName: "Kasa", itemNo: 1, itemText: "Kasa", responseType: "score", weight: 50, maxScore: 10, scoreValue: 2, commentText: null, isNonCompliant: true },
+          { templateItemId: "item-2", sectionName: "Vitrin", itemNo: 2, itemText: "Vitrin", responseType: "score", weight: 50, maxScore: 10, scoreValue: 3, commentText: null, isNonCompliant: true },
+        ],
+      }),
+    };
+    const storeActionPlanService = {
+      createPlan: jest.fn()
+        .mockResolvedValueOnce({ command: { status: "created" } })
+        .mockRejectedValueOnce(new Error("transient plan write failure"))
+        .mockRejectedValueOnce(new ConflictException("Active store action plan already exists for this source"))
+        .mockResolvedValueOnce({ command: { status: "created" } }),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+      storeActionPlanService as never,
+    );
+    const command = {
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+    };
+
+    await expect(service.acknowledgeChecklist(command)).rejects.toThrow("transient plan write failure");
+    const retry = await service.acknowledgeChecklist(command);
+
+    expect(retry.data.remediation).toEqual({
+      status: "created", createdCount: 1, duplicateCount: 1, blockedCount: 0,
+    });
+    expect(acknowledgementRepository.acknowledgeChecklist).toHaveBeenCalledTimes(2);
+    expect(storeActionPlanService.createPlan).toHaveBeenCalledTimes(4);
+    expect(storeActionPlanService.createPlan.mock.calls.map(([input]) => input.dueOn)).toEqual([
+      "2026-05-27", "2026-05-27", "2026-05-27", "2026-05-27",
+    ]);
   });
 
   it("does not acknowledge or create remediation outside assigned stores", async () => {

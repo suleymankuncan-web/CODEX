@@ -352,7 +352,7 @@ export class ChecklistService {
       acknowledgementNote: input.acknowledgementNote,
     });
 
-    await this.createChecklistRemediationPlans({
+    const remediation = await this.createChecklistRemediationPlans({
       checklistInstanceId: input.checklistInstanceId,
       actorUserId: input.actorUserId,
       actorActionScope: input.actorActionScope,
@@ -364,6 +364,7 @@ export class ChecklistService {
       message: "Checklist instance acknowledged",
       data: {
         acknowledgement,
+        remediation,
       },
     });
   }
@@ -386,6 +387,8 @@ export class ChecklistService {
     const extractionResult = extractChecklistRemediationFindings(source);
     const dueOn = this.calculateChecklistRemediationDueOn(input.acknowledgedAt);
 
+    let createdCount = 0;
+    let duplicateCount = 0;
     for (const finding of extractionResult.findings) {
       try {
         await this.storeActionPlanService.createPlan({
@@ -409,14 +412,28 @@ export class ChecklistService {
             templateItemId: finding.templateItemId,
           },
         });
+        createdCount += 1;
       } catch (error) {
         if (isDuplicateStoreActionPlanConflict(error)) {
+          duplicateCount += 1;
           continue;
         }
 
         throw error;
       }
     }
+    return {
+      status: extractionResult.blockedReasons.length > 0
+        ? "blocked"
+        : extractionResult.findings.length === 0
+          ? "zero_findings"
+          : createdCount > 0
+            ? "created"
+            : "duplicate",
+      createdCount,
+      duplicateCount,
+      blockedCount: extractionResult.blockedReasons.length,
+    } as const;
   }
 
   private calculateChecklistRemediationDueOn(acknowledgedAt: string | Date) {

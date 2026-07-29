@@ -122,7 +122,6 @@ export class ChecklistCommandReadRepository {
           CROSS JOIN period_bounds pb
           WHERE ci.status = 'completed'
             AND ci.completed_at IS NOT NULL
-            AND ci.total_score IS NOT NULL
             AND ct.template_type = ANY($4::text[])
             AND ci.completed_at >= (pb.period_start::timestamp AT TIME ZONE 'Europe/Istanbul')
             AND ci.completed_at < ((pb.period_start + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')
@@ -134,7 +133,8 @@ export class ChecklistCommandReadRepository {
             MAX(total_score) FILTER (WHERE template_type = 'VM_STORE_VISIT')::numeric AS vm_score,
             MAX(completed_at) FILTER (WHERE template_type = 'BM_STORE_VISIT') AS bm_completed_at,
             MAX(completed_at) FILTER (WHERE template_type = 'VM_STORE_VISIT') AS vm_completed_at,
-            COUNT(*)::int AS completed_type_count
+            COUNT(*)::int AS completed_type_count,
+            COUNT(*) FILTER (WHERE template_type = ANY($12::text[]))::int AS execution_completed_type_count
           FROM period_completed_ranked
           WHERE completed_rank = 1
           GROUP BY store_id
@@ -156,6 +156,9 @@ export class ChecklistCommandReadRepository {
           SELECT
             ci.store_id,
             COUNT(*)::int AS active_checklist_count,
+            COUNT(*) FILTER (WHERE ct.template_type = 'BM_STORE_VISIT')::int AS active_bm_checklist_count,
+            COUNT(*) FILTER (WHERE ct.template_type = 'VM_STORE_VISIT')::int AS active_vm_checklist_count,
+            COUNT(*) FILTER (WHERE ct.template_type = ANY($12::text[]))::int AS execution_active_checklist_count,
             MAX(COALESCE(ci.started_at, ci.created_at)) AS last_active_at
           FROM ops.checklist_instance ci
           INNER JOIN scoped_stores ss ON ss.store_id = ci.store_id
@@ -169,6 +172,9 @@ export class ChecklistCommandReadRepository {
           SELECT
             ci.store_id,
             COUNT(*)::int AS pending_acknowledgement_count
+            ,COUNT(*) FILTER (WHERE ct.template_type = 'BM_STORE_VISIT')::int AS pending_bm_acknowledgement_count
+            ,COUNT(*) FILTER (WHERE ct.template_type = 'VM_STORE_VISIT')::int AS pending_vm_acknowledgement_count
+            ,COUNT(*) FILTER (WHERE ct.template_type = ANY($12::text[]))::int AS execution_pending_acknowledgement_count
           FROM ops.checklist_instance ci
           INNER JOIN scoped_stores ss ON ss.store_id = ci.store_id
           INNER JOIN ops.checklist_template ct
@@ -231,6 +237,7 @@ export class ChecklistCommandReadRepository {
             pc.bm_completed_at,
             pc.vm_completed_at,
             COALESCE(pc.completed_type_count, 0)::int AS completed_type_count,
+            COALESCE(pc.execution_completed_type_count, 0)::int AS execution_completed_type_count,
             lc.last_completed_visit_at,
             CASE
               WHEN lc.last_completed_visit_at IS NULL THEN NULL
@@ -238,14 +245,20 @@ export class ChecklistCommandReadRepository {
                 - (lc.last_completed_visit_at AT TIME ZONE 'Europe/Istanbul')::date
             END AS elapsed_days_since_last_visit,
             COALESCE(ac.active_checklist_count, 0) AS active_checklist_count,
+            COALESCE(ac.active_bm_checklist_count, 0) AS active_bm_checklist_count,
+            COALESCE(ac.active_vm_checklist_count, 0) AS active_vm_checklist_count,
+            COALESCE(ac.execution_active_checklist_count, 0) AS execution_active_checklist_count,
             COALESCE(pa.pending_acknowledgement_count, 0) AS pending_acknowledgement_count,
+            COALESCE(pa.pending_bm_acknowledgement_count, 0) AS pending_bm_acknowledgement_count,
+            COALESCE(pa.pending_vm_acknowledgement_count, 0) AS pending_vm_acknowledgement_count,
+            COALESCE(pa.execution_pending_acknowledgement_count, 0) AS execution_pending_acknowledgement_count,
             COALESCE(ast.open_action_count, 0) AS open_action_count,
             COALESCE(ast.blocked_action_count, 0) AS blocked_action_count,
             GREATEST(lc.last_completed_visit_at, ac.last_active_at, ast.last_action_at) AS last_operational_at,
             CASE
-              WHEN COALESCE(ac.active_checklist_count, 0) > 0 THEN 'active'
-              WHEN COALESCE(pa.pending_acknowledgement_count, 0) > 0 THEN 'pending'
-              WHEN COALESCE(pc.completed_type_count, 0) >= cardinality($4::text[]) THEN 'completed'
+              WHEN COALESCE(pa.execution_pending_acknowledgement_count, 0) > 0 THEN 'pending'
+              WHEN COALESCE(ac.execution_active_checklist_count, 0) > 0 THEN 'active'
+              WHEN COALESCE(pc.execution_completed_type_count, 0) >= cardinality($12::text[]) THEN 'completed'
               ELSE 'needs_visit'
             END AS command_status
           FROM scoped_stores ss
@@ -262,9 +275,9 @@ export class ChecklistCommandReadRepository {
           WHERE ($8::text = 'all' OR command_status = $8::text)
             AND (
               $11::text = 'all'
-              OR ($11::text = 'missing_visit' AND completed_type_count < cardinality($4::text[]))
+              OR ($11::text = 'missing_visit' AND execution_completed_type_count < cardinality($12::text[]))
               OR ($11::text = 'open_actions' AND open_action_count > 0)
-              OR ($11::text = 'completed_coverage' AND completed_type_count >= cardinality($4::text[]))
+              OR ($11::text = 'completed_coverage' AND execution_completed_type_count >= cardinality($12::text[]))
             )
         ),
         paged_command AS (
@@ -280,10 +293,10 @@ export class ChecklistCommandReadRepository {
           (SELECT COUNT(*)::int FROM filtered_command) AS total_count,
           jsonb_build_object(
             'totalStores', (SELECT COUNT(*)::int FROM command_base),
-            'needsVisit', (SELECT COUNT(*)::int FROM command_base WHERE command_status = 'needs_visit'),
-            'active', (SELECT COUNT(*)::int FROM command_base WHERE command_status = 'active'),
-            'pending', (SELECT COUNT(*)::int FROM command_base WHERE command_status = 'pending'),
-            'completed', (SELECT COUNT(*)::int FROM command_base WHERE command_status = 'completed')
+            'needsVisit', (SELECT COUNT(*)::int FROM command_base WHERE execution_completed_type_count < cardinality($12::text[])),
+            'active', (SELECT COUNT(*)::int FROM command_base WHERE execution_active_checklist_count > 0),
+            'pending', (SELECT COUNT(*)::int FROM command_base WHERE execution_pending_acknowledgement_count > 0),
+            'completed', (SELECT COUNT(*)::int FROM command_base WHERE execution_completed_type_count >= cardinality($12::text[]))
           ) AS metrics_json,
           COALESCE(
             (
@@ -302,15 +315,19 @@ export class ChecklistCommandReadRepository {
                   'lastCompletedVisitAt', pc.last_completed_visit_at,
                   'elapsedDaysSinceLastVisit', pc.elapsed_days_since_last_visit,
                   'activeChecklistCount', pc.active_checklist_count,
+                  'activeBmChecklistCount', pc.active_bm_checklist_count,
+                  'activeVmChecklistCount', pc.active_vm_checklist_count,
                   'pendingAcknowledgementCount', pc.pending_acknowledgement_count,
+                  'pendingBmAcknowledgementCount', pc.pending_bm_acknowledgement_count,
+                  'pendingVmAcknowledgementCount', pc.pending_vm_acknowledgement_count,
                   'openActionCount', pc.open_action_count,
                   'blockedActionCount', pc.blocked_action_count,
                   'status', pc.command_status,
                   'reasonCodes', array_remove(ARRAY[
                     CASE WHEN pc.command_status = 'active' THEN 'active_checklist' END,
                     CASE WHEN pc.command_status = 'pending' THEN 'pending_acknowledgement' END,
-                    CASE WHEN pc.bm_score IS NULL AND 'BM_STORE_VISIT' = ANY($4::text[]) THEN 'missing_bm_visit' END,
-                    CASE WHEN pc.vm_score IS NULL AND 'VM_STORE_VISIT' = ANY($4::text[]) THEN 'missing_vm_visit' END,
+                    CASE WHEN pc.bm_completed_at IS NULL AND 'BM_STORE_VISIT' = ANY($4::text[]) THEN 'missing_bm_visit' END,
+                    CASE WHEN pc.vm_completed_at IS NULL AND 'VM_STORE_VISIT' = ANY($4::text[]) THEN 'missing_vm_visit' END,
                     CASE WHEN pc.open_action_count > 0 THEN 'open_actions' END,
                     CASE WHEN pc.command_status = 'completed' THEN 'completed_period' END
                   ], NULL),
@@ -336,6 +353,7 @@ export class ChecklistCommandReadRepository {
         input.limit,
         input.offset,
         input.signal ?? "all",
+        input.executionTemplateTypes,
       ],
     );
 

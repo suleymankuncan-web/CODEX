@@ -11,6 +11,7 @@ import {
 } from "../application/checklist.contract";
 import { isChecklistScoreNonCompliant } from "../application/checklist-low-score-policy";
 import { parseChecklistScorePolicy } from "../application/checklist-score-policy";
+import { startOrResumeChecklistInstance } from "./checklist-instance-start";
 
 @Injectable()
 export class ChecklistRepository {
@@ -308,43 +309,9 @@ export class ChecklistRepository {
     storeId: string;
     actorUserId: string;
   }) {
-    const result = await this.databaseService.query<{
-      checklist_instance_id: string;
-      status: string;
-      created_at: string;
-    }>(
-      `
-        INSERT INTO ops.checklist_instance (
-          checklist_template_id,
-          store_id,
-          started_by_user_id,
-          started_at,
-          status
-        )
-        SELECT
-          ct.checklist_template_id,
-          s.store_id,
-          $3,
-          NOW(),
-          'in_progress'
-        FROM ops.checklist_template ct
-        INNER JOIN ops.store s
-          ON s.store_id = $2::uuid
-         AND s.company_id = ct.company_id
-        WHERE ct.checklist_template_id = $1::uuid
-          AND ct.status = 'published'
-          AND ct.effective_from <= CURRENT_DATE
-          AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
-        RETURNING checklist_instance_id, status, created_at
-      `,
-      [input.checklistTemplateId, input.storeId, input.actorUserId],
+    return this.databaseService.withTransaction((client) =>
+      startOrResumeChecklistInstance(client, input),
     );
-
-    if (!result.rows[0]) {
-      throw new BadRequestException("Checklist template is not available for this store");
-    }
-
-    return result.rows[0];
   }
 
   async getMobileChecklistInstanceScope(checklistInstanceId: string) {
@@ -482,7 +449,7 @@ export class ChecklistRepository {
 
   async calculateMobileChecklistCompletion(checklistInstanceId: string) {
     const result = await this.databaseService.query<{
-      total_score: string;
+      total_score: string | null;
       compliance_rate: string;
       missing_mandatory_count: string;
       missing_required_evidence_count: string;
@@ -826,9 +793,8 @@ export class ChecklistRepository {
         WHERE ci.store_id = ANY($1::uuid[])
           AND ct.template_type = ANY($2::text[])
           AND ci.status = 'completed'
-          AND ci.total_score IS NOT NULL
-          AND ci.completed_at >= date_trunc('month', CURRENT_DATE)
-          AND ci.completed_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+          AND ci.completed_at >= (date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul') AT TIME ZONE 'Europe/Istanbul')
+          AND ci.completed_at < ((date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul') + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')
         ORDER BY ci.completed_at DESC
       `,
       [storeIds, input.allowedTemplateTypes],
@@ -854,9 +820,8 @@ export class ChecklistRepository {
         WHERE ci.store_id = ANY($1::uuid[])
           AND ct.template_type = ANY($2::text[])
           AND ci.status = 'completed'
-          AND ci.total_score IS NOT NULL
-          AND ci.completed_at >= date_trunc('month', CURRENT_DATE)
-          AND ci.completed_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+          AND ci.completed_at >= (date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul') AT TIME ZONE 'Europe/Istanbul')
+          AND ci.completed_at < ((date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul') + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')
         GROUP BY ci.store_id, ci.checklist_template_id, date_trunc('month', ci.completed_at)::date
       `,
       [storeIds, input.allowedTemplateTypes],
@@ -888,7 +853,7 @@ export class ChecklistRepository {
         checklistTemplateId: row.checklist_template_id,
         storeId: row.store_id,
         completedAt: row.completed_at,
-        totalScore: Number(row.total_score),
+        totalScore: row.total_score === null ? null : Number(row.total_score),
         acknowledgedAt: row.acknowledged_at,
       })),
       pendingAcknowledgements: completedThisMonth.rows
@@ -898,7 +863,7 @@ export class ChecklistRepository {
           checklistTemplateId: row.checklist_template_id,
           storeId: row.store_id,
           completedAt: row.completed_at,
-          totalScore: Number(row.total_score),
+          totalScore: row.total_score === null ? null : Number(row.total_score),
         })),
       monthlySummaries: monthlySummaries.rows.map((row) => ({
         storeId: row.store_id,
