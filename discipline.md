@@ -272,7 +272,7 @@ birden fazla risk tasiyorsa bolunur.
 ### PR Check Beklerken Paralel Ilerleme
 
 Owner'in 2026-07-10 tarihli acik karariyla, PR acildiktan ve lokal verification
-tamamlandiktan sonra GitHub ve aktif frontend provider deploy check suresi bos bekleme suresi degildir. Cutover rollback penceresinde Cloudflare ve Vercel birlikte izlenir.
+tamamlandiktan sonra GitHub ve aktif Cloudflare frontend provider deploy check suresi bos bekleme suresi degildir.
 Closer check, deployment ve mergeability durumunu arka planda izlerken sonraki
 bagimsiz PR'in Scout, Planner, test veya implementasyon calismasi ayri bir
 branch/worktree'de ilerletilir.
@@ -314,7 +314,7 @@ acikca degistirirse gevsetilir:
 
 - Bosta check/release polling araligi 55-60 saniyedir. Daha sik model turu
   yalniz state transition, fail-fast sinyali veya kullanici mesaji varsa acilir.
-- Polling native GitHub ve aktif frontend provider (cutover sirasinda Cloudflare + Vercel) komutu veya background shell watcher ile yapilir;
+- Polling native GitHub ve aktif Cloudflare frontend provider komutu veya background shell watcher ile yapilir;
   yalniz beklemek icin model agent acilmaz.
 - Basarili uzun loglar modele tasinmaz. Yalniz sonuc ozeti, degisen durum ve
   failure halinde hatayi aciklayan sinirli tail/ilgili satirlar alinir.
@@ -612,7 +612,7 @@ Stop kurali:
 Merge icin her zaman gerekenler:
 
 - Local verification gecti.
-- GitHub ve aktif frontend provider deployment checks yesil; cutover rollback penceresinde Cloudflare ve Vercel birlikte kapsanir.
+- GitHub ve aktif Cloudflare frontend provider deployment checks yesil.
 - PR mergeable.
 
 Kontrollu PR'larda varsayilan strateji squash merge'dir. Tek parent ve ayni tree
@@ -637,7 +637,7 @@ push geldikten sonra merge karari verilene kadar gereken durum birlikte
 degerlendirilir:
 
 - GitHub Actions checks,
-- aktif frontend provider/deploy checks (cutover rollback penceresinde Cloudflare + Vercel),
+- aktif Cloudflare frontend provider/deploy checks,
 - status check rollup,
 - mergeability / branch state.
 
@@ -684,7 +684,7 @@ API contract:
 Release/readiness:
 
 - GitHub checks.
-- aktif frontend provider deployment checks; cutover rollback penceresinde Cloudflare ve Vercel.
+- aktif Cloudflare frontend provider deployment checks.
 - Gerekiyorsa deployed smoke.
 - Gercek provider/input gerektiren kanitlar mock ile kapatilmaz.
 

@@ -50,7 +50,7 @@ test('release stage manifest preserves the complete proof families', () => {
   assert.deepEqual(byId.get('backend-release').dependsOn, ['root-contracts'])
   assert.deepEqual(byId.get('frontend-static').dependsOn, ['root-contracts'])
   assert.deepEqual(byId.get('dependency-audit').dependsOn, ['root-contracts'])
-  assert.deepEqual(byId.get('frontend-e2e').dependsOn, ['frontend-static'])
+  assert.deepEqual(byId.get('frontend-e2e').dependsOn, ['frontend-static', 'backend-release'])
   assert.equal(byId.get('dependency-audit').volatile, true)
   assert.equal(byId.get('frontend-e2e').commands.length, 1)
   assert.equal(validateReleaseManifest(manifest), manifest)

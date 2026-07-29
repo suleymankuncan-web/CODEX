@@ -1,6 +1,8 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
+import { createCloudflareBuildEnvironment } from './cloudflare-build-contract.mjs'
+
 const action = process.argv[2]
 if (!['upload', 'promote'].includes(action)) {
   throw new Error('Usage: node scripts/cloudflare-release.mjs <upload|promote>')
@@ -24,9 +26,10 @@ if (!npmCli) {
 const wranglerCli = join(adminRoot, 'node_modules', 'wrangler', 'bin', 'wrangler.js')
 
 if (action === 'upload') {
+  const buildEnvironment = createCloudflareBuildEnvironment(process.env, head)
   const build = spawnSync(process.execPath, [npmCli, 'run', 'build:cloudflare'], {
     cwd: adminRoot,
-    env: { ...process.env, VITE_SENTRY_RELEASE: head },
+    env: buildEnvironment,
     stdio: 'inherit',
   })
   if (build.error) throw build.error
