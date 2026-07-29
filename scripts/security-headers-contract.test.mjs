@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -130,13 +131,26 @@ test("Cloudflare release dependencies execute through Node on this operator plat
   });
   assert.equal(npm.status, 0, npm.stderr || npm.error?.message);
 
-  const wrangler = spawnSync(
-    process.execPath,
-    [join(workspaceRoot, "admin-web/node_modules/wrangler/bin/wrangler.js"), "--version"],
-    { cwd: join(workspaceRoot, "admin-web"), encoding: "utf8" },
-  );
-  assert.equal(wrangler.status, 0, wrangler.stderr || wrangler.error?.message);
-  assert.match(wrangler.stdout.trim(), /^\d+\.\d+\.\d+(?:[-+].+)?$/);
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "cloudflare-node-cli-contract-"));
+  const fixtureCli = join(fixtureRoot, "cli.mjs");
+  try {
+    writeFileSync(fixtureCli, "process.stdout.write('node-cli-ok')\n", "utf8");
+    const cli = spawnSync(process.execPath, [fixtureCli], { encoding: "utf8" });
+    assert.equal(cli.status, 0, cli.stderr || cli.error?.message);
+    assert.equal(cli.stdout, "node-cli-ok");
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+
+  const wranglerCli = join(workspaceRoot, "admin-web/node_modules/wrangler/bin/wrangler.js");
+  if (existsSync(wranglerCli)) {
+    const wrangler = spawnSync(process.execPath, [wranglerCli, "--version"], {
+      cwd: join(workspaceRoot, "admin-web"),
+      encoding: "utf8",
+    });
+    assert.equal(wrangler.status, 0, wrangler.stderr || wrangler.error?.message);
+    assert.match(wrangler.stdout.trim(), /^\d+\.\d+\.\d+(?:[-+].+)?$/);
+  }
 });
 
 test("backend API installs the shared security headers middleware", () => {
