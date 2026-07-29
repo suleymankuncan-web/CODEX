@@ -1,6 +1,6 @@
-# HR Axis Render + Supabase + Vercel Staging
+# HR Axis Render + Supabase + Cloudflare Staging
 
-Tarih: 2026-05-02
+Tarih: 2026-07-29
 
 Bu rota Koyeb Pro zorunlulugu goruldugu icin aktif staging rotasidir.
 
@@ -8,7 +8,7 @@ Bu rota Koyeb Pro zorunlulugu goruldugu icin aktif staging rotasidir.
 
 ```text
 Domain/DNS: Cloudflare, hr-axis.com
-Frontend: Vercel
+Frontend: Cloudflare Workers Static Assets
 Backend: Render Web Service + Background Worker
 Database: Supabase Postgres
 Authentication: Clerk
@@ -207,17 +207,21 @@ $env:RATE_LIMIT_MAX="120"
 npm.cmd run db:migrate
 ```
 
-## 5. Vercel Frontend
+## 5. Cloudflare Frontend
 
-Vercel project:
+Cloudflare Worker:
 
 ```text
 Repo: suleymankuncan-web/CODEX
 Branch: main
 Root Directory: admin-web
 Framework: Vite
-Build Command: npm run build
+Build Command: npm run build:cloudflare
+Upload Command: npm run upload:cloudflare:artifact
+Promote Command: npm run promote:cloudflare:version
 Output Directory: dist
+Worker: hr-axis-staging-frontend
+SPA fallback: single-page-application
 ```
 
 Frontend env:
@@ -226,18 +230,29 @@ Frontend env:
 VITE_API_BASE_URL=https://api-staging.hr-axis.com/api
 VITE_AUTH_MODE=bearer
 VITE_AUTH_PROVIDER=clerk
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_cmVsYXRpdmUtZ2F6ZWxsZS00Ny5jbGVyay5hY2NvdW50cy5kZXYk
+VITE_BROWSER_SESSION_TRANSPORT=cookie
+VITE_CLERK_PUBLISHABLE_KEY=<provider-managed public build value>
 VITE_CLERK_JWT_TEMPLATE=hr-axis-api
+VITE_BEARER_TOKEN=
+VITE_SENTRY_DSN=<provider-managed public ingest value>
+VITE_SENTRY_ENABLED=true
+VITE_SENTRY_ENVIRONMENT=staging
+VITE_SENTRY_RELEASE=<exact deployed Git commit>
 ```
+
+Build-time values are supplied by the controlled deploy environment. They are
+never committed or copied into deployment evidence. The Worker contains no
+runtime script; `dist` is served by Cloudflare Workers Static Assets.
 
 ## 6. DNS
 
 ```text
-staging.hr-axis.com -> Vercel custom domain target
+staging.hr-axis.com -> Cloudflare Worker custom domain
 api-staging.hr-axis.com -> Render custom domain target
 ```
 
-Ilk dogrulamada Cloudflare proxy `DNS only` kalabilir.
+The active frontend hostname is owned by the Worker custom-domain binding. A
+separate CNAME to a frontend hosting provider is not part of the steady state.
 
 ## 7. Smoke
 
@@ -285,13 +300,15 @@ Guard` table.
   `UPLOAD_PARSE_TIMEOUT_MS`, `DAILY_CLOSURE_ACTOR_USER_ID`, and
   `READINESS_PROFILE` are intentionally set or intentionally omitted for the
   controlled-pilot profile.
-- Vercel frontend: verify `VITE_API_BASE_URL`, `VITE_AUTH_MODE`,
-  `VITE_AUTH_PROVIDER`, `VITE_CLERK_PUBLISHABLE_KEY`,
-  `VITE_CLERK_JWT_TEMPLATE`, and empty `VITE_BEARER_TOKEN`.
+- Cloudflare frontend build: verify `VITE_API_BASE_URL`, `VITE_AUTH_MODE`,
+  `VITE_AUTH_PROVIDER`, `VITE_BROWSER_SESSION_TRANSPORT`,
+  `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_CLERK_JWT_TEMPLATE`, empty
+  `VITE_BEARER_TOKEN`, `VITE_SENTRY_DSN`, `VITE_SENTRY_ENABLED`,
+  `VITE_SENTRY_ENVIRONMENT`, and `VITE_SENTRY_RELEASE`.
 - Clerk dashboard: verify the issuer, JWKS URL, audience/template, callback URL,
   and post-logout URL match the backend/frontend env names above.
 - Supabase dashboard: verify the database connection target, backup capability,
   and pooler mode without copying the connection string.
 
-Do not copy values from Render, Vercel, Clerk, Supabase, or local shells into
+Do not copy values from Render, Cloudflare, Clerk, Supabase, or local shells into
 docs, PRs, chat, screenshots, or evidence. Record only variable names, status, and owner.

@@ -40,8 +40,8 @@ This runbook is intentionally a skeleton. It gives the order, checks, and eviden
 ### Manual Env Verification
 
 - [ ] Compare Render backend env names against the `Production Env Contract Guard` table in `docs/plans/environment-variable-inventory.md`.
-- [ ] Compare Vercel frontend env names against the `Production Env Contract Guard` table in `docs/plans/environment-variable-inventory.md`.
-- [ ] Do not copy values from Render, Vercel, Clerk, Supabase, or local shells into docs, PRs, chat, screenshots, or evidence.
+- [ ] Compare Cloudflare frontend build env names against the `Production Env Contract Guard` table in `docs/plans/environment-variable-inventory.md`.
+- [ ] Do not copy values from Render, Cloudflare, Clerk, Supabase, or local shells into docs, PRs, chat, screenshots, or evidence.
 - [ ] Record only variable names, status, and owner in the deployment note.
 - [ ] Confirm any missing P0 variable has a dated Go / Conditional Go / No-Go decision before deploy starts.
 

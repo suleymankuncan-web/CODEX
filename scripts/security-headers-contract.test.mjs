@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -24,32 +25,7 @@ function readText(path) {
   return readFileSync(join(workspaceRoot, path), "utf8");
 }
 
-test("frontend deployments set baseline browser security headers", () => {
-  const vercelConfig = JSON.parse(readText("admin-web/vercel.json"));
-  const vercelHeaderSets = vercelConfig.headers.map((entry) =>
-    Object.fromEntries(entry.headers.map((header) => [header.key, header.value])),
-  );
-
-  for (const headers of vercelHeaderSets) {
-    assert.equal(headers["X-Content-Type-Options"], "nosniff");
-    assert.equal(headers["Strict-Transport-Security"], "max-age=31536000; includeSubDomains");
-    assert.equal(headers["X-Frame-Options"], "DENY");
-    assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
-    assert.equal(
-      headers["Permissions-Policy"],
-      "camera=(), microphone=(), geolocation=(), payment=()",
-    );
-
-    const csp = headers["Content-Security-Policy"];
-    assert.ok(csp, "frontend responses must set Content-Security-Policy");
-    assert.doesNotMatch(csp, /unsafe-eval/);
-    assert.doesNotMatch(csp, /(?:^|;)\s*default-src\s+\*/);
-
-    for (const directive of requiredCspDirectives) {
-      assert.match(csp, new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-    }
-  }
-
+test("container fallback sets baseline browser security headers", () => {
   const nginxConfig = readText("admin-web/nginx.conf");
   for (const expected of [
     'add_header X-Content-Type-Options "nosniff" always;',
@@ -64,6 +40,103 @@ test("frontend deployments set baseline browser security headers", () => {
   for (const directive of requiredCspDirectives) {
     assert.match(nginxConfig, new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+});
+
+test("temporary Vercel rollback keeps the same browser security boundary", () => {
+  const vercelConfig = JSON.parse(readText("admin-web/vercel.json"));
+  const headerSets = vercelConfig.headers.map((entry) =>
+    Object.fromEntries(entry.headers.map((header) => [header.key, header.value])),
+  );
+
+  for (const headers of headerSets) {
+    assert.equal(headers["X-Content-Type-Options"], "nosniff");
+    assert.equal(headers["Strict-Transport-Security"], "max-age=31536000; includeSubDomains");
+    assert.equal(headers["X-Frame-Options"], "DENY");
+    assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
+    assert.equal(headers["Permissions-Policy"], "camera=(), microphone=(), geolocation=(), payment=()");
+    for (const directive of requiredCspDirectives) {
+      assert.match(
+        headers["Content-Security-Policy"],
+        new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+      );
+    }
+  }
+});
+
+test("Cloudflare Workers assets preserve SPA and browser security contracts", () => {
+  const wrangler = JSON.parse(readText("admin-web/wrangler.jsonc"));
+  assert.equal(wrangler.name, "hr-axis-staging-frontend");
+  assert.equal(wrangler.assets.directory, "./dist");
+  assert.equal(wrangler.assets.not_found_handling, "single-page-application");
+  assert.equal(wrangler.main, undefined, "static frontend must not add Worker runtime code");
+  assert.equal(
+    existsSync(join(workspaceRoot, "admin-web/vercel.json")),
+    true,
+    "Vercel rollback config remains until post-cutover live proof",
+  );
+  assert.equal(existsSync(join(workspaceRoot, "admin-web/.vercelignore")), true);
+
+  const cloudflareHeaders = readText("admin-web/public/_headers");
+  assert.match(cloudflareHeaders, /^\/\*/m);
+  assert.match(cloudflareHeaders, /^\/assets\/\*/m);
+  assert.match(cloudflareHeaders, /X-Content-Type-Options: nosniff/);
+  assert.match(
+    cloudflareHeaders,
+    /Strict-Transport-Security: max-age=31536000; includeSubDomains/,
+  );
+  assert.match(cloudflareHeaders, /X-Frame-Options: DENY/);
+  assert.match(cloudflareHeaders, /Referrer-Policy: strict-origin-when-cross-origin/);
+  assert.match(
+    cloudflareHeaders,
+    /Permissions-Policy: camera=\(\), microphone=\(\), geolocation=\(\), payment=\(\)/,
+  );
+  assert.match(cloudflareHeaders, /Cache-Control: public, max-age=31536000, immutable/);
+  assert.doesNotMatch(cloudflareHeaders, /unsafe-eval/);
+  assert.doesNotMatch(cloudflareHeaders, /(?:^|;)\s*default-src\s+\*/);
+
+  for (const directive of requiredCspDirectives) {
+    assert.match(
+      cloudflareHeaders,
+      new RegExp(directive.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
+  }
+});
+
+test("Cloudflare upload and promotion are exact-commit separated", () => {
+  const packageJson = JSON.parse(readText("admin-web/package.json"));
+  const releaseScript = readText("admin-web/scripts/cloudflare-release.mjs");
+
+  assert.match(packageJson.scripts["upload:cloudflare:artifact"], /cloudflare-release\.mjs upload/);
+  assert.match(packageJson.scripts["promote:cloudflare:version"], /cloudflare-release\.mjs promote/);
+  assert.doesNotMatch(JSON.stringify(packageJson.scripts), /wrangler deploy/);
+  assert.match(releaseScript, /status --porcelain|\['status', '--porcelain'/);
+  assert.match(releaseScript, /versions'.*upload/s);
+  assert.match(releaseScript, /versions'.*deploy/s);
+  assert.match(releaseScript, /git-\$\{head\.slice\(0, 12\)\}/);
+  assert.match(releaseScript, /\$\{tag\}@100%/);
+  assert.match(releaseScript, /npm.*run.*build:cloudflare/s);
+  assert.match(releaseScript, /VITE_SENTRY_RELEASE: head/);
+  assert.match(releaseScript, /fetch', 'origin', 'main'/);
+  assert.match(releaseScript, /branch !== 'main' \|\| head !== originMain/);
+  assert.match(releaseScript, /postBuildStatus/);
+  assert.match(releaseScript, /spawnSync\(process\.execPath/);
+});
+
+test("Cloudflare release dependencies execute through Node on this operator platform", () => {
+  assert.ok(process.env.npm_execpath, "canonical npm execution must expose npm_execpath");
+  const npm = spawnSync(process.execPath, [process.env.npm_execpath, "--version"], {
+    cwd: workspaceRoot,
+    encoding: "utf8",
+  });
+  assert.equal(npm.status, 0, npm.stderr || npm.error?.message);
+
+  const wrangler = spawnSync(
+    process.execPath,
+    [join(workspaceRoot, "admin-web/node_modules/wrangler/bin/wrangler.js"), "--version"],
+    { cwd: join(workspaceRoot, "admin-web"), encoding: "utf8" },
+  );
+  assert.equal(wrangler.status, 0, wrangler.stderr || wrangler.error?.message);
+  assert.match(wrangler.stdout.trim(), /^\d+\.\d+\.\d+(?:[-+].+)?$/);
 });
 
 test("backend API installs the shared security headers middleware", () => {
@@ -93,6 +166,6 @@ test("checklist evidence previews stay same-origin instead of widening CSP to pr
   assert.match(api, /fetchBlob\(/);
   assert.match(controller, /Cache-Control", "private, no-store/);
   assert.match(controller, /new StreamableFile/);
-  assert.doesNotMatch(readText("admin-web/vercel.json"), /r2\.cloudflarestorage\.com/);
+  assert.doesNotMatch(readText("admin-web/public/_headers"), /r2\.cloudflarestorage\.com/);
   assert.doesNotMatch(readText("admin-web/nginx.conf"), /r2\.cloudflarestorage\.com/);
 });

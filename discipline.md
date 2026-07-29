@@ -272,7 +272,7 @@ birden fazla risk tasiyorsa bolunur.
 ### PR Check Beklerken Paralel Ilerleme
 
 Owner'in 2026-07-10 tarihli acik karariyla, PR acildiktan ve lokal verification
-tamamlandiktan sonra GitHub/Vercel check suresi bos bekleme suresi degildir.
+tamamlandiktan sonra GitHub ve aktif frontend provider deploy check suresi bos bekleme suresi degildir. Cutover rollback penceresinde Cloudflare ve Vercel birlikte izlenir.
 Closer check, deployment ve mergeability durumunu arka planda izlerken sonraki
 bagimsiz PR'in Scout, Planner, test veya implementasyon calismasi ayri bir
 branch/worktree'de ilerletilir.
@@ -314,7 +314,7 @@ acikca degistirirse gevsetilir:
 
 - Bosta check/release polling araligi 55-60 saniyedir. Daha sik model turu
   yalniz state transition, fail-fast sinyali veya kullanici mesaji varsa acilir.
-- Polling native GitHub/Vercel komutu veya background shell watcher ile yapilir;
+- Polling native GitHub ve aktif frontend provider (cutover sirasinda Cloudflare + Vercel) komutu veya background shell watcher ile yapilir;
   yalniz beklemek icin model agent acilmaz.
 - Basarili uzun loglar modele tasinmaz. Yalniz sonuc ozeti, degisen durum ve
   failure halinde hatayi aciklayan sinirli tail/ilgili satirlar alinir.
@@ -374,7 +374,7 @@ optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
   owner karari gerekir.
 - Tek makinede ikinci canonical full gate ayni anda acilmaz. Yerel lock,
   child-process cleanup ve receipt yazimi Windows dahil fail-closed test edilir.
-- PR/Vercel bosta polling 55-60 saniyedir; check izlemek icin model agent
+- PR/aktif frontend provider bosta polling 55-60 saniyedir; check izlemek icin model agent
   acilmaz. Basarili uzun log yerine state transition ve sinirli failure tail
   raporlanir.
 
@@ -452,7 +452,7 @@ Roller:
 - `Reviewer`: Worker diff'ini yeni gozle okur. P1/P2 sinifi muhtemel reviewer
   notlarini, guard bypass'larini, test bosluklarini, fake veri riskini ve
   scope creep'i PR acilmadan yakalamaya calisir.
-- `Closer`: PR acma, GitHub/Vercel checks, mergeability, final lokal review,
+- `Closer`: PR acma, GitHub/aktif frontend provider checks, mergeability, final lokal review,
   merge ve merge sonrasi `origin/main` dogrulamasini yurutur.
 
 Kullanim kurali:
@@ -517,7 +517,7 @@ Verim ve guvenlik guardrail'leri:
   karari vermez. Bu, ayni dosyada iki implementer cakismasini engeller.
 - Varsayilan bir uzman agent'tir. Planner ve problem solver ancak gercekten
   bagimsiz sorulari varsa paralel calisir.
-- PR check polling icin model agent acilmaz. Kanonik `gh`/Vercel watcher veya
+- PR check polling icin model agent acilmaz. Kanonik `gh`/aktif frontend provider watcher veya
   mevcut background shell loop bekler; bekleme suresi reasoning token'i
   tuketmez. Durum degisince Medium sonucu siniflandirir ve acik hatayi ele alir.
   Koku ilk odakli incelemede aciklanamiyorsa veya High-risk siniri varsa
@@ -612,7 +612,7 @@ Stop kurali:
 Merge icin her zaman gerekenler:
 
 - Local verification gecti.
-- GitHub/Vercel checks yesil.
+- GitHub ve aktif frontend provider deployment checks yesil; cutover rollback penceresinde Cloudflare ve Vercel birlikte kapsanir.
 - PR mergeable.
 
 Kontrollu PR'larda varsayilan strateji squash merge'dir. Tek parent ve ayni tree
@@ -627,7 +627,7 @@ Owner'in 2026-07-10 tarihli acik karariyla GitHub Codex review devre disidir:
 - bot reaction/comment beklenmez ve merge kapisi sayilmaz,
 - ancak daha yeni acik owner talimatiyla yeniden etkinlestirilir.
 
-Bu karar required check, Vercel/deploy check, mergeability, local adversarial
+Bu karar required check, aktif frontend provider/deploy check, mergeability, local adversarial
 review, diff scope okuma veya verification'i waive etmez. Insan reviewer ya da
 baska bir otomatik kontrol actionable yorum birakirsa normal sekilde okunur ve
 cozulur.
@@ -637,7 +637,7 @@ push geldikten sonra merge karari verilene kadar gereken durum birlikte
 degerlendirilir:
 
 - GitHub Actions checks,
-- Vercel/deploy checks,
+- aktif frontend provider/deploy checks (cutover rollback penceresinde Cloudflare + Vercel),
 - status check rollup,
 - mergeability / branch state.
 
@@ -684,7 +684,7 @@ API contract:
 Release/readiness:
 
 - GitHub checks.
-- Vercel checks.
+- aktif frontend provider deployment checks; cutover rollback penceresinde Cloudflare ve Vercel.
 - Gerekiyorsa deployed smoke.
 - Gercek provider/input gerektiren kanitlar mock ile kapatilmaz.
 

@@ -95,17 +95,17 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `BROWSER_SESSION_TTL_SECONDS` | Auth owner | Render backend env | Internal | Default `900`; values above `3600` require explicit owner approval and must not be used by this train. | `900` |
 | `BROWSER_SESSION_RENEWAL_WINDOW_SECONDS` | Auth owner | Render backend env | Internal | Renewal window must be lower than the app-session TTL and renewal must be provider-backed. | `120` |
 | `BROWSER_SESSION_SAME_SITE` | Auth owner | Render backend env | Internal | Must be `lax` or `strict` unless `SameSite=None` has explicit owner approval and Secure cookies are active. | `lax` |
-| `VITE_API_BASE_URL` | Frontend owner | Vercel frontend env | Public | Must point to the target backend `/api` URL. | `/api` |
-| `VITE_SENTRY_DSN` | Frontend owner | Vercel frontend env | Public ingest key | Browser-visible Sentry ingest DSN; keep it in Vercel env, never source code. | Empty. |
-| `VITE_SENTRY_ENABLED` | Frontend owner | Vercel frontend env | Public | Exact `true`/`false`; default `false` until the frontend receipt is approved. | `false` |
-| `VITE_SENTRY_ENVIRONMENT` | Frontend owner | Vercel frontend env | Public | Stable Sentry environment label, `staging` for the current project. | `development` |
-| `VITE_SENTRY_RELEASE` | Frontend owner | Vercel frontend env | Public | Optional deployed release/commit label; no secrets. | Empty. |
-| `VITE_AUTH_MODE` | Frontend/Auth owner | Vercel frontend env | Public | Must be `bearer` for real environments. | `mock` |
-| `VITE_BROWSER_SESSION_TRANSPORT` | Frontend/Auth owner | Vercel frontend env | Public | Selects real browser session transport: `bearer` for legacy rollback or `cookie` after backend cookie-session support is proven. | `bearer` |
-| `VITE_AUTH_PROVIDER` | Frontend/Auth owner | Vercel frontend env | Public | Must be `clerk` when Clerk owns browser auth. | `oidc` |
-| `VITE_BEARER_TOKEN` | Frontend/Auth owner | Vercel frontend env | Secret | Must stay empty in production and committed examples. | Empty. |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Frontend/Auth owner | Vercel frontend env | Public | Required when `VITE_AUTH_PROVIDER=clerk`; publishable key only. | Empty in local example. |
-| `VITE_CLERK_JWT_TEMPLATE` | Frontend/Auth owner | Vercel frontend env | Public | Set only when backend audience verification requires a Clerk JWT template. | Empty in local example. |
+| `VITE_API_BASE_URL` | Frontend owner | Cloudflare frontend build env | Public | Must point to the target backend `/api` URL. | `/api` |
+| `VITE_SENTRY_DSN` | Frontend owner | Cloudflare frontend build env | Public ingest key | Browser-visible Sentry ingest DSN; keep it in the controlled build env, never source code. | Empty. |
+| `VITE_SENTRY_ENABLED` | Frontend owner | Cloudflare frontend build env | Public | Exact `true`/`false`; default `false` until the frontend receipt is approved. | `false` |
+| `VITE_SENTRY_ENVIRONMENT` | Frontend owner | Cloudflare frontend build env | Public | Stable Sentry environment label, `staging` for the current project. | `development` |
+| `VITE_SENTRY_RELEASE` | Frontend owner | Cloudflare frontend build env | Public | Optional deployed release/commit label; no secrets. | Empty. |
+| `VITE_AUTH_MODE` | Frontend/Auth owner | Cloudflare frontend build env | Public | Must be `bearer` for real environments. | `mock` |
+| `VITE_BROWSER_SESSION_TRANSPORT` | Frontend/Auth owner | Cloudflare frontend build env | Public | Selects real browser session transport: `bearer` for legacy rollback or `cookie` after backend cookie-session support is proven. | `bearer` |
+| `VITE_AUTH_PROVIDER` | Frontend/Auth owner | Cloudflare frontend build env | Public | Must be `clerk` when Clerk owns browser auth. | `oidc` |
+| `VITE_BEARER_TOKEN` | Frontend/Auth owner | Cloudflare frontend build env | Secret | Must stay empty in production and committed examples. | Empty. |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Frontend/Auth owner | Cloudflare frontend build env | Public | Required when `VITE_AUTH_PROVIDER=clerk`; publishable key only. | Empty in local example. |
+| `VITE_CLERK_JWT_TEMPLATE` | Frontend/Auth owner | Cloudflare frontend build env | Public | Set only when backend audience verification requires a Clerk JWT template. | Empty in local example. |
 | `DAILY_CLOSURE_ACTOR_USER_ID` | Backend owner | Render backend env | Secret | Required only if daily closure automation is enabled; must identify a real service/operator actor. | Local seed actor placeholder. |
 
 ## Backend Runtime Variables
@@ -187,7 +187,7 @@ These values are read by `admin-web/src`.
 | Variable | P0/P1 | Production rule | Notes |
 | --- | --- | --- | --- |
 | `VITE_API_BASE_URL` | P0 | Points to production backend `/api`. | Public value, not secret. |
-| `VITE_SENTRY_DSN` | P1 | Sentry ingest DSN for the selected project; no server secret. | Browser-visible by design; configure in Vercel only. |
+| `VITE_SENTRY_DSN` | P1 | Sentry ingest DSN for the selected project; no server secret. | Browser-visible by design; configure only in the controlled Cloudflare build environment. |
 | `VITE_SENTRY_ENABLED` | P1 | Exact `true`/`false`; enable only after frontend staging receipt and redaction review. | Default `false`; rollback is flag-only. |
 | `VITE_SENTRY_ENVIRONMENT` | P1 | Stable Sentry environment label, `staging` for the current staging project. | Used in issue metadata. |
 | `VITE_SENTRY_RELEASE` | P1 | Optional deployed commit/release id. | Used for grouping when supplied; do not store secrets. |

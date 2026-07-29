@@ -37,8 +37,8 @@ Allowed sign-off states:
 - [ ] `NODE_ENV=production` is used for production backend runtime.
 - [ ] Backend and frontend public origins are final for the target environment.
 - [ ] Manual Env Verification compares Render backend env names against `docs/plans/environment-variable-inventory.md`.
-- [ ] Manual Env Verification compares Vercel frontend env names against `docs/plans/environment-variable-inventory.md`.
-- [ ] Manual Env Verification records only variable names, status, and owner. Do not copy values from Render, Vercel, Clerk, Supabase, local shells, or secret managers.
+- [ ] Manual Env Verification compares Cloudflare frontend build env names against `docs/plans/environment-variable-inventory.md`.
+- [ ] Manual Env Verification records only variable names, status, and owner. Do not copy values from Render, Cloudflare, Clerk, Supabase, local shells, or secret managers.
 - [ ] `JWT_JWKS_URL` is configured for real IdP verification, or production has an explicit non-default `JWT_SECRET` only for an approved non-JWKS mode.
 - [ ] Production never uses `JWT_SECRET=change-me`.
 - [ ] `CORS_ALLOWED_ORIGINS` is explicitly configured and contains only approved frontend origins.
@@ -177,7 +177,7 @@ Allowed sign-off states:
 - [ ] Root release gate passed: `npm.cmd run check:release`.
 - [ ] Deployed readiness smoke passed against the target frontend/backend: `npm.cmd run smoke:deployed-readiness`.
 - [ ] Deployed readiness smoke used explicit `READINESS_FRONTEND_URL` and `READINESS_BACKEND_URL` values for the target environment.
-- [ ] Deployed readiness evidence records environment name, frontend URL, backend URL, commit SHA when known, Render deploy id when known, Vercel deployment URL when known, and JSON smoke output summary.
+- [ ] Deployed readiness evidence records environment name, frontend URL, backend URL, commit SHA when known, Render deploy id when known, Cloudflare Worker version id when known, and JSON smoke output summary.
 - [ ] If `READINESS_BEARER_TOKEN` is unavailable, deployed readiness evidence marks auth/session as skipped instead of passed.
 - [ ] If `READINESS_BEARER_TOKEN` is available, `GET /api/auth/session` returns authenticated user role codes, read scope, and action scope.
 - [ ] Backend readiness load smoke ran against the target API: `npm.cmd run smoke:backend-readiness-load`.

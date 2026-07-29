@@ -614,7 +614,8 @@ Work is done only when:
 - Relevant local checks have passed.
 - Any known caveat or skipped gate is explicitly recorded.
 - Risk and rollback shape are understandable.
-- If a PR was opened, required GitHub checks, Vercel checks when relevant, and
+- If a PR was opened, required GitHub checks, active frontend-provider checks when relevant
+  (Cloudflare plus Vercel during the cutover rollback window), and
   mergeability are satisfied, and the final local adversarial review is clean.
   GitHub Codex review is owner-disabled and is not requested or awaited.
 - If merged, `origin/main` has been fetched and the merge commit is verified.
@@ -659,7 +660,7 @@ Stop and report instead of pushing forward when:
 - API/auth/DB behavior changes unintentionally.
 - A batch PR cannot be explained in one paragraph.
 - Rollback becomes ambiguous.
-- GitHub checks, Vercel, or an actionable human/tool review shows a real issue.
+- GitHub checks, active frontend-provider deployment proof (Cloudflare plus Vercel during cutover), or an actionable human/tool review shows a real issue.
 - Branch protection or mergeability blocks the PR.
 - The fix required is larger or riskier than the approved slice.
 - You cannot explain the change, risk, and rollback in plain language.
@@ -803,7 +804,7 @@ Use the cheapest useful signal first, then climb only as needed:
 5. Build for touched app/package.
 6. Targeted integration or E2E tests.
 7. Full backend or frontend gate when blast radius warrants it.
-8. GitHub checks and Vercel checks when a PR is opened.
+8. GitHub checks and active frontend-provider deployment checks when a PR is opened; Cloudflare and Vercel are both required during the cutover rollback window.
 9. Final local adversarial diff review and mergeability confirmation.
 10. Fetch `origin/main` and verify the merge commit after merge.
 
@@ -830,7 +831,7 @@ it locally.
   PR once the work is meaningful.
 - Use a separate branch/worktree when useful for isolation.
 - Before push: inspect diff, confirm scope, and run local gates.
-- After PR open: wait for required GitHub checks, Vercel checks when relevant,
+- After PR open: wait for required GitHub checks, active frontend-provider deployment checks when relevant (Cloudflare plus Vercel during cutover),
   and mergeability. GitHub Codex review is owner-disabled: do not trigger
   `@codex review`, request it elsewhere, or wait for bot reactions/comments.
 - Use the single canonical 55-60 second polling loop from `discipline.md` for

@@ -28,7 +28,7 @@ ERROR_TRACKING_SMOKE=false
 ```
 
 Set the same backend values on `hr-axis-api` and `hr-axis-worker`. The frontend
-uses Vercel project `hr-axis-staging`:
+uses the controlled Cloudflare frontend build environment:
 
 ```text
 VITE_SENTRY_DSN=<same Sentry ingest DSN>
@@ -37,7 +37,7 @@ VITE_SENTRY_ENVIRONMENT=staging
 ```
 
 `VITE_SENTRY_DSN` is an ingest key intentionally present in the browser bundle;
-it still belongs in Vercel environment configuration, not source code.
+it still belongs in the controlled Cloudflare build environment, not source code.
 
 ## Data protection contract
 
@@ -53,7 +53,7 @@ it still belongs in Vercel environment configuration, not source code.
 
 ## Staging activation
 
-1. Confirm the DSN exists only in Render/Vercel environment settings.
+1. Confirm the DSN exists only in Render/Cloudflare build environment settings.
 2. Set `ERROR_TRACKING_ENABLED=true` on both Render services. Leave the
    frontend flag false until the frontend PR is deployed.
 3. Set `ERROR_TRACKING_SMOKE=true` on both Render services for one restart.
@@ -70,8 +70,8 @@ it still belongs in Vercel environment configuration, not source code.
 
 ## Frontend smoke (after PR-2)
 
-With `VITE_SENTRY_ENABLED=true` on the staging Vercel Production and Preview
-environments, open `https://staging.hr-axis.com` and trigger the documented
+With `VITE_SENTRY_ENABLED=true` in the staging Cloudflare build environment,
+open `https://staging.hr-axis.com` and trigger the documented
 browser error smoke. Confirm one frontend event with `environment=staging` and
 no user/request payload. Then leave the flag enabled for the staging profile.
 
@@ -91,19 +91,20 @@ after receipt. `ERROR_TRACKING_ENABLED=true` remains active for staging; the
 frontend has no separate smoke flag and keeps `VITE_SENTRY_ENABLED=true`.
 
 The frontend browser delivery initially hit the CSP `connect-src` boundary.
-PR #941 adds the exact Sentry ingest origin to the Vercel and nginx policies;
-the subsequent browser request was delivered. Only event names, runtimes, and
+PR #941 originally added the exact Sentry ingest origin to the then-active
+frontend edge and nginx policies; the current Cloudflare `_headers` contract
+preserves the same allowlist. The subsequent browser request was delivered. Only event names, runtimes, and
 environment tags are retained here. DSNs, event IDs, payloads, user data, and
 provider identifiers are intentionally excluded.
 
 ## Rollback
 
 1. Set `ERROR_TRACKING_ENABLED=false` on Render API and worker; set
-   `VITE_SENTRY_ENABLED=false` on Vercel if the frontend slice is active.
+   `VITE_SENTRY_ENABLED=false` in the Cloudflare build environment if the frontend slice is active.
 2. Restart/redeploy the affected service. The application returns to local
    sanitized log-only behavior; no code revert or database action is needed.
 3. If the DSN itself is suspected compromised, rotate it in Sentry and replace
-   the Render/Vercel values without recording either value in evidence.
+   the Render/Cloudflare build values without recording either value in evidence.
 4. Re-open DG4 only after redaction, destination, and staging receipt are
    re-verified.
 

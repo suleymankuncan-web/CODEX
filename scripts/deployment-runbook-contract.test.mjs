@@ -15,7 +15,7 @@ function requireText(text, expected) {
 
 const inventory = readText('docs/plans/environment-variable-inventory.md')
 const runbook = readText('docs/plans/deployment-runbook-skeleton.md')
-const renderStagingRunbook = readText('docs/deployment/render-supabase-vercel-staging.md')
+const renderStagingRunbook = readText('docs/deployment/render-supabase-cloudflare-staging.md')
 const backendEnvExample = readText('backend/nestjs/.env.example')
 const frontendEnvExample = readText('admin-web/.env.example')
 const appConfigService = readText('backend/nestjs/src/shared/app-config.service.ts')
@@ -162,12 +162,12 @@ test('deployment runbook requires guarded commands and sanitized evidence', () =
   }
 })
 
-test('deployment runbook requires manual Render and Vercel env verification', () => {
+test('deployment runbook requires manual Render and Cloudflare env verification', () => {
   for (const phrase of [
     'Manual Env Verification',
     'Production Env Contract Guard',
     'Render',
-    'Vercel',
+    'Cloudflare',
     'Do not copy values',
     'variable names, status, and owner',
   ]) {
@@ -193,6 +193,21 @@ test('render blueprint declares a dedicated BullMQ worker service', () => {
   requireText(renderStagingRunbook, 'Background Worker')
   requireText(renderStagingRunbook, 'Start Command: node dist/src/workers.js')
   requireText(renderStagingRunbook, 'Worker build command migration calistirmaz')
+})
+
+test('cloudflare frontend runbook locks cookie session and sentry build variables', () => {
+  for (const variable of [
+    'VITE_BROWSER_SESSION_TRANSPORT',
+    'VITE_SENTRY_DSN',
+    'VITE_SENTRY_ENABLED',
+    'VITE_SENTRY_ENVIRONMENT',
+    'VITE_SENTRY_RELEASE',
+  ]) {
+    requireText(renderStagingRunbook, variable)
+  }
+
+  requireText(renderStagingRunbook, 'npm run upload:cloudflare:artifact')
+  requireText(renderStagingRunbook, 'npm run promote:cloudflare:version')
 })
 
 test('env examples expose production-relevant variables and PKCE response type', () => {

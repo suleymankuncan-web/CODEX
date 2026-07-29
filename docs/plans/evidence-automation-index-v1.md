@@ -54,7 +54,7 @@ Decision:
 | --- | --- | --- | --- | --- |
 | Docs-only hygiene | `git diff --check` | Current branch diff | No whitespace/error marker issues in tracked diff | Runtime behavior, provider delivery, protected auth |
 | Root script contracts | `npm.cmd run test:scripts` | Repository source | Docs/contracts/generator guards pass | Browser UI, backend Jest, provider delivery |
-| Release gate wrapper | `npm.cmd run check:release` | Clean local install | Root script contracts plus release checker | Vercel/Render deploy, protected persona evidence |
+| Release gate wrapper | `npm.cmd run check:release` | Clean local install | Root script contracts plus release checker | Cloudflare/Render deploy, protected persona evidence |
 | System flow refresh | `npm.cmd run system-flow:generate` then `node --test scripts/system-flow-generator-contract.test.mjs` | Current repo source | Flow JSON/HTML matches source-derived routes/API/backend map | Live traffic, auth runtime, API latency |
 | Frontend static gate | `npm.cmd --prefix admin-web run lint` and `npm.cmd --prefix admin-web run build` | Frontend source | Type/lint/build health | Playwright behavior, backend contracts |
 | Frontend script contracts | `npm.cmd --prefix admin-web run test:scripts` | Frontend scripts and fixtures | Admin-web local script contracts pass | Full browser routes or production deploy |
@@ -62,7 +62,7 @@ Decision:
 | Frontend pilot smoke | `npm.cmd --prefix admin-web run smoke:pilot` | Local app/test setup | Pilot route/API-contract smoke subset | Live staging, protected Clerk session |
 | API contract generation | `npm.cmd --prefix backend/nestjs run openapi:generate` then `npm.cmd --prefix admin-web run api:generate` and `npm.cmd --prefix admin-web run api:check` | Backend buildable OpenAPI source | OpenAPI and generated frontend client/types are current | Response behavior unless paired with tests |
 | Backend targeted tests | `npm.cmd --prefix backend/nestjs run test -- <pattern> --runInBand` | Backend source | Targeted Jest coverage for selected backend behavior | Full backend blast radius |
-| Backend release gate | `npm.cmd --prefix backend/nestjs run check:release` | Backend source and install | Backend lint, Jest, build, audit | Frontend, Vercel, protected staging |
+| Backend release gate | `npm.cmd --prefix backend/nestjs run check:release` | Backend source and install | Backend lint, Jest, build, audit | Frontend, Cloudflare, protected staging |
 | Deployed readiness smoke | `npm.cmd run smoke:deployed-readiness` | `READINESS_FRONTEND_URL`, `READINESS_BACKEND_URL`, optional bearer token | Public staging health/security/assets; protected checks only if token is supplied | Protected persona proof without token |
 | Backend readiness/load smoke | `npm.cmd run smoke:backend-readiness-load` | Backend URL, optional role-specific tokens | Public backend health/load; protected groups only with matching tokens | Broad production performance if token/profile inputs are missing |
 | Public performance baseline | `npm.cmd run perf:public` | Public frontend/backend URLs | Public latency/bundle baseline | Protected route performance |
