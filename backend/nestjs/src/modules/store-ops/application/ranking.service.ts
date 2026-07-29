@@ -544,7 +544,7 @@ export class RankingService {
         : input.assignment.region_id !== null && input.regionIds.includes(input.assignment.region_id);
     }
 
-    return false;
+    return input.roleCodes.includes("STORE_MANAGER") && input.assignment.store_id !== null && input.storeIds.includes(input.assignment.store_id);
   }
 
   private hasPersonnelReadScope(input: {
