@@ -113,8 +113,8 @@ describe("checklist photo media storage recovery schema", () => {
   it.each([retentionMigration, schema])(
     "expires an executing purge only after its execution lease expires",
     (sql) => {
-      expect(sql).toContain(
-        "OLD.status = 'executing' AND NEW.status = 'expired'\n            AND OLD.execution_lease_expires_at <= NOW()",
+      expect(sql).toMatch(
+        /\(OLD\.status = 'executing' AND NEW\.status = 'expired'\r?\n\s+AND OLD\.execution_lease_expires_at <= NOW\(\)\)/,
       );
       expect(sql).not.toContain(
         "OLD.execution_lease_expires_at <= NOW() OR OLD.expires_at <= NOW()",
