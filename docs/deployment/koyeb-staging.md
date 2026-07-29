@@ -4,7 +4,7 @@ Tarih: 2026-05-02
 
 Bu rota backend hosting ve Postgres DB'yi ayni platformda tutmak icin degerlendirildi. Koyeb dashboard bu hesapta Pro plan / kart dogrulama akisi gosterdiği icin aktif staging rotasi olmaktan cikarildi.
 
-Aktif rota: `docs/deployment/render-supabase-vercel-staging.md`.
+Aktif rota: `docs/deployment/render-supabase-cloudflare-staging.md`.
 
 ## Secilen Stack
 

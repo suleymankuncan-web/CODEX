@@ -157,7 +157,11 @@ test('workspace content digest changes for path or byte changes', () => {
     const initial = digestWorkspaceFiles(root, ['a.txt', 'b.txt'])
     writeFileSync(join(root, 'b.txt'), 'changed')
     const changed = digestWorkspaceFiles(root, ['a.txt', 'b.txt'])
+    rmSync(join(root, 'b.txt'))
+    const deleted = digestWorkspaceFiles(root, ['a.txt', 'b.txt'])
     assert.notEqual(initial, changed)
+    assert.notEqual(changed, deleted)
+    assert.match(deleted, /^[a-f0-9]{64}$/)
     assert.notEqual(changed, digestWorkspaceFiles(root, ['b.txt']))
   } finally {
     rmSync(root, { recursive: true, force: true })

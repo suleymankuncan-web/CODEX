@@ -1,4 +1,4 @@
-# HR Axis Supabase + Vercel Staging
+# HR Axis Supabase + Vercel Staging (Archived)
 
 Tarih: 2026-05-02
 
@@ -15,7 +15,10 @@ Authorization: HR Axis DB
 Backend hosting: pending
 ```
 
-Backend hosting icin aktif yol Render'dir: `docs/deployment/render-supabase-vercel-staging.md`. Koyeb degerlendirmesi no-go olarak ayrica yazildi: `docs/deployment/koyeb-staging.md`. NestJS backend uzun sureli Node process olarak calisir; Vercel serverless'a tasimak ayri adapter/refactor ister.
+Bu belge tarihsel Vercel rotasini kaydeder ve aktif degildir. Aktif yol
+`docs/deployment/render-supabase-cloudflare-staging.md` belgesindeki Render +
+Supabase + Cloudflare Workers Static Assets kurulumudur. Koyeb degerlendirmesi
+no-go olarak ayrica yazildi: `docs/deployment/koyeb-staging.md`.
 
 ## Satin Alma ve Uyelik Listesi
 
@@ -102,7 +105,9 @@ VITE_CLERK_PUBLISHABLE_KEY=<Clerk publishable key>
 VITE_CLERK_JWT_TEMPLATE=hr-axis-api
 ```
 
-SPA fallback icin repo'da `admin-web/vercel.json` bulunur. Bu dosya React Router route refresh'lerinde `index.html`'e rewrite yapar.
+Tarihsel Vercel rotasi SPA fallback icin `admin-web/vercel.json` kullaniyordu.
+Aktif Cloudflare rotasi `admin-web/wrangler.jsonc` icindeki
+`single-page-application` asset fallback sozlesmesini kullanir.
 
 ## Backend Env Kontrati
 

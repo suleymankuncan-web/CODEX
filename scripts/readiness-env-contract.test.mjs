@@ -54,7 +54,7 @@ function extractTableRowsAfterHeading(document, heading) {
 
 const inventory = readText('docs/plans/environment-variable-inventory.md')
 const deploymentRunbook = readText('docs/plans/deployment-runbook-skeleton.md')
-const stagingRunbook = readText('docs/deployment/render-supabase-vercel-staging.md')
+const stagingRunbook = readText('docs/deployment/render-supabase-cloudflare-staging.md')
 const productionChecklist = readText('docs/plans/production-environment-readiness-checklist.md')
 const backendEnvExample = readText('backend/nestjs/.env.example')
 const frontendEnvExample = readText('admin-web/.env.example')
@@ -156,11 +156,11 @@ test('critical secret and public env boundaries are explicit', () => {
   assert.equal(readEnvExampleValue(frontendEnvExample, 'VITE_BEARER_TOKEN'), '')
 })
 
-test('render and vercel env verification remains manual and no-secret', () => {
+test('render and cloudflare env verification remains manual and no-secret', () => {
   for (const text of [deploymentRunbook, stagingRunbook, productionChecklist]) {
     requireText(text, 'Manual Env Verification')
     requireText(text, 'Render')
-    requireText(text, 'Vercel')
+    requireText(text, 'Cloudflare')
     requireText(text, 'Do not copy values')
     requireText(text, 'variable names, status, and owner')
   }

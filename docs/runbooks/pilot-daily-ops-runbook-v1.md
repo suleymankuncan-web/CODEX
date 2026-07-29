@@ -47,7 +47,7 @@ Run these checks before asking pilot users to validate the app for the day:
 
 1. Confirm frontend staging is reachable: `https://staging.hr-axis.com`.
 2. Confirm backend staging health is reachable: `https://api-staging.hr-axis.com/api/health`.
-3. Confirm the expected Vercel deploy and Render deploy are the intended release for the day.
+3. Confirm the expected Cloudflare Worker version and Render deploy are the intended release for the day.
 4. Confirm `main` contains the last merged pilot-readiness PR.
 5. Run or review the latest pilot smoke evidence for Admin, Region Manager, Store Manager, and Store Personnel personas.
 6. Check the latest import/data-quality batch state if a new source file was loaded.
@@ -61,7 +61,7 @@ Evidence note format:
 
 - Frontend staging:
 - Backend health:
-- Vercel deploy:
+- Cloudflare Worker version:
 - Render deploy:
 - Latest app commit:
 - Persona smoke:

@@ -8,7 +8,8 @@ const evidencePath =
   'docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md'
 const packagePath = 'admin-web/package.json'
 const smokeScriptPath = 'admin-web/scripts/auth-cookie-session-live-smoke.mjs'
-const vercelIgnorePath = 'admin-web/.vercelignore'
+const workspaceIgnorePath = '.gitignore'
+const cloudflareConfigPath = 'admin-web/wrangler.jsonc'
 
 function readText(path) {
   return readFileSync(join(workspaceRoot, path), 'utf8')
@@ -102,24 +103,23 @@ test('browser-session staging evidence does not contain raw secret patterns', ()
   }
 })
 
-test('vercel deployment ignores local env and secret-bearing files', () => {
-  assert.equal(existsSync(join(workspaceRoot, vercelIgnorePath)), true, `${vercelIgnorePath} must exist`)
-  const vercelIgnore = readText(vercelIgnorePath)
+test('cloudflare build keeps local env and secret-bearing files outside the artifact', () => {
+  assert.equal(existsSync(join(workspaceRoot, cloudflareConfigPath)), true, `${cloudflareConfigPath} must exist`)
+  const workspaceIgnore = readText(workspaceIgnorePath)
+  const cloudflareConfig = JSON.parse(readText(cloudflareConfigPath))
 
   for (const expected of [
-    '.env',
-    '.env.*',
-    '!.env.example',
-    '!.env*.example',
-    '.vercel',
-    'node_modules',
-    'dist',
-    'coverage',
-    'playwright-report',
-    'test-results',
+    'admin-web/.env',
+    'admin-web/.env.local',
+    'admin-web/.env.*.local',
+    'admin-web/node_modules/',
+    'admin-web/dist/',
   ]) {
-    requireText(vercelIgnore, expected)
+    requireText(workspaceIgnore, expected)
   }
+
+  assert.equal(cloudflareConfig.assets.directory, './dist')
+  assert.equal(cloudflareConfig.main, undefined)
 })
 
 test('admin package exposes the repeatable staging cookie-session smoke', () => {

@@ -56,7 +56,7 @@ Alert response rules:
 | `import-failure-spike` | Pause import/materialization jobs, record batch/source/entity evidence, do not retry until idempotency impact is understood. | Incident lead -> Data owner |
 | `snapshot-worker-failure` | Pause dependent reporting decisions, inspect snapshot run lineage, rerun only after dependency cause is known. | Incident lead -> Data owner -> Backend owner |
 | `database-latency-high` | Check provider health, migration state, pool pressure, and recent query-heavy changes. | Incident lead -> Backend owner |
-| `frontend-unreachable` | Verify Vercel deployment, frontend root, SPA fallback, static assets, and backend API reachability. | Incident lead -> Frontend owner -> Release operator |
+| `frontend-unreachable` | Verify Cloudflare Worker deployment, frontend root, SPA fallback, static assets, and backend API reachability. | Incident lead -> Frontend owner -> Release operator |
 | `observability-degraded` | Keep broad rollout blocked until provider decision, DSN setup, or written Conditional Go risk acceptance exists. | Incident lead -> Backend owner -> Business approver |
 
 Minimum alert evidence:

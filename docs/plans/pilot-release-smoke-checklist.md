@@ -2,18 +2,18 @@
 
 ## Decision Rule
 
-- Frontend-only change: run local frontend verification, deploy Vercel preview, verify the Vercel deployment id maps to the expected Git commit hash, promote, run production smoke.
+- Frontend-only change: run local frontend verification, deploy the exact artifact to the Cloudflare Worker, verify the Cloudflare Worker version id maps to the expected Git commit hash, promote only that version, then run deployed smoke.
 - Backend/API change: run backend targeted tests, deploy Render, verify `/api/auth/session` and `/api/admin/migrations/status`, then run affected frontend smoke.
 - Database migration change: run migration tests, deploy Render with the approved migration step, verify migration status has no failed or pending migration, then run admin and store smoke.
-- Docs-only change: run the affected documentation/contract tests, merge to main, record the Git commit hash; Vercel and Render deploys are not required unless runtime files changed.
+- Docs-only change: run the affected documentation/contract tests, merge to main, record the Git commit hash; Cloudflare and Render deploys are not required unless runtime files changed.
 
 ## Standard Deploy SOP
 
 1. Merge the approved PR into `main`.
 2. Record the merged Git commit hash.
-3. Wait for the Vercel frontend deployment when frontend runtime files changed.
-4. Record the Vercel deployment id and verify the Vercel deployment id maps to the expected Git commit hash.
-5. Promote only the verified Vercel deployment when the frontend change is intended for production/staging use.
+3. Wait for the Cloudflare frontend deployment when frontend runtime files changed.
+4. Record the Cloudflare Worker version id and verify the Cloudflare Worker version id maps to the expected Git commit hash.
+5. Promote only the verified Cloudflare Worker version when the frontend change is intended for production/staging use.
 6. Trigger or verify Render deploy when backend, API contract, environment, migration, or `render.yaml` changed.
 7. Verify Render build completed and migrations ran through the approved Render migration step when a Render deploy is required.
 8. Verify `/api/auth/session` and `/api/admin/migrations/status`; migration status must have zero failed and zero pending migrations.
@@ -22,10 +22,10 @@
 
 ## Change-Type Decision Table
 
-| Change type | Vercel deploy | Render deploy | Minimum smoke |
+| Change type | Cloudflare deploy | Render deploy | Minimum smoke |
 | --- | --- | --- | --- |
 | Docs-only change | Not required | Not required | Affected docs/contract tests and `git diff --check` |
-| Frontend-only change | Required | Not required | Vercel deployment id, Git commit hash, production smoke order |
+| Frontend-only change | Required | Not required | Cloudflare Worker version id, Git commit hash, deployed smoke order |
 | Backend/API change | Only if frontend files changed | Required | `/api/auth/session`, `/api/admin/migrations/status`, affected frontend smoke |
 | Database migration change | Only if frontend files changed | Required | Render migration step, migration status, admin and store smoke |
 | Environment/config change | Required for frontend-owned env | Required for backend-owned env | Verify the owning service restarted with expected config and run affected smoke |
@@ -42,11 +42,11 @@ node --test scripts/pilot-release-smoke-checklist-contract.test.mjs
 git diff --check
 ```
 
-## Vercel Promote Check
+## Cloudflare Promote Check
 
 - Record the Git commit hash.
-- Record the Vercel deployment id.
-- Confirm the Vercel deployment id row shows the expected Git commit hash.
+- Record the Cloudflare Worker version id.
+- Confirm the recorded Worker version was built from the expected Git commit hash.
 - Promote only that deployment.
 - After promote, open production in a fresh browser context.
 
@@ -135,7 +135,7 @@ Accepted evidence file:
 
 - Old chunk symptoms mean the promoted deployment is ready but the browser still executes stale JavaScript.
 - A page still throws an error fixed by the promoted commit.
-- The Vercel deployment id is promoted but the browser renders old JavaScript chunks.
+- The Cloudflare Worker version is active but the browser renders old JavaScript chunks.
 - The app works after closing all browser windows and reopening the site.
 
 ## Cache Recovery
@@ -143,5 +143,5 @@ Accepted evidence file:
 1. Hard refresh the route.
 2. Close all browser windows for the affected browser.
 3. Reopen the browser and navigate directly to the affected route.
-4. Verify the Vercel deployment id maps to the expected Git commit hash.
+4. Verify the Cloudflare Worker version id maps to the expected Git commit hash.
 5. Re-run the production smoke order.

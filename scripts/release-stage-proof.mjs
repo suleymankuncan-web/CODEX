@@ -145,6 +145,11 @@ export function digestWorkspaceFiles(workspaceRoot, relativePaths) {
   const hash = createHash('sha256')
   for (const relativePath of [...new Set(relativePaths)].sort()) {
     const absolutePath = join(workspaceRoot, ...relativePath.split('/'))
+    if (!existsSync(absolutePath)) {
+      hash.update(relativePath)
+      hash.update('\0missing\0')
+      continue
+    }
     const stat = lstatSync(absolutePath)
     hash.update(relativePath)
     hash.update('\0')

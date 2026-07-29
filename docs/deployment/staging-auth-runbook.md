@@ -30,15 +30,15 @@ Bu runbook, `hr-axis.com` icin gercek internette calisan staging ortamini kurmak
    - Clerk Organizations V1'de kullanilmayacak; yetki HR Axis DB'de.
 
 3. Hosting
-   - Ana yol frontend: Vercel.
+   - Ana yol frontend: Cloudflare Workers Static Assets.
    - Ana yol backend: Render Web Service.
    - Ana yol database: Supabase Postgres.
    - Koyeb bu hesapta Pro plan zorunlulugu gosterdigi icin no-go.
    - B plani: DigitalOcean App Platform veya DigitalOcean Basic Droplet + Docker Compose.
 
 Repo icindeki hazir deploy paketi: `infra/staging/README.md`.
-Aktif Render + Supabase + Vercel kurulumu: `docs/deployment/render-supabase-vercel-staging.md`.
-Aktif Supabase + Vercel kurulumu: `docs/deployment/supabase-vercel-staging.md`.
+Aktif Render + Supabase + Cloudflare kurulumu: `docs/deployment/render-supabase-cloudflare-staging.md`.
+Eski Supabase + Vercel belgesi tarihsel referanstir ve aktif rota degildir.
 Koyeb no-go notu: `docs/deployment/koyeb-staging.md`.
 App Platform B plani: `docs/deployment/digitalocean-app-platform-staging.md`.
 
@@ -118,6 +118,7 @@ Staging frontend icin:
 VITE_API_BASE_URL=https://api-staging.hr-axis.com/api
 VITE_AUTH_MODE=bearer
 VITE_AUTH_PROVIDER=clerk
+VITE_BROWSER_SESSION_TRANSPORT=cookie
 VITE_CLERK_PUBLISHABLE_KEY=<Clerk publishable key>
 VITE_CLERK_JWT_TEMPLATE=hr-axis-api
 ```

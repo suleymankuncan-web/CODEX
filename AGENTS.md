@@ -71,7 +71,8 @@ merge, deploy, or make owner decisions.
   cancelled, timed-out, failed, stale, or identity-mismatched proof cannot be
   reused. Total runner-minutes above 110% of the recorded baseline require an
   owner decision before further orchestration expansion.
-- Monitor PR checks with native GitHub/Vercel polling or an existing background
+- Monitor PR checks with native GitHub and active frontend-provider polling (Cloudflare
+  plus Vercel during the cutover rollback window) or an existing background
   shell watcher. Do not spawn a model agent only to wait or poll.
 - Use 55-60 second idle polling intervals. Return only state transitions or a
   compact failure tail to the model; never stream complete successful logs.

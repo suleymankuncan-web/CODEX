@@ -4,10 +4,9 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-28
+Last verified: 2026-07-29
 
-This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next
-safe action in under five minutes.
+This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
 Historical detail is separate:
 
@@ -32,6 +31,7 @@ when the decision needs them.
 
 ## Current Product Position
 
+- Frontend ownership is moving to Cloudflare Workers Static Assets; its isolated preview is verified, and Vercel retires only after exact-main live proof.
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
 - Broad production rollout: `No-Go`.

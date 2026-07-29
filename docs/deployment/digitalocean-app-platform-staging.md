@@ -2,7 +2,9 @@
 
 Tarih: 2026-05-01
 
-Bu dosya artik aktif staging rotasi degildir. Aktif rota `docs/deployment/supabase-vercel-staging.md` icindeki Supabase Postgres + Vercel frontend yoludur.
+Bu dosya artik aktif staging rotasi degildir. Aktif rota
+`docs/deployment/render-supabase-cloudflare-staging.md` icindeki Render +
+Supabase Postgres + Cloudflare Workers Static Assets yoludur.
 
 Bu yol Droplet yolu degildir. Bos Linux sunucu kiralamiyoruz; DigitalOcean App Platform frontend ve backend component'lerini GitHub'dan build edip calistirir. Docker/Caddy dosyalari diger B planidir.
 

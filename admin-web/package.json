@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:cloudflare": "tsc -b && vite build --mode cloudflare",
+    "upload:cloudflare:artifact": "node scripts/cloudflare-release.mjs upload",
+    "promote:cloudflare:version": "node scripts/cloudflare-release.mjs promote",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:e2e": "node scripts/run-release-e2e.mjs",
     "test:e2e:capture": "playwright test",
@@ -76,6 +79,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.4",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.115.0"
   }
 }

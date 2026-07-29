@@ -62,7 +62,7 @@ startCommand: node dist/src/workers.js
 Worker build command migration calistirmaz. Migration sorumlulugu web service
 build akisi veya kontrollu release adiminda kalir.
 
-### `docs/deployment/render-supabase-vercel-staging.md`
+### `docs/deployment/render-supabase-cloudflare-staging.md`
 
 Staging runbook guncellendi:
 
