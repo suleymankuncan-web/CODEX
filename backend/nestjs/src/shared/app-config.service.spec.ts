@@ -942,4 +942,80 @@ describe("AppConfigService", () => {
       PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT: "101",
     }).photoMediaStorageConfiguration).toThrow("1 <= warning < critical <= 100");
   });
+
+  it("keeps visual comparison enqueue and worker disabled without requiring secrets", () => {
+    const config = createConfig({});
+    expect(config.visualComparisonEnqueueEnabled).toBe(false);
+    expect(config.visualComparisonWorkerEnabled).toBe(false);
+    expect(config.qwenVisualComparisonRuntimeConfiguration.enabled).toBe(false);
+  });
+
+  it("requires an exact bounded scope for enqueue without requiring the provider secret", () => {
+    const config = createConfig({
+      VISUAL_COMPARISON_ENQUEUE_ENABLED: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+    });
+    expect(config.visualComparisonCompanyId).toBe("11111111-1111-4111-8111-111111111111");
+    expect(config.visualComparisonReferenceSetId).toBe("22222222-2222-4222-8222-222222222222");
+    expect(config.visualComparisonNotBefore.toISOString()).toBe("2026-07-30T00:00:00.000Z");
+    expect(config.qwenVisualComparisonRuntimeConfiguration.apiKey).toBe("");
+  });
+
+  it("requires BullMQ and exact Qwen worker configuration when shadow processing is enabled", () => {
+    expect(() => createConfig({ VISUAL_COMPARISON_WORKER_ENABLED: "true" })
+      .visualComparisonWorkerEnabled).toThrow("requires QUEUE_BACKEND=bullmq");
+
+    const config = createConfig({
+      QUEUE_BACKEND: "bullmq",
+      VISUAL_COMPARISON_WORKER_ENABLED: "true",
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+      CHECKLIST_EVIDENCE_STORAGE_HEALTHY: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+      QWEN_BASE_URL: "https://workspace.eu-central-1.maas.aliyuncs.com/compatible-mode/v1",
+      QWEN_ALLOWED_HOST_SHA256: "a".repeat(64),
+      QWEN_API_KEY: "secret",
+      QWEN_MODEL: "qwen3.7-plus-2026-05-26",
+      QWEN_INPUT_USD_MICROS_PER_MILLION_TOKENS: "1",
+      QWEN_OUTPUT_USD_MICROS_PER_MILLION_TOKENS: "1",
+    });
+    expect(config.qwenVisualComparisonRuntimeConfiguration).toMatchObject({
+      enabled: true,
+      model: "qwen3.7-plus-2026-05-26",
+    });
+  });
+
+  it("requires explicit positive Qwen prices when the worker is enabled", () => {
+    const base = {
+      QUEUE_BACKEND: "bullmq",
+      VISUAL_COMPARISON_WORKER_ENABLED: "true",
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+      CHECKLIST_EVIDENCE_STORAGE_HEALTHY: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+      QWEN_BASE_URL: "https://workspace.eu-central-1.maas.aliyuncs.com/compatible-mode/v1",
+      QWEN_ALLOWED_HOST_SHA256: "a".repeat(64),
+      QWEN_API_KEY: "secret",
+      QWEN_MODEL: "qwen3.7-plus-2026-05-26",
+    };
+    expect(() => createConfig(base).qwenVisualComparisonRuntimeConfiguration)
+      .toThrow("price ceilings must be positive");
+  });
+
+  it("fails closed when shadow processing lacks healthy private media storage", () => {
+    expect(() => createConfig({
+      QUEUE_BACKEND: "bullmq",
+      VISUAL_COMPARISON_WORKER_ENABLED: "true",
+    }).visualComparisonWorkerEnabled).toThrow("PHOTO_MEDIA_STORAGE_ENABLED=true");
+
+    expect(() => createConfig({
+      QUEUE_BACKEND: "bullmq",
+      VISUAL_COMPARISON_WORKER_ENABLED: "true",
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+    }).visualComparisonWorkerEnabled).toThrow("CHECKLIST_EVIDENCE_STORAGE_HEALTHY=true");
+  });
 });
