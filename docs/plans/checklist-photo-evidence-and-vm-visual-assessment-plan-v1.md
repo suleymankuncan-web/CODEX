@@ -6,6 +6,26 @@ Risk: R5
 Date: 2026-07-27
 Shelf: Checklist / Store Action / Visual Merchandising
 
+## 2026-07-30 Lean Store-Photo Pilot Override
+
+The owner has confirmed that the intended visual-assessment inputs are store,
+shelf, fixture, display, and product photographs, not personal data. The
+controlling pilot decision is
+`qwen-store-photo-lean-pilot-decision-v1.md`.
+
+That decision supersedes conflicting real-photo and PR-8 through PR-10 entry
+gates in this older parent plan. The controlled pilot does not require a
+dedicated antivirus service, a provider legal/subprocessor dossier, two
+independent labelers, or a 100-150 pair blind benchmark. It retains private
+storage, safe image decode/re-encode and metadata removal, exact-model and
+budget controls, strict fail-closed output, AI-as-advice, Region Manager final
+authority, manual fallback, and zero official-score or incentive effects.
+
+The proportional validation line is 20 synthetic comparisons in PR-8B and
+30-50 controlled store-photo comparisons in PR-10. Any later move to
+intentional personal-data processing, automated official scoring, or broad
+production requires a new R5 owner decision.
+
 ## Reader And Required Action
 
 This plan is for the engineer or agent who will add photographic checklist
