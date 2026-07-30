@@ -34,7 +34,8 @@
     "observe:rem8:target:constraint": "ts-node scripts/rem8-target-constraint-observation.ts",
     "apply:staging:dbc5:target": "ts-node scripts/dbc5-target-constraint-apply.ts",
     "rehearse:release": "ts-node scripts/release-rehearsal.ts",
-    "maintenance:photo-media": "ts-node scripts/photo-media-maintenance.ts"
+    "maintenance:photo-media": "ts-node scripts/photo-media-maintenance.ts",
+    "smoke:qwen-visual-comparison": "ts-node scripts/qwen-visual-comparison-smoke.ts"
   },
   "jest": {
     "moduleFileExtensions": [
