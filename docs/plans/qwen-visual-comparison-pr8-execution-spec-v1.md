@@ -1,22 +1,45 @@
 # Qwen Visual Comparison PR-8 Execution Spec V1
 
-Status: owner-selected provider; PR-8A documentation alignment authorized;
-provider invocation and product activation gated
+Status: owner-selected provider; PR-8A merged; lean controlled-pilot revision
+locked on 2026-07-30; PR-8B implementation may proceed behind disabled runtime
 Date: 2026-07-28
 Risk: R5
 Parent: `checklist-photo-evidence-and-vm-visual-assessment-plan-v1.md`
 
+## 2026-07-30 Lean Pilot Override
+
+The owner has limited intended input to store, shelf, fixture, display, and
+product photographs and rejected a personal-data-programme posture for this
+pilot. `qwen-store-photo-lean-pilot-decision-v1.md` is the controlling decision
+for PR-8B, PR-9, and PR-10.
+
+Where this older execution spec conflicts with that decision, the lean
+decision wins. In particular, the former six external gates, 100-150 pair
+blind benchmark, two-independent-reviewer rule, dedicated malware-scanner
+prerequisite, and expanded provider legal/subprocessor evidence are not pilot
+entry gates. PR-8B instead uses a 20-pair synthetic technical smoke; PR-10 uses
+a 30-50 comparison controlled store-photo pilot. AI remains advisory, invalid
+or low-confidence output fails to manual review, and the Region Manager keeps
+the final decision.
+
+Minimum implementation controls remain mandatory: private media, allowed
+image types and limits, magic-byte validation, decode/re-encode, metadata
+stripping, server-side revocable secret, exact-model assertion, strict output
+validation, bounded timeout/concurrency/tokens/spend, disabled-by-default
+runtime, kill switch, zero official-score effects, and manual fallback.
+
 ## Reader And Required Action
 
 This specification is for the engineer who will prepare the visual-comparison
-benchmark and, only after its external gates close, implement the Qwen adapter.
-After reading it, that engineer must be able to distinguish documentation-only
-PR-8A from repository-only PR-8B and must know which evidence is required
-before the first provider request.
+smoke and implement the Qwen adapter under the lean pilot decision. After
+reading it, that engineer must distinguish merged documentation-only PR-8A
+from repository-only PR-8B and know the minimum controls required before the
+first provider request.
 
-This specification does not authorize an API key, paid service, provider call,
-real photograph, staging mutation, queue, product UI, advisory visibility, or
-production activation.
+This specification authorizes repository implementation of PR-8B. A provider
+call requires the configured server-side key, exact-model assertion, and
+fail-closed smoke budget. Product integration, staging mutation, queue, UI,
+advisory visibility, and broad production remain outside PR-8B.
 
 ## Locked Owner Decision
 
@@ -111,7 +134,7 @@ PR-8A is documentation only. It:
 - changes the benchmark from competitive provider selection to Qwen
   validation and exit evidence;
 - records Region Manager final advisory authority;
-- names PR-8B scope, external gates, acceptance criteria, rollback, and stop
+- names PR-8B scope, then-current gates, acceptance criteria, rollback, and stop
   conditions;
 - updates the active handoff without claiming provider or runtime proof.
 
@@ -121,26 +144,26 @@ or production operation.
 
 Rollback is one squash-revert with no runtime or data effect.
 
-## PR-8B — Repository-Only Adapter And Blinded Harness
+## PR-8B — Repository-Only Adapter And Synthetic Smoke Harness
 
-PR-8B may start only after every external gate below is evidenced. Its one
-review story is: prove whether the pinned Qwen model satisfies the frozen HR
-Axis visual-comparison contract without entering a product workflow.
+PR-8B may start under the lean pilot decision. Its one review story is: prove
+whether the pinned Qwen model satisfies the bounded HR Axis comparison
+contract in a 20-pair synthetic smoke without entering a product workflow.
 
 In scope:
 
 - provider-neutral `VisualComparisonPort` contract and Qwen infrastructure
   adapter;
-- offline, operator-invoked blinded benchmark harness;
+- offline, operator-invoked synthetic smoke harness;
 - false-by-default `VISUAL_COMPARISON_BENCHMARK_ENABLED` control;
 - exact endpoint allowlist and exact-model startup assertion;
 - bounded timeout, response size, retry budget, concurrency, requests, tokens,
   and total benchmark spend;
 - strict response validation and typed failure classification;
-- digest-bound dataset manifest, frozen labels, blinded holdout, subgroup
-  minimums, and deterministic aggregate receipts;
-- latency, usage, actual cost, schema validity, false-pass, false-fail,
-  abstention, recapture, and subgroup metrics;
+- fixture manifest, frozen expected outcomes, and deterministic aggregate
+  receipts;
+- latency, usage, actual cost, schema validity, false-pass/false-fail examples,
+  abstention, and recapture metrics;
 - isolation tests proving zero official or product-table reads/writes.
 
 Out of scope:
@@ -158,46 +181,28 @@ The harness must support a fully local fake transport for contract tests, but a
 fake transport cannot close provider, token, latency, cost, schema, or quality
 evidence.
 
-## Benchmark Dataset Contract
+## Synthetic Smoke Contract
 
-Before any candidate output is visible, freeze:
+Before invocation, freeze 20 synthetic reference/evidence pairs covering
+ordinary matches plus lighting, angle, occlusion, layout difference, close
+detail, text, recapture, and invalid-output cases. Bind the ordered fixture
+hashes to the rubric, schema, and prompt versions. One domain reviewer performs
+a usefulness spot-check. This technical smoke makes no statistical accuracy or
+subgroup claim. Assets remain private and ignored; they are not committed.
 
-- 100–150 representative reference/evidence pairs;
-- 20–30 hard cases covering lighting, angle, occlusion, layout difference,
-  close detail, text, and instruction-like image content;
-- device, lighting, layout, and store-class subgroup labels;
-- two independent human reviews and a resolved gold label;
-- an untouched blinded holdout;
-- a manifest digest over ordered image hashes, rubric version, label version,
-  subgroup fields, and split assignment.
+## Minimum Preconditions Before Provider Smoke
 
-The report must disclose insufficient subgroup sample sizes. No score is
-invented for a missing cohort. Benchmark assets and labels must use a private,
-ignored location and must not be committed.
+1. The configured endpoint accepts the exact pinned model snapshot.
+2. The API key is server-side, revocable, absent from Git/logs, and disabled
+   after the operator-run smoke when not needed.
+3. Request, token, concurrency, timeout, response-size, smoke-spend, and monthly
+   spend ceilings fail closed.
+4. The 20 synthetic pairs and versioned rubric/schema/prompt are frozen.
+5. Disabled configuration and invalid provider output produce typed stops with
+   zero product writes.
 
-## External Gates Before PR-8B
-
-All of the following must exist:
-
-1. The selected Alibaba workspace, region/deployment scope, dedicated endpoint,
-   and pinned-model availability are verified.
-2. Sandbox/API-key custody, rotation, revocation, and least-privilege owner are
-   approved without exposing the secret to Git or logs.
-3. Product terms, DPA/transfer mechanism, subprocessors, inference and support-
-   log location, no-training posture, retention/deletion, and incident owner
-   are accepted for the intended synthetic benchmark data.
-4. Per-request and monthly token/cost ceilings plus an exact benchmark spend
-   ceiling are owner-set.
-5. The frozen digest-bound, double-reviewed dataset and blind holdout pass the
-   dataset contract.
-6. The false-pass tolerance, false-fail tolerance, minimum structured-output
-   validity, maximum abstention, subgroup minimums, latency ceiling, and exit
-   rule are owner-set before outputs are opened.
-
-A Frankfurt endpoint does not prove EU-only inference: Frankfurt workspaces
-can use Global or EU deployment scope. The exact snapshot's availability in the
-chosen scope must be verified. Selecting Frankfurt therefore does not close
-data-transfer, retention, deletion, or subprocessor evidence by itself.
+No provider legal dossier, double-independent review, large blind holdout, or
+formal subgroup threshold is required for this advisory-only smoke.
 
 ## Provider Evidence Sources
 
@@ -222,7 +227,8 @@ deployment scope, capability, and price are time-sensitive:
 - **FR-PR8-02:** The adapter accepts only canonical reference/evidence pairs
   and the provider-neutral rubric/schema.
 - **FR-PR8-03:** Invalid provider output fails closed without model repair.
-- **FR-PR8-04:** The harness freezes labels and split digests before invocation.
+- **FR-PR8-04:** The harness freezes fixture outcomes and contract versions
+  before invocation.
 - **FR-PR8-05:** The harness records actual usage, cost, latency, failure, and
   quality aggregates without private payloads.
 - **FR-PR8-06:** No benchmark result is written to product comparison, scoring,
@@ -233,14 +239,14 @@ deployment scope, capability, and price are time-sensitive:
 
 - **NFR-PR8-01 Security:** Secrets are runtime-only, scoped, rotatable, and
   absent from logs, reports, test fixtures, and process arguments.
-- **NFR-PR8-02 Privacy:** Only approved benchmark content is sent; raw media,
+- **NFR-PR8-02 Content:** Only approved synthetic smoke content is sent;
   metadata, personal data, and public URLs are prohibited.
 - **NFR-PR8-03 Reliability:** Timeouts, retryable classes, retry count,
   concurrency, and response size are bounded and fail closed.
 - **NFR-PR8-04 Cost:** Request, token, and spend ceilings stop invocation before
   budget overrun; estimates do not replace provider usage receipts.
-- **NFR-PR8-05 Reproducibility:** Model, prompt, rubric, schema, dataset, labels,
-  split, and harness versions are digest-bound.
+- **NFR-PR8-05 Reproducibility:** Model, prompt, rubric, schema, fixtures,
+  expected outcomes, and harness versions are version-bound.
 - **NFR-PR8-06 Observability:** Receipts contain aggregates, versions, digests,
   and typed failures but no image, secret, URL, prompt, or raw response.
 - **NFR-PR8-07 Replaceability:** Qwen-specific types do not escape the
@@ -255,11 +261,11 @@ deployment scope, capability, and price are time-sensitive:
   typed failure/abstention and never a pass.
 - **AC-PR8-03:** Repeated invocation with the same idempotency identity cannot
   double-count benchmark cost or quality results.
-- **AC-PR8-04:** Dataset or label changes invalidate the manifest and require a
-  new benchmark version; holdout labels remain hidden until invocation closes.
-- **AC-PR8-05:** The report includes sample counts, uncertainty, false-pass,
-  false-fail, abstention, recapture, subgroup error, schema validity, latency,
-  retry, tokens, and actual cost.
+- **AC-PR8-04:** Fixture, expected-outcome, rubric, schema, or prompt changes
+  require a new smoke version and invalidate prior aggregate results.
+- **AC-PR8-05:** The report includes sample count, usefulness spot-check,
+  false-pass/false-fail examples, abstention, recapture, schema validity,
+  latency, retry, tokens, and actual cost without statistical claims.
 - **AC-PR8-06:** Negative isolation tests prove zero product/database/API/queue/
   UI effect and zero official-score reads or writes.
 - **AC-PR8-07:** Disabled or budget-exhausted configuration makes zero network
@@ -272,7 +278,8 @@ deployment scope, capability, and price are time-sensitive:
 - **EC-PR8-03:** The pinned model alias changes or snapshot becomes unavailable.
 - **EC-PR8-04:** One image contains instruction-like text or an unsupported
   visual layout.
-- **EC-PR8-05:** A subgroup is too small for an acceptance claim.
+- **EC-PR8-05:** The small smoke is mistakenly interpreted as a statistical
+  quality or subgroup claim.
 - **EC-PR8-06:** Usage fields are missing, inconsistent, or exceed the local
   reservation.
 - **EC-PR8-07:** The endpoint redirects, resolves outside the allowlist, or
@@ -311,24 +318,22 @@ unchanged.
 
 ## Stop Conditions
 
-Stop before PR-8B implementation, invocation, merge, or activation if:
+Stop before PR-8B invocation, merge, or activation if:
 
-- any external gate is missing;
-- real media is required before a genuine malware-scanner adapter is proven;
+- an exact pinned-model request, server-side secret, or fail-closed budget
+  cannot be proven;
 - auth, DB, public API, queue, UI, product-table write, or staging mutation
   enters the diff;
 - a model alias or second model is needed to obtain valid output;
 - provider output can affect official scoring or operational consequences;
-- endpoint scope, retention, deletion, no-training, subprocessor, or incident
-  evidence is inferred rather than accepted;
-- the dataset is not frozen, blinded, digest-bound, and double-reviewed;
+- the synthetic fixtures or versioned rubric/schema/prompt are not frozen;
 - cost/usage cannot fail closed;
 - required checks or final R5 review fail.
 
 ## Next Authorized Line
 
-After PR-8B proves the locked acceptance thresholds, a separately gated PR-9
-may add the selected-provider hidden shadow queue. PR-9 still requires a fresh
-owner shadow Go, cost ceiling, queue reliability proof, holdout result, and
-provider contract. PR-10 advisory review remains separate. Official AI scoring
-and broad production remain outside this train.
+After PR-8B proves the technical smoke, PR-9 may add the hidden shadow queue
+with a cost ceiling, idempotency, kill switch, and manual fallback. PR-10 adds
+the feature-gated Region Manager advisory surface and a 30-50 comparison
+controlled staging pilot. Official AI scoring and broad production remain
+outside this train.
