@@ -4,6 +4,7 @@ import { VisualComparisonShadowRepository } from "./visual-comparison-shadow.rep
 
 const claimInput = {
   comparisonRunId: "11111111-1111-4111-8111-111111111111",
+  isolationClass: "shadow" as const,
   maxAttempts: 3,
   processingLeaseSeconds: 300,
   companyId: "22222222-2222-4222-8222-222222222222",

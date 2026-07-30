@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-07-30T10:00:38.526Z",
+  "generatedAt": "2026-07-30T19:50:53.635Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 248,
-    "backendEndpointsWithoutFrontendCallCount": 52,
-    "controllerCount": 34,
-    "frontendApiCallCount": 197,
+    "backendEndpointCount": 252,
+    "backendEndpointsWithoutFrontendCallCount": 53,
+    "controllerCount": 35,
+    "frontendApiCallCount": 200,
     "frontendRouteCount": 55,
-    "matchedFrontendApiCallCount": 197,
-    "openApiEndpointCount": 248,
-    "routeApiEdgeCount": 252,
+    "matchedFrontendApiCallCount": 200,
+    "openApiEndpointCount": 252,
+    "routeApiEdgeCount": 255,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -731,7 +731,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 360
+        "line": 364
       }
     },
     {
@@ -781,7 +781,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 343
+        "line": 347
       }
     },
     {
@@ -812,7 +812,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 325
+        "line": 329
       }
     },
     {
@@ -865,7 +865,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 377
+        "line": 381
       }
     },
     {
@@ -890,7 +890,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 260
+        "line": 264
       }
     },
     {
@@ -913,7 +913,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 277
+        "line": 281
       }
     },
     {
@@ -939,7 +939,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 294
+        "line": 298
       }
     },
     {
@@ -965,7 +965,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 308
+        "line": 312
       }
     },
     {
@@ -990,7 +990,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 448
+        "line": 452
       }
     },
     {
@@ -1021,7 +1021,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 394
+        "line": 398
       }
     },
     {
@@ -1046,7 +1046,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 412
+        "line": 416
       }
     },
     {
@@ -1071,7 +1071,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 243
+        "line": 247
       }
     },
     {
@@ -1084,6 +1084,7 @@
       "componentFile": "admin-web/src/pages/StoreVmCampaignsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
+        "REGION_MANAGER",
         "STORE_MANAGER",
         "VISUAL_MERCHANDISER"
       ],
@@ -1118,7 +1119,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 431
+        "line": 435
       }
     }
   ],
@@ -3595,7 +3596,7 @@
       "exportedFunction": "getVmReferences",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 16
+        "line": 35
       }
     },
     {
@@ -3610,7 +3611,7 @@
       "exportedFunction": "getVmReferenceOptions",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 22
+        "line": 41
       }
     },
     {
@@ -3625,7 +3626,7 @@
       "exportedFunction": "getVmReviewerCampaigns",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 28
+        "line": 47
       }
     },
     {
@@ -3640,7 +3641,7 @@
       "exportedFunction": "getVmManagedCampaigns",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 34
+        "line": 53
       }
     },
     {
@@ -3655,7 +3656,7 @@
       "exportedFunction": "reviseVmCampaign",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 49
+        "line": 68
       }
     },
     {
@@ -3670,7 +3671,7 @@
       "exportedFunction": "changeVmAssignmentState",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 67
+        "line": 86
       }
     },
     {
@@ -3685,7 +3686,7 @@
       "exportedFunction": "retireVmReference",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 80
+        "line": 99
       }
     },
     {
@@ -3700,7 +3701,7 @@
       "exportedFunction": "createVmReference",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 89
+        "line": 108
       }
     },
     {
@@ -3715,7 +3716,7 @@
       "exportedFunction": "configureAndPublishVmReference",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 112
+        "line": 131
       }
     },
     {
@@ -3730,7 +3731,7 @@
       "exportedFunction": "configureAndPublishVmReference",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 128
+        "line": 147
       }
     },
     {
@@ -3745,7 +3746,7 @@
       "exportedFunction": "configureAndPublishVmReference",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 132
+        "line": 151
       }
     },
     {
@@ -3760,7 +3761,7 @@
       "exportedFunction": "configureAndPublishVmReference",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 139
+        "line": 158
       }
     },
     {
@@ -3775,7 +3776,7 @@
       "exportedFunction": "getVmCampaigns",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 149
+        "line": 168
       }
     },
     {
@@ -3787,10 +3788,10 @@
       "path": "/api/mobile/visual-campaigns/{dynamic}/items/{dynamic}/uploads",
       "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads",
       "openApiCovered": true,
-      "exportedFunction": "uploadSyntheticVmEvidence",
+      "exportedFunction": "uploadVmEvidence",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 166
+        "line": 189
       }
     },
     {
@@ -3802,14 +3803,59 @@
       "path": "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
       "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads/{mediaAssetId}/finalize",
       "openApiCovered": true,
-      "exportedFunction": "uploadSyntheticVmEvidence",
+      "exportedFunction": "uploadVmEvidence",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 170
+        "line": 193
       }
     },
     {
       "id": "api:180",
+      "client": "legacy-json",
+      "functionName": "fetchJson",
+      "method": "GET",
+      "rawPath": "/visual-comparisons/advisories?limit=100&offset=0",
+      "path": "/api/visual-comparisons/advisories",
+      "backendEndpointId": "endpoint:GET:/api/visual-comparisons/advisories",
+      "openApiCovered": true,
+      "exportedFunction": "getVisualAdvisories",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 205
+      }
+    },
+    {
+      "id": "api:181",
+      "client": "legacy-json",
+      "functionName": "fetchJson",
+      "method": "GET",
+      "rawPath": "/visual-comparisons/advisories/${encodeURIComponent(comparisonRunId)}",
+      "path": "/api/visual-comparisons/advisories/{dynamic}",
+      "backendEndpointId": "endpoint:GET:/api/visual-comparisons/advisories/{comparisonRunId}",
+      "openApiCovered": true,
+      "exportedFunction": "getVisualAdvisory",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 211
+      }
+    },
+    {
+      "id": "api:182",
+      "client": "legacy-json",
+      "functionName": "sendJson",
+      "method": "POST",
+      "rawPath": "/visual-comparisons/advisories/${encodeURIComponent(input.comparisonRunId)}/reviews",
+      "path": "/api/visual-comparisons/advisories/{dynamic}/reviews",
+      "backendEndpointId": "endpoint:POST:/api/visual-comparisons/advisories/{comparisonRunId}/reviews",
+      "openApiCovered": true,
+      "exportedFunction": "reviewVisualAdvisory",
+      "source": {
+        "file": "admin-web/src/features/vm-campaigns/api.ts",
+        "line": 225
+      }
+    },
+    {
+      "id": "api:183",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "POST",
@@ -3820,11 +3866,11 @@
       "exportedFunction": "submitVmCampaign",
       "source": {
         "file": "admin-web/src/features/vm-campaigns/api.ts",
-        "line": 186
+        "line": 235
       }
     },
     {
-      "id": "api:181",
+      "id": "api:184",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3839,7 +3885,7 @@
       }
     },
     {
-      "id": "api:182",
+      "id": "api:185",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3854,7 +3900,7 @@
       }
     },
     {
-      "id": "api:183",
+      "id": "api:186",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3869,7 +3915,7 @@
       }
     },
     {
-      "id": "api:184",
+      "id": "api:187",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3884,7 +3930,7 @@
       }
     },
     {
-      "id": "api:185",
+      "id": "api:188",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3899,7 +3945,7 @@
       }
     },
     {
-      "id": "api:186",
+      "id": "api:189",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3914,7 +3960,7 @@
       }
     },
     {
-      "id": "api:187",
+      "id": "api:190",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3929,7 +3975,7 @@
       }
     },
     {
-      "id": "api:188",
+      "id": "api:191",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3944,7 +3990,7 @@
       }
     },
     {
-      "id": "api:189",
+      "id": "api:192",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -3959,7 +4005,7 @@
       }
     },
     {
-      "id": "api:190",
+      "id": "api:193",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -3974,7 +4020,7 @@
       }
     },
     {
-      "id": "api:191",
+      "id": "api:194",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3989,7 +4035,7 @@
       }
     },
     {
-      "id": "api:192",
+      "id": "api:195",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -4004,7 +4050,7 @@
       }
     },
     {
-      "id": "api:193",
+      "id": "api:196",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -4019,7 +4065,7 @@
       }
     },
     {
-      "id": "api:194",
+      "id": "api:197",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -4034,7 +4080,7 @@
       }
     },
     {
-      "id": "api:195",
+      "id": "api:198",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -4049,7 +4095,7 @@
       }
     },
     {
-      "id": "api:196",
+      "id": "api:199",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -4064,7 +4110,7 @@
       }
     },
     {
-      "id": "api:197",
+      "id": "api:200",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -6220,7 +6266,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
-        "line": 49
+        "line": 51
       }
     },
     {
@@ -6234,7 +6280,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
-        "line": 42
+        "line": 44
       }
     },
     {
@@ -6262,7 +6308,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
-        "line": 61
+        "line": 63
       }
     },
     {
@@ -6276,7 +6322,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/vm-campaign.controller.ts",
-        "line": 69
+        "line": 71
       }
     },
     {
@@ -7159,6 +7205,62 @@
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
         "line": 43
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-comparisons/advisories",
+      "method": "GET",
+      "path": "/api/visual-comparisons/advisories",
+      "rawControllerPath": "visual-comparisons/advisories",
+      "rawMethodPath": "",
+      "controller": "visual-comparison-advisory",
+      "domain": "visual-comparisons",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/visual-comparison-advisory.controller.ts",
+        "line": 16
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-comparisons/advisories/{comparisonRunId}",
+      "method": "GET",
+      "path": "/api/visual-comparisons/advisories/{comparisonRunId}",
+      "rawControllerPath": "visual-comparisons/advisories",
+      "rawMethodPath": ":comparisonRunId",
+      "controller": "visual-comparison-advisory",
+      "domain": "visual-comparisons",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/visual-comparison-advisory.controller.ts",
+        "line": 21
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/visual-comparisons/advisories/{comparisonRunId}/media/{kind}/thumbnail",
+      "method": "GET",
+      "path": "/api/visual-comparisons/advisories/{comparisonRunId}/media/{kind}/thumbnail",
+      "rawControllerPath": "visual-comparisons/advisories",
+      "rawMethodPath": ":comparisonRunId/media/:kind/thumbnail",
+      "controller": "visual-comparison-advisory",
+      "domain": "visual-comparisons",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/visual-comparison-advisory.controller.ts",
+        "line": 26
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/visual-comparisons/advisories/{comparisonRunId}/reviews",
+      "method": "POST",
+      "path": "/api/visual-comparisons/advisories/{comparisonRunId}/reviews",
+      "rawControllerPath": "visual-comparisons/advisories",
+      "rawMethodPath": ":comparisonRunId/reviews",
+      "controller": "visual-comparison-advisory",
+      "domain": "visual-comparisons",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/visual-comparison-advisory.controller.ts",
+        "line": 36
       }
     },
     {
@@ -8876,6 +8978,30 @@
       "domain": "target-distributions"
     },
     {
+      "id": "openapi:GET:/api/visual-comparisons/advisories",
+      "method": "GET",
+      "path": "/api/visual-comparisons/advisories",
+      "domain": "visual-comparisons"
+    },
+    {
+      "id": "openapi:GET:/api/visual-comparisons/advisories/{comparisonRunId}",
+      "method": "GET",
+      "path": "/api/visual-comparisons/advisories/{comparisonRunId}",
+      "domain": "visual-comparisons"
+    },
+    {
+      "id": "openapi:GET:/api/visual-comparisons/advisories/{comparisonRunId}/media/{kind}/thumbnail",
+      "method": "GET",
+      "path": "/api/visual-comparisons/advisories/{comparisonRunId}/media/{kind}/thumbnail",
+      "domain": "visual-comparisons"
+    },
+    {
+      "id": "openapi:POST:/api/visual-comparisons/advisories/{comparisonRunId}/reviews",
+      "method": "POST",
+      "path": "/api/visual-comparisons/advisories/{comparisonRunId}/reviews",
+      "domain": "visual-comparisons"
+    },
+    {
       "id": "openapi:GET:/api/visual-merchandising/references",
       "method": "GET",
       "path": "/api/visual-merchandising/references",
@@ -9352,14 +9478,14 @@
         "apiCallId": "api:137"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:183",
+        "id": "edge:route:admin:/admin/data-quality:api:186",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:183"
+        "apiCallId": "api:186"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:192",
+        "id": "edge:route:admin:/admin/data-quality:api:195",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:192"
+        "apiCallId": "api:195"
       },
       {
         "id": "edge:route:admin:/admin/data-quality:api:87",
@@ -9407,21 +9533,6 @@
         "apiCallId": "api:76"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:181",
-        "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:181"
-      },
-      {
-        "id": "edge:route:admin:/admin/inbox:api:182",
-        "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:182"
-      },
-      {
-        "id": "edge:route:admin:/admin/inbox:api:183",
-        "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:183"
-      },
-      {
         "id": "edge:route:admin:/admin/inbox:api:184",
         "routeId": "route:admin:/admin/inbox",
         "apiCallId": "api:184"
@@ -9432,9 +9543,19 @@
         "apiCallId": "api:185"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:192",
+        "id": "edge:route:admin:/admin/inbox:api:186",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:192"
+        "apiCallId": "api:186"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:187",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:187"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:188",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:188"
       },
       {
         "id": "edge:route:admin:/admin/inbox:api:195",
@@ -9442,9 +9563,14 @@
         "apiCallId": "api:195"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:196",
+        "id": "edge:route:admin:/admin/inbox:api:198",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:196"
+        "apiCallId": "api:198"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:199",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:199"
       },
       {
         "id": "edge:route:admin:/admin/incentives:api:80",
@@ -9717,19 +9843,19 @@
         "apiCallId": "api:137"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:181",
+        "id": "edge:route:admin:/admin/operations:api:184",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:181"
+        "apiCallId": "api:184"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:183",
+        "id": "edge:route:admin:/admin/operations:api:186",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:183"
+        "apiCallId": "api:186"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:192",
+        "id": "edge:route:admin:/admin/operations:api:195",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:192"
+        "apiCallId": "api:195"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:87",
@@ -9872,9 +9998,9 @@
         "apiCallId": "api:6"
       },
       {
-        "id": "edge:route:store:/store:api:181",
+        "id": "edge:route:store:/store:api:184",
         "routeId": "route:store:/store",
-        "apiCallId": "api:181"
+        "apiCallId": "api:184"
       },
       {
         "id": "edge:route:store:/store:api:34",
@@ -10022,9 +10148,9 @@
         "apiCallId": "api:76"
       },
       {
-        "id": "edge:route:store:/store/home:api:181",
+        "id": "edge:route:store:/store/home:api:184",
         "routeId": "route:store:/store/home",
-        "apiCallId": "api:181"
+        "apiCallId": "api:184"
       },
       {
         "id": "edge:route:store:/store/home:api:34",
@@ -10067,9 +10193,9 @@
         "apiCallId": "api:131"
       },
       {
-        "id": "edge:route:store:/store/kpis:api:190",
+        "id": "edge:route:store:/store/kpis:api:193",
         "routeId": "route:store:/store/kpis",
-        "apiCallId": "api:190"
+        "apiCallId": "api:193"
       },
       {
         "id": "edge:route:store:/store/me:api:119",
@@ -10177,9 +10303,9 @@
         "apiCallId": "api:157"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:181",
+        "id": "edge:route:store:/store/tasks:api:184",
         "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:181"
+        "apiCallId": "api:184"
       },
       {
         "id": "edge:route:store:/store/visual-campaigns:api:165",
@@ -10262,8 +10388,18 @@
         "apiCallId": "api:180"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:183",
-        "routeId": "route:store:/store/workforce",
+        "id": "edge:route:store:/store/visual-campaigns:api:181",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:181"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:182",
+        "routeId": "route:store:/store/visual-campaigns",
+        "apiCallId": "api:182"
+      },
+      {
+        "id": "edge:route:store:/store/visual-campaigns:api:183",
+        "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:183"
       },
       {
@@ -10272,14 +10408,14 @@
         "apiCallId": "api:186"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:187",
+        "id": "edge:route:store:/store/workforce:api:189",
         "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:187"
+        "apiCallId": "api:189"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:188",
+        "id": "edge:route:store:/store/workforce:api:190",
         "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:188"
+        "apiCallId": "api:190"
       },
       {
         "id": "edge:route:store:/store/workforce:api:191",
@@ -10287,24 +10423,29 @@
         "apiCallId": "api:191"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:192",
-        "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:192"
-      },
-      {
-        "id": "edge:route:store:/store/workforce:api:193",
-        "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:193"
-      },
-      {
         "id": "edge:route:store:/store/workforce:api:194",
         "routeId": "route:store:/store/workforce",
         "apiCallId": "api:194"
       },
       {
+        "id": "edge:route:store:/store/workforce:api:195",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:195"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:196",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:196"
+      },
+      {
         "id": "edge:route:store:/store/workforce:api:197",
         "routeId": "route:store:/store/workforce",
         "apiCallId": "api:197"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:200",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:200"
       }
     ],
     "apiToEndpoint": [
@@ -10759,54 +10900,54 @@
         "backendEndpointId": "endpoint:POST:/api/auth/pilot-user-bindings"
       },
       {
-        "id": "edge:api:180:endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions",
+        "id": "edge:api:180:endpoint:GET:/api/visual-comparisons/advisories",
         "apiCallId": "api:180",
+        "backendEndpointId": "endpoint:GET:/api/visual-comparisons/advisories"
+      },
+      {
+        "id": "edge:api:181:endpoint:GET:/api/visual-comparisons/advisories/{comparisonRunId}",
+        "apiCallId": "api:181",
+        "backendEndpointId": "endpoint:GET:/api/visual-comparisons/advisories/{comparisonRunId}"
+      },
+      {
+        "id": "edge:api:182:endpoint:POST:/api/visual-comparisons/advisories/{comparisonRunId}/reviews",
+        "apiCallId": "api:182",
+        "backendEndpointId": "endpoint:POST:/api/visual-comparisons/advisories/{comparisonRunId}/reviews"
+      },
+      {
+        "id": "edge:api:183:endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions",
+        "apiCallId": "api:183",
         "backendEndpointId": "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/submissions"
       },
       {
-        "id": "edge:api:181:endpoint:GET:/api/workflow/inbox",
-        "apiCallId": "api:181",
+        "id": "edge:api:184:endpoint:GET:/api/workflow/inbox",
+        "apiCallId": "api:184",
         "backendEndpointId": "endpoint:GET:/api/workflow/inbox"
       },
       {
-        "id": "edge:api:182:endpoint:GET:/api/workforce/seller-code-reference",
-        "apiCallId": "api:182",
+        "id": "edge:api:185:endpoint:GET:/api/workforce/seller-code-reference",
+        "apiCallId": "api:185",
         "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-reference"
       },
       {
-        "id": "edge:api:183:endpoint:GET:/api/workforce/seller-code-requests",
-        "apiCallId": "api:183",
+        "id": "edge:api:186:endpoint:GET:/api/workforce/seller-code-requests",
+        "apiCallId": "api:186",
         "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-requests"
       },
       {
-        "id": "edge:api:184:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve",
-        "apiCallId": "api:184",
+        "id": "edge:api:187:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve",
+        "apiCallId": "api:187",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve"
       },
       {
-        "id": "edge:api:185:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject",
-        "apiCallId": "api:185",
+        "id": "edge:api:188:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject",
+        "apiCallId": "api:188",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject"
       },
       {
-        "id": "edge:api:186:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit",
-        "apiCallId": "api:186",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit"
-      },
-      {
-        "id": "edge:api:187:endpoint:GET:/api/workforce/position-options",
-        "apiCallId": "api:187",
-        "backendEndpointId": "endpoint:GET:/api/workforce/position-options"
-      },
-      {
-        "id": "edge:api:188:endpoint:GET:/api/workforce/store-employees",
-        "apiCallId": "api:188",
-        "backendEndpointId": "endpoint:GET:/api/workforce/store-employees"
-      },
-      {
-        "id": "edge:api:189:endpoint:GET:/api/workforce/headcount-gap",
+        "id": "edge:api:189:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit",
         "apiCallId": "api:189",
-        "backendEndpointId": "endpoint:GET:/api/workforce/headcount-gap"
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit"
       },
       {
         "id": "edge:api:19:endpoint:POST:/api/auth/role-assignments",
@@ -10814,44 +10955,54 @@
         "backendEndpointId": "endpoint:POST:/api/auth/role-assignments"
       },
       {
-        "id": "edge:api:190:endpoint:GET:/api/org/stores",
+        "id": "edge:api:190:endpoint:GET:/api/workforce/position-options",
         "apiCallId": "api:190",
+        "backendEndpointId": "endpoint:GET:/api/workforce/position-options"
+      },
+      {
+        "id": "edge:api:191:endpoint:GET:/api/workforce/store-employees",
+        "apiCallId": "api:191",
+        "backendEndpointId": "endpoint:GET:/api/workforce/store-employees"
+      },
+      {
+        "id": "edge:api:192:endpoint:GET:/api/workforce/headcount-gap",
+        "apiCallId": "api:192",
+        "backendEndpointId": "endpoint:GET:/api/workforce/headcount-gap"
+      },
+      {
+        "id": "edge:api:193:endpoint:GET:/api/org/stores",
+        "apiCallId": "api:193",
         "backendEndpointId": "endpoint:GET:/api/org/stores"
       },
       {
-        "id": "edge:api:191:endpoint:GET:/api/store/workforce/workspace",
-        "apiCallId": "api:191",
+        "id": "edge:api:194:endpoint:GET:/api/store/workforce/workspace",
+        "apiCallId": "api:194",
         "backendEndpointId": "endpoint:GET:/api/store/workforce/workspace"
       },
       {
-        "id": "edge:api:192:endpoint:GET:/api/workforce/offboarding-requests",
-        "apiCallId": "api:192",
+        "id": "edge:api:195:endpoint:GET:/api/workforce/offboarding-requests",
+        "apiCallId": "api:195",
         "backendEndpointId": "endpoint:GET:/api/workforce/offboarding-requests"
       },
       {
-        "id": "edge:api:193:endpoint:POST:/api/workforce/seller-code-requests",
-        "apiCallId": "api:193",
+        "id": "edge:api:196:endpoint:POST:/api/workforce/seller-code-requests",
+        "apiCallId": "api:196",
         "backendEndpointId": "endpoint:POST:/api/workforce/seller-code-requests"
       },
       {
-        "id": "edge:api:194:endpoint:POST:/api/workforce/offboarding-requests",
-        "apiCallId": "api:194",
+        "id": "edge:api:197:endpoint:POST:/api/workforce/offboarding-requests",
+        "apiCallId": "api:197",
         "backendEndpointId": "endpoint:POST:/api/workforce/offboarding-requests"
       },
       {
-        "id": "edge:api:195:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
-        "apiCallId": "api:195",
+        "id": "edge:api:198:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
+        "apiCallId": "api:198",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve"
       },
       {
-        "id": "edge:api:196:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
-        "apiCallId": "api:196",
+        "id": "edge:api:199:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
+        "apiCallId": "api:199",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject"
-      },
-      {
-        "id": "edge:api:197:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
-        "apiCallId": "api:197",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
       },
       {
         "id": "edge:api:2:endpoint:GET:/api/auth/lookups/users/search",
@@ -10862,6 +11013,11 @@
         "id": "edge:api:20:endpoint:POST:/api/auth/action-store-assignments",
         "apiCallId": "api:20",
         "backendEndpointId": "endpoint:POST:/api/auth/action-store-assignments"
+      },
+      {
+        "id": "edge:api:200:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
+        "apiCallId": "api:200",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
       },
       {
         "id": "edge:api:21:endpoint:POST:/api/auth/roles/{roleId}/permissions",
@@ -11565,6 +11721,13 @@
         "frontendCallCount": 3
       },
       {
+        "id": "controller:visual-comparison-advisory",
+        "controller": "visual-comparison-advisory",
+        "domain": "visual-comparisons",
+        "endpointCount": 4,
+        "frontendCallCount": 3
+      },
+      {
         "id": "controller:pilot-feedback",
         "controller": "pilot-feedback",
         "domain": "admin",
@@ -11752,7 +11915,8 @@
       "endpoint:GET:/api/snapshots/runs",
       "endpoint:POST:/api/snapshots/runs",
       "endpoint:GET:/api/snapshots/runs/summary",
-      "endpoint:GET:/api/store-actions/plans/{actionPlanId}/evidence/{mediaAssetId}/content/{variant}"
+      "endpoint:GET:/api/store-actions/plans/{actionPlanId}/evidence/{mediaAssetId}/content/{variant}",
+      "endpoint:GET:/api/visual-comparisons/advisories/{comparisonRunId}/media/{kind}/thumbnail"
     ],
     "routesWithoutApiCalls": [
       "route:store:/store/incentives",

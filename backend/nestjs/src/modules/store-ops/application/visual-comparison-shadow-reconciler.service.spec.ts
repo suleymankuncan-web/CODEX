@@ -3,6 +3,7 @@ import { VisualComparisonShadowReconcilerService } from "./visual-comparison-sha
 function runtime(enqueueEnabled = true) {
   return {
     enqueueEnabled,
+    isolationClass: "shadow" as const,
     workerEnabled: false,
     maxAttempts: 3,
     processingLeaseSeconds: 120,
@@ -56,5 +57,28 @@ describe("VisualComparisonShadowReconcilerService", () => {
     await expect(service.reconcile()).resolves.toEqual({ status: "disabled", dispatched: 0 });
     expect(repository.reconcile).not.toHaveBeenCalled();
     expect(dispatcher.dispatch).not.toHaveBeenCalled();
+  });
+
+  it("AC-4 dispatches advisory reconciliation through the unchanged queue contract", async () => {
+    const repository = { reconcile: jest.fn().mockResolvedValue(["run-advisory-1"]) };
+    const dispatcher = { dispatch: jest.fn().mockResolvedValue({ status: "queued" }) };
+    const advisoryRuntime = { ...runtime(), isolationClass: "advisory" as const };
+    const service = new VisualComparisonShadowReconcilerService(
+      repository as never,
+      dispatcher as never,
+      { process: jest.fn() } as never,
+      advisoryRuntime,
+    );
+
+    await expect(service.reconcile()).resolves.toEqual({ status: "queued", dispatched: 1 });
+    expect(repository.reconcile).toHaveBeenCalledWith(expect.objectContaining({
+      isolationClass: "advisory",
+    }));
+    expect(dispatcher.dispatch).toHaveBeenCalledWith(
+      "visual-comparison-shadow",
+      { comparisonRunId: "run-advisory-1" },
+      expect.any(Function),
+      { jobId: "run-advisory-1" },
+    );
   });
 });

@@ -3456,6 +3456,69 @@ export type components = {
       "rubricVersion": string
       "expectedRevision": number
     }
+    "VisualComparisonAdvisory": {
+      "comparisonRunId": string
+      "storeName": string
+      "referenceName": string
+      "status": "completed" | "abstained" | "failed_terminal" | "human_reviewed"
+      "suggestion": "pass" | "partial" | "fail" | "abstain" | "recapture_required" | null
+      "confidence": number | null
+      "qualityFlags": string[]
+      "modelLimitations": string[]
+      "dimensions": Array<{
+          [key: string]: unknown
+        }>
+      "finishedAt": string | null
+      "reviewed": boolean
+      "acceptAllowed": boolean
+      "criterion"?: string
+      "reviewInstructions"?: string
+      "review"?: ({
+        "decision": "accept" | "override" | "reject" | "recapture"
+        "reason": string
+        "finalDecision": "pass" | "partial" | "fail" | null
+        "reviewedAt": string
+      }) | null
+    }
+    "VisualComparisonAdvisoryListResponse": {
+      "items": Array<{
+          "comparisonRunId": string
+          "storeName": string
+          "referenceName": string
+          "status": "completed" | "abstained" | "failed_terminal" | "human_reviewed"
+          "suggestion": "pass" | "partial" | "fail" | "abstain" | "recapture_required" | null
+          "confidence": number | null
+          "qualityFlags": string[]
+          "modelLimitations": string[]
+          "dimensions": Array<{
+              [key: string]: unknown
+            }>
+          "finishedAt": string | null
+          "reviewed": boolean
+          "acceptAllowed": boolean
+          "criterion"?: string
+          "reviewInstructions"?: string
+          "review"?: ({
+            "decision": "accept" | "override" | "reject" | "recapture"
+            "reason": string
+            "finalDecision": "pass" | "partial" | "fail" | null
+            "reviewedAt": string
+          }) | null
+        }>
+      "total": number
+      "limit": number
+      "offset": number
+    }
+    "VisualComparisonAdvisoryReviewDto": {
+      "decision": "accept" | "override" | "reject" | "recapture"
+      "reason": string
+      "finalDecision"?: "pass" | "partial" | "fail"
+    }
+    "VisualComparisonAdvisoryReviewResponse": {
+      "comparisonRunId": string
+      "decision": string
+      "finalDecision": string | null
+    }
     "VmCampaignAssignmentCommandResponse": {
       "assignmentId": string
       "deadlineStatus": "scheduled" | "open" | "on_time" | "missed" | "exempt" | "withdrawn" | "operational_hold"
@@ -3485,6 +3548,10 @@ export type components = {
       "total": number
       "limit": number
       "offset": number
+    }
+    "VmCampaignPhotoUploadDto": {
+      "captureSource"?: "camera" | "gallery"
+      "contentPolicyAttestation"?: boolean
     }
     "VmCampaignRevisionResponse": {
       "referenceSetId": string
@@ -4426,6 +4493,11 @@ export type paths = {
   }
   "/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/uploads": {
     post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["VmCampaignPhotoUploadDto"]
+        }
+      }
       responses: {
         "201": {
           content: Record<string, never>
@@ -4471,6 +4543,44 @@ export type paths = {
         "201": {
           content: {
             'application/json': components['schemas']["VmCampaignSubmissionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-comparisons/advisories": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VisualComparisonAdvisoryListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-comparisons/advisories/{comparisonRunId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["VisualComparisonAdvisory"]
+          }
+        }
+      }
+    }
+  }
+  "/api/visual-comparisons/advisories/{comparisonRunId}/reviews": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["VisualComparisonAdvisoryReviewDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["VisualComparisonAdvisoryReviewResponse"]
           }
         }
       }

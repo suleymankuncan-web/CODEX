@@ -7,6 +7,7 @@ import {
 describe("visual comparison shadow contract", () => {
   it("builds stable work identity and six bounded criteria", () => {
     const input = {
+      isolationClass: "shadow" as const,
       companyId: "company-1",
       assignmentId: "assignment-1",
       visualReferenceItemId: "item-1",
@@ -18,6 +19,8 @@ describe("visual comparison shadow contract", () => {
     };
     expect(buildShadowIdempotencyKey(input)).toBe(buildShadowIdempotencyKey(input));
     expect(buildShadowIdempotencyKey({ ...input, evidenceSha256: "c".repeat(64) }))
+      .not.toBe(buildShadowIdempotencyKey(input));
+    expect(buildShadowIdempotencyKey({ ...input, isolationClass: "advisory" }))
       .not.toBe(buildShadowIdempotencyKey(input));
     const criteria = buildShadowCriteria({
       expectedVisualIntent: "Approved fixture layout.",

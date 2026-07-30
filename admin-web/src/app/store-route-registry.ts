@@ -116,7 +116,7 @@ const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPO
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeIncentiveRoles = ['REPORT_VIEWER', 'REGION_MANAGER']
-const vmCampaignRoles = ['STORE_MANAGER', 'VISUAL_MERCHANDISER']
+const vmCampaignRoles = ['STORE_MANAGER', 'VISUAL_MERCHANDISER', 'REGION_MANAGER']
 
 function roleSet(authSummary: AuthSessionSummary | null) {
   return new Set(authSummary?.user.roleCodes ?? [])
@@ -231,6 +231,10 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     },
     modulePreload: () => import('../pages/StoreVmCampaignsPage'),
     access: (authSummary) => {
+      if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
+        return (authSummary?.user.readScope.regionIds.length ?? 0) > 0 &&
+          (authSummary?.user.actionScope.assignedStoreIds.length ?? 0) > 0
+      }
       if (hasAnyRole(authSummary, ['STORE_MANAGER'])) return true
       const permissions = authSummary?.user.permissionScopes ?? {}
       return (permissions.VM_REFERENCE_PUBLISHER?.companyIds.length ?? 0) > 0 ||

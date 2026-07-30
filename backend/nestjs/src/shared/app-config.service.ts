@@ -331,11 +331,16 @@ export class AppConfigService {
       queueBackend: this.queueBackend,
       photoMediaStorageEnabled: this.photoMediaStorageEnabled,
       checklistEvidenceStorageHealthy: this.checklistEvidenceStorageHealthy,
+      advisoryReviewEnabled: this.visualComparisonAdvisoryReviewEnabled,
     });
   }
 
   get visualComparisonEnqueueEnabled(): boolean { return this.visualComparisonRuntimeConfiguration.enqueueEnabled; }
+  get visualComparisonIsolationClass(): "shadow" | "advisory" { return this.visualComparisonRuntimeConfiguration.isolationClass; }
   get visualComparisonWorkerEnabled(): boolean { return this.visualComparisonRuntimeConfiguration.workerEnabled; }
+  get visualComparisonAdvisoryReviewEnabled(): boolean {
+    return this.readBoolean("VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED", false);
+  }
   get visualComparisonCompanyId(): string { return this.visualComparisonRuntimeConfiguration.companyId; }
   get visualComparisonReferenceSetId(): string { return this.visualComparisonRuntimeConfiguration.referenceSetId; }
   get visualComparisonNotBefore(): Date { return this.visualComparisonRuntimeConfiguration.notBefore; }
@@ -353,6 +358,17 @@ export class AppConfigService {
   get photoMediaSyntheticFixtureSha256Allowlist(): string[] { return this.photoMediaRuntimeConfiguration.syntheticFixtureSha256Allowlist; }
   get photoMediaStorageSyntheticOnly(): boolean { return this.photoMediaRuntimeConfiguration.syntheticOnly; }
   get photoMediaStorageConfiguration() { return this.photoMediaRuntimeConfiguration.storage; }
+  get photoMediaRealVmPilotConfiguration() {
+    const pilot = this.photoMediaRuntimeConfiguration.realVmPilot;
+    if (pilot.enabled && (this.visualComparisonIsolationClass === "advisory" ||
+        this.visualComparisonAdvisoryReviewEnabled) &&
+        (pilot.companyId !== this.visualComparisonCompanyId ||
+         pilot.referenceSetId !== this.visualComparisonReferenceSetId ||
+         pilot.notBefore?.getTime() !== this.visualComparisonNotBefore.getTime())) {
+      throw new Error("Real VM photo and advisory comparison cohort configuration must match exactly");
+    }
+    return pilot;
+  }
   get photoMediaPrimaryCredentials() {
     return readPhotoMediaCredentials(this.configService, this.photoMediaStorageEnabled, "PRIMARY");
   }

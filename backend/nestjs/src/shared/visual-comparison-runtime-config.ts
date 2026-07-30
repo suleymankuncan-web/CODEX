@@ -7,6 +7,7 @@ export type VisualComparisonRuntimeContext = {
   queueBackend: "in-memory" | "bullmq";
   photoMediaStorageEnabled: boolean;
   checklistEvidenceStorageHealthy: boolean;
+  advisoryReviewEnabled: boolean;
 };
 
 export type QwenVisualComparisonRuntimeConfiguration = {
@@ -29,6 +30,7 @@ export type QwenVisualComparisonRuntimeConfiguration = {
 
 export type VisualComparisonRuntimeConfiguration = {
   enqueueEnabled: boolean;
+  isolationClass: "shadow" | "advisory";
   workerEnabled: boolean;
   companyId: string;
   referenceSetId: string;
@@ -72,7 +74,16 @@ export function readVisualComparisonRuntimeConfiguration(
     return value;
   };
 
-  const enqueueEnabled = boolean("VISUAL_COMPARISON_ENQUEUE_ENABLED", false);
+  const shadowEnqueueEnabled = boolean("VISUAL_COMPARISON_ENQUEUE_ENABLED", false);
+  const advisoryEnqueueEnabled = boolean(
+    "VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED",
+    false,
+  );
+  if (shadowEnqueueEnabled && advisoryEnqueueEnabled) {
+    throw new Error("Visual comparison shadow and advisory enqueue modes are mutually exclusive");
+  }
+  const enqueueEnabled = shadowEnqueueEnabled || advisoryEnqueueEnabled;
+  const isolationClass = advisoryEnqueueEnabled ? "advisory" as const : "shadow" as const;
   const workerEnabled = boolean("VISUAL_COMPARISON_WORKER_ENABLED", false);
   if (workerEnabled && context.queueBackend !== "bullmq") {
     throw new Error("VISUAL_COMPARISON_WORKER_ENABLED=true requires QUEUE_BACKEND=bullmq");
@@ -90,8 +101,8 @@ export function readVisualComparisonRuntimeConfiguration(
 
   const required = (key: string): string => {
     const value = optional(key);
-    if ((enqueueEnabled || workerEnabled) && !value) {
-      throw new Error(`${key} is required when visual comparison shadow processing is enabled`);
+    if ((enqueueEnabled || workerEnabled || context.advisoryReviewEnabled) && !value) {
+      throw new Error(`${key} is required when visual comparison processing or review is enabled`);
     }
     return value ?? "";
   };
@@ -112,7 +123,7 @@ export function readVisualComparisonRuntimeConfiguration(
   }
   const notBeforeRaw = required("VISUAL_COMPARISON_NOT_BEFORE");
   const notBefore = notBeforeRaw ? new Date(notBeforeRaw) : new Date(0);
-  if (Number.isNaN(notBefore.getTime())) {
+  if (notBeforeRaw && (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/.test(notBeforeRaw) || Number.isNaN(notBefore.getTime()))) {
     throw new Error("VISUAL_COMPARISON_NOT_BEFORE must be an ISO timestamp");
   }
 
@@ -140,6 +151,7 @@ export function readVisualComparisonRuntimeConfiguration(
 
   return {
     enqueueEnabled,
+    isolationClass,
     workerEnabled,
     companyId,
     referenceSetId,

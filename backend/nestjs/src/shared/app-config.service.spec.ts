@@ -950,6 +950,87 @@ describe("AppConfigService", () => {
     expect(config.qwenVisualComparisonRuntimeConfiguration.enabled).toBe(false);
   });
 
+  it("AC-1 keeps the real VM pilot disabled and requires an exact bounded cohort when enabled", () => {
+    expect(createConfig({}).photoMediaRealVmPilotConfiguration).toEqual({
+      enabled: false,
+      companyId: "",
+      referenceSetId: "",
+      notBefore: null,
+    });
+    expect(() => createConfig({
+      PHOTO_MEDIA_REAL_VM_PILOT_ENABLED: "true",
+    }).photoMediaRealVmPilotConfiguration).toThrow("PHOTO_MEDIA_STORAGE_ENABLED=true");
+    expect(() => createConfig({
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+      PHOTO_MEDIA_REAL_VM_PILOT_ENABLED: "true",
+    }).photoMediaRealVmPilotConfiguration).toThrow("PHOTO_MEDIA_REAL_VM_PILOT_COMPANY_ID");
+  });
+
+  it("AC-1 fails closed for timezone-less pilot timestamps and mismatched advisory scope", () => {
+    const media = {
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+      PHOTO_MEDIA_PRIMARY_BUCKET: "hr-axis-photo-primary",
+      PHOTO_MEDIA_RECOVERY_BUCKET: "hr-axis-photo-recovery",
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: "https://account.eu.r2.cloudflarestorage.com",
+      PHOTO_MEDIA_RECOVERY_ENDPOINT: "https://account.eu.r2.cloudflarestorage.com",
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID: "primary-key",
+      PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY: "primary-secret",
+      PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID: "recovery-key",
+      PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY: "recovery-secret",
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: "a".repeat(64),
+      PHOTO_MEDIA_REAL_VM_PILOT_ENABLED: "true",
+      PHOTO_MEDIA_REAL_VM_PILOT_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      PHOTO_MEDIA_REAL_VM_PILOT_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+    };
+    expect(() => createConfig({
+      ...media,
+      PHOTO_MEDIA_REAL_VM_PILOT_NOT_BEFORE: "2026-07-30T00:00:00",
+    }).photoMediaRealVmPilotConfiguration).toThrow("exact ISO timestamp");
+    expect(() => createConfig({
+      ...media,
+      PHOTO_MEDIA_REAL_VM_PILOT_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+      VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "33333333-3333-4333-8333-333333333333",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+    }).photoMediaRealVmPilotConfiguration).toThrow("must match exactly");
+  });
+
+  it("AC-7 requires exact bounded visual scope before advisory review can be enabled", () => {
+    expect(() => createConfig({
+      VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED: "true",
+    }).qwenVisualComparisonRuntimeConfiguration).toThrow("VISUAL_COMPARISON_COMPANY_ID");
+    expect(() => createConfig({
+      VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00",
+    }).qwenVisualComparisonRuntimeConfiguration).toThrow("ISO timestamp");
+  });
+
+  it("AC-5 rejects simultaneous shadow and advisory enqueue modes", () => {
+    expect(() => createConfig({
+      VISUAL_COMPARISON_ENQUEUE_ENABLED: "true",
+      VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+    }).visualComparisonIsolationClass).toThrow(
+      "shadow and advisory enqueue modes are mutually exclusive",
+    );
+  });
+
+  it("AC-4 selects advisory isolation only behind its independent gate", () => {
+    const config = createConfig({
+      VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "true",
+      VISUAL_COMPARISON_COMPANY_ID: "11111111-1111-4111-8111-111111111111",
+      VISUAL_COMPARISON_REFERENCE_SET_ID: "22222222-2222-4222-8222-222222222222",
+      VISUAL_COMPARISON_NOT_BEFORE: "2026-07-30T00:00:00.000Z",
+    });
+    expect(config.visualComparisonEnqueueEnabled).toBe(true);
+    expect(config.visualComparisonIsolationClass).toBe("advisory");
+  });
+
   it("requires an exact bounded scope for enqueue without requiring the provider secret", () => {
     const config = createConfig({
       VISUAL_COMPARISON_ENQUEUE_ENABLED: "true",

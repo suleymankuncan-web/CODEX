@@ -24,7 +24,12 @@ describe("VmReferenceManagementService", () => {
     listPublisherOptions: jest.fn(async () => ({ stores: [], templates: [] })),
     listReviewerCampaigns: jest.fn(async () => []),
     listStoreAssignments: jest.fn(async () => []),
-    getAssignmentScope: jest.fn(async () => ({ storeId: "store-1" })),
+    getAssignmentScope: jest.fn(async () => ({
+      storeId: "store-1", companyId: "company-1", referenceSetId: "reference-1",
+    })),
+    getSubmissionUploadScope: jest.fn(async () => ({
+      storeId: "store-1", companyId: "company-1", referenceSetId: "reference-1",
+    })),
     getAssignmentReferenceAsset: jest.fn(async () => ({ mediaAssetId: "asset-1" })),
     createSubmissionUploadIntent: jest.fn(async () => undefined),
     hasSubmissionUploadIntent: jest.fn(async () => true),
@@ -36,7 +41,12 @@ describe("VmReferenceManagementService", () => {
   };
   const media = {
     initiateApprovedSyntheticFixtureUpload: jest.fn(async () => ({ mediaAssetId: "asset-1", state: "uploaded" })),
+    initiateRealVmCampaignUpload: jest.fn(async (input: { bindInitiatedAsset?: (mediaAssetId: string) => Promise<void> }) => {
+      await input.bindInitiatedAsset?.("asset-1");
+      return { mediaAssetId: "asset-1", state: "uploaded" };
+    }),
     finalizeSyntheticUpload: jest.fn(async () => ({ mediaAssetId: "asset-1", state: "ready" })),
+    finalizeRealVmCampaignUpload: jest.fn(async () => ({ mediaAssetId: "asset-1", state: "ready" })),
   };
   const config = {
     vmReferencePublishingEnabled: true,
@@ -44,6 +54,7 @@ describe("VmReferenceManagementService", () => {
     vmCampaignDeadlineSettlementEnabled: true,
     photoMediaStorageEnabled: true,
     checklistEvidenceStorageHealthy: true,
+    photoMediaRealVmPilotConfiguration: { enabled: false, companyId: "", referenceSetId: "", notBefore: null },
   };
 
   beforeEach(() => jest.clearAllMocks());
@@ -100,6 +111,31 @@ describe("VmReferenceManagementService", () => {
       classification: "vm_campaign_evidence",
     }));
     expect(repository.createSubmissionUploadIntent).toHaveBeenCalled();
+  });
+
+  it("[FR-1][AC-1] admits real photos only for the exact enabled campaign cohort", async () => {
+    const service = new VmReferenceManagementService(repository as never, repository as never, media as never, {
+      ...config,
+      photoMediaRealVmPilotConfiguration: {
+        enabled: true, companyId: "company-1", referenceSetId: "reference-1", notBefore: new Date(0),
+      },
+    } as never);
+    await service.uploadCampaignEvidence({
+      actorUserId: "manager-1", actorRoleCodes: ["STORE_MANAGER"],
+      actorScope: { companyIds: ["company-1"], regionIds: ["region-1"], storeIds: ["store-1"] },
+      actorActionScope: { assignedStoreIds: ["store-1"] }, actorPermissionScopes: {},
+      assignmentId: "assignment-1", referenceItemId: "item-1",
+      contentType: "image/png", contentLength: 8,
+      contentBody: Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]),
+      captureSource: "camera", contentPolicyAttestation: true,
+    });
+    expect(media.initiateRealVmCampaignUpload).toHaveBeenCalledWith(expect.objectContaining({
+      companyId: "company-1", storeId: "store-1", captureSource: "camera", cohortAuthorized: true,
+    }));
+    expect(media.initiateApprovedSyntheticFixtureUpload).not.toHaveBeenCalled();
+    expect(repository.createSubmissionUploadIntent).toHaveBeenCalledWith(expect.objectContaining({
+      assignmentId: "assignment-1", referenceItemId: "item-1", mediaAssetId: "asset-1",
+    }));
   });
 
   it("[AC-14] fails closed while every PR6 runtime flag is disabled", async () => {

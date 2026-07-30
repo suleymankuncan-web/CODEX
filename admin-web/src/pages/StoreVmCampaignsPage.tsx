@@ -27,9 +27,10 @@ import {
   retireVmReference,
   reviseVmCampaign,
   submitVmCampaign,
-  uploadSyntheticVmEvidence,
+  uploadVmEvidence,
   type VmCampaignAssignment,
 } from '../features/vm-campaigns/api'
+import { RegionManagerAdvisoryWorkspace } from '../features/vm-campaigns/RegionManagerAdvisoryWorkspace'
 import './store-vm-campaigns.css'
 
 export function StoreVmCampaignsPage(input: { authSummary: AuthSessionSummary | null }) {
@@ -39,7 +40,9 @@ export function StoreVmCampaignsPage(input: { authSummary: AuthSessionSummary | 
   const permissionScopes = input.authSummary?.user.permissionScopes ?? {}
   const publisher = roles.includes('VISUAL_MERCHANDISER') && publisherCompanies.length > 0
   const reviewer = roles.includes('VISUAL_MERCHANDISER') && reviewerCompanies.length > 0
-  return publisher
+  return roles.includes('REGION_MANAGER')
+    ? <RegionManagerAdvisoryWorkspace />
+    : publisher
     ? <PublisherWorkspace companyId={publisherCompanies[0]!}
         windowAuthority={permissionScopes.VM_CAMPAIGN_WINDOW_AUTHORITY?.companyIds.includes(publisherCompanies[0]!) ?? false}
         scopeAuthority={permissionScopes.VM_CAMPAIGN_SCOPE_AUTHORITY?.companyIds.includes(publisherCompanies[0]!) ?? false}
@@ -217,7 +220,8 @@ function PublisherConfiguration(input: { companyId: string; reference: { referen
 
 function StoreManagerWorkspace(input: { allowed: boolean }) {
   const queryClient = useQueryClient()
-  const [files, setFiles] = useState<Record<string, Record<string, File>>>({})
+  const [files, setFiles] = useState<Record<string, Record<string, { file: File; captureSource: 'camera' | 'gallery' }>>>({})
+  const [attestations, setAttestations] = useState<Record<string, boolean>>({})
   const [referenceUrls, setReferenceUrls] = useState<Record<string, string>>({})
   const objectUrls = useRef<string[]>([])
   useEffect(() => () => { objectUrls.current.forEach((url) => URL.revokeObjectURL(url)) }, [])
@@ -230,10 +234,12 @@ function StoreManagerWorkspace(input: { allowed: boolean }) {
       }
       const uploaded = []
       for (const item of assignment.items) {
-        uploaded.push(await uploadSyntheticVmEvidence({
+        uploaded.push(await uploadVmEvidence({
           assignmentId: assignment.assignmentId,
           referenceItemId: item.referenceItemId,
-          file: selected[item.referenceItemId]!,
+          file: selected[item.referenceItemId]!.file,
+          captureSource: selected[item.referenceItemId]!.captureSource,
+          contentPolicyAttestation: attestations[assignment.assignmentId] === true,
         }))
       }
       return submitVmCampaign({ assignmentId: assignment.assignmentId,
@@ -241,6 +247,7 @@ function StoreManagerWorkspace(input: { allowed: boolean }) {
     },
     onSuccess: async (_data, assignment) => {
       setFiles((current) => { const next = { ...current }; delete next[assignment.assignmentId]; return next })
+      setAttestations((current) => { const next = { ...current }; delete next[assignment.assignmentId]; return next })
       await queryClient.invalidateQueries({ queryKey: ['vm-campaigns'] })
       actionToast.success('Denetim kanıtı gönderildi.')
     },
@@ -256,7 +263,7 @@ function StoreManagerWorkspace(input: { allowed: boolean }) {
   return (
     <CommandCanvasPage ariaLabelledBy="vm-campaign-title" className="vm-campaign-page">
       <CommandCanvasPageHeader titleId="vm-campaign-title" eyebrow="VM denetimleri" title="Görsel kampanyalar"
-        description="Mağazanıza atanan görsel standardı inceleyin ve süre içinde sentetik test kanıtını gönderin." />
+        description="Mağazanıza atanan görsel standardı inceleyin ve süre içinde mağaza kanıtını gönderin." />
       <CommandCanvasMetricRail ariaLabel="VM kampanya özeti">
         <CommandCanvasMetric label="Atanan" value={String(items.length)} icon={<Layers3 />} tone="plum" />
         <CommandCanvasMetric label="Açık" value={String(counts.open)} icon={<CalendarClock />} tone="amber" />
@@ -270,11 +277,22 @@ function StoreManagerWorkspace(input: { allowed: boolean }) {
         {assignment.items.map((item) => <div key={item.referenceItemId} className="vm-evidence-picker">
           <span><b>{item.expectedVisualIntent}</b><small>{item.reviewInstructions}</small></span>
           {referenceUrls[`${assignment.assignmentId}:${item.referenceItemId}`] ? <img className="vm-reference-preview" src={referenceUrls[`${assignment.assignmentId}:${item.referenceItemId}`]} alt={`${item.expectedVisualIntent} referans görünümü`} /> : <Button type="button" size="sm" variant="outline" disabled={referenceRead.isPending} onClick={() => referenceRead.mutate({ assignmentId: assignment.assignmentId, referenceItemId: item.referenceItemId })}>Referansı görüntüle</Button>}
-          <input accept="image/jpeg,image/png,image/webp" aria-label={`${item.expectedVisualIntent} için kanıt seç`} disabled={assignment.deadlineStatus !== 'open' || submit.isPending} type="file"
-            onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) setFiles((current) => ({ ...current,
-              [assignment.assignmentId]: { ...(current[assignment.assignmentId] ?? {}), [item.referenceItemId]: file } })) }} />
+          <div className="vm-capture-actions">
+            <label><span>Fotoğraf çek</span><input accept="image/jpeg,image/png,image/webp" aria-label={`${item.expectedVisualIntent} için fotoğraf çek`} disabled={assignment.deadlineStatus !== 'open' || submit.isPending} type="file" capture="environment"
+              onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) setFiles((current) => ({ ...current,
+                [assignment.assignmentId]: { ...(current[assignment.assignmentId] ?? {}), [item.referenceItemId]: { file, captureSource: 'camera' } } })) }} /></label>
+            <label><span>Galeriden seç</span><input accept="image/jpeg,image/png,image/webp" aria-label={`${item.expectedVisualIntent} için galeriden seç`} disabled={assignment.deadlineStatus !== 'open' || submit.isPending} type="file"
+              onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) setFiles((current) => ({ ...current,
+                [assignment.assignmentId]: { ...(current[assignment.assignmentId] ?? {}), [item.referenceItemId]: { file, captureSource: 'gallery' } } })) }} /></label>
+          </div>
+          <small>Yalnız reyon ve ürün görünümü yükleyin; kişi, belge, ekran veya plaka eklemeyin.</small>
         </div>)}
-        {assignment.deadlineStatus === 'open' ? <Button disabled={submit.isPending || assignment.items.some((item) => !files[assignment.assignmentId]?.[item.referenceItemId])}
+        {assignment.deadlineStatus === 'open' ? <label className="vm-content-attestation">
+          <Checkbox checked={attestations[assignment.assignmentId] === true}
+            onCheckedChange={(checked) => setAttestations((current) => ({ ...current, [assignment.assignmentId]: checked === true }))} />
+          <span>Görsellerin yalnız reyon ve ürün içerdiğini; kişi, belge, ekran veya plaka içermediğini onaylıyorum.</span>
+        </label> : null}
+        {assignment.deadlineStatus === 'open' ? <Button disabled={submit.isPending || attestations[assignment.assignmentId] !== true || assignment.items.some((item) => !files[assignment.assignmentId]?.[item.referenceItemId])}
           onClick={() => submit.mutate(assignment)}>Kanıtları gönder</Button> : null}
       </article>)}</div>
     </CommandCanvasPage>

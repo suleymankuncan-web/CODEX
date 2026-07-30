@@ -32,6 +32,7 @@ function claim() {
 function runtime(workerEnabled = true, enqueueEnabled = true) {
   return {
     enqueueEnabled,
+    isolationClass: "shadow" as const,
     workerEnabled,
     maxAttempts: 3,
     processingLeaseSeconds: 120,

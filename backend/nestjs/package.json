@@ -35,7 +35,8 @@
     "apply:staging:dbc5:target": "ts-node scripts/dbc5-target-constraint-apply.ts",
     "rehearse:release": "ts-node scripts/release-rehearsal.ts",
     "maintenance:photo-media": "ts-node scripts/photo-media-maintenance.ts",
-    "smoke:qwen-visual-comparison": "ts-node scripts/qwen-visual-comparison-smoke.ts"
+    "smoke:qwen-visual-comparison": "ts-node scripts/qwen-visual-comparison-smoke.ts",
+    "receipt:visual-advisory-pilot": "ts-node scripts/visual-comparison-advisory-pilot-receipt.ts"
   },
   "jest": {
     "moduleFileExtensions": [
