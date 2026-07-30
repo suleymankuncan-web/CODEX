@@ -283,10 +283,7 @@ const storeOpsModuleGraphLimits = new Map([
   ],
 ])
 const workerJobsModuleGraphLimits = new Map([
-  [
-    'backend/nestjs/src/worker-jobs.module.ts',
-    { imports: 2, providers: 0, exports: 2 },
-  ],
+  ['backend/nestjs/src/worker-jobs.module.ts', { imports: 3, providers: 0, exports: 3 }],
   [
     'backend/nestjs/src/worker-materialization-jobs.module.ts',
     { providers: 19, exports: 1 },
@@ -295,6 +292,7 @@ const workerJobsModuleGraphLimits = new Map([
     'backend/nestjs/src/worker-snapshot-jobs.module.ts',
     { providers: 4, exports: 1 },
   ],
+  ['backend/nestjs/src/worker-visual-comparison-jobs.module.ts', { imports: 3, providers: 6, exports: 2 }],
 ])
 
 function hasDirectDatabaseServiceImport(importEntry) {
@@ -1088,10 +1086,7 @@ test('guard rejects provider growth on the Store Ops facade module', () => {
 
 test('guard rejects fake worker job module provider growth', () => {
   const violations = findWorkerJobsModuleGraphViolations([
-    {
-      path: 'backend/nestjs/src/worker-jobs.module.ts',
-      content: 'import { Module } from "@nestjs/common"; @Module({ imports: [WorkerMaterializationJobsModule, WorkerSnapshotJobsModule], providers: [NewJobHandler], exports: [WorkerMaterializationJobsModule, WorkerSnapshotJobsModule] }) export class WorkerJobsModule {}',
-    },
+    { path: 'backend/nestjs/src/worker-jobs.module.ts', content: 'import { Module } from "@nestjs/common"; @Module({ imports: [WorkerMaterializationJobsModule, WorkerSnapshotJobsModule, WorkerVisualComparisonJobsModule], providers: [NewJobHandler], exports: [WorkerMaterializationJobsModule, WorkerSnapshotJobsModule, WorkerVisualComparisonJobsModule] }) export class WorkerJobsModule {}' },
     {
       path: 'backend/nestjs/src/worker-materialization-jobs.module.ts',
       content: 'import { Module } from "@nestjs/common"; @Module({ providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S], exports: [A] }) export class WorkerMaterializationJobsModule {}',
@@ -1100,10 +1095,13 @@ test('guard rejects fake worker job module provider growth', () => {
       path: 'backend/nestjs/src/worker-snapshot-jobs.module.ts',
       content: 'import { Module } from "@nestjs/common"; @Module({ providers: [A, B, C, D], exports: [A] }) export class WorkerSnapshotJobsModule {}',
     },
+    { path: 'backend/nestjs/src/worker-visual-comparison-jobs.module.ts', content: 'import { Module } from "@nestjs/common"; @Module({ imports: [A, B, C], providers: [A, B, C, D, E, F, NewProvider], exports: [A, B] }) export class WorkerVisualComparisonJobsModule {}' },
   ])
 
   assert.match(violations.join('\n'), /worker-jobs\.module\.ts/)
   assert.match(violations.join('\n'), /providers graph has 1 entries/)
+  assert.match(violations.join('\n'), /worker-visual-comparison-jobs\.module\.ts/)
+  assert.match(violations.join('\n'), /providers graph has 7 entries/)
 })
 
 test('guard rejects module graph spread entries before counting size', () => {

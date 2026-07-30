@@ -28,8 +28,11 @@ import { WorkerModule } from "../../worker.module";
 import { WorkerJobsModule } from "../../worker-jobs.module";
 import { WorkerMaterializationJobsModule } from "../../worker-materialization-jobs.module";
 import { WorkerSnapshotJobsModule } from "../../worker-snapshot-jobs.module";
+import { WorkerVisualComparisonJobsModule } from "../../worker-visual-comparison-jobs.module";
 import { MaterializationService } from "../../modules/integration/application/materialization.service";
 import { SnapshotService } from "../../modules/store-ops/application/snapshot.service";
+import { VisualComparisonShadowService } from "../../modules/store-ops/application/visual-comparison-shadow.service";
+import { VisualComparisonShadowReconcilerService } from "../../modules/store-ops/application/visual-comparison-shadow-reconciler.service";
 import { AppConfigService } from "../app-config.service";
 import { PG_POOL } from "../database/database.constants";
 import { IntegrationModule } from "../../modules/integration/integration.module";
@@ -121,6 +124,51 @@ describe("BullMqWorkerHostService", () => {
     );
   });
 
+  it("registers the hidden visual comparison worker only behind both runtime boundaries", async () => {
+    const process = jest.fn().mockResolvedValue({ status: "completed" });
+    const reconcile = jest.fn().mockResolvedValue({ status: "queued", dispatched: 0 });
+    const service = new BullMqWorkerHostService(
+      {
+        queueBackend: "bullmq",
+        redisUrl: "redis://localhost:6379",
+        importQueueName: "imports",
+        snapshotQueueName: "snapshots",
+        visualComparisonWorkerEnabled: true,
+        visualComparisonEnqueueEnabled: true,
+        visualComparisonQueueName: "visual-shadow",
+        visualComparisonReconcilePollSeconds: 60,
+      } as never,
+      { materializeBatch: jest.fn() } as never,
+      { executeSnapshotRun: jest.fn() } as never,
+      undefined,
+      { process } as never,
+      { reconcile } as never,
+    );
+
+    await service.onModuleInit();
+    expect(workerConstructorMock).toHaveBeenCalledTimes(3);
+    expect(workerConstructorMock).toHaveBeenNthCalledWith(
+      3,
+      "visual-shadow",
+      expect.any(Function),
+      expect.objectContaining({ concurrency: 1 }),
+    );
+    expect(reconcile).toHaveBeenCalledTimes(1);
+
+    const processor = workerConstructorMock.mock.calls[2][1] as (job: {
+      id: string;
+      name: string;
+      data: { comparisonRunId: string };
+    }) => Promise<void>;
+    await processor({
+      id: "run-1",
+      name: "visual-comparison-shadow",
+      data: { comparisonRunId: "run-1" },
+    });
+    expect(process).toHaveBeenCalledWith({ comparisonRunId: "run-1" });
+    await service.onModuleDestroy();
+  });
+
   it("closes workers and redis connection on shutdown", async () => {
     const service = new BullMqWorkerHostService(
       {
@@ -189,6 +237,7 @@ describe("BullMqWorkerHostService", () => {
     const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, WorkerModule) ?? [];
 
     expect(imports).toContain(WorkerJobsModule);
+    expect(imports).not.toContain(WorkerVisualComparisonJobsModule);
     expect(imports).not.toContain(IntegrationModule);
     expect(imports).not.toContain(StoreOpsModule);
   });
@@ -208,18 +257,29 @@ describe("BullMqWorkerHostService", () => {
     const snapshotExports =
       Reflect.getMetadata(MODULE_METADATA.EXPORTS, WorkerSnapshotJobsModule) ??
       [];
+    const visualComparisonExports =
+      Reflect.getMetadata(
+        MODULE_METADATA.EXPORTS,
+        WorkerVisualComparisonJobsModule,
+      ) ?? [];
 
     expect(imports).toEqual([
       WorkerMaterializationJobsModule,
       WorkerSnapshotJobsModule,
+      WorkerVisualComparisonJobsModule,
     ]);
     expect(providers).toEqual([]);
     expect(exports).toEqual([
       WorkerMaterializationJobsModule,
       WorkerSnapshotJobsModule,
+      WorkerVisualComparisonJobsModule,
     ]);
     expect(materializationExports).toEqual([MaterializationService]);
     expect(snapshotExports).toEqual([SnapshotService]);
+    expect(visualComparisonExports).toEqual([
+      VisualComparisonShadowService,
+      VisualComparisonShadowReconcilerService,
+    ]);
   });
 
   it("compiles the worker context with BullMQ disabled", async () => {
@@ -233,6 +293,38 @@ describe("BullMqWorkerHostService", () => {
         redisUrl: "redis://localhost:6379",
         importQueueName: "imports",
         snapshotQueueName: "snapshots",
+        visualComparisonEnqueueEnabled: false,
+        visualComparisonWorkerEnabled: false,
+        visualComparisonMaxAttempts: 3,
+        visualComparisonProcessingLeaseSeconds: 300,
+        visualComparisonCompanyId: "",
+        visualComparisonReferenceSetId: "",
+        visualComparisonNotBefore: "",
+        visualComparisonReconcileLimit: 10,
+        qwenVisualComparisonRuntimeConfiguration: {
+          enabled: false,
+        },
+        photoMediaStorageConfiguration: {
+          enabled: false,
+          syntheticOnly: true,
+          provider: "r2",
+          jurisdiction: "eu",
+          primaryBucket: "",
+          recoveryBucket: "",
+          primaryEndpoint: "",
+          recoveryEndpoint: "",
+          publicDeliveryEnabled: false,
+          aggregateBytesHardLimit: 1,
+          monthlyClassAHardLimit: 1,
+          monthlyClassBHardLimit: 1,
+          signedReadTtlSeconds: 1,
+          lockSafetyDays: 1,
+          perUserDailyBytesHardLimit: 1,
+          perStoreDailyBytesHardLimit: 1,
+          concurrentProcessingHardLimit: 1,
+          syntheticFixtureSha256Allowlist: [],
+          safetyAssurance: "fixture_identity_only",
+        },
         databaseUrl: "postgres://user:pass@localhost:5432/store_ops",
         dbPoolMax: 1,
         dbSslMode: "disable",

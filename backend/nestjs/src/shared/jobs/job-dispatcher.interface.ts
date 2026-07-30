@@ -1,4 +1,4 @@
-export type JobType = "import-batch" | "snapshot-run";
+export type JobType = "import-batch" | "snapshot-run" | "visual-comparison-shadow";
 
 export interface JobDispatchResult {
   status: "queued";
@@ -13,5 +13,6 @@ export interface JobDispatcher {
     type: JobType,
     payload: TPayload,
     handler: (payload: TPayload) => Promise<void>,
+    options?: { jobId?: string },
   ): Promise<JobDispatchResult>;
 }

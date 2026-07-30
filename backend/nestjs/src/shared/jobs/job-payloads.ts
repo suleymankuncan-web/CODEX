@@ -7,3 +7,7 @@ export interface SnapshotRunJobPayload {
   periodStart: string;
   periodEnd: string;
 }
+
+export interface VisualComparisonShadowJobPayload {
+  comparisonRunId: string;
+}

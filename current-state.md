@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-29
+Last verified: 2026-07-30
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -194,7 +194,7 @@ Now:
 - Incentives and Targets desktop/mobile prototype parity, legacy removal, and protected staging reads pass for Region Manager, Report Viewer, and Store Manager with zero browser mutation requests. Report Viewer remains company-scoped/read-only, Store Manager remains own-store scoped, and broad production remains `No-Go`; see `docs/evidence/store-command-canvas-parity/2026-07-16-controlled-pilot-read-gate.md`.
 - The seven-PR operational-surfaces cutover is merged through PR #1013. Closeout PR #1014 remains open while its repaired head is recertified. Owner-observed KPI, Talep Merkezi and Görevler geometry differences invalidated the first visual PASS assumption. The local repair now gives KPI Özetleri, Talep Merkezi, Norm Kadro and Görevler one shared compact four-cell decision rail, fixed desktop geometry, content-sized page rows, and before/after rectangle assertions at 1440x900, 1024x768, 390x844 and 320x844. Local parity, role and accessibility suites pass; final CI, deployment and protected staging read evidence remain required before merge. See `docs/evidence/store-operational-surfaces-command-canvas/parity-gap-audit-2026-07-17.md`.
 Next:
-1. Logical PR-8B is active on `codex/qwen-pr8b-lean-smoke` from merged lean-decision SHA `1e6d2baf`. Its bounded scope is the provider-neutral port, exact Qwen adapter, strict schema/failure contracts, fail-closed cost/timeout controls, and operator-run 20-pair synthetic smoke without product writes or UI. Provider invocation still requires the server-side secret and exact-model/budget assertions; raw images and secrets never enter Git.
+1. Logical PR-8B merged as PR #1036 at `01fdd8292e9963c1a8d4c91388f27dfe93459faf`: the provider-neutral port, exact Qwen adapter, strict schema/failure contracts, fail-closed cost/timeout controls, and operator-run 20-pair synthetic smoke have no product writes or UI. Logical PR-9 is active on `codex/qwen-pr9-shadow-queue`: it reuses `ops.visual_comparison_run` as a durable hidden ledger for one exact company/reference-set/not-before scope, with disabled-by-default enqueue/worker switches, stable BullMQ identities, private canonical media reads, bounded retries, and shadow-only sanitized output. It adds no migration, controller, UI, auth, or official product sink. Provider invocation still requires the server-side secret and exact-model/budget assertions; raw images and secrets never enter Git. See `docs/plans/qwen-pr9-hidden-shadow-queue-execution-plan-v1.md` and `docs/runbooks/qwen-hidden-shadow-worker-v1.md`.
 2. Keep retention cleanup disabled and do not execute a purge until a separately approved staging run window and exact sanitized manifest exist.
 3. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open unrelated runtime work.
 4. Keep ORG/ASSIGN correction, DG1-C contraction, Qwen product runtime activation, automated AI scoring, and broad production behind their recorded gates. Controlled store-photo staging use follows the lean pilot decision and remains feature-gated/advisory.

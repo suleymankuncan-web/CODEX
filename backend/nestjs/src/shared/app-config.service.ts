@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import {
+  readPhotoMediaCredentials,
+  readPhotoMediaRuntimeConfiguration,
+} from "./photo-media-runtime-config";
+import { readVisualComparisonRuntimeConfiguration } from "./visual-comparison-runtime-config";
 
 export type QueueBackend = "in-memory" | "bullmq";
 export type BrowserSessionSameSite = "lax" | "strict" | "none";
@@ -321,104 +326,42 @@ export class AppConfigService {
     return this.readPositiveInteger("VM_CAMPAIGN_SETTLEMENT_POLL_SECONDS", "60");
   }
 
-  get photoMediaSyntheticFixtureSha256Allowlist(): string[] {
-    const raw = this.readOptionalString("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST") ?? "";
-    const values = [...new Set(raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean))];
-    if (values.length > 20 || values.some((value) => !/^[a-f0-9]{64}$/.test(value))) {
-      throw new Error("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST must contain at most 20 comma-separated SHA-256 digests");
-    }
-    return values;
+  private get visualComparisonRuntimeConfiguration() {
+    return readVisualComparisonRuntimeConfiguration(this.configService, {
+      queueBackend: this.queueBackend,
+      photoMediaStorageEnabled: this.photoMediaStorageEnabled,
+      checklistEvidenceStorageHealthy: this.checklistEvidenceStorageHealthy,
+    });
   }
 
-  get photoMediaStorageSyntheticOnly(): boolean {
-    const value = this.readBoolean("PHOTO_MEDIA_SYNTHETIC_ONLY", true);
-    if (this.photoMediaStorageEnabled && !value) {
-      throw new Error("PR-3 photo media storage must remain synthetic-only");
-    }
-    return value;
+  get visualComparisonEnqueueEnabled(): boolean { return this.visualComparisonRuntimeConfiguration.enqueueEnabled; }
+  get visualComparisonWorkerEnabled(): boolean { return this.visualComparisonRuntimeConfiguration.workerEnabled; }
+  get visualComparisonCompanyId(): string { return this.visualComparisonRuntimeConfiguration.companyId; }
+  get visualComparisonReferenceSetId(): string { return this.visualComparisonRuntimeConfiguration.referenceSetId; }
+  get visualComparisonNotBefore(): Date { return this.visualComparisonRuntimeConfiguration.notBefore; }
+  get visualComparisonReconcileLimit(): number { return this.visualComparisonRuntimeConfiguration.reconcileLimit; }
+  get visualComparisonReconcilePollSeconds(): number { return this.visualComparisonRuntimeConfiguration.reconcilePollSeconds; }
+  get visualComparisonMaxAttempts(): number { return this.visualComparisonRuntimeConfiguration.maxAttempts; }
+  get visualComparisonProcessingLeaseSeconds(): number { return this.visualComparisonRuntimeConfiguration.processingLeaseSeconds; }
+  get visualComparisonQueueName(): string { return this.visualComparisonRuntimeConfiguration.queueName; }
+  get qwenVisualComparisonRuntimeConfiguration() { return this.visualComparisonRuntimeConfiguration.qwen; }
+
+  private get photoMediaRuntimeConfiguration() {
+    return readPhotoMediaRuntimeConfiguration(this.configService, this.photoMediaStorageEnabled);
   }
 
-  get photoMediaStorageConfiguration() {
-    const enabled = this.photoMediaStorageEnabled;
-    const required = (key: string) => {
-      const value = this.readOptionalString(key);
-      if (enabled && !value) {
-        throw new Error(`${key} must be configured when photo media storage is enabled`);
-      }
-      return value ?? "";
-    };
-
-    const configuration = {
-      enabled,
-      syntheticOnly: this.photoMediaStorageSyntheticOnly,
-      provider: "r2" as const,
-      jurisdiction: "eu" as const,
-      primaryBucket: required("PHOTO_MEDIA_PRIMARY_BUCKET"),
-      recoveryBucket: required("PHOTO_MEDIA_RECOVERY_BUCKET"),
-      primaryEndpoint: required("PHOTO_MEDIA_PRIMARY_ENDPOINT"),
-      recoveryEndpoint: required("PHOTO_MEDIA_RECOVERY_ENDPOINT"),
-      publicDeliveryEnabled: false,
-      aggregateBytesHardLimit: this.readPositiveInteger(
-        "PHOTO_MEDIA_AGGREGATE_BYTES_HARD_LIMIT",
-        String(8 * 1024 * 1024 * 1024),
-      ),
-      monthlyClassAHardLimit: this.readPositiveInteger(
-        "PHOTO_MEDIA_MONTHLY_CLASS_A_HARD_LIMIT",
-        "750000",
-      ),
-      monthlyClassBHardLimit: this.readPositiveInteger(
-        "PHOTO_MEDIA_MONTHLY_CLASS_B_HARD_LIMIT",
-        "7500000",
-      ),
-      signedReadTtlSeconds: this.readPositiveInteger(
-        "PHOTO_MEDIA_SIGNED_READ_TTL_SECONDS",
-        "120",
-      ),
-      lockSafetyDays: this.readPositiveInteger(
-        "PHOTO_MEDIA_LOCK_SAFETY_DAYS",
-        "30",
-      ),
-      perUserDailyBytesHardLimit: this.readPositiveInteger(
-        "PHOTO_MEDIA_PER_USER_DAILY_BYTES_HARD_LIMIT",
-        String(100 * 1024 * 1024),
-      ),
-      perStoreDailyBytesHardLimit: this.readPositiveInteger(
-        "PHOTO_MEDIA_PER_STORE_DAILY_BYTES_HARD_LIMIT",
-        String(250 * 1024 * 1024),
-      ),
-      concurrentProcessingHardLimit: this.readPositiveInteger(
-        "PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT",
-        "2",
-      ),
-      scheduledRetentionCleanupEnabled: this.readBoolean("PHOTO_MEDIA_SCHEDULED_RETENTION_CLEANUP_ENABLED", false),
-      retentionManifestTtlMinutes: this.readPositiveInteger("PHOTO_MEDIA_RETENTION_MANIFEST_TTL_MINUTES", "60"),
-      retentionWarningPercent: this.readPositiveInteger("PHOTO_MEDIA_RETENTION_WARNING_PERCENT", "70"),
-      retentionCriticalPercent: this.readPositiveInteger("PHOTO_MEDIA_RETENTION_CRITICAL_PERCENT", "85"),
-      syntheticFixtureSha256Allowlist: this.photoMediaSyntheticFixtureSha256Allowlist,
-      safetyAssurance: "fixture_identity_only" as const,
-    };
-
-    if (!(configuration.retentionWarningPercent >= 1 && configuration.retentionWarningPercent <
-      configuration.retentionCriticalPercent && configuration.retentionCriticalPercent <= 100))
-      throw new Error("PHOTO_MEDIA_RETENTION thresholds must satisfy 1 <= warning < critical <= 100");
-    if (enabled) {
-      if (configuration.syntheticFixtureSha256Allowlist.length !== 1) {
-        throw new Error(
-          "PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST must contain exactly one approved synthetic fixture digest when storage is enabled",
-        );
-      }
-      this.photoMediaPrimaryCredentials;
-      this.photoMediaRecoveryCredentials;
-    }
-    return configuration;
-  }
-
+  get photoMediaSyntheticFixtureSha256Allowlist(): string[] { return this.photoMediaRuntimeConfiguration.syntheticFixtureSha256Allowlist; }
+  get photoMediaStorageSyntheticOnly(): boolean { return this.photoMediaRuntimeConfiguration.syntheticOnly; }
+  get photoMediaStorageConfiguration() { return this.photoMediaRuntimeConfiguration.storage; }
   get photoMediaPrimaryCredentials() {
-    return this.readPhotoMediaCredentials("PRIMARY");
+    return readPhotoMediaCredentials(this.configService, this.photoMediaStorageEnabled, "PRIMARY");
   }
-
   get photoMediaRecoveryCredentials() {
-    const recovery = this.readPhotoMediaCredentials("RECOVERY");
+    const recovery = readPhotoMediaCredentials(
+      this.configService,
+      this.photoMediaStorageEnabled,
+      "RECOVERY",
+    );
     if (
       this.photoMediaStorageEnabled &&
       recovery.accessKeyId === this.photoMediaPrimaryCredentials.accessKeyId
@@ -839,18 +782,6 @@ export class AppConfigService {
     }
 
     return value.replace(/\\n/g, "\n");
-  }
-
-  private readPhotoMediaCredentials(role: "PRIMARY" | "RECOVERY") {
-    const accessKeyId = this.readOptionalString(`PHOTO_MEDIA_${role}_ACCESS_KEY_ID`);
-    const secretAccessKey = this.readOptionalString(`PHOTO_MEDIA_${role}_SECRET_ACCESS_KEY`);
-    if (this.photoMediaStorageEnabled && !accessKeyId) {
-      throw new Error(`PHOTO_MEDIA_${role}_ACCESS_KEY_ID must be configured when photo media storage is enabled`);
-    }
-    if (this.photoMediaStorageEnabled && !secretAccessKey) {
-      throw new Error(`PHOTO_MEDIA_${role}_SECRET_ACCESS_KEY must be configured when photo media storage is enabled`);
-    }
-    return { accessKeyId: accessKeyId ?? "", secretAccessKey: secretAccessKey ?? "" };
   }
 
   private validateBrowserSessionSecret(

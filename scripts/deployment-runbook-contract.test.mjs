@@ -19,6 +19,8 @@ const renderStagingRunbook = readText('docs/deployment/render-supabase-cloudflar
 const backendEnvExample = readText('backend/nestjs/.env.example')
 const frontendEnvExample = readText('admin-web/.env.example')
 const appConfigService = readText('backend/nestjs/src/shared/app-config.service.ts')
+const photoMediaRuntimeConfig = readText('backend/nestjs/src/shared/photo-media-runtime-config.ts')
+const visualComparisonRuntimeConfig = readText('backend/nestjs/src/shared/visual-comparison-runtime-config.ts')
 const authLiveSmokeScript = readText('admin-web/scripts/auth-live-smoke.mjs')
 const renderBlueprint = readText('render.yaml')
 
@@ -225,10 +227,16 @@ test('env examples expose production-relevant variables and PKCE response type',
 })
 
 test('backend env inventory and example stay aligned with AppConfigService', () => {
+  const backendConfigSources = [
+    appConfigService,
+    photoMediaRuntimeConfig,
+    visualComparisonRuntimeConfig,
+  ].join('\n')
   const backendVariables = uniqueSorted([
-    ...extractMatches(appConfigService, /readString\("([A-Z0-9_]+)"/g),
-    ...extractMatches(appConfigService, /readOptionalString\("([A-Z0-9_]+)"/g),
-    ...extractMatches(appConfigService, /configService\.get<string>\("([A-Z0-9_]+)"/g),
+    ...extractMatches(backendConfigSources, /readString\("([A-Z0-9_]+)"/g),
+    ...extractMatches(backendConfigSources, /readOptionalString\("([A-Z0-9_]+)"/g),
+    ...extractMatches(backendConfigSources, /(?:optional|string|boolean|positiveInteger|nonNegativeInteger|required|workerRequired)\("([A-Z0-9_]+)"/g),
+    ...extractMatches(backendConfigSources, /configService\.get<string>\("([A-Z0-9_]+)"/g),
   ])
 
   assert.ok(backendVariables.length > 0, 'AppConfigService env extraction returned no variables')

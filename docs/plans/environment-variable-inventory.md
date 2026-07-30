@@ -55,6 +55,30 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `VM_CAMPAIGN_SUBMISSION_ENABLED` | Project owner | Render API env | Internal | Enables own-store synthetic VM campaign submissions within an immutable window. | `false` |
 | `VM_CAMPAIGN_DEADLINE_SETTLEMENT_ENABLED` | Project owner | Render worker env | Internal | Enables bounded idempotent VM campaign deadline settlement. | `false` |
 | `VM_CAMPAIGN_SETTLEMENT_POLL_SECONDS` | Project owner | Render worker env | Internal | Poll interval for bounded VM campaign settlement. | `60` |
+| `VISUAL_COMPARISON_ENQUEUE_ENABLED` | Project owner | Render worker env | Internal | Independent reconciler/enqueue kill switch. Keep `false` until the exact PR9 shadow scope is configured. | `false` |
+| `VISUAL_COMPARISON_WORKER_ENABLED` | Project owner | Render worker env | Internal | Independent Qwen execution kill switch. Requires BullMQ, healthy private media storage, exact scope, host pin and positive price ceilings. | `false` |
+| `VISUAL_COMPARISON_COMPANY_ID` | Project owner | Render worker env | Sensitive scope identifier | Exact company UUID allowlist for the hidden shadow run; never record its value in evidence. | Empty. |
+| `VISUAL_COMPARISON_REFERENCE_SET_ID` | Project owner | Render worker env | Sensitive scope identifier | Exact immutable reference-set UUID allowlist for the hidden shadow run. | Empty. |
+| `VISUAL_COMPARISON_NOT_BEFORE` | Project owner | Render worker env | Internal | ISO timestamp lower bound that excludes earlier submissions from the approved shadow cohort. | Empty. |
+| `VISUAL_COMPARISON_RECONCILE_LIMIT` | Backend owner | Render worker env | Internal | Maximum ledger rows reconciled per bounded poll. | `20` |
+| `VISUAL_COMPARISON_RECONCILE_POLL_SECONDS` | Backend owner | Render worker env | Internal | Poll interval for idempotent shadow reconciliation. | `60` |
+| `VISUAL_COMPARISON_MAX_ATTEMPTS` | Backend owner | Render worker env | Internal | Durable maximum attempts before terminal failure. | `3` |
+| `VISUAL_COMPARISON_PROCESSING_LEASE_SECONDS` | Backend owner | Render worker env | Internal | Processing lease used to recover stalled work without concurrent overwrite. | `300` |
+| `QUEUE_VISUAL_COMPARISON_NAME` | Backend/Platform owner | Render worker env | Internal | Stable isolated queue name for hidden visual-comparison shadow jobs. | `store-ops-visual-comparison-shadow` |
+| `QWEN_BASE_URL` | Platform owner | Render worker env | Provider endpoint | Exact approved EU Model Studio API base URL; private media is sent only after host-pin validation. | Empty. |
+| `QWEN_ALLOWED_HOST_SHA256` | Security owner | Render worker env | Integrity control | SHA-256 pin of the exact approved provider hostname. | Empty. |
+| `QWEN_API_KEY` | Platform owner | Render worker secret env | Secret | Workspace-scoped key restricted to the approved exact model snapshot; never log or document its value. | Empty. |
+| `QWEN_MODEL` | Project owner | Render worker env | Internal | Must equal the approved snapshot `qwen3.7-plus-2026-05-26` while PR9 is active. | `qwen3.7-plus-2026-05-26` |
+| `QWEN_TIMEOUT_MS` | Backend owner | Render worker env | Internal | Per-request timeout ceiling. | `30000` |
+| `QWEN_MAX_RESPONSE_BYTES` | Backend owner | Render worker env | Internal | Maximum accepted provider response size. | `65536` |
+| `QWEN_MAX_OUTPUT_TOKENS` | Project owner | Render worker env | Cost control | Maximum advisory output tokens per request. | `1024` |
+| `QWEN_SHADOW_MAX_REQUESTS` | Project owner | Render worker env | Cost control | Durable aggregate request ceiling for the approved shadow cohort. | `20` |
+| `QWEN_MAX_TOKENS_PER_REQUEST` | Project owner | Render worker env | Cost control | Maximum total tokens accepted for one provider response. | `20000` |
+| `QWEN_SHADOW_MAX_TOTAL_TOKENS` | Project owner | Render worker env | Cost control | Durable aggregate token ceiling across restarts and replicas. | `400000` |
+| `QWEN_SHADOW_MAX_SPEND_USD_MICROS` | Project owner | Render worker env | Cost control | Durable aggregate spend ceiling in USD micros. | `1000000` |
+| `QWEN_INPUT_USD_MICROS_PER_MILLION_TOKENS` | Project owner | Render worker env | Cost control | Current provider input price used for fail-closed reservation; must be positive when enabled. | `0` while disabled. |
+| `QWEN_OUTPUT_USD_MICROS_PER_MILLION_TOKENS` | Project owner | Render worker env | Cost control | Current provider output price used for fail-closed reservation; must be positive when enabled. | `0` while disabled. |
+| `QWEN_MIN_ADVISORY_CONFIDENCE` | Project owner | Render worker env | Internal | Minimum confidence for advisory benchmark reporting only; never changes official score. | `0.6` |
 | `PHOTO_MEDIA_PRIMARY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Private EU-jurisdiction primary bucket name; never record its value in evidence. | Empty. |
 | `PHOTO_MEDIA_RECOVERY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Distinct private EU-jurisdiction recovery bucket name. | Empty. |
 | `PHOTO_MEDIA_PRIMARY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint; no public delivery endpoint. | Empty. |
@@ -325,6 +349,9 @@ Root script tests keep this inventory aligned with code and committed env exampl
 The guard reads env names from:
 
 - `backend/nestjs/src/shared/app-config.service.ts` via `AppConfigService`.
+- `backend/nestjs/src/shared/photo-media-runtime-config.ts` and
+  `backend/nestjs/src/shared/visual-comparison-runtime-config.ts` via their
+  bounded runtime configuration readers.
 - `admin-web/src` via `import.meta.env` usage.
 - `admin-web/scripts/auth-live-smoke.mjs` via `AUTH_SMOKE_*` usage.
 
