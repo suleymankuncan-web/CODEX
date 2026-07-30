@@ -82,13 +82,16 @@ function AccountTray(props: AuthAccessWorkbenchViewProps) {
         </section>
 
         <section className="auth-account-section">
-          <SectionTitle meta="Giriş yöntemi" title="Yeni üyelik" />
+          <SectionTitle meta="Saha dışı roller için" title="Yönetim hesabı" />
+          <p className="auth-account-section__hint">
+            Report Viewer ve yönetim rolleri için hesabı oluşturun; rol ve kapsamı ardından mevcut panellerden atayın.
+          </p>
           <div className="auth-form-grid">
             <label>
-              Ad soyad
+              Kullanıcı adı
               <Input
                 onChange={(event) => props.onNewAccountDraftChange({ username: event.target.value })}
-                placeholder="Kullanıcı adı"
+                placeholder="ad.soyad"
                 value={props.newAccountDraft.username}
               />
             </label>
@@ -104,7 +107,7 @@ function AccountTray(props: AuthAccessWorkbenchViewProps) {
               Personel
               <Input
                 onChange={(event) => props.onNewAccountDraftChange({ employeeId: event.target.value })}
-                placeholder="Opsiyonel personel kodu"
+                placeholder="Opsiyonel personel kimliği"
                 value={props.newAccountDraft.employeeId}
               />
             </label>
@@ -114,14 +117,10 @@ function AccountTray(props: AuthAccessWorkbenchViewProps) {
                 onValueChange={(value) => props.onNewAccountDraftChange({ authProvider: value })}
                 value={props.newAccountDraft.authProvider}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Giriş yöntemi seç" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Giriş yöntemi seç" /></SelectTrigger>
                 <SelectContent>
                   {props.providerOptions.map((provider) => (
-                    <SelectItem key={provider} value={provider}>
-                      {providerLabel(provider)}
-                    </SelectItem>
+                    <SelectItem key={provider} value={provider}>{providerLabel(provider)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -129,7 +128,7 @@ function AccountTray(props: AuthAccessWorkbenchViewProps) {
           </div>
           <Button disabled={props.pending.newUser} onClick={props.onCreateUser}>
             <Mail size={16} />
-            {props.pending.newUser ? 'Oluşturuluyor' : 'Üyelik oluştur'}
+            {props.pending.newUser ? 'Oluşturuluyor' : 'Hesap oluştur'}
           </Button>
         </section>
 

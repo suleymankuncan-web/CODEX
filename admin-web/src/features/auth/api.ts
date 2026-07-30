@@ -11,6 +11,8 @@ export type AuthLookupUser = AuthLookups['users'][number]
 export type AuthLookupStore = AuthLookups['stores'][number]
 type AuthLookupUserSearchResponse = ApiGetResponse<'/api/auth/lookups/users/search'>
 export type AuthLookupUserSearchResult = AuthLookupUserSearchResponse['items'][number]
+type AuthEligiblePersonnelResponse = ApiGetResponse<'/api/integrations/personnel-master'>
+export type AuthEligiblePersonnel = AuthEligiblePersonnelResponse['items'][number]
 type AuthRoleCatalogResponse = ApiGetResponse<'/api/auth/roles'>
 export type RoleCatalogItem = AuthRoleCatalogResponse['items'][number]
 type AuthPermissionCatalogResponse = ApiGetResponse<'/api/auth/permissions'>
@@ -87,6 +89,17 @@ export async function searchAuthStores(input: { query: string; limit?: number })
   })
 
   return fetchOpenApiJson('/api/auth/lookups/stores/search', { query: params })
+}
+
+export async function searchAuthEligiblePersonnel(input: { query: string; limit?: number }) {
+  const params = new URLSearchParams({
+    q: input.query,
+    status: 'active',
+    limit: String(input.limit ?? 20),
+    offset: '0',
+  })
+
+  return fetchOpenApiJson('/api/integrations/personnel-master', { query: params })
 }
 
 export async function getAuthSession() {

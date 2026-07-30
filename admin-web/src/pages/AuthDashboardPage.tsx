@@ -6,6 +6,7 @@ import {
 } from './admin-operational-primitives'
 import {
   createActionStoreAssignment,
+  createPilotUserBinding,
   createRoleAssignment,
   createUserAccount,
   deactivateActionStoreAssignment,
@@ -21,6 +22,7 @@ import {
   type ActionStoreAssignment,
   type AuthLookupStore,
   type CreateActionStoreAssignmentInput,
+  type CreatePilotUserBindingInput,
   type CreateRoleAssignmentInput,
   type RoleAssignment,
   type UserAccount,
@@ -99,6 +101,9 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<AuthWorkbenchDetailTab>('overview')
   const [openTray, setOpenTray] = useState<AuthWorkbenchTray>('role')
+  const [membershipDialogOpen, setMembershipDialogOpen] = useState(false)
+  const [membershipError, setMembershipError] = useState<string | null>(null)
+  const [newAccountDraft, setNewAccountDraft] = useState<NewAuthAccountDraft>(defaultNewAccountDraft)
   const [profileDraftState, setProfileDraftState] = useState<{
     draft: UserProfileDraft | null
     userId: string | null
@@ -107,8 +112,6 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
     draft: UserStatusDraft | null
     userId: string | null
   }>({ draft: null, userId: null })
-  const [newAccountDraft, setNewAccountDraft] =
-    useState<NewAuthAccountDraft>(defaultNewAccountDraft)
   const [roleDraft, setRoleDraft] = useState<AuthRoleDraft>({
     companyId: '',
     effectiveFrom: '',
@@ -133,6 +136,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
   const usersQuery = useQuery({
     queryKey: authAccessWorkbenchKeys.users({ limit: authWorkbenchUserListLimit, q: trimmedQuery }),
     queryFn: () => getUserAccounts({ limit: authWorkbenchUserListLimit, q: trimmedQuery }),
+    placeholderData: (previous) => previous,
   })
   const assignmentsQuery = useQuery({
     queryKey: authAccessWorkbenchKeys.roleAssignments(),
@@ -206,11 +210,11 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
     () => (selectedUser === model.selectedUser ? model : { ...model, selectedUser }),
     [model, selectedUser],
   )
+  const availableStores = useMemo(() => lookups?.stores ?? [], [lookups?.stores])
   const providerOptions = useMemo(
     () => Array.from(new Set(['clerk', 'oidc', 'sso', 'local', ...(lookups?.authProviders ?? [])])),
     [lookups?.authProviders],
   )
-  const availableStores = useMemo(() => lookups?.stores ?? [], [lookups?.stores])
   const regionOptions = useMemo(() => buildRegionOptions(availableStores), [availableStores])
   const defaultCompanyId = availableStores[0]?.companyId ?? ''
   const defaultRoleCode = lookups?.roles[0]?.roleCode ?? ''
@@ -234,13 +238,28 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
   }
 
   const createUserMutation = useMutation({
+    mutationFn: createPilotUserBinding,
+    onMutate: () => setMembershipError(null),
+    onSuccess: async (response) => {
+      actionToast.success(response.command.message)
+      const createdUserId = response.data.binding.user.userId
+      setMembershipDialogOpen(false)
+      setSelectedUserId(createdUserId)
+      await invalidateWorkbench(queryClient, createdUserId)
+    },
+    onError: (error) => {
+      setMembershipError('Üyelik oluşturulamadı. Bilgileri kontrol edip tekrar deneyin.')
+      actionToast.error(error, 'Üyelik oluşturulamadı.')
+    },
+  })
+  const createManagementAccountMutation = useMutation({
     mutationFn: createUserAccount,
     onSuccess: async (response) => {
       actionToast.success(response.command.message)
       setNewAccountDraft(defaultNewAccountDraft)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => actionToast.error(error, 'Kullanıcı oluşturulamadı.'),
+    onError: (error) => actionToast.error(error, 'Yönetim hesabı oluşturulamadı.'),
   })
   const updateUserMutation = useMutation({
     mutationFn: (input: { user: UserAccount; draft: UserProfileDraft }) => {
@@ -339,6 +358,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
   const canSaveStatus = selectedUser ? hasUserStatusChange(selectedUser.source, statusDraft) : false
   const mutationBusy =
     createUserMutation.isPending ||
+    createManagementAccountMutation.isPending ||
     updateUserMutation.isPending ||
     createRoleMutation.isPending ||
     createActionStoreMutation.isPending ||
@@ -362,6 +382,8 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
         model={visibleModel}
         mutationBusy={mutationBusy}
         newAccountDraft={newAccountDraft}
+        membershipDialogOpen={membershipDialogOpen}
+        membershipError={membershipError}
         onActionStoreDraftChange={(patch) =>
           setActionStoreDraft((current) => ({ ...current, ...patch }))
         }
@@ -387,8 +409,9 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
             ...(effectiveRoleDraft.effectiveTo ? { effectiveTo: effectiveRoleDraft.effectiveTo } : {}),
           })
         }}
+        onCreateMembership={(input: CreatePilotUserBindingInput) => createUserMutation.mutate(input)}
         onCreateUser={() =>
-          createUserMutation.mutate({
+          createManagementAccountMutation.mutate({
             username: newAccountDraft.username.trim(),
             email: newAccountDraft.email.trim(),
             authProvider: newAccountDraft.authProvider as CreateUserAuthProvider,
@@ -401,9 +424,11 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
           if (!selectedUser) return
           deactivateUserMutation.mutate({ userId: selectedUser.userId, draft: statusDraft })
         }}
-        onNewAccountDraftChange={(patch) =>
-          setNewAccountDraft((current) => ({ ...current, ...patch }))
-        }
+        onMembershipDialogOpenChange={(open) => {
+          setMembershipDialogOpen(open)
+          if (open) setMembershipError(null)
+        }}
+        onNewAccountDraftChange={(patch) => setNewAccountDraft((current) => ({ ...current, ...patch }))}
         onOpenTrayChange={setOpenTray}
         onProfileDraftChange={(patch) =>
           selectedUser &&
@@ -445,7 +470,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
           actionStore: createActionStoreMutation.isPending,
           deactivateActionStore: deactivateActionStoreMutation.isPending,
           deactivateRole: deactivateRoleMutation.isPending,
-          newUser: createUserMutation.isPending,
+          newUser: createUserMutation.isPending || createManagementAccountMutation.isPending,
           profile: updateUserMutation.isPending,
           reactivateUser: reactivateUserMutation.isPending,
           role: createRoleMutation.isPending,
