@@ -35,7 +35,8 @@ test('auth workbench remains readable and persists locale preference', async ({ 
   await expect(main.getByLabel('Seçili kullanıcı')).toContainText('store.manager')
   await expect(toolbar.getByRole('button', { name: 'Rol ata' })).toBeVisible()
   await expect(toolbar.getByRole('button', { name: 'Mağaza bağla' })).toBeVisible()
-  await expect(main.getByRole('button', { name: 'Üyelik oluştur' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Personel üyeliği oluştur' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Yönetim hesabı' })).toBeVisible()
   await expect(main.getByText('Kontrol izi')).toBeVisible()
   await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
@@ -53,31 +54,94 @@ test('auth workbench remains readable and persists locale preference', async ({ 
   await expect(main.getByRole('heading', { name: 'Erişim Yönetimi' })).toBeVisible()
 })
 
-test('HR admin can create a user from the access workbench', async ({ page }) => {
+test('HR admin creates a complete membership with one atomic request', async ({ page }) => {
+  const employeeId = '70000000-0000-4000-8000-000000000101'
+  const storeId = '10000000-0000-4000-8000-000000000021'
   let requestBody: Record<string, unknown> | null = null
+  const fragmentedWrites: string[] = []
 
-  await page.route('**/api/auth/users', async (route) => {
-    if (route.request().method() !== 'POST') {
-      await route.fallback()
-      return
-    }
-
+  await page.route('**/api/integrations/personnel-master?**', async (route) => {
+    await route.fulfill({ json: eligiblePersonnelFixture })
+  })
+  await page.route('**/api/auth/pilot-user-bindings', async (route) => {
     requestBody = route.request().postDataJSON()
     await route.fulfill({
       status: 201,
       json: {
-        command: { status: 'created', message: 'Üyelik oluşturuldu' },
+        command: { status: 'created', message: 'Üyelik ve yetkileri oluşturuldu' },
+        data: {
+          binding: {
+            user: {
+              userId: '90000000-0000-4000-8000-000000000101',
+              employeeId,
+              username: 'ayse.demir',
+              email: 'ayse.demir@example.com',
+              authProvider: 'clerk',
+              providerSubject: 'user_clerk_ayse',
+              isActive: true,
+              lastLoginAt: null,
+              createdAt: '2026-07-30T09:00:00.000Z',
+            },
+            roleAssignments: [],
+            actionStoreAssignments: [],
+          },
+        },
+      },
+    })
+  })
+  for (const path of ['/api/auth/users', '/api/auth/role-assignments', '/api/auth/action-store-assignments']) {
+    await page.route(`**${path}`, async (route) => {
+      if (route.request().method() === 'POST') fragmentedWrites.push(path)
+      await route.fallback()
+    })
+  }
+
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Personel üyeliği oluştur' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Yeni üyelik oluştur' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByLabel('Personel ara').fill('Ayşe')
+  await dialog.getByRole('button', { name: /Ayşe Demir/ }).click()
+  await dialog.getByLabel('Clerk kullanıcı kimliği').fill('user_clerk_ayse')
+  await dialog.getByLabel('Kullanıcı adı').fill('ayse.demir')
+  await dialog.getByLabel('E-posta').fill('ayse.demir@example.com')
+  await expect(dialog.getByText('Marmara Park', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Üyeliği oluştur' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Üyelik ve yetkileri oluşturuldu')).toBeVisible()
+  expect(requestBody).toEqual({
+    employeeId,
+    authProvider: 'clerk',
+    providerSubject: 'user_clerk_ayse',
+    username: 'ayse.demir',
+    email: 'ayse.demir@example.com',
+    roleCode: 'STORE_MANAGER',
+    storeIds: [storeId],
+  })
+  expect(fragmentedWrites).toEqual([])
+})
+
+test('management account creation remains available for non-pilot roles', async ({ page }) => {
+  let requestBody: Record<string, unknown> | null = null
+  await page.route('**/api/auth/users', async (route) => {
+    requestBody = route.request().postDataJSON()
+    await route.fulfill({
+      status: 201,
+      json: {
+        command: { status: 'created', message: 'Yönetim hesabı oluşturuldu' },
         data: {
           user: {
-            userId: '90000000-0000-4000-8000-000000000101',
-            employeeId: '70000000-0000-4000-8000-000000000101',
-            username: 'ayse.demir',
-            email: 'ayse.demir@example.com',
+            userId: '90000000-0000-4000-8000-000000000111',
+            employeeId: null,
+            username: 'report.viewer',
+            email: 'report.viewer@example.com',
             authProvider: 'clerk',
             providerSubject: null,
             isActive: true,
             lastLoginAt: null,
-            createdAt: '2026-04-29T18:30:00.000Z',
+            createdAt: '2026-07-30T09:00:00.000Z',
           },
         },
       },
@@ -85,21 +149,62 @@ test('HR admin can create a user from the access workbench', async ({ page }) =>
   })
 
   await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Yönetim hesabı' }).click()
+  const section = page.locator('.auth-account-section').filter({ hasText: 'Yönetim hesabı' })
+  await section.getByLabel('Kullanıcı adı').fill('report.viewer')
+  await section.getByLabel('E-posta').fill('report.viewer@example.com')
+  await section.getByRole('button', { name: 'Hesap oluştur' }).click()
 
-  await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
-  const newAccount = page.locator('.auth-account-section').filter({ hasText: 'Yeni üyelik' })
-  await newAccount.getByLabel('Ad soyad').fill('ayse.demir')
-  await newAccount.getByLabel('E-posta').fill('ayse.demir@example.com')
-  await newAccount.getByLabel('Personel').fill('70000000-0000-4000-8000-000000000101')
-  await newAccount.getByRole('button', { name: 'Üyelik oluştur' }).click()
-
-  await expect(page.getByText('Üyelik oluşturuldu')).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Yönetim hesabı oluşturuldu')).toBeVisible()
   expect(requestBody).toMatchObject({
-    username: 'ayse.demir',
-    email: 'ayse.demir@example.com',
-    employeeId: '70000000-0000-4000-8000-000000000101',
+    username: 'report.viewer',
+    email: 'report.viewer@example.com',
     authProvider: 'clerk',
   })
+})
+
+test('membership failure keeps the complete draft open', async ({ page }) => {
+  await page.route('**/api/integrations/personnel-master?**', async (route) => {
+    await route.fulfill({ json: eligiblePersonnelFixture })
+  })
+  await page.route('**/api/auth/pilot-user-bindings', async (route) => {
+    await route.fulfill({ status: 409, json: { message: 'Binding conflict' } })
+  })
+
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Personel üyeliği oluştur' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Yeni üyelik oluştur' })
+  await dialog.getByLabel('Personel ara').fill('Ayşe')
+  await dialog.getByRole('button', { name: /Ayşe Demir/ }).click()
+  await dialog.getByLabel('Clerk kullanıcı kimliği').fill('user_clerk_ayse')
+  await dialog.getByLabel('Kullanıcı adı').fill('ayse.demir')
+  await dialog.getByLabel('E-posta').fill('ayse.demir@example.com')
+  await dialog.getByRole('button', { name: 'Üyeliği oluştur' }).click()
+
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByLabel('Kullanıcı adı')).toHaveValue('ayse.demir')
+  await expect(dialog.getByText('Üyelik oluşturulamadı. Bilgileri kontrol edip tekrar deneyin.')).toBeVisible()
+})
+
+test('membership search never leaves stale personnel selectable', async ({ page }) => {
+  await page.route('**/api/integrations/personnel-master?**', async (route) => {
+    const query = new URL(route.request().url()).searchParams.get('q') ?? ''
+    if (query.includes('Mehmet')) await new Promise((resolve) => setTimeout(resolve, 800))
+    await route.fulfill({
+      json: query.includes('Mehmet')
+        ? { items: [], meta: { count: 0, total: 0, limit: 20, offset: 0 } }
+        : eligiblePersonnelFixture,
+    })
+  })
+
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Personel üyeliği oluştur' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Yeni üyelik oluştur' })
+  const search = dialog.getByLabel('Personel ara')
+  await search.fill('Ayşe')
+  await expect(dialog.getByRole('button', { name: /Ayşe Demir/ })).toBeVisible()
+  await search.fill('Mehmet')
+  await expect(dialog.getByRole('button', { name: /Ayşe Demir/ })).toBeHidden({ timeout: 500 })
 })
 
 test('HR admin can search users and create assignments from the workbench', async ({ page }) => {
@@ -186,6 +291,25 @@ test('HR admin can search users and create assignments from the workbench', asyn
   })
 })
 
+test('user search keeps focus while deferred results refresh', async ({ page }) => {
+  await page.route('**/api/auth/users?**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    await route.fulfill({ json: authUsersFixture })
+  })
+
+  await page.goto('/admin/auth')
+  const search = page.getByLabel('Kullanıcı ara')
+  await search.click()
+
+  for (const character of 'manager') {
+    await search.press(character)
+    await page.waitForTimeout(100)
+    await expect(search).toBeFocused()
+  }
+
+  await expect(search).toHaveValue('manager')
+})
+
 test('HR admin can update and deactivate selected user access', async ({ page }) => {
   const userId = '90000000-0000-4000-8000-000000000201'
   let updateBody: Record<string, unknown> | null = null
@@ -218,7 +342,7 @@ test('HR admin can update and deactivate selected user access', async ({ page })
 
   await page.goto('/admin/auth')
 
-  await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
+  await page.locator('.auth-change-summary').getByRole('button', { name: 'Üyelik' }).click()
   const account = page.locator('.auth-account-section').filter({ hasText: 'Hesap bilgileri' })
   await account.getByLabel('Ad soyad').fill('store.manager.updated')
   await account.getByRole('button', { name: 'Bilgileri kaydet' }).click()
@@ -253,7 +377,7 @@ test('HR admin can reactivate an inactive user from the workbench', async ({ pag
 
   await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /inactive\.user/ }).click()
   await expect(page.getByLabel('Seçili kullanıcı')).toContainText('inactive.user')
-  await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
+  await page.locator('.auth-change-summary').getByRole('button', { name: 'Üyelik' }).click()
   await page.getByRole('button', { name: 'Hesabı aktifleştir' }).click()
 
   await expect(page.locator('.hr-axis-toast__title').getByText('Hesap aktifleştirildi')).toBeVisible()
@@ -311,6 +435,10 @@ test('auth dashboard remains readable on mobile', async ({ page }) => {
   await expect(main.getByRole('heading', { name: 'Erişim Yönetimi' })).toBeVisible()
   await expect(main.getByLabel('Kullanıcı listesi')).toBeVisible()
   await expect(main.getByLabel('İşlem paneli')).toBeVisible()
+  await main.getByRole('button', { name: 'Personel üyeliği oluştur' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Yeni üyelik oluştur' })
+  await expect(dialog.getByLabel('Personel ara')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Üyeliği oluştur' })).toBeVisible()
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   )
@@ -519,6 +647,34 @@ const authLookupsFixture = {
     totalPermissions: 0,
     totalStores: 1,
   },
+}
+
+const eligiblePersonnelFixture = {
+  items: [
+    {
+      employeeId: '70000000-0000-4000-8000-000000000101',
+      externalEmployeeRef: 'P101',
+      firstName: 'Ayşe',
+      lastName: 'Demir',
+      displayName: 'Ayşe Demir',
+      hireDate: '2025-01-15',
+      terminationDate: null,
+      employmentStatus: 'active',
+      employmentType: 'full_time',
+      assignmentId: 'assignment-ayse',
+      assignmentStartDate: '2025-01-15',
+      storeId: '10000000-0000-4000-8000-000000000021',
+      storeCode: 'SM140',
+      storeName: 'Marmara Park',
+      regionId: '10000000-0000-4000-8000-000000000011',
+      regionName: 'Marmara',
+      positionId: 'position-store-manager',
+      positionCode: 'STORE_MANAGER',
+      positionName: 'Mağaza Müdürü',
+      updatedAt: '2026-07-30T08:00:00.000Z',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 20, offset: 0 },
 }
 
 const authRolesFixture = {

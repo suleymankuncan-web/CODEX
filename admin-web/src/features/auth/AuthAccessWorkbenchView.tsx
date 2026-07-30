@@ -17,9 +17,11 @@ import { Input } from '../../components/ui/input'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { cn } from '../../lib/utils'
 import { AccountTray, AuditTray, ChangeSummary, RoleTray, StoreTray } from './AuthAccessWorkbenchTrays'
+import { AuthMembershipDialog } from './AuthMembershipDialog'
 import type {
   AuthLookupStore,
   AuthLookups,
+  CreatePilotUserBindingInput,
   CreateRoleAssignmentInput,
 } from './api'
 import type {
@@ -83,6 +85,8 @@ export type AuthAccessWorkbenchViewProps = {
   feedback: string | null
   filter: AuthWorkbenchKindFilter
   lookups: AuthLookups
+  membershipDialogOpen: boolean
+  membershipError: string | null
   model: AuthAccessWorkbenchModel
   mutationBusy: boolean
   newAccountDraft: NewAuthAccountDraft
@@ -90,9 +94,11 @@ export type AuthAccessWorkbenchViewProps = {
   onCreateActionStore: () => void
   onCreateRole: () => void
   onCreateUser: () => void
+  onCreateMembership: (input: CreatePilotUserBindingInput) => void
   onDeactivateActionStore: (assignmentId: string) => void
   onDeactivateRole: (assignmentId: string) => void
   onDeactivateUser: () => void
+  onMembershipDialogOpenChange: (open: boolean) => void
   onNewAccountDraftChange: (patch: Partial<NewAuthAccountDraft>) => void
   onOpenTrayChange: (tray: AuthWorkbenchTray) => void
   onProfileDraftChange: (patch: Partial<UserProfileDraft>) => void
@@ -161,9 +167,12 @@ export function AuthAccessWorkbenchView(props: AuthAccessWorkbenchViewProps) {
                 Son işlemler
               </a>
             </Button>
-            <Button size="sm" onClick={() => props.onOpenTrayChange('account')}>
+            <Button size="sm" variant="outline" onClick={() => props.onOpenTrayChange('account')}>
+              Yönetim hesabı
+            </Button>
+            <Button size="sm" onClick={() => props.onMembershipDialogOpenChange(true)}>
               <UserPlus size={16} />
-              Üyelik oluştur
+              Personel üyeliği oluştur
             </Button>
           </div>
         </header>
@@ -356,6 +365,16 @@ export function AuthAccessWorkbenchView(props: AuthAccessWorkbenchViewProps) {
           </aside>
         </section>
       </section>
+      {props.membershipDialogOpen ? (
+        <AuthMembershipDialog
+          availableStores={props.availableStores}
+          errorMessage={props.membershipError}
+          onOpenChange={props.onMembershipDialogOpenChange}
+          onSubmit={props.onCreateMembership}
+          open
+          pending={props.pending.newUser}
+        />
+      ) : null}
     </main>
   )
 }
