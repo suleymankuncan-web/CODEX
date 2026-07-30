@@ -94,6 +94,41 @@ export function applyVmReferenceManagementOpenApi(document: Document) {
       } } },
     } } },
   } };
+  const advisory = objectSchema([
+    "comparisonRunId", "storeName", "referenceName", "status", "suggestion",
+    "confidence", "qualityFlags", "modelLimitations", "dimensions", "finishedAt", "reviewed", "acceptAllowed",
+  ], {
+    comparisonRunId: uuid(), storeName: { type: "string" }, referenceName: { type: "string" },
+    status: { type: "string", enum: ["completed", "abstained", "failed_terminal", "human_reviewed"] },
+    suggestion: { type: "string", nullable: true, enum: ["pass", "partial", "fail", "abstain", "recapture_required"] },
+    confidence: { type: "number", nullable: true, minimum: 0, maximum: 1 },
+    qualityFlags: { type: "array", items: { type: "string" } },
+    modelLimitations: { type: "array", items: { type: "string" } },
+    dimensions: { type: "array", items: { type: "object", additionalProperties: true } },
+    finishedAt: { type: "string", format: "date-time", nullable: true },
+    reviewed: { type: "boolean" },
+    acceptAllowed: { type: "boolean" },
+    criterion: { type: "string" },
+    reviewInstructions: { type: "string" },
+    review: {
+      type: "object",
+      nullable: true,
+      additionalProperties: false,
+      required: ["decision", "reason", "finalDecision", "reviewedAt"],
+      properties: {
+        decision: { type: "string", enum: ["accept", "override", "reject", "recapture"] },
+        reason: { type: "string" },
+        finalDecision: { type: "string", nullable: true, enum: ["pass", "partial", "fail"] },
+        reviewedAt: { type: "string", format: "date-time" },
+      },
+    },
+  });
+  schemas.VisualComparisonAdvisory = advisory;
+  schemas.VisualComparisonAdvisoryListResponse = page(advisory);
+  schemas.VisualComparisonAdvisoryReviewResponse = objectSchema(
+    ["comparisonRunId", "decision", "finalDecision"],
+    { comparisonRunId: uuid(), decision: { type: "string" }, finalDecision: { type: "string", nullable: true } },
+  );
   setResponse(document, "/api/visual-merchandising/references", "get", 200, "VmReferenceListResponse");
   setResponse(document, "/api/visual-merchandising/references", "post", 201, "VmReference");
   setResponse(document, "/api/visual-merchandising/references/options", "get", 200, "VmReferencePublisherOptions");
@@ -108,6 +143,10 @@ export function applyVmReferenceManagementOpenApi(document: Document) {
   setResponse(document, "/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands", "post", 201, "VmCampaignAssignmentCommandResponse");
   setResponse(document, "/api/visual-merchandising/references/{referenceSetId}/retire", "post", 201, "VmReferenceRetireResponse");
   setResponse(document, "/api/mobile/visual-campaigns/{assignmentId}/submissions", "post", 201, "VmCampaignSubmissionResponse");
+  setResponse(document, "/api/visual-comparisons/advisories", "get", 200, "VisualComparisonAdvisoryListResponse");
+  setResponse(document, "/api/visual-comparisons/advisories/{comparisonRunId}", "get", 200, "VisualComparisonAdvisory");
+  setBinaryResponse(document, "/api/visual-comparisons/advisories/{comparisonRunId}/media/{kind}/thumbnail", "get", 200);
+  setResponse(document, "/api/visual-comparisons/advisories/{comparisonRunId}/reviews", "post", 201, "VisualComparisonAdvisoryReviewResponse");
 }
 
 function objectSchema(required: string[], properties: Record<string, unknown>) {

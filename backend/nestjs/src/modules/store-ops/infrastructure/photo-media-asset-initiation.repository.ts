@@ -14,7 +14,7 @@ export type CreatePhotoMediaAssetInput = {
   companyId?: string;
   contentType: string;
   contentLength: number;
-  captureSource: "system_generated";
+  captureSource: "camera" | "gallery" | "system_generated";
   classification?: "checklist_evidence" | "action_evidence" | "vm_reference" | "vm_campaign_evidence" | "derived_artifact";
   quota: {
     aggregateBytesHardLimit: number;

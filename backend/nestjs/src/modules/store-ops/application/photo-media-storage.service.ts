@@ -198,6 +198,116 @@ export class PhotoMediaStorageService {
     });
   }
 
+  async initiateRealVmCampaignUpload(input: {
+    actorUserId: string;
+    actorRoleCodes: readonly string[];
+    actorScope: PhotoMediaActorScope;
+    actorActionScope: { assignedStoreIds: string[] };
+    storeId: string;
+    companyId: string;
+    contentType: string;
+    contentLength: number;
+    contentBody: Buffer;
+    captureSource: "camera" | "gallery";
+    contentPolicyAttestation: boolean;
+    cohortAuthorized: boolean;
+    bindInitiatedAsset?: (mediaAssetId: string) => Promise<void>;
+  }) {
+    this.assertEnabled();
+    if (
+      !input.cohortAuthorized ||
+      !input.contentPolicyAttestation ||
+      !input.actorRoleCodes.includes("STORE_MANAGER") ||
+      !input.actorActionScope.assignedStoreIds.includes(input.storeId) ||
+      !input.actorScope.companyIds.includes(input.companyId)
+    ) {
+      throw new ForbiddenException("Real VM campaign photo upload is outside the approved cohort");
+    }
+    if (!new Set(["image/jpeg", "image/png", "image/webp"]).has(input.contentType)) {
+      throw new BadRequestException("Photo media content type is not supported");
+    }
+    if (!Number.isSafeInteger(input.contentLength) || input.contentLength <= 0 || input.contentLength > 15 * 1024 * 1024) {
+      throw new BadRequestException("Photo media content length is invalid");
+    }
+    if (input.contentBody.byteLength !== input.contentLength) {
+      throw new BadRequestException("Photo media content length does not match the submitted body");
+    }
+    if (detectImageMimeType(input.contentBody) !== input.contentType) {
+      throw new BadRequestException("Photo media declared type does not match image bytes");
+    }
+    const mediaAssetId = randomUUID();
+    const asset = await this.repository.createInitiatedAsset({
+      mediaAssetId,
+      actorUserId: input.actorUserId,
+      allowedCompanyIds: [input.companyId],
+      storeId: input.storeId,
+      companyId: input.companyId,
+      contentType: input.contentType,
+      contentLength: input.contentLength,
+      captureSource: input.captureSource,
+      classification: "vm_campaign_evidence",
+      quota: {
+        aggregateBytesHardLimit: this.configuration.aggregateBytesHardLimit,
+        monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
+        monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
+        lockSafetyDays: this.configuration.lockSafetyDays,
+        perUserDailyBytesHardLimit: this.configuration.perUserDailyBytesHardLimit,
+        perStoreDailyBytesHardLimit: this.configuration.perStoreDailyBytesHardLimit,
+        concurrentProcessingHardLimit: this.configuration.concurrentProcessingHardLimit,
+      },
+    });
+    let uploadLeaseToken: string | null = null;
+    try {
+      // The assignment/revision binding must succeed before any customer bytes reach R2.
+      // This closes the revocation race without relying on best-effort object cleanup.
+      await input.bindInitiatedAsset?.(mediaAssetId);
+      uploadLeaseToken = await this.repository.acquireProcessingLease({
+        mediaAssetId,
+        requiredState: "initiated",
+        concurrentProcessingHardLimit: this.configuration.concurrentProcessingHardLimit,
+      });
+      // Decode under the bounded processing lease, before any bytes reach R2.
+      await this.imageProcessor.process(input.contentBody);
+      const rawObjectKey = asset.rawObjectKey ?? buildPhotoMediaObjectKeys({
+        companyId: asset.companyId,
+        mediaAssetId,
+      }).raw;
+      await this.primaryStorage.putObject({
+        objectKey: rawObjectKey,
+        body: input.contentBody,
+        contentType: input.contentType,
+        sha256: createHash("sha256").update(input.contentBody).digest("hex"),
+      });
+      await this.repository.markUploaded({
+        mediaAssetId,
+        actorUserId: input.actorUserId,
+        byteCount: input.contentLength,
+        contentType: input.contentType,
+      });
+      return { mediaAssetId, state: "uploaded" as const };
+    } catch (error) {
+      const rawObjectKey = asset.rawObjectKey ?? buildPhotoMediaObjectKeys({
+        companyId: asset.companyId,
+        mediaAssetId,
+      }).raw;
+      try {
+        await this.primaryStorage.deleteObject(rawObjectKey);
+        await this.repository.markRejected({
+          mediaAssetId,
+          actorUserId: input.actorUserId,
+          reasonCode: error instanceof BadRequestException ? "invalid_image" : "server_upload_failed",
+        });
+      } catch {
+        // Preserve the reservation when compensating cleanup cannot be proven.
+      }
+      throw error;
+    } finally {
+      if (uploadLeaseToken) {
+        await this.repository.releaseProcessingLease({ mediaAssetId, processingLeaseToken: uploadLeaseToken });
+      }
+    }
+  }
+
   async createSignedRead(input: {
     mediaAssetId: string;
     actorUserId: string;
@@ -286,15 +396,22 @@ export class PhotoMediaStorageService {
     actorRoleCodes?: string[];
     actorScope?: PhotoMediaActorScope;
     allowCompanyScopedVmReference?: boolean;
+    realVmPilotAuthorized?: boolean;
   }) {
     this.assertEnabled();
-    if (!this.configuration.syntheticOnly) {
+    if (!input.realVmPilotAuthorized && !this.configuration.syntheticOnly) {
       throw new ServiceUnavailableException("Real-photo processing is not authorized");
     }
 
     const existingAsset = await this.repository.findAssetForRead(input.mediaAssetId);
     if (!existingAsset || !["uploaded", "ready"].includes(existingAsset.state) || !existingAsset.rawObjectKey) {
       throw new BadRequestException("Photo media upload cannot be finalized");
+    }
+    if (input.realVmPilotAuthorized && existingAsset.classification !== "vm_campaign_evidence") {
+      throw new ForbiddenException("Real-photo finalization is limited to VM campaign evidence");
+    }
+    if (input.realVmPilotAuthorized && !["camera", "gallery"].includes(existingAsset.captureSource ?? "")) {
+      throw new ForbiddenException("Real-photo finalization requires camera or gallery provenance");
     }
     const superAdminCompanyAccess =
       input.actorRoleCodes?.includes("SUPER_ADMIN") &&
@@ -333,22 +450,27 @@ export class PhotoMediaStorageService {
     });
 
     const raw = await this.primaryStorage.getObject(asset.rawObjectKey!);
-    const scan = await this.safetyScanner.scan(raw);
-    if (scan.assurance !== this.configuration.safetyAssurance) {
-      throw new ServiceUnavailableException("Photo media safety assurance does not match the configured mode");
+    let assuranceEngine = "strict_image_decode_reencode";
+    let assuranceVersion: string | null = null;
+    if (!input.realVmPilotAuthorized) {
+      const scan = await this.safetyScanner.scan(raw);
+      if (scan.assurance !== this.configuration.safetyAssurance) {
+        throw new ServiceUnavailableException("Photo media safety assurance does not match the configured mode");
+      }
+      if (scan.verdict === "unavailable") {
+        throw new ServiceUnavailableException("Photo media safety scanning is temporarily unavailable");
+      }
+      if (scan.verdict === "unsafe") {
+        await this.repository.markQuarantined({
+          mediaAssetId: asset.mediaAssetId,
+          actorUserId: input.actorUserId,
+          reasonCode: scan.reasonCode ?? `scanner_${scan.verdict}`,
+        });
+        throw new BadRequestException("Photo media upload did not pass safety scanning");
+      }
+      assuranceEngine = scan.engine;
+      assuranceVersion = scan.signatureVersion ?? null;
     }
-    if (scan.verdict === "unavailable") {
-      throw new ServiceUnavailableException("Photo media safety scanning is temporarily unavailable");
-    }
-    if (scan.verdict === "unsafe") {
-      await this.repository.markQuarantined({
-        mediaAssetId: asset.mediaAssetId,
-        actorUserId: input.actorUserId,
-        reasonCode: scan.reasonCode ?? `scanner_${scan.verdict}`,
-      });
-      throw new BadRequestException("Photo media upload did not pass safety scanning");
-    }
-
     const processed = await this.imageProcessor.process(raw);
     await this.repository.resizeByteReservation({
       mediaAssetId: asset.mediaAssetId,
@@ -415,8 +537,8 @@ export class PhotoMediaStorageService {
       widthPx: processed.widthPx,
       heightPx: processed.heightPx,
       mimeType: processed.mimeType,
-      scannerEngine: scan.engine,
-      scannerSignatureVersion: scan.signatureVersion ?? null,
+      scannerEngine: assuranceEngine,
+      scannerSignatureVersion: assuranceVersion,
     });
 
       return this.disposeFinalizedRaw(asset, input.actorUserId);
@@ -426,6 +548,20 @@ export class PhotoMediaStorageService {
         processingLeaseToken,
       });
     }
+  }
+
+  async finalizeRealVmCampaignUpload(input: {
+    mediaAssetId: string;
+    actorUserId: string;
+    actorActionScope: { assignedStoreIds: string[] };
+    actorRoleCodes: string[];
+    actorScope: PhotoMediaActorScope;
+    cohortAuthorized: boolean;
+  }) {
+    if (!input.cohortAuthorized || !input.actorRoleCodes.includes("STORE_MANAGER")) {
+      throw new ForbiddenException("Real VM campaign photo finalization is outside the approved cohort");
+    }
+    return this.finalizeSyntheticUpload({ ...input, realVmPilotAuthorized: true });
   }
 
   async disposeSyntheticQuarantine(input: {
@@ -520,4 +656,11 @@ export class PhotoMediaStorageService {
       Boolean(asset.storeId && scope.storeIds.includes(asset.storeId))
     );
   }
+}
+
+function detectImageMimeType(body: Buffer): "image/jpeg" | "image/png" | "image/webp" | null {
+  if (body.length >= 3 && body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff) return "image/jpeg";
+  if (body.length >= 8 && body.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (body.length >= 12 && body.subarray(0, 4).toString("ascii") === "RIFF" && body.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  return null;
 }

@@ -144,16 +144,42 @@ export class VmReferenceManagementService {
     contentType: string;
     contentLength: number;
     contentBody: Buffer;
+    captureSource?: "camera" | "gallery";
+    contentPolicyAttestation?: boolean;
   }) {
     this.assertSubmissionEnabled();
     this.assertStoreManager(input);
-    const assignment = await this.repository.getAssignmentScope({
+    const assignment = await this.repository.getSubmissionUploadScope({
       assignmentId: input.assignmentId,
+      referenceItemId: input.referenceItemId,
       actorUserId: input.actorUserId,
       storeIds: input.actorActionScope.assignedStoreIds,
     });
     if (!assignment) throw new ForbiddenException("VM campaign assignment is outside actor scope");
-    const result = await this.media.initiateApprovedSyntheticFixtureUpload({
+    const realPilot = this.realVmPilotMatches(assignment);
+    const result = realPilot
+      ? await this.media.initiateRealVmCampaignUpload({
+          actorUserId: input.actorUserId,
+          actorRoleCodes: input.actorRoleCodes,
+          actorScope: input.actorScope,
+          actorActionScope: input.actorActionScope,
+          storeId: assignment.storeId,
+          companyId: assignment.companyId,
+          contentType: input.contentType,
+          contentLength: input.contentLength,
+          contentBody: input.contentBody,
+          captureSource: input.captureSource ?? "gallery",
+          contentPolicyAttestation: input.contentPolicyAttestation === true,
+          cohortAuthorized: true,
+          bindInitiatedAsset: (mediaAssetId) => this.repository.createSubmissionUploadIntent({
+            assignmentId: input.assignmentId,
+            referenceItemId: input.referenceItemId,
+            mediaAssetId,
+            actorUserId: input.actorUserId,
+            storeIds: input.actorActionScope.assignedStoreIds,
+          }).then(() => undefined),
+        })
+      : await this.media.initiateApprovedSyntheticFixtureUpload({
       actorUserId: input.actorUserId,
       actorScope: input.actorScope,
       storeId: assignment.storeId,
@@ -162,11 +188,13 @@ export class VmReferenceManagementService {
       contentBody: input.contentBody,
       classification: "vm_campaign_evidence",
     });
-    await this.repository.createSubmissionUploadIntent({
-      ...input,
-      mediaAssetId: result.mediaAssetId,
-      storeIds: input.actorActionScope.assignedStoreIds,
-    });
+    if (!realPilot) {
+      await this.repository.createSubmissionUploadIntent({
+        ...input,
+        mediaAssetId: result.mediaAssetId,
+        storeIds: input.actorActionScope.assignedStoreIds,
+      });
+    }
     return result;
   }
 
@@ -183,13 +211,23 @@ export class VmReferenceManagementService {
     })) {
       throw new ForbiddenException("VM campaign upload is not bound to this assignment and actor");
     }
-    return this.media.finalizeSyntheticUpload({
+    const assignment = await this.repository.getSubmissionUploadScope({
+      assignmentId: input.assignmentId,
+      referenceItemId: input.referenceItemId,
+      actorUserId: input.actorUserId,
+      storeIds: input.actorActionScope.assignedStoreIds,
+    });
+    if (!assignment) throw new ForbiddenException("VM campaign assignment is outside actor scope");
+    const common = {
       mediaAssetId: input.mediaAssetId,
       actorUserId: input.actorUserId,
       actorActionScope: input.actorActionScope,
       actorRoleCodes: [...input.actorRoleCodes],
       actorScope: input.actorScope,
-    });
+    };
+    return this.realVmPilotMatches(assignment)
+      ? this.media.finalizeRealVmCampaignUpload({ ...common, cohortAuthorized: true })
+      : this.media.finalizeSyntheticUpload(common);
   }
 
   async readStoreReference(input: Actor & {
@@ -319,5 +357,13 @@ export class VmReferenceManagementService {
         input.actorActionScope.assignedStoreIds.length === 0) {
       throw new ForbiddenException("VM campaign submission requires Store Manager action scope");
     }
+  }
+
+  private realVmPilotMatches(assignment: { companyId: string; referenceSetId: string }): boolean {
+    const pilot = this.config.photoMediaRealVmPilotConfiguration;
+    return pilot.enabled &&
+      pilot.companyId === assignment.companyId &&
+      pilot.referenceSetId === assignment.referenceSetId &&
+      Boolean(pilot.notBefore && Date.now() >= pilot.notBefore.getTime());
   }
 }

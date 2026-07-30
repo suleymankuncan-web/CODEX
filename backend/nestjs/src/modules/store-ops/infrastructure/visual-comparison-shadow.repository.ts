@@ -99,6 +99,7 @@ implements VisualComparisonShadowRepositoryPort {
 
       for (const row of candidates.rows) {
         const idempotencyKey = buildShadowIdempotencyKey({
+          isolationClass: input.isolationClass,
           companyId: row.company_id,
           assignmentId: row.assignment_id,
           visualReferenceItemId: row.visual_reference_item_id,
@@ -115,11 +116,12 @@ implements VisualComparisonShadowRepositoryPort {
             visual_reference_item_id, evidence_media_asset_id,
             isolation_class, status, evidence_sha256, reference_sha256,
             rubric_version, prompt_version, comparison_policy_version,
-            idempotency_key
+            idempotency_key, provider_adapter_id, provider_model_id
           ) VALUES (
             $1::uuid, $2::uuid, $3::uuid, $4::uuid,
             $5::uuid, $6::uuid, $7::uuid, $8::uuid,
-            'shadow', 'queued', $9, $10, $11, $12, $13, $14
+            $9, 'queued', $10, $11, $12, $13, $14, $15,
+            'qwen-compatible-v1', $16
           )
           ON CONFLICT (company_id, idempotency_key) DO NOTHING
         `, [
@@ -131,12 +133,14 @@ implements VisualComparisonShadowRepositoryPort {
           row.campaign_revision_id,
           row.visual_reference_item_id,
           row.evidence_media_asset_id,
+          input.isolationClass,
           row.evidence_sha256,
           row.reference_sha256,
           row.rubric_version,
           input.promptVersion,
           input.policyVersion,
           idempotencyKey,
+          QWEN_VISUAL_COMPARISON_MODEL,
         ]);
       }
 
@@ -146,7 +150,7 @@ implements VisualComparisonShadowRepositoryPort {
         WHERE run.company_id = $1::uuid
           AND run.visual_reference_set_id = $2::uuid
           AND run.created_at >= $3::timestamptz
-          AND run.isolation_class = 'shadow'
+          AND run.isolation_class = $7
           AND (
             run.status IN ('queued', 'failed_retryable')
             OR (
@@ -164,6 +168,7 @@ implements VisualComparisonShadowRepositoryPort {
         input.limit,
         input.maxAttempts,
         input.processingLeaseSeconds,
+        input.isolationClass,
       ]);
       return queued.rows.map((row) => row.comparison_run_id);
     });
@@ -176,12 +181,13 @@ implements VisualComparisonShadowRepositoryPort {
     companyId: string;
     referenceSetId: string;
     notBefore: Date;
+    isolationClass: "shadow" | "advisory";
     budget: Parameters<VisualComparisonShadowRepositoryPort["claim"]>[0]["budget"];
   }): Promise<VisualComparisonShadowClaimResult> {
     return this.database.withTransaction(async (client) => {
       await client.query(
         "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))",
-        [`visual-comparison-shadow:${input.companyId}:${input.referenceSetId}`],
+        [`visual-comparison:${input.isolationClass}:${input.companyId}:${input.referenceSetId}`],
       );
 
       const selected = await client.query<ClaimRow>(`
@@ -225,7 +231,7 @@ implements VisualComparisonShadowRepositoryPort {
          AND submission.visual_reference_set_id = run.visual_reference_set_id
          AND submission.finalized_at >= $4::timestamptz
         WHERE run.comparison_run_id = $1::uuid
-          AND run.isolation_class = 'shadow'
+          AND run.isolation_class = $5
           AND run.company_id = $2::uuid
           AND run.visual_reference_set_id = $3::uuid
         FOR UPDATE OF run
@@ -234,6 +240,7 @@ implements VisualComparisonShadowRepositoryPort {
         input.companyId,
         input.referenceSetId,
         input.notBefore,
+        input.isolationClass,
       ]);
       const row = selected.rows[0];
       if (!row) {
@@ -244,7 +251,7 @@ implements VisualComparisonShadowRepositoryPort {
           WHERE comparison_run_id = $1::uuid
             AND company_id = $2::uuid
             AND visual_reference_set_id = $3::uuid
-            AND isolation_class = 'shadow'
+            AND isolation_class = $5
             AND (
               status IN ('queued', 'failed_retryable')
               OR (
@@ -260,6 +267,7 @@ implements VisualComparisonShadowRepositoryPort {
           input.companyId,
           input.referenceSetId,
           input.processingLeaseSeconds,
+          input.isolationClass,
         ]);
         return { status: "idempotent" as const };
       }
@@ -293,9 +301,9 @@ implements VisualComparisonShadowRepositoryPort {
         FROM ops.visual_comparison_run run
         WHERE run.company_id = $1::uuid
           AND run.visual_reference_set_id = $2::uuid
-          AND run.isolation_class = 'shadow'
+          AND run.isolation_class = $4
           AND run.created_at >= $3::timestamptz
-      `, [input.companyId, input.referenceSetId, input.notBefore]);
+      `, [input.companyId, input.referenceSetId, input.notBefore, input.isolationClass]);
       const used = budgetResult.rows[0];
       const requestsAfterClaim = BigInt(used.request_attempts) + 1n;
       const tokensAfterClaim = BigInt(used.reserved_tokens) +

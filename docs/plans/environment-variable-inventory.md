@@ -46,6 +46,10 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `PHOTO_MEDIA_STORAGE_ENABLED` | Project owner | Render API env | Internal | Keep `false` until the synthetic-only R2 provider gate is verified. | `false` |
 | `PHOTO_MEDIA_SYNTHETIC_ONLY` | Project owner | Render API env | Internal | PR-3 requires exact `true`; real photographs remain blocked. | `true` |
 | `PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST` | Project owner | Render API env | Secret-like operational control | PR-4 enabled synthetic staging requires exactly one pre-approved SHA-256 digest. Empty, malformed, or multiple values fail enabled startup. Never place image bytes or private payloads here. | Empty. |
+| `PHOTO_MEDIA_REAL_VM_PILOT_ENABLED` | Project owner | Render API env | Internal | Exact-cohort real VM photo intake kill switch. Does not open checklist or action uploads. | `false` |
+| `PHOTO_MEDIA_REAL_VM_PILOT_COMPANY_ID` | Project owner | Render API env | Sensitive scope identifier | Exact approved company UUID; must match the visual-comparison cohort. | Empty. |
+| `PHOTO_MEDIA_REAL_VM_PILOT_REFERENCE_SET_ID` | Project owner | Render API env | Sensitive scope identifier | Exact approved VM reference-set UUID; must match the visual-comparison cohort. | Empty. |
+| `PHOTO_MEDIA_REAL_VM_PILOT_NOT_BEFORE` | Project owner | Render API env | Internal | Timezone-qualified ISO lower bound; must match the visual-comparison cohort. | Empty. |
 | `CHECKLIST_EVIDENCE_CAPTURE_ENABLED` | Project owner | Render API env | Internal | Independent capture control; remains `false` until PR-4 synthetic device proof is accepted. | `false` |
 | `CHECKLIST_REQUIRED_EVIDENCE_ENFORCEMENT_ENABLED` | Project owner | Render API env | Internal | Allows publishing new required policies only when capture and storage health are also enabled. | `false` |
 | `CHECKLIST_EVIDENCE_STORAGE_HEALTHY` | Platform owner | Render API env | Internal | Explicit fail-closed storage-health gate for new required policy publication. | `false` |
@@ -56,6 +60,8 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `VM_CAMPAIGN_DEADLINE_SETTLEMENT_ENABLED` | Project owner | Render worker env | Internal | Enables bounded idempotent VM campaign deadline settlement. | `false` |
 | `VM_CAMPAIGN_SETTLEMENT_POLL_SECONDS` | Project owner | Render worker env | Internal | Poll interval for bounded VM campaign settlement. | `60` |
 | `VISUAL_COMPARISON_ENQUEUE_ENABLED` | Project owner | Render worker env | Internal | Independent reconciler/enqueue kill switch. Keep `false` until the exact PR9 shadow scope is configured. | `false` |
+| `VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED` | Project owner | Render worker env | Internal | Advisory enqueue kill switch. Mutually exclusive with shadow enqueue. | `false` |
+| `VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED` | Project owner | Render API env | Internal | Region Manager advisory visibility and review kill switch. Exact visual-comparison scope is required when enabled. | `false` |
 | `VISUAL_COMPARISON_WORKER_ENABLED` | Project owner | Render worker env | Internal | Independent Qwen execution kill switch. Requires BullMQ, healthy private media storage, exact scope, host pin and positive price ceilings. | `false` |
 | `VISUAL_COMPARISON_COMPANY_ID` | Project owner | Render worker env | Sensitive scope identifier | Exact company UUID allowlist for the hidden shadow run; never record its value in evidence. | Empty. |
 | `VISUAL_COMPARISON_REFERENCE_SET_ID` | Project owner | Render worker env | Sensitive scope identifier | Exact immutable reference-set UUID allowlist for the hidden shadow run. | Empty. |

@@ -34,6 +34,7 @@ export class VisualComparisonShadowReconcilerService {
     }
     const runIds = await this.repository.reconcile({
       ...this.runtime.scope,
+      isolationClass: this.runtime.isolationClass,
       promptVersion: VISUAL_COMPARISON_PROMPT_POLICY_VERSION,
       policyVersion: VISUAL_COMPARISON_RESULT_SCHEMA_VERSION,
       maxAttempts: this.runtime.maxAttempts,

@@ -66,7 +66,7 @@ test('pilot route matrix locks the visual merchandiser-only route boundary', () 
     '## Authority',
     'A Visual Merchandiser-only session lands on `/store/checklists` and may use',
     'only `/store/checklists`, `/store/visual-campaigns`, `/store/feed`, and `/store/settings`.',
-    '| `/store/visual-campaigns` | store | secondary | `VISUAL_MERCHANDISER` with an explicit company-scoped publisher or reviewer capability; `STORE_MANAGER` with an assigned campaign store |',
+    '| `/store/visual-campaigns` | store | secondary | `VISUAL_MERCHANDISER` with an explicit company-scoped publisher or reviewer capability; `STORE_MANAGER` with an assigned campaign store; `REGION_MANAGER` with both a current region-role assignment and current action-store assignment |',
     '| `/store/feed` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
     '| `/store/settings` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
     'Catalog inclusion for `VISUAL_MERCHANDISER` does not imply a Store route',

@@ -11,7 +11,7 @@ import { RequestContextStore } from "../../../shared/request-context";
 type DbClient = { query<T = Record<string, unknown>>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> };
 
 const ASSIGNMENT_SCOPE_SQL = `
-  SELECT assignment.store_id
+  SELECT assignment.store_id, assignment.company_id, assignment.visual_reference_set_id
   FROM ops.visual_campaign_assignment assignment
   INNER JOIN ops.store active_store ON active_store.store_id = assignment.store_id
     AND active_store.region_id = assignment.region_id
@@ -519,9 +519,36 @@ export class VmReferenceManagementRepository {
   }
 
   async getAssignmentScope(input: { assignmentId: string; actorUserId: string; storeIds: string[] }) {
-    const result = await this.database.query<{ store_id: string }>(ASSIGNMENT_SCOPE_SQL,
+    const result = await this.database.query<{ store_id: string; company_id: string; visual_reference_set_id: string }>(ASSIGNMENT_SCOPE_SQL,
       [input.assignmentId, input.storeIds, input.actorUserId]);
-    return result.rows[0] ? { storeId: result.rows[0].store_id } : null;
+    return result.rows[0] ? {
+      storeId: result.rows[0].store_id,
+      companyId: result.rows[0].company_id,
+      referenceSetId: result.rows[0].visual_reference_set_id,
+    } : null;
+  }
+
+  async getSubmissionUploadScope(input: {
+    assignmentId: string; referenceItemId: string; actorUserId: string; storeIds: string[];
+  }) {
+    const result = await this.database.query<{
+      store_id: string; company_id: string; visual_reference_set_id: string;
+    }>(`
+      WITH authorized_assignment AS (${ASSIGNMENT_SCOPE_SQL})
+      SELECT authorized.store_id, assignment.company_id, assignment.visual_reference_set_id
+      FROM authorized_assignment authorized
+      INNER JOIN ops.visual_campaign_assignment assignment
+        ON assignment.assignment_id = $1::uuid AND assignment.store_id = authorized.store_id
+      INNER JOIN ops.visual_reference_item item
+        ON item.campaign_revision_id = assignment.active_campaign_revision_id
+       AND item.visual_reference_item_id = $4::uuid
+      LIMIT 1
+    `, [input.assignmentId, input.storeIds, input.actorUserId, input.referenceItemId]);
+    return result.rows[0] ? {
+      storeId: result.rows[0].store_id,
+      companyId: result.rows[0].company_id,
+      referenceSetId: result.rows[0].visual_reference_set_id,
+    } : null;
   }
 
   async getAssignmentReferenceAsset(input: {
@@ -548,9 +575,13 @@ export class VmReferenceManagementRepository {
   private async getAssignmentScopeWithClient(client: DbClient, input: {
     assignmentId: string; actorUserId: string; storeIds: string[];
   }) {
-    const result = await client.query<{ store_id: string }>(ASSIGNMENT_SCOPE_SQL,
+    const result = await client.query<{ store_id: string; company_id: string; visual_reference_set_id: string }>(ASSIGNMENT_SCOPE_SQL,
       [input.assignmentId, input.storeIds, input.actorUserId]);
-    return result.rows[0] ? { storeId: result.rows[0].store_id } : null;
+    return result.rows[0] ? {
+      storeId: result.rows[0].store_id,
+      companyId: result.rows[0].company_id,
+      referenceSetId: result.rows[0].visual_reference_set_id,
+    } : null;
   }
 
   async createSubmissionUploadIntent(input: {

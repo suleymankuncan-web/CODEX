@@ -10,6 +10,7 @@ export const VISUAL_COMPARISON_SHADOW_JOB_TYPE = "visual-comparison-shadow" as c
 export const VISUAL_COMPARISON_SHADOW_ADAPTER_ID = "qwen-compatible-v1" as const;
 
 export type VisualComparisonShadowScope = {
+  isolationClass: "shadow" | "advisory";
   companyId: string;
   referenceSetId: string;
   notBefore: Date;
@@ -65,11 +66,12 @@ export class VisualComparisonShadowDisabledError extends Error {
 
 export type VisualComparisonShadowRuntime = {
   enqueueEnabled: boolean;
+  isolationClass: "shadow" | "advisory";
   workerEnabled: boolean;
   maxAttempts: number;
   processingLeaseSeconds: number;
   budget: VisualComparisonShadowBudget;
-  scope: VisualComparisonShadowScope;
+  scope: Omit<VisualComparisonShadowScope, "isolationClass">;
 };
 
 export interface VisualComparisonShadowRepositoryPort {
@@ -81,6 +83,7 @@ export interface VisualComparisonShadowRepositoryPort {
   }): Promise<string[]>;
   claim(input: {
     comparisonRunId: string;
+    isolationClass: "shadow" | "advisory";
     maxAttempts: number;
     processingLeaseSeconds: number;
     companyId: string;
@@ -118,6 +121,7 @@ export function buildShadowCriteria(input: {
 }
 
 export function buildShadowIdempotencyKey(input: {
+  isolationClass: "shadow" | "advisory";
   companyId: string;
   assignmentId: string;
   visualReferenceItemId: string;
@@ -130,6 +134,7 @@ export function buildShadowIdempotencyKey(input: {
   return createHash("sha256")
     .update([
       input.companyId,
+      input.isolationClass,
       input.assignmentId,
       input.visualReferenceItemId,
       input.evidenceSha256,

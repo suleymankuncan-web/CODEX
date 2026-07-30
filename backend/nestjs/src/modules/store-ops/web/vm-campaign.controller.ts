@@ -8,7 +8,7 @@ import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { VmReferenceManagementService } from "../application/vm-reference-management.service";
 import { PhotoMediaUploadBufferGuardInterceptor } from "./photo-media-upload-buffer-guard.interceptor";
-import { PhotoMediaReadDto } from "./dto/photo-media-storage.dto";
+import { PhotoMediaReadDto, VmCampaignPhotoUploadDto } from "./dto/photo-media-storage.dto";
 import { SubmitVmCampaignDto, VmCampaignListQueryDto } from "./dto/vm-reference-management.dto";
 
 type Request = { user: AuthenticatedUser };
@@ -26,17 +26,19 @@ export class VmCampaignController {
 
   @Post(":assignmentId/items/:referenceItemId/uploads")
   @UseInterceptors(new PhotoMediaUploadBufferGuardInterceptor(), FileInterceptor("file", {
-    limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 0 },
+    limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 2 },
   }))
   upload(@Req() request: Request, @Param("assignmentId") assignmentId: string,
     @Param("referenceItemId") referenceItemId: string,
+    @Body() body: VmCampaignPhotoUploadDto,
     @UploadedFile(new ParseFilePipeBuilder()
       .addFileTypeValidator({ fileType: /^(image\/jpeg|image\/png|image\/webp)$/ })
       .addMaxSizeValidator({ maxSize: 15 * 1024 * 1024 })
       .build({ fileIsRequired: true })) file: { buffer: Buffer; mimetype: string; size: number }) {
     return this.service.uploadCampaignEvidence({ ...actor(request.user), assignmentId,
       referenceItemId, contentType: file.mimetype, contentLength: file.size,
-      contentBody: file.buffer });
+      contentBody: file.buffer, captureSource: body.captureSource,
+      contentPolicyAttestation: body.contentPolicyAttestation });
   }
 
   @Post(":assignmentId/items/:referenceItemId/reference-read-url")

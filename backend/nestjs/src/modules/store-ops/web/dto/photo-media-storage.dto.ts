@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsIn, IsInt, Matches, Max, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, Matches, Max, Min } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 import { ApiProperty } from "@nestjs/swagger";
 
@@ -10,6 +10,17 @@ export class InitiateSyntheticPhotoMediaUploadDto {
   @Transform(({ value }) => value === true || value === "true")
   @IsBoolean()
   syntheticFixtureAttestation!: boolean;
+}
+
+export class VmCampaignPhotoUploadDto {
+  @IsOptional()
+  @IsIn(["camera", "gallery"])
+  captureSource?: "camera" | "gallery";
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === "true")
+  @IsBoolean()
+  contentPolicyAttestation?: boolean;
 }
 
 export class DisposeSyntheticPhotoMediaQuarantineDto {

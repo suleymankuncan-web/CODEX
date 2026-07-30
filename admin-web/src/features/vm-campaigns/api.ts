@@ -4,7 +4,26 @@ import {
   type ApiGetResponse,
   type ApiMutationBody,
 } from '../../lib/openapi-client'
-import { fetchBlob, sendFormData } from '../../lib/api'
+import { fetchBlob, fetchJson, sendFormData, sendJson } from '../../lib/api'
+
+export type VisualAdvisoryDecision = 'pass' | 'partial' | 'fail' | 'abstain' | 'recapture_required'
+export type VisualAdvisory = {
+  comparisonRunId: string
+  storeName: string
+  referenceName: string
+  status: string
+  suggestion: VisualAdvisoryDecision | null
+  confidence: number | null
+  qualityFlags: string[]
+  modelLimitations: string[]
+  dimensions: Array<{ key: string; score: number | null; confidence: number; reasonCode: string; explanation: string }>
+  finishedAt: string | null
+  reviewed: boolean
+  acceptAllowed: boolean
+  criterion?: string
+  reviewInstructions?: string
+  review?: null | { decision: string; reason: string; finalDecision: string | null; reviewedAt: string }
+}
 
 export type VmReferenceList = ApiGetResponse<'/api/visual-merchandising/references'>
 export type VmCampaignList = ApiGetResponse<'/api/mobile/visual-campaigns'>
@@ -156,13 +175,17 @@ export async function getVmReferenceReadUrl(input: { assignmentId: string; refer
   return { url: URL.createObjectURL(blob) }
 }
 
-export async function uploadSyntheticVmEvidence(input: {
+export async function uploadVmEvidence(input: {
   assignmentId: string
   referenceItemId: string
   file: File
+  captureSource: 'camera' | 'gallery'
+  contentPolicyAttestation: boolean
 }) {
   const form = new FormData()
   form.append('file', input.file)
+  form.append('captureSource', input.captureSource)
+  form.append('contentPolicyAttestation', String(input.contentPolicyAttestation))
   const upload = await sendFormData<{ mediaAssetId: string }>(
     `/mobile/visual-campaigns/${encodeURIComponent(input.assignmentId)}/items/${encodeURIComponent(input.referenceItemId)}/uploads`,
     { method: 'POST', body: form },
@@ -176,6 +199,32 @@ export async function uploadSyntheticVmEvidence(input: {
     } },
   )
   return { referenceItemId: input.referenceItemId, mediaAssetId: upload.mediaAssetId }
+}
+
+export function getVisualAdvisories() {
+  return fetchJson<{ items: VisualAdvisory[]; total: number; limit: number; offset: number }>(
+    '/visual-comparisons/advisories?limit=100&offset=0',
+  )
+}
+
+export function getVisualAdvisory(comparisonRunId: string) {
+  return fetchJson<VisualAdvisory>(`/visual-comparisons/advisories/${encodeURIComponent(comparisonRunId)}`)
+}
+
+export async function getVisualAdvisoryImage(comparisonRunId: string, kind: 'reference' | 'evidence') {
+  const blob = await fetchBlob(`/visual-comparisons/advisories/${encodeURIComponent(comparisonRunId)}/media/${kind}/thumbnail`)
+  return URL.createObjectURL(blob)
+}
+
+export function reviewVisualAdvisory(input: {
+  comparisonRunId: string
+  decision: 'accept' | 'override' | 'reject' | 'recapture'
+  reason: string
+  finalDecision?: 'pass' | 'partial' | 'fail'
+}) {
+  return sendJson(`/visual-comparisons/advisories/${encodeURIComponent(input.comparisonRunId)}/reviews`, {
+    method: 'POST', body: { decision: input.decision, reason: input.reason, finalDecision: input.finalDecision },
+  })
 }
 
 export function submitVmCampaign(input: {

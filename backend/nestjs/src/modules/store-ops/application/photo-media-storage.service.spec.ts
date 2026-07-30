@@ -1,4 +1,4 @@
-import { ForbiddenException, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, ServiceUnavailableException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { PhotoMediaStorageService } from "./photo-media-storage.service";
 
@@ -154,6 +154,93 @@ describe("PhotoMediaStorageService", () => {
       requiredState: "initiated",
     }));
     expect(repository.releaseProcessingLease).toHaveBeenCalledTimes(1);
+  });
+
+  it("[FR-2][AC-2] accepts only cohort-authorized attested real VM image bytes", async () => {
+    const png = Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);
+    repository.createInitiatedAsset.mockResolvedValueOnce({
+      ...mediaAsset, state: "initiated", rawObjectKey: "transient/real/raw",
+      classification: "vm_campaign_evidence",
+    });
+    await expect(createService().initiateRealVmCampaignUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorRoleCodes: ["STORE_MANAGER"],
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [mediaAsset.regionId], storeIds: [mediaAsset.storeId] },
+      actorActionScope: { assignedStoreIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId,
+      companyId: mediaAsset.companyId,
+      contentType: "image/png",
+      contentLength: png.length,
+      contentBody: png,
+      captureSource: "camera",
+      contentPolicyAttestation: true,
+      cohortAuthorized: true,
+    })).resolves.toMatchObject({ state: "uploaded" });
+    expect(repository.createInitiatedAsset).toHaveBeenCalledWith(expect.objectContaining({
+      captureSource: "camera", classification: "vm_campaign_evidence",
+    }));
+    expect(primary.putObject).toHaveBeenCalled();
+
+    await expect(createService().initiateRealVmCampaignUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorRoleCodes: ["STORE_MANAGER"],
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      actorActionScope: { assignedStoreIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId,
+      companyId: mediaAsset.companyId,
+      contentType: "image/jpeg",
+      contentLength: png.length,
+      contentBody: png,
+      captureSource: "gallery",
+      contentPolicyAttestation: true,
+      cohortAuthorized: true,
+    })).rejects.toThrow("does not match");
+  });
+
+  it("[NFR-5][EC-2] decodes under the processing lease and never writes malformed real input to R2", async () => {
+    const jpegHeader = Buffer.from([0xff, 0xd8, 0xff, 0x00]);
+    repository.createInitiatedAsset.mockResolvedValueOnce({
+      ...mediaAsset, state: "initiated", rawObjectKey: "transient/real/raw",
+      classification: "vm_campaign_evidence", captureSource: "gallery",
+    });
+    processor.process.mockRejectedValueOnce(new BadRequestException("Photo media image decode failed"));
+    await expect(createService().initiateRealVmCampaignUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorRoleCodes: ["STORE_MANAGER"],
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      actorActionScope: { assignedStoreIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId, companyId: mediaAsset.companyId,
+      contentType: "image/jpeg", contentLength: jpegHeader.length, contentBody: jpegHeader,
+      captureSource: "gallery", contentPolicyAttestation: true, cohortAuthorized: true,
+    })).rejects.toThrow("decode failed");
+    expect(repository.acquireProcessingLease).toHaveBeenCalled();
+    expect(primary.putObject).not.toHaveBeenCalled();
+    expect(repository.markRejected).toHaveBeenCalledWith(expect.objectContaining({
+      reasonCode: "invalid_image",
+    }));
+  });
+
+  it("[AC-2][EC-2] binds the fresh assignment and revision before writing real bytes to R2", async () => {
+    const png = Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]);
+    repository.createInitiatedAsset.mockResolvedValueOnce({
+      ...mediaAsset, state: "initiated", rawObjectKey: "transient/real/raw",
+      classification: "vm_campaign_evidence", captureSource: "camera",
+    });
+    const bindInitiatedAsset = jest.fn(async () => { throw new ForbiddenException("assignment changed"); });
+    await expect(createService().initiateRealVmCampaignUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorRoleCodes: ["STORE_MANAGER"],
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      actorActionScope: { assignedStoreIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId, companyId: mediaAsset.companyId,
+      contentType: "image/png", contentLength: png.length, contentBody: png,
+      captureSource: "camera", contentPolicyAttestation: true, cohortAuthorized: true,
+      bindInitiatedAsset,
+    })).rejects.toThrow("assignment changed");
+    expect(bindInitiatedAsset).toHaveBeenCalledWith(expect.any(String));
+    expect(processor.process).not.toHaveBeenCalled();
+    expect(primary.putObject).not.toHaveBeenCalled();
+    expect(repository.markRejected).toHaveBeenCalled();
   });
 
   it("rejects ordinary actors and non-synthetic upload initiation", async () => {

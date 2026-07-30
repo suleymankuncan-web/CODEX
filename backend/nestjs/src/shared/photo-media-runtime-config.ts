@@ -59,6 +59,27 @@ export function readPhotoMediaRuntimeConfiguration(
     throw new Error("PR-3 photo media storage must remain synthetic-only");
   }
   const rawAllowlist = optional("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST") ?? "";
+
+  const realVmPilotEnabled = boolean("PHOTO_MEDIA_REAL_VM_PILOT_ENABLED", false);
+  if (realVmPilotEnabled && !enabled) {
+    throw new Error("PHOTO_MEDIA_REAL_VM_PILOT_ENABLED requires PHOTO_MEDIA_STORAGE_ENABLED=true");
+  }
+  const realVmPilotCompanyId = optional("PHOTO_MEDIA_REAL_VM_PILOT_COMPANY_ID") ?? "";
+  const realVmPilotReferenceSetId = optional("PHOTO_MEDIA_REAL_VM_PILOT_REFERENCE_SET_ID") ?? "";
+  const realVmPilotNotBeforeRaw = optional("PHOTO_MEDIA_REAL_VM_PILOT_NOT_BEFORE") ?? "";
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (realVmPilotEnabled && !uuidPattern.test(realVmPilotCompanyId)) {
+    throw new Error("PHOTO_MEDIA_REAL_VM_PILOT_COMPANY_ID must be an exact UUID when enabled");
+  }
+  if (realVmPilotEnabled && !uuidPattern.test(realVmPilotReferenceSetId)) {
+    throw new Error("PHOTO_MEDIA_REAL_VM_PILOT_REFERENCE_SET_ID must be an exact UUID when enabled");
+  }
+  const exactIsoTimestamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
+  const realVmPilotNotBefore = realVmPilotNotBeforeRaw ? new Date(realVmPilotNotBeforeRaw) : null;
+  if (realVmPilotEnabled && (!exactIsoTimestamp.test(realVmPilotNotBeforeRaw) ||
+      !realVmPilotNotBefore || Number.isNaN(realVmPilotNotBefore.getTime()))) {
+    throw new Error("PHOTO_MEDIA_REAL_VM_PILOT_NOT_BEFORE must be an exact ISO timestamp when enabled");
+  }
   const syntheticFixtureSha256Allowlist = [
     ...new Set(rawAllowlist.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean)),
   ];
@@ -134,5 +155,11 @@ export function readPhotoMediaRuntimeConfiguration(
     primaryCredentials,
     recoveryCredentials,
     storage,
+    realVmPilot: {
+      enabled: realVmPilotEnabled,
+      companyId: realVmPilotCompanyId,
+      referenceSetId: realVmPilotReferenceSetId,
+      notBefore: realVmPilotNotBefore,
+    },
   };
 }

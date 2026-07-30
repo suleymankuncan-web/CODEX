@@ -40,6 +40,7 @@ import {
         );
         return {
           enqueueEnabled: config.visualComparisonEnqueueEnabled,
+          isolationClass: config.visualComparisonIsolationClass,
           workerEnabled: config.visualComparisonWorkerEnabled,
           maxAttempts: config.visualComparisonMaxAttempts,
           processingLeaseSeconds: config.visualComparisonProcessingLeaseSeconds,

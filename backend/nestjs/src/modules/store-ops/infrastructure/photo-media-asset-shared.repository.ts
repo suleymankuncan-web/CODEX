@@ -192,11 +192,13 @@ export function mapPhotoMediaAsset(row: {
   canonical_sha256?: string | null; byte_count?: string | null;
   storage_attempt_id?: string | null; raw_disposed_at?: Date | null;
   classification?: PhotoMediaAssetRecord["classification"];
+  capture_source?: PhotoMediaAssetRecord["captureSource"];
 }): PhotoMediaAssetRecord {
   return {
     mediaAssetId: row.media_asset_id, companyId: row.company_id, regionId: row.region_id,
     storeId: row.store_id, state: row.state,
     ...(row.classification ? { classification: row.classification } : {}),
+    ...(row.capture_source ? { captureSource: row.capture_source } : {}),
     ...(row.raw_object_key ? { rawObjectKey: row.raw_object_key } : {}),
     canonicalObjectKey: row.canonical_object_key ?? null,
     thumbnailObjectKey: row.thumbnail_object_key ?? null,

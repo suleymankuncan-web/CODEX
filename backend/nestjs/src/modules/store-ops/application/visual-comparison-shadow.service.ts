@@ -41,6 +41,7 @@ export class VisualComparisonShadowService {
     }
     const claimResult = await this.repository.claim({
       comparisonRunId: input.comparisonRunId,
+      isolationClass: this.runtime.isolationClass,
       maxAttempts: this.runtime.maxAttempts,
       processingLeaseSeconds: this.runtime.processingLeaseSeconds,
       companyId: this.runtime.scope.companyId,
