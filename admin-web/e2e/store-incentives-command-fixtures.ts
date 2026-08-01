@@ -10,7 +10,7 @@ const employeeB = '30000000-0000-4000-8000-000000000002'
 
 export function createIncentiveWorkspace(
   view: 'region_manager' | 'report_viewer',
-  options: { partial?: boolean; allReviewed?: boolean; multipleRegions?: boolean; draftCorrection?: boolean; prototypeParity?: boolean } = {},
+  options: { partial?: boolean; allReviewed?: boolean; multipleRegions?: boolean; mixedClosure?: boolean; draftCorrection?: boolean; prototypeParity?: boolean } = {},
 ) {
   const canAct = view === 'region_manager'
   const prototypeStores = options.prototypeParity ? createPrototypeParityStores(canAct, options) : null
@@ -28,7 +28,7 @@ export function createIncentiveWorkspace(
           row({ employeeId: employeeB, displayName: 'Derya Uslu', participantType: 'personnel', rate: '0.0150', calculated: '23901.60', final: '23901.60' }),
         ],
       }),
-      store({ storeId: incentiveStoreB, storeName: 'Marmara Forum', storeCode: 'MRM', canAct, reviewed: options.allReviewed ?? false, rows: [row({ employeeId: '30000000-0000-4000-8000-000000000003', displayName: 'Can Erdem', participantType: 'personnel', rate: '0.0065', calculated: '7092.80', final: '7092.80' })] }),
+      store({ storeId: incentiveStoreB, storeName: 'Marmara Forum', storeCode: 'MRM', canAct, reviewed: options.allReviewed ?? false, periodCloseStatus: options.mixedClosure ? 'projection_only' : 'closed', rows: [row({ employeeId: '30000000-0000-4000-8000-000000000003', displayName: 'Can Erdem', participantType: 'personnel', rate: '0.0065', calculated: '7092.80', final: '7092.80' })] }),
     ],
   })
   const regions = [firstRegion]
@@ -59,7 +59,12 @@ export function createIncentiveWorkspace(
   return {
     data: {
       period: '2026-06', periodStart: '2026-06-01', periodEnd: '2026-06-30', periodTimezone: 'Europe/Istanbul', view,
-      capabilities: capabilities(canAct),
+      capabilities: {
+        canMarkStoreReview: canAct,
+        canCreateCorrection: canAct,
+        canVoidCorrection: canAct,
+        canSubmitPackage: regions.some((region) => region.capabilities.canSubmitPackage),
+      },
       sections: {
         core: { status: 'complete' },
         storeMetadata: { status: options.partial ? 'unavailable' : 'complete' },
@@ -91,7 +96,6 @@ export function createIncentiveWorkspace(
     },
   }
 }
-
 function createPrototypeParityStores(canAct: boolean, options: { allReviewed?: boolean; draftCorrection?: boolean }) {
   return [
     store({
@@ -188,13 +192,13 @@ export async function routeIncentiveCommands(
 function region(input: { regionId: string; regionName: string; managerName: string; canAct: boolean; stores: ReturnType<typeof store>[] }) {
   return {
     regionId: input.regionId, regionName: input.regionName, regionManager: { displayName: input.managerName },
-    capabilities: { canSubmitPackage: input.canAct },
+    capabilities: { canSubmitPackage: input.canAct && input.stores.length > 0 && input.stores.every((store) => store.review.periodCloseStatus === 'closed') },
     package: { status: 'not_submitted', submittedAt: null, reviewedAt: null, reviewNote: null },
     stores: input.stores,
   }
 }
 
-function store(input: { storeId: string; storeName: string; storeCode: string; city?: string | null; target?: string; actual?: string; canAct: boolean; reviewed: boolean; rows: ReturnType<typeof row>[] }) {
+function store(input: { storeId: string; storeName: string; storeCode: string; city?: string | null; target?: string; actual?: string; canAct: boolean; reviewed: boolean; periodCloseStatus?: 'closed' | 'projection_only'; rows: ReturnType<typeof row>[] }) {
   const target = input.target ?? '8200000.00'
   const actual = input.actual ?? '8721540.00'
   return {
@@ -205,7 +209,7 @@ function store(input: { storeId: string; storeName: string; storeCode: string; c
       canCreateCorrection: input.canAct,
       canVoidCorrection: input.canAct && input.rows.some((item) => item.correction?.status === 'draft' || item.correction?.status === 'admin_returned'),
     },
-    review: { status: input.reviewed ? 'reviewed' : 'pending_review', reviewedAt: input.reviewed ? '2026-07-01T09:00:00.000Z' : null, periodCloseStatus: 'closed' },
+    review: { status: input.reviewed ? 'reviewed' : 'pending_review', reviewedAt: input.reviewed ? '2026-07-01T09:00:00.000Z' : null, periodCloseStatus: input.periodCloseStatus ?? 'closed' },
     rows: input.rows,
   }
 }
@@ -238,8 +242,4 @@ function row(input: {
     rate: input.rate, calculatedAmount: input.calculated, finalAmount: input.final, signedDifferenceAmount: delta,
     status: input.correction ? 'corrected' : 'projected', correction, correctionRecords: correction ? [correction] : [],
   }
-}
-
-function capabilities(enabled: boolean) {
-  return { canMarkStoreReview: enabled, canCreateCorrection: enabled, canVoidCorrection: enabled, canSubmitPackage: enabled }
 }

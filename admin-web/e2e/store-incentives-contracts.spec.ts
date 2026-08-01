@@ -165,6 +165,23 @@ test('multiple actionable regions require an explicit region selection before su
   })
 })
 
+test('mixed closed and projection-only stores keep the submission disabled', async ({ page }) => {
+  const requests: Array<{ path: string; body: unknown }> = []
+  await prepare(page, 'region_manager', { allReviewed: true, mixedClosure: true, multipleRegions: true, requests })
+  await page.goto('/store/incentives')
+
+  await page.getByRole('button', { name: 'Onaya gönder', exact: true }).first().click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Gönderilecek bölge').click()
+  await page.getByRole('option', { name: 'İstanbul Avrupa' }).click()
+
+  const summary = dialog.locator('.incentive-confirm-grid .incentive-drawer-stat')
+  await expect(summary.nth(0)).toContainText('2/2')
+  await expect(summary.nth(2)).toContainText('Kontrol tamamlanmadı')
+  await expect(dialog.getByRole('button', { name: 'Onaya gönder', exact: true })).toBeDisabled()
+  await expect.poll(() => requests).toEqual([])
+})
+
 test('workspace tabs implement the ARIA arrow, Home, and End keyboard contract', async ({ page }) => {
   await prepare(page, 'region_manager')
   await page.goto('/store/incentives')
@@ -241,6 +258,7 @@ async function prepare(
   options: {
     allReviewed?: boolean
     multipleRegions?: boolean
+    mixedClosure?: boolean
     requests?: Array<{ path: string; body: unknown }>
     delayMs?: number
     draftCorrection?: boolean
