@@ -1,47 +1,83 @@
-import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CalendarDays, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '../../components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '../../components/ui/popover'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { cn } from '../../lib/utils'
-import { createChecklistCommandPeriod } from './model'
 import { formatChecklistCommandPeriodLabel, parseChecklistCommandPeriod } from './checklist-command-period'
+import { createChecklistCommandPeriod } from './model'
 
 export function ChecklistCommandPeriodPicker(input: { locale: 'tr' | 'en'; period: string; onChange: (value: string) => void }) {
+  const current = parseChecklistCommandPeriod(input.period)
+  const [draft, setDraft] = useState(current)
   const [open, setOpen] = useState(false)
-  const { year: periodYear, month: periodMonth } = parseChecklistCommandPeriod(input.period)
-  const [draft, setDraft] = useState({ year: periodYear, month: periodMonth })
-  const rootRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, index, 1))))
-  const currentPeriod = parseChecklistCommandPeriod(getBusinessMonthInputValue())
-  const previousPeriod = currentPeriod.month === 1 ? { year: currentPeriod.year - 1, month: 12 } : { year: currentPeriod.year, month: currentPeriod.month - 1 }
+  const monthNames = useMemo(
+    () => Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, index, 1)))),
+    [input.locale],
+  )
+  const businessPeriod = parseChecklistCommandPeriod(getBusinessMonthInputValue())
+  const previousPeriod = businessPeriod.month === 1
+    ? { year: businessPeriod.year - 1, month: 12 }
+    : { year: businessPeriod.year, month: businessPeriod.month - 1 }
 
-  useEffect(() => {
-    if (!open) return
-    const close = (restoreFocus: boolean) => {
-      setDraft({ year: periodYear, month: periodMonth })
-      setOpen(false)
-      if (restoreFocus) window.requestAnimationFrame(() => triggerRef.current?.focus())
-    }
-    const handlePointerDown = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) close(false) }
-    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') close(true) }
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => { document.removeEventListener('pointerdown', handlePointerDown); document.removeEventListener('keydown', handleKeyDown) }
-  }, [open, periodMonth, periodYear])
-
-  const closeWithoutApply = (restoreFocus = true) => {
-    setDraft({ year: periodYear, month: periodMonth })
+  const resetDraft = () => setDraft(current)
+  const apply = () => {
+    input.onChange(createChecklistCommandPeriod(draft.year, draft.month))
     setOpen(false)
-    if (restoreFocus) window.requestAnimationFrame(() => triggerRef.current?.focus())
   }
-  return <div ref={rootRef} className={cn('checklist-command-period', open && 'is-open')}>
-    <button ref={triggerRef} type="button" className="checklist-command-period-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => { if (open) closeWithoutApply(false); else { setDraft({ year: periodYear, month: periodMonth }); setOpen(true) } }}><CalendarDays size={15} /><span><small>{input.locale === 'tr' ? 'DÖNEM' : 'PERIOD'}</small><strong>{formatChecklistCommandPeriodLabel(input.period, input.locale)}</strong></span><ChevronDown size={13} /></button>
-    {open ? <div className="checklist-command-period-popover" role="dialog" aria-label={input.locale === 'tr' ? 'Raporlama dönemi' : 'Reporting period'}>
-      <header><div><span className="checklist-command-period-icon"><CalendarDays size={16} /></span><span><small>{input.locale === 'tr' ? 'RAPORLAMA DÖNEMİ' : 'REPORTING PERIOD'}</small><strong>{input.locale === 'tr' ? 'Ay ve yıl seçin' : 'Select month and year'}</strong></span></div><button type="button" aria-label={input.locale === 'tr' ? 'Tarih filtresini kapat' : 'Close date filter'} onClick={() => closeWithoutApply()}><X size={15} /></button></header>
-      <div className="checklist-command-period-presets"><button type="button" className={draft.year === currentPeriod.year && draft.month === currentPeriod.month ? 'is-active' : ''} onClick={() => setDraft(currentPeriod)}>{input.locale === 'tr' ? 'Bu ay' : 'This month'}</button><button type="button" className={draft.year === previousPeriod.year && draft.month === previousPeriod.month ? 'is-active' : ''} onClick={() => setDraft(previousPeriod)}>{input.locale === 'tr' ? 'Geçen ay' : 'Last month'}</button></div>
-      <div className="checklist-command-period-year"><button type="button" aria-label={input.locale === 'tr' ? 'Önceki yıl' : 'Previous year'} onClick={() => setDraft((current) => ({ ...current, year: current.year - 1 }))}><ChevronLeft size={15} /></button><span><small>{input.locale === 'tr' ? 'YIL' : 'YEAR'}</small><strong>{draft.year}</strong></span><button type="button" aria-label={input.locale === 'tr' ? 'Sonraki yıl' : 'Next year'} onClick={() => setDraft((current) => ({ ...current, year: current.year + 1 }))}><ChevronRight size={15} /></button></div>
-      <div className="checklist-command-period-months">{monthNames.map((label, index) => <button type="button" className={draft.month === index + 1 ? 'is-active' : ''} key={label} onClick={() => setDraft((current) => ({ ...current, month: index + 1 }))}><span>{label}</span>{draft.month === index + 1 ? <Check size={13} /> : null}</button>)}</div>
-      <footer><button type="button" onClick={() => setDraft(currentPeriod)}>{input.locale === 'tr' ? 'Sıfırla' : 'Reset'}</button><span>{formatChecklistCommandPeriodLabel(createChecklistCommandPeriod(draft.year, draft.month), input.locale)}</span><button type="button" className="primary" onClick={() => { input.onChange(createChecklistCommandPeriod(draft.year, draft.month)); setOpen(false) }}><Check size={14} /> {input.locale === 'tr' ? 'Uygula' : 'Apply'}</button></footer>
-    </div> : null}
-  </div>
+
+  return (
+    <Popover open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (nextOpen) setDraft(current); else resetDraft() }}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="checklist-command-period-trigger tw:min-h-10 tw:gap-2 tw:rounded-lg tw:px-2.5 tw:text-left"
+          aria-label={formatChecklistCommandPeriodLabel(input.period, input.locale)}
+        >
+          <CalendarDays className="tw:size-4 tw:text-primary" aria-hidden="true" />
+          <span className="tw:grid tw:gap-0.5">
+            <small className="tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.08em] tw:text-muted-foreground">{input.locale === 'tr' ? 'DÖNEM' : 'PERIOD'}</small>
+            <strong className="tw:whitespace-nowrap tw:text-xs tw:text-foreground">{formatChecklistCommandPeriodLabel(input.period, input.locale)}</strong>
+          </span>
+          <ChevronRight className="tw:size-3 tw:rotate-90 tw:text-muted-foreground" aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent role="dialog" aria-label={input.locale === 'tr' ? 'Raporlama dönemi' : 'Reporting period'} align="end" className="tw:w-[min(22rem,calc(100vw-1.5rem))] tw:p-0">
+        <PopoverHeader className="tw:border-b tw:border-border tw:px-4 tw:py-3">
+          <PopoverTitle className="tw:flex tw:items-center tw:gap-2 tw:text-sm"><CalendarDays className="tw:size-4 tw:text-primary" aria-hidden="true" />{input.locale === 'tr' ? 'Ay ve yıl seçin' : 'Select month and year'}</PopoverTitle>
+          <PopoverDescription className="tw:text-xs">{input.locale === 'tr' ? 'Raporlama dönemini seçin.' : 'Choose a reporting period.'}</PopoverDescription>
+        </PopoverHeader>
+        <div className="tw:grid tw:gap-3 tw:p-3">
+          <div className="tw:grid tw:grid-cols-2 tw:gap-1.5" role="group" aria-label={input.locale === 'tr' ? 'Hızlı dönemler' : 'Quick periods'}>
+            <Button type="button" variant={draft.year === businessPeriod.year && draft.month === businessPeriod.month ? 'secondary' : 'outline'} size="sm" onClick={() => setDraft(businessPeriod)}>{input.locale === 'tr' ? 'Bu ay' : 'This month'}</Button>
+            <Button type="button" variant={draft.year === previousPeriod.year && draft.month === previousPeriod.month ? 'secondary' : 'outline'} size="sm" onClick={() => setDraft(previousPeriod)}>{input.locale === 'tr' ? 'Geçen ay' : 'Last month'}</Button>
+          </div>
+          <div className="tw:grid tw:grid-cols-[2.5rem_1fr_2.5rem] tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-muted/20 tw:p-1.5">
+            <Button type="button" variant="ghost" size="icon" aria-label={input.locale === 'tr' ? 'Önceki yıl' : 'Previous year'} onClick={() => setDraft((value) => ({ ...value, year: value.year - 1 }))}><ChevronLeft className="tw:size-4" /></Button>
+            <span className="tw:text-center"><small className="tw:block tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.1em] tw:text-muted-foreground">{input.locale === 'tr' ? 'YIL' : 'YEAR'}</small><strong className="tw:text-base tw:tabular-nums">{draft.year}</strong></span>
+            <Button type="button" variant="ghost" size="icon" aria-label={input.locale === 'tr' ? 'Sonraki yıl' : 'Next year'} onClick={() => setDraft((value) => ({ ...value, year: value.year + 1 }))}><ChevronRight className="tw:size-4" /></Button>
+          </div>
+          <div className="tw:grid tw:grid-cols-3 tw:gap-1.5" role="group" aria-label={input.locale === 'tr' ? 'Ay seçin' : 'Select month'}>
+            {monthNames.map((label, index) => {
+              const selected = draft.month === index + 1
+              return <Button key={label} type="button" variant={selected ? 'secondary' : 'outline'} size="sm" className={cn('tw:min-h-10 tw:justify-between tw:px-2 tw:text-xs', selected && 'tw:text-primary')} onClick={() => setDraft((value) => ({ ...value, month: index + 1 }))}><span>{label}</span>{selected ? <Check className="tw:size-3.5" aria-hidden="true" /> : null}</Button>
+            })}
+          </div>
+        </div>
+        <footer className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:border-t tw:border-border tw:bg-muted/20 tw:px-3 tw:py-2.5">
+          <Button type="button" variant="ghost" size="sm" onClick={resetDraft}>{input.locale === 'tr' ? 'Sıfırla' : 'Reset'}</Button>
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{formatChecklistCommandPeriodLabel(createChecklistCommandPeriod(draft.year, draft.month), input.locale)}</span>
+          <Button type="button" size="sm" onClick={apply}><Check className="tw:size-3.5" aria-hidden="true" />{input.locale === 'tr' ? 'Uygula' : 'Apply'}</Button>
+        </footer>
+      </PopoverContent>
+    </Popover>
+  )
 }
