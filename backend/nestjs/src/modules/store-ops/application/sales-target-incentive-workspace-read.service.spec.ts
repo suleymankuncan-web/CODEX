@@ -259,15 +259,46 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       ["store-locked", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
     ]);
     expect(result.regions.map((region) => [region.regionId, region.capabilities.canSubmitPackage])).toEqual([
-      ["region-a", true],
+      ["region-a", false],
       ["region-b", false],
     ]);
     expect(result.capabilities).toEqual({
       canMarkStoreReview: false,
       canCreateCorrection: false,
       canVoidCorrection: false,
-      canSubmitPackage: true,
+      canSubmitPackage: false,
     });
+  });
+
+  it("does not advertise submission when assigned stores mix closed and projection-only periods", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-closed", "region-a"), projectionStore("store-open", "region-a")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([
+      storeMetadata("store-closed", "region-a"),
+      storeMetadata("store-open", "region-a"),
+    ]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-closed")]);
+    repository.listWorkflowAudit.mockResolvedValue({ reviews: [], corrections: [], packages: [] });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REGION_MANAGER"], {
+        REGION_MANAGER: { companyIds: [], regionIds: ["region-a"], storeIds: ["store-closed", "store-open"] },
+      }, ["store-closed", "store-open"]) as never,
+      periodKey: "2026-05",
+    });
+
+    expect(result.regions[0]?.capabilities).toEqual({ canSubmitPackage: false });
+    expect(result.capabilities.canSubmitPackage).toBe(false);
+    expect(result.regions[0]?.stores.map((store) => [store.storeId, store.review.periodCloseStatus])).toEqual([
+      ["store-closed", "closed"],
+      ["store-open", "projection_only"],
+    ]);
+    expect(result.regions[0]?.stores.find((store) => store.storeId === "store-closed")?.capabilities.canMarkStoreReview).toBe(true);
+    expect(result.regions[0]?.stores.find((store) => store.storeId === "store-open")?.capabilities.canMarkStoreReview).toBe(false);
   });
 
   it("keeps an active Region Manager correction after a closed row is refetched", async () => {

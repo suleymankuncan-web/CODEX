@@ -5,6 +5,7 @@ import {
   calculateRateProposal,
   filterIncentiveWorkspace,
   getSubmitRegionOptions,
+  isIncentiveRegionSubmitReady,
   sumMoney,
 } from './model'
 
@@ -58,7 +59,7 @@ const workspace: IncentiveWorkspace = {
     },
     {
       regionId: 'region-b', regionName: 'Anadolu', regionManager: { displayName: 'Ayşe Kaya' },
-      capabilities: { canSubmitPackage: true },
+      capabilities: { canSubmitPackage: false },
       package: { status: 'not_submitted', submittedAt: null, reviewedAt: null, reviewNote: null },
       stores: [{
         storeId: 'store-b', storeCode: null, storeName: 'Capacity AVM', city: null,
@@ -111,5 +112,11 @@ describe('Incentives Command Canvas model', () => {
       { regionId: 'region-a', label: 'Avrupa' },
       { regionId: 'region-b', label: 'Anadolu' },
     ])
+  })
+
+  test('requires every store in the selected region to be reviewed and closed', () => {
+    expect(isIncentiveRegionSubmitReady(workspace.regions[0])).toBe(true)
+    expect(isIncentiveRegionSubmitReady(workspace.regions[1])).toBe(false)
+    expect(getSubmitRegionOptions(workspace)).toContainEqual({ regionId: 'region-b', label: 'Anadolu' })
   })
 })

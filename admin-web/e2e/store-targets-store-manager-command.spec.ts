@@ -3,6 +3,7 @@ import { installGenericStoreApiFallbacks, installStoreContractSession } from './
 import { routeStoreManagerTargetCommand, storeManagerStoreId } from './store-targets-store-manager-command-fixtures'
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-07-15T09:00:00+03:00'))
   await installStoreContractSession(page, 'storeManager')
   await installGenericStoreApiFallbacks(page)
 })
