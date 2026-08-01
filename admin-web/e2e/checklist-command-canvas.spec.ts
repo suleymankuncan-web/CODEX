@@ -12,6 +12,10 @@ function installStoreContractSession(page: Page, persona: 'regionManager') {
   return installBaseStoreContractSession(page, persona, { actionStoreIds: checklistActionStoreIds })
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-07-15T09:00:00+03:00'))
+})
+
 test('region manager command canvas reads bounded real rows and applies server controls', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
