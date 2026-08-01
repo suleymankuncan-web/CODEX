@@ -1,16 +1,14 @@
 import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, CircleAlert, ClipboardCheck, Store } from 'lucide-react'
+import { Building2, ChevronDown, ChevronUp, CircleAlert, ClipboardCheck, Store } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Card, CardContent } from '../../components/ui/card'
-import { Badge } from '../../components/ui/badge'
 import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import { cn } from '../../lib/utils'
-import { StoreErrorState, StoreSurfacePage } from '../../pages/store-surface-primitives'
+import { StoreErrorState, StoreLoadingState, StoreSurfacePage } from '../../pages/store-surface-primitives'
 import type { AuthSessionSummary } from '../auth/api'
 import {
   getStoreQueryScopeSignature,
@@ -36,7 +34,6 @@ import {
   type ChecklistCommandSignal,
 } from './model'
 import { ChecklistCommandPeriodPicker } from './ChecklistCommandPeriodPicker'
-import { ChecklistCommandLoadingState, ChecklistCommandMetricStrip, ChecklistCommandPageHeader, ChecklistCommandPagination, ChecklistCommandState, type ChecklistCommandMetric } from './ChecklistCommandSurface'
 
 const REGION_PAGE_SIZE = 20
 const STORE_PAGE_SIZE = 30
@@ -99,7 +96,7 @@ export function ReportViewerChecklistCommandPage(input: { authSummary: AuthSessi
   })
 
   if (!regionQuery.data && regionQuery.isLoading) {
-    return <ChecklistCommandLoadingState />
+    return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
   }
   if (!regionQuery.data) {
     const forbidden = regionQuery.error instanceof ApiError && regionQuery.error.status === 403
@@ -114,22 +111,76 @@ export function ReportViewerChecklistCommandPage(input: { authSummary: AuthSessi
     { key: 'completed_coverage' as const, label: copy.completedCoverage, value: data.metrics.completedCoverageStores, icon: Building2 },
   ]
 
-  const sharedMetrics: ChecklistCommandMetric[] = metrics.map((metric) => ({ ...metric, tone: metric.key === 'missing_visit' ? 'danger' : metric.key === 'completed_coverage' ? 'done' : 'plum' }))
   return (
     <>
-      <StoreSurfacePage ariaLabel={copy.aria} className="tw:font-['DM_Sans',sans-serif] tw:max-w-[1180px] tw:gap-3">
-        <ChecklistCommandPageHeader eyebrow={copy.breadcrumb} title={copy.title} description={copy.scope} actions={<><Badge variant="secondary" className="tw:min-h-8 tw:px-3 tw:text-xs">{copy.readOnly}</Badge><ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value: string) => { setPeriod(value); setWeekStart(getChecklistPeriodWeekStart(value)); setRegionOffset(0); setStoreOffset(0); setOpenRegion(null) }} /></>} />
-        <ChecklistCommandMetricStrip ariaLabel={copy.metrics} metrics={sharedMetrics} selectedKey={signal} onSelect={(key) => { setSignal(key as ChecklistCommandSignal); setRegionOffset(0); setStoreOffset(0); setOpenRegion(null) }} />
-        <nav aria-label={copy.sortAria} className="tw:flex tw:flex-wrap tw:gap-1.5 tw:rounded-xl tw:border tw:border-border tw:bg-muted/20 tw:p-2">{([['manager_asc', copy.manager], ['stores_desc', copy.storeCount], ['missing_desc', copy.missingVisits], ['open_actions_desc', copy.openActions], ['score_desc', copy.score]] as const).map(([value, label]) => <Button key={value} size="sm" type="button" variant={sort === value ? 'secondary' : 'ghost'} onClick={() => { setSort(value); setRegionOffset(0) }}>{label}</Button>)}</nav>
-        {regionQuery.isError ? <ChecklistCommandState kind="error" title={copy.partialError} description={copy.partialError} retryLabel={copy.retry} onRetry={() => void regionQuery.refetch()} /> : null}
-        <section aria-label={copy.breadcrumb} className="tw:grid tw:gap-2">
-          {data.items.length === 0 ? <Card><CardContent className="tw:p-0"><ChecklistCommandState kind="empty" title={copy.emptyTitle} description={copy.emptyCopy} icon={Building2} /></CardContent></Card> : data.items.map((region) => {
-            const expanded = openRegionId === region.regionId
-            return <Card key={region.regionId} className="tw:gap-0 tw:overflow-hidden tw:border-border tw:shadow-sm"><Button type="button" variant="ghost" aria-expanded={expanded} className="tw:h-auto tw:min-h-16 tw:justify-between tw:gap-3 tw:rounded-none tw:px-4 tw:py-3 tw:text-left tw:hover:bg-muted/30" onClick={() => { setOpenRegion(expanded ? null : { regionId: region.regionId, scopeSignature }); setStoreOffset(0) }}><span className="tw:grid tw:min-w-0 tw:gap-0.5"><strong className="tw:truncate tw:text-sm">{region.regionManagers.map((manager) => manager.displayName).join(', ') || copy.noManager}</strong><small className="tw:text-xs tw:text-muted-foreground">{region.regionName} · {region.metrics.totalStores} {copy.stores}</small></span><span className="tw:text-right tw:text-xs tw:text-muted-foreground">{region.visitAverageScore === null ? '—' : Math.round(region.visitAverageScore)} {copy.points} · {region.metrics.openActionCount} {copy.openShort}</span></Button>{expanded ? <RegionReadback copy={copy} locale={locale} planQuery={planQuery} storesQuery={storesQuery} offset={storeOffset} query={storeQuery} status={storeStatus} sort={storeSort} weekStart={weekStart} onOffset={setStoreOffset} onQuery={(value) => { setStoreQuery(value); setStoreOffset(0) }} onStatus={(value) => { setStoreStatus(value); setStoreOffset(0) }} onSort={(value) => { setStoreSort(value); setStoreOffset(0) }} onWeekStart={setWeekStart} onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedStoreState({ store, scopeSignature }) }} /> : null}</Card>
-          })}
+      <StoreSurfacePage ariaLabel={copy.aria} className="tw:max-w-[1180px] tw:gap-3">
+        <header className="tw:flex tw:flex-wrap tw:items-end tw:justify-between tw:gap-3">
+          <div className="tw:min-w-0">
+            <p className="tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[.14em] tw:text-muted-foreground">{copy.breadcrumb}</p>
+            <h1 className="tw:mt-1 tw:text-2xl tw:font-semibold tw:tracking-[-.035em]">{copy.title}</h1>
+            <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{copy.scope}</p>
+          </div>
+          <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+            <span className="tw:rounded-full tw:bg-primary/10 tw:px-3 tw:py-1.5 tw:text-[10px] tw:font-semibold tw:text-primary">{copy.readOnly}</span>
+            <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value: string) => { setPeriod(value); setWeekStart(getChecklistPeriodWeekStart(value)); setRegionOffset(0); setStoreOffset(0); setOpenRegion(null) }} />
+          </div>
+        </header>
+
+        <section className="tw:grid tw:grid-cols-2 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:lg:grid-cols-4" aria-label={copy.metrics}>
+          {metrics.map(({ key, label, value, icon: Icon }) => (
+            <button key={key} type="button" aria-pressed={signal === key} className="tw:flex tw:min-h-24 tw:items-center tw:gap-3 tw:border-b tw:border-r tw:border-border tw:p-4 tw:text-left tw:hover:bg-muted/25 tw:aria-pressed:bg-primary/5" onClick={() => { setSignal(key); setRegionOffset(0); setStoreOffset(0); setOpenRegion(null) }}>
+              <span className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:bg-primary/10 tw:text-primary"><Icon className="tw:size-4" /></span>
+              <span className="tw:min-w-0"><small className="tw:block tw:text-[9px] tw:font-semibold tw:text-muted-foreground">{label}</small><strong className="tw:text-2xl tw:tabular-nums">{value}</strong></span>
+            </button>
+          ))}
         </section>
-        <ChecklistCommandPagination firstItem={data.page.total === 0 ? 0 : data.page.offset + 1} lastItem={Math.min(data.page.total, data.page.offset + data.items.length)} total={data.page.total} pageNumber={Math.floor(regionOffset / REGION_PAGE_SIZE) + 1} pageCount={Math.max(1, Math.ceil(data.page.total / REGION_PAGE_SIZE))} previousLabel={copy.previous} nextLabel={copy.next} previousDisabled={regionOffset === 0 || regionQuery.isFetching} nextDisabled={!data.page.hasMore || regionQuery.isFetching} onPrevious={() => setRegionOffset(Math.max(0, regionOffset - REGION_PAGE_SIZE))} onNext={() => setRegionOffset(regionOffset + REGION_PAGE_SIZE)} />
+
+        <nav aria-label={copy.sortAria} className="tw:flex tw:flex-wrap tw:gap-1.5 tw:rounded-xl tw:border tw:border-border tw:bg-muted/20 tw:p-2">
+          {([
+            ['manager_asc', copy.manager], ['stores_desc', copy.storeCount], ['missing_desc', copy.missingVisits],
+            ['open_actions_desc', copy.openActions], ['score_desc', copy.score],
+          ] as const).map(([value, label]) => <Button key={value} size="sm" type="button" variant={sort === value ? 'secondary' : 'ghost'} onClick={() => { setSort(value); setRegionOffset(0) }}>{label}</Button>)}
+        </nav>
+
+        {regionQuery.isError ? (
+          <div role="alert" className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/25 tw:bg-destructive/5 tw:p-3 tw:text-xs tw:text-destructive"><span>{copy.partialError}</span><Button size="sm" variant="outline" onClick={() => void regionQuery.refetch()}>{copy.retry}</Button></div>
+        ) : null}
+
+        <section className="tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card">
+          {data.items.length === 0 ? <EmptyState title={copy.emptyTitle} copy={copy.emptyCopy} /> : data.items.map((region) => {
+            const expanded = openRegionId === region.regionId
+            return (
+              <article key={region.regionId} className="tw:border-b tw:border-border tw:last:border-b-0">
+                <button type="button" aria-expanded={expanded} className="tw:grid tw:w-full tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:bg-transparent tw:p-4 tw:text-left tw:hover:bg-muted/25" onClick={() => { setOpenRegion(expanded ? null : { regionId: region.regionId, scopeSignature }); setStoreOffset(0) }}>
+                  <span className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-sm">{region.regionManagers.map((manager) => manager.displayName).join(', ') || copy.noManager}</strong><small className="tw:text-[10px] tw:text-muted-foreground">{region.regionName} · {region.metrics.totalStores} {copy.stores}</small></span>
+                  <span className="tw:flex tw:items-center tw:gap-3"><span className="tw:hidden tw:text-[10px] tw:text-muted-foreground tw:sm:inline">{region.visitAverageScore === null ? '—' : Math.round(region.visitAverageScore)} {copy.points} · {region.metrics.openActionCount} {copy.openShort}</span>{expanded ? <ChevronUp className="tw:size-4" /> : <ChevronDown className="tw:size-4" />}</span>
+                </button>
+                {expanded ? (
+                  <RegionReadback
+                    copy={copy}
+                    locale={locale}
+                    planQuery={planQuery}
+                    storesQuery={storesQuery}
+                    offset={storeOffset}
+                    query={storeQuery}
+                    status={storeStatus}
+                    sort={storeSort}
+                    weekStart={weekStart}
+                    onOffset={setStoreOffset}
+                    onQuery={(value) => { setStoreQuery(value); setStoreOffset(0) }}
+                    onStatus={(value) => { setStoreStatus(value); setStoreOffset(0) }}
+                    onSort={(value) => { setStoreSort(value); setStoreOffset(0) }}
+                    onWeekStart={setWeekStart}
+                    onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedStoreState({ store, scopeSignature }) }}
+                  />
+                ) : null}
+              </article>
+            )
+          })}
+          <footer className="tw:flex tw:justify-end tw:gap-2 tw:border-t tw:border-border tw:bg-muted/20 tw:p-3"><Button size="sm" variant="outline" disabled={regionOffset === 0} onClick={() => setRegionOffset(Math.max(0, regionOffset - REGION_PAGE_SIZE))}>{copy.previous}</Button><Button size="sm" variant="outline" disabled={!data.page.hasMore} onClick={() => setRegionOffset(regionOffset + REGION_PAGE_SIZE)}>{copy.next}</Button></footer>
+        </section>
       </StoreSurfacePage>
+
       <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.storeId ?? null} storeName={selectedStore?.storeName ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStoreState(null)} />
     </>
   )
@@ -172,7 +223,7 @@ function RegionReadback(input: {
       <p className="tw:mt-1 tw:text-[10px] tw:text-muted-foreground">{input.planQuery.isLoading ? input.copy.planLoading : `${plan?.items.length ?? 0} ${input.copy.plannedVisits}`}</p>
       {input.planQuery.isError ? <InlineReadError error={input.planQuery.error} copy={input.copy} fallback={input.copy.planError} onRetry={() => void input.planQuery.refetch()} /> : null}
       {plan && plan.items.length > 0 ? <div className="tw:mt-3 tw:grid tw:gap-1.5 tw:sm:grid-cols-2">
-        {plan.items.map((item) => <span key={item.planItemId} className="tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-2 tw:rounded-lg tw:bg-muted/30 tw:px-2.5 tw:py-2"><span className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-[10px]">{item.storeName}</strong><small className="tw:text-[9px] tw:text-muted-foreground">{new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }).format(new Date(`${item.plannedDate}T12:00:00+03:00`))}</small></span><small className={cn('tw:self-center tw:rounded-full tw:px-2 tw:py-1 tw:text-[8px] tw:font-semibold', item.status === 'completed' ? 'tw:bg-accent/10 tw:text-accent' : item.status === 'missed' ? 'tw:bg-destructive/10 tw:text-destructive' : 'tw:bg-secondary tw:text-secondary-foreground')}>{item.status === 'completed' ? input.copy.visitDone : item.status === 'missed' ? input.copy.checklistMissing : input.copy.visitWaiting}</small></span>)}
+        {plan.items.map((item) => <span key={item.planItemId} className="tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-2 tw:rounded-lg tw:bg-muted/30 tw:px-2.5 tw:py-2"><span className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-[10px]">{item.storeName}</strong><small className="tw:text-[9px] tw:text-muted-foreground">{new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }).format(new Date(`${item.plannedDate}T12:00:00+03:00`))}</small></span><small className={cn('tw:self-center tw:rounded-full tw:px-2 tw:py-1 tw:text-[8px] tw:font-semibold', item.status === 'completed' ? 'tw:bg-emerald-500/10 tw:text-emerald-700' : item.status === 'missed' ? 'tw:bg-destructive/10 tw:text-destructive' : 'tw:bg-amber-500/10 tw:text-amber-700')}>{item.status === 'completed' ? input.copy.visitDone : item.status === 'missed' ? input.copy.checklistMissing : input.copy.visitWaiting}</small></span>)}
       </div> : null}
     </section>
     <div className="tw:grid tw:min-w-0 tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-2 tw:sm:grid-cols-[minmax(180px,1fr)_150px_170px]">

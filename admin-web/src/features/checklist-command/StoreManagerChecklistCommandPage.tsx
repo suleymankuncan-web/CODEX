@@ -3,10 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, ClipboardCheck, Clock3, Search, Store } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Badge } from '../../components/ui/badge'
-import { Card, CardContent } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
-import { Separator } from '../../components/ui/separator'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
@@ -22,7 +19,6 @@ import { getChecklistCommandCanvas, type ChecklistCommandResponse, type Checklis
 import { ChecklistCommandPeriodPicker } from './ChecklistCommandPeriodPicker'
 import { ChecklistOperationalHistoryDrawer } from './ChecklistOperationalHistoryDrawer'
 import { getChecklistCommandSortLabel, toggleChecklistCommandSort, type ChecklistCommandSort, type ChecklistCommandSortKey, type ChecklistCommandStatus } from './model'
-import { ChecklistCommandLoadingState, ChecklistCommandMetricStrip, ChecklistCommandPageHeader, ChecklistCommandPagination, ChecklistCommandState, ChecklistCommandStatusBadge, type ChecklistCommandMetric } from './ChecklistCommandSurface'
 
 const PAGE_SIZE = 30
 
@@ -75,8 +71,8 @@ function StoreManagerChecklistInstancePage(input: {
     queryFn: () => getChecklistAcknowledgements({ period, status: 'acknowledged', limit: 1, offset: 0 }),
     ...transientQueryRetryOptions,
   })
-  const response = query.data as NonNullable<typeof query.data>
-  if (!response && query.isLoading) return <ChecklistCommandLoadingState />
+  const response = query.data
+  if (!response && query.isLoading) return <StoreLoadingState title="Checklistler yükleniyor" description="Tamamlanan checklist kayıtları hazırlanıyor." />
   if (!response) return <StoreSurfacePage ariaLabel="Mağaza checklist kayıtları"><StoreErrorState title="Checklistler açılamadı" description={getUserFacingErrorMessage(query.error, 'Checklist kayıtları okunamadı.')} action={{ label: 'Tekrar dene', onClick: () => void query.refetch(), variant: 'outline' }} /></StoreSurfacePage>
 
   const pagePendingCount = response.items.filter((item) => item.acknowledgement === null).length
@@ -92,24 +88,29 @@ function StoreManagerChecklistInstancePage(input: {
     else input.onOpenWorkflow(item.storeId, tab, trigger)
   }
 
-  const metrics: ChecklistCommandMetric[] = [
-    { key: 'all', label: 'Toplam checklist', value: response.meta.total, icon: ClipboardCheck, tone: 'plum' },
-    { key: 'pending', label: 'Mağaza Müdürü Onayı Bekliyor', value: pendingCount, icon: Clock3, tone: 'active' },
-    { key: 'acknowledged', label: 'Kabul edildi', value: acknowledgedCount, icon: CheckCircle2, tone: 'done' },
-  ]
-  return (
-    <>
-      <StoreSurfacePage ariaLabel="Mağaza müdürü checklist görünümü" className="checklist-command-parity tw:font-['DM_Sans',sans-serif] tw:max-w-[1065px] tw:gap-3" data-testid="store_manager-checklist-command">
-        <ChecklistCommandPageHeader eyebrow="CHECKLIST KAYITLARI" title="Mağaza Kontrol Merkezi" description="Tamamlanan checklistleri inceleyin ve bekleyen sonuçları kabul edin." actions={<ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setPeriod(value); setOffset(0) }} />} />
-        <ChecklistCommandMetricStrip ariaLabel="Checklist kayıt özeti" metrics={metrics} testId="checklist-command-metrics" />
-        <section className="checklist-command-surface tw:overflow-hidden tw:rounded-[15px] tw:border tw:border-border tw:bg-card tw:shadow-sm">
-          {response.items.length === 0 ? <ChecklistCommandState kind="empty" title="Bu dönemde checklist kaydı yok" description="Seçili ayda tamamlanan checklist bulunamadı." icon={ClipboardCheck} /> : <div className="tw:grid tw:gap-2 tw:p-3">{response.items.map((item) => <Card key={item.checklistInstanceId} data-testid="store-manager-checklist-instance-row" className="store-manager-checklist-instance-row tw:gap-3 tw:border-border tw:p-4 tw:shadow-none"><CardContent className="tw:grid tw:gap-3 tw:p-0 tw:sm:grid-cols-[minmax(0,1fr)_auto] tw:sm:items-center"><div className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-sm">{item.templateName}</strong><span className="tw:mt-1 tw:block tw:text-xs tw:text-muted-foreground">{item.storeName} · {item.completedAt ? formatDate(item.completedAt, locale) : 'Tarih yok'}</span><Badge variant={item.totalScore === null ? 'outline' : 'secondary'} className="tw:mt-2 tw:w-fit tw:text-xs">{item.totalScore === null ? 'Skor yok' : `${Math.round(item.totalScore)} puan`}</Badge></div><div className="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2"><ChecklistCommandStatusBadge label={item.acknowledgement ? 'Kabul edildi' : 'Onay bekliyor'} tone={item.acknowledgement ? 'done' : 'review'} /><Button type="button" size="sm" className="tw:min-h-10" onClick={(event) => openResult(item, event.currentTarget)}>{item.acknowledgement ? 'Sonucu gör' : 'İncele ve kabul et'}</Button><Button type="button" size="sm" variant="outline" className="tw:min-h-10" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStore({ id: item.storeId, name: item.storeName }) }}>Mağaza kaydı</Button></div></CardContent><Separator className="tw:sm:hidden" /></Card>)}</div>}
-          <ChecklistCommandPagination firstItem={firstItem} lastItem={lastItem} total={response.meta.total} pageNumber={pageNumber} pageCount={pageCount} previousLabel="Önceki sayfa" nextLabel="Sonraki sayfa" previousDisabled={offset === 0 || query.isFetching} nextDisabled={offset + response.items.length >= response.meta.total || query.isFetching} onPrevious={() => setOffset(Math.max(0, offset - PAGE_SIZE))} onNext={() => setOffset(offset + PAGE_SIZE)} />
-        </section>
-      </StoreSurfacePage>
-      <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.id ?? null} storeName={selectedStore?.name ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStore(null)} />
-    </>
-  )
+  return <>
+    <StoreSurfacePage ariaLabel="Mağaza müdürü checklist görünümü" className="checklist-command-parity" data-testid="store_manager-checklist-command">
+      <header className="checklist-command-title">
+        <div><p>CHECKLIST KAYITLARI</p><h1>Mağaza Kontrol Merkezi</h1><p>Tamamlanan checklistleri ayrı ayrı inceleyin ve bekleyen sonuçları kabul edin.</p></div>
+        <div className="checklist-command-title-actions"><ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setPeriod(value); setOffset(0) }} /></div>
+      </header>
+      <section aria-label="Checklist kayıt özeti" className="checklist-command-metrics">
+        <span className="checklist-command-metric"><span className="checklist-command-metric-icon tone-plum"><ClipboardCheck size={15} /></span><span className="checklist-command-metric-copy"><small>Toplam checklist</small></span><strong>{response.meta.total}</strong></span>
+        <span className="checklist-command-metric"><span className="checklist-command-metric-icon tone-active"><Clock3 size={15} /></span><span className="checklist-command-metric-copy"><small>Mağaza Müdürü Onayı Bekliyor</small></span><strong>{pendingCount}</strong></span>
+        <span className="checklist-command-metric"><span className="checklist-command-metric-icon tone-done"><CheckCircle2 size={15} /></span><span className="checklist-command-metric-copy"><small>Kabul edildi</small></span><strong>{acknowledgedCount}</strong></span>
+      </section>
+      <section className="checklist-command-surface tw:overflow-hidden">
+        {response.items.length === 0 ? <div className="tw:grid tw:min-h-56 tw:place-items-center tw:p-8 tw:text-center"><div><ClipboardCheck className="tw:mx-auto tw:size-5 tw:text-muted-foreground" /><strong className="tw:mt-2 tw:block tw:text-sm">Bu dönemde checklist kaydı yok</strong><p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">Seçili ayda tamamlanan checklist bulunamadı.</p></div></div> : <div className="tw:grid tw:gap-2 tw:p-3">
+          {response.items.map((item) => <article key={item.checklistInstanceId} data-testid="store-manager-checklist-instance-row" className="tw:grid tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-4 tw:shadow-sm tw:sm:grid-cols-[minmax(0,1fr)_auto] tw:sm:items-center">
+            <div className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-sm">{item.templateName}</strong><span className="tw:mt-1 tw:block tw:text-xs tw:text-muted-foreground">{item.storeName} · {item.completedAt ? formatDate(item.completedAt, locale) : 'Tarih yok'}</span><span className="tw:mt-2 inline-flex tw:rounded-full tw:bg-primary/[.06] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold">{item.totalScore === null ? 'Skor yok' : `${Math.round(item.totalScore)} puan`}</span></div>
+            <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2"><span className={cn('tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[10px] tw:font-semibold', item.acknowledgement ? 'tw:bg-emerald-500/10 tw:text-emerald-700' : 'tw:bg-amber-500/10 tw:text-amber-700')}>{item.acknowledgement ? 'Kabul edildi' : 'Onay bekliyor'}</span><Button size="sm" onClick={(event) => openResult(item, event.currentTarget)}>{item.acknowledgement ? 'Sonucu gör' : 'İncele ve kabul et'}</Button><Button size="sm" variant="outline" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStore({ id: item.storeId, name: item.storeName }) }}>Mağaza kaydı</Button></div>
+          </article>)}
+        </div>}
+        <footer className="checklist-command-pagination"><span>{firstItem}–{lastItem} / {response.meta.total}</span><div><button type="button" aria-label="Önceki sayfa" disabled={offset === 0 || query.isFetching} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}><ChevronLeft size={14} /></button><small>{pageNumber} / {pageCount}</small><button type="button" aria-label="Sonraki sayfa" disabled={offset + response.items.length >= response.meta.total || query.isFetching} onClick={() => setOffset(offset + PAGE_SIZE)}><ChevronRight size={14} /></button></div></footer>
+      </section>
+    </StoreSurfacePage>
+    <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.id ?? null} storeName={selectedStore?.name ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStore(null)} />
+  </>
 }
 
 function ChecklistOperatorCommandPage(input: {
@@ -211,7 +212,7 @@ function ChecklistOperatorCommandPage(input: {
 
         {data.items.length === 0 ? <div className="tw:grid tw:min-h-56 tw:place-items-center tw:p-8 tw:text-center"><div><Store className="tw:mx-auto tw:size-5 tw:text-muted-foreground" /><strong className="tw:mt-2 tw:block tw:text-sm">{copy.empty}</strong><p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{copy.emptyCopy}</p></div></div> : <div className="tw:grid tw:gap-3 tw:p-3 tw:md:grid-cols-2">
           {data.items.map((row) => <article key={row.storeId} className="tw:grid tw:min-w-0 tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-4 tw:shadow-sm">
-            <header className="tw:flex tw:min-w-0 tw:items-start tw:justify-between tw:gap-3"><strong className="tw:min-w-0 tw:truncate tw:text-base">{row.storeName}</strong><span className={cn('tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[9px] tw:font-semibold', row.status === 'completed' ? 'tw:bg-accent/10 tw:text-accent' : row.status === 'active' ? 'tw:bg-primary/10 tw:text-primary' : 'tw:bg-secondary tw:text-secondary-foreground')}>{statusLabel(row.status, copy)}</span></header>
+            <header className="tw:flex tw:min-w-0 tw:items-start tw:justify-between tw:gap-3"><strong className="tw:min-w-0 tw:truncate tw:text-base">{row.storeName}</strong><span className={cn('tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[9px] tw:font-semibold', row.status === 'completed' ? 'tw:bg-emerald-500/10 tw:text-emerald-700' : row.status === 'active' ? 'tw:bg-blue-500/10 tw:text-blue-700' : 'tw:bg-amber-500/10 tw:text-amber-700')}>{statusLabel(row.status, copy)}</span></header>
             <div className="tw:grid tw:grid-cols-2 tw:gap-2">{input.view !== 'visual_merchandiser' ? <Score label="BM" value={row.bmScore} /> : null}<Score label="VM" value={row.vmScore} /><Signal label={copy.pendingAcknowledgements} value={row.pendingAcknowledgementCount} /><Signal label={copy.openTasks} value={row.openActionCount} /></div>
             <p className="tw:text-[10px] tw:text-muted-foreground">{row.lastCompletedVisitAt ? `${formatDate(row.lastCompletedVisitAt, locale)} · ${row.elapsedDaysSinceLastVisit ?? 0} ${copy.days}` : copy.noVisit}</p>
             <div className="tw:flex tw:flex-wrap tw:gap-2"><Button size="sm" onClick={(event) => input.onOpenWorkflow(row.storeId, 'visits', event.currentTarget, input.view === 'visual_merchandiser' ? 'vm' : undefined)}><ClipboardCheck />{copy.openControls}</Button><Button size="sm" variant="outline" onClick={(event) => input.onOpenWorkflow(row.storeId, row.pendingAcknowledgementCount > 0 ? 'inbox' : 'history', event.currentTarget)}>{row.pendingAcknowledgementCount > 0 ? copy.openApprovals : copy.openResults}</Button>{input.view === 'store_manager' ? <Button size="sm" variant="outline" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStoreState({ store: row, scopeSignature }) }}>{copy.openRecord}</Button> : null}{input.view === 'store_manager' && row.openActionCount > 0 ? <Button asChild size="sm" variant="ghost"><Link to="/store/tasks">{copy.openTasksLink}</Link></Button> : null}</div>
