@@ -323,6 +323,10 @@ acikca degistirirse gevsetilir:
   dogrulanir.
 - High/XHigh yalniz `AGENTS.md` routing kosulu gercekten olustugunda kullanilir;
   rutin implementation, polling ve acik mekanik hata icin specialist acilmaz.
+- Luna Max Fast, trivial olmayan ve ownership'i mekanik olarak ayrilabilen
+  execution dilimlerinde kullanicinin tekrar soylemesine gerek olmadan
+  varsayilan worker'dir. Tek satir/tek komut isi, duplicate repo okuma veya
+  self-contained prompt maliyeti isten buyukse seremoni icin agent acilmaz.
 - Canonical full release oncesi gerekli package binary'leri, dependency
   link/junction'lari ve komut erisimi ucuz bir preflight ile dogrulanir.
 - Targeted kanit normalde bir kez, selector'in sectigi full release normalde bir
@@ -474,6 +478,11 @@ Bu model `PR Oncesi Adversarial Review` kuralini genisletir. GitHub Codex
 review owner-disabled kalir; lokal reviewer modeli final diff kalitesini ve
 guard/test bosluklarinin erken bulunmasini guclendirir.
 
+Bu modeldeki `Worker`, Luna uygunluk kosullari saglandiginda varsayilan olarak
+`luna_max_fast` roludur. Scout, ilk-pass Reviewer ve Test Hakemi gibi bounded
+roller de Luna'ya verilebilir. Planner/XHigh, problem solver/High, Closer/root
+ve owner karar yetkileri Luna worker rolune donusmez.
+
 ### Adaptive Reasoning Effort Routing
 
 Codex calismasinda zeka seviyesi her adimda en yuksek tutulmaz; gorevin risk ve
@@ -485,9 +494,16 @@ talimata cevirir.
 
 Varsayilan model:
 
-- `Medium root coordinator`: scope, kodlama, test, entegrasyon, PR/merge ve
-  handoff tek elde kalir. Acik plani yurutme, mekanik duzeltme, docs, check
-  takibi ve normal implementasyon Medium'da yapilir.
+- `Medium root coordinator`: scope, Sokrates karari, ajanlar arasi entegrasyon,
+  PR/merge ve handoff tek elde kalir. Root her satiri kendisi yazmak zorunda
+  degildir; uygulanabilir isi dogru sahiplikle Luna'ya dagitir ve final sonucu
+  repo kanitiyla kendisi dogrular.
+- `Luna Max Fast execution worker`: owner'in 2026-08-01 tarihli kilitli
+  karariyla, kendine yeterli prompt ile ayrilabilen bounded implementation,
+  repo kesfi, test, fixture, docs/script, mekanik fix, UI/backend slice ve
+  ilk-pass review islerinin varsayilan maliyet-etkin yurutucusudur. Kanonik rol
+  `luna_max_fast`, cagri sekli `fork_turns: "none"`, reasoning seviyesi `max`
+  ve service tier `fast`tir. Ana Sol/root standart service tier'da kalir.
 - `XHigh planner`: kapsamli plan/spec, mimari veya multi-PR hat, katmanlar arasi
   bagimlilik, acceptance/rollback/sequencing belirsizligi ya da scope,
   acceptance, rollback ve verification'i kilitlenmemis R3-R5 is icin
@@ -503,11 +519,50 @@ Yonlendirme akisi:
 1. Ana koordinator risk sinifini ve kabul kriterini belirler.
 2. Planlama tetikleyicisi varsa `planner_xhigh` yalnizca kanit, slice, risk,
    rollback ve verification plani uretir.
-3. Medium ana koordinator plani `sokrates.md` ile kontrol eder ve uygular.
-4. Problem tetikleyicisi cikarsa rutin uygulama guvenli noktada tutulur;
+3. Medium ana koordinator plani `sokrates.md` ile kontrol eder; dosya veya
+   sorumluluk sahipligi acik bounded execution dilimlerini Luna'ya verir,
+   kalan entegrasyonu kendisi yurutur.
+4. Luna verilen dilimi uygular, targeted verification'i kosar ve degisen
+   dosya, kanit, risk ve cozulmemis gate ile kompakt handoff verir. Root diff'i
+   ve kaniti bagimsiz kontrol eder.
+5. Problem tetikleyicisi cikarsa rutin uygulama guvenli noktada tutulur;
    `problem_solver_high` dar root-cause/review sorusunu inceler.
-5. Medium ana koordinator oneriyi repo kanitiyla kabul veya reddeder, gerekli
+6. Medium ana koordinator oneriyi repo kanitiyla kabul veya reddeder, gerekli
    degisikligi kendisi yapar ve normal verification/closeout'a doner.
+
+Luna kullanim matrisi:
+
+- `Varsayilan delegate`: ilgili kod yolu envanteri, bagimlilik/usage aramasi,
+  bounded frontend veya backend implementation, test-first fixture ve test
+  yazimi, acik lint/type/build hatasi, docs/script degisikligi, saf refactor,
+  dead-code/legacy residue taramasi, responsive/accessibility kontrolu ve PR
+  oncesi ilk-pass diff incelemesi.
+- `Kosullu delegate`: R4/R5 icinde ancak onayli plan, tam contract, tekil
+  ownership, negatif testler, stop kosullari ve rollback mekanik olarak
+  kilitliyse ve verilen slice hassas semantigi secmiyor veya yeniden
+  tanimlamiyorsa izole implementation, test, fixture veya evidence. Root
+  entegrasyon ve final dogrulamayi; High final adversarial review'u elinde
+  tutar.
+- `Root'ta kalir`: owner veya product karari, Sokrates risk kabul/ret karari,
+  cakisan agent ciktisi birlestirme, cross-slice mimari tercih, PR kapsami,
+  merge/rollback karari, final kullanici raporu ve delegasyon overhead'inden
+  daha kucuk tek adimlik is.
+- `Luna'ya verilmez`: sirf check/deploy bekleme veya polling, sinirsiz repo
+  gezintisi, ham secret/credential tasiyan is, owner onayi gerektiren live
+  provider veya production operasyonu, deploy/merge, ayni dosyada ikinci
+  implementerlik ve R4/R5 icin tek final reviewer olma.
+
+Token hedefi:
+
+- Yeterli bounded is bulunan tipik hedefte model tokenlarinin yaklasik
+  `%60-%75`i ve ayrilabilir execution task'larinin `%75-%85`i Luna tarafinda;
+  tokenlarin `%25-%40`i Sol/root koordinasyonunda kalabilir.
+- Bu oran maliyet ve kapasite yonlendirme bandidir; KPI, merge gate veya
+  basari iddiasi degildir. Kesin olcum yoksa tahmin kanit gibi yazilmaz.
+- Orana ulasmak icin yapay task bolme, ayni dosyayi iki kez okutma, duplicate
+  review veya root ile Luna'ya ayni arastirmayi yaptirma yoktur. Delegasyonun
+  self-contained prompt, repo okuma ve handoff maliyeti isi asiyorsa root tek
+  adimda tamamlar.
 
 Verim ve guvenlik guardrail'leri:
 
@@ -515,6 +570,13 @@ Verim ve guvenlik guardrail'leri:
   veya yalniz check izleme icin High/XHigh agent acilmaz.
 - High/XHigh agent dosya edit etmez, commit/push/PR/merge/deploy yapmaz ve owner
   karari vermez. Bu, ayni dosyada iki implementer cakismasini engeller.
+- Luna edit ve targeted test yapabilir; ancak prompt'ta sahip oldugu dosya veya
+  sorumluluk siniri, diger agentlarin yalniz olmadigi, geri alma/stop kosulu ve
+  beklenen handoff acik yazilir.
+- Her Luna prompt'u workspace, hedef, risk sinifi, gerekli operating-doc/skill
+  okumasi, izinli dosya veya sorumluluk, yasak sinirlar, kabul kriteri, targeted
+  komutlar ve rapor formatini kendi icinde tasir. Spawn sirasinda rolun model,
+  reasoning veya tier ayari yeniden yazilmaz.
 - Varsayilan bir uzman agent'tir. Planner ve problem solver ancak gercekten
   bagimsiz sorulari varsa paralel calisir.
 - PR check polling icin model agent acilmaz. Kanonik `gh`/aktif frontend provider watcher veya
@@ -527,6 +589,17 @@ Verim ve guvenlik guardrail'leri:
   destructive riskinde bu bekleme uygulanmaz, dogrudan High inceleme kullanilir.
 - Uzman sorusu cevaplaninca agent kapatilir; rutin implementation High/XHigh'da
   surdurulmez.
+- Luna task'i kendi bounded sorumlulugu ve targeted verification'i bitince
+  kapanir. Bos ajan genel arka plan worker'i olarak acik tutulmaz; sonraki is
+  icin yeni self-contained prompt verilir.
+- Luna ayni boundary icindeki acik bir failure icin en fazla bir focused
+  correction yapar. Root ve Luna'nin deneme butcesi ortaktir; yeniden delegate
+  etmek sayaci sifirlamaz. Iki kanitli denemeden sonra veya hassas sinirda daha
+  erken `problem_solver_high` routing'i uygulanir.
+- Luna'nin exact HEAD/workspace uzerinde verdigi taze targeted PASS kaniti
+  sirf subagent kostu diye root tarafindan tekrar edilmez. Root final diff'i,
+  entegrasyon-level gate'i, tek canonical full release'i ve PR/provider/merge
+  closeout'unu sahiplenir.
 - Role konfigurasyonu istemcide yuklenmezse calismis gibi raporlanmaz. Capability
   failure acik yazilir ve `sokrates.md` risk/stop kurali uygulanir.
 - Project config yalniz yeni Codex task'larinda garanti edilir. Acik task'in
@@ -542,6 +615,10 @@ uygulanir.
 
 Bu bolum gecici/pilot calisma disiplinidir. Surec olgunlasinca kaldirilabilir,
 daraltilabilir veya kalici role modeline tasinabilir.
+
+Bu pilot bolum coklu-bakisli decomposition'i yonetir. Luna'nin varsayilan
+execution worker olmasi ise `Adaptive Reasoning Effort Routing` altindaki
+kalici kuraldir; pilot bolum kaldirilsa bile Luna-first karar devam eder.
 
 Varsayilan model:
 

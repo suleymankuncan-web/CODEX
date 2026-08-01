@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-30
+Last verified: 2026-08-01
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -142,7 +142,7 @@ test-data input.
 
 ## Review, Release, And Merge Policy
 
-- Repo-local Codex routing is Medium execution, XHigh planning, and read-only High diagnosis/R4-R5 review; see root `AGENTS.md` and `.codex/config.toml`.
+- Owner-locked routing is Sol/Medium integration, default bounded Luna Max Fast execution, XHigh planning and read-only High review; it applies automatically under root `AGENTS.md` and `discipline.md`.
 - Local adversarial review, scope-appropriate verification, required GitHub
   checks, deployment checks when applicable, and clean mergeability are
   mandatory.

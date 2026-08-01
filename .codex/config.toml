@@ -7,6 +7,10 @@ plan_mode_reasoning_effort = "xhigh"
 max_threads = 3
 max_depth = 1
 
+[agents.luna_max_fast]
+description = "Fast Luna Max execution worker for bounded repository discovery, implementation, targeted verification, and first-pass review. Receives exclusive ownership and never makes owner, PR, merge, deploy, or live-provider decisions."
+config_file = "agents/luna-max-fast.toml"
+
 [agents.planner_xhigh]
 description = "Read-only XHigh planner for substantive plans, architecture, R3-R5 work, cross-layer sequencing, acceptance criteria, rollback, and decision gates. Return evidence-backed slices; never edit or make owner decisions."
 config_file = "agents/planner-xhigh.toml"

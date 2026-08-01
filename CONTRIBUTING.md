@@ -28,8 +28,12 @@ A narrow read-only question may use only the files needed to answer it. Do not
 turn the four-file operating set into mandatory ceremony for every small task.
 
 Codex sessions also load root `AGENTS.md`. It is the concise execution entry
-point for the adaptive Medium/High/XHigh routing defined in `discipline.md`;
+point for the adaptive Medium/Luna/High/XHigh routing defined in `discipline.md`;
 it does not replace the four operating documents or their ownership rules.
+The same entry contract applies the owner-locked Luna-first execution policy:
+bounded work is delegated to `luna_max_fast` when delegation is cheaper and
+ownership is explicit, while the root retains decisions, integration, PR and
+merge accountability.
 
 ## Operating Document Roles
 
