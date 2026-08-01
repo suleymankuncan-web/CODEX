@@ -15,8 +15,72 @@ policy remains in `discipline.md`; decision and stop rules remain in
 
 ## Adaptive reasoning routing
 
-The root coordinator is the Medium implementation owner. It owns scope,
-edits, tests, integration, PR decisions, and the final report.
+The root coordinator is the Medium integration owner. It owns scope, Sokrates
+decisions, cross-slice integration, PR and merge decisions, and the final
+report. Routine execution should be delegated to the configured
+`luna_max_fast` worker whenever the work contains a concrete bounded subtask
+that can be given exclusive file or responsibility ownership.
+
+### Luna-first execution routing
+
+Use `luna_max_fast` with `fork_turns: "none"` as the default cost-efficient
+execution specialist. The role is configured as Luna Max with maximum
+reasoning and the fast service tier. The root must give it a self-contained
+prompt because no conversation history is inherited.
+
+Delegate to Luna by default for:
+
+- scoped repository discovery, inventories, code-path tracing, and evidence
+  collection;
+- implementation in explicitly owned files or modules;
+- targeted tests, fixtures, contract checks, lint/build failure classification,
+  and mechanical repairs with a clear expected result;
+- docs, scripts, UI slices, backend slices, refactors, and cleanup whose scope,
+  behavior contract, and verification are already clear;
+- independent next-PR preparation while another PR's checks are monitored by
+  native tooling;
+- first-pass diff, regression, mobile/responsive, accessibility, and test-gap
+  review when the review does not replace a required High-risk review.
+
+Keep work in the Medium root when delegation overhead would exceed the task,
+the work cannot be separated from active integration, or the next action is a
+root-owned decision. Examples are a one-line answer or edit, resolving a tiny
+obvious conflict, combining agent outputs, selecting scope, accepting risk,
+and PR/merge closeout.
+
+Luna may implement a bounded slice inside R4/R5 work only after the approved
+plan, exact ownership, invariants, stop conditions, and verification are
+mechanically clear, and only when the slice does not itself choose or redefine
+the sensitive semantics. Auth, permission, security, database, migration,
+data-integrity, concurrency, destructive, provider, or production uncertainty
+still triggers `problem_solver_high`; substantive planning still triggers
+`planner_xhigh`. Luna can support those lines with isolated implementation,
+tests, fixtures, or evidence, but does not replace either specialist.
+
+Luna must not make owner/product decisions, broaden scope, handle unbounded
+secrets or live-provider operations, commit, push, open or merge a PR, deploy,
+or act as the sole final reviewer for R4/R5. Do not spawn Luna merely to wait
+or poll checks. Never give two agents overlapping ownership of the same files
+or workflow.
+
+Every Luna prompt must be self-contained and state the workspace, goal, risk
+class, required operating-doc or skill reads, exact allowed files or
+responsibility, forbidden boundaries, acceptance criteria, targeted commands,
+stop conditions, and handoff format. State that other agents and user changes
+may exist and must not be reverted. Do not override the role's model,
+reasoning, or service tier at spawn time.
+
+The root validates every Luna handoff against the current diff and repository
+evidence, runs the required integration-level verification, and remains
+accountable for the result. If `luna_max_fast` is unavailable or its configured
+model/tier cannot be verified, report that fact and continue under normal
+Sokrates routing; never claim Luna was used.
+
+Token-efficiency target: when a task has enough safe delegable work, aim for
+roughly 60-75% of model tokens and 75-85% of bounded task executions to run on
+Luna, leaving roughly 25-40% of tokens for Sol/root coordination. This is a
+directional operating band, not a quota or completion gate. Do not create
+artificial subtasks or duplicate repository reading merely to reach it.
 
 Delegate a read-only planning task to `planner_xhigh` before editing when any
 of these is true:
@@ -56,6 +120,9 @@ merge, deploy, or make owner decisions.
   uncertainty/risk, XHigh for substantive planning and decision structure.
 - Prefer one specialist at a time. Run planner and problem solver concurrently
   only when their scopes are genuinely independent.
+- Prefer Luna for bounded execution, but delegate only work that is large
+  enough to repay the self-contained prompt, repository reading, and handoff
+  overhead. One root action is cheaper than a ceremonial subagent round trip.
 - Never assign two agents to edit the same files or workflow.
 - Never run two full release suites concurrently.
 - Use `npm.cmd run check:release` for a fresh canonical local proof. After a
@@ -85,5 +152,12 @@ merge, deploy, or make owner decisions.
   the failure or a High-risk boundary is involved.
 - Stop delegating when the specialist question is answered; do not keep High
   or XHigh active for routine implementation.
+- Stop each Luna task when its assigned ownership and verification are complete;
+  reuse an idle Luna role with a new bounded prompt instead of leaving it open
+  as a general-purpose background worker.
+- Luna may make one focused correction when an obvious failure remains inside
+  its assigned boundary. The root and Luna share one failure budget; delegation
+  does not reset attempt counts. Escalate under the existing High rules after
+  two evidence-based attempts or earlier for a sensitive boundary.
 - If a configured role is unavailable, do not claim it ran. Report the
   capability failure and apply the normal `sokrates.md` stop/risk rules.
