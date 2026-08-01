@@ -6,6 +6,10 @@ import { installGenericStoreApiFallbacks, installStoreContractSession } from './
 import { routeTargetWorkspace } from './store-targets-command-fixtures'
 import { routeStoreManagerTargetCommand } from './store-targets-store-manager-command-fixtures'
 
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-07-15T09:00:00+03:00'))
+})
+
 const capture = process.env.CAPTURE_COMMAND_CANVAS_EVIDENCE === '1'
 
 type Rect = { x: number; y: number; width: number; height: number }
