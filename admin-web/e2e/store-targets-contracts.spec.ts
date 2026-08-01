@@ -2,6 +2,10 @@ import { expect, test } from './test-fixtures'
 import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
 import { routeTargetWorkspace, targetStoreA } from './store-targets-command-fixtures'
 
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-07-15T09:00:00+03:00'))
+})
+
 test('AC-TGT-001/002: Region Manager sees every assigned store and approves a balanced allocation', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await installGenericStoreApiFallbacks(page)
