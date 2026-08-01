@@ -149,14 +149,26 @@ export class SalesTargetIncentiveWorkspaceReadService {
         packageStatus: packageState.status,
       });
       region.stores.push(workspaceStore);
-      const packageEditable = packageState.status !== "submitted" && packageState.status !== "admin_approved";
-      if (canAct && packageEditable) region.capabilities.canSubmitPackage = true;
       capabilities.canMarkStoreReview ||= workspaceStore.capabilities.canMarkStoreReview;
       capabilities.canCreateCorrection ||= workspaceStore.capabilities.canCreateCorrection;
       capabilities.canVoidCorrection ||= workspaceStore.capabilities.canVoidCorrection;
-      capabilities.canSubmitPackage ||= region.capabilities.canSubmitPackage;
       regions.set(store.regionId, region);
     }
+
+    const resolvedRegions = [...regions.values()].map((region) => {
+      const actionableStores = region.stores.filter((store) => actionableStoreIds.has(store.storeId));
+      const packageEditable = region.package.status !== "submitted" && region.package.status !== "admin_approved";
+      return {
+        ...region,
+        capabilities: {
+          canSubmitPackage: packageEditable
+            && actionableStores.length > 0
+            && actionableStores.every((store) => store.capabilities.canMarkStoreReview),
+        },
+        stores: region.stores.sort((left, right) => left.storeName.localeCompare(right.storeName, "tr")),
+      };
+    });
+    capabilities.canSubmitPackage = resolvedRegions.some((region) => region.capabilities.canSubmitPackage);
 
     return {
       period: projection.periodKey,
@@ -172,11 +184,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         correctionActors: { status: actorRowsResult.status },
       },
       rateMetadata,
-      regions: [...regions.values()]
-        .map((region) => ({
-          ...region,
-          stores: region.stores.sort((left, right) => left.storeName.localeCompare(right.storeName, "tr")),
-        }))
+      regions: resolvedRegions
         .sort((left, right) => (left.regionName ?? "").localeCompare(right.regionName ?? "", "tr")),
     };
   }

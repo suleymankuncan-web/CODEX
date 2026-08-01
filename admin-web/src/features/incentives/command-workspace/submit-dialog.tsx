@@ -9,7 +9,7 @@ import { CommandCanvasConfirmationContent } from '@/features/store-command-canva
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { formatIncentiveMoney, formatIncentivePeriod } from './format'
-import { getSubmitRegionOptions, sumMoney } from './model'
+import { getSubmitRegionOptions, isIncentiveRegionSubmitReady, sumMoney } from './model'
 import type { IncentiveWorkspace } from './types'
 
 type Translate = ReturnType<typeof useLocalization>['t']
@@ -28,12 +28,17 @@ export function IncentiveSubmitDialog(input: {
   const [regionId, setRegionId] = useState(() => options.length === 1 ? options[0]?.regionId ?? '' : '')
   const [note, setNote] = useState('')
   const region = input.workspace.regions.find((item) => item.regionId === regionId)
-  const actionableStores = region?.stores.filter((store) => store.capabilities.canMarkStoreReview) ?? []
-  const ready = actionableStores.length > 0 && actionableStores.every((store) => store.review.status === 'reviewed' && store.review.periodCloseStatus === 'closed')
-  const regionRows = actionableStores.flatMap((store) => store.rows)
+  const regionStores = region?.stores ?? []
+  const ready = isIncentiveRegionSubmitReady(region)
+  const regionRows = regionStores.flatMap((store) => store.rows)
   const total = sumMoney(regionRows.map((row) => row.finalAmount))
   const correctionCount = regionRows.filter((row) => row.correction !== null).length
-  const reviewedCount = actionableStores.filter((store) => store.review.status === 'reviewed').length
+  const reviewedCount = regionStores.filter((store) => store.review.status === 'reviewed').length
+
+  const submit = () => {
+    if (!regionId || !ready || input.pending) return
+    input.onSubmit({ regionId, ...(note.trim() ? { submissionNote: note.trim() } : {}) })
+  }
 
   return (
     <Dialog open={input.open} onOpenChange={(open) => { if (!input.pending) input.onOpenChange(open) }}>
@@ -48,7 +53,7 @@ export function IncentiveSubmitDialog(input: {
         <div className="incentive-confirm-body">
           <div className="incentive-confirm-total"><span>{input.t('storeIncentives.command.totalEntitlement')}</span><strong>{formatIncentiveMoney(total, input.locale)}</strong></div>
           <div className="incentive-stat-grid incentive-confirm-grid">
-            <ConfirmStat label={input.t('storeIncentives.command.storeReview')} value={`${reviewedCount}/${actionableStores.length}`} />
+            <ConfirmStat label={input.t('storeIncentives.command.storeReview')} value={`${reviewedCount}/${regionStores.length}`} />
             <ConfirmStat label={input.t('storeIncentives.command.corrections')} value={String(correctionCount)} />
             <ConfirmStat label={input.t('storeIncentives.command.packageStatus')} value={input.t(ready ? 'storeIncentives.command.readyToSubmit' : 'storeIncentives.command.notReadyToSubmit')} />
             <ConfirmStat label={input.t('storeIncentives.command.submissionType')} value={input.t('storeIncentives.command.periodPackage')} />
@@ -63,7 +68,7 @@ export function IncentiveSubmitDialog(input: {
                 </Select>
               </div>
             ) : null}
-            <div className="incentive-submit-readiness"><span>{input.t('storeIncentives.regionManagerReviewedStores')}</span><strong>{actionableStores.filter((store) => store.review.status === 'reviewed').length}/{actionableStores.length}</strong></div>
+            <div className="incentive-submit-readiness"><span>{input.t('storeIncentives.regionManagerReviewedStores')}</span><strong>{reviewedCount}/{regionStores.length}</strong></div>
             <div className="incentive-form-field">
               <Label htmlFor="incentive-submission-note">{input.t('storeIncentives.command.submissionNote')}</Label>
               <Textarea id="incentive-submission-note" maxLength={1000} onChange={(event) => setNote(event.target.value)} value={note} />
@@ -72,7 +77,7 @@ export function IncentiveSubmitDialog(input: {
         </div>
         <DialogFooter className="incentive-confirm-footer">
           <Button disabled={input.pending} onClick={() => input.onOpenChange(false)} variant="outline">{input.t('storeIncentives.command.cancel')}</Button>
-          <Button disabled={!regionId || !ready || input.pending} onClick={() => input.onSubmit({ regionId, ...(note.trim() ? { submissionNote: note.trim() } : {}) })}>
+          <Button disabled={!regionId || !ready || input.pending} onClick={submit}>
             <Send aria-hidden="true" data-icon="inline-start" />
             {input.t('storeIncentives.command.submitConfirm')}
           </Button>

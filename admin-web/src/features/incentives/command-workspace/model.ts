@@ -31,12 +31,23 @@ export function filterIncentiveWorkspace(
 
 export function getSubmitRegionOptions(workspace: IncentiveWorkspace, fallbackLabel = 'Unassigned region') {
   return workspace.regions
-    .filter((region) => region.capabilities.canSubmitPackage)
     .filter((region) => region.package.status === 'not_submitted' || region.package.status === 'admin_returned')
     .map((region) => ({
       regionId: region.regionId,
       label: region.regionName?.trim() || region.regionManager.displayName?.trim() || fallbackLabel,
     }))
+}
+
+export function isIncentiveRegionSubmitReady(region: IncentiveRegion | undefined) {
+  return Boolean(
+    region
+    && region.capabilities.canSubmitPackage
+    && region.stores.length > 0
+    && region.stores.every((store) => (
+      store.review.status === 'reviewed'
+      && store.review.periodCloseStatus === 'closed'
+    )),
+  )
 }
 
 export function calculateRateProposal(actual: string | null, rate: string | null) {
