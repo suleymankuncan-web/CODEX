@@ -870,7 +870,7 @@ function parseOpenApiEndpoints(rootDir) {
 }
 
 function parseFrontendApiUsage(rootDir) {
-  const files = walkFiles(path.join(rootDir, 'admin-web', 'src'), (file) => /\.(ts|tsx)$/.test(file))
+  const files = walkFiles(path.join(rootDir, 'admin-web', 'src'), (file) => /\.(ts|tsx)$/.test(file) && !/\.(test|spec)\.(ts|tsx)$/.test(file))
   const apiCalls = []
   const unresolvedApiCalls = []
   const apiFunctionIndex = new Map()
