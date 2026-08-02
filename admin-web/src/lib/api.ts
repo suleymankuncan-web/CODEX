@@ -6,9 +6,14 @@ import {
   readBrowserSessionCsrfToken,
   readClientSession,
   writeBrowserSessionCsrfToken,
-  writeClientBearerSession,
 } from '../features/session/session-storage'
 import type { SessionState } from '../features/session/session-storage'
+import {
+  extractApiErrorMessage,
+  isCanonicalCsrfFailureResponse,
+  refreshSession,
+  shouldRecoverSessionFromApiError,
+} from './api-session-recovery'
 import {
   emitApiFailureDiagnostic,
   getRequestIdFromHeaders,
@@ -20,8 +25,6 @@ const STAGING_HOST_API_BASE_URL = 'https://api-staging.hr-axis.com/api'
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL
 
 type JsonMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-type SessionRefreshResult = string | { refreshed: boolean; bearerToken?: string | null } | null
-type BearerTokenRefreshHandler = (input?: { skipCache?: boolean }) => Promise<SessionRefreshResult>
 type ApiRequestContext = {
   method: JsonMethod
   durationMs: number
@@ -33,9 +36,6 @@ type BrowserSessionCreateResponse = {
   sessionId: string
   session: unknown
 }
-
-let bearerTokenRefreshHandler: BearerTokenRefreshHandler | null = null
-let bearerTokenRefreshPromise: Promise<boolean> | null = null
 
 export class ApiError extends Error {
   status: number
@@ -54,16 +54,7 @@ export type SessionExpiredDetail = {
 }
 
 export const SESSION_EXPIRED_EVENT = 'store-ops-session-expired'
-
-export function registerBearerTokenRefreshHandler(handler: BearerTokenRefreshHandler) {
-  bearerTokenRefreshHandler = handler
-
-  return () => {
-    if (bearerTokenRefreshHandler === handler) {
-      bearerTokenRefreshHandler = null
-    }
-  }
-}
+export { registerBearerTokenRefreshHandler } from './api-session-recovery'
 
 async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?: unknown }): Promise<T> {
   const body = input?.body !== undefined ? JSON.stringify(input.body) : undefined
@@ -85,6 +76,23 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
         2,
       )
       response = attempt.response
+    }
+  } else if (
+    isUnsafeMethod(method) &&
+    isCookieBrowserSession(prepared.session) &&
+    (await isCanonicalCsrfFailureResponse(response))
+  ) {
+    const retryHeaders = await prepareCsrfRecoveryHeaders(input?.body !== undefined, method)
+    if (retryHeaders) {
+      const retrySession = readClientSession()
+      if (isCookieBrowserSession(retrySession)) {
+        attempt = await performFetchAttempt(
+          path,
+          buildJsonRequest(method, retrySession, retryHeaders, body),
+          2,
+        )
+        response = attempt.response
+      }
     }
   }
 
@@ -135,6 +143,28 @@ async function requestFormData<T>(
         2,
       )
       response = attempt.response
+    }
+  } else if (
+    isUnsafeMethod(input.method) &&
+    isCookieBrowserSession(prepared.session) &&
+    (await isCanonicalCsrfFailureResponse(response))
+  ) {
+    const retryHeaders = await prepareCsrfRecoveryHeaders(false, input.method)
+    if (retryHeaders) {
+      const retrySession = readClientSession()
+      if (isCookieBrowserSession(retrySession)) {
+        attempt = await performFetchAttempt(
+          path,
+          {
+            method: input.method,
+            headers: retryHeaders,
+            body: input.body,
+            credentials: 'include',
+          },
+          2,
+        )
+        response = attempt.response
+      }
     }
   }
 
@@ -388,44 +418,21 @@ async function prepareRefreshedHeaders(
   return isCookieBrowserSession(refreshedSession) || headers.Authorization ? headers : null
 }
 
-async function refreshSession(input?: { skipCache?: boolean }) {
-  if (!bearerTokenRefreshHandler) {
-    return false
-  }
-
-  if (!bearerTokenRefreshPromise) {
-    bearerTokenRefreshPromise = bearerTokenRefreshHandler({ skipCache: Boolean(input?.skipCache) })
-      .then((result) => {
-        const session = readClientSession()
-        const normalized = normalizeRefreshResult(result)
-
-        if (!normalized.refreshed) {
-          return false
-        }
-
-        if (isCookieBrowserSession(session)) {
-          clearClientBearerSession()
-          return true
-        }
-
-        const token = normalized.bearerToken?.trim() ?? ''
-        if (!token) {
-          return false
-        }
-
-        writeClientBearerSession(token)
-        return true
-      })
-      .catch(() => false)
-      .finally(() => {
-        bearerTokenRefreshPromise = null
-      })
-  }
-
+async function prepareCsrfRecoveryHeaders(hasJsonBody: boolean, method: JsonMethod) {
   try {
-    return await bearerTokenRefreshPromise
+    const refreshed = await refreshSession({ skipCache: true })
+    if (!refreshed) {
+      return null
+    }
+
+    const refreshedSession = readClientSession()
+    if (!isCookieBrowserSession(refreshedSession) || !readBrowserSessionCsrfToken()) {
+      return null
+    }
+
+    return buildRequestHeaders(refreshedSession, hasJsonBody, method)
   } catch {
-    return false
+    return null
   }
 }
 
@@ -445,46 +452,6 @@ async function throwApiError(
   }
 
   throw new ApiError(response.status, message)
-}
-
-function extractApiErrorMessage(rawBody: string, status: number) {
-  const trimmed = rawBody.trim()
-  if (!trimmed) {
-    return `Request failed with status ${status}`
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed) as { message?: unknown }
-    if (typeof parsed.message === 'string' && parsed.message.trim()) {
-      return parsed.message.trim()
-    }
-    if (Array.isArray(parsed.message)) {
-      const joined = parsed.message.filter((item): item is string => typeof item === 'string').join(' ')
-      if (joined.trim()) {
-        return joined.trim()
-      }
-    }
-  } catch {
-    return trimmed
-  }
-
-  return trimmed
-}
-
-function shouldRecoverSessionFromApiError(status: number, session: SessionState, message: string) {
-  if (session.mode !== 'bearer' || typeof window === 'undefined') {
-    return false
-  }
-
-  if (status === 401) {
-    return true
-  }
-
-  return status === 403 && isCookieBrowserSession(session) && isCsrfFailureMessage(message)
-}
-
-function isCsrfFailureMessage(message: string) {
-  return message.toLowerCase().includes('csrf token is required')
 }
 
 function dispatchSessionExpired(path: string, message: string, status: number) {
@@ -553,20 +520,6 @@ function getNetworkFailureMessage(error: unknown) {
   }
 
   return 'Network request failed'
-}
-
-function normalizeRefreshResult(result: SessionRefreshResult) {
-  if (typeof result === 'string') {
-    return {
-      refreshed: Boolean(result.trim()),
-      bearerToken: result,
-    }
-  }
-
-  return {
-    refreshed: Boolean(result?.refreshed),
-    bearerToken: result?.bearerToken ?? null,
-  }
 }
 
 function assertBrowserSessionCsrfAvailable(session: SessionState, path: string, method: JsonMethod) {
