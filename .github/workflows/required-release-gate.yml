@@ -21,6 +21,7 @@ jobs:
       mode: ${{ steps.scope.outputs.mode }}
       run_root_release: ${{ steps.scope.outputs.run_root_release }}
       observe_rehearsal: ${{ steps.scope.outputs.observe_rehearsal }}
+      run_onprem_image_proof: ${{ steps.scope.outputs.run_onprem_image_proof }}
 
     steps:
       - name: Checkout
@@ -103,6 +104,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/required-release-gate.mjs --observe
 
+  onprem-image-proof:
+    name: onprem-image-proof
+    needs: scope
+    if: needs.scope.outputs.run_onprem_image_proof == 'true'
+    uses: ./.github/workflows/onprem-image-proof.yml
+    permissions:
+      contents: read
+
   required-release-gate:
     name: required-release-gate
     needs:
@@ -110,6 +119,7 @@ jobs:
       - docs-process-contracts
       - root-release
       - release-rehearsal-observer
+      - onprem-image-proof
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -131,4 +141,6 @@ jobs:
           REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT: ${{ needs.root-release.result }}
           REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT: ${{ needs.release-rehearsal-observer.result }}
           REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL: ${{ needs.scope.outputs.observe_rehearsal }}
+          REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RESULT: ${{ needs.onprem-image-proof.result }}
+          REQUIRED_RELEASE_GATE_RUN_ONPREM_IMAGE_PROOF: ${{ needs.scope.outputs.run_onprem_image_proof }}
         run: node scripts/required-release-gate.mjs --final

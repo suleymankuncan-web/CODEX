@@ -12,3 +12,15 @@ tmp
 outputs
 references/design-md
 
+# Keep repository metadata and credential-like material out of every build context.
+**/.git
+**/.github
+**/.env*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*credentials*
+**/*secrets*
+**/*.map
+

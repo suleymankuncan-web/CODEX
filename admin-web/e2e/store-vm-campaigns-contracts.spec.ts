@@ -40,13 +40,13 @@ test('Region Manager advisory workspace stays scoped, mobile-safe and removes in
   expect(overflow.body).toBeLessThanOrEqual(overflow.viewport + 4)
 })
 
-test('Region Manager advisory workspace is accessible, responsive and restores focus', async ({ page }) => {
-  await installStoreContractSession(page, 'regionManager', { actionStoreIds: [storeIds[0]] })
-  await routeAdvisoryApi(page, () => undefined)
-  for (const viewport of [
-    { width: 1440, height: 900 }, { width: 1024, height: 768 },
-    { width: 390, height: 844 }, { width: 320, height: 700 },
-  ]) {
+for (const viewport of [
+  { width: 1440, height: 900 }, { width: 1024, height: 768 },
+  { width: 390, height: 844 }, { width: 320, height: 700 },
+]) {
+  test(`Region Manager advisory workspace is accessible, responsive and restores focus at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await installStoreContractSession(page, 'regionManager', { actionStoreIds: [storeIds[0]] })
+    await routeAdvisoryApi(page, () => undefined)
     await page.setViewportSize(viewport)
     await page.goto('/store/visual-campaigns')
     await expectNoCriticalAxeViolations(page)
@@ -65,8 +65,8 @@ test('Region Manager advisory workspace is accessible, responsive and restores f
     await expect(row).toBeFocused()
     const overflow = await page.evaluate(() => document.body.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(4)
-  }
-})
+  })
+}
 
 test('Region Manager without current action-store scope cannot open the advisory workspace', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager', { actionStoreIds: [] })

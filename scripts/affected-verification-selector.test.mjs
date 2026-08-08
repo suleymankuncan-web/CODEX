@@ -155,3 +155,18 @@ test('root package exposes the advisory affected verification selector command',
   )
   assert.doesNotMatch(packageJson.scripts['check:release'], /check:affected-verification/)
 })
+
+test('on-prem image proof changes select build gates, root release, and the targeted workflow note', () => {
+  const selection = selectAffectedVerification([
+    'infra/onprem/images/backend.Dockerfile',
+    'scripts/onprem-image-proof-contract.test.mjs',
+    'tools/onprem-license/package-lock.json',
+  ])
+
+  assert.equal(selection.fullReleaseRequired, true)
+  assert.ok(selection.commands.includes('npm.cmd run test:scripts'))
+  assert.ok(selection.commands.includes('npm.cmd --prefix admin-web run build'))
+  assert.ok(selection.commands.includes('npm.cmd --prefix backend/nestjs run build'))
+  assert.ok(selection.commands.includes('npm.cmd run check:release'))
+  assert.ok(selection.targeted.includes('on-prem image proof workflow'))
+})

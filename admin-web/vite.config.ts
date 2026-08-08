@@ -52,6 +52,9 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.unit.test.ts'],
   },
+  build: {
+    sourcemap: false,
+  },
   server: {
     fs: {
       allow: [projectRoot, dependencyRoot],
