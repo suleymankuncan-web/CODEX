@@ -867,7 +867,7 @@ Review method:
 - `hr-axis-prototype-standard` contract review;
 - `hr-axis-ui-refactor` risk review;
 - Sokrates R5 decomposition;
-- XHigh read-only planning review;
+- High read-only risk review when triggered by the repository routing contract;
 - final adversarial gap audit.
 
 Gaps found and corrected in this revision:

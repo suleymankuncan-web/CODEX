@@ -4,16 +4,12 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-08-01
+Last verified: 2026-08-08
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
-Historical detail is separate:
-
-- former long handoff through PR #913:
-  `docs/history/current-state-through-pr-913-2026-07-09.md`;
-- operating-truth and plan-execution transition record:
-  `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
+Historical detail is separate in `docs/history/current-state-through-pr-913-2026-07-09.md`
+and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
 ## Authority And Freshness
 
@@ -36,8 +32,7 @@ when the decision needs them.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
-- New modules, broad redesign, generic architecture/refactor, and provider/JSON
-  integration remain parked unless a real trigger and owner decision reopen one.
+- New modules, broad redesign, generic architecture/refactor, and provider/JSON integration remain parked. The owner-approved on-prem synthetic preparation is the bounded exception, without live-provider, production, or company-data authority.
 - Power BI/Excel remains the current operating data path; JSON integration is
   suspended pending a real provider contract and reconciliation plan.
 - Runtime work remains parked except for the owner-opened DG1-DG2 remediation
@@ -59,6 +54,8 @@ are locked in `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`:
 execute the company-read/no-action Report Viewer allowlist, incentive closure,
 read-only production Session, honest Norm Kadro projection reversal, and safe
 verify-full preflight in order. Constraints still require live evidence.
+The 2026-08-08 `docs/plans/on-premise-private-container-deployment-plan-v1.md`
+authorizes ONP-0..ONP-5 repository-only synthetic preparation, not workstation installation, company-server deployment, real data/Nebim/photos, paid services, provider retirement, or production. ONP-0 is active; every later slice starts from its predecessor's merged SHA.
 DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Cloudflare env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
@@ -142,7 +139,7 @@ test-data input.
 
 ## Review, Release, And Merge Policy
 
-- Owner-locked routing is Sol/Medium integration, default bounded Luna Max Fast execution, XHigh planning and read-only High review; it applies automatically under root `AGENTS.md` and `discipline.md`.
+- Owner-locked routing is Sol/Medium integration, default bounded normal-speed Luna Max execution and read-only High review; substantive planning stays with Sol/root and reasoning never exceeds High. It applies automatically under root `AGENTS.md` and `discipline.md`.
 - Local adversarial review, scope-appropriate verification, required GitHub
   checks, deployment checks when applicable, and clean mergeability are
   mandatory.

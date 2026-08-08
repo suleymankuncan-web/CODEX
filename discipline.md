@@ -321,9 +321,9 @@ acikca degistirirse gevsetilir:
 - Ayni hedefte tamamen okunmus operating docs, plan ve skill dosyalari drift
   sinyali yoksa tekrar okunmaz. Fresh Git/runtime gercegi yine her slice'ta
   dogrulanir.
-- High/XHigh yalniz `AGENTS.md` routing kosulu gercekten olustugunda kullanilir;
+- High yalniz `AGENTS.md` routing kosulu gercekten olustugunda kullanilir;
   rutin implementation, polling ve acik mekanik hata icin specialist acilmaz.
-- Luna Max Fast, trivial olmayan ve ownership'i mekanik olarak ayrilabilen
+- Normal hizli Luna Max, trivial olmayan ve ownership'i mekanik olarak ayrilabilen
   execution dilimlerinde kullanicinin tekrar soylemesine gerek olmadan
   varsayilan worker'dir. Tek satir/tek komut isi, duplicate repo okuma veya
   self-contained prompt maliyeti isten buyukse seremoni icin agent acilmaz.
@@ -479,9 +479,9 @@ review owner-disabled kalir; lokal reviewer modeli final diff kalitesini ve
 guard/test bosluklarinin erken bulunmasini guclendirir.
 
 Bu modeldeki `Worker`, Luna uygunluk kosullari saglandiginda varsayilan olarak
-`luna_max_fast` roludur. Scout, ilk-pass Reviewer ve Test Hakemi gibi bounded
-roller de Luna'ya verilebilir. Planner/XHigh, problem solver/High, Closer/root
-ve owner karar yetkileri Luna worker rolune donusmez.
+`luna_max` roludur. Scout, ilk-pass Reviewer ve Test Hakemi gibi bounded roller
+de Luna'ya verilebilir. Planlama/root, problem solver/High, Closer/root ve owner
+karar yetkileri Luna worker rolune donusmez.
 
 ### Adaptive Reasoning Effort Routing
 
@@ -498,16 +498,17 @@ Varsayilan model:
   PR/merge ve handoff tek elde kalir. Root her satiri kendisi yazmak zorunda
   degildir; uygulanabilir isi dogru sahiplikle Luna'ya dagitir ve final sonucu
   repo kanitiyla kendisi dogrular.
-- `Luna Max Fast execution worker`: owner'in 2026-08-01 tarihli kilitli
+- `Luna Max normal-speed execution worker`: owner'in 2026-08-08 tarihli kilitli
   karariyla, kendine yeterli prompt ile ayrilabilen bounded implementation,
   repo kesfi, test, fixture, docs/script, mekanik fix, UI/backend slice ve
   ilk-pass review islerinin varsayilan maliyet-etkin yurutucusudur. Kanonik rol
-  `luna_max_fast`, cagri sekli `fork_turns: "none"`, reasoning seviyesi `max`
-  ve service tier `fast`tir. Ana Sol/root standart service tier'da kalir.
-- `XHigh planner`: kapsamli plan/spec, mimari veya multi-PR hat, katmanlar arasi
-  bagimlilik, acceptance/rollback/sequencing belirsizligi ya da scope,
-  acceptance, rollback ve verification'i kilitlenmemis R3-R5 is icin
-  implementasyondan once salt-okunur planlama yapar.
+  `luna_max`, cagri sekli `fork_turns: "none"`, reasoning seviyesi `max` ve
+  service tier normal/inherited'dir; spawn sirasinda `fast` override verilmez.
+  Ana Sol/root da standart service tier'da kalir.
+- `High root planning`: kapsamli plan/spec, mimari veya multi-PR hat, katmanlar
+  arasi bagimlilik, acceptance/rollback/sequencing belirsizligi ya da scope,
+  acceptance, rollback ve verification'i kilitlenmemis R3-R5 is icin ana
+  koordinator High reasoning ile planlama yapar. Reasoning High'i asmaz.
 - `High problem solver`: iki kanitli denemeden sonra suren hata, ilk odakli
   incelemede nedeni bulunamayan check, celisen repo/runtime kaniti, auth,
   security, DB, data integrity, migration, concurrency veya production safety
@@ -517,9 +518,9 @@ Varsayilan model:
 Yonlendirme akisi:
 
 1. Ana koordinator risk sinifini ve kabul kriterini belirler.
-2. Planlama tetikleyicisi varsa `planner_xhigh` yalnizca kanit, slice, risk,
-   rollback ve verification plani uretir.
-3. Medium ana koordinator plani `sokrates.md` ile kontrol eder; dosya veya
+2. Planlama tetikleyicisi varsa ana koordinator High reasoning ile kanit,
+   slice, risk, rollback ve verification plani uretir.
+3. Ana koordinator plani `sokrates.md` ile kontrol eder; dosya veya
    sorumluluk sahipligi acik bounded execution dilimlerini Luna'ya verir,
    kalan entegrasyonu kendisi yurutur.
 4. Luna verilen dilimi uygular, targeted verification'i kosar ve degisen
@@ -567,8 +568,8 @@ Token hedefi:
 Verim ve guvenlik guardrail'leri:
 
 - R0 docs duzeltmesi, tek satirlik mekanik fix, acik adimlari olan onayli plan
-  veya yalniz check izleme icin High/XHigh agent acilmaz.
-- High/XHigh agent dosya edit etmez, commit/push/PR/merge/deploy yapmaz ve owner
+  veya yalniz check izleme icin High review agent acilmaz.
+- High review agent dosya edit etmez, commit/push/PR/merge/deploy yapmaz ve owner
   karari vermez. Bu, ayni dosyada iki implementer cakismasini engeller.
 - Luna edit ve targeted test yapabilir; ancak prompt'ta sahip oldugu dosya veya
   sorumluluk siniri, diger agentlarin yalniz olmadigi, geri alma/stop kosulu ve
@@ -587,7 +588,7 @@ Verim ve guvenlik guardrail'leri:
 - Ayni problem icin ilk net hata mesajinda High'a cikilmaz; once Medium tek
   odakli inceleme ve en fazla iki kanitli fix denemesi yapar. Auth/security/DB
   destructive riskinde bu bekleme uygulanmaz, dogrudan High inceleme kullanilir.
-- Uzman sorusu cevaplaninca agent kapatilir; rutin implementation High/XHigh'da
+- Uzman sorusu cevaplaninca agent kapatilir; rutin implementation High'da
   surdurulmez.
 - Luna task'i kendi bounded sorumlulugu ve targeted verification'i bitince
   kapanir. Bos ajan genel arka plan worker'i olarak acik tutulmaz; sonraki is
@@ -605,11 +606,11 @@ Verim ve guvenlik guardrail'leri:
 - Project config yalniz yeni Codex task'larinda garanti edilir. Acik task'in
   reasoning seviyesi kendiliginden degisti varsayilmaz.
 
-Bu politika ana agent'in task ortasinda fiziksel olarak Medium/High/XHigh
-ayarini degistirdigi anlamina gelmez. Otomasyon, Medium ana koordinatorden
-farkli reasoning overlay'i olan salt-okunur uzman agente gorev delegasyonudur.
-Codex Plan Mode kullanilirsa `plan_mode_reasoning_effort = "xhigh"` ayrica
-uygulanir.
+Bu politika ana agent'in task ortasinda fiziksel olarak Medium/High ayarini
+degistirdigi anlamina gelmez. Otomasyon, Medium ana koordinatorden farkli
+reasoning overlay'i olan salt-okunur High uzman agente gorev delegasyonudur.
+Codex Plan Mode kullanilirsa `plan_mode_reasoning_effort = "high"` uygulanir;
+hicbir repo rolu High'in ustune cikmaz.
 
 ### Pilot Subagent Orchestration Discipline
 
