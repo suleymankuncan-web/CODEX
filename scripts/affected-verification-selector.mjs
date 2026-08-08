@@ -31,6 +31,21 @@ const rules = [
     reason: 'repo script or root command surface changed',
   },
   {
+    name: 'on-prem image proof',
+    test: (file) =>
+      file.startsWith('infra/onprem/') ||
+      file === 'backend/nestjs/tsconfig.onprem.json' ||
+      file === 'admin-web/vite.config.ts' ||
+      file === '.dockerignore' ||
+      file === '.github/workflows/onprem-image-proof.yml' ||
+      file.startsWith('scripts/onprem-') ||
+      file.startsWith('tools/onprem-license/'),
+    commands: ['diffCheck', 'scriptTests', 'frontendBuild', 'backendBuild', 'rootRelease'],
+    targeted: ['on-prem image proof workflow'],
+    reason: 'on-prem production image and signed artifact proof surface changed',
+    fullRelease: true,
+  },
+  {
     name: 'frontend app',
     test: (file) => file.startsWith('admin-web/src/') || file.startsWith('admin-web/e2e/'),
     commands: ['frontendLint', 'frontendBuild'],

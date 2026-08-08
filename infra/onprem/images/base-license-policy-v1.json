@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "allowedSpdxLicenseIds": [
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "FSFAP",
+    "GCC-exception-3.1",
+    "GPL-1.0-only",
+    "GPL-1.0-or-later",
+    "GPL-2.0-only",
+    "GPL-2.0-or-later",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "ISC",
+    "LGPL-2.0-only",
+    "LGPL-2.0-or-later",
+    "LGPL-2.1-only",
+    "LGPL-2.1-or-later",
+    "LGPL-3.0-only",
+    "LGPL-3.0-or-later",
+    "MIT",
+    "MPL-2.0",
+    "SunPro",
+    "Unicode-DFS-2016",
+    "Zlib"
+  ],
+  "images": {
+    "backend": {
+      "baseImage": "gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a",
+      "firstPartyPackage": "hr-axis-onprem-backend",
+      "overrides": [
+        { "name": "base-files", "version": "13.8+deb13u6", "purl": "pkg:deb/debian/base-files@13.8%2Bdeb13u6?arch=amd64&distro=debian-13.6", "declaredLicense": "LicenseRef-GPL AND GPL-2.0-or-later AND LicenseRef-verbatim", "resolvedLicense": "LicenseRef-GPL AND GPL-2.0-or-later AND LicenseRef-verbatim", "evidencePath": "debian/base-files-13.8+deb13u6.copyright", "evidenceSha256": "576859a65409c99cb1632c8b3de4b3deb26910800832beda76aca33d00720134", "evidenceUrl": "https://packages.debian.org/trixie/base-files" },
+        { "name": "gcc-14-base", "version": "14.2.0-19", "purl": "pkg:deb/debian/gcc-14-base@14.2.0-19?arch=amd64&distro=debian-13.6&upstream=gcc-14", "declaredLicense": "NOASSERTION", "resolvedLicense": "GPL-3.0-or-later WITH GCC-exception-3.1", "evidencePath": "debian/gcc-14-base-14.2.0-19.copyright", "evidenceSha256": "20390f8a6f3b1e4d7cb45dd8652dabb259bbef688cbad839bcdb0b9ba7252f79", "evidenceUrl": "https://packages.debian.org/trixie/gcc-14-base" },
+        { "name": "libc6", "version": "2.41-12+deb13u3", "purl": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u3?arch=amd64&distro=debian-13.6&upstream=glibc", "declaredLicense": "BSD-2-Clause AND LicenseRef-BSD-3-clause-Berkeley AND LicenseRef-BSD-3-clause-Carnegie AND LicenseRef-BSD-3-clause-Oracle AND LicenseRef-BSD-3-clause-WIDE AND LicenseRef-BSD-like-Spencer AND BSL-1.0 AND LicenseRef-CORE-MATH AND LicenseRef-Carnegie AND LicenseRef-DEC AND FSFAP AND GPL-2.0-only AND GPL-2.0-or-later AND LicenseRef-GPL-2--with-link-exception AND GPL-3.0-only AND GPL-3.0-or-later AND LicenseRef-IBM AND ISC AND LicenseRef-Inner-Net AND LGPL-2.0-only AND LGPL-2.0-or-later AND LGPL-2.1-only AND LGPL-2.1-or-later AND LicenseRef-LGPL-2.1--with-link-exception AND LGPL-3.0-only AND LGPL-3.0-or-later AND LicenseRef-MIT-like-Lord AND LicenseRef-PCRE AND SunPro AND Unicode-DFS-2016 AND LicenseRef-Univ-Coimbra AND LicenseRef-public-domain", "resolvedLicense": "BSD-2-Clause AND LicenseRef-BSD-3-clause-Berkeley AND LicenseRef-BSD-3-clause-Carnegie AND LicenseRef-BSD-3-clause-Oracle AND LicenseRef-BSD-3-clause-WIDE AND LicenseRef-BSD-like-Spencer AND BSL-1.0 AND LicenseRef-CORE-MATH AND LicenseRef-Carnegie AND LicenseRef-DEC AND FSFAP AND GPL-2.0-only AND GPL-2.0-or-later AND LicenseRef-GPL-2--with-link-exception AND GPL-3.0-only AND GPL-3.0-or-later AND LicenseRef-IBM AND ISC AND LicenseRef-Inner-Net AND LGPL-2.0-only AND LGPL-2.0-or-later AND LGPL-2.1-only AND LGPL-2.1-or-later AND LicenseRef-LGPL-2.1--with-link-exception AND LGPL-3.0-only AND LGPL-3.0-or-later AND LicenseRef-MIT-like-Lord AND LicenseRef-PCRE AND SunPro AND Unicode-DFS-2016 AND LicenseRef-Univ-Coimbra AND LicenseRef-public-domain", "evidencePath": "debian/libc6-2.41-12+deb13u3.copyright", "evidenceSha256": "f5788886720a2605a946e81d571e6c8162b09f58d2e2ceb8d36e5768fccd850d", "evidenceUrl": "https://packages.debian.org/trixie/libc6" },
+        { "name": "libgcc-s1", "version": "14.2.0-19", "purl": "pkg:deb/debian/libgcc-s1@14.2.0-19?arch=amd64&distro=debian-13.6&upstream=gcc-14", "declaredLicense": "NOASSERTION", "resolvedLicense": "GPL-3.0-or-later WITH GCC-exception-3.1", "evidencePath": "debian/gcc-14-base-14.2.0-19.copyright", "evidenceSha256": "20390f8a6f3b1e4d7cb45dd8652dabb259bbef688cbad839bcdb0b9ba7252f79", "evidenceUrl": "https://packages.debian.org/trixie/libgcc-s1" },
+        { "name": "libgomp1", "version": "14.2.0-19", "purl": "pkg:deb/debian/libgomp1@14.2.0-19?arch=amd64&distro=debian-13.6&upstream=gcc-14", "declaredLicense": "NOASSERTION", "resolvedLicense": "GPL-3.0-or-later WITH GCC-exception-3.1", "evidencePath": "debian/gcc-14-base-14.2.0-19.copyright", "evidenceSha256": "20390f8a6f3b1e4d7cb45dd8652dabb259bbef688cbad839bcdb0b9ba7252f79", "evidenceUrl": "https://packages.debian.org/trixie/libgomp1" },
+        { "name": "libssl3t64", "version": "3.5.6-1~deb13u2", "purl": "pkg:deb/debian/libssl3t64@3.5.6-1~deb13u2?arch=amd64&distro=debian-13.6&upstream=openssl", "declaredLicense": "Apache-2.0 AND LicenseRef-Artistic AND GPL-1.0-only AND GPL-1.0-or-later", "resolvedLicense": "Apache-2.0 AND LicenseRef-Artistic AND GPL-1.0-only AND GPL-1.0-or-later", "evidencePath": "debian/libssl3t64-3.5.6-1~deb13u2.copyright", "evidenceSha256": "6a7da622fe0637a334d2a8fc470852d2ffb77d9a2b2f930f854e32a41ad6ef35", "evidenceUrl": "https://packages.debian.org/trixie/libssl3t64" },
+        { "name": "libstdc++6", "version": "14.2.0-19", "purl": "pkg:deb/debian/libstdc%2B%2B6@14.2.0-19?arch=amd64&distro=debian-13.6&upstream=gcc-14", "declaredLicense": "NOASSERTION", "resolvedLicense": "GPL-3.0-or-later WITH GCC-exception-3.1", "evidencePath": "debian/gcc-14-base-14.2.0-19.copyright", "evidenceSha256": "20390f8a6f3b1e4d7cb45dd8652dabb259bbef688cbad839bcdb0b9ba7252f79", "evidenceUrl": "https://packages.debian.org/trixie/libstdc++6" },
+        { "name": "libzstd1", "version": "1.5.7+dfsg-1", "purl": "pkg:deb/debian/libzstd1@1.5.7%2Bdfsg-1?arch=amd64&distro=debian-13.6&upstream=libzstd", "declaredLicense": "BSD-3-Clause AND LicenseRef-Expat AND GPL-2.0-only AND Zlib", "resolvedLicense": "BSD-3-Clause AND LicenseRef-Expat AND GPL-2.0-only AND Zlib", "evidencePath": "debian/libzstd1-1.5.7+dfsg-1.copyright", "evidenceSha256": "5cec9fef4d3fa7e0371fbef4ec3fc416e0105dc2a9922117f84e825cb11f50f8", "evidenceUrl": "https://packages.debian.org/trixie/libzstd1" },
+        { "name": "media-types", "version": "13.0.0", "purl": "pkg:deb/debian/media-types@13.0.0?arch=all&distro=debian-13.6", "declaredLicense": "LicenseRef-ad-hoc", "resolvedLicense": "LicenseRef-ad-hoc", "evidencePath": "debian/media-types-13.0.0.copyright", "evidenceSha256": "5ded7c53199b6a1d089b0b7e231d77e5c84081c7156b372b3f11ad9c1c2c5cc7", "evidenceUrl": "https://packages.debian.org/trixie/media-types" },
+        { "name": "node", "version": "24.19.0", "purl": "pkg:generic/node@24.19.0", "declaredLicense": "NOASSERTION", "resolvedLicense": "MIT", "evidencePath": "node/node-24.19.0.LICENSE", "evidenceSha256": "148eacf7863ef4329224a29398623077200a27194aa075569faf4a0a85566ca5", "evidenceUrl": "https://github.com/nodejs/node/blob/v24.19.0/LICENSE" },
+        { "name": "tzdata", "version": "2026b-0+deb13u1", "purl": "pkg:deb/debian/tzdata@2026b-0%2Bdeb13u1?arch=all&distro=debian-13.6", "declaredLicense": "LicenseRef-public-domain", "resolvedLicense": "LicenseRef-public-domain", "evidencePath": "debian/tzdata-2026b-0+deb13u1.copyright", "evidenceSha256": "cb61132bc0fc7b26ef5a82ee18b2fb644a1362f4f286ed980ff22e408471f59a", "evidenceUrl": "https://packages.debian.org/trixie/tzdata" },
+        { "name": "tzdata-legacy", "version": "2026b-0+deb13u1", "purl": "pkg:deb/debian/tzdata-legacy@2026b-0%2Bdeb13u1?arch=all&distro=debian-13.6&upstream=tzdata", "declaredLicense": "LicenseRef-public-domain", "resolvedLicense": "LicenseRef-public-domain", "evidencePath": "debian/tzdata-2026b-0+deb13u1.copyright", "evidenceSha256": "cb61132bc0fc7b26ef5a82ee18b2fb644a1362f4f286ed980ff22e408471f59a", "evidenceUrl": "https://packages.debian.org/trixie/tzdata-legacy" }
+      ]
+    },
+    "frontend": {
+      "baseImage": "nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65",
+      "firstPartyPackage": "hr-axis-onprem-frontend",
+      "overrides": [
+        { "name": "nginx", "version": "1.30.4-r1", "purl": "pkg:apk/alpine/nginx@1.30.4-r1?arch=x86_64&distro=alpine-3.24.1", "declaredLicense": "LicenseRef-2-clause AND LicenseRef-BSD-like AND LicenseRef-license", "resolvedLicense": "LicenseRef-2-clause AND LicenseRef-BSD-like AND LicenseRef-license", "evidencePath": "alpine/nginx-1.30.4-r1.COPYRIGHT", "evidenceSha256": "4f72e2bccf0bcd839dd447ab6f359336f428caa1987a9afec2bc9ade5711658a", "evidenceUrl": "https://nginx.org/LICENSE" },
+        { "name": "tzdata", "version": "2026c-r0", "purl": "pkg:apk/alpine/tzdata@2026c-r0?arch=x86_64&distro=alpine-3.24.1", "declaredLicense": "LicenseRef-Public-Domain", "resolvedLicense": "LicenseRef-Public-Domain", "evidencePath": "alpine/tzdata-2026c-r0.apk-installed", "evidenceSha256": "e3179c0fa48b1c558229e02727450748616d3dbcccd8268bd56a399349973e5e", "evidenceUrl": "https://pkgs.alpinelinux.org/package/v3.24/main/x86_64/tzdata" }
+      ]
+    }
+  }
+}

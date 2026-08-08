@@ -53,6 +53,16 @@ function isRehearsalPath(file) {
   )
 }
 
+function isOnpremImageProofPath(file) {
+  return (
+    hasPrefix(file, ['admin-web/', 'backend/nestjs/', 'infra/onprem/images/', 'scripts/onprem-']) ||
+    file === '.dockerignore' ||
+    file === '.github/workflows/onprem-image-proof.yml' ||
+    file === 'package.json' ||
+    hasPrefix(file, ['tools/onprem-license/'])
+  )
+}
+
 export function parseNameStatusFiles(text) {
   const files = []
 
@@ -91,6 +101,7 @@ export function selectRequiredReleaseGateScope(files) {
       affectedVerification,
       runRootRelease: false,
       observeRehearsal: false,
+      runOnpremImageProof: false,
     }
   }
 
@@ -102,6 +113,7 @@ export function selectRequiredReleaseGateScope(files) {
       affectedVerification,
       runRootRelease: false,
       observeRehearsal: false,
+      runOnpremImageProof: false,
     }
   }
 
@@ -112,6 +124,7 @@ export function selectRequiredReleaseGateScope(files) {
     affectedVerification,
     runRootRelease: true,
     observeRehearsal: normalizedFiles.some(isRehearsalPath),
+    runOnpremImageProof: normalizedFiles.some(isOnpremImageProofPath),
   }
 }
 
@@ -185,6 +198,8 @@ export function evaluateRequiredReleaseGateFinal({
   rootReleaseResult,
   rehearsalObserverResult,
   observeRehearsal,
+  onpremImageProofResult,
+  runOnpremImageProof,
 }) {
   const failures = []
 
@@ -203,6 +218,9 @@ export function evaluateRequiredReleaseGateFinal({
     if (observeRehearsal && rehearsalObserverResult !== 'success') {
       failures.push(`release-rehearsal-observer=${rehearsalObserverResult || 'missing'}`)
     }
+    if (runOnpremImageProof && onpremImageProofResult !== 'success') {
+      failures.push(`onprem-image-proof=${onpremImageProofResult || 'missing'}`)
+    }
   } else {
     failures.push(`unsupported scope mode=${mode || 'missing'}`)
   }
@@ -217,6 +235,7 @@ function writeScopeOutput(scope) {
   console.log(`mode=${scope.mode}`)
   console.log(`run_root_release=${scope.runRootRelease}`)
   console.log(`observe_rehearsal=${scope.observeRehearsal}`)
+  console.log(`run_onprem_image_proof=${scope.runOnpremImageProof}`)
   console.error(`[required-release-gate] ${scope.reason}`)
   console.error(`[required-release-gate] files: ${scope.files.join(', ')}`)
 }
@@ -332,6 +351,8 @@ function evaluateFinalFromEnvironment() {
     rootReleaseResult: process.env.REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT,
     rehearsalObserverResult: process.env.REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT,
     observeRehearsal: process.env.REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL === 'true',
+    onpremImageProofResult: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RESULT,
+    runOnpremImageProof: process.env.REQUIRED_RELEASE_GATE_RUN_ONPREM_IMAGE_PROOF === 'true',
   })
 
   if (!final.ok) {

@@ -1,0 +1,9 @@
+{
+  "name": "hr-axis-onprem-license-tooling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned canonical SPDX text source for ONP image proof",
+  "devDependencies": {
+    "spdx-license-list": "6.12.0"
+  }
+}

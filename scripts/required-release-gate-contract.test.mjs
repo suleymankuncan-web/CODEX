@@ -60,6 +60,7 @@ test('docs/process-only scope uses local diff and root script contracts without 
   assert.equal(scope.mode, 'docs')
   assert.equal(scope.runRootRelease, false)
   assert.equal(scope.observeRehearsal, false)
+  assert.equal(scope.runOnpremImageProof, false)
   assert.equal(scope.affectedVerification.fullReleaseRequired, false)
 })
 
@@ -85,8 +86,16 @@ test('frontend scope runs the canonical root release workflow once', () => {
   assert.equal(scope.mode, 'release')
   assert.equal(scope.runRootRelease, true)
   assert.equal(scope.observeRehearsal, false)
+  assert.equal(scope.runOnpremImageProof, true)
   assert.ok(scope.affectedVerification.commands.includes('npm.cmd --prefix admin-web run lint'))
   assert.ok(scope.affectedVerification.commands.includes('npm.cmd --prefix admin-web run build'))
+})
+
+test('pinned on-prem license tooling selects the fail-closed image proof', () => {
+  const scope = selectRequiredReleaseGateScope(['tools/onprem-license/package-lock.json'])
+  assert.equal(scope.mode, 'release')
+  assert.equal(scope.runRootRelease, true)
+  assert.equal(scope.runOnpremImageProof, true)
 })
 
 test('API-contract docs cannot be mistaken for docs/process-only scope', () => {
@@ -108,6 +117,7 @@ test('backend, database, and infrastructure scope waits for the rehearsal child'
     assert.equal(scope.mode, 'release')
     assert.equal(scope.runRootRelease, true)
     assert.equal(scope.observeRehearsal, true)
+    assert.equal(scope.runOnpremImageProof, file.startsWith('backend/nestjs/') || file.startsWith('infra/onprem/'))
   }
 })
 
@@ -178,6 +188,8 @@ test('aggregate accepts only applicable children and fails on a selected child f
     rootReleaseResult: 'skipped',
     rehearsalObserverResult: 'skipped',
     observeRehearsal: false,
+    runOnpremImageProof: false,
+    onpremImageProofResult: 'skipped',
   })
   assert.equal(docsFinal.ok, true)
 
@@ -188,9 +200,11 @@ test('aggregate accepts only applicable children and fails on a selected child f
     rootReleaseResult: 'success',
     rehearsalObserverResult: 'failure',
     observeRehearsal: true,
+    runOnpremImageProof: true,
+    onpremImageProofResult: 'failure',
   })
   assert.equal(releaseFinal.ok, false)
-  assert.deepEqual(releaseFinal.failures, ['release-rehearsal-observer=failure'])
+  assert.deepEqual(releaseFinal.failures, ['release-rehearsal-observer=failure', 'onprem-image-proof=failure'])
 })
 
 test('aggregate rejects cancelled, timed out, skipped, and missing selected children', () => {
@@ -202,6 +216,8 @@ test('aggregate rejects cancelled, timed out, skipped, and missing selected chil
       rootReleaseResult,
       rehearsalObserverResult: 'skipped',
       observeRehearsal: false,
+      runOnpremImageProof: false,
+      onpremImageProofResult: 'skipped',
     })
 
     assert.equal(result.ok, false)
@@ -231,6 +247,9 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.match(workflow, /on:\s*\n\s+pull_request:\s*\n\s*\nconcurrency:/)
   assert.doesNotMatch(workflow, /pull_request:\s*\n\s+paths:/)
   assert.match(workflow, /uses:\s*\.\/\.github\/workflows\/release-check\.yml/)
+  assert.match(workflow, /uses:\s*\.\/\.github\/workflows\/onprem-image-proof\.yml/)
+  assert.match(workflow, /REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RESULT:/)
+  assert.match(workflow, /REQUIRED_RELEASE_GATE_RUN_ONPREM_IMAGE_PROOF:/)
   assert.match(workflow, /git diff --check "\$BASE_SHA" "\$HEAD_SHA"/)
   assert.match(workflow, /run:\s*npm run test:scripts/)
   assert.doesNotMatch(workflow, /frontend-targeted:/)
