@@ -15,11 +15,22 @@ for (const item of storeRouteContractExpectations) {
 
     await page.goto(item.path)
 
+    await waitForStorePageLoadingToSettle(page, item.id)
     await expect(page.getByText(item.visibleText).first()).toBeVisible()
     await expectNoHorizontalOverflow(page)
     await expectNoInternalCopy(page)
     expect(pageErrors).toEqual([])
   })
+}
+
+async function waitForStorePageLoadingToSettle(page: Page, routeId: string) {
+  if (routeId === 'targets') {
+    await expect(page.locator('.target-command-state[role="status"]')).toHaveCount(0)
+  }
+
+  if (routeId === 'workforce') {
+    await expect(page.getByTestId('store-workforce-loading')).toHaveCount(0)
+  }
 }
 
 test('store personnel cannot open region-manager-only incentives route', async ({ page }) => {
