@@ -1,19 +1,15 @@
 # Repository-local Codex defaults. The selected model is inherited from the
 # user's active Codex configuration; only reasoning effort is routed here.
 model_reasoning_effort = "medium"
-plan_mode_reasoning_effort = "xhigh"
+plan_mode_reasoning_effort = "high"
 
 [agents]
 max_threads = 3
 max_depth = 1
 
-[agents.luna_max_fast]
-description = "Fast Luna Max execution worker for bounded repository discovery, implementation, targeted verification, and first-pass review. Receives exclusive ownership and never makes owner, PR, merge, deploy, or live-provider decisions."
-config_file = "agents/luna-max-fast.toml"
-
-[agents.planner_xhigh]
-description = "Read-only XHigh planner for substantive plans, architecture, R3-R5 work, cross-layer sequencing, acceptance criteria, rollback, and decision gates. Return evidence-backed slices; never edit or make owner decisions."
-config_file = "agents/planner-xhigh.toml"
+[agents.luna_max]
+description = "Normal-speed Luna Max execution worker for bounded repository discovery, implementation, targeted verification, and first-pass review. Receives exclusive ownership and never makes owner, PR, merge, deploy, or live-provider decisions."
+config_file = "agents/luna-max.toml"
 
 [agents.problem_solver_high]
 description = "Read-only High investigator and adversarial reviewer for unresolved failures, conflicting evidence, auth/security/database/data-integrity/concurrency risk, and final R4-R5 review. Diagnose and recommend; never edit or make owner decisions."

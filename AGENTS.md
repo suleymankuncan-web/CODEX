@@ -15,18 +15,19 @@ policy remains in `discipline.md`; decision and stop rules remain in
 
 ## Adaptive reasoning routing
 
-The root coordinator is the Medium integration owner. It owns scope, Sokrates
-decisions, cross-slice integration, PR and merge decisions, and the final
-report. Routine execution should be delegated to the configured
-`luna_max_fast` worker whenever the work contains a concrete bounded subtask
-that can be given exclusive file or responsibility ownership.
+The root coordinator is the Medium integration owner and may raise its own
+reasoning only as far as High when substantive planning or risk requires it. It
+owns scope, Sokrates decisions, cross-slice integration, PR and merge decisions,
+and the final report. Routine execution should be delegated to the configured
+`luna_max` worker whenever the work contains a concrete bounded subtask that can
+be given exclusive file or responsibility ownership.
 
 ### Luna-first execution routing
 
-Use `luna_max_fast` with `fork_turns: "none"` as the default cost-efficient
-execution specialist. The role is configured as Luna Max with maximum
-reasoning and the fast service tier. The root must give it a self-contained
-prompt because no conversation history is inherited.
+Use `luna_max` with `fork_turns: "none"` as the default cost-efficient execution specialist.
+The role is configured as Luna Max with maximum reasoning and the inherited
+normal service tier. Do not set a fast service tier override. The root must give
+it a self-contained prompt because no conversation history is inherited.
 
 Delegate to Luna by default for:
 
@@ -53,9 +54,9 @@ plan, exact ownership, invariants, stop conditions, and verification are
 mechanically clear, and only when the slice does not itself choose or redefine
 the sensitive semantics. Auth, permission, security, database, migration,
 data-integrity, concurrency, destructive, provider, or production uncertainty
-still triggers `problem_solver_high`; substantive planning still triggers
-`planner_xhigh`. Luna can support those lines with isolated implementation,
-tests, fixtures, or evidence, but does not replace either specialist.
+still triggers `problem_solver_high`; substantive planning remains with the
+root at High. Luna can support those lines with isolated implementation, tests,
+fixtures, or evidence, but does not replace the risk specialist or root.
 
 Luna must not make owner/product decisions, broaden scope, handle unbounded
 secrets or live-provider operations, commit, push, open or merge a PR, deploy,
@@ -68,12 +69,13 @@ class, required operating-doc or skill reads, exact allowed files or
 responsibility, forbidden boundaries, acceptance criteria, targeted commands,
 stop conditions, and handoff format. State that other agents and user changes
 may exist and must not be reverted. Do not override the role's model,
-reasoning, or service tier at spawn time.
+reasoning, or service tier at spawn time. In particular, never opt Luna into a
+fast tier.
 
 The root validates every Luna handoff against the current diff and repository
 evidence, runs the required integration-level verification, and remains
-accountable for the result. If `luna_max_fast` is unavailable or its configured
-model/tier cannot be verified, report that fact and continue under normal
+accountable for the result. If `luna_max` is unavailable or its configured
+model cannot be verified, report that fact and continue under normal
 Sokrates routing; never claim Luna was used.
 
 Token-efficiency target: when a task has enough safe delegable work, aim for
@@ -82,21 +84,9 @@ Luna, leaving roughly 25-40% of tokens for Sol/root coordination. This is a
 directional operating band, not a quota or completion gate. Do not create
 artificial subtasks or duplicate repository reading merely to reach it.
 
-Delegate a read-only planning task to `planner_xhigh` before editing when any
-of these is true:
-
-- the user explicitly requests a plan, specification, architecture, or
-  multi-PR execution line;
-- the work is R3, R4, or R5 under `discipline.md` and no approved executable
-  plan already fixes scope, acceptance, rollback, and verification;
-- the expected change crosses frontend/backend/database/auth/provider
-  boundaries or has three or more coupled slices;
-- acceptance criteria, rollback, sequencing, or owner decisions are not yet
-  mechanically clear.
-
-Do not invoke XHigh planning for R0 docs corrections, one-line mechanical
-fixes, routine check monitoring, already-approved step-by-step execution, or
-other work whose scope and verification are already explicit.
+Substantive plans, architecture, multi-PR sequencing, and unresolved R3-R5
+acceptance or rollback are prepared by the root using High reasoning. No
+repository role may request a reasoning level above High.
 
 Delegate a bounded read-only investigation or review to
 `problem_solver_high` when any of these is true:
@@ -109,15 +99,15 @@ Delegate a bounded read-only investigation or review to
   destructive operations, or production safety is involved;
 - an R4/R5 diff is ready for its final adversarial review.
 
-After the High or XHigh report, the Medium root coordinator applies or rejects
+After the High report, the Medium root coordinator applies or rejects
 the recommendation using repository evidence and `sokrates.md`, then resumes
-routine execution. High/XHigh agents do not edit files, commit, push, open PRs,
+routine execution. High review agents do not edit files, commit, push, open PRs,
 merge, deploy, or make owner decisions.
 
 ## Efficiency and concurrency
 
-- Use the smallest sufficient effort: Medium by default, High for bounded
-  uncertainty/risk, XHigh for substantive planning and decision structure.
+- Use the smallest sufficient effort: Medium by default and High for substantive
+  planning, bounded uncertainty, risk, or final R4/R5 review. Never exceed High.
 - Prefer one specialist at a time. Run planner and problem solver concurrently
   only when their scopes are genuinely independent.
 - Prefer Luna for bounded execution, but delegate only work that is large
@@ -151,7 +141,7 @@ merge, deploy, or make owner decisions.
   failure; use `problem_solver_high` only when focused inspection cannot explain
   the failure or a High-risk boundary is involved.
 - Stop delegating when the specialist question is answered; do not keep High
-  or XHigh active for routine implementation.
+  active for routine implementation.
 - Stop each Luna task when its assigned ownership and verification are complete;
   reuse an idle Luna role with a new bounded prompt instead of leaving it open
   as a general-purpose background worker.

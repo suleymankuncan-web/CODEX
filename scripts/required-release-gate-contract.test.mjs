@@ -45,7 +45,7 @@ function workflowRun(overrides = {}) {
 
 test('docs/process-only scope uses local diff and root script contracts without a release child', () => {
   const scope = selectRequiredReleaseGateScope([
-    '.codex/agents/planner-xhigh.toml',
+    '.codex/agents/luna-max.toml',
     '.codex/agents/problem-solver-high.toml',
     '.codex/config.toml',
     'AGENTS.md',

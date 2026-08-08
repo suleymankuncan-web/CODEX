@@ -6,7 +6,7 @@ Decision slice: `TREF-1`
 Last verified: 2026-07-13
 Owner approval: 2026-07-13
 Author: Codex root coordinator
-Read-only planning review: `planner_xhigh`
+Read-only planning review: `problem_solver_high` when a High-risk review trigger exists; otherwise Sol/root owns planning at High.
 
 ## 1. Objective
 

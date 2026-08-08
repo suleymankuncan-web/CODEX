@@ -37,7 +37,7 @@ test('docs-only changes select diff check and script tests only when guarded scr
   const codexProcess = selectAffectedVerification([
     'AGENTS.md',
     '.codex/config.toml',
-    '.codex/agents/planner-xhigh.toml',
+    '.codex/agents/luna-max.toml',
   ])
 
   assert.deepEqual(codexProcess.commands, ['git diff --check'])
@@ -45,7 +45,7 @@ test('docs-only changes select diff check and script tests only when guarded scr
   assert.deepEqual(codexProcess.matchedRules[0].files, [
     'AGENTS.md',
     '.codex/config.toml',
-    '.codex/agents/planner-xhigh.toml',
+    '.codex/agents/luna-max.toml',
   ])
 
   const scriptChange = selectAffectedVerification(['scripts/store-ui-refactor-guard.test.mjs'])
