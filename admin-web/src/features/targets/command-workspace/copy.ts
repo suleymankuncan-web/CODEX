@@ -20,7 +20,7 @@ const tr = {
   approvalNote: 'Bölge karar notu', approvalNotePlaceholder: 'Düzenlenmiş onay için zorunlu karar notu', noPersonnel: 'Bu kayıtta personel hedef dağılımı bulunmuyor.',
   requestFailed: 'Hedef çalışma alanı açılamadı.', approvalFailed: 'Hedef kararı kaydedilemedi.', approvedSuccess: 'Hedef kararı kaydedildi.',
   returned: 'İade edildi', selectPeriod: 'Hedef dönemini seçin', viewedPeriod: 'Görüntülenen dönem', showing: 'gösteriliyor', of: '/',
-  loadingTitle: 'Hedefler yükleniyor', loadingCopy: 'Yetkili mağaza kapsamı hazırlanıyor.', failureCopy: 'Bağlantıyı kontrol edip yeniden deneyin.',
+  loadingTitle: 'Hedefler yükleniyor', loadingCopy: 'Hedef bilgileri hazırlanıyor.', failureCopy: 'Bağlantıyı kontrol edip yeniden deneyin.',
 } as const
 
 const en: Record<keyof typeof tr, string> = {
@@ -43,7 +43,7 @@ const en: Record<keyof typeof tr, string> = {
   approvalNote: 'Region decision note', approvalNotePlaceholder: 'Required note for an adjusted approval', noPersonnel: 'No personnel allocation exists for this record.',
   requestFailed: 'The target workspace could not be opened.', approvalFailed: 'The target decision could not be saved.', approvedSuccess: 'The target decision was saved.',
   returned: 'Returned', selectPeriod: 'Select target period', viewedPeriod: 'Viewed period', showing: 'showing', of: '/',
-  loadingTitle: 'Loading targets', loadingCopy: 'Preparing the authorized store scope.', failureCopy: 'Check the connection and try again.',
+  loadingTitle: 'Loading targets', loadingCopy: 'Preparing target details.', failureCopy: 'Check the connection and try again.',
 }
 
 export function getTargetCommandCopy(locale: AppLocale) { return locale === 'tr' ? tr : en }
