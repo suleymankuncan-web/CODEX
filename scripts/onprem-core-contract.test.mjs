@@ -275,6 +275,20 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
   assert.match(input.runtimeProof, /setval/)
 })
 
+test('ONP-2 contract rejects an injected init shim for privilege-dropping data services', () => {
+  for (const service of ['postgres', 'redis']) {
+    const input = contractInput()
+    input.compose = input.compose.replace(
+      `  ${service}:\n    image:`,
+      `  ${service}:\n    init: true\n    image:`,
+    )
+    const result = validateOnpremCoreContract(input)
+
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => new RegExp(`${service} must receive stop signals directly`, 'i').test(error)))
+  }
+})
+
 test('ONP-2 contract rejects runtime sequence mutation capability', () => {
   const input = contractInput()
   input.bootstrap = input.bootstrap.replace(

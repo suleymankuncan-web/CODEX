@@ -202,6 +202,9 @@ export function validateOnpremCoreContract(input) {
   fail(/aclfile \/run\/secrets\/redis_users_acl/.test(input.redis), 'Redis authentication must use a mounted ACL file')
   fail(/-flushall -flushdb -swapdb -migrate/.test(input.workflow) && /~hr-axis:rate-limit:\*/.test(input.workflow) && /~bull:hr-axis-onprem-synthetic-recovery-v1:\*/.test(input.workflow), 'runtime Redis ACLs must scope keys and deny destructive non-admin commands')
   fail(/cap_drop: \[ALL\]/.test(blocks.get('redis') ?? '') && /cap_add: \[CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID\]/.test(blocks.get('redis') ?? ''), 'Redis fresh-volume entrypoint must retain only the identity and ownership setup capabilities it needs')
+  for (const service of ['postgres', 'redis']) {
+    fail(!/^    init:\s*true\s*$/m.test(blocks.get(service) ?? ''), `${service} must receive stop signals directly after its official entrypoint drops privileges`)
+  }
   fail(/^  postgres_data:/m.test(input.compose) && /^  redis_data:/m.test(input.compose), 'PostgreSQL and Redis require named volumes')
 
   for (const role of ['hr_axis_migrator', 'hr_axis_api', 'hr_axis_worker']) {

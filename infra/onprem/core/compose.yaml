@@ -285,7 +285,6 @@ services:
     entrypoint: [/bin/sh, /opt/hr-axis/entrypoint-tls.sh]
     command: [postgres, -c, ssl=on, -c, ssl_cert_file=/var/lib/postgresql/tls/server.crt, -c, ssl_key_file=/var/lib/postgresql/tls/server.key, -c, ssl_ca_file=/var/lib/postgresql/tls/ca.crt, -c, password_encryption=scram-sha-256]
     restart: unless-stopped
-    init: true
     read_only: true
     cap_drop: [ALL]
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
@@ -339,7 +338,6 @@ services:
     profiles: [infra, migrate, seed, runtime]
     command: [redis-server, /usr/local/etc/redis/redis.conf]
     restart: unless-stopped
-    init: true
     read_only: true
     cap_drop: [ALL]
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
