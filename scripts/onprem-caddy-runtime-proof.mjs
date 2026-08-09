@@ -10,6 +10,11 @@ export const TLS_WRONG_CA_CODES = Object.freeze([
 ])
 export const TLS_SAFE_ERROR_CODES = Object.freeze(['ERR_TLS_CERT_ALTNAME_INVALID', ...TLS_WRONG_CA_CODES])
 
+export function sanitizeTlsErrorCode(value) {
+  const candidate = String(value ?? '')
+  return /^[A-Z0-9_]{1,64}$/.test(candidate) ? candidate : 'UNKNOWN_TLS_ERROR'
+}
+
 const CADDY_MEMORY_LIMIT = 128 * 1024 * 1024
 
 function procStatusValue(text, name) {
@@ -85,8 +90,8 @@ export function verifyCaddyRuntimeInvariants({
   }
 }
 
-export function buildTlsProbeDockerArgs({ caPath, caddyProxyIp, host, image, network, probeScript = '' }) {
-  for (const [name, value] of Object.entries({ caPath, caddyProxyIp, host, image, network })) {
+export function buildTlsProbeDockerArgs({ caPath, caddyProxyIp, host, image, network, probeScript = '', verifyHost }) {
+  for (const [name, value] of Object.entries({ caPath, caddyProxyIp, host, image, network, verifyHost })) {
     if (!String(value ?? '').trim()) throw new Error(`TLS proof requires ${name}`)
   }
   return [
@@ -98,6 +103,7 @@ export function buildTlsProbeDockerArgs({ caPath, caddyProxyIp, host, image, net
     '--volume', `${caPath}:/run/proof/ca.crt:ro`,
     '--env', 'PROOF_CA=/run/proof/ca.crt',
     '--env', `PROOF_HOST=${host}`,
+    '--env', `PROOF_VERIFY_HOST=${verifyHost}`,
     '--env', `PROOF_IP=${caddyProxyIp}`,
     '--entrypoint', '/nodejs/bin/node',
     image,
@@ -106,8 +112,9 @@ export function buildTlsProbeDockerArgs({ caPath, caddyProxyIp, host, image, net
 }
 
 export function classifyTlsProbeResult(output, expectation) {
-  const fail = () => {
-    throw new Error(`TLS proof did not produce the exact ${expectation} classification`)
+  const fail = (observedCode = '') => {
+    const observed = /^[A-Z0-9_]{1,64}$/.test(String(observedCode)) ? String(observedCode) : 'UNAVAILABLE'
+    throw new Error(`TLS proof did not produce the exact ${expectation} classification (observed=${observed})`)
   }
   if (!['success', 'wrong-host', 'wrong-ca'].includes(expectation)) fail()
   if (!Number.isInteger(output?.status) || String(output?.stderr ?? '').trim() !== '') fail()
@@ -128,7 +135,7 @@ export function classifyTlsProbeResult(output, expectation) {
   }
 
   if (output.status !== 20 || keys !== 'code,marker,result' || payload.result !== 'tls_error' || typeof payload.code !== 'string') fail()
-  if (expectation === 'wrong-host' && payload.code !== 'ERR_TLS_CERT_ALTNAME_INVALID') fail()
-  if (expectation === 'wrong-ca' && !TLS_WRONG_CA_CODES.includes(payload.code)) fail()
+  if (expectation === 'wrong-host' && payload.code !== 'ERR_TLS_CERT_ALTNAME_INVALID') fail(payload.code)
+  if (expectation === 'wrong-ca' && !TLS_WRONG_CA_CODES.includes(payload.code)) fail(payload.code)
   return { code: payload.code, result: 'tls_error', statusCode: null }
 }

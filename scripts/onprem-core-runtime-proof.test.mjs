@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
+import { checkServerIdentity } from 'node:tls'
 
 import {
   assertNoSecretLeak,
@@ -12,6 +13,7 @@ import {
   parseMigrationIdentity,
   parseSequencePrivilegeMatrix,
   redact,
+  sanitizeTlsErrorCode,
   buildTlsProbeDockerArgs,
   serviceFailureDiagnostic,
   TLS_WRONG_CA_CODES,
@@ -278,24 +280,52 @@ test('wrong-CA TLS proof explicitly mounts and selects an unrelated CA while wro
     ...common,
     caPath: '/tmp/unrelated-ca/ca.crt',
     host: 'onprem-proof.example.invalid',
+    verifyHost: 'onprem-proof.example.invalid',
   })
   const wrongHost = buildTlsProbeDockerArgs({
     ...common,
     caPath: '/approved/ca.crt',
-    host: 'wrong-host.example.invalid',
+    host: 'onprem-proof.example.invalid',
+    verifyHost: 'wrong-host.example.invalid',
   })
 
   assert.ok(wrongCa.includes('/tmp/unrelated-ca/ca.crt:/run/proof/ca.crt:ro'))
   assert.ok(wrongCa.includes('PROOF_CA=/run/proof/ca.crt'))
   assert.ok(wrongCa.includes('PROOF_HOST=onprem-proof.example.invalid'))
+  assert.ok(wrongCa.includes('PROOF_VERIFY_HOST=onprem-proof.example.invalid'))
   assert.ok(wrongHost.includes('/approved/ca.crt:/run/proof/ca.crt:ro'))
-  assert.ok(wrongHost.includes('PROOF_HOST=wrong-host.example.invalid'))
+  assert.ok(wrongHost.includes('PROOF_HOST=onprem-proof.example.invalid'))
+  assert.ok(wrongHost.includes('PROOF_VERIFY_HOST=wrong-host.example.invalid'))
   const source = readFileSync(new URL('./onprem-core-runtime-proof.mjs', import.meta.url), 'utf8')
+  assert.match(source, /require\('node:tls'\)/)
   assert.match(source, /const ca=fs\.readFileSync\(process\.env\.PROOF_CA\)/)
+  assert.match(source, /headers:\{host:process\.env\.PROOF_HOST\}/)
+  assert.match(source, /servername:process\.env\.PROOF_HOST/)
+  assert.match(source, /tls\.checkServerIdentity\(process\.env\.PROOF_VERIFY_HOST,cert\)/)
   assert.doesNotMatch(source, /process\.env\.PROOF_CA\?fs\.readFileSync/)
   assert.match(source, /unrelated-ca\.crt/)
   assert.match(source, /command\('openssl'/)
-  assert.match(source, /runTlsProbe\(\{ caPath: wrongCaPath, host: publicHost/)
+  assert.match(source, /runTlsProbe\(\{ caPath: wrongCaPath, host: publicHost, label: 'wrong-CA TLS rejection proof', verifyHost: publicHost \}\)/)
+})
+
+test('Node hostname verification deterministically classifies the synthetic wrong-host certificate', () => {
+  const error = checkServerIdentity('wrong-host.example.invalid', {
+    subjectaltname: 'DNS:onprem-proof.example.invalid',
+  })
+  assert.equal(error?.code, 'ERR_TLS_CERT_ALTNAME_INVALID')
+})
+
+test('TLS probe preserves only bounded safe error codes for rejected diagnostics', () => {
+  assert.equal(sanitizeTlsErrorCode('EPROTO'), 'EPROTO')
+  assert.equal(sanitizeTlsErrorCode('ERR_TLS_CERT_ALTNAME_INVALID'), 'ERR_TLS_CERT_ALTNAME_INVALID')
+  assert.equal(sanitizeTlsErrorCode('lowercase'), 'UNKNOWN_TLS_ERROR')
+  assert.equal(sanitizeTlsErrorCode('A'.repeat(65)), 'UNKNOWN_TLS_ERROR')
+  assert.equal(sanitizeTlsErrorCode('EPROTO\nsecret=value'), 'UNKNOWN_TLS_ERROR')
+
+  const source = readFileSync(new URL('./onprem-core-runtime-proof.mjs', import.meta.url), 'utf8')
+  assert.match(source, /sanitizeTlsErrorCode\.toString\(\)/)
+  assert.match(source, /sanitizeTlsErrorCode\(error\?\.code\)/)
+  assert.doesNotMatch(source, /safeCodes\.has\(candidate\)/)
 })
 
 test('TLS probe classifier requires the exact success marker and HTTP 200', () => {
@@ -333,6 +363,11 @@ test('TLS probe classifier accepts only the exact wrong-host certificate code', 
     marker('ERR_TLS_CERT_ALTNAME_INVALID', 1),
     { status: 22, stderr: '', stdout: '{"marker":"hr-axis-onprem-tls-proof-v1","result":"timeout"}\n' },
   ]) assert.throws(() => classifyTlsProbeResult(result, 'wrong-host'), /TLS proof/i)
+
+  assert.throws(
+    () => classifyTlsProbeResult(marker('EPROTO'), 'wrong-host'),
+    /observed=EPROTO/,
+  )
 })
 
 test('TLS probe classifier accepts only narrow unrelated-CA trust-chain codes', () => {

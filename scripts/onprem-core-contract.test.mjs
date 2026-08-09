@@ -328,6 +328,28 @@ test('ONP-2 contract rejects an optional or unproven runtime CI gate', () => {
   assert.ok(result.errors.some((error) => /cleanup trap/i.test(error)))
 })
 
+test('ONP-2 contract keeps wrong-host verification distinct from the valid TLS SNI', () => {
+  const input = contractInput()
+  const active = "const wrongHostname = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'wrong-hostname TLS rejection proof', verifyHost: 'wrong-host.example.invalid' })"
+  assert.equal(input.runtimeProof.includes(active), true, 'wrong-host fixture must use the production SNI with a distinct verify hostname')
+  input.runtimeProof = input.runtimeProof.replace(
+    active,
+    "const wrongHostname = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'wrong-hostname TLS rejection proof', verifyHost: publicHost })",
+  )
+  assert.equal(validateOnpremCoreContract(input).ok, false)
+})
+
+test('ONP-2 contract preserves bounded unexpected TLS codes for rejected diagnostics', () => {
+  const input = contractInput()
+  const active = "request.on('error',error=>{emit({result:'tls_error',code:sanitizeTlsErrorCode(error?.code)},20)})"
+  assert.equal(input.runtimeProof.includes(active), true, 'runtime probe must use the shared bounded sanitizer')
+  input.runtimeProof = input.runtimeProof.replace(
+    active,
+    "request.on('error',error=>{emit({result:'tls_error',code:'UNKNOWN_TLS_ERROR'},20)})",
+  )
+  assert.equal(validateOnpremCoreContract(input).ok, false)
+})
+
 test('ONP-2 contract rejects invented auth keys and disabled-provider credential surfaces', () => {
   const input = contractInput()
   input.compose = input.compose

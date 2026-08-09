@@ -11,14 +11,15 @@ import {
   CADDY_CMDLINE,
   CADDY_IMAGE,
   classifyTlsProbeResult,
+  sanitizeTlsErrorCode,
   TLS_PROBE_MARKER,
-  TLS_SAFE_ERROR_CODES,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
 
 export {
   buildTlsProbeDockerArgs,
   classifyTlsProbeResult,
+  sanitizeTlsErrorCode,
   TLS_WRONG_CA_CODES,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
@@ -629,15 +630,16 @@ async function main() {
     const tlsProbe = [
       "const fs=require('node:fs')",
       "const https=require('node:https')",
+      "const tls=require('node:tls')",
+      sanitizeTlsErrorCode.toString(),
       `const marker=${JSON.stringify(TLS_PROBE_MARKER)}`,
-      `const safeCodes=new Set(${JSON.stringify([...TLS_SAFE_ERROR_CODES])})`,
       "const emit=(payload,exitCode)=>{process.stdout.write(JSON.stringify({marker,...payload})+'\\n');process.exit(exitCode)}",
       "const ca=fs.readFileSync(process.env.PROOF_CA)",
-      "const request=https.get({ca,headers:{host:process.env.PROOF_HOST},host:process.env.PROOF_IP,port:8443,servername:process.env.PROOF_HOST,path:'/healthz',timeout:5000},response=>{response.resume();const statusCode=response.statusCode;if(statusCode===200)emit({result:'success',statusCode},0);emit({result:'http_error',statusCode:Number.isInteger(statusCode)?statusCode:null},21)})",
-      "request.on('error',error=>{const candidate=String(error?.code??'');emit({result:'tls_error',code:safeCodes.has(candidate)?candidate:'UNKNOWN_TLS_ERROR'},20)})",
+      "const request=https.get({ca,checkServerIdentity:(_servername,cert)=>tls.checkServerIdentity(process.env.PROOF_VERIFY_HOST,cert),headers:{host:process.env.PROOF_HOST},host:process.env.PROOF_IP,port:8443,servername:process.env.PROOF_HOST,path:'/healthz',timeout:5000},response=>{response.resume();const statusCode=response.statusCode;if(statusCode===200)emit({result:'success',statusCode},0);emit({result:'http_error',statusCode:Number.isInteger(statusCode)?statusCode:null},21)})",
+      "request.on('error',error=>{emit({result:'tls_error',code:sanitizeTlsErrorCode(error?.code)},20)})",
       "request.on('timeout',()=>{request.removeAllListeners('error');request.destroy();emit({result:'timeout'},22)})",
     ].join(';')
-    const runTlsProbe = ({ caPath, host, label }) => {
+    const runTlsProbe = ({ caPath, host, label, verifyHost }) => {
       const args = buildTlsProbeDockerArgs({
         caPath,
         caddyProxyIp,
@@ -645,6 +647,7 @@ async function main() {
         image: config.services.api.image,
         network: `${options.project}_proxy`,
         probeScript: tlsProbe,
+        verifyHost,
       })
       const result = command('docker', args, { allowFailure: true, label })
       assertNoSecretLeak(secretValues, {
@@ -663,11 +666,11 @@ async function main() {
       '-keyout', wrongCaKeyPath,
       '-out', wrongCaPath,
     ], { label: 'generate unrelated synthetic TLS CA' })
-    const tlsResult = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'isolated proxy-network verify-full HTTPS proof' })
+    const tlsResult = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'isolated proxy-network verify-full HTTPS proof', verifyHost: publicHost })
     classifyTlsProbeResult(tlsResult, 'success')
-    const wrongHostname = runTlsProbe({ caPath: approvedCaPath, host: 'wrong-host.example.invalid', label: 'wrong-hostname TLS rejection proof' })
+    const wrongHostname = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'wrong-hostname TLS rejection proof', verifyHost: 'wrong-host.example.invalid' })
     classifyTlsProbeResult(wrongHostname, 'wrong-host')
-    const wrongCa = runTlsProbe({ caPath: wrongCaPath, host: publicHost, label: 'wrong-CA TLS rejection proof' })
+    const wrongCa = runTlsProbe({ caPath: wrongCaPath, host: publicHost, label: 'wrong-CA TLS rejection proof', verifyHost: publicHost })
     classifyTlsProbeResult(wrongCa, 'wrong-ca')
     receipt.tls = {
       internalHostnameVerified: true,
