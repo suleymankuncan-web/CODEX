@@ -2,17 +2,26 @@ import {
   clearClientBearerSession,
   isCookieBrowserSession,
   readClientSession,
+  readBrowserSessionCsrfToken,
   writeClientBearerSession,
+  writeBrowserSessionCsrfToken,
 } from '../features/session/session-storage'
 import type { SessionState } from '../features/session/session-storage'
 
 const CSRF_TOKEN_REQUIRED_MESSAGE = 'CSRF token is required'
+
+export type BrowserSessionCsrfResponse = {
+  csrfToken: string
+  expiresAt: string
+  sessionId: string
+}
 
 type SessionRefreshResult = string | { refreshed: boolean; bearerToken?: string | null } | null
 type BearerTokenRefreshHandler = (input?: { skipCache?: boolean }) => Promise<SessionRefreshResult>
 
 let bearerTokenRefreshHandler: BearerTokenRefreshHandler | null = null
 let bearerTokenRefreshPromise: Promise<boolean> | null = null
+let browserSessionCsrfRecoveryPromise: Promise<boolean> | null = null
 
 export function registerBearerTokenRefreshHandler(handler: BearerTokenRefreshHandler) {
   bearerTokenRefreshHandler = handler
@@ -59,6 +68,63 @@ export async function refreshSession(input?: { skipCache?: boolean }) {
   }
 
   return bearerTokenRefreshPromise
+}
+
+export function isSameOriginApi(resolveApiBaseUrl: () => string) {
+  if (typeof window === 'undefined' || !window.location.origin) {
+    return false
+  }
+
+  try {
+    return new URL(resolveApiBaseUrl(), window.location.origin).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
+export async function recoverBrowserSessionCsrfToken(resolveApiBaseUrl: () => string) {
+  if (!browserSessionCsrfRecoveryPromise) {
+    browserSessionCsrfRecoveryPromise = performBrowserSessionCsrfRecovery(resolveApiBaseUrl).finally(() => {
+      browserSessionCsrfRecoveryPromise = null
+    })
+  }
+
+  return browserSessionCsrfRecoveryPromise
+}
+
+async function performBrowserSessionCsrfRecovery(resolveApiBaseUrl: () => string) {
+  try {
+    const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session/csrf`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+      },
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      return false
+    }
+
+    const payload = (await response.json()) as Partial<BrowserSessionCsrfResponse>
+    const csrfToken = typeof payload.csrfToken === 'string' ? payload.csrfToken.trim() : ''
+    if (!csrfToken) {
+      return false
+    }
+
+    writeBrowserSessionCsrfToken(csrfToken)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function recoverCrossOriginBrowserSessionCsrf() {
+  if (!(await refreshSession({ skipCache: true }))) {
+    return false
+  }
+
+  return Boolean(readBrowserSessionCsrfToken())
 }
 
 export async function isCanonicalCsrfFailureResponse(response: Response) {

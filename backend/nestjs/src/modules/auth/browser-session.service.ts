@@ -36,17 +36,23 @@ export interface BrowserSessionIssueResult {
   sessionId: string;
 }
 
+export interface BrowserSessionCsrfRecoveryResult {
+  csrfNonce: string;
+  expiresAt: string;
+  sessionId: string;
+}
+
 @Injectable()
 export class BrowserSessionService {
   constructor(private readonly appConfigService: AppConfigService) {}
 
   issueSession(user: AuthenticatedUser, now = Date.now()): BrowserSessionIssueResult {
-    const csrfNonce = randomBytes(32).toString("base64url");
+    const signingSecret = this.requireSigningSecret();
     const issuedAt = Math.floor(now / 1000);
     const expiresAt = issuedAt + this.appConfigService.browserSessionTtlSeconds;
     const envelope: BrowserSessionEnvelope = {
       alg: SIGNING_ALGORITHM,
-      csrfHash: this.hashCsrfNonce(csrfNonce),
+      csrfHash: "",
       exp: expiresAt,
       iat: issuedAt,
       sid: randomBytes(16).toString("base64url"),
@@ -65,11 +71,29 @@ export class BrowserSessionService {
       },
       v: SESSION_VERSION,
     };
+    const csrfNonce = this.deriveCsrfRecoveryNonce(envelope, signingSecret);
+    envelope.csrfHash = this.hashCsrfNonce(csrfNonce);
 
     return {
-      cookieValue: this.signEnvelope(envelope),
+      cookieValue: this.signEnvelope(envelope, signingSecret),
       csrfNonce,
       expiresAt: new Date(expiresAt * 1000).toISOString(),
+      sessionId: envelope.sid,
+    };
+  }
+
+  recoverCsrfNonce(cookieValue: string, now = Date.now()): BrowserSessionCsrfRecoveryResult {
+    const { envelope, signingSecret } = this.verifySignedEnvelope(cookieValue);
+    if (envelope.exp <= Math.floor(now / 1000)) {
+      throw new UnauthorizedException("Invalid browser session");
+    }
+    const csrfNonce = this.deriveCsrfRecoveryNonce(envelope, signingSecret);
+    if (!timingSafeStringEqual(envelope.csrfHash, this.hashCsrfNonce(csrfNonce))) {
+      throw new UnauthorizedException("Invalid browser session");
+    }
+    return {
+      csrfNonce,
+      expiresAt: new Date(envelope.exp * 1000).toISOString(),
       sessionId: envelope.sid,
     };
   }
@@ -78,7 +102,7 @@ export class BrowserSessionService {
     envelope: BrowserSessionEnvelope;
     user: AuthenticatedUser;
   } {
-    const envelope = this.verifySignedEnvelope(cookieValue);
+    const { envelope } = this.verifySignedEnvelope(cookieValue);
     const currentTimeSeconds = Math.floor(now / 1000);
 
     if (envelope.exp <= currentTimeSeconds) {
@@ -121,21 +145,30 @@ export class BrowserSessionService {
     }
   }
 
-  private signEnvelope(envelope: BrowserSessionEnvelope): string {
+  private signEnvelope(envelope: BrowserSessionEnvelope, secret = this.appConfigService.browserSessionSecret): string {
     const payload = Buffer.from(JSON.stringify(envelope), "utf8").toString("base64url");
-    return `${payload}.${this.signPayload(payload, this.appConfigService.browserSessionSecret)}`;
+    return `${payload}.${this.signPayload(payload, secret)}`;
   }
 
-  private verifySignedEnvelope(cookieValue: string): BrowserSessionEnvelope {
+  private verifySignedEnvelope(cookieValue: string): {
+    envelope: BrowserSessionEnvelope;
+    signingSecret: string;
+  } {
     const [payload, signature, extra] = cookieValue.split(".");
     if (!payload || !signature || extra !== undefined) {
       throw new UnauthorizedException("Invalid browser session");
     }
 
-    if (
-      !this.signatureMatches(payload, signature, this.appConfigService.browserSessionSecret) &&
-      !this.signatureMatches(payload, signature, this.appConfigService.browserSessionPreviousSecret)
-    ) {
+    const currentSecret = this.appConfigService.browserSessionSecret;
+    const previousSecret = this.appConfigService.browserSessionPreviousSecret;
+    let signingSecret: string | undefined;
+    if (this.signatureMatches(payload, signature, currentSecret)) {
+      signingSecret = currentSecret;
+    } else if (this.signatureMatches(payload, signature, previousSecret)) {
+      signingSecret = previousSecret;
+    }
+
+    if (!signingSecret) {
       throw new UnauthorizedException("Invalid browser session");
     }
 
@@ -160,7 +193,7 @@ export class BrowserSessionService {
       throw new UnauthorizedException("Invalid browser session");
     }
 
-    return parsed as BrowserSessionEnvelope;
+    return { envelope: parsed as BrowserSessionEnvelope, signingSecret };
   }
 
   private signatureMatches(
@@ -185,6 +218,28 @@ export class BrowserSessionService {
 
   private hashCsrfNonce(csrfNonce: string): string {
     return createHash("sha256").update(csrfNonce).digest("base64url");
+  }
+
+  private deriveCsrfRecoveryNonce(
+    envelope: BrowserSessionEnvelope,
+    signingSecret: string,
+  ): string {
+    if (!signingSecret) {
+      throw new UnauthorizedException("Invalid browser session");
+    }
+
+    return createHmac("sha256", signingSecret)
+      .update("hr-axis/browser-session/csrf-recovery/v1\0", "utf8")
+      .update(JSON.stringify({ exp: envelope.exp, iat: envelope.iat, sid: envelope.sid }), "utf8")
+      .digest("base64url");
+  }
+
+  private requireSigningSecret(): string {
+    const secret = this.appConfigService.browserSessionSecret;
+    if (!secret) {
+      throw new UnauthorizedException("Invalid browser session");
+    }
+    return secret;
   }
 }
 

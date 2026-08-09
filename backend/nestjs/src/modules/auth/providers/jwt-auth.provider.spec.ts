@@ -78,6 +78,32 @@ describe("JwtAuthProvider", () => {
     });
   });
 
+  it("does not call issuer userinfo in strict-local mode when optional claims are absent", async () => {
+    const fetchSpy = jest.spyOn(global, "fetch");
+    const provider = new JwtAuthProvider({
+      jwtSecret: "top-secret",
+      jwtIssuer: "https://hr-axis.example.invalid/realms/store-ops",
+      jwtAudience: "store-ops-api",
+      jwtJwksUrl: undefined,
+      isStrictLocal: true,
+    } as never);
+
+    const token = await new SignJWT({ roles: ["REPORT_VIEWER"] })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("local-user-1")
+      .setIssuer("https://hr-axis.example.invalid/realms/store-ops")
+      .setAudience("store-ops-api")
+      .sign(new TextEncoder().encode("top-secret"));
+
+    await expect(
+      provider.resolveUser({
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    ).resolves.toMatchObject({ userId: "local-user-1" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
   it("parses separate read scope and assigned action stores from JWT claims", async () => {
     const provider = new JwtAuthProvider({
       jwtSecret: "top-secret",
@@ -198,6 +224,67 @@ describe("JwtAuthProvider", () => {
       },
       assignedStoreIds: [],
     });
+  });
+
+  it("never accesses the shared secret or accepts HS tokens when JWKS mode is enabled", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("RS256");
+    const jwk = await exportJWK(publicKey);
+    jwksServer = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ keys: [{ ...jwk, use: "sig", alg: "RS256", kid: "jwks-kid" }] }));
+    });
+
+    const address = await new Promise<{ port: number }>((resolve, reject) => {
+      jwksServer?.listen(0, "127.0.0.1", () => {
+        const serverAddress = jwksServer?.address();
+        if (!serverAddress || typeof serverAddress === "string") {
+          reject(new Error("failed to bind JWKS server"));
+          return;
+        }
+
+        resolve({ port: serverAddress.port });
+      });
+    });
+
+    const appConfig = {
+      get jwtSecret(): string {
+        throw new Error("JWT_SECRET must not be accessed in JWKS mode");
+      },
+      jwtIssuer: "https://issuer.example.com",
+      jwtAudience: "store-ops-api",
+      jwtJwksUrl: `http://127.0.0.1:${address.port}/realms/store-ops/protocol/openid-connect/certs`,
+      isProduction: true,
+      isStrictLocal: true,
+      authClientId: undefined,
+    };
+    const provider = new JwtAuthProvider(appConfig as never);
+    const claims = {
+      roles: ["REPORT_VIEWER"],
+      preferred_username: "local-user",
+    };
+    const validToken = await new SignJWT(claims)
+      .setProtectedHeader({ alg: "RS256", kid: "jwks-kid" })
+      .setSubject("local-user")
+      .setIssuer("https://issuer.example.com")
+      .setAudience("store-ops-api")
+      .setExpirationTime("5m")
+      .sign(privateKey);
+
+    await expect(
+      provider.resolveUser({ headers: { authorization: `Bearer ${validToken}` } }),
+    ).resolves.toMatchObject({ userId: "local-user" });
+
+    const hsToken = await new SignJWT(claims)
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("local-user")
+      .setIssuer("https://issuer.example.com")
+      .setAudience("store-ops-api")
+      .setExpirationTime("5m")
+      .sign(new TextEncoder().encode("shared-secret"));
+
+    await expect(
+      provider.resolveUser({ headers: { authorization: `Bearer ${hsToken}` } }),
+    ).rejects.toThrow("Invalid JWT");
   });
 
   it("resolves Clerk-style JWKS tokens without inferring HR Axis roles or scopes", async () => {

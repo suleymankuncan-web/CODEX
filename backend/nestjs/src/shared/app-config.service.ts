@@ -7,6 +7,7 @@ import {
 import { readVisualComparisonRuntimeConfiguration } from "./visual-comparison-runtime-config";
 import {
   assertStrictLocalConfiguration,
+  STRICT_LOCAL_KEYCLOAK_JWKS_URL,
   readFileBackedSetting,
 } from "./secret-file-config";
 
@@ -21,6 +22,8 @@ export type DatabaseTransportStatus =
 const FILE_BACKED_SETTINGS = new Set([
   "DATABASE_URL",
   "DB_SSL_CA",
+  "BROWSER_SESSION_PREVIOUS_SECRET",
+  "BROWSER_SESSION_SECRET",
   "JWT_SECRET",
   "REDIS_URL",
 ]);
@@ -54,6 +57,16 @@ export class AppConfigService {
     }
 
     return value;
+  }
+
+  private readConfiguredString(key: string): string | undefined {
+    const value = this.configService.get<string>(key);
+    return value && value !== "undefined" && value !== "null" ? value : undefined;
+  }
+
+  private readConfiguredHttpsUrl(key: string): string | undefined {
+    const value = this.readConfiguredString(key);
+    return value ? this.requireProductionHttpsUrl(key, value) : undefined;
   }
 
   private readPositiveNumber(key: string, fallback: string): number {
@@ -571,6 +584,10 @@ export class AppConfigService {
   get jwtSecret(): string {
     const value = this.readOptionalString("JWT_SECRET");
 
+    if (this.isStrictLocal && this.jwtJwksUrl) {
+      throw new Error("JWT_SECRET is not used when JWT_JWKS_URL is configured in strict-local mode");
+    }
+
     if (
       this.isProduction &&
       !this.jwtJwksUrl &&
@@ -585,27 +602,22 @@ export class AppConfigService {
   }
 
   get jwtJwksUrl(): string | undefined {
-    const value = this.configService.get<string>("JWT_JWKS_URL");
-    if (!value || value === "undefined" || value === "null") {
-      return undefined;
+    const value = this.readConfiguredString("JWT_JWKS_URL");
+    if (!value) return undefined;
+
+    if (this.isStrictLocal && value === STRICT_LOCAL_KEYCLOAK_JWKS_URL) {
+      return value;
     }
+
     return this.requireProductionHttpsUrl("JWT_JWKS_URL", value);
   }
 
   get authAuthorizationUrl(): string | undefined {
-    const value = this.configService.get<string>("AUTH_AUTHORIZATION_URL");
-    if (!value || value === "undefined" || value === "null") {
-      return undefined;
-    }
-    return this.requireProductionHttpsUrl("AUTH_AUTHORIZATION_URL", value);
+    return this.readConfiguredHttpsUrl("AUTH_AUTHORIZATION_URL");
   }
 
   get authClientId(): string | undefined {
-    const value = this.configService.get<string>("AUTH_CLIENT_ID");
-    if (!value || value === "undefined" || value === "null") {
-      return undefined;
-    }
-    return value;
+    return this.readConfiguredString("AUTH_CLIENT_ID");
   }
 
   get authScope(): string {
@@ -623,19 +635,11 @@ export class AppConfigService {
   }
 
   get authTokenUrl(): string | undefined {
-    const value = this.configService.get<string>("AUTH_TOKEN_URL");
-    if (!value || value === "undefined" || value === "null") {
-      return undefined;
-    }
-    return this.requireProductionHttpsUrl("AUTH_TOKEN_URL", value);
+    return this.readConfiguredHttpsUrl("AUTH_TOKEN_URL");
   }
 
   get authAudienceOverride(): string | undefined {
-    const value = this.configService.get<string>("AUTH_AUDIENCE_OVERRIDE");
-    if (!value || value === "undefined" || value === "null") {
-      return undefined;
-    }
-    return value;
+    return this.readConfiguredString("AUTH_AUDIENCE_OVERRIDE");
   }
 
   get authCallbackPath(): string {
@@ -646,11 +650,7 @@ export class AppConfigService {
   }
 
   get authLogoutUrl(): string | undefined {
-    const value = this.configService.get<string>("AUTH_LOGOUT_URL");
-    if (!value || value === "undefined" || value === "null") {
-      return undefined;
-    }
-    return this.requireProductionHttpsUrl("AUTH_LOGOUT_URL", value);
+    return this.readConfiguredHttpsUrl("AUTH_LOGOUT_URL");
   }
 
   get authPostLogoutRedirectPath(): string {

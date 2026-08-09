@@ -13,6 +13,7 @@ import { AppConfigService } from "../../../shared/app-config.service";
 import { AuthContextService, AuthenticatedUser } from "../auth-context.service";
 import { BrowserSessionService } from "../browser-session.service";
 import {
+  parseCookieHeader,
   serializeBrowserSessionCookie,
   serializeClearCookie,
 } from "../browser-session-cookie";
@@ -109,6 +110,38 @@ export class AuthSessionController {
       expiresAt: issued.expiresAt,
       sessionId: issued.sessionId,
       session: this.buildSessionResponse(user),
+    };
+  }
+
+  @Post("browser-session/csrf")
+  recoverBrowserSessionCsrf(
+    @Req()
+    request: {
+      headers: Record<string, string | string[] | undefined>;
+      user: AuthenticatedUser;
+    },
+  ) {
+    if (!this.appConfigService.browserSessionCookieEnabled) {
+      throw new NotFoundException("Browser session transport is disabled");
+    }
+
+    const cookies = parseCookieHeader(request.headers.cookie);
+    const cookieValue = cookies[this.appConfigService.browserSessionCookieName];
+    if (!cookieValue) {
+      throw new UnauthorizedException("Browser session cookie is required");
+    }
+
+    const now = Date.now();
+    const verified = this.browserSessionService.verifySession(cookieValue, now);
+    if (!request.user || request.user.userId !== verified.user.userId) {
+      throw new UnauthorizedException("Invalid browser session");
+    }
+
+    const recovered = this.browserSessionService.recoverCsrfNonce(cookieValue, now);
+    return {
+      csrfToken: recovered.csrfNonce,
+      expiresAt: recovered.expiresAt,
+      sessionId: recovered.sessionId,
     };
   }
 

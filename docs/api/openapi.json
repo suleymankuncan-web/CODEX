@@ -9581,6 +9581,20 @@
           "VisualComparisonAdvisory"
         ]
       }
+    },
+    "/api/auth/browser-session/csrf": {
+      "post": {
+        "operationId": "AuthSessionController_recoverBrowserSessionCsrf",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthSession"
+        ]
+      }
     }
   },
   "info": {

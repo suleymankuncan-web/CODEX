@@ -1,4 +1,7 @@
 import { AuthSessionController } from "./auth-session.controller";
+import { BrowserSessionService } from "../browser-session.service";
+import { buildAuthenticatedUser } from "../auth-context.service";
+import { UnauthorizedException } from "@nestjs/common";
 
 describe("AuthSessionController", () => {
   it("returns PKCE token endpoint metadata in auth bootstrap", () => {
@@ -82,5 +85,82 @@ describe("AuthSessionController", () => {
         authorizationContextVersion: expect.stringMatching(/^v1:[a-f0-9]{64}$/),
       },
     });
+  });
+
+  it("recovers a verified browser-session CSRF nonce without mutating its cookie", () => {
+    const now = Date.UTC(2026, 0, 1, 0, 0, 30);
+    const browserSessionService = new BrowserSessionService({
+      browserSessionSecret: "0123456789abcdef0123456789ABCDEF",
+      browserSessionPreviousSecret: undefined,
+      browserSessionTtlSeconds: 120,
+    } as never);
+    const issued = browserSessionService.issueSession(
+      buildAuthenticatedUser({
+        userId: "app-user-1",
+        roleCodes: ["REPORT_VIEWER"],
+        readScope: { companyIds: [], regionIds: [], storeIds: [] },
+        actionScope: { assignedStoreIds: [] },
+      }),
+      Date.UTC(2026, 0, 1, 0, 0, 0),
+    );
+    const controller = new AuthSessionController(
+      {
+        browserSessionCookieEnabled: true,
+        browserSessionCookieName: "hr_axis_browser_session",
+        browserSessionCookieSecure: true,
+        browserSessionSameSite: "lax",
+      } as never,
+      {} as never,
+      browserSessionService,
+    );
+    const dateNow = jest.spyOn(Date, "now").mockReturnValue(now);
+
+    try {
+      const result = controller.recoverBrowserSessionCsrf(
+        {
+          headers: {
+            cookie: `hr_axis_browser_session=${encodeURIComponent(issued.cookieValue)}`,
+          },
+          user: browserSessionService.verifySession(issued.cookieValue, now).user,
+        },
+      );
+
+      expect(result).toMatchObject({
+        expiresAt: issued.expiresAt,
+        sessionId: issued.sessionId,
+        csrfToken: expect.any(String),
+      });
+      expect(result.csrfToken).toBe(issued.csrfNonce);
+    } finally {
+      dateNow.mockRestore();
+    }
+  });
+
+  it.each([
+    { headers: {}, label: "missing cookie" },
+    {
+      headers: { cookie: "hr_axis_browser_session=tampered" },
+      label: "tampered cookie",
+    },
+  ])("rejects browser-session CSRF recovery with a $label", ({ headers }) => {
+    const browserSessionService = new BrowserSessionService({
+      browserSessionSecret: "0123456789abcdef0123456789ABCDEF",
+      browserSessionPreviousSecret: undefined,
+      browserSessionTtlSeconds: 120,
+    } as never);
+    const controller = new AuthSessionController(
+      {
+        browserSessionCookieEnabled: true,
+        browserSessionCookieName: "hr_axis_browser_session",
+      } as never,
+      {} as never,
+      browserSessionService,
+    );
+
+    expect(() =>
+      controller.recoverBrowserSessionCsrf(
+        { headers, user: { userId: "app-user-1" } as never },
+      ),
+    ).toThrow(UnauthorizedException);
   });
 });
