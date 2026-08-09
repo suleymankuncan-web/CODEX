@@ -131,13 +131,52 @@ describe("AppConfigService strict-local", () => {
     },
   );
 
+  it("allows the DB-only identity binder only with a file-backed subject manifest", () => {
+    const directory = mkdtempSync(join(tmpdir(), "hr-axis-keycloak-subjects-"));
+    const manifestPath = join(directory, "subjects.v1.json");
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({ schemaVersion: "onprem-keycloak-subjects-v1" }),
+      { encoding: "utf8", mode: 0o600 },
+    );
+    chmodSync(manifestPath, 0o600);
+    const {
+      JWT_SECRET_FILE: _jwtSecretFile,
+      QUEUE_BACKEND: _queueBackend,
+      REDIS_URL_FILE: _redisUrlFile,
+      ...databaseOnlyValues
+    } = createStrictLocalValues();
+
+    const config = createConfig({
+      ...databaseOnlyValues,
+      HR_AXIS_PROCESS_ROLE: "identity-binder",
+      KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE: manifestPath,
+      NODE_ENV: "production",
+    });
+
+    expect(config.keycloakSyntheticSubjectManifest).toContain(
+      "onprem-keycloak-subjects-v1",
+    );
+    expect(() =>
+      createConfig({
+        ...databaseOnlyValues,
+        HR_AXIS_PROCESS_ROLE: "identity-binder",
+        NODE_ENV: "production",
+      }),
+    ).toThrow(
+      "KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE is required when HR_AXIS_STRICT_LOCAL=true",
+    );
+  });
+
   it("rejects an unknown process role", () => {
     expect(() =>
       createConfig({
         ...createStrictLocalValues(),
         HR_AXIS_PROCESS_ROLE: "maintenance",
       }),
-    ).toThrow("HR_AXIS_PROCESS_ROLE must be runtime, migrator, or synthetic-seed");
+    ).toThrow(
+      "HR_AXIS_PROCESS_ROLE must be runtime, migrator, synthetic-seed, or identity-binder",
+    );
   });
 
   it.each([

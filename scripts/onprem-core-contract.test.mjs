@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import { validateOnpremCoreContract } from './onprem-core-contract.mjs'
 
-const read = (path) => readFileSync(path, 'utf8')
+const read = (path) => readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 
 function contractInput() {
   return {
@@ -172,6 +172,9 @@ test('ONP-2 private core contract accepts the committed fail-closed stack', () =
     'api',
     'caddy',
     'frontend',
+    'identity-binder',
+    'keycloak',
+    'keycloak-bootstrap',
     'migrator',
     'postgres',
     'redis',

@@ -16,6 +16,9 @@ env:
   BACKEND_RUNTIME_IMAGE: gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a
   FRONTEND_RUNTIME_IMAGE: nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65
   CADDY_IMAGE: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+  KEYCLOAK_IMAGE: hr-axis-onprem-keycloak:proof
+  KEYCLOAK_TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   SYFT_IMAGE: anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026
 
@@ -31,6 +34,16 @@ jobs:
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.19.0
+
+      - name: Pull pinned Keycloak base and build the optimized ONP-3B image
+        run: |
+          set -euo pipefail
+          docker pull "$KEYCLOAK_BASE_IMAGE"
+          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13"]'
+          docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE" \
+            --build-arg KEYCLOAK_BASE_IMAGE="$KEYCLOAK_BASE_IMAGE" .
+          test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Config.Entrypoint}}')" = '[/opt/keycloak/bin/kc.sh]'
+          printf 'KEYCLOAK_IMAGE_ID=%s\n' "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')" >> "$GITHUB_ENV"
 
       - name: Build dedicated images with synthetic inputs
         env:
@@ -67,6 +80,13 @@ jobs:
             --input tests/fixtures/onprem-core-firewall-valid.v4 \
             --subnet 172.30.0.0/24 --subnet 172.30.10.0/24 --subnet 172.30.20.0/24 --subnet 172.30.30.0/24 \
             --proxy-port 443 --ssh-admin-cidr 192.0.2.0/24
+
+      - name: Prove ONP-3B production-shaped Keycloak contracts
+        run: |
+          set -euo pipefail
+          node --test scripts/onprem-keycloak-contract.test.mjs scripts/onprem-keycloak-runtime-proof.test.mjs
+          docker compose --env-file infra/onprem/core/env.template --file infra/onprem/core/compose.yaml \
+            --profile infra --profile keycloak-bootstrap --profile migrate --profile seed --profile identity-binder --profile runtime config --quiet
 
       - name: Prove non-root image users
         run: |
@@ -229,6 +249,8 @@ jobs:
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
               "hr-axis-onprem-${image}:proof" -o "spdx-json=/out/${image}-sbom.spdx.json"
           done
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
+            "$KEYCLOAK_IMAGE" -o spdx-json=/out/keycloak-sbom.spdx.json
 
       - name: Fail closed on image vulnerabilities and secrets with pinned Trivy
         run: |
@@ -242,6 +264,13 @@ jobs:
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
               --scanners secret --exit-code 1 "hr-axis-onprem-${image}:proof"
           done
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$KEYCLOAK_TRIVY_IMAGE" image \
+            --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
+            --output /out/keycloak-trivy.json "$KEYCLOAK_IMAGE"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$KEYCLOAK_TRIVY_IMAGE" image \
+            --scanners vuln --severity CRITICAL --exit-code 1 "$KEYCLOAK_IMAGE"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$KEYCLOAK_TRIVY_IMAGE" image \
+            --scanners secret --exit-code 1 "$KEYCLOAK_IMAGE"
 
       - name: Export final filesystems and layers then run content guards
         run: |
@@ -269,6 +298,26 @@ jobs:
               layer_index=$((layer_index + 1))
             done < <(jq -r '.[0].Layers[]' "proof/${image}-saved-image/manifest.json")
           done
+          keycloak_tag=hr-axis-onprem-keycloak:proof
+          keycloak_id="$(docker create "$keycloak_tag")"
+          mkdir -p proof/keycloak-rootfs
+          docker export "$keycloak_id" | tar -xf - -C proof/keycloak-rootfs
+          docker rm "$keycloak_id" >/dev/null
+          node scripts/onprem-image-content-guard.mjs --rootfs proof/keycloak-rootfs --application-root /opt/keycloak --json \
+            | tee proof/keycloak-content-guard.json
+          docker save "$keycloak_tag" -o proof/keycloak-image.tar
+          mkdir -p proof/keycloak-saved-image
+          tar -xf proof/keycloak-image.tar -C proof/keycloak-saved-image
+          keycloak_layer_index=0
+          while IFS= read -r layer; do
+            keycloak_layer_root=proof/keycloak-layer-rootfs
+            rm -rf "$keycloak_layer_root"
+            mkdir -p "$keycloak_layer_root"
+            tar -xf "proof/keycloak-saved-image/$layer" -C "$keycloak_layer_root"
+            node scripts/onprem-image-content-guard.mjs --rootfs "$keycloak_layer_root" --application-root /opt/keycloak --json \
+              | tee "proof/keycloak-layer-${keycloak_layer_index}-content-guard.json"
+            keycloak_layer_index=$((keycloak_layer_index + 1))
+          done < <(jq -r '.[0].Layers[]' proof/keycloak-saved-image/manifest.json)
 
       - name: Generate production license inventories and notices
         run: |
@@ -319,6 +368,48 @@ jobs:
               --receipt "proof/${image}-image-license-reconciliation.json" \
               --notices "proof/${image}-image-THIRD_PARTY_NOTICES.txt"
           done
+          keycloak_license_container="$(docker create "$KEYCLOAK_IMAGE")"
+          trap 'docker rm "$keycloak_license_container" >/dev/null 2>&1 || true' EXIT
+          docker cp "$keycloak_license_container:/opt/keycloak/LICENSE.txt" proof/keycloak-LICENSE.txt
+          docker export "$keycloak_license_container" | tar -tf - | grep -Ei '(^|/)(LICENSE|NOTICE)(\.[^/]*)?$' > proof/keycloak-license-paths.txt
+          test -s proof/keycloak-license-paths.txt
+          mkdir -p proof/keycloak-license-evidence
+          while IFS= read -r license_path; do
+            license_rel="${license_path#/}"
+            test -f "proof/keycloak-rootfs/$license_rel"
+            mkdir -p "proof/keycloak-license-evidence/$(dirname "$license_rel")"
+            cp "proof/keycloak-rootfs/$license_rel" "proof/keycloak-license-evidence/$license_rel"
+          done < proof/keycloak-license-paths.txt
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -cf proof/keycloak-license-evidence.tar -C proof/keycloak-license-evidence .
+          keycloak_package_count="$(jq '.packages | length' proof/keycloak-sbom.spdx.json)"
+          printf '%s\n' '{"image":"'"$KEYCLOAK_IMAGE"'","baseImage":"'"$KEYCLOAK_BASE_IMAGE"'","licenseEvidence":"keycloak-LICENSE.txt","licensePathEvidence":"keycloak-license-paths.txt","licenseBundle":"keycloak-license-evidence.tar","packageCount":'"$keycloak_package_count"',"dataClass":"synthetic"}' > proof/keycloak-license-inventory.json
+          node scripts/onprem-keycloak-license-reconciliation.mjs \
+            --sbom proof/keycloak-sbom.spdx.json --inventory proof/keycloak-license-inventory.json \
+            --license-text proof/keycloak-LICENSE.txt --license-paths proof/keycloak-license-paths.txt \
+            --license-bundle proof/keycloak-license-evidence.tar \
+            --output proof/keycloak-license-reconciliation.json
+          node <<'NODE'
+          const { readFileSync } = require('node:fs')
+          const receipt = JSON.parse(readFileSync('proof/keycloak-license-reconciliation.json', 'utf8'))
+          if (receipt.residualExternalReviewRequired !== true) throw new Error('Keycloak license reconciliation must retain the residualExternalReviewRequired activation gate')
+          console.log('Keycloak license reconciliation: residualExternalReviewRequired=true (external review remains an activation gate)')
+          NODE
+
+      - name: Generate sanitized Keycloak image manifest
+        run: |
+          set -euo pipefail
+          keycloak_image_id="$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')"
+          node scripts/onprem-keycloak-image-manifest.mjs \
+            --base-image "$KEYCLOAK_BASE_IMAGE" \
+            --image "hr-axis-onprem-keycloak@${keycloak_image_id}" --image-id "$keycloak_image_id" \
+            --sbom proof/keycloak-sbom.spdx.json --trivy proof/keycloak-trivy.json \
+            --license proof/keycloak-license-inventory.json \
+            --license-text proof/keycloak-LICENSE.txt --license-paths proof/keycloak-license-paths.txt \
+            --license-reconciliation proof/keycloak-license-reconciliation.json \
+            --license-bundle proof/keycloak-license-evidence.tar \
+            --content proof/keycloak-content-guard.json \
+            --output proof/keycloak-image-manifest.json
 
       # This ephemeral key proves the manifest implementation is internally
       # consistent in CI. It is not the owner trust anchor. ONP-5 supplies and
@@ -352,20 +443,31 @@ jobs:
               build: process.env.BUILD_IMAGE,
               backendRuntime: process.env.BACKEND_RUNTIME_IMAGE,
               frontendRuntime: process.env.FRONTEND_RUNTIME_IMAGE,
+              keycloakBase: process.env.KEYCLOAK_BASE_IMAGE,
               trivy: process.env.TRIVY_IMAGE,
               syft: process.env.SYFT_IMAGE,
             },
             artifacts: {
               backendImage: 'proof/backend-image.tar',
               frontendImage: 'proof/frontend-image.tar',
+              keycloakImage: 'proof/keycloak-image.tar',
               backendSbom: 'proof/backend-sbom.spdx.json',
               frontendSbom: 'proof/frontend-sbom.spdx.json',
+              keycloakSbom: 'proof/keycloak-sbom.spdx.json',
               backendVulnerabilityReport: 'proof/backend-trivy.json',
               frontendVulnerabilityReport: 'proof/frontend-trivy.json',
+              keycloakVulnerabilityReport: 'proof/keycloak-trivy.json',
               backendLicenseInventory: 'proof/backend-license-inventory.json',
               frontendLicenseInventory: 'proof/frontend-license-inventory.json',
+              keycloakLicenseInventory: 'proof/keycloak-license-inventory.json',
+              keycloakLicenseText: 'proof/keycloak-LICENSE.txt',
+              keycloakLicensePaths: 'proof/keycloak-license-paths.txt',
+              keycloakLicenseReconciliation: 'proof/keycloak-license-reconciliation.json',
+              keycloakLicenseBundle: 'proof/keycloak-license-evidence.tar',
               backendNotices: 'proof/backend-THIRD_PARTY_NOTICES.txt',
               frontendNotices: 'proof/frontend-THIRD_PARTY_NOTICES.txt',
+              keycloakImageManifest: 'proof/keycloak-image-manifest.json',
+              keycloakContentGuard: 'proof/keycloak-content-guard.json',
               backendImageLicenseReconciliation: 'proof/backend-image-license-reconciliation.json',
               frontendImageLicenseReconciliation: 'proof/frontend-image-license-reconciliation.json',
               backendImageNotices: 'proof/backend-image-THIRD_PARTY_NOTICES.txt',
@@ -375,6 +477,7 @@ jobs:
             imageIds: {
               backend: process.env.BACKEND_IMAGE_ID,
               frontend: process.env.FRONTEND_IMAGE_ID,
+              keycloak: process.env.KEYCLOAK_IMAGE_ID,
             },
           }
           writeFileSync(process.env.MANIFEST_INPUT_PATH, JSON.stringify(input))
@@ -389,7 +492,7 @@ jobs:
           set -euo pipefail
           secret_root=infra/onprem/core/secret-files
           rm -rf "$secret_root"
-          mkdir -p "$secret_root"/{backend,caddy,postgres,redis}
+          mkdir -p "$secret_root"/{backend,caddy,postgres,redis,keycloak}
           openssl req -x509 -newkey rsa:3072 -nodes -days 2 -subj '/CN=HR Axis synthetic proof CA' \
             -keyout "$RUNNER_TEMP/onprem-proof-ca.key" -out "$secret_root/postgres/ca.crt"
           cp "$secret_root/postgres/ca.crt" "$secret_root/caddy/ca.crt"
@@ -409,23 +512,83 @@ jobs:
           redis_health_password="$(openssl rand -hex 24)"
           redis_api_password="$(openssl rand -hex 24)"
           redis_worker_password="$(openssl rand -hex 24)"
-          printf '%s' "$bootstrap_password" > "$secret_root/postgres/bootstrap-password"
-          printf '%s' "$migrator_password" > "$secret_root/postgres/migrator-password"
-          printf '%s' "$api_password" > "$secret_root/postgres/api-password"
-          printf '%s' "$worker_password" > "$secret_root/postgres/worker-password"
-          printf 'postgresql://hr_axis_migrator:%s@postgres:5432/hr_axis?sslmode=verify-full' "$migrator_password" > "$secret_root/backend/migrator-database-url"
-          printf 'postgresql://hr_axis_api:%s@postgres:5432/hr_axis?sslmode=verify-full' "$api_password" > "$secret_root/backend/api-database-url"
-          printf 'postgresql://hr_axis_worker:%s@postgres:5432/hr_axis?sslmode=verify-full' "$worker_password" > "$secret_root/backend/worker-database-url"
-          printf 'user default off resetpass ~* &* +@all\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' \
-            "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
-          printf 'redis://health:%s@redis:6379' "$redis_health_password" > "$secret_root/redis/health-url"
-          printf 'redis://api:%s@redis:6379' "$redis_api_password" > "$secret_root/backend/redis-api-url"
-          printf 'redis://worker:%s@redis:6379' "$redis_worker_password" > "$secret_root/backend/redis-worker-url"
-          openssl rand -hex 32 > "$secret_root/backend/jwt-secret"
+          keycloak_database_password="$(openssl rand -hex 24)"
+          keycloak_bootstrap_password="$(openssl rand -hex 24)"
+          keycloak_smtp_password="$(openssl rand -hex 24)"
+          browser_session_secret="$(openssl rand -hex 32)"
+          cat > "$secret_root/postgres/bootstrap-password" <<EOF
+$bootstrap_password
+EOF
+          cat > "$secret_root/postgres/migrator-password" <<EOF
+$migrator_password
+EOF
+          cat > "$secret_root/postgres/api-password" <<EOF
+$api_password
+EOF
+          cat > "$secret_root/postgres/worker-password" <<EOF
+$worker_password
+EOF
+          cat > "$secret_root/postgres/keycloak-password" <<EOF
+$keycloak_database_password
+EOF
+          cat > "$secret_root/keycloak/database-password" <<EOF
+$keycloak_database_password
+EOF
+          test "$(sha256sum "$secret_root/postgres/keycloak-password" | cut -d' ' -f1)" = "$(sha256sum "$secret_root/keycloak/database-password" | cut -d' ' -f1)"
+          printf 'jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full&sslrootcert=/run/secrets/postgres_tls_ca' > "$secret_root/keycloak/database-url"
+          printf 'keycloak' > "$secret_root/keycloak/database-username"
+          printf 'bootstrap-ci' > "$secret_root/keycloak/bootstrap-username"
+          cat > "$secret_root/keycloak/bootstrap-password" <<EOF
+$keycloak_bootstrap_password
+EOF
+          cat > "$secret_root/keycloak/smtp-auth-user" <<EOF
+synthetic-smtp-user
+EOF
+          cat > "$secret_root/keycloak/smtp-password" <<EOF
+$keycloak_smtp_password
+EOF
+          cat > "$secret_root/backend/browser-session-secret" <<EOF
+$browser_session_secret
+EOF
+          : > "$secret_root/keycloak/synthetic-accounts"
+          while IFS='|' read -r account_key username role employee_id company_ids region_ids store_ids read_company_ids read_region_ids read_store_ids assigned_store_ids; do
+            account_password="$(openssl rand -hex 32)"
+            cat >> "$secret_root/keycloak/synthetic-accounts" <<ROW
+$account_key|$username|$account_password|$role|$employee_id|$company_ids|$region_ids|$store_ids|$read_company_ids|$read_region_ids|$read_store_ids|$assigned_store_ids
+ROW
+            unset account_password
+          done <<'PERSONAS'
+onprem.store-manager|onprem.store-manager|STORE_MANAGER|synthetic-employee-store-manager|company-001|region-001|store-100|company-001|region-001|store-100,store-999|store-100
+onprem.region-manager|onprem.region-manager|REGION_MANAGER|synthetic-employee-region-manager|company-001|region-001|store-100,store-101|company-001|region-001|store-100,store-101|store-100,store-101
+onprem.report-viewer|onprem.report-viewer|REPORT_VIEWER|synthetic-employee-report-viewer|company-001|||company-001|||
+onprem.store-personnel|onprem.store-personnel|STORE_PERSONNEL|synthetic-employee-store-personnel|company-001|region-001|store-100|company-001|region-001|store-100|store-100
+onprem.visual-merchandiser|onprem.visual-merchandiser|VISUAL_MERCHANDISER|synthetic-employee-visual-merchandiser|company-001|region-001|store-100|company-001|region-001|store-100|store-100
+PERSONAS
+          cat > "$secret_root/backend/migrator-database-url" <<EOF
+postgresql://hr_axis_migrator:$migrator_password@postgres:5432/hr_axis?sslmode=verify-full
+EOF
+          cat > "$secret_root/backend/api-database-url" <<EOF
+postgresql://hr_axis_api:$api_password@postgres:5432/hr_axis?sslmode=verify-full
+EOF
+          cp "$secret_root/backend/api-database-url" "$secret_root/keycloak/binder-database-url"
+          cat > "$secret_root/backend/worker-database-url" <<EOF
+postgresql://hr_axis_worker:$worker_password@postgres:5432/hr_axis?sslmode=verify-full
+EOF
+          printf 'user default off resetpass ~* &* +@all\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
+          cat > "$secret_root/redis/health-url" <<EOF
+redis://health:$redis_health_password@redis:6379
+EOF
+          cat > "$secret_root/backend/redis-api-url" <<EOF
+redis://api:$redis_api_password@redis:6379
+EOF
+          cat > "$secret_root/backend/redis-worker-url" <<EOF
+redis://worker:$redis_worker_password@redis:6379
+EOF
 
           chmod 0444 "$secret_root"/{caddy,postgres}/*.crt
           sudo chown 10001:10001 "$secret_root/caddy/server.key" && sudo chmod 0400 "$secret_root/caddy/server.key"
           sudo chown 70:70 "$secret_root/postgres/server.key" "$secret_root/postgres/"*-password && sudo chmod 0400 "$secret_root/postgres/server.key" "$secret_root/postgres/"*-password
+          sudo chown 1000:1000 "$secret_root/keycloak/"* && sudo chmod 0400 "$secret_root/keycloak/"*
           sudo chown 999:1000 "$secret_root/redis/users.acl" "$secret_root/redis/health-url" && sudo chmod 0400 "$secret_root/redis/users.acl" "$secret_root/redis/health-url"
           sudo chown 65532:65532 "$secret_root/backend/"* && sudo chmod 0400 "$secret_root/backend/"*
 
@@ -436,6 +599,8 @@ jobs:
             -e 's|^HR_AXIS_PUBLIC_HOST=.*|HR_AXIS_PUBLIC_HOST=onprem-proof.example.invalid|' \
             -e "s|^HR_AXIS_BACKEND_IMAGE=.*|HR_AXIS_BACKEND_IMAGE=$backend_id|" \
             -e "s|^HR_AXIS_FRONTEND_IMAGE=.*|HR_AXIS_FRONTEND_IMAGE=$frontend_id|" \
+            -e "s|^KEYCLOAK_IMAGE=.*|KEYCLOAK_IMAGE=$KEYCLOAK_IMAGE_ID|" \
+            -e 's|^KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=.*|KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true|' \
             infra/onprem/core/env.template > "$RUNNER_TEMP/onprem-core.env"
           printf 'ONPREM_CORE_ENV=%s\n' "$RUNNER_TEMP/onprem-core.env" >> "$GITHUB_ENV"
 
@@ -450,10 +615,36 @@ jobs:
           firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"
           sudo iptables-save > "$firewall_snapshot"
           cleanup() {
-            docker compose --project-name hr-axis-onprem-core --env-file "$ONPREM_CORE_ENV" \
-              --file infra/onprem/core/compose.yaml --profile infra --profile migrate \
-              --profile seed --profile runtime down --remove-orphans >/dev/null 2>&1 || true
-            sudo iptables-restore < "$firewall_snapshot"
+            local original_status=$?
+            local cleanup_status=0
+            local container_cleanup_status
+            if sudo "$(command -v node)" scripts/onprem-keycloak-runtime-proof.mjs --cleanup \
+              --compose infra/onprem/core/compose.yaml --env-file "$ONPREM_CORE_ENV" \
+              --project hr-axis-onprem-keycloak --release-id "$RELEASE_ID"; then
+              :
+            else
+              container_cleanup_status=$?
+              cleanup_status="$container_cleanup_status"
+            fi
+            if sudo "$(command -v node)" scripts/onprem-core-runtime-proof.mjs --cleanup \
+              --compose infra/onprem/core/compose.yaml --env-file "$ONPREM_CORE_ENV" \
+              --project hr-axis-onprem-core --release-id "$RELEASE_ID"; then
+              :
+            else
+              container_cleanup_status=$?
+              if [ "$cleanup_status" -eq 0 ]; then cleanup_status="$container_cleanup_status"; fi
+            fi
+            if sudo iptables-restore < "$firewall_snapshot"; then
+              :
+            else
+              local firewall_restore_status=$?
+              if [ "$cleanup_status" -eq 0 ]; then cleanup_status="$firewall_restore_status"; fi
+            fi
+            if [ "$cleanup_status" -ne 0 ]; then
+              echo "on-prem runtime cleanup failed (status=$cleanup_status)" >&2
+              return "$cleanup_status"
+            fi
+            return "$original_status"
           }
           trap cleanup EXIT
 
@@ -487,6 +678,18 @@ jobs:
             --receipt "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
           sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
           chmod 0600 "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
+          sudo "$(command -v node)" scripts/onprem-keycloak-runtime-proof.mjs --execute \
+            --compose infra/onprem/core/compose.yaml \
+            --env-file "$ONPREM_CORE_ENV" \
+            --project hr-axis-onprem-keycloak \
+            --release-id "$RELEASE_ID" \
+            --auth-host onprem-proof.example.invalid \
+            --accounts-file infra/onprem/core/secret-files/keycloak/synthetic-accounts \
+            --ca-file infra/onprem/core/secret-files/postgres/ca.crt \
+            --require-fresh-volumes \
+            --receipt "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
+          sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
+          chmod 0600 "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
 
       - name: Upload sanitized runtime receipt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -494,6 +697,13 @@ jobs:
           name: onprem-core-runtime-proof-${{ github.sha }}
           if-no-files-found: error
           path: ${{ runner.temp }}/onprem-core-runtime-receipt.json
+
+      - name: Upload sanitized Keycloak runtime receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: onprem-keycloak-runtime-proof-${{ github.sha }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/onprem-keycloak-runtime-receipt.json
 
       - name: Upload sanitized proof artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -509,5 +719,10 @@ jobs:
             proof/base-license-evidence/**
             proof/base-license-evidence.tar
             proof/*-THIRD_PARTY_NOTICES.txt
+            proof/keycloak-image-manifest.json
+            proof/keycloak-LICENSE.txt
+            proof/keycloak-license-paths.txt
+            proof/keycloak-license-reconciliation.json
+            proof/keycloak-license-evidence.tar
             proof/release-manifest.json
             proof/ephemeral-public.pem

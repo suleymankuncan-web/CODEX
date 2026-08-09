@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-08-08
+Last verified: 2026-08-09
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -55,38 +55,23 @@ execute the company-read/no-action Report Viewer allowlist, incentive closure,
 read-only production Session, honest Norm Kadro projection reversal, and safe
 verify-full preflight in order. Constraints still require live evidence.
 The 2026-08-08 `docs/plans/on-premise-private-container-deployment-plan-v1.md`
-authorizes only repository/synthetic ONP-0..5 preparation. ONP-0/1 merged as
-PR #1044/#1046; ONP-2 is active from exact ONP-1 SHA `d3ae14e367a9d22f25677e3534e6f287f131e635` and remains fail-closed pending its mandatory GitHub-hosted fresh-volume Compose proof. Workstation/company-server install, company firewall/DNS/TLS activation, real data/Nebim/photos, paid services, provider retirement, and production remain unauthorized external gates.
+authorizes only repository/synthetic ONP-0..5 preparation. ONP-0, ONP-1 and
+ONP-2 merged as PR #1044, #1046 and #1047. ONP-3A merged as PR #1048; its
+provider-neutral cookie-session, CSRF recovery and strict-local internal JWKS
+contract does not activate Keycloak or alter hosted Clerk. ONP-3B is active on
+`codex/on-prem-keycloak-runtime-v1` from exact ONP-3A merge SHA
+`b691510b7891b5f251e0708b3105e50db192f7d3`: it is limited to production-shaped
+Keycloak topology, five synthetic personas, deterministic database binding and
+fresh-Linux proof. Existing Clerk users are not migrated, hosted Clerk remains
+the rollback path, and real company SMTP remains an external IT gate.
+Workstation/company-server install, company firewall/DNS/TLS activation, real
+users/data/Nebim/photos, paid services, provider retirement, and production
+remain unauthorized external gates.
 DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Cloudflare env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
-Broad production remains `No-Go`. PR #927
-completed PR-1 without runtime behavior change; its contract covers 54 routes,
-33 direct matrix routes, and three preview plus three backend drifts. PR #929
-completed PR-3: authorization changes now clear protected frontend cache state
-before a new shell renders. PR #930 completed PR-4: target and request-center
-reads are bounded without mutation, DB, or authorization-policy changes. PR
-#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS configuration; PR #939 closed provider-CA verify-full staging proof plus rotation/rollback ownership. PR #943 completed DG1-A: Report Viewer backend reads are bounded by role-specific company scope with cross-company, empty-scope, and mixed-role tests; frontend exposure remains the DG1-B gate.
-PR #944 completed DG1-B. PR #948 completed DG1-D: non-development Admin Session is read-only while the local diagnostics editor remains development-only.
-PR #949 completed DG2-A and PR #950 completed DG2-B. The approved DG2-C read-only
-staging receipt records 70 invariant check hits and an overall DB-CONSTRAINTS
-No-Go without repair or mutation. PR #952 merged REM-1A; PR #953 merged one owner-confirmed REM-1B run with stable 70 family hits, 72 source records, nine buckets, and unresolved distinct-person count. All REM-2 owner decisions are locked, including restore and concurrency safety; implementation, row evidence, staging mutation, and constraints remain separately gated. DG1-C retirement remains usage-gated.
-- PR #917 (A1) made `required-release-gate` the truthful required main-branch aggregate and verified the ruleset readback.
-- PR #918 (A2) made root release the one canonical full frontend-release owner; the reusable frontend-targeted workflow remains manual and is not a duplicate required child.
-- PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
-  serial files, and preserves failure-only Playwright artifacts.
-- The release path keeps one full PR release as the canonical proof. Relevant
-  main pushes reuse that proof only when merged PR, base parent, latest green
-  gate, completion time, and tree hash agree; every uncertain case falls back
-  to the full release.
-- PR #920 (B1) established the five-flow blocker record. A later owner
-  attestation records successful 5 July checklist approval, Store Action task
-  closure, and target submission/editing with no issue. PRs #971-#975 add live
-  Admin, Region Manager, Store Manager, Store Personnel, Report Viewer, Moi
-  ranking/profile, June report/export, and incentive-readback evidence. No P0/P1
-  finding or runtime change is authorized by those successful reads.
-- PR #921 (E1) reconciles Visual Merchandiser-only Store routes and starts an
-  incremental archive-guard migration register without a bulk archive rewrite.
-The historical transition record carries PR narrative and proof links. This
-section intentionally retains only the current operating consequences.
+Broad production remains `No-Go`; the detailed PR narrative, route changes,
+release proof, and DG1/DG2/REM history live in the linked historical records.
+Current consequences are the active release, pilot, database, and on-prem
+gates below; no successful read authorizes an unrelated runtime change.
 
 ## Active Evidence Gates
 
@@ -192,10 +177,14 @@ Now:
 - Incentives and Targets desktop/mobile prototype parity, legacy removal, and protected staging reads pass for Region Manager, Report Viewer, and Store Manager with zero browser mutation requests. Report Viewer remains company-scoped/read-only, Store Manager remains own-store scoped, and broad production remains `No-Go`; see `docs/evidence/store-command-canvas-parity/2026-07-16-controlled-pilot-read-gate.md`.
 - The seven-PR operational-surfaces cutover is merged through PR #1013. Closeout PR #1014 remains open while its repaired head is recertified. Owner-observed KPI, Talep Merkezi and Görevler geometry differences invalidated the first visual PASS assumption. The local repair now gives KPI Özetleri, Talep Merkezi, Norm Kadro and Görevler one shared compact four-cell decision rail, fixed desktop geometry, content-sized page rows, and before/after rectangle assertions at 1440x900, 1024x768, 390x844 and 320x844. Local parity, role and accessibility suites pass; final CI, deployment and protected staging read evidence remain required before merge. See `docs/evidence/store-operational-surfaces-command-canvas/parity-gap-audit-2026-07-17.md`.
 Next:
-1. Logical PR-8B merged as PR #1036 at `01fdd8292e9963c1a8d4c91388f27dfe93459faf`. Logical PR-9 merged as PR #1037 at `a1e7708948e8fb0da0a550dcfbe5a732f8441fb5`: the exact-cohort BullMQ path writes only isolated `shadow` ledger rows, reads private canonical media, retries within fixed bounds and has no controller, UI, auth or official product sink. Logical PR-10 is active on `codex/qwen-pr10-advisory-pilot`: it adds default-off exact-cohort real VM photo intake, mutually exclusive `advisory` enqueue, a Region Manager-only advisory review surface scoped by the intersection of current region-role and action-store assignments, immutable first-review semantics, aggregate-only 30–50-pair receipt tooling, and a provider-neutral Qwen/Luna same-corpus evaluation protocol. AI output remains advisory and cannot update checklist outcomes, Store Actions, KPIs, rankings, targets or incentives. Staging execution, provider calls and gate activation remain separately controlled by the runbook.
-2. Keep retention cleanup disabled and do not execute a purge until a separately approved staging run window and exact sanitized manifest exist.
-3. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open unrelated runtime work.
-4. Keep ORG/ASSIGN correction, DG1-C contraction, Qwen product runtime activation, automated AI scoring, and broad production behind their recorded gates. Controlled store-photo staging use follows the lean pilot decision and remains feature-gated/advisory.
+1. Complete and merge repository/synthetic ONP-3B, then start ONP-4 only from
+   its merged SHA. Do not create real Keycloak users, contact SMTP, or activate
+   the company server during these repository slices.
+
+2. Logical PR-8B merged as PR #1036 at `01fdd8292e9963c1a8d4c91388f27dfe93459faf`. Logical PR-9 merged as PR #1037 at `a1e7708948e8fb0da0a550dcfbe5a732f8441fb5`: the exact-cohort BullMQ path writes only isolated `shadow` ledger rows, reads private canonical media, retries within fixed bounds and has no controller, UI, auth or official product sink. Logical PR-10 is active on `codex/qwen-pr10-advisory-pilot`: it adds default-off exact-cohort real VM photo intake, mutually exclusive `advisory` enqueue, a Region Manager-only advisory review surface scoped by the intersection of current region-role and action-store assignments, immutable first-review semantics, aggregate-only 30-50-pair receipt tooling, and a provider-neutral Qwen/Luna same-corpus evaluation protocol. AI output remains advisory and cannot update checklist outcomes, Store Actions, KPIs, rankings, targets or incentives. Staging execution, provider calls and gate activation remain separately controlled by the runbook.
+3. Keep retention cleanup disabled and do not execute a purge until a separately approved staging run window and exact sanitized manifest exist.
+4. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open unrelated runtime work.
+5. Keep ORG/ASSIGN correction, DG1-C contraction, Qwen product runtime activation, automated AI scoring, and broad production behind their recorded gates. Controlled store-photo staging use follows the lean pilot decision and remains feature-gated/advisory.
 Park:
 - Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
 - Provider/Nebim/JSON implementation without a real source contract and owner decision.

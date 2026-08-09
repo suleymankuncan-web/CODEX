@@ -160,6 +160,7 @@ files, Compose output, inspect, logs, and receipts.
 | `DB_SSL_CA_FILE` | IT/Platform owner | Public trust file path | Local CA file required with `DB_SSL_MODE=verify-full`; no downgrade is allowed. |
 | `REDIS_URL_FILE` | Platform owner | Secret file path | Role-specific Redis ACL URL for API or worker. |
 | `JWT_SECRET_FILE` | Auth owner | Secret file path | Synthetic JWT bridge only with `AUTH_PROVIDER_KEY=oidc`; identity remains not installed until ONP-3. |
+| `KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST` | Auth owner | Backend runtime env | Private synthetic subject manifest path consumed by the ONP-3B identity binder; keep absent outside strict-local synthetic rehearsal and never expose its contents. |
 | `POSTGRES_PASSWORD_FILE` | Backend/Data owner | Secret file path | Bootstrap owner password consumed by the pinned PostgreSQL image. |
 
 Redis ACL content, PostgreSQL role passwords, server TLS private keys, and the

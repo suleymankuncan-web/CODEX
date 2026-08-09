@@ -107,3 +107,24 @@ test('ONP-1 explicitly disables frontend and backend source maps', () => {
   assert.match(frontendDockerfile, /ARG VITE_API_BASE_URL=\/api/)
   assert.doesNotMatch(frontendDockerfile, /ARG VITE_API_BASE_URL=http:\/\/api:3000/)
 })
+
+test('ONP-3B frontend image pins OIDC to the secure cookie-session transport', () => {
+  assert.match(frontendDockerfile, /VITE_AUTH_MODE=bearer/)
+  assert.match(frontendDockerfile, /VITE_AUTH_PROVIDER=oidc/)
+  assert.match(frontendDockerfile, /VITE_BROWSER_SESSION_TRANSPORT=cookie/)
+  assert.match(frontendDockerfile, /VITE_SENTRY_ENABLED=false/)
+})
+
+test('ONP runtime cleanup uses guarded exact-project CLIs and still restores the firewall on cleanup failure', () => {
+  const cleanup = coreRuntimeProof.split('          cleanup() {')[1]?.split('          trap cleanup EXIT')[0] ?? ''
+  assert.match(cleanup, /onprem-keycloak-runtime-proof\.mjs --cleanup/)
+  assert.match(cleanup, /onprem-core-runtime-proof\.mjs --cleanup/)
+  assert.match(cleanup, /--project hr-axis-onprem-keycloak/)
+  assert.match(cleanup, /--project hr-axis-onprem-core/)
+  assert.match(cleanup, /--release-id "\$RELEASE_ID"/)
+  assert.match(cleanup, /iptables-restore < "\$firewall_snapshot"/)
+  assert.match(cleanup, /cleanup_status/)
+  assert.match(cleanup, /return "\$cleanup_status"/)
+  assert.doesNotMatch(cleanup, /docker compose[^\n]*down --remove-orphans/)
+  assert.doesNotMatch(cleanup, /--cleanup[^\n]*\|\| true/)
+})

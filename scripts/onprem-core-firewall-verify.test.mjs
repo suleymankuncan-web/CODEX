@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 
-const read = (path) => readFileSync(path, 'utf8')
+const read = (path) => readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 
 function tableEvidence(table) {
   const evidence = read('tests/fixtures/onprem-core-firewall-valid.v4')

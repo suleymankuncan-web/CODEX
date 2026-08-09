@@ -18,6 +18,9 @@ import {
   serviceFailureDiagnostic,
   TLS_WRONG_CA_CODES,
   verifyCaddyRuntimeInvariants,
+  EXPECTED_PUBLIC_SECRET_NAMES,
+  EXPECTED_SECRET_UIDS,
+  validateCoreCleanupContainerIdentities,
 } from './onprem-core-runtime-proof.mjs'
 import { CADDY_CMDLINE, TLS_SAFE_ERROR_CODES } from './onprem-caddy-runtime-proof.mjs'
 import {
@@ -42,6 +45,42 @@ const respCommand = (...args) => Buffer.from(
 const respStream = (...commands) => Buffer.concat(commands.map((args) => respCommand(...args)))
 
 const subnets = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
+
+const cleanupOptions = { project: 'hr-axis-onprem-core', releaseId: 'synthetic-release-v1' }
+const cleanupLabels = (service, overrides = {}) => ({
+  'com.docker.compose.project': cleanupOptions.project,
+  'com.docker.compose.service': service,
+  'com.docker.compose.container-number': '1',
+  'com.docker.compose.oneoff': 'False',
+  'com.hr-axis.project': 'hr-axis-onprem-core',
+  'com.hr-axis.data-class': 'synthetic',
+  'com.hr-axis.release-id': cleanupOptions.releaseId,
+  ...overrides,
+})
+
+test('core cleanup rejects duplicate service, non-1 index, and one-off identities', () => {
+  const container = (service, overrides) => ({ id: `${service}-id`, Config: { Labels: cleanupLabels(service, overrides) } })
+  assert.throws(
+    () => validateCoreCleanupContainerIdentities([container('postgres'), container('postgres')], cleanupOptions),
+    /duplicate Compose service identity/i,
+  )
+  assert.throws(
+    () => validateCoreCleanupContainerIdentities([container('postgres', { 'com.docker.compose.container-number': '2' })], cleanupOptions),
+    /container-number/i,
+  )
+  assert.throws(
+    () => validateCoreCleanupContainerIdentities([container('postgres', { 'com.docker.compose.oneoff': 'True' })], cleanupOptions),
+    /one-off/i,
+  )
+})
+
+test('runtime secret ownership map covers every Compose file-backed secret', () => {
+  const compose = readFileSync('infra/onprem/core/compose.yaml', 'utf8')
+  const secretSection = compose.split(/\nsecrets:\r?\n/, 2)[1]?.split(/\n\S/, 1)[0] ?? ''
+  const names = [...secretSection.matchAll(/^  ([a-z0-9_]+):\r?$/gm)].map((match) => match[1]).sort()
+  const covered = new Set([...EXPECTED_PUBLIC_SECRET_NAMES, ...Object.keys(EXPECTED_SECRET_UIDS)])
+  assert.deepEqual(names, [...covered].sort())
+})
 
 test('Caddy runtime identity and TLS classification inputs are immutable', () => {
   assert.equal(Object.isFrozen(CADDY_CMDLINE), true)

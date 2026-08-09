@@ -15,14 +15,24 @@ function artifactFixture() {
   const files = {}
   for (const name of [
     'frontendImage',
+    'keycloakImage',
     'backendImage',
     'frontendSbom',
+    'keycloakSbom',
     'backendSbom',
     'frontendVulnerabilityReport',
+    'keycloakVulnerabilityReport',
     'backendVulnerabilityReport',
     'frontendLicenseInventory',
+    'keycloakLicenseInventory',
+    'keycloakLicenseText',
+    'keycloakLicensePaths',
+    'keycloakLicenseReconciliation',
+    'keycloakLicenseBundle',
     'backendLicenseInventory',
     'frontendNotices',
+    'keycloakImageManifest',
+    'keycloakContentGuard',
     'backendNotices',
     'frontendImageLicenseReconciliation',
     'backendImageLicenseReconciliation',
@@ -52,6 +62,7 @@ function input(fixture) {
       build: 'node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d',
       frontendRuntime: 'nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65',
       backendRuntime: 'gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a',
+      keycloakBase: 'quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13',
       trivy: 'aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f',
       syft: 'anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026',
     },
@@ -59,6 +70,7 @@ function input(fixture) {
     imageIds: {
       frontend: `sha256:${'1'.repeat(64)}`,
       backend: `sha256:${'2'.repeat(64)}`,
+      keycloak: `sha256:${'3'.repeat(64)}`,
     },
   }
 }

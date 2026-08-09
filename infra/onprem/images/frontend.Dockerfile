@@ -9,7 +9,7 @@ COPY admin-web/ ./admin-web/
 ARG VITE_API_BASE_URL=/api
 
 RUN cd admin-web \
-  && VITE_API_BASE_URL="$VITE_API_BASE_URL" VITE_AUTH_MODE=bearer VITE_AUTH_PROVIDER=oidc VITE_SENTRY_ENABLED=false VITE_SENTRY_DSN= npm run build \
+  && VITE_API_BASE_URL="$VITE_API_BASE_URL" VITE_AUTH_MODE=bearer VITE_AUTH_PROVIDER=oidc VITE_BROWSER_SESSION_TRANSPORT=cookie VITE_SENTRY_ENABLED=false VITE_SENTRY_DSN= npm run build \
   && find dist -type f -name '*.map' -delete
 
 FROM nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65 AS runtime

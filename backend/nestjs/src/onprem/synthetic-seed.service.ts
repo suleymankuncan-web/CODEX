@@ -17,33 +17,60 @@ export class SyntheticSeedService {
       throw new Error("synthetic seed requires strict-local synthetic mode");
     }
 
-    const seedPath = resolveSeedPath(basePath);
-    if (!seedPath) {
-      throw new Error("synthetic reference seed is missing");
+    const seedPaths = resolveSeedPaths(basePath);
+    if (!seedPaths) {
+      throw new Error("synthetic seed set is incomplete");
     }
-    const sql = readFileSync(seedPath, "utf8");
-    const queryResult = await this.database.withTransaction((client) =>
-      client.query(sql),
-    );
-    const results = Array.isArray(queryResult) ? queryResult : [queryResult];
+    const seeds = seedPaths.map(({ name, path }) => ({
+      name,
+      sql: readFileSync(path, "utf8"),
+    }));
+    const results = await this.database.withTransaction(async (client) => {
+      const collected = [];
+      for (const seed of seeds) {
+        const queryResult = await client.query(seed.sql);
+        collected.push(...(Array.isArray(queryResult) ? queryResult : [queryResult]));
+      }
+      return collected;
+    });
+    const digest = createHash("sha256");
+    for (const seed of seeds) {
+      digest.update(seed.name).update("\0").update(seed.sql).update("\0");
+    }
 
     return {
       affectedRows: results.reduce(
         (total, result) => total + Math.max(0, result.rowCount ?? 0),
         0,
       ),
-      byteCount: Buffer.byteLength(sql, "utf8"),
-      digest: createHash("sha256").update(sql).digest("hex"),
+      byteCount: seeds.reduce(
+        (total, seed) => total + Buffer.byteLength(seed.sql, "utf8"),
+        0,
+      ),
+      digest: digest.digest("hex"),
       resultSetCount: results.length,
+      seedCount: seeds.length,
     };
   }
 }
 
-function resolveSeedPath(basePath: string): string | undefined {
-  const candidates = [
-    resolve(basePath, "db", "seeds", "001_reference_seed.sql"),
-    resolve(basePath, "..", "db", "seeds", "001_reference_seed.sql"),
-    resolve(basePath, "..", "..", "db", "seeds", "001_reference_seed.sql"),
+function resolveSeedPaths(
+  basePath: string,
+): Array<{ name: string; path: string }> | undefined {
+  const names = [
+    "001_reference_seed.sql",
+    "002_onprem_keycloak_personas.sql",
+  ] as const;
+  const roots = [
+    resolve(basePath, "db", "seeds"),
+    resolve(basePath, "..", "db", "seeds"),
+    resolve(basePath, "..", "..", "db", "seeds"),
   ];
-  return candidates.find((candidate) => existsSync(candidate));
+  for (const root of roots) {
+    const paths = names.map((name) => ({ name, path: resolve(root, name) }));
+    if (paths.every(({ path }) => existsSync(path))) {
+      return paths;
+    }
+  }
+  return undefined;
 }

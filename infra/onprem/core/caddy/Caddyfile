@@ -19,9 +19,30 @@ https://{$HR_AXIS_PUBLIC_HOST}:8443 {
   }
   route {
     respond /healthz 200
-    @identityNotInstalled path /auth /auth/*
-    header @identityNotInstalled Content-Type application/json
-    respond @identityNotInstalled `{"error":"identity_not_installed"}` 503
+    # These are HR Axis SPA routes. They must never be sent to Keycloak.
+    handle /auth/login {
+      reverse_proxy frontend:8080
+    }
+    handle /auth/callback {
+      reverse_proxy frontend:8080
+    }
+    handle /auth/logout {
+      reverse_proxy frontend:8080
+    }
+
+    # The administration console/API and every unlisted /auth path are denied
+    # before the narrow OIDC allowlist is evaluated.
+    @authAdmin path /auth/admin /auth/admin/*
+    respond @authAdmin `{"error":"not_found"}` 404
+    @keycloakAdmin path /admin /admin/*
+    respond @keycloakAdmin `{"error":"not_found"}` 404
+    @authAllowed path /realms/store-ops /realms/store-ops/.well-known/openid-configuration /realms/store-ops/protocol/openid-connect/auth /realms/store-ops/protocol/openid-connect/token /realms/store-ops/protocol/openid-connect/logout /realms/store-ops/protocol/openid-connect/certs /realms/store-ops/login-actions/* /resources/*
+    handle @authAllowed {
+      reverse_proxy keycloak:8080
+    }
+    @authUnknown path /auth /auth/* /realms /realms/* /resources /resources/*
+    respond @authUnknown `{"error":"not_found"}` 404
+
     handle /api/* {
       reverse_proxy api:3000
     }
