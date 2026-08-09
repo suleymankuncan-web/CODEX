@@ -310,9 +310,8 @@ jobs:
           tar -xf proof/keycloak-image.tar -C proof/keycloak-saved-image
           keycloak_layer_index=0
           while IFS= read -r layer; do
-            keycloak_layer_root=proof/keycloak-layer-rootfs
-            rm -rf "$keycloak_layer_root"
-            mkdir -p "$keycloak_layer_root"
+            keycloak_layer_root="proof/keycloak-layer-${keycloak_layer_index}-rootfs"
+            mkdir "$keycloak_layer_root"
             tar -xf "proof/keycloak-saved-image/$layer" -C "$keycloak_layer_root"
             node scripts/onprem-image-content-guard.mjs --rootfs "$keycloak_layer_root" --kind keycloak --application-root /opt/keycloak --json \
               | tee "proof/keycloak-layer-${keycloak_layer_index}-content-guard.json"

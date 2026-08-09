@@ -119,6 +119,18 @@ test('ONP-3B contract requires the provider-signed overbroad scope rehearsal row
   assert.ok(result.errors.some((error) => /overbroad|provider-signed|assigned store/i.test(error)))
 })
 
+test('ONP-3B image proof isolates every Keycloak layer without permission-sensitive reuse', () => {
+  const workflow = input().workflow
+  const loop = workflow.match(/keycloak_layer_index=0[\s\S]*?done < <\(jq -r '\.\[0\]\.Layers\[\]' proof\/keycloak-saved-image\/manifest\.json\)/)?.[0]
+
+  assert.ok(loop, 'Keycloak layer proof loop must remain present')
+  assert.match(loop, /keycloak_layer_root="proof\/keycloak-layer-\$\{keycloak_layer_index\}-rootfs"/)
+  assert.doesNotMatch(loop, /rm -rf|proof\/keycloak-layer-rootfs/)
+  assert.match(loop, /mkdir "\$keycloak_layer_root"/)
+  assert.match(loop, /tar -xf "proof\/keycloak-saved-image\/\$layer" -C "\$keycloak_layer_root"/)
+  assert.match(loop, /--rootfs "\$keycloak_layer_root" --kind keycloak --application-root \/opt\/keycloak/)
+})
+
 test('ONP-3B contract rejects mapper semantic drift in the parity fixture', () => {
   const mutated = input()
   mutated.realmConfig = mutated.realmConfig.replace(
