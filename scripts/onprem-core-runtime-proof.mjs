@@ -1,9 +1,27 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { lstatSync, readFileSync, writeFileSync } from 'node:fs'
-import { isAbsolute, resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
+import {
+  buildTlsProbeDockerArgs,
+  CADDY_CMDLINE,
+  CADDY_IMAGE,
+  classifyTlsProbeResult,
+  TLS_PROBE_MARKER,
+  TLS_SAFE_ERROR_CODES,
+  verifyCaddyRuntimeInvariants,
+} from './onprem-caddy-runtime-proof.mjs'
+
+export {
+  buildTlsProbeDockerArgs,
+  classifyTlsProbeResult,
+  TLS_WRONG_CA_CODES,
+  verifyCaddyRuntimeInvariants,
+} from './onprem-caddy-runtime-proof.mjs'
 
 const PRIVATE_SUBNETS = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
 const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis']
@@ -26,6 +44,41 @@ export function redact(value) {
     if (secret) redacted = redacted.replaceAll(secret, '[redacted]')
   }
   return redacted
+}
+
+function boundedText(value, limit = 768) {
+  const text = String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+  return text.length <= limit ? text : `${text.slice(0, limit)}…[truncated]`
+}
+
+export function serviceFailureDiagnostic({ service, state = {}, logs = '', secretValues = new Map() }) {
+  const redactDiagnostic = (value) => {
+    let result = redact(String(value ?? ''))
+    for (const secret of secretValues.values()) {
+      if (secret) result = result.replaceAll(secret, '[redacted]')
+    }
+    return boundedText(result)
+  }
+  const healthEntries = (state.Health?.Log ?? []).slice(-3).map((entry) => ({
+    exitCode: Number.isInteger(entry?.ExitCode) ? entry.ExitCode : null,
+    output: redactDiagnostic(entry?.Output),
+  }))
+  const logTail = String(logs ?? '').split(/\r?\n/).filter(Boolean).slice(-12).join('\n')
+  const diagnostic = {
+    service: redactDiagnostic(service),
+    state: {
+      status: redactDiagnostic(state.Status),
+      exitCode: Number.isInteger(state.ExitCode) ? state.ExitCode : null,
+      oomKilled: state.OOMKilled === true,
+      error: redactDiagnostic(state.Error),
+    },
+    health: state.Health ? {
+      status: redactDiagnostic(state.Health.Status),
+      recent: healthEntries,
+    } : null,
+    logs: redactDiagnostic(logTail),
+  }
+  return boundedText(JSON.stringify(diagnostic), 4096)
 }
 
 function command(command, args, options = {}) {
@@ -71,6 +124,10 @@ function parseArgs(argv) {
 
 function immutableImage(value) {
   return (/^sha256:[0-9a-f]{64}$/i.test(value) || /@sha256:[0-9a-f]{64}$/i.test(value)) && !/sha256:0{64}$/i.test(value)
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex')
 }
 
 export function assertSecretSourceMetadata(name, metadata) {
@@ -256,6 +313,7 @@ async function main() {
     images: {},
     migration: null,
     databaseRoles: null,
+    caddyRuntime: null,
     project: options.project,
     releaseId: options.releaseId,
     resources: 'exact-approved-ceilings',
@@ -266,6 +324,7 @@ async function main() {
   }
 
   if (config.name !== options.project) throw new Error('Compose project identity mismatch')
+  if (config.services.caddy.image !== CADDY_IMAGE) throw new Error('Caddy must use the exact approved upstream image identity')
   if (config.services.caddy.environment.HR_AXIS_PUBLIC_HOST === 'hr-axis.example.invalid') throw new Error('placeholder public host is forbidden in executable proof')
   for (const [name, service] of Object.entries(config.services)) {
     if (!immutableImage(service.image)) throw new Error(`service ${name} does not use an exact immutable image identity`)
@@ -280,6 +339,15 @@ async function main() {
   )
   activeSecretValues = [...secretValues.values()].filter(Boolean)
   assertNoSecretLeak(secretValues, { 'docker compose config': serializedConfig })
+  const caddyfilePath = resolve(dirname(composePath), 'caddy', 'Caddyfile')
+  receipt.caddyRuntime = {
+    bootstrapDigest: sha256(JSON.stringify({
+      command: config.services.caddy.command,
+      entrypoint: config.services.caddy.entrypoint,
+    })),
+    caddyfileDigest: sha256(readFileSync(caddyfilePath)),
+    upstreamImage: CADDY_IMAGE,
+  }
 
   if (options.requireFreshVolumes) {
     const existingVolumes = command('docker', ['volume', 'ls', '--quiet', '--filter', `label=com.hr-axis.project=${options.project}`], { label: 'fresh volume precondition' }).stdout.trim()
@@ -306,9 +374,25 @@ async function main() {
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const state = JSON.parse(command('docker', ['inspect', id], { label: `inspect ${service}` }).stdout)[0].State
       if (state.Status === 'running' && (!state.Health || state.Health.Status === 'healthy')) return id
+      if (['dead', 'exited', 'removing'].includes(state.Status) || state.OOMKilled === true || Boolean(state.Error)) {
+        const logs = command('docker', ['logs', '--tail', '12', id], { allowFailure: true, label: `logs ${service}` })
+        throw new Error(`${service} terminated before becoming healthy\n${serviceFailureDiagnostic({
+          service,
+          state,
+          logs: `${logs.stderr}\n${logs.stdout}`,
+          secretValues,
+        })}`)
+      }
       command(process.execPath, ['-e', 'setTimeout(()=>{},1000)'], { label: 'health wait' })
     }
-    throw new Error(`${service} did not become healthy`)
+    const state = JSON.parse(command('docker', ['inspect', id], { label: `inspect ${service}` }).stdout)[0].State
+    const logs = command('docker', ['logs', '--tail', '12', id], { allowFailure: true, label: `logs ${service}` })
+    throw new Error(`${service} did not become healthy\n${serviceFailureDiagnostic({
+      service,
+      state,
+      logs: `${logs.stderr}\n${logs.stdout}`,
+      secretValues,
+    })}`)
   }
 
   const waitUnhealthy = (service, attempts = 150) => {
@@ -320,6 +404,70 @@ async function main() {
       command(process.execPath, ['-e', 'setTimeout(()=>{},1000)'], { label: 'unhealthy wait' })
     }
     throw new Error(`${service} did not become unhealthy during the Redis outage`)
+  }
+
+  const verifyCaddyRuntime = (pathState = 'installed') => {
+    const id = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
+    if (!id) throw new Error('caddy container is missing during bootstrap verification')
+    const inspect = JSON.parse(command('docker', ['inspect', id], { label: 'inspect caddy bootstrap runtime' }).stdout)[0]
+    if (inspect.Config.User !== '10001:10001') throw new Error('Caddy runtime user config must equal 10001:10001')
+    const execCaddyShell = (script) => compose(['exec', '-T', 'caddy', '/bin/sh', '-ec', script], ['runtime']).stdout
+    const processProbe = [
+      `expected="$(printf '%s\\n' ${CADDY_CMDLINE.map((value) => `'${value}'`).join(' ')})"`,
+      'matched_pid=',
+      'count=0',
+      'for proc in /proc/[0-9]*; do',
+      '  [ -r "$proc/cmdline" ] || continue',
+      '  candidate="$(tr \'\\0\' \'\\n\' < "$proc/cmdline")"',
+      '  if [ "$candidate" = "$expected" ]; then',
+      '    matched_pid="${proc#/proc/}"',
+      '    count=$((count + 1))',
+      '  fi',
+      'done',
+      'test "$count" -eq 1',
+      'printf \'%s|%s\\n\' "$count" "$matched_pid"',
+    ].join('\n')
+    const [processCountText, caddyPidText] = execCaddyShell(processProbe).trim().split('|')
+    const processCount = Number(processCountText)
+    const caddyPid = Number(caddyPidText)
+    if (!Number.isSafeInteger(caddyPid)) throw new Error('Caddy process resolver returned an invalid PID')
+    const cmdline = execCaddyShell(`tr '\\0' '\\n' < /proc/${caddyPid}/cmdline`).trim().split(/\r?\n/)
+    const procStatus = execCaddyShell(`cat /proc/${caddyPid}/status`)
+    const exeTarget = execCaddyShell(`readlink /proc/${caddyPid}/exe`).trim()
+    const exeInode = execCaddyShell(`stat -Lc '%d:%i' /proc/${caddyPid}/exe`).trim()
+    const copyInode = execCaddyShell("stat -Lc '%d:%i' /run/caddy-bin/caddy").trim()
+    const digest = (path) => {
+      const output = execCaddyShell(`sha256sum ${path}`).trim()
+      const value = output.match(/^([0-9a-f]{64})\s+/i)?.[1]?.toLowerCase()
+      if (!value) throw new Error(`Caddy SHA-256 output was invalid for ${path}`)
+      return value
+    }
+    const sourceDigest = digest('/usr/bin/caddy')
+    const copyDigest = digest('/run/caddy-bin/caddy')
+    const liveExeDigest = digest(`/proc/${caddyPid}/exe`)
+    const copyCapabilities = execCaddyShell('/usr/sbin/getcap /run/caddy-bin/caddy')
+    const mountInfo = execCaddyShell(`awk '$5=="/run/caddy-bin"{print;found=1} END{exit !found}' /proc/${caddyPid}/mountinfo`).trim()
+    const memoryPeakText = compose(['exec', '-T', 'caddy', '/bin/sh', '-ec', 'cat /sys/fs/cgroup/memory.peak'], ['runtime']).stdout.trim()
+    const memoryPeakBytes = Number(memoryPeakText)
+    const verified = verifyCaddyRuntimeInvariants({
+      caddyPid,
+      cmdline,
+      copyCapabilities,
+      copyDigest,
+      copyInode,
+      exeInode,
+      exeTarget,
+      liveExeDigest,
+      memoryPeakBytes,
+      mountInfo,
+      oomKilled: inspect.State.OOMKilled === true,
+      pathState,
+      processCount,
+      procStatus,
+      sourceDigest,
+      tmpfsConfig: inspect.HostConfig.Tmpfs?.['/run/caddy-bin'],
+    })
+    return verified
   }
 
   const assertRedisDestructiveCommandsDenied = (service, urlFile) => {
@@ -351,6 +499,7 @@ async function main() {
     return result
   }
   let cleanupRequired = false
+  let tlsTempDirectory = null
   try {
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
     cleanupRequired = true
@@ -440,6 +589,34 @@ async function main() {
     compose(['up', '--detach', 'api', 'worker', 'frontend', 'caddy'], ['runtime'])
     for (const service of LONG_LIVED) waitHealthy(service)
 
+    const initialCaddyRuntime = verifyCaddyRuntime()
+    compose([
+      'exec', '-T', 'caddy', '/bin/sh', '-ec',
+      "rm -f /run/caddy-bin/caddy && printf '%s' stale-bootstrap-copy > /run/caddy-bin/caddy && chmod 0500 /run/caddy-bin/caddy",
+    ], ['runtime'])
+    const tamperedCaddyRuntime = verifyCaddyRuntime('tampered')
+    if (tamperedCaddyRuntime.executableDigest !== initialCaddyRuntime.executableDigest) {
+      throw new Error('Caddy pathname tamper changed the already-running executable identity')
+    }
+    compose(['restart', 'caddy'], ['runtime'])
+    waitHealthy('caddy')
+    const restartedCaddyRuntime = verifyCaddyRuntime()
+    if (initialCaddyRuntime.executableDigest !== restartedCaddyRuntime.executableDigest) {
+      throw new Error('Caddy restart bootstrap did not restore the exact upstream binary')
+    }
+    receipt.caddyRuntime = {
+      ...receipt.caddyRuntime,
+      approvedExecutableDigest: initialCaddyRuntime.executableDigest,
+      phases: {
+        initial: initialCaddyRuntime,
+        pathnameTampered: tamperedCaddyRuntime,
+        restarted: restartedCaddyRuntime,
+      },
+      restartOverwriteVerified: true,
+      tamperedPathRejected: true,
+      tamperLiveExecutableUnchanged: true,
+    }
+
     const publicHost = config.services.caddy.environment.HR_AXIS_PUBLIC_HOST
     const caddyIdForTls = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     const caddyInspectForTls = JSON.parse(
@@ -452,28 +629,51 @@ async function main() {
     const tlsProbe = [
       "const fs=require('node:fs')",
       "const https=require('node:https')",
-      "const request=https.get({ca:fs.readFileSync('/run/proof/ca.crt'),headers:{host:process.env.PROOF_HOST},host:process.env.PROOF_IP,port:8443,servername:process.env.PROOF_HOST,path:'/healthz',timeout:5000},response=>{response.resume();process.exit(response.statusCode===200?0:1)})",
-      "request.on('error',()=>process.exit(1))",
-      "request.on('timeout',()=>{request.destroy();process.exit(1)})",
+      `const marker=${JSON.stringify(TLS_PROBE_MARKER)}`,
+      `const safeCodes=new Set(${JSON.stringify([...TLS_SAFE_ERROR_CODES])})`,
+      "const emit=(payload,exitCode)=>{process.stdout.write(JSON.stringify({marker,...payload})+'\\n');process.exit(exitCode)}",
+      "const ca=fs.readFileSync(process.env.PROOF_CA)",
+      "const request=https.get({ca,headers:{host:process.env.PROOF_HOST},host:process.env.PROOF_IP,port:8443,servername:process.env.PROOF_HOST,path:'/healthz',timeout:5000},response=>{response.resume();const statusCode=response.statusCode;if(statusCode===200)emit({result:'success',statusCode},0);emit({result:'http_error',statusCode:Number.isInteger(statusCode)?statusCode:null},21)})",
+      "request.on('error',error=>{const candidate=String(error?.code??'');emit({result:'tls_error',code:safeCodes.has(candidate)?candidate:'UNKNOWN_TLS_ERROR'},20)})",
+      "request.on('timeout',()=>{request.removeAllListeners('error');request.destroy();emit({result:'timeout'},22)})",
     ].join(';')
-    const tlsResult = command('docker', [
-      'run', '--rm',
-      '--network', `${options.project}_proxy`,
-      '--read-only',
-      '--cap-drop', 'ALL',
-      '--security-opt', 'no-new-privileges',
-      '--volume', `${config.secrets.caddy_tls_ca.file}:/run/proof/ca.crt:ro`,
-      '--env', `PROOF_HOST=${publicHost}`,
-      '--env', `PROOF_IP=${caddyProxyIp}`,
-      '--entrypoint', '/nodejs/bin/node',
-      config.services.api.image,
-      '-e', tlsProbe,
-    ], { label: 'isolated proxy-network verify-full HTTPS proof' })
-    assertNoSecretLeak(secretValues, {
-      'TLS proof stderr': tlsResult.stderr,
-      'TLS proof stdout': tlsResult.stdout,
-    })
-    receipt.tls = { internalHostnameVerified: true }
+    const runTlsProbe = ({ caPath, host, label }) => {
+      const args = buildTlsProbeDockerArgs({
+        caPath,
+        caddyProxyIp,
+        host,
+        image: config.services.api.image,
+        network: `${options.project}_proxy`,
+        probeScript: tlsProbe,
+      })
+      const result = command('docker', args, { allowFailure: true, label })
+      assertNoSecretLeak(secretValues, {
+        [`${label} stderr`]: result.stderr,
+        [`${label} stdout`]: result.stdout,
+      })
+      return result
+    }
+    const approvedCaPath = resolve(config.secrets.caddy_tls_ca.file)
+    tlsTempDirectory = mkdtempSync(join(tmpdir(), 'hr-axis-wrong-ca-'))
+    const wrongCaPath = join(tlsTempDirectory, 'unrelated-ca.crt')
+    const wrongCaKeyPath = join(tlsTempDirectory, 'unrelated-ca.key')
+    command('openssl', [
+      'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
+      '-subj', '/CN=HR Axis unrelated synthetic proof CA',
+      '-keyout', wrongCaKeyPath,
+      '-out', wrongCaPath,
+    ], { label: 'generate unrelated synthetic TLS CA' })
+    const tlsResult = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'isolated proxy-network verify-full HTTPS proof' })
+    classifyTlsProbeResult(tlsResult, 'success')
+    const wrongHostname = runTlsProbe({ caPath: approvedCaPath, host: 'wrong-host.example.invalid', label: 'wrong-hostname TLS rejection proof' })
+    classifyTlsProbeResult(wrongHostname, 'wrong-host')
+    const wrongCa = runTlsProbe({ caPath: wrongCaPath, host: publicHost, label: 'wrong-CA TLS rejection proof' })
+    classifyTlsProbeResult(wrongCa, 'wrong-ca')
+    receipt.tls = {
+      internalHostnameVerified: true,
+      wrongCaRejected: true,
+      wrongHostnameRejected: true,
+    }
 
     const privateIps = new Set()
     for (const service of LONG_LIVED) {
@@ -525,6 +725,12 @@ async function main() {
     waitHealthy('postgres')
     assertPersistenceIdentity('PostgreSQL restart')
 
+    const workloadCaddyRuntime = verifyCaddyRuntime()
+    if (workloadCaddyRuntime.executableDigest !== receipt.caddyRuntime.approvedExecutableDigest) {
+      throw new Error('Caddy workload phase changed the verified binary identity')
+    }
+    receipt.caddyRuntime.phases.workload = workloadCaddyRuntime
+
     compose(['stop', ...LONG_LIVED], ['runtime'])
     for (const service of LONG_LIVED) {
       const id = compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()
@@ -537,6 +743,17 @@ async function main() {
     compose(['up', '--detach', 'api', 'worker', 'frontend', 'caddy'], ['runtime'])
     for (const service of LONG_LIVED) waitHealthy(service)
     assertPersistenceIdentity('full project restart')
+    const finalCaddyRuntime = verifyCaddyRuntime()
+    if (finalCaddyRuntime.executableDigest !== receipt.caddyRuntime.approvedExecutableDigest) {
+      throw new Error('full project restart changed the verified Caddy binary identity')
+    }
+    receipt.caddyRuntime = {
+      ...receipt.caddyRuntime,
+      fullProjectRestartVerified: true,
+      memoryPeakBytes: Math.max(...Object.values(receipt.caddyRuntime.phases).map((phase) => phase.memoryPeakBytes), finalCaddyRuntime.memoryPeakBytes),
+      phases: { ...receipt.caddyRuntime.phases, fullProjectRestart: finalCaddyRuntime },
+      restartOverwriteVerified: true,
+    }
 
     const projectLogs = compose(['logs', '--no-color'], ['infra', 'migrate', 'seed', 'runtime'])
     assertNoSecretLeak(secretValues, {
@@ -559,7 +776,11 @@ async function main() {
     if (packetDelta !== 0) throw new Error(`project containers attempted ${packetDelta} externally rejected flow(s)`)
     receipt.egressRejectPacketDelta = packetDelta
   } finally {
-    if (cleanupRequired) compose(['down', '--remove-orphans'], ['infra', 'migrate', 'seed', 'runtime'])
+    try {
+      if (cleanupRequired) compose(['down', '--remove-orphans'], ['infra', 'migrate', 'seed', 'runtime'])
+    } finally {
+      if (tlsTempDirectory) rmSync(tlsTempDirectory, { force: true, recursive: true })
+    }
   }
 
   const output = { ...receipt, ok: true }

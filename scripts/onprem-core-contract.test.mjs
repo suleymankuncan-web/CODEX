@@ -23,6 +23,138 @@ function contractInput() {
   }
 }
 
+test('ONP-2 contract requires a capability-free tmpfs Caddy bootstrap and loopback health endpoint', () => {
+  const input = contractInput()
+  const result = validateOnpremCoreContract(input)
+
+  assert.equal(result.ok, true, result.errors.join('\n'))
+  assert.match(input.compose, /cp "\$\$\{source\}" "\$\$\{temporary\}"/)
+  assert.match(input.compose, /copy_capabilities="\$\$\(\/usr\/sbin\/getcap/)
+  assert.match(input.caddy, /http:\/\/127\.0\.0\.1:8081/)
+  assert.match(input.compose, /CADDY_IMAGE:-caddy:2\.10\.2-alpine@sha256:/)
+  assert.match(input.compose, /\/run\/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700/)
+})
+
+test('ONP-2 contract rejects failed sha256sum, cmp, and getcap bootstrap verifiers in Compose and CI', () => {
+  const mutations = [
+    {
+      compose: ['source_sha256_output="$$(sha256sum "$${source}")"', 'source_sha256_output="$$(false; printf \'a%.0s\' $$(seq 1 64))"'],
+      workflow: ['source_sha256_output="$(sha256sum "${source}")"', 'source_sha256_output="$(false; printf \'a%.0s\' $(seq 1 64))"'],
+    },
+    {
+      compose: ['cmp -s "$${source}" "$${temporary}"', 'false # cmp -s "$${source}" "$${temporary}"'],
+      workflow: ['cmp -s "${source}" "${temporary}"', 'false # cmp -s "${source}" "${temporary}"'],
+    },
+    {
+      compose: ['copy_capabilities="$$(/usr/sbin/getcap "$${temporary}")"', 'copy_capabilities="$$(false)" # /usr/sbin/getcap "$${temporary}"'],
+      workflow: ['copy_capabilities="$(/usr/sbin/getcap "${temporary}")"', 'copy_capabilities="$(false)" # /usr/sbin/getcap "${temporary}"'],
+    },
+  ]
+
+  for (const mutation of mutations) {
+    for (const surface of ['compose', 'workflow']) {
+      const input = contractInput()
+      input[surface] = input[surface].replace(mutation[surface][0], () => mutation[surface][1])
+      assert.equal(input[surface].includes(mutation[surface][1]), true, `${surface} mutation fixture must apply`)
+      assert.equal(validateOnpremCoreContract(input).ok, false, `${surface} verifier failure must fail closed`)
+    }
+  }
+
+  const missingNegativeProof = contractInput()
+  missingNegativeProof.workflow = missingNegativeProof.workflow.replace(
+    'for verifier in sha256sum cmp getcap; do',
+    'for verifier in sha256sum cmp; do',
+  )
+  assert.equal(validateOnpremCoreContract(missingNegativeProof).ok, false)
+})
+
+test('ONP-2 workflow verifier proof requires active commands rather than comments or strings', () => {
+  for (const [active, inert] of [
+    [
+      'for verifier in sha256sum cmp getcap; do',
+      '# for verifier in sha256sum cmp getcap; do',
+    ],
+    [
+      'test "$verifier_status" -eq 42',
+      'description=\'test "$verifier_status" -eq 42\'',
+    ],
+    [
+      'grep -Fqx "verifier-failed-$verifier" <<< "$verifier_output"',
+      'printf \'%s\\n\' \'grep -Fqx "verifier-failed-$verifier" <<< "$verifier_output"\'',
+    ],
+  ]) {
+    const input = contractInput()
+    input.workflow = input.workflow.replace(active, () => inert)
+    assert.equal(input.workflow.includes(inert), true, 'workflow inert-text fixture must apply')
+    assert.equal(validateOnpremCoreContract(input).ok, false)
+  }
+})
+
+test('ONP-2 contract validates active bootstrap commands instead of comments, strings, or alternate exec text', () => {
+  const mutations = [
+    ['cmp -s "$${source}" "$${temporary}"', '# cmp -s "$${source}" "$${temporary}"'],
+    ['cp "$${source}" "$${temporary}"', 'description=\'cp "$${source}" "$${temporary}"\''],
+    ['exec "$${destination}" run --config /etc/caddy/Caddyfile --adapter caddyfile', 'printf \'%s\\n\' \'exec "$${destination}" run --config /etc/caddy/Caddyfile --adapter caddyfile\''],
+  ]
+
+  for (const mutation of mutations) {
+    const input = contractInput()
+    input.compose = input.compose.replace(mutation[0], () => mutation[1])
+    assert.equal(input.compose.includes(mutation[1]), true, 'Compose bypass fixture must apply')
+    assert.equal(validateOnpremCoreContract(input).ok, false)
+  }
+})
+
+test('ONP-2 contract rejects Caddy capability, direct source execution, incomplete bootstrap, and unsupported wget regressions', () => {
+  const input = contractInput()
+  input.compose = input.compose
+    .replace('cap_drop: [ALL]', 'cap_drop: [ALL]\n    cap_add: [NET_BIND_SERVICE]')
+    .replace('test -z "$${copy_capabilities}"', '# getcap proof removed')
+    .replace('exec "$${destination}" run', 'exec /usr/bin/caddy run')
+    .replace('/run/caddy-bin:rw,nosuid,nodev,exec,', '/run/caddy-bin:rw,nosuid,nodev,noexec,')
+    .replace('wget -q -O /dev/null http://127.0.0.1:8081/healthz', 'wget -q --no-check-certificate -O /dev/null https://0.0.0.0:8443/healthz')
+  const result = validateOnpremCoreContract(input)
+
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /cap_add/i.test(error)))
+  assert.ok(result.errors.some((error) => /exact active fail-closed/i.test(error)))
+  assert.ok(result.errors.some((error) => /never execute.*upstream path/i.test(error)))
+  assert.ok(result.errors.some((error) => /executable tmpfs|must not include noexec/i.test(error)))
+  assert.ok(result.errors.some((error) => /unsupported wget/i.test(error)))
+})
+
+test('ONP-2 contract rejects broader executable tmpfs mounts or loss of nosuid/nodev', () => {
+  for (const replacement of [
+    '/run/caddy-bin:rw,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700',
+    '/run/caddy-bin:rw,nosuid,exec,size=64m,uid=10001,gid=10001,mode=0700',
+    '/run/caddy-bin:rw,nosuid,nodev,size=64m,uid=10001,gid=10001,mode=0700',
+  ]) {
+    const input = contractInput()
+    input.compose = input.compose.replace(
+      '/run/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700',
+      replacement,
+    )
+    assert.equal(validateOnpremCoreContract(input).ok, false)
+  }
+  const broadened = contractInput()
+  broadened.compose = broadened.compose.replace(
+    '/tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001',
+    '/tmp:rw,exec,nosuid,size=16m,uid=10001,gid=10001',
+  )
+  assert.ok(validateOnpremCoreContract(broadened).errors.some((error) => /broaden executable tmpfs/i.test(error)))
+})
+
+test('ONP-2 workflow binds the Caddy bootstrap proof to an exact immutable image reference', () => {
+  const input = contractInput()
+  const pinned = /^  CADDY_IMAGE: caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\r?$/m
+  assert.match(input.workflow, pinned)
+
+  input.workflow = input.workflow.replace(pinned, '  CADDY_IMAGE: caddy:latest')
+  const result = validateOnpremCoreContract(input)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /workflow.*exact pinned Caddy image/i.test(error)))
+})
+
 test('ONP-2 private core contract accepts the committed fail-closed stack', () => {
   const result = validateOnpremCoreContract(contractInput())
 
@@ -176,7 +308,7 @@ test('ONP-2 contract rejects ambiguous PostgreSQL boolean migration identity ser
 test('ONP-2 contract rejects an optional or unproven runtime CI gate', () => {
   const input = contractInput()
   input.workflow = input.workflow
-    .replace('proof:\n    runs-on: ubuntu-latest', 'proof:\n    if: ${{ false }}\n    runs-on: [self-hosted, linux]')
+    .replace(/proof:\r?\n    runs-on: ubuntu-latest/, 'proof:\n    if: ${{ false }}\n    runs-on: [self-hosted, linux]')
     .replace('          trap cleanup EXIT', '          # cleanup trap removed')
 
   const result = validateOnpremCoreContract(input)

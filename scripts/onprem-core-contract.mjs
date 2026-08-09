@@ -13,6 +13,65 @@ const EXPECTED_RESOURCES = {
   migrator: ['0.5', '512m'],
   'synthetic-seed': ['0.5', '512m'],
 }
+const CADDY_BOOTSTRAP_PREFIX = [
+  'umask 077',
+  'source=/usr/bin/caddy',
+  'destination=/run/caddy-bin/caddy',
+  'temporary=/run/caddy-bin/.caddy.tmp',
+  'rm -f "${destination}" "${temporary}"',
+  'cp "${source}" "${temporary}"',
+  'cmp -s "${source}" "${temporary}"',
+  'source_sha256_output="$(sha256sum "${source}")"',
+  'source_sha256="${source_sha256_output%% *}"',
+  'copy_sha256_output="$(sha256sum "${temporary}")"',
+  'copy_sha256="${copy_sha256_output%% *}"',
+  'test "${source_sha256}" = "${copy_sha256}"',
+  'copy_capabilities="$(/usr/sbin/getcap "${temporary}")"',
+  'test -z "${copy_capabilities}"',
+  'chmod 0500 "${temporary}"',
+  'mv "${temporary}" "${destination}"',
+]
+
+function activeShellLines(value) {
+  return String(value)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+}
+
+function composeCaddyBootstrapLines(caddyBlock) {
+  const body = String(caddyBlock).match(/^    command:\r?\n      - \|\r?\n((?: {8}.*(?:\r?\n|$))*)/m)?.[1] ?? ''
+  return activeShellLines(body.replace(/^ {8}/gm, '')).map((line) => line.replaceAll('$$', '$'))
+}
+
+function workflowStepActiveLines(workflow, name) {
+  const lines = String(workflow).split(/\r?\n/)
+  const start = lines.findIndex((line) => line === `      - name: ${name}`)
+  if (start < 0) return []
+  const endOffset = lines.slice(start + 1).findIndex((line) => /^      - name: /.test(line))
+  const end = endOffset < 0 ? lines.length : start + 1 + endOffset
+  const run = lines.slice(start, end).findIndex((line) => line === '        run: |')
+  if (run < 0) return []
+  return activeShellLines(lines.slice(start + run + 1, end).join('\n'))
+}
+
+function workflowCaddyBootstrapBodies(activeLines) {
+  const bodies = []
+  for (let index = 0; index < activeLines.length; index += 1) {
+    if (activeLines[index] !== '--entrypoint /bin/sh "$CADDY_IMAGE" -ec \'') continue
+    const end = activeLines.findIndex((line, candidate) => candidate > index && (
+      line === '\' | grep -F \'v2.10.2\'' || line === '\' 2>&1)"; then'
+    ))
+    if (end < 0) return []
+    bodies.push(activeLines.slice(index + 1, end))
+    index = end
+  }
+  return bodies
+}
+
+function hasExactActiveLine(lines, expected) {
+  return lines.filter((line) => line === expected).length === 1
+}
 
 function serviceBlocks(compose) {
   const lines = compose.split(/\r?\n/)
@@ -69,7 +128,20 @@ export function validateOnpremCoreContract(input) {
   fail(/ports:\s*\n\s+- ["']?443:8443["']?/m.test(blocks.get('caddy') ?? ''), 'caddy must publish host TCP 443 to its non-root listener')
   fail(!/(?:80:80|:80\b)/.test(blocks.get('caddy') ?? ''), 'TCP 80 must not be published')
   fail(/networks: \[edge, proxy\]/.test(blocks.get('caddy') ?? ''), 'caddy alone must bridge edge and internal proxy networks')
-  fail(/user: ["']10001:10001["']/.test(blocks.get('caddy') ?? '') && !/cap_add:/.test(blocks.get('caddy') ?? ''), 'caddy must run as fixed numeric non-root without added capabilities')
+  const caddyBlock = blocks.get('caddy') ?? ''
+  fail(/user: ["']10001:10001["']/.test(caddyBlock) && /cap_drop: \[ALL\]/.test(caddyBlock) && !/cap_add:/.test(caddyBlock), 'caddy must run as fixed numeric non-root with cap_drop ALL and no cap_add')
+  fail(/security_opt: \[no-new-privileges:true\]/.test(caddyBlock), 'caddy must keep no-new-privileges enabled')
+  fail(/^    image: \$\{CADDY_IMAGE:-caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\}$/m.test(caddyBlock), 'Compose must retain the exact pinned upstream Caddy image identity')
+  fail(!/--no-check-certificate/.test(caddyBlock), 'Caddy healthcheck must not use the unsupported wget --no-check-certificate flag')
+  fail(/wget -q -O \/dev\/null http:\/\/127\.0\.0\.1:8081\/healthz/.test(caddyBlock), 'Caddy healthcheck must use the BusyBox-supported loopback HTTP health endpoint')
+  fail(!/(?:ports|expose):[^\n]*(?:\n\s+- ["']?(?:8081|\d+:8081))/m.test(caddyBlock), 'Caddy loopback health port 8081 must not be published or exposed')
+  fail(/entrypoint: \["\/bin\/sh", "-ec"\]/.test(caddyBlock), 'Caddy must enter through the audited inline tmpfs bootstrap')
+  const expectedComposeBootstrap = [...CADDY_BOOTSTRAP_PREFIX, 'exec "${destination}" run --config /etc/caddy/Caddyfile --adapter caddyfile']
+  fail(JSON.stringify(composeCaddyBootstrapLines(caddyBlock)) === JSON.stringify(expectedComposeBootstrap), 'Caddy bootstrap must contain only the exact active fail-closed copy, cmp, SHA-256, getcap, install, and exec commands')
+  fail(!/exec \/usr\/bin\/caddy|entrypoint:.*\/usr\/bin\/caddy/.test(caddyBlock), 'Caddy must never execute the capability-bearing upstream path directly')
+  fail(/\/run\/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700/.test(caddyBlock), 'Caddy bootstrap binary must live in the exact private 64 MiB executable tmpfs')
+  fail(!/\/run\/(?:caddy-bin):[^\n]*(?:noexec|exec[^\n]*,exec)/.test(caddyBlock), 'only the dedicated Caddy binary tmpfs may be executable and it must not include noexec')
+  fail(!/^\s+- \/(?!run\/caddy-bin:)[^\n]*\bexec\b/m.test(caddyBlock), 'Caddy must not broaden executable tmpfs access beyond /run/caddy-bin')
   for (const [service, block] of blocks) {
     if (service !== 'caddy') fail(!/networks:[^\n]*\bedge\b/.test(block), `${service} must not attach to the edge network`)
   }
@@ -144,6 +216,7 @@ export function validateOnpremCoreContract(input) {
   fail(/GRANT EXECUTE ON FUNCTIONS/.test(input.bootstrap), 'runtime roles require bounded function access')
 
   fail(/identity_not_installed/.test(input.caddy) && /503/.test(input.caddy), '/auth must fail 503 identity_not_installed until ONP-3')
+  fail(/http:\/\/127\.0\.0\.1:8081\s*\{[\s\S]*?respond \/healthz 200[\s\S]*?\}/.test(input.caddy), 'Caddy must provide a loopback HTTP health listener on 127.0.0.1:8081')
   fail(/ocsp_stapling off/.test(input.caddy), 'strict-local Caddy must disable external OCSP stapling fetches')
   fail(/AUTH_PROVIDER_KEY: oidc/.test(blocks.get('api') ?? ''), 'strict-local auth provider key must remain oidc until ONP-3')
   fail(!/^\s+(?:SENTRY_DSN|QWEN_API_KEY|BROWSER_SESSION_SECRET(?:_FILE)?|PHOTO_MEDIA_[A-Z0-9_]*(?:SECRET|KEY|TOKEN)):/m.test(input.compose), 'disabled providers must omit their credential keys entirely')
@@ -158,10 +231,34 @@ export function validateOnpremCoreContract(input) {
   fail(!/core-runtime-proof:/m.test(input.workflow), 'runtime proof must reuse the exact scanned images in one proof job')
   fail(!/:core-proof/.test(input.workflow), 'runtime proof must not rebuild or exercise an unscanned image identity')
   fail(/docker image inspect hr-axis-onprem-backend:proof/.test(input.workflow) && /docker image inspect hr-axis-onprem-frontend:proof/.test(input.workflow), 'runtime proof must bind Compose to the scanned proof image IDs')
+  fail(/^  CADDY_IMAGE: caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\r?$/m.test(input.workflow), 'workflow must bind the Caddy bootstrap proof to the exact pinned Caddy image')
+  const expectedWorkflowBootstrap = [...CADDY_BOOTSTRAP_PREFIX, 'exec "${destination}" version']
+  const caddyProofLines = workflowStepActiveLines(input.workflow, 'Prove capability-free Caddy bootstrap under production restrictions')
+  const workflowBootstrapBodies = workflowCaddyBootstrapBodies(caddyProofLines)
+  fail(/Prove capability-free Caddy bootstrap under production restrictions/.test(input.workflow) && /--user 10001:10001 --read-only --cap-drop=ALL/.test(input.workflow) && /--security-opt=no-new-privileges:true/.test(input.workflow) && /\/run\/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700/.test(input.workflow) && workflowBootstrapBodies.length === 2 && workflowBootstrapBodies.every((body) => JSON.stringify(body) === JSON.stringify(expectedWorkflowBootstrap)), 'workflow must prove the exact active fail-closed Caddy bootstrap under production restrictions in both positive and negative executions')
+  const requiredVerifierLines = [
+    'verifier_failure_root="$(mktemp -d)"',
+    'trap \'rm -rf "$verifier_failure_root"\' EXIT',
+    'for verifier in sha256sum cmp getcap; do',
+    'printf \'%s\\n\' \'#!/bin/sh\' "echo verifier-failed-$verifier >&2" \'exit 42\' > "$verifier_failure_root/$verifier"',
+    'chmod 0555 "$verifier_failure_root/$verifier"',
+    'verifier_mount=(--volume "$verifier_failure_root:/run/fail-bin:ro" --env PATH=/run/fail-bin:/usr/sbin:/usr/bin:/sbin:/bin)',
+    'if [ "$verifier" = getcap ]; then',
+    'verifier_mount=(--volume "$verifier_failure_root/getcap:/usr/sbin/getcap:ro")',
+    'verifier_output=\'\'',
+    'echo "Caddy bootstrap verifier failed open: $verifier" >&2',
+    'verifier_status=$?',
+    'test "$verifier_status" -eq 42',
+    'grep -Fqx "verifier-failed-$verifier" <<< "$verifier_output"',
+  ]
+  fail(requiredVerifierLines.every((line) => hasExactActiveLine(caddyProofLines, line)), 'workflow must negatively prove sha256sum, cmp, and getcap failures through exact active commands with exit-status evidence')
   fail(/iptables-save/.test(input.workflow) && /iptables-restore/.test(input.workflow) && /trap cleanup EXIT/.test(input.workflow), 'CI firewall mutation must be ephemeral and restored by a cleanup trap')
   fail(/--require-fresh-volumes/.test(input.workflow), 'required CI runtime proof must start from fresh project volumes')
   fail(!/^\s*pull_request:/m.test(input.workflow), 'ONP-2 must not create a competing required workflow')
   fail(/42501/.test(input.runtimeProof) && /synthetic-queue-probe\.js/.test(input.runtimeProof) && /conntrack/.test(input.runtimeProof), 'runtime harness must prove DDL denial, compiled terminal Redis recovery, and zero external flows')
+  fail(/wrongCaRejected: true/.test(input.runtimeProof) && /wrongHostnameRejected: true/.test(input.runtimeProof) && /internalHostnameVerified: true/.test(input.runtimeProof) && /unrelated-ca\.crt/.test(input.runtimeProof) && /command\('openssl'/.test(input.runtimeProof) && /runTlsProbe\(\{ caPath: wrongCaPath, host: publicHost/.test(input.runtimeProof) && /classifyTlsProbeResult\(tlsResult, 'success'\)/.test(input.runtimeProof) && /classifyTlsProbeResult\(wrongHostname, 'wrong-host'\)/.test(input.runtimeProof) && /classifyTlsProbeResult\(wrongCa, 'wrong-ca'\)/.test(input.runtimeProof), 'runtime harness must prove exact TLS success, exact wrong-host classification, and a generated unrelated-CA trust-chain rejection')
+  fail(/verifyCaddyRuntimeInvariants/.test(input.runtimeProof) && !/\/proc\/1\/status/.test(input.runtimeProof) && /\/proc\/\$\{caddyPid\}\/status/.test(input.runtimeProof) && /liveExeDigest/.test(input.runtimeProof) && /tamperedPathRejected/.test(input.runtimeProof) && /memory\.peak/.test(input.runtimeProof) && /restartOverwriteVerified: true/.test(input.runtimeProof), 'runtime harness must resolve the sole intended Caddy child and prove its live executable, capability, tamper, memory, and restart invariants')
+  fail(/bootstrapDigest/.test(input.runtimeProof) && /caddyfileDigest/.test(input.runtimeProof), 'runtime receipt must bind the Caddy bootstrap and Caddyfile digests')
   fail(/assertRedisDestructiveCommandsDenied\('api'/.test(input.runtimeProof) && /assertRedisDestructiveCommandsDenied\('worker'/.test(input.runtimeProof), 'runtime harness must prove destructive Redis commands are denied for both runtime roles')
   fail(/onprem_sequence_privilege_probe/.test(input.runtimeProof) && /setval/.test(input.runtimeProof) && /apiIdentityVerified/.test(input.runtimeProof) && /workerIdentityVerified/.test(input.runtimeProof), 'runtime harness must prove exact runtime DB identities and sequence mutation denial')
   fail(/parseSequencePrivilegeMatrix\(query\("SELECT has_sequence_privilege/.test(input.runtimeProof) && /, has_sequence_privilege/.test(input.runtimeProof) && !/has_sequence_privilege\([^\n]*\)\s*\|\|/.test(input.runtimeProof), 'runtime sequence privilege probe must select six separate boolean columns without concatenation')

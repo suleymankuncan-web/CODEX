@@ -15,6 +15,7 @@ env:
   BUILD_IMAGE: node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d
   BACKEND_RUNTIME_IMAGE: gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a
   FRONTEND_RUNTIME_IMAGE: nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65
+  CADDY_IMAGE: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   SYFT_IMAGE: anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026
 
@@ -74,6 +75,74 @@ jobs:
           backend_user="$(docker image inspect hr-axis-onprem-backend:proof --format '{{.Config.User}}')"
           test -n "$frontend_user" && test "$frontend_user" != "0" && test "$frontend_user" != "root"
           test -n "$backend_user" && test "$backend_user" != "0" && test "$backend_user" != "root"
+
+      - name: Prove capability-free Caddy bootstrap under production restrictions
+        run: |
+          set -euo pipefail
+          docker run --rm --user 10001:10001 --read-only --cap-drop=ALL \
+            --security-opt=no-new-privileges:true \
+            --tmpfs /run/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700 \
+            --entrypoint /bin/sh "$CADDY_IMAGE" -ec '
+              umask 077
+              source=/usr/bin/caddy
+              destination=/run/caddy-bin/caddy
+              temporary=/run/caddy-bin/.caddy.tmp
+              rm -f "${destination}" "${temporary}"
+              cp "${source}" "${temporary}"
+              cmp -s "${source}" "${temporary}"
+              source_sha256_output="$(sha256sum "${source}")"
+              source_sha256="${source_sha256_output%% *}"
+              copy_sha256_output="$(sha256sum "${temporary}")"
+              copy_sha256="${copy_sha256_output%% *}"
+              test "${source_sha256}" = "${copy_sha256}"
+              copy_capabilities="$(/usr/sbin/getcap "${temporary}")"
+              test -z "${copy_capabilities}"
+              chmod 0500 "${temporary}"
+              mv "${temporary}" "${destination}"
+              exec "${destination}" version
+            ' | grep -F 'v2.10.2'
+          verifier_failure_root="$(mktemp -d)"
+          trap 'rm -rf "$verifier_failure_root"' EXIT
+          for verifier in sha256sum cmp getcap; do
+            rm -f "$verifier_failure_root"/*
+            printf '%s\n' '#!/bin/sh' "echo verifier-failed-$verifier >&2" 'exit 42' > "$verifier_failure_root/$verifier"
+            chmod 0555 "$verifier_failure_root/$verifier"
+            verifier_mount=(--volume "$verifier_failure_root:/run/fail-bin:ro" --env PATH=/run/fail-bin:/usr/sbin:/usr/bin:/sbin:/bin)
+            if [ "$verifier" = getcap ]; then
+              verifier_mount=(--volume "$verifier_failure_root/getcap:/usr/sbin/getcap:ro")
+            fi
+            verifier_output=''
+            if verifier_output="$(docker run --rm --user 10001:10001 --read-only --cap-drop=ALL \
+              --security-opt=no-new-privileges:true \
+              --tmpfs /run/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700 \
+              "${verifier_mount[@]}" \
+              --entrypoint /bin/sh "$CADDY_IMAGE" -ec '
+                umask 077
+                source=/usr/bin/caddy
+                destination=/run/caddy-bin/caddy
+                temporary=/run/caddy-bin/.caddy.tmp
+                rm -f "${destination}" "${temporary}"
+                cp "${source}" "${temporary}"
+                cmp -s "${source}" "${temporary}"
+                source_sha256_output="$(sha256sum "${source}")"
+                source_sha256="${source_sha256_output%% *}"
+                copy_sha256_output="$(sha256sum "${temporary}")"
+                copy_sha256="${copy_sha256_output%% *}"
+                test "${source_sha256}" = "${copy_sha256}"
+                copy_capabilities="$(/usr/sbin/getcap "${temporary}")"
+                test -z "${copy_capabilities}"
+                chmod 0500 "${temporary}"
+                mv "${temporary}" "${destination}"
+                exec "${destination}" version
+              ' 2>&1)"; then
+              echo "Caddy bootstrap verifier failed open: $verifier" >&2
+              exit 1
+            else
+              verifier_status=$?
+            fi
+            test "$verifier_status" -eq 42
+            grep -Fqx "verifier-failed-$verifier" <<< "$verifier_output"
+          done
 
       - name: Prove the pruned backend dependency graph and lazy runtime features
         run: |
