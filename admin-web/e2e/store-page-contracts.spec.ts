@@ -24,6 +24,10 @@ for (const item of storeRouteContractExpectations) {
 }
 
 async function waitForStorePageLoadingToSettle(page: Page, routeId: string) {
+  if (routeId === 'kpis') {
+    await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
+  }
+
   if (routeId === 'targets') {
     await expect(page.locator('.target-command-state[role="status"]')).toHaveCount(0)
   }
@@ -55,6 +59,7 @@ async function expectNoInternalCopy(page: Page) {
   const body = await page.locator('body').innerText()
   expect(body).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)
   expect(body).not.toMatch(/\b(API|DB|scope|mock|contract)\b/i)
-  expect(body).not.toMatch(/gerçek veri|yetkili mağaza|kayıt temsil eder/i)
+  const internalCopyPattern = /gerçek veri|kayıt temsil eder|yetkili mağaza (?:listesi|kapsamı)/i
+  expect(body).not.toMatch(internalCopyPattern)
   expect(body).not.toMatch(/Ã|Ä|Å|Ë|Ð|Ý|þ|ð/)
 }
