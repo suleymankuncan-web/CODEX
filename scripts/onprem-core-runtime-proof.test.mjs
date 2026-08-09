@@ -7,6 +7,7 @@ import {
   assertSecretSourceMetadata,
   egressRejectCounters,
   migrationTreeDigestFromOutput,
+  parseMigrationIdentity,
   redact,
 } from './onprem-core-runtime-proof.mjs'
 
@@ -56,6 +57,15 @@ test('runtime proof binds the sanitized receipt to the resolved migration tree d
     () => migrationTreeDigestFromOutput({ stdout: '{"appliedCount":1}' }),
     /omitted its resolved tree digest/i,
   )
+})
+
+test('runtime proof accepts only the canonical successful migration ledger identity', () => {
+  const digest = 'a'.repeat(64)
+
+  assert.deepEqual(parseMigrationIdentity(`67|t|${digest}`), { identity: digest, succeededCount: 67 })
+  for (const invalid of [`67|true|${digest}`, `67|f|${digest}`, `67|t|${'a'.repeat(63)}`, `count|t|${digest}`]) {
+    assert.throws(() => parseMigrationIdentity(invalid), /migration idempotency\/checksum proof mismatch/i)
+  }
 })
 
 test('runtime proof rejects symlink secret sources before reading them', () => {

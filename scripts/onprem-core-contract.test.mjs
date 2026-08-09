@@ -147,6 +147,19 @@ test('ONP-2 contract rejects runtime sequence mutation capability', () => {
   assert.ok(result.errors.some((error) => /sequence mutation/i.test(error)))
 })
 
+test('ONP-2 contract rejects ambiguous PostgreSQL boolean migration identity serialization', () => {
+  const input = contractInput()
+  input.runtimeProof = input.runtimeProof.replace(
+    "CASE WHEN bool_and(status = 'succeeded') THEN 't' ELSE 'f' END",
+    "bool_and(status = 'succeeded')",
+  )
+
+  const result = validateOnpremCoreContract(input)
+
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /canonical t\/f migration identity/i.test(error)))
+})
+
 test('ONP-2 contract rejects an optional or unproven runtime CI gate', () => {
   const input = contractInput()
   input.workflow = input.workflow

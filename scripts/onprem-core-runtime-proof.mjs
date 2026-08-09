@@ -98,6 +98,15 @@ export function migrationTreeDigestFromOutput(output) {
   return digest.toLowerCase()
 }
 
+export function parseMigrationIdentity(value) {
+  const match = String(value).match(/^(\d+)\|t\|([0-9a-f]{64})$/)
+  const succeededCount = Number(match?.[1])
+  if (!match || !Number.isSafeInteger(succeededCount)) {
+    throw new Error('migration idempotency/checksum proof mismatch')
+  }
+  return { identity: match[2], succeededCount }
+}
+
 function assertSecretPermissions(config) {
   const publicFiles = new Set(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
   const expectedUid = new Map([
@@ -340,14 +349,15 @@ async function main() {
 
     const firstMigrationRun = compose(['run', '--rm', '--no-deps', 'migrator'], ['migrate'])
     const firstTreeDigest = migrationTreeDigestFromOutput(firstMigrationRun)
-    const migrationIdentitySql = "SELECT count(*) || '|' || bool_and(status = 'succeeded') || '|' || encode(digest(string_agg(migration_name || ':' || migration_checksum, ',' ORDER BY migration_name), 'sha256'), 'hex') FROM audit.schema_migration"
+    const migrationIdentitySql = "SELECT count(*) || '|' || CASE WHEN bool_and(status = 'succeeded') THEN 't' ELSE 'f' END || '|' || encode(digest(string_agg(migration_name || ':' || migration_checksum, ',' ORDER BY migration_name), 'sha256'), 'hex') FROM audit.schema_migration"
     const firstMigration = query(migrationIdentitySql)
     const secondMigrationRun = compose(['run', '--rm', '--no-deps', 'migrator'], ['migrate'])
     const secondTreeDigest = migrationTreeDigestFromOutput(secondMigrationRun)
     const secondMigration = query(migrationIdentitySql)
-    if (firstMigration !== secondMigration || !/^\d+\|t\|[0-9a-f]{64}$/.test(secondMigration)) throw new Error('migration idempotency/checksum proof mismatch')
+    if (firstMigration !== secondMigration) throw new Error('migration idempotency/checksum proof mismatch')
+    const migrationIdentity = parseMigrationIdentity(secondMigration)
     if (firstTreeDigest !== secondTreeDigest) throw new Error('migration resolved tree digest changed between identical runs')
-    receipt.migration = { checksumMismatchRejected: false, identity: secondMigration.split('|')[2], orphanRejected: false, succeededCount: Number(secondMigration.split('|')[0]), secondRunStable: true, treeDigest: secondTreeDigest }
+    receipt.migration = { checksumMismatchRejected: false, ...migrationIdentity, orphanRejected: false, secondRunStable: true, treeDigest: secondTreeDigest }
 
     query("INSERT INTO audit.schema_migration (migration_name, migration_checksum, status) VALUES ('999_onprem_orphan.sql', repeat('a', 64), 'succeeded')")
     try {
