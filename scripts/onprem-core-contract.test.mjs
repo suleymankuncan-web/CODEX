@@ -90,6 +90,15 @@ test('ONP-2 workflow verifier proof requires active commands rather than comment
   }
 })
 
+test('ONP-2 workflow makes the mounted verifier directory traversable by the non-root Caddy user', () => {
+  const input = contractInput()
+  input.workflow = input.workflow.replace(
+    'chmod 0755 "$verifier_failure_root"',
+    '# chmod 0755 "$verifier_failure_root"',
+  )
+  assert.equal(validateOnpremCoreContract(input).ok, false)
+})
+
 test('ONP-2 contract validates active bootstrap commands instead of comments, strings, or alternate exec text', () => {
   const mutations = [
     ['cmp -s "$${source}" "$${temporary}"', '# cmp -s "$${source}" "$${temporary}"'],

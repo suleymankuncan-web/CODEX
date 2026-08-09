@@ -239,6 +239,7 @@ export function validateOnpremCoreContract(input) {
   const requiredVerifierLines = [
     'verifier_failure_root="$(mktemp -d)"',
     'trap \'rm -rf "$verifier_failure_root"\' EXIT',
+    'chmod 0755 "$verifier_failure_root"',
     'for verifier in sha256sum cmp getcap; do',
     'printf \'%s\\n\' \'#!/bin/sh\' "echo verifier-failed-$verifier >&2" \'exit 42\' > "$verifier_failure_root/$verifier"',
     'chmod 0555 "$verifier_failure_root/$verifier"',
