@@ -14,15 +14,41 @@ export const SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS = [
   "worker_error",
   "job_failed",
   "worker_run_failed",
-  "timeout",
+  "redis_connect_timeout",
+  "state_read_timeout",
+  "worker_timeout",
   "unexpected",
 ] as const;
 
 export type SyntheticQueueProbeFailureReason =
   (typeof SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS)[number];
 
+export const SYNTHETIC_QUEUE_PROBE_JOB_STATES = [
+  "missing",
+  "delayed",
+  "waiting",
+  "active",
+  "completed",
+  "failed",
+  "unknown",
+] as const;
+export type SyntheticQueueProbeJobState =
+  (typeof SYNTHETIC_QUEUE_PROBE_JOB_STATES)[number];
+
+export type SyntheticQueueProbeMarkerState = "absent" | "present" | "unknown";
+
+export type SyntheticQueueProbeFailureDetails = Partial<{
+  preflightState: SyntheticQueueProbeJobState;
+  timeoutState: SyntheticQueueProbeJobState;
+  preflightMarker: SyntheticQueueProbeMarkerState;
+  timeoutMarker: SyntheticQueueProbeMarkerState;
+}>;
+
 export class SyntheticQueueProbeFailure extends Error {
-  constructor(readonly reason: SyntheticQueueProbeFailureReason) {
+  constructor(
+    readonly reason: SyntheticQueueProbeFailureReason,
+    readonly details: SyntheticQueueProbeFailureDetails = {},
+  ) {
     super(reason);
     this.name = "SyntheticQueueProbeFailure";
   }
@@ -43,11 +69,77 @@ export function getSyntheticQueueProbeFailureReason(
   return "unexpected";
 }
 
+export function getSyntheticQueueProbeFailureDetails(
+  error: unknown,
+): SyntheticQueueProbeFailureDetails {
+  return error instanceof SyntheticQueueProbeFailure
+    ? sanitizeSyntheticQueueProbeFailureDetails(error.details)
+    : {};
+}
+
 function isFailureReason(value: unknown): value is SyntheticQueueProbeFailureReason {
   return (
     typeof value === "string" &&
     (SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS as readonly string[]).includes(value)
   );
+}
+
+export function classifySyntheticQueueProbeJobState(
+  value: unknown,
+): SyntheticQueueProbeJobState {
+  return (
+    typeof value === "string" &&
+    (SYNTHETIC_QUEUE_PROBE_JOB_STATES as readonly string[]).includes(value)
+  )
+    ? (value as SyntheticQueueProbeJobState)
+    : "unknown";
+}
+
+export function classifySyntheticQueueProbeMarkerState(
+  value: unknown,
+): SyntheticQueueProbeMarkerState {
+  if (value === null) {
+    return "absent";
+  }
+  return typeof value === "string" ? "present" : "unknown";
+}
+
+export function sanitizeSyntheticQueueProbeFailureDetails(
+  value: unknown,
+): SyntheticQueueProbeFailureDetails {
+  if (typeof value !== "object" || value === null) {
+    return {};
+  }
+  const raw = value as Record<string, unknown>;
+  const sanitized: SyntheticQueueProbeFailureDetails = {};
+  if ("preflightState" in raw) {
+    sanitized.preflightState = classifySyntheticQueueProbeJobState(
+      raw.preflightState,
+    );
+  }
+  if ("timeoutState" in raw) {
+    sanitized.timeoutState = classifySyntheticQueueProbeJobState(raw.timeoutState);
+  }
+  if ("preflightMarker" in raw) {
+    sanitized.preflightMarker = sanitizeMarkerDiagnostic(raw.preflightMarker);
+  }
+  if ("timeoutMarker" in raw) {
+    sanitized.timeoutMarker = sanitizeMarkerDiagnostic(raw.timeoutMarker);
+  }
+  return sanitized;
+}
+
+function sanitizeMarkerDiagnostic(value: unknown): SyntheticQueueProbeMarkerState {
+  return value === "absent" || value === "present" || value === "unknown"
+    ? value
+    : "unknown";
+}
+
+export function isSyntheticQueueProbePreflightReady(snapshot: {
+  marker: SyntheticQueueProbeMarkerState;
+  state: SyntheticQueueProbeJobState;
+}): boolean {
+  return snapshot.state === "delayed" && snapshot.marker === "absent";
 }
 
 function asSyntheticQueueProbeFailure(error: unknown): SyntheticQueueProbeFailure {
@@ -98,16 +190,18 @@ export class SyntheticQueueProbeService {
       await withTimeout(
         connection.connect(),
         this.config.redisOperationTimeoutMs,
+        "redis_connect_timeout",
       );
       queue = new Queue(PROBE_QUEUE, { connection });
       const [existing, marker] = await withTimeout(
         Promise.all([queue.getJob(PROBE_JOB_ID), connection.get(PROBE_MARKER)]),
         this.config.redisOperationTimeoutMs,
+        "state_read_timeout",
       );
       if (existing || marker) {
         throw new Error("synthetic queue probe state is not clean");
       }
-      await withTimeout(
+      const job = await withTimeout(
         queue.add(
           "synthetic-recovery",
           { dataClass: "synthetic", schemaVersion: 1 },
@@ -121,7 +215,16 @@ export class SyntheticQueueProbeService {
         ),
         this.config.redisOperationTimeoutMs,
       );
-      return { mode: "enqueue" as const, queuedCount: 1, status: "queued" as const };
+      const state = await readJobState(job, this.config.redisOperationTimeoutMs);
+      if (state !== "delayed") {
+        throw new SyntheticQueueProbeFailure("unexpected");
+      }
+      return {
+        mode: "enqueue" as const,
+        queuedCount: 1,
+        state,
+        status: "queued" as const,
+      };
     } finally {
       const activeQueue = queue;
       if (activeQueue) {
@@ -143,10 +246,27 @@ export class SyntheticQueueProbeService {
     });
     let duplicateCount = 0;
     let processedCount = 0;
+    let queue: Queue | undefined;
     let worker: Worker | undefined;
 
     try {
-      await withTimeout(connection.connect(), this.config.redisOperationTimeoutMs);
+      await withTimeout(
+        connection.connect(),
+        this.config.redisOperationTimeoutMs,
+        "redis_connect_timeout",
+      );
+      queue = new Queue(PROBE_QUEUE, { connection });
+      const preflight = await readQueueSnapshot(
+        queue,
+        connection,
+        this.config.redisOperationTimeoutMs,
+      );
+      if (!isSyntheticQueueProbePreflightReady(preflight)) {
+        throw new SyntheticQueueProbeFailure("unexpected", {
+          preflightMarker: preflight.marker,
+          preflightState: preflight.state,
+        });
+      }
       worker = new Worker(
         PROBE_QUEUE,
         async (_job: Job) => {
@@ -159,7 +279,27 @@ export class SyntheticQueueProbeService {
         },
         { autorun: false, connection, concurrency: 1 },
       );
-      await waitForOneCompletion(worker);
+      try {
+        await waitForOneCompletion(worker);
+      } catch (error) {
+        if (
+          error instanceof SyntheticQueueProbeFailure &&
+          error.reason === "worker_timeout"
+        ) {
+          const timeout = await readQueueSnapshot(
+            queue,
+            connection,
+            this.config.redisOperationTimeoutMs,
+          );
+          throw new SyntheticQueueProbeFailure("worker_timeout", {
+            preflightMarker: preflight.marker,
+            preflightState: preflight.state,
+            timeoutMarker: timeout.marker,
+            timeoutState: timeout.state,
+          });
+        }
+        throw error;
+      }
       if (processedCount !== 1 || duplicateCount !== 0) {
         throw new Error("synthetic queue probe exactly-once assertion failed");
       }
@@ -176,6 +316,12 @@ export class SyntheticQueueProbeService {
           this.config.redisOperationTimeoutMs,
         );
       }
+      if (queue) {
+        await boundedClose(
+          () => queue!.close(),
+          this.config.redisOperationTimeoutMs,
+        );
+      }
       connection.disconnect(false);
     }
   }
@@ -184,13 +330,20 @@ export class SyntheticQueueProbeService {
     const connection = this.createProducerConnection();
     let queue: Queue | undefined;
     try {
-      await withTimeout(connection.connect(), this.config.redisOperationTimeoutMs);
+      await withTimeout(
+        connection.connect(),
+        this.config.redisOperationTimeoutMs,
+        "redis_connect_timeout",
+      );
       queue = new Queue(PROBE_QUEUE, { connection });
       const [job, marker] = await withTimeout(
         Promise.all([queue.getJob(PROBE_JOB_ID), connection.get(PROBE_MARKER)]),
         this.config.redisOperationTimeoutMs,
+        "state_read_timeout",
       );
-      const state = job ? await withTimeout(job.getState(), this.config.redisOperationTimeoutMs) : "missing";
+      const state = job
+        ? await readJobState(job, this.config.redisOperationTimeoutMs)
+        : "missing";
       return {
         markerCount: marker === "1" ? 1 : 0,
         mode: "status" as const,
@@ -241,7 +394,7 @@ export function waitForOneCompletion(worker: Worker): Promise<void> {
     worker.once("completed", onCompleted);
     worker.once("failed", onFailed);
     worker.once("error", onError);
-    timeout = setTimeout(() => settle("timeout"), PROBE_TIMEOUT_MS);
+    timeout = setTimeout(() => settle("worker_timeout"), PROBE_TIMEOUT_MS);
 
     try {
       void Promise.resolve(worker.run()).catch(() => settle("worker_run_failed"));
@@ -251,10 +404,14 @@ export function waitForOneCompletion(worker: Worker): Promise<void> {
   });
 }
 
-function withTimeout<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
+function withTimeout<T>(
+  work: Promise<T>,
+  timeoutMs: number,
+  reason: SyntheticQueueProbeFailureReason = "unexpected",
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new SyntheticQueueProbeFailure("timeout")),
+      () => reject(new SyntheticQueueProbeFailure(reason)),
       timeoutMs,
     );
     void work.then(
@@ -268,6 +425,57 @@ function withTimeout<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
       },
     );
   });
+}
+
+async function readJobState(
+  job: Job,
+  timeoutMs: number,
+): Promise<SyntheticQueueProbeJobState> {
+  try {
+    const state = await withTimeout(
+      job.getState(),
+      timeoutMs,
+      "state_read_timeout",
+    );
+    return classifySyntheticQueueProbeJobState(state);
+  } catch (error) {
+    if (
+      error instanceof SyntheticQueueProbeFailure &&
+      error.reason === "state_read_timeout"
+    ) {
+      throw error;
+    }
+    return "unknown";
+  }
+}
+
+async function readQueueSnapshot(
+  queue: Queue,
+  connection: IORedis,
+  timeoutMs: number,
+): Promise<{
+  marker: SyntheticQueueProbeMarkerState;
+  state: SyntheticQueueProbeJobState;
+}> {
+  try {
+    const [job, marker] = await withTimeout(
+      Promise.all([queue.getJob(PROBE_JOB_ID), connection.get(PROBE_MARKER)]),
+      timeoutMs,
+      "state_read_timeout",
+    );
+    return {
+      marker: classifySyntheticQueueProbeMarkerState(marker),
+      state: job ? await readJobState(job, timeoutMs) : "missing",
+    };
+  } catch (error) {
+    if (
+      error instanceof SyntheticQueueProbeFailure &&
+      error.reason === "state_read_timeout"
+    ) {
+      throw error;
+    }
+    return { marker: "unknown", state: "unknown" };
+  }
 }
 
 async function boundedClose(

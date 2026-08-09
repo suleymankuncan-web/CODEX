@@ -3,9 +3,11 @@ import { NestFactory } from "@nestjs/core";
 import type { INestApplicationContext } from "@nestjs/common";
 import { SyntheticQueueProbeModule } from "./synthetic-queue-probe.module";
 import {
+  getSyntheticQueueProbeFailureDetails,
   getSyntheticQueueProbeFailureReason,
   type ProbeMode,
   type SyntheticQueueProbeFailureReason,
+  sanitizeSyntheticQueueProbeFailureDetails,
   SyntheticQueueProbeService,
 } from "./synthetic-queue-probe.service";
 
@@ -18,17 +20,23 @@ export type SyntheticQueueProbeFailureDiagnostic = {
   event: string;
   mode: ProbeMode | typeof UNKNOWN_MODE;
   reason: SyntheticQueueProbeFailureReason;
+  preflightState?: string;
+  timeoutState?: string;
+  preflightMarker?: string;
+  timeoutMarker?: string;
 };
 
 export function formatFailureDiagnostic(
   requestedMode: string | undefined,
   reason: SyntheticQueueProbeFailureReason,
   event: string = FAILED_EVENT,
+  details: ReturnType<typeof getSyntheticQueueProbeFailureDetails> = {},
 ): SyntheticQueueProbeFailureDiagnostic {
   return {
-    event,
+    event: event === INVALID_MODE_EVENT ? INVALID_MODE_EVENT : FAILED_EVENT,
     mode: parseMode(requestedMode) ?? UNKNOWN_MODE,
     reason,
+    ...sanitizeSyntheticQueueProbeFailureDetails(details),
   };
 }
 
@@ -64,7 +72,12 @@ export async function bootstrap(): Promise<void> {
   } catch (error) {
     process.stderr.write(
       `${JSON.stringify(
-        formatFailureDiagnostic(mode, getSyntheticQueueProbeFailureReason(error)),
+        formatFailureDiagnostic(
+          mode,
+          getSyntheticQueueProbeFailureReason(error),
+          FAILED_EVENT,
+          getSyntheticQueueProbeFailureDetails(error),
+        ),
       )}\n`,
     );
     process.exitCode = 1;

@@ -61,6 +61,16 @@ test('runtime proof validates the sanitized synthetic queue result contract', ()
 
   assert.doesNotThrow(() => assertProbeOutput(output, { duplicateCount: 0, mode: 'process', processedCount: 1, status: 'completed' }))
   assert.throws(() => assertProbeOutput(output, { markerCount: 1, mode: 'status', state: 'completed' }), /status omitted the completion event|result mismatch/i)
+
+  const enqueued = {
+    stderr: '',
+    stdout: '{"event":"onprem.synthetic_queue_probe.completed","mode":"enqueue","queuedCount":1,"state":"delayed","status":"queued"}\n',
+  }
+  assert.doesNotThrow(() => assertProbeOutput(enqueued, { mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }))
+  assert.throws(
+    () => assertProbeOutput({ ...enqueued, stdout: enqueued.stdout.replace('delayed', 'waiting') }, { mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }),
+    /result mismatch for state/i,
+  )
 })
 
 test('runtime proof binds the sanitized receipt to the resolved migration tree digest', () => {

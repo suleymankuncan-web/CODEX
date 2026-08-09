@@ -4,7 +4,11 @@ import {
   PROBE_TIMEOUT_MS,
   SyntheticQueueProbeFailure,
   SyntheticQueueProbeService,
+  classifySyntheticQueueProbeJobState,
+  classifySyntheticQueueProbeMarkerState,
   getSyntheticQueueProbeFailureReason,
+  isSyntheticQueueProbePreflightReady,
+  sanitizeSyntheticQueueProbeFailureDetails,
   waitForOneCompletion,
 } from "./synthetic-queue-probe.service";
 import { formatFailureDiagnostic } from "./synthetic-queue-probe";
@@ -92,7 +96,7 @@ describe("SyntheticQueueProbeService", () => {
       const worker = createWorkerDouble(new Promise<void>(() => undefined));
       const completion = waitForOneCompletion(worker);
       const failure = expect(completion).rejects.toEqual(
-        expect.objectContaining({ reason: "timeout" }),
+        expect.objectContaining({ reason: "worker_timeout" }),
       );
 
       await jest.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
@@ -117,6 +121,99 @@ describe("SyntheticQueueProbeService", () => {
     expect(new SyntheticQueueProbeFailure("unexpected").reason).toBe("unexpected");
   });
 
+  it.each([
+    "missing",
+    "delayed",
+    "waiting",
+    "active",
+    "completed",
+    "failed",
+  ] as const)("preserves the allowlisted %s job state", (state) => {
+    expect(classifySyntheticQueueProbeJobState(state)).toBe(state);
+  });
+
+  it.each(["waiting-children", "paused", "redis://secret", undefined, 1])(
+    "maps unsupported job state %p to unknown",
+    (state) => {
+      expect(classifySyntheticQueueProbeJobState(state)).toBe("unknown");
+    },
+  );
+
+  it("rebuilds failure details from the runtime allowlist", () => {
+    const malformed = {
+      event: "raw-event-override",
+      mode: "redis://user:secret@redis:6379",
+      preflightMarker: { secret: true },
+      preflightState: "redis://user:secret@redis:6379",
+      reason: "raw-secret-override",
+      timeoutMarker: "1",
+      timeoutState: "active",
+    };
+
+    expect(sanitizeSyntheticQueueProbeFailureDetails(malformed)).toEqual({
+      preflightMarker: "unknown",
+      preflightState: "unknown",
+      timeoutMarker: "unknown",
+      timeoutState: "active",
+    });
+
+    const diagnostic = formatFailureDiagnostic(
+      "process",
+      "worker_timeout",
+      "raw-event-parameter",
+      malformed as never,
+    );
+    expect(diagnostic).toEqual({
+      event: "onprem.synthetic_queue_probe.failed",
+      mode: "process",
+      preflightMarker: "unknown",
+      preflightState: "unknown",
+      reason: "worker_timeout",
+      timeoutMarker: "unknown",
+      timeoutState: "active",
+    });
+    expect(JSON.stringify(diagnostic)).not.toContain("redis://");
+    expect(JSON.stringify(diagnostic)).not.toContain("secret");
+    expect(JSON.stringify(diagnostic)).not.toContain("raw-event-override");
+  });
+
+  it("classifies only closed marker states", () => {
+    expect(classifySyntheticQueueProbeMarkerState(null)).toBe("absent");
+    expect(classifySyntheticQueueProbeMarkerState("1")).toBe("present");
+    expect(classifySyntheticQueueProbeMarkerState("unexpected-value")).toBe(
+      "present",
+    );
+    expect(classifySyntheticQueueProbeMarkerState(undefined)).toBe("unknown");
+  });
+
+  it.each([
+    ["delayed", "absent", true],
+    ["missing", "absent", false],
+    ["waiting", "absent", false],
+    ["active", "absent", false],
+    ["completed", "present", false],
+    ["failed", "present", false],
+    ["unknown", "unknown", false],
+    ["delayed", "present", false],
+  ] as const)(
+    "allows processing only for %s/%s preflight",
+    (state, marker, expected) => {
+      expect(isSyntheticQueueProbePreflightReady({ marker, state })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each([
+    "redis_connect_timeout",
+    "state_read_timeout",
+    "worker_timeout",
+  ] as const)("keeps the %s reason distinct", (reason) => {
+    expect(getSyntheticQueueProbeFailureReason(new SyntheticQueueProbeFailure(reason))).toBe(
+      reason,
+    );
+  });
+
   it("formats failure JSON with only the safe diagnostic fields", () => {
     const diagnostic = formatFailureDiagnostic("process", "worker_error");
     expect(diagnostic).toEqual({
@@ -134,7 +231,46 @@ describe("SyntheticQueueProbeService", () => {
       "unknown",
     );
   });
+
+  it.each([
+    ["missing", "absent"],
+    ["delayed", "absent"],
+    ["waiting", "absent"],
+    ["active", "present"],
+    ["completed", "present"],
+    ["failed", "present"],
+    ["unknown", "unknown"],
+  ] as const)(
+    "formats a closed worker-timeout diagnostic for %s/%s",
+    (timeoutState, timeoutMarker) => {
+      const diagnostic = formatFailureDiagnostic(
+        "process",
+        "worker_timeout",
+        "onprem.synthetic_queue_probe.failed",
+        {
+          preflightMarker: "absent",
+          preflightState: "delayed",
+          timeoutMarker,
+          timeoutState,
+        },
+      );
+      expect(diagnostic).toEqual({
+        event: "onprem.synthetic_queue_probe.failed",
+        mode: "process",
+        preflightMarker: "absent",
+        preflightState: "delayed",
+        reason: "worker_timeout",
+        timeoutMarker,
+        timeoutState,
+      });
+      const serialized = JSON.stringify(diagnostic);
+      expect(serialized).not.toContain("redis://");
+      expect(serialized).not.toContain(PROBE_JOB_ID_FOR_LEAK_ASSERTION);
+    },
+  );
 });
+
+const PROBE_JOB_ID_FOR_LEAK_ASSERTION = "synthetic-recovery-v1";
 
 function createWorkerDouble(runResult: Promise<void> = Promise.resolve()): Worker {
   return Object.assign(new EventEmitter(), {
