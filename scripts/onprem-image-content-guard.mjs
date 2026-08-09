@@ -263,7 +263,7 @@ function secretContentReason(content, options = {}) {
 }
 
 const PEM_PRIVATE_KEY_MARKER = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/i
-const PEM_CERTIFICATE_BLOCK = /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/gi
+const PEM_CERTIFICATE_BLOCK = /-----BEGIN (TRUSTED )?CERTIFICATE-----[\s\S]*?-----END \1CERTIFICATE-----/gi
 
 function certificateContentReason(content, { allowEmpty = false } = {}) {
   if (allowEmpty && content.length === 0) return null

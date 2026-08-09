@@ -326,6 +326,7 @@ test('Keycloak approved-content classifier requires the exact CI path and SHA-25
 
 test('certificate validator accepts a parsed trust anchor and rejects private-key material', () => {
   assert.equal(validateCertificateContent(VALID_CERTIFICATE), null)
+  assert.equal(validateCertificateContent(VALID_CERTIFICATE.replaceAll('CERTIFICATE', 'TRUSTED CERTIFICATE')), null)
   assert.equal(validateCertificateContent('-----BEGIN PRIVATE KEY-----\nshort\n-----END PRIVATE KEY-----\n'), 'private-key')
   assert.equal(validateCertificateContent('not a certificate'), 'certificate-required')
 })
