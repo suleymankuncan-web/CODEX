@@ -147,6 +147,19 @@ test('ONP-2 contract rejects runtime sequence mutation capability', () => {
   assert.ok(result.errors.some((error) => /sequence mutation/i.test(error)))
 })
 
+test('ONP-2 contract rejects boolean concatenation in the sequence privilege probe', () => {
+  const input = contractInput()
+  input.runtimeProof = input.runtimeProof.replace(
+    "), has_sequence_privilege('hr_axis_api'",
+    ") || '|' || has_sequence_privilege('hr_axis_api'",
+  )
+
+  const result = validateOnpremCoreContract(input)
+
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /separate boolean columns/i.test(error)))
+})
+
 test('ONP-2 contract rejects ambiguous PostgreSQL boolean migration identity serialization', () => {
   const input = contractInput()
   input.runtimeProof = input.runtimeProof.replace(

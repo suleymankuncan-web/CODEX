@@ -107,6 +107,16 @@ export function parseMigrationIdentity(value) {
   return { identity: match[2], succeededCount }
 }
 
+export function parseSequencePrivilegeMatrix(value) {
+  if (String(value) !== 't|t|f|t|t|f') {
+    throw new Error('runtime sequence least-privilege contract mismatch')
+  }
+  return {
+    api: { select: true, update: false, usage: true },
+    worker: { select: true, update: false, usage: true },
+  }
+}
+
 function assertSecretPermissions(config) {
   const publicFiles = new Set(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
   const expectedUid = new Map([
@@ -392,8 +402,7 @@ async function main() {
     }
     query('SET ROLE hr_axis_migrator; CREATE SEQUENCE ops.onprem_sequence_privilege_probe; RESET ROLE')
     try {
-      const privileges = query("SELECT has_sequence_privilege('hr_axis_api', 'ops.onprem_sequence_privilege_probe', 'USAGE') || '|' || has_sequence_privilege('hr_axis_api', 'ops.onprem_sequence_privilege_probe', 'SELECT') || '|' || has_sequence_privilege('hr_axis_api', 'ops.onprem_sequence_privilege_probe', 'UPDATE') || '|' || has_sequence_privilege('hr_axis_worker', 'ops.onprem_sequence_privilege_probe', 'USAGE') || '|' || has_sequence_privilege('hr_axis_worker', 'ops.onprem_sequence_privilege_probe', 'SELECT') || '|' || has_sequence_privilege('hr_axis_worker', 'ops.onprem_sequence_privilege_probe', 'UPDATE')")
-      if (privileges !== 't|t|f|t|t|f') throw new Error('runtime sequence least-privilege contract mismatch')
+      parseSequencePrivilegeMatrix(query("SELECT has_sequence_privilege('hr_axis_api', 'ops.onprem_sequence_privilege_probe', 'USAGE'), has_sequence_privilege('hr_axis_api', 'ops.onprem_sequence_privilege_probe', 'SELECT'), has_sequence_privilege('hr_axis_api', 'ops.onprem_sequence_privilege_probe', 'UPDATE'), has_sequence_privilege('hr_axis_worker', 'ops.onprem_sequence_privilege_probe', 'USAGE'), has_sequence_privilege('hr_axis_worker', 'ops.onprem_sequence_privilege_probe', 'SELECT'), has_sequence_privilege('hr_axis_worker', 'ops.onprem_sequence_privilege_probe', 'UPDATE')"))
       for (const [role, passwordFile] of runtimeRoles) {
         const mutation = runtimeRoleQuery(
           role,

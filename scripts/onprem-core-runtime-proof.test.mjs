@@ -8,6 +8,7 @@ import {
   egressRejectCounters,
   migrationTreeDigestFromOutput,
   parseMigrationIdentity,
+  parseSequencePrivilegeMatrix,
   redact,
 } from './onprem-core-runtime-proof.mjs'
 
@@ -65,6 +66,27 @@ test('runtime proof accepts only the canonical successful migration ledger ident
   assert.deepEqual(parseMigrationIdentity(`67|t|${digest}`), { identity: digest, succeededCount: 67 })
   for (const invalid of [`67|true|${digest}`, `67|f|${digest}`, `67|t|${'a'.repeat(63)}`, `count|t|${digest}`]) {
     assert.throws(() => parseMigrationIdentity(invalid), /migration idempotency\/checksum proof mismatch/i)
+  }
+})
+
+test('runtime proof accepts only the exact runtime sequence privilege matrix', () => {
+  assert.deepEqual(parseSequencePrivilegeMatrix('t|t|f|t|t|f'), {
+    api: { select: true, update: false, usage: true },
+    worker: { select: true, update: false, usage: true },
+  })
+
+  for (const invalid of [
+    'true|true|false|true|true|false',
+    't|t|t|t|t|f',
+    'f|t|f|t|t|f',
+    't|f|f|t|t|f',
+    't|t|f|t|t|t',
+    't|t|f|f|t|f',
+    't|t|f|t|f|f',
+    't|t|f|t|t',
+    't|t|f|t|t|false',
+  ]) {
+    assert.throws(() => parseSequencePrivilegeMatrix(invalid), /runtime sequence least-privilege contract mismatch/i)
   }
 })
 
