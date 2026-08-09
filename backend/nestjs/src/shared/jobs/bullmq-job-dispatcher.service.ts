@@ -18,10 +18,21 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
       return;
     }
 
-    this.connection = new IORedis(this.appConfigService.redisUrl, {
-      maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-    });
+    this.connection = new IORedis(
+      this.appConfigService.redisUrl,
+      this.appConfigService.isStrictLocal
+        ? {
+            commandTimeout: this.appConfigService.redisOperationTimeoutMs,
+            connectTimeout: this.appConfigService.redisOperationTimeoutMs,
+            enableOfflineQueue: false,
+            enableReadyCheck: true,
+            maxRetriesPerRequest: 1,
+          }
+        : {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+          },
+    );
 
     this.importQueue = new Queue(this.appConfigService.importQueueName, {
       connection: this.connection,
@@ -45,7 +56,7 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
     type: JobType,
     payload: TPayload,
     _handler: (payload: TPayload) => Promise<void>,
-    options?: { jobId?: string },
+    options?: { jobId?: string; strictLocalJobId?: string },
   ): Promise<JobDispatchResult> {
     const queue = type === "import-batch"
       ? this.importQueue
@@ -55,6 +66,15 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
 
     if (!queue) {
       throw new Error("BullMQ dispatcher is not active because queue backend is not bullmq");
+    }
+    const jobId = this.appConfigService.isStrictLocal
+      ? options?.strictLocalJobId ?? options?.jobId
+      : options?.jobId;
+    if (this.appConfigService.isStrictLocal && !jobId) {
+      throw new Error("Strict-local BullMQ dispatch requires a stable jobId");
+    }
+    if (this.appConfigService.isStrictLocal && this.connection?.status !== "ready") {
+      throw new Error("Strict-local Redis producer is not ready");
     }
 
     const job = await queue.add(type, payload as object, {
@@ -67,7 +87,7 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
         type: "exponential",
         delay: 5000,
       },
-      jobId: options?.jobId,
+      jobId,
     });
 
     logStructuredMessage(this.logger, "job.dispatch.queued", {
@@ -97,17 +117,11 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.importQueue) {
-      await this.importQueue.close();
-    }
-
-    if (this.snapshotQueue) {
-      await this.snapshotQueue.close();
-    }
-
-    if (this.visualComparisonQueue) {
-      await this.visualComparisonQueue.close();
-    }
+    const queueCloseResults = await Promise.allSettled(
+      [this.importQueue, this.snapshotQueue, this.visualComparisonQueue]
+        .filter((queue): queue is Queue => Boolean(queue))
+        .map((queue) => queue.close()),
+    );
 
     if (this.connection && this.connection.status !== "end") {
       try {
@@ -118,6 +132,10 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
           throw error;
         }
       }
+    }
+
+    if (queueCloseResults.some((result) => result.status === "rejected")) {
+      throw new Error("BullMQ queue cleanup failed");
     }
   }
 }

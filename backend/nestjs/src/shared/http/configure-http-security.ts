@@ -24,21 +24,22 @@ export function configureHttpSecurity(
     | "trustProxyHops"
   >,
   observabilityService?: ObservabilityService,
-): void {
+): { close(): Promise<void> } | undefined {
   configureTrustProxy(app, config.trustProxyHops ?? 0);
   app.setGlobalPrefix("api");
   app.use(createSecurityHeadersMiddleware());
   app.use(createCorsAllowlistMiddleware(config.corsAllowedOrigins));
+  const redisStore =
+    config.rateLimitBackend === "redis"
+      ? createRedisRateLimitStore({
+          prefix: config.rateLimitRedisPrefix,
+          redisUrl: config.redisUrl,
+        })
+      : undefined;
   app.use(
     createRateLimitMiddleware({
       max: config.rateLimitMax,
-      store:
-        config.rateLimitBackend === "redis"
-          ? createRedisRateLimitStore({
-              prefix: config.rateLimitRedisPrefix,
-              redisUrl: config.redisUrl,
-            })
-          : undefined,
+      store: redisStore,
       windowMs: config.rateLimitWindowMs,
     }),
   );
@@ -50,6 +51,7 @@ export function configureHttpSecurity(
     }),
   );
   app.useGlobalFilters(new StandardErrorFilter(observabilityService));
+  return redisStore;
 }
 
 function configureTrustProxy(

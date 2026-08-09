@@ -28,7 +28,14 @@ export type MigrationStatusResult = {
     durationMs: number | null;
     errorMessage: string | null;
   }>;
+  running: string[];
   checksumMismatches: string[];
+  unknownApplied: string[];
+  unexpectedTracked: string[];
+};
+
+type MigrationTreeOptions = {
+  requireMigrationTree?: boolean;
 };
 
 type ExistingMigrationRow = {
@@ -49,9 +56,16 @@ type MigrationStatusRow = ExistingMigrationRow & {
 export class MigrationService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async getMigrationStatus(basePath = process.cwd()): Promise<MigrationStatusResult> {
+  async getMigrationStatus(
+    basePath = process.cwd(),
+    options: MigrationTreeOptions = {},
+  ): Promise<MigrationStatusResult> {
     const migrationsPath = this.resolveMigrationsPath(basePath);
-    const files = existsSync(migrationsPath)
+    const migrationTreeExists = existsSync(migrationsPath);
+    if (options.requireMigrationTree && !migrationTreeExists) {
+      throw new Error("Migration tree is missing");
+    }
+    const files = migrationTreeExists
       ? readdirSync(migrationsPath)
           .filter((file) => file.endsWith(".sql"))
           .sort()
@@ -86,8 +100,11 @@ export class MigrationService {
           checksumMismatches: [],
           failed: [],
           pending: files,
+          running: [],
           totalFiles: files.length,
           trackingTable: "missing",
+          unknownApplied: [],
+          unexpectedTracked: [],
         };
       }
 
@@ -107,6 +124,17 @@ export class MigrationService {
       const row = rowsByName.get(file);
       return row?.status === "succeeded";
     }).length;
+    const fileNames = new Set(files);
+    const unknownApplied = rows
+      .filter(
+        (row) => row.status === "succeeded" && !fileNames.has(row.migration_name),
+      )
+      .map((row) => row.migration_name)
+      .sort();
+    const unexpectedTracked = rows
+      .filter((row) => !fileNames.has(row.migration_name))
+      .map((row) => row.migration_name)
+      .sort();
     const failed = rows
       .filter((row) => row.status === "failed")
       .map((row) => ({
@@ -118,20 +146,33 @@ export class MigrationService {
         startedAt: row.started_at,
         status: "failed" as const,
       }));
+    const running = rows
+      .filter((row) => row.status === "running")
+      .map((row) => row.migration_name)
+      .sort();
 
     return {
       appliedCount,
       checksumMismatches,
       failed,
       pending,
+      running,
       totalFiles: files.length,
       trackingTable: "present",
+      unknownApplied,
+      unexpectedTracked,
     };
   }
 
-  async runMigrations(basePath = process.cwd()): Promise<MigrationRunResult> {
+  async runMigrations(
+    basePath = process.cwd(),
+    options: MigrationTreeOptions = {},
+  ): Promise<MigrationRunResult> {
     const migrationsPath = this.resolveMigrationsPath(basePath);
     if (!existsSync(migrationsPath)) {
+      if (options.requireMigrationTree) {
+        throw new Error("Migration tree is missing");
+      }
       return { applied: [], failed: [], skipped: [] };
     }
 
@@ -145,7 +186,9 @@ export class MigrationService {
 
     for (const file of files) {
       const rawSql = readFileSync(join(migrationsPath, file), "utf8");
-      const sql = this.resolvePsqlIncludes(join(migrationsPath, file));
+      const sql = options.requireMigrationTree
+        ? resolveMigrationSql(join(migrationsPath, file))
+        : rawSql;
       const checksum = computeChecksum(rawSql);
       const existing = await this.findExistingMigration(file);
 
@@ -299,12 +342,35 @@ export class MigrationService {
     );
   }
 
-  private resolvePsqlIncludes(filePath: string): string {
-    const raw = readFileSync(filePath, "utf8");
-    return raw.replace(/^\\i\s+(.+)$/gm, (_match: string, relativePath: string) => {
-      const includePath = resolve(dirname(filePath), relativePath.trim());
-      return readFileSync(includePath, "utf8");
-    });
+}
+
+export function resolveMigrationSql(
+  filePath: string,
+  activeIncludes = new Set<string>(),
+): string {
+  const absolutePath = resolve(filePath);
+  if (activeIncludes.has(absolutePath)) {
+    throw new Error(`Circular migration include detected at ${absolutePath}`);
+  }
+
+  activeIncludes.add(absolutePath);
+  try {
+    const raw = readFileSync(absolutePath, "utf8");
+    return raw.replace(
+      /^\\i\s+(.+?)\s*$/gm,
+      (_match: string, relativePath: string) => {
+        const trimmedPath = relativePath.trim();
+        const unquotedPath =
+          (trimmedPath.startsWith('"') && trimmedPath.endsWith('"')) ||
+          (trimmedPath.startsWith("'") && trimmedPath.endsWith("'"))
+            ? trimmedPath.slice(1, -1)
+            : trimmedPath;
+        const includePath = resolve(dirname(absolutePath), unquotedPath);
+        return resolveMigrationSql(includePath, activeIncludes);
+      },
+    );
+  } finally {
+    activeIncludes.delete(absolutePath);
   }
 }
 

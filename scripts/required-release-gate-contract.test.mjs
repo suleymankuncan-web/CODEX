@@ -98,6 +98,16 @@ test('pinned on-prem license tooling selects the fail-closed image proof', () =>
   assert.equal(scope.runOnpremImageProof, true)
 })
 
+test('on-prem core-only changes select the fail-closed runtime image proof', () => {
+  const scope = selectRequiredReleaseGateScope([
+    'infra/onprem/core/caddy/Caddyfile',
+  ])
+
+  assert.equal(scope.mode, 'release')
+  assert.equal(scope.runRootRelease, true)
+  assert.equal(scope.runOnpremImageProof, true)
+})
+
 test('API-contract docs cannot be mistaken for docs/process-only scope', () => {
   const scope = selectRequiredReleaseGateScope(['docs/api/openapi.json'])
 

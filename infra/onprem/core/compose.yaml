@@ -1,0 +1,447 @@
+name: hr-axis-onprem-core
+
+services:
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d}
+    profiles: [runtime]
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports:
+      - "443:8443"
+    networks: [edge, proxy]
+    environment:
+      HR_AXIS_PUBLIC_HOST: ${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    secrets:
+      - source: caddy_tls_certificate
+        target: caddy_tls_certificate
+      - source: caddy_tls_private_key
+        target: caddy_tls_private_key
+      - source: caddy_tls_ca
+        target: caddy_tls_ca
+    tmpfs:
+      - /config:rw,noexec,nosuid,size=16m,uid=10001,gid=10001
+      - /data:rw,noexec,nosuid,size=16m,uid=10001,gid=10001
+      - /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001
+    healthcheck:
+      test: [CMD-SHELL, "wget -q --no-check-certificate --header=\"Host: $${HR_AXIS_PUBLIC_HOST}\" -O /dev/null https://127.0.0.1:8443/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+    stop_grace_period: 20s
+    logging: &bounded-logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+    labels: &project-labels
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+
+  frontend:
+    image: ${HR_AXIS_FRONTEND_IMAGE:?set an immutable frontend image reference}
+    profiles: [runtime]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    expose:
+      - "8080"
+    networks: [proxy]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+    stop_grace_period: 20s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  api:
+    image: ${HR_AXIS_BACKEND_IMAGE:?set an immutable backend image reference}
+    profiles: [runtime]
+    command: [dist/src/main.js]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks: [proxy, app, data]
+    environment: &strict-local-environment
+      NODE_ENV: production
+      HR_AXIS_STRICT_LOCAL: "true"
+      HR_AXIS_DATA_CLASS: synthetic
+      APP_PORT: "3000"
+      AUTH_MODE: jwt
+      AUTH_PROVIDER_KEY: oidc
+      ALLOW_MOCK_AUTH: "false"
+      MIGRATIONS_HTTP_ENABLED: "false"
+      CORS_ALLOWED_ORIGINS: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}
+      TRUST_PROXY_HOPS: "1"
+      RATE_LIMIT_WINDOW_MS: "60000"
+      RATE_LIMIT_MAX: "120"
+      RATE_LIMIT_BACKEND: redis
+      QUEUE_BACKEND: bullmq
+      DB_SSL_MODE: verify-full
+      DATABASE_URL_FILE: /run/secrets/api_database_url
+      DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
+      REDIS_URL_FILE: /run/secrets/redis_api_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      ERROR_TRACKING_ENABLED: "false"
+      PHOTO_MEDIA_STORAGE_ENABLED: "false"
+      PHOTO_MEDIA_SYNTHETIC_ONLY: "true"
+      PHOTO_MEDIA_REAL_VM_PILOT_ENABLED: "false"
+      VISUAL_COMPARISON_ENQUEUE_ENABLED: "false"
+      VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "false"
+      VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED: "false"
+      VISUAL_COMPARISON_WORKER_ENABLED: "false"
+    secrets:
+      - source: api_database_url
+        target: api_database_url
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+      - source: redis_api_url
+        target: redis_api_url
+      - source: jwt_secret
+        target: jwt_secret
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    healthcheck:
+      test: [CMD, /nodejs/bin/node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 9
+      start_period: 30s
+    cpus: 0.9
+    mem_limit: 1536m
+    pids_limit: 192
+    stop_grace_period: 30s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  worker:
+    image: ${HR_AXIS_BACKEND_IMAGE:?set an immutable backend image reference}
+    profiles: [runtime]
+    command: [dist/src/workers.js]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [app, data]
+    environment:
+      <<: *strict-local-environment
+      MIGRATIONS_HTTP_ENABLED: "false"
+      DATABASE_URL_FILE: /run/secrets/worker_database_url
+      REDIS_URL_FILE: /run/secrets/redis_worker_url
+    secrets:
+      - source: worker_database_url
+        target: worker_database_url
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+      - source: redis_worker_url
+        target: redis_worker_url
+      - source: jwt_secret
+        target: jwt_secret
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    healthcheck:
+      test: [CMD, /nodejs/bin/node, dist/src/onprem/worker-health.js]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    cpus: 0.9
+    mem_limit: 1536m
+    pids_limit: 192
+    stop_grace_period: 45s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  migrator:
+    image: ${HR_AXIS_BACKEND_IMAGE:?set an immutable backend image reference}
+    profiles: [migrate]
+    command: [dist/src/onprem/migrate.js]
+    restart: "no"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [app, data]
+    environment:
+      NODE_ENV: production
+      HR_AXIS_STRICT_LOCAL: "true"
+      HR_AXIS_DATA_CLASS: synthetic
+      HR_AXIS_PROCESS_ROLE: migrator
+      MIGRATIONS_HTTP_ENABLED: "false"
+      DB_SSL_MODE: verify-full
+      DATABASE_URL_FILE: /run/secrets/migrator_database_url
+      DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
+    secrets:
+      - source: migrator_database_url
+        target: migrator_database_url
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cpus: 0.5
+    mem_limit: 512m
+    pids_limit: 128
+    stop_grace_period: 30s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  synthetic-seed:
+    image: ${HR_AXIS_BACKEND_IMAGE:?set an immutable backend image reference}
+    profiles: [seed]
+    command: [dist/src/onprem/seed-synthetic.js]
+    restart: "no"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [app, data]
+    environment:
+      NODE_ENV: production
+      HR_AXIS_STRICT_LOCAL: "true"
+      HR_AXIS_DATA_CLASS: synthetic
+      HR_AXIS_PROCESS_ROLE: synthetic-seed
+      DB_SSL_MODE: verify-full
+      DATABASE_URL_FILE: /run/secrets/api_database_url
+      DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
+    secrets:
+      - source: api_database_url
+        target: api_database_url
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cpus: 0.5
+    mem_limit: 512m
+    pids_limit: 128
+    stop_grace_period: 30s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297}
+    profiles: [infra, migrate, seed, runtime]
+    entrypoint: [/bin/sh, /opt/hr-axis/entrypoint-tls.sh]
+    command: [postgres, -c, ssl=on, -c, ssl_cert_file=/var/lib/postgresql/tls/server.crt, -c, ssl_key_file=/var/lib/postgresql/tls/server.key, -c, ssl_ca_file=/var/lib/postgresql/tls/ca.crt, -c, password_encryption=scram-sha-256]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    expose:
+      - "5432"
+    networks: [data]
+    environment:
+      POSTGRES_DB: hr_axis
+      POSTGRES_USER: hr_axis_bootstrap
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_bootstrap_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/entrypoint-tls.sh:/opt/hr-axis/entrypoint-tls.sh:ro
+      - ./postgres/010-bootstrap-roles.sh:/docker-entrypoint-initdb.d/010-bootstrap-roles.sh:ro
+    secrets:
+      - source: postgres_tls_certificate
+        target: postgres_tls_certificate
+      - source: postgres_tls_private_key
+        target: postgres_tls_private_key
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+      - source: postgres_bootstrap_password
+        target: postgres_bootstrap_password
+      - source: postgres_migrator_password
+        target: postgres_migrator_password
+      - source: postgres_api_password
+        target: postgres_api_password
+      - source: postgres_worker_password
+        target: postgres_worker_password
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /var/run/postgresql:rw,noexec,nosuid,size=16m,uid=70,gid=70
+      - /var/lib/postgresql/tls:rw,noexec,nosuid,size=16m,uid=70,gid=70
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready --quiet --username hr_axis_bootstrap --dbname hr_axis"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    cpus: 1.2
+    mem_limit: 2048m
+    pids_limit: 192
+    stop_grace_period: 60s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98}
+    profiles: [infra, migrate, seed, runtime]
+    command: [redis-server, /usr/local/etc/redis/redis.conf]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    expose:
+      - "6379"
+    networks: [data]
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    secrets:
+      - source: redis_users_acl
+        target: redis_users_acl
+      - source: redis_health_url
+        target: redis_health_url
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    healthcheck:
+      test: [CMD-SHELL, "redis-cli -u \"$$(cat /run/secrets/redis_health_url)\" --no-auth-warning PING | grep -qx PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    cpus: 0.5
+    mem_limit: 768m
+    pids_limit: 96
+    stop_grace_period: 30s
+    logging: *bounded-logging
+    labels: *project-labels
+
+networks:
+  edge:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.network-class: edge
+  proxy:
+    internal: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.10.0/24
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.network-class: proxy
+  app:
+    internal: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.20.0/24
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.network-class: app
+  data:
+    internal: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.30.0/24
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.network-class: data
+
+volumes:
+  postgres_data:
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.volume-class: postgres
+  redis_data:
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.volume-class: redis-aof
+
+secrets:
+  caddy_tls_certificate:
+    file: ./secret-files/caddy/server.crt
+  caddy_tls_private_key:
+    file: ./secret-files/caddy/server.key
+  caddy_tls_ca:
+    file: ./secret-files/caddy/ca.crt
+  postgres_tls_certificate:
+    file: ./secret-files/postgres/server.crt
+  postgres_tls_private_key:
+    file: ./secret-files/postgres/server.key
+  postgres_tls_ca:
+    file: ./secret-files/postgres/ca.crt
+  postgres_bootstrap_password:
+    file: ./secret-files/postgres/bootstrap-password
+  postgres_migrator_password:
+    file: ./secret-files/postgres/migrator-password
+  postgres_api_password:
+    file: ./secret-files/postgres/api-password
+  postgres_worker_password:
+    file: ./secret-files/postgres/worker-password
+  migrator_database_url:
+    file: ./secret-files/backend/migrator-database-url
+  api_database_url:
+    file: ./secret-files/backend/api-database-url
+  worker_database_url:
+    file: ./secret-files/backend/worker-database-url
+  redis_users_acl:
+    file: ./secret-files/redis/users.acl
+  redis_health_url:
+    file: ./secret-files/redis/health-url
+  redis_api_url:
+    file: ./secret-files/backend/redis-api-url
+  redis_worker_url:
+    file: ./secret-files/backend/redis-worker-url
+  jwt_secret:
+    file: ./secret-files/backend/jwt-secret

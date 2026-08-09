@@ -21,7 +21,7 @@ env:
 jobs:
   proof:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -55,6 +55,17 @@ jobs:
             --build-arg BUILD_VERSION="$BUILD_VERSION" \
             --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
             .
+
+      - name: Prove ONP-2 static Compose, network, and firewall contracts
+        run: |
+          set -euo pipefail
+          node --test scripts/onprem-core-contract.test.mjs scripts/onprem-core-firewall-verify.test.mjs
+          docker compose --env-file infra/onprem/core/env.template --file infra/onprem/core/compose.yaml \
+            --profile infra --profile migrate --profile seed --profile runtime config --quiet
+          node scripts/onprem-core-firewall-verify.mjs \
+            --input tests/fixtures/onprem-core-firewall-valid.v4 \
+            --subnet 172.30.0.0/24 --subnet 172.30.10.0/24 --subnet 172.30.20.0/24 --subnet 172.30.30.0/24 \
+            --proxy-port 443 --ssh-admin-cidr 192.0.2.0/24
 
       - name: Prove non-root image users
         run: |
@@ -96,7 +107,7 @@ jobs:
           common=(--read-only --cap-drop=ALL --security-opt=no-new-privileges:true --tmpfs /tmp:rw,noexec,nosuid,size=64m)
           synthetic_env=(
             -e NODE_ENV=production
-            -e HR_AXIS_STRICT_LOCAL=true
+            -e HR_AXIS_STRICT_LOCAL=false
             -e HR_AXIS_DATA_CLASS=synthetic
             -e AUTH_MODE=jwt
             -e AUTH_PROVIDER_KEY=oidc
@@ -300,6 +311,116 @@ jobs:
           NODE
           node scripts/onprem-release-manifest.mjs generate --input "$manifest_input" --output proof/release-manifest.json --private-key "$private_key"
           node scripts/onprem-release-manifest.mjs verify --input proof/release-manifest.json --base-dir proof --public-key proof/ephemeral-public.pem
+
+      - name: Prepare UID-bound ephemeral synthetic secret files
+        env:
+          RELEASE_ID: onprem-core-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          secret_root=infra/onprem/core/secret-files
+          rm -rf "$secret_root"
+          mkdir -p "$secret_root"/{backend,caddy,postgres,redis}
+          openssl req -x509 -newkey rsa:3072 -nodes -days 2 -subj '/CN=HR Axis synthetic proof CA' \
+            -keyout "$RUNNER_TEMP/onprem-proof-ca.key" -out "$secret_root/postgres/ca.crt"
+          cp "$secret_root/postgres/ca.crt" "$secret_root/caddy/ca.crt"
+          openssl req -newkey rsa:3072 -nodes -subj '/CN=postgres' \
+            -addext 'subjectAltName=DNS:postgres' -keyout "$secret_root/postgres/server.key" -out "$RUNNER_TEMP/postgres.csr"
+          openssl x509 -req -days 2 -in "$RUNNER_TEMP/postgres.csr" -CA "$secret_root/postgres/ca.crt" \
+            -CAkey "$RUNNER_TEMP/onprem-proof-ca.key" -CAcreateserial -copy_extensions copyall -out "$secret_root/postgres/server.crt"
+          openssl req -newkey rsa:3072 -nodes -subj '/CN=onprem-proof.example.invalid' \
+            -addext 'subjectAltName=DNS:onprem-proof.example.invalid' -keyout "$secret_root/caddy/server.key" -out "$RUNNER_TEMP/caddy.csr"
+          openssl x509 -req -days 2 -in "$RUNNER_TEMP/caddy.csr" -CA "$secret_root/caddy/ca.crt" \
+            -CAkey "$RUNNER_TEMP/onprem-proof-ca.key" -CAcreateserial -copy_extensions copyall -out "$secret_root/caddy/server.crt"
+
+          bootstrap_password="$(openssl rand -hex 24)"
+          migrator_password="$(openssl rand -hex 24)"
+          api_password="$(openssl rand -hex 24)"
+          worker_password="$(openssl rand -hex 24)"
+          redis_health_password="$(openssl rand -hex 24)"
+          redis_api_password="$(openssl rand -hex 24)"
+          redis_worker_password="$(openssl rand -hex 24)"
+          printf '%s' "$bootstrap_password" > "$secret_root/postgres/bootstrap-password"
+          printf '%s' "$migrator_password" > "$secret_root/postgres/migrator-password"
+          printf '%s' "$api_password" > "$secret_root/postgres/api-password"
+          printf '%s' "$worker_password" > "$secret_root/postgres/worker-password"
+          printf 'postgresql://hr_axis_migrator:%s@postgres:5432/hr_axis?sslmode=verify-full' "$migrator_password" > "$secret_root/backend/migrator-database-url"
+          printf 'postgresql://hr_axis_api:%s@postgres:5432/hr_axis?sslmode=verify-full' "$api_password" > "$secret_root/backend/api-database-url"
+          printf 'postgresql://hr_axis_worker:%s@postgres:5432/hr_axis?sslmode=verify-full' "$worker_password" > "$secret_root/backend/worker-database-url"
+          printf 'user default off\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' \
+            "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
+          printf 'redis://health:%s@redis:6379' "$redis_health_password" > "$secret_root/redis/health-url"
+          printf 'redis://api:%s@redis:6379' "$redis_api_password" > "$secret_root/backend/redis-api-url"
+          printf 'redis://worker:%s@redis:6379' "$redis_worker_password" > "$secret_root/backend/redis-worker-url"
+          openssl rand -hex 32 > "$secret_root/backend/jwt-secret"
+
+          chmod 0444 "$secret_root"/{caddy,postgres}/*.crt
+          sudo chown 10001:10001 "$secret_root/caddy/server.key" && sudo chmod 0400 "$secret_root/caddy/server.key"
+          sudo chown 70:70 "$secret_root/postgres/server.key" "$secret_root/postgres/"*-password && sudo chmod 0400 "$secret_root/postgres/server.key" "$secret_root/postgres/"*-password
+          sudo chown 999:1000 "$secret_root/redis/users.acl" "$secret_root/redis/health-url" && sudo chmod 0400 "$secret_root/redis/users.acl" "$secret_root/redis/health-url"
+          sudo chown 65532:65532 "$secret_root/backend/"* && sudo chmod 0400 "$secret_root/backend/"*
+
+          backend_id="$(docker image inspect hr-axis-onprem-backend:proof --format '{{.Id}}')"
+          frontend_id="$(docker image inspect hr-axis-onprem-frontend:proof --format '{{.Id}}')"
+          sed \
+            -e "s|^HR_AXIS_RELEASE_ID=.*|HR_AXIS_RELEASE_ID=$RELEASE_ID|" \
+            -e 's|^HR_AXIS_PUBLIC_HOST=.*|HR_AXIS_PUBLIC_HOST=onprem-proof.example.invalid|' \
+            -e "s|^HR_AXIS_BACKEND_IMAGE=.*|HR_AXIS_BACKEND_IMAGE=$backend_id|" \
+            -e "s|^HR_AXIS_FRONTEND_IMAGE=.*|HR_AXIS_FRONTEND_IMAGE=$frontend_id|" \
+            infra/onprem/core/env.template > "$RUNNER_TEMP/onprem-core.env"
+          printf 'ONPREM_CORE_ENV=%s\n' "$RUNNER_TEMP/onprem-core.env" >> "$GITHUB_ENV"
+
+      - name: Run mandatory fresh-volume core proof behind a reversible firewall
+        env:
+          RELEASE_ID: onprem-core-${{ github.sha }}
+        run: |
+          set -euo pipefail
+          firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"
+          sudo iptables-save > "$firewall_snapshot"
+          cleanup() {
+            docker compose --project-name hr-axis-onprem-core --env-file "$ONPREM_CORE_ENV" \
+              --file infra/onprem/core/compose.yaml --profile infra --profile migrate \
+              --profile seed --profile runtime down --remove-orphans >/dev/null 2>&1 || true
+            sudo iptables-restore < "$firewall_snapshot"
+          }
+          trap cleanup EXIT
+
+          sudo iptables -F INPUT
+          sudo iptables -P INPUT DROP
+          sudo iptables -P FORWARD DROP
+          sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+          sudo iptables -A INPUT -i lo -j ACCEPT
+          sudo iptables -A INPUT -s 192.0.2.0/24 -p tcp --dport 22 -j ACCEPT
+          sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+          sudo iptables -A INPUT -j DROP
+          sudo iptables -F DOCKER-USER
+          sudo iptables -A DOCKER-USER -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+          project_subnets='172.30.0.0/24 172.30.10.0/24 172.30.20.0/24 172.30.30.0/24'
+          for source in $project_subnets; do
+            for destination in $project_subnets; do
+              sudo iptables -A DOCKER-USER -s "$source" -d "$destination" -m conntrack --ctstate NEW -j ACCEPT
+            done
+            sudo iptables -A DOCKER-USER -s "$source" -m conntrack --ctstate NEW -j REJECT
+            sudo iptables -I OUTPUT 1 -d "$source" -j REJECT
+          done
+          sudo iptables -A DOCKER-USER -j RETURN
+
+          sudo "$(command -v node)" scripts/onprem-core-runtime-proof.mjs --execute \
+            --compose infra/onprem/core/compose.yaml \
+            --env-file "$ONPREM_CORE_ENV" \
+            --project hr-axis-onprem-core \
+            --release-id "$RELEASE_ID" \
+            --ssh-admin-cidr 192.0.2.0/24 \
+            --require-fresh-volumes \
+            --receipt "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
+          sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
+          chmod 0600 "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
+
+      - name: Upload sanitized runtime receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: onprem-core-runtime-proof-${{ github.sha }}
+          if-no-files-found: error
+          path: ${{ runner.temp }}/onprem-core-runtime-receipt.json
 
       - name: Upload sanitized proof artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

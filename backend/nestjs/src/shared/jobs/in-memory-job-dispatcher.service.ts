@@ -11,7 +11,7 @@ export class InMemoryJobDispatcherService implements JobDispatcher {
     type: JobType,
     payload: TPayload,
     handler: (payload: TPayload) => Promise<void>,
-    options?: { jobId?: string },
+    options?: { jobId?: string; strictLocalJobId?: string },
   ): Promise<JobDispatchResult> {
     const jobId = options?.jobId ?? randomUUID();
 

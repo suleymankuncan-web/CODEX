@@ -55,7 +55,8 @@ execute the company-read/no-action Report Viewer allowlist, incentive closure,
 read-only production Session, honest Norm Kadro projection reversal, and safe
 verify-full preflight in order. Constraints still require live evidence.
 The 2026-08-08 `docs/plans/on-premise-private-container-deployment-plan-v1.md`
-authorizes ONP-0..ONP-5 repository-only synthetic preparation, not workstation installation, company-server deployment, real data/Nebim/photos, paid services, provider retirement, or production. ONP-0 is active; every later slice starts from its predecessor's merged SHA.
+authorizes only repository/synthetic ONP-0..5 preparation. ONP-0/1 merged as
+PR #1044/#1046; ONP-2 is active from exact ONP-1 SHA `d3ae14e367a9d22f25677e3534e6f287f131e635` and remains fail-closed pending its mandatory GitHub-hosted fresh-volume Compose proof. Workstation/company-server install, company firewall/DNS/TLS activation, real data/Nebim/photos, paid services, provider retirement, and production remain unauthorized external gates.
 DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Cloudflare env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,

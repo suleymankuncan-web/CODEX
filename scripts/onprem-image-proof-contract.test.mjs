@@ -8,6 +8,12 @@ const frontendDockerfile = readFileSync('infra/onprem/images/frontend.Dockerfile
 const backendTsconfig = JSON.parse(readFileSync('backend/nestjs/tsconfig.onprem.json', 'utf8'))
 const backendPackage = JSON.parse(readFileSync('backend/nestjs/package.json', 'utf8'))
 const frontendVite = readFileSync('admin-web/vite.config.ts', 'utf8')
+const sameImageSmoke = workflow
+  .split('- name: Start API and worker from the same backend image')[1]
+  ?.split('- name: Generate SPDX SBOMs with pinned Syft')[0] ?? ''
+const coreRuntimeProof = workflow
+  .split('- name: Prepare UID-bound ephemeral synthetic secret files')[1]
+  ?.split('- name: Upload sanitized runtime receipt')[0] ?? ''
 
 test('ONP-1 images use immutable bases, non-root users, and no source-bearing OCI label', () => {
   for (const dockerfile of [backendDockerfile, frontendDockerfile]) {
@@ -34,6 +40,8 @@ test('ONP-1 workflow proves read-only API and worker startup from one image', ()
   assert.match(workflow, /require\('sharp'\)/)
   assert.match(workflow, /require\('@e965\/xlsx'\)/)
   assert.match(workflow, /require\('@aws-sdk\/client-s3'\)/)
+  assert.match(sameImageSmoke, /HR_AXIS_STRICT_LOCAL=false/)
+  assert.doesNotMatch(sameImageSmoke, /HR_AXIS_STRICT_LOCAL=true/)
   assert.equal(backendPackage.dependencies['@nestjs/swagger'], '^11.4.6')
   assert.equal(backendPackage.devDependencies['@nestjs/swagger'], undefined)
   assert.equal(backendPackage.overrides['@nestjs/swagger']['js-yaml'], '5.2.3')
@@ -50,6 +58,14 @@ test('ONP-1 proof is reusable by the fail-closed required gate and binds manifes
   assert.match(workflow, /FROM \$BUILD_IMAGE AS build/)
   assert.match(workflow, /FROM \$BACKEND_RUNTIME_IMAGE AS runtime/)
   assert.match(workflow, /FROM \$FRONTEND_RUNTIME_IMAGE AS runtime/)
+})
+
+test('ONP-2 runtime proof executes the exact image identities scanned and bound to the manifest', () => {
+  assert.match(coreRuntimeProof, /docker image inspect hr-axis-onprem-frontend:proof/)
+  assert.match(coreRuntimeProof, /docker image inspect hr-axis-onprem-backend:proof/)
+  assert.doesNotMatch(workflow, /hr-axis-onprem-(?:frontend|backend):core-proof/)
+  assert.equal((workflow.match(/docker build --file infra\/onprem\/images\/frontend\.Dockerfile/g) ?? []).length, 1)
+  assert.equal((workflow.match(/docker build --file infra\/onprem\/images\/backend\.Dockerfile/g) ?? []).length, 1)
 })
 
 test('ONP-1 workflow self-tests with an external public-key file and defers the owner trust anchor to ONP-5', () => {

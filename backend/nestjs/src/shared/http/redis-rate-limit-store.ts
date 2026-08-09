@@ -8,6 +8,8 @@ type RedisRateLimitClient = {
     key: string,
     windowMs: string,
   ): Promise<unknown>;
+  disconnect?(reconnect?: boolean): void;
+  quit?(): Promise<unknown>;
 };
 
 const INCREMENT_SCRIPT = `
@@ -46,6 +48,17 @@ export class RedisRateLimitStore implements RateLimitStore {
       count,
       resetAt: now + ttlMs,
     };
+  }
+
+  async close(): Promise<void> {
+    if (!this.client.quit) {
+      return;
+    }
+    try {
+      await this.client.quit();
+    } catch {
+      this.client.disconnect?.(false);
+    }
   }
 
   private buildKey(key: string): string {

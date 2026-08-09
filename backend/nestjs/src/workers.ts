@@ -7,28 +7,38 @@ import {
   ObservabilityService,
   resolveNestLogLevels,
 } from "./shared/observability/observability.service";
+import { installGracefulShutdown } from "./shared/graceful-shutdown";
+import { RuntimeReadinessService } from "./onprem/runtime-readiness.service";
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(WorkerModule);
-  const logger = new Logger("WorkerBootstrap");
-  const observabilityService = app.get(ObservabilityService);
-  const config = app.get(AppConfigService);
+  try {
+    const logger = new Logger("WorkerBootstrap");
+    const observabilityService = app.get(ObservabilityService);
+    const config = app.get(AppConfigService);
+    const runtimeReadiness = app.get(RuntimeReadinessService);
 
-  app.useLogger(resolveNestLogLevels(config.logLevel));
+    app.useLogger(resolveNestLogLevels(config.logLevel));
 
-  observabilityService.installProcessHandlers();
-  observabilityService.logStartupState("worker");
+    observabilityService.installProcessHandlers();
+    observabilityService.logStartupState("worker");
 
-  const shutdown = async (signal: string) => {
-    logger.log(`Received ${signal}, shutting down worker context`);
-    await app.close();
-    process.exit(0);
-  };
+    await runtimeReadiness.assertReady("worker");
 
-  process.on("SIGINT", () => void shutdown("SIGINT"));
-  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+    installGracefulShutdown({
+      logger,
+      resources: [{ close: () => app.close() }],
+      timeoutMs: 40_000,
+    });
 
-  logger.log("BullMQ worker context started");
+    logger.log("BullMQ worker context started");
+  } catch (error) {
+    await app.close().catch(() => undefined);
+    throw error;
+  }
 }
 
-void bootstrap();
+void bootstrap().catch(() => {
+  new Logger("WorkerBootstrap").error("Worker startup failed");
+  process.exit(1);
+});

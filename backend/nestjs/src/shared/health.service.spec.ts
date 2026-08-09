@@ -1,8 +1,10 @@
 const redisConnectMock = jest.fn();
 const redisPingMock = jest.fn();
 const redisQuitMock = jest.fn();
+const redisDisconnectMock = jest.fn();
 const redisConstructorMock = jest.fn(() => ({
   connect: redisConnectMock,
+  disconnect: redisDisconnectMock,
   ping: redisPingMock,
   quit: redisQuitMock,
   status: "ready",
@@ -46,6 +48,7 @@ describe("HealthService", () => {
     redisConnectMock.mockReset();
     redisPingMock.mockReset();
     redisQuitMock.mockReset();
+    redisDisconnectMock.mockReset();
     redisConstructorMock.mockClear();
   });
 
@@ -196,5 +199,17 @@ describe("HealthService", () => {
     expect(result.checks.redis.message).toContain("[redacted-url]");
     expect(JSON.stringify(result)).not.toContain("secret-pass");
     expect(JSON.stringify(result)).not.toContain("redis.example.com");
+  });
+
+  it("force-disconnects the ephemeral Redis probe when graceful cleanup fails", async () => {
+    redisConnectMock.mockRejectedValue(new Error("redis unavailable"));
+    redisQuitMock.mockRejectedValue(new Error("quit unavailable"));
+    const service = createService({ queueBackend: "bullmq" });
+
+    const result = await service.getHealth();
+
+    expect(result.checks.redis.status).toBe("error");
+    expect(redisQuitMock).toHaveBeenCalledTimes(1);
+    expect(redisDisconnectMock).toHaveBeenCalledWith(false);
   });
 });

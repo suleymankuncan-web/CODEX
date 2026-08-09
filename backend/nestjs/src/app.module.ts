@@ -9,6 +9,7 @@ import { HealthService } from "./shared/health.service";
 import { DatabaseModule } from "./shared/database/database.module";
 import { RequestContextMiddleware } from "./shared/request-context.middleware";
 import { ObservabilityModule } from "./shared/observability/observability.module";
+import { RuntimeReadinessModule } from "./onprem/runtime-readiness.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ObservabilityModule } from "./shared/observability/observability.module
     StoreOpsModule,
     IntegrationModule,
     SnapshotModule,
+    RuntimeReadinessModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

@@ -1350,6 +1350,7 @@ describe("Import batch evidence", () => {
       "import-batch",
       { batchId: "batch-r1" },
       expect.any(Function),
+      { strictLocalJobId: "import-batch-batch-r1-retry-2" },
     );
 
     await app.close();
