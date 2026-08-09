@@ -30,6 +30,6 @@ import { OnPremConfigModule } from "./onprem-config.module";
     DatabaseService,
     MigrationService,
   ],
-  exports: [AppConfigService, PG_POOL, DatabaseService, MigrationService],
+  exports: [OnPremConfigModule, PG_POOL, DatabaseService, MigrationService],
 })
 export class OnPremDatabaseModule {}
