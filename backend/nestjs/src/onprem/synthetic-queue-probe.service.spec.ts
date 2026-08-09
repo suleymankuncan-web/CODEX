@@ -10,6 +10,7 @@ import {
   getSyntheticQueueProbeFailureReason,
   isLocalAofFsyncAcknowledged,
   isSyntheticQueueProbePreflightReady,
+  parseSyntheticQueuePersistenceInfo,
   sanitizeSyntheticQueueProbeFailureDetails,
   waitForOneCompletion,
 } from "./synthetic-queue-probe.service";
@@ -235,13 +236,61 @@ describe("SyntheticQueueProbeService", () => {
         calls.push("waitaof");
         return [1, 0];
       }),
+      set: jest.fn(async () => {
+        calls.push("sentinel");
+        return "OK";
+      }),
     };
 
     await expect(
       enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
     ).resolves.toBe("delayed");
-    expect(calls).toEqual(["add", "waitaof", "state"]);
+    expect(calls).toEqual(["add", "sentinel", "waitaof", "state"]);
+    expect(connection.set).toHaveBeenCalledWith(
+      "hr-axis:onprem:synthetic-recovery-v1:enqueued",
+      "1",
+      "NX",
+    );
     expect(connection.call).toHaveBeenCalledWith("WAITAOF", "1", "0", "500");
+  });
+
+  it("parses only allowlisted Redis persistence fields", () => {
+    const result = parseSyntheticQueuePersistenceInfo([
+      "# Persistence",
+      "loading:0",
+      "aof_enabled:1",
+      "aof_rewrite_in_progress:0",
+      "aof_rewrite_scheduled:0",
+      "aof_current_size:2048",
+      "aof_base_size:512",
+      "aof_pending_bio_fsync:0",
+      "aof_delayed_fsync:2",
+      "aof_last_write_status:ok",
+      "aof_last_bgrewrite_status:err",
+      "unsafe_field:redis://user:secret@host",
+    ].join("\r\n"));
+
+    expect(result).toEqual({
+      aofEnabled: 1,
+      aofRewriteInProgress: 0,
+      aofRewriteScheduled: 0,
+      aofCurrentSize: 2048,
+      aofBaseSize: 512,
+      aofPendingBioFsync: 0,
+      aofDelayedFsync: 2,
+      aofLastWriteStatus: "ok",
+      aofLastBgrewriteStatus: "err",
+    });
+    expect(JSON.stringify(result)).not.toContain("redis://");
+    expect(JSON.stringify(result)).not.toContain("unsafe_field");
+  });
+
+  it.each([
+    ["not-info"],
+    ["aof_enabled:yes"],
+    ["aof_enabled:-1"],
+  ])("fails closed for malformed persistence INFO", (info) => {
+    expect(() => parseSyntheticQueuePersistenceInfo(info)).toThrow("unexpected");
   });
 
   it.each([
@@ -262,7 +311,10 @@ describe("SyntheticQueueProbeService", () => {
       const queue = {
         add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
       };
-      const connection = { call: jest.fn(async () => reply) };
+      const connection = {
+        call: jest.fn(async () => reply),
+        set: jest.fn(async () => "OK"),
+      };
       await expect(
         enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
       ).rejects.toEqual(
@@ -279,6 +331,7 @@ describe("SyntheticQueueProbeService", () => {
       call: jest.fn(async () => {
         throw new Error("unknown command and redis://secret");
       }),
+      set: jest.fn(async () => "OK"),
     };
     await expect(
       enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
@@ -295,6 +348,7 @@ describe("SyntheticQueueProbeService", () => {
       };
       const connection = {
         call: jest.fn(() => new Promise<never>(() => undefined)),
+        set: jest.fn(async () => "OK"),
       };
       const result = enqueueSyntheticQueueProbeDurably(
         queue as never,
@@ -309,6 +363,21 @@ describe("SyntheticQueueProbeService", () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it("fails closed when the enqueue sentinel cannot be created", async () => {
+    const queue = {
+      add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+    };
+    const connection = {
+      call: jest.fn(async () => [1, 0]),
+      set: jest.fn(async () => null),
+    };
+
+    await expect(
+      enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+    ).rejects.toEqual(expect.objectContaining({ reason: "unexpected" }));
+    expect(connection.call).not.toHaveBeenCalled();
   });
 
   it("formats failure JSON with only the safe diagnostic fields", () => {

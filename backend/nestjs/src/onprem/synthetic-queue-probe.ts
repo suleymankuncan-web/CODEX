@@ -11,7 +11,12 @@ import {
   SyntheticQueueProbeService,
 } from "./synthetic-queue-probe.service";
 
-const ALLOWED_MODES = new Set<ProbeMode>(["enqueue", "process", "status"]);
+const ALLOWED_MODES = new Set<ProbeMode>([
+  "enqueue",
+  "process",
+  "snapshot",
+  "status",
+]);
 const UNKNOWN_MODE = "unknown" as const;
 const FAILED_EVENT = "onprem.synthetic_queue_probe.failed" as const;
 const INVALID_MODE_EVENT = "onprem.synthetic_queue_probe.invalid_mode" as const;

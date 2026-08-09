@@ -275,6 +275,36 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
   assert.match(input.runtimeProof, /setval/)
 })
 
+test('ONP-2 contract keeps the Redis default user disabled while permitting internal AOF replay', () => {
+  const accepted = contractInput()
+  assert.match(accepted.workflow, /user default off resetpass ~\* &\* \+@all\\nuser health on/)
+  assert.equal(validateOnpremCoreContract(accepted).ok, true)
+
+  for (const declaration of [
+    'user default off resetpass ~* &*',
+    'user default on resetpass ~* &* +@all',
+    'user default off nopass ~* &* +@all',
+    'user default off resetpass &* +@all',
+    'user default off resetpass ~* +@all',
+  ]) {
+    const input = contractInput()
+    input.workflow = input.workflow.replace(
+      'user default off resetpass ~* &* +@all',
+      declaration,
+    )
+    assert.equal(validateOnpremCoreContract(input).ok, false, `${declaration} must fail closed`)
+    assert.ok(input.workflow.includes(declaration), 'ACL mutation fixture must apply')
+  }
+
+  const alternateWriter = contractInput()
+  alternateWriter.workflow = alternateWriter.workflow.replace(
+    '"$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"',
+    '"$redis_health_password" "$redis_api_password" "$redis_worker_password" > /dev/null\n          cp "$RUNNER_TEMP/unsafe-users.acl" "$secret_root/redis/users.acl"',
+  )
+  assert.ok(alternateWriter.workflow.includes('unsafe-users.acl'), 'alternate writer fixture must apply')
+  assert.equal(validateOnpremCoreContract(alternateWriter).ok, false, 'approved inert ACL text plus an alternate writer must fail closed')
+})
+
 test('ONP-2 contract rejects an injected init shim for privilege-dropping data services', () => {
   for (const service of ['postgres', 'redis']) {
     const input = contractInput()
@@ -340,6 +370,26 @@ test('ONP-2 contract rejects an optional or unproven runtime CI gate', () => {
   assert.ok(result.errors.some((error) => /GitHub-hosted Linux proof job/i.test(error)))
   assert.ok(result.errors.some((error) => /must not be optional/i.test(error)))
   assert.ok(result.errors.some((error) => /cleanup trap/i.test(error)))
+})
+
+test('ONP-2 contract requires conntrack provisioning and read-only preflight before firewall mutation', () => {
+  for (const activeLine of [
+    'sudo apt-get update',
+    'sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends conntrack',
+    'sudo conntrack -L -o extended >/dev/null',
+  ]) {
+    const input = contractInput()
+    input.workflow = input.workflow.replace(activeLine, `# ${activeLine}`)
+    assert.ok(input.workflow.includes(`# ${activeLine}`), 'conntrack mutation fixture must apply')
+    assert.equal(validateOnpremCoreContract(input).ok, false, `${activeLine} must remain active`)
+  }
+
+  const lateProvisioning = contractInput()
+  lateProvisioning.workflow = lateProvisioning.workflow.replace(
+    'sudo conntrack -L -o extended >/dev/null\n          firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"',
+    'firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"\n          sudo conntrack -L -o extended >/dev/null',
+  )
+  assert.equal(validateOnpremCoreContract(lateProvisioning).ok, false, 'conntrack preflight after firewall mutation must fail closed')
 })
 
 test('ONP-2 contract keeps wrong-host verification distinct from the valid TLS SNI', () => {

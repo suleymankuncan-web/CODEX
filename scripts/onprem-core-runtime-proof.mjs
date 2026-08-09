@@ -11,12 +11,15 @@ import {
   classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
+import { assertPostRedisLoadCheckpoint, assertProbeOutput, assertStoppedAofCommandSequence, buildQueueSnapshotComposeArgs, classifyQueueFailureReason, classifyRedisPersistenceLogs, collectRedisRestartLogDelta, collectStoppedAofInventoryEvidence, createRuntimeIsolationControls, parseStoppedAofInventory, sanitizeQueuePersistenceCheckpoint } from './onprem-redis-persistence-diagnostic.mjs'
 
 export {
   buildTlsProbeDockerArgs, classifyTlsProbeResult,
   sanitizeTlsErrorCode, TLS_WRONG_CA_CODES,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
+
+export { assertProbeOutput, classifyRedisPersistenceLogs, parseProbeCompletion, parseStoppedAofInventory, sanitizeQueuePersistenceCheckpoint } from './onprem-redis-persistence-diagnostic.mjs'
 
 const PRIVATE_SUBNETS = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
 const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis']
@@ -256,19 +259,6 @@ export function egressRejectCounters(text) {
   return counters
 }
 
-export function assertProbeOutput(output, expected) {
-  const text = `${output.stdout}\n${output.stderr}`
-  if (!/"event"\s*:\s*"onprem\.synthetic_queue_probe\.completed"/.test(text)) {
-    throw new Error(`synthetic queue ${expected.mode} omitted the completion event`)
-  }
-  for (const [key, value] of Object.entries(expected)) {
-    const rendered = typeof value === 'string' ? `"${value}"` : String(value)
-    if (!new RegExp(`"${key}"\\s*:\\s*${rendered}`).test(text)) {
-      throw new Error(`synthetic queue ${expected.mode} result mismatch for ${key}`)
-    }
-  }
-}
-
 export function buildRedisProbeComposeArgs(service, script) {
   if (!['api', 'worker'].includes(service)) throw new Error('Redis probe requires an approved runtime service')
   if (!String(script ?? '').trim()) throw new Error('Redis probe script is required')
@@ -321,6 +311,7 @@ async function main() {
     seedAggregates: null,
     services: LONG_LIVED,
     outageRecovery: null,
+    redisPersistenceDiagnostics: null,
     volumeRecovery: 'same-volume-only',
   }
 
@@ -481,6 +472,24 @@ async function main() {
     ].join(';')
     compose(buildRedisProbeComposeArgs(service, script), ['runtime'], `${service} Redis destructive-command denial probe`)
   }
+
+  const captureQueueCheckpoint = (checkpoint) => {
+    const spec = buildQueueSnapshotComposeArgs(checkpoint)
+    return sanitizeQueuePersistenceCheckpoint(compose(spec.args, spec.profiles, spec.label), checkpoint)
+  }
+
+  const collectStoppedAofInventory = (volumeName) => {
+    return collectStoppedAofInventoryEvidence({
+      command, assertNoSecretLeak, secretValues, volumeName,
+      redisImage: config.services.redis.image, workerImage: config.services.worker.image,
+    })
+  }
+
+  const {
+    resolveRuntimeTarget,
+    pauseRuntimeService,
+    unpauseRuntimeService,
+  } = createRuntimeIsolationControls({ compose, command, assertNoSecretLeak, secretValues })
 
   const query = (sql) => compose(['exec', '-T', 'postgres', 'psql', '--no-psqlrc', '--username', 'hr_axis_bootstrap', '--dbname', 'hr_axis', '--tuples-only', '--no-align', '--command', sql], ['infra']).stdout.trim()
   const runtimeRoleQuery = (role, passwordFile, sql, { allowFailure = false, label } = {}) => {
@@ -700,25 +709,114 @@ async function main() {
     assertRedisDestructiveCommandsDenied('api', '/run/secrets/redis_api_url')
     assertRedisDestructiveCommandsDenied('worker', '/run/secrets/redis_worker_url')
     receipt.redisAcl = { destructiveCommandsDenied: true, keyPrefixesScoped: true }
-    const redisMountBefore = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect redis volume' }).stdout)[0].Mounts.find((mount) => mount.Destination === '/data')?.Name
-    const enqueued = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'enqueue'], ['runtime'])
-    assertProbeOutput(enqueued, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' })
-    compose(['stop', 'redis'], ['infra'])
-    const redisStoppedState = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect stopped redis' }).stdout)[0].State
-    if (redisStoppedState.ExitCode !== 0 || redisStoppedState.OOMKilled || redisStoppedState.Dead || redisStoppedState.Error) {
-      throw new Error('Redis outage was not a graceful stop')
+    const redisInspectBefore = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect Redis before restart' }).stdout)[0]
+    const redisMountBefore = redisInspectBefore.Mounts.find((mount) => mount.Destination === '/data')
+    if (!redisMountBefore?.Name || !redisMountBefore?.Source) throw new Error('Redis named AOF volume inspection failed')
+    const redisPersistenceDiagnostics = {
+      checkpoints: {},
+      redisLogClassification: null,
+      stoppedAof: null,
     }
-    waitUnhealthy('api')
-    waitUnhealthy('worker')
-    compose(['start', 'redis'], ['infra'])
-    waitHealthy('redis')
-    waitHealthy('api')
-    waitHealthy('worker')
-    const redisIdAfter = compose(['ps', '--quiet', 'redis'], ['infra']).stdout.trim()
-    const redisMountAfter = JSON.parse(command('docker', ['inspect', redisIdAfter], { label: 'inspect restarted redis volume' }).stdout)[0].Mounts.find((mount) => mount.Destination === '/data')?.Name
-    if (!redisMountBefore || redisMountBefore !== redisMountAfter) throw new Error('Redis restart did not preserve the exact named AOF volume')
-    const processed = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'process'], ['runtime'])
-    assertProbeOutput(processed, { duplicateCount: 0, mode: 'process', processedCount: 1, status: 'completed' })
+    try {
+      const enqueued = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'enqueue'], ['runtime'])
+      assertProbeOutput(enqueued, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' })
+      redisPersistenceDiagnostics.checkpoints.preStop = captureQueueCheckpoint('pre_stop')
+      const preStop = redisPersistenceDiagnostics.checkpoints.preStop
+      if (
+        preStop.jobHashExists !== 1
+        || preStop.delayedMembershipExists !== 1
+        || preStop.enqueueSentinelExists !== 1
+        || preStop.processedMarkerExists !== 0
+        || preStop.persistence.aofEnabled !== 1
+        || preStop.persistence.aofLastWriteStatus !== 'ok'
+      ) throw new Error('synthetic queue pre-stop persistence checkpoint failed')
+
+      const redisRestartLogSince = new Date().toISOString()
+      compose(['stop', 'redis'], ['infra'])
+      const redisStoppedInspect = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect stopped Redis' }).stdout)[0]
+      const redisStoppedState = redisStoppedInspect.State
+      if (redisStoppedState.ExitCode !== 0 || redisStoppedState.OOMKilled || redisStoppedState.Dead || redisStoppedState.Error) {
+        throw new Error('Redis outage was not a graceful stop')
+      }
+      const redisStoppedMount = redisStoppedInspect.Mounts.find((mount) => mount.Destination === '/data')
+      const stoppedInventory = collectStoppedAofInventory(redisMountBefore?.Name)
+      redisPersistenceDiagnostics.stoppedAof = {
+        checkpoint: 'stopped_aof',
+        sameContainerId: redisStoppedInspect.Id === redisId,
+        sameVolumeName: Boolean(redisMountBefore?.Name && redisStoppedMount?.Name === redisMountBefore.Name),
+        sameVolumeSource: Boolean(redisMountBefore?.Source && redisStoppedMount?.Source === redisMountBefore.Source),
+        ...stoppedInventory,
+      }
+      if (
+        !redisPersistenceDiagnostics.stoppedAof.sameContainerId
+        || !redisPersistenceDiagnostics.stoppedAof.sameVolumeName
+        || !redisPersistenceDiagnostics.stoppedAof.sameVolumeSource
+        || !redisPersistenceDiagnostics.stoppedAof.manifestPresent
+        || redisPersistenceDiagnostics.stoppedAof.files.length === 0
+      ) throw new Error('stopped Redis AOF identity or manifest checkpoint failed')
+      assertStoppedAofCommandSequence(redisPersistenceDiagnostics.stoppedAof)
+
+      waitUnhealthy('api')
+      waitUnhealthy('worker')
+      const runtimeTargets = ['api', 'worker'].map(resolveRuntimeTarget)
+      try {
+        for (const target of runtimeTargets) pauseRuntimeService(target)
+        compose(['start', 'redis'], ['infra'])
+        waitHealthy('redis')
+        const redisIdAfter = compose(['ps', '--quiet', 'redis'], ['infra']).stdout.trim()
+        const redisInspectAfter = JSON.parse(command('docker', ['inspect', redisIdAfter], { label: 'inspect restarted Redis' }).stdout)[0]
+        const redisMountAfter = redisInspectAfter.Mounts.find((mount) => mount.Destination === '/data')
+        redisPersistenceDiagnostics.stoppedAof.sameContainerId &&= redisIdAfter === redisId
+        redisPersistenceDiagnostics.stoppedAof.sameVolumeName &&= Boolean(redisMountBefore?.Name && redisMountAfter?.Name === redisMountBefore.Name)
+        redisPersistenceDiagnostics.stoppedAof.sameVolumeSource &&= Boolean(redisMountBefore?.Source && redisMountAfter?.Source === redisMountBefore.Source)
+        if (
+          !redisPersistenceDiagnostics.stoppedAof.sameContainerId
+          || !redisPersistenceDiagnostics.stoppedAof.sameVolumeName
+          || !redisPersistenceDiagnostics.stoppedAof.sameVolumeSource
+        ) throw new Error('Redis restart did not preserve the exact container and named AOF volume')
+        redisPersistenceDiagnostics.checkpoints.postRedisLoad = captureQueueCheckpoint('post_redis_load')
+        assertPostRedisLoadCheckpoint(redisPersistenceDiagnostics.checkpoints.postRedisLoad)
+        redisPersistenceDiagnostics.redisLogClassification = classifyRedisPersistenceLogs(
+          collectRedisRestartLogDelta({
+            command,
+            assertNoSecretLeak,
+            secretValues,
+            containerId: redisIdAfter,
+            since: redisRestartLogSince,
+          }),
+          redisRestartLogSince,
+        )
+      } finally {
+        const unpauseFailures = []
+        for (const target of runtimeTargets) {
+          try {
+            unpauseRuntimeService(target)
+          } catch (error) {
+            unpauseFailures.push({ service: target.service, reason: classifyQueueFailureReason(error) })
+          }
+        }
+        if (unpauseFailures.length > 0) {
+          throw new Error(`Redis runtime unpause failed ${boundedText(JSON.stringify({
+            event: 'onprem.redis_runtime_isolation.failed',
+            phase: 'unpause',
+            reason: 'runtime_unpause_failed',
+            services: unpauseFailures,
+          }), 2048)}`)
+        }
+      }
+      waitHealthy('api')
+      waitHealthy('worker')
+      redisPersistenceDiagnostics.checkpoints.postRuntimeReconnect = captureQueueCheckpoint('post_runtime_reconnect')
+      const processed = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'process'], ['runtime'])
+      assertProbeOutput(processed, { duplicateCount: 0, mode: 'process', processedCount: 1, status: 'completed' })
+    } catch (error) {
+      throw new Error(`Redis persistence diagnostic failed ${JSON.stringify({
+        event: 'onprem.redis_persistence_diagnostic.failed',
+        reason: classifyQueueFailureReason(error),
+        ...redisPersistenceDiagnostics,
+      })}`)
+    }
+    receipt.redisPersistenceDiagnostics = redisPersistenceDiagnostics
     const queueStatus = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'status'], ['runtime'])
     assertProbeOutput(queueStatus, { markerCount: 1, mode: 'status', state: 'completed' })
     receipt.outageRecovery = { apiUnhealthy: true, recovered: true, redisStoppedGracefully: true, workerUnhealthy: true }

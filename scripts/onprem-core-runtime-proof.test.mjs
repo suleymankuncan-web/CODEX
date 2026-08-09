@@ -5,7 +5,6 @@ import { checkServerIdentity } from 'node:tls'
 
 import {
   assertNoSecretLeak,
-  assertProbeOutput,
   assertSecretSourceMetadata,
   classifyTlsProbeResult,
   egressRejectCounters,
@@ -21,6 +20,26 @@ import {
   verifyCaddyRuntimeInvariants,
 } from './onprem-core-runtime-proof.mjs'
 import { CADDY_CMDLINE, TLS_SAFE_ERROR_CODES } from './onprem-caddy-runtime-proof.mjs'
+import {
+  assertProbeOutput,
+  buildStoppedAofInventoryScript,
+  buildStoppedAofSemanticInspectorScript,
+  classifyQueueFailureReason,
+  classifyStoppedAofCommandSequence,
+  classifyRedisPersistenceLogs,
+  collectStoppedAofInventoryEvidence,
+  collectRedisRestartLogDelta,
+  parseStoppedAofInventory,
+  readBoundedAofFiles,
+  resolveStoppedAofManifest,
+  sanitizeQueuePersistenceCheckpoint,
+} from './onprem-redis-persistence-diagnostic.mjs'
+
+const respCommand = (...args) => Buffer.from(
+  `*${args.length}\r\n${args.map((arg) => `$${Buffer.byteLength(String(arg))}\r\n${arg}\r\n`).join('')}`,
+)
+
+const respStream = (...commands) => Buffer.concat(commands.map((args) => respCommand(...args)))
 
 const subnets = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
 
@@ -75,6 +94,379 @@ test('runtime proof validates the sanitized synthetic queue result contract', ()
     () => assertProbeOutput({ ...enqueued, stdout: enqueued.stdout.replace('local-aof-fsynced', 'unproven') }, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }),
     /result mismatch for durability/i,
   )
+})
+
+test('runtime proof rebuilds queue persistence checkpoints from the exact allowlist', () => {
+  const raw = {
+    event: 'onprem.synthetic_queue_probe.completed',
+    mode: 'snapshot',
+    jobHashExists: 1,
+    delayedMembershipExists: 1,
+    enqueueSentinelExists: 1,
+    processedMarkerExists: 0,
+    dbSize: 12,
+    persistence: {
+      aofEnabled: 1,
+      aofRewriteInProgress: 0,
+      aofRewriteScheduled: 0,
+      aofCurrentSize: 2048,
+      aofBaseSize: 512,
+      aofPendingBioFsync: 0,
+      aofDelayedFsync: 0,
+      aofLastWriteStatus: 'ok',
+      aofLastBgrewriteStatus: 'ok',
+      unsafe: 'redis://user:secret@host',
+    },
+    unsafe: 'redis://user:secret@host',
+  }
+  const checkpoint = sanitizeQueuePersistenceCheckpoint(
+    { stdout: `${JSON.stringify(raw)}\n`, stderr: '' },
+    'pre_stop',
+  )
+
+  assert.deepEqual(checkpoint, {
+    checkpoint: 'pre_stop',
+    jobHashExists: 1,
+    delayedMembershipExists: 1,
+    enqueueSentinelExists: 1,
+    processedMarkerExists: 0,
+    dbSize: 12,
+    persistence: {
+      aofEnabled: 1,
+      aofRewriteInProgress: 0,
+      aofRewriteScheduled: 0,
+      aofCurrentSize: 2048,
+      aofBaseSize: 512,
+      aofPendingBioFsync: 0,
+      aofDelayedFsync: 0,
+      aofLastWriteStatus: 'ok',
+      aofLastBgrewriteStatus: 'ok',
+    },
+  })
+  assert.doesNotMatch(JSON.stringify(checkpoint), /redis:\/\/|secret|unsafe/)
+  assert.throws(
+    () => sanitizeQueuePersistenceCheckpoint(
+      { stdout: `${JSON.stringify({ ...raw, jobHashExists: 2 })}\n`, stderr: '' },
+      'pre_stop',
+    ),
+    /closed existence flag/i,
+  )
+})
+
+test('runtime proof accepts only bounded multipart AOF inventory metadata', () => {
+  const digest = 'a'.repeat(64)
+  assert.deepEqual(
+    parseStoppedAofInventory([
+      'manifest|1',
+      `file|appendonly.aof.manifest|88|${digest}|0|0`,
+      `file|appendonly.aof.1.base.rdb|120|${digest}|0|0`,
+      `file|appendonly.aof.1.incr.aof|512|${digest}|1|1`,
+    ].join('\n')),
+    {
+      manifestPresent: true,
+      files: [
+        { fileName: 'appendonly.aof.manifest', sizeBytes: 88, sha256: digest, containsExpectedJobToken: false, containsExpectedSentinelToken: false },
+        { fileName: 'appendonly.aof.1.base.rdb', sizeBytes: 120, sha256: digest, containsExpectedJobToken: false, containsExpectedSentinelToken: false },
+        { fileName: 'appendonly.aof.1.incr.aof', sizeBytes: 512, sha256: digest, containsExpectedJobToken: true, containsExpectedSentinelToken: true },
+      ],
+    },
+  )
+  for (const unsafe of [
+    `manifest|1\nfile|../../secret|10|${digest}|0|0`,
+    `manifest|1\nfile|appendonly.aof.1.incr.aof|10|redis://secret|0|0`,
+    `manifest|1\nfile|appendonly.aof.1.incr.aof|10|${digest}|2|0`,
+  ]) assert.throws(() => parseStoppedAofInventory(unsafe), /unsafe or malformed/i)
+  const semantic = JSON.stringify({
+    analysisStatus: 'ok',
+    reason: 'none',
+    commandCount: 6,
+    completeTransactionCount: 1,
+    lastJobHashEffect: 'present',
+    lastJobHashEffectIndex: 3,
+    lastDelayedEffect: 'present',
+    lastDelayedEffectIndex: 4,
+    lastSentinelEffect: 'present',
+    lastSentinelEffectIndex: 6,
+  })
+  assert.equal(
+    parseStoppedAofInventory(`manifest|1\nsemantic|${semantic}`).commandSequence.lastDelayedEffect,
+    'present',
+  )
+  assert.throws(
+    () => parseStoppedAofInventory('manifest|1\nsemantic|{"analysisStatus":"ok","reason":"none","unsafe":"secret"}'),
+    /semantic evidence was malformed/i,
+  )
+  assert.match(buildStoppedAofInventoryScript(), /redis-check-aof/)
+  assert.doesNotMatch(buildStoppedAofInventoryScript(), /--fix/)
+})
+
+test('runtime proof classifies only committed final AOF effects for the synthetic queue keys', () => {
+  const creation = respStream(
+    ['SELECT', '0'],
+    ['MULTI'],
+    ['HMSET', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1', 'name', 'synthetic-recovery'],
+    ['ZADD', 'bull:hr-axis-onprem-synthetic-recovery-v1:delayed', '1723200000000', 'synthetic-recovery-v1'],
+    ['EXEC'],
+    ['SET', 'hr-axis:onprem:synthetic-recovery-v1:enqueued', '1'],
+  )
+  assert.deepEqual(classifyStoppedAofCommandSequence(creation), {
+    commandCount: 6,
+    completeTransactionCount: 1,
+    lastJobHashEffect: 'present',
+    lastJobHashEffectIndex: 3,
+    lastDelayedEffect: 'present',
+    lastDelayedEffectIndex: 4,
+    lastSentinelEffect: 'present',
+    lastSentinelEffectIndex: 6,
+  })
+
+  const laterCleanup = Buffer.concat([
+    creation,
+    respStream(
+      ['ZREM', 'bull:hr-axis-onprem-synthetic-recovery-v1:delayed', 'synthetic-recovery-v1'],
+      ['DEL', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1'],
+    ),
+  ])
+  assert.deepEqual(classifyStoppedAofCommandSequence(laterCleanup), {
+    commandCount: 8,
+    completeTransactionCount: 1,
+    lastJobHashEffect: 'absent',
+    lastJobHashEffectIndex: 8,
+    lastDelayedEffect: 'absent',
+    lastDelayedEffectIndex: 7,
+    lastSentinelEffect: 'present',
+    lastSentinelEffectIndex: 6,
+  })
+})
+
+test('runtime proof rejects incomplete, malformed, oversized, and token-only AOF evidence', () => {
+  const incomplete = respStream(
+    ['MULTI'],
+    ['HMSET', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1', 'payload', 'synthetic-recovery-v1'],
+  )
+  assert.throws(() => classifyStoppedAofCommandSequence(incomplete), /incomplete transaction/i)
+  assert.throws(() => classifyStoppedAofCommandSequence(Buffer.from('*2\r\n$3\r\nSET\r\n$10\r\nshort\r\n')), /malformed RESP/i)
+  assert.throws(() => classifyStoppedAofCommandSequence(Buffer.alloc(1024 * 1024 + 1)), /bounded size/i)
+  assert.throws(
+    () => classifyStoppedAofCommandSequence(respStream(['XADD', 'bull:unrelated:events', '*', 'payload', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1'])),
+    /expected creation missing/i,
+  )
+})
+
+test('runtime proof accepts only exact manifest-referenced multipart AOF files', () => {
+  const manifest = [
+    'file appendonly.aof.1.base.rdb seq 1 type b',
+    'file appendonly.aof.1.incr.aof seq 1 type i',
+  ].join('\n')
+  const actual = ['appendonly.aof.1.base.rdb', 'appendonly.aof.1.incr.aof']
+  assert.deepEqual(resolveStoppedAofManifest(manifest, actual), ['appendonly.aof.1.incr.aof'])
+  assert.throws(
+    () => resolveStoppedAofManifest(manifest, [...actual, 'appendonly.aof.2.incr.aof']),
+    /orphan entry/i,
+  )
+  assert.throws(
+    () => resolveStoppedAofManifest(`${manifest}\nfile ..\\secret seq 2 type i`, actual),
+    /unsafe/i,
+  )
+  assert.throws(
+    () => resolveStoppedAofManifest('file appendonly.aof.1.base.rdb seq 1 type b', ['appendonly.aof.1.base.rdb']),
+    /omitted incremental/i,
+  )
+})
+
+test('runtime proof rejects oversized AOF files before reading any payload bytes', () => {
+  let reads = 0
+  assert.throws(
+    () => readBoundedAofFiles(['appendonly.aof.1.incr.aof'], {
+      stat: () => ({ size: 1024 * 1024 + 1 }),
+      read: () => { reads += 1; return Buffer.alloc(0) },
+    }),
+    /bounded size/i,
+  )
+  assert.equal(reads, 0)
+
+  const buffers = readBoundedAofFiles(['appendonly.aof.1.incr.aof'], {
+    stat: () => ({ size: 4 }),
+    read: () => { reads += 1; return Buffer.from('safe') },
+  })
+  assert.equal(reads, 1)
+  assert.equal(buffers[0].toString(), 'safe')
+})
+
+test('runtime proof classifies whole-key and range cleanup without exposing AOF payloads', () => {
+  const fixture = respStream(
+    ['HSET', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1', 'payload', 'redis://user:secret@host'],
+    ['ZADD', 'bull:hr-axis-onprem-synthetic-recovery-v1:delayed', '100', 'synthetic-recovery-v1'],
+    ['SET', 'hr-axis:onprem:synthetic-recovery-v1:enqueued', 'secret-value'],
+    ['ZREMRANGEBYSCORE', 'bull:hr-axis-onprem-synthetic-recovery-v1:delayed', '99', '101'],
+    ['UNLINK', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1'],
+  )
+  const result = classifyStoppedAofCommandSequence(fixture)
+  assert.equal(result.lastJobHashEffect, 'absent')
+  assert.equal(result.lastDelayedEffect, 'absent')
+  assert.equal(result.lastSentinelEffect, 'present')
+  assert.doesNotMatch(JSON.stringify(result), /redis:\/\/|secret|payload|bull:/)
+
+  const wholeKey = classifyStoppedAofCommandSequence(respStream(
+    ['HSET', 'bull:hr-axis-onprem-synthetic-recovery-v1:synthetic-recovery-v1', 'name', 'x'],
+    ['ZADD', 'bull:hr-axis-onprem-synthetic-recovery-v1:delayed', '100', 'synthetic-recovery-v1'],
+    ['SET', 'hr-axis:onprem:synthetic-recovery-v1:enqueued', '1'],
+    ['DEL', 'bull:hr-axis-onprem-synthetic-recovery-v1:delayed'],
+  ))
+  assert.equal(wholeKey.lastDelayedEffect, 'absent')
+  assert.match(buildStoppedAofSemanticInspectorScript(), /appendonly\.aof\.manifest/)
+  assert.doesNotMatch(buildStoppedAofSemanticInspectorScript(), /--fix/)
+})
+
+test('stopped AOF inspection preserves read-only source and emits typed container failures', () => {
+  const base = {
+    assertNoSecretLeak: () => {},
+    redisImage: 'redis@sha256:' + 'a'.repeat(64),
+    secretValues: ['synthetic-secret'],
+    volumeName: 'synthetic-redis-volume',
+    workerImage: 'worker@sha256:' + 'b'.repeat(64),
+  }
+  const validationCalls = []
+  let validationError
+  try {
+    collectStoppedAofInventoryEvidence({
+      ...base,
+      command: (_binary, args) => {
+        validationCalls.push(args)
+        return { status: 43, stderr: 'closed validation failure', stdout: '' }
+      },
+    })
+  } catch (error) {
+    validationError = error
+  }
+  assert.equal(classifyQueueFailureReason(validationError), 'aof_readonly_validation_failed')
+  assert.ok(validationCalls[0].includes('synthetic-redis-volume:/data:ro'))
+  assert.ok(validationCalls[0].includes('/aof-check:rw,noexec,nosuid,nodev,size=2m,mode=0700,uid=999,gid=1000'))
+
+  let invocation = 0
+  let semanticError
+  try {
+    collectStoppedAofInventoryEvidence({
+      ...base,
+      command: () => {
+        invocation += 1
+        return invocation === 1
+          ? { status: 0, stderr: '', stdout: 'manifest|1\n' }
+          : { status: 17, stderr: 'closed semantic failure', stdout: '' }
+      },
+    })
+  } catch (error) {
+    semanticError = error
+  }
+  assert.equal(classifyQueueFailureReason(semanticError), 'aof_semantic_inspection_failed')
+})
+
+test('runtime proof reduces Redis persistence logs to closed booleans', () => {
+  const result = classifyRedisPersistenceLogs([
+    'Reading RDB base file on AOF loading',
+    'Creating AOF incr file appendonly.aof.1.incr.aof',
+    'AOF tail was truncated because aof-load-truncated is enabled',
+    'redis://user:secret@host',
+  ].join('\n'))
+  assert.deepEqual(result, {
+    aofLoadObserved: true,
+    aofTruncationWarning: true,
+    aofCorruptionWarning: false,
+    newAofBaseCreated: false,
+    incrementalAofOpened: true,
+    shutdownFsyncError: false,
+  })
+  assert.doesNotMatch(JSON.stringify(result), /redis:\/\/|secret|appendonly/)
+})
+
+test('runtime proof excludes initial-startup Redis log markers before the pre-stop boundary', () => {
+  const boundary = '2026-08-09T10:00:00.000Z'
+  const result = classifyRedisPersistenceLogs([
+    '2026-08-09T09:59:59.000Z Creating AOF base file initial-startup-only',
+    '2026-08-09T10:00:00.001Z Reading RDB base file on AOF loading',
+    '2026-08-09T10:00:00.002Z Creating AOF incr file appendonly.aof.1.incr.aof',
+  ].join('\n'), boundary)
+  assert.deepEqual(result, {
+    aofLoadObserved: true,
+    aofTruncationWarning: false,
+    aofCorruptionWarning: false,
+    newAofBaseCreated: false,
+    incrementalAofOpened: true,
+    shutdownFsyncError: false,
+  })
+})
+
+test('runtime proof injects the bounded Docker log collector contract', () => {
+  const calls = []
+  const leakChecks = []
+  const result = collectRedisRestartLogDelta({
+    command: (executable, args, options) => {
+      calls.push({ executable, args, options })
+      return { status: 0, stdout: 'restart stdout', stderr: 'restart stderr' }
+    },
+    assertNoSecretLeak: (secretValues, surfaces) => leakChecks.push({ secretValues, surfaces }),
+    secretValues: new Map([['redis', 'redacted-test-secret']]),
+    containerId: 'synthetic-redis-container',
+    since: '2026-08-09T10:00:00.000Z',
+  })
+
+  assert.equal(result, 'restart stdout\nrestart stderr')
+  assert.deepEqual(calls, [{
+    executable: 'docker',
+    args: ['logs', '--since', '2026-08-09T10:00:00.000Z', '--timestamps', 'synthetic-redis-container'],
+    options: { allowFailure: true, label: 'bounded Redis restart log delta' },
+  }])
+  assert.equal(leakChecks.length, 1)
+  assert.equal(leakChecks[0].surfaces['Redis restart log delta stdout'], 'restart stdout')
+  assert.equal(leakChecks[0].surfaces['Redis restart log delta stderr'], 'restart stderr')
+})
+
+test('runtime proof captures Redis persistence checkpoints before and after reconnect', () => {
+  const source = readFileSync(new URL('./onprem-core-runtime-proof.mjs', import.meta.url), 'utf8')
+  const diagnosticSource = readFileSync(new URL('./onprem-redis-persistence-diagnostic.mjs', import.meta.url), 'utf8')
+  const preStop = source.indexOf("captureQueueCheckpoint('pre_stop')")
+  const stop = source.indexOf("compose(['stop', 'redis']")
+  const pause = source.indexOf('pauseRuntimeService(target)', stop)
+  const start = source.indexOf("compose(['start', 'redis']", pause)
+  const postLoad = source.indexOf("captureQueueCheckpoint('post_redis_load')")
+  const unpause = source.indexOf('unpauseRuntimeService(target)', postLoad)
+  const apiHealth = source.indexOf("waitHealthy('api')", postLoad)
+  const postReconnect = source.indexOf("captureQueueCheckpoint('post_runtime_reconnect')")
+  const process = source.indexOf("synthetic-queue-probe.js', 'process'", postReconnect)
+  assert.ok(preStop > 0 && preStop < stop)
+  assert.ok(stop < pause && pause < start && start < postLoad && postLoad < unpause)
+  assert.ok(unpause < apiHealth)
+  assert.ok(apiHealth < postReconnect && postReconnect < process)
+  assert.match(source, /finally \{[\s\S]*unpauseRuntimeService\(target\)/)
+  assert.match(source, /collectRedisRestartLogDelta\(\{[\s\S]*command,[\s\S]*assertNoSecretLeak,[\s\S]*containerId: redisIdAfter,[\s\S]*since: redisRestartLogSince/)
+  assert.match(diagnosticSource, /docker', \['logs', '--since', since, '--timestamps'/)
+  assert.match(diagnosticSource, /--network', 'none'/)
+  assert.match(diagnosticSource, /--read-only', '--cap-drop', 'ALL'/)
+  assert.match(diagnosticSource, /--security-opt', 'no-new-privileges', '--user', '999:1000'/)
+  assert.match(diagnosticSource, /--memory', '128m', '--pids-limit', '32'/)
+  assert.match(diagnosticSource, /--tmpfs', '\/aof-check:rw,noexec,nosuid,nodev,size=2m,mode=0700,uid=999,gid=1000'/)
+  assert.doesNotMatch(diagnosticSource, /--user', '0:0'/)
+  assert.doesNotMatch(diagnosticSource, /--cap-add/)
+  assert.match(diagnosticSource, /:\/data:ro/)
+  assert.match(diagnosticSource, /\[ ! -r "\$dir" \] \|\| \[ ! -x "\$dir" \]/)
+  assert.match(diagnosticSource, /"\$total" -gt 1048576/)
+  assert.match(diagnosticSource, /"\$count" -gt 17/)
+  assert.match(diagnosticSource, /cp "\$path" "\$work\/\$name"/)
+  assert.match(diagnosticSource, /for hidden in "\$dir"\/\.\[!\.\]\* "\$dir"\/\.\.\?\*/)
+  const symlinkGuard = diagnosticSource.indexOf('[ ! -L "$path" ] || exit 41')
+  const missingGlobGuard = diagnosticSource.indexOf('[ -e "$path" ] || continue')
+  assert.ok(symlinkGuard > 0 && symlinkGuard < missingGlobGuard)
+  assert.match(source, /collectStoppedAofInventoryEvidence\(\{/)
+  assert.match(source, /workerImage: config\.services\.worker\.image/)
+  assert.match(diagnosticSource, /buildStoppedAofSemanticInspectorScript\(\)/)
+  assert.match(diagnosticSource, /workerImage, '-e'/)
+  assert.match(diagnosticSource, /aof_contains_later_cleanup/)
+  assert.match(diagnosticSource, /aof_committed_state_replay_mismatch/)
+  assert.match(diagnosticSource, /redis-check-aof "\$work\/appendonly\.aof\.manifest"/)
+  assert.doesNotMatch(diagnosticSource, /redis-check-aof[^\n]*--fix/)
+  assert.match(diagnosticSource, /aof_readonly_validation_failed/)
+  assert.match(diagnosticSource, /aof_semantic_inspection_failed/)
+  assert.doesNotMatch(source, /console\.log\([^\n]*(?:redisLogs|redisMountBefore\.Source)/)
 })
 
 test('runtime proof has no timing-based AOF durability sleep', () => {

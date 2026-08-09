@@ -416,7 +416,7 @@ jobs:
           printf 'postgresql://hr_axis_migrator:%s@postgres:5432/hr_axis?sslmode=verify-full' "$migrator_password" > "$secret_root/backend/migrator-database-url"
           printf 'postgresql://hr_axis_api:%s@postgres:5432/hr_axis?sslmode=verify-full' "$api_password" > "$secret_root/backend/api-database-url"
           printf 'postgresql://hr_axis_worker:%s@postgres:5432/hr_axis?sslmode=verify-full' "$worker_password" > "$secret_root/backend/worker-database-url"
-          printf 'user default off\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' \
+          printf 'user default off resetpass ~* &* +@all\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' \
             "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
           printf 'redis://health:%s@redis:6379' "$redis_health_password" > "$secret_root/redis/health-url"
           printf 'redis://api:%s@redis:6379' "$redis_api_password" > "$secret_root/backend/redis-api-url"
@@ -444,6 +444,9 @@ jobs:
           RELEASE_ID: onprem-core-${{ github.sha }}
         run: |
           set -euo pipefail
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends conntrack
+          sudo conntrack -L -o extended >/dev/null
           firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"
           sudo iptables-save > "$firewall_snapshot"
           cleanup() {

@@ -31,6 +31,14 @@ const CADDY_BOOTSTRAP_PREFIX = [
   'chmod 0500 "${temporary}"',
   'mv "${temporary}" "${destination}"',
 ]
+const EXPECTED_REDIS_ACL_RULES = [
+  'user default off resetpass ~* &* +@all',
+  'user health on >%s ~* +ping',
+  'user api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate',
+  'user worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate',
+]
+const EXPECTED_REDIS_ACL_WRITE_COMMAND = `printf '${EXPECTED_REDIS_ACL_RULES.join('\\n')}\\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"`
+const EXPECTED_REDIS_ACL_PERMISSION_COMMAND = 'sudo chown 999:1000 "$secret_root/redis/users.acl" "$secret_root/redis/health-url" && sudo chmod 0400 "$secret_root/redis/users.acl" "$secret_root/redis/health-url"'
 
 function activeShellLines(value) {
   return String(value)
@@ -53,6 +61,22 @@ function workflowStepActiveLines(workflow, name) {
   const run = lines.slice(start, end).findIndex((line) => line === '        run: |')
   if (run < 0) return []
   return activeShellLines(lines.slice(start + run + 1, end).join('\n'))
+}
+
+function joinShellContinuations(lines) {
+  const commands = []
+  let current = ''
+  for (const line of lines) {
+    const continued = line.endsWith('\\')
+    const segment = continued ? line.slice(0, -1).trimEnd() : line
+    current = current ? `${current} ${segment}` : segment
+    if (!continued) {
+      commands.push(current)
+      current = ''
+    }
+  }
+  if (current) commands.push(current)
+  return commands
 }
 
 function workflowCaddyBootstrapBodies(activeLines) {
@@ -200,6 +224,15 @@ export function validateOnpremCoreContract(input) {
   fail(/appendonly yes/.test(input.redis) && /appendfsync everysec/.test(input.redis), 'Redis must use AOF everysec recovery')
   fail(/maxmemory 640mb/.test(input.redis) && /maxmemory-policy noeviction/.test(input.redis), 'Redis maxmemory must stay below 768 MiB with noeviction')
   fail(/aclfile \/run\/secrets\/redis_users_acl/.test(input.redis), 'Redis authentication must use a mounted ACL file')
+  const redisSecretCommands = joinShellContinuations(workflowStepActiveLines(input.workflow, 'Prepare UID-bound ephemeral synthetic secret files'))
+  const redisAclCommands = redisSecretCommands.filter((line) => /users\.acl/.test(line))
+  fail(
+    JSON.stringify(redisAclCommands) === JSON.stringify([
+      EXPECTED_REDIS_ACL_WRITE_COMMAND,
+      EXPECTED_REDIS_ACL_PERMISSION_COMMAND,
+    ]),
+    'Redis 7 AOF replay requires one exact disabled-default ACL writer bound to the protected users.acl sink',
+  )
   fail(/-flushall -flushdb -swapdb -migrate/.test(input.workflow) && /~hr-axis:rate-limit:\*/.test(input.workflow) && /~bull:hr-axis-onprem-synthetic-recovery-v1:\*/.test(input.workflow), 'runtime Redis ACLs must scope keys and deny destructive non-admin commands')
   fail(/cap_drop: \[ALL\]/.test(blocks.get('redis') ?? '') && /cap_add: \[CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID\]/.test(blocks.get('redis') ?? ''), 'Redis fresh-volume entrypoint must retain only the identity and ownership setup capabilities it needs')
   for (const service of ['postgres', 'redis']) {
@@ -234,6 +267,20 @@ export function validateOnpremCoreContract(input) {
   fail(!/core-runtime-proof:/m.test(input.workflow), 'runtime proof must reuse the exact scanned images in one proof job')
   fail(!/:core-proof/.test(input.workflow), 'runtime proof must not rebuild or exercise an unscanned image identity')
   fail(/docker image inspect hr-axis-onprem-backend:proof/.test(input.workflow) && /docker image inspect hr-axis-onprem-frontend:proof/.test(input.workflow), 'runtime proof must bind Compose to the scanned proof image IDs')
+  const coreProofLines = workflowStepActiveLines(input.workflow, 'Run mandatory fresh-volume core proof behind a reversible firewall')
+  const conntrackProvisioning = [
+    'sudo apt-get update',
+    'sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends conntrack',
+    'sudo conntrack -L -o extended >/dev/null',
+  ]
+  const firewallSnapshotIndex = coreProofLines.indexOf('firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"')
+  fail(
+    firewallSnapshotIndex >= 0
+      && conntrackProvisioning.every((line, index) => hasExactActiveLine(coreProofLines, line)
+        && coreProofLines.indexOf(line) < firewallSnapshotIndex
+        && (index === 0 || coreProofLines.indexOf(conntrackProvisioning[index - 1]) < coreProofLines.indexOf(line))),
+    'GitHub-hosted runtime proof must provision and preflight read-only conntrack observation before applying the reversible firewall',
+  )
   fail(/^  CADDY_IMAGE: caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\r?$/m.test(input.workflow), 'workflow must bind the Caddy bootstrap proof to the exact pinned Caddy image')
   const expectedWorkflowBootstrap = [...CADDY_BOOTSTRAP_PREFIX, 'exec "${destination}" version']
   const caddyProofLines = workflowStepActiveLines(input.workflow, 'Prove capability-free Caddy bootstrap under production restrictions')
