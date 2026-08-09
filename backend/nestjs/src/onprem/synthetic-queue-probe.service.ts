@@ -6,9 +6,56 @@ import { AppConfigService } from "../shared/app-config.service";
 const PROBE_QUEUE = "hr-axis-onprem-synthetic-recovery-v1";
 const PROBE_JOB_ID = "synthetic-recovery-v1";
 const PROBE_MARKER = "hr-axis:onprem:synthetic-recovery-v1:processed";
-const PROBE_TIMEOUT_MS = 60_000;
+export const PROBE_TIMEOUT_MS = 60_000;
 
-type ProbeMode = "enqueue" | "process" | "status";
+export type ProbeMode = "enqueue" | "process" | "status";
+
+export const SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS = [
+  "worker_error",
+  "job_failed",
+  "worker_run_failed",
+  "timeout",
+  "unexpected",
+] as const;
+
+export type SyntheticQueueProbeFailureReason =
+  (typeof SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS)[number];
+
+export class SyntheticQueueProbeFailure extends Error {
+  constructor(readonly reason: SyntheticQueueProbeFailureReason) {
+    super(reason);
+    this.name = "SyntheticQueueProbeFailure";
+  }
+}
+
+export function getSyntheticQueueProbeFailureReason(
+  error: unknown,
+): SyntheticQueueProbeFailureReason {
+  if (error instanceof SyntheticQueueProbeFailure && isFailureReason(error.reason)) {
+    return error.reason;
+  }
+  if (typeof error === "object" && error !== null && "reason" in error) {
+    const reason = (error as { reason?: unknown }).reason;
+    if (isFailureReason(reason)) {
+      return reason;
+    }
+  }
+  return "unexpected";
+}
+
+function isFailureReason(value: unknown): value is SyntheticQueueProbeFailureReason {
+  return (
+    typeof value === "string" &&
+    (SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS as readonly string[]).includes(value)
+  );
+}
+
+function asSyntheticQueueProbeFailure(error: unknown): SyntheticQueueProbeFailure {
+  if (error instanceof SyntheticQueueProbeFailure && isFailureReason(error.reason)) {
+    return error;
+  }
+  return new SyntheticQueueProbeFailure(getSyntheticQueueProbeFailureReason(error));
+}
 
 @Injectable()
 export class SyntheticQueueProbeService {
@@ -16,13 +63,17 @@ export class SyntheticQueueProbeService {
 
   async run(mode: ProbeMode) {
     this.assertContext();
-    if (mode === "enqueue") {
-      return this.enqueue();
+    try {
+      if (mode === "enqueue") {
+        return await this.enqueue();
+      }
+      if (mode === "process") {
+        return await this.process();
+      }
+      return await this.status();
+    } catch (error) {
+      throw asSyntheticQueueProbeFailure(error);
     }
-    if (mode === "process") {
-      return this.process();
-    }
-    return this.status();
   }
 
   private assertContext(): void {
@@ -108,7 +159,7 @@ export class SyntheticQueueProbeService {
         },
         { autorun: false, connection, concurrency: 1 },
       );
-      await withTimeout(waitForOneCompletion(worker), PROBE_TIMEOUT_MS);
+      await waitForOneCompletion(worker);
       if (processedCount !== 1 || duplicateCount !== 0) {
         throw new Error("synthetic queue probe exactly-once assertion failed");
       }
@@ -158,18 +209,52 @@ export class SyntheticQueueProbeService {
   }
 }
 
-function waitForOneCompletion(worker: Worker): Promise<void> {
+export function waitForOneCompletion(worker: Worker): Promise<void> {
   return new Promise((resolve, reject) => {
-    worker.once("completed", () => resolve());
-    worker.once("failed", (_job, error) => reject(error));
-    void worker.run().catch(reject);
+    let settled = false;
+    let timeout: NodeJS.Timeout | undefined;
+
+    const cleanup = () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      worker.off("completed", onCompleted);
+      worker.off("failed", onFailed);
+      worker.off("error", onError);
+    };
+    const settle = (failure?: SyntheticQueueProbeFailureReason) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      if (failure) {
+        reject(new SyntheticQueueProbeFailure(failure));
+      } else {
+        resolve();
+      }
+    };
+    const onCompleted = () => settle();
+    const onFailed = () => settle("job_failed");
+    const onError = () => settle("worker_error");
+
+    worker.once("completed", onCompleted);
+    worker.once("failed", onFailed);
+    worker.once("error", onError);
+    timeout = setTimeout(() => settle("timeout"), PROBE_TIMEOUT_MS);
+
+    try {
+      void Promise.resolve(worker.run()).catch(() => settle("worker_run_failed"));
+    } catch {
+      settle("worker_run_failed");
+    }
   });
 }
 
 function withTimeout<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error("synthetic queue probe timed out")),
+      () => reject(new SyntheticQueueProbeFailure("timeout")),
       timeoutMs,
     );
     void work.then(

@@ -2,15 +2,50 @@ import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import type { INestApplicationContext } from "@nestjs/common";
 import { SyntheticQueueProbeModule } from "./synthetic-queue-probe.module";
-import { SyntheticQueueProbeService } from "./synthetic-queue-probe.service";
+import {
+  getSyntheticQueueProbeFailureReason,
+  type ProbeMode,
+  type SyntheticQueueProbeFailureReason,
+  SyntheticQueueProbeService,
+} from "./synthetic-queue-probe.service";
 
-const ALLOWED_MODES = new Set(["enqueue", "process", "status"]);
+const ALLOWED_MODES = new Set<ProbeMode>(["enqueue", "process", "status"]);
+const UNKNOWN_MODE = "unknown" as const;
+const FAILED_EVENT = "onprem.synthetic_queue_probe.failed" as const;
+const INVALID_MODE_EVENT = "onprem.synthetic_queue_probe.invalid_mode" as const;
 
-async function bootstrap(): Promise<void> {
-  const mode = process.argv[2];
-  if (!mode || !ALLOWED_MODES.has(mode)) {
+export type SyntheticQueueProbeFailureDiagnostic = {
+  event: string;
+  mode: ProbeMode | typeof UNKNOWN_MODE;
+  reason: SyntheticQueueProbeFailureReason;
+};
+
+export function formatFailureDiagnostic(
+  requestedMode: string | undefined,
+  reason: SyntheticQueueProbeFailureReason,
+  event: string = FAILED_EVENT,
+): SyntheticQueueProbeFailureDiagnostic {
+  return {
+    event,
+    mode: parseMode(requestedMode) ?? UNKNOWN_MODE,
+    reason,
+  };
+}
+
+function parseMode(value: string | undefined): ProbeMode | undefined {
+  return value && ALLOWED_MODES.has(value as ProbeMode)
+    ? (value as ProbeMode)
+    : undefined;
+}
+
+export async function bootstrap(): Promise<void> {
+  const requestedMode = process.argv[2];
+  const mode = parseMode(requestedMode);
+  if (!mode) {
     process.stderr.write(
-      `${JSON.stringify({ event: "onprem.synthetic_queue_probe.invalid_mode" })}\n`,
+      `${JSON.stringify(
+        formatFailureDiagnostic(requestedMode, "unexpected", INVALID_MODE_EVENT),
+      )}\n`,
     );
     process.exitCode = 2;
     return;
@@ -22,15 +57,15 @@ async function bootstrap(): Promise<void> {
       SyntheticQueueProbeModule,
       { logger: false },
     );
-    const result = await context
-      .get(SyntheticQueueProbeService)
-      .run(mode as "enqueue" | "process" | "status");
+    const result = await context.get(SyntheticQueueProbeService).run(mode);
     process.stdout.write(
       `${JSON.stringify({ event: "onprem.synthetic_queue_probe.completed", ...result })}\n`,
     );
-  } catch {
+  } catch (error) {
     process.stderr.write(
-      `${JSON.stringify({ event: "onprem.synthetic_queue_probe.failed" })}\n`,
+      `${JSON.stringify(
+        formatFailureDiagnostic(mode, getSyntheticQueueProbeFailureReason(error)),
+      )}\n`,
     );
     process.exitCode = 1;
   } finally {
@@ -38,4 +73,6 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-void bootstrap();
+if (require.main === module) {
+  void bootstrap();
+}
