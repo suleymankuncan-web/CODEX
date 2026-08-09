@@ -168,7 +168,7 @@ export function validateOnpremCoreContract(input) {
   fail(/assertPersistenceIdentity\('PostgreSQL restart'\)/.test(input.runtimeProof) && /assertPersistenceIdentity\('full project restart'\)/.test(input.runtimeProof), 'runtime harness must preserve the complete seed aggregate and migration ledger across both restart phases')
   fail(/waitUnhealthy\('api'\)/.test(input.runtimeProof) && /waitUnhealthy\('worker'\)/.test(input.runtimeProof) && /\['stop', 'redis'\]/.test(input.runtimeProof), 'runtime harness must observe API and worker unhealthy during a real Redis stop')
   fail(!/\['stop', '--timeout'/.test(input.runtimeProof), 'runtime proof must preserve each service-specific Compose stop grace')
-  fail(/iptables-save', \['-c'\]/.test(input.runtimeProof) && /egressRejectPacketDelta/.test(input.runtimeProof), 'runtime harness must prove zero rejected egress with packet counters')
+  fail(/collectFirewallEvidence\(\{ counters: true \}\)/.test(input.runtimeProof) && /egressRejectPacketDelta/.test(input.runtimeProof), 'runtime harness must prove zero rejected egress with complete per-table packet counters')
   const rollbackArgs = input.rollbackDown.match(/const args = \[([\s\S]*?)\]\n/)?.[1] ?? ''
   fail(!/(?:'--volumes'|'\-v')/.test(rollbackArgs), 'ordinary rollback down must not remove volumes')
   fail(/--confirm-delete-synthetic-volumes/.test(input.volumeDelete) && /com\.hr-axis\.release-id/.test(input.volumeDelete) && /com\.hr-axis\.data-class/.test(input.volumeDelete), 'volume deletion must require synthetic exact-identity confirmation')

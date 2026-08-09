@@ -2,6 +2,30 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+const REQUIRED_TABLES = ['raw', 'mangle', 'nat', 'filter']
+
+export function collectFirewallEvidence({ counters = false, execute = execFileSync } = {}) {
+  return REQUIRED_TABLES.map((table) => {
+    let evidence
+    try {
+      evidence = String(execute('iptables-save', [...(counters ? ['-c'] : []), '-t', table], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }))
+    } catch {
+      throw new Error(`${table} table evidence command failed`)
+    }
+
+    if (!evidence.trim()) throw new Error(`${table} table evidence is missing`)
+    const tableHeaders = [...evidence.matchAll(/^\*([^\s]+)$/gm)].map((match) => match[1])
+    if (tableHeaders.length !== 1 || tableHeaders[0] !== table) {
+      throw new Error(`${table} table evidence mismatch`)
+    }
+    if (!/^COMMIT$/m.test(evidence)) throw new Error(`${table} table evidence is incomplete`)
+    return evidence.trim()
+  }).join('\n') + '\n'
+}
+
 function chainRules(text, chain) {
   return text.split(/\r?\n/).filter((line) => line.startsWith(`-A ${chain} `))
 }
@@ -61,7 +85,7 @@ export function validateFirewallRules({ iptables, privateSubnets, proxyPorts, ss
   const inputEstablished = input.findIndex(hasEstablished)
   const firstInputAccept = input.findIndex((rule) => /-j ACCEPT\b/.test(rule))
 
-  for (const table of ['raw', 'mangle', 'nat', 'filter']) {
+  for (const table of REQUIRED_TABLES) {
     if (!new RegExp(`^\\*${table}$`, 'm').test(iptables)) {
       errors.push(`complete iptables-save evidence must include the ${table} table`)
     }
@@ -187,7 +211,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     const options = parseArgs(process.argv.slice(2))
     const iptables = options.input
       ? readFileSync(options.input, 'utf8')
-      : execFileSync('iptables-save', [], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+      : collectFirewallEvidence()
     const result = validateFirewallRules({ ...options, iptables })
     console.log(JSON.stringify(result, null, 2))
     if (!result.ok) process.exitCode = 1

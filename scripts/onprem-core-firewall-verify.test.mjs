@@ -2,9 +2,62 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { validateFirewallRules } from './onprem-core-firewall-verify.mjs'
+import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 
 const read = (path) => readFileSync(path, 'utf8')
+
+function tableEvidence(table) {
+  const evidence = read('tests/fixtures/onprem-core-firewall-valid.v4')
+  const block = evidence.match(new RegExp(`^\\*${table}$[\\s\\S]*?^COMMIT$`, 'm'))?.[0]
+  assert.ok(block, `fixture table ${table} is missing`)
+  return `${block}\n`
+}
+
+test('firewall collector obtains deterministic authoritative evidence for every table', () => {
+  const calls = []
+  const evidence = collectFirewallEvidence({
+    counters: true,
+    execute(command, args) {
+      calls.push([command, args])
+      return tableEvidence(args.at(-1))
+    },
+  })
+
+  assert.deepEqual(calls, [
+    ['iptables-save', ['-c', '-t', 'raw']],
+    ['iptables-save', ['-c', '-t', 'mangle']],
+    ['iptables-save', ['-c', '-t', 'nat']],
+    ['iptables-save', ['-c', '-t', 'filter']],
+  ])
+  for (const table of ['raw', 'mangle', 'nat', 'filter']) assert.match(evidence, new RegExp(`^\\*${table}$`, 'm'))
+})
+
+test('firewall collector fails closed when a per-table command omits or substitutes evidence', () => {
+  assert.throws(
+    () => collectFirewallEvidence({ execute: () => { throw new Error('table unavailable') } }),
+    /raw.*command failed/i,
+  )
+  assert.throws(
+    () => collectFirewallEvidence({ execute: (_command, args) => args.at(-1) === 'mangle' ? '' : tableEvidence(args.at(-1)) }),
+    /mangle.*missing/i,
+  )
+  assert.throws(
+    () => collectFirewallEvidence({ execute: (_command, args) => args.at(-1) === 'mangle' ? tableEvidence('filter') : tableEvidence(args.at(-1)) }),
+    /mangle.*mismatch/i,
+  )
+})
+
+test('firewall verifier rejects aggregate evidence that omits an empty security table', () => {
+  const result = validateFirewallRules({
+    iptables: read('tests/fixtures/onprem-core-firewall-missing-mangle.v4'),
+    privateSubnets: ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24'],
+    proxyPorts: [443],
+    sshAdminCidrs: ['192.0.2.0/24'],
+  })
+
+  assert.equal(result.ok, false)
+  assert.deepEqual(result.errors, ['complete iptables-save evidence must include the mangle table'])
+})
 
 test('read-only firewall verifier accepts ordered default-deny synthetic fixture', () => {
   const result = validateFirewallRules({

@@ -3,7 +3,7 @@ import { lstatSync, readFileSync, writeFileSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { validateFirewallRules } from './onprem-core-firewall-verify.mjs'
+import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 
 const PRIVATE_SUBNETS = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
 const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis']
@@ -270,7 +270,7 @@ async function main() {
     receipt.freshVolumes = true
   }
 
-  const firewallText = execFileSync('iptables-save', [], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  const firewallText = collectFirewallEvidence()
   const firewall = validateFirewallRules({
     iptables: firewallText,
     privateSubnets: PRIVATE_SUBNETS,
@@ -279,7 +279,7 @@ async function main() {
   })
   if (!firewall.ok) throw new Error(`host firewall contract failed: ${firewall.errors.join('; ')}`)
   receipt.firewall = firewall.summary
-  const initialRejectCounters = egressRejectCounters(execFileSync('iptables-save', ['-c'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
+  const initialRejectCounters = egressRejectCounters(collectFirewallEvidence({ counters: true }))
 
   const waitHealthy = (service, attempts = 60) => {
     const id = compose(['ps', '--quiet', service], ['infra', 'runtime']).stdout.trim()
@@ -527,10 +527,10 @@ async function main() {
 
     command(process.execPath, ['-e', 'setTimeout(()=>{},3000)'], { label: 'external flow observation window' })
     receipt.flowObservation = observeNoExternalFlows(privateIps)
-    const finalFirewallText = execFileSync('iptables-save', [], { encoding: 'utf8' })
+    const finalFirewallText = collectFirewallEvidence()
     const finalFirewall = validateFirewallRules({ iptables: finalFirewallText, privateSubnets: PRIVATE_SUBNETS, proxyPorts: [443], sshAdminCidrs: options.sshAdminCidrs })
     if (!finalFirewall.ok) throw new Error(`post-runtime firewall contract failed: ${finalFirewall.errors.join('; ')}`)
-    const finalRejectCounters = egressRejectCounters(execFileSync('iptables-save', ['-c'], { encoding: 'utf8' }))
+    const finalRejectCounters = egressRejectCounters(collectFirewallEvidence({ counters: true }))
     let packetDelta = 0
     for (const subnet of PRIVATE_SUBNETS) {
       const delta = finalRejectCounters.get(subnet).packets - initialRejectCounters.get(subnet).packets
