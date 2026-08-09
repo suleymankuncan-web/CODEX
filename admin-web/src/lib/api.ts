@@ -11,6 +11,9 @@ import type { SessionState } from '../features/session/session-storage'
 import {
   extractApiErrorMessage,
   isCanonicalCsrfFailureResponse,
+  isSameOriginApi,
+  recoverBrowserSessionCsrfToken,
+  recoverCrossOriginBrowserSessionCsrf,
   refreshSession,
   shouldRecoverSessionFromApiError,
 } from './api-session-recovery'
@@ -82,7 +85,11 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     isCookieBrowserSession(prepared.session) &&
     (await isCanonicalCsrfFailureResponse(response))
   ) {
-    const retryHeaders = await prepareCsrfRecoveryHeaders(input?.body !== undefined, method)
+    const retryHeaders = await prepareCsrfRecoveryHeaders(
+      input?.body !== undefined,
+      method,
+      prepared.headers['X-CSRF-Token'],
+    )
     if (retryHeaders) {
       const retrySession = readClientSession()
       if (isCookieBrowserSession(retrySession)) {
@@ -149,7 +156,7 @@ async function requestFormData<T>(
     isCookieBrowserSession(prepared.session) &&
     (await isCanonicalCsrfFailureResponse(response))
   ) {
-    const retryHeaders = await prepareCsrfRecoveryHeaders(false, input.method)
+    const retryHeaders = await prepareCsrfRecoveryHeaders(false, input.method, prepared.headers['X-CSRF-Token'])
     if (retryHeaders) {
       const retrySession = readClientSession()
       if (isCookieBrowserSession(retrySession)) {
@@ -356,8 +363,9 @@ export async function clearBrowserSessionCookie() {
 }
 
 async function prepareHeaders(path: string, hasJsonBody: boolean, method: JsonMethod) {
-  const session = readClientSession()
-  assertBrowserSessionCsrfAvailable(session, path, method)
+  let session = readClientSession()
+  await assertBrowserSessionCsrfAvailable(session, path, method)
+  session = readClientSession()
   const headers = buildRequestHeaders(session, hasJsonBody, method)
 
   if (session.mode !== 'bearer') {
@@ -413,24 +421,33 @@ async function prepareRefreshedHeaders(
   }
 
   const refreshedSession = readClientSession()
-  assertBrowserSessionCsrfAvailable(refreshedSession, path, method)
+  await assertBrowserSessionCsrfAvailable(refreshedSession, path, method)
   const headers = buildRequestHeaders(refreshedSession, hasJsonBody, method)
   return isCookieBrowserSession(refreshedSession) || headers.Authorization ? headers : null
 }
 
-async function prepareCsrfRecoveryHeaders(hasJsonBody: boolean, method: JsonMethod) {
+async function prepareCsrfRecoveryHeaders(
+  hasJsonBody: boolean,
+  method: JsonMethod,
+  failedCsrfToken?: string,
+) {
   try {
-    const refreshed = await refreshSession({ skipCache: true })
-    if (!refreshed) {
+    const currentCsrfToken = readBrowserSessionCsrfToken()
+    if (!currentCsrfToken || currentCsrfToken === failedCsrfToken) {
+      const recovered = isSameOriginApi(resolveApiBaseUrl)
+        ? await recoverBrowserSessionCsrfToken(resolveApiBaseUrl)
+        : await recoverCrossOriginBrowserSessionCsrf()
+      if (!recovered) {
+        return null
+      }
+    }
+
+    const recoveredSession = readClientSession()
+    if (!isCookieBrowserSession(recoveredSession) || !readBrowserSessionCsrfToken()) {
       return null
     }
 
-    const refreshedSession = readClientSession()
-    if (!isCookieBrowserSession(refreshedSession) || !readBrowserSessionCsrfToken()) {
-      return null
-    }
-
-    return buildRequestHeaders(refreshedSession, hasJsonBody, method)
+    return buildRequestHeaders(recoveredSession, hasJsonBody, method)
   } catch {
     return null
   }
@@ -527,22 +544,32 @@ function assertBrowserSessionCsrfAvailable(session: SessionState, path: string, 
     return
   }
 
-  const message = 'Cookie session requires a fresh CSRF token. Sign in again and retry the request.'
+  return (async () => {
+    const recovered = isSameOriginApi(resolveApiBaseUrl)
+      ? await recoverBrowserSessionCsrfToken(resolveApiBaseUrl)
+      : await recoverCrossOriginBrowserSessionCsrf()
+    if (recovered) {
+      return
+    }
 
-  if (typeof window !== 'undefined') {
+    const message = 'Cookie session requires a fresh CSRF token. Sign in again and retry the request.'
     clearClientBearerSession()
-    window.dispatchEvent(
-      new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
-        detail: {
-          path,
-          message,
-          status: 401,
-        },
-      }),
-    )
-  }
+    writeBrowserSessionCsrfToken('')
 
-  throw new ApiError(401, message)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
+          detail: {
+            path,
+            message,
+            status: 401,
+          },
+        }),
+      )
+    }
+
+    throw new ApiError(401, message)
+  })()
 }
 
 function isUnsafeMethod(method: JsonMethod) {

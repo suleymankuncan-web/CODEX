@@ -34,6 +34,7 @@ describe('API CSRF recovery', () => {
       sessionStorage,
       location: {
         hostname: 'localhost',
+        origin: 'http://localhost:5173',
         pathname: '/admin/test',
         search: '',
       },
@@ -57,46 +58,238 @@ describe('API CSRF recovery', () => {
     const fetchMock = vi.mocked(fetch)
     fetchMock
       .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
       .mockResolvedValueOnce(createJsonResponse({ ok: true }))
-    const refreshCalls: Array<{ skipCache?: boolean }> = []
-    refreshHandlerCleanup = registerBearerTokenRefreshHandler(async (input) => {
-      refreshCalls.push(input ?? {})
-      writeBrowserSessionCsrfToken(freshCsrfToken)
-      return { refreshed: true }
-    })
 
     const payload = { name: 'Alice', count: 2 }
     await expect(sendJson('/admin/test', { method: 'POST', body: payload })).resolves.toEqual({
       ok: true,
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(refreshCalls).toEqual([{ skipCache: true }])
+    expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(getRequestHeaders(fetchMock, 0)).toMatchObject({
       'X-CSRF-Token': staleCsrfToken,
       'Content-Type': 'application/json',
     })
-    expect(getRequestHeaders(fetchMock, 1)).toMatchObject({
+    expect(getRequestHeaders(fetchMock, 2)).toMatchObject({
       'X-CSRF-Token': freshCsrfToken,
       'Content-Type': 'application/json',
     })
     expect(getRequestInit(fetchMock, 0).credentials).toBe('include')
     expect(getRequestInit(fetchMock, 1).credentials).toBe('include')
+    expect(getRequestInit(fetchMock, 2).credentials).toBe('include')
     expect(getRequestInit(fetchMock, 0).body).toBe(JSON.stringify(payload))
-    expect(getRequestInit(fetchMock, 1).body).toBe(JSON.stringify(payload))
+    expect(getRequestInit(fetchMock, 2).body).toBe(JSON.stringify(payload))
+  })
+
+  it('recovers a JSON mutation through the provider-neutral nonce endpoint without a refresh handler', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+
+    await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).resolves.toEqual({
+      ok: true,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(getRequestUrl(fetchMock, 1)).toContain('/auth/browser-session/csrf')
+    expect(getRequestInit(fetchMock, 1).credentials).toBe('include')
+    expect(getRequestHeaders(fetchMock, 2)['X-CSRF-Token']).toBe(freshCsrfToken)
+  })
+
+  it('recovers a missing initial nonce before sending the unsafe business request', async () => {
+    writeBrowserSessionCsrfToken('')
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+
+    await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).resolves.toEqual({
+      ok: true,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(getRequestUrl(fetchMock, 0)).toContain('/auth/browser-session/csrf')
+    expect(getRequestHeaders(fetchMock, 1)['X-CSRF-Token']).toBe(freshCsrfToken)
+  })
+
+  it('fails closed when provider-neutral nonce recovery fails', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(new Response('expired', { status: 401 }))
+
+    await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).rejects.toMatchObject({
+      status: 403,
+      message: 'CSRF token is required',
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(testWindow.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'store-ops-session-expired' }),
+    )
+  })
+
+  it('uses the registered refresh handler for a hosted cross-origin cookie session', async () => {
+    Object.assign(testWindow.location, {
+      hostname: 'staging.hr-axis.com',
+      origin: 'https://staging.hr-axis.com',
+    })
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+    const refreshCalls: Array<{ skipCache?: boolean }> = []
+    refreshHandlerCleanup = registerRefreshingHandler(refreshCalls)
+
+    await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).resolves.toEqual({
+      ok: true,
+    })
+
+    expect(refreshCalls).toEqual([{ skipCache: true }])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/auth/browser-session/csrf'))).toBe(false)
+    expect(getRequestHeaders(fetchMock, 1)['X-CSRF-Token']).toBe(freshCsrfToken)
+  })
+
+  it('uses the registered refresh handler before a hosted cross-origin unsafe request when the nonce is missing', async () => {
+    Object.assign(testWindow.location, {
+      hostname: 'staging.hr-axis.com',
+      origin: 'https://staging.hr-axis.com',
+    })
+    writeBrowserSessionCsrfToken('')
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValueOnce(createJsonResponse({ ok: true }))
+    const refreshCalls: Array<{ skipCache?: boolean }> = []
+    refreshHandlerCleanup = registerRefreshingHandler(refreshCalls)
+
+    await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).resolves.toEqual({
+      ok: true,
+    })
+
+    expect(refreshCalls).toEqual([{ skipCache: true }])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(getRequestUrl(fetchMock, 0)).toBe('https://api-staging.hr-axis.com/api/admin/test')
+    expect(getRequestHeaders(fetchMock, 0)['X-CSRF-Token']).toBe(freshCsrfToken)
+  })
+
+  it('fails closed for a hosted cross-origin cookie session when the refresh handler is unavailable', async () => {
+    Object.assign(testWindow.location, {
+      hostname: 'staging.hr-axis.com',
+      origin: 'https://staging.hr-axis.com',
+    })
+    writeBrowserSessionCsrfToken('')
+    const fetchMock = vi.mocked(fetch)
+
+    await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).rejects.toMatchObject({
+      status: 401,
+    })
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('replays FormData with the same body identity through provider-neutral recovery', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
+      .mockResolvedValueOnce(createJsonResponse({ uploaded: true }))
+    const body = new FormData()
+    body.append('file', new Blob(['safe upload']), 'report.xlsx')
+
+    await expect(sendFormData('/admin/upload', { method: 'POST', body })).resolves.toEqual({
+      uploaded: true,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(getRequestInit(fetchMock, 0).body).toBe(body)
+    expect(getRequestInit(fetchMock, 2).body).toBe(body)
+  })
+
+  it('keeps the two-business-attempt budget after a second CSRF failure', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+
+    await expect(sendJson('/admin/test', { method: 'PATCH', body: { ok: true } })).rejects.toMatchObject({
+      status: 403,
+      message: 'CSRF token is required',
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(getRequestUrl(fetchMock, 1)).toContain('/auth/browser-session/csrf')
+  })
+
+  it('single-flights concurrent CSRF recoveries and shares the fresh nonce', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
+      .mockResolvedValueOnce(createJsonResponse({ ok: 'first' }))
+      .mockResolvedValueOnce(createJsonResponse({ ok: 'second' }))
+
+    const [first, second] = await Promise.all([
+      sendJson('/admin/first', { method: 'POST', body: { ok: true } }),
+      sendJson('/admin/second', { method: 'POST', body: { ok: true } }),
+    ])
+
+    expect(first).toEqual({ ok: 'first' })
+    expect(second).toEqual({ ok: 'second' })
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/auth/browser-session/csrf'))).toHaveLength(1)
+    expect(getRequestHeaders(fetchMock, 3)['X-CSRF-Token']).toBe(freshCsrfToken)
+    expect(getRequestHeaders(fetchMock, 4)['X-CSRF-Token']).toBe(freshCsrfToken)
+  })
+
+  it('reuses a completed recovery for a stale response that resolves afterward', async () => {
+    const fetchMock = vi.mocked(fetch)
+    const firstFailure = createDeferred<Response>()
+    const secondFailure = createDeferred<Response>()
+    let businessRequestCount = 0
+    fetchMock.mockImplementation((url) => {
+      if (String(url).includes('/auth/browser-session/csrf')) {
+        return Promise.resolve(createCsrfRecoveryResponse())
+      }
+
+      businessRequestCount += 1
+      if (businessRequestCount === 1) {
+        return firstFailure.promise
+      }
+      if (businessRequestCount === 2) {
+        return secondFailure.promise
+      }
+
+      return Promise.resolve(createJsonResponse({ ok: businessRequestCount === 3 ? 'first' : 'second' }))
+    })
+
+    const firstRequest = sendJson('/admin/first', { method: 'POST', body: { ok: true } })
+    const secondRequest = sendJson('/admin/second', { method: 'POST', body: { ok: true } })
+    await waitForCondition(() => fetchMock.mock.calls.length === 2)
+
+    firstFailure.resolve(createCsrfFailureResponse())
+    await waitForCondition(() => readBrowserSessionCsrfToken() === freshCsrfToken)
+    secondFailure.resolve(createCsrfFailureResponse())
+
+    await expect(firstRequest).resolves.toEqual({ ok: 'first' })
+    await expect(secondRequest).resolves.toEqual({ ok: 'second' })
+
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/auth/browser-session/csrf'))).toHaveLength(1)
+    expect(fetchMock).toHaveBeenCalledTimes(5)
+    expect(getRequestHeaders(fetchMock, 3)['X-CSRF-Token']).toBe(freshCsrfToken)
+    expect(getRequestHeaders(fetchMock, 4)['X-CSRF-Token']).toBe(freshCsrfToken)
   })
 
   it('recovers a multipart mutation without changing the original FormData body', async () => {
     const fetchMock = vi.mocked(fetch)
     fetchMock
       .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
       .mockResolvedValueOnce(createJsonResponse({ uploaded: true }))
-    const refreshCalls: Array<{ skipCache?: boolean }> = []
-    refreshHandlerCleanup = registerBearerTokenRefreshHandler(async (input) => {
-      refreshCalls.push(input ?? {})
-      writeBrowserSessionCsrfToken(freshCsrfToken)
-      return { refreshed: true }
-    })
 
     const body = new FormData()
     body.append('file', new Blob(['safe upload']), 'report.xlsx')
@@ -106,14 +299,13 @@ describe('API CSRF recovery', () => {
       uploaded: true,
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(refreshCalls).toEqual([{ skipCache: true }])
+    expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(getRequestHeaders(fetchMock, 0)['X-CSRF-Token']).toBe(staleCsrfToken)
-    expect(getRequestHeaders(fetchMock, 1)['X-CSRF-Token']).toBe(freshCsrfToken)
+    expect(getRequestHeaders(fetchMock, 2)['X-CSRF-Token']).toBe(freshCsrfToken)
     expect(getRequestInit(fetchMock, 0).credentials).toBe('include')
-    expect(getRequestInit(fetchMock, 1).credentials).toBe('include')
+    expect(getRequestInit(fetchMock, 2).credentials).toBe('include')
     expect(getRequestInit(fetchMock, 0).body).toBe(body)
-    expect(getRequestInit(fetchMock, 1).body).toBe(body)
+    expect(getRequestInit(fetchMock, 2).body).toBe(body)
   })
 
   it('keeps the shared retry budget when a 401 retry then receives a CSRF failure', async () => {
@@ -146,14 +338,13 @@ describe('API CSRF recovery', () => {
         const fetchMock = vi.mocked(fetch)
         fetchMock
           .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createCsrfRecoveryResponse())
           .mockResolvedValueOnce(createCsrfFailureResponse())
-        const refreshCalls: Array<{ skipCache?: boolean }> = []
-        refreshHandlerCleanup = registerRefreshingHandler(refreshCalls)
-        return { fetchMock, refreshCalls }
+        return { fetchMock, refreshCalls: [] }
       },
       invoke: () => sendJson('/admin/test', { method: 'PATCH', body: { ok: true } }),
-      expectedCalls: 2,
-      expectedRefreshes: 1,
+      expectedCalls: 3,
+      expectedRefreshes: 0,
       expectedMessage: 'CSRF token is required',
       expectedCsrfToken: '',
     },
@@ -161,11 +352,13 @@ describe('API CSRF recovery', () => {
       name: 'does not replay when the refresher is unavailable',
       setup: () => {
         const fetchMock = vi.mocked(fetch)
-        fetchMock.mockResolvedValueOnce(createCsrfFailureResponse())
+        fetchMock
+          .mockResolvedValueOnce(createCsrfFailureResponse())
+          .mockResolvedValueOnce(new Response('expired', { status: 401 }))
         return { fetchMock, refreshCalls: [] }
       },
       invoke: () => sendJson('/admin/test', { method: 'POST', body: { ok: true } }),
-      expectedCalls: 1,
+      expectedCalls: 2,
       expectedRefreshes: 0,
       expectedMessage: 'CSRF token is required',
     },
@@ -173,17 +366,14 @@ describe('API CSRF recovery', () => {
       name: 'does not replay when the refresher fails',
       setup: () => {
         const fetchMock = vi.mocked(fetch)
-        fetchMock.mockResolvedValueOnce(createCsrfFailureResponse())
-        const refreshCalls: Array<{ skipCache?: boolean }> = []
-        refreshHandlerCleanup = registerBearerTokenRefreshHandler(async (input) => {
-          refreshCalls.push(input ?? {})
-          throw new Error('refresh failed')
-        })
-        return { fetchMock, refreshCalls }
+        fetchMock
+          .mockResolvedValueOnce(createCsrfFailureResponse())
+          .mockResolvedValueOnce(new Response('expired', { status: 401 }))
+        return { fetchMock, refreshCalls: [] }
       },
       invoke: () => sendJson('/admin/test', { method: 'POST', body: { ok: true } }),
-      expectedCalls: 1,
-      expectedRefreshes: 1,
+      expectedCalls: 2,
+      expectedRefreshes: 0,
       expectedMessage: 'CSRF token is required',
     },
     {
@@ -243,21 +433,16 @@ describe('API CSRF recovery', () => {
 
   it('falls through session expiry when refresh succeeds without a CSRF nonce', async () => {
     const fetchMock = vi.mocked(fetch)
-    fetchMock.mockResolvedValueOnce(createCsrfFailureResponse())
-    const refreshCalls: Array<{ skipCache?: boolean }> = []
-    refreshHandlerCleanup = registerBearerTokenRefreshHandler(async (input) => {
-      refreshCalls.push(input ?? {})
-      writeBrowserSessionCsrfToken('')
-      return { refreshed: true }
-    })
+    fetchMock
+      .mockResolvedValueOnce(createCsrfFailureResponse())
+      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
 
     await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).rejects.toMatchObject({
       status: 403,
       message: 'CSRF token is required',
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(refreshCalls).toEqual([{ skipCache: true }])
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(readBrowserSessionCsrfToken()).toBe('')
     expect(testWindow.dispatchEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'store-ops-session-expired' }),
@@ -319,6 +504,14 @@ function createJsonResponse(value: unknown, status = 200) {
   })
 }
 
+function createCsrfRecoveryResponse() {
+  return createJsonResponse({
+    csrfToken: freshCsrfToken,
+    expiresAt: '2026-08-09T00:00:00.000Z',
+    sessionId: 'session-1',
+  })
+}
+
 function persistCookieSession() {
   persistClientSession({
     ...defaultSession,
@@ -339,6 +532,35 @@ function getRequestInit(fetchMock: ReturnType<typeof vi.fn>, index: number) {
 
 function getRequestHeaders(fetchMock: ReturnType<typeof vi.fn>, index: number) {
   return getRequestInit(fetchMock, index).headers as Record<string, string>
+}
+
+function getRequestUrl(fetchMock: ReturnType<typeof vi.fn>, index: number) {
+  return fetchMock.mock.calls[index]?.[0] as string
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve
+    reject = promiseReject
+  })
+
+  return { promise, resolve, reject }
+}
+
+async function waitForCondition(condition: () => boolean) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (condition()) {
+      return
+    }
+
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+  }
+
+  throw new Error('Timed out waiting for the fetch sequence')
 }
 
 function createStorage() {

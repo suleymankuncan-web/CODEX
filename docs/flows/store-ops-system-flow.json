@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-30T19:50:53.635Z",
+  "generatedAt": "2026-08-09T16:22:02.783Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 252,
-    "backendEndpointsWithoutFrontendCallCount": 53,
+    "backendEndpointCount": 253,
+    "backendEndpointsWithoutFrontendCallCount": 54,
     "controllerCount": 35,
     "frontendApiCallCount": 200,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 200,
-    "openApiEndpointCount": 252,
+    "openApiEndpointCount": 253,
     "routeApiEdgeCount": 255,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
@@ -4446,7 +4446,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 30
+        "line": 31
       }
     },
     {
@@ -4460,7 +4460,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 116
+        "line": 149
       }
     },
     {
@@ -4474,7 +4474,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 70
+        "line": 71
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/auth/browser-session/csrf",
+      "method": "POST",
+      "path": "/api/auth/browser-session/csrf",
+      "rawControllerPath": "auth",
+      "rawMethodPath": "browser-session/csrf",
+      "controller": "auth-session",
+      "domain": "auth",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
+        "line": 116
       }
     },
     {
@@ -4656,7 +4670,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 59
+        "line": 60
       }
     },
     {
@@ -7805,6 +7819,12 @@
       "id": "openapi:POST:/api/auth/browser-session",
       "method": "POST",
       "path": "/api/auth/browser-session",
+      "domain": "auth"
+    },
+    {
+      "id": "openapi:POST:/api/auth/browser-session/csrf",
+      "method": "POST",
+      "path": "/api/auth/browser-session/csrf",
       "domain": "auth"
     },
     {
@@ -11735,17 +11755,17 @@
         "frontendCallCount": 3
       },
       {
-        "id": "controller:checklist",
-        "controller": "checklist",
-        "domain": "checklists",
+        "id": "controller:auth-session",
+        "controller": "auth-session",
+        "domain": "auth",
         "endpointCount": 5,
         "frontendCallCount": 2
       },
       {
-        "id": "controller:auth-session",
-        "controller": "auth-session",
-        "domain": "auth",
-        "endpointCount": 4,
+        "id": "controller:checklist",
+        "controller": "checklist",
+        "domain": "checklists",
+        "endpointCount": 5,
         "frontendCallCount": 2
       },
       {
@@ -11870,6 +11890,7 @@
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session",
+      "endpoint:POST:/api/auth/browser-session/csrf",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",

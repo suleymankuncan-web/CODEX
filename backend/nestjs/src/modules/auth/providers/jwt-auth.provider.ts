@@ -195,6 +195,10 @@ export class JwtAuthProvider implements AuthProvider {
       return null;
     }
 
+    if (this.appConfigService.isStrictLocal) {
+      return null;
+    }
+
     try {
       const response = await fetch(`${payload.iss}/protocol/openid-connect/userinfo`, {
         headers: {

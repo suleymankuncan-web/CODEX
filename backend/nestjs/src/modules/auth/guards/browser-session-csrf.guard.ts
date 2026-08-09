@@ -5,6 +5,7 @@ import { parseCookieHeader } from "../browser-session-cookie";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const BROWSER_SESSION_ENDPOINT = "/api/auth/browser-session";
+const BROWSER_SESSION_CSRF_RECOVERY_ENDPOINT = "/api/auth/browser-session/csrf";
 
 @Injectable()
 export class BrowserSessionCsrfGuard implements CanActivate {
@@ -27,6 +28,11 @@ export class BrowserSessionCsrfGuard implements CanActivate {
     }>();
 
     if (SAFE_METHODS.has(request.method.toUpperCase())) {
+      return true;
+    }
+
+    if (this.isCsrfRecoveryEndpoint(request)) {
+      this.assertCsrfRecoveryRequestMetadata(request.headers);
       return true;
     }
 
@@ -53,6 +59,15 @@ export class BrowserSessionCsrfGuard implements CanActivate {
     return true;
   }
 
+  private isCsrfRecoveryEndpoint(request: {
+    originalUrl?: string;
+    path?: string;
+    url?: string;
+  }): boolean {
+    const path = request.originalUrl ?? request.path ?? request.url ?? "";
+    return path.split("?")[0] === BROWSER_SESSION_CSRF_RECOVERY_ENDPOINT;
+  }
+
   private isBrowserSessionEndpoint(request: {
     originalUrl?: string;
     path?: string;
@@ -61,8 +76,32 @@ export class BrowserSessionCsrfGuard implements CanActivate {
     const path = request.originalUrl ?? request.path ?? request.url ?? "";
     return path.split("?")[0] === BROWSER_SESSION_ENDPOINT;
   }
+
+  private assertCsrfRecoveryRequestMetadata(
+    headers: Record<string, string | string[] | undefined>,
+  ): void {
+    const origin = resolveExactHeader(headers.origin);
+    const fetchSite = resolveExactHeader(headers["sec-fetch-site"]);
+    const allowedOrigins = this.appConfigService.corsAllowedOrigins ?? [];
+
+    if (
+      !origin ||
+      !allowedOrigins.includes(origin) ||
+      fetchSite !== "same-origin"
+    ) {
+      throw new ForbiddenException("CSRF recovery request metadata is invalid");
+    }
+  }
 }
 
 function resolveHeader(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
+}
+
+function resolveExactHeader(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value.length === 1 ? value[0] : undefined;
+  }
+
+  return value;
 }
