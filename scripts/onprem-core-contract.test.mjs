@@ -350,6 +350,17 @@ test('ONP-2 contract preserves bounded unexpected TLS codes for rejected diagnos
   assert.equal(validateOnpremCoreContract(input).ok, false)
 })
 
+test('ONP-2 contract rejects a duplicated Node binary in Redis ACL probes', () => {
+  const input = contractInput()
+  const active = "compose(buildRedisProbeComposeArgs(service, script), ['runtime'], `${service} Redis destructive-command denial probe`)"
+  assert.equal(input.runtimeProof.includes(active), true, 'Redis probe must use the entrypoint-safe argument builder')
+  input.runtimeProof = input.runtimeProof.replace(
+    active,
+    "compose(['run', '--rm', '--no-deps', service, '/nodejs/bin/node', '-e', script], ['runtime'])",
+  )
+  assert.equal(validateOnpremCoreContract(input).ok, false)
+})
+
 test('ONP-2 contract rejects invented auth keys and disabled-provider credential surfaces', () => {
   const input = contractInput()
   input.compose = input.compose

@@ -7,20 +7,14 @@ import { fileURLToPath } from 'node:url'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import {
-  buildTlsProbeDockerArgs,
-  CADDY_CMDLINE,
-  CADDY_IMAGE,
-  classifyTlsProbeResult,
-  sanitizeTlsErrorCode,
-  TLS_PROBE_MARKER,
+  buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE,
+  classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
 
 export {
-  buildTlsProbeDockerArgs,
-  classifyTlsProbeResult,
-  sanitizeTlsErrorCode,
-  TLS_WRONG_CA_CODES,
+  buildTlsProbeDockerArgs, classifyTlsProbeResult,
+  sanitizeTlsErrorCode, TLS_WRONG_CA_CODES,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
 
@@ -275,6 +269,12 @@ export function assertProbeOutput(output, expected) {
   }
 }
 
+export function buildRedisProbeComposeArgs(service, script) {
+  if (!['api', 'worker'].includes(service)) throw new Error('Redis probe requires an approved runtime service')
+  if (!String(script ?? '').trim()) throw new Error('Redis probe script is required')
+  return ['run', '--rm', '--no-deps', '--entrypoint', '/nodejs/bin/node', service, '-e', script]
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   const composePath = resolve(options.compose)
@@ -282,8 +282,8 @@ async function main() {
   const base = ['compose', '--project-name', options.project, '--env-file', envPath, '--file', composePath]
   const composeArgs = (args, profiles = []) => [...base, ...profiles.flatMap((profile) => ['--profile', profile]), ...args]
   let secretValues = new Map()
-  const compose = (args, profiles = []) => {
-    const result = command('docker', composeArgs(args, profiles), { label: `docker compose ${args[0]}` })
+  const compose = (args, profiles = [], label = `docker compose ${args[0]}`) => {
+    const result = command('docker', composeArgs(args, profiles), { label })
     if (secretValues.size > 0) {
       assertNoSecretLeak(secretValues, {
         [`docker compose ${args[0]} stderr`]: result.stderr,
@@ -479,7 +479,7 @@ async function main() {
       "const probes=[['flushall'],['flushdb'],['swapdb','0','1'],['migrate','127.0.0.1','1','__acl_probe__','0','1']]",
       "Promise.all(probes.map(async(args)=>{try{await client.call(...args);throw new Error('destructive Redis command was allowed')}catch(error){if(!String(error?.message).includes('NOPERM'))throw error}})).then(()=>client.quit()).then(()=>process.exit(0)).catch(()=>{client.disconnect(false);process.exit(1)})",
     ].join(';')
-    compose(['run', '--rm', '--no-deps', service, '/nodejs/bin/node', '-e', script], ['runtime'])
+    compose(buildRedisProbeComposeArgs(service, script), ['runtime'], `${service} Redis destructive-command denial probe`)
   }
 
   const query = (sql) => compose(['exec', '-T', 'postgres', 'psql', '--no-psqlrc', '--username', 'hr_axis_bootstrap', '--dbname', 'hr_axis', '--tuples-only', '--no-align', '--command', sql], ['infra']).stdout.trim()

@@ -14,6 +14,7 @@ import {
   parseSequencePrivilegeMatrix,
   redact,
   sanitizeTlsErrorCode,
+  buildRedisProbeComposeArgs,
   buildTlsProbeDockerArgs,
   serviceFailureDiagnostic,
   TLS_WRONG_CA_CODES,
@@ -326,6 +327,19 @@ test('TLS probe preserves only bounded safe error codes for rejected diagnostics
   assert.match(source, /sanitizeTlsErrorCode\.toString\(\)/)
   assert.match(source, /sanitizeTlsErrorCode\(error\?\.code\)/)
   assert.doesNotMatch(source, /safeCodes\.has\(candidate\)/)
+})
+
+test('Redis ACL probes override the Compose entrypoint without duplicating the Node binary', () => {
+  const script = "process.stdout.write('ok')"
+  for (const service of ['api', 'worker']) {
+    const args = buildRedisProbeComposeArgs(service, script)
+    assert.deepEqual(args, [
+      'run', '--rm', '--no-deps', '--entrypoint', '/nodejs/bin/node', service, '-e', script,
+    ])
+    assert.equal(args.slice(args.indexOf(service) + 1).includes('/nodejs/bin/node'), false)
+  }
+  assert.throws(() => buildRedisProbeComposeArgs('migrator', script), /runtime service/i)
+  assert.throws(() => buildRedisProbeComposeArgs('api', ''), /probe script/i)
 })
 
 test('TLS probe classifier requires the exact success marker and HTTP 200', () => {
