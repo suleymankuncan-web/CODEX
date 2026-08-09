@@ -6,7 +6,9 @@ import {
   SyntheticQueueProbeService,
   classifySyntheticQueueProbeJobState,
   classifySyntheticQueueProbeMarkerState,
+  enqueueSyntheticQueueProbeDurably,
   getSyntheticQueueProbeFailureReason,
+  isLocalAofFsyncAcknowledged,
   isSyntheticQueueProbePreflightReady,
   sanitizeSyntheticQueueProbeFailureDetails,
   waitForOneCompletion,
@@ -212,6 +214,101 @@ describe("SyntheticQueueProbeService", () => {
     expect(getSyntheticQueueProbeFailureReason(new SyntheticQueueProbeFailure(reason))).toBe(
       reason,
     );
+  });
+
+  it("acknowledges the BullMQ write on the same connection before reading state", async () => {
+    const calls: string[] = [];
+    const job = {
+      getState: jest.fn(async () => {
+        calls.push("state");
+        return "delayed";
+      }),
+    };
+    const queue = {
+      add: jest.fn(async () => {
+        calls.push("add");
+        return job;
+      }),
+    };
+    const connection = {
+      call: jest.fn(async () => {
+        calls.push("waitaof");
+        return [1, 0];
+      }),
+    };
+
+    await expect(
+      enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+    ).resolves.toBe("delayed");
+    expect(calls).toEqual(["add", "waitaof", "state"]);
+    expect(connection.call).toHaveBeenCalledWith("WAITAOF", "1", "0", "500");
+  });
+
+  it.each([
+    [[1, 0], true],
+    [["1", "0"], true],
+    [[0, 0], false],
+    [[1], false],
+    [[1, -1], false],
+    ["1,0", false],
+    [undefined, false],
+  ])("classifies local AOF acknowledgement %p as %s", (reply, expected) => {
+    expect(isLocalAofFsyncAcknowledged(reply)).toBe(expected);
+  });
+
+  it.each([[0, 0], ["malformed"], null])(
+    "fails closed for unacknowledged AOF reply %p",
+    async (reply) => {
+      const queue = {
+        add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+      };
+      const connection = { call: jest.fn(async () => reply) };
+      await expect(
+        enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+      ).rejects.toEqual(
+        expect.objectContaining({ reason: "aof_fsync_not_acknowledged" }),
+      );
+    },
+  );
+
+  it("fails closed when WAITAOF rejects", async () => {
+    const queue = {
+      add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+    };
+    const connection = {
+      call: jest.fn(async () => {
+        throw new Error("unknown command and redis://secret");
+      }),
+    };
+    await expect(
+      enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+    ).rejects.toEqual(
+      expect.objectContaining({ reason: "aof_fsync_not_acknowledged" }),
+    );
+  });
+
+  it("fails closed when WAITAOF exceeds the bounded timeout", async () => {
+    jest.useFakeTimers();
+    try {
+      const queue = {
+        add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+      };
+      const connection = {
+        call: jest.fn(() => new Promise<never>(() => undefined)),
+      };
+      const result = enqueueSyntheticQueueProbeDurably(
+        queue as never,
+        connection as never,
+        500,
+      );
+      const failure = expect(result).rejects.toEqual(
+        expect.objectContaining({ reason: "aof_fsync_not_acknowledged" }),
+      );
+      await jest.advanceTimersByTimeAsync(500);
+      await failure;
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("formats failure JSON with only the safe diagnostic fields", () => {

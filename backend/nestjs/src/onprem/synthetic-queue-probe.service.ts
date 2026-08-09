@@ -14,6 +14,7 @@ export const SYNTHETIC_QUEUE_PROBE_FAILURE_REASONS = [
   "worker_error",
   "job_failed",
   "worker_run_failed",
+  "aof_fsync_not_acknowledged",
   "redis_connect_timeout",
   "state_read_timeout",
   "worker_timeout",
@@ -201,25 +202,13 @@ export class SyntheticQueueProbeService {
       if (existing || marker) {
         throw new Error("synthetic queue probe state is not clean");
       }
-      const job = await withTimeout(
-        queue.add(
-          "synthetic-recovery",
-          { dataClass: "synthetic", schemaVersion: 1 },
-          {
-            attempts: 1,
-            delay: 30_000,
-            jobId: PROBE_JOB_ID,
-            removeOnComplete: false,
-            removeOnFail: false,
-          },
-        ),
+      const state = await enqueueSyntheticQueueProbeDurably(
+        queue,
+        connection,
         this.config.redisOperationTimeoutMs,
       );
-      const state = await readJobState(job, this.config.redisOperationTimeoutMs);
-      if (state !== "delayed") {
-        throw new SyntheticQueueProbeFailure("unexpected");
-      }
       return {
+        durability: "local-aof-fsynced" as const,
         mode: "enqueue" as const,
         queuedCount: 1,
         state,
@@ -360,6 +349,59 @@ export class SyntheticQueueProbeService {
       connection.disconnect(false);
     }
   }
+}
+
+export async function enqueueSyntheticQueueProbeDurably(
+  queue: Pick<Queue, "add">,
+  connection: Pick<IORedis, "call">,
+  timeoutMs: number,
+): Promise<"delayed"> {
+  const job = await withTimeout(
+    queue.add(
+      "synthetic-recovery",
+      { dataClass: "synthetic", schemaVersion: 1 },
+      {
+        attempts: 1,
+        delay: 30_000,
+        jobId: PROBE_JOB_ID,
+        removeOnComplete: false,
+        removeOnFail: false,
+      },
+    ),
+    timeoutMs,
+  );
+  let acknowledgement: unknown;
+  try {
+    acknowledgement = await withTimeout(
+      connection.call("WAITAOF", "1", "0", String(timeoutMs)),
+      timeoutMs,
+      "aof_fsync_not_acknowledged",
+    );
+  } catch {
+    throw new SyntheticQueueProbeFailure("aof_fsync_not_acknowledged");
+  }
+  if (!isLocalAofFsyncAcknowledged(acknowledgement)) {
+    throw new SyntheticQueueProbeFailure("aof_fsync_not_acknowledged");
+  }
+  const state = await readJobState(job, timeoutMs);
+  if (state !== "delayed") {
+    throw new SyntheticQueueProbeFailure("unexpected");
+  }
+  return state;
+}
+
+export function isLocalAofFsyncAcknowledged(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length !== 2) {
+    return false;
+  }
+  const localFsyncCount = Number(value[0]);
+  const replicaFsyncCount = Number(value[1]);
+  return (
+    Number.isSafeInteger(localFsyncCount) &&
+    localFsyncCount >= 1 &&
+    Number.isSafeInteger(replicaFsyncCount) &&
+    replicaFsyncCount >= 0
+  );
 }
 
 export function waitForOneCompletion(worker: Worker): Promise<void> {

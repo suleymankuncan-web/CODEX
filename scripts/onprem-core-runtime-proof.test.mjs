@@ -64,13 +64,23 @@ test('runtime proof validates the sanitized synthetic queue result contract', ()
 
   const enqueued = {
     stderr: '',
-    stdout: '{"event":"onprem.synthetic_queue_probe.completed","mode":"enqueue","queuedCount":1,"state":"delayed","status":"queued"}\n',
+    stdout: '{"event":"onprem.synthetic_queue_probe.completed","durability":"local-aof-fsynced","mode":"enqueue","queuedCount":1,"state":"delayed","status":"queued"}\n',
   }
-  assert.doesNotThrow(() => assertProbeOutput(enqueued, { mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }))
+  assert.doesNotThrow(() => assertProbeOutput(enqueued, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }))
   assert.throws(
-    () => assertProbeOutput({ ...enqueued, stdout: enqueued.stdout.replace('delayed', 'waiting') }, { mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }),
+    () => assertProbeOutput({ ...enqueued, stdout: enqueued.stdout.replace('delayed', 'waiting') }, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }),
     /result mismatch for state/i,
   )
+  assert.throws(
+    () => assertProbeOutput({ ...enqueued, stdout: enqueued.stdout.replace('local-aof-fsynced', 'unproven') }, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' }),
+    /result mismatch for durability/i,
+  )
+})
+
+test('runtime proof has no timing-based AOF durability sleep', () => {
+  const source = readFileSync(new URL('./onprem-core-runtime-proof.mjs', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /AOF everysec wait|setTimeout\(\(\)=>\{\},2000\)/)
+  assert.match(source, /durability: 'local-aof-fsynced'/)
 })
 
 test('runtime proof binds the sanitized receipt to the resolved migration tree digest', () => {

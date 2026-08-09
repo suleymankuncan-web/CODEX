@@ -702,8 +702,7 @@ async function main() {
     receipt.redisAcl = { destructiveCommandsDenied: true, keyPrefixesScoped: true }
     const redisMountBefore = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect redis volume' }).stdout)[0].Mounts.find((mount) => mount.Destination === '/data')?.Name
     const enqueued = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'enqueue'], ['runtime'])
-    assertProbeOutput(enqueued, { mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' })
-    command(process.execPath, ['-e', 'setTimeout(()=>{},2000)'], { label: 'AOF everysec wait' })
+    assertProbeOutput(enqueued, { durability: 'local-aof-fsynced', mode: 'enqueue', queuedCount: 1, state: 'delayed', status: 'queued' })
     compose(['stop', 'redis'], ['infra'])
     const redisStoppedState = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect stopped redis' }).stdout)[0].State
     if (redisStoppedState.ExitCode !== 0 || redisStoppedState.OOMKilled || redisStoppedState.Dead || redisStoppedState.Error) {
