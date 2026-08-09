@@ -303,7 +303,7 @@ jobs:
           mkdir -p proof/keycloak-rootfs
           docker export "$keycloak_id" | tar -xf - -C proof/keycloak-rootfs
           docker rm "$keycloak_id" >/dev/null
-          node scripts/onprem-image-content-guard.mjs --rootfs proof/keycloak-rootfs --application-root /opt/keycloak --json \
+          node scripts/onprem-image-content-guard.mjs --rootfs proof/keycloak-rootfs --kind keycloak --application-root /opt/keycloak --json \
             | tee proof/keycloak-content-guard.json
           docker save "$keycloak_tag" -o proof/keycloak-image.tar
           mkdir -p proof/keycloak-saved-image
@@ -314,7 +314,7 @@ jobs:
             rm -rf "$keycloak_layer_root"
             mkdir -p "$keycloak_layer_root"
             tar -xf "proof/keycloak-saved-image/$layer" -C "$keycloak_layer_root"
-            node scripts/onprem-image-content-guard.mjs --rootfs "$keycloak_layer_root" --application-root /opt/keycloak --json \
+            node scripts/onprem-image-content-guard.mjs --rootfs "$keycloak_layer_root" --kind keycloak --application-root /opt/keycloak --json \
               | tee "proof/keycloak-layer-${keycloak_layer_index}-content-guard.json"
             keycloak_layer_index=$((keycloak_layer_index + 1))
           done < <(jq -r '.[0].Layers[]' proof/keycloak-saved-image/manifest.json)

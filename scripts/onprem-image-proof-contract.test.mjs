@@ -159,3 +159,13 @@ test('ONP image proof keeps shell heredocs inside their YAML run blocks', () => 
     index = closingIndex
   }
 })
+
+test('ONP-3B content guard invokes keycloak kind for the final image and every layer', () => {
+  const keycloakGuardCalls = (workflow.match(/node scripts\/onprem-image-content-guard\.mjs --rootfs[^\n]+/g) ?? [])
+    .filter((call) => /keycloak-rootfs|keycloak_layer_root/.test(call))
+  assert.equal(keycloakGuardCalls.length, 2)
+  for (const call of keycloakGuardCalls) {
+    assert.match(call, /--kind keycloak/)
+    assert.match(call, /--application-root \/opt\/keycloak/)
+  }
+})

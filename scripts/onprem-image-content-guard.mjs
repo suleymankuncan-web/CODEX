@@ -1,4 +1,5 @@
 import { closeSync, lstatSync, openSync, readFileSync, readSync, readdirSync, readlinkSync } from 'node:fs'
+import { createHash, X509Certificate } from 'node:crypto'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -53,8 +54,93 @@ const TEXT_PROBE_BYTES = 8 * 1024
 const BINARY_SCAN_BYTES = 64 * 1024
 const BINARY_SCAN_OVERLAP_BYTES = 8 * 1024
 
+const KEYCLOAK_APPROVED_CONTENT = Object.freeze({
+  'etc/java/java-21-openjdk/java-21-openjdk-21.0.12.0.8-1.2.el9.x86_64/conf/management/jmxremote.password.template': Object.freeze({
+    sha256: '0273b6a6b9e20e6ce54c5aee70164028e0395063b2b7d39060a40b6495543dbf',
+    kind: 'jmx-template',
+  }),
+  'etc/pki/product-default/479.pem': Object.freeze({
+    sha256: '84272960fd18a054316433a717e0bea38f804cbe06f5539a4d3b6d1f4bcf0dfd',
+    kind: 'x509',
+  }),
+  'usr/share/pki/ca-trust-legacy/ca-bundle.legacy.default.crt': Object.freeze({
+    sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    kind: 'empty-legacy-ca',
+  }),
+  'usr/share/pki/ca-trust-legacy/ca-bundle.legacy.disable.crt': Object.freeze({
+    sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    kind: 'empty-legacy-ca',
+  }),
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-credentials-deployment-3.33.2.1.jar': Object.freeze({
+    sha256: '7381a26a584468502217e25d9b2457f3585bf7c282bf367a9d7e528151630224',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.33.2.1.jar': Object.freeze({
+    sha256: '7c7dc5e0110f9a6eac5b893a556239c4b710c671154cc037942382e549021b0f',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/main/io.smallrye.certs.smallrye-private-key-pem-parser-0.9.3.jar': Object.freeze({
+    sha256: 'c00012f3e911e6dbc06059bc7d524a0437150739c32becbb259b78ecf1e75807',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-model-storage-private-26.7.0.jar': Object.freeze({
+    sha256: 'dbbd5d845465bd1132b1c57ee7852d7d332ab3158f00e6d6ba7dff3d6b917af3',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-server-spi-private-26.7.0.jar': Object.freeze({
+    sha256: '5bc9ba1748306eba339a63a20d66690a893c723847cfe6d0ac26b30d9934f78f',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-credential-2.8.4.Final.jar': Object.freeze({
+    sha256: 'b13e94dd2319886ea2126692c44c4823531e9f36635467062b19c738be55de6b',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-password-impl-2.8.4.Final.jar': Object.freeze({
+    sha256: '95d9843470d3d46d179e94e6fd5ab921abd6f760ca2d08cb0572c5408297da43',
+    kind: 'jar',
+  }),
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-3.33.2.1.jar': Object.freeze({
+    sha256: 'e131f7ea4bce3560ee17c9d307c649c24503df1a33e751afb4e64327d8375cd4',
+    kind: 'jar',
+    allowTestPath: true,
+  }),
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-decorator-3.33.2.1.jar': Object.freeze({
+    sha256: '3efbfc19d06ed9b0867610314e331f3ffbe465add53a927fe3989004b116fa0c',
+    kind: 'jar',
+    allowTestPath: true,
+  }),
+})
+
+export const KEYCLOAK_APPROVED_CONTENT_HASHES = Object.freeze(
+  Object.fromEntries(Object.entries(KEYCLOAK_APPROVED_CONTENT).map(([pathname, entry]) => [pathname, entry.sha256])),
+)
+
 function normalizePath(value) {
   return value.split(sep).join('/').replace(/^\.\//, '')
+}
+
+export function normalizeApplicationRoot(value) {
+  if (typeof value !== 'string') throw new TypeError('application root must be a string')
+  const normalized = value
+    .replaceAll('\\', '/')
+    .replace(/\/+/g, '/')
+    .replace(/^(?:\.\/)+/, '')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
+  if (!normalized) throw new Error('application root must not be empty')
+  if (normalized.split('/').some((segment) => segment === '.' || segment === '..')) {
+    throw new Error('application root must be canonical and traversal-free')
+  }
+  return normalized
+}
+
+export function classifyKeycloakApprovedContent(pathname, sha256) {
+  const entry = KEYCLOAK_APPROVED_CONTENT[pathname]
+  return entry && entry.sha256 === sha256 ? entry.kind : null
+}
+
+function keycloakApprovedSpec(pathname) {
+  return KEYCLOAK_APPROVED_CONTENT[pathname] ?? null
 }
 
 function relativePath(root, target) {
@@ -138,9 +224,10 @@ function isAllowedOperatingSystemPublicCertificate(pathname, name) {
   return /^(?:etc\/ssl\/certs|etc\/ca-certificates|etc\/pki\/ca-trust|usr\/lib\/ssl\/certs|usr\/share\/ca-certificates|usr\/local\/share\/ca-certificates)\//.test(lowerPath)
 }
 
-function isForbiddenGlobalCredentialFile(pathname, name) {
+function isForbiddenGlobalCredentialFile(pathname, name, options = {}) {
   if (['etc/passwd', 'etc/passwd-'].includes(pathname.toLowerCase())) return false
   if (isGloballyForbiddenCredentialName(name)) return true
+  if (options.keycloakApprovedPath) return false
   if (isAllowedOperatingSystemPublicCertificate(pathname, name)) return false
   return isForbiddenApplicationName(name)
 }
@@ -173,6 +260,55 @@ function secretContentReason(content, options = {}) {
   }
 
   return null
+}
+
+const PEM_PRIVATE_KEY_MARKER = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----/i
+const PEM_CERTIFICATE_BLOCK = /-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/gi
+
+function certificateContentReason(content, { allowEmpty = false } = {}) {
+  if (allowEmpty && content.length === 0) return null
+  if (PEM_PRIVATE_KEY_MARKER.test(content)) return 'private-key'
+  const secretReason = secretContentReason(content, { includeAssignments: true })
+  if (secretReason) return secretReason
+
+  const blocks = [...content.matchAll(PEM_CERTIFICATE_BLOCK)].map((match) => match[0])
+  if (blocks.length === 0) return 'certificate-required'
+  try {
+    for (const block of blocks) new X509Certificate(block)
+  } catch {
+    return 'invalid-certificate'
+  }
+
+  const remainder = content
+    .replace(PEM_CERTIFICATE_BLOCK, '')
+    .replace(/^\s*(?:#.*)?$/gm, '')
+    .trim()
+  return remainder ? 'untrusted-certificate-material' : null
+}
+
+function validateKeycloakArtifactContent(kind, probe, absolute) {
+  if (kind === 'empty-legacy-ca') {
+    return probe.kind === 'text' && probe.content.length === 0 ? null : 'legacy-ca-must-be-empty'
+  }
+  if (kind === 'x509') {
+    return probe.kind === 'text'
+      ? certificateContentReason(probe.content)
+      : 'certificate-must-be-text'
+  }
+  if (kind === 'jmx-template') {
+    if (probe.kind === 'oversized-text') return 'template-is-oversized'
+    if (probe.kind !== 'text') return 'template-must-be-text'
+    return secretContentReason(probe.content, { includeAssignments: true })
+  }
+  if (kind === 'jar') {
+    if (probe.kind !== 'binary') return 'jar-must-be-binary'
+    return binaryHighSignalSecretReason(absolute)
+  }
+  return 'unknown-keycloak-artifact-class'
+}
+
+export function validateCertificateContent(content, options = {}) {
+  return certificateContentReason(String(content), options)
 }
 
 function probeApplicationText(absolute, size) {
@@ -217,6 +353,10 @@ function binaryHighSignalSecretReason(absolute) {
   }
 }
 
+function sha256File(absolute) {
+  return createHash('sha256').update(readFileSync(absolute)).digest('hex')
+}
+
 function walk(root, current = root, entries = []) {
   let children
   try {
@@ -248,7 +388,7 @@ export function inspectImageContent(rootfsPath, options = {}) {
     : options.kind === 'backend'
       ? ['app']
       : []
-  const applicationRoots = (options.applicationRoots ?? defaultRoots).map(normalizePath)
+  const applicationRoots = (options.applicationRoots ?? defaultRoots).map(normalizeApplicationRoot)
   const violations = []
   let rootStat
   try {
@@ -269,6 +409,12 @@ export function inspectImageContent(rootfsPath, options = {}) {
     const applicationOwned = isApplicationOwned(pathname, applicationRoots)
     const lower = pathname.toLowerCase()
     const firstPartyApplication = applicationOwned && !lower.split('/').includes('node_modules')
+    const keycloakKind = options.kind === 'keycloak'
+    const keycloakApprovedEntry = keycloakKind ? keycloakApprovedSpec(pathname) : null
+    const keycloakApprovedPath = Boolean(keycloakApprovedEntry)
+    const operatingSystemPublicCertificate = stat.isFile() && isAllowedOperatingSystemPublicCertificate(pathname, name)
+    const keycloakApprovedContentPath = keycloakApprovedPath && stat.isFile()
+    const contentScoped = stat.isFile() && (applicationOwned || operatingSystemPublicCertificate || keycloakApprovedContentPath)
     if (applicationOwned && stat.isSymbolicLink()) {
       const violation = inspectApplicationSymlink(rootfsPath, absolute, pathname, applicationRoots)
       if (violation) violations.push(violation)
@@ -277,16 +423,35 @@ export function inspectImageContent(rootfsPath, options = {}) {
     if (lower.split('/').includes('.git') || lower.split('/').includes('.github')) {
       violations.push({ code: 'forbidden-file', path: pathname, detail: 'repository metadata is not permitted' })
     }
-    if (stat.isFile() && isForbiddenGlobalCredentialFile(pathname, name)) {
+    if (keycloakApprovedPath && !stat.isFile()) {
+      violations.push({ code: 'forbidden-file', path: pathname, detail: 'approved Keycloak content must be a regular file' })
+    }
+    if (stat.isFile() && isForbiddenGlobalCredentialFile(pathname, name, { keycloakApprovedPath })) {
       violations.push({ code: 'forbidden-file', path: pathname, detail: 'credential, environment, or key file is not permitted' })
+    }
+    let keycloakApprovedKind = null
+    if (keycloakApprovedPath && stat.isFile()) {
+      let actualSha256
+      try {
+        actualSha256 = sha256File(absolute)
+      } catch (error) {
+        violations.push({ code: 'unreadable-entry', path: pathname, detail: error.message })
+      }
+      if (actualSha256) {
+        keycloakApprovedKind = classifyKeycloakApprovedContent(pathname, actualSha256)
+        if (!keycloakApprovedKind) {
+          violations.push({ code: 'forbidden-file', path: pathname, detail: `approved Keycloak content SHA-256 mismatch (expected ${keycloakApprovedEntry.sha256}, observed ${actualSha256})` })
+        }
+      }
     }
     if (applicationOwned && isForbiddenExtension(name)) {
       violations.push({ code: 'forbidden-extension', path: pathname, detail: 'source or source-map extension is not permitted' })
     }
-    if (applicationOwned && (isForbiddenSegment(pathname) || isForbiddenTestName(name)) && !LICENSE_NAMES.test(name)) {
+    const allowApprovedTestPath = keycloakApprovedEntry?.allowTestPath === true && keycloakApprovedKind === keycloakApprovedEntry.kind
+    if (applicationOwned && (isForbiddenSegment(pathname) || isForbiddenTestName(name)) && !allowApprovedTestPath && !LICENSE_NAMES.test(name)) {
       violations.push({ code: 'forbidden-path', path: pathname, detail: 'test, documentation, evidence, cache, or build path is not permitted' })
     }
-    if (!stat.isFile() || !applicationOwned) continue
+    if (!contentScoped) continue
     if (firstPartyApplication && stat.size > MAX_APPLICATION_TEXT_BYTES) {
       violations.push({ code: 'oversized-application-file', path: pathname, detail: 'application files above 16 MiB require explicit review' })
       continue
@@ -296,6 +461,31 @@ export function inspectImageContent(rootfsPath, options = {}) {
       textProbe = probeApplicationText(absolute, stat.size)
     } catch (error) {
       violations.push({ code: 'unreadable-entry', path: pathname, detail: error.message })
+      continue
+    }
+    if (operatingSystemPublicCertificate) {
+      if (textProbe.kind !== 'text') {
+        violations.push({ code: 'forbidden-file', path: pathname, detail: 'public certificate content must be text PEM' })
+        continue
+      }
+      const certificateReason = certificateContentReason(textProbe.content)
+      if (certificateReason) {
+        const code = ['private-key', 'provider-token', 'jwt', 'credential-assignment'].includes(certificateReason)
+          ? 'secret-content'
+          : 'forbidden-file'
+        violations.push({ code, path: pathname, detail: `public certificate content failed validation (${certificateReason})` })
+      }
+      continue
+    }
+    const approvedKind = keycloakApprovedPath ? keycloakApprovedEntry.kind : null
+    if (approvedKind) {
+      const reason = validateKeycloakArtifactContent(approvedKind, textProbe, absolute)
+      if (reason) {
+        const code = ['private-key', 'provider-token', 'jwt', 'credential-assignment'].includes(reason)
+          ? 'secret-content'
+          : 'forbidden-file'
+        violations.push({ code, path: pathname, detail: `approved Keycloak content failed ${approvedKind} validation (${reason})` })
+      }
       continue
     }
     if (textProbe.kind === 'binary') {
@@ -343,7 +533,9 @@ function parseArgs(argv) {
     else throw new Error(`Unknown argument: ${argument}`)
   }
   if (!options.rootfs) throw new Error('--rootfs is required')
-  if (options.kind && !['frontend', 'backend'].includes(options.kind)) throw new Error('--kind must be frontend or backend')
+  if (Object.prototype.hasOwnProperty.call(options, 'kind') && !['frontend', 'backend', 'keycloak'].includes(options.kind)) {
+    throw new Error('--kind must be frontend, backend, or keycloak')
+  }
   return options
 }
 
