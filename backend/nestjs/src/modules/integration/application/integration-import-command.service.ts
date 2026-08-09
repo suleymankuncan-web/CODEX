@@ -113,6 +113,7 @@ export class IntegrationImportCommandService {
           async ({ batchId }: ImportBatchJobPayload) => {
             await this.materializationService.materializeBatch(batchId);
           },
+          { strictLocalJobId: `import-batch-${batch.batchId}-initial` },
         );
 
     logStructuredMessage(this.logger, "import_batch.command.accepted", {
@@ -250,6 +251,9 @@ export class IntegrationImportCommandService {
       { batchId: input.batchId } satisfies ImportBatchJobPayload,
       async ({ batchId: queuedBatchId }: ImportBatchJobPayload) => {
         await this.materializationService.materializeBatch(queuedBatchId);
+      },
+      {
+        strictLocalJobId: `import-batch-${input.batchId}-retry-${detail.batch.retryCount + 1}`,
       },
     );
 

@@ -30,4 +30,16 @@ describe("RedisRateLimitStore", () => {
       "Redis rate limit response was invalid",
     );
   });
+
+  it("closes an owned Redis connection", async () => {
+    const client = {
+      eval: jest.fn(),
+      quit: jest.fn().mockResolvedValue(undefined),
+    };
+    const store = new RedisRateLimitStore(client, "hr-axis:rate-limit");
+
+    await store.close();
+
+    expect(client.quit).toHaveBeenCalledTimes(1);
+  });
 });

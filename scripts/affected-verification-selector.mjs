@@ -41,8 +41,9 @@ const rules = [
       file.startsWith('scripts/onprem-') ||
       file.startsWith('tools/onprem-license/'),
     commands: ['diffCheck', 'scriptTests', 'frontendBuild', 'backendBuild', 'rootRelease'],
-    targeted: ['on-prem image proof workflow'],
-    reason: 'on-prem production image and signed artifact proof surface changed',
+    targeted: ['on-prem image proof workflow', 'on-prem private core static/runtime proof'],
+    routes: ['/onprem-core'],
+    reason: 'on-prem production image, private data plane, and signed artifact proof surface changed',
     fullRelease: true,
   },
   {

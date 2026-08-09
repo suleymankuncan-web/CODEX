@@ -1,0 +1,445 @@
+import { EventEmitter } from "node:events";
+import { Worker } from "bullmq";
+import {
+  PROBE_TIMEOUT_MS,
+  SyntheticQueueProbeFailure,
+  SyntheticQueueProbeService,
+  classifySyntheticQueueProbeJobState,
+  classifySyntheticQueueProbeMarkerState,
+  enqueueSyntheticQueueProbeDurably,
+  getSyntheticQueueProbeFailureReason,
+  isLocalAofFsyncAcknowledged,
+  isSyntheticQueueProbePreflightReady,
+  parseSyntheticQueuePersistenceInfo,
+  sanitizeSyntheticQueueProbeFailureDetails,
+  waitForOneCompletion,
+} from "./synthetic-queue-probe.service";
+import { formatFailureDiagnostic } from "./synthetic-queue-probe";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+describe("SyntheticQueueProbeService", () => {
+  it.each([
+    [{ dataClass: "synthetic", isStrictLocal: false }],
+    [{ dataClass: "company", isStrictLocal: true }],
+  ])("rejects use outside strict-local synthetic mode", async (config) => {
+    const service = new SyntheticQueueProbeService(config as never);
+
+    await expect(service.run("status")).rejects.toThrow(
+      "synthetic queue probe requires strict-local synthetic mode",
+    );
+  });
+
+  it("emits a deterministic sanitized success record for the runtime harness", () => {
+    const cli = readFileSync(
+      join(process.cwd(), "src", "onprem", "synthetic-queue-probe.ts"),
+      "utf8",
+    );
+
+    expect(cli).toContain("process.stdout.write");
+    expect(cli).toContain("onprem.synthetic_queue_probe.completed");
+    expect(cli).not.toContain("redisUrl");
+  });
+
+  it("resolves on completion and removes every worker listener", async () => {
+    const worker = createWorkerDouble();
+    const completion = waitForOneCompletion(worker);
+
+    expect(worker.listenerCount("completed")).toBe(1);
+    expect(worker.listenerCount("failed")).toBe(1);
+    expect(worker.listenerCount("error")).toBe(1);
+
+    (worker as unknown as EventEmitter).emit("completed");
+    await expect(completion).resolves.toBeUndefined();
+
+    expect(worker.listenerCount("completed")).toBe(0);
+    expect(worker.listenerCount("failed")).toBe(0);
+    expect(worker.listenerCount("error")).toBe(0);
+  });
+
+  it.each([
+    ["failed", "job_failed"],
+    ["error", "worker_error"],
+  ] as const)("maps the worker %s event to a typed failure", async (event, reason) => {
+    const worker = createWorkerDouble();
+    const completion = waitForOneCompletion(worker);
+
+    (worker as unknown as EventEmitter).emit(
+      event,
+      undefined,
+      new Error("sensitive worker detail"),
+      "prev",
+    );
+
+    await expect(completion).rejects.toEqual(
+      expect.objectContaining({ reason }),
+    );
+    expect(worker.listenerCount("completed")).toBe(0);
+    expect(worker.listenerCount("failed")).toBe(0);
+    expect(worker.listenerCount("error")).toBe(0);
+  });
+
+  it("maps a worker.run rejection to a typed failure", async () => {
+    const worker = createWorkerDouble();
+    (worker as unknown as { run: jest.Mock }).run.mockRejectedValue(
+      new Error("redis://secret"),
+    );
+
+    await expect(waitForOneCompletion(worker)).rejects.toEqual(
+      expect.objectContaining({ reason: "worker_run_failed" }),
+    );
+    expect(worker.listenerCount("completed")).toBe(0);
+    expect(worker.listenerCount("failed")).toBe(0);
+    expect(worker.listenerCount("error")).toBe(0);
+  });
+
+  it("maps the 60 second wait timeout and removes listeners", async () => {
+    jest.useFakeTimers();
+    try {
+      const worker = createWorkerDouble(new Promise<void>(() => undefined));
+      const completion = waitForOneCompletion(worker);
+      const failure = expect(completion).rejects.toEqual(
+        expect.objectContaining({ reason: "worker_timeout" }),
+      );
+
+      await jest.advanceTimersByTimeAsync(PROBE_TIMEOUT_MS);
+
+      await failure;
+      expect(PROBE_TIMEOUT_MS).toBe(60_000);
+      expect(worker.listenerCount("completed")).toBe(0);
+      expect(worker.listenerCount("failed")).toBe(0);
+      expect(worker.listenerCount("error")).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("maps an unknown thrown value to the closed unexpected reason", () => {
+    expect(getSyntheticQueueProbeFailureReason("raw secret message")).toBe(
+      "unexpected",
+    );
+    expect(getSyntheticQueueProbeFailureReason(new Error("stack and URL"))).toBe(
+      "unexpected",
+    );
+    expect(new SyntheticQueueProbeFailure("unexpected").reason).toBe("unexpected");
+  });
+
+  it.each([
+    "missing",
+    "delayed",
+    "waiting",
+    "active",
+    "completed",
+    "failed",
+  ] as const)("preserves the allowlisted %s job state", (state) => {
+    expect(classifySyntheticQueueProbeJobState(state)).toBe(state);
+  });
+
+  it.each(["waiting-children", "paused", "redis://secret", undefined, 1])(
+    "maps unsupported job state %p to unknown",
+    (state) => {
+      expect(classifySyntheticQueueProbeJobState(state)).toBe("unknown");
+    },
+  );
+
+  it("rebuilds failure details from the runtime allowlist", () => {
+    const malformed = {
+      event: "raw-event-override",
+      mode: "redis://user:secret@redis:6379",
+      preflightMarker: { secret: true },
+      preflightState: "redis://user:secret@redis:6379",
+      reason: "raw-secret-override",
+      timeoutMarker: "1",
+      timeoutState: "active",
+    };
+
+    expect(sanitizeSyntheticQueueProbeFailureDetails(malformed)).toEqual({
+      preflightMarker: "unknown",
+      preflightState: "unknown",
+      timeoutMarker: "unknown",
+      timeoutState: "active",
+    });
+
+    const diagnostic = formatFailureDiagnostic(
+      "process",
+      "worker_timeout",
+      "raw-event-parameter",
+      malformed as never,
+    );
+    expect(diagnostic).toEqual({
+      event: "onprem.synthetic_queue_probe.failed",
+      mode: "process",
+      preflightMarker: "unknown",
+      preflightState: "unknown",
+      reason: "worker_timeout",
+      timeoutMarker: "unknown",
+      timeoutState: "active",
+    });
+    expect(JSON.stringify(diagnostic)).not.toContain("redis://");
+    expect(JSON.stringify(diagnostic)).not.toContain("secret");
+    expect(JSON.stringify(diagnostic)).not.toContain("raw-event-override");
+  });
+
+  it("classifies only closed marker states", () => {
+    expect(classifySyntheticQueueProbeMarkerState(null)).toBe("absent");
+    expect(classifySyntheticQueueProbeMarkerState("1")).toBe("present");
+    expect(classifySyntheticQueueProbeMarkerState("unexpected-value")).toBe(
+      "present",
+    );
+    expect(classifySyntheticQueueProbeMarkerState(undefined)).toBe("unknown");
+  });
+
+  it.each([
+    ["delayed", "absent", true],
+    ["missing", "absent", false],
+    ["waiting", "absent", false],
+    ["active", "absent", false],
+    ["completed", "present", false],
+    ["failed", "present", false],
+    ["unknown", "unknown", false],
+    ["delayed", "present", false],
+  ] as const)(
+    "allows processing only for %s/%s preflight",
+    (state, marker, expected) => {
+      expect(isSyntheticQueueProbePreflightReady({ marker, state })).toBe(
+        expected,
+      );
+    },
+  );
+
+  it.each([
+    "redis_connect_timeout",
+    "state_read_timeout",
+    "worker_timeout",
+  ] as const)("keeps the %s reason distinct", (reason) => {
+    expect(getSyntheticQueueProbeFailureReason(new SyntheticQueueProbeFailure(reason))).toBe(
+      reason,
+    );
+  });
+
+  it("acknowledges the BullMQ write on the same connection before reading state", async () => {
+    const calls: string[] = [];
+    const job = {
+      getState: jest.fn(async () => {
+        calls.push("state");
+        return "delayed";
+      }),
+    };
+    const queue = {
+      add: jest.fn(async () => {
+        calls.push("add");
+        return job;
+      }),
+    };
+    const connection = {
+      call: jest.fn(async () => {
+        calls.push("waitaof");
+        return [1, 0];
+      }),
+      set: jest.fn(async () => {
+        calls.push("sentinel");
+        return "OK";
+      }),
+    };
+
+    await expect(
+      enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+    ).resolves.toBe("delayed");
+    expect(calls).toEqual(["add", "sentinel", "waitaof", "state"]);
+    expect(connection.set).toHaveBeenCalledWith(
+      "hr-axis:onprem:synthetic-recovery-v1:enqueued",
+      "1",
+      "NX",
+    );
+    expect(connection.call).toHaveBeenCalledWith("WAITAOF", "1", "0", "500");
+  });
+
+  it("parses only allowlisted Redis persistence fields", () => {
+    const result = parseSyntheticQueuePersistenceInfo([
+      "# Persistence",
+      "loading:0",
+      "aof_enabled:1",
+      "aof_rewrite_in_progress:0",
+      "aof_rewrite_scheduled:0",
+      "aof_current_size:2048",
+      "aof_base_size:512",
+      "aof_pending_bio_fsync:0",
+      "aof_delayed_fsync:2",
+      "aof_last_write_status:ok",
+      "aof_last_bgrewrite_status:err",
+      "unsafe_field:redis://user:secret@host",
+    ].join("\r\n"));
+
+    expect(result).toEqual({
+      aofEnabled: 1,
+      aofRewriteInProgress: 0,
+      aofRewriteScheduled: 0,
+      aofCurrentSize: 2048,
+      aofBaseSize: 512,
+      aofPendingBioFsync: 0,
+      aofDelayedFsync: 2,
+      aofLastWriteStatus: "ok",
+      aofLastBgrewriteStatus: "err",
+    });
+    expect(JSON.stringify(result)).not.toContain("redis://");
+    expect(JSON.stringify(result)).not.toContain("unsafe_field");
+  });
+
+  it.each([
+    ["not-info"],
+    ["aof_enabled:yes"],
+    ["aof_enabled:-1"],
+  ])("fails closed for malformed persistence INFO", (info) => {
+    expect(() => parseSyntheticQueuePersistenceInfo(info)).toThrow("unexpected");
+  });
+
+  it.each([
+    [[1, 0], true],
+    [["1", "0"], true],
+    [[0, 0], false],
+    [[1], false],
+    [[1, -1], false],
+    ["1,0", false],
+    [undefined, false],
+  ])("classifies local AOF acknowledgement %p as %s", (reply, expected) => {
+    expect(isLocalAofFsyncAcknowledged(reply)).toBe(expected);
+  });
+
+  it.each([[0, 0], ["malformed"], null])(
+    "fails closed for unacknowledged AOF reply %p",
+    async (reply) => {
+      const queue = {
+        add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+      };
+      const connection = {
+        call: jest.fn(async () => reply),
+        set: jest.fn(async () => "OK"),
+      };
+      await expect(
+        enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+      ).rejects.toEqual(
+        expect.objectContaining({ reason: "aof_fsync_not_acknowledged" }),
+      );
+    },
+  );
+
+  it("fails closed when WAITAOF rejects", async () => {
+    const queue = {
+      add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+    };
+    const connection = {
+      call: jest.fn(async () => {
+        throw new Error("unknown command and redis://secret");
+      }),
+      set: jest.fn(async () => "OK"),
+    };
+    await expect(
+      enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+    ).rejects.toEqual(
+      expect.objectContaining({ reason: "aof_fsync_not_acknowledged" }),
+    );
+  });
+
+  it("fails closed when WAITAOF exceeds the bounded timeout", async () => {
+    jest.useFakeTimers();
+    try {
+      const queue = {
+        add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+      };
+      const connection = {
+        call: jest.fn(() => new Promise<never>(() => undefined)),
+        set: jest.fn(async () => "OK"),
+      };
+      const result = enqueueSyntheticQueueProbeDurably(
+        queue as never,
+        connection as never,
+        500,
+      );
+      const failure = expect(result).rejects.toEqual(
+        expect.objectContaining({ reason: "aof_fsync_not_acknowledged" }),
+      );
+      await jest.advanceTimersByTimeAsync(500);
+      await failure;
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("fails closed when the enqueue sentinel cannot be created", async () => {
+    const queue = {
+      add: jest.fn(async () => ({ getState: jest.fn(async () => "delayed") })),
+    };
+    const connection = {
+      call: jest.fn(async () => [1, 0]),
+      set: jest.fn(async () => null),
+    };
+
+    await expect(
+      enqueueSyntheticQueueProbeDurably(queue as never, connection as never, 500),
+    ).rejects.toEqual(expect.objectContaining({ reason: "unexpected" }));
+    expect(connection.call).not.toHaveBeenCalled();
+  });
+
+  it("formats failure JSON with only the safe diagnostic fields", () => {
+    const diagnostic = formatFailureDiagnostic("process", "worker_error");
+    expect(diagnostic).toEqual({
+      event: "onprem.synthetic_queue_probe.failed",
+      mode: "process",
+      reason: "worker_error",
+    });
+    expect(Object.keys(diagnostic).sort()).toEqual(["event", "mode", "reason"]);
+
+    const serialized = JSON.stringify(diagnostic);
+    expect(serialized).not.toContain("sensitive worker detail");
+    expect(serialized).not.toContain("redis://");
+    expect(serialized).not.toContain("secret");
+    expect(formatFailureDiagnostic("redis://secret", "unexpected").mode).toBe(
+      "unknown",
+    );
+  });
+
+  it.each([
+    ["missing", "absent"],
+    ["delayed", "absent"],
+    ["waiting", "absent"],
+    ["active", "present"],
+    ["completed", "present"],
+    ["failed", "present"],
+    ["unknown", "unknown"],
+  ] as const)(
+    "formats a closed worker-timeout diagnostic for %s/%s",
+    (timeoutState, timeoutMarker) => {
+      const diagnostic = formatFailureDiagnostic(
+        "process",
+        "worker_timeout",
+        "onprem.synthetic_queue_probe.failed",
+        {
+          preflightMarker: "absent",
+          preflightState: "delayed",
+          timeoutMarker,
+          timeoutState,
+        },
+      );
+      expect(diagnostic).toEqual({
+        event: "onprem.synthetic_queue_probe.failed",
+        mode: "process",
+        preflightMarker: "absent",
+        preflightState: "delayed",
+        reason: "worker_timeout",
+        timeoutMarker,
+        timeoutState,
+      });
+      const serialized = JSON.stringify(diagnostic);
+      expect(serialized).not.toContain("redis://");
+      expect(serialized).not.toContain(PROBE_JOB_ID_FOR_LEAK_ASSERTION);
+    },
+  );
+});
+
+const PROBE_JOB_ID_FOR_LEAK_ASSERTION = "synthetic-recovery-v1";
+
+function createWorkerDouble(runResult: Promise<void> = Promise.resolve()): Worker {
+  return Object.assign(new EventEmitter(), {
+    run: jest.fn(() => runResult),
+  }) as unknown as Worker;
+}

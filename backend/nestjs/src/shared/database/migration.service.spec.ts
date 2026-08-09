@@ -217,7 +217,158 @@ describe("MigrationService", () => {
       }),
     ]);
     expect(status.checksumMismatches).toEqual(["003_failed.sql"]);
+    expect(status.unknownApplied).toEqual([]);
+    expect(status.unexpectedTracked).toEqual([]);
     expect(calls.some((call) => call.sql.includes("should_not_run"))).toBe(false);
     expect(calls.some((call) => call.sql.includes("will_not_run"))).toBe(false);
+  });
+
+  it("reports succeeded tracking rows whose migration file is missing", async () => {
+    const project = createProjectWithMigrations({
+      "001_current.sql": "SELECT 1;",
+    });
+    const { databaseService } = createDatabaseMock({
+      existingRows: {
+        "001_current.sql": {
+          migration_checksum: computeChecksum("SELECT 1;"),
+          status: "succeeded",
+        },
+        "000_deleted.sql": {
+          migration_checksum: "historical-checksum",
+          status: "succeeded",
+        },
+      },
+    });
+    const service = new MigrationService(databaseService as never);
+
+    const status = await service.getMigrationStatus(project.backendNestjs);
+
+    expect(status.unknownApplied).toEqual(["000_deleted.sql"]);
+    expect(status.unexpectedTracked).toEqual(["000_deleted.sql"]);
+  });
+
+  it("reports running tracking rows whose migration file is missing", async () => {
+    const project = createProjectWithMigrations({
+      "001_current.sql": "SELECT 1;",
+    });
+    const { databaseService } = createDatabaseMock({
+      existingRows: {
+        "001_current.sql": {
+          migration_checksum: computeChecksum("SELECT 1;"),
+          status: "succeeded",
+        },
+        "002_deleted_running.sql": {
+          migration_checksum: "historical-checksum",
+          status: "running",
+        },
+      },
+    });
+    const service = new MigrationService(databaseService as never);
+
+    const status = await service.getMigrationStatus(project.backendNestjs);
+
+    expect(status.unknownApplied).toEqual([]);
+    expect(status.unexpectedTracked).toEqual(["002_deleted_running.sql"]);
+    expect(status.running).toEqual(["002_deleted_running.sql"]);
+  });
+
+  it("reports tracked migrations left in a running state", async () => {
+    const project = createProjectWithMigrations({
+      "001_running.sql": "SELECT 1;",
+    });
+    const { databaseService } = createDatabaseMock({
+      existingRows: {
+        "001_running.sql": {
+          migration_checksum: computeChecksum("SELECT 1;"),
+          status: "running",
+        },
+      },
+    });
+    const service = new MigrationService(databaseService as never);
+
+    const status = await service.getMigrationStatus(project.backendNestjs, {
+      requireMigrationTree: true,
+    });
+
+    expect(status.running).toEqual(["001_running.sql"]);
+  });
+
+  it("can fail closed for a missing migration tree without changing the default", async () => {
+    const root = mkdtempSync(join(tmpdir(), "store-ops-no-migrations-"));
+    const { databaseService } = createDatabaseMock();
+    const service = new MigrationService(databaseService as never);
+
+    await expect(service.runMigrations(root)).resolves.toEqual({
+      applied: [],
+      failed: [],
+      skipped: [],
+    });
+    await expect(
+      service.runMigrations(root, { requireMigrationTree: true }),
+    ).rejects.toThrow("Migration tree is missing");
+    await expect(
+      service.getMigrationStatus(root, { requireMigrationTree: true }),
+    ).rejects.toThrow("Migration tree is missing");
+  });
+
+  it("keeps the immutable wrapper checksum while strict-local executes resolved include content", async () => {
+    const project = createProjectWithMigrations({
+      "001_first.sql": "\\i ../schema.sql",
+    });
+    writeFileSync(join(project.root, "db", "schema.sql"), "SELECT 1;", "utf8");
+    const wrapperChecksum = computeChecksum("\\i ../schema.sql");
+    const firstDatabase = createDatabaseMock();
+    const firstService = new MigrationService(firstDatabase.databaseService as never);
+    await firstService.runMigrations(project.backendNestjs, {
+      requireMigrationTree: true,
+    });
+    expect(
+      firstDatabase.calls.some((call) =>
+        call.params.includes(wrapperChecksum),
+      ),
+    ).toBe(true);
+    expect(firstDatabase.calls.some((call) => call.sql === "SELECT 1;")).toBe(
+      true,
+    );
+
+    writeFileSync(join(project.root, "db", "schema.sql"), "SELECT 2;", "utf8");
+    const { databaseService } = createDatabaseMock({
+      existingRows: {
+        "001_first.sql": {
+          migration_checksum: wrapperChecksum,
+          status: "succeeded",
+        },
+      },
+    });
+    const service = new MigrationService(databaseService as never);
+
+    await expect(
+      service.getMigrationStatus(project.backendNestjs, {
+        requireMigrationTree: true,
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({ checksumMismatches: [] }),
+    );
+  });
+
+  it("preserves hosted checksum compatibility for include wrappers", async () => {
+    const wrapper = "\\i ../schema.sql";
+    const project = createProjectWithMigrations({ "001_first.sql": wrapper });
+    writeFileSync(join(project.root, "db", "schema.sql"), "SELECT changed;", "utf8");
+    const { databaseService } = createDatabaseMock({
+      existingRows: {
+        "001_first.sql": {
+          migration_checksum: computeChecksum(wrapper),
+          status: "succeeded",
+        },
+      },
+    });
+    const service = new MigrationService(databaseService as never);
+
+    await expect(service.runMigrations(project.backendNestjs)).resolves.toEqual({
+      applied: [],
+      failed: [],
+      skipped: ["001_first.sql"],
+    });
   });
 });

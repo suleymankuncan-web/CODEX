@@ -20,6 +20,7 @@ import {
 } from "./job-payloads";
 import { logStructuredError, logStructuredMessage } from "../structured-log";
 import { ObservabilityService } from "../observability/observability.service";
+import { RuntimeReadinessService } from "../../onprem/runtime-readiness.service";
 
 @Injectable()
 export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
@@ -35,12 +36,20 @@ export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
     @Optional() private readonly observabilityService?: ObservabilityService,
     @Optional() private readonly visualComparisonService?: VisualComparisonShadowService,
     @Optional() private readonly visualComparisonReconciler?: VisualComparisonShadowReconcilerService,
+    @Optional() private readonly runtimeReadiness?: RuntimeReadinessService,
   ) {}
 
   async onModuleInit(): Promise<void> {
     if (this.appConfigService.queueBackend !== "bullmq") {
       this.logger.log("Skipping BullMQ worker registration because queue backend is not bullmq");
       return;
+    }
+
+    if (this.appConfigService.isStrictLocal) {
+      if (!this.runtimeReadiness) {
+        throw new Error("Strict-local runtime readiness service is unavailable");
+      }
+      await this.runtimeReadiness.assertReady("worker");
     }
 
     this.connection = new IORedis(this.appConfigService.redisUrl, {
@@ -206,9 +215,9 @@ export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
       clearInterval(this.visualComparisonReconcileTimer);
       this.visualComparisonReconcileTimer = undefined;
     }
-    for (const worker of this.workers) {
-      await worker.close();
-    }
+    const workerCloseResults = await Promise.allSettled(
+      this.workers.map((worker) => worker.close()),
+    );
 
     this.workers = [];
 
@@ -224,6 +233,9 @@ export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
         }
       }
       this.connection = undefined;
+    }
+    if (workerCloseResults.some((result) => result.status === "rejected")) {
+      throw new Error("BullMQ worker cleanup failed");
     }
   }
 }

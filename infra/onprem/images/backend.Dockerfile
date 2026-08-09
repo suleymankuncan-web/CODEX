@@ -34,6 +34,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=production-dependencies /workspace/backend/dist ./dist
 COPY --from=production-dependencies /workspace/backend/node_modules ./node_modules
+COPY db/schema.sql /app/db/schema.sql
+COPY db/migrations/ /app/db/migrations/
+COPY db/seeds/001_reference_seed.sql /app/db/seeds/001_reference_seed.sql
 
 EXPOSE 3000
 USER nonroot

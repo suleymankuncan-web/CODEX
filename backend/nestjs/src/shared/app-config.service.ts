@@ -5,6 +5,10 @@ import {
   readPhotoMediaRuntimeConfiguration,
 } from "./photo-media-runtime-config";
 import { readVisualComparisonRuntimeConfiguration } from "./visual-comparison-runtime-config";
+import {
+  assertStrictLocalConfiguration,
+  readFileBackedSetting,
+} from "./secret-file-config";
 
 export type QueueBackend = "in-memory" | "bullmq";
 export type BrowserSessionSameSite = "lax" | "strict" | "none";
@@ -14,15 +18,24 @@ export type DatabaseTransportStatus =
   | "encrypted-unverified"
   | "encrypted-verified";
 
+const FILE_BACKED_SETTINGS = new Set([
+  "DATABASE_URL",
+  "DB_SSL_CA",
+  "JWT_SECRET",
+  "REDIS_URL",
+]);
+
+
 @Injectable()
 export class AppConfigService {
   constructor(private readonly configService: ConfigService) {
     this.assertBrowserSessionContract();
     this.assertDatabaseNumericContract();
+    this.assertStrictLocalContract();
   }
 
   private readString(key: string, fallback: string): string {
-    const value = this.configService.get<string>(key);
+    const value = this.readOptionalString(key);
     if (!value || value === "undefined" || value === "null") {
       return fallback;
     }
@@ -31,6 +44,10 @@ export class AppConfigService {
   }
 
   private readOptionalString(key: string): string | undefined {
+    if (FILE_BACKED_SETTINGS.has(key)) {
+      return readFileBackedSetting(this.configService, key);
+    }
+
     const value = this.configService.get<string>(key);
     if (!value || value === "undefined" || value === "null") {
       return undefined;
@@ -453,6 +470,14 @@ export class AppConfigService {
     return this.readString("NODE_ENV", "development") === "production";
   }
 
+  get isStrictLocal(): boolean {
+    return this.readBoolean("HR_AXIS_STRICT_LOCAL", false);
+  }
+
+  get dataClass(): string {
+    return this.readString("HR_AXIS_DATA_CLASS", "unspecified");
+  }
+
   get databaseUrl(): string {
     return this.readString(
       "DATABASE_URL",
@@ -743,6 +768,10 @@ export class AppConfigService {
     return this.readString("REDIS_URL", "redis://localhost:6379");
   }
 
+  get redisOperationTimeoutMs(): number {
+    return this.readPositiveInteger("REDIS_OPERATION_TIMEOUT_MS", "5000");
+  }
+
   get importQueueName(): string {
     return this.readString("QUEUE_IMPORT_NAME", "store-ops-import");
   }
@@ -787,6 +816,7 @@ export class AppConfigService {
     this.dbConnectionTimeoutMs;
     this.dbIdleTimeoutMs;
     this.dbStatementTimeoutMs;
+    this.redisOperationTimeoutMs;
     this.dailyClosurePollMinutes;
   }
 
@@ -798,6 +828,25 @@ export class AppConfigService {
     }
 
     return value.replace(/\\n/g, "\n");
+  }
+
+  private assertStrictLocalContract(): void {
+    assertStrictLocalConfiguration(this.configService, {
+      dataClass: this.dataClass,
+      isStrictLocal: this.isStrictLocal,
+      processRole: this.readStrictLocalProcessRole(),
+    });
+  }
+
+  private readStrictLocalProcessRole():
+    | "runtime"
+    | "migrator"
+    | "synthetic-seed" {
+    const value = this.configService.get<string>("HR_AXIS_PROCESS_ROLE") ?? "runtime";
+    if (value === "runtime" || value === "migrator" || value === "synthetic-seed") {
+      return value;
+    }
+    throw new Error("HR_AXIS_PROCESS_ROLE must be runtime, migrator, or synthetic-seed");
   }
 
   private validateBrowserSessionSecret(

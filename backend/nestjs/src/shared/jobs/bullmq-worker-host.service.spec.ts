@@ -124,6 +124,28 @@ describe("BullMqWorkerHostService", () => {
     );
   });
 
+  it("fails strict-local worker bootstrap before opening Redis when readiness fails", async () => {
+    const assertReady = jest.fn().mockRejectedValue(new Error("not ready"));
+    const service = new BullMqWorkerHostService(
+      {
+        isStrictLocal: true,
+        queueBackend: "bullmq",
+        redisUrl: "redis://redis.example.invalid:6379",
+      } as never,
+      { materializeBatch: jest.fn() } as never,
+      { executeSnapshotRun: jest.fn() } as never,
+      undefined,
+      undefined,
+      undefined,
+      { assertReady } as never,
+    );
+
+    await expect(service.onModuleInit()).rejects.toThrow("not ready");
+    expect(assertReady).toHaveBeenCalledWith("worker");
+    expect(redisConstructorMock).not.toHaveBeenCalled();
+    expect(workerConstructorMock).not.toHaveBeenCalled();
+  });
+
   it("registers the hidden visual comparison worker only behind both runtime boundaries", async () => {
     const process = jest.fn().mockResolvedValue({ status: "completed" });
     const reconcile = jest.fn().mockResolvedValue({ status: "queued", dispatched: 0 });

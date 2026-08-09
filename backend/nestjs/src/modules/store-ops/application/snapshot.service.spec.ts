@@ -44,6 +44,7 @@ describe("SnapshotService", () => {
         periodEnd: "2026-04-30",
       },
       expect.any(Function),
+      { strictLocalJobId: "snapshot-run-snapshot-1" },
     );
     expect(result.command.status).toBe("queued");
     expect(result.data.snapshotRun.snapshot_run_id).toBe("snapshot-1");
@@ -146,6 +147,7 @@ describe("SnapshotService", () => {
         periodEnd: "2026-04-30",
       },
       expect.any(Function),
+      { strictLocalJobId: "snapshot-run-snapshot-new" },
     );
     expect(snapshotRunCommandRepository.createRerunSnapshotRun).toHaveBeenCalledWith({
       snapshotRunId: "snapshot-old",

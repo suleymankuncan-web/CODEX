@@ -55,7 +55,7 @@ function isRehearsalPath(file) {
 
 function isOnpremImageProofPath(file) {
   return (
-    hasPrefix(file, ['admin-web/', 'backend/nestjs/', 'infra/onprem/images/', 'scripts/onprem-']) ||
+    hasPrefix(file, ['admin-web/', 'backend/nestjs/', 'infra/onprem/core/', 'infra/onprem/images/', 'scripts/onprem-']) ||
     file === '.dockerignore' ||
     file === '.github/workflows/onprem-image-proof.yml' ||
     file === 'package.json' ||

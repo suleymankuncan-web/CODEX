@@ -4,6 +4,7 @@ import { DatabaseModule } from "./shared/database/database.module";
 import { BullMqWorkerHostService } from "./shared/jobs/bullmq-worker-host.service";
 import { ObservabilityModule } from "./shared/observability/observability.module";
 import { WorkerJobsModule } from "./worker-jobs.module";
+import { RuntimeReadinessModule } from "./onprem/runtime-readiness.module";
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { WorkerJobsModule } from "./worker-jobs.module";
     DatabaseModule,
     ObservabilityModule,
     WorkerJobsModule,
+    RuntimeReadinessModule,
   ],
   providers: [BullMqWorkerHostService],
 })

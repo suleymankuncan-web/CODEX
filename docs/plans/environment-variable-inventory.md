@@ -140,6 +140,37 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 
 ## Backend Runtime Variables
 
+### ONP-2 strict-local file inputs
+
+The ONP-2 profile uses file-backed secrets only. Local Docker Compose bind
+mounts do not rewrite uid/gid/mode; the Linux host must prepare each file for
+the exact service UID before startup. Values remain absent from committed env
+files, Compose output, inspect, logs, and receipts.
+
+| Variable | Owner | Classification | ONP-2 rule |
+| --- | --- | --- | --- |
+| `HR_AXIS_STRICT_LOCAL` | Project owner | Internal | Exact `true`; external delivery stays disabled. |
+| `HR_AXIS_DATA_CLASS` | Project owner | Internal | Exact `synthetic`; real company data is unauthorized. |
+| `HR_AXIS_PROCESS_ROLE` | Project owner | Internal | `runtime`, `migrator`, or `synthetic-seed`; defaults to `runtime`. |
+| `HR_AXIS_PUBLIC_HOST` | IT/Platform owner | Public | Approved internal DNS name; committed template uses only `.invalid`. |
+| `HR_AXIS_RELEASE_ID` | Release operator | Public integrity identity | Exact signed release identity used in service/network/volume labels. |
+| `HR_AXIS_BACKEND_IMAGE` | Release operator | Public integrity identity | Exact image ID or `@sha256` digest; tag-only values and zero placeholders fail execution. |
+| `HR_AXIS_FRONTEND_IMAGE` | Release operator | Public integrity identity | Exact image ID or `@sha256` digest; tag-only values and zero placeholders fail execution. |
+| `DATABASE_URL_FILE` | Backend/Data owner | Secret file path | Role-specific migrator/API/worker URL. API-role file also owns the DML-only synthetic seed. |
+| `DB_SSL_CA_FILE` | IT/Platform owner | Public trust file path | Local CA file required with `DB_SSL_MODE=verify-full`; no downgrade is allowed. |
+| `REDIS_URL_FILE` | Platform owner | Secret file path | Role-specific Redis ACL URL for API or worker. |
+| `JWT_SECRET_FILE` | Auth owner | Secret file path | Synthetic JWT bridge only with `AUTH_PROVIDER_KEY=oidc`; identity remains not installed until ONP-3. |
+| `POSTGRES_PASSWORD_FILE` | Backend/Data owner | Secret file path | Bootstrap owner password consumed by the pinned PostgreSQL image. |
+
+Redis ACL content, PostgreSQL role passwords, server TLS private keys, and the
+role-specific URLs are mounted from ignored `infra/onprem/core/secret-files/`.
+When cookie sessions, Sentry, Qwen, photo storage, or another provider is off,
+its secret key is omitted entirely; do not add an empty `*_FILE` placeholder.
+
+The ONP-2 non-secret template also pins `CADDY_IMAGE`, `POSTGRES_IMAGE`, and
+`REDIS_IMAGE` by digest. See `infra/onprem/core/README.md` for UID/mode and
+runtime-order details.
+
 These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 
 | Variable | P0/P1 | Production rule | Notes |

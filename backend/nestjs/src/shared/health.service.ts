@@ -141,6 +141,7 @@ export class HealthService {
           await connection.quit();
         } catch {
           // Cleanup failure must not mask the actual dependency health result.
+          connection.disconnect(false);
         }
       }
     }

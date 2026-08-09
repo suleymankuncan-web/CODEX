@@ -13,6 +13,6 @@ export interface JobDispatcher {
     type: JobType,
     payload: TPayload,
     handler: (payload: TPayload) => Promise<void>,
-    options?: { jobId?: string },
+    options?: { jobId?: string; strictLocalJobId?: string },
   ): Promise<JobDispatchResult>;
 }

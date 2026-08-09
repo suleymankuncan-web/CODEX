@@ -69,6 +69,7 @@ export class SnapshotService {
           async (payload: SnapshotRunJobPayload) => {
             await this.executeSnapshotRun(payload.snapshotRunId, payload.periodStart, payload.periodEnd);
           },
+          { strictLocalJobId: `snapshot-run-${snapshotRun.snapshot_run_id}` },
         );
 
     logStructuredMessage(this.logger, "snapshot_run.command.accepted", {
@@ -549,6 +550,7 @@ export class SnapshotService {
       async (payload: SnapshotRunJobPayload) => {
         await this.executeSnapshotRun(payload.snapshotRunId, payload.periodStart, payload.periodEnd);
       },
+      { strictLocalJobId: `snapshot-run-${rerun.snapshot_run_id}` },
     );
 
     logStructuredMessage(this.logger, "snapshot_run.rerun.accepted", {

@@ -674,6 +674,7 @@ describe("POST /api/integrations/import-batches", () => {
       "import-batch",
       { batchId: "batch-1" },
       expect.any(Function),
+      { strictLocalJobId: "import-batch-batch-1-initial" },
     );
 
     await app.close();
@@ -865,6 +866,7 @@ describe("POST /api/integrations/import-batches", () => {
       "import-batch",
       { batchId: "batch-2" },
       expect.any(Function),
+      { strictLocalJobId: "import-batch-batch-2-initial" },
     );
 
     await app.close();
@@ -944,6 +946,7 @@ describe("POST /api/integrations/import-batches", () => {
       "import-batch",
       { batchId: "batch-2b" },
       expect.any(Function),
+      { strictLocalJobId: "import-batch-batch-2b-initial" },
     );
 
     await app.close();

@@ -85,6 +85,7 @@ describe("Snapshot run operations", () => {
         periodEnd: "2026-04-30",
       },
       expect.any(Function),
+      { strictLocalJobId: "snapshot-run-snapshot-1" },
     );
     const insertCall = query.mock.calls.find(([sql]) =>
       sql.includes("INSERT INTO rpt.snapshot_run"),
@@ -197,6 +198,7 @@ describe("Snapshot run operations", () => {
         periodEnd: "2026-04-30",
       },
       expect.any(Function),
+      { strictLocalJobId: "snapshot-run-snapshot-3" },
     );
 
     await app.close();

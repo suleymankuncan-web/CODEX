@@ -169,4 +169,6 @@ test('on-prem image proof changes select build gates, root release, and the targ
   assert.ok(selection.commands.includes('npm.cmd --prefix backend/nestjs run build'))
   assert.ok(selection.commands.includes('npm.cmd run check:release'))
   assert.ok(selection.targeted.includes('on-prem image proof workflow'))
+  assert.ok(selection.targeted.includes('on-prem private core static/runtime proof'))
+  assert.ok(selection.affectedRoutesOrServices.includes('/onprem-core'))
 })
