@@ -128,3 +128,34 @@ test('ONP runtime cleanup uses guarded exact-project CLIs and still restores the
   assert.doesNotMatch(cleanup, /docker compose[^\n]*down --remove-orphans/)
   assert.doesNotMatch(cleanup, /--cleanup[^\n]*\|\| true/)
 })
+
+test('ONP image proof keeps shell heredocs inside their YAML run blocks', () => {
+  const lines = workflow.split(/\r?\n/)
+  for (let index = 0; index < lines.length; index += 1) {
+    const opener = lines[index].match(/^(\s*).*<<-?\s*['"]?([A-Z][A-Z0-9_]*)['"]?\s*$/)
+    if (!opener) continue
+
+    const [, , delimiter] = opener
+    const runBlockIndex = lines.findLastIndex(
+      (line, candidateIndex) => candidateIndex < index && /^\s*run:\s*\|\s*$/.test(line),
+    )
+    assert.notEqual(runBlockIndex, -1, `missing YAML run block before heredoc at line ${index + 1}`)
+    const runIndentation = lines[runBlockIndex].match(/^\s*/)?.[0].length ?? 0
+    const requiredIndentation = runIndentation + 2
+    const closingIndex = lines.findIndex(
+      (line, candidateIndex) => candidateIndex > index && line.trim() === delimiter,
+    )
+    assert.notEqual(closingIndex, -1, `missing ${delimiter} heredoc delimiter after line ${index + 1}`)
+
+    for (let bodyIndex = index + 1; bodyIndex <= closingIndex; bodyIndex += 1) {
+      const line = lines[bodyIndex]
+      if (line.length === 0) continue
+      const bodyIndentation = line.match(/^\s*/)?.[0].length ?? 0
+      assert.ok(
+        bodyIndentation >= requiredIndentation,
+        `${delimiter} heredoc escaped its YAML run block at line ${bodyIndex + 1}`,
+      )
+    }
+    index = closingIndex
+  }
+})

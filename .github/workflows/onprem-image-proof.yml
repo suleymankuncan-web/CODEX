@@ -517,73 +517,73 @@ jobs:
           keycloak_smtp_password="$(openssl rand -hex 24)"
           browser_session_secret="$(openssl rand -hex 32)"
           cat > "$secret_root/postgres/bootstrap-password" <<EOF
-$bootstrap_password
-EOF
+          $bootstrap_password
+          EOF
           cat > "$secret_root/postgres/migrator-password" <<EOF
-$migrator_password
-EOF
+          $migrator_password
+          EOF
           cat > "$secret_root/postgres/api-password" <<EOF
-$api_password
-EOF
+          $api_password
+          EOF
           cat > "$secret_root/postgres/worker-password" <<EOF
-$worker_password
-EOF
+          $worker_password
+          EOF
           cat > "$secret_root/postgres/keycloak-password" <<EOF
-$keycloak_database_password
-EOF
+          $keycloak_database_password
+          EOF
           cat > "$secret_root/keycloak/database-password" <<EOF
-$keycloak_database_password
-EOF
+          $keycloak_database_password
+          EOF
           test "$(sha256sum "$secret_root/postgres/keycloak-password" | cut -d' ' -f1)" = "$(sha256sum "$secret_root/keycloak/database-password" | cut -d' ' -f1)"
           printf 'jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full&sslrootcert=/run/secrets/postgres_tls_ca' > "$secret_root/keycloak/database-url"
           printf 'keycloak' > "$secret_root/keycloak/database-username"
           printf 'bootstrap-ci' > "$secret_root/keycloak/bootstrap-username"
           cat > "$secret_root/keycloak/bootstrap-password" <<EOF
-$keycloak_bootstrap_password
-EOF
+          $keycloak_bootstrap_password
+          EOF
           cat > "$secret_root/keycloak/smtp-auth-user" <<EOF
-synthetic-smtp-user
-EOF
+          synthetic-smtp-user
+          EOF
           cat > "$secret_root/keycloak/smtp-password" <<EOF
-$keycloak_smtp_password
-EOF
+          $keycloak_smtp_password
+          EOF
           cat > "$secret_root/backend/browser-session-secret" <<EOF
-$browser_session_secret
-EOF
+          $browser_session_secret
+          EOF
           : > "$secret_root/keycloak/synthetic-accounts"
           while IFS='|' read -r account_key username role employee_id company_ids region_ids store_ids read_company_ids read_region_ids read_store_ids assigned_store_ids; do
             account_password="$(openssl rand -hex 32)"
             cat >> "$secret_root/keycloak/synthetic-accounts" <<ROW
-$account_key|$username|$account_password|$role|$employee_id|$company_ids|$region_ids|$store_ids|$read_company_ids|$read_region_ids|$read_store_ids|$assigned_store_ids
-ROW
+          $account_key|$username|$account_password|$role|$employee_id|$company_ids|$region_ids|$store_ids|$read_company_ids|$read_region_ids|$read_store_ids|$assigned_store_ids
+          ROW
             unset account_password
           done <<'PERSONAS'
-onprem.store-manager|onprem.store-manager|STORE_MANAGER|synthetic-employee-store-manager|company-001|region-001|store-100|company-001|region-001|store-100,store-999|store-100
-onprem.region-manager|onprem.region-manager|REGION_MANAGER|synthetic-employee-region-manager|company-001|region-001|store-100,store-101|company-001|region-001|store-100,store-101|store-100,store-101
-onprem.report-viewer|onprem.report-viewer|REPORT_VIEWER|synthetic-employee-report-viewer|company-001|||company-001|||
-onprem.store-personnel|onprem.store-personnel|STORE_PERSONNEL|synthetic-employee-store-personnel|company-001|region-001|store-100|company-001|region-001|store-100|store-100
-onprem.visual-merchandiser|onprem.visual-merchandiser|VISUAL_MERCHANDISER|synthetic-employee-visual-merchandiser|company-001|region-001|store-100|company-001|region-001|store-100|store-100
-PERSONAS
+          onprem.store-manager|onprem.store-manager|STORE_MANAGER|synthetic-employee-store-manager|company-001|region-001|store-100|company-001|region-001|store-100,store-999|store-100
+          onprem.region-manager|onprem.region-manager|REGION_MANAGER|synthetic-employee-region-manager|company-001|region-001|store-100,store-101|company-001|region-001|store-100,store-101|store-100,store-101
+          onprem.report-viewer|onprem.report-viewer|REPORT_VIEWER|synthetic-employee-report-viewer|company-001|||company-001|||
+          onprem.store-personnel|onprem.store-personnel|STORE_PERSONNEL|synthetic-employee-store-personnel|company-001|region-001|store-100|company-001|region-001|store-100|store-100
+          onprem.visual-merchandiser|onprem.visual-merchandiser|VISUAL_MERCHANDISER|synthetic-employee-visual-merchandiser|company-001|region-001|store-100|company-001|region-001|store-100|store-100
+          PERSONAS
           cat > "$secret_root/backend/migrator-database-url" <<EOF
-postgresql://hr_axis_migrator:$migrator_password@postgres:5432/hr_axis?sslmode=verify-full
-EOF
+          postgresql://hr_axis_migrator:$migrator_password@postgres:5432/hr_axis?sslmode=verify-full
+          EOF
           cat > "$secret_root/backend/api-database-url" <<EOF
-postgresql://hr_axis_api:$api_password@postgres:5432/hr_axis?sslmode=verify-full
-EOF
+          postgresql://hr_axis_api:$api_password@postgres:5432/hr_axis?sslmode=verify-full
+          EOF
           cp "$secret_root/backend/api-database-url" "$secret_root/keycloak/binder-database-url"
           cat > "$secret_root/backend/worker-database-url" <<EOF
-postgresql://hr_axis_worker:$worker_password@postgres:5432/hr_axis?sslmode=verify-full
-EOF
+          postgresql://hr_axis_worker:$worker_password@postgres:5432/hr_axis?sslmode=verify-full
+          EOF
           printf 'user default off resetpass ~* &* +@all\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
           cat > "$secret_root/redis/health-url" <<EOF
-redis://health:$redis_health_password@redis:6379
-EOF
+          redis://health:$redis_health_password@redis:6379
+          EOF
           cat > "$secret_root/backend/redis-api-url" <<EOF
-redis://api:$redis_api_password@redis:6379
-EOF
+          redis://api:$redis_api_password@redis:6379
+          EOF
           cat > "$secret_root/backend/redis-worker-url" <<EOF
-redis://worker:$redis_worker_password@redis:6379
-EOF
+          redis://worker:$redis_worker_password@redis:6379
+          EOF
 
           chmod 0444 "$secret_root"/{caddy,postgres}/*.crt
           sudo chown 10001:10001 "$secret_root/caddy/server.key" && sudo chmod 0400 "$secret_root/caddy/server.key"
