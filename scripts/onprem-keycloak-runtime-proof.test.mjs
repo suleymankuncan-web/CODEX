@@ -94,10 +94,13 @@ test('Keycloak runtime counter parser scopes only project egress reject rules', 
     '*filter',
     ':DOCKER-USER - [0:0]',
     '[3:120] -A DOCKER-USER -s 172.30.0.0/24 -j REJECT',
+    '[4:80] -A DOCKER-USER -s 172.30.10.0/24 -j REJECT',
+    '[0:0] -A DOCKER-USER -s 172.30.20.0/24 -j REJECT',
+    '[1:30] -A DOCKER-USER -s 172.30.30.0/24 -j REJECT',
     '[99:900] -A DOCKER-USER -s 10.0.0.0/8 -j REJECT',
     'COMMIT',
   ].join('\n'))
-  assert.deepEqual(counters, { packets: 3, bytes: 120, ruleCount: 1 })
+  assert.deepEqual(counters, { packets: 8, bytes: 230, ruleCount: 4 })
 })
 
 test('Keycloak final firewall checkpoint covers the complete retry and restart phase', () => {
