@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
+import { assertGracefulStopState } from './onprem-graceful-stop-contract.mjs'
 
 function parseArgs(argv) {
   const options = { execute: false, cleanup: false, requireFreshVolumes: false }
@@ -303,6 +304,7 @@ export function runKeycloakRuntimeProof(options) {
       authorizationEndpoint: false,
       bootstrapCompleted: false,
       bootstrapSecondRun: false,
+      gracefulStopVerified: false,
       persistenceAfterRestart: false,
       hostPortPublished: null,
       subjectManifestPrivate: false,
@@ -389,6 +391,12 @@ export function runKeycloakRuntimeProof(options) {
     receipt.keycloak.noRawCredentials = true
     receipt.keycloak.logsSecretScanned = true
     runDocker([...base, 'stop', 'keycloak'], 'long-lived Keycloak stop before retry')
+    const stoppedKeycloakId = runDocker([...base, 'ps', '--all', '--quiet', 'keycloak'], 'stopped Keycloak identity').trim()
+    const stoppedKeycloakState = JSON.parse(runDocker(['inspect', stoppedKeycloakId], 'stopped Keycloak state'))[0].State
+    const stoppedKeycloakLogs = runDockerCapture(['logs', stoppedKeycloakId], 'stopped Keycloak logs')
+    scanCapture(stoppedKeycloakLogs, 'stopped Keycloak graceful-shutdown logs')
+    assertGracefulStopState({ service: 'keycloak', state: stoppedKeycloakState, logs: `${stoppedKeycloakLogs.stderr}\n${stoppedKeycloakLogs.stdout}`, secretValues })
+    receipt.keycloak.gracefulStopVerified = true
     runScannedOneShot([...base, 'run', '--rm', 'keycloak-bootstrap'], 'Keycloak bootstrap idempotency retry')
     receipt.keycloak.bootstrapSecondRun = true
     runScannedOneShot([...base, 'run', '--rm', '--no-deps', 'identity-binder'], 'synthetic identity binder retry')

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
+import { assertGracefulStopState } from './onprem-graceful-stop-contract.mjs'
 import {
   buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE,
   classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
@@ -839,9 +840,9 @@ async function main() {
     receipt.caddyRuntime.phases.workload = workloadCaddyRuntime
     compose(['stop', ...LONG_LIVED], ['runtime'])
     for (const service of LONG_LIVED) {
-      const id = compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()
-      const state = JSON.parse(command('docker', ['inspect', id], { label: `inspect stopped ${service}` }).stdout)[0].State
-      if (state.ExitCode !== 0 || state.OOMKilled || state.Dead || state.Error) throw new Error(`${service} did not stop gracefully`)
+      const state = JSON.parse(command('docker', ['inspect', compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()], { label: `inspect stopped ${service}` }).stdout)[0].State
+      const logs = service === 'keycloak' ? command('docker', ['logs', compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()], { label: 'stopped Keycloak logs' }) : {}
+      assertGracefulStopState({ service, state, logs: `${logs.stderr ?? ''}\n${logs.stdout ?? ''}`, secretValues })
     }
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
     waitHealthy('postgres')

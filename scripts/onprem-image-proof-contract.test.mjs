@@ -33,6 +33,13 @@ test('ONP-1 workflow proves read-only API and worker startup from one image', ()
   assert.match(workflow, /curl --fail --silent http:\/\/127\.0\.0\.1:18082\/api\/health\/live/)
   assert.match(workflow, /docker inspect -f '\{\{\.State\.ExitCode\}\}' "\$worker_id"\)" = 0/)
   assert.match(workflow, /BullMQ worker context started/)
+  assert.equal(
+    (sameImageSmoke.match(/worker_started=true/g) ?? []).length,
+    2,
+  )
+  assert.match(sameImageSmoke, /if test "\$worker_status" = running; then\s+if docker logs "\$worker_id" 2>&1 \| grep -F 'BullMQ worker context started' >\/dev\/null; then\s+worker_started=true\s+fi/)
+  assert.match(sameImageSmoke, /elif test "\$worker_status" = exited; then\s+test "\$\(docker inspect -f '\{\{\.State\.ExitCode\}\}' "\$worker_id"\)" = 0\s+if docker logs "\$worker_id" 2>&1 \| grep -F 'BullMQ worker context started' >\/dev\/null; then\s+worker_started=true\s+fi/)
+  assert.doesNotMatch(sameImageSmoke, /grep -Fq/)
   assert.match(workflow, /hr-axis-onprem-backend:proof dist\/src\/workers\.js/)
   assert.match(workflow, /Prove the pruned backend dependency graph and lazy runtime features/)
   assert.match(workflow, /require\.resolve\(name\)/)

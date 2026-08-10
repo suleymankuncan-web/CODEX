@@ -221,10 +221,14 @@ jobs:
             api_status="$(docker inspect -f '{{.State.Status}}' "$api_id")"
             worker_status="$(docker inspect -f '{{.State.Status}}' "$worker_id")"
             if test "$worker_status" = running; then
-              worker_started=true
+              if docker logs "$worker_id" 2>&1 | grep -F 'BullMQ worker context started' >/dev/null; then
+                worker_started=true
+              fi
             elif test "$worker_status" = exited; then
               test "$(docker inspect -f '{{.State.ExitCode}}' "$worker_id")" = 0
-              worker_started=true
+              if docker logs "$worker_id" 2>&1 | grep -F 'BullMQ worker context started' >/dev/null; then
+                worker_started=true
+              fi
             fi
             if test "$api_status" = running && test "$worker_started" = true \
               && curl --fail --silent http://127.0.0.1:18082/api/health/live >/dev/null; then break; fi

@@ -42,6 +42,7 @@ test('Keycloak runtime cleanup only deletes volumes behind the exact identity gu
   assert.match(source, /KEYCLOAK_VOLUME_CLASSES/)
   assert.match(source, /assertComposeIdentity/)
   assert.match(source, /logsSecretScanned/)
+  assert.match(source, /gracefulStopVerified/)
   assert.match(source, /noRawCredentials/)
   assert.match(source, /if \(receipt\.keycloak\.hostPortPublished\)/)
   assert.match(source, /if \(!receipt\.keycloak\.imagePinned\)/)
@@ -110,6 +111,16 @@ test('Keycloak final firewall checkpoint covers the complete retry and restart p
   const firewallAssertion = source.indexOf('const firewallDelta = assertFirewallCounterDelta(', firewallAfter)
   assert.ok(retry > 0 && retry < restart && restart < health && health < metadata && metadata < retryLogs)
   assert.ok(retryLogs < firewallAfter && firewallAfter < firewallAssertion)
+})
+
+test('Keycloak stop is inspected and secret-scanned before bootstrap retry', () => {
+  const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  const stop = source.indexOf("'stop', 'keycloak'")
+  const inspect = source.indexOf("'stopped Keycloak state'", stop)
+  const logs = source.indexOf("'stopped Keycloak graceful-shutdown logs'", inspect)
+  const assertion = source.indexOf('assertGracefulStopState(', logs)
+  const retry = source.indexOf('Keycloak bootstrap idempotency retry', assertion)
+  assert.ok(stop > 0 && stop < inspect && inspect < logs && logs < assertion && assertion < retry)
 })
 
 test('Keycloak firewall proof rejects a reset reject counter', () => {

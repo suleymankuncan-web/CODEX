@@ -23,6 +23,7 @@ import {
   EXPECTED_SECRET_UIDS,
   validateCoreCleanupContainerIdentities,
 } from './onprem-core-runtime-proof.mjs'
+import { assertGracefulStopState } from './onprem-graceful-stop-contract.mjs'
 import { CADDY_CMDLINE, TLS_SAFE_ERROR_CODES } from './onprem-caddy-runtime-proof.mjs'
 import {
   assertProbeOutput,
@@ -88,6 +89,36 @@ test('runtime secret value scan exempts only the fixed Keycloak database role id
   for (const name of ['keycloak_database_password', 'keycloak_bootstrap_username', 'keycloak_smtp_auth_user', 'api_database_url']) {
     assert.equal(isConfidentialRuntimeSecretName(name), true, `${name} must remain value-scanned`)
   }
+})
+
+test('Keycloak SIGTERM is graceful only with a clean exit state and official shutdown marker', () => {
+  const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 143 }
+  const logs = 'INFO [io.quarkus] (Shutdown thread) Keycloak stopped in 0.123s'
+  assert.deepEqual(assertGracefulStopState({ service: 'keycloak', state, logs }), { exitCode: 143, markerObserved: true })
+  assert.deepEqual(assertGracefulStopState({ service: 'keycloak', state: { ...state, ExitCode: 0 }, logs }), { exitCode: 0, markerObserved: true })
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state, logs: '' }), /graceful shutdown marker missing/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state, logs: 'INFO [wrong.logger] (Shutdown thread) Keycloak stopped in 0.123s' }), /marker missing/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state, logs: 'INFO [io.quarkus] (main) Keycloak stopped in 0.123s' }), /marker missing/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, ExitCode: 137 }, logs }), /did not stop gracefully/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, OOMKilled: true }, logs }), /did not stop gracefully/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, Running: true }, logs }), /"running":true/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, Paused: true }, logs }), /did not stop gracefully/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, Restarting: true }, logs }), /"restarting":true/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, Dead: true }, logs }), /"dead":true/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state: { ...state, Error: 'sensitive runtime detail' }, logs }), /"errorPresent":true/)
+  assert.throws(
+    () => assertGracefulStopState({ service: 'keycloak', state: { ...state, Error: 'sensitive runtime detail' }, logs }),
+    error => !error.message.includes('sensitive runtime detail'),
+  )
+})
+
+test('graceful-stop log evidence remains secret-safe and other services stay zero-exit only', () => {
+  const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 143 }
+  const secretValues = new Map([['keycloak_database_password', 'synthetic-password-canary']])
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state, logs: 'Keycloak stopped in 0.1s synthetic-password-canary', secretValues }), /secret value leaked/)
+  assert.throws(() => assertGracefulStopState({ service: 'keycloak', state, logs: 'INFO [io.quarkus] (Shutdown thread) Keycloak stopped in 0.1s set-secret-canary', secretValues: new Set(['set-secret-canary']) }), /secret value leaked/)
+  assert.throws(() => assertGracefulStopState({ service: 'api', state, logs: '' }), /did not stop gracefully/)
+  assert.doesNotThrow(() => assertGracefulStopState({ service: 'api', state: { ...state, ExitCode: 0 }, logs: '' }))
 })
 
 test('Caddy runtime identity and TLS classification inputs are immutable', () => {
