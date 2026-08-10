@@ -277,14 +277,21 @@ test('Keycloak license reconciliation binds the sole blank-source package to the
     assert.equal(receipt.packageCount, 1)
     assert.equal(receipt.unresolvedCount, 1)
     assert.equal(receipt.components[0].sourceClassification, 'first-party-image-root')
-    assert.equal(receipt.components[0].sourceIdentity, `sha256:${imageDigest}`)
+    assert.deepEqual(receipt.components[0].sourceIdentity, { imageId: `sha256:${imageDigest}`, sbomRootDigest: `sha256:${imageDigest}` })
     assert.equal(receipt.components[0].sourceInfo, '')
     assert.equal(receipt.components[0].license, null)
     assert.equal(receipt.components[0].evidence, null)
 
     writeFileSync(inventoryPath, JSON.stringify({ ...inventoryFor(1), imageId: `sha256:${'c'.repeat(64)}` }))
-    assert.throws(() => reconcileKeycloakLicenses(options, policy), /immutable first-party image root/)
+    const distinctDigests = reconcileKeycloakLicenses(options, policy)
+    assert.deepEqual(distinctDigests.components[0].sourceIdentity, { imageId: `sha256:${'c'.repeat(64)}`, sbomRootDigest: `sha256:${imageDigest}` })
     writeFileSync(inventoryPath, JSON.stringify({ ...inventoryFor(1), imageId: `sha256:${imageDigest}` }))
+    const mismatchedRoot = JSON.parse(readFileSync(sbomPath, 'utf8'))
+    mismatchedRoot.packages[0].checksums[0].checksumValue = 'd'.repeat(64)
+    writeFileSync(sbomPath, JSON.stringify(mismatchedRoot))
+    assert.throws(() => reconcileKeycloakLicenses(options, policy), /immutable first-party image root/)
+    mismatchedRoot.packages[0].checksums[0].checksumValue = imageDigest
+    writeFileSync(sbomPath, JSON.stringify(mismatchedRoot))
     assert.throws(() => reconcileKeycloakLicenses(options, { ...policy, maxUnresolvedCount: 0 }), /exceeds approved maximum/)
     assert.throws(() => reconcileKeycloakLicenses(options, { ...policy, expectedPackageCount: 2 }), /pinned SBOM package count mismatch/)
   } finally {

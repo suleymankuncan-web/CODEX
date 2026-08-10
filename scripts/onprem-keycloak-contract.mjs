@@ -296,6 +296,13 @@ export function validateOnpremKeycloakContract(input) {
   fail(!/path \/auth(?:\s|\/\*)/.test(caddy) || /respond @authUnknown/.test(caddy), 'Caddy must fail closed for unlisted /auth paths')
 
   const workflow = String(input.workflow)
+  const syftStep = workflow.match(/- name: Generate SPDX SBOMs with pinned Syft[\s\S]*?(?=\n\s+- name:|$)/)?.[0] ?? ''
+  const licenseStep = workflow.match(/- name: Generate production license inventories and notices[\s\S]*?(?=\n\s+- name:|$)/)?.[0] ?? ''
+  const syftIdentityCheck = 'test "$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Id}}\')" = "$KEYCLOAK_IMAGE_ID"'
+  const keycloakSyftCommand = '"$KEYCLOAK_IMAGE" -o spdx-json=/out/keycloak-sbom.spdx.json'
+  const reconciliationIdentityRead = 'keycloak_image_id="$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Id}}\')"'
+  const reconciliationIdentityCheck = 'test "$keycloak_image_id" = "$KEYCLOAK_IMAGE_ID"'
+  const reconciliationCommand = 'node scripts/onprem-keycloak-license-reconciliation.mjs'
   fail(workflow.includes(KEYCLOAK_IMAGE), 'on-prem image proof must pin and pull the Keycloak image')
   fail(/docker pull ["']?\$KEYCLOAK_BASE_IMAGE/.test(workflow) || /docker pull .*KEYCLOAK_BASE_IMAGE/.test(workflow), 'workflow must pull the pinned Keycloak base image')
   fail(/keycloak.*(?:trivy|vulnerability|scan)/i.test(workflow) && /KEYCLOAK_TRIVY_IMAGE/.test(workflow), 'workflow must scan the pinned Keycloak image')
@@ -306,6 +313,10 @@ export function validateOnpremKeycloakContract(input) {
   fail(/--license-text\s+proof\/keycloak-LICENSE\.txt/.test(workflow) && /--license-paths\s+proof\/keycloak-license-paths\.txt/.test(workflow), 'Keycloak image manifest must bind license text and path evidence')
   fail(/onprem-keycloak-license-reconciliation\.mjs/.test(workflow) && /keycloak-license-reconciliation\.json/.test(workflow), 'workflow must reconcile every Keycloak SBOM component against license evidence')
   fail(/"imageId":"'"\$keycloak_image_id"'"/.test(workflow) && /docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'/.test(workflow), 'Keycloak license inventory must bind the immutable built image identity')
+  fail(syftStep.indexOf(syftIdentityCheck) >= 0 && syftStep.indexOf(syftIdentityCheck) < syftStep.indexOf(keycloakSyftCommand), 'Keycloak Syft proof must reject tag drift before reading the built image')
+  fail(licenseStep.indexOf(reconciliationIdentityRead) >= 0
+    && licenseStep.indexOf(reconciliationIdentityRead) < licenseStep.indexOf(reconciliationIdentityCheck)
+    && licenseStep.indexOf(reconciliationIdentityCheck) < licenseStep.indexOf(reconciliationCommand), 'Keycloak license reconciliation must reject tag drift before consuming the SBOM identity')
   fail(/keycloak.*content|content.*keycloak/i.test(workflow), 'workflow must content-scan Keycloak layers')
   fail(/keycloak.*manifest|manifest.*keycloak/i.test(workflow), 'workflow must bind Keycloak evidence into a sanitized manifest')
   fail(/proof\/keycloak-image-manifest\.json/.test(workflow), 'workflow must upload the sanitized Keycloak image manifest')

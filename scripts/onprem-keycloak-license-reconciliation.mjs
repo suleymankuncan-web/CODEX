@@ -146,17 +146,16 @@ function assertKnownSpdxExpression(expression, allowedIds, identity) {
 function isVerifiedFirstPartyRoot(pkg, inventory) {
   if (String(pkg?.name ?? '') !== 'hr-axis-onprem-keycloak'
     || String(pkg?.SPDXID ?? '') !== 'SPDXRef-DocumentRoot-Image-hr-axis-onprem-keycloak'
+    || String(pkg?.versionInfo ?? '') !== 'proof'
     || String(pkg?.sourceInfo ?? '') !== '') return false
   const purls = packagePurls(pkg)
   if (purls.length !== 1) return false
   const match = /^pkg:oci\/hr-axis-onprem-keycloak@sha256%3A([a-f0-9]{64})\?arch=amd64&tag=proof$/i.exec(purls[0])
   if (!match) return false
   const checksums = Array.isArray(pkg?.checksums) ? pkg.checksums : []
-  const packageDigest = checksums.find((item) => String(item?.algorithm ?? '').toUpperCase() === 'SHA256')?.checksumValue
-  const inventoryDigest = /^sha256:([a-f0-9]{64})$/i.exec(String(inventory?.imageId ?? ''))?.[1]
-  return Boolean(packageDigest && inventoryDigest
-    && match[1].toLowerCase() === String(packageDigest).toLowerCase()
-    && match[1].toLowerCase() === inventoryDigest.toLowerCase())
+  if (checksums.length !== 1 || String(checksums[0]?.algorithm ?? '').toUpperCase() !== 'SHA256') return false
+  const packageDigest = String(checksums[0]?.checksumValue ?? '')
+  return /^[a-f0-9]{64}$/i.test(packageDigest) && match[1].toLowerCase() === packageDigest.toLowerCase()
 }
 
 function verifiedAngusEvidence(packages, options, policy) {
@@ -260,7 +259,7 @@ export function reconcileKeycloakLicenses(options, angusPolicy = ANGUS_EMBEDDED_
       return {
         ...identity,
         sourceClassification: 'first-party-image-root',
-        sourceIdentity: inventory.imageId,
+        sourceIdentity: { imageId: inventory.imageId, sbomRootDigest: `sha256:${refs[0].match(/@sha256%3A([a-f0-9]{64})/i)[1].toLowerCase()}` },
         license: null,
         classification: 'unresolved-external-review',
         unresolvedReason: 'missing-sbom-license-assertion',

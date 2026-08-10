@@ -146,9 +146,55 @@ test('ONP-3B image proof binds the exact embedded Angus JAR license evidence', (
   assert.match(workflow, /bba43e29c8098aaa07c2130d979f6d44a62f9ad51f8061c96bf6889ff5926819/)
   assert.match(workflow, /--angus-source-jar "\$angus_jar" --angus-license "\$angus_license" --angus-notice "\$angus_notice"/)
   assert.match(workflow, /keycloak_image_id="\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)"/)
+  assert.match(workflow, /test "\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)" = "\$KEYCLOAK_IMAGE_ID"/)
+  assert.match(workflow, /keycloak_image_id="\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)"[\s\S]*?test "\$keycloak_image_id" = "\$KEYCLOAK_IMAGE_ID"/)
   assert.match(workflow, /receipt\.packageCount !== 552 \|\| receipt\.maxUnresolvedCount !== 452/)
   assert.match(workflow, /receipt\.resolvedCount \+ receipt\.unresolvedCount !== receipt\.packageCount/)
   assert.match(workflow, /component\.license !== null \|\| component\.evidence !== null/)
+})
+
+test('ONP-3B contract rejects Keycloak tag drift gaps around SBOM and reconciliation', () => {
+  const beforeSbom = input()
+  beforeSbom.workflow = beforeSbom.workflow.replace(
+    '          test "$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Id}}\')" = "$KEYCLOAK_IMAGE_ID"\n',
+    '',
+  )
+  const beforeSbomResult = validateOnpremKeycloakContract(beforeSbom)
+  assert.equal(beforeSbomResult.ok, false)
+  assert.ok(beforeSbomResult.errors.some((error) => /Syft proof.*tag drift.*before/i.test(error)))
+
+  const reorderedSbom = input()
+  reorderedSbom.workflow = reorderedSbom.workflow.replace(
+    '          test "$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Id}}\')" = "$KEYCLOAK_IMAGE_ID"\n',
+    '',
+  ).replace(
+    '            "$KEYCLOAK_IMAGE" -o spdx-json=/out/keycloak-sbom.spdx.json\n',
+    '            "$KEYCLOAK_IMAGE" -o spdx-json=/out/keycloak-sbom.spdx.json\n          test "$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Id}}\')" = "$KEYCLOAK_IMAGE_ID"\n',
+  )
+  const reorderedSbomResult = validateOnpremKeycloakContract(reorderedSbom)
+  assert.equal(reorderedSbomResult.ok, false)
+  assert.ok(reorderedSbomResult.errors.some((error) => /Syft proof.*tag drift.*before/i.test(error)))
+
+  const beforeReconciliation = input()
+  beforeReconciliation.workflow = beforeReconciliation.workflow.replace(
+    '          test "$keycloak_image_id" = "$KEYCLOAK_IMAGE_ID"\n',
+    '',
+  )
+  const beforeReconciliationResult = validateOnpremKeycloakContract(beforeReconciliation)
+  assert.equal(beforeReconciliationResult.ok, false)
+  assert.ok(beforeReconciliationResult.errors.some((error) => /license reconciliation.*tag drift.*before/i.test(error)))
+
+  const reorderedReconciliation = input()
+  reorderedReconciliation.workflow = reorderedReconciliation.workflow.replace(
+    '          test "$keycloak_image_id" = "$KEYCLOAK_IMAGE_ID"\n',
+    '',
+  ).replace(
+    '            --output proof/keycloak-license-reconciliation.json\n',
+    '            --output proof/keycloak-license-reconciliation.json\n          test "$keycloak_image_id" = "$KEYCLOAK_IMAGE_ID"\n',
+  )
+  const reorderedReconciliationResult = validateOnpremKeycloakContract(reorderedReconciliation)
+  assert.equal(reorderedReconciliationResult.ok, false)
+  assert.ok(reorderedReconciliationResult.errors.some((error) => /license reconciliation.*tag drift.*before/i.test(error)))
 })
 
 test('ONP-3B contract rejects mapper semantic drift in the parity fixture', () => {

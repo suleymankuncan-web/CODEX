@@ -245,6 +245,7 @@ jobs:
       - name: Generate SPDX SBOMs with pinned Syft
         run: |
           set -euo pipefail
+          test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')" = "$KEYCLOAK_IMAGE_ID"
           for image in frontend backend; do
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
               "hr-axis-onprem-${image}:proof" -o "spdx-json=/out/${image}-sbom.spdx.json"
@@ -412,6 +413,7 @@ jobs:
             -cf proof/keycloak-license-evidence.tar -C proof/keycloak-license-evidence .
           keycloak_package_count="$(jq '.packages | length' proof/keycloak-sbom.spdx.json)"
           keycloak_image_id="$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')"
+          test "$keycloak_image_id" = "$KEYCLOAK_IMAGE_ID"
           printf '%s\n' '{"image":"'"$KEYCLOAK_IMAGE"'","imageId":"'"$keycloak_image_id"'","baseImage":"'"$KEYCLOAK_BASE_IMAGE"'","licenseEvidence":"keycloak-LICENSE.txt","licensePathEvidence":"keycloak-license-paths.txt","licenseBundle":"keycloak-license-evidence.tar","packageCount":'"$keycloak_package_count"',"dataClass":"synthetic"}' > proof/keycloak-license-inventory.json
           node scripts/onprem-keycloak-license-reconciliation.mjs \
             --sbom proof/keycloak-sbom.spdx.json --inventory proof/keycloak-license-inventory.json \
