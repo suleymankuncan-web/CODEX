@@ -194,6 +194,8 @@ export function assertNoSecretLeak(secretValues, surfaces) {
     }
   }
 }
+
+export const isConfidentialRuntimeSecretName = (name) => String(name) !== 'keycloak_database_username'
 export function migrationTreeDigestFromOutput(output) {
   const digest = String(output?.stdout ?? '').match(
     /"migrationTreeDigest":"([0-9a-f]{64})"/i,
@@ -355,10 +357,9 @@ async function main() {
   }
   assertSecretPermissions(config)
   secretValues = new Map(
-    Object.entries(config.secrets ?? {}).map(([name, descriptor]) => [
-      name,
-      readFileSync(descriptor.file, 'utf8').trim(),
-    ]),
+    Object.entries(config.secrets ?? {})
+      .filter(([name]) => isConfidentialRuntimeSecretName(name))
+      .map(([name, descriptor]) => [name, readFileSync(descriptor.file, 'utf8').trim()]),
   )
   activeSecretValues = [...secretValues.values()].filter(Boolean)
   assertNoSecretLeak(secretValues, { 'docker compose config': serializedConfig })

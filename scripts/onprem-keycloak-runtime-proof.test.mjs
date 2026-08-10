@@ -1,12 +1,30 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
 
 import {
   assertFirewallCounterDelta,
+  collectSecretValues,
   runKeycloakRuntimeProof,
   validateComposeContainerIdentities,
 } from './onprem-keycloak-runtime-proof.mjs'
+
+test('Keycloak runtime scan keeps credentials but excludes the fixed database role identity', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-secret-scan-'))
+  try {
+    const compose = join(directory, 'compose.yaml')
+    writeFileSync(join(directory, 'database-username'), 'keycloak')
+    writeFileSync(join(directory, 'database-password'), 'synthetic-password-canary')
+    writeFileSync(compose, `secrets:\n  keycloak_database_username:\n    file: ./database-username\n  keycloak_database_password:\n    file: ./database-password\n`)
+    const values = collectSecretValues({ compose })
+    assert.equal(values.has('keycloak'), false)
+    assert.equal(values.has('synthetic-password-canary'), true)
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 test('Keycloak runtime proof is explicitly synthetic and receipt-safe', () => {
   assert.throws(

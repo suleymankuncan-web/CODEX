@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
+import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
 
 function parseArgs(argv) {
   const options = { execute: false, cleanup: false, requireFreshVolumes: false }
@@ -253,7 +254,7 @@ function assertSecretSafeLogsWithValues(value, label, secretValues) {
   }
 }
 
-function collectSecretValues(options) {
+export function collectSecretValues(options) {
   const composePath = resolve(options.compose)
   const composeText = readFileSync(composePath, 'utf8')
   const publicSecretNames = new Set(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
@@ -265,7 +266,7 @@ function collectSecretValues(options) {
   const entries = [...composeText.matchAll(/^  ([a-z0-9_]+):\r?\n    file:\s+(.+)\r?$/gm)]
   if (entries.length === 0) throw new Error('Keycloak runtime secret scan could not resolve Compose file-backed secrets')
   for (const [, secretName, configuredPath] of entries) {
-    if (publicSecretNames.has(secretName)) continue
+    if (publicSecretNames.has(secretName) || !isConfidentialRuntimeSecretName(secretName)) continue
     const rawPath = configuredPath.trim().replace(/^['"]|['"]$/g, '')
     const filePath = resolve(dirname(composePath), rawPath)
     try {

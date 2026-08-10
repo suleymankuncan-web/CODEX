@@ -19,6 +19,7 @@ import {
   TLS_WRONG_CA_CODES,
   verifyCaddyRuntimeInvariants,
   EXPECTED_PUBLIC_SECRET_NAMES,
+  isConfidentialRuntimeSecretName,
   EXPECTED_SECRET_UIDS,
   validateCoreCleanupContainerIdentities,
 } from './onprem-core-runtime-proof.mjs'
@@ -80,6 +81,13 @@ test('runtime secret ownership map covers every Compose file-backed secret', () 
   const names = [...secretSection.matchAll(/^  ([a-z0-9_]+):\r?$/gm)].map((match) => match[1]).sort()
   const covered = new Set([...EXPECTED_PUBLIC_SECRET_NAMES, ...Object.keys(EXPECTED_SECRET_UIDS)])
   assert.deepEqual(names, [...covered].sort())
+})
+
+test('runtime secret value scan exempts only the fixed Keycloak database role identity', () => {
+  assert.equal(isConfidentialRuntimeSecretName('keycloak_database_username'), false)
+  for (const name of ['keycloak_database_password', 'keycloak_bootstrap_username', 'keycloak_smtp_auth_user', 'api_database_url']) {
+    assert.equal(isConfidentialRuntimeSecretName(name), true, `${name} must remain value-scanned`)
+  }
 })
 
 test('Caddy runtime identity and TLS classification inputs are immutable', () => {
