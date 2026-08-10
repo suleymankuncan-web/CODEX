@@ -379,19 +379,57 @@ jobs:
             mkdir -p "proof/keycloak-license-evidence/$(dirname "$license_rel")"
             cp "proof/keycloak-rootfs/$license_rel" "proof/keycloak-license-evidence/$license_rel"
           done < proof/keycloak-license-paths.txt
+          angus_jar_rel=opt/keycloak/lib/lib/main/org.eclipse.angus.angus-mail-2.0.5.jar
+          angus_jar="proof/keycloak-rootfs/$angus_jar_rel"
+          test -f "$angus_jar"
+          test "$(sha256sum "$angus_jar" | cut -d ' ' -f 1)" = b4d8c30d35f455def6c7a05fe595a1e62ea2b80cac3efec1e9ccf4118b23168a
+          angus_evidence_root=proof/keycloak-license-evidence/embedded-jars/org.eclipse.angus.angus-mail-2.0.5
+          mkdir -p "$angus_evidence_root/META-INF"
+          python3 - "$angus_jar" "$angus_evidence_root" <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          import sys
+
+          source = Path(sys.argv[1])
+          destination = Path(sys.argv[2])
+          entries = ('META-INF/LICENSE.md', 'META-INF/NOTICE.md')
+          with ZipFile(source) as archive:
+              names = archive.namelist()
+              for entry in entries:
+                  if names.count(entry) != 1:
+                      raise SystemExit(f'exactly one {entry} entry is required')
+                  target = destination.joinpath(*entry.split('/'))
+                  target.write_bytes(archive.read(entry))
+          PY
+          angus_license="$angus_evidence_root/META-INF/LICENSE.md"
+          angus_notice="$angus_evidence_root/META-INF/NOTICE.md"
+          test "$(sha256sum "$angus_license" | cut -d ' ' -f 1)" = a8f94fd9e41984cfadc6d26821c21ed047e3bdf48c5af899d735287e7cddd997
+          test "$(sha256sum "$angus_notice" | cut -d ' ' -f 1)" = bba43e29c8098aaa07c2130d979f6d44a62f9ad51f8061c96bf6889ff5926819
+          printf '%s\n' \
+            "$angus_jar_rel!/META-INF/LICENSE.md" \
+            "$angus_jar_rel!/META-INF/NOTICE.md" >> proof/keycloak-license-paths.txt
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
             -cf proof/keycloak-license-evidence.tar -C proof/keycloak-license-evidence .
           keycloak_package_count="$(jq '.packages | length' proof/keycloak-sbom.spdx.json)"
-          printf '%s\n' '{"image":"'"$KEYCLOAK_IMAGE"'","baseImage":"'"$KEYCLOAK_BASE_IMAGE"'","licenseEvidence":"keycloak-LICENSE.txt","licensePathEvidence":"keycloak-license-paths.txt","licenseBundle":"keycloak-license-evidence.tar","packageCount":'"$keycloak_package_count"',"dataClass":"synthetic"}' > proof/keycloak-license-inventory.json
+          keycloak_image_id="$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')"
+          printf '%s\n' '{"image":"'"$KEYCLOAK_IMAGE"'","imageId":"'"$keycloak_image_id"'","baseImage":"'"$KEYCLOAK_BASE_IMAGE"'","licenseEvidence":"keycloak-LICENSE.txt","licensePathEvidence":"keycloak-license-paths.txt","licenseBundle":"keycloak-license-evidence.tar","packageCount":'"$keycloak_package_count"',"dataClass":"synthetic"}' > proof/keycloak-license-inventory.json
           node scripts/onprem-keycloak-license-reconciliation.mjs \
             --sbom proof/keycloak-sbom.spdx.json --inventory proof/keycloak-license-inventory.json \
             --license-text proof/keycloak-LICENSE.txt --license-paths proof/keycloak-license-paths.txt \
             --license-bundle proof/keycloak-license-evidence.tar \
+            --angus-source-jar "$angus_jar" --angus-license "$angus_license" --angus-notice "$angus_notice" \
             --output proof/keycloak-license-reconciliation.json
           node <<'NODE'
           const { readFileSync } = require('node:fs')
           const receipt = JSON.parse(readFileSync('proof/keycloak-license-reconciliation.json', 'utf8'))
           if (receipt.residualExternalReviewRequired !== true) throw new Error('Keycloak license reconciliation must retain the residualExternalReviewRequired activation gate')
+          if (receipt.packageCount !== 552 || receipt.maxUnresolvedCount !== 452) throw new Error('Keycloak license reconciliation pinned count contract changed')
+          if (receipt.resolvedCount + receipt.unresolvedCount !== receipt.packageCount) throw new Error('Keycloak license reconciliation summary count mismatch')
+          if (receipt.evidenceResolvedCount + receipt.sbomStandardAssertedCount !== receipt.resolvedCount) throw new Error('Keycloak license reconciliation resolved count mismatch')
+          if (receipt.unresolvedCount > receipt.maxUnresolvedCount) throw new Error('Keycloak unresolved license count exceeds the approved boundary')
+          const unresolved = receipt.components.filter((component) => component.classification === 'unresolved-external-review')
+          if (unresolved.length !== receipt.unresolvedCount) throw new Error('Keycloak unresolved component count mismatch')
+          if (unresolved.some((component) => component.license !== null || component.evidence !== null || !component.unresolvedReason)) throw new Error('Keycloak unresolved component claims unsupported license evidence')
           console.log('Keycloak license reconciliation: residualExternalReviewRequired=true (external review remains an activation gate)')
           NODE
 

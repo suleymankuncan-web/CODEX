@@ -131,6 +131,26 @@ test('ONP-3B image proof isolates every Keycloak layer without permission-sensit
   assert.match(loop, /--rootfs "\$keycloak_layer_root" --kind keycloak --application-root \/opt\/keycloak/)
 })
 
+test('ONP-3B image proof binds the exact embedded Angus JAR license evidence', () => {
+  const workflow = input().workflow
+  const jarMarker = 'opt/keycloak/lib/lib/main/org.eclipse.angus.angus-mail-2.0.5.jar'
+  const jarIndex = workflow.indexOf(jarMarker)
+  const bundleIndex = workflow.indexOf('-cf proof/keycloak-license-evidence.tar')
+  const reconciliationIndex = workflow.indexOf('onprem-keycloak-license-reconciliation.mjs')
+
+  assert.ok(jarIndex >= 0 && jarIndex < bundleIndex && bundleIndex < reconciliationIndex)
+  assert.match(workflow, /b4d8c30d35f455def6c7a05fe595a1e62ea2b80cac3efec1e9ccf4118b23168a/)
+  assert.match(workflow, /names\.count\(entry\) != 1/)
+  assert.match(workflow, /entries = \('META-INF\/LICENSE\.md', 'META-INF\/NOTICE\.md'\)/)
+  assert.match(workflow, /a8f94fd9e41984cfadc6d26821c21ed047e3bdf48c5af899d735287e7cddd997/)
+  assert.match(workflow, /bba43e29c8098aaa07c2130d979f6d44a62f9ad51f8061c96bf6889ff5926819/)
+  assert.match(workflow, /--angus-source-jar "\$angus_jar" --angus-license "\$angus_license" --angus-notice "\$angus_notice"/)
+  assert.match(workflow, /keycloak_image_id="\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)"/)
+  assert.match(workflow, /receipt\.packageCount !== 552 \|\| receipt\.maxUnresolvedCount !== 452/)
+  assert.match(workflow, /receipt\.resolvedCount \+ receipt\.unresolvedCount !== receipt\.packageCount/)
+  assert.match(workflow, /component\.license !== null \|\| component\.evidence !== null/)
+})
+
 test('ONP-3B contract rejects mapper semantic drift in the parity fixture', () => {
   const mutated = input()
   mutated.realmConfig = mutated.realmConfig.replace(
