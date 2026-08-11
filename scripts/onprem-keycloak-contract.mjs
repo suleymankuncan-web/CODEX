@@ -21,6 +21,27 @@ export function isStrictHttpsOrigin(value) {
   return host.split('.').every((label) => label.length > 0 && label.length <= 63 && /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label))
 }
 
+// SMTP sender addresses intentionally use a narrow ASCII dot-atom local part
+// (letters, digits, dot, plus, and hyphen; alphanumeric edges)
+// and DNS-style domain labels.  Display names, quoted local parts, comments,
+// internationalized addresses, and single-label domains are not accepted.
+const SMTP_LOCAL_PART = /^[A-Za-z0-9](?:[A-Za-z0-9.+-]*[A-Za-z0-9])?$/
+const SMTP_DOMAIN_LABEL = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/
+
+export function isValidSmtpSender(value) {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 254) return false
+  const atIndex = value.indexOf('@')
+  if (atIndex <= 0 || atIndex !== value.lastIndexOf('@') || atIndex === value.length - 1) return false
+
+  const localPart = value.slice(0, atIndex)
+  const domain = value.slice(atIndex + 1)
+  if (localPart.length > 64 || !SMTP_LOCAL_PART.test(localPart) || localPart.includes('..')) return false
+  if (domain.length === 0 || domain.length > 253) return false
+
+  const labels = domain.split('.')
+  return labels.length >= 2 && labels.every((label) => SMTP_DOMAIN_LABEL.test(label))
+}
+
 const STEADY_RESOURCES = {
   caddy: ['0.25', '128m'],
   frontend: ['0.25', '128m'],
@@ -55,6 +76,10 @@ function serviceBlocks(compose) {
 
 function envValue(text, name) {
   return String(text).match(new RegExp(`^${name}=(.+)$`, 'm'))?.[1]?.trim() ?? ''
+}
+
+function rawEnvValue(text, name) {
+  return String(text).match(new RegExp(`^${name}=(.*)$`, 'm'))?.[1] ?? ''
 }
 
 function hasImmutableImage(value) {
@@ -180,6 +205,9 @@ export function validateOnpremKeycloakContract(input) {
     fail(/COPY db\/seeds\/002_onprem_keycloak_personas\.sql \/app\/db\/seeds\/002_onprem_keycloak_personas\.sql/.test(input.backendDockerfile), 'backend image must copy the synthetic Keycloak persona seed')
   }
 
+  const smtpFrom = rawEnvValue(input.envTemplate, 'KEYCLOAK_SMTP_FROM')
+  fail(isValidSmtpSender(smtpFrom), 'env.template must contain a valid SMTP sender address')
+
   fail(!/"users"\s*:/.test(input.realmConfig), 'sanitized realm configuration must not contain a users import')
   fail(realmFixture?.['x-hr-axis-authoritative'] === false && realmFixture?.['x-hr-axis-fixture-authority'] === 'non-authoritative-bootstrap-parity', 'realm fixture must explicitly remain non-authoritative')
   if (realmFixture) {
@@ -260,8 +288,21 @@ export function validateOnpremKeycloakContract(input) {
   fail(/store-ops-api-audience/.test(input.bootstrapScript) && /store-ops-api/.test(input.realmConfig), 'Keycloak access tokens must carry the store-ops-api audience accepted by the backend')
   fail(/resetPasswordAllowed=true/.test(input.bootstrapScript) && /verifyEmail=true/.test(input.bootstrapScript) && !/updatePasswordAllowed/.test(input.bootstrapScript), 'realm must enable reset and verify-email flows without the unsupported updatePasswordAllowed setting')
   fail(/smtpServer/.test(input.bootstrapScript) && /KEYCLOAK_SMTP_(?:HOST|PORT|FROM|STARTTLS)/.test(input.bootstrapScript), 'SMTP host, port, from, starttls and auth config must be wired by bootstrap')
+  const smtpSenderSource = String(input.bootstrapScript).match(/read_smtp_sender\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  fail(smtpSenderSource.length > 0, 'bootstrap must define a field-specific SMTP sender validator')
+  fail(/smtp_from="\$\(read_smtp_sender "\$\{KEYCLOAK_SMTP_FROM:-\}"\)"/.test(input.bootstrapScript), 'bootstrap must parse KEYCLOAK_SMTP_FROM with its field-specific validator')
+  fail(!/smtp_from="\$\(read_config /.test(input.bootstrapScript), 'bootstrap must not pass KEYCLOAK_SMTP_FROM through generic read_config')
+  fail(smtpSenderSource.includes('[ "${#value}" -le 254 ]'), 'SMTP sender validator must retain the bounded sender length')
+  fail(smtpSenderSource.includes('*[!A-Za-z0-9.+@-]*)'), 'SMTP sender validator must retain its narrow ASCII character allowlist')
+  fail(smtpSenderSource.includes('    *@*) ;;') && smtpSenderSource.includes("    ''|*@*) die"), 'SMTP sender validator must reject missing or multiple @ characters')
+  fail(smtpSenderSource.includes('local_part="${value%%@*}"') && smtpSenderSource.includes('domain="${value#*@}"'), 'SMTP sender validator must parse local and domain parts explicitly')
+  fail(smtpSenderSource.includes('[ "${#local_part}" -le 64 ]') && smtpSenderSource.includes('*..*) die'), 'SMTP sender validator must bound and validate the local part')
+  fail(smtpSenderSource.includes('[ "${#domain}" -le 253 ]') && smtpSenderSource.includes('*.*) ;;'), 'SMTP sender validator must require a bounded dotted domain')
+  fail(smtpSenderSource.includes('-*|*-|*[!A-Za-z0-9-]*)'), 'SMTP sender validator must reject malformed domain labels')
   fail(/keycloak_smtp_password/.test(input.compose) && /KEYCLOAK_SMTP_AUTH_USER_FILE/.test(input.bootstrapScript), 'SMTP auth credentials must be secret-file inputs')
   fail(/set -eu/.test(input.bootstrapScript) && !/set -x/.test(input.bootstrapScript), 'bootstrap must be fail-closed and never enable shell tracing')
+  fail(String(input.bootstrapScript).includes('*[!A-Za-z0-9._:/?\\&=%+-]*')
+    && !String(input.bootstrapScript).includes('*[!A-Za-z0-9._:/?&=%+-]*'), 'database secret allowlist must escape ampersand for POSIX shell parsing')
   fail(/bootstrap-admin\s+service/.test(input.bootstrapScript), 'bootstrap must provision a temporary service principal with kc.sh bootstrap-admin')
   fail(/--client-secret:env=KEYCLOAK_BOOTSTRAP_SERVICE_SECRET/.test(input.bootstrapScript), 'bootstrap-admin must receive the service secret only through its environment')
   fail(!/kcadm\.sh config credentials[\s\S]*--secret(?:=|\s+)["']?\$/.test(input.bootstrapScript), 'kcadm service credential login must not pass a secret in argv')

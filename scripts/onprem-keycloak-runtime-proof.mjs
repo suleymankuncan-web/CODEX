@@ -36,11 +36,243 @@ function parseArgs(argv) {
   return options
 }
 
+const KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES = Object.freeze({
+  SERVER_EXITED_BEFORE_AUTHENTICATION: 'server-exited-before-authentication',
+  BOOTSTRAP_AUTH_TIMEOUT: 'bootstrap-auth-timeout',
+  DATABASE_OR_TLS_CONTRACT: 'database-or-tls-contract',
+  REALM_RECONCILIATION: 'realm-reconciliation',
+  SECRET_CONTRACT: 'secret-contract',
+  RESOURCE_OR_EXTERNAL_TERMINATION: 'resource-or-external-termination',
+  GENERIC_FAILED_CLOSED: 'generic-failed-closed',
+})
+
+const KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_MARKERS = Object.freeze({
+  [KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.SERVER_EXITED_BEFORE_AUTHENTICATION]: Object.freeze([
+    'temporary Keycloak server exited before authentication',
+    'keycloak bootstrap: server log scan skipped (server did not start)',
+  ]),
+  [KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.BOOTSTRAP_AUTH_TIMEOUT]: Object.freeze([
+    'temporary bootstrap principal authentication failed',
+  ]),
+  [KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.DATABASE_OR_TLS_CONTRACT]: Object.freeze([
+    'required database secret file is unavailable',
+    'required database secret is empty',
+    'database secret value exceeds the bounded length',
+    'database secret contains unsupported characters',
+    'Keycloak PostgreSQL CA secret is unavailable',
+  ]),
+  [KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.REALM_RECONCILIATION]: Object.freeze([
+    'only the approved store-ops realm is supported',
+    'only the approved browser client is supported',
+    'sanitized realm configuration fixture is unavailable',
+    'public origin must be an exact HTTPS origin',
+    'public origin must contain a hostname',
+    'public origin hostname is too long',
+    'public origin hostname is not a valid hostname',
+    'public origin hostname contains an empty label',
+    'public origin hostname label is too long',
+    'public origin hostname label is invalid',
+    'realm fixture parity check failed',
+    'browser client fixture parity check failed',
+    'synthetic role fixture parity check failed',
+    'realm fixture must remain user-free',
+    'realm creation failed',
+    'realm settings reconciliation failed',
+    'realm role reconciliation failed',
+    'browser client reconciliation failed',
+    'browser client creation failed',
+    'browser client id was not resolved',
+    'claim mapper update failed',
+    'claim mapper creation failed',
+    'claim mapper inventory read failed',
+    'claim mapper inventory contains duplicate names',
+    'SMTP contract reconciliation failed',
+    'realm parity read failed',
+    'realm parity mismatch',
+    'SMTP parity mismatch',
+    'browser client parity read failed',
+    'browser client parity mismatch',
+    'browser client PKCE parity mismatch',
+    'browser client logout parity mismatch',
+    'managed mapper parity read failed',
+    'managed mapper identity parity mismatch',
+    'managed mapper name parity mismatch',
+    'managed mapper type parity mismatch',
+    'audience mapper parity mismatch',
+    'audience mapper access-token parity mismatch',
+    'audience mapper id-token parity mismatch',
+    'audience mapper userinfo parity mismatch',
+    'roles mapper claim parity mismatch',
+    'roles mapper multivalue parity mismatch',
+    'roles mapper token parity mismatch',
+    'claim mapper source parity mismatch',
+    'claim mapper target parity mismatch',
+    'claim mapper token parity mismatch',
+    'browser client default scopes parity read failed',
+    'browser client default scopes parity mismatch',
+    'realm role parity mismatch',
+    'temporary bootstrap client was not found for deletion',
+    'temporary bootstrap client deletion failed',
+    'temporary bootstrap client still exists',
+  ]),
+  [KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.SECRET_CONTRACT]: Object.freeze([
+    'required secret file is unavailable',
+    'required secret file is empty',
+    'secret value exceeds the bounded length',
+    'secret value contains unsupported characters',
+    'bootstrap principal must use the temporary bootstrap-* name',
+    'required configuration is missing: KEYCLOAK_SMTP_HOST',
+    'required configuration is missing: KEYCLOAK_SMTP_PORT',
+    'required configuration is missing: KEYCLOAK_SMTP_FROM',
+    'required configuration is missing: KEYCLOAK_SMTP_STARTTLS',
+    'configuration contains unsupported characters: KEYCLOAK_SMTP_HOST',
+    'configuration contains unsupported characters: KEYCLOAK_SMTP_PORT',
+    'configuration contains unsupported characters: KEYCLOAK_SMTP_FROM',
+    'configuration contains unsupported characters: KEYCLOAK_SMTP_STARTTLS',
+    'SMTP port must be numeric',
+    'SMTP STARTTLS must be true or false',
+    'SMTP from value contains unsupported characters',
+    'synthetic account contract is enabled but its secret file is unavailable',
+    'synthetic account identity contains unsupported characters',
+    'synthetic account persona is not one of the five approved roles',
+    'duplicate synthetic account persona',
+    'synthetic account password is below the minimum length',
+    'synthetic account creation failed',
+    'synthetic account claim update failed',
+    'synthetic account subject was not resolved',
+    'synthetic account password update failed',
+    'stale synthetic account role removal failed',
+    'synthetic account role assignment failed',
+    'synthetic account role is not approved',
+    'synthetic account role parity mismatch',
+    'synthetic account contract must provide all five approved personas',
+    'synthetic scope value contains unsupported characters',
+    'keycloak bootstrap: server log scan failed (invalid bounded size)',
+    'keycloak bootstrap: server log scan failed (log exceeded bounded size)',
+    'keycloak bootstrap: server log scan failed (secret value detected)',
+  ]),
+})
+
+const SAFE_KEYCLOAK_DIAGNOSTIC_SIGNALS = new Set([
+  'SIGABRT',
+  'SIGBUS',
+  'SIGFPE',
+  'SIGHUP',
+  'SIGILL',
+  'SIGINT',
+  'SIGKILL',
+  'SIGPIPE',
+  'SIGQUIT',
+  'SIGSEGV',
+  'SIGTERM',
+])
+
+const KEYCLOAK_BOOTSTRAP_MARKER_PREFIX = /^keycloak bootstrap: failed closed \(([^()\r\n]+)\)$/
+const KEYCLOAK_BOOTSTRAP_LOG_PREFIX = /^(?:keycloak-bootstrap(?:-[1-9][0-9]*)?\s*\|\s*)?/
+const SECRET_LIKE_DIAGNOSTIC_TEXT = /(?:password|secret|token|authorization)\s*[=:]\s*[^\s,;]+|Bearer\s+\S+|\beyJ[A-Za-z0-9_-]{20,}\b|-----BEGIN\s+[A-Z ]+PRIVATE KEY-----|:\/\/[^\s/:@]+:[^\s/@]+@/i
+
+function boundedDockerExitCode(value) {
+  return Number.isSafeInteger(value) && value >= 0 && value <= 255 ? value : null
+}
+
+function boundedDockerSignal(value) {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toUpperCase()
+  return SAFE_KEYCLOAK_DIAGNOSTIC_SIGNALS.has(normalized) ? normalized : null
+}
+
+function markerCategory(marker) {
+  const categories = []
+  for (const [category, markers] of Object.entries(KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_MARKERS)) {
+    if (markers.includes(marker)) categories.push(category)
+  }
+  return categories.length === 1 ? categories[0] : null
+}
+
+function extractAllowlistedBootstrapCategories(value) {
+  const categories = new Set()
+  let malformed = false
+  const lines = String(value ?? '').replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').split(/\r?\n/)
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    const withoutComposePrefix = trimmed.replace(KEYCLOAK_BOOTSTRAP_LOG_PREFIX, '')
+    const failedClosed = withoutComposePrefix.match(KEYCLOAK_BOOTSTRAP_MARKER_PREFIX)
+    if (failedClosed) {
+      const category = markerCategory(failedClosed[1])
+      if (category) categories.add(category)
+      else malformed = true
+      continue
+    }
+    if (/^keycloak bootstrap:\s+failed closed(?:\s|$)/i.test(withoutComposePrefix)) malformed = true
+    const category = markerCategory(withoutComposePrefix)
+    if (category) categories.add(category)
+  }
+  return { categories, malformed }
+}
+
+/**
+ * Return a bounded, secret-free classification for a failed Keycloak bootstrap
+ * child process. Only exact markers emitted by the approved bootstrap script
+ * can select a category; zero, multiple, malformed, or secret-bearing markers
+ * fail closed to the generic category while unrelated log noise is ignored.
+ */
+export function classifyKeycloakBootstrapDiagnostic({
+  status = null,
+  exitCode = undefined,
+  signal = null,
+  stdout = '',
+  stderr = '',
+} = {}) {
+  const boundedExitCode = boundedDockerExitCode(status ?? exitCode)
+  const boundedSignal = boundedDockerSignal(signal)
+  if (boundedExitCode === 137 || boundedSignal === 'SIGKILL') {
+    return {
+      category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.RESOURCE_OR_EXTERNAL_TERMINATION,
+      exitCode: boundedExitCode,
+      signal: boundedSignal,
+    }
+  }
+  const combined = `${String(stdout ?? '')}\n${String(stderr ?? '')}`
+  if (SECRET_LIKE_DIAGNOSTIC_TEXT.test(combined)) {
+    return {
+      category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.GENERIC_FAILED_CLOSED,
+      exitCode: boundedExitCode,
+      signal: boundedSignal,
+    }
+  }
+  const stdoutCategories = extractAllowlistedBootstrapCategories(stdout)
+  const stderrCategories = extractAllowlistedBootstrapCategories(stderr)
+  const categories = new Set([...stdoutCategories.categories, ...stderrCategories.categories])
+  const malformed = stdoutCategories.malformed || stderrCategories.malformed
+  return {
+    category: !malformed && categories.size === 1
+      ? [...categories][0]
+      : KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.GENERIC_FAILED_CLOSED,
+    exitCode: boundedExitCode,
+    signal: boundedSignal,
+  }
+}
+
+function formatKeycloakBootstrapDiagnostic(diagnostic) {
+  const exit = diagnostic.exitCode === null ? 'unknown' : String(diagnostic.exitCode)
+  const signal = diagnostic.signal ? `; signal=${diagnostic.signal}` : ''
+  return `category=${diagnostic.category}; exit=${exit}${signal}`
+}
+
 function runDockerCapture(args, label, inspectOutput = null) {
   const result = spawnSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
   const output = { stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
   inspectOutput?.(output)
-  if (result.error || result.status !== 0) throw new Error(`${label} failed`)
+  if (result.error || result.status !== 0) {
+    const diagnostic = classifyKeycloakBootstrapDiagnostic({
+      status: result.status,
+      signal: result.signal,
+      stdout: output.stdout,
+      stderr: output.stderr,
+    })
+    throw new Error(`${label} failed (${formatKeycloakBootstrapDiagnostic(diagnostic)})`)
+  }
   return output
 }
 

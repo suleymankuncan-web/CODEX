@@ -2,7 +2,12 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-import { KEYCLOAK_IMAGE, isStrictHttpsOrigin, validateOnpremKeycloakContract } from './onprem-keycloak-contract.mjs'
+import {
+  KEYCLOAK_IMAGE,
+  isStrictHttpsOrigin,
+  isValidSmtpSender,
+  validateOnpremKeycloakContract,
+} from './onprem-keycloak-contract.mjs'
 
 const read = (path) => readFileSync(path, 'utf8')
 
@@ -26,6 +31,74 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   const result = validateOnpremKeycloakContract(baseline)
   assert.equal(result.ok, true, result.errors.join('; '))
   assert.equal(result.errors.length, 0)
+})
+
+test('ONP-3B SMTP sender accepts the committed address and bypasses generic read_config', () => {
+  const baseline = input()
+  const committedSender = baseline.envTemplate.match(/^KEYCLOAK_SMTP_FROM=(.*)$/m)?.[1]
+
+  assert.equal(committedSender, 'hr-axis@example.invalid')
+  assert.equal(isValidSmtpSender(committedSender), true)
+  assert.match(baseline.bootstrapScript, /read_config \"\$\{KEYCLOAK_SMTP_HOST:-\}\" KEYCLOAK_SMTP_HOST\)/)
+  assert.match(baseline.bootstrapScript, /smtp_from=\"\$\(read_smtp_sender \"\$\{KEYCLOAK_SMTP_FROM:-\}\"\)\"/)
+  assert.doesNotMatch(baseline.bootstrapScript, /smtp_from=\"\$\(read_config /)
+})
+
+test('ONP-3B SMTP sender validator fails closed for malformed or unsafe mutations', () => {
+  const invalidSenders = [
+    '',
+    'hr-axis @example.invalid',
+    'hr-axis\texample.invalid',
+    'hr-axis\u0000@example.invalid',
+    'hr"axis@example.invalid',
+    'hr\\axis@example.invalid',
+    'hr/axis@example.invalid',
+    'hr:axis@example.invalid',
+    'hr-axis.example.invalid',
+    'hr-axis@example@invalid',
+    '@example.invalid',
+    'hr-axis@',
+    'hr-axis@example',
+    'hr_axis@example.invalid',
+    'hr-axis@exa_mple.invalid',
+    'hr-axis@-example.invalid',
+    'hr-axis@example-.invalid',
+    'hr-axis@example..invalid',
+    `hr-axis@${'a'.repeat(64)}.invalid`,
+    `${'a'.repeat(65)}@example.invalid`,
+    `${'a'.repeat(245)}@example.invalid`,
+  ]
+
+  for (const sender of invalidSenders) assert.equal(isValidSmtpSender(sender), false, sender)
+})
+
+test('ONP-3B contract rejects representative invalid committed SMTP sender mutations', () => {
+  const baseline = input()
+  const senderLine = /^KEYCLOAK_SMTP_FROM=.*$/m
+  for (const sender of ['', 'hr-axis@example', 'hr_axis@example.invalid', 'hr-axis@-example.invalid', 'hr-axis@example-.invalid', 'hr-axis@example.invalid@other.invalid']) {
+    const mutated = {
+      ...baseline,
+      envTemplate: baseline.envTemplate.replace(senderLine, `KEYCLOAK_SMTP_FROM=${sender}`),
+    }
+    const result = validateOnpremKeycloakContract(mutated)
+    assert.equal(result.ok, false, sender)
+    assert.ok(result.errors.some((error) => /SMTP sender/i.test(error)), sender)
+  }
+})
+
+test('ONP-3B contract keeps the database-secret ampersand allowlist POSIX-parseable', () => {
+  const baseline = input()
+  const escapedPattern = '*[!A-Za-z0-9._:/?\\&=%+-]*'
+  const unescapedPattern = '*[!A-Za-z0-9._:/?&=%+-]*'
+  assert.ok(baseline.bootstrapScript.includes(escapedPattern))
+
+  const mutated = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(escapedPattern, unescapedPattern),
+  }
+  const result = validateOnpremKeycloakContract(mutated)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /database secret.*ampersand|POSIX shell/i.test(error)))
 })
 
 test('ONP-3B contract rejects tag-only or wrong Keycloak image identities', () => {

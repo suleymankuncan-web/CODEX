@@ -6,10 +6,94 @@ import { test } from 'node:test'
 
 import {
   assertFirewallCounterDelta,
+  classifyKeycloakBootstrapDiagnostic,
   collectSecretValues,
   runKeycloakRuntimeProof,
   validateComposeContainerIdentities,
 } from './onprem-keycloak-runtime-proof.mjs'
+
+test('Keycloak bootstrap diagnostics classify only allowlisted safe markers', () => {
+  const cases = [
+    ['temporary Keycloak server exited before authentication', 'server-exited-before-authentication'],
+    ['temporary bootstrap principal authentication failed', 'bootstrap-auth-timeout'],
+    ['required database secret is empty', 'database-or-tls-contract'],
+    ['realm settings reconciliation failed', 'realm-reconciliation'],
+    ['secret value contains unsupported characters', 'secret-contract'],
+    ['configuration contains unsupported characters: KEYCLOAK_SMTP_FROM', 'secret-contract'],
+  ]
+  for (const [marker, category] of cases) {
+    assert.deepEqual(
+      classifyKeycloakBootstrapDiagnostic({
+        status: 1,
+        signal: null,
+        stdout: 'keycloak-bootstrap-1  | lifecycle output that is not a diagnostic marker',
+        stderr: `keycloak bootstrap: failed closed (${marker})\nkeycloak bootstrap: server log scan passed (bounded bytes=128)`,
+      }),
+      { category, exitCode: 1, signal: null },
+    )
+  }
+})
+
+test('Keycloak bootstrap diagnostics fail closed for malformed or secret-bearing text', () => {
+  const secret = 'synthetic-diagnostic-secret'
+  const diagnostic = classifyKeycloakBootstrapDiagnostic({
+    status: 1,
+    signal: null,
+    stdout: `keycloak bootstrap: failed closed (realm settings reconciliation failed) password=${secret}`,
+    stderr: '',
+  })
+  assert.deepEqual(diagnostic, { category: 'generic-failed-closed', exitCode: 1, signal: null })
+  assert.doesNotMatch(JSON.stringify(diagnostic), new RegExp(secret))
+  assert.deepEqual(
+    classifyKeycloakBootstrapDiagnostic({ status: 1, signal: null, stdout: 'not an approved marker', stderr: '' }),
+    { category: 'generic-failed-closed', exitCode: 1, signal: null },
+  )
+  assert.deepEqual(
+    classifyKeycloakBootstrapDiagnostic({
+      status: 1,
+      signal: null,
+      stdout: 'keycloak bootstrap: failed closed (realm settings reconciliation failed) trailing',
+      stderr: '',
+    }),
+    { category: 'generic-failed-closed', exitCode: 1, signal: null },
+  )
+  assert.deepEqual(
+    classifyKeycloakBootstrapDiagnostic({
+      status: 1,
+      signal: null,
+      stdout: 'keycloak bootstrap: failed closed (realm settings reconciliation failed)',
+      stderr: 'keycloak bootstrap: failed closed (required database secret is empty)',
+    }),
+    { category: 'generic-failed-closed', exitCode: 1, signal: null },
+  )
+})
+
+test('Keycloak bootstrap diagnostics classify SIGKILL and exit 137 as external termination without OOM claims', () => {
+  for (const input of [
+    { status: 137, signal: null },
+    { status: null, signal: 'SIGKILL' },
+  ]) {
+    const diagnostic = classifyKeycloakBootstrapDiagnostic({
+      ...input,
+      stdout: 'keycloak bootstrap: failed closed (realm settings reconciliation failed)',
+      stderr: '',
+    })
+    assert.deepEqual(diagnostic, {
+      category: 'resource-or-external-termination',
+      exitCode: input.status,
+      signal: input.signal === 'SIGKILL' ? 'SIGKILL' : null,
+    })
+    assert.doesNotMatch(JSON.stringify(diagnostic), /oom/i)
+  }
+})
+
+test('Keycloak bootstrap failure diagnostics scan child output before classification', () => {
+  const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  const scan = source.indexOf('inspectOutput?.(output)')
+  const classify = source.indexOf('classifyKeycloakBootstrapDiagnostic', scan)
+  const failure = source.indexOf('throw new Error(`${label} failed', classify)
+  assert.ok(scan > 0 && scan < classify && classify < failure)
+})
 
 test('Keycloak runtime scan keeps credentials but excludes the fixed database role identity', () => {
   const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-secret-scan-'))

@@ -31,7 +31,7 @@ read_database_secret() {
   [ -n "$value" ] || die 'required database secret is empty'
   [ "${#value}" -le 512 ] || die 'database secret value exceeds the bounded length'
   case "$value" in
-    *[!A-Za-z0-9._:/?&=%+-]*) die 'database secret contains unsupported characters' ;;
+    *[!A-Za-z0-9._:/?\&=%+-]*) die 'database secret contains unsupported characters' ;;
   esac
   printf '%s' "$value"
 }
@@ -43,6 +43,52 @@ read_config() {
   case "$value" in
     *[!A-Za-z0-9._:/-]*) die "configuration contains unsupported characters: $name" ;;
   esac
+  printf '%s' "$value"
+}
+
+read_smtp_sender() {
+  value="$1"
+  [ -n "$value" ] || die 'required configuration is missing: KEYCLOAK_SMTP_FROM'
+  [ "${#value}" -le 254 ] || die 'SMTP from value contains unsupported characters'
+  # Keep the local part intentionally narrow: ASCII letters/digits plus dot,
+  # plus, and hyphen, with alphanumeric edges only.  Display names,
+  # quoted forms, comments, and internationalized addresses are out of scope.
+  case "$value" in
+    *[!A-Za-z0-9.+@-]*) die 'SMTP from value contains unsupported characters' ;;
+    *@*) ;;
+    *) die 'SMTP from value contains unsupported characters' ;;
+  esac
+
+  local_part="${value%%@*}"
+  domain="${value#*@}"
+  case "$domain" in
+    ''|*@*) die 'SMTP from value contains unsupported characters' ;;
+  esac
+  [ -n "$local_part" ] || die 'SMTP from value contains unsupported characters'
+  [ "${#local_part}" -le 64 ] || die 'SMTP from value contains unsupported characters'
+  case "$local_part" in
+    [!A-Za-z0-9]*|*[!A-Za-z0-9]|*..*) die 'SMTP from value contains unsupported characters' ;;
+  esac
+
+  [ "${#domain}" -le 253 ] || die 'SMTP from value contains unsupported characters'
+  case "$domain" in
+    *.*) ;;
+    *) die 'SMTP from value contains unsupported characters' ;;
+  esac
+  case "$domain" in
+    .*|*.|*..*) die 'SMTP from value contains unsupported characters' ;;
+  esac
+  old_ifs="$IFS"
+  IFS='.'
+  set -- $domain
+  IFS="$old_ifs"
+  for label in "$@"; do
+    [ -n "$label" ] || die 'SMTP from value contains unsupported characters'
+    [ "${#label}" -le 63 ] || die 'SMTP from value contains unsupported characters'
+    case "$label" in
+      -*|*-|*[!A-Za-z0-9-]*) die 'SMTP from value contains unsupported characters' ;;
+    esac
+  done
   printf '%s' "$value"
 }
 
@@ -129,11 +175,10 @@ esac
 
 smtp_host="$(read_config "${KEYCLOAK_SMTP_HOST:-}" KEYCLOAK_SMTP_HOST)"
 smtp_port="$(read_config "${KEYCLOAK_SMTP_PORT:-}" KEYCLOAK_SMTP_PORT)"
-smtp_from="$(read_config "${KEYCLOAK_SMTP_FROM:-}" KEYCLOAK_SMTP_FROM)"
+smtp_from="$(read_smtp_sender "${KEYCLOAK_SMTP_FROM:-}")"
 smtp_starttls="$(read_config "${KEYCLOAK_SMTP_STARTTLS:-}" KEYCLOAK_SMTP_STARTTLS)"
 case "$smtp_port" in *[!0-9]*) die 'SMTP port must be numeric' ;; esac
 case "$smtp_starttls" in true|false) ;; *) die 'SMTP STARTTLS must be true or false' ;; esac
-case "$smtp_from" in *[!A-Za-z0-9._@+-]*) die 'SMTP from value contains unsupported characters' ;; esac
 smtp_auth_user_file="${KEYCLOAK_SMTP_AUTH_USER_FILE:-/run/secrets/keycloak_smtp_auth_user}"
 smtp_password_file="${KEYCLOAK_SMTP_PASSWORD_FILE:-/run/secrets/keycloak_smtp_password}"
 smtp_auth_user="$(read_secret "$smtp_auth_user_file")"
