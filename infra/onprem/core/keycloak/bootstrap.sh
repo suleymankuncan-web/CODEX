@@ -146,7 +146,7 @@ json_array() {
 }
 
 kcadm() {
-  /opt/keycloak/bin/kcadm.sh "$@"
+  /opt/keycloak/bin/kcadm.sh "$@" --config "$config_file"
 }
 
 kcadm_quiet() {
@@ -292,13 +292,12 @@ phase_marker server-start
   >"$tmp_dir/keycloak-server.log" 2>&1 &
 server_pid="$!"
 
-export KCADM_CONFIG="$config_file"
 credentials_ready=false
 attempt=0
 phase_marker bootstrap-authentication
 while [ "$attempt" -lt 90 ]; do
-  if KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$(tr -d '\r\n' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials \
-      --server "$server" --realm master --client "$bootstrap_user" >/dev/null 2>&1; then
+  if KC_CLI_CLIENT_SECRET="$(tr -d '\r\n' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials \
+      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file" >/dev/null 2>&1; then
     credentials_ready=true
     break
   fi

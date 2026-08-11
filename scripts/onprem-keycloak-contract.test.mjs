@@ -170,15 +170,108 @@ test('ONP-3B bootstrap secret-log scan excludes only the fixed database role ide
   assert.ok(result.errors.some((error) => /realm-reconciliation phase marker/i.test(error)))
 })
 
+test('ONP-3B contract requires suffix kcadm config paths and rejects unsupported KCADM_CONFIG reliance', () => {
+  const baseline = input()
+  const wrapperInvocation = '/opt/keycloak/bin/kcadm.sh "$@" --config "$config_file"'
+  const credentialInvocation = 'KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials'
+  assert.ok(baseline.bootstrapScript.includes(wrapperInvocation))
+  assert.ok(baseline.bootstrapScript.includes(credentialInvocation))
+  assert.doesNotMatch(baseline.bootstrapScript, /\bKCADM_CONFIG\b/)
+
+  const missingWrapperConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, '/opt/keycloak/bin/kcadm.sh "$@"'),
+  }
+  const missingWrapperResult = validateOnpremKeycloakContract(missingWrapperConfig)
+  assert.equal(missingWrapperResult.ok, false)
+  assert.ok(missingWrapperResult.errors.some((error) => /wrapper.*config|kcadm.*config/i.test(error)))
+
+  const wrongWrapperConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, '/opt/keycloak/bin/kcadm.sh "$@" --config "$tmp_dir/other.config"'),
+  }
+  const wrongWrapperResult = validateOnpremKeycloakContract(wrongWrapperConfig)
+  assert.equal(wrongWrapperResult.ok, false)
+  assert.ok(wrongWrapperResult.errors.some((error) => /wrapper.*config|kcadm.*config/i.test(error)))
+
+  const prefixWrapperConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, '/opt/keycloak/bin/kcadm.sh --config "$config_file" "$@"'),
+  }
+  const prefixWrapperResult = validateOnpremKeycloakContract(prefixWrapperConfig)
+  assert.equal(prefixWrapperResult.ok, false)
+  assert.ok(prefixWrapperResult.errors.some((error) => /suffix|ordering|wrapper.*config|kcadm.*config/i.test(error)))
+
+  const duplicateWrapperConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, `${wrapperInvocation} --config "$config_file"`),
+  }
+  const duplicateWrapperResult = validateOnpremKeycloakContract(duplicateWrapperConfig)
+  assert.equal(duplicateWrapperResult.ok, false)
+  assert.ok(duplicateWrapperResult.errors.some((error) => /exactly one|wrapper.*config|kcadm.*config/i.test(error)))
+
+  const missingDirectConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      '      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file"',
+      '      --server "$server" --realm master --client "$bootstrap_user"',
+    ),
+  }
+  const missingDirectResult = validateOnpremKeycloakContract(missingDirectConfig)
+  assert.equal(missingDirectResult.ok, false)
+  assert.ok(missingDirectResult.errors.some((error) => /direct.*config|auth.*config|kcadm.*config/i.test(error)))
+
+  const wrongDirectConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      '      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file"',
+      '      --server "$server" --realm master --client "$bootstrap_user" --config "$tmp_dir/other.config"',
+    ),
+  }
+  const wrongDirectResult = validateOnpremKeycloakContract(wrongDirectConfig)
+  assert.equal(wrongDirectResult.ok, false)
+  assert.ok(wrongDirectResult.errors.some((error) => /direct.*config|auth.*config|kcadm.*config/i.test(error)))
+
+  const prefixDirectConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      ' /opt/keycloak/bin/kcadm.sh config credentials \\\n      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file"',
+      ' /opt/keycloak/bin/kcadm.sh --config "$config_file" config credentials \\\n      --server "$server" --realm master --client "$bootstrap_user"',
+    ),
+  }
+  const prefixDirectResult = validateOnpremKeycloakContract(prefixDirectConfig)
+  assert.equal(prefixDirectResult.ok, false)
+  assert.ok(prefixDirectResult.errors.some((error) => /suffix|ordering|direct.*config|auth.*config|kcadm.*config/i.test(error)))
+
+  const duplicateDirectConfig = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      '      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file"',
+      '      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file" --config "$config_file"',
+    ),
+  }
+  const duplicateDirectResult = validateOnpremKeycloakContract(duplicateDirectConfig)
+  assert.equal(duplicateDirectResult.ok, false)
+  assert.ok(duplicateDirectResult.errors.some((error) => /exactly one|direct.*config|auth.*config|kcadm.*config/i.test(error)))
+
+  const envReliance = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace('credentials_ready=false', 'export KCADM_CONFIG="$config_file"\ncredentials_ready=false'),
+  }
+  const envRelianceResult = validateOnpremKeycloakContract(envReliance)
+  assert.equal(envRelianceResult.ok, false)
+  assert.ok(envRelianceResult.errors.some((error) => /KCADM_CONFIG|unsupported.*config/i.test(error)))
+})
+
 test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsafe mutations', () => {
   const baseline = input()
-  const credentialInvocation = 'KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials'
+  const credentialInvocation = 'KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials'
   assert.ok(baseline.bootstrapScript.includes(credentialInvocation))
   assert.doesNotMatch(baseline.bootstrapScript, /export\s+KC_CLI_CLIENT_SECRET=/)
 
   const unnormalizedSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials',
+    'KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials',
   )
   const unnormalizedResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: unnormalizedSecret })
   assert.equal(unnormalizedResult.ok, false)
@@ -186,7 +279,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const stdinSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'cat "$bootstrap_password_file" | KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials',
+    'cat "$bootstrap_password_file" | /opt/keycloak/bin/kcadm.sh config credentials',
   )
   const stdinResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: stdinSecret })
   assert.equal(stdinResult.ok, false)
@@ -194,7 +287,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const secretArg = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials --secret "$bootstrap_password"',
+    '/opt/keycloak/bin/kcadm.sh config credentials --secret "$bootstrap_password"',
   )
   const secretResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: secretArg })
   assert.equal(secretResult.ok, false)
@@ -202,7 +295,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const exportedSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'export KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")"\n  KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials',
+    'export KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")"\n  /opt/keycloak/bin/kcadm.sh config credentials',
   )
   const exportedResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: exportedSecret })
   assert.equal(exportedResult.ok, false)
@@ -210,7 +303,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const rawSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$bootstrap_password" /opt/keycloak/bin/kcadm.sh config credentials',
+    'KC_CLI_CLIENT_SECRET="$bootstrap_password" /opt/keycloak/bin/kcadm.sh config credentials',
   )
   const rawResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: rawSecret })
   assert.equal(rawResult.ok, false)

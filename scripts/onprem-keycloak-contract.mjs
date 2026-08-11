@@ -305,9 +305,19 @@ export function validateOnpremKeycloakContract(input) {
     && !String(input.bootstrapScript).includes('*[!A-Za-z0-9._:/?&=%+-]*'), 'database secret allowlist must escape ampersand for POSIX shell parsing')
   fail(/bootstrap-admin\s+service/.test(input.bootstrapScript), 'bootstrap must provision a temporary service principal with kc.sh bootstrap-admin')
   fail(/--client-secret:env=KEYCLOAK_BOOTSTRAP_SERVICE_SECRET/.test(input.bootstrapScript), 'bootstrap-admin must receive the service secret only through its environment')
+  const kcadmWrapperSource = input.bootstrapScript.match(/kcadm\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const kcadmWrapperHasSuffixConfig = /\/opt\/keycloak\/bin\/kcadm\.sh "\$@" --config "\$config_file"/.test(kcadmWrapperSource)
+  const kcadmWrapperHasPrefixConfig = /\/opt\/keycloak\/bin\/kcadm\.sh\s+--config "\$config_file"/.test(kcadmWrapperSource)
+  const kcadmWrapperConfigArguments = kcadmWrapperSource.match(/--config\s+"[^"]+"/g) ?? []
+  fail(kcadmWrapperSource.length > 0 && kcadmWrapperHasSuffixConfig && !kcadmWrapperHasPrefixConfig && kcadmWrapperConfigArguments.length === 1, 'kcadm wrapper must append exactly one explicit config file after command arguments (Keycloak 26.7 rejects prefix --config ordering)')
+  fail(!/\bKCADM_CONFIG\b/.test(input.bootstrapScript), 'bootstrap must not rely on the unsupported KCADM_CONFIG environment variable')
   const bootstrapAuthBlock = input.bootstrapScript.match(/credentials_ready=false[\s\S]*?credentials_ready=true/)?.[0] ?? ''
   fail(bootstrapAuthBlock.length > 0, 'bootstrap must retain its bounded authentication retry loop')
-  fail(/if KCADM_CONFIG="\$config_file" KC_CLI_CLIENT_SECRET="\$\(tr -d '\\r\\n' < "\$bootstrap_password_file"\)" \/opt\/keycloak\/bin\/kcadm\.sh config credentials/.test(bootstrapAuthBlock), 'kcadm service credential login must normalize the password through a command-local KC_CLI_CLIENT_SECRET')
+  fail(/if KC_CLI_CLIENT_SECRET="\$\(tr -d '\\r\\n' < "\$bootstrap_password_file"\)" \/opt\/keycloak\/bin\/kcadm\.sh config credentials/.test(bootstrapAuthBlock), 'kcadm service credential login must normalize the password through a command-local KC_CLI_CLIENT_SECRET')
+  const kcadmDirectAuthHasSuffixConfig = /\/opt\/keycloak\/bin\/kcadm\.sh config credentials[\s\S]*--config "\$config_file"/.test(bootstrapAuthBlock)
+  const kcadmDirectAuthHasPrefixConfig = /\/opt\/keycloak\/bin\/kcadm\.sh\s+--config "\$config_file"\s+config credentials/.test(bootstrapAuthBlock)
+  const kcadmDirectAuthConfigArguments = bootstrapAuthBlock.match(/--config\s+"[^"]+"/g) ?? []
+  fail(kcadmDirectAuthHasSuffixConfig && !kcadmDirectAuthHasPrefixConfig && kcadmDirectAuthConfigArguments.length === 1, 'kcadm service credential login must pass exactly one explicit config file after config credentials (Keycloak 26.7 rejects prefix --config ordering)')
   fail(!/cat\s+"\$bootstrap_password_file"\s*\|/.test(bootstrapAuthBlock), 'kcadm service credential login must not pipe its secret through stdin')
   fail(!/kcadm\.sh config credentials[\s\S]*--(?:secret|password|client-secret)(?:=|\s+)/.test(bootstrapAuthBlock), 'kcadm service credential login must not pass a secret in argv')
   fail(!/(?:^|\s)export\s+KC_CLI_CLIENT_SECRET=/.test(input.bootstrapScript), 'kcadm service credential login must not export its secret beyond the command')
