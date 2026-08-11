@@ -1,10 +1,7 @@
 const KEYCLOAK_GRACEFUL_STOP_MARKER = /^.*\bINFO\s+\[io\.quarkus\]\s+\(Shutdown thread\)\s+Keycloak stopped in \d+(?:\.\d+)?s\s*$/m
 
-// Docker can report a container as exited before its logging driver has made
-// the final shutdown line visible. Keep the exact marker fail-closed, but give
-// the bounded snapshot reader enough time for that asynchronous flush.
-export const KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS = 30
-export const KEYCLOAK_GRACEFUL_STOP_WAIT_MS = 1000
+export const KEYCLOAK_STOP_SIGNAL = 'SIGTERM'
+export const KEYCLOAK_STOP_TIMEOUT_SECONDS = 60
 
 function assertSecretSafeLogs(logs, secretValues) {
   for (const entry of secretValues ?? []) {
@@ -27,7 +24,7 @@ function safeStopDiagnostic(state) {
 
 function assertCleanStoppedState({ service, state = {} }) {
   const exactService = String(service)
-  const allowedExitCodes = exactService === 'keycloak' ? [0, 143] : [0]
+  const allowedExitCodes = exactService === 'keycloak' ? [143] : [0]
   const stoppedCleanly = state.Status === 'exited'
     && state.Running === false
     && state.Paused === false
@@ -37,6 +34,7 @@ function assertCleanStoppedState({ service, state = {} }) {
     && !state.Error
     && allowedExitCodes.includes(state.ExitCode)
   if (!stoppedCleanly) throw new Error(`${exactService} did not stop gracefully: ${safeStopDiagnostic(state)}`)
+  if (exactService === 'keycloak') deriveDockerLogCursor(state)
   return { exitCode: state.ExitCode }
 }
 
@@ -93,10 +91,63 @@ function deriveDockerLogCursor(state) {
   return startedAt.value
 }
 
-function gracefulStopExhaustionDiagnostic(state, attempts) {
-  const exitCode = Number.isSafeInteger(state?.ExitCode) && state.ExitCode >= 0 && state.ExitCode <= 255 ? state.ExitCode : null
-  const status = state?.Status === 'exited' ? 'exited' : 'unknown'
-  return `keycloak graceful shutdown marker missing (category=marker-missing; exitCode=${exitCode}; state=${status}; windowValid=true; attempts=${attempts})`
+function inspectRecord(inspect) {
+  return Array.isArray(inspect) ? (inspect[0] ?? {}) : (inspect ?? {})
+}
+
+function validatedContainerId(containerId) {
+  const value = typeof containerId === 'string' ? containerId.trim() : ''
+  if (!value || /\s/.test(value)) throw new Error('keycloak stop requires a validated container identity')
+  return value
+}
+
+export function buildKeycloakStopArgs(containerId) {
+  const validatedId = validatedContainerId(containerId)
+  return ['stop', '--signal', KEYCLOAK_STOP_SIGNAL, '--timeout', String(KEYCLOAK_STOP_TIMEOUT_SECONDS), validatedId]
+}
+
+export function assertKeycloakContainerIdentity({ containerId, inspect, expectedRestartCount = 0 } = {}) {
+  const record = inspectRecord(inspect)
+  const candidateId = validatedContainerId(containerId)
+  const inspectedId = validatedContainerId(record.Id)
+  if (candidateId !== inspectedId) throw new Error('keycloak container identity contract failed')
+  if (!Number.isSafeInteger(record.RestartCount) || record.RestartCount !== expectedRestartCount) {
+    throw new Error('keycloak container restart contract failed')
+  }
+  return { containerId: candidateId, restartCount: record.RestartCount }
+}
+
+export function assertKeycloakPreStopState({ containerId, inspect } = {}) {
+  const record = inspectRecord(inspect)
+  const identity = assertKeycloakContainerIdentity({ containerId, inspect: record, expectedRestartCount: 0 })
+  const state = record.State ?? {}
+  const healthy = state.Health?.Status === 'healthy'
+  const cleanFlags = state.Status === 'running'
+    && state.Running === true
+    && state.Paused === false
+    && state.Restarting === false
+    && state.OOMKilled === false
+    && state.Dead === false
+    && !state.Error
+  if (!cleanFlags || !healthy || !parseRfc3339Timestamp(state.StartedAt)) {
+    throw new Error('keycloak pre-stop state contract failed')
+  }
+  return { ...identity, startedAt: state.StartedAt }
+}
+
+export function assertControlledKeycloakStop({ beforeInspect, afterInspect } = {}) {
+  const before = inspectRecord(beforeInspect)
+  const after = inspectRecord(afterInspect)
+  const beforeIdentity = assertKeycloakPreStopState({ containerId: before.Id, inspect: before })
+  const afterIdentity = assertKeycloakContainerIdentity({ containerId: beforeIdentity.containerId, inspect: after, expectedRestartCount: 0 })
+  if (afterIdentity.containerId !== beforeIdentity.containerId
+    || afterIdentity.restartCount !== beforeIdentity.restartCount
+    || after.State?.StartedAt !== beforeIdentity.startedAt) {
+    throw new Error('keycloak container identity/lifecycle continuity contract failed')
+  }
+  const result = assertCleanStoppedState({ service: 'keycloak', state: after.State ?? {} })
+  deriveDockerLogCursor(after.State ?? {})
+  return { containerId: beforeIdentity.containerId, restartCount: afterIdentity.restartCount, exitCode: result.exitCode, lifecycleVerified: true }
 }
 
 export function assertCleanStoppedServiceState({ service, state = {} }) {
@@ -105,26 +156,25 @@ export function assertCleanStoppedServiceState({ service, state = {} }) {
 
 export function assertGracefulStopState({ service, state = {}, logs = '', secretValues = new Map() }) {
   const result = assertCleanStoppedState({ service, state })
+  let markerObserved = false
   if (String(service) === 'keycloak') {
     const exactLogs = String(logs)
     assertSecretSafeLogs(exactLogs, secretValues)
-    if (!KEYCLOAK_GRACEFUL_STOP_MARKER.test(exactLogs)) throw new Error('keycloak graceful shutdown marker missing')
+    markerObserved = KEYCLOAK_GRACEFUL_STOP_MARKER.test(exactLogs)
   }
-  return { ...result, markerObserved: String(service) === 'keycloak' }
+  return { ...result, markerObserved }
 }
 
 /**
- * Validate a stopped service before reading any logs, then poll only the
- * post-stop Keycloak log window. The reader is intentionally injected so the
- * runtime proofs can enforce Docker's --since/--timestamps contract while
- * tests exercise delayed, missing, secret-bearing, and failing samples without
- * a live daemon.
+ * Validate a stopped service before reading one post-stop Keycloak log window.
+ * The exact shutdown marker is optional telemetry; lifecycle state remains the
+ * mandatory proof. The reader is injected so runtime proofs enforce Docker's
+ * --since/--timestamps contract while tests remain daemon-free.
  */
 export function observeKeycloakGracefulStop({
   service = 'keycloak',
   state = {},
   readLogs,
-  wait = () => {},
   secretValues = new Map(),
 }) {
   const result = assertCleanStoppedState({ service, state })
@@ -132,19 +182,13 @@ export function observeKeycloakGracefulStop({
   const since = deriveDockerLogCursor(state)
   if (typeof readLogs !== 'function') throw new Error('keycloak graceful shutdown observation requires a log reader')
 
-  for (let attempt = 0; attempt < KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS; attempt += 1) {
-    let sample
-    try {
-      sample = readLogs({ since, timestamps: true, attempt })
-    } catch {
-      throw new Error('keycloak graceful shutdown log retrieval failed')
-    }
-    const logs = normalizeLogSample(sample)
-    assertSecretSafeLogs(logs, secretValues)
-    if (KEYCLOAK_GRACEFUL_STOP_MARKER.test(logs)) {
-      return { ...result, markerObserved: true, attempts: attempt + 1 }
-    }
-    if (attempt + 1 < KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS) wait(KEYCLOAK_GRACEFUL_STOP_WAIT_MS)
+  let sample
+  try {
+    sample = readLogs({ since, timestamps: true })
+  } catch {
+    throw new Error('keycloak graceful shutdown log retrieval failed')
   }
-  throw new Error(gracefulStopExhaustionDiagnostic(state, KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS))
+  const logs = normalizeLogSample(sample)
+  assertSecretSafeLogs(logs, secretValues)
+  return { ...result, markerObserved: KEYCLOAK_GRACEFUL_STOP_MARKER.test(logs), attempts: 1 }
 }
