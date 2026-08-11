@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
-import { assertGracefulStopState, observeKeycloakGracefulStop, KEYCLOAK_GRACEFUL_STOP_WAIT_MS } from './onprem-graceful-stop-contract.mjs'
+import { assertControlledKeycloakStop, assertGracefulStopState, assertKeycloakContainerIdentity, assertKeycloakPreStopState, buildKeycloakStopArgs, observeKeycloakGracefulStop } from './onprem-graceful-stop-contract.mjs'
 import {
   buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE,
   classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
@@ -345,7 +345,7 @@ async function main() {
     services: LONG_LIVED,
     outageRecovery: null,
     redisPersistenceDiagnostics: null,
-    volumeRecovery: 'same-volume-only',
+    volumeRecovery: 'same-volume-only', keycloakLifecycleProof: null,
   }
   if (config.name !== options.project) throw new Error('Compose project identity mismatch')
   if (config.services.caddy.image !== CADDY_IMAGE) throw new Error('Caddy must use the exact approved upstream image identity')
@@ -424,12 +424,12 @@ async function main() {
     }
     throw new Error(`${service} did not become unhealthy during the Redis outage`)
   }
-  const assertStoppedServiceState = (service, profiles, phase, stopTimestamp = null) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
-    const inspectResult = command('docker', ['inspect', containerId], { label: `inspect stopped ${service}` }); assertNoSecretLeak(secretValues, { [`stopped ${service} state`]: inspectResult.stdout }); const state = JSON.parse(inspectResult.stdout)[0]?.State
-    if (service !== 'keycloak') return assertGracefulStopState({ service, state, logs: '', secretValues }); if (!stopTimestamp) throw new Error('Keycloak stop proof is missing its RFC3339 stop timestamp')
-    return observeKeycloakGracefulStop({ service, state, since: stopTimestamp, secretValues, wait: (delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) => command(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], { label: 'Keycloak graceful-shutdown log wait' }),
-      readLogs: ({ since, timestamps }) => { if (since !== stopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window'); const logs = command('docker', ['logs', '--since', since, '--timestamps', containerId], { label: 'stopped Keycloak logs', suppressOutput: true, inspectOutput: (capture) => assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': `${capture.stderr ?? ''}\n${capture.stdout ?? ''}` }) }); return `${logs.stderr ?? ''}\n${logs.stdout ?? ''}` },
-    }) }; const verifyCaddyRuntime = (pathState = 'installed') => {
+  const inspectContainer = (containerId, label) => { const inspectResult = command('docker', ['inspect', containerId], { label }); assertNoSecretLeak(secretValues, { [`${label} output`]: inspectResult.stdout, [`${label} errors`]: inspectResult.stderr }); const record = JSON.parse(inspectResult.stdout)[0]; if (!record) throw new Error(`${label} returned no container identity`); return record }
+  const assertStoppedServiceState = (service, profiles, phase) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`); const inspect = inspectContainer(containerId, `inspect stopped ${service}`); return assertGracefulStopState({ service, state: inspect.State ?? {}, logs: '', secretValues }) }
+  const captureKeycloakBeforeStop = (phase) => { const candidateId = compose(['ps', '--all', '--quiet', '--no-trunc', 'keycloak'], ['runtime'], `${phase} Keycloak identity`).stdout.trim(); if (!candidateId) throw new Error(`Keycloak container is missing during ${phase}`); const inspect = inspectContainer(candidateId, `${phase} Keycloak state`); const identity = assertKeycloakPreStopState({ containerId: candidateId, inspect }); return { ...identity, inspect } }
+  const observeStoppedKeycloak = ({ identity, inspect }) => observeKeycloakGracefulStop({ service: 'keycloak', state: inspect.State ?? {}, secretValues, readLogs: ({ since, timestamps }) => { if (since !== inspect.State?.StartedAt || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window'); const logs = command('docker', ['logs', '--since', since, '--timestamps', identity.containerId], { label: 'stopped Keycloak logs', suppressOutput: true, inspectOutput: (capture) => assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': `${capture.stderr ?? ''}\n${capture.stdout ?? ''}` }) }); return `${logs.stderr ?? ''}\n${logs.stdout ?? ''}` } })
+  const verifyKeycloakRestartIdentity = (identity, phase) => { const inspect = inspectContainer(identity.containerId, `${phase} Keycloak state`); const sameIdentity = assertKeycloakContainerIdentity({ containerId: identity.containerId, inspect, expectedRestartCount: 0 }); const state = inspect.State ?? {}; if (state.Status !== 'running' || state.Running !== true || state.Health?.Status !== 'healthy') throw new Error(`Keycloak ${phase} state contract failed`); return sameIdentity }
+  const verifyCaddyRuntime = (pathState = 'installed') => {
     const id = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     if (!id) throw new Error('caddy container is missing during bootstrap verification')
     const inspect = JSON.parse(command('docker', ['inspect', id], { label: 'inspect caddy bootstrap runtime' }).stdout)[0]
@@ -841,13 +841,14 @@ async function main() {
       throw new Error('Caddy workload phase changed the verified binary identity')
     }
     receipt.caddyRuntime.phases.workload = workloadCaddyRuntime; compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime']); for (const service of ['caddy', 'frontend', 'api', 'worker']) assertStoppedServiceState(service, ['runtime'], 'edge/application')
-    waitHealthy('postgres'); const keycloakStopTimestamp = new Date().toISOString(); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak', keycloakStopTimestamp)
+    waitHealthy('postgres'); const keycloakBeforeStop = captureKeycloakBeforeStop('pre-stop')
+    const keycloakStop = command('docker', buildKeycloakStopArgs(keycloakBeforeStop.containerId), { label: 'explicit Keycloak SIGTERM stop' }); assertNoSecretLeak(secretValues, { 'explicit Keycloak SIGTERM stop stdout': keycloakStop.stdout, 'explicit Keycloak SIGTERM stop stderr': keycloakStop.stderr })
+    const keycloakAfterStop = inspectContainer(keycloakBeforeStop.containerId, 'post-stop Keycloak state'); const keycloakStopProof = assertControlledKeycloakStop({ beforeInspect: keycloakBeforeStop.inspect, afterInspect: keycloakAfterStop }); const keycloakLogObservation = observeStoppedKeycloak({ identity: keycloakBeforeStop, inspect: keycloakAfterStop })
+    receipt.keycloakLifecycleProof = { stoppedCleanly: keycloakStopProof.lifecycleVerified, restartCountStable: keycloakStopProof.restartCount === 0, markerObserved: keycloakLogObservation.markerObserved }
     waitHealthy('postgres'); compose(['stop', 'postgres', 'redis'], ['infra']); for (const service of ['postgres', 'redis']) assertStoppedServiceState(service, ['infra'], 'postgres/redis')
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
-    waitHealthy('postgres')
-    waitHealthy('redis')
-    compose(['up', '--detach', 'api', 'worker', 'frontend', 'caddy'], ['runtime'])
-    for (const service of LONG_LIVED) waitHealthy(service)
+    waitHealthy('postgres'); waitHealthy('redis')
+    compose(['up', '--detach', 'api', 'worker', 'frontend', 'caddy'], ['runtime']); for (const service of LONG_LIVED) waitHealthy(service); verifyKeycloakRestartIdentity(keycloakBeforeStop, 'post-restart'); receipt.keycloakLifecycleProof = { ...receipt.keycloakLifecycleProof, restartIdentityVerified: true }
     assertPersistenceIdentity('full project restart')
     const finalCaddyRuntime = verifyCaddyRuntime()
     if (finalCaddyRuntime.executableDigest !== receipt.caddyRuntime.approvedExecutableDigest) {

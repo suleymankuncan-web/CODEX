@@ -6,7 +6,10 @@ import { fileURLToPath } from 'node:url'
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
 import {
-  KEYCLOAK_GRACEFUL_STOP_WAIT_MS,
+  assertControlledKeycloakStop,
+  assertKeycloakContainerIdentity,
+  assertKeycloakPreStopState,
+  buildKeycloakStopArgs,
   observeKeycloakGracefulStop,
 } from './onprem-graceful-stop-contract.mjs'
 
@@ -324,14 +327,6 @@ export function runDockerCapture(args, label, inspectOutput = null, spawnRunner 
 
 function runDocker(args, label) {
   return runDockerCapture(args, label).stdout
-}
-
-function waitForGracefulStopLog(delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) {
-  const result = spawnSync(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], {
-    encoding: 'utf8',
-    windowsHide: true,
-  })
-  if (result.error || result.status !== 0) throw new Error('Keycloak graceful shutdown log wait failed')
 }
 
 function composeArgs(options, profiles = []) {
@@ -676,6 +671,10 @@ export function runKeycloakRuntimeProof(options) {
       bootstrapCompleted: false,
       bootstrapSecondRun: false,
       gracefulStopVerified: false,
+      gracefulStopLifecycleVerified: false,
+      gracefulStopMarkerObserved: false,
+      restartIdentityVerified: false,
+      restartCountStable: false,
       persistenceAfterRestart: false,
       hostPortPublished: null,
       subjectManifestPrivate: false,
@@ -756,31 +755,46 @@ export function runKeycloakRuntimeProof(options) {
     scanCapture(runDockerCapture([...base, 'logs', '--no-color', '--no-log-prefix'], 'Keycloak project secret-log scan'), 'Keycloak project logs')
     receipt.keycloak.noRawCredentials = true
     receipt.keycloak.logsSecretScanned = true
-    const keycloakStopTimestamp = new Date().toISOString()
-    runDocker([...base, 'stop', 'keycloak'], 'long-lived Keycloak stop before retry')
-    const stoppedKeycloakId = runDocker([...base, 'ps', '--all', '--quiet', 'keycloak'], 'stopped Keycloak identity').trim()
-    const stoppedKeycloakState = JSON.parse(runDocker(['inspect', stoppedKeycloakId], 'stopped Keycloak state'))[0].State
-    observeKeycloakGracefulStop({
+    const stoppedKeycloakId = runDocker([...base, 'ps', '--all', '--quiet', '--no-trunc', 'keycloak'], 'pre-stop Keycloak identity').trim()
+    if (!stoppedKeycloakId) throw new Error('Keycloak container identity is missing before stop')
+    const keycloakBeforeInspect = JSON.parse(runDocker(['inspect', stoppedKeycloakId], 'pre-stop Keycloak state'))[0]
+    const keycloakBeforeIdentity = assertKeycloakPreStopState({ containerId: stoppedKeycloakId, inspect: keycloakBeforeInspect })
+    runDockerCapture(
+      buildKeycloakStopArgs(keycloakBeforeIdentity.containerId),
+      'explicit Keycloak SIGTERM stop',
+      (capture) => scanCapture(capture, 'explicit Keycloak SIGTERM stop'),
+    )
+    const keycloakAfterInspect = JSON.parse(runDocker(['inspect', keycloakBeforeIdentity.containerId], 'post-stop Keycloak state'))[0]
+    const keycloakStopProof = assertControlledKeycloakStop({ beforeInspect: keycloakBeforeInspect, afterInspect: keycloakAfterInspect })
+    const keycloakLogObservation = observeKeycloakGracefulStop({
       service: 'keycloak',
-      state: stoppedKeycloakState,
-      since: keycloakStopTimestamp,
+      state: keycloakAfterInspect.State,
       secretValues,
-      wait: waitForGracefulStopLog,
       readLogs: ({ since, timestamps }) => {
-        if (since !== keycloakStopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window')
+        if (since !== keycloakAfterInspect.State?.StartedAt || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window')
         const capture = runDockerCapture(
-          ['logs', '--since', since, '--timestamps', stoppedKeycloakId],
+          ['logs', '--since', since, '--timestamps', keycloakBeforeIdentity.containerId],
           'stopped Keycloak graceful-shutdown logs',
-          (capture) => scanCapture(capture, 'stopped Keycloak graceful-shutdown logs'),
+          (value) => scanCapture(value, 'stopped Keycloak graceful-shutdown logs'),
         )
         return capture
       },
     })
-    receipt.keycloak.gracefulStopVerified = true
+    receipt.keycloak.gracefulStopVerified = keycloakStopProof.lifecycleVerified
+    receipt.keycloak.gracefulStopLifecycleVerified = keycloakStopProof.lifecycleVerified
+    receipt.keycloak.gracefulStopMarkerObserved = keycloakLogObservation.markerObserved
     runScannedOneShot([...base, 'run', '--rm', 'keycloak-bootstrap'], 'Keycloak bootstrap idempotency retry')
     receipt.keycloak.bootstrapSecondRun = true
     runScannedOneShot([...base, 'run', '--rm', '--no-deps', 'identity-binder'], 'synthetic identity binder retry')
     runDocker([...base, 'up', '-d', '--wait', '--wait-timeout', '180', 'keycloak'], 'Keycloak restart after retry')
+    const keycloakAfterRestartInspect = JSON.parse(runDocker(['inspect', keycloakBeforeIdentity.containerId], 'post-restart Keycloak state'))[0]
+    assertKeycloakContainerIdentity({ containerId: keycloakBeforeIdentity.containerId, inspect: keycloakAfterRestartInspect, expectedRestartCount: 0 })
+    if (keycloakAfterRestartInspect.State?.Status !== 'running' || keycloakAfterRestartInspect.State?.Running !== true
+      || keycloakAfterRestartInspect.State?.Health?.Status !== 'healthy') {
+      throw new Error('Keycloak post-restart state contract failed')
+    }
+    receipt.keycloak.restartIdentityVerified = true
+    receipt.keycloak.restartCountStable = true
     runDocker([...base, 'exec', '-T', 'keycloak', '/bin/bash', '-ec', "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '200' <&3"], 'Keycloak health after retry')
     runDocker([...base, 'exec', '-T', 'keycloak', '/bin/bash', '-ec', "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/store-ops/.well-known/openid-configuration HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '200' <&3"], 'Keycloak metadata after retry')
     receipt.keycloak.authProof = executePersonaAuthProof('post-reconcile Keycloak persona auth proof')
