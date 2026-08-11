@@ -170,15 +170,65 @@ test('ONP-3B bootstrap secret-log scan excludes only the fixed database role ide
   assert.ok(result.errors.some((error) => /realm-reconciliation phase marker/i.test(error)))
 })
 
-test('ONP-3B contract rejects secret-bearing kcadm argv and weak password reset forms', () => {
+test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsafe mutations', () => {
   const baseline = input()
-  const secretArg = baseline.bootstrapScript.replace(
+  const credentialInvocation = 'KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials'
+  assert.ok(baseline.bootstrapScript.includes(credentialInvocation))
+  assert.doesNotMatch(baseline.bootstrapScript, /export\s+KC_CLI_CLIENT_SECRET=/)
+
+  const unnormalizedSecret = baseline.bootstrapScript.replace(
+    credentialInvocation,
+    'KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials',
+  )
+  const unnormalizedResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: unnormalizedSecret })
+  assert.equal(unnormalizedResult.ok, false)
+  assert.ok(unnormalizedResult.errors.some((error) => /normalize|command-local/i.test(error)))
+
+  const stdinSecret = baseline.bootstrapScript.replace(
+    credentialInvocation,
     'cat "$bootstrap_password_file" | KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials',
+  )
+  const stdinResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: stdinSecret })
+  assert.equal(stdinResult.ok, false)
+  assert.ok(stdinResult.errors.some((error) => /stdin|command-local/i.test(error)))
+
+  const secretArg = baseline.bootstrapScript.replace(
+    credentialInvocation,
     'KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials --secret "$bootstrap_password"',
   )
   const secretResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: secretArg })
   assert.equal(secretResult.ok, false)
   assert.ok(secretResult.errors.some((error) => /argv|stdin|secret/i.test(error)))
+
+  const exportedSecret = baseline.bootstrapScript.replace(
+    credentialInvocation,
+    'export KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")"\n  KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials',
+  )
+  const exportedResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: exportedSecret })
+  assert.equal(exportedResult.ok, false)
+  assert.ok(exportedResult.errors.some((error) => /export|command-local/i.test(error)))
+
+  const rawSecret = baseline.bootstrapScript.replace(
+    credentialInvocation,
+    'KCADM_CONFIG="$config_file" KC_CLI_CLIENT_SECRET="$bootstrap_password" /opt/keycloak/bin/kcadm.sh config credentials',
+  )
+  const rawResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: rawSecret })
+  assert.equal(rawResult.ok, false)
+  assert.ok(rawResult.errors.some((error) => /command-local|raw|secret/i.test(error)))
+
+  const missingLoop = baseline.bootstrapScript.replace('while [ "$attempt" -lt 90 ]; do', 'if true; then')
+  const loopResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: missingLoop })
+  assert.equal(loopResult.ok, false)
+  assert.ok(loopResult.errors.some((error) => /retry|authentication/i.test(error)))
+
+  const missingServerCheck = baseline.bootstrapScript.replace(
+    '  kill -0 "$server_pid" >/dev/null 2>&1 || die \'temporary Keycloak server exited before authentication\'\n',
+    '',
+  )
+  const serverResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: missingServerCheck })
+  assert.equal(serverResult.ok, false)
+  assert.ok(serverResult.errors.some((error) => /server-liveness|authentication/i.test(error)))
+
   const passwordArg = baseline.bootstrapScript.replace(
     'update "users/$user_uuid/reset-password" -r "$realm" -f "$password_file" -n',
     'set-password -r "$realm" --userid "$user_uuid" --new-password "$password"',
