@@ -227,7 +227,7 @@ services:
     image: ${KEYCLOAK_IMAGE:?set an immutable built Keycloak image reference}
     profiles: [infra, runtime]
     restart: unless-stopped
-    init: true
+    init: false
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]

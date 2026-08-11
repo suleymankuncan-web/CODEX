@@ -33,6 +33,34 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   assert.equal(result.errors.length, 0)
 })
 
+test('ONP-3B Keycloak runtime remains PID 1 for reliable graceful shutdown', () => {
+  const baseline = input()
+  assert.match(
+    baseline.compose,
+    /  keycloak:\r?\n[\s\S]*?^    init: false\s*$/m,
+    'the committed Keycloak service must explicitly disable Docker init',
+  )
+
+  for (const mutate of [
+    (compose) => compose.replace(/^    init: false\s*$/m, '    init: true'),
+    (compose) => compose.replace(/^    init: false\s*\r?\n/m, ''),
+    (compose) => compose.replace(/^    init: false\s*$/m, '    init: false\n    init: true'),
+    (compose) => compose.replace(
+      /(  keycloak:\r?\n[\s\S]*?)^    entrypoint: \["\/bin\/sh", "-ec"\]\s*$/m,
+      '$1    # entrypoint: ["/bin/sh", "-ec"]',
+    ),
+    (compose) => compose.replace('        exec /opt/keycloak/bin/kc.sh start --optimized', '        /opt/keycloak/bin/kc.sh start --optimized'),
+    (compose) => compose.replace('        exec /opt/keycloak/bin/kc.sh start --optimized', '        exec /opt/keycloak/bin/kc.sh start --auto-build'),
+  ]) {
+    const mutated = input()
+    mutated.compose = mutate(mutated.compose)
+    const result = validateOnpremKeycloakContract(mutated)
+
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /PID 1|graceful shutdown/i.test(error)))
+  }
+})
+
 test('ONP-3B SMTP sender accepts the committed address and bypasses generic read_config', () => {
   const baseline = input()
   const committedSender = baseline.envTemplate.match(/^KEYCLOAK_SMTP_FROM=(.*)$/m)?.[1]

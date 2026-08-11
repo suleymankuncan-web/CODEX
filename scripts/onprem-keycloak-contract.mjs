@@ -119,6 +119,16 @@ export function validateOnpremKeycloakContract(input) {
   fail(!/start-dev/i.test(input.compose) && !/start-dev/i.test(input.bootstrap), 'production Compose and bootstrap must never use start-dev')
   fail(!/KEYCLOAK_ADMIN(?:_PASSWORD)?\s*:/i.test(input.compose) && !/admin\s*[:=]\s*admin/i.test(input.compose), 'default Keycloak admin credentials must be absent')
   fail(/start\s+--optimized/.test(keycloak), 'Keycloak must use optimized production startup')
+  const keycloakInitDeclarations = keycloak.match(/^    init:\s*\S+\s*$/gm) ?? []
+  const keycloakEntrypointDeclarations = keycloak.match(/^    entrypoint:\s*.*$/gm) ?? []
+  fail(
+    keycloakInitDeclarations.length === 1
+      && /^    init:\s*false\s*$/.test(keycloakInitDeclarations[0])
+      && keycloakEntrypointDeclarations.length === 1
+      && /^    entrypoint:\s*\["\/bin\/sh", "-ec"\]\s*$/.test(keycloakEntrypointDeclarations[0])
+      && /^        exec \/opt\/keycloak\/bin\/kc\.sh start --optimized(?:\s|$)/m.test(keycloak),
+    'Keycloak must remain the direct PID 1 through the final exec for reliable graceful shutdown',
+  )
   fail(/health-enabled=true/.test(keycloak) && /metrics-enabled=true/.test(keycloak), 'Keycloak health and metrics must be enabled')
   fail(/9000/.test(keycloak) && /health\/ready/.test(keycloak) && /\/bin\/bash/.test(keycloak) && /dev\/tcp/.test(keycloak), 'Keycloak management health endpoint must use port 9000 without curl/network tooling')
   fail(/^    expose:\r?\n\s+- "8080"\r?\n\s+- "9000"/m.test(keycloak), 'Keycloak must expose only private application and management ports')
