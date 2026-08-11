@@ -11,6 +11,7 @@ test('on-prem executable and mutation-test inputs keep LF bytes across platforms
     '*.yml text eol=lf',
     '*.yaml text eol=lf',
     '*.json text eol=lf',
+    '*.sql text eol=lf',
     '*.Dockerfile text eol=lf',
     'Dockerfile text eol=lf',
   ]) {
@@ -23,7 +24,8 @@ test('on-prem executable and mutation-test inputs keep LF bytes across platforms
     'infra/onprem/core/keycloak/realm-config.json',
     '.github/workflows/onprem-image-proof.yml',
     'scripts/onprem-keycloak-contract.mjs',
+    'db/migrations/001_initial_store_ops.sql',
   ]) {
-    assert.doesNotMatch(readFileSync(path, 'utf8'), /\r\n/, `${path} must use LF bytes`)
+    assert.doesNotMatch(readFileSync(path, 'utf8'), /\r/, `${path} must use LF bytes`)
   }
 })
