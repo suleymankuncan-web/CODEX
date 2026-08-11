@@ -49,6 +49,8 @@ describe("PhotoMediaMaintenanceService", () => {
       syntheticOnly: true,
       provider: "r2",
       jurisdiction: "eu",
+      region: "auto",
+      forcePathStyle: true,
       primaryBucket: "primary",
       recoveryBucket: "recovery",
       primaryEndpoint: "https://account.eu.r2.cloudflarestorage.com",

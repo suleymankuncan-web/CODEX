@@ -186,9 +186,7 @@ export class MigrationService {
 
     for (const file of files) {
       const rawSql = readFileSync(join(migrationsPath, file), "utf8");
-      const sql = options.requireMigrationTree
-        ? resolveMigrationSql(join(migrationsPath, file))
-        : rawSql;
+      const sql = resolveMigrationSql(join(migrationsPath, file));
       const checksum = computeChecksum(rawSql);
       const existing = await this.findExistingMigration(file);
 

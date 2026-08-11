@@ -1,13 +1,17 @@
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
-import { PhotoMediaAssetRecord } from "../application/photo-media-storage.contract";
+import {
+  PHOTO_MEDIA_QUOTA_LOCK_KEY,
+  PHOTO_MEDIA_USAGE_SCOPE,
+  PhotoMediaAssetRecord,
+} from "../application/photo-media-storage.contract";
 
 export async function getPhotoMediaUsage(databaseService: DatabaseService) {
   const result = await databaseService.query<{
     provider_visible_bytes: string; class_a_operations: string; class_b_operations: string;
   }>(`
     SELECT provider_visible_bytes, class_a_operations, class_b_operations
-    FROM ops.photo_media_usage_state WHERE usage_scope = 'r2-eu'
+    FROM ops.photo_media_usage_state WHERE usage_scope = '${PHOTO_MEDIA_USAGE_SCOPE}'
   `);
   const row = result.rows[0];
   return {
@@ -149,18 +153,18 @@ export async function reservePhotoMediaProviderOperations(
     throw new BadRequestException("Photo media provider operation reservation is invalid");
   }
   await databaseService.withTransaction(async (client) => {
-    await client.query(`SELECT pg_advisory_xact_lock(hashtext('photo-media-r2-eu-quota')::bigint)`);
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('${PHOTO_MEDIA_QUOTA_LOCK_KEY}')::bigint)`);
     await client.query(`
       INSERT INTO ops.photo_media_usage_state (
         usage_scope, provider_visible_bytes, operation_month, class_a_operations, class_b_operations
-      ) VALUES ('r2-eu', 0, date_trunc('month', CURRENT_DATE)::date, 0, 0)
+      ) VALUES ('${PHOTO_MEDIA_USAGE_SCOPE}', 0, date_trunc('month', CURRENT_DATE)::date, 0, 0)
       ON CONFLICT (usage_scope) DO NOTHING
     `);
     const usage = await client.query<{ class_a_operations: string; class_b_operations: string }>(`
       SELECT
         CASE WHEN operation_month = date_trunc('month', CURRENT_DATE)::date THEN class_a_operations ELSE 0 END AS class_a_operations,
         CASE WHEN operation_month = date_trunc('month', CURRENT_DATE)::date THEN class_b_operations ELSE 0 END AS class_b_operations
-      FROM ops.photo_media_usage_state WHERE usage_scope = 'r2-eu' FOR UPDATE
+      FROM ops.photo_media_usage_state WHERE usage_scope = '${PHOTO_MEDIA_USAGE_SCOPE}' FOR UPDATE
     `);
     const row = usage.rows[0];
     if (!row) throw new ServiceUnavailableException("Photo media usage state is unavailable");
@@ -180,7 +184,7 @@ export async function reservePhotoMediaProviderOperations(
             WHEN operation_month = date_trunc('month', CURRENT_DATE)::date THEN class_b_operations + $2::bigint
             ELSE $2::bigint END,
           updated_at = NOW()
-      WHERE usage_scope = 'r2-eu'
+      WHERE usage_scope = '${PHOTO_MEDIA_USAGE_SCOPE}'
     `, [input.classAOperations, input.classBOperations]);
   });
 }

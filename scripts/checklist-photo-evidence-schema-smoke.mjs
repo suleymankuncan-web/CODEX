@@ -63,6 +63,12 @@ const retentionOperationsRollbackSqlPath = join(
   "rollback",
   "067_photo_media_retention_operations_v1.rollback.sql",
 );
+const providerNeutralStorageRollbackSqlPath = join(
+  workspaceRoot,
+  "db",
+  "rollback",
+  "068_photo_media_provider_neutral_storage_v1.rollback.sql",
+);
 const vmReferenceAuthMatrixSqlPath = join(
   workspaceRoot,
   "db",
@@ -120,6 +126,143 @@ runPsql(`
   DELETE FROM ops.user_account WHERE user_id = '84000000-0000-4000-8000-000000000001';
 `);
 
+runPsql(readFileSync(providerNeutralStorageRollbackSqlPath, "utf8"));
+const providerNeutralHistoricalFixture = {
+  companyId: "88000000-0000-4000-8000-000000000001",
+  userId: "88000000-0000-4000-8000-000000000002",
+  mediaAssetId: "88000000-0000-4000-8000-000000000003",
+  replicaId: "88000000-0000-4000-8000-000000000004",
+  localReplicaId: "88000000-0000-4000-8000-000000000005",
+};
+const providerNeutralHistoricalObjectKey =
+  `companies/${providerNeutralHistoricalFixture.companyId}/media/${providerNeutralHistoricalFixture.mediaAssetId}/canonical.webp`;
+runPsql(`
+  INSERT INTO ops.company (company_id, company_code, company_name)
+  VALUES (
+    '${providerNeutralHistoricalFixture.companyId}',
+    'ONP4A_PROVIDER_NEUTRAL',
+    'Synthetic provider-neutral storage guard'
+  );
+  INSERT INTO ops.user_account (user_id, username, email)
+  VALUES (
+    '${providerNeutralHistoricalFixture.userId}',
+    'onp4a-provider-neutral',
+    'onp4a-provider-neutral@example.invalid'
+  );
+  INSERT INTO ops.media_asset (
+    media_asset_id, company_id, classification, state, capture_source,
+    raw_object_key, uploaded_by_user_id
+  ) VALUES (
+    '${providerNeutralHistoricalFixture.mediaAssetId}',
+    '${providerNeutralHistoricalFixture.companyId}',
+    'checklist_evidence',
+    'canonicalized',
+    'system_generated',
+    'companies/${providerNeutralHistoricalFixture.companyId}/media/${providerNeutralHistoricalFixture.mediaAssetId}/raw',
+    '${providerNeutralHistoricalFixture.userId}'
+  );
+  INSERT INTO ops.media_asset_replica (
+    media_asset_replica_id, media_asset_id, company_id, replica_role,
+    provider_adapter_id, jurisdiction, bucket_alias, object_key,
+    replica_generation, is_active, replica_state
+  ) VALUES (
+    '${providerNeutralHistoricalFixture.replicaId}',
+    '${providerNeutralHistoricalFixture.mediaAssetId}',
+    '${providerNeutralHistoricalFixture.companyId}',
+    'primary', 'r2', 'eu', 'primary',
+    '${providerNeutralHistoricalObjectKey}',
+    1, TRUE, 'pending'
+  );
+  INSERT INTO ops.photo_media_usage_state (
+    usage_scope, provider_visible_bytes, operation_month,
+    class_a_operations, class_b_operations
+  ) VALUES ('r2-eu', 1234567, DATE '2026-08-01', 17, 29);
+`);
+runBackendMigration();
+const providerNeutralHistoricalState = queryScalar(`
+  SELECT CASE WHEN
+    EXISTS (
+      SELECT 1
+      FROM ops.photo_media_usage_state
+      WHERE usage_scope = 'photo-media-v1'
+        AND provider_visible_bytes = 1234567
+        AND operation_month = DATE '2026-08-01'
+        AND class_a_operations = 17
+        AND class_b_operations = 29
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM ops.media_asset_replica
+      WHERE media_asset_replica_id = '${providerNeutralHistoricalFixture.replicaId}'
+        AND provider_adapter_id = 'r2'
+        AND jurisdiction = 'eu'
+        AND bucket_alias = 'primary'
+        AND object_key = '${providerNeutralHistoricalObjectKey}'
+        AND replica_generation = 1
+        AND is_active = TRUE
+    )
+  THEN 'passed' ELSE 'failed' END;
+`);
+if (providerNeutralHistoricalState !== "passed") {
+  fail("Provider-neutral migration changed historical R2 counters, month, or replica identity.");
+}
+runPsql(`
+  INSERT INTO ops.media_asset_replica (
+    media_asset_replica_id, media_asset_id, company_id, replica_role,
+    provider_adapter_id, jurisdiction, bucket_alias, object_key,
+    replica_generation, is_active, replica_state, failed_at, failure_reason_code
+  ) VALUES (
+    '${providerNeutralHistoricalFixture.localReplicaId}',
+    '${providerNeutralHistoricalFixture.mediaAssetId}',
+    '${providerNeutralHistoricalFixture.companyId}',
+    'primary', 'seaweedfs', 'onprem', 'primary',
+    'companies/${providerNeutralHistoricalFixture.companyId}/media/${providerNeutralHistoricalFixture.mediaAssetId}/local-smoke.webp',
+    2, FALSE, 'failed', NOW(), 'synthetic-onprem-use'
+  );
+`);
+expectPsqlFailure(
+  readFileSync(providerNeutralStorageRollbackSqlPath, "utf8"),
+  "Pre-use rollback refused after local storage provider use.",
+);
+
+runNpm(["run", "smoke:migration:fresh-db"]);
+runPsql(readFileSync(providerNeutralStorageRollbackSqlPath, "utf8"));
+const providerNeutralPreUseRollback = queryScalar(`
+  SELECT CASE WHEN
+    to_regclass('ops.photo_media_usage_state') IS NOT NULL
+    AND to_regclass('ops.media_asset_replica') IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM ops.photo_media_usage_state)
+    AND NOT EXISTS (SELECT 1 FROM ops.media_asset_replica)
+    AND NOT EXISTS (
+      SELECT 1 FROM audit.schema_migration
+      WHERE migration_name = '068_photo_media_provider_neutral_storage_v1.sql'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'ck_photo_media_usage_scope'
+        AND pg_get_constraintdef(oid) LIKE '%r2-eu%'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'ck_media_asset_replica_provider'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'ck_media_asset_replica_jurisdiction'
+    )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'ck_media_asset_replica_provider_jurisdiction'
+    )
+  THEN 'passed' ELSE 'failed' END;
+`);
+if (providerNeutralPreUseRollback !== "passed") {
+  fail("Provider-neutral pre-use rollback did not reset the empty disposable database.");
+}
 runPsql(readFileSync(retentionOperationsRollbackSqlPath, "utf8"));
 runPsql(readFileSync(vmReferenceManagementRollbackSqlPath, "utf8"));
 runPsql(readFileSync(storeActionPhotoReviewRollbackSqlPath, "utf8"));
@@ -173,6 +316,11 @@ const rollbackResidual = Number(
           SELECT 1
           FROM audit.schema_migration
           WHERE migration_name = '067_photo_media_retention_operations_v1.sql'
+        ))::int
+      + (EXISTS (
+          SELECT 1
+          FROM audit.schema_migration
+          WHERE migration_name = '068_photo_media_provider_neutral_storage_v1.sql'
         ))::int;
   `),
 );
@@ -227,6 +375,12 @@ const forwardReapply = queryScalar(`
       SELECT 1
       FROM audit.schema_migration
       WHERE migration_name = '067_photo_media_retention_operations_v1.sql'
+        AND status = 'succeeded'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM audit.schema_migration
+      WHERE migration_name = '068_photo_media_provider_neutral_storage_v1.sql'
         AND status = 'succeeded'
     )
   THEN 'passed' ELSE 'failed' END;
@@ -330,6 +484,10 @@ if (
   storageReceipt.recovery_required_before_ready !== true ||
   storageReceipt.post_ready_identity_immutable !== true ||
   storageReceipt.active_cleanup_lease_hold_immutable !== true ||
+  storageReceipt.provider_neutral_usage_scope !== true ||
+  storageReceipt.historical_r2_identity_accepted !== true ||
+  storageReceipt.local_provider_identity_accepted !== true ||
+  storageReceipt.invalid_provider_pair_rejected !== true ||
   storageReceipt.verified_replica_immutable !== true ||
   storageReceipt.reconciliation_receipt_append_only !== true ||
   storageReceipt.rolled_back !== true
@@ -403,6 +561,11 @@ console.log(
     checklistEvidenceLifecycle: "passed",
     privateObjectIdentity: "passed",
     recoveryBeforeReady: "passed",
+    providerNeutralStorageIdentity: "passed",
+    providerNeutralHistoricalScope: "preserved",
+    providerNeutralHistoricalCounters: "preserved",
+    providerNeutralHistoricalReplica: "preserved",
+    providerNeutralUsedRollbackRefusal: "verified",
     reconciliationReceipt: "append-only",
     preUseRollback: "verified",
     usedSchemaRollbackRefusal: "verified",

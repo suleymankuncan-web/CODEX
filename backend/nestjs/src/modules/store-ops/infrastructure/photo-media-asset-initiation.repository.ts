@@ -1,6 +1,8 @@
 import { ForbiddenException, ServiceUnavailableException } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import {
+  PHOTO_MEDIA_QUOTA_LOCK_KEY,
+  PHOTO_MEDIA_USAGE_SCOPE,
   PhotoMediaAssetRecord,
   assertPhotoMediaUploadQuota,
   buildPhotoMediaObjectKeys,
@@ -32,7 +34,7 @@ export async function createPhotoMediaAsset(
   input: CreatePhotoMediaAssetInput,
 ): Promise<PhotoMediaAssetRecord> {
   return databaseService.withTransaction(async (client) => {
-    await client.query(`SELECT pg_advisory_xact_lock(hashtext('photo-media-r2-eu-quota')::bigint)`);
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('${PHOTO_MEDIA_QUOTA_LOCK_KEY}')::bigint)`);
     const scope = input.storeId
       ? (await client.query<{ company_id: string; region_id: string }>(`
           SELECT company_id, region_id FROM ops.store
@@ -49,7 +51,7 @@ export async function createPhotoMediaAsset(
     await client.query(`
       INSERT INTO ops.photo_media_usage_state (
         usage_scope, provider_visible_bytes, operation_month, class_a_operations, class_b_operations
-      ) VALUES ('r2-eu', 0, date_trunc('month', CURRENT_DATE)::date, 0, 0)
+      ) VALUES ('${PHOTO_MEDIA_USAGE_SCOPE}', 0, date_trunc('month', CURRENT_DATE)::date, 0, 0)
       ON CONFLICT (usage_scope) DO NOTHING
     `);
     const usageResult = await client.query<{
@@ -60,7 +62,7 @@ export async function createPhotoMediaAsset(
       SELECT provider_visible_bytes,
         CASE WHEN operation_month = date_trunc('month', CURRENT_DATE)::date THEN class_a_operations ELSE 0 END AS class_a_operations,
         CASE WHEN operation_month = date_trunc('month', CURRENT_DATE)::date THEN class_b_operations ELSE 0 END AS class_b_operations
-      FROM ops.photo_media_usage_state WHERE usage_scope = 'r2-eu' FOR UPDATE
+      FROM ops.photo_media_usage_state WHERE usage_scope = '${PHOTO_MEDIA_USAGE_SCOPE}' FOR UPDATE
     `);
     const usage = usageResult.rows[0];
     const reservedBytes = input.contentLength * 4;
@@ -72,18 +74,9 @@ export async function createPhotoMediaAsset(
       monthlyClassAOperations: Number(usage?.class_a_operations ?? 0),
       monthlyClassBOperations: Number(usage?.class_b_operations ?? 0),
       configuration: {
-        enabled: true,
-        syntheticOnly: true,
-        provider: "r2",
-        jurisdiction: "eu",
-        primaryBucket: "primary",
-        recoveryBucket: "recovery",
-        primaryEndpoint: "https://account.eu.r2.cloudflarestorage.com",
-        recoveryEndpoint: "https://account.eu.r2.cloudflarestorage.com",
-        publicDeliveryEnabled: false,
-        safetyAssurance: "fixture_identity_only",
-        ...input.quota,
-        signedReadTtlSeconds: 120,
+        aggregateBytesHardLimit: input.quota.aggregateBytesHardLimit,
+        monthlyClassAHardLimit: input.quota.monthlyClassAHardLimit,
+        monthlyClassBHardLimit: input.quota.monthlyClassBHardLimit,
       },
     });
 
@@ -162,7 +155,7 @@ export async function createPhotoMediaAsset(
             WHEN operation_month = date_trunc('month', CURRENT_DATE)::date THEN class_b_operations + $3::bigint
             ELSE $3::bigint END,
           updated_at = NOW()
-      WHERE usage_scope = 'r2-eu'
+      WHERE usage_scope = '${PHOTO_MEDIA_USAGE_SCOPE}'
     `, [reservedBytes, reservedClassA, reservedClassB]);
 
     const assetResult = await client.query<{

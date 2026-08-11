@@ -19,6 +19,12 @@ const STRICT_LOCAL_EXTERNAL_CONFIGURATION = [
   "AUTH_CLIENT_SECRET_FILE",
   "ERROR_TRACKING_DSN",
   "ERROR_TRACKING_DSN_FILE",
+] as const;
+
+const STRICT_LOCAL_PHOTO_MEDIA_SETTINGS = [
+  "PHOTO_MEDIA_STORAGE_ENABLED",
+  "PHOTO_MEDIA_PROVIDER",
+  "PHOTO_MEDIA_SYNTHETIC_ONLY",
   "PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID",
   "PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE",
   "PHOTO_MEDIA_PRIMARY_BUCKET",
@@ -54,7 +60,6 @@ const STRICT_LOCAL_DISABLED_ACTIVATIONS = [
   "ERROR_TRACKING_ENABLED",
   "ERROR_TRACKING_SMOKE",
   "PHOTO_MEDIA_REAL_VM_PILOT_ENABLED",
-  "PHOTO_MEDIA_STORAGE_ENABLED",
   "REGION_MANAGER_SOLUTION_REVIEW_ENABLED",
   "STORE_ACTION_PHOTO_RESOLUTION_ENABLED",
   "VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED",
@@ -65,6 +70,52 @@ const STRICT_LOCAL_DISABLED_ACTIVATIONS = [
   "VM_CAMPAIGN_SUBMISSION_ENABLED",
   "VM_REFERENCE_PUBLISHING_ENABLED",
 ] as const;
+
+function assertStrictLocalPhotoMediaConfiguration(config: ConfigReader): void {
+  if (config.get("PHOTO_MEDIA_STORAGE_ENABLED") !== "true") {
+    const dormantProviderConfiguration = STRICT_LOCAL_PHOTO_MEDIA_SETTINGS.some(
+      (key) =>
+        key !== "PHOTO_MEDIA_STORAGE_ENABLED" &&
+        key !== "PHOTO_MEDIA_SYNTHETIC_ONLY" &&
+        Boolean(normalize(config.get(key))),
+    );
+    if (dormantProviderConfiguration) {
+      throw new Error(
+        "External provider configuration is not allowed when HR_AXIS_STRICT_LOCAL=true",
+      );
+    }
+    return;
+  }
+
+  const exactLocal =
+    config.get("PHOTO_MEDIA_PROVIDER") === "seaweedfs" &&
+    config.get("PHOTO_MEDIA_SYNTHETIC_ONLY") === "true" &&
+    config.get("PHOTO_MEDIA_PRIMARY_ENDPOINT") === "http://object-storage:8333" &&
+    config.get("PHOTO_MEDIA_RECOVERY_ENDPOINT") === "http://object-storage:8333";
+  if (!exactLocal) {
+    throw new Error(
+      "External provider configuration is not allowed when HR_AXIS_STRICT_LOCAL=true; strict-local photo media storage requires the exact private local S3 synthetic bundle",
+    );
+  }
+
+  const primaryBucket = normalize(config.get("PHOTO_MEDIA_PRIMARY_BUCKET"));
+  const recoveryBucket = normalize(config.get("PHOTO_MEDIA_RECOVERY_BUCKET"));
+  if (!primaryBucket || !recoveryBucket || primaryBucket === recoveryBucket) {
+    throw new Error("Strict-local photo media storage requires distinct private buckets");
+  }
+
+  for (const key of [
+    "PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID",
+    "PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY",
+    "PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID",
+    "PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY",
+  ] as const) {
+    if (normalize(config.get(key)) || !normalize(config.get(`${key}_FILE`))) {
+      throw new Error("Strict-local photo media credentials must be file-backed");
+    }
+    readFileBackedSetting(config, key);
+  }
+}
 
 const QWEN_CONFIGURATION = [
   "QWEN_ALLOWED_HOST_SHA256",
@@ -321,6 +372,7 @@ export function assertStrictLocalConfiguration(
       "HR_AXIS_DATA_CLASS=synthetic is required when HR_AXIS_STRICT_LOCAL=true",
     );
   }
+  assertStrictLocalPhotoMediaConfiguration(config);
   if (
     STRICT_LOCAL_PLAINTEXT_SETTINGS.some((key) =>
       Boolean(config.get(key)?.trim()),

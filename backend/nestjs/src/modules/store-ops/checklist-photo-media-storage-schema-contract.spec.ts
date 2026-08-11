@@ -28,8 +28,8 @@ describe("checklist photo media storage recovery schema", () => {
     join(root, "backend/nestjs/src/modules/store-ops/infrastructure/photo-media-asset-initiation.repository.ts"),
     "utf8",
   );
-  const assetRepository = readFileSync(
-    join(root, "backend/nestjs/src/modules/store-ops/infrastructure/photo-media-asset.repository.ts"),
+  const assetRestoreRepository = readFileSync(
+    join(root, "backend/nestjs/src/modules/store-ops/infrastructure/photo-media-asset-restore.repository.ts"),
     "utf8",
   );
   const retentionMigration = readFileSync(
@@ -38,6 +38,14 @@ describe("checklist photo media storage recovery schema", () => {
   );
   const retentionRollback = readFileSync(
     join(root, "db/rollback/067_photo_media_retention_operations_v1.rollback.sql"),
+    "utf8",
+  );
+  const providerNeutralMigration = readFileSync(
+    join(root, "db/migrations/068_photo_media_provider_neutral_storage_v1.sql"),
+    "utf8",
+  );
+  const providerNeutralRollback = readFileSync(
+    join(root, "db/rollback/068_photo_media_provider_neutral_storage_v1.rollback.sql"),
     "utf8",
   );
 
@@ -93,8 +101,8 @@ describe("checklist photo media storage recovery schema", () => {
   it("pins derived artifacts to the versioned derived retention period", () => {
     expect(assetInitiationRepository).toContain("derived_retention_days");
     expect(assetInitiationRepository).toContain('input.classification === "derived_artifact"');
-    expect(assetRepository).toContain("ma.classification = 'derived_artifact'");
-    expect(assetRepository).toContain("THEN policy.derived_retention_days");
+    expect(assetRestoreRepository).toContain("ma.classification = 'derived_artifact'");
+    expect(assetRestoreRepository).toContain("THEN policy.derived_retention_days");
   });
 
   it.each([retentionMigration, schema])(
@@ -132,5 +140,21 @@ describe("checklist photo media storage recovery schema", () => {
     expect(maintenanceScript).toContain('reason: "retention_cleanup_failed"');
     expect(maintenanceScript.indexOf("maintenance.reconcile()"))
       .toBeGreaterThan(maintenanceScript.indexOf("retention_cleanup_failed"));
+  });
+
+  it("preserves historical R2 replicas while allowing only the selected local adapter pair", () => {
+    expect(providerNeutralMigration).toContain("photo-media-v1");
+    expect(providerNeutralMigration).toContain("photo-media-r2-eu-quota");
+    expect(providerNeutralMigration).toContain("Provider-neutral usage scope migration conflict");
+    expect(providerNeutralMigration).toMatch(/provider_adapter_id = 'r2'[\s\S]+jurisdiction = 'eu'/);
+    expect(providerNeutralMigration).toMatch(/provider_adapter_id = 'seaweedfs'[\s\S]+jurisdiction = 'onprem'/);
+    expect(providerNeutralMigration).not.toMatch(/UPDATE ops\.media_asset_replica/);
+    expect(providerNeutralRollback).toContain("Pre-use rollback refused");
+    expect(providerNeutralRollback).toContain("provider_adapter_id = 'seaweedfs'");
+    expect(schema).toContain("CHECK (usage_scope = 'photo-media-v1')");
+    expect(schema).toContain("provider_adapter_id = 'r2' AND jurisdiction = 'eu'");
+    expect(schema).toContain("provider_adapter_id = 'seaweedfs' AND jurisdiction = 'onprem'");
+    expect(smoke).toContain("provider_neutral_usage_scope was not enforced");
+    expect(smoke).toContain("invalid_provider_pair was not rejected");
   });
 });

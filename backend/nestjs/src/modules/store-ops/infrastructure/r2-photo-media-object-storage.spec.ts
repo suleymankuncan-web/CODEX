@@ -1,6 +1,49 @@
-import { R2PhotoMediaObjectStorage } from "./r2-photo-media-object-storage";
+import { S3Client } from "@aws-sdk/client-s3";
+import {
+  buildR2PhotoMediaObjectStorageClientConfiguration,
+  R2PhotoMediaObjectStorage,
+} from "./r2-photo-media-object-storage";
+
+jest.mock("@aws-sdk/client-s3", () => {
+  const actual = jest.requireActual("@aws-sdk/client-s3");
+  return {
+    ...actual,
+    S3Client: jest.fn().mockImplementation(() => ({ send: jest.fn() })),
+  };
+});
 
 describe("R2PhotoMediaObjectStorage", () => {
+  it("builds the exact R2 client configuration", () => {
+    expect(buildR2PhotoMediaObjectStorageClientConfiguration({
+      bucket: "hr-axis-photo-primary",
+      endpoint: "https://account.eu.r2.cloudflarestorage.com",
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    })).toEqual({
+      endpoint: "https://account.eu.r2.cloudflarestorage.com",
+      region: "auto",
+      forcePathStyle: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    });
+  });
+
+  it("constructs the S3 client from the R2 configuration builder", () => {
+    const clientConstructor = S3Client as unknown as jest.Mock;
+    clientConstructor.mockClear();
+
+    new R2PhotoMediaObjectStorage({
+      bucket: "hr-axis-photo-primary",
+      endpoint: "https://account.eu.r2.cloudflarestorage.com",
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    });
+
+    expect(clientConstructor).toHaveBeenCalledWith({
+      endpoint: "https://account.eu.r2.cloudflarestorage.com",
+      region: "auto",
+      forcePathStyle: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    });
+  });
+
   it("uses only the configured private bucket and preserves sha256 metadata", async () => {
     const send = jest.fn()
       .mockResolvedValueOnce({})

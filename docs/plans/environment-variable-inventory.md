@@ -43,7 +43,8 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `REDIS_URL` | Platform owner | Render backend env | Secret | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis`. | Local Redis URL. |
 | `UPLOAD_PARSE_MAX_CONCURRENCY` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `1` |
 | `UPLOAD_PARSE_TIMEOUT_MS` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `15000` |
-| `PHOTO_MEDIA_STORAGE_ENABLED` | Project owner | Render API env | Internal | Keep `false` until the synthetic-only R2 provider gate is verified. | `false` |
+| `PHOTO_MEDIA_STORAGE_ENABLED` | Project owner | Backend runtime env | Internal | Keep `false` until the selected synthetic-only storage runtime proof is verified. | `false` |
+| `PHOTO_MEDIA_PROVIDER` | Project/Platform owner | Backend runtime env | Internal | `r2` preserves hosted rollback; strict-local accepts only `seaweedfs` with the exact private endpoint and file-backed credentials. Provider identity must not change business semantics. | `r2` |
 | `PHOTO_MEDIA_SYNTHETIC_ONLY` | Project owner | Render API env | Internal | PR-3 requires exact `true`; real photographs remain blocked. | `true` |
 | `PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST` | Project owner | Render API env | Secret-like operational control | PR-4 enabled synthetic staging requires exactly one pre-approved SHA-256 digest. Empty, malformed, or multiple values fail enabled startup. Never place image bytes or private payloads here. | Empty. |
 | `PHOTO_MEDIA_REAL_VM_PILOT_ENABLED` | Project owner | Render API env | Internal | Exact-cohort real VM photo intake kill switch. Does not open checklist or action uploads. | `false` |
@@ -85,14 +86,18 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `QWEN_INPUT_USD_MICROS_PER_MILLION_TOKENS` | Project owner | Render worker env | Cost control | Current provider input price used for fail-closed reservation; must be positive when enabled. | `0` while disabled. |
 | `QWEN_OUTPUT_USD_MICROS_PER_MILLION_TOKENS` | Project owner | Render worker env | Cost control | Current provider output price used for fail-closed reservation; must be positive when enabled. | `0` while disabled. |
 | `QWEN_MIN_ADVISORY_CONFIDENCE` | Project owner | Render worker env | Internal | Minimum confidence for advisory benchmark reporting only; never changes official score. | `0.6` |
-| `PHOTO_MEDIA_PRIMARY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Private EU-jurisdiction primary bucket name; never record its value in evidence. | Empty. |
-| `PHOTO_MEDIA_RECOVERY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Distinct private EU-jurisdiction recovery bucket name. | Empty. |
-| `PHOTO_MEDIA_PRIMARY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint; no public delivery endpoint. | Empty. |
-| `PHOTO_MEDIA_RECOVERY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint for recovery. | Empty. |
-| `PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID` | Platform owner | Render API secret env | Secret | Primary-bucket-scoped credential ID. | Empty. |
-| `PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY` | Platform owner | Render API secret env | Secret | Primary-bucket-scoped credential secret. | Empty. |
-| `PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID` | Platform owner | Render API secret env | Secret | Separate recovery-bucket-scoped credential ID. | Empty. |
-| `PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY` | Platform owner | Render API secret env | Secret | Separate recovery-bucket-scoped credential secret. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_BUCKET` | Platform owner | Backend runtime env | Secret identifier | Private primary bucket name; never record its value in evidence. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_BUCKET` | Platform owner | Backend runtime env | Secret identifier | Distinct private recovery bucket name. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_ENDPOINT` | Platform owner | Backend runtime env | Internal | Hosted rollback uses the exact account-scoped R2 EU endpoint; strict-local requires exact `http://object-storage:8333`. This is a server-internal S3 endpoint, never a browser delivery URL. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_ENDPOINT` | Platform owner | Backend runtime env | Internal | Must follow the same provider boundary as primary; strict-local requires exact `http://object-storage:8333`. This is server-internal and must never be returned to a browser. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID` | Platform owner | Hosted backend secret env | Secret | Primary-bucket-scoped credential ID. Forbidden as plaintext in strict-local mode. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE` | Platform owner | Strict-local backend secret file | Secret file path | Required in strict-local mode; points to the primary credential ID file. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY` | Platform owner | Hosted backend secret env | Secret | Primary-bucket-scoped credential secret. Forbidden as plaintext in strict-local mode. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE` | Platform owner | Strict-local backend secret file | Secret file path | Required in strict-local mode; points to the primary secret file. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID` | Platform owner | Hosted backend secret env | Secret | Separate recovery-bucket-scoped credential ID. Forbidden as plaintext in strict-local mode. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID_FILE` | Platform owner | Strict-local backend secret file | Secret file path | Required in strict-local mode; points to the recovery credential ID file. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY` | Platform owner | Hosted backend secret env | Secret | Separate recovery-bucket-scoped credential secret. Forbidden as plaintext in strict-local mode. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE` | Platform owner | Strict-local backend secret file | Secret file path | Required in strict-local mode; points to the recovery secret file. | Empty. |
 | `PHOTO_MEDIA_AGGREGATE_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Must not exceed the owner-approved 8 GiB synthetic staging ceiling. | `8589934592` |
 | `PHOTO_MEDIA_MONTHLY_CLASS_A_HARD_LIMIT` | Backend owner | Render API env | Internal | Must not exceed `750000`. | `750000` |
 | `PHOTO_MEDIA_MONTHLY_CLASS_B_HARD_LIMIT` | Backend owner | Render API env | Internal | Must not exceed `7500000`. | `7500000` |

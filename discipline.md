@@ -357,6 +357,15 @@ optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
   `Re-run failed jobs` kullanilir; yesil sibling job'lar sebepsiz yeniden
   kosturulmaz. Required aggregate selected child eksik, skipped, cancelled,
   timed-out veya failed ise fail-closed kalir.
+- GitHub Actions problem bulma, hipotez deneme veya debug laboratuvari olarak
+  kullanilmaz. Ilk push'tan once exact HEAD icin verification ladder, targeted
+  kanitlar ve selector'in sectigi canonical yerel kanit yesil olmalidir;
+  GitHub yalniz temiz Linux runner'da bagimsiz yeniden dogrulama yapar.
+- Bir GitHub job'i kirmiziysa kor push/rerun dongusu acilmaz. Once failure'in
+  exact alt asamasi yerelde yeniden uretilir, tek kok neden dar bir diff ile
+  duzeltilir ve ilgili yerel kanit tekrar yesile getirilir. Ancak bundan sonra
+  yeni push yapilir ve gec hata icin native `Re-run failed jobs` kullanilir.
+  Ag/429/5xx icin mevcut sinirli retry kurali bu disiplini gevsetmez.
 - Harici release-rehearsal observer tek kanit otoritesi olarak exact
   `release-rehearsal.yml` workflow run'ini kullanir. Event, PR numarasi, base
   SHA, head SHA ve en yeni run/attempt birebir uyusmadan PASS kabul edilmez;

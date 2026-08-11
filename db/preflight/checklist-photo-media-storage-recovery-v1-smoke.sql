@@ -94,6 +94,53 @@ INSERT INTO ops.media_asset_replica (
     'verified', repeat('b', 64), 100, NOW(), NOW()
 );
 
+INSERT INTO ops.photo_media_usage_state (
+    usage_scope, provider_visible_bytes, operation_month, class_a_operations, class_b_operations
+) VALUES ('photo-media-v1', 0, date_trunc('month', CURRENT_DATE)::date, 0, 0)
+ON CONFLICT (usage_scope) DO NOTHING;
+
+DO $$
+BEGIN
+    BEGIN
+        INSERT INTO ops.photo_media_usage_state (
+            usage_scope, provider_visible_bytes, operation_month, class_a_operations, class_b_operations
+        ) VALUES ('r2-eu', 0, date_trunc('month', CURRENT_DATE)::date, 0, 0);
+        RAISE EXCEPTION 'provider_neutral_usage_scope was not enforced';
+    EXCEPTION
+        WHEN check_violation THEN NULL;
+    END;
+
+    BEGIN
+        INSERT INTO ops.media_asset_replica (
+            media_asset_id, company_id, replica_role, provider_adapter_id, jurisdiction,
+            bucket_alias, object_key, replica_generation, is_active, replica_state,
+            failed_at, failure_reason_code
+        ) VALUES (
+            '51000000-0000-4000-8000-000000000001',
+            '11000000-0000-4000-8000-000000000001',
+            'primary', 'r2', 'onprem', 'primary',
+            'locked/companies/11000000-0000-4000-8000-000000000001/media/51000000-0000-4000-8000-000000000001/invalid.webp',
+            2, FALSE, 'failed', NOW(), 'synthetic-invalid-provider-pair'
+        );
+        RAISE EXCEPTION 'invalid_provider_pair was not rejected';
+    EXCEPTION
+        WHEN check_violation THEN NULL;
+    END;
+END;
+$$;
+
+INSERT INTO ops.media_asset_replica (
+    media_asset_id, company_id, replica_role, provider_adapter_id, jurisdiction,
+    bucket_alias, object_key, replica_generation, is_active, replica_state,
+    failed_at, failure_reason_code
+) VALUES (
+    '51000000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'primary', 'seaweedfs', 'onprem', 'primary',
+    'locked/companies/11000000-0000-4000-8000-000000000001/media/51000000-0000-4000-8000-000000000001/local-smoke.webp',
+    2, FALSE, 'failed', NOW(), 'synthetic-local-provider-use'
+);
+
 UPDATE ops.media_asset
 SET state = 'ready'
 WHERE media_asset_id = '51000000-0000-4000-8000-000000000001';
@@ -174,6 +221,10 @@ SELECT json_build_object(
     'recovery_required_before_ready', true,
     'post_ready_identity_immutable', true,
     'active_cleanup_lease_hold_immutable', true,
+    'provider_neutral_usage_scope', true,
+    'historical_r2_identity_accepted', true,
+    'local_provider_identity_accepted', true,
+    'invalid_provider_pair_rejected', true,
     'verified_replica_immutable', true,
     'reconciliation_receipt_append_only', true,
     'rolled_back', true

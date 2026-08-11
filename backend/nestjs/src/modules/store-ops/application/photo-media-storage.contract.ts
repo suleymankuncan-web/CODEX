@@ -1,14 +1,19 @@
 import { BadRequestException, ServiceUnavailableException } from "@nestjs/common";
 import { isPostgresUuidString } from "../../../shared/validation/postgres-uuid";
 
-export type PhotoMediaStorageProvider = "r2";
-export type PhotoMediaStorageJurisdiction = "eu";
+export type PhotoMediaStorageProvider = "r2" | "seaweedfs";
+export type PhotoMediaStorageJurisdiction = "eu" | "onprem";
+
+export const PHOTO_MEDIA_USAGE_SCOPE = "photo-media-v1" as const;
+export const PHOTO_MEDIA_QUOTA_LOCK_KEY = "photo-media-v1-quota" as const;
 
 export type PhotoMediaStorageConfiguration = {
   enabled: boolean;
   syntheticOnly: boolean;
   provider: PhotoMediaStorageProvider;
   jurisdiction: PhotoMediaStorageJurisdiction;
+  region: "auto" | "us-east-1";
+  forcePathStyle: true;
   primaryBucket: string;
   recoveryBucket: string;
   primaryEndpoint: string;
@@ -28,6 +33,16 @@ export type PhotoMediaStorageConfiguration = {
   retentionCriticalPercent?: number;
   syntheticFixtureSha256Allowlist?: string[];
   safetyAssurance: "fixture_identity_only" | "malware_scan";
+};
+
+export type PhotoMediaStorageIdentity = Pick<
+  PhotoMediaStorageConfiguration,
+  "provider" | "jurisdiction"
+>;
+
+export const HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY: PhotoMediaStorageIdentity = {
+  provider: "r2",
+  jurisdiction: "eu",
 };
 
 const BUCKET_PATTERN = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
@@ -59,17 +74,39 @@ function assertR2EuEndpoint(name: string, value: string): void {
   }
 }
 
+function assertPrivateLocalS3Endpoint(name: string, value: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${name} must be the private local S3 endpoint`);
+  }
+
+  if (
+    parsed.protocol !== "http:" ||
+    parsed.username ||
+    parsed.password ||
+    parsed.hostname !== "object-storage" ||
+    parsed.port !== "8333" ||
+    parsed.pathname !== "/" ||
+    parsed.search ||
+    parsed.hash
+  ) {
+    throw new Error(`${name} must be the private local S3 endpoint`);
+  }
+}
+
 export function assertPhotoMediaStorageConfiguration(
   configuration: PhotoMediaStorageConfiguration,
 ): void {
   if (!configuration.enabled) {
     return;
   }
-  if (configuration.provider !== "r2") {
-    throw new Error("Photo media storage provider must be r2");
-  }
-  if (configuration.jurisdiction !== "eu") {
-    throw new Error("Photo media storage requires the approved EU jurisdiction");
+  const historicalR2 = configuration.provider === "r2" && configuration.jurisdiction === "eu";
+  const privateLocal =
+    configuration.provider === "seaweedfs" && configuration.jurisdiction === "onprem";
+  if (!historicalR2 && !privateLocal) {
+    throw new Error("Photo media storage provider and jurisdiction pairing is invalid");
   }
   if (!configuration.syntheticOnly) {
     throw new Error("PR-3 photo media storage must remain synthetic-only");
@@ -97,8 +134,22 @@ export function assertPhotoMediaStorageConfiguration(
     throw new Error("Primary and recovery buckets must be distinct");
   }
 
-  assertR2EuEndpoint("PHOTO_MEDIA_PRIMARY_ENDPOINT", configuration.primaryEndpoint);
-  assertR2EuEndpoint("PHOTO_MEDIA_RECOVERY_ENDPOINT", configuration.recoveryEndpoint);
+  if (historicalR2) {
+    if (configuration.region !== "auto") {
+      throw new Error("R2 photo media storage region must be auto");
+    }
+    assertR2EuEndpoint("PHOTO_MEDIA_PRIMARY_ENDPOINT", configuration.primaryEndpoint);
+    assertR2EuEndpoint("PHOTO_MEDIA_RECOVERY_ENDPOINT", configuration.recoveryEndpoint);
+  } else {
+    if (configuration.region !== "us-east-1") {
+      throw new Error("Private local S3 region must be us-east-1");
+    }
+    assertPrivateLocalS3Endpoint("PHOTO_MEDIA_PRIMARY_ENDPOINT", configuration.primaryEndpoint);
+    assertPrivateLocalS3Endpoint("PHOTO_MEDIA_RECOVERY_ENDPOINT", configuration.recoveryEndpoint);
+  }
+  if (configuration.forcePathStyle !== true) {
+    throw new Error("Photo media storage requires path-style S3 addressing");
+  }
   assertPositiveInteger("PHOTO_MEDIA_AGGREGATE_BYTES_HARD_LIMIT", configuration.aggregateBytesHardLimit);
   assertPositiveInteger("PHOTO_MEDIA_MONTHLY_CLASS_A_HARD_LIMIT", configuration.monthlyClassAHardLimit);
   assertPositiveInteger("PHOTO_MEDIA_MONTHLY_CLASS_B_HARD_LIMIT", configuration.monthlyClassBHardLimit);
@@ -169,7 +220,10 @@ export function assertPhotoMediaUploadQuota(input: {
   requestedBytes: number;
   monthlyClassAOperations: number;
   monthlyClassBOperations: number;
-  configuration: PhotoMediaStorageConfiguration;
+  configuration: Pick<
+    PhotoMediaStorageConfiguration,
+    "aggregateBytesHardLimit" | "monthlyClassAHardLimit" | "monthlyClassBHardLimit"
+  >;
 }): void {
   const values = [
     input.aggregateStoredBytes,
