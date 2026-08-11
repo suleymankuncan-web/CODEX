@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import {
+  countCsvItems,
   KEYCLOAK_IMAGE,
   isStrictHttpsOrigin,
   isValidSmtpSender,
+  selectCsvFirstFields,
+  selectCsvFirstFieldsByExactSecond,
   validateOnpremKeycloakContract,
 } from './onprem-keycloak-contract.mjs'
 
@@ -357,6 +361,102 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
   const passwordResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: passwordArg })
   assert.equal(passwordResult.ok, false)
   assert.ok(passwordResult.errors.some((error) => /password|reset/i.test(error)))
+})
+
+test('ONP-3B bootstrap uses only bounded POSIX CSV helpers available in the pinned image', () => {
+  const baseline = input()
+  assert.doesNotMatch(baseline.bootstrapScript, /\bawk\b/)
+  assert.deepEqual(
+    selectCsvFirstFieldsByExactSecond('uuid-1,roles\nuuid-2,roles-extra\nuuid-3,roles\nuuid-4,xroles', 'roles'),
+    ['uuid-1', 'uuid-3'],
+  )
+  assert.deepEqual(selectCsvFirstFieldsByExactSecond('uuid-1,roles,', 'roles'), [])
+  assert.deepEqual(selectCsvFirstFieldsByExactSecond(',roles\nuuid-2,', 'roles'), [])
+  assert.deepEqual(selectCsvFirstFields('web-origins\nprofile\nroles\nemail'), ['web-origins', 'profile', 'roles', 'email'])
+  assert.deepEqual(selectCsvFirstFields('profile,unexpected'), [])
+  assert.deepEqual(selectCsvFirstFields('profile,'), [])
+  assert.equal(countCsvItems(''), 0)
+  assert.equal(countCsvItems('company-001'), 1)
+  assert.equal(countCsvItems('store-100,store-101,store-999'), 3)
+  assert.equal(countCsvItems('store-100,,store-101'), null)
+
+  const result = validateOnpremKeycloakContract({
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      'csv_first_fields_matching_second "$mapper_name"',
+      'awk -F\',\' -v target="$mapper_name" \'$2 == target {print $1}\'',
+    ),
+  })
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /awk|POSIX CSV|approved POSIX/i.test(error)))
+})
+
+test('ONP-3B POSIX CSV helpers reject malformed delimiter shapes in the actual shell', (t) => {
+  const shellProbe = spawnSync('sh', ['-c', 'exit 0'], { encoding: 'utf8', windowsHide: true })
+  if (shellProbe.error || shellProbe.status !== 0) {
+    t.skip('POSIX sh is unavailable; the pinned-image workflow runs this contract on Linux')
+    return
+  }
+
+  const bootstrapScript = input().bootstrapScript
+  const exactHelper = bootstrapScript.match(/csv_first_fields_matching_second\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const firstHelper = bootstrapScript.match(/csv_first_fields\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const run = (body) => spawnSync('sh', ['-eu', '-c', `die() { exit 97; }\n${exactHelper}\n${firstHelper}\n${body}`], {
+    encoding: 'utf8',
+    windowsHide: true,
+  })
+
+  const validExact = run("printf 'uuid-1,roles\\nuuid-2,other\\n' | csv_first_fields_matching_second roles")
+  assert.equal(validExact.status, 0)
+  assert.equal(validExact.stdout.trim(), 'uuid-1')
+  for (const malformed of ['uuid,roles,', ',roles', 'uuid,', 'uuid,roles,extra']) {
+    assert.equal(run(`printf '%s\\n' '${malformed}' | csv_first_fields_matching_second roles`).status, 97)
+  }
+
+  const validFirst = run("printf 'profile\\nemail\\n' | csv_first_fields")
+  assert.equal(validFirst.status, 0)
+  assert.equal(validFirst.stdout.trim(), 'profile\nemail')
+  for (const malformed of ['profile,', ',profile', 'profile,extra']) {
+    assert.equal(run(`printf '%s\\n' '${malformed}' | csv_first_fields`).status, 97)
+  }
+})
+
+test('ONP-3B image proof preflights every bootstrap executable before expensive runtime work', () => {
+  const baseline = input()
+  const inventory = 'required_bootstrap_commands="cat chmod grep mkdir mktemp mv rm sed sleep tr wc"'
+  const identityCheck = 'test "$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Config.Entrypoint}}\')" = \'[/opt/keycloak/bin/kc.sh]\''
+  const preflightStart = 'docker run --rm --volume "$PWD/infra/onprem/core/keycloak/bootstrap.sh:/opt/keycloak/bootstrap.sh:ro"'
+  assert.ok(baseline.workflow.includes(inventory))
+  assert.match(baseline.workflow, /\/bin\/sh -n \/opt\/keycloak\/bootstrap\.sh/)
+
+  for (const workflow of [
+    baseline.workflow.replace('--volume "$PWD/infra/onprem/core/keycloak/bootstrap.sh:/opt/keycloak/bootstrap.sh:ro"', ''),
+    baseline.workflow.replace('--entrypoint /bin/sh "$KEYCLOAK_IMAGE" -ec', '--entrypoint /bin/sh alpine:latest -ec'),
+    baseline.workflow.replace(inventory, inventory.replace(' grep', '')),
+    baseline.workflow.replace('command -v "$required_command" >/dev/null', ':'),
+    baseline.workflow.replace('/bin/sh -n /opt/keycloak/bootstrap.sh', ':'),
+    baseline.workflow.replace(identityCheck, `${preflightStart}\n          ${identityCheck}`),
+  ]) {
+    const result = validateOnpremKeycloakContract({ ...baseline, workflow })
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /preflight.*bootstrap|bootstrap executable|POSIX-parse/i.test(error)))
+  }
+})
+
+test('ONP-3B existing mapper updates include the validated mapper id in a private body', () => {
+  const baseline = input()
+  const idBody = 'printf \'{"id":"%s",%s\\n\' "$mapper_uuid" "${mapper_json#\\{}" > "$mapper_update_file"'
+  assert.ok(baseline.bootstrapScript.includes(idBody))
+
+  for (const bootstrapScript of [
+    baseline.bootstrapScript.replace(idBody, 'printf \'%s\\n\' "$mapper_json" > "$mapper_update_file"'),
+    baseline.bootstrapScript.replace('-f "$mapper_update_file" || die \'claim mapper update failed\'', '-f "$mapper_file" || die \'claim mapper update failed\''),
+    baseline.bootstrapScript.replace('*[!A-Fa-f0-9-]*) die \'claim mapper id contains unsupported characters\' ;;', '*) ;;'),
+  ]) {
+    const result = validateOnpremKeycloakContract({ ...baseline, bootstrapScript })
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /mapper.*id|idempotency|private JSON/i.test(error)))
+  }
 })
 
 test('ONP-3B strict public origin contract rejects userinfo, port, path, query, fragment, and malformed labels', () => {

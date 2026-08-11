@@ -42,6 +42,28 @@ export function isValidSmtpSender(value) {
   return labels.length >= 2 && labels.every((label) => SMTP_DOMAIN_LABEL.test(label))
 }
 
+export function selectCsvFirstFieldsByExactSecond(rows, target) {
+  if (typeof rows !== 'string' || typeof target !== 'string') return []
+  return rows.split(/\r?\n/).filter(Boolean).flatMap((row) => {
+    const fields = row.split(',')
+    return fields.length === 2 && fields[0] && fields[1] === target ? [fields[0]] : []
+  })
+}
+
+export function selectCsvFirstFields(rows) {
+  if (typeof rows !== 'string') return []
+  return rows.split(/\r?\n/).filter(Boolean).flatMap((row) => {
+    const fields = row.split(',')
+    return fields.length === 1 && fields[0] ? [fields[0]] : []
+  })
+}
+
+export function countCsvItems(value) {
+  if (typeof value !== 'string' || value.length === 0) return 0
+  const fields = value.split(',')
+  return fields.every((field) => /^[A-Za-z0-9._:-]+$/.test(field)) ? fields.length : null
+}
+
 const STEADY_RESOURCES = {
   caddy: ['0.25', '128m'],
   frontend: ['0.25', '128m'],
@@ -341,6 +363,37 @@ export function validateOnpremKeycloakContract(input) {
   fail(/phase_marker server-start/.test(input.bootstrapScript)
     && /\/opt\/keycloak\/bin\/kc\.sh start --optimized[\s\S]*server_pid="\$!"/.test(input.bootstrapScript), 'bootstrap must retain the optimized temporary server start and pid capture')
   fail(!/set-password[\s\S]*--new-password/.test(input.bootstrapScript), 'persona passwords must not use kcadm set-password --new-password')
+  const exactCsvHelper = input.bootstrapScript.match(/csv_first_fields_matching_second\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const firstCsvHelper = input.bootstrapScript.match(/csv_first_fields\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  const countCsvHelper = input.bootstrapScript.match(/csv_item_count\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  fail(!/\bawk\b/.test(input.bootstrapScript), 'bootstrap must not depend on awk because the pinned Keycloak image does not provide it')
+  fail(exactCsvHelper.includes('while IFS= read -r row')
+    && exactCsvHelper.includes("*,*,*) die 'kcadm CSV row contains unexpected fields'")
+    && exactCsvHelper.includes("*) die 'kcadm CSV row contains unexpected fields'")
+    && exactCsvHelper.includes('first="${row%%,*}"')
+    && exactCsvHelper.includes('second="${row#*,}"')
+    && exactCsvHelper.includes('[ -n "$first" ]')
+    && exactCsvHelper.includes('[ -n "$second" ]')
+    && exactCsvHelper.includes('[ "$second" = "$target" ]')
+    && exactCsvHelper.includes("printf '%s\\n' \"$first\""), 'bootstrap must select mapper ids with the bounded exact-second-field POSIX CSV helper')
+  fail(firstCsvHelper.includes('while IFS= read -r row')
+    && firstCsvHelper.includes("*,*) die 'kcadm CSV row contains unexpected fields'")
+    && firstCsvHelper.includes("printf '%s\\n' \"$row\""), 'bootstrap must select default scope names with the bounded first-field POSIX CSV helper')
+  fail(countCsvHelper.includes('if [ -z "$value" ]')
+    && countCsvHelper.includes('set -- $value')
+    && countCsvHelper.includes('count=$((count + 1))')
+    && countCsvHelper.includes("printf '%s' \"$count\""), 'bootstrap must count synthetic scope ids with the bounded POSIX CSV helper')
+  fail(/mapper_matches="\$\(printf '%s\\n' "\$mapper_rows" \| csv_first_fields_matching_second "\$mapper_name"\)"/.test(input.bootstrapScript)
+    && /default_scope_names="\$\(printf '%s\\n' "\$default_scope_rows" \| csv_first_fields \| sed/.test(input.bootstrapScript)
+    && /csv_item_count "\$read_company_ids"/.test(input.bootstrapScript)
+    && /csv_item_count "\$read_region_ids"/.test(input.bootstrapScript)
+    && /csv_item_count "\$read_store_ids"/.test(input.bootstrapScript)
+    && /csv_item_count "\$assigned_store_ids"/.test(input.bootstrapScript), 'bootstrap must route mapper, scope, and manifest CSV operations through the approved POSIX helpers')
+  fail(/\*\[!A-Fa-f0-9-\]\*\) die 'claim mapper id contains unsupported characters'/.test(input.bootstrapScript)
+    && /mapper_update_file="\$tmp_dir\/\$mapper_name\.update\.json"/.test(input.bootstrapScript)
+    && /printf '\{"id":"%s",%s\\n' "\$mapper_uuid" "\$\{mapper_json#\\\{\}" > "\$mapper_update_file"/.test(input.bootstrapScript)
+    && /chmod 0600 "\$mapper_update_file"/.test(input.bootstrapScript)
+    && /update "clients\/\$client_uuid\/protocol-mappers\/models\/\$mapper_uuid"[\s\S]*-f "\$mapper_update_file"/.test(input.bootstrapScript), 'existing mapper updates must bind the validated mapper id into a private JSON body for Keycloak 26.7 idempotency')
   fail(/users\/\$user_uuid\/reset-password/.test(input.bootstrapScript) && /-f\s+"\$password_file"/.test(input.bootstrapScript) && /-n/.test(input.bootstrapScript) && /chmod 0600\s+"\$password_file"/.test(input.bootstrapScript), 'persona password reset must use a mode-0600 JSON request file and kcadm update -f -n')
   fail(/kcadm\(\)[\s\S]*\/opt\/keycloak\/bin\/kcadm\.sh/.test(input.bootstrapScript)
     && /kcadm_quiet\(\)[\s\S]*kcadm "\$@" >\/dev\/null 2>&1/.test(input.bootstrapScript)
@@ -376,6 +429,22 @@ export function validateOnpremKeycloakContract(input) {
   fail(!/path \/auth(?:\s|\/\*)/.test(caddy) || /respond @authUnknown/.test(caddy), 'Caddy must fail closed for unlisted /auth paths')
 
   const workflow = String(input.workflow)
+  const keycloakBuildStep = workflow.match(/- name: Pull pinned Keycloak base and build the optimized ONP-3B image[\s\S]*?(?=\n\s+- name:|$)/)?.[0] ?? ''
+  const bootstrapCommandInventory = 'required_bootstrap_commands="cat chmod grep mkdir mktemp mv rm sed sleep tr wc"'
+  const keycloakBuildIndex = keycloakBuildStep.indexOf('docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE"')
+  const keycloakIdentityIndex = keycloakBuildStep.indexOf('test "$(docker image inspect "$KEYCLOAK_IMAGE"')
+  const bootstrapPreflightIndex = keycloakBuildStep.indexOf('docker run --rm --volume "$PWD/infra/onprem/core/keycloak/bootstrap.sh:/opt/keycloak/bootstrap.sh:ro"')
+  const imageIdCaptureIndex = keycloakBuildStep.indexOf("printf 'KEYCLOAK_IMAGE_ID=%s\\n'")
+  fail(keycloakBuildIndex >= 0
+    && keycloakIdentityIndex > keycloakBuildIndex
+    && bootstrapPreflightIndex > keycloakIdentityIndex
+    && imageIdCaptureIndex > bootstrapPreflightIndex
+    && /docker run --rm --volume "\$PWD\/infra\/onprem\/core\/keycloak\/bootstrap\.sh:\/opt\/keycloak\/bootstrap\.sh:ro"[\s\S]*?--entrypoint \/bin\/sh "\$KEYCLOAK_IMAGE" -ec '/.test(keycloakBuildStep)
+    && keycloakBuildStep.includes(bootstrapCommandInventory)
+    && /for required_command in \$required_bootstrap_commands; do[\s\S]*command -v "\$required_command" >\/dev\/null[\s\S]*done/.test(keycloakBuildStep)
+    && /test -x \/opt\/keycloak\/bin\/kc\.sh/.test(keycloakBuildStep)
+    && /test -x \/opt\/keycloak\/bin\/kcadm\.sh/.test(keycloakBuildStep)
+    && /\/bin\/sh -n \/opt\/keycloak\/bootstrap\.sh/.test(keycloakBuildStep), 'workflow must preflight every bootstrap executable and POSIX-parse the script in the freshly built pinned Keycloak image after its identity check')
   const syftStep = workflow.match(/- name: Generate SPDX SBOMs with pinned Syft[\s\S]*?(?=\n\s+- name:|$)/)?.[0] ?? ''
   const licenseStep = workflow.match(/- name: Generate production license inventories and notices[\s\S]*?(?=\n\s+- name:|$)/)?.[0] ?? ''
   const syftIdentityCheck = 'test "$(docker image inspect "$KEYCLOAK_IMAGE" --format \'{{.Id}}\')" = "$KEYCLOAK_IMAGE_ID"'

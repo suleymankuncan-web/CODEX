@@ -145,6 +145,55 @@ json_array() {
   printf ']'
 }
 
+csv_first_fields_matching_second() {
+  target="$1"
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    case "$row" in
+      *,*,*) die 'kcadm CSV row contains unexpected fields' ;;
+      *,*) ;;
+      *) die 'kcadm CSV row contains unexpected fields' ;;
+    esac
+    first="${row%%,*}"
+    second="${row#*,}"
+    [ -n "$first" ] || die 'kcadm CSV row contains an empty first field'
+    [ -n "$second" ] || die 'kcadm CSV row contains an empty second field'
+    [ "$second" = "$target" ] || continue
+    printf '%s\n' "$first"
+  done
+}
+
+csv_first_fields() {
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    case "$row" in
+      *,*) die 'kcadm CSV row contains unexpected fields' ;;
+    esac
+    printf '%s\n' "$row"
+  done
+}
+
+csv_item_count() {
+  value="$1"
+  if [ -z "$value" ]; then
+    printf '0'
+    return
+  fi
+  old_ifs="$IFS"
+  IFS=','
+  set -- $value
+  IFS="$old_ifs"
+  count=0
+  for item in "$@"; do
+    [ -n "$item" ] || die 'CSV item list contains an empty value'
+    case "$item" in
+      *[!A-Za-z0-9._:-]*) die 'CSV item list contains unsupported characters' ;;
+    esac
+    count=$((count + 1))
+  done
+  printf '%s' "$count"
+}
+
 kcadm() {
   /opt/keycloak/bin/kcadm.sh "$@" --config "$config_file"
 }
@@ -350,7 +399,13 @@ create_or_update_mapper() {
   printf '%s\n' "$mapper_json" > "$mapper_file"
   mapper_uuid="$(find_mapper_uuid "$mapper_name")"
   if [ -n "$mapper_uuid" ]; then
-    kcadm_quiet update "clients/$client_uuid/protocol-mappers/models/$mapper_uuid" -r "$realm" -f "$mapper_file" || die 'claim mapper update failed'
+    case "$mapper_uuid" in
+      *[!A-Fa-f0-9-]*) die 'claim mapper id contains unsupported characters' ;;
+    esac
+    mapper_update_file="$tmp_dir/$mapper_name.update.json"
+    printf '{"id":"%s",%s\n' "$mapper_uuid" "${mapper_json#\{}" > "$mapper_update_file"
+    chmod 0600 "$mapper_update_file"
+    kcadm_quiet update "clients/$client_uuid/protocol-mappers/models/$mapper_uuid" -r "$realm" -f "$mapper_update_file" || die 'claim mapper update failed'
   else
     kcadm_quiet create "clients/$client_uuid/protocol-mappers/models" -r "$realm" -f "$mapper_file" || die 'claim mapper creation failed'
   fi
@@ -359,7 +414,7 @@ create_or_update_mapper() {
 find_mapper_uuid() {
   mapper_name="$1"
   mapper_rows="$(kcadm_query get "clients/$client_uuid/protocol-mappers/models" -r "$realm" --fields id,name --format csv --noquotes 2>/dev/null)" || die 'claim mapper inventory read failed'
-  mapper_matches="$(printf '%s\n' "$mapper_rows" | awk -F',' -v target="$mapper_name" '$2 == target {print $1}')"
+  mapper_matches="$(printf '%s\n' "$mapper_rows" | csv_first_fields_matching_second "$mapper_name")"
   mapper_count="$(printf '%s\n' "$mapper_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
   case "$mapper_count" in
     0) printf '%s' '' ;;
@@ -435,7 +490,7 @@ assert_mapper() {
 }
 
 default_scope_rows="$(kcadm_query get "clients/$client_uuid/default-client-scopes" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'browser client default scopes parity read failed'
-default_scope_names="$(printf '%s\n' "$default_scope_rows" | awk -F',' 'NF {print $1}' | sed '/^[[:space:]]*$/d')"
+default_scope_names="$(printf '%s\n' "$default_scope_rows" | csv_first_fields | sed '/^[[:space:]]*$/d')"
 default_scope_count="$(printf '%s\n' "$default_scope_names" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
 [ "$default_scope_count" -eq 4 ] || die 'browser client default scopes parity mismatch'
 for expected_scope in web-origins profile roles email; do
@@ -529,7 +584,7 @@ JSON
       printf '%s\n' "$reconciled_role_names" | grep -Fqx "$role" || die 'synthetic account role parity mismatch'
     done
     if [ "$manifest_first" = true ]; then manifest_first=false; else manifest_subjects="$manifest_subjects,"; fi
-    manifest_subjects="$manifest_subjects{\"accountKey\":\"$account_key\",\"subject\":\"$user_uuid\",\"roleCodes\":[\"$roles\"],\"readScope\":{\"companies\":$(printf '%s' "$read_company_ids" | awk -F, '{print NF}') ,\"regions\":$(printf '%s' "$read_region_ids" | awk -F, '{if ($0=="") print 0; else print NF}') ,\"stores\":$(printf '%s' "$read_store_ids" | awk -F, '{if ($0=="") print 0; else print NF}')},\"actionScope\":{\"assignedStores\":$(printf '%s' "$assigned_store_ids" | awk -F, '{if ($0=="") print 0; else print NF}')}}"
+    manifest_subjects="$manifest_subjects{\"accountKey\":\"$account_key\",\"subject\":\"$user_uuid\",\"roleCodes\":[\"$roles\"],\"readScope\":{\"companies\":$(csv_item_count "$read_company_ids") ,\"regions\":$(csv_item_count "$read_region_ids") ,\"stores\":$(csv_item_count "$read_store_ids")},\"actionScope\":{\"assignedStores\":$(csv_item_count "$assigned_store_ids")}}"
   done < "$accounts_file"
   for required_persona in onprem.store-manager onprem.region-manager onprem.report-viewer onprem.store-personnel onprem.visual-merchandiser; do
     case ",$seen_personas," in *,"$required_persona",*) ;; *) die 'synthetic account contract must provide all five approved personas' ;; esac

@@ -43,6 +43,16 @@ jobs:
           docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE" \
             --build-arg KEYCLOAK_BASE_IMAGE="$KEYCLOAK_BASE_IMAGE" .
           test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Config.Entrypoint}}')" = '[/opt/keycloak/bin/kc.sh]'
+          docker run --rm --volume "$PWD/infra/onprem/core/keycloak/bootstrap.sh:/opt/keycloak/bootstrap.sh:ro" \
+            --entrypoint /bin/sh "$KEYCLOAK_IMAGE" -ec '
+            required_bootstrap_commands="cat chmod grep mkdir mktemp mv rm sed sleep tr wc"
+            for required_command in $required_bootstrap_commands; do
+              command -v "$required_command" >/dev/null
+            done
+            test -x /opt/keycloak/bin/kc.sh
+            test -x /opt/keycloak/bin/kcadm.sh
+            /bin/sh -n /opt/keycloak/bootstrap.sh
+          '
           printf 'KEYCLOAK_IMAGE_ID=%s\n' "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')" >> "$GITHUB_ENV"
 
       - name: Build dedicated images with synthetic inputs
