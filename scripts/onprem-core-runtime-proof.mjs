@@ -424,11 +424,11 @@ async function main() {
     }
     throw new Error(`${service} did not become unhealthy during the Redis outage`)
   }
-  const assertStoppedServiceState = (service, profiles, phase, stopTimestamp = null) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
+  const assertStoppedServiceState = (service, profiles, phase) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
     const inspectResult = command('docker', ['inspect', containerId], { label: `inspect stopped ${service}` }); assertNoSecretLeak(secretValues, { [`stopped ${service} state`]: inspectResult.stdout }); const state = JSON.parse(inspectResult.stdout)[0]?.State
-    if (service !== 'keycloak') return assertGracefulStopState({ service, state, logs: '', secretValues }); if (!stopTimestamp) throw new Error('Keycloak stop proof is missing its RFC3339 stop timestamp')
-    return observeKeycloakGracefulStop({ service, state, since: stopTimestamp, secretValues, wait: (delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) => command(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], { label: 'Keycloak graceful-shutdown log wait' }),
-      readLogs: ({ since, timestamps }) => { if (since !== stopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window'); const logs = command('docker', ['logs', '--since', since, '--timestamps', containerId], { label: 'stopped Keycloak logs', suppressOutput: true, inspectOutput: (capture) => assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': `${capture.stderr ?? ''}\n${capture.stdout ?? ''}` }) }); return `${logs.stderr ?? ''}\n${logs.stdout ?? ''}` },
+    if (service !== 'keycloak') return assertGracefulStopState({ service, state, logs: '', secretValues })
+    return observeKeycloakGracefulStop({ service, state, secretValues, wait: (delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) => command(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], { label: 'Keycloak graceful-shutdown log wait' }),
+      readLogs: ({ since, timestamps }) => { if (since !== state.StartedAt || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window'); const logs = command('docker', ['logs', '--since', since, '--timestamps', containerId], { label: 'stopped Keycloak logs', suppressOutput: true, inspectOutput: (capture) => assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': `${capture.stderr ?? ''}\n${capture.stdout ?? ''}` }) }); return `${logs.stderr ?? ''}\n${logs.stdout ?? ''}` },
     }) }; const verifyCaddyRuntime = (pathState = 'installed') => {
     const id = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     if (!id) throw new Error('caddy container is missing during bootstrap verification')
@@ -841,7 +841,7 @@ async function main() {
       throw new Error('Caddy workload phase changed the verified binary identity')
     }
     receipt.caddyRuntime.phases.workload = workloadCaddyRuntime; compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime']); for (const service of ['caddy', 'frontend', 'api', 'worker']) assertStoppedServiceState(service, ['runtime'], 'edge/application')
-    waitHealthy('postgres'); const keycloakStopTimestamp = new Date().toISOString(); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak', keycloakStopTimestamp)
+    waitHealthy('postgres'); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak')
     waitHealthy('postgres'); compose(['stop', 'postgres', 'redis'], ['infra']); for (const service of ['postgres', 'redis']) assertStoppedServiceState(service, ['infra'], 'postgres/redis')
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
     waitHealthy('postgres')

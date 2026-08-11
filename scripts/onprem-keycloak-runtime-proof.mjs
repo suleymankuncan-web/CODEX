@@ -756,18 +756,16 @@ export function runKeycloakRuntimeProof(options) {
     scanCapture(runDockerCapture([...base, 'logs', '--no-color', '--no-log-prefix'], 'Keycloak project secret-log scan'), 'Keycloak project logs')
     receipt.keycloak.noRawCredentials = true
     receipt.keycloak.logsSecretScanned = true
-    const keycloakStopTimestamp = new Date().toISOString()
     runDocker([...base, 'stop', 'keycloak'], 'long-lived Keycloak stop before retry')
     const stoppedKeycloakId = runDocker([...base, 'ps', '--all', '--quiet', 'keycloak'], 'stopped Keycloak identity').trim()
     const stoppedKeycloakState = JSON.parse(runDocker(['inspect', stoppedKeycloakId], 'stopped Keycloak state'))[0].State
     observeKeycloakGracefulStop({
       service: 'keycloak',
       state: stoppedKeycloakState,
-      since: keycloakStopTimestamp,
       secretValues,
       wait: waitForGracefulStopLog,
       readLogs: ({ since, timestamps }) => {
-        if (since !== keycloakStopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window')
+        if (since !== stoppedKeycloakState.StartedAt || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window')
         const capture = runDockerCapture(
           ['logs', '--since', since, '--timestamps', stoppedKeycloakId],
           'stopped Keycloak graceful-shutdown logs',

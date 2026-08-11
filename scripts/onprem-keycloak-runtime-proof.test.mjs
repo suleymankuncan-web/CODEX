@@ -445,16 +445,20 @@ test('Keycloak retry restart waits within the bounded healthcheck budget before 
 
 test('Keycloak stop is inspected and secret-scanned before bootstrap retry', () => {
   const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
-  const timestamp = source.indexOf('const keycloakStopTimestamp = new Date().toISOString()')
   const stop = source.indexOf("'stop', 'keycloak'")
   const inspect = source.indexOf("'stopped Keycloak state'", stop)
   const observation = source.indexOf('observeKeycloakGracefulStop({', inspect)
   const logs = source.indexOf("['logs', '--since', since, '--timestamps', stoppedKeycloakId]", observation)
   const retry = source.indexOf('Keycloak bootstrap idempotency retry', observation)
-  assert.ok(timestamp > 0 && timestamp < stop && stop < inspect && inspect < observation && observation < logs && logs < retry)
+  assert.ok(stop > 0 && stop < inspect && inspect < observation && observation < logs && logs < retry)
   assert.match(source, /runDockerCapture\([\s\S]*\['logs', '--since', since, '--timestamps', stoppedKeycloakId\][\s\S]*\(capture\) => scanCapture\(capture, 'stopped Keycloak graceful-shutdown logs'\)/)
   assert.match(source, /\['logs', '--since', since, '--timestamps', stoppedKeycloakId\]/)
   assert.doesNotMatch(source, /runDockerCapture\(\['logs', stoppedKeycloakId\]/)
+  assert.doesNotMatch(source, /keycloakStopTimestamp|new Date\(\)\.toISOString\(\).*Keycloak/)
+  assert.match(source, /const stoppedKeycloakState = JSON\.parse\(runDocker\(\['inspect', stoppedKeycloakId\], 'stopped Keycloak state'\)\)\[0\]\.State/)
+  const observationBlock = source.slice(observation, logs)
+  assert.match(observationBlock, /state: stoppedKeycloakState/)
+  assert.doesNotMatch(observationBlock, /since:/)
   assert.equal((source.match(/scanCapture\(capture, 'stopped Keycloak graceful-shutdown logs'\)/g) ?? []).length, 1)
 })
 
