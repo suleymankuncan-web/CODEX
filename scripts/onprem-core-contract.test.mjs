@@ -278,6 +278,23 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
   assert.match(input.runtimeProof, /setval/)
 })
 
+test('ONP-3B fresh-Linux Keycloak bootstrap rehearsal uses the corrected one-shot ceiling', () => {
+  const input = contractInput()
+  assert.match(input.compose, /keycloak-bootstrap:[\s\S]*?cpus: 0\.5\n    mem_limit: 1g\n    pids_limit: 128/)
+  assert.equal(validateOnpremCoreContract(input).ok, true)
+
+  const underprovisioned = {
+    ...input,
+    compose: input.compose.replace(
+      '    cpus: 0.5\n    mem_limit: 1g\n    pids_limit: 128',
+      '    cpus: 0.25\n    mem_limit: 512m\n    pids_limit: 128',
+    ),
+  }
+  const result = validateOnpremCoreContract(underprovisioned)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /keycloak-bootstrap.*CPU|keycloak-bootstrap.*memory/i.test(error)))
+})
+
 test('ONP-2 contract keeps the Redis default user disabled while permitting internal AOF replay', () => {
   const accepted = contractInput()
   assert.match(accepted.workflow, /user default off resetpass ~\* &\* \+@all\\nuser health on/)

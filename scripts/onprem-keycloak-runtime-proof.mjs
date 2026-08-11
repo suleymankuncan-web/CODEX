@@ -153,6 +153,19 @@ const KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_MARKERS = Object.freeze({
   ]),
 })
 
+// Phase markers are emitted only from fixed bootstrap boundaries. They carry
+// no runtime values; category selection remains independent and still comes
+// from one exact failed-closed marker.
+export const KEYCLOAK_BOOTSTRAP_PHASES = Object.freeze({
+  'secret-input': true,
+  'server-start': true,
+  'bootstrap-authentication': true,
+  'realm-reconciliation': true,
+  'synthetic-account-reconciliation': true,
+  'subject-manifest': true,
+  'server-log-scan': true,
+})
+
 const SAFE_KEYCLOAK_DIAGNOSTIC_SIGNALS = new Set([
   'SIGABRT',
   'SIGBUS',
@@ -168,6 +181,7 @@ const SAFE_KEYCLOAK_DIAGNOSTIC_SIGNALS = new Set([
 ])
 
 const KEYCLOAK_BOOTSTRAP_MARKER_PREFIX = /^keycloak bootstrap: failed closed \(([^()\r\n]+)\)$/
+const KEYCLOAK_BOOTSTRAP_PHASE_MARKER = /^keycloak bootstrap: phase=([a-z-]+)$/
 const KEYCLOAK_BOOTSTRAP_LOG_PREFIX = /^(?:keycloak-bootstrap(?:-[1-9][0-9]*)?\s*\|\s*)?/
 const SECRET_LIKE_DIAGNOSTIC_TEXT = /(?:password|secret|token|authorization)\s*[=:]\s*[^\s,;]+|Bearer\s+\S+|\beyJ[A-Za-z0-9_-]{20,}\b|-----BEGIN\s+[A-Z ]+PRIVATE KEY-----|:\/\/[^\s/:@]+:[^\s/@]+@/i
 
@@ -191,12 +205,23 @@ function markerCategory(marker) {
 
 function extractAllowlistedBootstrapCategories(value) {
   const categories = new Set()
+  const phases = []
   let malformed = false
   const lines = String(value ?? '').replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, '').split(/\r?\n/)
   for (const line of lines) {
     const trimmed = line.trim()
     if (!trimmed) continue
     const withoutComposePrefix = trimmed.replace(KEYCLOAK_BOOTSTRAP_LOG_PREFIX, '')
+    const phaseMarker = withoutComposePrefix.match(KEYCLOAK_BOOTSTRAP_PHASE_MARKER)
+    if (phaseMarker) {
+      if (Object.hasOwn(KEYCLOAK_BOOTSTRAP_PHASES, phaseMarker[1])) phases.push(phaseMarker[1])
+      else malformed = true
+      continue
+    }
+    if (/^keycloak bootstrap:\s+phase(?:=|\s|$)/i.test(withoutComposePrefix)) {
+      malformed = true
+      continue
+    }
     const failedClosed = withoutComposePrefix.match(KEYCLOAK_BOOTSTRAP_MARKER_PREFIX)
     if (failedClosed) {
       const category = markerCategory(failedClosed[1])
@@ -208,7 +233,7 @@ function extractAllowlistedBootstrapCategories(value) {
     const category = markerCategory(withoutComposePrefix)
     if (category) categories.add(category)
   }
-  return { categories, malformed }
+  return { categories, phases, malformed }
 }
 
 /**
@@ -216,6 +241,8 @@ function extractAllowlistedBootstrapCategories(value) {
  * child process. Only exact markers emitted by the approved bootstrap script
  * can select a category; zero, multiple, malformed, or secret-bearing markers
  * fail closed to the generic category while unrelated log noise is ignored.
+ * Exact phase markers are independent and report only the last bounded phase
+ * that preceded the single primary category marker.
  */
 export function classifyKeycloakBootstrapDiagnostic({
   status = null,
@@ -226,17 +253,11 @@ export function classifyKeycloakBootstrapDiagnostic({
 } = {}) {
   const boundedExitCode = boundedDockerExitCode(status ?? exitCode)
   const boundedSignal = boundedDockerSignal(signal)
-  if (boundedExitCode === 137 || boundedSignal === 'SIGKILL') {
-    return {
-      category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.RESOURCE_OR_EXTERNAL_TERMINATION,
-      exitCode: boundedExitCode,
-      signal: boundedSignal,
-    }
-  }
   const combined = `${String(stdout ?? '')}\n${String(stderr ?? '')}`
   if (SECRET_LIKE_DIAGNOSTIC_TEXT.test(combined)) {
     return {
       category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.GENERIC_FAILED_CLOSED,
+      phase: null,
       exitCode: boundedExitCode,
       signal: boundedSignal,
     }
@@ -245,10 +266,29 @@ export function classifyKeycloakBootstrapDiagnostic({
   const stderrCategories = extractAllowlistedBootstrapCategories(stderr)
   const categories = new Set([...stdoutCategories.categories, ...stderrCategories.categories])
   const malformed = stdoutCategories.malformed || stderrCategories.malformed
+  const phases = [...stdoutCategories.phases, ...stderrCategories.phases]
+  const lastPhase = phases.length > 0 ? phases[phases.length - 1] : null
+  if (malformed || categories.size > 1) {
+    return {
+      category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.GENERIC_FAILED_CLOSED,
+      phase: null,
+      exitCode: boundedExitCode,
+      signal: boundedSignal,
+    }
+  }
+  if (boundedExitCode === 137 || boundedSignal === 'SIGKILL') {
+    return {
+      category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.RESOURCE_OR_EXTERNAL_TERMINATION,
+      phase: lastPhase,
+      exitCode: boundedExitCode,
+      signal: boundedSignal,
+    }
+  }
   return {
-    category: !malformed && categories.size === 1
+    category: categories.size === 1
       ? [...categories][0]
       : KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.GENERIC_FAILED_CLOSED,
+    phase: categories.size === 1 ? lastPhase : null,
     exitCode: boundedExitCode,
     signal: boundedSignal,
   }
@@ -256,8 +296,9 @@ export function classifyKeycloakBootstrapDiagnostic({
 
 function formatKeycloakBootstrapDiagnostic(diagnostic) {
   const exit = diagnostic.exitCode === null ? 'unknown' : String(diagnostic.exitCode)
+  const phase = diagnostic.phase ? `; phase=${diagnostic.phase}` : ''
   const signal = diagnostic.signal ? `; signal=${diagnostic.signal}` : ''
-  return `category=${diagnostic.category}; exit=${exit}${signal}`
+  return `category=${diagnostic.category}${phase}; exit=${exit}${signal}`
 }
 
 function runDockerCapture(args, label, inspectOutput = null) {

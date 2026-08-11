@@ -12,6 +12,15 @@ die() {
   exit 1
 }
 
+phase_marker() {
+  phase="$1"
+  case "$phase" in
+    secret-input|server-start|bootstrap-authentication|realm-reconciliation|synthetic-account-reconciliation|subject-manifest|server-log-scan) ;;
+    *) die 'bootstrap phase marker is not allowlisted' ;;
+  esac
+  printf '%s\n' "keycloak bootstrap: phase=$phase" >&2
+}
+
 read_secret() {
   file="$1"
   [ -r "$file" ] || die 'required secret file is unavailable'
@@ -200,6 +209,7 @@ export KC_DB_PASSWORD="$database_password"
 export KC_HOSTNAME="$public_origin"
 export KC_HOSTNAME_STRICT=true
 export KC_PROXY_HEADERS=xforwarded
+phase_marker secret-input
 
 state_dir="${KEYCLOAK_SUBJECT_MANIFEST_DIR:-/var/lib/keycloak-bootstrap}"
 manifest_path="$state_dir/subjects.v1.json"
@@ -228,7 +238,7 @@ scan_server_log() {
   log_text="$(cat "$server_log")"
   secret_found=false
   bootstrap_candidate="$(tr -d '\r\n' < "$bootstrap_password_file")"
-  for candidate in "$bootstrap_candidate" "${bootstrap_password:-}" "$smtp_password" "$smtp_auth_user" "$database_password" "$database_username" "$database_url"; do
+  for candidate in "$bootstrap_candidate" "${bootstrap_password:-}" "$smtp_password" "$smtp_auth_user" "$database_password" "$database_url"; do
     [ -n "$candidate" ] || continue
     case "$log_text" in *"$candidate"*) secret_found=true ;; esac
   done
@@ -254,6 +264,9 @@ cleanup() {
     kill "$server_pid" >/dev/null 2>&1 || true
     wait "$server_pid" >/dev/null 2>&1 || true
   fi
+  if [ "$status" -eq 0 ]; then
+    phase_marker server-log-scan
+  fi
   scan_server_log || [ "$status" -ne 0 ] || status=1
   rm -rf "$tmp_dir" "$manifest_tmp"
   unset bootstrap_password smtp_password smtp_auth_user database_password database_username database_url KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
@@ -273,6 +286,7 @@ unset KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
 unset bootstrap_password
 
 server_pid=''
+phase_marker server-start
 /opt/keycloak/bin/kc.sh start --optimized --http-enabled=true --http-port=8080 \
   --http-management-port=9000 --health-enabled=true --metrics-enabled=true \
   >"$tmp_dir/keycloak-server.log" 2>&1 &
@@ -281,6 +295,7 @@ server_pid="$!"
 export KCADM_CONFIG="$config_file"
 credentials_ready=false
 attempt=0
+phase_marker bootstrap-authentication
 while [ "$attempt" -lt 90 ]; do
   if cat "$bootstrap_password_file" | KCADM_CONFIG="$config_file" /opt/keycloak/bin/kcadm.sh config credentials \
       --server "$server" --realm master --client "$bootstrap_user" >/dev/null 2>&1; then
@@ -295,6 +310,7 @@ done
 
 # Realm settings are updated in place. There is deliberately no delete/recreate
 # path: a retry can reconcile an interrupted run without destroying identities.
+phase_marker realm-reconciliation
 if ! kcadm_query get "realms/$realm" >/dev/null 2>&1; then
   kcadm_quiet create realms -s "realm=$realm" -s enabled=true || die 'realm creation failed'
 fi
@@ -441,6 +457,7 @@ manifest_subjects=''
 manifest_first=true
 seen_personas=''
 accounts_enabled="${KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false}"
+phase_marker synthetic-account-reconciliation
 accounts_file="${KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE:-/run/secrets/keycloak_synthetic_accounts}"
 if [ "$accounts_enabled" = true ]; then
   [ -r "$accounts_file" ] || die 'synthetic account contract is enabled but its secret file is unavailable'
@@ -520,6 +537,7 @@ JSON
   done
 fi
 
+phase_marker subject-manifest
 printf '%s\n' "{\"schemaVersion\":\"onprem-keycloak-subjects-v1\",\"dataClass\":\"synthetic\",\"provider\":\"oidc\",\"realm\":\"$realm\",\"clientId\":\"$client_id\",\"subjects\":[${manifest_subjects}]}" > "$manifest_tmp"
 chmod 0600 "$manifest_tmp"
 

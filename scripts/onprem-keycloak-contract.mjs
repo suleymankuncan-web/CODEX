@@ -321,6 +321,12 @@ export function validateOnpremKeycloakContract(input) {
   const manifestLine = input.bootstrapScript.match(/printf '%s\\n' \"\{\\\"schemaVersion[\s\S]*?manifest_tmp/)?.[0] ?? ''
   fail(!/email|password|token/i.test(manifestLine), 'subject manifest writer must not include emails, passwords, or tokens')
   fail(/scan_server_log/.test(input.bootstrapScript) && /secret value detected/.test(input.bootstrapScript) && /bounded bytes=/.test(input.bootstrapScript), 'bootstrap must scan its temporary server log for exact secret values and emit only bounded sanitized diagnostics')
+  const phaseMarkerSource = input.bootstrapScript.match(/phase_marker\(\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  fail(phaseMarkerSource.includes('secret-input|server-start|bootstrap-authentication|realm-reconciliation|synthetic-account-reconciliation|subject-manifest|server-log-scan'), 'bootstrap phase markers must use the exact bounded allowlist')
+  fail(/printf '%s\\n' \"keycloak bootstrap: phase=\$phase\"/.test(phaseMarkerSource), 'bootstrap phase markers must emit only a static phase diagnostic')
+  for (const phase of ['secret-input', 'server-start', 'bootstrap-authentication', 'realm-reconciliation', 'synthetic-account-reconciliation', 'subject-manifest', 'server-log-scan']) {
+    fail(new RegExp(`phase_marker ${phase}(?:\\s|$)`).test(input.bootstrapScript), `bootstrap must emit the bounded ${phase} phase marker`)
+  }
   fail(/unset bootstrap_password/.test(input.bootstrapScript), 'bootstrap must unset the service secret immediately after bootstrap-admin')
 
   const caddy = String(input.caddy)

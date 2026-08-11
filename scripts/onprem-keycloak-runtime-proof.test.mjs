@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -29,7 +30,33 @@ test('Keycloak bootstrap diagnostics classify only allowlisted safe markers', ()
         stdout: 'keycloak-bootstrap-1  | lifecycle output that is not a diagnostic marker',
         stderr: `keycloak bootstrap: failed closed (${marker})\nkeycloak bootstrap: server log scan passed (bounded bytes=128)`,
       }),
-      { category, exitCode: 1, signal: null },
+      { category, phase: null, exitCode: 1, signal: null },
+    )
+  }
+})
+
+test('Keycloak bootstrap diagnostics report the last exact phase with its primary category', () => {
+  assert.deepEqual(
+    classifyKeycloakBootstrapDiagnostic({
+      status: 1,
+      signal: null,
+      stdout: 'keycloak-bootstrap-1  | unrelated lifecycle noise\nkeycloak bootstrap: phase=secret-input',
+      stderr: 'keycloak bootstrap: phase=realm-reconciliation\nkeycloak bootstrap: failed closed (realm settings reconciliation failed)',
+    }),
+    { category: 'realm-reconciliation', phase: 'realm-reconciliation', exitCode: 1, signal: null },
+  )
+})
+
+test('Keycloak bootstrap diagnostics fail closed for malformed phase markers and phase/category ambiguity', () => {
+  for (const stderr of [
+    'keycloak bootstrap: phase=unknown-phase\nkeycloak bootstrap: failed closed (realm settings reconciliation failed)',
+    'keycloak bootstrap: phase=realm-reconciliation trailing\nkeycloak bootstrap: failed closed (realm settings reconciliation failed)',
+    'keycloak bootstrap: phase=realm-reconciliation\nkeycloak bootstrap: failed closed (realm settings reconciliation failed)\nkeycloak bootstrap: failed closed (required database secret is empty)',
+    'keycloak bootstrap: phase=realm-reconciliation\nkeycloak bootstrap: failed closed (realm settings reconciliation failed) password=synthetic-diagnostic-secret',
+  ]) {
+    assert.deepEqual(
+      classifyKeycloakBootstrapDiagnostic({ status: 1, signal: null, stdout: '', stderr }),
+      { category: 'generic-failed-closed', phase: null, exitCode: 1, signal: null },
     )
   }
 })
@@ -42,11 +69,11 @@ test('Keycloak bootstrap diagnostics fail closed for malformed or secret-bearing
     stdout: `keycloak bootstrap: failed closed (realm settings reconciliation failed) password=${secret}`,
     stderr: '',
   })
-  assert.deepEqual(diagnostic, { category: 'generic-failed-closed', exitCode: 1, signal: null })
+  assert.deepEqual(diagnostic, { category: 'generic-failed-closed', phase: null, exitCode: 1, signal: null })
   assert.doesNotMatch(JSON.stringify(diagnostic), new RegExp(secret))
   assert.deepEqual(
     classifyKeycloakBootstrapDiagnostic({ status: 1, signal: null, stdout: 'not an approved marker', stderr: '' }),
-    { category: 'generic-failed-closed', exitCode: 1, signal: null },
+    { category: 'generic-failed-closed', phase: null, exitCode: 1, signal: null },
   )
   assert.deepEqual(
     classifyKeycloakBootstrapDiagnostic({
@@ -55,7 +82,7 @@ test('Keycloak bootstrap diagnostics fail closed for malformed or secret-bearing
       stdout: 'keycloak bootstrap: failed closed (realm settings reconciliation failed) trailing',
       stderr: '',
     }),
-    { category: 'generic-failed-closed', exitCode: 1, signal: null },
+    { category: 'generic-failed-closed', phase: null, exitCode: 1, signal: null },
   )
   assert.deepEqual(
     classifyKeycloakBootstrapDiagnostic({
@@ -64,7 +91,7 @@ test('Keycloak bootstrap diagnostics fail closed for malformed or secret-bearing
       stdout: 'keycloak bootstrap: failed closed (realm settings reconciliation failed)',
       stderr: 'keycloak bootstrap: failed closed (required database secret is empty)',
     }),
-    { category: 'generic-failed-closed', exitCode: 1, signal: null },
+    { category: 'generic-failed-closed', phase: null, exitCode: 1, signal: null },
   )
 })
 
@@ -80,6 +107,7 @@ test('Keycloak bootstrap diagnostics classify SIGKILL and exit 137 as external t
     })
     assert.deepEqual(diagnostic, {
       category: 'resource-or-external-termination',
+      phase: null,
       exitCode: input.status,
       signal: input.signal === 'SIGKILL' ? 'SIGKILL' : null,
     })
@@ -95,6 +123,12 @@ test('Keycloak bootstrap failure diagnostics scan child output before classifica
   assert.ok(scan > 0 && scan < classify && classify < failure)
 })
 
+test('Keycloak bootstrap cleanup preserves the primary failure phase before scanning logs', () => {
+  const source = readFileSync('infra/onprem/core/keycloak/bootstrap.sh', 'utf8')
+  const cleanup = source.match(/cleanup\(\) \{[\s\S]*?\n\}\ntrap cleanup/)?.[0] ?? ''
+  assert.match(cleanup, /if \[ "\$status" -eq 0 \]; then\s+phase_marker server-log-scan\s+fi\s+scan_server_log/)
+})
+
 test('Keycloak runtime scan keeps credentials but excludes the fixed database role identity', () => {
   const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-secret-scan-'))
   try {
@@ -105,6 +139,62 @@ test('Keycloak runtime scan keeps credentials but excludes the fixed database ro
     const values = collectSecretValues({ compose })
     assert.equal(values.has('keycloak'), false)
     assert.equal(values.has('synthetic-password-canary'), true)
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('Keycloak inner server-log scan ignores org.keycloak noise but catches a credential canary', () => {
+  const source = readFileSync('infra/onprem/core/keycloak/bootstrap.sh', 'utf8')
+  const scanFunction = source.match(/scan_server_log\(\) \{[\s\S]*?\n\}\ncleanup\(\)/)?.[0]?.replace(/\ncleanup\(\)$/, '')
+  assert.ok(scanFunction, 'bootstrap server-log scan function must remain statically bounded')
+  const candidateLine = scanFunction.match(/for candidate in ([^\n]+); do/)?.[1] ?? ''
+  assert.doesNotMatch(candidateLine, /database_username/)
+  assert.match(candidateLine, /database_password/)
+  assert.match(scanFunction, /account_password/)
+
+  const shellProbe = spawnSync('sh', ['-c', 'exit 0'], { encoding: 'utf8', windowsHide: true })
+  if (shellProbe.error) return
+
+  const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-inner-scan-'))
+  try {
+    const serverLog = join(directory, 'server.log')
+    const bootstrapPassword = join(directory, 'bootstrap-password')
+    const accountsFile = join(directory, 'accounts')
+    writeFileSync(bootstrapPassword, 'bootstrap-password-canary')
+    writeFileSync(accountsFile, 'onprem.store-manager|synthetic-user|synthetic-account-password-canary|STORE_MANAGER\n')
+    const runScan = (text) => {
+      writeFileSync(serverLog, text)
+      const script = `set -eu
+server_log="$1"
+bootstrap_password_file="$2"
+accounts_file="$3"
+bootstrap_password='bootstrap-password-canary'
+smtp_password='smtp-password-canary'
+smtp_auth_user='smtp-user-canary'
+database_username='keycloak'
+database_password='database-password-canary'
+database_url='jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full'
+${scanFunction}
+scan_server_log
+`
+      return spawnSync('sh', ['-eu', '-c', script, 'scan-test', serverLog, bootstrapPassword, accountsFile], {
+        encoding: 'utf8',
+        windowsHide: true,
+      })
+    }
+
+    assert.equal(runScan('org.keycloak.SomeLogger: server started').status, 0)
+    for (const canary of [
+      'bootstrap-password-canary',
+      'smtp-password-canary',
+      'smtp-user-canary',
+      'database-password-canary',
+      'jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full',
+      'synthetic-account-password-canary',
+    ]) {
+      assert.notEqual(runScan(`WARN leaked ${canary}`).status, 0, canary)
+    }
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }

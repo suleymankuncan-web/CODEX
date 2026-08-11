@@ -54,13 +54,19 @@ Neither action touches hosted services or user data.
 | Keycloak | app, data | 0.5 | 2048 MiB | 256 | long-lived |
 | PostgreSQL | data | 1.0 | 2048 MiB | 192 | long-lived |
 | Redis | data | 0.5 | 768 MiB | 96 | long-lived |
-| Keycloak bootstrap | app, data | 0.25 | 512 MiB | 128 | explicit one-shot |
+| Keycloak bootstrap | app, data | 0.5 | 1 GiB | 128 | explicit one-shot |
 | identity binder | app, data | 0.5 | 512 MiB | 128 | explicit one-shot |
 | migrator | app, data | 0.5 | 512 MiB | 128 | explicit one-shot |
 | synthetic seed | app, data | 0.5 | 512 MiB | 128 | explicit one-shot |
 
 The resource table is a synthetic rehearsal target, pending fresh Linux
 measurement and explicit owner approval; it is not a production sizing claim.
+The Keycloak bootstrap one-shot ceiling is a fresh-Linux rehearsal correction:
+official Keycloak container guidance calls for at least 750 MiB to approximate
+the former 512 MiB heap, and the temporary server plus repeated JVM `kcadm`
+processes need headroom beyond the former 0.25 CPU/512 MiB limit. The 0.5 CPU/
+1 GiB ceiling is not production sizing and does not change the long-lived
+Keycloak or steady-state totals.
 The target steady runtime total is 4 vCPU and 8 GiB; one-shot ceilings are
 additional and are not part of that steady total. Required order is PostgreSQL/Redis, migrator, synthetic seed,
 Keycloak bootstrap, identity binder (`run --rm --no-deps`), then the runtime
@@ -162,6 +168,10 @@ stop, full firewall evidence, conntrack availability, or zero project-origin
 external flows cannot be proven. Its Redis proof enqueues a delayed job, stops
 Redis gracefully, observes API and worker become unhealthy, restarts the same
 volume, observes recovery, then processes and verifies one completion marker.
+Bootstrap failure output is limited to the exact allowlisted phase/category
+diagnostic and bounded exit/signal fields; malformed, multiple, or
+secret-bearing output remains generic and raw logs are never retained in the
+receipt.
 `iptables-save -c` reject-counter deltas are authoritative attempted-egress
 evidence; conntrack is supplemental accepted-flow evidence. The harness does
 not delete volumes and does not install firewall tooling or rules.

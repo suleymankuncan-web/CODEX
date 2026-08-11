@@ -147,6 +147,29 @@ test('ONP-3B contract requires the temporary-principal deletion and private subj
   assert.ok(result.errors.some((error) => /temporary (?:principal|master service client)/i.test(error)))
 })
 
+test('ONP-3B bootstrap secret-log scan excludes only the fixed database role identity and emits bounded phases', () => {
+  const baseline = input()
+  const scan = baseline.bootstrapScript.match(/scan_server_log\(\) \{[\s\S]*?\n\}\ncleanup\(\)/)?.[0] ?? ''
+  const candidateLine = scan.match(/for candidate in ([^\n]+); do/)?.[1] ?? ''
+  assert.doesNotMatch(candidateLine, /database_username/)
+  assert.match(candidateLine, /bootstrap_candidate/)
+  assert.match(candidateLine, /database_password/)
+  assert.match(candidateLine, /database_url/)
+  assert.match(scan, /account_password/)
+  assert.match(baseline.bootstrapScript, /phase_marker\(\) \{[\s\S]*?phase=\$phase/)
+  for (const phase of ['secret-input', 'server-start', 'bootstrap-authentication', 'realm-reconciliation', 'synthetic-account-reconciliation', 'subject-manifest', 'server-log-scan']) {
+    assert.match(baseline.bootstrapScript, new RegExp(`phase_marker ${phase}(?:\\s|$)`))
+  }
+
+  const removedPhase = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace('phase_marker realm-reconciliation\n', '# phase marker removed\n'),
+  }
+  const result = validateOnpremKeycloakContract(removedPhase)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /realm-reconciliation phase marker/i.test(error)))
+})
+
 test('ONP-3B contract rejects secret-bearing kcadm argv and weak password reset forms', () => {
   const baseline = input()
   const secretArg = baseline.bootstrapScript.replace(
