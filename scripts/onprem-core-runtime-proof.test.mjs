@@ -165,6 +165,33 @@ test('Keycloak graceful-stop observation accepts a marker that appears on a late
   assert.deepEqual(waits, [KEYCLOAK_GRACEFUL_STOP_WAIT_MS])
 })
 
+test('Keycloak graceful-stop observation keeps a 30-second-class bounded log flush window', () => {
+  assert.equal(KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS, 30)
+  assert.equal(KEYCLOAK_GRACEFUL_STOP_WAIT_MS, 1000)
+
+  const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 143 }
+  let reads = 0
+  let waits = 0
+  const result = observeKeycloakGracefulStop({
+    state,
+    since: '2026-08-11T06:00:00.000Z',
+    readLogs: ({ attempt }) => {
+      reads += 1
+      return attempt === KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS - 1
+        ? '2026-08-11T06:00:29.000Z INFO [io.quarkus] (Shutdown thread) Keycloak stopped in 0.123s'
+        : ''
+    },
+    wait: (delayMs) => {
+      assert.equal(delayMs, KEYCLOAK_GRACEFUL_STOP_WAIT_MS)
+      waits += 1
+    },
+  })
+
+  assert.deepEqual(result, { exitCode: 143, markerObserved: true, attempts: KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS })
+  assert.equal(reads, KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS)
+  assert.equal(waits, KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS - 1)
+})
+
 test('Keycloak graceful-stop observation exhausts its bounded polls for missing or lookalike markers', () => {
   const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 0 }
   let reads = 0

@@ -1,7 +1,10 @@
 const KEYCLOAK_GRACEFUL_STOP_MARKER = /^.*\bINFO\s+\[io\.quarkus\]\s+\(Shutdown thread\)\s+Keycloak stopped in \d+(?:\.\d+)?s\s*$/m
 
-export const KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS = 10
-export const KEYCLOAK_GRACEFUL_STOP_WAIT_MS = 250
+// Docker can report a container as exited before its logging driver has made
+// the final shutdown line visible. Keep the exact marker fail-closed, but give
+// the bounded snapshot reader enough time for that asynchronous flush.
+export const KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS = 30
+export const KEYCLOAK_GRACEFUL_STOP_WAIT_MS = 1000
 
 function assertSecretSafeLogs(logs, secretValues) {
   for (const entry of secretValues ?? []) {
