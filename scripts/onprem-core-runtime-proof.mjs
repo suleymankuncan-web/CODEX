@@ -426,6 +426,10 @@ async function main() {
     }
     throw new Error(`${service} did not become unhealthy during the Redis outage`)
   }
+  const assertStoppedServiceState = (service, profiles, phase) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
+    const inspectResult = command('docker', ['inspect', containerId], { label: `inspect stopped ${service}` }); assertNoSecretLeak(secretValues, { [`stopped ${service} state`]: inspectResult.stdout }); const inspected = JSON.parse(inspectResult.stdout)[0]
+    const logs = service === 'keycloak' ? command('docker', ['logs', containerId], { label: 'stopped Keycloak logs' }) : { stderr: '', stdout: '' }; const logText = `${logs.stderr ?? ''}\n${logs.stdout ?? ''}`; if (service === 'keycloak') assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': logText })
+    return assertGracefulStopState({ service, state: inspected?.State, logs: logText, secretValues }) }
   const verifyCaddyRuntime = (pathState = 'installed') => {
     const id = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     if (!id) throw new Error('caddy container is missing during bootstrap verification')
@@ -837,13 +841,9 @@ async function main() {
     if (workloadCaddyRuntime.executableDigest !== receipt.caddyRuntime.approvedExecutableDigest) {
       throw new Error('Caddy workload phase changed the verified binary identity')
     }
-    receipt.caddyRuntime.phases.workload = workloadCaddyRuntime
-    compose(['stop', ...LONG_LIVED], ['runtime'])
-    for (const service of LONG_LIVED) {
-      const state = JSON.parse(command('docker', ['inspect', compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()], { label: `inspect stopped ${service}` }).stdout)[0].State
-      const logs = service === 'keycloak' ? command('docker', ['logs', compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()], { label: 'stopped Keycloak logs' }) : {}
-      assertGracefulStopState({ service, state, logs: `${logs.stderr ?? ''}\n${logs.stdout ?? ''}`, secretValues })
-    }
+    receipt.caddyRuntime.phases.workload = workloadCaddyRuntime; compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime']); for (const service of ['caddy', 'frontend', 'api', 'worker']) assertStoppedServiceState(service, ['runtime'], 'edge/application')
+    waitHealthy('postgres'); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak')
+    waitHealthy('postgres'); compose(['stop', 'postgres', 'redis'], ['infra']); for (const service of ['postgres', 'redis']) assertStoppedServiceState(service, ['infra'], 'postgres/redis')
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
     waitHealthy('postgres')
     waitHealthy('redis')

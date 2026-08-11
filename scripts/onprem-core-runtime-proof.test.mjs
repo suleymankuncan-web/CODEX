@@ -121,6 +121,34 @@ test('graceful-stop log evidence remains secret-safe and other services stay zer
   assert.doesNotThrow(() => assertGracefulStopState({ service: 'api', state: { ...state, ExitCode: 0 }, logs: '' }))
 })
 
+test('runtime proof stops edge/application, Keycloak, then PostgreSQL/Redis in deterministic stages', () => {
+  const source = readFileSync(new URL('./onprem-core-runtime-proof.mjs', import.meta.url), 'utf8')
+  const edgeStop = source.indexOf("compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime'])")
+  const edgeVerify = source.indexOf("assertStoppedServiceState(service, ['runtime'], 'edge/application')", edgeStop)
+  const postgresHealthyBeforeKeycloak = source.indexOf("waitHealthy('postgres')", edgeVerify)
+  const keycloakStop = source.indexOf("compose(['stop', 'keycloak'], ['runtime'])", postgresHealthyBeforeKeycloak)
+  const keycloakVerify = source.indexOf("assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak')", keycloakStop)
+  const postgresHealthyAfterKeycloak = source.indexOf("waitHealthy('postgres')", keycloakVerify)
+  const dataStop = source.indexOf("compose(['stop', 'postgres', 'redis'], ['infra'])", postgresHealthyAfterKeycloak)
+  const dataVerify = source.indexOf("assertStoppedServiceState(service, ['infra'], 'postgres/redis')", dataStop)
+  const restart = source.indexOf("compose(['up', '--detach', 'postgres', 'redis'], ['infra'])", dataVerify)
+
+  assert.ok(edgeStop > 0 && edgeStop < edgeVerify)
+  assert.ok(edgeVerify < postgresHealthyBeforeKeycloak)
+  assert.ok(postgresHealthyBeforeKeycloak < keycloakStop && keycloakStop < keycloakVerify)
+  assert.ok(keycloakVerify < postgresHealthyAfterKeycloak)
+  assert.ok(postgresHealthyAfterKeycloak < dataStop && dataStop < dataVerify)
+  assert.ok(dataVerify < restart)
+
+  assert.match(source, /const assertStoppedServiceState = \(service, profiles, phase\) => \{[\s\S]*command\('docker', \['inspect', containerId\]/)
+  assert.match(source, /const assertStoppedServiceState = \(service, profiles, phase\) => \{[\s\S]*command\('docker', \['logs', containerId\]/)
+  assert.match(source, /command\('docker', \['logs', containerId\], \{ label: 'stopped Keycloak logs' \}\)/)
+  assert.doesNotMatch(source, /command\('docker', \['logs', containerId\], \{ allowFailure: true/)
+  assert.match(source, /assertNoSecretLeak\(secretValues, \{ 'stopped Keycloak logs': logText \}\)/)
+  assert.doesNotMatch(source, /compose\(\['stop',\s*\.\.\.LONG_LIVED\]/)
+  assert.doesNotMatch(source, /compose\(\['stop',\s*\.\.\.[^\]]*keycloak/i)
+})
+
 test('Caddy runtime identity and TLS classification inputs are immutable', () => {
   assert.equal(Object.isFrozen(CADDY_CMDLINE), true)
   assert.equal(Object.isFrozen(TLS_SAFE_ERROR_CODES), true)
