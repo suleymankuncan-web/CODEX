@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
-import { assertGracefulStopState } from './onprem-graceful-stop-contract.mjs'
+import {
+  KEYCLOAK_GRACEFUL_STOP_WAIT_MS,
+  observeKeycloakGracefulStop,
+} from './onprem-graceful-stop-contract.mjs'
 
 function parseArgs(argv) {
   const options = { execute: false, cleanup: false, requireFreshVolumes: false }
@@ -301,10 +304,11 @@ function formatKeycloakBootstrapDiagnostic(diagnostic) {
   return `category=${diagnostic.category}${phase}; exit=${exit}${signal}`
 }
 
-function runDockerCapture(args, label, inspectOutput = null) {
-  const result = spawnSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
+export function runDockerCapture(args, label, inspectOutput = null, spawnRunner = spawnSync) {
+  const result = spawnRunner('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
   const output = { stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
-  inspectOutput?.(output)
+  let inspectionFailed = false
+  try { inspectOutput?.(output) } catch { inspectionFailed = true }
   if (result.error || result.status !== 0) {
     const diagnostic = classifyKeycloakBootstrapDiagnostic({
       status: result.status,
@@ -314,11 +318,20 @@ function runDockerCapture(args, label, inspectOutput = null) {
     })
     throw new Error(`${label} failed (${formatKeycloakBootstrapDiagnostic(diagnostic)})`)
   }
+  if (inspectionFailed) throw new Error(`${label} output inspection failed`)
   return output
 }
 
 function runDocker(args, label) {
   return runDockerCapture(args, label).stdout
+}
+
+function waitForGracefulStopLog(delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) {
+  const result = spawnSync(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], {
+    encoding: 'utf8',
+    windowsHide: true,
+  })
+  if (result.error || result.status !== 0) throw new Error('Keycloak graceful shutdown log wait failed')
 }
 
 function composeArgs(options, profiles = []) {
@@ -518,7 +531,7 @@ function assertSecretSafeLogs(value, label) {
   return assertSecretSafeLogsWithValues(value, label, new Set())
 }
 
-function assertSecretSafeLogsWithValues(value, label, secretValues) {
+export function assertSecretSafeLogsWithValues(value, label, secretValues) {
   const text = String(value)
   for (const secret of secretValues) {
     if (secret && text.includes(secret)) throw new Error(`${label} contained a raw secret or token`)
@@ -663,12 +676,26 @@ export function runKeycloakRuntimeProof(options) {
     scanCapture(runDockerCapture([...base, 'logs', '--no-color', '--no-log-prefix'], 'Keycloak project secret-log scan'), 'Keycloak project logs')
     receipt.keycloak.noRawCredentials = true
     receipt.keycloak.logsSecretScanned = true
+    const keycloakStopTimestamp = new Date().toISOString()
     runDocker([...base, 'stop', 'keycloak'], 'long-lived Keycloak stop before retry')
     const stoppedKeycloakId = runDocker([...base, 'ps', '--all', '--quiet', 'keycloak'], 'stopped Keycloak identity').trim()
     const stoppedKeycloakState = JSON.parse(runDocker(['inspect', stoppedKeycloakId], 'stopped Keycloak state'))[0].State
-    const stoppedKeycloakLogs = runDockerCapture(['logs', stoppedKeycloakId], 'stopped Keycloak logs')
-    scanCapture(stoppedKeycloakLogs, 'stopped Keycloak graceful-shutdown logs')
-    assertGracefulStopState({ service: 'keycloak', state: stoppedKeycloakState, logs: `${stoppedKeycloakLogs.stderr}\n${stoppedKeycloakLogs.stdout}`, secretValues })
+    observeKeycloakGracefulStop({
+      service: 'keycloak',
+      state: stoppedKeycloakState,
+      since: keycloakStopTimestamp,
+      secretValues,
+      wait: waitForGracefulStopLog,
+      readLogs: ({ since, timestamps }) => {
+        if (since !== keycloakStopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window')
+        const capture = runDockerCapture(
+          ['logs', '--since', since, '--timestamps', stoppedKeycloakId],
+          'stopped Keycloak graceful-shutdown logs',
+          (capture) => scanCapture(capture, 'stopped Keycloak graceful-shutdown logs'),
+        )
+        return capture
+      },
+    })
     receipt.keycloak.gracefulStopVerified = true
     runScannedOneShot([...base, 'run', '--rm', 'keycloak-bootstrap'], 'Keycloak bootstrap idempotency retry')
     receipt.keycloak.bootstrapSecondRun = true

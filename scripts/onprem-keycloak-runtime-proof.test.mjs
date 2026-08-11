@@ -7,11 +7,25 @@ import { test } from 'node:test'
 
 import {
   assertFirewallCounterDelta,
+  assertSecretSafeLogsWithValues,
   classifyKeycloakBootstrapDiagnostic,
   collectSecretValues,
+  runDockerCapture,
   runKeycloakRuntimeProof,
   validateComposeContainerIdentities,
 } from './onprem-keycloak-runtime-proof.mjs'
+
+test('Keycloak Docker capture scans failed partial output before a sanitized retrieval error', () => {
+  const canary = 'synthetic-partial-keycloak-password-canary'
+  let scanned = false
+  assert.throws(
+    () => runDockerCapture([], 'stopped Keycloak graceful-shutdown logs', (capture) => {
+      scanned = true
+      assertSecretSafeLogsWithValues(capture.stderr, 'partial stopped Keycloak logs', new Set([canary]))
+    }, () => ({ status: 23, signal: null, error: null, stdout: '', stderr: `partial password=${canary}` })),
+    error => scanned && /stopped Keycloak graceful-shutdown logs failed/.test(error.message) && !error.message.includes(canary),
+  )
+})
 
 test('Keycloak bootstrap diagnostics classify only allowlisted safe markers', () => {
   const cases = [
@@ -292,12 +306,17 @@ test('Keycloak final firewall checkpoint covers the complete retry and restart p
 
 test('Keycloak stop is inspected and secret-scanned before bootstrap retry', () => {
   const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  const timestamp = source.indexOf('const keycloakStopTimestamp = new Date().toISOString()')
   const stop = source.indexOf("'stop', 'keycloak'")
   const inspect = source.indexOf("'stopped Keycloak state'", stop)
-  const logs = source.indexOf("'stopped Keycloak graceful-shutdown logs'", inspect)
-  const assertion = source.indexOf('assertGracefulStopState(', logs)
-  const retry = source.indexOf('Keycloak bootstrap idempotency retry', assertion)
-  assert.ok(stop > 0 && stop < inspect && inspect < logs && logs < assertion && assertion < retry)
+  const observation = source.indexOf('observeKeycloakGracefulStop({', inspect)
+  const logs = source.indexOf("['logs', '--since', since, '--timestamps', stoppedKeycloakId]", observation)
+  const retry = source.indexOf('Keycloak bootstrap idempotency retry', observation)
+  assert.ok(timestamp > 0 && timestamp < stop && stop < inspect && inspect < observation && observation < logs && logs < retry)
+  assert.match(source, /runDockerCapture\([\s\S]*\['logs', '--since', since, '--timestamps', stoppedKeycloakId\][\s\S]*\(capture\) => scanCapture\(capture, 'stopped Keycloak graceful-shutdown logs'\)/)
+  assert.match(source, /\['logs', '--since', since, '--timestamps', stoppedKeycloakId\]/)
+  assert.doesNotMatch(source, /runDockerCapture\(\['logs', stoppedKeycloakId\]/)
+  assert.equal((source.match(/scanCapture\(capture, 'stopped Keycloak graceful-shutdown logs'\)/g) ?? []).length, 1)
 })
 
 test('Keycloak firewall proof rejects a reset reject counter', () => {

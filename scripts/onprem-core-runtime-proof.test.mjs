@@ -6,6 +6,7 @@ import { checkServerIdentity } from 'node:tls'
 import {
   assertNoSecretLeak,
   assertSecretSourceMetadata,
+  command,
   classifyTlsProbeResult,
   egressRejectCounters,
   migrationTreeDigestFromOutput,
@@ -23,7 +24,12 @@ import {
   EXPECTED_SECRET_UIDS,
   validateCoreCleanupContainerIdentities,
 } from './onprem-core-runtime-proof.mjs'
-import { assertGracefulStopState } from './onprem-graceful-stop-contract.mjs'
+import {
+  assertGracefulStopState,
+  KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS,
+  KEYCLOAK_GRACEFUL_STOP_WAIT_MS,
+  observeKeycloakGracefulStop,
+} from './onprem-graceful-stop-contract.mjs'
 import { CADDY_CMDLINE, TLS_SAFE_ERROR_CODES } from './onprem-caddy-runtime-proof.mjs'
 import {
   assertProbeOutput,
@@ -91,6 +97,22 @@ test('runtime secret value scan exempts only the fixed Keycloak database role id
   }
 })
 
+test('core command scans a failed partial log capture before a fixed retrieval error', () => {
+  const canary = 'synthetic-partial-log-password-canary'
+  let scanned = false
+  assert.throws(
+    () => command(process.execPath, ['-e', `process.stdout.write(${JSON.stringify(canary)}); process.exit(23)`], {
+      label: 'stopped Keycloak logs',
+      suppressOutput: true,
+      inspectOutput: (capture) => {
+        scanned = true
+        assertNoSecretLeak(new Map([['stopped_keycloak_password', canary]]), { 'partial stopped logs': capture.stdout })
+      },
+    }),
+    error => scanned && error.message === 'stopped Keycloak logs failed' && !error.message.includes(canary),
+  )
+})
+
 test('Keycloak SIGTERM is graceful only with a clean exit state and official shutdown marker', () => {
   const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 143 }
   const logs = 'INFO [io.quarkus] (Shutdown thread) Keycloak stopped in 0.123s'
@@ -121,13 +143,100 @@ test('graceful-stop log evidence remains secret-safe and other services stay zer
   assert.doesNotThrow(() => assertGracefulStopState({ service: 'api', state: { ...state, ExitCode: 0 }, logs: '' }))
 })
 
+test('Keycloak graceful-stop observation accepts a marker that appears on a later fresh-log poll', () => {
+  const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 143 }
+  const since = '2026-08-11T06:00:00.000Z'
+  const reads = []
+  const waits = []
+  const result = observeKeycloakGracefulStop({
+    state,
+    since,
+    readLogs: ({ since: readSince, timestamps, attempt }) => {
+      reads.push({ since: readSince, timestamps, attempt })
+      return attempt === 1 ? '2026-08-11T06:00:00.250Z INFO [io.quarkus] (Shutdown thread) Keycloak stopped in 0.123s' : ''
+    },
+    wait: (delayMs) => waits.push(delayMs),
+  })
+  assert.deepEqual(result, { exitCode: 143, markerObserved: true, attempts: 2 })
+  assert.deepEqual(reads, [
+    { since, timestamps: true, attempt: 0 },
+    { since, timestamps: true, attempt: 1 },
+  ])
+  assert.deepEqual(waits, [KEYCLOAK_GRACEFUL_STOP_WAIT_MS])
+})
+
+test('Keycloak graceful-stop observation exhausts its bounded polls for missing or lookalike markers', () => {
+  const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 0 }
+  let reads = 0
+  let waits = 0
+  assert.throws(
+    () => observeKeycloakGracefulStop({
+      state,
+      since: '2026-08-11T06:00:00.000Z',
+      readLogs: () => {
+        reads += 1
+        return 'INFO [io.quarkus] (main) Keycloak stopped in 0.123s'
+      },
+      wait: () => { waits += 1 },
+    }),
+    /graceful shutdown marker missing/,
+  )
+  assert.equal(reads, KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS)
+  assert.equal(waits, KEYCLOAK_GRACEFUL_STOP_MAX_ATTEMPTS - 1)
+})
+
+test('Keycloak graceful-stop observation validates clean state before reading logs', () => {
+  let reads = 0
+  assert.throws(
+    () => observeKeycloakGracefulStop({
+      state: { Status: 'running', Running: true, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 0 },
+      since: '2026-08-11T06:00:00.000Z',
+      readLogs: () => { reads += 1; return 'stale marker' },
+    }),
+    /did not stop gracefully/,
+  )
+  assert.equal(reads, 0)
+})
+
+test('Keycloak graceful-stop observation fails immediately on reader errors without exposing reader output', () => {
+  let reads = 0
+  assert.throws(
+    () => observeKeycloakGracefulStop({
+      state: { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 143 },
+      since: '2026-08-11T06:00:00.000Z',
+      readLogs: () => { reads += 1; throw new Error('raw log secret=should-not-escape') },
+    }),
+    error => error.message === 'keycloak graceful shutdown log retrieval failed' && !error.message.includes('should-not-escape'),
+  )
+  assert.equal(reads, 1)
+})
+
+test('Keycloak graceful-stop observation secret-scans every sample before marker evaluation', () => {
+  const state = { Status: 'exited', Running: false, Paused: false, Restarting: false, OOMKilled: false, Dead: false, Error: '', ExitCode: 0 }
+  const secretValues = new Map([['keycloak_database_password', 'synthetic-stop-secret']])
+  for (const sample of [
+    'INFO [io.quarkus] (Shutdown thread) waiting synthetic-stop-secret',
+    'INFO [io.quarkus] (Shutdown thread) Keycloak stopped in 0.123s synthetic-stop-secret',
+  ]) {
+    assert.throws(
+      () => observeKeycloakGracefulStop({
+        state,
+        since: '2026-08-11T06:00:00.000Z',
+        secretValues,
+        readLogs: () => sample,
+      }),
+      /secret value leaked/,
+    )
+  }
+})
+
 test('runtime proof stops edge/application, Keycloak, then PostgreSQL/Redis in deterministic stages', () => {
   const source = readFileSync(new URL('./onprem-core-runtime-proof.mjs', import.meta.url), 'utf8')
   const edgeStop = source.indexOf("compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime'])")
   const edgeVerify = source.indexOf("assertStoppedServiceState(service, ['runtime'], 'edge/application')", edgeStop)
   const postgresHealthyBeforeKeycloak = source.indexOf("waitHealthy('postgres')", edgeVerify)
   const keycloakStop = source.indexOf("compose(['stop', 'keycloak'], ['runtime'])", postgresHealthyBeforeKeycloak)
-  const keycloakVerify = source.indexOf("assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak')", keycloakStop)
+  const keycloakVerify = source.indexOf("assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak', keycloakStopTimestamp)", keycloakStop)
   const postgresHealthyAfterKeycloak = source.indexOf("waitHealthy('postgres')", keycloakVerify)
   const dataStop = source.indexOf("compose(['stop', 'postgres', 'redis'], ['infra'])", postgresHealthyAfterKeycloak)
   const dataVerify = source.indexOf("assertStoppedServiceState(service, ['infra'], 'postgres/redis')", dataStop)
@@ -140,11 +249,20 @@ test('runtime proof stops edge/application, Keycloak, then PostgreSQL/Redis in d
   assert.ok(postgresHealthyAfterKeycloak < dataStop && dataStop < dataVerify)
   assert.ok(dataVerify < restart)
 
-  assert.match(source, /const assertStoppedServiceState = \(service, profiles, phase\) => \{[\s\S]*command\('docker', \['inspect', containerId\]/)
-  assert.match(source, /const assertStoppedServiceState = \(service, profiles, phase\) => \{[\s\S]*command\('docker', \['logs', containerId\]/)
-  assert.match(source, /command\('docker', \['logs', containerId\], \{ label: 'stopped Keycloak logs' \}\)/)
-  assert.doesNotMatch(source, /command\('docker', \['logs', containerId\], \{ allowFailure: true/)
-  assert.match(source, /assertNoSecretLeak\(secretValues, \{ 'stopped Keycloak logs': logText \}\)/)
+  assert.match(source, /const assertStoppedServiceState = \(service, profiles, phase, stopTimestamp = null\) => \{[\s\S]*command\('docker', \['inspect', containerId\]/)
+  assert.match(source, /observeKeycloakGracefulStop\([\s\S]*readLogs: \(\{ since, timestamps \}\)/)
+  assert.match(source, /\['logs', '--since', since, '--timestamps', containerId\]/)
+  assert.match(source, /label: 'stopped Keycloak logs', suppressOutput: true/)
+  assert.match(source, /inspectOutput: \(capture\) => assertNoSecretLeak\(secretValues, \{ 'stopped Keycloak logs': `\$\{capture\.stderr \?\? ''\}\\n\$\{capture\.stdout \?\? ''\}` \}\)/)
+  assert.doesNotMatch(source, /command\('docker', \['logs', containerId\]/)
+  const keycloakStopTimestamp = source.indexOf('const keycloakStopTimestamp = new Date().toISOString()')
+  const freshKeycloakStop = source.indexOf("compose(['stop', 'keycloak']", keycloakStopTimestamp)
+  const keycloakStopAssertion = source.indexOf("assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak', keycloakStopTimestamp)", freshKeycloakStop)
+  const stoppedState = source.indexOf('const state = JSON.parse(inspectResult.stdout)[0]?.State')
+  const observation = source.indexOf('observeKeycloakGracefulStop({', stoppedState)
+  const keycloakLogPoll = source.indexOf("['logs', '--since', since, '--timestamps', containerId]", observation)
+  assert.ok(keycloakStopTimestamp > 0 && keycloakStopTimestamp < freshKeycloakStop && freshKeycloakStop < keycloakStopAssertion)
+  assert.ok(stoppedState > 0 && stoppedState < observation && observation < keycloakLogPoll)
   assert.doesNotMatch(source, /compose\(\['stop',\s*\.\.\.LONG_LIVED\]/)
   assert.doesNotMatch(source, /compose\(\['stop',\s*\.\.\.[^\]]*keycloak/i)
 })

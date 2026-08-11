@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
-import { assertGracefulStopState } from './onprem-graceful-stop-contract.mjs'
+import { assertGracefulStopState, observeKeycloakGracefulStop, KEYCLOAK_GRACEFUL_STOP_WAIT_MS } from './onprem-graceful-stop-contract.mjs'
 import {
   buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE,
   classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
@@ -66,19 +66,18 @@ export function serviceFailureDiagnostic({ service, state = {}, logs = '', secre
   }
   return boundedText(JSON.stringify(diagnostic), 4096)
 }
-function command(command, args, options = {}) {
+export function command(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     encoding: 'utf8',
     env: options.env ?? process.env,
     input: options.input,
     windowsHide: true,
-  })
-  if (result.error || (!options.allowFailure && result.status !== 0)) {
-    const tail = redact(`${result.stderr ?? ''}\n${result.stdout ?? ''}`).trim().split(/\r?\n/).slice(-12).join('\n')
+  }); const output = { status: result.status ?? -1, stderr: result.stderr ?? '', stdout: result.stdout ?? '' }; let inspectionFailed = false; try { options.inspectOutput?.(output) } catch { inspectionFailed = true }
+  if (result.error || (!options.allowFailure && result.status !== 0)) { const tail = options.suppressOutput || inspectionFailed ? '' : redact(`${result.stderr ?? ''}\n${result.stdout ?? ''}`).trim().split(/\r?\n/).slice(-12).join('\n')
     throw new Error(`${options.label ?? command} failed${tail ? `\n${tail}` : ''}`)
   }
-  return { status: result.status ?? -1, stderr: result.stderr ?? '', stdout: result.stdout ?? '' }
+  if (inspectionFailed) throw new Error(`${options.label ?? command} output inspection failed`); return output
 }
 function parseArgs(argv) {
   const options = {
@@ -195,7 +194,6 @@ export function assertNoSecretLeak(secretValues, surfaces) {
     }
   }
 }
-
 export const isConfidentialRuntimeSecretName = (name) => String(name) !== 'keycloak_database_username'
 export function migrationTreeDigestFromOutput(output) {
   const digest = String(output?.stdout ?? '').match(
@@ -426,11 +424,12 @@ async function main() {
     }
     throw new Error(`${service} did not become unhealthy during the Redis outage`)
   }
-  const assertStoppedServiceState = (service, profiles, phase) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
-    const inspectResult = command('docker', ['inspect', containerId], { label: `inspect stopped ${service}` }); assertNoSecretLeak(secretValues, { [`stopped ${service} state`]: inspectResult.stdout }); const inspected = JSON.parse(inspectResult.stdout)[0]
-    const logs = service === 'keycloak' ? command('docker', ['logs', containerId], { label: 'stopped Keycloak logs' }) : { stderr: '', stdout: '' }; const logText = `${logs.stderr ?? ''}\n${logs.stdout ?? ''}`; if (service === 'keycloak') assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': logText })
-    return assertGracefulStopState({ service, state: inspected?.State, logs: logText, secretValues }) }
-  const verifyCaddyRuntime = (pathState = 'installed') => {
+  const assertStoppedServiceState = (service, profiles, phase, stopTimestamp = null) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
+    const inspectResult = command('docker', ['inspect', containerId], { label: `inspect stopped ${service}` }); assertNoSecretLeak(secretValues, { [`stopped ${service} state`]: inspectResult.stdout }); const state = JSON.parse(inspectResult.stdout)[0]?.State
+    if (service !== 'keycloak') return assertGracefulStopState({ service, state, logs: '', secretValues }); if (!stopTimestamp) throw new Error('Keycloak stop proof is missing its RFC3339 stop timestamp')
+    return observeKeycloakGracefulStop({ service, state, since: stopTimestamp, secretValues, wait: (delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) => command(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], { label: 'Keycloak graceful-shutdown log wait' }),
+      readLogs: ({ since, timestamps }) => { if (since !== stopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window'); const logs = command('docker', ['logs', '--since', since, '--timestamps', containerId], { label: 'stopped Keycloak logs', suppressOutput: true, inspectOutput: (capture) => assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': `${capture.stderr ?? ''}\n${capture.stdout ?? ''}` }) }); return `${logs.stderr ?? ''}\n${logs.stdout ?? ''}` },
+    }) }; const verifyCaddyRuntime = (pathState = 'installed') => {
     const id = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     if (!id) throw new Error('caddy container is missing during bootstrap verification')
     const inspect = JSON.parse(command('docker', ['inspect', id], { label: 'inspect caddy bootstrap runtime' }).stdout)[0]
@@ -842,7 +841,7 @@ async function main() {
       throw new Error('Caddy workload phase changed the verified binary identity')
     }
     receipt.caddyRuntime.phases.workload = workloadCaddyRuntime; compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime']); for (const service of ['caddy', 'frontend', 'api', 'worker']) assertStoppedServiceState(service, ['runtime'], 'edge/application')
-    waitHealthy('postgres'); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak')
+    waitHealthy('postgres'); const keycloakStopTimestamp = new Date().toISOString(); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak', keycloakStopTimestamp)
     waitHealthy('postgres'); compose(['stop', 'postgres', 'redis'], ['infra']); for (const service of ['postgres', 'redis']) assertStoppedServiceState(service, ['infra'], 'postgres/redis')
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
     waitHealthy('postgres')
