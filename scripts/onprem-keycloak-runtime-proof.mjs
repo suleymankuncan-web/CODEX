@@ -573,6 +573,91 @@ export function collectSecretValues(options) {
   return values
 }
 
+export function assertKeycloakAuthProofReceipt(receipt) {
+  const denialStatus = (value) => value === 401 || value === 403
+  const discovery = receipt?.discovery
+  const personas = receipt?.personas
+  const expectedCount = 5
+  const discoveryValid = discovery?.status === 200
+    && discovery.issuerMatches === true
+    && discovery.authorizationEndpointMatches === true
+    && discovery.tokenEndpointMatches === true
+    && discovery.logoutEndpointMatches === true
+    && discovery.jwksEndpointMatches === true
+  const personasValid = personas?.count === expectedCount
+    && personas.sessionsVerified === expectedCount
+    && personas.csrfMissingDenied === expectedCount
+    && personas.csrfRecoverySucceeded === expectedCount
+    && personas.crossScopeDenied === expectedCount
+    && personas.authorizedMutationCount === 1
+    && personas.deniedMutationCount === expectedCount
+    && personas.realmLogoutCount === expectedCount
+    && personas.unallowlistedLogoutRejectedCount === expectedCount
+    && personas.reauthorizeCredentialCount === expectedCount
+    && personas.secureHttpOnlySameSiteHostOnlyCookieCount === expectedCount
+    && personas.clearingCookieContractCount === expectedCount
+  const jwtRejections = receipt?.jwtRejections ?? {}
+  if (!receipt || typeof receipt !== 'object'
+    || receipt.schemaVersion !== 1
+    || receipt.dataClass !== 'synthetic'
+    || !discoveryValid
+    || receipt.jwks?.status !== 200
+    || !Number.isSafeInteger(receipt.jwks?.keyCount)
+    || receipt.jwks.keyCount < 1
+    || !denialStatus(receipt.jwks?.unknownKeyStatus)
+    || receipt.publicAdminDenials?.allDenied !== true
+    || receipt.publicAdminDenials?.paths?.length !== 5
+    || !['unknown-key', 'wrong-issuer', 'wrong-audience', 'wrong-role-scope'].every((key) => denialStatus(jwtRejections[key]))
+    || !personasValid
+    || receipt.csrf?.missingHeaderStatus !== 403
+    || receipt.csrf?.recoveryStatus !== 200
+    || receipt.logout?.invalidated !== true
+    || receipt.logout?.realmEndSession !== true
+    || receipt.logout?.reauthorizeRequiresCredentials !== true
+    || receipt.scopeAuthorization?.crossScopeDenied !== true
+    || receipt.scopeAuthorization?.validCsrfMutationObserved !== true
+    || receipt.scopeAuthorization?.deniedActionWriteDelta !== 0
+    || receipt.forgedClaimDefense?.deniedActionWriteDelta !== 0
+    || receipt.providerSignedOverbroadClaims?.tested !== true
+    || !receipt.providerSignedOverbroadClaims?.claimStoreIds?.includes('store-999')
+    || receipt.providerSignedOverbroadClaims?.dbAuthorizationRemainedSubordinate !== true
+    || receipt.noRawCredentials !== true) {
+    throw new Error('Keycloak auth proof receipt failed the authorization acceptance contract')
+  }
+  return receipt
+}
+
+export function resolveAuthProofMounts({ accountsFile, caFile, cwd = process.cwd() }) {
+  if (typeof accountsFile !== 'string' || !accountsFile.trim()
+    || typeof caFile !== 'string' || !caFile.trim()
+    || typeof cwd !== 'string' || !cwd.trim()) {
+    throw new Error('Keycloak auth proof mount source is invalid')
+  }
+  return {
+    accountsFile: resolve(cwd, accountsFile),
+    caFile: resolve(cwd, caFile),
+  }
+}
+
+export function resolveAuthProofNetwork(config, options) {
+  const edge = config?.networks?.edge
+  const labels = edge?.labels ?? {}
+  const caddy = config?.services?.caddy
+  const caddyLabels = caddy?.labels ?? {}
+  if (edge?.name !== `${options.project}_edge`
+    || labels['com.hr-axis.project'] !== 'hr-axis-onprem-core'
+    || labels['com.hr-axis.data-class'] !== 'synthetic'
+    || labels['com.hr-axis.network-class'] !== 'edge'
+    || labels['com.hr-axis.release-id'] !== options.releaseId
+    || !Object.hasOwn(caddy?.networks ?? {}, 'edge')
+    || caddyLabels['com.hr-axis.project'] !== 'hr-axis-onprem-core'
+    || caddyLabels['com.hr-axis.data-class'] !== 'synthetic'
+    || caddyLabels['com.hr-axis.release-id'] !== options.releaseId) {
+    throw new Error('Keycloak auth proof edge network identity mismatch')
+  }
+  return edge.name
+}
+
 export function runKeycloakRuntimeProof(options) {
   if (options.project !== 'hr-axis-onprem-keycloak') throw new Error('Keycloak runtime proof refuses an unapproved Compose project')
   const profiles = ['infra', 'keycloak-bootstrap', 'migrate', 'seed', 'identity-binder', 'runtime']
@@ -597,6 +682,7 @@ export function runKeycloakRuntimeProof(options) {
       projectIdentityMatched: false,
       logsSecretScanned: false,
       noRawCredentials: false,
+      initialAuthProof: null,
       authProof: null,
       publicAdminDenials: null,
       cookieContract: null,
@@ -609,6 +695,7 @@ export function runKeycloakRuntimeProof(options) {
   if (options.requireFreshVolumes) guardedDown(options, base, 'fresh-volume cleanup', { removeVolumes: true })
   try {
     const secretValues = collectSecretValues(options)
+    const authProofMounts = resolveAuthProofMounts(options)
     if (secretValues.size === 0) throw new Error('Keycloak runtime secret scan has no readable secret values')
     const firewallBefore = collectScopedFirewallCounters('Keycloak preflight')
     const scanCapture = (capture, label) => {
@@ -619,6 +706,23 @@ export function runKeycloakRuntimeProof(options) {
     const runScannedOneShot = (args, label) => runDockerCapture(args, label, (capture) => scanCapture(capture, label)).stdout
     const composeConfig = JSON.parse(runDocker([...base, 'config', '--format', 'json'], 'Keycloak Compose identity').toString())
     assertComposeIdentity(composeConfig, options)
+    const authProofNetwork = resolveAuthProofNetwork(composeConfig, options)
+    const executePersonaAuthProof = (label) => {
+      const capture = runDockerCapture(['run', '--rm', '--user', '1000:1000', '--network', authProofNetwork, '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges:true', '--tmpfs', '/tmp:rw,noexec,nosuid,size=32m',
+        '-v', `${authProofMounts.accountsFile}:/run/onprem/synthetic-accounts:ro`,
+        '-v', `${authProofMounts.caFile}:/run/onprem/ca.crt:ro`,
+        '-v', `${process.cwd()}/scripts/onprem-keycloak-auth-proof.mjs:/opt/onprem-keycloak-auth-proof.mjs:ro`,
+        'node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d',
+        'node', '/opt/onprem-keycloak-auth-proof.mjs', '--host', options.authHost, '--connect-host', 'caddy', '--connect-port', '8443', '--accounts-file', '/run/onprem/synthetic-accounts', '--ca-file', '/run/onprem/ca.crt'], label, (value) => scanCapture(value, label))
+      const parsed = JSON.parse(scanCapture(capture, label))
+      assertKeycloakAuthProofReceipt(parsed)
+      const text = JSON.stringify(parsed)
+      assertSecretSafeLogsWithValues(text, `${label} receipt`, secretValues)
+      if (/(?:access_token|id_token|Bearer\s+eyJ|password\s*[=:]\s*[^\s,;]+|secret\s*[=:]\s*[^\s,;]+|eyJ[A-Za-z0-9_-]{20,})/i.test(text)) {
+        throw new Error(`${label} receipt contained raw credentials`)
+      }
+      return parsed
+    }
     receipt.keycloak.projectIdentityMatched = true
     const keycloakImage = composeConfig.services?.keycloak?.image ?? ''
     receipt.keycloak.image = keycloakImage
@@ -648,31 +752,7 @@ export function runKeycloakRuntimeProof(options) {
     receipt.keycloak.managementHealth = true
     runDocker([...base, 'exec', '-T', 'keycloak', '/bin/bash', '-ec', "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/store-ops/.well-known/openid-configuration HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '200' <&3"], 'Keycloak realm metadata')
     receipt.keycloak.realmMetadata = true
-    runDocker([...base, 'exec', '-T', 'keycloak', '/bin/bash', '-ec', "request='GET /realms/store-ops/protocol/openid-connect/auth?client_id=store-ops-admin-web&redirect_uri=https%3A%2F%2Fhr-axis.example.invalid%2Fauth%2Fcallback&response_type=code&scope=openid&code_challenge_method=S256&code_challenge=synthetic HTTP/1.0'; exec 3<>/dev/tcp/127.0.0.1/8080; printf '%s\\r\\nHost: hr-axis.example.invalid\\r\\nConnection: close\\r\\n\\r\\n' \"$request\" >&3; { grep -q '200' <&3 || grep -q '302' <&3; }"], 'Keycloak authorization endpoint')
-    receipt.keycloak.authorizationEndpoint = true
-    const authProofCapture = runDockerCapture(['run', '--rm', '--network', 'host', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges:true', '--tmpfs', '/tmp:rw,noexec,nosuid,size=32m',
-      '-v', `${options.accountsFile}:/run/onprem/synthetic-accounts:ro`,
-      '-v', `${options.caFile}:/run/onprem/ca.crt:ro`,
-      '-v', `${process.cwd()}/scripts/onprem-keycloak-auth-proof.mjs:/opt/onprem-keycloak-auth-proof.mjs:ro`,
-      'node:24-trixie-slim@sha256:0711b541c1c33a8a530ac4f0d391baa9a15b3d804695b1b24a47daa5fb60e74d',
-      '/opt/onprem-keycloak-auth-proof.mjs', '--host', options.authHost, '--accounts-file', '/run/onprem/synthetic-accounts', '--ca-file', '/run/onprem/ca.crt'], 'Keycloak persona auth proof', (capture) => scanCapture(capture, 'Keycloak persona auth proof'))
-    const authProof = scanCapture(authProofCapture, 'Keycloak persona auth proof')
-    receipt.keycloak.authProof = JSON.parse(authProof)
-    receipt.keycloak.publicAdminDenials = receipt.keycloak.authProof.publicAdminDenials ?? null
-    receipt.keycloak.cookieContract = {
-      secureHttpOnlySameSiteHostOnly: receipt.keycloak.authProof.personas?.secureHttpOnlySameSiteHostOnlyCookieCount === receipt.keycloak.authProof.personas?.count,
-      clearingObserved: receipt.keycloak.authProof.personas?.clearingCookieContractCount === receipt.keycloak.authProof.personas?.count,
-    }
-    receipt.keycloak.providerSignedOverbroadClaims = receipt.keycloak.authProof.providerSignedOverbroadClaims ?? null
-    receipt.keycloak.jwksRotation = receipt.keycloak.authProof.jwksRotation ?? {
-      attempted: false,
-      proved: false,
-      status: 'unproven',
-      activationGate: 'owner-approved fresh-Linux key rotation and retired-key rehearsal required',
-    }
-    const authReceiptText = JSON.stringify(receipt.keycloak.authProof)
-    assertSecretSafeLogsWithValues(authReceiptText, 'Keycloak auth receipt', secretValues)
-    if (/(?:access_token|id_token|Bearer\s+eyJ|password\s*[=:]\s*[^\s,;]+|secret\s*[=:]\s*[^\s,;]+|eyJ[A-Za-z0-9_-]{20,})/i.test(authReceiptText)) throw new Error('Keycloak auth receipt contained raw credentials')
+    receipt.keycloak.initialAuthProof = executePersonaAuthProof('initial Keycloak persona auth proof')
     scanCapture(runDockerCapture([...base, 'logs', '--no-color', '--no-log-prefix'], 'Keycloak project secret-log scan'), 'Keycloak project logs')
     receipt.keycloak.noRawCredentials = true
     receipt.keycloak.logsSecretScanned = true
@@ -700,9 +780,23 @@ export function runKeycloakRuntimeProof(options) {
     runScannedOneShot([...base, 'run', '--rm', 'keycloak-bootstrap'], 'Keycloak bootstrap idempotency retry')
     receipt.keycloak.bootstrapSecondRun = true
     runScannedOneShot([...base, 'run', '--rm', '--no-deps', 'identity-binder'], 'synthetic identity binder retry')
-    runDocker([...base, 'up', '-d', 'keycloak'], 'Keycloak restart after retry')
+    runDocker([...base, 'up', '-d', '--wait', '--wait-timeout', '180', 'keycloak'], 'Keycloak restart after retry')
     runDocker([...base, 'exec', '-T', 'keycloak', '/bin/bash', '-ec', "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '200' <&3"], 'Keycloak health after retry')
     runDocker([...base, 'exec', '-T', 'keycloak', '/bin/bash', '-ec', "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/store-ops/.well-known/openid-configuration HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '200' <&3"], 'Keycloak metadata after retry')
+    receipt.keycloak.authProof = executePersonaAuthProof('post-reconcile Keycloak persona auth proof')
+    receipt.keycloak.authorizationEndpoint = true
+    receipt.keycloak.publicAdminDenials = receipt.keycloak.authProof.publicAdminDenials ?? null
+    receipt.keycloak.cookieContract = {
+      secureHttpOnlySameSiteHostOnly: receipt.keycloak.authProof.personas?.secureHttpOnlySameSiteHostOnlyCookieCount === receipt.keycloak.authProof.personas?.count,
+      clearingObserved: receipt.keycloak.authProof.personas?.clearingCookieContractCount === receipt.keycloak.authProof.personas?.count,
+    }
+    receipt.keycloak.providerSignedOverbroadClaims = receipt.keycloak.authProof.providerSignedOverbroadClaims ?? null
+    receipt.keycloak.jwksRotation = receipt.keycloak.authProof.jwksRotation ?? {
+      attempted: false,
+      proved: false,
+      status: 'unproven',
+      activationGate: 'owner-approved fresh-Linux key rotation and retired-key rehearsal required',
+    }
     receipt.keycloak.persistenceAfterRestart = true
     scanCapture(runDockerCapture([...base, 'logs', '--no-color', '--no-log-prefix'], 'Keycloak retry project secret-log scan'), 'Keycloak retry project logs')
     const firewallAfter = collectScopedFirewallCounters('Keycloak post-auth')

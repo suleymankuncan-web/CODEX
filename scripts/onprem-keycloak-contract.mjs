@@ -9,6 +9,7 @@ export const KEYCLOAK_PUBLIC_PATHS = [
   '/realms/store-ops/protocol/openid-connect/auth',
   '/realms/store-ops/protocol/openid-connect/token',
   '/realms/store-ops/protocol/openid-connect/logout',
+  '/realms/store-ops/protocol/openid-connect/logout/*',
   '/realms/store-ops/protocol/openid-connect/certs',
   '/realms/store-ops/login-actions/*',
   '/resources/*',
@@ -232,6 +233,14 @@ export function validateOnpremKeycloakContract(input) {
     fail(/ON CONFLICT \(username\) DO UPDATE/.test(personaSeed), 'persona seed must reconcile account rows idempotently')
     fail(/ON CONFLICT \(user_role_assignment_id\) DO UPDATE/.test(personaSeed) && /ON CONFLICT \(user_action_store_assignment_id\) DO UPDATE/.test(personaSeed), 'persona seed must reconcile role and action assignments idempotently')
     fail(/'STORE_MANAGER'\s*,\s*'store'/.test(personaSeed) && /'REGION_MANAGER'\s*,\s*'region'/.test(personaSeed) && /'REPORT_VIEWER'\s*,\s*'company'/.test(personaSeed), 'persona seed must retain deterministic role scope assignments')
+    const completeScopeAncestry = [
+      "'onprem.store-manager', 'STORE_MANAGER', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid",
+      "'onprem.region-manager', 'REGION_MANAGER', 'region', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, NULL::uuid",
+      "'onprem.report-viewer', 'REPORT_VIEWER', 'company', '00000000-0000-0000-0000-000000000001'::uuid, NULL::uuid, NULL::uuid",
+      "'onprem.store-personnel', 'STORE_PERSONNEL', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid",
+      "'onprem.visual-merchandiser', 'VISUAL_MERCHANDISER', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid",
+    ]
+    fail(completeScopeAncestry.every((row) => personaSeed.includes(row)), 'persona seed authorization hierarchy must retain complete scope ancestry')
   }
   if (input.backendDockerfile) {
     fail(/COPY db\/seeds\/002_onprem_keycloak_personas\.sql \/app\/db\/seeds\/002_onprem_keycloak_personas\.sql/.test(input.backendDockerfile), 'backend image must copy the synthetic Keycloak persona seed')
@@ -246,6 +255,9 @@ export function validateOnpremKeycloakContract(input) {
     const expectedClient = realmFixture.clients?.find((client) => client.clientId === 'store-ops-admin-web')
     fail(realmFixture.realm === KEYCLOAK_REALM && realmFixture.enabled === true && realmFixture.sslRequired === 'external' && realmFixture.registrationAllowed === false && realmFixture.loginWithEmailAllowed === true && realmFixture.resetPasswordAllowed === true && realmFixture.verifyEmail === true, 'realm fixture settings must match the bootstrap contract')
     fail(Boolean(expectedClient) && expectedClient.publicClient === true && expectedClient.standardFlowEnabled === true && expectedClient.implicitFlowEnabled === false && expectedClient.directAccessGrantsEnabled === false && expectedClient.serviceAccountsEnabled === false, 'realm browser client fixture must match the bootstrap contract')
+    const expectedDefaultScopes = ['web-origins', 'profile', 'roles', 'email', 'basic']
+    const fixtureDefaultScopes = expectedClient?.defaultClientScopes
+    fail(Array.isArray(fixtureDefaultScopes) && fixtureDefaultScopes.length === expectedDefaultScopes.length && new Set(fixtureDefaultScopes).size === expectedDefaultScopes.length && expectedDefaultScopes.every((scope) => fixtureDefaultScopes.includes(scope)), 'realm browser client must retain exactly the five approved default scopes including canonical basic subject claims')
     const fixtureOrigin = expectedClient?.redirectUris?.[0]?.replace(/\/auth\/callback$/, '')
     fail(Boolean(expectedClient) && isStrictHttpsOrigin(fixtureOrigin), 'realm browser client redirect must use a strict HTTPS origin')
     fail(Boolean(expectedClient) && expectedClient.webOrigins?.length === 1 && expectedClient.webOrigins[0] === fixtureOrigin, 'realm browser client web origin must match its strict HTTPS origin')
@@ -309,6 +321,12 @@ export function validateOnpremKeycloakContract(input) {
   }
   fail(/create_or_update_mapper roles '(?=[^']*"protocolMapper":"oidc-usermodel-realm-role-mapper")(?=[^']*"multivalued":"true")(?=[^']*"claim.name":"roles")(?=[^']*"userinfo.token.claim":"true")(?=[^']*"id.token.claim":"true")(?=[^']*"access.token.claim":"true")[^']*'/.test(input.bootstrapScript), 'bootstrap roles mapper must preserve the multi-valued realm-role claim contract')
   fail(/create_or_update_mapper store-ops-api-audience '(?=[^']*"protocolMapper":"oidc-audience-mapper")(?=[^']*"included.client.audience":"store-ops-api")(?=[^']*"id.token.claim":"false")(?=[^']*"access.token.claim":"true")(?=[^']*"userinfo.token.claim":"false")[^']*'/.test(input.bootstrapScript), 'bootstrap audience mapper must target store-ops-api only in access tokens')
+  fail(/"defaultClientScopes":\["web-origins","profile","roles","email","basic"\]/.test(input.bootstrapScript)
+    && /\[ "\$default_scope_count" -eq 5 \]/.test(input.bootstrapScript)
+    && /for expected_scope in web-origins profile roles email basic; do/.test(input.bootstrapScript)
+    && /resolve_client_scope_uuid\(\)[\s\S]*get client-scopes[\s\S]*csv_first_fields_matching_second "\$scope_name"[\s\S]*\[ "\$scope_count" -eq 1 \][\s\S]*\*\[!A-Fa-f0-9-\]\*\) die 'client scope id contains unsupported characters'/.test(input.bootstrapScript)
+    && /attached_scope_rows="\$\(kcadm_query get "clients\/\$client_uuid\/default-client-scopes"[\s\S]*for expected_scope in web-origins profile roles email basic; do[\s\S]*scope_uuid="\$\(resolve_client_scope_uuid "\$expected_scope"\)"[\s\S]*kcadm_quiet update "clients\/\$client_uuid\/default-client-scopes\/\$scope_uuid" -r "\$realm" -n \|\| die 'browser client default scope attachment failed'/.test(input.bootstrapScript)
+    && !/create_or_update_mapper sub |assert_mapper sub |"protocolMapper":"oidc-sub-mapper"/.test(input.bootstrapScript), 'bootstrap browser client must receive subject claims from exactly the five canonical default scopes with explicit fail-closed scope attachment and without a client-level sub mapper')
   fail(/for claim in employee_id company_ids region_ids store_ids read_company_ids read_region_ids read_store_ids assigned_store_ids; do/.test(input.bootstrapScript)
     && /\\"protocolMapper\\":\\"oidc-usermodel-attribute-mapper\\"/.test(input.bootstrapScript)
     && /\\"multivalued\\":\\"true\\"/.test(input.bootstrapScript)
@@ -395,6 +413,9 @@ export function validateOnpremKeycloakContract(input) {
     && /chmod 0600 "\$mapper_update_file"/.test(input.bootstrapScript)
     && /update "clients\/\$client_uuid\/protocol-mappers\/models\/\$mapper_uuid"[\s\S]*-f "\$mapper_update_file"/.test(input.bootstrapScript), 'existing mapper updates must bind the validated mapper id into a private JSON body for Keycloak 26.7 idempotency')
   fail(/users\/\$user_uuid\/reset-password/.test(input.bootstrapScript) && /-f\s+"\$password_file"/.test(input.bootstrapScript) && /-n/.test(input.bootstrapScript) && /chmod 0600\s+"\$password_file"/.test(input.bootstrapScript), 'persona password reset must use a mode-0600 JSON request file and kcadm update -f -n')
+  fail(/profile_email="\$username@example\.invalid"/.test(input.bootstrapScript)
+    && /,"email":"%s","firstName":"Synthetic","lastName":"Persona"/.test(input.bootstrapScript)
+    && /"\$username" "\$profile_email"/.test(input.bootstrapScript), 'synthetic persona profile must use a complete deterministic non-personal identity')
   fail(/kcadm\(\)[\s\S]*\/opt\/keycloak\/bin\/kcadm\.sh/.test(input.bootstrapScript)
     && /kcadm_quiet\(\)[\s\S]*kcadm "\$@" >\/dev\/null 2>&1/.test(input.bootstrapScript)
     && /kcadm_query\(\)[\s\S]*kcadm "\$@"/.test(input.bootstrapScript)

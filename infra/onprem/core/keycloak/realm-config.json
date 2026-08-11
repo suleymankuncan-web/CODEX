@@ -42,7 +42,7 @@
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "https://hr-axis.example.invalid/auth/login"
       },
-      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email", "basic"],
       "protocolMappers": [
       {
         "name": "roles",

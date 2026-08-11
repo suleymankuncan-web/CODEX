@@ -4,6 +4,7 @@ import { request as httpsRequest } from 'node:https'
 import { fileURLToPath } from 'node:url'
 
 let trustedCa = null
+let authorizationTransport = Object.freeze({ hostname: '127.0.0.1', port: 443 })
 
 const PERSONAS = new Map([
   ['onprem.store-manager', { role: 'STORE_MANAGER', scope: 'store' }],
@@ -13,16 +14,27 @@ const PERSONAS = new Map([
   ['onprem.visual-merchandiser', { role: 'VISUAL_MERCHANDISER', scope: 'store' }],
 ])
 
+function resolveAuthorizationTransport({ connectHost, connectPort }) {
+  const port = Number(connectPort)
+  const approved = (connectHost === '127.0.0.1' && port === 443)
+    || (connectHost === 'caddy' && port === 8443)
+  if (!approved) throw new Error('authorization transport is not approved')
+  return Object.freeze({ hostname: connectHost, port })
+}
+
 function parseArgs(argv) {
-  const options = { host: 'onprem-proof.example.invalid', accountsFile: '' }
+  const options = { host: 'onprem-proof.example.invalid', accountsFile: '', connectHost: '127.0.0.1', connectPort: 443 }
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
     if (arg === '--host') options.host = argv[++index]
     else if (arg === '--accounts-file') options.accountsFile = argv[++index]
     else if (arg === '--ca-file') options.caFile = argv[++index]
+    else if (arg === '--connect-host') options.connectHost = argv[++index]
+    else if (arg === '--connect-port') options.connectPort = Number(argv[++index])
     else throw new Error(`unknown argument: ${arg}`)
   }
   if (!options.host || !options.accountsFile || !options.caFile) throw new Error('--host, --accounts-file, and --ca-file are required')
+  resolveAuthorizationTransport(options)
   return options
 }
 
@@ -53,6 +65,30 @@ function readAccounts(path) {
 
 function base64url(value) {
   return Buffer.from(value).toString('base64url')
+}
+
+function buildAuthorizationRequest({ host, verifier, state }) {
+  if (typeof host !== 'string' || !/^[A-Za-z0-9.-]+$/.test(host) || host.startsWith('.') || host.endsWith('.') || host.includes('..')) {
+    throw new Error('authorization request host is invalid')
+  }
+  if (typeof verifier !== 'string' || verifier.length < 43 || verifier.length > 128 || !/^[A-Za-z0-9._~-]+$/.test(verifier)) {
+    throw new Error('authorization request PKCE verifier is invalid')
+  }
+  if (typeof state !== 'string' || !state || state.length > 256 || !/^[A-Za-z0-9_-]+$/.test(state)) {
+    throw new Error('authorization request state is invalid')
+  }
+  const challenge = createHash('sha256').update(verifier).digest('base64url')
+  const redirectUri = `https://${host}/auth/callback`
+  const authorizationPath = `/realms/store-ops/protocol/openid-connect/auth?${new URLSearchParams({
+    client_id: 'store-ops-admin-web',
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid profile email roles',
+    state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+  })}`
+  return { authorizationPath, challenge, redirectUri }
 }
 
 function cookieJar() {
@@ -133,8 +169,8 @@ function assertBrowserSessionClearContract(headers) {
 function requestRaw(host, path, { method = 'GET', headers = {}, body = '', jar } = {}) {
   return new Promise((resolve, reject) => {
     const request = httpsRequest({
-      hostname: '127.0.0.1',
-      port: 443,
+      hostname: authorizationTransport.hostname,
+      port: authorizationTransport.port,
       servername: host,
       path,
       method,
@@ -184,6 +220,30 @@ async function requestFollow(host, path, options = {}, limit = 8) {
   throw new Error('OIDC redirect chain exceeded the bounded limit')
 }
 
+function classifyAuthorizationEntryFailure(response, host) {
+  const status = Number(response?.status)
+  const location = response?.headers?.location
+  if ([301, 302, 303, 307, 308].includes(status) && typeof location === 'string' && location) {
+    let redirect
+    try {
+      redirect = new URL(location, `https://${host}`)
+    } catch {
+      return 'malformed-authorization-redirect'
+    }
+    if (redirect.protocol !== 'https:' || redirect.hostname !== host) return 'redirect-escaped-approved-host'
+    const error = redirect.searchParams.get('error')
+    if (error === 'invalid_scope') return 'scope-rejected'
+    if (error === 'invalid_request') return 'authorization-request-rejected'
+    if (error === 'unauthorized_client') return 'client-rejected'
+    if (error) return 'authorization-callback-error'
+    return `unexpected-authorization-redirect-${status}`
+  }
+  if (status === 400) return 'authorization-request-rejected'
+  return Number.isInteger(status) && status >= 100 && status <= 599
+    ? `unexpected-authorization-response-${status}`
+    : 'unexpected-authorization-response'
+}
+
 function hiddenFormFields(html) {
   const fields = {}
   for (const match of html.matchAll(/<input\b[^>]*>/gi)) {
@@ -207,23 +267,30 @@ function decodeHtmlAttribute(value) {
     .replaceAll('&gt;', '>')
 }
 
+function classifyLoginCodeFailure(response) {
+  const body = String(response?.body ?? '')
+  const finalPath = String(response?.finalPath ?? '').split('?', 1)[0]
+  if (/invalid username or password|invalid user credentials/i.test(body)) return 'credentials-rejected'
+  if (/invalid parameter|invalid_request|invalid redirect/i.test(body) || Number(response?.status) === 400) return 'authorization-request-rejected'
+  if (finalPath === '/auth/callback') return 'callback-returned-without-observed-code'
+  if (finalPath === '/auth/login') return 'application-login-returned'
+  if (/(?:alert-error|kc-feedback-text|input-error)/i.test(body)) return 'login-form-error'
+  if (Number(response?.status) === 200 && /(?:kc-form-login|login-actions\/authenticate)/i.test(`${finalPath}\n${body}`)) {
+    return 'login-form-returned-without-code'
+  }
+  const status = Number(response?.status)
+  return Number.isInteger(status) && status >= 100 && status <= 599
+    ? `unexpected-login-response-${status}`
+    : 'unexpected-login-response'
+}
+
 async function loginPersona(host, account) {
   const jar = cookieJar()
   const verifier = base64url(requireRandom(32))
-  const challenge = createHash('sha256').update(verifier).digest('base64url')
   const state = base64url(requireRandom(24))
-  const redirectUri = `https://${host}/auth/callback`
-  const authorizationPath = `/realms/store-ops/protocol/openid-connect/auth?${new URLSearchParams({
-    client_id: 'store-ops-admin-web',
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'openid profile email roles',
-    state,
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-  })}`
+  const { authorizationPath, redirectUri } = buildAuthorizationRequest({ host, verifier, state })
   const loginPage = await requestRaw(host, authorizationPath, { jar })
-  if (loginPage.status !== 200) throw new Error(`authorization endpoint returned ${loginPage.status}`)
+  if (loginPage.status !== 200) throw new Error(`authorization endpoint rejected request (${classifyAuthorizationEntryFailure(loginPage, host)})`)
   const formAction = loginPage.body.match(/<form\b[^>]*action\s*=\s*["']([^"']+)["']/i)?.[1]
   const decodedFormAction = formAction ? decodeHtmlAttribute(formAction) : ''
   if (!decodedFormAction) throw new Error('Keycloak login form was not rendered')
@@ -237,7 +304,7 @@ async function loginPersona(host, account) {
     jar,
   })
   const codeLocation = loginResult.history.map((entry) => entry.location).find((location) => location && location.includes('code='))
-  if (!codeLocation) throw new Error(`Keycloak login did not return an authorization code for ${account.accountKey}`)
+  if (!codeLocation) throw new Error(`Keycloak login did not return an authorization code (${classifyLoginCodeFailure(loginResult)})`)
   const callback = new URL(codeLocation, `https://${host}`)
   if (callback.searchParams.get('state') !== state) throw new Error('OIDC state did not round-trip')
   const tokenBody = new URLSearchParams({
@@ -256,6 +323,7 @@ async function loginPersona(host, account) {
   const tokenPayload = JSON.parse(tokenResponse.body)
   const token = tokenPayload.access_token
   if (typeof token !== 'string' || !token) throw new Error('OIDC token response omitted access_token')
+  assertAccessTokenContract(host, token, account)
   // The browser-session policy keeps access/refresh/ID tokens in memory only;
   // the proof never persists or forwards an ID-token hint during logout.
   return { token, jar }
@@ -265,6 +333,49 @@ function requireRandom(length) {
   return randomBytes(length)
 }
 
+function assertAccessTokenContract(host, token, account) {
+  let payload
+  try {
+    payload = JSON.parse(Buffer.from(String(token).split('.')[1] ?? '', 'base64url').toString('utf8'))
+  } catch {
+    throw new Error('OIDC access token contract is malformed')
+  }
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud]
+  const roles = Array.isArray(payload.roles) ? payload.roles : [payload.roles]
+  if (payload.iss !== `https://${host}/realms/store-ops`) throw new Error('OIDC access token issuer contract failed')
+  if (!audiences.includes('store-ops-api')) throw new Error('OIDC access token audience contract failed')
+  if (payload.azp !== 'store-ops-admin-web') throw new Error('OIDC access token authorized-party contract failed')
+  if (typeof payload.sub !== 'string' || !payload.sub) {
+    if (!Number.isInteger(payload.auth_time)) throw new Error('OIDC access token canonical basic scope contract failed')
+    throw new Error('OIDC access token subject contract failed')
+  }
+  if (!roles.includes(account.role)) throw new Error('OIDC access token role contract failed')
+  return { issuer: true, audience: true, authorizedParty: true, subject: true, role: true }
+}
+
+function classifyBrowserSessionCreateFailure(response) {
+  const status = Number(response?.status)
+  let message = ''
+  try {
+    const parsed = JSON.parse(String(response?.body ?? ''))
+    message = typeof parsed?.message === 'string' ? parsed.message : ''
+  } catch {
+    // Only exact allowlisted messages are classified; response bodies are never emitted.
+  }
+  if (status === 401) {
+    if (message === 'Invalid JWT') return 'invalid-jwt'
+    if (message === 'User account is not mapped') return 'account-not-mapped'
+    if (message === 'User account has no active role assignments') return 'no-active-role-assignment'
+    if (message === 'User account is inactive' || message === 'User account is inactive or missing') return 'account-inactive'
+    if (message === 'JWT subject claim is required') return 'subject-missing'
+    return 'unauthorized'
+  }
+  if (status === 503) return 'authorization-context-unavailable'
+  return Number.isInteger(status) && status >= 100 && status <= 599
+    ? `unexpected-browser-session-response-${status}`
+    : 'unexpected-browser-session-response'
+}
+
 async function createBrowserSession(host, token) {
   const jar = cookieJar()
   const response = await requestRaw(host, '/api/auth/browser-session', {
@@ -272,7 +383,9 @@ async function createBrowserSession(host, token) {
     headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
     jar,
   })
-  if (response.status !== 201 && response.status !== 200) throw new Error(`browser-session creation returned ${response.status}`)
+  if (response.status !== 201 && response.status !== 200) {
+    throw new Error(`browser-session creation failed (${classifyBrowserSessionCreateFailure(response)})`)
+  }
   const body = JSON.parse(response.body)
   if (typeof body.csrfToken !== 'string' || !body.csrfToken) throw new Error('browser-session response omitted CSRF nonce')
   const cookieContract = assertBrowserSessionCookieContract(response.headers)
@@ -384,6 +497,23 @@ function assertApprovedLogoutResponse(response, host) {
   return loginLocations.length > 0
 }
 
+function classifyRealmLogoutFailure(response, host) {
+  const status = Number(response?.status)
+  let pathname = ''
+  try {
+    const url = new URL(String(response?.finalPath ?? ''), `https://${host}`)
+    if (url.origin === `https://${host}`) pathname = url.pathname
+  } catch {
+    // The classifier returns a fixed category and never emits the raw path.
+  }
+  if (status === 404 && pathname.startsWith('/realms/store-ops/protocol/openid-connect/logout/')) return 'logout-confirmation-route-unavailable'
+  if (status === 404 && pathname.startsWith('/realms/store-ops/login-actions/')) return 'logout-login-action-route-unavailable'
+  if (status === 404 && pathname === '/auth/login') return 'approved-login-route-unavailable'
+  return Number.isInteger(status) && status >= 100 && status <= 599
+    ? `unexpected-realm-logout-response-${status}`
+    : 'unexpected-realm-logout-response'
+}
+
 async function assertUnallowlistedLogoutRejected(host, jar) {
   const query = new URLSearchParams({
     client_id: 'store-ops-admin-web',
@@ -408,6 +538,7 @@ function assertSession(session, account) {
 }
 
 async function run(options) {
+  authorizationTransport = resolveAuthorizationTransport(options)
   trustedCa = readFileSync(options.caFile)
   const accounts = readAccounts(options.accountsFile)
   const discoveryResponse = await jsonRequest(options.host, '/realms/store-ops/.well-known/openid-configuration')
@@ -486,26 +617,23 @@ async function run(options) {
       actionDeniedStatus = actionDenied.status
       if (actionDenied.status !== 403) throw new Error(`${account.accountKey} role/action scope denial returned ${actionDenied.status}`)
     }
-    const cookie = browser.sessionCookie
     const logout = await jsonRequest(options.host, '/api/auth/browser-session', { method: 'DELETE', headers: { Accept: 'application/json' }, jar: browser.jar })
     if (logout.status !== 200) throw new Error(`${account.accountKey} logout returned ${logout.status}`)
     const clearCookieContract = assertBrowserSessionClearContract(logout.headers)
     if (browser.jar.header()) throw new Error(`${account.accountKey} logout did not clear browser cookie state`)
-    const afterLogout = await jsonRequest(options.host, '/api/auth/session', { headers: { Accept: 'application/json', Cookie: cookie } })
+    const afterLogout = await jsonRequest(options.host, '/api/auth/session', { headers: { Accept: 'application/json' }, jar: browser.jar })
     if (![401, 403].includes(afterLogout.status)) throw new Error(`${account.accountKey} logout did not invalidate the session`)
     const realmLogout = await endSessionLogout(options.host, oidcJar)
     const returnedToLogin = assertApprovedLogoutResponse(realmLogout, options.host)
-    if (![200, 204].includes(realmLogout.status) || !returnedToLogin) throw new Error(`${account.accountKey} realm logout did not return to the approved login route`)
+    if (![200, 204].includes(realmLogout.status)) throw new Error(`${account.accountKey} realm logout failed (${classifyRealmLogoutFailure(realmLogout, options.host)})`)
+    if (!returnedToLogin) throw new Error(`${account.accountKey} realm logout did not return to the approved login route`)
     const unallowlistedLogoutStatus = await assertUnallowlistedLogoutRejected(options.host, oidcJar)
-    const reauthorize = await requestRaw(options.host, `/realms/store-ops/protocol/openid-connect/auth?${new URLSearchParams({
-      client_id: 'store-ops-admin-web',
-      redirect_uri: `https://${options.host}/auth/callback`,
-      response_type: 'code',
-      scope: 'openid profile email roles',
+    const reauthorizationRequest = buildAuthorizationRequest({
+      host: options.host,
+      verifier: base64url(requireRandom(32)),
       state: base64url(requireRandom(24)),
-      code_challenge: createHash('sha256').update(base64url(requireRandom(32))).digest('base64url'),
-      code_challenge_method: 'S256',
-    })}`, { jar: oidcJar })
+    })
+    const reauthorize = await requestRaw(options.host, reauthorizationRequest.authorizationPath, { jar: oidcJar })
     if (reauthorize.status !== 200 || !/<form\b/i.test(reauthorize.body)) throw new Error(`${account.accountKey} realm logout left an SSO session active`)
     personaResults.push({ accountKey: account.accountKey, role: account.role, sessionStatus: session.status, csrfDeniedStatus: csrfDenied.status, csrfRecoveryStatus: csrfRecovery.status, scopeDeniedStatus: scopeDenied.status, assignedActionStatus, unassignedActionStatus, actionDeniedStatus, actionCountBefore, actionCountAfter, logoutStatus: logout.status, realmLogoutStatus: realmLogout.status, unallowlistedLogoutStatus, reauthorizeRequiresCredentials: true, cookieContract: browser.cookieContract, clearCookieContract, providerSignedOverbroadClaims })
   }
@@ -585,12 +713,19 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
 }
 
 export {
+  assertAccessTokenContract,
   assertBrowserSessionClearContract,
   assertBrowserSessionCookieContract,
   assertPublicAdminDenials,
   assertSession,
+  buildAuthorizationRequest,
+  classifyAuthorizationEntryFailure,
+  classifyBrowserSessionCreateFailure,
+  classifyLoginCodeFailure,
+  classifyRealmLogoutFailure,
   decodeHtmlAttribute,
   parseArgs,
   readAccounts,
+  resolveAuthorizationTransport,
   run as runKeycloakAuthProof,
 }

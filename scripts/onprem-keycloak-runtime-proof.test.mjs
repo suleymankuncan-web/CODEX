@@ -2,18 +2,149 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { isAbsolute, join, resolve } from 'node:path'
 import { test } from 'node:test'
 
 import {
   assertFirewallCounterDelta,
+  assertKeycloakAuthProofReceipt,
   assertSecretSafeLogsWithValues,
   classifyKeycloakBootstrapDiagnostic,
   collectSecretValues,
+  resolveAuthProofMounts,
+  resolveAuthProofNetwork,
   runDockerCapture,
   runKeycloakRuntimeProof,
   validateComposeContainerIdentities,
 } from './onprem-keycloak-runtime-proof.mjs'
+
+test('Keycloak authorization success is derived only from the full validated auth receipt', () => {
+  const valid = {
+    schemaVersion: 1,
+    dataClass: 'synthetic',
+    discovery: { status: 200, issuerMatches: true, authorizationEndpointMatches: true, tokenEndpointMatches: true, logoutEndpointMatches: true, jwksEndpointMatches: true },
+    jwks: { status: 200, keyCount: 1, unknownKeyStatus: 401 },
+    publicAdminDenials: { paths: ['/admin', '/admin/', '/admin/master/console/', '/auth/admin', '/auth/admin/realms/master/console/'], allDenied: true },
+    jwtRejections: { 'unknown-key': 401, 'wrong-issuer': 401, 'wrong-audience': 401, 'wrong-role-scope': 403 },
+    personas: {
+      count: 5,
+      sessionsVerified: 5,
+      csrfMissingDenied: 5,
+      csrfRecoverySucceeded: 5,
+      crossScopeDenied: 5,
+      authorizedMutationCount: 1,
+      deniedMutationCount: 5,
+      realmLogoutCount: 5,
+      unallowlistedLogoutRejectedCount: 5,
+      reauthorizeCredentialCount: 5,
+      secureHttpOnlySameSiteHostOnlyCookieCount: 5,
+      clearingCookieContractCount: 5,
+    },
+    csrf: { missingHeaderStatus: 403, recoveryStatus: 200 },
+    logout: { invalidated: true, realmEndSession: true, reauthorizeRequiresCredentials: true },
+    scopeAuthorization: { crossScopeDenied: true, validCsrfMutationObserved: true, deniedActionWriteDelta: 0 },
+    forgedClaimDefense: { deniedActionWriteDelta: 0 },
+    providerSignedOverbroadClaims: { tested: true, claimStoreIds: ['store-100', 'store-999'], dbAuthorizationRemainedSubordinate: true },
+    noRawCredentials: true,
+  }
+  assert.deepEqual(assertKeycloakAuthProofReceipt(valid), valid)
+  const mutations = [
+    receipt => { receipt.schemaVersion = 2 },
+    receipt => { receipt.discovery.authorizationEndpointMatches = false },
+    receipt => { receipt.jwks.keyCount = 0 },
+    receipt => { receipt.publicAdminDenials.allDenied = false },
+    receipt => { receipt.jwtRejections['wrong-audience'] = 200 },
+    receipt => { receipt.personas.sessionsVerified = 4 },
+    receipt => { receipt.personas.csrfMissingDenied = 4 },
+    receipt => { receipt.personas.authorizedMutationCount = 0 },
+    receipt => { receipt.personas.deniedMutationCount = 4 },
+    receipt => { receipt.personas.clearingCookieContractCount = 4 },
+    receipt => { receipt.csrf.recoveryStatus = 403 },
+    receipt => { receipt.logout.realmEndSession = false },
+    receipt => { receipt.scopeAuthorization.deniedActionWriteDelta = 1 },
+    receipt => { receipt.forgedClaimDefense.deniedActionWriteDelta = 1 },
+    receipt => { receipt.providerSignedOverbroadClaims.dbAuthorizationRemainedSubordinate = false },
+    receipt => { receipt.noRawCredentials = false },
+  ]
+  for (const mutate of mutations) {
+    const receipt = structuredClone(valid)
+    mutate(receipt)
+    assert.throws(() => assertKeycloakAuthProofReceipt(receipt), /auth proof receipt/i)
+  }
+
+  const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  assert.doesNotMatch(source, /code_challenge=synthetic|hr-axis\.example\.invalid|grep -q '200' <&3 \|\| grep -q '302'/)
+  const helper = source.indexOf('const executePersonaAuthProof')
+  const parse = source.indexOf('JSON.parse(scanCapture(capture, label))', helper)
+  const validate = source.indexOf('assertKeycloakAuthProofReceipt(parsed)', parse)
+  const initial = source.indexOf("executePersonaAuthProof('initial Keycloak persona auth proof')", validate)
+  const retry = source.indexOf("'Keycloak bootstrap idempotency retry'", initial)
+  const postReconcile = source.indexOf("executePersonaAuthProof('post-reconcile Keycloak persona auth proof')", retry)
+  const accepted = source.indexOf('receipt.keycloak.authorizationEndpoint = true', postReconcile)
+  assert.ok(helper > 0 && helper < parse && parse < validate && validate < initial && initial < retry && retry < postReconcile && postReconcile < accepted)
+})
+
+test('Keycloak auth proof bind sources are absolute for Docker', () => {
+  const mounts = resolveAuthProofMounts({
+    accountsFile: 'infra/onprem/core/secret-files/keycloak/synthetic-accounts',
+    caFile: 'infra/onprem/core/secret-files/postgres/ca.crt',
+    cwd: 'synthetic-workspace',
+  })
+  assert.equal(mounts.accountsFile, resolve('synthetic-workspace', 'infra/onprem/core/secret-files/keycloak/synthetic-accounts'))
+  assert.equal(mounts.caFile, resolve('synthetic-workspace', 'infra/onprem/core/secret-files/postgres/ca.crt'))
+  assert.equal(isAbsolute(mounts.accountsFile), true)
+  assert.equal(isAbsolute(mounts.caFile), true)
+  assert.throws(() => resolveAuthProofMounts({ accountsFile: '', caFile: 'ca.crt', cwd: '/workspace' }), /mount/i)
+
+  const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  const authContainer = source.slice(source.indexOf('const executePersonaAuthProof'), source.indexOf('const parsed = JSON.parse', source.indexOf('const executePersonaAuthProof')))
+  assert.match(authContainer, /'--user', '1000:1000'/)
+  assert.doesNotMatch(authContainer, /'--network', 'host'/)
+  assert.match(authContainer, /'--network', authProofNetwork/)
+  assert.match(authContainer, /'--connect-host', 'caddy', '--connect-port', '8443'/)
+  assert.match(authContainer, /'node', '\/opt\/onprem-keycloak-auth-proof\.mjs'/)
+})
+
+test('Keycloak auth proof joins only the release-bound private edge network', () => {
+  const options = { project: 'hr-axis-onprem-keycloak', releaseId: 'synthetic-release' }
+  const config = {
+    services: {
+      caddy: {
+        labels: {
+          'com.hr-axis.project': 'hr-axis-onprem-core',
+          'com.hr-axis.data-class': 'synthetic',
+          'com.hr-axis.release-id': options.releaseId,
+        },
+        networks: { edge: null, proxy: null },
+      },
+    },
+    networks: {
+      edge: {
+        name: 'hr-axis-onprem-keycloak_edge',
+        labels: {
+          'com.hr-axis.project': 'hr-axis-onprem-core',
+          'com.hr-axis.data-class': 'synthetic',
+          'com.hr-axis.network-class': 'edge',
+          'com.hr-axis.release-id': options.releaseId,
+        },
+      },
+    },
+  }
+  assert.equal(resolveAuthProofNetwork(config, options), 'hr-axis-onprem-keycloak_edge')
+  for (const mutate of [
+    value => { value.networks.edge.name = 'other_edge' },
+    value => { value.networks.edge.labels['com.hr-axis.project'] = 'other' },
+    value => { value.networks.edge.labels['com.hr-axis.data-class'] = 'production' },
+    value => { value.networks.edge.labels['com.hr-axis.network-class'] = 'data' },
+    value => { value.networks.edge.labels['com.hr-axis.release-id'] = 'other-release' },
+    value => { delete value.services.caddy.networks.edge },
+    value => { value.services.caddy.labels['com.hr-axis.release-id'] = 'other-release' },
+  ]) {
+    const invalid = structuredClone(config)
+    mutate(invalid)
+    assert.throws(() => resolveAuthProofNetwork(invalid, options), /edge network identity/i)
+  }
+})
 
 test('Keycloak Docker capture scans failed partial output before a sanitized retrieval error', () => {
   const canary = 'synthetic-partial-keycloak-password-canary'
@@ -302,6 +433,14 @@ test('Keycloak final firewall checkpoint covers the complete retry and restart p
   const firewallAssertion = source.indexOf('const firewallDelta = assertFirewallCounterDelta(', firewallAfter)
   assert.ok(retry > 0 && retry < restart && restart < health && health < metadata && metadata < retryLogs)
   assert.ok(retryLogs < firewallAfter && firewallAfter < firewallAssertion)
+})
+
+test('Keycloak retry restart waits within the bounded healthcheck budget before direct probes', () => {
+  const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  const restart = source.indexOf("[...base, 'up', '-d', '--wait', '--wait-timeout', '180', 'keycloak']")
+  const health = source.indexOf('Keycloak health after retry')
+  assert.ok(restart > 0 && restart < health)
+  assert.doesNotMatch(source, /\[\.\.\.base, 'up', '-d', 'keycloak'\], 'Keycloak restart after retry'/)
 })
 
 test('Keycloak stop is inspected and secret-scanned before bootstrap retry', () => {

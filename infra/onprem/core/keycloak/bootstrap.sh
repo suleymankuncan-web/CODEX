@@ -381,7 +381,7 @@ done
 redirect_uri="$public_origin/auth/callback"
 logout_uri="$public_origin/auth/login"
 cat > "$client_file" <<JSON
-{"clientId":"$client_id","name":"HR Axis browser","enabled":true,"protocol":"openid-connect","publicClient":true,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"redirectUris":["$redirect_uri"],"webOrigins":["$public_origin"],"attributes":{"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"$logout_uri"},"defaultClientScopes":["web-origins","profile","roles","email"]}
+{"clientId":"$client_id","name":"HR Axis browser","enabled":true,"protocol":"openid-connect","publicClient":true,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"redirectUris":["$redirect_uri"],"webOrigins":["$public_origin"],"attributes":{"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"$logout_uri"},"defaultClientScopes":["web-origins","profile","roles","email","basic"]}
 JSON
 client_uuid="$(kcadm_query get clients -r "$realm" -q "clientId=$client_id" --fields id --format csv --noquotes | sed -n '1p')"
 if [ -n "$client_uuid" ]; then
@@ -391,6 +391,33 @@ else
   client_uuid="$(kcadm_query get clients -r "$realm" -q "clientId=$client_id" --fields id --format csv --noquotes | sed -n '1p')"
 fi
 [ -n "$client_uuid" ] || die 'browser client id was not resolved'
+
+resolve_client_scope_uuid() {
+  scope_name="$1"
+  scope_rows="$(kcadm_query get client-scopes -r "$realm" -q "name=$scope_name" --fields id,name --format csv --noquotes 2>/dev/null)" || die 'client scope inventory read failed'
+  scope_matches="$(printf '%s\n' "$scope_rows" | csv_first_fields_matching_second "$scope_name")"
+  scope_count="$(printf '%s\n' "$scope_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  [ "$scope_count" -eq 1 ] || die 'client scope identity is missing or ambiguous'
+  scope_uuid="$scope_matches"
+  case "$scope_uuid" in
+    *[!A-Fa-f0-9-]*) die 'client scope id contains unsupported characters' ;;
+  esac
+  printf '%s' "$scope_uuid"
+}
+
+attached_scope_rows="$(kcadm_query get "clients/$client_uuid/default-client-scopes" -r "$realm" --fields id,name --format csv --noquotes 2>/dev/null)" || die 'browser client default scopes reconciliation read failed'
+for expected_scope in web-origins profile roles email basic; do
+  attached_scope_matches="$(printf '%s\n' "$attached_scope_rows" | csv_first_fields_matching_second "$expected_scope")"
+  attached_scope_count="$(printf '%s\n' "$attached_scope_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  case "$attached_scope_count" in
+    0)
+      scope_uuid="$(resolve_client_scope_uuid "$expected_scope")"
+      kcadm_quiet update "clients/$client_uuid/default-client-scopes/$scope_uuid" -r "$realm" -n || die 'browser client default scope attachment failed'
+      ;;
+    1) ;;
+    *) die 'browser client default scope attachment is ambiguous' ;;
+  esac
+done
 
 create_or_update_mapper() {
   mapper_name="$1"
@@ -492,8 +519,8 @@ assert_mapper() {
 default_scope_rows="$(kcadm_query get "clients/$client_uuid/default-client-scopes" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'browser client default scopes parity read failed'
 default_scope_names="$(printf '%s\n' "$default_scope_rows" | csv_first_fields | sed '/^[[:space:]]*$/d')"
 default_scope_count="$(printf '%s\n' "$default_scope_names" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
-[ "$default_scope_count" -eq 4 ] || die 'browser client default scopes parity mismatch'
-for expected_scope in web-origins profile roles email; do
+[ "$default_scope_count" -eq 5 ] || die 'browser client default scopes parity mismatch'
+for expected_scope in web-origins profile roles email basic; do
   printf '%s\n' "$default_scope_names" | grep -Fqx "$expected_scope" || die 'browser client default scopes parity mismatch'
 done
 assert_mapper roles oidc-usermodel-realm-role-mapper
@@ -539,9 +566,10 @@ JSON
     chmod 0600 "$password_file"
     kcadm_quiet update "users/$user_uuid/reset-password" -r "$realm" -f "$password_file" -n || die 'synthetic account password update failed'
     unset password
+    profile_email="$username@example.invalid"
     user_json="$tmp_dir/$account_key.json"
     {
-      printf '{"enabled":true,"emailVerified":true,"requiredActions":[],"attributes":{"employee_id":'
+      printf '{"username":"%s","email":"%s","firstName":"Synthetic","lastName":"Persona","enabled":true,"emailVerified":true,"requiredActions":[],"attributes":{"employee_id":' "$username" "$profile_email"
       json_array "$employee_id"
       printf ',"company_ids":'
       json_array "$company_ids"
@@ -560,6 +588,7 @@ JSON
       printf '}}\n'
     } > "$user_json"
     kcadm_quiet update "users/$user_uuid" -r "$realm" -f "$user_json" || die 'synthetic account claim update failed'
+    unset profile_email
     managed_role_names="$(kcadm_query get "users/$user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
     for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
       case ",$roles," in

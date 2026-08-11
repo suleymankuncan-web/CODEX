@@ -36,11 +36,11 @@ WITH assignments(
     store_id
 ) AS (
     VALUES
-        ('90000000-0000-0000-0000-000000000011'::uuid, 'onprem.store-manager', 'STORE_MANAGER', 'store', NULL::uuid, NULL::uuid, '00000000-0000-0000-0000-000000000100'::uuid),
-        ('90000000-0000-0000-0000-000000000012'::uuid, 'onprem.region-manager', 'REGION_MANAGER', 'region', NULL::uuid, '00000000-0000-0000-0000-000000000010'::uuid, NULL::uuid),
+        ('90000000-0000-0000-0000-000000000011'::uuid, 'onprem.store-manager', 'STORE_MANAGER', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid),
+        ('90000000-0000-0000-0000-000000000012'::uuid, 'onprem.region-manager', 'REGION_MANAGER', 'region', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, NULL::uuid),
         ('90000000-0000-0000-0000-000000000013'::uuid, 'onprem.report-viewer', 'REPORT_VIEWER', 'company', '00000000-0000-0000-0000-000000000001'::uuid, NULL::uuid, NULL::uuid),
-        ('90000000-0000-0000-0000-000000000014'::uuid, 'onprem.store-personnel', 'STORE_PERSONNEL', 'store', NULL::uuid, NULL::uuid, '00000000-0000-0000-0000-000000000100'::uuid),
-        ('90000000-0000-0000-0000-000000000015'::uuid, 'onprem.visual-merchandiser', 'VISUAL_MERCHANDISER', 'store', NULL::uuid, NULL::uuid, '00000000-0000-0000-0000-000000000100'::uuid)
+        ('90000000-0000-0000-0000-000000000014'::uuid, 'onprem.store-personnel', 'STORE_PERSONNEL', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid),
+        ('90000000-0000-0000-0000-000000000015'::uuid, 'onprem.visual-merchandiser', 'VISUAL_MERCHANDISER', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid)
 )
 INSERT INTO ops.user_role_assignment (
     user_role_assignment_id,

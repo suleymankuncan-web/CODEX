@@ -2,6 +2,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
   Post,
   Req,
@@ -114,6 +116,7 @@ export class AuthSessionController {
   }
 
   @Post("browser-session/csrf")
+  @HttpCode(HttpStatus.OK)
   recoverBrowserSessionCsrf(
     @Req()
     request: {

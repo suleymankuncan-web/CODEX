@@ -36,7 +36,7 @@ https://{$HR_AXIS_PUBLIC_HOST}:8443 {
     respond @authAdmin `{"error":"not_found"}` 404
     @keycloakAdmin path /admin /admin/*
     respond @keycloakAdmin `{"error":"not_found"}` 404
-    @authAllowed path /realms/store-ops /realms/store-ops/.well-known/openid-configuration /realms/store-ops/protocol/openid-connect/auth /realms/store-ops/protocol/openid-connect/token /realms/store-ops/protocol/openid-connect/logout /realms/store-ops/protocol/openid-connect/certs /realms/store-ops/login-actions/* /resources/*
+    @authAllowed path /realms/store-ops /realms/store-ops/.well-known/openid-configuration /realms/store-ops/protocol/openid-connect/auth /realms/store-ops/protocol/openid-connect/token /realms/store-ops/protocol/openid-connect/logout /realms/store-ops/protocol/openid-connect/logout/* /realms/store-ops/protocol/openid-connect/certs /realms/store-ops/login-actions/* /resources/*
     handle @authAllowed {
       reverse_proxy keycloak:8080
     }

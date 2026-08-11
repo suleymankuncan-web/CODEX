@@ -476,6 +476,40 @@ test('ONP-3B strict public origin contract rejects userinfo, port, path, query, 
   ]) assert.equal(isStrictHttpsOrigin(origin), false, origin)
 })
 
+test('ONP-3B synthetic personas receive a complete non-personal Keycloak profile', () => {
+  const baseline = input()
+  assert.equal(validateOnpremKeycloakContract(baseline).ok, true)
+  for (const bootstrapScript of [
+    baseline.bootstrapScript.replace('profile_email="$username@example.invalid"', 'profile_email=""'),
+    baseline.bootstrapScript.replace(',"email":"%s"', ''),
+    baseline.bootstrapScript.replace(',"firstName":"Synthetic"', ''),
+    baseline.bootstrapScript.replace(',"lastName":"Persona"', ''),
+  ]) {
+    const result = validateOnpremKeycloakContract({ ...baseline, bootstrapScript })
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /synthetic persona profile/i.test(error)))
+  }
+})
+
+test('ONP-3B synthetic role assignments retain the complete active scope ancestry', () => {
+  const baseline = input()
+  const expectedRows = [
+    "'onprem.store-manager', 'STORE_MANAGER', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid",
+    "'onprem.region-manager', 'REGION_MANAGER', 'region', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, NULL::uuid",
+    "'onprem.report-viewer', 'REPORT_VIEWER', 'company', '00000000-0000-0000-0000-000000000001'::uuid, NULL::uuid, NULL::uuid",
+    "'onprem.store-personnel', 'STORE_PERSONNEL', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid",
+    "'onprem.visual-merchandiser', 'VISUAL_MERCHANDISER', 'store', '00000000-0000-0000-0000-000000000001'::uuid, '00000000-0000-0000-0000-000000000010'::uuid, '00000000-0000-0000-0000-000000000100'::uuid",
+  ]
+  for (const row of expectedRows) assert.ok(baseline.personaSeed.includes(row), row)
+
+  for (const row of expectedRows) {
+    const mutated = { ...baseline, personaSeed: baseline.personaSeed.replace(row, row.replace("'00000000-0000-0000-0000-000000000001'::uuid", 'NULL::uuid')) }
+    const result = validateOnpremKeycloakContract(mutated)
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /scope ancestry|authorization hierarchy/i.test(error)))
+  }
+})
+
 test('ONP-3B contract requires the provider-signed overbroad scope rehearsal row', () => {
   const baseline = input()
   const overbroadRow = 'onprem.store-manager|onprem.store-manager|STORE_MANAGER|synthetic-employee-store-manager|company-001|region-001|store-100|company-001|region-001|store-100,store-999|store-100'
@@ -573,4 +607,25 @@ test('ONP-3B contract rejects mapper semantic drift in the parity fixture', () =
   const result = validateOnpremKeycloakContract(mutated)
   assert.equal(result.ok, false)
   assert.ok(result.errors.some((error) => /audience|mapper/i.test(error)))
+})
+
+test('ONP-3B browser client receives the OIDC subject from the exact canonical default scopes', () => {
+  const baseline = input()
+  const subMapper = 'create_or_update_mapper sub \'{"name":"sub","protocol":"openid-connect","protocolMapper":"oidc-sub-mapper","consentRequired":false,"config":{"access.token.claim":"true","introspection.token.claim":"true"}}\''
+  const scopeResolver = 'scope_uuid="$(resolve_client_scope_uuid "$expected_scope")"'
+  const scopeAttach = 'kcadm_quiet update "clients/$client_uuid/default-client-scopes/$scope_uuid" -r "$realm" -n || die \'browser client default scope attachment failed\''
+
+  for (const mutated of [
+    { ...baseline, bootstrapScript: baseline.bootstrapScript.replace('"defaultClientScopes":["web-origins","profile","roles","email","basic"]', '"defaultClientScopes":["web-origins","profile","roles","email"]') },
+    { ...baseline, bootstrapScript: baseline.bootstrapScript.replace('[ "$default_scope_count" -eq 5 ]', '[ "$default_scope_count" -eq 4 ]') },
+    { ...baseline, bootstrapScript: baseline.bootstrapScript.replace('for expected_scope in web-origins profile roles email basic; do', 'for expected_scope in web-origins profile roles email; do') },
+    { ...baseline, realmConfig: baseline.realmConfig.replace('"defaultClientScopes": ["web-origins", "profile", "roles", "email", "basic"]', '"defaultClientScopes": ["web-origins", "profile", "roles", "email"]') },
+    { ...baseline, bootstrapScript: baseline.bootstrapScript.replace("create_or_update_mapper roles '", `${subMapper}\ncreate_or_update_mapper roles '` ) },
+    { ...baseline, bootstrapScript: baseline.bootstrapScript.replace(scopeResolver, 'scope_uuid=""') },
+    { ...baseline, bootstrapScript: baseline.bootstrapScript.replace(scopeAttach, ':') },
+  ]) {
+    const result = validateOnpremKeycloakContract(mutated)
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /subject|basic|default scope|client.*sub mapper/i.test(error)))
+  }
 })
