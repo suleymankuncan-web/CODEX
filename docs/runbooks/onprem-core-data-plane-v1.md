@@ -4,14 +4,14 @@ Status: repository-ready; target-host execution gated
 
 Risk: R5 database privileges, migration, Redis recovery, secrets, and network isolation
 
-Scope: ONP-2 synthetic private core only
+Scope: ONP-3B synthetic private core (database, Redis, and local Keycloak)
 
 ## Decision and boundary
 
-ONP-2 supplies one isolated Compose project with Caddy, frontend, API, worker,
-explicit migrator, explicit synthetic seed, PostgreSQL 16, and Redis 7. It
-does not install Keycloak. Caddy returns `503 identity_not_installed` for
-`/auth` until ONP-3. Only TCP 443 is published; Caddy runs as numeric UID 10001
+ONP-3B supplies one isolated Compose project with Caddy, frontend, API, worker,
+explicit migrator, explicit synthetic seed, PostgreSQL 16, Redis 7, and a
+local Keycloak runtime with an explicit bootstrap reconcile and identity binder.
+Only TCP 443 is published; Caddy runs as numeric UID 10001
 on container port 8443 without added Linux capabilities. Strict-local Caddy
 also disables OCSP stapling so a certificate AIA responder cannot introduce
 undeclared egress. Certificate revocation and trust distribution remain an
@@ -33,6 +33,12 @@ Corporate client-CIDR enforcement for Docker-forwarded 443 traffic remains an
 IT activation gate and must be enforced in the target host's forwarding path;
 the synthetic INPUT policy is not accepted as company client scoping.
 
+Keycloak is attached only to the private `proxy` and `data` networks. The
+bootstrap service is a temporary private server on those networks: all
+long-lived Keycloak nodes remain stopped while `bootstrap-admin service` and
+the in-place realm reconcile run, and Keycloak is started only after the
+bootstrap and identity binder complete successfully.
+
 Rollback is a two-step boundary: ordinary `down` always preserves volumes;
 synthetic volume deletion is a separate exact-identity destructive action.
 Neither action touches hosted services or user data.
@@ -43,19 +49,32 @@ Neither action touches hosted services or user data.
 | --- | --- | ---: | ---: | ---: | --- |
 | Caddy | edge, proxy | 0.25 | 128 MiB | 64 | long-lived |
 | frontend | proxy | 0.25 | 128 MiB | 64 | long-lived |
-| API | proxy, app, data | 0.9 | 1536 MiB | 192 | long-lived |
-| worker | app, data | 0.9 | 1536 MiB | 192 | long-lived |
-| PostgreSQL | data | 1.2 | 2048 MiB | 192 | long-lived |
+| API | proxy, app, data | 0.75 | 1536 MiB | 192 | long-lived |
+| worker | app, data | 0.75 | 1536 MiB | 192 | long-lived |
+| Keycloak | app, data | 0.5 | 2048 MiB | 256 | long-lived |
+| PostgreSQL | data | 1.0 | 2048 MiB | 192 | long-lived |
 | Redis | data | 0.5 | 768 MiB | 96 | long-lived |
+| Keycloak bootstrap | app, data | 0.5 | 1 GiB | 128 | explicit one-shot |
+| identity binder | app, data | 0.5 | 512 MiB | 128 | explicit one-shot |
 | migrator | app, data | 0.5 | 512 MiB | 128 | explicit one-shot |
 | synthetic seed | app, data | 0.5 | 512 MiB | 128 | explicit one-shot |
 
-The steady runtime total is exactly 4 vCPU and 6 GiB, inside the
-approved 4 vCPU/8 GiB rehearsal host. Migrator and seed are limited to 0.5
-vCPU/512 MiB and must run while the runtime profile is down. Every long-lived
-service has a health check, restart policy, PID/resource ceilings, bounded
-`json-file` rotation, and stop grace. Proxy, app, and data are internal Docker
-networks. Edge is also a pinned subnet so Caddy egress is covered by IT-11.
+The resource table is a synthetic rehearsal target, pending fresh Linux
+measurement and explicit owner approval; it is not a production sizing claim.
+The Keycloak bootstrap one-shot ceiling is a fresh-Linux rehearsal correction:
+official Keycloak container guidance calls for at least 750 MiB to approximate
+the former 512 MiB heap, and the temporary server plus repeated JVM `kcadm`
+processes need headroom beyond the former 0.25 CPU/512 MiB limit. The 0.5 CPU/
+1 GiB ceiling is not production sizing and does not change the long-lived
+Keycloak or steady-state totals.
+The target steady runtime total is 4 vCPU and 8 GiB; one-shot ceilings are
+additional and are not part of that steady total. Required order is PostgreSQL/Redis, migrator, synthetic seed,
+Keycloak bootstrap, identity binder (`run --rm --no-deps`), then the runtime
+services. Keycloak must be stopped before bootstrap and is restarted only
+after the reconcile succeeds. Every long-lived service has a health check,
+restart policy, PID/resource ceilings, bounded `json-file` rotation, and stop
+grace. Proxy, app, and data are internal Docker networks. Edge is also a
+pinned subnet so Caddy egress is covered by IT-11.
 
 ## Database and Redis contracts
 
@@ -103,7 +122,7 @@ other providers have no credential file or secret environment key.
 ## Operator sequence
 
 1. Verify the signed release manifest and exact image identities outside this
-   ONP-2 slice.
+   ONP-3B slice.
 2. Confirm the runtime profile is down.
 3. Run `docker compose config` with the approved env file and retain no output
    containing secret material.
@@ -121,8 +140,13 @@ other providers have no credential file or secret environment key.
    migration count/checksum aggregate with no new apply.
 7. Run the explicit synthetic seed through `hr_axis_api` and record only
    aggregate counts.
-8. Start API, worker, frontend, and Caddy. Never enable runtime auto-migration.
-9. Execute the fail-closed runtime proof on the approved Linux host:
+8. While every long-lived Keycloak node is stopped, run the temporary private
+   Keycloak bootstrap reconcile, then run `identity-binder` with `--rm
+   --no-deps`. Record only aggregate
+   subject counts; never retain the private subject manifest in evidence.
+9. Start Keycloak, API, worker, frontend, and Caddy. Never enable runtime
+   auto-migration.
+10. Execute the fail-closed runtime proof on the approved Linux host:
 
    ```sh
    sudo node scripts/onprem-core-runtime-proof.mjs --execute \
@@ -144,6 +168,10 @@ stop, full firewall evidence, conntrack availability, or zero project-origin
 external flows cannot be proven. Its Redis proof enqueues a delayed job, stops
 Redis gracefully, observes API and worker become unhealthy, restarts the same
 volume, observes recovery, then processes and verifies one completion marker.
+Bootstrap failure output is limited to the exact allowlisted phase/category
+diagnostic and bounded exit/signal fields; malformed, multiple, or
+secret-bearing output remains generic and raw logs are never retained in the
+receipt.
 `iptables-save -c` reject-counter deltas are authoritative attempted-egress
 evidence; conntrack is supplemental accepted-flow evidence. The harness does
 not delete volumes and does not install firewall tooling or rules.
@@ -180,9 +208,9 @@ deletion before either volume removal is attempted.
 
 ## Requirements mapping
 
-| Requirement | ONP-2 evidence |
+| Requirement | ONP-3B evidence |
 | --- | --- |
-| FR-1, FR-2 | strict-local Compose topology and explicit service profiles; identity intentionally remains 503 until ONP-3 |
+| FR-1, FR-2 | strict-local Compose topology, explicit service profiles, and local Keycloak bootstrap/binder order |
 | FR-4 | one-shot locked migrator, second-run, orphan/checksum negative proof, runtime migration disabled |
 | FR-7 | missing external-provider credentials, disabled flags, internal networks, host policy and conntrack observation |
 | NFR-1 | missing identities/secrets/firewall evidence fail closed; DDL SQLSTATE 42501 |
@@ -191,18 +219,18 @@ deletion before either volume removal is attempted.
 | NFR-4 | no hosted runtime dependency or external provider credential |
 | NFR-5 | limited here to same-volume Redis/PostgreSQL restart; backup/restore remains ONP-5 |
 | NFR-6 | exact digests/counts/states without credentials, raw UUIDs, keys, or payloads |
-| NFR-7 | exact 4 vCPU steady ceilings and 8 GiB host headroom |
+| NFR-7 | exact 4 vCPU steady ceilings and 8 GiB container-memory envelope |
 | NFR-8 | same backend/frontend business artifacts; infrastructure differs by configuration |
-| AC-1 | clean-host installation remains ONP-5; ONP-2 supplies its fail-closed core harness |
+| AC-1 | clean-host installation remains ONP-5; ONP-3B supplies its fail-closed core harness |
 | AC-2 | only host TCP 443; all service ports private |
-| AC-3 | health checks for all long-lived ONP-2 services; identity/storage arrive later |
+| AC-3 | health checks for all long-lived ONP-3B services, including Keycloak |
 | AC-6 | exactly-once terminal BullMQ job survives accepted Redis same-volume restart |
 | AC-10 | exact project-subnet allowlist, zero reject-counter delta, and supplemental zero project-origin conntrack flows |
 | AC-12 | isolated project and no hosted provider mutation or retirement |
 
 ## No-Go and residual gates
 
-- Full runtime PASS requires the backend ONP-2 compiled entries
+- Full runtime PASS requires the backend ONP-3B compiled entries
   `dist/src/onprem/migrate.js`, `dist/src/onprem/seed-synthetic.js`,
   `dist/src/onprem/worker-health.js`, and
   `dist/src/onprem/synthetic-queue-probe.js` with strict-local `*_FILE`
@@ -227,3 +255,12 @@ deletion before either volume removal is attempted.
   ONP-4. Backup/restore/offline installation is ONP-5.
 - Real data, provider calls, company hosts/IPs, production deployment, hosted
   cutover, and hosted rollback deletion remain unauthorized.
+
+## Unresolved activation gates
+
+- The Keycloak license receipt must retain
+  `residualExternalReviewRequired: true`; repository reconciliation is not
+  final component clearance. Owner/legal review is required before activation.
+- JWKS rotation and retired-key acceptance are intentionally reported as
+  `proved: false`, `status: unproven` in the synthetic receipt. A fresh Linux
+  rehearsal with an approved rotation window is required before activation.

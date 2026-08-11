@@ -33,6 +33,13 @@ test('ONP-1 workflow proves read-only API and worker startup from one image', ()
   assert.match(workflow, /curl --fail --silent http:\/\/127\.0\.0\.1:18082\/api\/health\/live/)
   assert.match(workflow, /docker inspect -f '\{\{\.State\.ExitCode\}\}' "\$worker_id"\)" = 0/)
   assert.match(workflow, /BullMQ worker context started/)
+  assert.equal(
+    (sameImageSmoke.match(/worker_started=true/g) ?? []).length,
+    2,
+  )
+  assert.match(sameImageSmoke, /if test "\$worker_status" = running; then\s+if docker logs "\$worker_id" 2>&1 \| grep -F 'BullMQ worker context started' >\/dev\/null; then\s+worker_started=true\s+fi/)
+  assert.match(sameImageSmoke, /elif test "\$worker_status" = exited; then\s+test "\$\(docker inspect -f '\{\{\.State\.ExitCode\}\}' "\$worker_id"\)" = 0\s+if docker logs "\$worker_id" 2>&1 \| grep -F 'BullMQ worker context started' >\/dev\/null; then\s+worker_started=true\s+fi/)
+  assert.doesNotMatch(sameImageSmoke, /grep -Fq/)
   assert.match(workflow, /hr-axis-onprem-backend:proof dist\/src\/workers\.js/)
   assert.match(workflow, /Prove the pruned backend dependency graph and lazy runtime features/)
   assert.match(workflow, /require\.resolve\(name\)/)
@@ -106,4 +113,66 @@ test('ONP-1 explicitly disables frontend and backend source maps', () => {
   assert.match(frontendVite, /sourcemap:\s*false/)
   assert.match(frontendDockerfile, /ARG VITE_API_BASE_URL=\/api/)
   assert.doesNotMatch(frontendDockerfile, /ARG VITE_API_BASE_URL=http:\/\/api:3000/)
+})
+
+test('ONP-3B frontend image pins OIDC to the secure cookie-session transport', () => {
+  assert.match(frontendDockerfile, /VITE_AUTH_MODE=bearer/)
+  assert.match(frontendDockerfile, /VITE_AUTH_PROVIDER=oidc/)
+  assert.match(frontendDockerfile, /VITE_BROWSER_SESSION_TRANSPORT=cookie/)
+  assert.match(frontendDockerfile, /VITE_SENTRY_ENABLED=false/)
+})
+
+test('ONP runtime cleanup uses guarded exact-project CLIs and still restores the firewall on cleanup failure', () => {
+  const cleanup = coreRuntimeProof.split('          cleanup() {')[1]?.split('          trap cleanup EXIT')[0] ?? ''
+  assert.match(cleanup, /onprem-keycloak-runtime-proof\.mjs --cleanup/)
+  assert.match(cleanup, /onprem-core-runtime-proof\.mjs --cleanup/)
+  assert.match(cleanup, /--project hr-axis-onprem-keycloak/)
+  assert.match(cleanup, /--project hr-axis-onprem-core/)
+  assert.match(cleanup, /--release-id "\$RELEASE_ID"/)
+  assert.match(cleanup, /iptables-restore < "\$firewall_snapshot"/)
+  assert.match(cleanup, /cleanup_status/)
+  assert.match(cleanup, /return "\$cleanup_status"/)
+  assert.doesNotMatch(cleanup, /docker compose[^\n]*down --remove-orphans/)
+  assert.doesNotMatch(cleanup, /--cleanup[^\n]*\|\| true/)
+})
+
+test('ONP image proof keeps shell heredocs inside their YAML run blocks', () => {
+  const lines = workflow.split(/\r?\n/)
+  for (let index = 0; index < lines.length; index += 1) {
+    const opener = lines[index].match(/^(\s*).*<<-?\s*['"]?([A-Z][A-Z0-9_]*)['"]?\s*$/)
+    if (!opener) continue
+
+    const [, , delimiter] = opener
+    const runBlockIndex = lines.findLastIndex(
+      (line, candidateIndex) => candidateIndex < index && /^\s*run:\s*\|\s*$/.test(line),
+    )
+    assert.notEqual(runBlockIndex, -1, `missing YAML run block before heredoc at line ${index + 1}`)
+    const runIndentation = lines[runBlockIndex].match(/^\s*/)?.[0].length ?? 0
+    const requiredIndentation = runIndentation + 2
+    const closingIndex = lines.findIndex(
+      (line, candidateIndex) => candidateIndex > index && line.trim() === delimiter,
+    )
+    assert.notEqual(closingIndex, -1, `missing ${delimiter} heredoc delimiter after line ${index + 1}`)
+
+    for (let bodyIndex = index + 1; bodyIndex <= closingIndex; bodyIndex += 1) {
+      const line = lines[bodyIndex]
+      if (line.length === 0) continue
+      const bodyIndentation = line.match(/^\s*/)?.[0].length ?? 0
+      assert.ok(
+        bodyIndentation >= requiredIndentation,
+        `${delimiter} heredoc escaped its YAML run block at line ${bodyIndex + 1}`,
+      )
+    }
+    index = closingIndex
+  }
+})
+
+test('ONP-3B content guard invokes keycloak kind for the final image and every layer', () => {
+  const keycloakGuardCalls = (workflow.match(/node scripts\/onprem-image-content-guard\.mjs --rootfs[^\n]+/g) ?? [])
+    .filter((call) => /keycloak-rootfs|keycloak_layer_root/.test(call))
+  assert.equal(keycloakGuardCalls.length, 2)
+  for (const call of keycloakGuardCalls) {
+    assert.match(call, /--kind keycloak/)
+    assert.match(call, /--application-root \/opt\/keycloak/)
+  }
 })

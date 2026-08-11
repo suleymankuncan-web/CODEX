@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const REQUIRED_TABLES = ['raw', 'mangle', 'nat', 'filter']
+const COUNTED_RULE_PREFIX = /^\[\d+:\d+\]\s+(?=-A )/
 
 export function collectFirewallEvidence({ counters = false, execute = execFileSync } = {}) {
   return REQUIRED_TABLES.map((table) => {
@@ -26,8 +27,23 @@ export function collectFirewallEvidence({ counters = false, execute = execFileSy
   }).join('\n') + '\n'
 }
 
-function chainRules(text, chain) {
-  return text.split(/\r?\n/).filter((line) => line.startsWith(`-A ${chain} `))
+function normalizeRuleForAnalysis(line) {
+  return line.replace(COUNTED_RULE_PREFIX, '')
+}
+
+function canonicalizeForAnalysis(text) {
+  const lines = String(text).split(/\r?\n/)
+  const malformedCounterRule = lines.some((line) =>
+    line.trimStart().startsWith('[') && !COUNTED_RULE_PREFIX.test(line),
+  )
+  return {
+    lines: lines.map(normalizeRuleForAnalysis),
+    malformedCounterRule,
+  }
+}
+
+function chainRules(lines, chain) {
+  return lines.filter((line) => line.startsWith(`-A ${chain} `))
 }
 
 function hasEstablished(rule) {
@@ -79,11 +95,14 @@ function bypassRuleTouchesProject(rule, privateSubnets) {
 
 export function validateFirewallRules({ iptables, privateSubnets, proxyPorts, sshAdminCidrs }) {
   const errors = []
-  const input = chainRules(iptables, 'INPUT')
-  const dockerUser = chainRules(iptables, 'DOCKER-USER')
-  const output = chainRules(iptables, 'OUTPUT')
+  const canonical = canonicalizeForAnalysis(iptables)
+  const input = chainRules(canonical.lines, 'INPUT')
+  const dockerUser = chainRules(canonical.lines, 'DOCKER-USER')
+  const output = chainRules(canonical.lines, 'OUTPUT')
   const inputEstablished = input.findIndex(hasEstablished)
   const firstInputAccept = input.findIndex((rule) => /-j ACCEPT\b/.test(rule))
+
+  if (canonical.malformedCounterRule) errors.push('counter-prefixed rule evidence is malformed')
 
   for (const table of REQUIRED_TABLES) {
     if (!new RegExp(`^\\*${table}$`, 'm').test(iptables)) {
@@ -166,7 +185,7 @@ export function validateFirewallRules({ iptables, privateSubnets, proxyPorts, ss
     }
   }
 
-  for (const rule of iptables.split(/\r?\n/).filter((line) => line.startsWith('-A '))) {
+  for (const rule of canonical.lines.filter((line) => line.startsWith('-A '))) {
     const touchesPrivateSubnet = bypassRuleTouchesProject(rule, privateSubnets)
     if (!touchesPrivateSubnet) continue
     if (/\s-j NOTRACK\b/.test(rule)) errors.push('raw NOTRACK bypass is forbidden for project-private subnets')

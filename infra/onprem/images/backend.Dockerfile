@@ -37,6 +37,7 @@ COPY --from=production-dependencies /workspace/backend/node_modules ./node_modul
 COPY db/schema.sql /app/db/schema.sql
 COPY db/migrations/ /app/db/migrations/
 COPY db/seeds/001_reference_seed.sql /app/db/seeds/001_reference_seed.sql
+COPY db/seeds/002_onprem_keycloak_personas.sql /app/db/seeds/002_onprem_keycloak_personas.sql
 
 EXPOSE 3000
 USER nonroot

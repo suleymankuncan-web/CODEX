@@ -2,8 +2,18 @@ import { AuthSessionController } from "./auth-session.controller";
 import { BrowserSessionService } from "../browser-session.service";
 import { buildAuthenticatedUser } from "../auth-context.service";
 import { UnauthorizedException } from "@nestjs/common";
+import { HTTP_CODE_METADATA } from "@nestjs/common/constants";
 
 describe("AuthSessionController", () => {
+  it("returns CSRF recovery with HTTP 200 rather than POST's default 201", () => {
+    expect(
+      Reflect.getMetadata(
+        HTTP_CODE_METADATA,
+        AuthSessionController.prototype.recoverBrowserSessionCsrf,
+      ),
+    ).toBe(200);
+  });
+
   it("returns PKCE token endpoint metadata in auth bootstrap", () => {
     const controller = new AuthSessionController({
       authMode: "jwt",

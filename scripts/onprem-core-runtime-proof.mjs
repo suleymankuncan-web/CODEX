@@ -4,36 +4,26 @@ import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
+import { assertGracefulStopState, observeKeycloakGracefulStop, KEYCLOAK_GRACEFUL_STOP_WAIT_MS } from './onprem-graceful-stop-contract.mjs'
 import {
   buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE,
   classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
 import { assertPostRedisLoadCheckpoint, assertProbeOutput, assertStoppedAofCommandSequence, buildQueueSnapshotComposeArgs, classifyQueueFailureReason, classifyRedisPersistenceLogs, collectRedisRestartLogDelta, collectStoppedAofInventoryEvidence, createRuntimeIsolationControls, parseStoppedAofInventory, sanitizeQueuePersistenceCheckpoint } from './onprem-redis-persistence-diagnostic.mjs'
-
 export {
   buildTlsProbeDockerArgs, classifyTlsProbeResult,
   sanitizeTlsErrorCode, TLS_WRONG_CA_CODES,
   verifyCaddyRuntimeInvariants,
 } from './onprem-caddy-runtime-proof.mjs'
-
 export { assertProbeOutput, classifyRedisPersistenceLogs, parseProbeCompletion, parseStoppedAofInventory, sanitizeQueuePersistenceCheckpoint } from './onprem-redis-persistence-diagnostic.mjs'
-
 const PRIVATE_SUBNETS = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
-const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis']
-const EXPECTED_LIMITS = {
-  caddy: [0.25, 128 * 1024 * 1024, 64],
-  frontend: [0.25, 128 * 1024 * 1024, 64],
-  api: [0.9, 1536 * 1024 * 1024, 192],
-  worker: [0.9, 1536 * 1024 * 1024, 192],
-  postgres: [1.2, 2048 * 1024 * 1024, 192],
-  redis: [0.5, 768 * 1024 * 1024, 96],
-}
-
+const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis', 'keycloak']
+const CORE_CLEANUP_PROFILES = ['infra', 'migrate', 'seed', 'runtime']
+const CORE_ALLOWED_SERVICES = new Set(['api', 'caddy', 'frontend', 'identity-binder', 'keycloak', 'keycloak-bootstrap', 'migrator', 'postgres', 'redis', 'synthetic-seed', 'worker'])
+const EXPECTED_LIMITS = { caddy: [0.25, 128 * 1024 * 1024, 64], frontend: [0.25, 128 * 1024 * 1024, 64], api: [0.75, 1536 * 1024 * 1024, 192], worker: [0.75, 1536 * 1024 * 1024, 192], postgres: [1.0, 2048 * 1024 * 1024, 192], keycloak: [0.5, 2048 * 1024 * 1024, 256], redis: [0.5, 768 * 1024 * 1024, 96] }
 let activeSecretValues = []
-
 export function redact(value) {
   let redacted = String(value)
     .replace(/(postgres(?:ql)?|redis):\/\/[^\s:@]+:[^\s@]+@/gi, '$1://[redacted]@')
@@ -43,12 +33,10 @@ export function redact(value) {
   }
   return redacted
 }
-
 function boundedText(value, limit = 768) {
   const text = String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
   return text.length <= limit ? text : `${text.slice(0, limit)}…[truncated]`
 }
-
 export function serviceFailureDiagnostic({ service, state = {}, logs = '', secretValues = new Map() }) {
   const redactDiagnostic = (value) => {
     let result = redact(String(value ?? ''))
@@ -78,27 +66,25 @@ export function serviceFailureDiagnostic({ service, state = {}, logs = '', secre
   }
   return boundedText(JSON.stringify(diagnostic), 4096)
 }
-
-function command(command, args, options = {}) {
+export function command(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
     encoding: 'utf8',
     env: options.env ?? process.env,
     input: options.input,
     windowsHide: true,
-  })
-  if (result.error || (!options.allowFailure && result.status !== 0)) {
-    const tail = redact(`${result.stderr ?? ''}\n${result.stdout ?? ''}`).trim().split(/\r?\n/).slice(-12).join('\n')
+  }); const output = { status: result.status ?? -1, stderr: result.stderr ?? '', stdout: result.stdout ?? '' }; let inspectionFailed = false; try { options.inspectOutput?.(output) } catch { inspectionFailed = true }
+  if (result.error || (!options.allowFailure && result.status !== 0)) { const tail = options.suppressOutput || inspectionFailed ? '' : redact(`${result.stderr ?? ''}\n${result.stdout ?? ''}`).trim().split(/\r?\n/).slice(-12).join('\n')
     throw new Error(`${options.label ?? command} failed${tail ? `\n${tail}` : ''}`)
   }
-  return { status: result.status ?? -1, stderr: result.stderr ?? '', stdout: result.stdout ?? '' }
+  if (inspectionFailed) throw new Error(`${options.label ?? command} output inspection failed`); return output
 }
-
 function parseArgs(argv) {
   const options = {
     compose: 'infra/onprem/core/compose.yaml',
     project: 'hr-axis-onprem-core',
     sshAdminCidrs: [],
+    cleanup: false,
   }
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
@@ -110,30 +96,94 @@ function parseArgs(argv) {
     else if (arg === '--receipt') options.receipt = argv[++index]
     else if (arg === '--require-fresh-volumes') options.requireFreshVolumes = true
     else if (arg === '--execute') options.execute = true
+    else if (arg === '--cleanup') options.cleanup = true
     else throw new Error(`unknown argument: ${arg}`)
   }
   if (!options.envFile) throw new Error('--env-file is required')
   if (!options.releaseId || !/^[A-Za-z0-9._-]{8,128}$/.test(options.releaseId)) throw new Error('--release-id must be an exact sanitized release identity')
-  if (options.sshAdminCidrs.length === 0) throw new Error('at least one --ssh-admin-cidr is required')
-  if (!options.execute) throw new Error('full Linux/Docker proof requires explicit --execute')
-  if (process.platform !== 'linux') throw new Error('full runtime proof is Linux-only; docker compose config remains portable')
+  if (!options.execute && !options.cleanup) throw new Error('full Linux/Docker proof or guarded cleanup requires an explicit mode')
+  if (options.execute && options.sshAdminCidrs.length === 0) throw new Error('at least one --ssh-admin-cidr is required')
+  if (options.cleanup && options.project !== 'hr-axis-onprem-core') throw new Error('core runtime cleanup refuses an unapproved Compose project')
+  if (options.execute && process.platform !== 'linux') throw new Error('full runtime proof is Linux-only; docker compose config remains portable')
   return options
 }
-
+function coreComposeBaseArgs(options) {
+  return [
+    'compose',
+    '--project-name', options.project,
+    '--env-file', resolve(options.envFile),
+    '--file', resolve(options.compose),
+  ]
+}
+export function validateCoreCleanupContainerIdentities(containers, options, label = 'Core runtime cleanup') {
+  const services = new Set()
+  return containers.map((container) => {
+    const labels = container?.Config?.Labels ?? container?.labels ?? {}
+    const service = labels['com.docker.compose.service']
+    if (labels['com.docker.compose.project'] !== options.project
+      || !CORE_ALLOWED_SERVICES.has(service)
+      || labels['com.hr-axis.project'] !== 'hr-axis-onprem-core'
+      || labels['com.hr-axis.data-class'] !== 'synthetic'
+      || labels['com.hr-axis.release-id'] !== options.releaseId) {
+      throw new Error(`${label} refused unexpected or mismatched project container`)
+    }
+    if (labels['com.docker.compose.container-number'] !== '1') {
+      throw new Error(`${label} refused non-1 Compose container-number for ${service ?? 'unknown service'}`)
+    }
+    if (labels['com.docker.compose.oneoff'] !== 'False') {
+      throw new Error(`${label} refused one-off Compose container for ${service ?? 'unknown service'}`)
+    }
+    if (services.has(service)) throw new Error(`${label} refused duplicate Compose service identity: ${service}`)
+    services.add(service)
+    return { id: container.id, service }
+  })
+}
+function listCoreCleanupContainers(options, label) {
+  const raw = command('docker', [
+    'ps', '-aq', '--filter', `label=com.docker.compose.project=${options.project}`,
+  ], { label: `${label} container inventory` }).stdout
+  const ids = raw.split(/\r?\n/).map((id) => id.trim()).filter(Boolean)
+  const containers = ids.map((id) => {
+    let inspected
+    try {
+      inspected = JSON.parse(command('docker', ['inspect', id], { label: `${label} container inspect` }).stdout)[0]
+    } catch {
+      throw new Error(`${label} refused an unreadable container identity`)
+    }
+    return { id, Config: inspected?.Config }
+  })
+  return validateCoreCleanupContainerIdentities(containers, options, label)
+}
+function guardedCoreDown(options, label = 'Core runtime cleanup') {
+  if (options.project !== 'hr-axis-onprem-core') throw new Error('core runtime cleanup refuses an unapproved Compose project')
+  if (!options.releaseId || !/^[A-Za-z0-9._-]{8,128}$/.test(options.releaseId)) {
+    throw new Error('core runtime cleanup requires an exact sanitized release identity')
+  }
+  listCoreCleanupContainers(options, label)
+  const profiles = CORE_CLEANUP_PROFILES.flatMap((profile) => ['--profile', profile])
+  command('docker', [
+    ...coreComposeBaseArgs(options),
+    ...profiles,
+    'down', '--remove-orphans',
+  ], { label })
+  const remaining = listCoreCleanupContainers(options, `${label} postcondition`)
+  if (remaining.length > 0) throw new Error(`${label} left project containers behind`)
+  return { cleaned: true, project: options.project, releaseId: options.releaseId }
+}
+export function cleanupCoreRuntime(options) {
+  return guardedCoreDown(options)
+}
 function immutableImage(value) {
   return (/^sha256:[0-9a-f]{64}$/i.test(value) || /@sha256:[0-9a-f]{64}$/i.test(value)) && !/sha256:0{64}$/i.test(value)
 }
-
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex')
 }
-
 export function assertSecretSourceMetadata(name, metadata) {
   if (metadata.isSymbolicLink() || !metadata.isFile()) {
     throw new Error(`secret source is not a regular non-symlink file: ${name}`)
   }
 }
-
 export function assertNoSecretLeak(secretValues, surfaces) {
   for (const [surface, value] of Object.entries(surfaces)) {
     const serialized = String(value ?? '')
@@ -144,7 +194,7 @@ export function assertNoSecretLeak(secretValues, surfaces) {
     }
   }
 }
-
+export const isConfidentialRuntimeSecretName = (name) => String(name) !== 'keycloak_database_username'
 export function migrationTreeDigestFromOutput(output) {
   const digest = String(output?.stdout ?? '').match(
     /"migrationTreeDigest":"([0-9a-f]{64})"/i,
@@ -152,7 +202,6 @@ export function migrationTreeDigestFromOutput(output) {
   if (!digest) throw new Error('migration runner omitted its resolved tree digest')
   return digest.toLowerCase()
 }
-
 export function parseMigrationIdentity(value) {
   const match = String(value).match(/^(\d+)\|t\|([0-9a-f]{64})$/)
   const succeededCount = Number(match?.[1])
@@ -161,7 +210,6 @@ export function parseMigrationIdentity(value) {
   }
   return { identity: match[2], succeededCount }
 }
-
 export function parseSequencePrivilegeMatrix(value) {
   if (String(value) !== 't|t|f|t|t|f') {
     throw new Error('runtime sequence least-privilege contract mismatch')
@@ -171,26 +219,11 @@ export function parseSequencePrivilegeMatrix(value) {
     worker: { select: true, update: false, usage: true },
   }
 }
-
+export const EXPECTED_PUBLIC_SECRET_NAMES = Object.freeze(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
+export const EXPECTED_SECRET_UIDS = Object.freeze({ caddy_tls_private_key: 10001, postgres_tls_private_key: 70, postgres_bootstrap_password: 70, postgres_migrator_password: 70, postgres_api_password: 70, postgres_worker_password: 70, redis_users_acl: 999, redis_health_url: 999, migrator_database_url: 65532, api_database_url: 65532, worker_database_url: 65532, redis_api_url: 65532, redis_worker_url: 65532, browser_session_secret: 65532, binder_database_url: 1000, keycloak_database_url: 1000, keycloak_database_username: 1000, keycloak_database_password: 1000, postgres_keycloak_database_password: 70, keycloak_bootstrap_username: 1000, keycloak_bootstrap_password: 1000, keycloak_smtp_auth_user: 1000, keycloak_smtp_password: 1000, keycloak_synthetic_accounts: 1000 })
 function assertSecretPermissions(config) {
-  const publicFiles = new Set(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
-  const expectedUid = new Map([
-    ['caddy_tls_private_key', 10001],
-    ['postgres_tls_private_key', 70],
-    ['postgres_bootstrap_password', 70],
-    ['postgres_migrator_password', 70],
-    ['postgres_api_password', 70],
-    ['postgres_worker_password', 70],
-    ['redis_users_acl', 999],
-    ['redis_health_url', 999],
-    ['migrator_database_url', 65532],
-    ['api_database_url', 65532],
-    ['worker_database_url', 65532],
-    ['redis_api_url', 65532],
-    ['redis_worker_url', 65532],
-    ['jwt_secret', 65532],
-  ])
-
+  const publicFiles = new Set(EXPECTED_PUBLIC_SECRET_NAMES)
+  const expectedUid = new Map(Object.entries(EXPECTED_SECRET_UIDS))
   for (const [name, descriptor] of Object.entries(config.secrets ?? {})) {
     const path = descriptor.file
     const stat = lstatSync(path)
@@ -206,7 +239,6 @@ function assertSecretPermissions(config) {
     }
   }
 }
-
 function ipv4InCidr(ip, cidr) {
   const [base, bitsText] = cidr.split('/')
   const bits = Number(bitsText)
@@ -214,7 +246,6 @@ function ipv4InCidr(ip, cidr) {
   const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0
   return (number(ip) & mask) === (number(base) & mask)
 }
-
 function observeNoExternalFlows(privateIps) {
   let text = ''
   try {
@@ -236,7 +267,6 @@ function observeNoExternalFlows(privateIps) {
   if (violations.length > 0) throw new Error(`external flow observation failed with ${violations.length} project-origin flow(s)`)
   return { observedLines: text.split(/\r?\n/).filter(Boolean).length, projectExternalFlows: 0 }
 }
-
 export function egressRejectCounters(text) {
   const counters = new Map()
   for (const subnet of PRIVATE_SUBNETS) {
@@ -258,15 +288,18 @@ export function egressRejectCounters(text) {
   }
   return counters
 }
-
 export function buildRedisProbeComposeArgs(service, script) {
   if (!['api', 'worker'].includes(service)) throw new Error('Redis probe requires an approved runtime service')
   if (!String(script ?? '').trim()) throw new Error('Redis probe script is required')
   return ['run', '--rm', '--no-deps', '--entrypoint', '/nodejs/bin/node', service, '-e', script]
 }
-
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  if (options.cleanup) {
+    cleanupCoreRuntime(options)
+    console.log('on-prem core runtime cleanup: PASS (exact project, guarded identity)')
+    return
+  }
   const composePath = resolve(options.compose)
   const envPath = resolve(options.envFile)
   const base = ['compose', '--project-name', options.project, '--env-file', envPath, '--file', composePath]
@@ -314,7 +347,6 @@ async function main() {
     redisPersistenceDiagnostics: null,
     volumeRecovery: 'same-volume-only',
   }
-
   if (config.name !== options.project) throw new Error('Compose project identity mismatch')
   if (config.services.caddy.image !== CADDY_IMAGE) throw new Error('Caddy must use the exact approved upstream image identity')
   if (config.services.caddy.environment.HR_AXIS_PUBLIC_HOST === 'hr-axis.example.invalid') throw new Error('placeholder public host is forbidden in executable proof')
@@ -324,10 +356,9 @@ async function main() {
   }
   assertSecretPermissions(config)
   secretValues = new Map(
-    Object.entries(config.secrets ?? {}).map(([name, descriptor]) => [
-      name,
-      readFileSync(descriptor.file, 'utf8').trim(),
-    ]),
+    Object.entries(config.secrets ?? {})
+      .filter(([name]) => isConfidentialRuntimeSecretName(name))
+      .map(([name, descriptor]) => [name, readFileSync(descriptor.file, 'utf8').trim()]),
   )
   activeSecretValues = [...secretValues.values()].filter(Boolean)
   assertNoSecretLeak(secretValues, { 'docker compose config': serializedConfig })
@@ -340,7 +371,6 @@ async function main() {
     caddyfileDigest: sha256(readFileSync(caddyfilePath)),
     upstreamImage: CADDY_IMAGE,
   }
-
   if (options.requireFreshVolumes) {
     const existingVolumes = command('docker', ['volume', 'ls', '--quiet', '--filter', `label=com.hr-axis.project=${options.project}`], { label: 'fresh volume precondition' }).stdout.trim()
     const expectedNames = [`${options.project}_postgres_data`, `${options.project}_redis_data`]
@@ -348,7 +378,6 @@ async function main() {
     if (existingVolumes || nameCollisions.length > 0) throw new Error('fresh-volume proof found an existing labelled or exact-name project volume')
     receipt.freshVolumes = true
   }
-
   const firewallText = collectFirewallEvidence()
   const firewall = validateFirewallRules({
     iptables: firewallText,
@@ -359,7 +388,6 @@ async function main() {
   if (!firewall.ok) throw new Error(`host firewall contract failed: ${firewall.errors.join('; ')}`)
   receipt.firewall = firewall.summary
   const initialRejectCounters = egressRejectCounters(collectFirewallEvidence({ counters: true }))
-
   const waitHealthy = (service, attempts = 60) => {
     const id = compose(['ps', '--quiet', service], ['infra', 'runtime']).stdout.trim()
     if (!id) throw new Error(`${service} container is missing`)
@@ -386,7 +414,6 @@ async function main() {
       secretValues,
     })}`)
   }
-
   const waitUnhealthy = (service, attempts = 150) => {
     const id = compose(['ps', '--quiet', service], ['infra', 'runtime']).stdout.trim()
     if (!id) throw new Error(`${service} container is missing during outage proof`)
@@ -397,8 +424,12 @@ async function main() {
     }
     throw new Error(`${service} did not become unhealthy during the Redis outage`)
   }
-
-  const verifyCaddyRuntime = (pathState = 'installed') => {
+  const assertStoppedServiceState = (service, profiles, phase, stopTimestamp = null) => { const containerId = compose(['ps', '--all', '--quiet', service], profiles).stdout.trim(); if (!containerId) throw new Error(`${service} container is missing during ${phase} stop proof`)
+    const inspectResult = command('docker', ['inspect', containerId], { label: `inspect stopped ${service}` }); assertNoSecretLeak(secretValues, { [`stopped ${service} state`]: inspectResult.stdout }); const state = JSON.parse(inspectResult.stdout)[0]?.State
+    if (service !== 'keycloak') return assertGracefulStopState({ service, state, logs: '', secretValues }); if (!stopTimestamp) throw new Error('Keycloak stop proof is missing its RFC3339 stop timestamp')
+    return observeKeycloakGracefulStop({ service, state, since: stopTimestamp, secretValues, wait: (delayMs = KEYCLOAK_GRACEFUL_STOP_WAIT_MS) => command(process.execPath, ['-e', `setTimeout(()=>{},${delayMs})`], { label: 'Keycloak graceful-shutdown log wait' }),
+      readLogs: ({ since, timestamps }) => { if (since !== stopTimestamp || timestamps !== true) throw new Error('Keycloak log reader received an invalid fresh-log window'); const logs = command('docker', ['logs', '--since', since, '--timestamps', containerId], { label: 'stopped Keycloak logs', suppressOutput: true, inspectOutput: (capture) => assertNoSecretLeak(secretValues, { 'stopped Keycloak logs': `${capture.stderr ?? ''}\n${capture.stdout ?? ''}` }) }); return `${logs.stderr ?? ''}\n${logs.stdout ?? ''}` },
+    }) }; const verifyCaddyRuntime = (pathState = 'installed') => {
     const id = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     if (!id) throw new Error('caddy container is missing during bootstrap verification')
     const inspect = JSON.parse(command('docker', ['inspect', id], { label: 'inspect caddy bootstrap runtime' }).stdout)[0]
@@ -461,7 +492,6 @@ async function main() {
     })
     return verified
   }
-
   const assertRedisDestructiveCommandsDenied = (service, urlFile) => {
     const script = [
       "const fs=require('node:fs')",
@@ -472,25 +502,21 @@ async function main() {
     ].join(';')
     compose(buildRedisProbeComposeArgs(service, script), ['runtime'], `${service} Redis destructive-command denial probe`)
   }
-
   const captureQueueCheckpoint = (checkpoint) => {
     const spec = buildQueueSnapshotComposeArgs(checkpoint)
     return sanitizeQueuePersistenceCheckpoint(compose(spec.args, spec.profiles, spec.label), checkpoint)
   }
-
   const collectStoppedAofInventory = (volumeName) => {
     return collectStoppedAofInventoryEvidence({
       command, assertNoSecretLeak, secretValues, volumeName,
       redisImage: config.services.redis.image, workerImage: config.services.worker.image,
     })
   }
-
   const {
     resolveRuntimeTarget,
     pauseRuntimeService,
     unpauseRuntimeService,
   } = createRuntimeIsolationControls({ compose, command, assertNoSecretLeak, secretValues })
-
   const query = (sql) => compose(['exec', '-T', 'postgres', 'psql', '--no-psqlrc', '--username', 'hr_axis_bootstrap', '--dbname', 'hr_axis', '--tuples-only', '--no-align', '--command', sql], ['infra']).stdout.trim()
   const runtimeRoleQuery = (role, passwordFile, sql, { allowFailure = false, label } = {}) => {
     if (!['hr_axis_api', 'hr_axis_worker'].includes(role)) throw new Error('unsupported runtime role proof identity')
@@ -515,7 +541,6 @@ async function main() {
     cleanupRequired = true
     waitHealthy('postgres')
     waitHealthy('redis')
-
     const firstMigrationRun = compose(['run', '--rm', '--no-deps', 'migrator'], ['migrate'])
     const firstTreeDigest = migrationTreeDigestFromOutput(firstMigrationRun)
     const migrationIdentitySql = "SELECT count(*) || '|' || CASE WHEN bool_and(status = 'succeeded') THEN 't' ELSE 'f' END || '|' || encode(digest(string_agg(migration_name || ':' || migration_checksum, ',' ORDER BY migration_name), 'sha256'), 'hex') FROM audit.schema_migration"
@@ -527,7 +552,6 @@ async function main() {
     const migrationIdentity = parseMigrationIdentity(secondMigration)
     if (firstTreeDigest !== secondTreeDigest) throw new Error('migration resolved tree digest changed between identical runs')
     receipt.migration = { checksumMismatchRejected: false, ...migrationIdentity, orphanRejected: false, secondRunStable: true, treeDigest: secondTreeDigest }
-
     query("INSERT INTO audit.schema_migration (migration_name, migration_checksum, status) VALUES ('999_onprem_orphan.sql', repeat('a', 64), 'succeeded')")
     try {
       const orphan = composeExpectedFailure(['run', '--rm', '--no-deps', 'migrator'], ['migrate'], 'orphan migration rejection')
@@ -536,7 +560,6 @@ async function main() {
     } finally {
       query("DELETE FROM audit.schema_migration WHERE migration_name = '999_onprem_orphan.sql'")
     }
-
     const [checksumName, checksumOriginal] = query("SELECT migration_name || '|' || migration_checksum FROM audit.schema_migration ORDER BY migration_name LIMIT 1").split('|')
     if (!checksumName || !/^[0-9a-f]{64}$/i.test(checksumOriginal ?? '')) throw new Error('migration checksum mutation fixture is unavailable')
     const sqlLiteral = (value) => `'${String(value).replaceAll("'", "''")}'`
@@ -550,7 +573,6 @@ async function main() {
     }
     const restoredMigration = query(migrationIdentitySql)
     if (restoredMigration !== secondMigration) throw new Error('migration negative proof did not restore the exact migration ledger')
-
     const runtimeRoles = [
       ['hr_axis_api', '/run/secrets/postgres_api_password'],
       ['hr_axis_worker', '/run/secrets/postgres_worker_password'],
@@ -581,7 +603,6 @@ async function main() {
     } finally {
       query('SET ROLE hr_axis_migrator; DROP SEQUENCE IF EXISTS ops.onprem_sequence_privilege_probe; RESET ROLE')
     }
-
     compose(['run', '--rm', '--no-deps', 'synthetic-seed'], ['seed'])
     const seedAggregateSql = "SELECT (SELECT count(*) FROM ops.company) || '|' || (SELECT count(*) FROM ops.store) || '|' || (SELECT count(*) FROM ops.employee) || '|' || (SELECT count(*) FROM ops.role) || '|' || (SELECT count(*) FROM ops.kpi_definition)"
     const aggregate = query(seedAggregateSql)
@@ -592,13 +613,10 @@ async function main() {
         throw new Error(`${phase} persistence identity mismatch`)
       }
     }
-
     const ddl = command('docker', [...base, '--profile', 'infra', 'exec', '-T', 'postgres', 'sh', '-ec', 'PGPASSWORD="$(cat /run/secrets/postgres_api_password)" psql "host=postgres port=5432 dbname=hr_axis user=hr_axis_api sslmode=verify-full sslrootcert=/var/lib/postgresql/tls/ca.crt" --no-psqlrc --set=VERBOSITY=verbose --command="CREATE TABLE ops.onprem_runtime_ddl_must_fail(id integer)"'], { allowFailure: true, label: 'runtime DDL denial' })
     if (ddl.status === 0 || !/42501/.test(`${ddl.stderr}\n${ddl.stdout}`)) throw new Error('runtime DDL denial did not return SQLSTATE 42501')
-
     compose(['up', '--detach', 'api', 'worker', 'frontend', 'caddy'], ['runtime'])
     for (const service of LONG_LIVED) waitHealthy(service)
-
     const initialCaddyRuntime = verifyCaddyRuntime()
     compose([
       'exec', '-T', 'caddy', '/bin/sh', '-ec',
@@ -626,7 +644,6 @@ async function main() {
       tamperedPathRejected: true,
       tamperLiveExecutableUnchanged: true,
     }
-
     const publicHost = config.services.caddy.environment.HR_AXIS_PUBLIC_HOST
     const caddyIdForTls = compose(['ps', '--quiet', 'caddy'], ['runtime']).stdout.trim()
     const caddyInspectForTls = JSON.parse(
@@ -686,7 +703,6 @@ async function main() {
       wrongCaRejected: true,
       wrongHostnameRejected: true,
     }
-
     const privateIps = new Set()
     for (const service of LONG_LIVED) {
       const id = compose(['ps', '--quiet', service], ['runtime']).stdout.trim()
@@ -704,7 +720,6 @@ async function main() {
         if (published.length !== 1 || published[0][0] !== '8443/tcp' || published[0][1][0].HostPort !== '443') throw new Error('caddy must be the sole TCP 443 publisher')
       } else if (published.length !== 0) throw new Error(`${service} unexpectedly publishes a host port`)
     }
-
     const redisId = compose(['ps', '--quiet', 'redis'], ['infra']).stdout.trim()
     assertRedisDestructiveCommandsDenied('api', '/run/secrets/redis_api_url')
     assertRedisDestructiveCommandsDenied('worker', '/run/secrets/redis_worker_url')
@@ -730,7 +745,6 @@ async function main() {
         || preStop.persistence.aofEnabled !== 1
         || preStop.persistence.aofLastWriteStatus !== 'ok'
       ) throw new Error('synthetic queue pre-stop persistence checkpoint failed')
-
       const redisRestartLogSince = new Date().toISOString()
       compose(['stop', 'redis'], ['infra'])
       const redisStoppedInspect = JSON.parse(command('docker', ['inspect', redisId], { label: 'inspect stopped Redis' }).stdout)[0]
@@ -755,7 +769,6 @@ async function main() {
         || redisPersistenceDiagnostics.stoppedAof.files.length === 0
       ) throw new Error('stopped Redis AOF identity or manifest checkpoint failed')
       assertStoppedAofCommandSequence(redisPersistenceDiagnostics.stoppedAof)
-
       waitUnhealthy('api')
       waitUnhealthy('worker')
       const runtimeTargets = ['api', 'worker'].map(resolveRuntimeTarget)
@@ -820,23 +833,16 @@ async function main() {
     const queueStatus = compose(['run', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', 'status'], ['runtime'])
     assertProbeOutput(queueStatus, { markerCount: 1, mode: 'status', state: 'completed' })
     receipt.outageRecovery = { apiUnhealthy: true, recovered: true, redisStoppedGracefully: true, workerUnhealthy: true }
-
     compose(['restart', 'postgres'], ['infra'])
     waitHealthy('postgres')
     assertPersistenceIdentity('PostgreSQL restart')
-
     const workloadCaddyRuntime = verifyCaddyRuntime()
     if (workloadCaddyRuntime.executableDigest !== receipt.caddyRuntime.approvedExecutableDigest) {
       throw new Error('Caddy workload phase changed the verified binary identity')
     }
-    receipt.caddyRuntime.phases.workload = workloadCaddyRuntime
-
-    compose(['stop', ...LONG_LIVED], ['runtime'])
-    for (const service of LONG_LIVED) {
-      const id = compose(['ps', '--all', '--quiet', service], ['runtime']).stdout.trim()
-      const state = JSON.parse(command('docker', ['inspect', id], { label: `inspect stopped ${service}` }).stdout)[0].State
-      if (state.ExitCode !== 0 || state.OOMKilled || state.Dead || state.Error) throw new Error(`${service} did not stop gracefully`)
-    }
+    receipt.caddyRuntime.phases.workload = workloadCaddyRuntime; compose(['stop', 'caddy', 'frontend', 'api', 'worker'], ['runtime']); for (const service of ['caddy', 'frontend', 'api', 'worker']) assertStoppedServiceState(service, ['runtime'], 'edge/application')
+    waitHealthy('postgres'); const keycloakStopTimestamp = new Date().toISOString(); compose(['stop', 'keycloak'], ['runtime']); assertStoppedServiceState('keycloak', ['runtime'], 'Keycloak', keycloakStopTimestamp)
+    waitHealthy('postgres'); compose(['stop', 'postgres', 'redis'], ['infra']); for (const service of ['postgres', 'redis']) assertStoppedServiceState(service, ['infra'], 'postgres/redis')
     compose(['up', '--detach', 'postgres', 'redis'], ['infra'])
     waitHealthy('postgres')
     waitHealthy('redis')
@@ -854,13 +860,11 @@ async function main() {
       phases: { ...receipt.caddyRuntime.phases, fullProjectRestart: finalCaddyRuntime },
       restartOverwriteVerified: true,
     }
-
     const projectLogs = compose(['logs', '--no-color'], ['infra', 'migrate', 'seed', 'runtime'])
     assertNoSecretLeak(secretValues, {
       'project logs stderr': projectLogs.stderr,
       'project logs stdout': projectLogs.stdout,
     })
-
     command(process.execPath, ['-e', 'setTimeout(()=>{},3000)'], { label: 'external flow observation window' })
     receipt.flowObservation = observeNoExternalFlows(privateIps)
     const finalFirewallText = collectFirewallEvidence()
@@ -877,18 +881,16 @@ async function main() {
     receipt.egressRejectPacketDelta = packetDelta
   } finally {
     try {
-      if (cleanupRequired) compose(['down', '--remove-orphans'], ['infra', 'migrate', 'seed', 'runtime'])
+      if (cleanupRequired) cleanupCoreRuntime(options)
     } finally {
       if (tlsTempDirectory) rmSync(tlsTempDirectory, { force: true, recursive: true })
     }
   }
-
   const output = { ...receipt, ok: true }
   assertNoSecretLeak(secretValues, { 'sanitized runtime receipt': JSON.stringify(output) })
   if (options.receipt) writeFileSync(isAbsolute(options.receipt) ? options.receipt : resolve(options.receipt), `${JSON.stringify(output, null, 2)}\n`, { mode: 0o600 })
   console.log(JSON.stringify(output, null, 2))
 }
-
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main().catch((error) => {
     console.error(`on-prem core runtime proof: ${redact(error.message)}`)

@@ -10,6 +10,7 @@ const STRICT_LOCAL_PLAINTEXT_SETTINGS = [
   "DATABASE_URL",
   "DB_SSL_CA",
   "JWT_SECRET",
+  "KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST",
   "REDIS_URL",
 ] as const;
 
@@ -309,7 +310,7 @@ export function assertStrictLocalConfiguration(
   input: {
     dataClass: string;
     isStrictLocal: boolean;
-    processRole?: "runtime" | "migrator" | "synthetic-seed";
+    processRole?: "runtime" | "migrator" | "synthetic-seed" | "identity-binder";
   },
 ): void {
   if (!input.isStrictLocal) {
@@ -349,17 +350,24 @@ export function assertStrictLocalConfiguration(
   assertStrictLocalOidcConfiguration(config);
 
   const processRole = input.processRole ?? "runtime";
-  const requiredFileBackedSettings = processRole === "runtime"
-    ? [
-        "DATABASE_URL",
-        "DB_SSL_CA",
-        "REDIS_URL",
-        ...(normalize(config.get("JWT_JWKS_URL")) ? [] : ["JWT_SECRET"]),
-        ...(config.get("BROWSER_SESSION_COOKIE_ENABLED") === "true"
-          ? ["BROWSER_SESSION_SECRET"]
-          : []),
-      ]
-    : ["DATABASE_URL", "DB_SSL_CA"];
+  const requiredFileBackedSettings =
+    processRole === "runtime"
+      ? [
+          "DATABASE_URL",
+          "DB_SSL_CA",
+          "REDIS_URL",
+          ...(normalize(config.get("JWT_JWKS_URL")) ? [] : ["JWT_SECRET"]),
+          ...(config.get("BROWSER_SESSION_COOKIE_ENABLED") === "true"
+            ? ["BROWSER_SESSION_SECRET"]
+            : []),
+        ]
+      : processRole === "identity-binder"
+        ? [
+            "DATABASE_URL",
+            "DB_SSL_CA",
+            "KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST",
+          ]
+        : ["DATABASE_URL", "DB_SSL_CA"];
   for (const key of requiredFileBackedSettings) {
     if (!config.get(`${key}_FILE`)) {
       throw new Error(`${key}_FILE is required when HR_AXIS_STRICT_LOCAL=true`);

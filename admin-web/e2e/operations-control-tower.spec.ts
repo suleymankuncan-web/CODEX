@@ -185,13 +185,16 @@ test('operations capacity panel refreshes without reload at the stale boundary',
   await page.goto('/admin/operations')
 
   const capacityPanel = page.getByTestId('operations-capacity-readiness')
-  await expect(capacityPanel).toContainText('Passed')
+  const capacityStatus = capacityPanel
+    .getByTestId('operations-queue-row')
+    .filter({ hasText: 'Public staging baseline' })
+    .locator('[data-slot="badge"]')
+  await expect(capacityStatus).toHaveText('Passed')
   await expect(capacityPanel).toContainText('Controlled pilot can continue only under limited concurrency assumptions.')
 
-  await page.clock.pauseAt(new Date('2026-06-27T23:59:59.000Z'))
-  await page.clock.runFor(1200)
+  await page.clock.runFor(122_000)
 
-  await expect(capacityPanel).toContainText('Stale')
+  await expect(capacityStatus).toHaveText('Stale')
   await expect(capacityPanel).toContainText(
     'Refresh public capacity evidence before using it for the controlled pilot decision.',
   )

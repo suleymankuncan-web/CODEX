@@ -25,9 +25,9 @@ const FILE_BACKED_SETTINGS = new Set([
   "BROWSER_SESSION_PREVIOUS_SECRET",
   "BROWSER_SESSION_SECRET",
   "JWT_SECRET",
+  "KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST",
   "REDIS_URL",
 ]);
-
 
 @Injectable()
 export class AppConfigService {
@@ -42,10 +42,8 @@ export class AppConfigService {
     if (!value || value === "undefined" || value === "null") {
       return fallback;
     }
-
     return value;
   }
-
   private readOptionalString(key: string): string | undefined {
     if (FILE_BACKED_SETTINGS.has(key)) {
       return readFileBackedSetting(this.configService, key);
@@ -55,7 +53,6 @@ export class AppConfigService {
     if (!value || value === "undefined" || value === "null") {
       return undefined;
     }
-
     return value;
   }
 
@@ -63,12 +60,10 @@ export class AppConfigService {
     const value = this.configService.get<string>(key);
     return value && value !== "undefined" && value !== "null" ? value : undefined;
   }
-
   private readConfiguredHttpsUrl(key: string): string | undefined {
     const value = this.readConfiguredString(key);
     return value ? this.requireProductionHttpsUrl(key, value) : undefined;
   }
-
   private readPositiveNumber(key: string, fallback: string): number {
     const value = Number(this.readString(key, fallback));
 
@@ -78,7 +73,6 @@ export class AppConfigService {
 
     return value;
   }
-
   private readPositiveInteger(key: string, fallback: string): number {
     const value = Number(this.readString(key, fallback));
 
@@ -88,7 +82,6 @@ export class AppConfigService {
 
     return value;
   }
-
   private readRequiredBroadProductionPositiveInteger(
     key: string,
     fallback: string,
@@ -121,7 +114,6 @@ export class AppConfigService {
 
     return value;
   }
-
   private readRequiredProductionNonNegativeInteger(
     key: string,
     fallback: string,
@@ -498,6 +490,10 @@ export class AppConfigService {
     );
   }
 
+  get keycloakSyntheticSubjectManifest(): string | undefined {
+    return this.readOptionalString("KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST");
+  }
+
   get dbPoolMax(): number {
     return this.readPositiveInteger("DB_POOL_MAX", "20");
   }
@@ -841,12 +837,20 @@ export class AppConfigService {
   private readStrictLocalProcessRole():
     | "runtime"
     | "migrator"
-    | "synthetic-seed" {
+    | "synthetic-seed"
+    | "identity-binder" {
     const value = this.configService.get<string>("HR_AXIS_PROCESS_ROLE") ?? "runtime";
-    if (value === "runtime" || value === "migrator" || value === "synthetic-seed") {
+    if (
+      value === "runtime" ||
+      value === "migrator" ||
+      value === "synthetic-seed" ||
+      value === "identity-binder"
+    ) {
       return value;
     }
-    throw new Error("HR_AXIS_PROCESS_ROLE must be runtime, migrator, or synthetic-seed");
+    throw new Error(
+      "HR_AXIS_PROCESS_ROLE must be runtime, migrator, synthetic-seed, or identity-binder",
+    );
   }
 
   private validateBrowserSessionSecret(

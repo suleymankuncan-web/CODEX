@@ -109,6 +109,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     expose:
       - "3000"
     networks: [proxy, app, data]
@@ -122,6 +124,18 @@ services:
       ALLOW_MOCK_AUTH: "false"
       MIGRATIONS_HTTP_ENABLED: "false"
       CORS_ALLOWED_ORIGINS: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}
+      JWT_ISSUER: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}/realms/store-ops
+      JWT_JWKS_URL: http://keycloak:8080/realms/store-ops/protocol/openid-connect/certs
+      AUTH_AUTHORIZATION_URL: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}/realms/store-ops/protocol/openid-connect/auth
+      AUTH_CLIENT_ID: store-ops-admin-web
+      AUTH_SCOPE: openid profile email roles
+      AUTH_RESPONSE_TYPE: code
+      AUTH_TOKEN_URL: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}/realms/store-ops/protocol/openid-connect/token
+      AUTH_LOGOUT_URL: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}/realms/store-ops/protocol/openid-connect/logout
+      AUTH_CALLBACK_PATH: /auth/callback
+      AUTH_POST_LOGOUT_REDIRECT_PATH: /auth/login
+      BROWSER_SESSION_COOKIE_ENABLED: "true"
+      BROWSER_SESSION_SECRET_FILE: /run/secrets/browser_session_secret
       TRUST_PROXY_HOPS: "1"
       RATE_LIMIT_WINDOW_MS: "60000"
       RATE_LIMIT_MAX: "120"
@@ -131,7 +145,6 @@ services:
       DATABASE_URL_FILE: /run/secrets/api_database_url
       DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
       REDIS_URL_FILE: /run/secrets/redis_api_url
-      JWT_SECRET_FILE: /run/secrets/jwt_secret
       ERROR_TRACKING_ENABLED: "false"
       PHOTO_MEDIA_STORAGE_ENABLED: "false"
       PHOTO_MEDIA_SYNTHETIC_ONLY: "true"
@@ -147,8 +160,8 @@ services:
         target: postgres_tls_ca
       - source: redis_api_url
         target: redis_api_url
-      - source: jwt_secret
-        target: jwt_secret
+      - source: browser_session_secret
+        target: browser_session_secret
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     healthcheck:
@@ -157,7 +170,7 @@ services:
       timeout: 5s
       retries: 9
       start_period: 30s
-    cpus: 0.9
+    cpus: 0.75
     mem_limit: 1536m
     pids_limit: 192
     stop_grace_period: 30s
@@ -178,6 +191,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     networks: [app, data]
     environment:
       <<: *strict-local-environment
@@ -191,8 +206,8 @@ services:
         target: postgres_tls_ca
       - source: redis_worker_url
         target: redis_worker_url
-      - source: jwt_secret
-        target: jwt_secret
+      - source: browser_session_secret
+        target: browser_session_secret
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     healthcheck:
@@ -201,10 +216,183 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
-    cpus: 0.9
+    cpus: 0.75
     mem_limit: 1536m
     pids_limit: 192
     stop_grace_period: 45s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:?set an immutable built Keycloak image reference}
+    profiles: [infra, runtime]
+    restart: unless-stopped
+    init: false
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: "1000:1000"
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        read_secret_file() { test -r "$1"; value="$$(tr -d '\r\n' < "$1")"; test -n "$${value}"; printf '%s' "$${value}"; }
+        export KC_DB=postgres
+        export KC_DB_URL="$$(read_secret_file "$${KEYCLOAK_DATABASE_URL_FILE}")"
+        export KC_DB_USERNAME="$$(read_secret_file "$${KEYCLOAK_DATABASE_USERNAME_FILE}")"
+        export KC_DB_PASSWORD="$$(read_secret_file "$${KEYCLOAK_DATABASE_PASSWORD_FILE}")"
+        exec /opt/keycloak/bin/kc.sh start --optimized --http-enabled=true --http-port=8080 --http-management-port=9000 --health-enabled=true --metrics-enabled=true
+    expose:
+      - "8080"
+      - "9000"
+    networks: [proxy, data]
+    environment:
+      KEYCLOAK_DATABASE_URL_FILE: /run/secrets/keycloak_database_url
+      KEYCLOAK_DATABASE_USERNAME_FILE: /run/secrets/keycloak_database_username
+      KEYCLOAK_DATABASE_PASSWORD_FILE: /run/secrets/keycloak_database_password
+      KC_HOSTNAME: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}
+      KC_HOSTNAME_STRICT: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_CACHE: local
+      KC_LOG_LEVEL: info
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    secrets:
+      - source: keycloak_database_url
+        target: keycloak_database_url
+      - source: keycloak_database_username
+        target: keycloak_database_username
+      - source: keycloak_database_password
+        target: keycloak_database_password
+        uid: "1000"
+        gid: "1000"
+        mode: 0400
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    healthcheck:
+      test: [CMD, /bin/bash, -ec, "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3; grep -q '200' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+    cpus: 0.5
+    mem_limit: 2048m
+    pids_limit: 256
+    stop_grace_period: 60s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  keycloak-bootstrap:
+    image: ${KEYCLOAK_IMAGE:?set an immutable built Keycloak image reference}
+    profiles: [keycloak-bootstrap]
+    restart: "no"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    entrypoint: ["/bin/sh"]
+    command: ["/opt/keycloak/bootstrap.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [proxy, data]
+    environment:
+      KEYCLOAK_SERVER: http://127.0.0.1:8080
+      KEYCLOAK_DATABASE_URL_FILE: /run/secrets/keycloak_database_url
+      KEYCLOAK_DATABASE_USERNAME_FILE: /run/secrets/keycloak_database_username
+      KEYCLOAK_DATABASE_PASSWORD_FILE: /run/secrets/keycloak_database_password
+      KEYCLOAK_DB_CA_FILE: /run/secrets/postgres_tls_ca
+      KEYCLOAK_REALM: store-ops
+      KEYCLOAK_CLIENT_ID: store-ops-admin-web
+      KEYCLOAK_REALM_CONFIG_FILE: /opt/keycloak/realm-config.json
+      KEYCLOAK_PUBLIC_ORIGIN: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}
+      KEYCLOAK_BOOTSTRAP_USERNAME_FILE: /run/secrets/keycloak_bootstrap_username
+      KEYCLOAK_BOOTSTRAP_PASSWORD_FILE: /run/secrets/keycloak_bootstrap_password
+      KEYCLOAK_SMTP_HOST: ${KEYCLOAK_SMTP_HOST:?set the approved company SMTP relay host}
+      KEYCLOAK_SMTP_PORT: ${KEYCLOAK_SMTP_PORT:-587}
+      KEYCLOAK_SMTP_FROM: ${KEYCLOAK_SMTP_FROM:?set the approved sender address}
+      KEYCLOAK_SMTP_STARTTLS: ${KEYCLOAK_SMTP_STARTTLS:-true}
+      KEYCLOAK_SMTP_AUTH_USER_FILE: /run/secrets/keycloak_smtp_auth_user
+      KEYCLOAK_SMTP_PASSWORD_FILE: /run/secrets/keycloak_smtp_password
+      KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: ${KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false}
+      KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE: /run/secrets/keycloak_synthetic_accounts
+      KEYCLOAK_SUBJECT_MANIFEST_DIR: /var/lib/keycloak-bootstrap
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./keycloak/bootstrap.sh:/opt/keycloak/bootstrap.sh:ro
+      - ./keycloak/realm-config.json:/opt/keycloak/realm-config.json:ro
+      - keycloak_bootstrap_state:/var/lib/keycloak-bootstrap
+    secrets:
+      - source: keycloak_bootstrap_username
+        target: keycloak_bootstrap_username
+      - source: keycloak_bootstrap_password
+        target: keycloak_bootstrap_password
+      - source: keycloak_database_url
+        target: keycloak_database_url
+      - source: keycloak_database_username
+        target: keycloak_database_username
+      - source: keycloak_database_password
+        target: keycloak_database_password
+        uid: "1000"
+        gid: "1000"
+        mode: 0400
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+      - source: keycloak_smtp_auth_user
+        target: keycloak_smtp_auth_user
+      - source: keycloak_smtp_password
+        target: keycloak_smtp_password
+      - source: keycloak_synthetic_accounts
+        target: keycloak_synthetic_accounts
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cpus: 0.5
+    mem_limit: 1g
+    pids_limit: 128
+    stop_grace_period: 30s
+    logging: *bounded-logging
+    labels: *project-labels
+
+  identity-binder:
+    image: ${HR_AXIS_BACKEND_IMAGE:?set an immutable backend image reference}
+    profiles: [identity-binder]
+    command: [dist/src/onprem/bind-keycloak-identities.js]
+    restart: "no"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: "1000:1000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak-bootstrap:
+        condition: service_completed_successfully
+    networks: [app, data]
+    environment:
+      NODE_ENV: production
+      HR_AXIS_STRICT_LOCAL: "true"
+      HR_AXIS_DATA_CLASS: synthetic
+      HR_AXIS_PROCESS_ROLE: identity-binder
+      AUTH_PROVIDER_KEY: oidc
+      DB_SSL_MODE: verify-full
+      DATABASE_URL_FILE: /run/secrets/binder_database_url
+      DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
+      KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE: /var/lib/keycloak-bootstrap/subjects.v1.json
+    secrets:
+      - source: binder_database_url
+        target: binder_database_url
+      - source: postgres_tls_ca
+        target: postgres_tls_ca
+    volumes:
+      - keycloak_bootstrap_state:/var/lib/keycloak-bootstrap:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cpus: 0.5
+    mem_limit: 512m
+    pids_limit: 128
+    stop_grace_period: 30s
     logging: *bounded-logging
     labels: *project-labels
 
@@ -316,6 +504,11 @@ services:
         target: postgres_api_password
       - source: postgres_worker_password
         target: postgres_worker_password
+      - source: postgres_keycloak_database_password
+        target: keycloak_database_password
+        uid: "70"
+        gid: "70"
+        mode: 0400
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
       - /var/run/postgresql:rw,noexec,nosuid,size=16m,uid=70,gid=70
@@ -326,7 +519,7 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
-    cpus: 1.2
+    cpus: 1.0
     mem_limit: 2048m
     pids_limit: 192
     stop_grace_period: 60s
@@ -426,6 +619,18 @@ volumes:
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.volume-class: redis-aof
+  keycloak_data:
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.volume-class: keycloak
+  keycloak_bootstrap_state:
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.volume-class: keycloak-bootstrap-state
 
 secrets:
   caddy_tls_certificate:
@@ -452,6 +657,8 @@ secrets:
     file: ./secret-files/backend/migrator-database-url
   api_database_url:
     file: ./secret-files/backend/api-database-url
+  binder_database_url:
+    file: ./secret-files/keycloak/binder-database-url
   worker_database_url:
     file: ./secret-files/backend/worker-database-url
   redis_users_acl:
@@ -462,5 +669,23 @@ secrets:
     file: ./secret-files/backend/redis-api-url
   redis_worker_url:
     file: ./secret-files/backend/redis-worker-url
-  jwt_secret:
-    file: ./secret-files/backend/jwt-secret
+  browser_session_secret:
+    file: ./secret-files/backend/browser-session-secret
+  keycloak_database_url:
+    file: ./secret-files/keycloak/database-url
+  keycloak_database_username:
+    file: ./secret-files/keycloak/database-username
+  postgres_keycloak_database_password:
+    file: ./secret-files/postgres/keycloak-password
+  keycloak_database_password:
+    file: ./secret-files/keycloak/database-password
+  keycloak_bootstrap_username:
+    file: ./secret-files/keycloak/bootstrap-username
+  keycloak_bootstrap_password:
+    file: ./secret-files/keycloak/bootstrap-password
+  keycloak_smtp_auth_user:
+    file: ./secret-files/keycloak/smtp-auth-user
+  keycloak_smtp_password:
+    file: ./secret-files/keycloak/smtp-password
+  keycloak_synthetic_accounts:
+    file: ./secret-files/keycloak/synthetic-accounts

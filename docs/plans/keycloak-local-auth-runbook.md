@@ -1,192 +1,184 @@
-# Keycloak Local Auth Runbook
+# Keycloak Strict-Local Authentication Runbook
 
-## Purpose
-Provide a real local identity provider so the app can exercise:
-- `/auth/login`
-- `/auth/callback`
-- `/auth/logout`
-- backend JWT verification through JWKS
+## Purpose and authority
 
-This is the second step after the local JWT test path.
+This runbook describes the production-shaped, synthetic-only Keycloak path for
+the HR Axis on-premise bundle. It is part of ONP-3 and does not authorize a
+company-server installation, real users, company data, DNS/TLS activation, or
+retirement of hosted Clerk.
 
-## What This Setup Uses
-- Keycloak in Docker
-- realm import from repo
-- frontend authorization code + PKCE redirect
-- backend JWT verification through JWKS
+The authoritative runtime artifacts live under `infra/onprem/core`. The older
+development-only files `infra/docker-compose.keycloak.yml`,
+`infra/keycloak/store-ops-realm.json`, and `infra/scripts/setup-keycloak.ps1`
+must never be used in an on-premise release or offline deployment bundle. They
+contain development assumptions that do not satisfy this runbook.
 
-## Files
-- compose file:
-  - [docker-compose.keycloak.yml](../../infra/docker-compose.keycloak.yml)
-- realm import:
-  - [store-ops-realm.json](../../infra/keycloak/store-ops-realm.json)
+## Locked identity decision
 
-## Start Keycloak
-In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\infra`:
+- Existing Clerk users are not migrated or automatically linked by e-mail.
+- Hosted Clerk remains unchanged as the rollback identity provider.
+- Keycloak users will be recreated later by an authorized company operation.
+- HR Axis remains the authorization source of truth. A valid Keycloak token is
+  necessary but does not create company, region, store, employee, or action
+  authority by itself.
+- HR Axis never stores, receives, or logs a user's password.
 
-```powershell
-docker compose -f docker-compose.keycloak.yml up -d
-```
+## Production-shaped topology
 
-Keycloak admin console:
-- `http://localhost:8080`
+- Keycloak 26.7.0 is pinned by immutable image digest.
+- Keycloak runs in production mode; `start-dev` is forbidden.
+- Keycloak uses a dedicated PostgreSQL database and role.
+- Keycloak is attached only to the private `proxy` and `data` Compose
+  networks; it has no host-published service or management port.
+- Browser traffic reaches only the explicitly allowed realm/OIDC paths through
+  the HTTPS reverse proxy.
+- The Keycloak admin console and Admin REST API are not publicly routed.
+- Health and metrics remain on the private management port.
+- Realm data survives restart in PostgreSQL; disposable CI proof uses fresh
+  synthetic volumes.
 
-Admin credentials:
-- username: `admin`
-- password: `admin`
+The public issuer and browser endpoints use the final HTTPS HR Axis origin.
+The API verifies signatures through the private service-to-service JWKS URL.
+Issuer, authorization, token, logout, callback, audience, and realm paths must
+form one coherent configuration; near-matches fail closed.
 
-## Imported Realm
-The import creates:
-- realm:
-  - `store-ops`
-- client:
-  - `store-ops-admin-web`
-- demo users:
-  - `store.manager`
-  - `store.personnel`
-  - `region.manager`
-  - `admin.operator`
+## Bootstrap contract
 
-Demo user password:
-- `StoreOps123!`
+Bootstrap is a one-shot, idempotent operation. It must:
 
-## Backend Env
-In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\backend\nestjs\.env` use:
+1. stop all long-lived Keycloak nodes and start a temporary private bootstrap
+   server only on the `proxy`/`data` networks;
+2. wait for Keycloak and PostgreSQL readiness;
+3. authenticate with a temporary bootstrap service account supplied only
+   through secret files;
+4. create or reconcile the `store-ops` realm and the public PKCE client;
+5. configure exact redirect and post-logout redirect paths;
+6. configure the `roles`, company, region, store-read, and assigned-store
+   action-scope claim mappers;
+7. configure the password-reset and e-mail-verification policy without sending
+   a real message in synthetic CI;
+8. verify the resulting realm/client contract;
+9. remove the temporary bootstrap principal before reporting success;
+10. start the long-lived Keycloak node only after bootstrap and identity binding
+    complete successfully.
 
-```env
-AUTH_MODE=jwt
-JWT_ISSUER=http://localhost:8080/realms/store-ops
-JWT_AUDIENCE=account
-JWT_SECRET=
-JWT_JWKS_URL=http://localhost:8080/realms/store-ops/protocol/openid-connect/certs
+The operation must be safe to retry. Missing secrets, a conflicting realm or
+client contract, failed verification, or failure to remove the temporary
+principal is a `No-Go`. No default administrator, demo password, real e-mail,
+token, subject, or raw identifier may appear in Git, logs, or evidence.
 
-AUTH_AUTHORIZATION_URL=http://localhost:8080/realms/store-ops/protocol/openid-connect/auth
-AUTH_CLIENT_ID=store-ops-admin-web
-AUTH_SCOPE=openid profile email roles
-AUTH_RESPONSE_TYPE=code
-AUTH_TOKEN_URL=http://localhost:8080/realms/store-ops/protocol/openid-connect/token
-AUTH_AUDIENCE_OVERRIDE=
-AUTH_CALLBACK_PATH=/auth/callback
-AUTH_LOGOUT_URL=http://localhost:8080/realms/store-ops/protocol/openid-connect/logout
-AUTH_POST_LOGOUT_REDIRECT_PATH=/auth/login
-```
+## Roles and authorization claims
 
-Important:
-- do not set `JWT_SECRET` for this Keycloak path
-- use `JWT_JWKS_URL` so backend validates through Keycloak JWKS
-- current frontend integration expects `response_type=code` with PKCE S256
+The synthetic proof covers these roles:
 
-## Verified Local Outcome
-This local Keycloak path is now verified end to end in the current codebase:
-- `store.manager` reaches `/store`
-- `admin.operator` reaches admin routes such as `/admin/reports`
-- backend resolves the session through `GET /api/auth/session`
-- frontend exchanges the authorization code with the saved PKCE verifier
-- frontend keeps the returned bearer token in `sessionStorage`
-- frontend keeps the returned `id_token` separately in `sessionStorage` for provider logout only
+- `STORE_MANAGER`
+- `REGION_MANAGER`
+- `REPORT_VIEWER`
+- `STORE_PERSONNEL`
+- `VISUAL_MERCHANDISER`
 
-## Important Local Notes
-The currently working local setup depends on:
-- Keycloak client `store-ops-admin-web`
-- a client protocol mapper that emits realm roles to claim name `roles`
-- client protocol mappers that emit `read_company_ids`, `read_region_ids`, `read_store_ids`, and `assigned_store_ids`
-- the `roles` client scope being attached to the client as a default scope
-- Keycloak 26 user profile policy allowing local demo custom attributes; the setup script sets `unmanagedAttributePolicy=ENABLED`
-- demo users being updated through Admin REST with `email`, `firstName`, `lastName`, `emailVerified=true`, empty `requiredActions`, and the read/action scope attributes
+Tokens may carry role and scope claims, but the backend must still resolve the
+current HR Axis membership and scope binding. Forged issuer, audience, role,
+company, region, store-read, or assigned-store action claims fail. An assigned
+action is allowed only after database authorization; an unassigned action
+returns `403`.
 
-Backend no longer infers roles, scopes, employee ids, or assigned stores from local demo usernames. If a local login lands without access, fix the Keycloak attributes/mappers instead of adding backend demo fallback logic.
+## Browser login and session flow
 
-## Frontend Env
-In `C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\admin-web\.env` use:
+1. The frontend starts authorization code flow with PKCE S256.
+2. The browser authenticates on the allowed Keycloak realm endpoint.
+3. Keycloak returns to the exact HTTPS callback path.
+4. HR Axis establishes its encrypted, secure, HTTP-only browser session.
+5. State-changing requests require the matching CSRF contract.
+6. A stale CSRF token may be recovered once through the deterministic session
+   recovery path; missing or invalid CSRF still fails closed.
+7. Logout invalidates the HR Axis browser session and completes Keycloak realm
+   logout before returning to the exact post-logout path.
 
-```env
-VITE_API_BASE_URL=http://localhost:3000/api
-VITE_AUTH_MODE=bearer
-```
+No bearer token, refresh token, password, or session secret is persisted in
+browser storage by this strict-local profile.
 
-Frontend provider config can now come from backend `GET /api/auth/bootstrap`.
+## Password, verification, and recovery e-mail
 
-## Run App
+Keycloak provides the user-facing identity lifecycle:
 
-### Backend
-```powershell
-cd /d "C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\backend\nestjs"
-npm.cmd run start:dev
-```
+- verify e-mail;
+- forgot password;
+- update password required action;
+- optional TOTP enrollment when separately enabled.
 
-### Frontend
-```powershell
-cd /d "C:\Users\suley\OneDrive\Masaüstü\WEBSÝTE ÇALIÞMASI\admin-web"
-npm.cmd run dev
-```
+The company must provide an SMTP relay before real-user activation. Required
+operator inputs are the SMTP host, port, sender address, TLS/STARTTLS policy,
+andâ€”when the relay requires itâ€”an authentication user and password. Sensitive
+SMTP values are supplied through deployment secret files and are never stored
+in the repository or printed in receipts.
 
-## Login Test
-1. Open:
-   - `http://localhost:5173/auth/login`
-2. Click provider login
-3. Sign in with one of:
-   - `store.manager`
-   - `admin.operator`
-4. Password:
-   - `StoreOps123!`
-5. Keycloak redirects back to:
-   - `http://localhost:5173/auth/callback`
-6. Frontend validates `state`, exchanges `code` through the token endpoint, stores the returned token, and verifies with:
-   - `GET /api/auth/session`
+The real reset flow is:
 
-## Expected Routing
+1. the user selects **Åžifremi unuttum**;
+2. Keycloak sends a short-lived, single-use reset link through the company
+   relay;
+3. the user sets a new password on Keycloak;
+4. existing sessions are invalidated according to the realm policy;
+5. HR Axis receives no password and only observes the later authenticated
+   session.
 
-### `store.manager`
-- token carries `STORE_MANAGER`
-- token carries read scope and assigned action store claims
-- frontend should land in `/store`
+Synthetic CI proves configuration wiring and fail-closed behavior without
+contacting an external SMTP server. SMTP reachability, sender reputation,
+delivery, expiry, and the final Turkish e-mail templates require a later
+company-owned rehearsal.
 
-### `store.personnel`
-- token carries `STORE_PERSONNEL`
-- token carries read scope and assigned action store claims
-- frontend should land in `/store`
+## Required synthetic proof
 
-### `region.manager`
-- token carries `REGION_MANAGER`
-- token carries region read scope and assigned action store claims
-- frontend should land in `/admin/targets`
+The GitHub-hosted fresh-volume proof must establish:
 
-### `admin.operator`
-- token carries `SUPER_ADMIN` and `REPORT_VIEWER`
-- token carries company/read scope claims
-- frontend should land in an admin route such as `/admin/integrations` or `/admin/reports`
+- the pinned Keycloak image and digest are present in the signed manifest,
+  SBOM, vulnerability scan, and license inventory;
+- production startup is used and no default/demo credentials exist;
+- only reverse-proxy ports are published;
+- temporary bootstrap identity is removed after idempotent reconciliation;
+- PKCE metadata, callback, logout, JWKS, mapper, and SMTP contracts match;
+- five synthetic roles authenticate and preserve database authorization;
+- forged and cross-scope attempts fail;
+- invalid CSRF fails and stale-token recovery does not strand a valid session;
+- restart preserves the realm while strict-local egress remains closed;
+- logs and generated artifacts contain no secret or real identity data.
 
-## Logout Test
-1. Open:
-   - `http://localhost:5173/auth/logout`
-2. Frontend clears bearer token
-3. Frontend redirects to Keycloak logout URL with `id_token_hint`, `client_id`, and `post_logout_redirect_uri`
-4. Keycloak should return user to:
-   - `http://localhost:5173/auth/login`
+If a local Docker daemon is unavailable, only the GitHub-hosted proof may be
+reported. Do not claim a workstation runtime rehearsal.
 
-## Notes About Current Security Posture
-This local Keycloak path now matches the production-shaped browser login direction.
+## Unresolved activation gates
 
-Current limitations:
-- no refresh token strategy
-- no backend token exchange
+- The Keycloak license receipt must retain
+  `residualExternalReviewRequired: true`. Repository reconciliation is
+  evidence preparation, not final component clearance; owner/legal review is
+  required before activation.
+- JWKS rotation and retired-key acceptance are intentionally emitted as
+  `proved: false`, `status: unproven` in the synthetic receipt. A fresh Linux
+  rehearsal with an approved rotation window is required before activation.
+- The 4 vCPU/8 GiB resource redistribution is a synthetic rehearsal target
+  pending Linux measurement and explicit owner approval; it is not a production
+  capacity claim.
 
-That is acceptable for local end-to-end validation while provider-specific refresh/logout behavior is finalized.
+## Operator gates before real activation
 
-## If Login Does Not Work
-Check these first:
+The following remain unresolved external gates:
 
-1. backend `AUTH_MODE=jwt`
-2. backend `JWT_ISSUER` exactly matches the Keycloak realm issuer
-3. backend `JWT_AUDIENCE` is set to `account` for the current local Keycloak path
-4. frontend `VITE_API_BASE_URL` points to `http://localhost:3000/api`
-5. Keycloak client redirect URI is exactly:
-   - `http://localhost:5173/auth/callback`
-6. Keycloak is running on:
-   - `http://localhost:8080`
-7. the Keycloak client has a protocol mapper that writes realm roles to:
-   - `roles`
+- company Linux server and approved resource envelope;
+- company DNS name and TLS certificate chain;
+- company SMTP relay, sender, and delivery rehearsal;
+- owner-created permanent Keycloak administrator and rotation custody;
+- authorized creation of real users and HR Axis membership bindings;
+- backup/restore and restart rehearsal on the company environment;
+- observation window and explicit cutover decision.
 
-## Next Hardening Step After This
-Once this works end to end, the next auth hardening move should be:
-- finalize provider-specific logout and refresh/silent re-auth behavior
+Until all gates are closed, production and real-user activation remain
+`No-Go`.
+
+## Rollback
+
+Stop only the isolated on-premise Keycloak/runtime project after verifying its
+project and volume identity. Never delete hosted Clerk users or configuration.
+Synthetic rollback returns the test client to the previous isolated provider;
+real cutover rollback requires the separately approved deployment runbook and
+verified backup.

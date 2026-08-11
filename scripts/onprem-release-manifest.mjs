@@ -11,19 +11,29 @@ const SOURCE_REVISION = /^[0-9a-f]{40}$/i
 const SAFE_VERSION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 const TOP_LEVEL_INPUT_FIELDS = new Set(['dataClass', 'sourceRevision', 'version', 'buildTimestamp', 'configSchemaVersion', 'baseImages', 'artifacts', 'imageIds'])
 const TOP_LEVEL_MANIFEST_FIELDS = new Set([...TOP_LEVEL_INPUT_FIELDS, 'signature'])
-const BASE_IMAGE_FIELDS = new Set(['build', 'backendRuntime', 'frontendRuntime', 'trivy', 'syft'])
-const IMAGE_ID_FIELDS = new Set(['backend', 'frontend'])
+const BASE_IMAGE_FIELDS = new Set(['build', 'backendRuntime', 'frontendRuntime', 'keycloakBase', 'trivy', 'syft'])
+const IMAGE_ID_FIELDS = new Set(['backend', 'frontend', 'keycloak'])
 const ARTIFACT_FIELDS = new Set([
   'backendImage',
   'frontendImage',
+  'keycloakImage',
   'backendSbom',
   'frontendSbom',
+  'keycloakSbom',
   'backendVulnerabilityReport',
   'frontendVulnerabilityReport',
+  'keycloakVulnerabilityReport',
   'backendLicenseInventory',
   'frontendLicenseInventory',
+  'keycloakLicenseInventory',
+  'keycloakLicenseText',
+  'keycloakLicensePaths',
+  'keycloakLicenseReconciliation',
+  'keycloakLicenseBundle',
   'backendNotices',
   'frontendNotices',
+  'keycloakImageManifest',
+  'keycloakContentGuard',
   'backendImageLicenseReconciliation',
   'frontendImageLicenseReconciliation',
   'backendImageNotices',

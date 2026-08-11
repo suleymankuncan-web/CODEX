@@ -1,17 +1,37 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const EXPECTED_SERVICES = ['caddy', 'frontend', 'api', 'worker', 'migrator', 'synthetic-seed', 'postgres', 'redis']
-const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis']
+// ONP-3B extends the original ONP-2 stack with the local identity provider,
+// its stopped-server bootstrap job, and the one-shot identity binder.  Keep
+// the order explicit: it is the order Compose presents the dependency graph
+// to the proof runner and prevents a hidden alternate topology from slipping
+// through this contract.
+const EXPECTED_SERVICES = [
+  'caddy',
+  'frontend',
+  'api',
+  'worker',
+  'keycloak',
+  'keycloak-bootstrap',
+  'identity-binder',
+  'migrator',
+  'synthetic-seed',
+  'postgres',
+  'redis',
+]
+const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'keycloak', 'postgres', 'redis']
 const EXPECTED_RESOURCES = {
   caddy: ['0.25', '128m'],
   frontend: ['0.25', '128m'],
-  api: ['0.9', '1536m'],
-  worker: ['0.9', '1536m'],
-  postgres: ['1.2', '2048m'],
+  api: ['0.75', '1536m'],
+  worker: ['0.75', '1536m'],
+  keycloak: ['0.5', '2048m'],
+  postgres: ['1.0', '2048m'],
   redis: ['0.5', '768m'],
   migrator: ['0.5', '512m'],
   'synthetic-seed': ['0.5', '512m'],
+  'keycloak-bootstrap': ['0.5', '1g'],
+  'identity-binder': ['0.5', '512m'],
 }
 const CADDY_BOOTSTRAP_PREFIX = [
   'umask 077',
@@ -129,6 +149,13 @@ function envValue(text, name) {
 }
 
 export function validateOnpremCoreContract(input) {
+  // Repository files are checked out with either LF or CRLF depending on the
+  // runner.  Contract semantics are line based, so normalize once at the
+  // boundary instead of making every individual assertion newline-sensitive.
+  input = Object.fromEntries(Object.entries(input).map(([key, value]) => [
+    key,
+    typeof value === 'string' ? value.replaceAll('\r\n', '\n') : value,
+  ]))
   const errors = []
   const blocks = serviceBlocks(input.compose)
   const services = [...blocks.keys()]
@@ -136,7 +163,7 @@ export function validateOnpremCoreContract(input) {
     if (!condition) errors.push(message)
   }
 
-  fail(JSON.stringify(services) === JSON.stringify(EXPECTED_SERVICES), 'compose must define only the eight approved ONP-2 services in dependency order')
+  fail(JSON.stringify(services) === JSON.stringify(EXPECTED_SERVICES), 'compose must define only the approved ONP-3B services in dependency order')
   fail(!/^\s*build:/m.test(input.compose), 'compose must never build images')
 
   for (const name of ['HR_AXIS_BACKEND_IMAGE', 'HR_AXIS_FRONTEND_IMAGE', 'CADDY_IMAGE', 'POSTGRES_IMAGE', 'REDIS_IMAGE']) {
@@ -176,9 +203,16 @@ export function validateOnpremCoreContract(input) {
   fail((input.compose.match(/com\.hr-axis\.project: hr-axis-onprem-core/g) ?? []).length >= 7, 'services, networks, and volumes require project labels')
   fail((input.compose.match(/com\.hr-axis\.data-class: synthetic/g) ?? []).length >= 7, 'services, networks, and volumes require synthetic data-class labels')
 
+  const safeEndpointEnvironment = new Set([
+    'AUTH_AUTHORIZATION_URL',
+    'AUTH_TOKEN_URL',
+    'AUTH_LOGOUT_URL',
+  ])
   const sensitiveEnvironment = /^\s{6}([A-Z0-9_]*(?:DATABASE_URL|REDIS_URL|PASSWORD|SECRET|PRIVATE_KEY|ACCESS_KEY|TOKEN|DSN)[A-Z0-9_]*):/gm
   for (const match of input.compose.matchAll(sensitiveEnvironment)) {
-    if (!match[1].endsWith('_FILE')) errors.push(`sensitive environment variable must use a _FILE boundary: ${match[1]}`)
+    if (!match[1].endsWith('_FILE') && !safeEndpointEnvironment.has(match[1])) {
+      errors.push(`sensitive environment variable must use a _FILE boundary: ${match[1]}`)
+    }
   }
   fail(!/\b(?:DATABASE_URL|REDIS_URL|JWT_SECRET|BROWSER_SESSION_SECRET):\s*\S+/.test(input.compose), 'sensitive environment variable must use a _FILE boundary')
   fail(/infra\/onprem\/core\/secret-files\//.test(input.gitignore), 'secret-files directory must be ignored')
@@ -233,6 +267,10 @@ export function validateOnpremCoreContract(input) {
     ]),
     'Redis 7 AOF replay requires one exact disabled-default ACL writer bound to the protected users.acl sink',
   )
+  fail(
+    redisSecretCommands.includes('test "$(sha256sum "$secret_root/postgres/keycloak-password" | cut -d\' \' -f1)" = "$(sha256sum "$secret_root/keycloak/database-password" | cut -d\' \' -f1)"'),
+    'PostgreSQL and Keycloak database-password copies require an exact pre-start digest equality check',
+  )
   fail(/-flushall -flushdb -swapdb -migrate/.test(input.workflow) && /~hr-axis:rate-limit:\*/.test(input.workflow) && /~bull:hr-axis-onprem-synthetic-recovery-v1:\*/.test(input.workflow), 'runtime Redis ACLs must scope keys and deny destructive non-admin commands')
   fail(/cap_drop: \[ALL\]/.test(blocks.get('redis') ?? '') && /cap_add: \[CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID\]/.test(blocks.get('redis') ?? ''), 'Redis fresh-volume entrypoint must retain only the identity and ownership setup capabilities it needs')
   for (const service of ['postgres', 'redis']) {
@@ -251,12 +289,14 @@ export function validateOnpremCoreContract(input) {
   fail(/GRANT SELECT, USAGE ON SEQUENCES/.test(input.bootstrap) && !/GRANT SELECT, USAGE, UPDATE ON SEQUENCES/.test(input.bootstrap), 'runtime sequence mutation capability must remain denied')
   fail(/GRANT EXECUTE ON FUNCTIONS/.test(input.bootstrap), 'runtime roles require bounded function access')
 
-  fail(/identity_not_installed/.test(input.caddy) && /503/.test(input.caddy), '/auth must fail 503 identity_not_installed until ONP-3')
+  fail(/handle \/auth\/login/.test(input.caddy) && /handle \/auth\/callback/.test(input.caddy) && /handle \/auth\/logout/.test(input.caddy), 'ONP-3B Caddy must keep browser auth routes on the SPA')
   fail(/http:\/\/127\.0\.0\.1:8081\s*\{[\s\S]*?respond \/healthz 200[\s\S]*?\}/.test(input.caddy), 'Caddy must provide a loopback HTTP health listener on 127.0.0.1:8081')
   fail(/ocsp_stapling off/.test(input.caddy), 'strict-local Caddy must disable external OCSP stapling fetches')
   fail(/AUTH_PROVIDER_KEY: oidc/.test(blocks.get('api') ?? ''), 'strict-local auth provider key must remain oidc until ONP-3')
-  fail(!/^\s+(?:SENTRY_DSN|QWEN_API_KEY|BROWSER_SESSION_SECRET(?:_FILE)?|PHOTO_MEDIA_[A-Z0-9_]*(?:SECRET|KEY|TOKEN)):/m.test(input.compose), 'disabled providers must omit their credential keys entirely')
-  fail(!/keycloak/i.test(input.compose), 'ONP-2 must not install a Keycloak stub')
+  fail(!/^\s+(?:SENTRY_DSN|QWEN_API_KEY|PHOTO_MEDIA_[A-Z0-9_]*(?:SECRET|KEY|TOKEN)):/m.test(input.compose), 'disabled providers must omit their credential keys entirely')
+  fail(/\n  keycloak:\n[\s\S]*?image: \$\{KEYCLOAK_IMAGE:\?set an immutable built Keycloak image reference\}/.test(input.compose), 'ONP-3B must run the pinned Keycloak image')
+  fail(/\n  keycloak-bootstrap:\n[\s\S]*?command: \["\/opt\/keycloak\/bootstrap\.sh"\]/.test(input.compose), 'ONP-3B must keep stopped-server Keycloak bootstrap explicit')
+  fail(/\n  identity-binder:\n[\s\S]*?KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE:/.test(input.compose), 'ONP-3B must bind synthetic identities through the private subject manifest')
   fail(/COPY db\/schema\.sql \/app\/db\/schema\.sql/.test(input.backendDockerfile), 'backend image must copy the canonical schema')
   fail(/COPY db\/migrations\/ \/app\/db\/migrations\//.test(input.backendDockerfile), 'backend image must copy canonical migrations')
   fail(/COPY db\/seeds\/001_reference_seed\.sql \/app\/db\/seeds\/001_reference_seed\.sql/.test(input.backendDockerfile), 'backend image must copy the unchanged deterministic seed')
