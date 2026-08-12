@@ -14,8 +14,6 @@ const rootProcessFiles = new Set([
 ])
 
 const docsProcessContractFiles = new Set([
-  'scripts/affected-verification-selector.mjs',
-  'scripts/affected-verification-selector.test.mjs',
   'scripts/current-state-handoff-contract.test.mjs',
   'scripts/project-control-registries-contract.test.mjs',
 ])
@@ -53,13 +51,151 @@ function isRehearsalPath(file) {
   )
 }
 
-function isOnpremImageProofPath(file) {
+const PROOF_MODES = new Set(['none', 'component', 'full'])
+const IMAGE_SCOPES = new Set(['none', 'frontend', 'backend', 'both'])
+
+const fullProofPaths = [
+  'infra/',
+  'db/',
+  'tools/onprem-license/',
+  'scripts/onprem-',
+  'scripts/release-',
+]
+
+const fullProofFiles = new Set([
+  '.dockerignore',
+  'package.json',
+  'package-lock.json',
+  'scripts/required-release-gate.mjs',
+  'scripts/required-release-gate-contract.test.mjs',
+  'scripts/check-release.mjs',
+  'scripts/post-merge-release-proof.mjs',
+  'scripts/affected-verification-selector.mjs',
+  'scripts/affected-verification-selector.test.mjs',
+  '.github/workflows/onprem-image-proof.yml',
+  '.github/workflows/required-release-gate.yml',
+  '.github/workflows/release-check.yml',
+  '.github/workflows/release-rehearsal.yml',
+  '.github/workflows/post-merge-verification.yml',
+])
+
+const sensitiveBackendToken = /^(?:auth(?:entication|orization)?|session|permission|scope|clerk|jwt|database|migration|db|queue|bullmq|worker|provider|s3|r2|photo|storage|onprem)s?(?:[._-]|$)/i
+
+const imageEntrypointFiles = new Set([
+  'admin-web/src/main.ts',
+  'admin-web/src/main.tsx',
+  'admin-web/src/index.ts',
+  'admin-web/src/index.tsx',
+  'admin-web/index.html',
+  'backend/nestjs/src/main.ts',
+  'backend/nestjs/src/main.tsx',
+  'backend/nestjs/src/index.ts',
+  'backend/nestjs/src/index.tsx',
+])
+
+function isSensitiveBackendPath(file) {
+  return file.split('/').some((segment) => sensitiveBackendToken.test(segment))
+}
+
+function isFrontendAuthSessionTransportPath(file) {
   return (
-    hasPrefix(file, ['admin-web/', 'backend/nestjs/', 'infra/onprem/core/', 'infra/onprem/images/', 'scripts/onprem-']) ||
-    file === '.dockerignore' ||
-    file === '.github/workflows/onprem-image-proof.yml' ||
-    file === 'package.json' ||
-    hasPrefix(file, ['tools/onprem-license/'])
+    file === 'admin-web/src/lib/api.ts' ||
+    /(^|\/)(?:auth|authentication|authorization|session|sessions)(?:\/|[._-]|$)/i.test(file) ||
+    /(^|\/)(?:[^/]*[-_.])?(?:auth|authentication|authorization|session|sessions)(?:[-_.]|$)/i.test(file) ||
+    /(^|\/)(?:providers?|hooks?)\/[^/]*(?:auth|session)/i.test(file)
+  )
+}
+
+function isBackendFullProofSource(file) {
+  return (
+    /(^|\/)backend\/nestjs\/src\/.*\.controller\.(?:ts|tsx)$/i.test(file) ||
+    /(^|\/)backend\/nestjs\/src\/.*\/infrastructure\/.*\.repository\.(?:ts|tsx)$/i.test(file) ||
+    /(^|\/)backend\/nestjs\/src\/shared\/(?:config|secret|secrets|runtime|auth|session)(?:\/|[._-]|$)/i.test(file) ||
+    /^backend\/nestjs\/src\/shared\/[^/]*(?:config|secret|runtime|auth|session)[^/]*\.(?:ts|tsx)$/i.test(file) ||
+    /(^|\/)(?:database|db|migration|migrations|integrity|data[-_]?integrity|transaction|transactions)(?:\/|[._-]|$)/i.test(file)
+  )
+}
+
+function isExplicitNonePath(file) {
+  return (
+    file.startsWith('admin-web/e2e/') ||
+    /(^|\/)playwright(?:\.|\/)/i.test(file) ||
+    /(^|\/)README(?:\.[^/]*)?$/i.test(file) ||
+    /(^|\/)\.env(?:\.|$)/i.test(file)
+  )
+}
+
+function isFullProofPath(file) {
+  return (
+    fullProofFiles.has(file) ||
+    hasPrefix(file, fullProofPaths) ||
+    /^\.github\/workflows\//.test(file) ||
+    /(^|\/)Dockerfile(?:\..*)?$/i.test(file)
+  )
+}
+
+function classifyOnpremImageProofPath(file) {
+  if (isExplicitNonePath(file)) {
+    return { mode: 'none', imageScope: 'none' }
+  }
+
+  if (isFullProofPath(file)) {
+    return { mode: 'full', imageScope: 'both' }
+  }
+
+  if (imageEntrypointFiles.has(file)) {
+    return { mode: 'full', imageScope: 'both' }
+  }
+
+  if (file.startsWith('admin-web/src/') || file.startsWith('admin-web/public/')) {
+    return isFrontendAuthSessionTransportPath(file) || isSensitiveBackendPath(file)
+      ? { mode: 'full', imageScope: 'both' }
+      : { mode: 'component', imageScope: 'frontend' }
+  }
+
+  if (file.startsWith('backend/nestjs/src/')) {
+    return isBackendFullProofSource(file) || isSensitiveBackendPath(file)
+      ? { mode: 'full', imageScope: 'both' }
+      : { mode: 'component', imageScope: 'backend' }
+  }
+
+  if (file.startsWith('admin-web/') || file.startsWith('backend/nestjs/')) {
+    return { mode: 'full', imageScope: 'both' }
+  }
+
+  return { mode: 'none', imageScope: 'none' }
+}
+
+function selectOnpremProofScope(files) {
+  let mode = 'none'
+  const imageScopes = new Set()
+
+  for (const file of files) {
+    const classification = classifyOnpremImageProofPath(file)
+    if (classification.mode === 'full') {
+      return { proofMode: 'full', imageScope: 'both' }
+    }
+    if (classification.mode === 'component') {
+      mode = 'component'
+      imageScopes.add(classification.imageScope)
+    }
+  }
+
+  if (mode === 'none') {
+    return { proofMode: 'none', imageScope: 'none' }
+  }
+
+  return {
+    proofMode: 'component',
+    imageScope: imageScopes.size === 2 ? 'both' : [...imageScopes][0],
+  }
+}
+
+function isValidProofIdentity(proofMode, imageScope) {
+  return PROOF_MODES.has(proofMode) && IMAGE_SCOPES.has(imageScope) && (
+    (proofMode === 'none' && imageScope === 'none') ||
+    (proofMode === 'component' && ['frontend', 'backend', 'both'].includes(imageScope)) ||
+    (proofMode === 'full' && imageScope === 'both')
   )
 }
 
@@ -99,6 +235,8 @@ export function selectRequiredReleaseGateScope(files) {
       reason: 'no changed files were detected; fail closed instead of guessing a release scope',
       files: normalizedFiles,
       affectedVerification,
+      proofMode: 'none',
+      imageScope: 'none',
       runRootRelease: false,
       observeRehearsal: false,
       runOnpremImageProof: false,
@@ -111,20 +249,25 @@ export function selectRequiredReleaseGateScope(files) {
       reason: 'all changed files are docs/process files',
       files: normalizedFiles,
       affectedVerification,
+      proofMode: 'none',
+      imageScope: 'none',
       runRootRelease: false,
       observeRehearsal: false,
       runOnpremImageProof: false,
     }
   }
 
+  const onpremProof = selectOnpremProofScope(normalizedFiles)
+
   return {
     mode: 'release',
     reason: 'a non-docs/process path changed, so the official root release gate is required',
     files: normalizedFiles,
     affectedVerification,
+    ...onpremProof,
     runRootRelease: true,
     observeRehearsal: normalizedFiles.some(isRehearsalPath),
-    runOnpremImageProof: normalizedFiles.some(isOnpremImageProofPath),
+    runOnpremImageProof: onpremProof.proofMode !== 'none',
   }
 }
 
@@ -198,18 +341,48 @@ export function evaluateRequiredReleaseGateFinal({
   rootReleaseResult,
   rehearsalObserverResult,
   observeRehearsal,
+  expectedSha,
+  proofMode,
+  imageScope,
   onpremImageProofResult,
+  onpremImageProofMode,
+  onpremImageProofScope,
+  onpremImageProofEvidenceSha,
+  onpremImageProofReceiptSha256,
+  onpremImageProofProvenSha,
   runOnpremImageProof,
 }) {
   const failures = []
+  const selectedProofMode = proofMode ?? (runOnpremImageProof ? 'full' : 'none')
+  const selectedImageScope = imageScope ?? (runOnpremImageProof ? 'both' : 'none')
+
+  if (!/^[a-f0-9]{40}$/.test(String(expectedSha ?? ''))) {
+    failures.push('expected-sha-invalid')
+  }
 
   if (scopeResult !== 'success') {
     failures.push(`scope=${scopeResult || 'missing'}`)
   }
 
+  const requireSkippedProof = () => {
+    if (onpremImageProofResult !== 'skipped') {
+      failures.push(`onprem-image-proof=expected-skipped:${onpremImageProofResult || 'missing'}`)
+    }
+    if (onpremImageProofMode || onpremImageProofScope || onpremImageProofEvidenceSha || onpremImageProofReceiptSha256 || onpremImageProofProvenSha) {
+      failures.push('onprem-image-proof=unexpected-output-for-none')
+    }
+  }
+
   if (mode === 'docs') {
     if (docsResult !== 'success') {
       failures.push(`docs-process-contracts=${docsResult || 'missing'}`)
+    }
+    if (!isValidProofIdentity(selectedProofMode, selectedImageScope)) {
+      failures.push(`onprem-image-proof=invalid-selector-identity:${selectedProofMode || 'missing'}/${selectedImageScope || 'missing'}`)
+    } else if (selectedProofMode !== 'none') {
+      failures.push(`onprem-image-proof=unexpected-for-docs:${selectedProofMode}/${selectedImageScope}`)
+    } else {
+      requireSkippedProof()
     }
   } else if (mode === 'release') {
     if (rootReleaseResult !== 'success') {
@@ -218,8 +391,30 @@ export function evaluateRequiredReleaseGateFinal({
     if (observeRehearsal && rehearsalObserverResult !== 'success') {
       failures.push(`release-rehearsal-observer=${rehearsalObserverResult || 'missing'}`)
     }
-    if (runOnpremImageProof && onpremImageProofResult !== 'success') {
+    if (!isValidProofIdentity(selectedProofMode, selectedImageScope)) {
+      failures.push(`onprem-image-proof=invalid-selector-identity:${selectedProofMode || 'missing'}/${selectedImageScope || 'missing'}`)
+    } else if (selectedProofMode === 'none') {
+      requireSkippedProof()
+    } else if (onpremImageProofResult !== 'success') {
       failures.push(`onprem-image-proof=${onpremImageProofResult || 'missing'}`)
+    } else {
+      if (onpremImageProofMode !== selectedProofMode) {
+        failures.push(`onprem-image-proof=mode-mismatch:${onpremImageProofMode || 'missing'}`)
+      }
+      if (onpremImageProofScope !== selectedImageScope) {
+        failures.push(`onprem-image-proof=scope-mismatch:${onpremImageProofScope || 'missing'}`)
+      }
+      if (!/^[a-f0-9]{64}$/.test(String(onpremImageProofEvidenceSha ?? ''))) {
+        failures.push('onprem-image-proof=evidence-sha256-invalid')
+      }
+      if (!/^[a-f0-9]{64}$/.test(String(onpremImageProofReceiptSha256 ?? ''))) {
+        failures.push('onprem-image-proof=receipt-sha256-invalid')
+      }
+      if (!/^[a-f0-9]{40}$/.test(String(onpremImageProofProvenSha ?? ''))) {
+        failures.push('onprem-image-proof=proven-sha-invalid')
+      } else if (onpremImageProofProvenSha !== expectedSha) {
+        failures.push('onprem-image-proof=proven-sha-mismatch')
+      }
     }
   } else {
     failures.push(`unsupported scope mode=${mode || 'missing'}`)
@@ -233,6 +428,8 @@ export function evaluateRequiredReleaseGateFinal({
 
 function writeScopeOutput(scope) {
   console.log(`mode=${scope.mode}`)
+  console.log(`proof_mode=${scope.proofMode}`)
+  console.log(`image_scope=${scope.imageScope}`)
   console.log(`run_root_release=${scope.runRootRelease}`)
   console.log(`observe_rehearsal=${scope.observeRehearsal}`)
   console.log(`run_onprem_image_proof=${scope.runOnpremImageProof}`)
@@ -351,7 +548,15 @@ function evaluateFinalFromEnvironment() {
     rootReleaseResult: process.env.REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT,
     rehearsalObserverResult: process.env.REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT,
     observeRehearsal: process.env.REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL === 'true',
+    expectedSha: process.env.REQUIRED_RELEASE_GATE_EXPECTED_SHA,
+    proofMode: process.env.REQUIRED_RELEASE_GATE_PROOF_MODE,
+    imageScope: process.env.REQUIRED_RELEASE_GATE_IMAGE_SCOPE,
     onpremImageProofResult: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RESULT,
+    onpremImageProofMode: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_MODE,
+    onpremImageProofScope: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_SCOPE,
+    onpremImageProofEvidenceSha: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_EVIDENCE_SHA,
+    onpremImageProofReceiptSha256: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RECEIPT_SHA256,
+    onpremImageProofProvenSha: process.env.REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_PROVEN_SHA,
     runOnpremImageProof: process.env.REQUIRED_RELEASE_GATE_RUN_ONPREM_IMAGE_PROOF === 'true',
   })
 

@@ -8,6 +8,7 @@ const frontendDockerfile = readFileSync('infra/onprem/images/frontend.Dockerfile
 const backendTsconfig = JSON.parse(readFileSync('backend/nestjs/tsconfig.onprem.json', 'utf8'))
 const backendPackage = JSON.parse(readFileSync('backend/nestjs/package.json', 'utf8'))
 const frontendVite = readFileSync('admin-web/vite.config.ts', 'utf8')
+const requiredGateWorkflow = readFileSync('.github/workflows/required-release-gate.yml', 'utf8')
 const sameImageSmoke = workflow
   .split('- name: Start API and worker from the same backend image')[1]
   ?.split('- name: Generate SPDX SBOMs with pinned Syft')[0] ?? ''
@@ -68,11 +69,12 @@ test('ONP-1 proof is reusable by the fail-closed required gate and binds manifes
 })
 
 test('ONP-2 runtime proof executes the exact image identities scanned and bound to the manifest', () => {
+  const fullWorkflow = workflow.split('  component_proof:')[0]
   assert.match(coreRuntimeProof, /docker image inspect hr-axis-onprem-frontend:proof/)
   assert.match(coreRuntimeProof, /docker image inspect hr-axis-onprem-backend:proof/)
   assert.doesNotMatch(workflow, /hr-axis-onprem-(?:frontend|backend):core-proof/)
-  assert.equal((workflow.match(/docker build --file infra\/onprem\/images\/frontend\.Dockerfile/g) ?? []).length, 1)
-  assert.equal((workflow.match(/docker build --file infra\/onprem\/images\/backend\.Dockerfile/g) ?? []).length, 1)
+  assert.equal((fullWorkflow.match(/docker build --file infra\/onprem\/images\/frontend\.Dockerfile/g) ?? []).length, 1)
+  assert.equal((fullWorkflow.match(/docker build --file infra\/onprem\/images\/backend\.Dockerfile/g) ?? []).length, 1)
 })
 
 test('ONP-1 workflow self-tests with an external public-key file and defers the owner trust anchor to ONP-5', () => {
@@ -175,4 +177,124 @@ test('ONP-3B content guard invokes keycloak kind for the final image and every l
     assert.match(call, /--kind keycloak/)
     assert.match(call, /--application-root \/opt\/keycloak/)
   }
+})
+
+test('tiered proof workflow requires mode, image scope, and exact expected SHA inputs', () => {
+  assert.match(workflow, /workflow_call:\s*\n\s+inputs:/)
+  for (const input of ['proof_mode', 'image_scope', 'expected_sha']) {
+    assert.match(workflow, new RegExp(`${input}:[\\s\\S]{0,180}?required:\\s*true`))
+  }
+  assert.match(workflow, /ref:\s*\$\{\{ inputs\.expected_sha \|\| github\.sha \}\}/)
+  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/)
+  assert.match(workflow, /proof_mode:\s*\n\s+description:/)
+  assert.match(workflow, /image_scope:\s*\n\s+description:/)
+  assert.match(workflow, /evidence_sha:/)
+  assert.match(workflow, /receipt_sha256:/)
+  assert.match(workflow, /proven_sha:/)
+  assert.match(workflow, /\[\[ "\$EXPECTED_SHA" =~ \^\[a-f0-9\]\{40\}\$ \]\]/)
+  assert.equal((workflow.match(/proven_sha: \$\{\{ steps\.emit-proof-output\.outputs\.proven_sha \}\}/g) ?? []).length, 2)
+  assert.equal((workflow.match(/echo "proven_sha=\$EXPECTED_SHA"/g) ?? []).length, 2)
+})
+
+test('manual dispatch is fail-closed with full/both defaults bound to the dispatched SHA', () => {
+  const dispatch = workflow.match(/  workflow_dispatch:[\s\S]*?\n\npermissions:/)?.[0] ?? ''
+  assert.match(dispatch, /proof_mode:[\s\S]{0,220}?required:\s*false[\s\S]{0,220}?default:\s*full/)
+  assert.match(dispatch, /image_scope:[\s\S]{0,220}?required:\s*false[\s\S]{0,220}?default:\s*both/)
+  assert.doesNotMatch(dispatch, /expected_sha:/)
+  assert.match(workflow, /EXPECTED_SHA:\s*\$\{\{ inputs\.expected_sha \|\| github\.sha \}\}/)
+  assert.match(workflow, /case "\$PROOF_MODE:\$IMAGE_SCOPE" in\s+full:both\|component:frontend\|component:backend\|component:both\) ;;\s+\*\) exit 1 ;;\s+esac/)
+  assert.doesNotMatch(workflow, /case "\$PROOF_MODE:\$IMAGE_SCOPE" in[\s\S]{0,180}full:frontend/)
+})
+
+test('tiered selector wiring passes exact scope and SHA to reusable proof and exports child evidence identity', () => {
+  assert.match(requiredGateWorkflow, /proof_mode:\s*\$\{\{ needs\.scope\.outputs\.proof_mode \}\}/)
+  assert.match(requiredGateWorkflow, /image_scope:\s*\$\{\{ needs\.scope\.outputs\.image_scope \}\}/)
+  assert.match(requiredGateWorkflow, /expected_sha:\s*\$\{\{ github\.event\.pull_request\.head\.sha \}\}/)
+  assert.match(requiredGateWorkflow, /REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_MODE:/)
+  assert.match(requiredGateWorkflow, /REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_SCOPE:/)
+  assert.match(requiredGateWorkflow, /REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_EVIDENCE_SHA:/)
+  assert.match(requiredGateWorkflow, /REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RECEIPT_SHA256:/)
+  assert.match(requiredGateWorkflow, /REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_PROVEN_SHA:/)
+  assert.match(requiredGateWorkflow, /REQUIRED_RELEASE_GATE_EXPECTED_SHA:\s*\$\{\{ github\.event\.pull_request\.head\.sha \}\}/)
+})
+
+test('full proof retains every existing expensive runtime and artifact stage', () => {
+  const expectedSteps = [
+    'Pull pinned Keycloak base and build the optimized ONP-3B image',
+    'Build dedicated images with synthetic inputs',
+    'Prove ONP-2 static Compose, network, and firewall contracts',
+    'Prove ONP-3B production-shaped Keycloak contracts',
+    'Prove non-root image users',
+    'Prove capability-free Caddy bootstrap under production restrictions',
+    'Prove the pruned backend dependency graph and lazy runtime features',
+    'Start frontend with read-only root and least privilege',
+    'Start API and worker from the same backend image',
+    'Generate SPDX SBOMs with pinned Syft',
+    'Fail closed on image vulnerabilities and secrets with pinned Trivy',
+    'Export final filesystems and layers then run content guards',
+    'Generate production license inventories and notices',
+    'Generate sanitized Keycloak image manifest',
+    'Self-test signed synthetic release manifest',
+    'Prepare UID-bound ephemeral synthetic secret files',
+    'Run mandatory fresh-volume core proof behind a reversible firewall',
+    'Upload sanitized runtime receipt',
+    'Upload sanitized Keycloak runtime receipt',
+    'Upload sanitized proof artifacts',
+  ]
+  for (const step of expectedSteps) {
+    assert.equal((workflow.match(new RegExp(`- name: ${step.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')) ?? []).length, 1, step)
+  }
+  assert.match(workflow, /KEYCLOAK_IMAGE_ID/)
+  assert.match(workflow, /onprem-core-runtime-receipt\.json/)
+  assert.match(workflow, /onprem-keycloak-runtime-receipt\.json/)
+  assert.match(workflow, /proof\/release-manifest\.json/)
+})
+
+test('component proof has selected-image build, runtime, SBOM, scan, layer, and license evidence', () => {
+  const component = workflow.split('  component_proof:')[1] ?? ''
+  assert.match(component, /if:\s*inputs\.proof_mode == 'component'/)
+  assert.match(component, /docker build --file infra\/onprem\/images\/frontend\.Dockerfile/)
+  assert.match(component, /docker build --file infra\/onprem\/images\/backend\.Dockerfile/)
+  assert.match(component, /--read-only --cap-drop=ALL --security-opt=no-new-privileges:true/)
+  assert.match(component, /curl --fail --silent http:\/\/127\.0\.0\.1:18080\/health/)
+  assert.match(component, /require\.resolve\(name\)/)
+  assert.match(component, /lazy-runtime-smoke=ok/)
+  assert.match(component, /BullMQ worker context started/)
+  assert.match(component, /SYFT_IMAGE/)
+  assert.match(component, /TRIVY_IMAGE/)
+  assert.match(component, /--scanners vuln,secret/)
+  assert.match(component, /onprem-image-content-guard\.mjs --rootfs/)
+  assert.match(component, /onprem-third-party-notices\.mjs/)
+  assert.match(component, /onprem-image-license-reconciliation\.mjs/)
+  assert.match(component, /component-evidence\.json/)
+  assert.match(component, /onprem-proof-receipt\.json/)
+  assert.match(component, /echo "evidence_sha=/)
+  assert.match(component, /echo "receipt_sha256=/)
+  assert.match(component, /echo "proven_sha=\$EXPECTED_SHA"/)
+})
+
+test('component receipt binds selected image IDs and every selected evidence digest', () => {
+  const component = workflow.split('  component_proof:')[1] ?? ''
+  const emit = component.split('- name: Emit fresh component proof identity and receipt')[1]?.split('- name: Upload sanitized component proof artifacts')[0] ?? ''
+  assert.match(emit, /docker', \['image', 'inspect', `hr-axis-onprem-\$\{image\}:component-proof`/)
+  assert.match(emit, /const imageId =/)
+  assert.match(emit, /imageId,/)
+  assert.match(emit, /artifacts: paths\.map/)
+  assert.match(emit, /bytes: statSync\(pathname\)\.size, sha256: sha256\(pathname\)/)
+  assert.match(emit, /evidence\.baseLicenseEvidence =/)
+  assert.match(emit, /imageIds: Object\.fromEntries/)
+  assert.match(emit, /evidenceSha/)
+  assert.match(emit, /proof\/component-proof-digests\.env/)
+  assert.doesNotMatch(emit, /const receipt = \{ proofMode: 'component', imageScope: scope, expectedSha \}/)
+})
+
+test('on-prem Dockerfiles expose every application input copied into production images', () => {
+  assert.match(frontendDockerfile, /COPY admin-web\/package\*\.json \.\/admin-web\//)
+  assert.match(frontendDockerfile, /COPY admin-web\/ \.\/admin-web\//)
+  assert.match(backendDockerfile, /COPY backend\/nestjs\/package\*\.json \.\//)
+  assert.match(backendDockerfile, /COPY backend\/nestjs\/ \.\//)
+  assert.match(backendDockerfile, /COPY db\/schema\.sql \/app\/db\/schema\.sql/)
+  assert.match(backendDockerfile, /COPY db\/migrations\/ \/app\/db\/migrations\//)
+  assert.match(backendDockerfile, /COPY db\/seeds\/001_reference_seed\.sql/)
+  assert.match(backendDockerfile, /COPY db\/seeds\/002_onprem_keycloak_personas\.sql/)
 })
