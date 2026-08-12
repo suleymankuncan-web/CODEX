@@ -58,10 +58,11 @@ import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-reten
         return runtime.provider === "r2"
           ? new R2PhotoMediaObjectStorage(storage)
           : new S3CompatiblePhotoMediaObjectStorage({
-              ...storage,
-              region: runtime.region,
-              forcePathStyle: runtime.forcePathStyle,
-            });
+            ...storage,
+            region: runtime.region,
+            forcePathStyle: runtime.forcePathStyle,
+            requireObjectVersionId: true,
+          });
       },
     },
     {
@@ -78,10 +79,11 @@ import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-reten
         return runtime.provider === "r2"
           ? new R2PhotoMediaObjectStorage(storage)
           : new S3CompatiblePhotoMediaObjectStorage({
-              ...storage,
-              region: runtime.region,
-              forcePathStyle: runtime.forcePathStyle,
-            });
+            ...storage,
+            region: runtime.region,
+            forcePathStyle: runtime.forcePathStyle,
+            requireObjectVersionId: true,
+          });
       },
     },
   ],

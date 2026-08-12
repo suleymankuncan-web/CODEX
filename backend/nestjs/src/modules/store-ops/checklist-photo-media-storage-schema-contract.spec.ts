@@ -56,6 +56,14 @@ describe("checklist photo media storage recovery schema", () => {
     join(root, "db/rollback/069_photo_media_opaque_version_ids_v1.rollback.sql"),
     "utf8",
   );
+  const assetStorageIdentityMigration = readFileSync(
+    join(root, "db/migrations/070_photo_media_asset_storage_identity_v1.sql"),
+    "utf8",
+  );
+  const assetStorageIdentityRollback = readFileSync(
+    join(root, "db/rollback/070_photo_media_asset_storage_identity_v1.rollback.sql"),
+    "utf8",
+  );
 
   it.each([migration, schema])("requires a verified recovery replica before ready", (sql) => {
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS ops\.media_asset_replica/);
@@ -180,5 +188,18 @@ describe("checklist photo media storage recovery schema", () => {
     expect(versionPersistenceRollback).toContain("Pre-use rollback refused");
     expect(versionPersistenceRollback).toContain("DROP COLUMN IF EXISTS object_version_id");
     expect(versionPersistenceMigration).toContain("NEW.object_version_id IS NOT DISTINCT FROM OLD.object_version_id");
+  });
+
+  it("binds every media asset to an allowed provider identity before provider I/O", () => {
+    expect(assetStorageIdentityMigration).toContain("ADD COLUMN IF NOT EXISTS provider_adapter_id");
+    expect(assetStorageIdentityMigration).toContain("ADD COLUMN IF NOT EXISTS jurisdiction");
+    expect(assetStorageIdentityMigration).toContain("SET provider_adapter_id = 'r2'");
+    expect(assetStorageIdentityMigration).toContain("SET NOT NULL");
+    expect(assetStorageIdentityMigration).toMatch(/provider_adapter_id = 'r2'[\s\S]+jurisdiction = 'eu'/);
+    expect(assetStorageIdentityMigration).toMatch(/provider_adapter_id = 'seaweedfs'[\s\S]+jurisdiction = 'onprem'/);
+    expect(assetStorageIdentityRollback).toContain("Pre-use rollback refused after local storage identity use");
+    expect(assetStorageIdentityRollback).toContain("DROP COLUMN IF EXISTS provider_adapter_id");
+    expect(schema).toContain("provider_adapter_id TEXT NOT NULL");
+    expect(schema).toContain("jurisdiction TEXT NOT NULL");
   });
 });

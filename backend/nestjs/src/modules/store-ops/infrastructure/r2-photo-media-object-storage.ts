@@ -36,6 +36,7 @@ export class R2PhotoMediaObjectStorage extends S3CompatiblePhotoMediaObjectStora
   ) {
     super({
       bucket: configuration.bucket,
+      requireObjectVersionId: false,
       ...buildR2PhotoMediaObjectStorageClientConfiguration(configuration),
     }, client, signer);
   }

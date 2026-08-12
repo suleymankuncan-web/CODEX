@@ -13,7 +13,11 @@ import {
   buildPurgeManifestDigest,
 } from "../application/photo-media-retention.contract";
 import { PhotoMediaRetentionRepositoryPort } from "../application/photo-media-retention.ports";
-import { PHOTO_MEDIA_USAGE_SCOPE } from "../application/photo-media-storage.contract";
+import {
+  PHOTO_MEDIA_USAGE_SCOPE,
+  HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY,
+  PhotoMediaStorageIdentity,
+} from "../application/photo-media-storage.contract";
 
 type ManifestRow = {
   photo_media_purge_manifest_id: string;
@@ -84,7 +88,9 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
     actorUserId: string | null;
     ttlMinutes: number;
     allowedCompanyIds?: string[];
+    storageIdentity?: PhotoMediaStorageIdentity;
   }) {
+    const storageIdentity = input.storageIdentity ?? HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY;
     return this.databaseService.withTransaction(async (client) => {
       const candidates = await client.query<SnapshotRow>(`
         SELECT ma.media_asset_id, ma.company_id, ma.state, ma.canonical_sha256,
@@ -95,6 +101,17 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
           AND ma.expires_at <= NOW()
           AND ma.raw_disposed_at IS NOT NULL
           AND ($2::uuid[] IS NULL OR ma.company_id = ANY($2::uuid[]))
+          AND ma.provider_adapter_id = $3
+          AND ma.jurisdiction = $4
+          AND EXISTS (
+            SELECT 1 FROM ops.media_asset_replica active_primary
+            WHERE active_primary.media_asset_id = ma.media_asset_id
+              AND active_primary.replica_role = 'primary'
+              AND active_primary.replica_state = 'verified'
+              AND active_primary.is_active
+              AND active_primary.provider_adapter_id = $3
+              AND active_primary.jurisdiction = $4
+          )
           AND NOT ma.legal_hold
           AND NOT ma.operational_hold
           AND NOT ma.active_workflow_hold
@@ -112,7 +129,12 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
         ORDER BY ma.expires_at, ma.media_asset_id
         FOR SHARE SKIP LOCKED
         LIMIT $1
-      `, [input.limit, input.allowedCompanyIds ?? null]);
+      `, [
+        input.limit,
+        input.allowedCompanyIds ?? null,
+        storageIdentity.provider,
+        storageIdentity.jurisdiction,
+      ]);
       const snapshots = candidates.rows.map(mapSnapshot).map((snapshot) => ({
         ...snapshot,
         eligibilityDigest: buildPurgeEligibilityDigest(snapshot),
@@ -192,7 +214,9 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
     manifestDigest: string;
     actorUserId: string | null;
     allowedCompanyIds?: string[];
+    storageIdentity?: PhotoMediaStorageIdentity;
   }) {
+    const storageIdentity = input.storageIdentity ?? HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY;
     const expired = await this.databaseService.query(`
       UPDATE ops.photo_media_purge_manifest
       SET status = 'expired', execution_lease_token = NULL,
@@ -277,11 +301,27 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
         JOIN ops.media_asset ma
           ON ma.media_asset_id = item.media_asset_id
          AND ma.company_id = item.company_id
+         AND ma.provider_adapter_id = $3
+         AND ma.jurisdiction = $4
+         AND (ma.state = 'deleted_tombstone' OR EXISTS (
+           SELECT 1 FROM ops.media_asset_replica active_primary
+           WHERE active_primary.media_asset_id = ma.media_asset_id
+             AND active_primary.replica_role = 'primary'
+             AND active_primary.replica_state = 'verified'
+             AND active_primary.is_active
+             AND active_primary.provider_adapter_id = $3
+             AND active_primary.jurisdiction = $4
+         ))
         WHERE item.photo_media_purge_manifest_id = $1::uuid
           AND ($2::uuid[] IS NULL OR item.company_id = ANY($2::uuid[]))
         ORDER BY item.item_no
         FOR UPDATE OF ma
-      `, [input.manifestId, input.allowedCompanyIds ?? null]);
+      `, [
+        input.manifestId,
+        input.allowedCompanyIds ?? null,
+        storageIdentity.provider,
+        storageIdentity.jurisdiction,
+      ]);
       if (items.rows.length !== manifest.candidate_count) {
         throw retentionConflict("manifest_stale", "Photo media purge manifest is incomplete");
       }
@@ -338,8 +378,25 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
               cleanup_lease_token = gen_random_uuid(),
               cleanup_lease_expires_at = NOW() + INTERVAL '30 minutes', updated_at = NOW()
           WHERE media_asset_id = $1::uuid AND company_id = $2::uuid
+            AND provider_adapter_id = $4
+            AND jurisdiction = $5
+            AND EXISTS (
+              SELECT 1 FROM ops.media_asset_replica active_primary
+              WHERE active_primary.media_asset_id = ops.media_asset.media_asset_id
+                AND active_primary.replica_role = 'primary'
+                AND active_primary.replica_state = 'verified'
+                AND active_primary.is_active
+                AND active_primary.provider_adapter_id = $4
+                AND active_primary.jurisdiction = $5
+            )
           RETURNING cleanup_lease_token, thumbnail_object_key
-        `, [row.media_asset_id, row.company_id, input.manifestId]);
+        `, [
+          row.media_asset_id,
+          row.company_id,
+          input.manifestId,
+          storageIdentity.provider,
+          storageIdentity.jurisdiction,
+        ]);
         const assetLease = claimed.rows[0];
         if (!assetLease) throw retentionConflict("manifest_stale", "Photo media purge asset lease failed");
         const replicas = await client.query<{
@@ -349,8 +406,14 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
           FROM ops.media_asset_replica
           WHERE media_asset_id = $1::uuid
             AND replica_state IN ('copying', 'verified')
+            AND provider_adapter_id = $2
+            AND jurisdiction = $3
           ORDER BY replica_role, replica_generation
-        `, [row.media_asset_id]);
+        `, [
+          row.media_asset_id,
+          storageIdentity.provider,
+          storageIdentity.jurisdiction,
+        ]);
         candidates.push({
           mediaAssetId: row.media_asset_id,
           cleanupLeaseToken: assetLease.cleanup_lease_token,

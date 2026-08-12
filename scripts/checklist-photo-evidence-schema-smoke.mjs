@@ -2,9 +2,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
-
-const workspaceRoot = join(import.meta.dirname, "..");
-const smokeSqlPath = join(
+import { verifyPhotoMediaStorageIdentity } from "./photo-media-storage-identity-smoke.mjs";
+const workspaceRoot = join(import.meta.dirname, ".."), smokeSqlPath = join(
   workspaceRoot,
   "db",
   "preflight",
@@ -134,6 +133,7 @@ runPsql(`
   DELETE FROM ops.company WHERE company_id = '81000000-0000-4000-8000-000000000001';
   DELETE FROM ops.user_account WHERE user_id = '84000000-0000-4000-8000-000000000001';
 `);
+const assetStorageIdentityEvidence = verifyPhotoMediaStorageIdentity({ expectPsqlFailure, queryScalar, runBackendMigration, runPsql });
 const versionPersistenceMigrationName = "069_photo_media_opaque_version_ids_v1.sql";
 const versionPersistenceMigrationChecksum = queryScalar(`SELECT migration_checksum FROM audit.schema_migration WHERE migration_name = '${versionPersistenceMigrationName}';`);
 if (!versionPersistenceMigrationChecksum) {
@@ -731,7 +731,7 @@ console.log(
     opaqueVersionUsedRollbackRefusal: "verified",
     opaqueVersionHistoryGuards: versionPersistenceHistoryGuards,
     opaqueVersionConcurrency: versionPersistenceConcurrency,
-    localProviderVersionCompleteness: "deferred_to_next_pr",
+    ...assetStorageIdentityEvidence,
     reconciliationReceipt: "append-only",
     preUseRollback: "verified",
     usedSchemaRollbackRefusal: "verified",

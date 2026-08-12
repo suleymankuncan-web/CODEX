@@ -274,6 +274,43 @@ describe("PhotoMediaMaintenanceService", () => {
     }));
   });
 
+  it("keeps local retention preview and execution fail-closed until exact-version Slice 2", async () => {
+    const localService = service({
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+      scheduledRetentionCleanupEnabled: true,
+    });
+    const expectedFailure = {
+      response: expect.objectContaining({ code: "exact_version_maintenance_pending" }),
+    };
+    await expect(localService.previewRetentionPurge({
+      limit: 10,
+      reason: "manual_retention_cleanup",
+      source: "manual",
+      actorUserId: null,
+    })).rejects.toMatchObject(expectedFailure);
+    await expect(localService.executeRetentionPurge({
+      manifestId: "manifest-1",
+      manifestDigest: "a".repeat(64),
+      actorUserId: null,
+    })).rejects.toMatchObject(expectedFailure);
+    await expect(localService.reconcile()).rejects.toMatchObject(expectedFailure);
+    await expect(localService.rehearseRestore()).rejects.toMatchObject(expectedFailure);
+    await expect(localService.cleanupStalePartials(10)).rejects.toMatchObject(expectedFailure);
+    await expect(localService.cleanupReadyRawDisposals(10, null)).rejects.toMatchObject(expectedFailure);
+    await expect(localService.restoreAsset({
+      mediaAssetId: "asset-1",
+      actorUserId: "actor-1",
+    })).rejects.toMatchObject(expectedFailure);
+
+    expect([
+      ...Object.values(repository),
+      ...Object.values(retentionRepository),
+      ...Object.values(primary),
+      ...Object.values(recovery),
+    ].every((mock) => mock.mock.calls.length === 0)).toBe(true);
+  });
+
   it("releases every unprocessed manifest asset lease before marking a retryable failure", async () => {
     retentionRepository.claimPurgeManifest.mockResolvedValue({
       manifestId: "manifest-1",

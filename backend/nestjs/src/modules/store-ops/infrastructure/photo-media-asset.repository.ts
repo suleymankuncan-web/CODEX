@@ -13,7 +13,10 @@ import {
   PhotoMediaAssetRecord,
   PhotoMediaStorageIdentity,
 } from "../application/photo-media-storage.contract";
-import { PhotoMediaAssetRepositoryPort } from "../application/photo-media-storage.ports";
+import {
+  PhotoMediaAssetRepositoryPort,
+  PhotoMediaFinalizeObjectCheckpoints,
+} from "../application/photo-media-storage.ports";
 import { PHOTO_MEDIA_STORAGE_CONFIGURATION } from "../application/photo-media-storage.service";
 import {
   CreatePhotoMediaAssetInput,
@@ -45,7 +48,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
   }
 
   async createInitiatedAsset(input: CreatePhotoMediaAssetInput): Promise<PhotoMediaAssetRecord> {
-    return createPhotoMediaAsset(this.databaseService, input);
+    return createPhotoMediaAsset(this.databaseService, input, this.storageIdentity);
   }
 
   async findAssetForRead(mediaAssetId: string): Promise<PhotoMediaAssetRecord | null> {
@@ -56,19 +59,33 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       store_id: string | null;
       state: PhotoMediaAssetRecord["state"];
       raw_object_key: string;
+      raw_object_version_id: string | null;
       canonical_object_key: string | null;
       thumbnail_object_key: string | null;
+      thumbnail_object_version_id: string | null;
       canonical_sha256: string | null;
       byte_count: string | null;
       classification: PhotoMediaAssetRecord["classification"];
       capture_source: PhotoMediaAssetRecord["captureSource"];
+      primary_object_version_id: string | null;
     }>(`
-      SELECT media_asset_id, company_id, region_id, store_id, classification, capture_source, state, raw_object_key,
-             canonical_object_key, thumbnail_object_key, canonical_sha256, byte_count
-             , storage_attempt_id, raw_disposed_at
-      FROM ops.media_asset
-      WHERE media_asset_id = $1::uuid
-    `, [mediaAssetId]);
+      SELECT ma.media_asset_id, ma.company_id, ma.region_id, ma.store_id, ma.classification, ma.capture_source, ma.state,
+             ma.raw_object_key, ma.raw_object_version_id, ma.canonical_object_key, ma.thumbnail_object_key,
+             ma.thumbnail_object_version_id, ma.canonical_sha256, ma.byte_count, ma.storage_attempt_id, ma.raw_disposed_at,
+             primary_replica.object_version_id AS primary_object_version_id
+      FROM ops.media_asset ma
+      LEFT JOIN ops.media_asset_replica primary_replica
+        ON primary_replica.media_asset_id = ma.media_asset_id
+       AND primary_replica.replica_role = 'primary'
+       AND primary_replica.replica_state = 'verified'
+       AND primary_replica.is_active
+       AND primary_replica.provider_adapter_id = $2
+       AND primary_replica.jurisdiction = $3
+      WHERE ma.media_asset_id = $1::uuid
+        AND ma.provider_adapter_id = $2
+        AND ma.jurisdiction = $3
+        AND (ma.state <> 'ready' OR primary_replica.media_asset_replica_id IS NOT NULL)
+    `, [mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
     return result.rows[0] ? mapPhotoMediaAsset(result.rows[0]) : null;
   }
 
@@ -80,19 +97,87 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       store_id: string | null;
       state: PhotoMediaAssetRecord["state"];
       raw_object_key: string;
+      raw_object_version_id: string | null;
       storage_attempt_id: string;
     }>(`
       UPDATE ops.media_asset
       SET storage_attempt_id = COALESCE(storage_attempt_id, gen_random_uuid()), updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND state = 'uploaded'
+        AND provider_adapter_id = $2
+        AND jurisdiction = $3
       RETURNING media_asset_id, company_id, region_id, store_id, state,
-                raw_object_key, storage_attempt_id
-    `, [mediaAssetId]);
+                raw_object_key, raw_object_version_id, thumbnail_object_key,
+                thumbnail_object_version_id, storage_attempt_id
+    `, [mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
     const row = result.rows[0];
     if (!row) {
       throw new BadRequestException("Photo media finalize attempt is stale");
     }
     return mapPhotoMediaAsset(row);
+  }
+
+  async findFinalizeObjectCheckpoints(
+    mediaAssetId: string,
+  ): Promise<PhotoMediaFinalizeObjectCheckpoints> {
+    const result = await this.databaseService.query<{
+      replica_role: "primary" | "recovery";
+      object_key: string;
+      object_version_id: string | null;
+    }>(`
+      SELECT replica_role, object_key, object_version_id
+      FROM ops.media_asset_replica
+      WHERE media_asset_id = $1::uuid
+        AND replica_role IN ('primary', 'recovery')
+        AND replica_generation = 1
+        AND replica_state = 'verified'
+        AND is_active
+        AND provider_adapter_id = $2
+        AND jurisdiction = $3
+      ORDER BY replica_role
+    `, [mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
+    const checkpoints: PhotoMediaFinalizeObjectCheckpoints = {};
+    for (const row of result.rows) {
+      this.assertConfiguredObjectVersion(
+        row.object_version_id,
+        "Photo media replica version identity is unavailable",
+      );
+      checkpoints[row.replica_role] = {
+        objectKey: row.object_key,
+        ...(row.object_version_id ? { versionId: row.object_version_id } : {}),
+      };
+    }
+    return checkpoints;
+  }
+
+  async checkpointThumbnailObject(input: Record<string, unknown>): Promise<void> {
+    this.assertConfiguredObjectVersion(
+      input.thumbnailObjectVersionId,
+      "Photo media thumbnail object version identity is unavailable",
+    );
+    const result = await this.databaseService.query(`
+      UPDATE ops.media_asset
+      SET thumbnail_object_key = $2, thumbnail_object_version_id = $3, updated_at = NOW()
+      WHERE media_asset_id = $1::uuid AND state = 'uploaded'
+        AND provider_adapter_id = $4
+        AND jurisdiction = $5
+        AND processing_lease_token = $6::uuid
+        AND processing_lease_expires_at > NOW()
+        AND (thumbnail_object_key IS NULL OR (
+          thumbnail_object_key = $2
+          AND thumbnail_object_version_id IS NOT DISTINCT FROM $3
+        ))
+      RETURNING media_asset_id
+    `, [
+      input.mediaAssetId,
+      input.thumbnailObjectKey,
+      input.thumbnailObjectVersionId ?? null,
+      this.storageIdentity.provider,
+      this.storageIdentity.jurisdiction,
+      input.processingLeaseToken,
+    ]);
+    if (result.rows.length !== 1) {
+      throw new ServiceUnavailableException("Photo media thumbnail checkpoint conflicts with retry");
+    }
   }
 
   async acquireProcessingLease(input: Record<string, unknown>): Promise<string> {
@@ -103,13 +188,15 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         UPDATE ops.media_asset
         SET processing_lease_token = NULL, processing_lease_expires_at = NULL, updated_at = NOW()
         WHERE processing_lease_expires_at <= NOW()
-      `);
+          AND provider_adapter_id = $1 AND jurisdiction = $2
+      `, [this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       const target = await client.query<{ uploaded_by_user_id: string; store_id: string }>(`
         SELECT uploaded_by_user_id, store_id
         FROM ops.media_asset
         WHERE media_asset_id = $1::uuid AND state = $2
+          AND provider_adapter_id = $3 AND jurisdiction = $4
         FOR UPDATE
-      `, [input.mediaAssetId, requiredState]);
+      `, [input.mediaAssetId, requiredState, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       const row = target.rows[0];
       if (!row) {
         throw new BadRequestException("Photo media processing target is stale");
@@ -120,7 +207,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           COUNT(*) FILTER (WHERE store_id = $2::uuid) AS store_count
         FROM ops.media_asset
         WHERE processing_lease_token IS NOT NULL AND processing_lease_expires_at > NOW()
-      `, [row.uploaded_by_user_id, row.store_id]);
+          AND provider_adapter_id = $3 AND jurisdiction = $4
+      `, [row.uploaded_by_user_id, row.store_id, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       const limit = Number(input.concurrentProcessingHardLimit);
       if (
         Number(counts.rows[0]?.user_count ?? 0) >= limit ||
@@ -133,8 +221,9 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         SET processing_lease_token = gen_random_uuid(),
             processing_lease_expires_at = NOW() + INTERVAL '5 minutes', updated_at = NOW()
         WHERE media_asset_id = $1::uuid AND state = $2 AND processing_lease_token IS NULL
+          AND provider_adapter_id = $3 AND jurisdiction = $4
         RETURNING processing_lease_token
-      `, [input.mediaAssetId, requiredState]);
+      `, [input.mediaAssetId, requiredState, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       const token = leased.rows[0]?.processing_lease_token;
       if (!token) {
         throw new ServiceUnavailableException("Photo media processing lease could not be acquired");
@@ -148,7 +237,9 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       UPDATE ops.media_asset
       SET processing_lease_token = NULL, processing_lease_expires_at = NULL, updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND processing_lease_token = $2::uuid
-    `, [input.mediaAssetId, input.processingLeaseToken]);
+        AND provider_adapter_id = $3 AND jurisdiction = $4
+    `, [input.mediaAssetId, input.processingLeaseToken,
+      this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
   }
 
   async resizeByteReservation(input: Record<string, unknown>): Promise<void> {
@@ -157,8 +248,16 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       const asset = await client.query<{ quota_reserved_bytes: string }>(`
         SELECT quota_reserved_bytes FROM ops.media_asset
         WHERE media_asset_id = $1::uuid AND state = 'uploaded'
+          AND provider_adapter_id = $2 AND jurisdiction = $3
+          AND processing_lease_token = $4::uuid
+          AND processing_lease_expires_at > NOW()
         FOR UPDATE
-      `, [input.mediaAssetId]);
+      `, [
+        input.mediaAssetId,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+        input.processingLeaseToken,
+      ]);
       const row = asset.rows[0];
       if (!row) {
         throw new BadRequestException("Photo media byte reservation state is stale");
@@ -185,8 +284,17 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       const updated = await client.query(`
         UPDATE ops.media_asset SET quota_reserved_bytes = $2::bigint, updated_at = NOW()
         WHERE media_asset_id = $1::uuid AND state = 'uploaded'
+          AND provider_adapter_id = $3 AND jurisdiction = $4
+          AND processing_lease_token = $5::uuid
+          AND processing_lease_expires_at > NOW()
         RETURNING media_asset_id
-      `, [input.mediaAssetId, requiredReservation]);
+      `, [
+        input.mediaAssetId,
+        requiredReservation,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+        input.processingLeaseToken,
+      ]);
       if (updated.rows.length !== 1) {
         throw new BadRequestException("Photo media byte reservation update failed");
       }
@@ -194,12 +302,21 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
   }
 
   async recordVerifiedReplica(input: Record<string, unknown>): Promise<void> {
+    this.assertConfiguredObjectVersion(input.objectVersionId, "Photo media replica version identity is unavailable");
     await this.databaseService.withTransaction(async (client) => {
       const asset = await client.query<{ company_id: string }>(`
         SELECT company_id FROM ops.media_asset
         WHERE media_asset_id = $1::uuid AND state = 'uploaded'
+          AND provider_adapter_id = $2 AND jurisdiction = $3
+          AND processing_lease_token = $4::uuid
+          AND processing_lease_expires_at > NOW()
         FOR UPDATE
-      `, [input.mediaAssetId]);
+      `, [
+        input.mediaAssetId,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+        input.processingLeaseToken,
+      ]);
       const companyId = asset.rows[0]?.company_id;
       if (!companyId) {
         throw new BadRequestException("Photo media replica proof state is stale");
@@ -208,14 +325,15 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         INSERT INTO ops.media_asset_replica (
           media_asset_id, company_id, replica_role, provider_adapter_id,
           jurisdiction, bucket_alias, object_key, replica_state,
-          replica_generation, is_active, content_sha256, byte_count, copy_started_at, verified_at
-        ) VALUES ($1::uuid, $2::uuid, $3, $7, $8, $3, $4, 'verified', 1, TRUE, $5, $6::bigint, NOW(), NOW())
-        ON CONFLICT (media_asset_id, replica_role, replica_generation) DO NOTHING
-      `, [
+          object_version_id, replica_generation, is_active, content_sha256, byte_count, copy_started_at, verified_at
+        ) VALUES ($1::uuid, $2::uuid, $3, $8, $9, $3, $4, 'verified', $5, 1, TRUE, $6, $7::bigint, NOW(), NOW())
+          ON CONFLICT (media_asset_id, replica_role, replica_generation) DO NOTHING
+        `, [
         input.mediaAssetId,
         companyId,
         input.replicaRole,
         input.objectKey,
+        input.objectVersionId ?? null,
         input.sha256,
         input.byteCount,
         this.storageIdentity.provider,
@@ -227,12 +345,14 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         WHERE media_asset_id = $1::uuid AND replica_role = $2
           AND replica_state = 'verified' AND object_key = $3
           AND replica_generation = 1 AND is_active
-          AND content_sha256 = $4 AND byte_count = $5::bigint
-          AND provider_adapter_id = $6 AND jurisdiction = $7
+          AND object_version_id IS NOT DISTINCT FROM $4
+          AND content_sha256 = $5 AND byte_count = $6::bigint
+          AND provider_adapter_id = $7 AND jurisdiction = $8
       `, [
         input.mediaAssetId,
         input.replicaRole,
         input.objectKey,
+        input.objectVersionId ?? null,
         input.sha256,
         input.byteCount,
         this.storageIdentity.provider,
@@ -254,21 +374,31 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
   }
 
   async markUploaded(input: Record<string, unknown>): Promise<void> {
+    this.assertConfiguredObjectVersion(input.rawObjectVersionId, "Photo media raw object version identity is unavailable");
     const result = await this.databaseService.query(`
       UPDATE ops.media_asset
-      SET state = 'uploaded', uploaded_at = NOW(), updated_at = NOW()
+      SET state = 'uploaded', raw_object_version_id = $4, uploaded_at = NOW(), updated_at = NOW()
       WHERE media_asset_id = $1::uuid
         AND state = 'initiated'
+        AND provider_adapter_id = $5
+        AND jurisdiction = $6
+        AND processing_lease_token = $7::uuid
+        AND processing_lease_expires_at > NOW()
         AND declared_upload_byte_count = $2::bigint
         AND detected_mime_type = $3
       RETURNING media_asset_id
-    `, [input.mediaAssetId, input.byteCount, input.contentType]);
+    `, [input.mediaAssetId, input.byteCount, input.contentType, input.rawObjectVersionId ?? null,
+      this.storageIdentity.provider, this.storageIdentity.jurisdiction, input.processingLeaseToken]);
     if (result.rows.length !== 1) {
       throw new BadRequestException("Photo media upload state is stale");
     }
   }
 
   async markReadyAfterVerifiedRecovery(input: Record<string, unknown>): Promise<void> {
+    this.assertConfiguredObjectVersion(
+      input.thumbnailObjectVersionId,
+      "Photo media thumbnail object version identity is unavailable",
+    );
     await this.databaseService.withTransaction(async (client) => {
       const locked = await client.query<{
         company_id: string;
@@ -287,8 +417,16 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
          AND policy.company_id = ma.company_id
          AND policy.version_no = ma.retention_policy_version
         WHERE ma.media_asset_id = $1::uuid AND ma.state IN ('uploaded', 'accepted', 'canonicalized')
+          AND ma.provider_adapter_id = $2 AND ma.jurisdiction = $3
+          AND ma.processing_lease_token = $4::uuid
+          AND ma.processing_lease_expires_at > NOW()
         FOR UPDATE
-      `, [input.mediaAssetId]);
+      `, [
+        input.mediaAssetId,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+        input.processingLeaseToken,
+      ]);
       const asset = locked.rows[0];
       if (!asset) {
         throw new BadRequestException("Photo media asset finalize state is stale");
@@ -305,31 +443,36 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         SET state = 'ready',
             canonical_object_key = $2,
             thumbnail_object_key = $3,
-            detected_mime_type = $4,
-            byte_count = $5::bigint,
-            thumbnail_byte_count = $6::bigint,
-            original_sha256 = $7,
-            canonical_sha256 = $8,
-            width_px = $9,
-            height_px = $10,
+            thumbnail_object_version_id = $4,
+            detected_mime_type = $5,
+            byte_count = $6::bigint,
+            thumbnail_byte_count = $7::bigint,
+            original_sha256 = $8,
+            canonical_sha256 = $9,
+            width_px = $10,
+            height_px = $11,
             accepted_at = NOW(),
             canonicalized_at = NOW(),
             finalized_at = NOW(),
             metadata_stripped_at = NOW(),
             safety_scanned_at = NOW(),
-            expires_at = NOW() + make_interval(days => $11::integer),
+            expires_at = NOW() + make_interval(days => $12::integer),
             quota_reserved_bytes = 0,
             quota_reserved_class_a = 0,
             quota_reserved_class_b = 0,
-            accounted_provider_bytes = $12::bigint,
+            accounted_provider_bytes = $13::bigint,
             updated_at = NOW()
         WHERE media_asset_id = $1::uuid
           AND state IN ('uploaded', 'accepted', 'canonicalized')
+          AND provider_adapter_id = $14 AND jurisdiction = $15
+          AND processing_lease_token = $16::uuid
+          AND processing_lease_expires_at > NOW()
         RETURNING media_asset_id
       `, [
         input.mediaAssetId,
         input.canonicalObjectKey,
         input.thumbnailObjectKey,
+        input.thumbnailObjectVersionId ?? null,
         input.mimeType,
         input.canonicalByteCount,
         input.thumbnailByteCount,
@@ -339,6 +482,9 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         input.heightPx,
         asset.evidence_retention_days,
         accountedBytes,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+        input.processingLeaseToken,
       ]);
       if (finalized.rows.length !== 1) {
         throw new BadRequestException("Photo media asset could not transition to ready");
@@ -359,8 +505,14 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         WHERE media_asset_id = $1::uuid AND state = 'ready' AND raw_disposed_at IS NULL
           AND cleanup_lease_token = $2::uuid AND cleanup_lease_expires_at > NOW()
           AND cleanup_origin_state = 'raw_disposal' AND NOT raw_security_hold
+          AND provider_adapter_id = $3 AND jurisdiction = $4
         RETURNING company_id, declared_upload_byte_count
-      `, [input.mediaAssetId, input.cleanupLeaseToken]);
+      `, [
+        input.mediaAssetId,
+        input.cleanupLeaseToken,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+      ]);
       const row = result.rows[0];
       if (!row) {
         throw new BadRequestException("Photo media raw disposal lease is stale or held");
@@ -370,7 +522,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         SET cleanup_lease_token = NULL, cleanup_lease_expires_at = NULL,
             cleanup_origin_state = NULL, updated_at = NOW()
         WHERE media_asset_id = $1::uuid
-      `, [input.mediaAssetId]);
+          AND provider_adapter_id = $2 AND jurisdiction = $3
+      `, [input.mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       await client.query(`
         UPDATE ops.photo_media_usage_state
         SET provider_visible_bytes = GREATEST(0, provider_visible_bytes - $1::bigint), updated_at = NOW()
@@ -391,6 +544,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     const result = await this.databaseService.query<{
       media_asset_id: string;
       raw_object_key: string;
+      raw_object_version_id: string | null;
       cleanup_lease_token: string;
     }>(`
       UPDATE ops.media_asset
@@ -398,13 +552,16 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           cleanup_lease_expires_at = NOW() + INTERVAL '15 minutes', updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND state = 'ready' AND raw_disposed_at IS NULL
         AND NOT raw_security_hold
+        AND provider_adapter_id = $2
+        AND jurisdiction = $3
         AND (cleanup_lease_token IS NULL OR cleanup_lease_expires_at <= NOW())
-      RETURNING media_asset_id, raw_object_key, cleanup_lease_token
-    `, [mediaAssetId]);
+      RETURNING media_asset_id, raw_object_key, raw_object_version_id, cleanup_lease_token
+    `, [mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
     const row = result.rows[0];
     return row ? {
       mediaAssetId: row.media_asset_id,
       rawObjectKey: row.raw_object_key,
+      rawObjectVersionId: row.raw_object_version_id,
       cleanupLeaseToken: row.cleanup_lease_token,
     } : null;
   }
@@ -413,11 +570,14 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     const result = await this.databaseService.query<{
       media_asset_id: string;
       raw_object_key: string;
+      raw_object_version_id: string | null;
       cleanup_lease_token: string;
     }>(`
       WITH eligible AS (
         SELECT media_asset_id FROM ops.media_asset
         WHERE state = 'ready' AND raw_disposed_at IS NULL AND NOT raw_security_hold
+          AND provider_adapter_id = $2
+          AND jurisdiction = $3
           AND (cleanup_lease_token IS NULL OR cleanup_lease_expires_at <= NOW())
         ORDER BY updated_at, media_asset_id
         FOR UPDATE SKIP LOCKED LIMIT $1
@@ -427,11 +587,12 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           cleanup_lease_expires_at = NOW() + INTERVAL '15 minutes', updated_at = NOW()
       FROM eligible
       WHERE ma.media_asset_id = eligible.media_asset_id
-      RETURNING ma.media_asset_id, ma.raw_object_key, ma.cleanup_lease_token
-    `, [limit]);
+      RETURNING ma.media_asset_id, ma.raw_object_key, ma.raw_object_version_id, ma.cleanup_lease_token
+    `, [limit, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
     return result.rows.map((row) => ({
       mediaAssetId: row.media_asset_id,
       rawObjectKey: row.raw_object_key,
+      rawObjectVersionId: row.raw_object_version_id,
       cleanupLeaseToken: row.cleanup_lease_token,
     }));
   }
@@ -442,8 +603,12 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         UPDATE ops.media_asset
         SET state = 'quarantined', quarantined_at = NOW(), rejection_reason = $2, updated_at = NOW()
         WHERE media_asset_id = $1::uuid AND state IN ('initiated', 'uploaded')
+          AND provider_adapter_id = $3 AND jurisdiction = $4
+          AND processing_lease_token = $5::uuid
+          AND processing_lease_expires_at > NOW()
         RETURNING company_id
-      `, [input.mediaAssetId, input.reasonCode]);
+      `, [input.mediaAssetId, input.reasonCode,
+        this.storageIdentity.provider, this.storageIdentity.jurisdiction, input.processingLeaseToken]);
       const row = updated.rows[0];
       if (!row) {
         throw new BadRequestException("Photo media quarantine state is stale");
@@ -464,6 +629,9 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           SELECT media_asset_id, quota_reserved_bytes
           FROM ops.media_asset
           WHERE media_asset_id = $1::uuid AND state IN ('initiated', 'uploaded')
+            AND provider_adapter_id = $3 AND jurisdiction = $4
+            AND processing_lease_token = $5::uuid
+            AND processing_lease_expires_at > NOW()
           FOR UPDATE
         ), updated AS (
           UPDATE ops.media_asset ma
@@ -476,7 +644,11 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           RETURNING target.quota_reserved_bytes
         )
         SELECT quota_reserved_bytes FROM updated
-      `, [input.mediaAssetId, input.reasonCode]);
+      `, [input.mediaAssetId, input.reasonCode,
+        this.storageIdentity.provider, this.storageIdentity.jurisdiction, input.processingLeaseToken]);
+      if (result.rows.length !== 1) {
+        throw new BadRequestException("Photo media rejection state is stale");
+      }
       const reserved = Number(result.rows[0]?.quota_reserved_bytes ?? 0);
       if (reserved > 0) {
         await client.query(`
@@ -493,7 +665,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
   }
 
   async listReconciliationInventory(allowedCompanyIds?: string[]) {
-    return listPhotoMediaReconciliationInventory(this.databaseService, allowedCompanyIds);
+    return listPhotoMediaReconciliationInventory(this.databaseService, allowedCompanyIds, this.storageIdentity);
   }
 
   async recordReconciliationReceipt(input: Record<string, unknown>): Promise<void> {
@@ -546,8 +718,9 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
                operational_hold, active_workflow_hold, ai_review_hold
         FROM ops.media_asset
         WHERE media_asset_id = $1::uuid
+          AND provider_adapter_id = $2 AND jurisdiction = $3
         FOR UPDATE
-      `, [input.mediaAssetId]);
+      `, [input.mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       const asset = locked.rows[0];
       if (!asset) {
         throw new ConflictException({
@@ -573,7 +746,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         UPDATE ops.media_asset_replica
         SET replica_state = 'deleted_tombstone', deleted_at = NOW(), updated_at = NOW()
         WHERE media_asset_id = $1::uuid AND replica_state IN ('copying', 'verified')
-      `, [input.mediaAssetId]);
+          AND provider_adapter_id = $2 AND jurisdiction = $3
+      `, [input.mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       const updated = await client.query(`
         UPDATE ops.media_asset
         SET state = 'deleted_tombstone', deleted_at = NOW(), deletion_reason = $4,
@@ -583,6 +757,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         WHERE media_asset_id = $1::uuid AND state = 'purge_pending'
           AND cleanup_lease_token = $2::uuid
           AND purge_manifest_id = $3::uuid
+          AND provider_adapter_id = $6 AND jurisdiction = $7
         RETURNING media_asset_id
       `, [
         input.mediaAssetId,
@@ -590,6 +765,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         input.purgeManifestId,
         input.reasonCode,
         input.tombstoneSha256,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
       ]);
       if (updated.rows.length !== 1) {
         throw new ConflictException({
@@ -617,6 +794,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       const result = await client.query<{
         media_asset_id: string;
         raw_object_key: string;
+        raw_object_version_id: string | null;
         cleanup_lease_token: string;
       }>(`
         WITH eligible AS (
@@ -628,6 +806,8 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
             )
             AND (cleanup_lease_token IS NULL OR cleanup_lease_expires_at <= NOW())
             AND NOT raw_security_hold
+            AND provider_adapter_id = $2
+            AND jurisdiction = $3
           ORDER BY initiated_at, media_asset_id
           FOR UPDATE SKIP LOCKED
           LIMIT $1
@@ -639,12 +819,13 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
             cleanup_lease_expires_at = NOW() + INTERVAL '15 minutes', updated_at = NOW()
         FROM eligible
         WHERE ma.media_asset_id = eligible.media_asset_id
-        RETURNING ma.media_asset_id, ma.raw_object_key, ma.cleanup_lease_token
-      `, [limit]);
+        RETURNING ma.media_asset_id, ma.raw_object_key, ma.raw_object_version_id, ma.cleanup_lease_token
+      `, [limit, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       return result.rows.map((row) => ({
         mediaAssetId: row.media_asset_id,
         cleanupLeaseToken: row.cleanup_lease_token,
         rawObjectKey: row.raw_object_key,
+        rawObjectVersionId: row.raw_object_version_id,
       }));
     });
   }
@@ -653,6 +834,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     const result = await this.databaseService.query<{
       media_asset_id: string;
       raw_object_key: string;
+      raw_object_version_id: string | null;
       cleanup_lease_token: string;
     }>(`
       UPDATE ops.media_asset
@@ -664,8 +846,10 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         AND (state = 'quarantined' OR (state = 'purge_pending' AND cleanup_origin_state = 'quarantined'))
         AND (cleanup_lease_token IS NULL OR cleanup_lease_expires_at <= NOW())
         AND NOT raw_security_hold
-      RETURNING media_asset_id, raw_object_key, cleanup_lease_token
-    `, [mediaAssetId]);
+        AND provider_adapter_id = $2
+        AND jurisdiction = $3
+      RETURNING media_asset_id, raw_object_key, raw_object_version_id, cleanup_lease_token
+    `, [mediaAssetId, this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
     const row = result.rows[0];
     if (!row) {
       throw new BadRequestException("Photo media quarantine is stale, held, or already leased");
@@ -674,6 +858,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
       mediaAssetId: row.media_asset_id,
       cleanupLeaseToken: row.cleanup_lease_token,
       rawObjectKey: row.raw_object_key,
+      rawObjectVersionId: row.raw_object_version_id,
     };
   }
 
@@ -689,6 +874,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
             AND cleanup_lease_expires_at > NOW()
             AND canonical_object_key IS NULL
             AND NOT raw_security_hold
+            AND provider_adapter_id = $4 AND jurisdiction = $5
           FOR UPDATE
         ), updated AS (
           UPDATE ops.media_asset ma
@@ -702,7 +888,13 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           RETURNING target.quota_reserved_bytes
         )
         SELECT quota_reserved_bytes FROM updated
-      `, [input.mediaAssetId, input.cleanupLeaseToken, input.reasonCode]);
+      `, [
+        input.mediaAssetId,
+        input.cleanupLeaseToken,
+        input.reasonCode,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+      ]);
       if (result.rows.length !== 1) {
         throw new BadRequestException("Photo media partial cleanup state is stale or held");
       }
@@ -726,8 +918,14 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
         WHERE media_asset_id = $1::uuid
           AND state IN ('purge_pending', 'ready')
           AND cleanup_lease_token = $2::uuid
+          AND provider_adapter_id = $3 AND jurisdiction = $4
         RETURNING company_id
-      `, [input.mediaAssetId, input.cleanupLeaseToken]);
+      `, [
+        input.mediaAssetId,
+        input.cleanupLeaseToken,
+        this.storageIdentity.provider,
+        this.storageIdentity.jurisdiction,
+      ]);
       const row = released.rows[0];
       if (!row) {
         throw new BadRequestException("Photo media cleanup failure lease is stale");
@@ -744,7 +942,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
   }
 
   async recordProviderFailure(input: Record<string, unknown>): Promise<void> {
-    await recordPhotoMediaProviderFailure(this.databaseService, input);
+    await recordPhotoMediaProviderFailure(this.databaseService, this.storageIdentity, input);
   }
 
   async recordQuotaDenial(input: Record<string, unknown>): Promise<void> {
@@ -788,5 +986,11 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
     monthlyClassBHardLimit: number;
   }): Promise<void> {
     await reservePhotoMediaProviderOperations(this.databaseService, input);
+  }
+
+  private assertConfiguredObjectVersion(value: unknown, message: string): void {
+    if (this.storageIdentity.provider !== "r2" && typeof value !== "string") {
+      throw new ServiceUnavailableException(message);
+    }
   }
 }

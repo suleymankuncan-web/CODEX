@@ -68,6 +68,7 @@ export class PhotoMediaMaintenanceService {
 
   async reconcile(actorScope?: { companyIds: string[] }): Promise<ReconciliationReceipt> {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     this.assertActorCompanyScope(actorScope);
     const allowedCompanyIds = actorScope?.companyIds;
     const inventory = await this.repository.listReconciliationInventory(allowedCompanyIds);
@@ -171,6 +172,7 @@ export class PhotoMediaMaintenanceService {
 
   async rehearseRestore() {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     await this.reserveOperations(3, 2);
     const body = Buffer.from("hr-axis-synthetic-restore-rehearsal-v1");
     const manifestDigest = createHash("sha256").update(body).digest("hex");
@@ -216,6 +218,7 @@ export class PhotoMediaMaintenanceService {
     actorScope?: { companyIds: string[] };
   }) {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     this.assertActorCompanyScope(input.actorScope);
     const expectedReason = input.source === "scheduled"
       ? "scheduled_retention_cleanup"
@@ -232,6 +235,7 @@ export class PhotoMediaMaintenanceService {
       limit: this.assertBatchLimit(input.limit),
       ttlMinutes: this.configuration.retentionManifestTtlMinutes ?? 60,
       allowedCompanyIds: input.actorScope?.companyIds,
+      storageIdentity: this.configuration,
     });
   }
 
@@ -242,6 +246,7 @@ export class PhotoMediaMaintenanceService {
     actorScope?: { companyIds: string[] };
   }) {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     this.assertActorCompanyScope(input.actorScope);
     if (!this.configuration.scheduledRetentionCleanupEnabled) {
       throw new ServiceUnavailableException({
@@ -258,6 +263,7 @@ export class PhotoMediaMaintenanceService {
     const claim = await this.retentionRepository.claimPurgeManifest({
       ...input,
       allowedCompanyIds: input.actorScope?.companyIds,
+      storageIdentity: this.configuration,
     });
     let deleted = 0;
     try {
@@ -362,6 +368,7 @@ export class PhotoMediaMaintenanceService {
 
   async cleanupStalePartials(limit: number) {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     const candidates = await this.repository.claimStalePartialUploads(this.assertBatchLimit(limit));
     let deleted = 0;
     for (const candidate of candidates) {
@@ -387,6 +394,7 @@ export class PhotoMediaMaintenanceService {
 
   async cleanupReadyRawDisposals(limit: number, actorUserId: string | null) {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     const candidates = await this.repository.claimReadyRawDisposals(this.assertBatchLimit(limit));
     let deleted = 0;
     for (const candidate of candidates) {
@@ -412,6 +420,7 @@ export class PhotoMediaMaintenanceService {
 
   async restoreAsset(input: { mediaAssetId: string; actorUserId: string }) {
     this.assertSyntheticMaintenanceEnabled();
+    this.assertExactVersionMaintenanceSupported();
     const candidate = await this.repository.claimRestoreCandidate(input);
     try {
       await this.reserveOperations(0, 1);
@@ -504,6 +513,15 @@ export class PhotoMediaMaintenanceService {
   private assertSyntheticMaintenanceEnabled(): void {
     if (!this.configuration.enabled || !this.configuration.syntheticOnly) {
       throw new ServiceUnavailableException("Synthetic photo media maintenance is disabled");
+    }
+  }
+
+  private assertExactVersionMaintenanceSupported(): void {
+    if (this.configuration.provider !== "r2") {
+      throw new ServiceUnavailableException({
+        code: "exact_version_maintenance_pending",
+        message: "Local photo media maintenance requires exact-version support",
+      });
     }
   }
 
