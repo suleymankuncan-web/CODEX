@@ -52,6 +52,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
 import { Textarea } from '../components/ui/textarea'
 import { actionToast } from '../lib/action-toast'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 import './store-tasks-command-canvas.css'
 import { StoreActionPhotoReviewControl } from '../features/store-actions/StoreActionPhotoReviewControl'
 
@@ -93,6 +94,7 @@ function StoreTasksWorkspace(input: {
     queryFn: () => getTaskCommandWorkspace({ ...range, limit: PAGE_SIZE, offset }),
     placeholderData: (previousData, previousQuery) =>
       retainScopedPlaceholder(previousData, previousQuery?.queryKey, scopeSignature),
+    ...transientQueryRetryOptions,
   })
   const workspace = workspaceQuery.data
   const canMutate = workspace?.view === 'store_manager' && Boolean(workspace.capabilities.canUpdate)
@@ -100,6 +102,7 @@ function StoreTasksWorkspace(input: {
     queryKey: storeWorkflowInboxQueryKey(input.authSummary),
     queryFn: getWorkflowInbox,
     enabled: canMutate,
+    ...transientQueryRetryOptions,
   })
   const candidates = useMemo(
     () => canMutate ? buildReadOnlyStoreActionCandidates(inboxQuery.data?.items ?? []) : [],
@@ -262,6 +265,7 @@ function TaskDrawer(input: {
       ? page.offset + page.items.length
       : undefined,
     enabled: Boolean(plan),
+    ...transientQueryRetryOptions,
   })
   const auditEvents = eventsQuery.data?.pages.flatMap((page) => page.items) ?? plan?.events.items ?? []
   const mutation = useMutation({

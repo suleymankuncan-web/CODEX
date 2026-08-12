@@ -83,13 +83,14 @@ test('store tasks renders persisted plan names without UUID fallbacks', async ({
 })
 
 test('store tasks keeps raw action plan permission errors out of the UI', async ({ page }) => {
-  await routeStoreTasksApi(page, { failActionPlanList: true })
+  const api = await routeStoreTasksApi(page, { failActionPlanList: true })
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByText('Görevler açılamadı')).toBeVisible()
+  await expect(page.getByText('Görevler açılamadı')).toBeVisible({ timeout: 10_000 })
   await expect(page.getByText('Missing required role')).toHaveCount(0)
   await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toHaveCount(0)
+  expect(api.workspaceRequestCount).toBe(1)
 })
 
 test('store manager can move and close a persisted action plan from the drawer', async ({ page }) => {
@@ -367,6 +368,7 @@ async function routeStoreTasksApi(
     statusPayloads: [] as Array<Record<string, unknown>>,
     closePayloads: [] as Array<Record<string, unknown>>,
     createPayloads: [] as Array<Record<string, unknown>>,
+    workspaceRequestCount: 0,
     failActionPlanList: input.failActionPlanList ?? false,
   }
 
@@ -402,6 +404,7 @@ async function routeStoreTasksApi(
   await page.route('**/api/store/tasks/**', async (route) => {
     const request = route.request()
     const url = new URL(request.url())
+    if (url.pathname.endsWith('/workspace')) state.workspaceRequestCount += 1
     if (url.pathname.endsWith('/events')) {
       await route.fulfill({
         json: {
