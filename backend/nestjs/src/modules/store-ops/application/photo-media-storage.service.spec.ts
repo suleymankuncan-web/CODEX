@@ -63,6 +63,8 @@ describe("PhotoMediaStorageService", () => {
     syntheticOnly: true,
     provider: "r2" as const,
     jurisdiction: "eu" as const,
+    region: "auto" as const,
+    forcePathStyle: true as const,
     primaryBucket: "primary",
     recoveryBucket: "recovery",
     primaryEndpoint: "https://account.eu.r2.cloudflarestorage.com",

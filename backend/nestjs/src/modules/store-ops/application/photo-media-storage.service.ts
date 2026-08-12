@@ -258,7 +258,7 @@ export class PhotoMediaStorageService {
     });
     let uploadLeaseToken: string | null = null;
     try {
-      // The assignment/revision binding must succeed before any customer bytes reach R2.
+      // The assignment/revision binding must succeed before any customer bytes reach object storage.
       // This closes the revocation race without relying on best-effort object cleanup.
       await input.bindInitiatedAsset?.(mediaAssetId);
       uploadLeaseToken = await this.repository.acquireProcessingLease({
@@ -266,7 +266,7 @@ export class PhotoMediaStorageService {
         requiredState: "initiated",
         concurrentProcessingHardLimit: this.configuration.concurrentProcessingHardLimit,
       });
-      // Decode under the bounded processing lease, before any bytes reach R2.
+      // Decode under the bounded processing lease, before any bytes reach object storage.
       await this.imageProcessor.process(input.contentBody);
       const rawObjectKey = asset.rawObjectKey ?? buildPhotoMediaObjectKeys({
         companyId: asset.companyId,

@@ -1,4 +1,5 @@
 import { ConfigService } from "@nestjs/config";
+import { readFileBackedSetting } from "./secret-file-config";
 
 export function readPhotoMediaCredentials(
   configService: ConfigService,
@@ -7,9 +8,11 @@ export function readPhotoMediaCredentials(
 ) {
   const normalize = (value: string | undefined) =>
     !value || value === "undefined" || value === "null" ? undefined : value;
-  const accessKeyId = normalize(configService.get<string>(`PHOTO_MEDIA_${role}_ACCESS_KEY_ID`));
+  const accessKeyId = normalize(
+    readFileBackedSetting(configService, `PHOTO_MEDIA_${role}_ACCESS_KEY_ID`),
+  );
   const secretAccessKey = normalize(
-    configService.get<string>(`PHOTO_MEDIA_${role}_SECRET_ACCESS_KEY`),
+    readFileBackedSetting(configService, `PHOTO_MEDIA_${role}_SECRET_ACCESS_KEY`),
   );
   if (enabled && !accessKeyId) {
     throw new Error(
@@ -59,6 +62,10 @@ export function readPhotoMediaRuntimeConfiguration(
     throw new Error("PR-3 photo media storage must remain synthetic-only");
   }
   const rawAllowlist = optional("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST") ?? "";
+  const provider = string("PHOTO_MEDIA_PROVIDER", "r2");
+  if (provider !== "r2" && provider !== "seaweedfs") {
+    throw new Error("PHOTO_MEDIA_PROVIDER must be r2 or seaweedfs");
+  }
 
   const realVmPilotEnabled = boolean("PHOTO_MEDIA_REAL_VM_PILOT_ENABLED", false);
   if (realVmPilotEnabled && !enabled) {
@@ -95,8 +102,10 @@ export function readPhotoMediaRuntimeConfiguration(
   const storage = {
     enabled,
     syntheticOnly,
-    provider: "r2" as const,
-    jurisdiction: "eu" as const,
+    provider,
+    jurisdiction: provider === "r2" ? "eu" as const : "onprem" as const,
+    region: provider === "r2" ? "auto" as const : "us-east-1" as const,
+    forcePathStyle: true as const,
     primaryBucket: required("PHOTO_MEDIA_PRIMARY_BUCKET"),
     recoveryBucket: required("PHOTO_MEDIA_RECOVERY_BUCKET"),
     primaryEndpoint: required("PHOTO_MEDIA_PRIMARY_ENDPOINT"),

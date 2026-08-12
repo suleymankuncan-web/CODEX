@@ -10,6 +10,8 @@ describe("photo media storage contract", () => {
     syntheticOnly: true,
     provider: "r2" as const,
     jurisdiction: "eu" as const,
+    region: "auto" as const,
+    forcePathStyle: true as const,
     primaryBucket: "hr-axis-photo-primary",
     recoveryBucket: "hr-axis-photo-recovery",
     primaryEndpoint: "https://account.eu.r2.cloudflarestorage.com",
@@ -27,14 +29,38 @@ describe("photo media storage contract", () => {
     safetyAssurance: "fixture_identity_only" as const,
   };
 
-  it("accepts only the owner-approved private EU two-bucket posture", () => {
+  it("accepts the historical private R2 posture and the bounded local S3 posture", () => {
     expect(() => assertPhotoMediaStorageConfiguration(validConfiguration)).not.toThrow();
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+      region: "us-east-1",
+      primaryEndpoint: "http://object-storage:8333",
+      recoveryEndpoint: "http://object-storage:8333",
+    })).not.toThrow();
     expect(() =>
       assertPhotoMediaStorageConfiguration({
         ...validConfiguration,
         jurisdiction: "auto" as never,
       }),
-    ).toThrow("EU jurisdiction");
+    ).toThrow("provider and jurisdiction");
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      provider: "seaweedfs",
+      jurisdiction: "eu",
+      region: "us-east-1",
+      primaryEndpoint: "http://object-storage:8333",
+      recoveryEndpoint: "http://object-storage:8333",
+    })).toThrow("provider and jurisdiction");
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+      region: "us-east-1",
+      primaryEndpoint: "http://127.0.0.1:8333",
+      recoveryEndpoint: "http://object-storage:8333",
+    })).toThrow("private local S3 endpoint");
     expect(() =>
       assertPhotoMediaStorageConfiguration({
         ...validConfiguration,

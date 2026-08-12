@@ -13,6 +13,7 @@ import {
   buildPurgeManifestDigest,
 } from "../application/photo-media-retention.contract";
 import { PhotoMediaRetentionRepositoryPort } from "../application/photo-media-retention.ports";
+import { PHOTO_MEDIA_USAGE_SCOPE } from "../application/photo-media-storage.contract";
 
 type ManifestRow = {
   photo_media_purge_manifest_id: string;
@@ -565,7 +566,7 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
           WHERE event_type = 'checklist_photo_evidence.storage.cleanup_failed'
             AND occurred_at >= NOW() - INTERVAL '30 days') AS cleanup_failure_count
       FROM ops.photo_media_usage_state usage
-      WHERE usage.usage_scope = 'r2-eu'
+      WHERE usage.usage_scope = '${PHOTO_MEDIA_USAGE_SCOPE}'
     `);
     const classifications = await this.databaseService.query<{
       classification: string; asset_count: string; byte_count: string;

@@ -62,6 +62,7 @@ slice. They are planning inputs, not permanent assumptions.
 | ONP-D3 | Keep PostgreSQL. Do not port HR Axis to the company's MySQL instance. | The schema, migrations, queries, and invariants are PostgreSQL-native. |
 | ONP-D4 | Use a local production-mode Keycloak instance as the independent HR Axis identity provider. | Keeps identity inside the HR Axis package and removes hosted Clerk dependency. |
 | ONP-D5 | Use a provider-neutral S3-compatible local object-store adapter. Select the concrete engine only after its current license, backup behavior, and S3 compatibility pass the ONP-4 gate. | Avoids hard-coding another provider before evidence. |
+| ONP-D5A | Treat SeaweedFS as the conditional ONP-4B synthetic candidate, not as an accepted engine. Use static startup identity/configuration and accept it only if private access, byte/hash/read/delete/list/signing, transient deletion, locked-object deletion denial, restart, backup, and restore-hash proofs all pass. | Keeps implementation progress reversible while current compatibility and retention behavior remain evidence-gated. |
 | ONP-D6 | Runtime egress is denied by default. Sentry and Qwen are disabled. | Keeps company data within the company boundary. |
 | ONP-D7 | Nebim is not implemented in this plan. Reserve an internal import-worker boundary only. | Exact endpoint, auth, payload, stable-IP, schedule, and ownership are not yet known. |
 | ONP-D8 | Source remains owner-controlled. Deliver immutable production images, Compose/config templates, checksums/signatures, SBOMs, and runbooks—not the Git repository. | Limits routine source exposure while keeping deployment reproducible. |
@@ -198,11 +199,30 @@ upgrade must have its own compatibility and restore rehearsal.
 
 - Keep objects private; no public development URL or public bucket.
 - Use short-lived server-authorized signed reads.
+- Treat the configured local S3 endpoint as a server-internal address only.
+  Never return an `object-storage` Compose hostname or plain-HTTP internal URL
+  to an HTTPS browser. Before ONP-4B activation, prove either a same-origin
+  authenticated proxy/stream delivery path or an owner-approved browser-
+  reachable signed endpoint whose TLS, host, signature, authorization, and
+  expiry contracts remain fail-closed.
 - Preserve primary/recovery integrity checks, SHA-256 and byte-count
   verification, prefixes, retention holds, and sanitized receipts.
 - Primary and recovery cannot claim independent failure domains if both reside
   on the same physical disk. The accepted production design needs a separate
   disk, NAS, or backup target supplied by IT.
+- Owner-provided host facts on 2026-08-11 are 4 CPU, 16 GB RAM, and a 100 GB SSD
+  for the application, PostgreSQL, Redis, and Keycloak. Photo/media objects are
+  intended to live on a separate antivirus-protected physical disk that is
+  covered by the company's recurring backup process. This is capacity/topology
+  input, not completed recovery evidence.
+- The existing distinct primary/recovery bucket contract remains required for
+  application-level canonical verification, but two buckets on this one media
+  disk do not count as independent disaster recovery. The company backup counts
+  as the production recovery copy only after IT identifies its target/failure
+  domain, frequency, retention, encryption and access ownership, and one
+  synthetic restore proves inventory plus SHA-256.
+- Antivirus is defense in depth; it does not replace decode/re-encode,
+  SHA-256/byte verification, private access, retention, or restore proof.
 - Provider-neutralization must not weaken the existing synthetic-only and
   real-photo activation gates.
 
@@ -474,6 +494,10 @@ Risk: R5 storage, retention, and evidence integrity.
 Scope:
 
 - select the local S3 engine using current license and compatibility evidence;
+- evaluate the conditional SeaweedFS candidate with static startup
+  identity/configuration; reject it if locked deletion succeeds, transient
+  deletion fails, or any private access/hash/list/signing/restore contract
+  cannot be proven;
 - replace R2-named runtime semantics with a provider-neutral S3 contract while
   preserving the existing R2 adapter as a hosted rollback option;
 - private buckets/volumes, signed reads, canonical/recovery verification,
@@ -484,6 +508,9 @@ Acceptance:
 
 - current R2 contract tests remain green;
 - local S3 contract suite passes byte/hash/read/delete/list/signing behavior;
+- browser delivery does not expose an internal Compose hostname or mixed-
+  content URL, and the selected same-origin/reachable delivery contract passes
+  authorization, TLS/host, signature, and expiry tests;
 - provider identity no longer changes business semantics;
 - primary/recovery mismatch fails closed;
 - no public object access;

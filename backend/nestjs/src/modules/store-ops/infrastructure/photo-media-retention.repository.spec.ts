@@ -187,4 +187,13 @@ describe("PhotoMediaRetentionRepository", () => {
     ])).rejects.toThrow("full company scope");
     expect(String(database.query.mock.calls[0]?.[0])).toContain("ops.company");
   });
+
+  it("reads the provider-neutral usage scope", async () => {
+    const database = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+    const repository = new PhotoMediaRetentionRepository(database as never);
+    await repository.getUsageForecast();
+    const sql = database.query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).toContain("usage.usage_scope = 'photo-media-v1'");
+    expect(sql).not.toContain("usage.usage_scope = 'r2-eu'");
+  });
 });

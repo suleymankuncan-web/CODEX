@@ -12,6 +12,7 @@ import {
 import { DisabledPhotoMediaObjectStorage } from "./infrastructure/disabled-photo-media-object-storage";
 import { PhotoMediaAssetRepository } from "./infrastructure/photo-media-asset.repository";
 import { R2PhotoMediaObjectStorage } from "./infrastructure/r2-photo-media-object-storage";
+import { S3CompatiblePhotoMediaObjectStorage } from "./infrastructure/s3-compatible-photo-media-object-storage";
 import { SharpPhotoMediaImageProcessor } from "./infrastructure/sharp-photo-media-image-processor";
 import { SyntheticFixturePhotoMediaSafetyScanner } from "./infrastructure/synthetic-fixture-photo-media-safety-scanner";
 import { PhotoMediaStorageController } from "./web/photo-media-storage.controller";
@@ -48,13 +49,19 @@ import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-reten
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => {
         const runtime = config.photoMediaStorageConfiguration;
-        return runtime.enabled
-          ? new R2PhotoMediaObjectStorage({
-              bucket: runtime.primaryBucket,
-              endpoint: runtime.primaryEndpoint,
-              credentials: config.photoMediaPrimaryCredentials,
-            })
-          : new DisabledPhotoMediaObjectStorage();
+        if (!runtime.enabled) return new DisabledPhotoMediaObjectStorage();
+        const storage = {
+          bucket: runtime.primaryBucket,
+          endpoint: runtime.primaryEndpoint,
+          credentials: config.photoMediaPrimaryCredentials,
+        };
+        return runtime.provider === "r2"
+          ? new R2PhotoMediaObjectStorage(storage)
+          : new S3CompatiblePhotoMediaObjectStorage({
+              ...storage,
+              region: runtime.region,
+              forcePathStyle: runtime.forcePathStyle,
+            });
       },
     },
     {
@@ -62,13 +69,19 @@ import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-reten
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => {
         const runtime = config.photoMediaStorageConfiguration;
-        return runtime.enabled
-          ? new R2PhotoMediaObjectStorage({
-              bucket: runtime.recoveryBucket,
-              endpoint: runtime.recoveryEndpoint,
-              credentials: config.photoMediaRecoveryCredentials,
-            })
-          : new DisabledPhotoMediaObjectStorage();
+        if (!runtime.enabled) return new DisabledPhotoMediaObjectStorage();
+        const storage = {
+          bucket: runtime.recoveryBucket,
+          endpoint: runtime.recoveryEndpoint,
+          credentials: config.photoMediaRecoveryCredentials,
+        };
+        return runtime.provider === "r2"
+          ? new R2PhotoMediaObjectStorage(storage)
+          : new S3CompatiblePhotoMediaObjectStorage({
+              ...storage,
+              region: runtime.region,
+              forcePathStyle: runtime.forcePathStyle,
+            });
       },
     },
   ],

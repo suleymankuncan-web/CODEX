@@ -40,6 +40,32 @@ function createStrictLocalValues() {
   };
 }
 
+function createStrictLocalPhotoMediaValues() {
+  const directory = mkdtempSync(join(tmpdir(), "hr-axis-local-photo-media-"));
+  const writeSecret = (name: string, value: string) => {
+    const filePath = join(directory, name);
+    writeFileSync(filePath, value, { encoding: "utf8", mode: 0o600 });
+    chmodSync(filePath, 0o600);
+    return filePath;
+  };
+
+  return {
+    ...createStrictLocalValues(),
+    PHOTO_MEDIA_STORAGE_ENABLED: "true",
+    PHOTO_MEDIA_PROVIDER: "seaweedfs",
+    PHOTO_MEDIA_SYNTHETIC_ONLY: "true",
+    PHOTO_MEDIA_PRIMARY_BUCKET: "hr-axis-media-primary",
+    PHOTO_MEDIA_RECOVERY_BUCKET: "hr-axis-media-recovery",
+    PHOTO_MEDIA_PRIMARY_ENDPOINT: "http://object-storage:8333",
+    PHOTO_MEDIA_RECOVERY_ENDPOINT: "http://object-storage:8333",
+    PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE: writeSecret("primary-key-id", "primary-key"),
+    PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE: writeSecret("primary-secret", "primary-secret"),
+    PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID_FILE: writeSecret("recovery-key-id", "recovery-key"),
+    PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE: writeSecret("recovery-secret", "recovery-secret"),
+    PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: "a".repeat(64),
+  };
+}
+
 function createStrictLocalCookieValues() {
   const directory = mkdtempSync(join(tmpdir(), "hr-axis-local-cookie-bundle-"));
   const secretPath = join(directory, "browser-session-secret");
@@ -198,6 +224,44 @@ describe("AppConfigService strict-local", () => {
         ? "strict-local mode"
         : "External provider configuration is not allowed when HR_AXIS_STRICT_LOCAL=true",
     );
+  });
+
+  it("allows only the exact file-backed private local S3 synthetic bundle", () => {
+    const config = createConfig(createStrictLocalPhotoMediaValues());
+    expect(config.photoMediaStorageConfiguration).toMatchObject({
+      enabled: true,
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+      primaryEndpoint: "http://object-storage:8333",
+      recoveryEndpoint: "http://object-storage:8333",
+    });
+    expect(config.photoMediaPrimaryCredentials.accessKeyId).toBe("primary-key");
+
+    expect(() => createConfig({
+      ...createStrictLocalPhotoMediaValues(),
+      PHOTO_MEDIA_PROVIDER: "r2",
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: "https://account.eu.r2.cloudflarestorage.com",
+      PHOTO_MEDIA_RECOVERY_ENDPOINT: "https://account.eu.r2.cloudflarestorage.com",
+    })).toThrow("private local S3");
+    expect(() => createConfig({
+      ...createStrictLocalPhotoMediaValues(),
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID: "plaintext-key",
+    })).toThrow("file-backed");
+  });
+
+  it("keeps the current strict-local synthetic runtime valid while photo storage is disabled", () => {
+    expect(() => createConfig({
+      ...createStrictLocalValues(),
+      PHOTO_MEDIA_STORAGE_ENABLED: "false",
+      PHOTO_MEDIA_SYNTHETIC_ONLY: "true",
+    })).not.toThrow();
+
+    expect(() => createConfig({
+      ...createStrictLocalValues(),
+      PHOTO_MEDIA_STORAGE_ENABLED: "false",
+      PHOTO_MEDIA_SYNTHETIC_ONLY: "true",
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: "https://storage.example.invalid",
+    })).toThrow("External provider configuration is not allowed");
   });
 
   it("allows HTTPS OIDC metadata with the exact internal Keycloak JWKS exception", () => {

@@ -877,6 +877,33 @@ describe("AppConfigService", () => {
     expect(config.photoMediaRecoveryCredentials.accessKeyId).toBe("recovery-key");
   });
 
+  it("maps the bounded private on-prem S3 identity without weakening synthetic-only gates", () => {
+    const config = createConfig({
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+      PHOTO_MEDIA_PROVIDER: "seaweedfs",
+      PHOTO_MEDIA_PRIMARY_BUCKET: "hr-axis-media-primary",
+      PHOTO_MEDIA_RECOVERY_BUCKET: "hr-axis-media-recovery",
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: "http://object-storage:8333",
+      PHOTO_MEDIA_RECOVERY_ENDPOINT: "http://object-storage:8333",
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID: "primary-key",
+      PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY: "primary-secret",
+      PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID: "recovery-key",
+      PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY: "recovery-secret",
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: "a".repeat(64),
+    });
+
+    expect(config.photoMediaStorageConfiguration).toMatchObject({
+      enabled: true,
+      syntheticOnly: true,
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+      region: "us-east-1",
+      forcePathStyle: true,
+      primaryEndpoint: "http://object-storage:8333",
+      recoveryEndpoint: "http://object-storage:8333",
+    });
+  });
+
   it("rejects shared recovery credentials and any attempt to enable real photos", () => {
     const shared = {
       PHOTO_MEDIA_STORAGE_ENABLED: "true",

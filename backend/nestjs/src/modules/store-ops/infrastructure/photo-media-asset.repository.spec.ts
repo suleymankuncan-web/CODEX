@@ -1,4 +1,8 @@
 import { PhotoMediaAssetRepository } from "./photo-media-asset.repository";
+import {
+  PHOTO_MEDIA_QUOTA_LOCK_KEY,
+  PHOTO_MEDIA_USAGE_SCOPE,
+} from "../application/photo-media-storage.contract";
 
 describe("PhotoMediaAssetRepository", () => {
   it.each([
@@ -242,5 +246,265 @@ describe("PhotoMediaAssetRepository", () => {
     expect(sql).toContain("SET replica_state = 'deleted_tombstone'");
     expect(sql).toContain("replica_generation = $2");
     expect(sql.indexOf("deleted_tombstone")).toBeLessThan(sql.indexOf("replica_generation = $2"));
+  });
+
+  it("writes the configured adapter identity while keeping quota accounting provider-neutral", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ company_id: "company" }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ media_asset_replica_id: "replica" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await repository.recordVerifiedReplica({
+      mediaAssetId: "asset",
+      actorUserId: "actor",
+      replicaRole: "primary",
+      objectKey: "locked/companies/a/media/b/canonical.webp",
+      sha256: "a".repeat(64),
+      byteCount: 9,
+    });
+
+    expect(query.mock.calls[1]?.[1]).toEqual(expect.arrayContaining(["seaweedfs", "onprem"]));
+    const source = [
+      require("node:fs").readFileSync(__filename.replace(/\.spec\.ts$/, ".ts"), "utf8"),
+      require("node:fs").readFileSync(
+        __filename.replace("photo-media-asset.repository.spec.ts", "photo-media-asset-initiation.repository.ts"),
+        "utf8",
+      ),
+      require("node:fs").readFileSync(
+        __filename.replace("photo-media-asset.repository.spec.ts", "photo-media-asset-shared.repository.ts"),
+        "utf8",
+      ),
+    ].join("\n");
+    expect(PHOTO_MEDIA_USAGE_SCOPE).toBe("photo-media-v1");
+    expect(PHOTO_MEDIA_QUOTA_LOCK_KEY).toBe("photo-media-v1-quota");
+    expect(source).toContain("PHOTO_MEDIA_USAGE_SCOPE");
+    expect(source).toContain("PHOTO_MEDIA_QUOTA_LOCK_KEY");
+    expect(source).not.toContain("photo-media-r2-eu-quota");
+    expect(source).not.toContain("usage_scope = 'r2-eu'");
+  });
+
+  it("rejects a local retry when an otherwise identical verified R2 replica owns the generation", async () => {
+    const query = jest.fn().mockImplementation((statement: string) => {
+      if (statement.includes("SELECT company_id FROM ops.media_asset")) {
+        return Promise.resolve({ rows: [{ company_id: "company" }] });
+      }
+      if (statement.includes("INSERT INTO ops.media_asset_replica")) {
+        return Promise.resolve({ rows: [] });
+      }
+      if (statement.includes("SELECT media_asset_replica_id")) {
+        const providerScoped = statement.includes("provider_adapter_id") && statement.includes("jurisdiction");
+        return Promise.resolve({ rows: providerScoped ? [] : [{ media_asset_replica_id: "r2-replica" }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await expect(repository.recordVerifiedReplica({
+      mediaAssetId: "asset",
+      actorUserId: "actor",
+      replicaRole: "primary",
+      objectKey: "locked/companies/a/media/b/canonical.webp",
+      sha256: "a".repeat(64),
+      byteCount: 9,
+    })).rejects.toThrow("immutable replica proof conflicts with retry");
+
+    const exactCall = query.mock.calls.find(([statement]) => String(statement).includes("SELECT media_asset_replica_id"));
+    expect(exactCall?.[0]).toContain("provider_adapter_id = $6");
+    expect(exactCall?.[0]).toContain("jurisdiction = $7");
+    expect(exactCall?.[1]).toEqual([
+      "asset", "primary", "locked/companies/a/media/b/canonical.webp", "a".repeat(64), 9,
+      "seaweedfs", "onprem",
+    ]);
+  });
+
+  it("does not select an R2 recovery candidate for a local restore", async () => {
+    const query = jest.fn().mockImplementation((statement: string) => {
+      if (statement.includes("UPDATE ops.media_asset ma")) {
+        const providerScoped = statement.includes("recovery.provider_adapter_id")
+          && statement.includes("recovery.jurisdiction");
+        return Promise.resolve({ rows: providerScoped ? [] : [{
+          media_asset_id: "asset",
+          company_id: "company",
+          cleanup_lease_token: "lease",
+          canonical_object_key: "locked/current.webp",
+          recovery_object_key: "locked/r2-recovery.webp",
+          canonical_sha256: "a".repeat(64),
+          byte_count: "9",
+          replica_generation: 2,
+          restore_object_key: "locked/r2-pending.webp",
+        }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await expect(repository.claimRestoreCandidate({
+      mediaAssetId: "asset",
+      actorUserId: "actor",
+    })).rejects.toThrow("restore target is stale");
+
+    const candidateCall = query.mock.calls.find(([statement]) => String(statement).includes("UPDATE ops.media_asset ma"));
+    expect(candidateCall?.[0]).toContain("recovery.provider_adapter_id = $2");
+    expect(candidateCall?.[0]).toContain("recovery.jurisdiction = $3");
+    expect(candidateCall?.[1]).toEqual(["asset", "seaweedfs", "onprem"]);
+    const maxGenerationClause = String(candidateCall?.[0]).slice(
+      String(candidateCall?.[0]).indexOf("(SELECT COALESCE(MAX(replica_generation), 0) + 1"),
+    );
+    expect(maxGenerationClause).toContain("generations.replica_role = 'primary'");
+    expect(maxGenerationClause).not.toContain("generations.provider_adapter_id");
+    expect(maxGenerationClause).not.toContain("generations.jurisdiction");
+  });
+
+  it("fails closed when a local restore generation conflicts with an identical R2 row", async () => {
+    const query = jest.fn().mockImplementation((statement: string) => {
+      if (statement.includes("SELECT ma.company_id, ma.accounted_provider_bytes")) {
+        return Promise.resolve({ rows: [{ company_id: "company", accounted_provider_bytes: "9", retention_days: 365 }] });
+      }
+      if (statement.includes("INSERT INTO ops.media_asset_replica")) {
+        return Promise.resolve({ rows: [] });
+      }
+      if (statement.includes("SELECT media_asset_replica_id")) {
+        const providerScoped = statement.includes("provider_adapter_id") && statement.includes("jurisdiction");
+        return Promise.resolve({ rows: providerScoped ? [] : [{ media_asset_replica_id: "r2-replica" }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await expect(repository.reserveRestoreGeneration({
+      mediaAssetId: "asset",
+      cleanupLeaseToken: "lease",
+      restoreObjectKey: "locked/local-pending.webp",
+      replicaGeneration: 1,
+      canonicalSha256: "a".repeat(64),
+      canonicalByteCount: 9,
+      additionalBytes: 0,
+      aggregateBytesHardLimit: 100,
+    })).rejects.toThrow("restore generation proof conflicts with provider identity");
+
+    const conflictCall = query.mock.calls.find(([statement]) => String(statement).includes("SELECT media_asset_replica_id"));
+    expect(conflictCall?.[0]).toContain("provider_adapter_id = $7");
+    expect(conflictCall?.[0]).toContain("jurisdiction = $8");
+    expect(conflictCall?.[1]).toEqual([
+      "asset", "company", "locked/local-pending.webp", 1, "a".repeat(64), 9,
+      "seaweedfs", "onprem",
+    ]);
+  });
+
+  it("does not promote an R2 copying generation for a local restore", async () => {
+    const query = jest.fn().mockImplementation((statement: string) => {
+      if (statement.includes("SELECT company_id, canonical_sha256, byte_count")) {
+        return Promise.resolve({ rows: [{ company_id: "company", canonical_sha256: "a".repeat(64), byte_count: "9" }] });
+      }
+      if (statement.includes("UPDATE ops.media_asset_replica SET is_active = FALSE")) {
+        return Promise.resolve({ rows: [] });
+      }
+      if (statement.includes("UPDATE ops.media_asset_replica") && statement.includes("SET replica_state = 'verified'")) {
+        const providerScoped = statement.includes("provider_adapter_id") && statement.includes("jurisdiction");
+        return Promise.resolve({ rows: providerScoped ? [] : [{ media_asset_replica_id: "r2-replica" }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await expect(repository.markRestoreVerified({
+      mediaAssetId: "asset",
+      cleanupLeaseToken: "lease",
+      actorUserId: "actor",
+      replicaGeneration: 1,
+      restoreObjectKey: "locked/local-pending.webp",
+      previousPrimaryMissing: false,
+    })).rejects.toThrow("restore generation proof is stale");
+
+    const promotionCall = query.mock.calls.find(([statement]) => (
+      String(statement).includes("SET replica_state = 'verified'")
+    ));
+    expect(promotionCall?.[0]).toContain("provider_adapter_id = $6");
+    expect(promotionCall?.[0]).toContain("jurisdiction = $7");
+    expect(promotionCall?.[1]).toEqual([
+      "asset", 1, "locked/local-pending.webp", "a".repeat(64), "9", "seaweedfs", "onprem",
+    ]);
+  });
+
+  it("keeps a deactivated historical R2 primary verified during a local missing-primary restore", async () => {
+    const replicas = new Map([
+      ["r2-primary", { provider: "r2", jurisdiction: "eu", state: "verified", isActive: true }],
+      ["local-primary", { provider: "seaweedfs", jurisdiction: "onprem", state: "verified", isActive: true }],
+    ]);
+    const query = jest.fn().mockImplementation((statement: string, params?: unknown[]) => {
+      if (statement.includes("SELECT company_id, canonical_sha256, byte_count")) {
+        return Promise.resolve({ rows: [{ company_id: "company", canonical_sha256: "a".repeat(64), byte_count: "9" }] });
+      }
+      if (statement.includes("UPDATE ops.media_asset_replica SET is_active = FALSE")) {
+        for (const replica of replicas.values()) replica.isActive = false;
+        return Promise.resolve({ rows: [
+          { media_asset_replica_id: "r2-primary" },
+          { media_asset_replica_id: "local-primary" },
+        ] });
+      }
+      if (statement.includes("SET replica_state = 'deleted_tombstone'")) {
+        const providerScoped = statement.includes("provider_adapter_id = $2")
+          && statement.includes("jurisdiction = $3");
+        for (const id of (params?.[0] as string[] ?? [])) {
+          const replica = replicas.get(id);
+          if (
+            replica && replica.state === "verified" && !replica.isActive
+            && (!providerScoped || (params?.[1] === "seaweedfs" && params?.[2] === "onprem" && replica.provider === "seaweedfs"))
+          ) {
+            replica.state = "deleted_tombstone";
+          }
+        }
+        return Promise.resolve({ rows: [] });
+      }
+      if (statement.includes("SET replica_state = 'verified'")) {
+        return Promise.resolve({ rows: [{ media_asset_replica_id: "local-copying" }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await repository.markRestoreVerified({
+      mediaAssetId: "asset",
+      cleanupLeaseToken: "lease",
+      actorUserId: "actor",
+      replicaGeneration: 2,
+      restoreObjectKey: "locked/local-restored.webp",
+      previousPrimaryMissing: true,
+    });
+
+    expect(replicas.get("r2-primary")).toMatchObject({ isActive: false, state: "verified" });
+    expect(replicas.get("local-primary")).toMatchObject({ isActive: false, state: "deleted_tombstone" });
+    const tombstoneCall = query.mock.calls.find(([statement]) => (
+      String(statement).includes("SET replica_state = 'deleted_tombstone'")
+    ));
+    expect(tombstoneCall?.[0]).toContain("provider_adapter_id = $2");
+    expect(tombstoneCall?.[0]).toContain("jurisdiction = $3");
+    expect(tombstoneCall?.[1]).toEqual([["r2-primary", "local-primary"], "seaweedfs", "onprem"]);
   });
 });

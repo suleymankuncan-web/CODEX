@@ -3175,7 +3175,7 @@ CREATE TABLE IF NOT EXISTS ops.photo_media_usage_state (
     class_a_operations BIGINT NOT NULL DEFAULT 0,
     class_b_operations BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT ck_photo_media_usage_scope CHECK (usage_scope = 'r2-eu'),
+    CONSTRAINT ck_photo_media_usage_scope CHECK (usage_scope = 'photo-media-v1'),
     CONSTRAINT ck_photo_media_usage_bytes CHECK (provider_visible_bytes >= 0),
     CONSTRAINT ck_photo_media_usage_operations CHECK (
         class_a_operations >= 0 AND class_b_operations >= 0
@@ -3224,8 +3224,10 @@ CREATE TABLE IF NOT EXISTS ops.media_asset_replica (
         REFERENCES ops.media_asset(media_asset_id, company_id),
     CONSTRAINT ck_media_asset_replica_role CHECK (replica_role IN ('primary', 'recovery')),
     CONSTRAINT ck_media_asset_replica_generation CHECK (replica_generation > 0),
-    CONSTRAINT ck_media_asset_replica_provider CHECK (provider_adapter_id = 'r2'),
-    CONSTRAINT ck_media_asset_replica_jurisdiction CHECK (jurisdiction = 'eu'),
+    CONSTRAINT ck_media_asset_replica_provider_jurisdiction CHECK (
+        (provider_adapter_id = 'r2' AND jurisdiction = 'eu')
+        OR (provider_adapter_id = 'seaweedfs' AND jurisdiction = 'onprem')
+    ),
     CONSTRAINT ck_media_asset_replica_bucket_role CHECK (
         (replica_role = 'primary' AND bucket_alias = 'primary')
         OR (replica_role = 'recovery' AND bucket_alias = 'recovery')

@@ -331,6 +331,8 @@ describe("BullMqWorkerHostService", () => {
           syntheticOnly: true,
           provider: "r2",
           jurisdiction: "eu",
+          region: "auto",
+          forcePathStyle: true,
           primaryBucket: "",
           recoveryBucket: "",
           primaryEndpoint: "",

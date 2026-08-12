@@ -351,6 +351,25 @@ describe("MigrationService", () => {
     );
   });
 
+  it.each(["\\i ../schema.sql\n", "\\i ../schema.sql\r\n"])(
+    "resolves include wrappers for default callers (%j)",
+    async (wrapper) => {
+      const project = createProjectWithMigrations({
+        "001_first.sql": wrapper,
+      });
+      writeFileSync(join(project.root, "db", "schema.sql"), "SELECT 1;", "utf8");
+      const { databaseService, calls } = createDatabaseMock();
+      const service = new MigrationService(databaseService as never);
+
+      await service.runMigrations(project.backendNestjs);
+
+      expect(calls.some((call) => call.sql === "SELECT 1;")).toBe(true);
+      expect(calls.some((call) => call.sql.includes("\\i ../schema.sql"))).toBe(
+        false,
+      );
+    },
+  );
+
   it("preserves hosted checksum compatibility for include wrappers", async () => {
     const wrapper = "\\i ../schema.sql";
     const project = createProjectWithMigrations({ "001_first.sql": wrapper });
