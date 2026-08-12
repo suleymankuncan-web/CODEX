@@ -2056,8 +2056,10 @@ CREATE TABLE IF NOT EXISTS ops.media_asset (
     state TEXT NOT NULL DEFAULT 'initiated',
     capture_source TEXT NOT NULL,
     raw_object_key TEXT NOT NULL,
+    raw_object_version_id TEXT,
     canonical_object_key TEXT,
     thumbnail_object_key TEXT,
+    thumbnail_object_version_id TEXT,
     detected_mime_type TEXT,
     byte_count BIGINT,
     width_px INTEGER,
@@ -2116,6 +2118,14 @@ CREATE TABLE IF NOT EXISTS ops.media_asset (
         AND raw_object_key !~ '(^|/)\.\.?(/|$)'
         AND raw_object_key !~ '//'
     ),
+    CONSTRAINT ck_media_asset_raw_object_version_id_private CHECK (
+        raw_object_version_id IS NULL OR (
+            raw_object_version_id = btrim(raw_object_version_id)
+            AND octet_length(raw_object_version_id) > 0
+            AND octet_length(raw_object_version_id) <= 1024
+            AND raw_object_version_id !~ '[[:cntrl:]]'
+        )
+    ),
     CONSTRAINT ck_media_asset_canonical_key_private CHECK (canonical_object_key IS NULL OR (
         canonical_object_key = btrim(canonical_object_key)
         AND length(canonical_object_key) > 0
@@ -2130,6 +2140,14 @@ CREATE TABLE IF NOT EXISTS ops.media_asset (
         AND thumbnail_object_key !~ '(^|/)\.\.?(/|$)'
         AND thumbnail_object_key !~ '//'
     )),
+    CONSTRAINT ck_media_asset_thumbnail_object_version_id_private CHECK (
+        thumbnail_object_version_id IS NULL OR (
+            thumbnail_object_version_id = btrim(thumbnail_object_version_id)
+            AND octet_length(thumbnail_object_version_id) > 0
+            AND octet_length(thumbnail_object_version_id) <= 1024
+            AND thumbnail_object_version_id !~ '[[:cntrl:]]'
+        )
+    ),
     CONSTRAINT ck_media_asset_byte_count CHECK (byte_count IS NULL OR byte_count > 0),
     CONSTRAINT ck_media_asset_dimensions CHECK (
         (width_px IS NULL AND height_px IS NULL)
@@ -3205,6 +3223,7 @@ CREATE TABLE IF NOT EXISTS ops.media_asset_replica (
     jurisdiction TEXT NOT NULL,
     bucket_alias TEXT NOT NULL,
     object_key TEXT NOT NULL,
+    object_version_id TEXT,
     replica_generation INTEGER NOT NULL DEFAULT 1,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     replica_state TEXT NOT NULL DEFAULT 'pending',
@@ -3242,6 +3261,14 @@ CREATE TABLE IF NOT EXISTS ops.media_asset_replica (
         AND object_key !~ '(^|/)\.\.?(/|$)'
         AND object_key !~ '//'
         AND object_key !~* '^(https?:|s3:|r2:|data:|file:)'
+    ),
+    CONSTRAINT ck_media_asset_replica_object_version_id_private CHECK (
+        object_version_id IS NULL OR (
+            object_version_id = btrim(object_version_id)
+            AND octet_length(object_version_id) > 0
+            AND octet_length(object_version_id) <= 1024
+            AND object_version_id !~ '[[:cntrl:]]'
+        )
     ),
     CONSTRAINT ck_media_asset_replica_hash CHECK (
         content_sha256 IS NULL OR content_sha256 ~ '^[0-9a-f]{64}$'
@@ -3542,6 +3569,7 @@ BEGIN
            AND NEW.jurisdiction = OLD.jurisdiction
            AND NEW.bucket_alias = OLD.bucket_alias
            AND NEW.object_key = OLD.object_key
+           AND NEW.object_version_id IS NOT DISTINCT FROM OLD.object_version_id
            AND NEW.content_sha256 = OLD.content_sha256
            AND NEW.byte_count = OLD.byte_count
            AND NEW.copy_started_at = OLD.copy_started_at
@@ -3560,6 +3588,7 @@ BEGIN
                 OR NEW.jurisdiction IS DISTINCT FROM OLD.jurisdiction
                 OR NEW.bucket_alias IS DISTINCT FROM OLD.bucket_alias
                 OR NEW.object_key IS DISTINCT FROM OLD.object_key
+                OR NEW.object_version_id IS DISTINCT FROM OLD.object_version_id
                 OR NEW.replica_generation IS DISTINCT FROM OLD.replica_generation
                 OR NEW.is_active IS DISTINCT FROM OLD.is_active
                 OR NEW.content_sha256 IS DISTINCT FROM OLD.content_sha256
@@ -3661,6 +3690,12 @@ CREATE TRIGGER trg_photo_media_reconciliation_run_append_only
     FOR EACH ROW EXECUTE FUNCTION audit.guard_photo_evidence_event_append_only();
 
 COMMENT ON TABLE ops.media_asset_replica IS 'Provider-neutral primary/recovery copy proof; verified rows are immutable except governed deletion tombstones.';
+COMMENT ON COLUMN ops.media_asset.raw_object_version_id IS
+    'Provider-neutral opaque version identity for the raw object; legacy R2 rows remain NULL.';
+COMMENT ON COLUMN ops.media_asset.thumbnail_object_version_id IS
+    'Provider-neutral opaque version identity for the thumbnail object; legacy R2 rows remain NULL.';
+COMMENT ON COLUMN ops.media_asset_replica.object_version_id IS
+    'Provider-neutral opaque version identity authoritative for each stored replica; legacy R2 rows remain NULL.';
 COMMENT ON TABLE audit.photo_media_storage_event IS 'Sanitized append-only media storage, recovery, reconciliation, quota, and cleanup audit.';
 COMMENT ON TABLE audit.photo_media_reconciliation_run IS 'Sanitized append-only object inventory reconciliation receipts; object keys are never stored here.';
 

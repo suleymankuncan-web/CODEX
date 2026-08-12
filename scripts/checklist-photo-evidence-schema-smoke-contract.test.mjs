@@ -39,6 +39,24 @@ const providerNeutralStorageRollback = readFileSync(
   ),
   "utf8",
 );
+const versionPersistenceMigration = readFileSync(
+  join(
+    workspaceRoot,
+    "db",
+    "migrations",
+    "069_photo_media_opaque_version_ids_v1.sql",
+  ),
+  "utf8",
+);
+const versionPersistenceRollback = readFileSync(
+  join(
+    workspaceRoot,
+    "db",
+    "rollback",
+    "069_photo_media_opaque_version_ids_v1.rollback.sql",
+  ),
+  "utf8",
+);
 const storageRecoverySmoke = readFileSync(
   join(
     workspaceRoot,
@@ -62,6 +80,7 @@ test("photo evidence schema isolates provider-use proof from clean rollback veri
   assert.match(runner, /checklist-item-evidence-pr4-v1-rollback\.sql/);
   assert.match(runner, /064_checklist_item_evidence_v1\.sql/);
   assert.match(runner, /068_photo_media_provider_neutral_storage_v1\.rollback\.sql/);
+  assert.match(runner, /069_photo_media_opaque_version_ids_v1\.rollback\.sql/);
   assert.match(runner, /068_photo_media_provider_neutral_storage_v1\.sql/);
   assert.match(runner, /providerNeutralStorageIdentity/);
   assert.match(runner, /providerNeutralHistoricalFixture/);
@@ -71,6 +90,15 @@ test("photo evidence schema isolates provider-use proof from clean rollback veri
   assert.match(runner, /providerNeutralHistoricalCounters/);
   assert.match(runner, /providerNeutralHistoricalReplica/);
   assert.match(runner, /providerNeutralUsedRollbackRefusal/);
+  assert.match(runner, /versionPersistenceFixture/);
+  assert.match(runner, /versionPersistenceRoundtrip/);
+  assert.match(runner, /versionPersistenceImmutable/);
+  assert.match(runner, /versionPersistencePreUseRollback/);
+  assert.match(runner, /versionPersistenceConcurrency/);
+  assert.match(runner, /versionPersistenceHistoryGuards/);
+  assert.match(runner, /versionPersistenceHistorySnapshot/);
+  assert.match(runner, /versionPersistenceRollbackRestoration/);
+  assert.match(runner, /localProviderVersionCompleteness/);
   assert.equal(
     (runner.match(/runPsql\(readFileSync\(providerNeutralStorageRollbackSqlPath/g) ?? []).length,
     2,
@@ -178,6 +206,54 @@ test("photo media provider-neutral rollback keeps locks, refusal, and DDL atomic
     assert.ok(firstIndex > beginIndex, `${marker} appears before BEGIN`);
     assert.ok(lastIndex < commitIndex, `${marker} appears after COMMIT`);
   }
+});
+
+test("photo media opaque version persistence keeps nullable legacy identity and atomic pre-use rollback", () => {
+  assert.match(versionPersistenceMigration, /raw_object_version_id TEXT/);
+  assert.match(versionPersistenceMigration, /thumbnail_object_version_id TEXT/);
+  assert.match(versionPersistenceMigration, /object_version_id TEXT/);
+  assert.match(versionPersistenceMigration, /SET LOCAL lock_timeout/);
+  assert.match(versionPersistenceMigration, /pg_advisory_xact_lock/);
+  assert.match(versionPersistenceMigration, /octet_length\([^)]*version_id/);
+  assert.match(versionPersistenceMigration, /\[\[:cntrl:\]\]/);
+  assert.match(versionPersistenceMigration, /NEW\.object_version_id IS NOT DISTINCT FROM OLD\.object_version_id/);
+  assert.doesNotMatch(versionPersistenceMigration, /canonical_object_version_id/);
+  assert.match(versionPersistenceRollback, /BEGIN;/);
+  assert.match(versionPersistenceRollback, /COMMIT;/);
+  assert.match(versionPersistenceRollback, /SET LOCAL lock_timeout/);
+  assert.match(versionPersistenceRollback, /pg_advisory_xact_lock/);
+  assert.match(versionPersistenceRollback, /hashtextextended\('hr-axis:onprem:migrations:v1', 0\)/);
+  assert.match(versionPersistenceRollback, /status = 'succeeded'/);
+  assert.match(versionPersistenceRollback, /Pre-use rollback refused after opaque media version identity use/);
+  assert.match(versionPersistenceRollback, /DROP COLUMN IF EXISTS raw_object_version_id/);
+  assert.match(versionPersistenceRollback, /DROP COLUMN IF EXISTS thumbnail_object_version_id/);
+  assert.match(versionPersistenceRollback, /DROP COLUMN IF EXISTS object_version_id/);
+  assert.match(versionPersistenceRollback, /DELETE FROM audit\.schema_migration/);
+});
+
+test("photo media opaque version rollback locks version tables before its pre-use scan", () => {
+  const beginIndex = versionPersistenceRollback.indexOf("BEGIN;");
+  const canonicalLockIndex = versionPersistenceRollback.indexOf(
+    "SELECT pg_advisory_xact_lock(hashtextextended('hr-axis:onprem:migrations:v1', 0));",
+  );
+  const migrationLockIndex = versionPersistenceRollback.indexOf(
+    "SELECT pg_advisory_xact_lock(hashtext('photo-media-opaque-version-ids-v1')::bigint);",
+  );
+  const lockIndex = versionPersistenceRollback.indexOf(
+    "LOCK TABLE ops.media_asset, ops.media_asset_replica IN SHARE ROW EXCLUSIVE MODE;",
+  );
+  const historyLockIndex = versionPersistenceRollback.indexOf(
+    "LOCK TABLE audit.schema_migration IN SHARE ROW EXCLUSIVE MODE;",
+  );
+  const historyStatusIndex = versionPersistenceRollback.indexOf("status = 'succeeded'");
+  const preUseScanIndex = versionPersistenceRollback.indexOf("raw_object_version_id IS NOT NULL");
+  assert.ok(beginIndex >= 0, "rollback must begin a transaction");
+  assert.ok(canonicalLockIndex > beginIndex, "canonical migration lock must be transactional");
+  assert.ok(migrationLockIndex > canonicalLockIndex, "migration lock must follow the canonical lock");
+  assert.ok(historyLockIndex > migrationLockIndex, "history lock must follow advisory locks");
+  assert.ok(lockIndex > migrationLockIndex, "table lock must follow advisory locks");
+  assert.ok(historyStatusIndex > historyLockIndex, "history status must be read under the history lock");
+  assert.ok(preUseScanIndex > lockIndex, "table lock must precede the pre-use scan");
 });
 
 test("photo media recovery failed replicas satisfy the failed-state contract before provider checks", () => {

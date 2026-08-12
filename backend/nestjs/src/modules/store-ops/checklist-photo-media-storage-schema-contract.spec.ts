@@ -48,6 +48,14 @@ describe("checklist photo media storage recovery schema", () => {
     join(root, "db/rollback/068_photo_media_provider_neutral_storage_v1.rollback.sql"),
     "utf8",
   );
+  const versionPersistenceMigration = readFileSync(
+    join(root, "db/migrations/069_photo_media_opaque_version_ids_v1.sql"),
+    "utf8",
+  );
+  const versionPersistenceRollback = readFileSync(
+    join(root, "db/rollback/069_photo_media_opaque_version_ids_v1.rollback.sql"),
+    "utf8",
+  );
 
   it.each([migration, schema])("requires a verified recovery replica before ready", (sql) => {
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS ops\.media_asset_replica/);
@@ -156,5 +164,21 @@ describe("checklist photo media storage recovery schema", () => {
     expect(schema).toContain("provider_adapter_id = 'seaweedfs' AND jurisdiction = 'onprem'");
     expect(smoke).toContain("provider_neutral_usage_scope was not enforced");
     expect(smoke).toContain("invalid_provider_pair was not rejected");
+  });
+
+  it("persists provider-neutral opaque object versions without a canonical duplicate", () => {
+    for (const sql of [versionPersistenceMigration, schema]) {
+      expect(sql).toContain("raw_object_version_id");
+      expect(sql).toContain("thumbnail_object_version_id");
+      expect(sql).toContain("object_version_id");
+      expect(sql).toMatch(/octet_length\([^)]*version_id/i);
+      expect(sql).toMatch(/btrim\([^)]*version_id/);
+      expect(sql).toContain("1024");
+      expect(sql).toMatch(/cntrl|\\x00|C0|ASCII|control/i);
+    }
+    expect(versionPersistenceMigration).not.toMatch(/canonical_object_version_id/i);
+    expect(versionPersistenceRollback).toContain("Pre-use rollback refused");
+    expect(versionPersistenceRollback).toContain("DROP COLUMN IF EXISTS object_version_id");
+    expect(versionPersistenceMigration).toContain("NEW.object_version_id IS NOT DISTINCT FROM OLD.object_version_id");
   });
 });
