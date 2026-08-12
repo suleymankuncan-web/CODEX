@@ -9587,12 +9587,47 @@
         "operationId": "AuthSessionController_recoverBrowserSessionCsrf",
         "parameters": [],
         "responses": {
-          "201": {
+          "200": {
             "description": ""
           }
         },
         "tags": [
           "AuthSession"
+        ]
+      }
+    },
+    "/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}": {
+      "get": {
+        "operationId": "PhotoMediaStorageController_readContent",
+        "parameters": [
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "thumbnail",
+                "canonical"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
         ]
       }
     }

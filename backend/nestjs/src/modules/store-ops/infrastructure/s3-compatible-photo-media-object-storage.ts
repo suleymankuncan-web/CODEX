@@ -29,6 +29,7 @@ export type S3CompatiblePhotoMediaObjectStorageConfiguration = {
   region: string;
   forcePathStyle: true;
   requireObjectVersionId?: boolean;
+  lockedObjectRetentionDays?: number;
   credentials: { accessKeyId: string; secretAccessKey: string };
 };
 
@@ -52,13 +53,18 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
   private readonly client: S3Client;
   private readonly signer: Signer;
   private readonly requireObjectVersionId: boolean;
+  private readonly lockedObjectRetentionDays?: number;
+  private readonly now: () => Date;
 
   constructor(
     private readonly configuration: S3CompatiblePhotoMediaObjectStorageConfiguration,
     client?: S3Client,
     signer?: Signer,
+    now: () => Date = () => new Date(),
   ) {
     this.requireObjectVersionId = configuration.requireObjectVersionId === true;
+    this.lockedObjectRetentionDays = configuration.lockedObjectRetentionDays;
+    this.now = now;
     this.client = client ?? new S3Client(
       buildS3CompatiblePhotoMediaObjectStorageClientConfiguration(configuration),
     );
@@ -113,6 +119,7 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     createOnly?: boolean;
   }): Promise<PhotoMediaObjectPutResult> {
     this.assertObjectKey(input.objectKey);
+    const objectLock = this.resolveLockedObjectRetention(input.objectKey);
     let result;
     try {
       result = await this.client.send(new PutObjectCommand({
@@ -123,6 +130,7 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
         ContentType: input.contentType,
         Metadata: { sha256: input.sha256 },
         ...(input.createOnly ? { IfNoneMatch: "*" } : {}),
+        ...(objectLock ?? {}),
       }));
     } catch (error) {
       if (input.createOnly && isCreateOnlyConflict(error)) {
@@ -136,6 +144,27 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     );
     this.assertProviderVersion(versionId);
     return versionId === undefined ? {} : { versionId };
+  }
+
+  private resolveLockedObjectRetention(objectKey: string): {
+    ObjectLockMode: "COMPLIANCE";
+    ObjectLockRetainUntilDate: Date;
+  } | undefined {
+    if (!this.requireObjectVersionId || !objectKey.startsWith("locked/")) {
+      return undefined;
+    }
+    if (this.lockedObjectRetentionDays !== 30) {
+      throw new Error("Photo media locked object retention is not configured for exactly 30 days");
+    }
+    const now = this.now();
+    const nowMilliseconds = now instanceof Date ? now.getTime() : Number.NaN;
+    if (!Number.isFinite(nowMilliseconds)) {
+      throw new Error("Photo media locked object retention clock is invalid");
+    }
+    return {
+      ObjectLockMode: "COMPLIANCE",
+      ObjectLockRetainUntilDate: new Date(nowMilliseconds + 30 * 24 * 60 * 60 * 1000),
+    };
   }
 
   async headObject(objectReference: string | PhotoMediaObjectReference) {

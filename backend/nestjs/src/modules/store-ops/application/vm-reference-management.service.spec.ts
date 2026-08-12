@@ -40,6 +40,10 @@ describe("VmReferenceManagementService", () => {
     retireReference: jest.fn(async (input) => input),
   };
   const media = {
+    createSignedRead: jest.fn(async (input: { contentPath?: string }) => ({
+      url: input.contentPath ?? "signed",
+      expiresInSeconds: 120,
+    })),
     initiateApprovedSyntheticFixtureUpload: jest.fn(async () => ({ mediaAssetId: "asset-1", state: "uploaded" })),
     initiateRealVmCampaignUpload: jest.fn(async (input: { bindInitiatedAsset?: (mediaAssetId: string) => Promise<void> }) => {
       await input.bindInitiatedAsset?.("asset-1");
@@ -111,6 +115,27 @@ describe("VmReferenceManagementService", () => {
       classification: "vm_campaign_evidence",
     }));
     expect(repository.createSubmissionUploadIntent).toHaveBeenCalled();
+  });
+
+  it("passes the existing VM reference content route to photo read-url creation", async () => {
+    const service = new VmReferenceManagementService(repository as never, repository as never, media as never, config as never);
+    const assignmentId = "11111111-1111-4111-8111-111111111111";
+    const referenceItemId = "22222222-2222-4222-8222-222222222222";
+
+    await service.readStoreReference({
+      actorUserId: "manager-1",
+      actorRoleCodes: ["STORE_MANAGER"],
+      actorScope: { companyIds: ["company-1"], regionIds: [], storeIds: ["store-1"] },
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+      assignmentId,
+      referenceItemId,
+      variant: "canonical",
+    });
+
+    expect(media.createSignedRead).toHaveBeenCalledWith(expect.objectContaining({
+      mediaAssetId: "asset-1",
+      contentPath: `/api/mobile/visual-campaigns/${assignmentId}/items/${referenceItemId}/reference-content/canonical`,
+    }));
   });
 
   it("[FR-1][AC-1] admits real photos only for the exact enabled campaign cohort", async () => {

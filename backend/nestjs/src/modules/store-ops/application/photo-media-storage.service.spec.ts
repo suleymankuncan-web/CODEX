@@ -450,28 +450,127 @@ describe("PhotoMediaStorageService", () => {
     }));
   });
 
-  it("uses exact active-primary and thumbnail versions for local signed and content reads", async () => {
-    const localAsset = {
-      ...mediaAsset,
-      canonicalObjectVersionId: "canonical-version-1",
-      thumbnailObjectVersionId: "thumbnail-version-1",
-    };
-    repository.findAssetForRead.mockResolvedValue(localAsset);
-    primary.createSignedRead.mockResolvedValue({ url: "http://signed.invalid/local", expiresInSeconds: 120 });
-    primary.getObject.mockResolvedValue(Buffer.from("thumbnail"));
+  it("returns a same-origin local content path without calling the adapter signer", async () => {
+    const contentPath = `/api/internal/photo-media/assets/${mediaAsset.mediaAssetId}/content/canonical`;
 
     await expect(createLocalService().createSignedRead({
-      mediaAssetId: localAsset.mediaAssetId,
+      mediaAssetId: mediaAsset.mediaAssetId,
       actorUserId: "55555555-5555-4555-8555-555555555555",
-      actorScope: { companyIds: [localAsset.companyId], regionIds: [], storeIds: [] },
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [] },
       variant: "canonical",
-    })).resolves.toEqual({ url: "http://signed.invalid/local", expiresInSeconds: 120 });
+      contentPath,
+    })).resolves.toEqual({ url: contentPath, expiresInSeconds: 120 });
+    expect(primary.createSignedRead).not.toHaveBeenCalled();
+    expect(repository.reserveProviderOperations).not.toHaveBeenCalled();
+    expect(repository.recordAccessEvent).not.toHaveBeenCalled();
+  });
+
+  it("records one local viewed event only after a successful content read", async () => {
+    const body = Buffer.from("local-thumbnail");
+    repository.findAssetForRead.mockResolvedValueOnce({
+      ...mediaAsset,
+      thumbnailObjectVersionId: "thumbnail-version-1",
+    });
+    primary.getObject.mockResolvedValueOnce(body);
+
+    await expect(createLocalService().readContent({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "thumbnail",
+    })).resolves.toEqual({ body, contentType: "image/webp" });
+
+    expect(repository.reserveProviderOperations).toHaveBeenCalledTimes(1);
+    expect(repository.recordAccessEvent).toHaveBeenCalledTimes(1);
+    expect(repository.recordAccessEvent).toHaveBeenCalledWith(expect.objectContaining({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      variant: "thumbnail",
+    }));
+  });
+
+  it("does not record a local viewed event when content delivery fails", async () => {
+    const failure = new Error("local object unavailable");
+    repository.findAssetForRead.mockResolvedValueOnce({
+      ...mediaAsset,
+      canonicalObjectVersionId: "canonical-version-1",
+    });
+    primary.getObject.mockRejectedValueOnce(failure);
+
+    await expect(createLocalService().readContent({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "canonical",
+    })).rejects.toBe(failure);
+
+    expect(repository.reserveProviderOperations).toHaveBeenCalledTimes(1);
+    expect(repository.recordAccessEvent).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "https://object-storage:8333/bucket/object",
+    "/internal/photo-media/assets/22222222-2222-4222-8222-222222222222/content/canonical",
+    "/api/internal/photo-media/assets/22222222-2222-4222-8222-222222222222/content/canonical?versionId=opaque",
+    "/api/internal/photo-media/assets/22222222-2222-4222-8222-222222222222/content/canonical/key",
+  ])("rejects an unsafe local content path (%s) before provider I/O", async (contentPath) => {
+    await expect(createLocalService().createSignedRead({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "canonical",
+      contentPath,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(primary.createSignedRead).not.toHaveBeenCalled();
+    expect(repository.reserveProviderOperations).not.toHaveBeenCalled();
+  });
+
+  it("rejects a valid same-origin route for another media asset or variant", async () => {
+    const wrongAssetPath = "/api/internal/photo-media/assets/11111111-1111-4111-8111-111111111111/content/canonical";
+    await expect(createLocalService().createSignedRead({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "canonical",
+      contentPath: wrongAssetPath,
+    })).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(createLocalService().createSignedRead({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "thumbnail",
+      contentPath: `/api/internal/photo-media/assets/${mediaAsset.mediaAssetId}/content/canonical`,
+    })).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.reserveProviderOperations).not.toHaveBeenCalled();
+  });
+
+  it("preserves exact-version R2 presigning with a content path supplied", async () => {
+    const r2Asset = {
+      ...mediaAsset,
+      canonicalObjectVersionId: "canonical-version-1",
+    };
+    repository.findAssetForRead.mockResolvedValue(r2Asset);
+    const contentPath = `/api/internal/photo-media/assets/${r2Asset.mediaAssetId}/content/canonical`;
+
+    await expect(createService().createSignedRead({
+      mediaAssetId: r2Asset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [r2Asset.companyId], regionIds: [], storeIds: [] },
+      variant: "canonical",
+      contentPath,
+    })).resolves.toEqual({ url: "https://signed.invalid", expiresInSeconds: 120 });
     expect(primary.createSignedRead).toHaveBeenCalledWith({
-      objectKey: localAsset.canonicalObjectKey,
-      versionId: localAsset.canonicalObjectVersionId,
+      objectKey: r2Asset.canonicalObjectKey,
+      versionId: r2Asset.canonicalObjectVersionId,
       expiresInSeconds: 120,
     });
 
+    const localAsset = {
+      ...mediaAsset,
+      thumbnailObjectVersionId: "thumbnail-version-1",
+    };
+    repository.findAssetForRead.mockResolvedValue(localAsset);
+    primary.getObject.mockResolvedValue(Buffer.from("thumbnail"));
     await expect(createLocalService().readContent({
       mediaAssetId: localAsset.mediaAssetId,
       actorUserId: "55555555-5555-4555-8555-555555555555",

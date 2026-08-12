@@ -244,7 +244,8 @@ export class VmReferenceManagementService {
     });
     if (!asset) throw new ForbiddenException("VM reference is outside actor assignment scope");
     return this.media.createSignedRead({ mediaAssetId: asset.mediaAssetId,
-      actorUserId: input.actorUserId, actorScope: input.actorScope, variant: input.variant });
+      actorUserId: input.actorUserId, actorScope: input.actorScope, variant: input.variant,
+      contentPath: `/api/mobile/visual-campaigns/${input.assignmentId}/items/${input.referenceItemId}/reference-content/${input.variant}` });
   }
 
   async readStoreReferenceContent(input: Actor & {

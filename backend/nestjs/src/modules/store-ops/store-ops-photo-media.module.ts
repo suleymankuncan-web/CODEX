@@ -62,6 +62,7 @@ import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-reten
             region: runtime.region,
             forcePathStyle: runtime.forcePathStyle,
             requireObjectVersionId: true,
+            lockedObjectRetentionDays: 30,
           });
       },
     },
@@ -83,6 +84,7 @@ import { StoreOpsPhotoMediaRetentionModule } from "./store-ops-photo-media-reten
             region: runtime.region,
             forcePathStyle: runtime.forcePathStyle,
             requireObjectVersionId: true,
+            lockedObjectRetentionDays: 30,
           });
       },
     },

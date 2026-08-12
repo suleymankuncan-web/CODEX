@@ -1,6 +1,6 @@
 import {
-  Body, Controller, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseUUIDPipe, Post, Req,
-  UploadedFile, UseInterceptors,
+  Body, Controller, Get, Header, HttpCode, HttpStatus, Param, ParseEnumPipe, ParseFilePipeBuilder,
+  ParseUUIDPipe, Post, Req, StreamableFile, UploadedFile, UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
@@ -130,7 +130,25 @@ export class PhotoMediaStorageController {
       actorUserId: request.user.userId,
       actorScope: request.user.scope,
       variant: body.variant,
+      contentPath: `/api/internal/photo-media/assets/${mediaAssetId}/content/${body.variant}`,
     });
+  }
+
+  @Get("assets/:mediaAssetId/content/:variant")
+  @Header("Cache-Control", "private, no-store")
+  async readContent(
+    @Req() request: { user: PhotoMediaRequestUser },
+    @Param("mediaAssetId", new ParseUUIDPipe()) mediaAssetId: string,
+    @Param("variant", new ParseEnumPipe(["canonical", "thumbnail"]))
+    variant: "canonical" | "thumbnail",
+  ) {
+    const content = await this.service.readContent({
+      mediaAssetId,
+      actorUserId: request.user.userId,
+      actorScope: request.user.scope,
+      variant,
+    });
+    return new StreamableFile(content.body, { type: content.contentType });
   }
 
   @Post("maintenance/reconcile")

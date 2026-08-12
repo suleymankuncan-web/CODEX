@@ -24,6 +24,7 @@ tmp/
 tmp_excel_inspect/
 outputs/
 infra/onprem/core/secret-files/
+infra/onprem/photo-storage/secret-files/
 tmp-keycloak-cookie*.txt
 references/design-md/
 

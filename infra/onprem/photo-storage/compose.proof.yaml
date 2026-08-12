@@ -1,0 +1,30 @@
+services:
+  object-storage:
+    ports:
+      - "127.0.0.1:${PHOTO_STORAGE_PROOF_PORT:-18333}:8333"
+    networks: !override
+      - photo-storage-proof
+
+networks:
+  edge:
+    ipam:
+      config: !override
+        - subnet: 172.31.40.0/24
+  proxy:
+    ipam:
+      config: !override
+        - subnet: 172.31.50.0/24
+  app:
+    ipam:
+      config: !override
+        - subnet: 172.31.60.0/24
+  data:
+    ipam:
+      config: !override
+        - subnet: 172.31.70.0/24
+  photo-storage-proof:
+    internal: false
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.80.0/24

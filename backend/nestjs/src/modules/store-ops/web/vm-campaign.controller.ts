@@ -49,7 +49,7 @@ export class VmCampaignController {
   }
 
   @Get(":assignmentId/items/:referenceItemId/reference-content/:variant")
-  @Header("Cache-Control", "private, max-age=60")
+  @Header("Cache-Control", "private, no-store")
   async readReferenceContent(@Req() request: Request,
     @Param("assignmentId") assignmentId: string,
     @Param("referenceItemId") referenceItemId: string,

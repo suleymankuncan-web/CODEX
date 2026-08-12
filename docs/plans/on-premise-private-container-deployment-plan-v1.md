@@ -71,6 +71,53 @@ slice. They are planning inputs, not permanent assumptions.
 | ONP-D11 | Use synthetic fixtures only during local package development and rehearsal. | Avoids accidental company-data movement before approval. |
 | ONP-D12 | No automatic database migration on API startup. A one-shot migrator runs explicitly before API/worker activation. | Makes schema change and rollback decisions observable. |
 
+### SeaweedFS 4.41 synthetic evidence status (ONP-4B, 2026-08-12)
+
+The conditional SeaweedFS candidate now has a repository-backed synthetic
+engine proof. This is evidence for the reversible ONP-4B slice; it is not a
+production engine-acceptance or photo-activation decision.
+
+- The pinned image is
+  `chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d`
+  (OCI version `4.41`, revision `de34a1a87c02893507f961cda9574172ee5064e9`,
+  Linux `amd64`). The vendored Apache-2.0 source is the upstream tag
+  `seaweedfs/seaweedfs@4.41:LICENSE`, SHA-256
+  `d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613`.
+- The versioned overlay joins the unchanged core Compose project. Production
+  object storage has no host-published port and is reachable only on the
+  internal data network. The proof-only overlay maps an ephemeral port to
+  `127.0.0.1`; that mapping is never part of the production overlay. Browser
+  delivery remains an application-controlled same-origin path; the internal
+  HTTP endpoint is not a browser URL.
+- The service is read-only, drops all capabilities except `CHOWN`, `SETGID`,
+  and `SETUID`, uses `no-new-privileges`, bounded resources/log rotation, and
+  persistent labelled synthetic storage. Telemetry, directory UI exposure,
+  recursive non-empty bucket deletion, and embedded IAM are explicitly off;
+  volume capacity is bounded at exactly `volume.max=32`. Startup generates a
+  private S3 config from file-backed secrets and runs the official entrypoint.
+- Primary and recovery identities use distinct credentials and distinct
+  bucket-scoped `Admin:<bucket>` actions. The proof rejects unsigned, wrong-key,
+  and cross-bucket requests; verifies versioning plus per-object 30-day
+  COMPLIANCE retention only for `locked/` objects in both buckets (never a
+  whole-bucket default), binary byte and
+  metadata SHA-256, HEAD/GET/list, presigned GET and expiry denial, transient
+  and derived exact deletion, primary/recovery locked `DeleteObject` denial, locked non-empty `DeleteBucket`
+  denial, restart preservation, and stopped-volume snapshot/restore into a
+  fresh labelled volume with the same VersionId, hash, and lock state.
+- The sanitized receipt is synthetic-only and excludes credentials, raw object
+  keys, and VersionIds. A same-host labelled backup volume in this rehearsal is
+  only a consistency/snapshot exercise; it is **not** production disaster
+  recovery or an independent failure domain.
+
+Production remains No-Go until ONP-5 and the IT/owner gates below are complete:
+company-server capacity and storage topology, a separate backup destination and
+failure domain, accepted backup frequency/retention/encryption/RPO/RTO, a
+documented restore operator and recurring restore drill, secret provisioning and
+rotation, host firewall/egress/DNS/TLS ownership, Nebim connectivity and
+credentials, real-data authorization, and the owner-approved real-photo/AI
+activation. Hosted R2 remains the rollback path, and the real-photo, VM pilot,
+and visual-AI flags remain disabled.
+
 ## 4. Non-Goals
 
 - no production deployment or live cutover;
@@ -207,6 +254,12 @@ upgrade must have its own compatibility and restore rehearsal.
   expiry contracts remain fail-closed.
 - Preserve primary/recovery integrity checks, SHA-256 and byte-count
   verification, prefixes, retention holds, and sanitized receipts.
+- The ONP-4B synthetic proof is the executable reference for private access,
+  file-backed scoped credentials, version/object-lock retention, exact
+  VersionId/hash/list behavior, presign expiry, transient deletion, locked
+  object deletion denial, locked non-empty bucket deletion denial, restart,
+  and stopped-volume restore. It does not replace the production backup and
+  restore gate.
 - Primary and recovery cannot claim independent failure domains if both reside
   on the same physical disk. The accepted production design needs a separate
   disk, NAS, or backup target supplied by IT.
@@ -498,6 +551,8 @@ Scope:
   identity/configuration; reject it if locked deletion succeeds, transient
   deletion fails, or any private access/hash/list/signing/restore contract
   cannot be proven;
+- retain the ONP-4B synthetic receipt as evidence only; the proof's same-host
+  backup volume is not a production recovery copy;
 - replace R2-named runtime semantics with a provider-neutral S3 contract while
   preserving the existing R2 adapter as a hosted rollback option;
 - private buckets/volumes, signed reads, canonical/recovery verification,

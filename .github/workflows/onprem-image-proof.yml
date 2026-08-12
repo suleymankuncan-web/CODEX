@@ -68,6 +68,7 @@ env:
   KEYCLOAK_TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   SYFT_IMAGE: anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026
+  SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d
 
 jobs:
   proof:
@@ -831,6 +832,39 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
           chmod 0600 "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
 
+      - name: Run mandatory synthetic SeaweedFS photo-storage proof
+        if: inputs.proof_mode == 'full'
+        env:
+          RELEASE_ID: onprem-photo-storage-${{ inputs.expected_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/onprem-photo-storage-runtime-proof.mjs --execute \
+            --core-compose infra/onprem/core/compose.yaml \
+            --compose infra/onprem/photo-storage/compose.yaml \
+            --proof-compose infra/onprem/photo-storage/compose.proof.yaml \
+            --project hr-axis-onprem-photo-storage \
+            --release-id "$RELEASE_ID" \
+            --receipt "$RUNNER_TEMP/onprem-photo-storage-runtime-receipt.json"
+          chmod 0600 "$RUNNER_TEMP/onprem-photo-storage-runtime-receipt.json"
+
+      - name: Generate SeaweedFS storage SBOM, license, and vulnerability evidence
+        if: inputs.proof_mode == 'full'
+        run: |
+          set -euo pipefail
+          docker pull "$SEAWEEDFS_IMAGE"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
+            "$SEAWEEDFS_IMAGE" -o spdx-json=/out/photo-storage-sbom.spdx.json
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+            --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
+            --output /out/photo-storage-trivy.json "$SEAWEEDFS_IMAGE"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            --scanners vuln --severity CRITICAL --exit-code 1 "$SEAWEEDFS_IMAGE"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            --scanners secret --exit-code 1 "$SEAWEEDFS_IMAGE"
+          test -s infra/onprem/photo-storage/LICENSE
+          test "$(sha256sum infra/onprem/photo-storage/LICENSE | cut -d ' ' -f 1)" = d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613
+          printf '%s\n' '{"image":"'"$SEAWEEDFS_IMAGE"'","license":"Apache-2.0","licenseSource":"seaweedfs/seaweedfs@4.41:LICENSE","licenseSha256":"d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613","dataClass":"synthetic"}' > proof/photo-storage-license-receipt.json
+
       - name: Emit fresh full proof identity and receipt
         if: inputs.proof_mode == 'full'
         id: emit-proof-output
@@ -865,6 +899,18 @@ jobs:
           name: onprem-keycloak-runtime-proof-${{ github.sha }}
           if-no-files-found: error
           path: ${{ runner.temp }}/onprem-keycloak-runtime-receipt.json
+
+      - name: Upload sanitized photo-storage proof and supply-chain evidence
+        if: inputs.proof_mode == 'full'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: onprem-photo-storage-proof-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/onprem-photo-storage-runtime-receipt.json
+            proof/photo-storage-sbom.spdx.json
+            proof/photo-storage-trivy.json
+            proof/photo-storage-license-receipt.json
 
       - name: Upload sanitized proof artifacts
         if: inputs.proof_mode == 'full'

@@ -143,6 +143,93 @@ describe("S3CompatiblePhotoMediaObjectStorage", () => {
     }));
   });
 
+  it("applies exactly 30 days of compliance retention to local locked objects", async () => {
+    const now = new Date("2026-08-12T10:20:30.000Z");
+    const send = jest.fn().mockResolvedValue({ VersionId: "locked-v1" });
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        lockedObjectRetentionDays: 30,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      },
+      { send } as never,
+      jest.fn(),
+      () => now,
+    );
+
+    await storage.putObject({
+      objectKey: "locked/companies/a/media/b/canonical.webp",
+      body: Buffer.from("canonical"),
+      contentType: "image/webp",
+      sha256: "a".repeat(64),
+    });
+
+    expect(send.mock.calls[0]?.[0]?.input).toEqual(expect.objectContaining({
+      ObjectLockMode: "COMPLIANCE",
+      ObjectLockRetainUntilDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+    }));
+  });
+
+  it.each(["transient/companies/a/media/b/raw", "derived/companies/a/media/b/thumbnail.webp", "rehearsals/a/canonical.webp"])(
+    "does not apply object retention to replaceable or synthetic prefix %s",
+    async (objectKey) => {
+      const send = jest.fn().mockResolvedValue({ VersionId: "unlocked-v1" });
+      const storage = new S3CompatiblePhotoMediaObjectStorage(
+        {
+          bucket: "hr-axis-media-primary",
+          endpoint: "http://object-storage:8333",
+          region: "us-east-1",
+          forcePathStyle: true,
+          requireObjectVersionId: true,
+          lockedObjectRetentionDays: 30,
+          credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+        },
+        { send } as never,
+        jest.fn(),
+      );
+
+      await storage.putObject({
+        objectKey,
+        body: Buffer.from("body"),
+        contentType: "image/webp",
+        sha256: "a".repeat(64),
+      });
+
+      expect(send.mock.calls[0]?.[0]?.input).not.toEqual(expect.objectContaining({
+        ObjectLockMode: expect.anything(),
+        ObjectLockRetainUntilDate: expect.anything(),
+      }));
+    },
+  );
+
+  it("fails closed for a local locked object when retention is not configured", async () => {
+    const send = jest.fn().mockResolvedValue({ VersionId: "locked-v1" });
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      },
+      { send } as never,
+      jest.fn(),
+    );
+
+    await expect(storage.putObject({
+      objectKey: "locked/companies/a/media/b/canonical.webp",
+      body: Buffer.from("canonical"),
+      contentType: "image/webp",
+      sha256: "a".repeat(64),
+    })).rejects.toThrow("locked object retention is not configured");
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("classifies only a create-only precondition conflict without exposing provider details", async () => {
     const send = jest.fn().mockRejectedValue(Object.assign(
       new Error("bucket/transient/secret-version-2 already exists"),
@@ -448,6 +535,7 @@ describe("S3CompatiblePhotoMediaObjectStorage", () => {
           region: "us-east-1",
           forcePathStyle: true,
           requireObjectVersionId: true,
+          lockedObjectRetentionDays: 30,
           credentials: { accessKeyId: "key", secretAccessKey: "secret" },
         },
         { send } as never,

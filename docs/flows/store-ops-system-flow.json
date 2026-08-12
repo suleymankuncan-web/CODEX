@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-08-11T14:29:48.425Z",
+  "generatedAt": "2026-08-12T18:40:47.191Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 253,
-    "backendEndpointsWithoutFrontendCallCount": 54,
+    "backendEndpointCount": 254,
+    "backendEndpointsWithoutFrontendCallCount": 55,
     "controllerCount": 35,
     "frontendApiCallCount": 200,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 200,
-    "openApiEndpointCount": 253,
+    "openApiEndpointCount": 254,
     "routeApiEdgeCount": 255,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
@@ -5864,6 +5864,20 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}",
+      "method": "GET",
+      "path": "/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}",
+      "rawControllerPath": "internal/photo-media",
+      "rawMethodPath": "assets/:mediaAssetId/content/:variant",
+      "controller": "photo-media-storage",
+      "domain": "internal",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
+        "line": 137
+      }
+    },
+    {
       "id": "endpoint:POST:/api/internal/photo-media/assets/{mediaAssetId}/read-url",
       "method": "POST",
       "path": "/api/internal/photo-media/assets/{mediaAssetId}/read-url",
@@ -5888,7 +5902,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 146
+        "line": 164
       }
     },
     {
@@ -5902,7 +5916,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 279
+        "line": 297
       }
     },
     {
@@ -5916,7 +5930,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 284
+        "line": 302
       }
     },
     {
@@ -5930,7 +5944,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 136
+        "line": 154
       }
     },
     {
@@ -5944,7 +5958,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 141
+        "line": 159
       }
     },
     {
@@ -5958,7 +5972,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 185
+        "line": 203
       }
     },
     {
@@ -5972,7 +5986,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 154
+        "line": 172
       }
     },
     {
@@ -5986,7 +6000,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/photo-media-storage.controller.ts",
-        "line": 215
+        "line": 233
       }
     },
     {
@@ -8414,6 +8428,12 @@
       "method": "PATCH",
       "path": "/api/integrations/store-master/{storeId}",
       "domain": "integrations"
+    },
+    {
+      "id": "openapi:GET:/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}",
+      "method": "GET",
+      "path": "/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}",
+      "domain": "internal"
     },
     {
       "id": "openapi:POST:/api/internal/photo-media/assets/{mediaAssetId}/read-url",
@@ -11863,7 +11883,7 @@
         "id": "controller:photo-media-storage",
         "controller": "photo-media-storage",
         "domain": "internal",
-        "endpointCount": 12,
+        "endpointCount": 13,
         "frontendCallCount": 0
       },
       {
@@ -11909,6 +11929,7 @@
       "endpoint:PATCH:/api/integrations/sources/{sourceId}/reactivate",
       "endpoint:PATCH:/api/integrations/sources/{sourceId}/schedule",
       "endpoint:GET:/api/integrations/sources/due-schedule",
+      "endpoint:GET:/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}",
       "endpoint:POST:/api/internal/photo-media/assets/{mediaAssetId}/read-url",
       "endpoint:POST:/api/internal/photo-media/maintenance/assets/{mediaAssetId}/restore",
       "endpoint:POST:/api/internal/photo-media/maintenance/cleanup-partials",
