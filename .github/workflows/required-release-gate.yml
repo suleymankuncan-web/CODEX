@@ -21,6 +21,8 @@ jobs:
       mode: ${{ steps.scope.outputs.mode }}
       run_root_release: ${{ steps.scope.outputs.run_root_release }}
       observe_rehearsal: ${{ steps.scope.outputs.observe_rehearsal }}
+      proof_mode: ${{ steps.scope.outputs.proof_mode }}
+      image_scope: ${{ steps.scope.outputs.image_scope }}
       run_onprem_image_proof: ${{ steps.scope.outputs.run_onprem_image_proof }}
 
     steps:
@@ -107,8 +109,12 @@ jobs:
   onprem-image-proof:
     name: onprem-image-proof
     needs: scope
-    if: needs.scope.outputs.run_onprem_image_proof == 'true'
+    if: needs.scope.outputs.proof_mode != 'none'
     uses: ./.github/workflows/onprem-image-proof.yml
+    with:
+      proof_mode: ${{ needs.scope.outputs.proof_mode }}
+      image_scope: ${{ needs.scope.outputs.image_scope }}
+      expected_sha: ${{ github.event.pull_request.head.sha }}
     permissions:
       contents: read
 
@@ -141,6 +147,14 @@ jobs:
           REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT: ${{ needs.root-release.result }}
           REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT: ${{ needs.release-rehearsal-observer.result }}
           REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL: ${{ needs.scope.outputs.observe_rehearsal }}
+          REQUIRED_RELEASE_GATE_PROOF_MODE: ${{ needs.scope.outputs.proof_mode }}
+          REQUIRED_RELEASE_GATE_IMAGE_SCOPE: ${{ needs.scope.outputs.image_scope }}
           REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RESULT: ${{ needs.onprem-image-proof.result }}
+          REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_MODE: ${{ needs.onprem-image-proof.outputs.proof_mode }}
+          REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_SCOPE: ${{ needs.onprem-image-proof.outputs.image_scope }}
+          REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_EVIDENCE_SHA: ${{ needs.onprem-image-proof.outputs.evidence_sha }}
+          REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_RECEIPT_SHA256: ${{ needs.onprem-image-proof.outputs.receipt_sha256 }}
+          REQUIRED_RELEASE_GATE_ONPREM_IMAGE_PROOF_PROVEN_SHA: ${{ needs.onprem-image-proof.outputs.proven_sha }}
+          REQUIRED_RELEASE_GATE_EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
           REQUIRED_RELEASE_GATE_RUN_ONPREM_IMAGE_PROOF: ${{ needs.scope.outputs.run_onprem_image_proof }}
         run: node scripts/required-release-gate.mjs --final

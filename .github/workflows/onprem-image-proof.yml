@@ -2,7 +2,54 @@ name: on-prem image proof
 
 on:
   workflow_call:
+    inputs:
+      proof_mode:
+        description: 'Fail-closed proof mode: component or full'
+        required: true
+        type: string
+      image_scope:
+        description: 'Selected application images: frontend, backend, or both'
+        required: true
+        type: string
+      expected_sha:
+        description: 'Exact commit SHA to check out and prove'
+        required: true
+        type: string
+    outputs:
+      proof_mode:
+        description: 'Proven proof mode'
+        value: ${{ jobs.proof.outputs.proof_mode || jobs.component_proof.outputs.proof_mode }}
+      image_scope:
+        description: 'Proven image scope'
+        value: ${{ jobs.proof.outputs.image_scope || jobs.component_proof.outputs.image_scope }}
+      evidence_sha:
+        description: 'SHA-256 of the fresh evidence index'
+        value: ${{ jobs.proof.outputs.evidence_sha || jobs.component_proof.outputs.evidence_sha }}
+      receipt_sha256:
+        description: 'SHA-256 of the fresh proof receipt'
+        value: ${{ jobs.proof.outputs.receipt_sha256 || jobs.component_proof.outputs.receipt_sha256 }}
+      proven_sha:
+        description: 'Exact commit SHA proven by the selected job'
+        value: ${{ jobs.proof.outputs.proven_sha || jobs.component_proof.outputs.proven_sha }}
   workflow_dispatch:
+    inputs:
+      proof_mode:
+        description: 'Fail-closed proof mode'
+        required: false
+        default: full
+        type: choice
+        options:
+          - component
+          - full
+      image_scope:
+        description: 'Selected application images'
+        required: false
+        default: both
+        type: choice
+        options:
+          - frontend
+          - backend
+          - both
 
 permissions:
   contents: read
@@ -26,9 +73,32 @@ jobs:
   proof:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      proof_mode: ${{ steps.emit-proof-output.outputs.proof_mode }}
+      image_scope: ${{ steps.emit-proof-output.outputs.image_scope }}
+      evidence_sha: ${{ steps.emit-proof-output.outputs.evidence_sha }}
+      receipt_sha256: ${{ steps.emit-proof-output.outputs.receipt_sha256 }}
+      proven_sha: ${{ steps.emit-proof-output.outputs.proven_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.expected_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Validate full proof inputs and exact checkout
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha || github.sha }}
+          PROOF_MODE: ${{ inputs.proof_mode }}
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          case "$PROOF_MODE:$IMAGE_SCOPE" in
+            full:both|component:frontend|component:backend|component:both) ;;
+            *) exit 1 ;;
+          esac
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Pin host proof toolchain to the image build Node line
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -36,6 +106,7 @@ jobs:
           node-version: 24.19.0
 
       - name: Pull pinned Keycloak base and build the optimized ONP-3B image
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           docker pull "$KEYCLOAK_BASE_IMAGE"
@@ -56,8 +127,9 @@ jobs:
           printf 'KEYCLOAK_IMAGE_ID=%s\n' "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')" >> "$GITHUB_ENV"
 
       - name: Build dedicated images with synthetic inputs
+        if: inputs.proof_mode == 'full'
         env:
-          SOURCE_REVISION: ${{ github.sha }}
+          SOURCE_REVISION: ${{ inputs.expected_sha || github.sha }}
           BUILD_VERSION: onprem-${{ github.run_number }}
         run: |
           set -euo pipefail
@@ -81,6 +153,7 @@ jobs:
             .
 
       - name: Prove ONP-2 static Compose, network, and firewall contracts
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           node --test scripts/onprem-core-contract.test.mjs scripts/onprem-core-firewall-verify.test.mjs
@@ -92,6 +165,7 @@ jobs:
             --proxy-port 443 --ssh-admin-cidr 192.0.2.0/24
 
       - name: Prove ONP-3B production-shaped Keycloak contracts
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           node --test scripts/onprem-keycloak-contract.test.mjs scripts/onprem-keycloak-runtime-proof.test.mjs
@@ -99,6 +173,7 @@ jobs:
             --profile infra --profile keycloak-bootstrap --profile migrate --profile seed --profile identity-binder --profile runtime config --quiet
 
       - name: Prove non-root image users
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           frontend_user="$(docker image inspect hr-axis-onprem-frontend:proof --format '{{.Config.User}}')"
@@ -107,6 +182,7 @@ jobs:
           test -n "$backend_user" && test "$backend_user" != "0" && test "$backend_user" != "root"
 
       - name: Prove capability-free Caddy bootstrap under production restrictions
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           docker run --rm --user 10001:10001 --read-only --cap-drop=ALL \
@@ -176,6 +252,7 @@ jobs:
           done
 
       - name: Prove the pruned backend dependency graph and lazy runtime features
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           mapfile -t dependencies < <(node --input-type=module -e "import pkg from './backend/nestjs/package.json' with { type: 'json' }; console.log(Object.keys(pkg.dependencies).sort().join('\\n'))")
@@ -189,6 +266,7 @@ jobs:
             | grep -F 'lazy-runtime-smoke=ok'
 
       - name: Start frontend with read-only root and least privilege
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           frontend_id="$(docker run -d --read-only --cap-drop=ALL --security-opt=no-new-privileges:true \
@@ -202,6 +280,7 @@ jobs:
           exit 1
 
       - name: Start API and worker from the same backend image
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           common=(--read-only --cap-drop=ALL --security-opt=no-new-privileges:true --tmpfs /tmp:rw,noexec,nosuid,size=64m)
@@ -257,6 +336,7 @@ jobs:
           docker logs "$worker_id" 2>&1 | grep -F 'BullMQ worker context started'
 
       - name: Generate SPDX SBOMs with pinned Syft
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')" = "$KEYCLOAK_IMAGE_ID"
@@ -268,6 +348,7 @@ jobs:
             "$KEYCLOAK_IMAGE" -o spdx-json=/out/keycloak-sbom.spdx.json
 
       - name: Fail closed on image vulnerabilities and secrets with pinned Trivy
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           for image in frontend backend; do
@@ -288,6 +369,7 @@ jobs:
             --scanners secret --exit-code 1 "$KEYCLOAK_IMAGE"
 
       - name: Export final filesystems and layers then run content guards
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           for image in frontend backend; do
@@ -334,6 +416,7 @@ jobs:
           done < <(jq -r '.[0].Layers[]' proof/keycloak-saved-image/manifest.json)
 
       - name: Generate production license inventories and notices
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           mkdir -p proof/base-license-evidence/debian proof/base-license-evidence/node proof/base-license-evidence/alpine
@@ -450,6 +533,7 @@ jobs:
           NODE
 
       - name: Generate sanitized Keycloak image manifest
+        if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
           keycloak_image_id="$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Id}}')"
@@ -468,8 +552,9 @@ jobs:
       # consistent in CI. It is not the owner trust anchor. ONP-5 supplies and
       # pins the owner-controlled offline signing and verification keys.
       - name: Self-test signed synthetic release manifest
+        if: inputs.proof_mode == 'full'
         env:
-          SOURCE_REVISION: ${{ github.sha }}
+          SOURCE_REVISION: ${{ inputs.expected_sha || github.sha }}
           BUILD_VERSION: onprem-${{ github.run_number }}
         run: |
           set -euo pipefail
@@ -539,8 +624,9 @@ jobs:
           node scripts/onprem-release-manifest.mjs verify --input proof/release-manifest.json --base-dir proof --public-key proof/ephemeral-public.pem
 
       - name: Prepare UID-bound ephemeral synthetic secret files
+        if: inputs.proof_mode == 'full'
         env:
-          RELEASE_ID: onprem-core-${{ github.sha }}
+          RELEASE_ID: onprem-core-${{ inputs.expected_sha || github.sha }}
         run: |
           set -euo pipefail
           secret_root=infra/onprem/core/secret-files
@@ -658,8 +744,9 @@ jobs:
           printf 'ONPREM_CORE_ENV=%s\n' "$RUNNER_TEMP/onprem-core.env" >> "$GITHUB_ENV"
 
       - name: Run mandatory fresh-volume core proof behind a reversible firewall
+        if: inputs.proof_mode == 'full'
         env:
-          RELEASE_ID: onprem-core-${{ github.sha }}
+          RELEASE_ID: onprem-core-${{ inputs.expected_sha || github.sha }}
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -744,7 +831,27 @@ jobs:
           sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
           chmod 0600 "$RUNNER_TEMP/onprem-keycloak-runtime-receipt.json"
 
+      - name: Emit fresh full proof identity and receipt
+        if: inputs.proof_mode == 'full'
+        id: emit-proof-output
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          evidence_sha="$(sha256sum proof/release-manifest.json | cut -d ' ' -f 1)"
+          receipt_path=proof/onprem-proof-receipt.json
+          printf '%s\n' '{"proofMode":"full","imageScope":"both","expectedSha":"'"$EXPECTED_SHA"'","evidenceSha":"'"$evidence_sha"'","dataClass":"synthetic"}' > "$receipt_path"
+          receipt_sha256="$(sha256sum "$receipt_path" | cut -d ' ' -f 1)"
+          {
+            echo 'proof_mode=full'
+            echo 'image_scope=both'
+            echo "evidence_sha=$evidence_sha"
+            echo "receipt_sha256=$receipt_sha256"
+            echo "proven_sha=$EXPECTED_SHA"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Upload sanitized runtime receipt
+        if: inputs.proof_mode == 'full'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-core-runtime-proof-${{ github.sha }}
@@ -752,6 +859,7 @@ jobs:
           path: ${{ runner.temp }}/onprem-core-runtime-receipt.json
 
       - name: Upload sanitized Keycloak runtime receipt
+        if: inputs.proof_mode == 'full'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-keycloak-runtime-proof-${{ github.sha }}
@@ -759,6 +867,7 @@ jobs:
           path: ${{ runner.temp }}/onprem-keycloak-runtime-receipt.json
 
       - name: Upload sanitized proof artifacts
+        if: inputs.proof_mode == 'full'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-image-proof-${{ github.sha }}
@@ -778,4 +887,328 @@ jobs:
             proof/keycloak-license-reconciliation.json
             proof/keycloak-license-evidence.tar
             proof/release-manifest.json
+            proof/onprem-proof-receipt.json
             proof/ephemeral-public.pem
+
+  component_proof:
+    name: component-proof
+    if: inputs.proof_mode == 'component'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      proof_mode: ${{ steps.emit-proof-output.outputs.proof_mode }}
+      image_scope: ${{ steps.emit-proof-output.outputs.image_scope }}
+      evidence_sha: ${{ steps.emit-proof-output.outputs.evidence_sha }}
+      receipt_sha256: ${{ steps.emit-proof-output.outputs.receipt_sha256 }}
+      proven_sha: ${{ steps.emit-proof-output.outputs.proven_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.expected_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Validate component proof inputs and exact checkout
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha || github.sha }}
+          PROOF_MODE: ${{ inputs.proof_mode }}
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          test "$PROOF_MODE" = component
+          case "$IMAGE_SCOPE" in frontend|backend|both) ;; *) exit 1 ;; esac
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Pin host proof toolchain to the image build Node line
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.19.0
+
+      - name: Build selected production images with synthetic inputs
+        env:
+          SOURCE_REVISION: ${{ inputs.expected_sha || github.sha }}
+          BUILD_VERSION: onprem-component-${{ github.run_number }}
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          mkdir -p proof
+          BUILD_TIMESTAMP="$(node --input-type=module -e "console.log(new Date().toISOString())")"
+          echo "BUILD_TIMESTAMP=$BUILD_TIMESTAMP" >> "$GITHUB_ENV"
+          case "$IMAGE_SCOPE" in
+            frontend|both)
+              grep -Fqx "FROM $BUILD_IMAGE AS build" infra/onprem/images/frontend.Dockerfile
+              grep -Fqx "FROM $FRONTEND_RUNTIME_IMAGE AS runtime" infra/onprem/images/frontend.Dockerfile
+              docker build --file infra/onprem/images/frontend.Dockerfile --tag hr-axis-onprem-frontend:component-proof \
+                --build-arg VITE_API_BASE_URL=/api \
+                --build-arg SOURCE_REVISION="$SOURCE_REVISION" \
+                --build-arg BUILD_VERSION="$BUILD_VERSION" \
+                --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" .
+              ;;
+          esac
+          case "$IMAGE_SCOPE" in
+            backend|both)
+              grep -Fqx "FROM $BUILD_IMAGE AS dependencies" infra/onprem/images/backend.Dockerfile
+              grep -Fqx "FROM $BACKEND_RUNTIME_IMAGE AS runtime" infra/onprem/images/backend.Dockerfile
+              docker build --file infra/onprem/images/backend.Dockerfile --tag hr-axis-onprem-backend:component-proof \
+                --build-arg SOURCE_REVISION="$SOURCE_REVISION" \
+                --build-arg BUILD_VERSION="$BUILD_VERSION" \
+                --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" .
+              ;;
+          esac
+
+      - name: Prove selected images are non-root and capability-free at startup
+        env:
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          common=(--read-only --cap-drop=ALL --security-opt=no-new-privileges:true --tmpfs /tmp:rw,noexec,nosuid,size=64m)
+          if [[ "$IMAGE_SCOPE" = frontend || "$IMAGE_SCOPE" = both ]]; then
+            frontend_user="$(docker image inspect hr-axis-onprem-frontend:component-proof --format '{{.Config.User}}')"
+            test -n "$frontend_user" && test "$frontend_user" != 0 && test "$frontend_user" != root
+            frontend_id="$(docker run -d "${common[@]}" -p 18080:8080 hr-axis-onprem-frontend:component-proof)"
+            trap 'docker rm -f "$frontend_id" >/dev/null 2>&1 || true' EXIT
+            for attempt in $(seq 1 20); do
+              if curl --fail --silent http://127.0.0.1:18080/health >/dev/null; then break; fi
+              sleep 1
+            done
+            curl --fail --silent http://127.0.0.1:18080/health >/dev/null
+            docker rm -f "$frontend_id" >/dev/null
+            trap - EXIT
+          fi
+          if [[ "$IMAGE_SCOPE" = backend || "$IMAGE_SCOPE" = both ]]; then
+            backend_user="$(docker image inspect hr-axis-onprem-backend:component-proof --format '{{.Config.User}}')"
+            test -n "$backend_user" && test "$backend_user" != 0 && test "$backend_user" != root
+            mapfile -t dependencies < <(node --input-type=module -e "import pkg from './backend/nestjs/package.json' with { type: 'json' }; console.log(Object.keys(pkg.dependencies).sort().join('\\n'))")
+            docker run --rm "${common[@]}" hr-axis-onprem-backend:component-proof -e \
+              "for (const name of process.argv.slice(1)) require.resolve(name); console.log('resolved=' + process.argv.slice(1).length)" \
+              "${dependencies[@]}" | grep -F "resolved=${#dependencies[@]}"
+            docker run --rm "${common[@]}" hr-axis-onprem-backend:component-proof -e \
+              "Promise.all([require('sharp')({create:{width:1,height:1,channels:3,background:'#fff'}}).png().toBuffer(), Promise.resolve(require('@e965/xlsx').utils.book_new()), Promise.resolve(new (require('@aws-sdk/client-s3').S3Client)({region:'eu-central-1',credentials:{accessKeyId:'synthetic',secretAccessKey:'synthetic'}}))]).then((items)=>{items[2].destroy();console.log('lazy-runtime-smoke=ok')})" \
+              | grep -F lazy-runtime-smoke=ok
+            synthetic_env=(
+              -e NODE_ENV=production -e HR_AXIS_STRICT_LOCAL=false -e HR_AXIS_DATA_CLASS=synthetic
+              -e AUTH_MODE=jwt -e AUTH_PROVIDER_KEY=oidc
+              -e JWT_SECRET=synthetic-only-not-a-real-secret-0000000000000000
+              -e DATABASE_URL=postgres://synthetic:synthetic@127.0.0.1:5432/synthetic
+              -e DB_SSL_MODE=require -e CORS_ALLOWED_ORIGINS=https://onprem.synthetic.invalid
+              -e RATE_LIMIT_WINDOW_MS=60000 -e RATE_LIMIT_MAX=120 -e RATE_LIMIT_BACKEND=memory
+              -e TRUST_PROXY_HOPS=0 -e QUEUE_BACKEND=in-memory -e ERROR_TRACKING_ENABLED=false
+              -e PHOTO_MEDIA_STORAGE_ENABLED=false
+            )
+            api_id="$(docker run -d "${common[@]}" -p 18082:3000 "${synthetic_env[@]}" hr-axis-onprem-backend:component-proof)"
+            worker_id="$(docker run -d "${common[@]}" "${synthetic_env[@]}" hr-axis-onprem-backend:component-proof dist/src/workers.js)"
+            trap 'docker rm -f "$api_id" "$worker_id" >/dev/null 2>&1 || true' EXIT
+            worker_started=false
+            for attempt in $(seq 1 20); do
+              api_status="$(docker inspect -f '{{.State.Status}}' "$api_id")"
+              worker_status="$(docker inspect -f '{{.State.Status}}' "$worker_id")"
+              if test "$worker_status" = running; then
+                if docker logs "$worker_id" 2>&1 | grep -F 'BullMQ worker context started' >/dev/null; then worker_started=true; fi
+              elif test "$worker_status" = exited; then
+                test "$(docker inspect -f '{{.State.ExitCode}}' "$worker_id")" = 0
+                if docker logs "$worker_id" 2>&1 | grep -F 'BullMQ worker context started' >/dev/null; then worker_started=true; fi
+              fi
+              if test "$api_status" = running && test "$worker_started" = true && curl --fail --silent http://127.0.0.1:18082/api/health/live >/dev/null; then break; fi
+              if test "$api_status" = exited; then docker logs "$api_id"; docker logs "$worker_id"; exit 1; fi
+              sleep 1
+            done
+            test "$(docker inspect -f '{{.State.Status}}' "$api_id")" = running
+            curl --fail --silent http://127.0.0.1:18082/api/health/live | grep -F '"status":"ok"'
+            test "$worker_started" = true
+            docker rm -f "$api_id" "$worker_id" >/dev/null
+            trap - EXIT
+          fi
+
+      - name: Generate selected image SBOMs and fail-closed vulnerability/secret scans
+        env:
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          for image in frontend backend; do
+            if [[ "$IMAGE_SCOPE" != both && "$IMAGE_SCOPE" != "$image" ]]; then continue; fi
+            tag="hr-axis-onprem-${image}:component-proof"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
+              "$tag" -o "spdx-json=/out/${image}-component-sbom.spdx.json"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+              --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
+              --output "/out/${image}-component-trivy.json" "$tag"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+              --scanners vuln --severity CRITICAL --exit-code 1 "$tag"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+              --scanners secret --exit-code 1 "$tag"
+          done
+
+      - name: Export selected image filesystems and every layer through content guards
+        env:
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          for image in frontend backend; do
+            if [[ "$IMAGE_SCOPE" != both && "$IMAGE_SCOPE" != "$image" ]]; then continue; fi
+            tag="hr-axis-onprem-${image}:component-proof"
+            id="$(docker create "$tag")"
+            mkdir -p "proof/${image}-component-rootfs"
+            docker export "$id" | tar -xf - -C "proof/${image}-component-rootfs"
+            docker rm "$id" >/dev/null
+            node scripts/onprem-image-content-guard.mjs --rootfs "proof/${image}-component-rootfs" --kind "$image" --json \
+              | tee "proof/${image}-component-content-guard.json"
+            docker save "$tag" -o "proof/${image}-component-image.tar"
+            mkdir -p "proof/${image}-component-saved-image"
+            tar -xf "proof/${image}-component-image.tar" -C "proof/${image}-component-saved-image"
+            layer_index=0
+            while IFS= read -r layer; do
+              layer_root="proof/${image}-component-layer-rootfs"
+              rm -rf "$layer_root"
+              mkdir -p "$layer_root"
+              tar -xf "proof/${image}-component-saved-image/$layer" -C "$layer_root"
+              node scripts/onprem-image-content-guard.mjs --rootfs "$layer_root" --kind "$image" --json \
+                | tee "proof/${image}-component-layer-${layer_index}-content-guard.json"
+              layer_index=$((layer_index + 1))
+            done < <(jq -r '.[0].Layers[]' "proof/${image}-component-saved-image/manifest.json")
+          done
+
+      - name: Generate selected image license inventories, reconciliation, and notices
+        env:
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          mkdir -p proof/base-license-evidence/debian proof/base-license-evidence/node proof/base-license-evidence/alpine
+          build_evidence_container="$(docker create "$BUILD_IMAGE")"
+          trap 'docker rm "$build_evidence_container" >/dev/null 2>&1 || true' EXIT
+          docker cp "$build_evidence_container:/usr/share/doc/base-files/copyright" proof/base-license-evidence/debian/base-files-13.8+deb13u6.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/gcc-14-base/copyright" proof/base-license-evidence/debian/gcc-14-base-14.2.0-19.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libc6/copyright" proof/base-license-evidence/debian/libc6-2.41-12+deb13u3.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libssl3t64/copyright" proof/base-license-evidence/debian/libssl3t64-3.5.6-1~deb13u2.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/libzstd1/copyright" proof/base-license-evidence/debian/libzstd1-1.5.7+dfsg-1.copyright
+          docker cp "$build_evidence_container:/usr/share/doc/tzdata/copyright" proof/base-license-evidence/debian/tzdata-2026b-0+deb13u1.copyright
+          docker cp "$build_evidence_container:/usr/local/LICENSE" proof/base-license-evidence/node/node-24.19.0.LICENSE
+          if [[ "$IMAGE_SCOPE" = frontend || "$IMAGE_SCOPE" = both ]]; then
+            frontend_evidence_container="$(docker create "$FRONTEND_RUNTIME_IMAGE")"
+            trap 'docker rm "$build_evidence_container" "$frontend_evidence_container" >/dev/null 2>&1 || true' EXIT
+            docker cp "$frontend_evidence_container:/usr/share/licenses/nginx/COPYRIGHT" proof/base-license-evidence/alpine/nginx-1.30.4-r1.COPYRIGHT
+            frontend_apk_metadata="$RUNNER_TEMP/hr-axis-onprem-frontend-component-apk-installed"
+            docker cp "$frontend_evidence_container:/lib/apk/db/installed" "$frontend_apk_metadata"
+            awk 'BEGIN { package = 0 } /^P:tzdata$/ { package = 1 } package { print } package && /^$/ { exit }' "$frontend_apk_metadata" > proof/base-license-evidence/alpine/tzdata-2026c-r0.apk-installed
+            rm -f "$frontend_apk_metadata"
+          fi
+          if [[ "$IMAGE_SCOPE" = backend || "$IMAGE_SCOPE" = both ]]; then
+            backend_evidence_container="$(docker create "$BACKEND_RUNTIME_IMAGE")"
+            trap 'docker rm "$build_evidence_container" "$backend_evidence_container" >/dev/null 2>&1 || true' EXIT
+            docker cp "$backend_evidence_container:/usr/share/doc/media-types/copyright" proof/base-license-evidence/debian/media-types-13.0.0.copyright
+          fi
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -cf proof/base-license-evidence.tar -C proof/base-license-evidence .
+          npm ci --prefix tools/onprem-license --ignore-scripts
+          if [[ "$IMAGE_SCOPE" = backend || "$IMAGE_SCOPE" = both ]]; then
+            npm ci --prefix backend/nestjs
+            spdx_license_directory=tools/onprem-license/node_modules/spdx-license-list/licenses
+            node scripts/onprem-third-party-notices.mjs \
+              --package-json backend/nestjs/package.json --lockfile backend/nestjs/package-lock.json --node-modules proof/backend-component-rootfs/app/node_modules \
+              --spdx-license-directory "$spdx_license_directory" \
+              --inventory proof/backend-component-license-inventory.json --notices proof/backend-component-THIRD_PARTY_NOTICES.txt
+            node scripts/onprem-image-license-reconciliation.mjs \
+              --sbom proof/backend-component-sbom.spdx.json \
+              --npm-inventory proof/backend-component-license-inventory.json \
+              --npm-notices proof/backend-component-THIRD_PARTY_NOTICES.txt \
+              --policy infra/onprem/images/base-license-policy-v1.json --image-kind backend --base-image "$BACKEND_RUNTIME_IMAGE" \
+              --rootfs proof/backend-component-rootfs --evidence-dir proof/base-license-evidence \
+              --spdx-license-directory "$spdx_license_directory" --receipt proof/backend-component-image-license-reconciliation.json \
+              --notices proof/backend-component-image-THIRD_PARTY_NOTICES.txt
+          fi
+          if [[ "$IMAGE_SCOPE" = frontend || "$IMAGE_SCOPE" = both ]]; then
+            npm ci --prefix admin-web
+            spdx_license_directory=tools/onprem-license/node_modules/spdx-license-list/licenses
+            node scripts/onprem-third-party-notices.mjs \
+              --package-json admin-web/package.json --lockfile admin-web/package-lock.json --node-modules admin-web/node_modules \
+              --spdx-license-directory "$spdx_license_directory" \
+              --inventory proof/frontend-component-license-inventory.json --notices proof/frontend-component-THIRD_PARTY_NOTICES.txt
+            node scripts/onprem-image-license-reconciliation.mjs \
+              --sbom proof/frontend-component-sbom.spdx.json \
+              --npm-inventory proof/frontend-component-license-inventory.json \
+              --npm-notices proof/frontend-component-THIRD_PARTY_NOTICES.txt \
+              --policy infra/onprem/images/base-license-policy-v1.json --image-kind frontend --base-image "$FRONTEND_RUNTIME_IMAGE" \
+              --rootfs proof/frontend-component-rootfs --evidence-dir proof/base-license-evidence \
+              --spdx-license-directory "$spdx_license_directory" --receipt proof/frontend-component-image-license-reconciliation.json \
+              --notices proof/frontend-component-image-THIRD_PARTY_NOTICES.txt
+          fi
+
+      - name: Emit fresh component proof identity and receipt
+        id: emit-proof-output
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha || github.sha }}
+          IMAGE_SCOPE: ${{ inputs.image_scope }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import { execFileSync } from 'node:child_process'
+          import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+
+          const scope = process.env.IMAGE_SCOPE
+          const expectedSha = process.env.EXPECTED_SHA
+          const images = scope === 'both' ? ['frontend', 'backend'] : [scope]
+          const sha256 = (pathname) => createHash('sha256').update(readFileSync(pathname)).digest('hex')
+          const evidence = { proofMode: 'component', imageScope: scope, expectedSha, dataClass: 'synthetic', images: {} }
+
+          for (const image of images) {
+            const imageId = execFileSync('docker', ['image', 'inspect', `hr-axis-onprem-${image}:component-proof`, '--format', '{{.Id}}'], { encoding: 'utf8' }).trim()
+            if (!imageId) throw new Error(`missing selected ${image} image identity`)
+            const paths = [
+              `proof/${image}-component-sbom.spdx.json`,
+              `proof/${image}-component-trivy.json`,
+              `proof/${image}-component-content-guard.json`,
+              `proof/${image}-component-license-inventory.json`,
+              `proof/${image}-component-image-license-reconciliation.json`,
+              `proof/${image}-component-THIRD_PARTY_NOTICES.txt`,
+              ...readdirSync('proof').filter((name) => name.startsWith(`${image}-component-layer-`) && name.endsWith('-content-guard.json')).sort().map((name) => `proof/${name}`),
+            ]
+            for (const pathname of paths) {
+              const stats = statSync(pathname)
+              if (!stats.isFile() || stats.size === 0) throw new Error(`missing selected ${image} evidence: ${pathname}`)
+            }
+            evidence.images[image] = {
+              imageId,
+              artifacts: paths.map((pathname) => ({ path: pathname, bytes: statSync(pathname).size, sha256: sha256(pathname) })),
+            }
+          }
+          const baseLicensePath = 'proof/base-license-evidence.tar'
+          const baseLicenseStats = statSync(baseLicensePath)
+          if (!baseLicenseStats.isFile() || baseLicenseStats.size === 0) throw new Error('missing base license evidence bundle')
+          evidence.baseLicenseEvidence = { path: baseLicensePath, bytes: baseLicenseStats.size, sha256: sha256(baseLicensePath) }
+          writeFileSync('proof/component-evidence.json', `${JSON.stringify(evidence)}\n`)
+          const evidenceSha = sha256('proof/component-evidence.json')
+          const receipt = { proofMode: 'component', imageScope: scope, expectedSha, evidenceSha, imageIds: Object.fromEntries(images.map((image) => [image, evidence.images[image].imageId])), dataClass: 'synthetic' }
+          writeFileSync('proof/onprem-proof-receipt.json', `${JSON.stringify(receipt)}\n`)
+          const receiptSha = sha256('proof/onprem-proof-receipt.json')
+          writeFileSync('proof/component-proof-digests.env', `EVIDENCE_SHA=${evidenceSha}\nRECEIPT_SHA256=${receiptSha}\n`)
+          NODE
+          evidence_sha="$(sed -n 's/^EVIDENCE_SHA=//p' proof/component-proof-digests.env)"
+          receipt_sha256="$(sed -n 's/^RECEIPT_SHA256=//p' proof/component-proof-digests.env)"
+          [[ "$evidence_sha" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$receipt_sha256" =~ ^[a-f0-9]{64}$ ]]
+          {
+            echo 'proof_mode=component'
+            echo "image_scope=$IMAGE_SCOPE"
+            echo "evidence_sha=$evidence_sha"
+            echo "receipt_sha256=$receipt_sha256"
+            echo "proven_sha=$EXPECTED_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload sanitized component proof artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: onprem-image-component-proof-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            proof/*-component-content-guard.json
+            proof/*-component-layer-*-content-guard.json
+            proof/*-component-sbom.spdx.json
+            proof/*-component-trivy.json
+            proof/*-component-license-inventory.json
+            proof/*-component-image-license-reconciliation.json
+            proof/*-component-THIRD_PARTY_NOTICES.txt
+            proof/base-license-evidence/**
+            proof/base-license-evidence.tar
+            proof/component-evidence.json
+            proof/onprem-proof-receipt.json
