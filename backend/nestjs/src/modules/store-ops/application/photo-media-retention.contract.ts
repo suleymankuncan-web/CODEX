@@ -1,5 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { createHash } from "node:crypto";
+import { PhotoMediaObjectReference } from "./photo-media-storage.ports";
 
 export type PhotoMediaPurgeManifestSource = "manual" | "scheduled";
 export type PhotoMediaPurgeReason =
@@ -40,9 +41,9 @@ export type PhotoMediaPurgeClaim = {
     mediaAssetId: string;
     cleanupLeaseToken: string;
     canonicalSha256: string;
-    thumbnailObjectKey: string;
-    primaryObjectKeys: string[];
-    recoveryObjectKeys: string[];
+    thumbnailObject: PhotoMediaObjectReference;
+    primaryObjects: PhotoMediaObjectReference[];
+    recoveryObjects: PhotoMediaObjectReference[];
   }>;
 };
 

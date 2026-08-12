@@ -29,6 +29,7 @@ import {
 } from "./photo-media-asset-shared.repository";
 import {
   claimPhotoMediaRestoreCandidate,
+  checkpointPhotoMediaRestoreObjectVersion,
   finishPhotoMediaRestore,
   markPhotoMediaRestoreVerified,
   reservePhotoMediaRestoreGeneration,
@@ -698,8 +699,10 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
           )
           SELECT 'checklist_photo_evidence.storage.reconciliation_detected',
                  media_asset_id, company_id, media_asset_id::text, $2, $3
-          FROM ops.media_asset WHERE media_asset_id = $1::uuid
-        `, [finding.mediaAssetId, finding.reasonCode, input.manifestDigest]);
+           FROM ops.media_asset WHERE media_asset_id = $1::uuid
+             AND provider_adapter_id = $4 AND jurisdiction = $5
+        `, [finding.mediaAssetId, finding.reasonCode, input.manifestDigest,
+          this.storageIdentity.provider, this.storageIdentity.jurisdiction]);
       }
     });
   }
@@ -963,8 +966,7 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
 
   async markRestoreFailed(input: Record<string, unknown>): Promise<void> {
     return finishPhotoMediaRestore(
-      this.databaseService,
-      input,
+      this.databaseService, this.storageIdentity, input,
       "checklist_photo_evidence.storage.restore_failed",
       input.reasonCode,
     );
@@ -972,18 +974,20 @@ export class PhotoMediaAssetRepository implements PhotoMediaAssetRepositoryPort 
 
   async markRestoreSkipped(input: Record<string, unknown>): Promise<void> {
     return finishPhotoMediaRestore(
-      this.databaseService,
-      input,
+      this.databaseService, this.storageIdentity, input,
       "checklist_photo_evidence.storage.restore_skipped",
       "primary_healthy",
     );
   }
 
+  async checkpointRestoreObjectVersion(input: Record<string, unknown>): Promise<void> {
+    return checkpointPhotoMediaRestoreObjectVersion(this.databaseService, this.storageIdentity, input);
+  }
+
   async reserveProviderOperations(input: {
-    classAOperations: number;
-    classBOperations: number;
-    monthlyClassAHardLimit: number;
-    monthlyClassBHardLimit: number;
+    classAOperations: number; classBOperations: number;
+    monthlyClassAHardLimit: number; monthlyClassBHardLimit: number;
+    enforceHardLimits?: boolean;
   }): Promise<void> {
     await reservePhotoMediaProviderOperations(this.databaseService, input);
   }

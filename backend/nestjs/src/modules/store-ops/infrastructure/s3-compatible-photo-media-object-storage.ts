@@ -15,6 +15,9 @@ import {
   PhotoMediaObjectReference,
   PhotoMediaObjectStoragePort,
   PhotoMediaObjectPutResult,
+  PhotoMediaObjectVersionInventory,
+  PhotoMediaObjectVersionInventoryCursor,
+  PhotoMediaObjectVersionInventoryPage,
 } from "../application/photo-media-storage.ports";
 
 const SAFE_OBJECT_KEY = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
@@ -221,36 +224,68 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     };
   }
 
-  async listObjectVersions(input: { objectKey: string }) {
+  async listObjectVersions(input: { objectKey: string }): Promise<PhotoMediaObjectVersionInventory> {
     this.assertObjectKey(input.objectKey);
+    const versions: PhotoMediaObjectReference[] = [];
+    let cursor: PhotoMediaObjectVersionInventoryCursor | undefined;
+    do {
+      const page = await this.listObjectVersionsByPrefix({ prefix: input.objectKey, ...(cursor ? { cursor } : {}) });
+      if (page.deleteMarkers.some((entry) => entry.objectKey === input.objectKey)) {
+        throw new Error("Photo media object version inventory contains a delete marker");
+      }
+      versions.push(...page.versions.filter((entry) => entry.objectKey === input.objectKey));
+      cursor = page.nextCursor;
+    } while (cursor);
+    return { versions };
+  }
+
+  async listObjectVersionsByPrefix(input: {
+    prefix: string;
+    cursor?: PhotoMediaObjectVersionInventoryCursor;
+  }): Promise<PhotoMediaObjectVersionInventoryPage> {
+    this.assertObjectKey(input.prefix);
+    if (input.cursor?.keyMarker !== undefined) this.assertObjectKey(input.cursor.keyMarker);
     const result = await this.client.send(new ListObjectVersionsCommand({
       Bucket: this.configuration.bucket,
-      Prefix: input.objectKey,
+      Prefix: input.prefix,
       MaxKeys: 3,
+      ...(input.cursor?.keyMarker !== undefined ? { KeyMarker: input.cursor.keyMarker } : {}),
+      ...(input.cursor?.versionIdMarker !== undefined ? { VersionIdMarker: input.cursor.versionIdMarker } : {}),
     }));
-    if (result.IsTruncated) {
+    const mapEntries = (entries: Array<{ Key?: string; VersionId?: string }>): PhotoMediaObjectReference[] => entries.map((entry) => {
+      this.assertObjectKey(entry.Key);
+      if (!entry.Key.startsWith(input.prefix)) {
+        throw new Error("Photo media object version inventory contains an object outside the requested prefix");
+      }
+      const versionId = this.validateVersionId(
+        entry.VersionId,
+        new Error("Photo media provider returned an invalid object version identity"),
+      );
+      this.assertProviderVersion(versionId);
+      return { objectKey: entry.Key, ...(versionId !== undefined ? { versionId } : {}) };
+    });
+    const versions = mapEntries(result.Versions ?? []);
+    const deleteMarkers = mapEntries(result.DeleteMarkers ?? []);
+    if (!result.IsTruncated) return { versions, deleteMarkers };
+    if (!result.NextKeyMarker || !result.NextVersionIdMarker) {
       throw new Error("Photo media object version inventory is ambiguous");
     }
-    for (const entry of [...(result.Versions ?? []), ...(result.DeleteMarkers ?? [])]) {
-      this.assertObjectKey(entry.Key);
+    this.assertObjectKey(result.NextKeyMarker);
+    if (!result.NextKeyMarker.startsWith(input.prefix)) {
+      throw new Error("Photo media object version inventory contains a marker outside the requested prefix");
     }
-    if ((result.DeleteMarkers ?? []).some((entry) => entry.Key === input.objectKey)) {
-      throw new Error("Photo media object version inventory contains a delete marker");
-    }
-    const versions = (result.Versions ?? [])
-      .filter((entry) => entry.Key === input.objectKey)
-      .map((entry) => {
-        const versionId = this.validateVersionId(
-          entry.VersionId,
-          new Error("Photo media provider returned an invalid object version identity"),
-        );
-        this.assertProviderVersion(versionId);
-        return {
-          objectKey: input.objectKey,
-          ...(versionId !== undefined ? { versionId } : {}),
-        };
-      });
-    return { versions };
+    this.validateVersionId(
+      result.NextVersionIdMarker,
+      new Error("Photo media object version inventory is ambiguous"),
+    );
+    return {
+      versions,
+      deleteMarkers,
+      nextCursor: {
+        keyMarker: result.NextKeyMarker,
+        versionIdMarker: result.NextVersionIdMarker,
+      },
+    };
   }
 
   private assertObjectKey(objectKey: unknown): asserts objectKey is string {

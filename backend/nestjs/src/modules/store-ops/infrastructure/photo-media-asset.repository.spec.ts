@@ -374,6 +374,39 @@ describe("PhotoMediaAssetRepository", () => {
     expect(String(query.mock.calls[0]?.[0])).not.toContain("raw_object_version_id IS NULL");
   });
 
+  it("scopes reconciliation finding receipts to the configured storage identity", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs",
+      jurisdiction: "onprem",
+    });
+
+    await repository.recordReconciliationReceipt({
+      expectedAssetCount: 1,
+      missingObjectCount: 0,
+      mismatchObjectCount: 1,
+      orphanPrimaryCount: 0,
+      orphanRecoveryCount: 0,
+      danglingLinkCount: 0,
+      stuckUploadCount: 0,
+      stuckPurgeCount: 0,
+      protectedExpiryCount: 0,
+      tombstoneResidueCount: 0,
+      manifestDigest: "a".repeat(64),
+      findingEvents: [{ mediaAssetId: "asset", reasonCode: "hash_mismatch" }],
+    });
+
+    const findingCall = query.mock.calls.find(([statement]) => (
+      String(statement).includes("reconciliation_detected")
+    ));
+    expect(findingCall?.[0]).toContain("provider_adapter_id = $4");
+    expect(findingCall?.[0]).toContain("jurisdiction = $5");
+    expect(findingCall?.[1]).toEqual([
+      "asset", "hash_mismatch", "a".repeat(64), "seaweedfs", "onprem",
+    ]);
+  });
+
   it("prevents R2 cleanup claims from selecting local or NULL-version rows", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new PhotoMediaAssetRepository({ query } as never, {
@@ -420,6 +453,26 @@ describe("PhotoMediaAssetRepository", () => {
     expect(sql).toContain("pg_advisory_xact_lock");
     expect(sql).toContain("FOR UPDATE");
     expect(query).toHaveBeenCalledTimes(3);
+  });
+
+  it("increments governed cleanup accounting above the hard limit", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ class_a_operations: "750000", class_b_operations: "7500000" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never);
+
+    await expect(repository.reserveProviderOperations({
+      classAOperations: 1,
+      classBOperations: 1,
+      monthlyClassAHardLimit: 750000,
+      monthlyClassBHardLimit: 7500000,
+      enforceHardLimits: false,
+    })).resolves.toBeUndefined();
+    expect(query).toHaveBeenCalledTimes(4);
+    expect(query.mock.calls[3]?.[1]).toEqual([1, 1]);
   });
 
   it("fails closed on the per-user daily byte ceiling before reserving provider bytes", async () => {
@@ -697,16 +750,17 @@ describe("PhotoMediaAssetRepository", () => {
       actorUserId: "actor",
       replicaGeneration: 1,
       restoreObjectKey: "locked/local-pending.webp",
+      restoreObjectVersionId: "local-pending-v1",
       previousPrimaryMissing: false,
     })).rejects.toThrow("restore generation proof is stale");
 
     const promotionCall = query.mock.calls.find(([statement]) => (
       String(statement).includes("SET replica_state = 'verified'")
     ));
-    expect(promotionCall?.[0]).toContain("provider_adapter_id = $6");
-    expect(promotionCall?.[0]).toContain("jurisdiction = $7");
+    expect(promotionCall?.[0]).toContain("provider_adapter_id = $7");
+    expect(promotionCall?.[0]).toContain("jurisdiction = $8");
     expect(promotionCall?.[1]).toEqual([
-      "asset", 1, "locked/local-pending.webp", "a".repeat(64), "9", "seaweedfs", "onprem",
+      "asset", 1, "locked/local-pending.webp", "a".repeat(64), "9", "local-pending-v1", "seaweedfs", "onprem",
     ]);
   });
 
@@ -757,6 +811,7 @@ describe("PhotoMediaAssetRepository", () => {
       actorUserId: "actor",
       replicaGeneration: 2,
       restoreObjectKey: "locked/local-restored.webp",
+      restoreObjectVersionId: "local-restored-v1",
       previousPrimaryMissing: true,
     });
 
@@ -765,8 +820,105 @@ describe("PhotoMediaAssetRepository", () => {
     const tombstoneCall = query.mock.calls.find(([statement]) => (
       String(statement).includes("SET replica_state = 'deleted_tombstone'")
     ));
+    const deactivationCall = query.mock.calls.find(([statement]) => (
+      String(statement).includes("UPDATE ops.media_asset_replica SET is_active = FALSE")
+    ));
+    expect(deactivationCall?.[0]).toContain("provider_adapter_id = $2");
+    expect(deactivationCall?.[0]).toContain("jurisdiction = $3");
+    expect(deactivationCall?.[1]).toEqual(["asset", "seaweedfs", "onprem"]);
     expect(tombstoneCall?.[0]).toContain("provider_adapter_id = $2");
     expect(tombstoneCall?.[0]).toContain("jurisdiction = $3");
     expect(tombstoneCall?.[1]).toEqual([["r2-primary", "local-primary"], "seaweedfs", "onprem"]);
+  });
+
+  it("maps restore claims to configured exact primary, recovery, and checkpoint versions", async () => {
+    const query = jest.fn().mockImplementation((statement: string) => {
+      if (statement.includes("UPDATE ops.media_asset ma")) {
+        return Promise.resolve({ rows: [{
+          media_asset_id: "asset",
+          company_id: "company",
+          cleanup_lease_token: "lease",
+          canonical_object_key: "locked/current.webp",
+          canonical_object_version_id: "primary-v1",
+          recovery_object_key: "locked/recovery.webp",
+          recovery_object_version_id: "recovery-v1",
+          canonical_sha256: "a".repeat(64),
+          byte_count: "9",
+          replica_generation: 2,
+          restore_object_key: "locked/restored.webp",
+          restore_object_version_id: "restored-v1",
+        }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs", jurisdiction: "onprem",
+    });
+
+    await expect(repository.claimRestoreCandidate({ mediaAssetId: "asset", actorUserId: "actor" }))
+      .resolves.toMatchObject({
+        canonicalObjectVersionId: "primary-v1",
+        recoveryObjectVersionId: "recovery-v1",
+        restoreObjectVersionId: "restored-v1",
+      });
+    const claimSql = String(query.mock.calls[0]?.[0]);
+    expect(claimSql).toContain("ma.provider_adapter_id = $2");
+    expect(claimSql).toContain("primary_current.provider_adapter_id = $2");
+    expect(claimSql).toContain("recovery.provider_adapter_id = $2");
+    expect(claimSql).toContain("recovery_object_version_id");
+    expect(query.mock.calls[0]?.[1]).toEqual(["asset", "seaweedfs", "onprem"]);
+  });
+
+  it.each([
+    ["missing", null],
+    ["blank", ""],
+  ])("fails closed before audit when local recovery version is %s", async (_label, version) => {
+    const query = jest.fn().mockImplementation((statement: string) => {
+      if (statement.includes("UPDATE ops.media_asset ma")) {
+        return Promise.resolve({ rows: [{
+          media_asset_id: "asset",
+          company_id: "company",
+          cleanup_lease_token: "lease",
+          canonical_object_key: null,
+          canonical_object_version_id: null,
+          recovery_object_key: "locked/recovery.webp",
+          recovery_object_version_id: version,
+          canonical_sha256: "a".repeat(64),
+          byte_count: "9",
+          replica_generation: 2,
+          restore_object_key: "locked/restored.webp",
+          restore_object_version_id: null,
+        }] });
+      }
+      return Promise.resolve({ rows: [] });
+    });
+    const database = { withTransaction: jest.fn(async (callback) => callback({ query })) };
+    const repository = new PhotoMediaAssetRepository(database as never, {
+      provider: "seaweedfs", jurisdiction: "onprem",
+    });
+
+    await expect(repository.claimRestoreCandidate({ mediaAssetId: "asset", actorUserId: "actor" }))
+      .rejects.toThrow("object version identity is unavailable");
+    expect(query.mock.calls.filter(([statement]) => String(statement).includes("INSERT INTO audit"))).toHaveLength(0);
+  });
+
+  it("checkpoints a local restore version only under the exact live lease", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [{ media_asset_replica_id: "replica" }] });
+    const repository = new PhotoMediaAssetRepository({ query } as never, {
+      provider: "seaweedfs", jurisdiction: "onprem",
+    });
+
+    await repository.checkpointRestoreObjectVersion({
+      mediaAssetId: "asset", cleanupLeaseToken: "lease", restoreObjectKey: "locked/restored.webp",
+      restoreObjectVersionId: "restored-v1", replicaGeneration: 2,
+      canonicalSha256: "a".repeat(64), canonicalByteCount: 9,
+    });
+    expect(String(query.mock.calls[0]?.[0])).toContain("cleanup_lease_expires_at > NOW()");
+    expect(String(query.mock.calls[0]?.[0])).toContain("provider_adapter_id = $7");
+    expect(String(query.mock.calls[0]?.[0])).toContain("jurisdiction = $8");
+    expect(query.mock.calls[0]?.[1]).toEqual([
+      "asset", 2, "locked/restored.webp", "a".repeat(64), 9, "restored-v1", "seaweedfs", "onprem", "lease",
+    ]);
   });
 });

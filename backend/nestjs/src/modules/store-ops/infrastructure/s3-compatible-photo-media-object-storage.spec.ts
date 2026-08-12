@@ -719,6 +719,64 @@ describe("S3CompatiblePhotoMediaObjectStorage", () => {
     });
   });
 
+  it("paginates prefix version inventory with both AWS markers and includes delete markers", async () => {
+    const firstKey = "locked/a/canonical.webp";
+    const secondKey = "locked/b/canonical.webp";
+    const send = jest.fn()
+      .mockResolvedValueOnce({
+        Versions: [{ Key: firstKey, VersionId: "version-1" }],
+        DeleteMarkers: [{ Key: firstKey, VersionId: "marker-1" }],
+        IsTruncated: true,
+        NextKeyMarker: firstKey,
+        NextVersionIdMarker: "version-1",
+      })
+      .mockResolvedValueOnce({
+        Versions: [{ Key: secondKey, VersionId: "version-2" }],
+        DeleteMarkers: [],
+        IsTruncated: false,
+      });
+    const storage = new S3CompatiblePhotoMediaObjectStorage({
+      bucket: "hr-axis-media-primary", endpoint: "http://object-storage:8333",
+      region: "us-east-1", forcePathStyle: true, requireObjectVersionId: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    }, { send } as never, jest.fn());
+
+    await expect(storage.listObjectVersionsByPrefix({ prefix: "locked/" })).resolves.toEqual({
+      versions: [{ objectKey: firstKey, versionId: "version-1" }],
+      deleteMarkers: [{ objectKey: firstKey, versionId: "marker-1" }],
+      nextCursor: { keyMarker: firstKey, versionIdMarker: "version-1" },
+    });
+    await expect(storage.listObjectVersionsByPrefix({
+      prefix: "locked/",
+      cursor: { keyMarker: firstKey, versionIdMarker: "version-1" },
+    })).resolves.toEqual({
+      versions: [{ objectKey: secondKey, versionId: "version-2" }],
+      deleteMarkers: [],
+    });
+    expect(send.mock.calls[0]?.[0]?.input).toEqual(expect.objectContaining({
+      Prefix: "locked/", MaxKeys: 3,
+    }));
+    expect(send.mock.calls[1]?.[0]?.input).toEqual(expect.objectContaining({
+      Prefix: "locked/", KeyMarker: firstKey, VersionIdMarker: "version-1",
+    }));
+  });
+
+  it.each([
+    [{ Versions: [], DeleteMarkers: [], IsTruncated: true, NextKeyMarker: "locked/a" }, "ambiguous"],
+    [{ Versions: [], DeleteMarkers: [{ Key: "locked/a" }], IsTruncated: false }, "version identity"],
+    [{ Versions: [{ Key: "other/a", VersionId: "v1" }], DeleteMarkers: [], IsTruncated: false }, "prefix"],
+    [{ Versions: [], DeleteMarkers: [{ Key: "other/a", VersionId: "v1" }], IsTruncated: false }, "prefix"],
+    [{ Versions: [], DeleteMarkers: [], IsTruncated: true, NextKeyMarker: "other/a", NextVersionIdMarker: "v1" }, "prefix"],
+  ])("fails closed for malformed prefix version inventory %#", async (result, message) => {
+    const storage = new S3CompatiblePhotoMediaObjectStorage({
+      bucket: "hr-axis-media-primary", endpoint: "http://object-storage:8333",
+      region: "us-east-1", forcePathStyle: true, requireObjectVersionId: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    }, { send: jest.fn().mockResolvedValue(result) } as never, jest.fn());
+
+    await expect(storage.listObjectVersionsByPrefix({ prefix: "locked/" })).rejects.toThrow(message);
+  });
+
   it.each([
     [{ Versions: [], DeleteMarkers: [], IsTruncated: true }, "ambiguous"],
     [{ Versions: [], DeleteMarkers: [{ Key: "locked/a", VersionId: "marker" }], IsTruncated: false }, "delete marker"],

@@ -16,7 +16,9 @@ import {
 import { PhotoMediaStorageConfiguration } from "./photo-media-storage.contract";
 import {
   PhotoMediaAssetRepositoryPort,
+  PhotoMediaObjectCreateConflictError,
   PhotoMediaObjectStoragePort,
+  PhotoMediaObjectReference,
 } from "./photo-media-storage.ports";
 import {
   PhotoMediaPurgeManifestSource,
@@ -24,6 +26,7 @@ import {
   classifyRetentionUsage,
 } from "./photo-media-retention.contract";
 import { PhotoMediaRetentionRepositoryPort } from "./photo-media-retention.ports";
+import { createPhotoMediaMaintenanceObjectOperations } from "./photo-media-maintenance-object-operations";
 
 export const PHOTO_MEDIA_RETENTION_REPOSITORY = Symbol("PHOTO_MEDIA_RETENTION_REPOSITORY");
 const EXECUTION_RETENTION_ERROR_CODES = new Set(["asset_held", "manifest_stale"]);
@@ -53,6 +56,8 @@ type ReconciliationReceipt = {
 
 @Injectable()
 export class PhotoMediaMaintenanceService {
+  private readonly objectOperations: ReturnType<typeof createPhotoMediaMaintenanceObjectOperations>;
+
   constructor(
     @Inject(PHOTO_MEDIA_ASSET_REPOSITORY)
     private readonly repository: PhotoMediaAssetRepositoryPort,
@@ -64,14 +69,23 @@ export class PhotoMediaMaintenanceService {
     private readonly recoveryStorage: PhotoMediaObjectStoragePort,
     @Inject(PHOTO_MEDIA_STORAGE_CONFIGURATION)
     private readonly configuration: PhotoMediaStorageConfiguration,
-  ) {}
+  ) {
+    this.objectOperations = createPhotoMediaMaintenanceObjectOperations({
+      provider: this.configuration.provider,
+      reserve: (classAOperations, classBOperations) => this.reserveOperations(classAOperations, classBOperations),
+    });
+  }
 
   async reconcile(actorScope?: { companyIds: string[] }): Promise<ReconciliationReceipt> {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
     this.assertActorCompanyScope(actorScope);
     const allowedCompanyIds = actorScope?.companyIds;
     const inventory = await this.repository.listReconciliationInventory(allowedCompanyIds);
+    for (const item of inventory) {
+      for (const object of [...item.primaryObjects, ...item.recoveryObjects]) {
+        this.validateReconciliationObject(object);
+      }
+    }
     const inventoryPrefixes = allowedCompanyIds
       ? allowedCompanyIds.flatMap((companyId) => [
         `transient/companies/${companyId}/`,
@@ -80,14 +94,14 @@ export class PhotoMediaMaintenanceService {
         `rehearsals/companies/${companyId}/`,
       ])
       : ["transient/", "locked/", "derived/", "rehearsals/"];
-    const primaryKeys = new Set((await Promise.all(
-      inventoryPrefixes.map((prefix) => this.listAll(this.primaryStorage, prefix)),
-    )).flat());
-    const recoveryKeys = new Set((await Promise.all(
-      inventoryPrefixes.map((prefix) => this.listAll(this.recoveryStorage, prefix)),
-    )).flat());
-    const expectedPrimary = new Set(inventory.flatMap((item) => item.primaryObjects.map((object) => object.objectKey)));
-    const expectedRecovery = new Set(inventory.flatMap((item) => item.recoveryObjects.map((object) => object.objectKey)));
+    const primaryInventory = await this.listReconciliationIdentities(this.primaryStorage, inventoryPrefixes);
+    const recoveryInventory = await this.listReconciliationIdentities(this.recoveryStorage, inventoryPrefixes);
+    const expectedPrimary = new Set(inventory.flatMap((item) => item.primaryObjects.map((object) => (
+      this.reconciliationIdentity(object)
+    ))));
+    const expectedRecovery = new Set(inventory.flatMap((item) => item.recoveryObjects.map((object) => (
+      this.reconciliationIdentity(object)
+    ))));
     const findings: string[] = [];
     const findingEvents: Array<{ mediaAssetId: string; reasonCode: string }> = [];
     let missingObjectCount = 0;
@@ -97,10 +111,10 @@ export class PhotoMediaMaintenanceService {
       for (const [role, storage, objects] of [
         ["primary", this.primaryStorage, item.primaryObjects],
         ["recovery", this.recoveryStorage, item.recoveryObjects],
-      ] as const) {
+        ] as const) {
         for (const expected of objects) {
-          await this.reserveOperations(0, 1);
-          const head = await storage.headObject(expected.objectKey);
+          const objectReference = this.toReconciliationObjectReference(expected);
+          const head = await this.objectOperations.head(storage, objectReference);
           if (!head) {
             missingObjectCount += 1;
             findings.push(`${item.mediaAssetId}:${role}:missing`);
@@ -108,9 +122,12 @@ export class PhotoMediaMaintenanceService {
               mediaAssetId: item.mediaAssetId,
               reasonCode: role === "recovery" ? "recovery_missing" : "primary_missing",
             });
+          } else if (!this.matchesReconciliationHeadVersion(expected, head)) {
+            mismatchObjectCount += 1;
+            findings.push(`${item.mediaAssetId}:${role}:mismatch`);
+            findingEvents.push({ mediaAssetId: item.mediaAssetId, reasonCode: "hash_mismatch" });
           } else if (expected.sha256) {
-            await this.reserveOperations(0, 1);
-            const body = await storage.getObject(expected.objectKey);
+            const body = await this.objectOperations.get(storage, objectReference);
             if (!this.matchesBody(body, expected.byteCount ?? body.byteLength, expected.sha256)) {
               mismatchObjectCount += 1;
               findings.push(`${item.mediaAssetId}:${role}:mismatch`);
@@ -130,9 +147,12 @@ export class PhotoMediaMaintenanceService {
       }
     }
 
-    const orphanPrimaryCount = [...primaryKeys].filter((key) => !expectedPrimary.has(key)).length;
-    const orphanRecoveryCount = [...recoveryKeys].filter((key) => !expectedRecovery.has(key)).length;
-    const lifecycle = await this.retentionRepository.getLifecycleReconciliationSummary(allowedCompanyIds);
+    const orphanPrimaryCount = [...primaryInventory].filter((identity) => !expectedPrimary.has(identity)).length;
+    const orphanRecoveryCount = [...recoveryInventory].filter((identity) => !expectedRecovery.has(identity)).length;
+    const lifecycle = await this.retentionRepository.getLifecycleReconciliationSummary(
+      allowedCompanyIds,
+      this.configuration,
+    );
     findings.push(
       `orphan-primary:${orphanPrimaryCount}`,
       `orphan-recovery:${orphanRecoveryCount}`,
@@ -172,34 +192,56 @@ export class PhotoMediaMaintenanceService {
 
   async rehearseRestore() {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
-    await this.reserveOperations(3, 2);
     const body = Buffer.from("hr-axis-synthetic-restore-rehearsal-v1");
     const manifestDigest = createHash("sha256").update(body).digest("hex");
     const objectKey = `rehearsals/${randomUUID()}/canonical.webp`;
-    const put = { objectKey, body, contentType: "image/webp", sha256: manifestDigest };
     let result: { status: "verified"; byteCount: number; manifestDigest: string } | undefined;
     let operationError: unknown;
+    let originalPrimary: PhotoMediaObjectReference | undefined;
+    let recoveryReference: PhotoMediaObjectReference | undefined;
+    let restoredPrimary: PhotoMediaObjectReference | undefined;
+    let originalPrimaryDeleted = false;
     try {
-      await this.primaryStorage.putObject(put);
-      await this.recoveryStorage.putObject(put);
-      const recoveryBody = await this.recoveryStorage.getObject(objectKey);
+      originalPrimary = await this.ensureRestoreObject({
+        storage: this.primaryStorage,
+        objectKey,
+        body,
+        contentType: "image/webp",
+        sha256: manifestDigest,
+        cleanupOnVerificationFailure: true,
+      });
+      recoveryReference = await this.ensureRestoreObject({
+        storage: this.recoveryStorage,
+        objectKey,
+        body,
+        contentType: "image/webp",
+        sha256: manifestDigest,
+        cleanupOnVerificationFailure: true,
+      });
+      const recoveryBody = await this.objectOperations.get(this.recoveryStorage, recoveryReference);
       if (!this.matchesBody(recoveryBody, body.byteLength, manifestDigest)) {
         throw new ServiceUnavailableException("Synthetic recovery copy verification failed");
       }
-      await this.primaryStorage.deleteObject(objectKey);
-      await this.primaryStorage.putObject({ ...put, body: recoveryBody });
-      const restoredBody = await this.primaryStorage.getObject(objectKey);
-      if (!this.matchesBody(restoredBody, body.byteLength, manifestDigest)) {
-        throw new ServiceUnavailableException("Synthetic restore verification failed");
-      }
+      await this.objectOperations.delete(this.primaryStorage, originalPrimary);
+      originalPrimaryDeleted = true;
+      restoredPrimary = await this.ensureRestoreObject({
+        storage: this.primaryStorage,
+        objectKey,
+        body: recoveryBody,
+        contentType: "image/webp",
+        sha256: manifestDigest,
+        cleanupOnVerificationFailure: true,
+      });
       result = { status: "verified", byteCount: body.byteLength, manifestDigest };
     } catch (error) {
       operationError = error;
     }
     const cleanup = await Promise.allSettled([
-      this.primaryStorage.deleteObject(objectKey),
-      this.recoveryStorage.deleteObject(objectKey),
+      ...(restoredPrimary ? [this.objectOperations.delete(this.primaryStorage, restoredPrimary)] : []),
+      ...(recoveryReference ? [this.objectOperations.delete(this.recoveryStorage, recoveryReference)] : []),
+      ...(originalPrimary && !originalPrimaryDeleted
+        ? [this.objectOperations.delete(this.primaryStorage, originalPrimary)]
+        : []),
     ]);
     if (operationError) {
       throw operationError;
@@ -218,7 +260,6 @@ export class PhotoMediaMaintenanceService {
     actorScope?: { companyIds: string[] };
   }) {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
     this.assertActorCompanyScope(input.actorScope);
     const expectedReason = input.source === "scheduled"
       ? "scheduled_retention_cleanup"
@@ -246,7 +287,6 @@ export class PhotoMediaMaintenanceService {
     actorScope?: { companyIds: string[] };
   }) {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
     this.assertActorCompanyScope(input.actorScope);
     if (!this.configuration.scheduledRetentionCleanupEnabled) {
       throw new ServiceUnavailableException({
@@ -269,12 +309,19 @@ export class PhotoMediaMaintenanceService {
     try {
       for (const candidate of claim.candidates) {
         try {
-          for (const objectKey of candidate.primaryObjectKeys) {
-            await this.primaryStorage.deleteObject(objectKey);
+          const primaryObjects = candidate.primaryObjects.map((object) =>
+            this.toPurgeObjectReference(object),
+          );
+          const thumbnailObject = this.toPurgeObjectReference(candidate.thumbnailObject);
+          const recoveryObjects = candidate.recoveryObjects.map((object) =>
+            this.toPurgeObjectReference(object),
+          );
+          for (const object of primaryObjects) {
+            await this.objectOperations.delete(this.primaryStorage, object);
           }
-          await this.primaryStorage.deleteObject(candidate.thumbnailObjectKey);
-          for (const objectKey of candidate.recoveryObjectKeys) {
-            await this.recoveryStorage.deleteObject(objectKey);
+          await this.objectOperations.delete(this.primaryStorage, thumbnailObject);
+          for (const object of recoveryObjects) {
+            await this.objectOperations.delete(this.recoveryStorage, object);
           }
           await this.repository.markDeletedTombstone({
             mediaAssetId: candidate.mediaAssetId,
@@ -296,6 +343,7 @@ export class PhotoMediaMaintenanceService {
       await this.retentionRepository.markPurgeManifestCompleted({
         ...input,
         manifestLeaseToken: claim.manifestLeaseToken,
+        storageIdentity: this.configuration,
       });
       return {
         manifestId: claim.manifestId,
@@ -309,6 +357,7 @@ export class PhotoMediaMaintenanceService {
         await this.retentionRepository.releasePurgeManifestAssetLeases({
           manifestId: input.manifestId,
           manifestLeaseToken: claim.manifestLeaseToken,
+          storageIdentity: this.configuration,
         });
         await this.retentionRepository.markPurgeManifestRetryableFailure({
           ...input,
@@ -368,12 +417,17 @@ export class PhotoMediaMaintenanceService {
 
   async cleanupStalePartials(limit: number) {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
     const candidates = await this.repository.claimStalePartialUploads(this.assertBatchLimit(limit));
     let deleted = 0;
     for (const candidate of candidates) {
       try {
-        await this.primaryStorage.deleteObject(candidate.rawObjectKey);
+        const objectReference = await this.resolveCleanupObjectReference(
+          candidate.rawObjectKey,
+          candidate.rawObjectVersionId,
+        );
+        if (objectReference) {
+          await this.objectOperations.delete(this.primaryStorage, objectReference);
+        }
         await this.repository.markPartialUploadDisposed({
           mediaAssetId: candidate.mediaAssetId,
           cleanupLeaseToken: candidate.cleanupLeaseToken,
@@ -394,12 +448,17 @@ export class PhotoMediaMaintenanceService {
 
   async cleanupReadyRawDisposals(limit: number, actorUserId: string | null) {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
     const candidates = await this.repository.claimReadyRawDisposals(this.assertBatchLimit(limit));
     let deleted = 0;
     for (const candidate of candidates) {
       try {
-        await this.primaryStorage.deleteObject(candidate.rawObjectKey);
+        const objectReference = await this.resolveCleanupObjectReference(
+          candidate.rawObjectKey,
+          candidate.rawObjectVersionId,
+        );
+        if (objectReference) {
+          await this.objectOperations.delete(this.primaryStorage, objectReference);
+        }
         await this.repository.markRawDisposed({
           mediaAssetId: candidate.mediaAssetId,
           cleanupLeaseToken: candidate.cleanupLeaseToken,
@@ -420,15 +479,23 @@ export class PhotoMediaMaintenanceService {
 
   async restoreAsset(input: { mediaAssetId: string; actorUserId: string }) {
     this.assertSyntheticMaintenanceEnabled();
-    this.assertExactVersionMaintenanceSupported();
     const candidate = await this.repository.claimRestoreCandidate(input);
     try {
-      await this.reserveOperations(0, 1);
-      const currentHead = await this.primaryStorage.headObject(candidate.canonicalObjectKey);
+      const currentPrimary = this.configuration.provider === "r2"
+        ? this.toRestoreObjectReference(candidate.canonicalObjectKey, candidate.canonicalObjectVersionId, false)
+        : candidate.canonicalObjectKey === null || candidate.canonicalObjectKey === undefined
+          ? candidate.canonicalObjectVersionId === null || candidate.canonicalObjectVersionId === undefined
+            ? null
+            : this.toRestoreObjectReference(candidate.canonicalObjectKey, candidate.canonicalObjectVersionId, true)
+          : this.toRestoreObjectReference(candidate.canonicalObjectKey, candidate.canonicalObjectVersionId, true);
+      const currentHead = currentPrimary
+        ? await this.objectOperations.head(this.primaryStorage, currentPrimary)
+        : null;
       if (currentHead) {
-        await this.reserveOperations(0, 1);
-        const currentBody = await this.primaryStorage.getObject(candidate.canonicalObjectKey);
-        if (this.matchesBody(currentBody, candidate.canonicalByteCount, candidate.canonicalSha256)) {
+        const currentBody = await this.objectOperations.get(this.primaryStorage, currentPrimary!);
+        const exactPrimaryProof = this.matchesBody(currentBody, candidate.canonicalByteCount, candidate.canonicalSha256) &&
+          this.matchesRestoreHeadVersion(currentPrimary!, currentHead);
+        if (exactPrimaryProof) {
           await this.repository.markRestoreSkipped({
             ...input,
             cleanupLeaseToken: candidate.cleanupLeaseToken,
@@ -446,25 +513,40 @@ export class PhotoMediaMaintenanceService {
         additionalBytes: currentHead ? candidate.canonicalByteCount : 0,
         aggregateBytesHardLimit: this.configuration.aggregateBytesHardLimit,
       });
-      await this.reserveOperations(1, 2);
-      const recoveryBody = await this.recoveryStorage.getObject(candidate.recoveryObjectKey);
+      const recoveryReference = this.toRestoreObjectReference(
+        candidate.recoveryObjectKey,
+        candidate.recoveryObjectVersionId,
+        true,
+      );
+      if (!recoveryReference) {
+        throw new ServiceUnavailableException("Photo media recovery object identity is unavailable");
+      }
+      const recoveryBody = await this.objectOperations.get(this.recoveryStorage, recoveryReference);
       if (!this.matchesBody(recoveryBody, candidate.canonicalByteCount, candidate.canonicalSha256)) {
         throw new ServiceUnavailableException("Photo media recovery source integrity verification failed");
       }
-      await this.primaryStorage.putObject({
+      const restoredReference = await this.ensureRestoreObject({
+        storage: this.primaryStorage,
         objectKey: candidate.restoreObjectKey,
         body: recoveryBody,
         contentType: "image/webp",
         sha256: candidate.canonicalSha256,
+        versionId: candidate.restoreObjectVersionId,
       });
-      const restored = await this.primaryStorage.getObject(candidate.restoreObjectKey);
-      if (!this.matchesBody(restored, candidate.canonicalByteCount, candidate.canonicalSha256)) {
-        throw new ServiceUnavailableException("Photo media restored primary integrity verification failed");
-      }
+      await this.repository.checkpointRestoreObjectVersion({
+        ...input,
+        cleanupLeaseToken: candidate.cleanupLeaseToken,
+        restoreObjectKey: candidate.restoreObjectKey,
+        restoreObjectVersionId: restoredReference.versionId ?? null,
+        replicaGeneration: candidate.replicaGeneration,
+        canonicalSha256: candidate.canonicalSha256,
+        canonicalByteCount: candidate.canonicalByteCount,
+      });
       await this.repository.markRestoreVerified({
         ...input,
         cleanupLeaseToken: candidate.cleanupLeaseToken,
         restoreObjectKey: candidate.restoreObjectKey,
+        restoreObjectVersionId: restoredReference.versionId ?? null,
         replicaGeneration: candidate.replicaGeneration,
         previousPrimaryMissing: !currentHead,
       });
@@ -491,6 +573,88 @@ export class PhotoMediaMaintenanceService {
     return keys;
   }
 
+  private async listReconciliationIdentities(
+    storage: PhotoMediaObjectStoragePort,
+    prefixes: string[],
+  ): Promise<Set<string>> {
+    if (this.configuration.provider === "r2") {
+      return new Set((await Promise.all(prefixes.map((prefix) => this.listAll(storage, prefix)))).flat());
+    }
+    if (typeof storage.listObjectVersionsByPrefix !== "function") {
+      throw new ServiceUnavailableException("Photo media reconciliation provider version inventory is unavailable");
+    }
+    const identities = new Set<string>();
+    for (const prefix of prefixes) {
+      let cursor: { keyMarker?: string; versionIdMarker?: string } | undefined;
+      do {
+        await this.reserveOperations(1, 0);
+        const page = await storage.listObjectVersionsByPrefix({ prefix, ...(cursor ? { cursor } : {}) });
+        if (!page || !Array.isArray(page.versions) || !Array.isArray(page.deleteMarkers)) {
+          throw new ServiceUnavailableException("Photo media reconciliation provider inventory is unavailable");
+        }
+        for (const version of page.versions) {
+          this.validateReconciliationObject(version);
+          identities.add(this.reconciliationIdentity(version));
+        }
+        for (const marker of page.deleteMarkers) {
+          this.validateReconciliationObject(marker);
+          identities.add(`${this.reconciliationIdentity(marker)}\u0000delete-marker`);
+        }
+        cursor = page.nextCursor;
+        if (cursor && (!cursor.keyMarker || !cursor.versionIdMarker)) {
+          throw new ServiceUnavailableException("Photo media reconciliation provider inventory is ambiguous");
+        }
+      } while (cursor);
+    }
+    return identities;
+  }
+
+  private validateReconciliationObject(object: {
+    objectKey: string;
+    versionId?: string | null;
+  }): void {
+    if (!object || typeof object.objectKey !== "string" || object.objectKey.trim() === "") {
+      throw new ServiceUnavailableException("Photo media reconciliation object identity is unavailable");
+    }
+    if (
+      object.versionId !== null && object.versionId !== undefined &&
+      (typeof object.versionId !== "string" || object.versionId.trim() === "")
+    ) {
+      throw new ServiceUnavailableException("Photo media reconciliation object version identity is unavailable");
+    }
+    if (
+      this.configuration.provider !== "r2" &&
+      (typeof object.versionId !== "string" || object.versionId.trim() === "")
+    ) {
+      throw new ServiceUnavailableException("Photo media reconciliation object version identity is unavailable");
+    }
+  }
+
+  private reconciliationIdentity(object: { objectKey: string; versionId?: string | null }): string {
+    return this.configuration.provider === "r2"
+      ? object.objectKey
+      : `${object.objectKey}\u0000${object.versionId}`;
+  }
+
+  private toReconciliationObjectReference(object: {
+    objectKey: string;
+    versionId?: string | null;
+  }): string | PhotoMediaObjectReference {
+    this.validateReconciliationObject(object);
+    if (this.configuration.provider === "r2" && (object.versionId === null || object.versionId === undefined)) {
+      return object.objectKey;
+    }
+    return { objectKey: object.objectKey, versionId: object.versionId as string };
+  }
+
+  private matchesReconciliationHeadVersion(
+    expected: { versionId?: string | null },
+    head: { versionId?: string },
+  ): boolean {
+    if (this.configuration.provider === "r2") return true;
+    return typeof expected.versionId === "string" && head.versionId === expected.versionId;
+  }
+
   private matches(
     head: { byteCount: number; sha256: string } | null,
     byteCount: number,
@@ -510,18 +674,218 @@ export class PhotoMediaMaintenanceService {
     return limit;
   }
 
-  private assertSyntheticMaintenanceEnabled(): void {
-    if (!this.configuration.enabled || !this.configuration.syntheticOnly) {
-      throw new ServiceUnavailableException("Synthetic photo media maintenance is disabled");
+  private async resolveCleanupObjectReference(
+    objectKey: string,
+    objectVersionId: string | null | undefined,
+  ): Promise<string | PhotoMediaObjectReference | null> {
+    if (this.configuration.provider === "r2") {
+      return objectVersionId ? { objectKey, versionId: objectVersionId } : objectKey;
+    }
+    if (objectVersionId !== null && objectVersionId !== undefined) {
+      if (typeof objectVersionId !== "string" || objectVersionId.trim() === "") {
+        throw new ServiceUnavailableException("Photo media cleanup object version identity is unavailable");
+      }
+      return { objectKey, versionId: objectVersionId };
+    }
+    const inventory = await this.objectOperations.listVersions(this.primaryStorage, { objectKey });
+    if (inventory.versions.length > 1) {
+      throw new ServiceUnavailableException("Photo media cleanup object version recovery is ambiguous");
+    }
+    if (inventory.versions.length === 0) {
+      return null;
+    }
+    const reference = inventory.versions[0];
+    if (
+      reference.objectKey !== objectKey ||
+      typeof reference.versionId !== "string" ||
+      reference.versionId.trim() === ""
+    ) {
+      throw new ServiceUnavailableException("Photo media cleanup object version recovery is ambiguous");
+    }
+    return { objectKey, versionId: reference.versionId };
+  }
+
+  private toPurgeObjectReference(reference: PhotoMediaObjectReference): string | PhotoMediaObjectReference {
+    if (
+      !reference ||
+      typeof reference.objectKey !== "string" ||
+      reference.objectKey.trim() === ""
+    ) {
+      throw new ServiceUnavailableException("Photo media purge object identity is unavailable");
+    }
+    if (this.configuration.provider === "r2") {
+      if (reference.versionId === undefined || reference.versionId === null) {
+        return reference.objectKey;
+      }
+      if (typeof reference.versionId !== "string" || reference.versionId.trim() === "") {
+        throw new ServiceUnavailableException("Photo media purge object identity is unavailable");
+      }
+      return reference;
+    }
+    if (typeof reference.versionId !== "string" || reference.versionId.trim() === "") {
+      throw new ServiceUnavailableException("Photo media purge object version identity is unavailable");
+    }
+    return reference;
+  }
+
+  private toRestoreObjectReference(
+    objectKey: string | null | undefined,
+    objectVersionId: string | null | undefined,
+    requireVersion: boolean,
+  ): string | PhotoMediaObjectReference | null {
+    if (typeof objectKey !== "string" || objectKey.trim() === "") {
+      if (!requireVersion && (objectKey === null || objectKey === undefined)) return null;
+      throw new ServiceUnavailableException("Photo media restore object identity is unavailable");
+    }
+    if (
+      objectVersionId !== null && objectVersionId !== undefined &&
+      (typeof objectVersionId !== "string" || objectVersionId.trim() === "")
+    ) {
+      throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+    }
+    if (
+      this.configuration.provider !== "r2" &&
+      (typeof objectVersionId !== "string" || objectVersionId.trim() === "")
+    ) {
+      if (!requireVersion) return null;
+      throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+    }
+    return objectVersionId ? { objectKey, versionId: objectVersionId } : objectKey;
+  }
+
+  private matchesRestoreHeadVersion(
+    reference: string | PhotoMediaObjectReference,
+    head: { versionId?: string } | null,
+  ): boolean {
+    if (this.configuration.provider === "r2") return true;
+    return typeof reference !== "string" && head?.versionId === reference.versionId;
+  }
+
+  private async ensureRestoreObject(input: {
+    storage: PhotoMediaObjectStoragePort;
+    objectKey: string;
+    body: Buffer;
+    contentType: string;
+    sha256: string;
+    versionId?: string | null;
+    cleanupOnVerificationFailure?: boolean;
+  }): Promise<PhotoMediaObjectReference> {
+    if (this.configuration.provider === "r2") {
+      if (input.versionId !== null && input.versionId !== undefined) {
+        const reference = this.toRestoreObjectReference(input.objectKey, input.versionId, false);
+        if (!reference || typeof reference === "string") {
+          throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+        }
+        await this.verifyRestoreObject(input.storage, reference, input.body, input.sha256, false);
+        return reference;
+      }
+      const putResult = await this.objectOperations.put(input.storage, {
+        objectKey: input.objectKey,
+        body: input.body,
+        contentType: input.contentType,
+        sha256: input.sha256,
+      });
+      const reference = this.toRestoreObjectReference(input.objectKey, putResult?.versionId, false);
+      if (!reference) throw new ServiceUnavailableException("Photo media restore object identity is unavailable");
+      const exactReference = typeof reference === "string" ? { objectKey: reference } : reference;
+      try {
+        await this.verifyRestoreObject(input.storage, exactReference, input.body, input.sha256, false);
+      } catch (error) {
+        if (input.cleanupOnVerificationFailure) {
+          try {
+            await this.objectOperations.delete(input.storage, exactReference);
+          } catch {
+            // Preserve the original verification failure; cleanup remains observable to maintenance.
+          }
+        }
+        throw error;
+      }
+      return exactReference;
+    }
+    if (input.versionId !== null && input.versionId !== undefined) {
+      const reference = this.toRestoreObjectReference(input.objectKey, input.versionId, true);
+      if (!reference || typeof reference === "string") {
+        throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+      }
+      await this.verifyRestoreObject(input.storage, reference, input.body, input.sha256, true);
+      return reference;
+    }
+    const inventory = await this.objectOperations.listVersions(input.storage, { objectKey: input.objectKey });
+    if (inventory.versions.length > 1) {
+      throw new ServiceUnavailableException("Photo media restore object version recovery is ambiguous");
+    }
+    let reference = inventory.versions[0];
+    let freshlyPut = false;
+    if (!reference) {
+      try {
+        const putResult = await this.objectOperations.put(input.storage, {
+          objectKey: input.objectKey,
+          body: input.body,
+          contentType: input.contentType,
+          sha256: input.sha256,
+          createOnly: true,
+        });
+        reference = {
+          objectKey: input.objectKey,
+          versionId: putResult?.versionId,
+        };
+        freshlyPut = true;
+      } catch (error) {
+        if (!(error instanceof PhotoMediaObjectCreateConflictError)) throw error;
+        const recovered = await this.objectOperations.listVersions(input.storage, { objectKey: input.objectKey });
+        if (recovered.versions.length !== 1) {
+          throw new ServiceUnavailableException("Photo media restore object version recovery is ambiguous");
+        }
+        reference = recovered.versions[0];
+      }
+    }
+    if (
+      reference.objectKey !== input.objectKey ||
+      typeof reference.versionId !== "string" ||
+      reference.versionId.trim() === ""
+    ) {
+      throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+    }
+    try {
+      await this.verifyRestoreObject(input.storage, reference, input.body, input.sha256, true);
+    } catch (error) {
+      if (input.cleanupOnVerificationFailure && freshlyPut) {
+        try {
+          await this.objectOperations.delete(input.storage, reference);
+        } catch {
+          // Preserve the original verification failure; never fall back to key-only cleanup.
+        }
+      }
+      throw error;
+    }
+    return reference;
+  }
+
+  private async verifyRestoreObject(
+    storage: PhotoMediaObjectStoragePort,
+    reference: PhotoMediaObjectReference,
+    expectedBody: Buffer,
+    sha256: string,
+    requireHead: boolean,
+  ): Promise<void> {
+    const head = requireHead ? await this.objectOperations.head(storage, reference) : null;
+    const body = await this.objectOperations.get(storage, reference);
+    if (
+      (requireHead && (
+        !head ||
+        head.byteCount !== expectedBody.byteLength ||
+        head.sha256 !== sha256 ||
+        !this.matchesRestoreHeadVersion(reference, head)
+      )) ||
+      !this.matchesBody(body, expectedBody.byteLength, sha256)
+    ) {
+      throw new ServiceUnavailableException("Photo media restored primary integrity verification failed");
     }
   }
 
-  private assertExactVersionMaintenanceSupported(): void {
-    if (this.configuration.provider !== "r2") {
-      throw new ServiceUnavailableException({
-        code: "exact_version_maintenance_pending",
-        message: "Local photo media maintenance requires exact-version support",
-      });
+  private assertSyntheticMaintenanceEnabled(): void {
+    if (!this.configuration.enabled || !this.configuration.syntheticOnly) {
+      throw new ServiceUnavailableException("Synthetic photo media maintenance is disabled");
     }
   }
 
@@ -531,12 +895,5 @@ export class PhotoMediaMaintenanceService {
     }
   }
 
-  private reserveOperations(classAOperations: number, classBOperations: number): Promise<void> {
-    return this.repository.reserveProviderOperations({
-      classAOperations,
-      classBOperations,
-      monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
-      monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
-    });
-  }
+  private reserveOperations(a: number, b: number, enforceHardLimits = true): Promise<void> { return this.repository.reserveProviderOperations({ classAOperations: a, classBOperations: b, monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit, monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit, enforceHardLimits }); }
 }

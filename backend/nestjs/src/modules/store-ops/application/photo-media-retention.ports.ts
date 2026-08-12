@@ -30,6 +30,7 @@ export interface PhotoMediaRetentionRepositoryPort {
     manifestDigest: string;
     manifestLeaseToken: string;
     actorUserId: string | null;
+    storageIdentity?: PhotoMediaStorageIdentity;
   }): Promise<void>;
   markPurgeManifestRetryableFailure(input: {
     manifestId: string;
@@ -41,9 +42,11 @@ export interface PhotoMediaRetentionRepositoryPort {
   releasePurgeManifestAssetLeases(input: {
     manifestId: string;
     manifestLeaseToken: string;
+    storageIdentity?: PhotoMediaStorageIdentity;
   }): Promise<void>;
   getLifecycleReconciliationSummary(
     allowedCompanyIds?: string[],
+    storageIdentity?: PhotoMediaStorageIdentity,
   ): Promise<PhotoMediaLifecycleReconciliationSummary>;
   getUsageForecast(allowedCompanyIds?: string[]): Promise<PhotoMediaUsageForecast>;
 }
