@@ -5,10 +5,25 @@ export type PhotoMediaSignedRequest = {
   expiresInSeconds: number;
 };
 
+export type PhotoMediaObjectReference = {
+  objectKey: string;
+  versionId?: string;
+};
+
+export type PhotoMediaObjectPutResult = {
+  versionId?: string;
+};
+
+export type PhotoMediaObjectDeleteResult = {
+  versionId?: string;
+  deleteMarker: boolean;
+};
+
 export type PhotoMediaObjectHead = {
   byteCount: number;
   sha256: string;
   contentType?: string;
+  versionId?: string;
 };
 
 export type PhotoMediaObjectInventoryPage = {
@@ -17,16 +32,16 @@ export type PhotoMediaObjectInventoryPage = {
 };
 
 export interface PhotoMediaObjectStoragePort {
-  createSignedRead(input: { objectKey: string; expiresInSeconds: number }): Promise<PhotoMediaSignedRequest>;
-  getObject(objectKey: string): Promise<Buffer>;
+  createSignedRead(input: PhotoMediaObjectReference & { expiresInSeconds: number }): Promise<PhotoMediaSignedRequest>;
+  getObject(objectReference: string | PhotoMediaObjectReference): Promise<Buffer>;
   putObject(input: {
     objectKey: string;
     body: Buffer;
     contentType: string;
     sha256: string;
-  }): Promise<void>;
-  headObject(objectKey: string): Promise<PhotoMediaObjectHead | null>;
-  deleteObject(objectKey: string): Promise<void>;
+  }): Promise<PhotoMediaObjectPutResult>;
+  headObject(objectReference: string | PhotoMediaObjectReference): Promise<PhotoMediaObjectHead | null>;
+  deleteObject(objectReference: string | PhotoMediaObjectReference): Promise<PhotoMediaObjectDeleteResult>;
   listObjectKeys(input: { prefix: string; cursor?: string }): Promise<PhotoMediaObjectInventoryPage>;
 }
 

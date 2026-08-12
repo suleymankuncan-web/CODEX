@@ -8,7 +8,12 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { BadRequestException } from "@nestjs/common";
-import { PhotoMediaObjectStoragePort } from "../application/photo-media-storage.ports";
+import {
+  PhotoMediaObjectDeleteResult,
+  PhotoMediaObjectReference,
+  PhotoMediaObjectStoragePort,
+  PhotoMediaObjectPutResult,
+} from "../application/photo-media-storage.ports";
 
 const SAFE_OBJECT_KEY = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 type Signer = (client: S3Client, command: object, options: { expiresIn: number }) => Promise<string>;
@@ -52,18 +57,27 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     this.signer = signer ?? (getSignedUrl as Signer);
   }
 
-  async createSignedRead(input: { objectKey: string; expiresInSeconds: number }) {
-    this.assertObjectKey(input.objectKey);
-    const command = new GetObjectCommand({ Bucket: this.configuration.bucket, Key: input.objectKey });
+  async createSignedRead(
+    input: PhotoMediaObjectReference & { expiresInSeconds: number },
+  ) {
+    const { objectKey, versionId } = this.resolveObjectReference(input);
+    this.assertObjectKey(objectKey);
+    const command = new GetObjectCommand({
+      Bucket: this.configuration.bucket,
+      Key: objectKey,
+      ...(versionId !== undefined ? { VersionId: versionId } : {}),
+    });
     const url = await this.signer(this.client, command, { expiresIn: input.expiresInSeconds });
     return { url, expiresInSeconds: input.expiresInSeconds };
   }
 
-  async getObject(objectKey: string): Promise<Buffer> {
+  async getObject(objectReference: string | PhotoMediaObjectReference): Promise<Buffer> {
+    const { objectKey, versionId } = this.resolveObjectReference(objectReference);
     this.assertObjectKey(objectKey);
     const result = await this.client.send(new GetObjectCommand({
       Bucket: this.configuration.bucket,
       Key: objectKey,
+      ...(versionId !== undefined ? { VersionId: versionId } : {}),
     }));
     if (!result.Body) {
       throw new Error("Photo media object body is missing");
@@ -83,9 +97,9 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     body: Buffer;
     contentType: string;
     sha256: string;
-  }): Promise<void> {
+  }): Promise<PhotoMediaObjectPutResult> {
     this.assertObjectKey(input.objectKey);
-    await this.client.send(new PutObjectCommand({
+    const result = await this.client.send(new PutObjectCommand({
       Bucket: this.configuration.bucket,
       Key: input.objectKey,
       Body: input.body,
@@ -93,15 +107,26 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
       ContentType: input.contentType,
       Metadata: { sha256: input.sha256 },
     }));
+    const versionId = this.validateVersionId(
+      result.VersionId,
+      new Error("Photo media provider returned an invalid object version identity"),
+    );
+    return versionId === undefined ? {} : { versionId };
   }
 
-  async headObject(objectKey: string) {
+  async headObject(objectReference: string | PhotoMediaObjectReference) {
+    const { objectKey, versionId } = this.resolveObjectReference(objectReference);
     this.assertObjectKey(objectKey);
     try {
       const result = await this.client.send(new HeadObjectCommand({
         Bucket: this.configuration.bucket,
         Key: objectKey,
+        ...(versionId !== undefined ? { VersionId: versionId } : {}),
       }));
+      const providerVersionId = this.validateVersionId(
+        result.VersionId,
+        new Error("Photo media provider returned an invalid object version identity"),
+      );
       const sha256 = result.Metadata?.sha256;
       if (result.ContentLength === undefined || !sha256) {
         return null;
@@ -110,6 +135,7 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
         byteCount: result.ContentLength,
         sha256,
         ...(result.ContentType ? { contentType: result.ContentType } : {}),
+        ...(providerVersionId !== undefined ? { versionId: providerVersionId } : {}),
       };
     } catch (error) {
       const statusCode = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
@@ -120,12 +146,24 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     }
   }
 
-  async deleteObject(objectKey: string): Promise<void> {
+  async deleteObject(
+    objectReference: string | PhotoMediaObjectReference,
+  ): Promise<PhotoMediaObjectDeleteResult> {
+    const { objectKey, versionId } = this.resolveObjectReference(objectReference);
     this.assertObjectKey(objectKey);
-    await this.client.send(new DeleteObjectCommand({
+    const result = await this.client.send(new DeleteObjectCommand({
       Bucket: this.configuration.bucket,
       Key: objectKey,
+      ...(versionId !== undefined ? { VersionId: versionId } : {}),
     }));
+    const providerVersionId = this.validateVersionId(
+      result.VersionId,
+      new Error("Photo media provider returned an invalid object version identity"),
+    );
+    return {
+      ...(providerVersionId !== undefined ? { versionId: providerVersionId } : {}),
+      deleteMarker: result.DeleteMarker === true,
+    };
   }
 
   async listObjectKeys(input: { prefix: string; cursor?: string }) {
@@ -149,8 +187,9 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     };
   }
 
-  private assertObjectKey(objectKey: string): void {
+  private assertObjectKey(objectKey: unknown): asserts objectKey is string {
     if (
+      typeof objectKey !== "string" ||
       objectKey !== objectKey.trim() ||
       !SAFE_OBJECT_KEY.test(objectKey) ||
       objectKey.includes("//") ||
@@ -159,5 +198,47 @@ export class S3CompatiblePhotoMediaObjectStorage implements PhotoMediaObjectStor
     ) {
       throw new BadRequestException("Photo media object key is invalid");
     }
+  }
+
+  private resolveObjectReference(
+    objectReference: string | PhotoMediaObjectReference,
+  ): PhotoMediaObjectReference {
+    if (typeof objectReference === "string") {
+      return { objectKey: objectReference };
+    }
+    if (!objectReference || typeof objectReference !== "object" || Array.isArray(objectReference)) {
+      throw new BadRequestException("Photo media object reference is invalid");
+    }
+    const versionId = this.validateVersionId(
+      objectReference.versionId,
+      new BadRequestException("Photo media object version identity is invalid"),
+    );
+    return {
+      objectKey: objectReference.objectKey,
+      ...(versionId !== undefined ? { versionId } : {}),
+    };
+  }
+
+  private validateVersionId(versionId: unknown, error: Error): string | undefined {
+    if (versionId === undefined) {
+      return undefined;
+    }
+    if (
+      typeof versionId !== "string" ||
+      versionId.length === 0 ||
+      Buffer.byteLength(versionId, "utf8") > 1024 ||
+      versionId !== versionId.trim() ||
+      this.containsAsciiControlCharacters(versionId)
+    ) {
+      throw error;
+    }
+    return versionId;
+  }
+
+  private containsAsciiControlCharacters(value: string): boolean {
+    return Array.from(value).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 0x1f || codePoint === 0x7f;
+    });
   }
 }
