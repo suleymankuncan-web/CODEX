@@ -47,6 +47,18 @@ export type PhotoMediaObjectInventoryPage = {
 
 export type PhotoMediaObjectVersionInventory = {
   versions: PhotoMediaObjectReference[];
+  deleteMarkers?: PhotoMediaObjectReference[];
+};
+
+export type PhotoMediaObjectVersionInventoryCursor = {
+  keyMarker?: string;
+  versionIdMarker?: string;
+};
+
+export type PhotoMediaObjectVersionInventoryPage = {
+  versions: PhotoMediaObjectReference[];
+  deleteMarkers: PhotoMediaObjectReference[];
+  nextCursor?: PhotoMediaObjectVersionInventoryCursor;
 };
 
 export interface PhotoMediaObjectStoragePort {
@@ -63,6 +75,10 @@ export interface PhotoMediaObjectStoragePort {
   deleteObject(objectReference: string | PhotoMediaObjectReference): Promise<PhotoMediaObjectDeleteResult>;
   listObjectKeys(input: { prefix: string; cursor?: string }): Promise<PhotoMediaObjectInventoryPage>;
   listObjectVersions(input: { objectKey: string }): Promise<PhotoMediaObjectVersionInventory>;
+  listObjectVersionsByPrefix?(input: {
+    prefix: string;
+    cursor?: PhotoMediaObjectVersionInventoryCursor;
+  }): Promise<PhotoMediaObjectVersionInventoryPage>;
 }
 
 export type PhotoMediaReconciliationInventoryItem = {
@@ -87,9 +103,12 @@ export type PhotoMediaFinalizeObjectCheckpoints = {
 export type PhotoMediaRestoreCandidate = {
   mediaAssetId: string;
   cleanupLeaseToken: string;
-  canonicalObjectKey: string;
+  canonicalObjectKey?: string | null;
+  canonicalObjectVersionId?: string | null;
   recoveryObjectKey: string;
+  recoveryObjectVersionId?: string | null;
   restoreObjectKey: string;
+  restoreObjectVersionId?: string | null;
   replicaGeneration: number;
   canonicalSha256: string;
   canonicalByteCount: number;
@@ -152,6 +171,7 @@ export interface PhotoMediaAssetRepositoryPort {
   markRestoreFailed(input: Record<string, unknown>): Promise<void>;
   markRestoreSkipped(input: Record<string, unknown>): Promise<void>;
   reserveRestoreGeneration(input: Record<string, unknown>): Promise<void>;
+  checkpointRestoreObjectVersion(input: Record<string, unknown>): Promise<void>;
   recordProviderFailure(input: Record<string, unknown>): Promise<void>;
   recordQuotaDenial(input: Record<string, unknown>): Promise<void>;
   reserveProviderOperations(input: {
@@ -159,5 +179,6 @@ export interface PhotoMediaAssetRepositoryPort {
     classBOperations: number;
     monthlyClassAHardLimit: number;
     monthlyClassBHardLimit: number;
+    enforceHardLimits?: boolean;
   }): Promise<void>;
 }

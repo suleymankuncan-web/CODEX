@@ -17,12 +17,15 @@ export async function claimPhotoMediaRestoreCandidate(
       media_asset_id: string;
       company_id: string;
       cleanup_lease_token: string;
-      canonical_object_key: string;
+      canonical_object_key: string | null;
+      canonical_object_version_id: string | null;
       recovery_object_key: string;
+      recovery_object_version_id: string | null;
       canonical_sha256: string;
       byte_count: string;
       replica_generation: number;
       restore_object_key: string | null;
+      restore_object_version_id: string | null;
     }>(`
       UPDATE ops.media_asset ma
       SET cleanup_origin_state = 'restore', cleanup_lease_token = gen_random_uuid(),
@@ -31,6 +34,8 @@ export async function claimPhotoMediaRestoreCandidate(
       WHERE ma.media_asset_id = $1::uuid
         AND ma.state = 'ready'
         AND (ma.cleanup_lease_token IS NULL OR ma.cleanup_lease_expires_at <= NOW())
+        AND ma.provider_adapter_id = $2
+        AND ma.jurisdiction = $3
         AND NOT ma.legal_hold AND NOT ma.operational_hold
         AND NOT ma.active_workflow_hold AND NOT ma.ai_review_hold
         AND recovery.media_asset_id = ma.media_asset_id
@@ -39,7 +44,42 @@ export async function claimPhotoMediaRestoreCandidate(
         AND recovery.provider_adapter_id = $2
         AND recovery.jurisdiction = $3
       RETURNING ma.media_asset_id, ma.company_id, ma.cleanup_lease_token,
-                ma.canonical_object_key, recovery.object_key AS recovery_object_key,
+                (SELECT primary_current.object_key
+                 FROM ops.media_asset_replica primary_current
+                 WHERE primary_current.media_asset_id = ma.media_asset_id
+                   AND primary_current.replica_role = 'primary'
+                   AND primary_current.replica_state = 'verified'
+                   AND primary_current.is_active
+                   AND primary_current.provider_adapter_id = $2
+                   AND primary_current.jurisdiction = $3
+                 ORDER BY primary_current.replica_generation DESC LIMIT 1) AS canonical_object_key,
+                (SELECT primary_current.object_version_id
+                 FROM ops.media_asset_replica primary_current
+                 WHERE primary_current.media_asset_id = ma.media_asset_id
+                   AND primary_current.replica_role = 'primary'
+                   AND primary_current.replica_state = 'verified'
+                   AND primary_current.is_active
+                   AND primary_current.provider_adapter_id = $2
+                   AND primary_current.jurisdiction = $3
+                 ORDER BY primary_current.replica_generation DESC LIMIT 1) AS canonical_object_version_id,
+                (SELECT recovery_current.object_key
+                 FROM ops.media_asset_replica recovery_current
+                 WHERE recovery_current.media_asset_id = ma.media_asset_id
+                   AND recovery_current.replica_role = 'recovery'
+                   AND recovery_current.replica_state = 'verified'
+                   AND recovery_current.is_active
+                   AND recovery_current.provider_adapter_id = $2
+                   AND recovery_current.jurisdiction = $3
+                 ORDER BY recovery_current.replica_generation DESC LIMIT 1) AS recovery_object_key,
+                (SELECT recovery_current.object_version_id
+                 FROM ops.media_asset_replica recovery_current
+                 WHERE recovery_current.media_asset_id = ma.media_asset_id
+                   AND recovery_current.replica_role = 'recovery'
+                   AND recovery_current.replica_state = 'verified'
+                   AND recovery_current.is_active
+                   AND recovery_current.provider_adapter_id = $2
+                   AND recovery_current.jurisdiction = $3
+                 ORDER BY recovery_current.replica_generation DESC LIMIT 1) AS recovery_object_version_id,
                 ma.canonical_sha256, ma.byte_count,
                 COALESCE(
                   (SELECT replica_generation FROM ops.media_asset_replica pending
@@ -59,10 +99,31 @@ export async function claimPhotoMediaRestoreCandidate(
                    AND pending.provider_adapter_id = $2
                    AND pending.jurisdiction = $3
                  ORDER BY replica_generation DESC LIMIT 1) AS restore_object_key
+                ,(SELECT object_version_id FROM ops.media_asset_replica pending
+                 WHERE pending.media_asset_id = ma.media_asset_id
+                   AND pending.replica_role = 'primary' AND pending.replica_state = 'copying'
+                   AND pending.provider_adapter_id = $2
+                   AND pending.jurisdiction = $3
+                 ORDER BY replica_generation DESC LIMIT 1) AS restore_object_version_id
     `, [input.mediaAssetId, storageIdentity.provider, storageIdentity.jurisdiction]);
     const row = result.rows[0];
     if (!row) {
       throw new BadRequestException("Photo media restore target is stale, held, or already leased");
+    }
+    if (
+      storageIdentity.provider !== "r2" && (
+        typeof row.recovery_object_version_id !== "string" || row.recovery_object_version_id.trim() === "" ||
+        (row.canonical_object_key === null && row.canonical_object_version_id !== null) ||
+        (row.canonical_object_key !== null && (
+          typeof row.canonical_object_version_id !== "string" || row.canonical_object_version_id.trim() === ""
+        )) ||
+        (row.restore_object_key === null && row.restore_object_version_id !== null) ||
+        (row.restore_object_key !== null && (
+          typeof row.restore_object_version_id !== "string" || row.restore_object_version_id.trim() === ""
+        ))
+      )
+    ) {
+      throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
     }
     await client.query(`
       INSERT INTO audit.photo_media_storage_event (
@@ -77,12 +138,15 @@ export async function claimPhotoMediaRestoreCandidate(
       mediaAssetId: row.media_asset_id,
       cleanupLeaseToken: row.cleanup_lease_token,
       canonicalObjectKey: row.canonical_object_key,
+      canonicalObjectVersionId: row.canonical_object_version_id,
       recoveryObjectKey: row.recovery_object_key,
+      recoveryObjectVersionId: row.recovery_object_version_id,
       restoreObjectKey: row.restore_object_key ?? buildPhotoMediaObjectKeys({
           companyId: row.company_id,
           mediaAssetId: row.media_asset_id,
           storageAttemptId: row.cleanup_lease_token,
-        }).canonical,
+      }).canonical,
+      restoreObjectVersionId: row.restore_object_version_id,
       replicaGeneration: row.replica_generation,
       canonicalSha256: row.canonical_sha256,
       canonicalByteCount: Number(row.byte_count),
@@ -114,8 +178,15 @@ export async function reservePhotoMediaRestoreGeneration(
        AND policy.version_no = ma.retention_policy_version
       WHERE ma.media_asset_id = $1::uuid AND ma.state = 'ready'
         AND ma.cleanup_lease_token = $2::uuid AND ma.cleanup_origin_state = 'restore'
-      FOR UPDATE OF ma
-    `, [input.mediaAssetId, input.cleanupLeaseToken]);
+        AND ma.cleanup_lease_expires_at > NOW()
+        AND ma.provider_adapter_id = $3 AND ma.jurisdiction = $4
+        FOR UPDATE OF ma
+    `, [
+      input.mediaAssetId,
+      input.cleanupLeaseToken,
+      storageIdentity.provider,
+      storageIdentity.jurisdiction,
+    ]);
     const row = asset.rows[0];
     if (!row) {
       throw new BadRequestException("Photo media restore reservation lease is stale");
@@ -182,7 +253,16 @@ export async function reservePhotoMediaRestoreGeneration(
           expires_at = GREATEST(expires_at, NOW() + make_interval(days => $4::integer)),
           updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND cleanup_lease_token = $2::uuid
-    `, [input.mediaAssetId, input.cleanupLeaseToken, additionalBytes, row.retention_days]);
+        AND cleanup_origin_state = 'restore' AND cleanup_lease_expires_at > NOW()
+        AND provider_adapter_id = $5 AND jurisdiction = $6
+    `, [
+      input.mediaAssetId,
+      input.cleanupLeaseToken,
+      additionalBytes,
+      row.retention_days,
+      storageIdentity.provider,
+      storageIdentity.jurisdiction,
+    ]);
   });
 }
 
@@ -191,6 +271,12 @@ export async function markPhotoMediaRestoreVerified(
   storageIdentity: PhotoMediaStorageIdentity,
   input: Record<string, unknown>,
 ): Promise<void> {
+  if (
+    storageIdentity.provider !== "r2" &&
+    (typeof input.restoreObjectVersionId !== "string" || input.restoreObjectVersionId.trim() === "")
+  ) {
+    throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+  }
   await databaseService.withTransaction(async (client) => {
     const asset = await client.query<{
       company_id: string;
@@ -201,8 +287,15 @@ export async function markPhotoMediaRestoreVerified(
       FROM ops.media_asset
       WHERE media_asset_id = $1::uuid AND state = 'ready'
         AND cleanup_lease_token = $2::uuid AND cleanup_origin_state = 'restore'
+        AND cleanup_lease_expires_at > NOW()
+        AND provider_adapter_id = $3 AND jurisdiction = $4
       FOR UPDATE
-    `, [input.mediaAssetId, input.cleanupLeaseToken]);
+    `, [
+      input.mediaAssetId,
+      input.cleanupLeaseToken,
+      storageIdentity.provider,
+      storageIdentity.jurisdiction,
+    ]);
     const row = asset.rows[0];
     if (!row) {
       throw new BadRequestException("Photo media restore lease is stale");
@@ -210,8 +303,9 @@ export async function markPhotoMediaRestoreVerified(
     const replacedPrimary = await client.query<{ media_asset_replica_id: string }>(`
       UPDATE ops.media_asset_replica SET is_active = FALSE, updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND replica_role = 'primary' AND is_active
+        AND provider_adapter_id = $2 AND jurisdiction = $3
       RETURNING media_asset_replica_id
-    `, [input.mediaAssetId]);
+    `, [input.mediaAssetId, storageIdentity.provider, storageIdentity.jurisdiction]);
     if (input.previousPrimaryMissing === true && replacedPrimary.rows.length > 0) {
       await client.query(`
         UPDATE ops.media_asset_replica
@@ -231,7 +325,8 @@ export async function markPhotoMediaRestoreVerified(
       WHERE media_asset_id = $1::uuid AND replica_role = 'primary'
         AND replica_generation = $2 AND replica_state = 'copying'
         AND object_key = $3 AND content_sha256 = $4 AND byte_count = $5::bigint
-        AND provider_adapter_id = $6 AND jurisdiction = $7
+        AND object_version_id IS NOT DISTINCT FROM $6
+        AND provider_adapter_id = $7 AND jurisdiction = $8
       RETURNING media_asset_replica_id
     `, [
       input.mediaAssetId,
@@ -239,6 +334,7 @@ export async function markPhotoMediaRestoreVerified(
       input.restoreObjectKey,
       row.canonical_sha256,
       row.byte_count,
+      input.restoreObjectVersionId ?? null,
       storageIdentity.provider,
       storageIdentity.jurisdiction,
     ]);
@@ -250,7 +346,15 @@ export async function markPhotoMediaRestoreVerified(
       SET canonical_object_key = $3, cleanup_lease_token = NULL,
           cleanup_lease_expires_at = NULL, cleanup_origin_state = NULL, updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND cleanup_lease_token = $2::uuid
-    `, [input.mediaAssetId, input.cleanupLeaseToken, input.restoreObjectKey]);
+        AND cleanup_lease_expires_at > NOW()
+        AND provider_adapter_id = $4 AND jurisdiction = $5
+    `, [
+      input.mediaAssetId,
+      input.cleanupLeaseToken,
+      input.restoreObjectKey,
+      storageIdentity.provider,
+      storageIdentity.jurisdiction,
+    ]);
     await client.query(`
       INSERT INTO audit.photo_media_storage_event (
         actor_user_id, event_type, media_asset_id, company_id, correlation_id,
@@ -261,8 +365,61 @@ export async function markPhotoMediaRestoreVerified(
   });
 }
 
+export async function checkpointPhotoMediaRestoreObjectVersion(
+  databaseService: DatabaseService,
+  storageIdentity: PhotoMediaStorageIdentity,
+  input: Record<string, unknown>,
+): Promise<void> {
+  const objectVersionId = input.restoreObjectVersionId;
+  if (
+    storageIdentity.provider !== "r2" &&
+    (typeof objectVersionId !== "string" || objectVersionId.trim() === "")
+  ) {
+    throw new ServiceUnavailableException("Photo media restore object version identity is unavailable");
+  }
+  const updated = await databaseService.query(`
+    UPDATE ops.media_asset_replica replica
+    SET object_version_id = $6, updated_at = NOW()
+    WHERE replica.media_asset_id = $1::uuid
+      AND replica.replica_role = 'primary'
+      AND replica.replica_generation = $2
+      AND replica.replica_state = 'copying'
+      AND replica.object_key = $3
+      AND replica.content_sha256 = $4
+      AND replica.byte_count = $5::bigint
+      AND replica.provider_adapter_id = $7
+      AND replica.jurisdiction = $8
+      AND (replica.object_version_id IS NULL OR replica.object_version_id IS NOT DISTINCT FROM $6)
+      AND EXISTS (
+        SELECT 1 FROM ops.media_asset ma
+        WHERE ma.media_asset_id = replica.media_asset_id
+          AND ma.state = 'ready'
+          AND ma.cleanup_origin_state = 'restore'
+          AND ma.cleanup_lease_token = $9::uuid
+          AND ma.cleanup_lease_expires_at > NOW()
+          AND ma.provider_adapter_id = $7
+          AND ma.jurisdiction = $8
+      )
+    RETURNING replica.media_asset_replica_id
+  `, [
+    input.mediaAssetId,
+    input.replicaGeneration,
+    input.restoreObjectKey,
+    input.canonicalSha256,
+    input.canonicalByteCount,
+    objectVersionId ?? null,
+    storageIdentity.provider,
+    storageIdentity.jurisdiction,
+    input.cleanupLeaseToken,
+  ]);
+  if (updated.rows.length !== 1) {
+    throw new ServiceUnavailableException("Photo media restore checkpoint is stale");
+  }
+}
+
 export async function finishPhotoMediaRestore(
   databaseService: DatabaseService,
+  storageIdentity: PhotoMediaStorageIdentity,
   input: Record<string, unknown>,
   eventType: string,
   reasonCode: unknown,
@@ -278,8 +435,15 @@ export async function finishPhotoMediaRestore(
           cleanup_origin_state = NULL, updated_at = NOW()
       WHERE media_asset_id = $1::uuid AND state = 'ready'
         AND cleanup_lease_token = $2::uuid AND cleanup_origin_state = 'restore'
+        AND cleanup_lease_expires_at > NOW()
+        AND provider_adapter_id = $3 AND jurisdiction = $4
       RETURNING company_id, canonical_sha256, byte_count
-    `, [input.mediaAssetId, input.cleanupLeaseToken]);
+    `, [
+      input.mediaAssetId,
+      input.cleanupLeaseToken,
+      storageIdentity.provider,
+      storageIdentity.jurisdiction,
+    ]);
     const row = released.rows[0];
     if (!row) {
       throw new BadRequestException("Photo media restore lease is stale");

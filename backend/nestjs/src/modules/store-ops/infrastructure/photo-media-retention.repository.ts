@@ -13,6 +13,7 @@ import {
   buildPurgeManifestDigest,
 } from "../application/photo-media-retention.contract";
 import { PhotoMediaRetentionRepositoryPort } from "../application/photo-media-retention.ports";
+import { PhotoMediaObjectReference } from "../application/photo-media-storage.ports";
 import {
   PHOTO_MEDIA_USAGE_SCOPE,
   HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY,
@@ -50,6 +51,7 @@ type SnapshotRow = {
   cleanup_lease_token?: string | null;
   cleanup_lease_expires_at?: Date | null;
   thumbnail_object_key?: string;
+  thumbnail_object_version_id?: string | null;
   raw_disposed_at?: Date | null;
   purge_manifest_id?: string | null;
   expiry_eligible?: boolean;
@@ -62,6 +64,23 @@ function retentionConflict(code: string, message: string): ConflictException {
 
 function retentionBadRequest(code: string, message: string): BadRequestException {
   return new BadRequestException({ code, message });
+}
+
+function mapPurgeObjectReference(
+  storageIdentity: PhotoMediaStorageIdentity,
+  objectKey: string | null | undefined,
+  objectVersionId: string | null | undefined,
+): PhotoMediaObjectReference {
+  if (typeof objectKey !== "string" || objectKey.trim() === "") {
+    throw retentionConflict("manifest_stale", "Photo media purge object identity is unavailable");
+  }
+  if (storageIdentity.provider === "r2" && (objectVersionId === null || objectVersionId === undefined)) {
+    return { objectKey };
+  }
+  if (typeof objectVersionId !== "string" || objectVersionId.trim() === "") {
+    throw retentionConflict("manifest_stale", "Photo media purge object version identity is unavailable");
+  }
+  return { objectKey, versionId: objectVersionId };
 }
 
 function mapSnapshot(row: SnapshotRow): PhotoMediaPurgeSnapshot {
@@ -293,6 +312,7 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
                ma.active_workflow_hold, ma.ai_review_hold,
                ma.cleanup_origin_state, ma.cleanup_lease_token,
                ma.cleanup_lease_expires_at, ma.thumbnail_object_key,
+               ma.thumbnail_object_version_id,
                ma.raw_disposed_at, ma.purge_manifest_id,
                (ma.expires_at <= NOW()) AS expiry_eligible,
                (ma.cleanup_lease_token IS NULL
@@ -355,6 +375,55 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
         }
       }
 
+      const preparedCandidates: Array<{
+        row: SnapshotRow & { item_no: number };
+        thumbnailObject: PhotoMediaObjectReference;
+        primaryObjects: PhotoMediaObjectReference[];
+        recoveryObjects: PhotoMediaObjectReference[];
+      }> = [];
+      for (const row of remaining) {
+        const thumbnailObject = mapPurgeObjectReference(
+          storageIdentity,
+          row.thumbnail_object_key,
+          row.thumbnail_object_version_id,
+        );
+        const replicas = await client.query<{
+          replica_role: "primary" | "recovery";
+          object_key: string;
+          object_version_id: string | null;
+        }>(`
+          SELECT replica_role, object_key, object_version_id
+          FROM ops.media_asset_replica
+          WHERE media_asset_id = $1::uuid
+            AND replica_state IN ('copying', 'verified')
+            AND provider_adapter_id = $2
+            AND jurisdiction = $3
+          ORDER BY replica_role, replica_generation
+        `, [
+          row.media_asset_id,
+          storageIdentity.provider,
+          storageIdentity.jurisdiction,
+        ]);
+        const primaryObjects = replicas.rows
+          .filter((item) => item.replica_role === "primary")
+          .map((item) => mapPurgeObjectReference(
+            storageIdentity,
+            item.object_key,
+            item.object_version_id,
+          ));
+        const recoveryObjects = replicas.rows
+          .filter((item) => item.replica_role === "recovery")
+          .map((item) => mapPurgeObjectReference(
+            storageIdentity,
+            item.object_key,
+            item.object_version_id,
+          ));
+        if (storageIdentity.provider !== "r2" && primaryObjects.length === 0) {
+          throw retentionConflict("manifest_stale", "Photo media purge primary object identity is unavailable");
+        }
+        preparedCandidates.push({ row, thumbnailObject, primaryObjects, recoveryObjects });
+      }
+
       const manifestLease = await client.query<{ execution_lease_token: string }>(`
         UPDATE ops.photo_media_purge_manifest
         SET status = 'executing', execution_attempt_count = execution_attempt_count + 1,
@@ -367,9 +436,12 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
       if (!manifestLeaseToken) throw retentionConflict("manifest_stale", "Photo media purge manifest lease failed");
 
       const candidates = [];
-      for (const row of remaining) {
+      for (const prepared of preparedCandidates) {
+        const row = prepared.row;
         const claimed = await client.query<{
-          cleanup_lease_token: string; thumbnail_object_key: string;
+          cleanup_lease_token: string;
+          thumbnail_object_key: string;
+          thumbnail_object_version_id: string | null;
         }>(`
           UPDATE ops.media_asset
           SET state = 'purge_pending', purge_pending_at = COALESCE(purge_pending_at, NOW()),
@@ -389,7 +461,8 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
                 AND active_primary.provider_adapter_id = $4
                 AND active_primary.jurisdiction = $5
             )
-          RETURNING cleanup_lease_token, thumbnail_object_key
+          RETURNING cleanup_lease_token, thumbnail_object_key,
+                    thumbnail_object_version_id
         `, [
           row.media_asset_id,
           row.company_id,
@@ -399,30 +472,13 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
         ]);
         const assetLease = claimed.rows[0];
         if (!assetLease) throw retentionConflict("manifest_stale", "Photo media purge asset lease failed");
-        const replicas = await client.query<{
-          replica_role: "primary" | "recovery"; object_key: string;
-        }>(`
-          SELECT replica_role, object_key
-          FROM ops.media_asset_replica
-          WHERE media_asset_id = $1::uuid
-            AND replica_state IN ('copying', 'verified')
-            AND provider_adapter_id = $2
-            AND jurisdiction = $3
-          ORDER BY replica_role, replica_generation
-        `, [
-          row.media_asset_id,
-          storageIdentity.provider,
-          storageIdentity.jurisdiction,
-        ]);
         candidates.push({
           mediaAssetId: row.media_asset_id,
           cleanupLeaseToken: assetLease.cleanup_lease_token,
           canonicalSha256: row.canonical_sha256,
-          thumbnailObjectKey: assetLease.thumbnail_object_key,
-          primaryObjectKeys: replicas.rows.filter((item) => item.replica_role === "primary")
-            .map((item) => item.object_key),
-          recoveryObjectKeys: replicas.rows.filter((item) => item.replica_role === "recovery")
-            .map((item) => item.object_key),
+          thumbnailObject: prepared.thumbnailObject,
+          primaryObjects: prepared.primaryObjects,
+          recoveryObjects: prepared.recoveryObjects,
         });
       }
       return {
@@ -439,18 +495,28 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
   }
 
   async markPurgeManifestCompleted(input: {
-    manifestId: string; manifestDigest: string; manifestLeaseToken: string; actorUserId: string | null;
+    manifestId: string;
+    manifestDigest: string;
+    manifestLeaseToken: string;
+    actorUserId: string | null;
+    storageIdentity?: PhotoMediaStorageIdentity;
   }): Promise<void> {
+    const storageIdentity = input.storageIdentity ?? HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY;
     await this.databaseService.withTransaction(async (client) => {
       const updated = await client.query<{ candidate_count: number }>(`
         WITH remaining AS (
-          SELECT COUNT(*) FILTER (
+          SELECT COUNT(*)::int AS scoped_count,
+                 COUNT(*) FILTER (
                    WHERE ma.state <> 'deleted_tombstone'
                       OR ma.purge_manifest_id IS DISTINCT FROM $1::uuid
                  )::int AS remaining_count,
                  MIN(item.company_id::text) AS company_id
           FROM ops.photo_media_purge_manifest_item item
-          JOIN ops.media_asset ma ON ma.media_asset_id = item.media_asset_id
+          JOIN ops.media_asset ma
+            ON ma.media_asset_id = item.media_asset_id
+           AND ma.company_id = item.company_id
+           AND ma.provider_adapter_id = $4
+           AND ma.jurisdiction = $5
           WHERE item.photo_media_purge_manifest_id = $1::uuid
         )
         UPDATE ops.photo_media_purge_manifest manifest
@@ -461,9 +527,16 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
           AND manifest.manifest_digest = $2
           AND manifest.status = 'executing'
           AND manifest.execution_lease_token = $3::uuid
+          AND remaining.scoped_count = manifest.candidate_count
           AND remaining.remaining_count = 0
         RETURNING manifest.candidate_count
-      `, [input.manifestId, input.manifestDigest, input.manifestLeaseToken]);
+      `, [
+        input.manifestId,
+        input.manifestDigest,
+        input.manifestLeaseToken,
+        storageIdentity.provider,
+        storageIdentity.jurisdiction,
+      ]);
       const row = updated.rows[0];
       if (!row) throw retentionConflict("manifest_stale", "Photo media purge completion is stale");
       await client.query(`
@@ -500,8 +573,11 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
   }
 
   async releasePurgeManifestAssetLeases(input: {
-    manifestId: string; manifestLeaseToken: string;
+    manifestId: string;
+    manifestLeaseToken: string;
+    storageIdentity?: PhotoMediaStorageIdentity;
   }): Promise<void> {
+    const storageIdentity = input.storageIdentity ?? HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY;
     await this.databaseService.withTransaction(async (client) => {
       const manifest = await client.query(`
         SELECT 1 FROM ops.photo_media_purge_manifest
@@ -519,11 +595,21 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
             purge_manifest_id = NULL, updated_at = NOW()
         WHERE purge_manifest_id = $1::uuid
           AND state = 'purge_pending'
-      `, [input.manifestId]);
+          AND provider_adapter_id = $3
+          AND jurisdiction = $4
+      `, [
+        input.manifestId,
+        input.manifestLeaseToken,
+        storageIdentity.provider,
+        storageIdentity.jurisdiction,
+      ]);
     });
   }
 
-  async getLifecycleReconciliationSummary(allowedCompanyIds?: string[]) {
+  async getLifecycleReconciliationSummary(
+    allowedCompanyIds?: string[],
+    storageIdentity: PhotoMediaStorageIdentity = HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY,
+  ) {
     const result = await this.databaseService.query<{
       dangling_link_count: string; stuck_upload_count: string; stuck_purge_count: string;
       protected_expiry_count: string; tombstone_residue_count: string;
@@ -560,29 +646,35 @@ export class PhotoMediaRetentionRepository implements PhotoMediaRetentionReposit
           ON assignment.assignment_id = submission.assignment_id
       )
       SELECT
-        (SELECT COUNT(*) FROM links JOIN ops.media_asset ma USING (media_asset_id, company_id)
-          WHERE ((links.active AND ma.state <> 'ready')
-              OR (NOT links.active AND ma.state NOT IN ('ready', 'deleted_tombstone')))
-            AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))) AS dangling_link_count,
-        (SELECT COUNT(*) FROM ops.media_asset
-          WHERE state IN ('initiated', 'uploaded')
-            AND initiated_at < NOW() - INTERVAL '24 hours'
-            AND ($1::uuid[] IS NULL OR company_id = ANY($1::uuid[]))) AS stuck_upload_count,
-        (SELECT COUNT(*) FROM ops.media_asset
-          WHERE state = 'purge_pending'
-            AND (cleanup_lease_expires_at IS NULL OR cleanup_lease_expires_at <= NOW())
-            AND ($1::uuid[] IS NULL OR company_id = ANY($1::uuid[]))) AS stuck_purge_count,
-        (SELECT COUNT(*) FROM ops.media_asset
-          WHERE state = 'ready' AND expires_at <= NOW()
-            AND (legal_hold OR operational_hold OR active_workflow_hold OR ai_review_hold)
-            AND ($1::uuid[] IS NULL OR company_id = ANY($1::uuid[]))) AS protected_expiry_count,
-        (SELECT COUNT(*) FROM ops.media_asset ma
-          WHERE ma.state = 'deleted_tombstone'
-            AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
-            AND EXISTS (SELECT 1 FROM ops.media_asset_replica mar
-              WHERE mar.media_asset_id = ma.media_asset_id
-                AND mar.replica_state <> 'deleted_tombstone')) AS tombstone_residue_count
-    `, [allowedCompanyIds ?? null]);
+          (SELECT COUNT(*) FROM links JOIN ops.media_asset ma USING (media_asset_id, company_id)
+           WHERE ((links.active AND ma.state <> 'ready')
+               OR (NOT links.active AND ma.state NOT IN ('ready', 'deleted_tombstone')))
+             AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
+             AND ma.provider_adapter_id = $2 AND ma.jurisdiction = $3) AS dangling_link_count,
+         (SELECT COUNT(*) FROM ops.media_asset
+           WHERE state IN ('initiated', 'uploaded')
+             AND initiated_at < NOW() - INTERVAL '24 hours'
+             AND ($1::uuid[] IS NULL OR company_id = ANY($1::uuid[]))
+             AND provider_adapter_id = $2 AND jurisdiction = $3) AS stuck_upload_count,
+         (SELECT COUNT(*) FROM ops.media_asset
+           WHERE state = 'purge_pending'
+             AND (cleanup_lease_expires_at IS NULL OR cleanup_lease_expires_at <= NOW())
+             AND ($1::uuid[] IS NULL OR company_id = ANY($1::uuid[]))
+             AND provider_adapter_id = $2 AND jurisdiction = $3) AS stuck_purge_count,
+         (SELECT COUNT(*) FROM ops.media_asset
+           WHERE state = 'ready' AND expires_at <= NOW()
+             AND (legal_hold OR operational_hold OR active_workflow_hold OR ai_review_hold)
+             AND ($1::uuid[] IS NULL OR company_id = ANY($1::uuid[]))
+             AND provider_adapter_id = $2 AND jurisdiction = $3) AS protected_expiry_count,
+         (SELECT COUNT(*) FROM ops.media_asset ma
+           WHERE ma.state = 'deleted_tombstone'
+             AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
+             AND ma.provider_adapter_id = $2 AND ma.jurisdiction = $3
+             AND EXISTS (SELECT 1 FROM ops.media_asset_replica mar
+               WHERE mar.media_asset_id = ma.media_asset_id
+                 AND mar.replica_state <> 'deleted_tombstone'
+                 AND mar.provider_adapter_id = $2 AND mar.jurisdiction = $3)) AS tombstone_residue_count
+    `, [allowedCompanyIds ?? null, storageIdentity.provider, storageIdentity.jurisdiction]);
     const row = result.rows[0];
     return {
       danglingLinkCount: Number(row?.dangling_link_count ?? 0),

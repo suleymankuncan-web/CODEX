@@ -177,6 +177,7 @@ export async function reservePhotoMediaProviderOperations(
   input: {
     classAOperations: number; classBOperations: number;
     monthlyClassAHardLimit: number; monthlyClassBHardLimit: number;
+    enforceHardLimits?: boolean;
   },
 ): Promise<void> {
   if (
@@ -186,6 +187,10 @@ export async function reservePhotoMediaProviderOperations(
   ) {
     throw new BadRequestException("Photo media provider operation reservation is invalid");
   }
+  if (input.enforceHardLimits !== undefined && typeof input.enforceHardLimits !== "boolean") {
+    throw new BadRequestException("Photo media provider operation reservation mode is invalid");
+  }
+  const enforceHardLimits = input.enforceHardLimits ?? true;
   await databaseService.withTransaction(async (client) => {
     await client.query(`SELECT pg_advisory_xact_lock(hashtext('${PHOTO_MEDIA_QUOTA_LOCK_KEY}')::bigint)`);
     await client.query(`
@@ -202,10 +207,10 @@ export async function reservePhotoMediaProviderOperations(
     `);
     const row = usage.rows[0];
     if (!row) throw new ServiceUnavailableException("Photo media usage state is unavailable");
-    if (Number(row.class_a_operations) + input.classAOperations > input.monthlyClassAHardLimit) {
+    if (enforceHardLimits && Number(row.class_a_operations) + input.classAOperations > input.monthlyClassAHardLimit) {
       throw new ServiceUnavailableException("Photo media Class A hard limit reached");
     }
-    if (Number(row.class_b_operations) + input.classBOperations > input.monthlyClassBHardLimit) {
+    if (enforceHardLimits && Number(row.class_b_operations) + input.classBOperations > input.monthlyClassBHardLimit) {
       throw new ServiceUnavailableException("Photo media Class B hard limit reached");
     }
     await client.query(`
