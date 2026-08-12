@@ -269,8 +269,12 @@ export type PhotoMediaAssetRecord = {
   captureSource?: "camera" | "gallery" | "system_generated";
   state: PhotoMediaAssetState;
   rawObjectKey?: string;
+  rawObjectVersionId?: string | null;
   canonicalObjectKey?: string | null;
+  /** Derived from the active verified primary replica; never persisted on media_asset. */
+  canonicalObjectVersionId?: string | null;
   thumbnailObjectKey?: string | null;
+  thumbnailObjectVersionId?: string | null;
   canonicalSha256?: string | null;
   canonicalByteCount?: number | null;
   storageAttemptId?: string | null;

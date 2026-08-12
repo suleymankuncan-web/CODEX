@@ -3,7 +3,9 @@ import { DatabaseService } from "../../../shared/database/database.service";
 import {
   PHOTO_MEDIA_QUOTA_LOCK_KEY,
   PHOTO_MEDIA_USAGE_SCOPE,
+  HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY,
   PhotoMediaAssetRecord,
+  PhotoMediaStorageIdentity,
   assertPhotoMediaUploadQuota,
   buildPhotoMediaObjectKeys,
 } from "../application/photo-media-storage.contract";
@@ -32,6 +34,7 @@ export type CreatePhotoMediaAssetInput = {
 export async function createPhotoMediaAsset(
   databaseService: DatabaseService,
   input: CreatePhotoMediaAssetInput,
+  storageIdentity: PhotoMediaStorageIdentity = HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY,
 ): Promise<PhotoMediaAssetRecord> {
   return databaseService.withTransaction(async (client) => {
     await client.query(`SELECT pg_advisory_xact_lock(hashtext('${PHOTO_MEDIA_QUOTA_LOCK_KEY}')::bigint)`);
@@ -168,12 +171,12 @@ export async function createPhotoMediaAsset(
     }>(`
       INSERT INTO ops.media_asset (
         media_asset_id, company_id, region_id, store_id, classification, state,
-        capture_source, raw_object_key, detected_mime_type, declared_upload_byte_count,
+        provider_adapter_id, jurisdiction, capture_source, raw_object_key, detected_mime_type, declared_upload_byte_count,
         uploaded_by_user_id, retention_policy_id, retention_policy_version, expires_at,
         quota_reserved_bytes, quota_reserved_class_a, quota_reserved_class_b
       ) VALUES (
         $1::uuid, $2::uuid, $3::uuid, $4::uuid, $15, 'initiated',
-        $5, $6, $7, $8::bigint, $9::uuid, $10::uuid, $11,
+        $16, $17, $5, $6, $7, $8::bigint, $9::uuid, $10::uuid, $11,
         NULL, $12::bigint, $13, $14
       )
       RETURNING media_asset_id, company_id, region_id, store_id, state, raw_object_key
@@ -183,6 +186,8 @@ export async function createPhotoMediaAsset(
       input.actorUserId, retention.retention_policy_id, retention.version_no,
       reservedBytes, reservedClassA, reservedClassB,
       input.classification ?? "checklist_evidence",
+      storageIdentity.provider,
+      storageIdentity.jurisdiction,
     ]);
     const row = assetResult.rows[0];
     if (!row) {

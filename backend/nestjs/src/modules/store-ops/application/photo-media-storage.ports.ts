@@ -14,6 +14,20 @@ export type PhotoMediaObjectPutResult = {
   versionId?: string;
 };
 
+/**
+ * Provider rejected an immutable create-only write because an object already
+ * exists at the requested key. The error intentionally carries no object key
+ * or provider version so callers cannot accidentally expose storage details.
+ */
+export class PhotoMediaObjectCreateConflictError extends Error {
+  readonly code = "photo_media_object_create_conflict" as const;
+
+  constructor() {
+    super("Photo media immutable object create conflicted");
+    this.name = "PhotoMediaObjectCreateConflictError";
+  }
+}
+
 export type PhotoMediaObjectDeleteResult = {
   versionId?: string;
   deleteMarker: boolean;
@@ -31,6 +45,10 @@ export type PhotoMediaObjectInventoryPage = {
   nextCursor?: string;
 };
 
+export type PhotoMediaObjectVersionInventory = {
+  versions: PhotoMediaObjectReference[];
+};
+
 export interface PhotoMediaObjectStoragePort {
   createSignedRead(input: PhotoMediaObjectReference & { expiresInSeconds: number }): Promise<PhotoMediaSignedRequest>;
   getObject(objectReference: string | PhotoMediaObjectReference): Promise<Buffer>;
@@ -39,23 +57,31 @@ export interface PhotoMediaObjectStoragePort {
     body: Buffer;
     contentType: string;
     sha256: string;
+    createOnly?: boolean;
   }): Promise<PhotoMediaObjectPutResult>;
   headObject(objectReference: string | PhotoMediaObjectReference): Promise<PhotoMediaObjectHead | null>;
   deleteObject(objectReference: string | PhotoMediaObjectReference): Promise<PhotoMediaObjectDeleteResult>;
   listObjectKeys(input: { prefix: string; cursor?: string }): Promise<PhotoMediaObjectInventoryPage>;
+  listObjectVersions(input: { objectKey: string }): Promise<PhotoMediaObjectVersionInventory>;
 }
 
 export type PhotoMediaReconciliationInventoryItem = {
   mediaAssetId: string;
   recoveryRequired: boolean;
-  primaryObjects: Array<{ objectKey: string; sha256?: string; byteCount?: number }>;
-  recoveryObjects: Array<{ objectKey: string; sha256?: string; byteCount?: number }>;
+  primaryObjects: Array<{ objectKey: string; versionId?: string | null; sha256?: string; byteCount?: number }>;
+  recoveryObjects: Array<{ objectKey: string; versionId?: string | null; sha256?: string; byteCount?: number }>;
 };
 
 export type PhotoMediaPartialCleanupCandidate = {
   mediaAssetId: string;
   cleanupLeaseToken: string;
   rawObjectKey: string;
+  rawObjectVersionId?: string | null;
+};
+
+export type PhotoMediaFinalizeObjectCheckpoints = {
+  primary?: PhotoMediaObjectReference;
+  recovery?: PhotoMediaObjectReference;
 };
 
 export type PhotoMediaRestoreCandidate = {
@@ -104,6 +130,8 @@ export interface PhotoMediaAssetRepositoryPort {
   markRejected(input: Record<string, unknown>): Promise<void>;
   markUploaded(input: Record<string, unknown>): Promise<void>;
   prepareFinalizeAttempt(mediaAssetId: string): Promise<PhotoMediaAssetRecord>;
+  findFinalizeObjectCheckpoints(mediaAssetId: string): Promise<PhotoMediaFinalizeObjectCheckpoints>;
+  checkpointThumbnailObject(input: Record<string, unknown>): Promise<void>;
   acquireProcessingLease(input: Record<string, unknown>): Promise<string>;
   releaseProcessingLease(input: Record<string, unknown>): Promise<void>;
   resizeByteReservation(input: Record<string, unknown>): Promise<void>;

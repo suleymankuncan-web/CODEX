@@ -9,6 +9,10 @@ const runner = readFileSync(
   join(workspaceRoot, "scripts", "checklist-photo-evidence-schema-smoke.mjs"),
   "utf8",
 );
+const storageIdentityRunner = readFileSync(
+  join(workspaceRoot, "scripts", "photo-media-storage-identity-smoke.mjs"),
+  "utf8",
+);
 const fixture = readFileSync(
   join(workspaceRoot, "db", "preflight", "checklist-photo-evidence-foundation-v1-smoke.sql"),
   "utf8",
@@ -57,6 +61,14 @@ const versionPersistenceRollback = readFileSync(
   ),
   "utf8",
 );
+const assetStorageIdentityMigration = readFileSync(
+  join(workspaceRoot, "db", "migrations", "070_photo_media_asset_storage_identity_v1.sql"),
+  "utf8",
+);
+const assetStorageIdentityRollback = readFileSync(
+  join(workspaceRoot, "db", "rollback", "070_photo_media_asset_storage_identity_v1.rollback.sql"),
+  "utf8",
+);
 const storageRecoverySmoke = readFileSync(
   join(
     workspaceRoot,
@@ -81,6 +93,7 @@ test("photo evidence schema isolates provider-use proof from clean rollback veri
   assert.match(runner, /064_checklist_item_evidence_v1\.sql/);
   assert.match(runner, /068_photo_media_provider_neutral_storage_v1\.rollback\.sql/);
   assert.match(runner, /069_photo_media_opaque_version_ids_v1\.rollback\.sql/);
+  assert.match(storageIdentityRunner, /070_photo_media_asset_storage_identity_v1\.rollback\.sql/);
   assert.match(runner, /068_photo_media_provider_neutral_storage_v1\.sql/);
   assert.match(runner, /providerNeutralStorageIdentity/);
   assert.match(runner, /providerNeutralHistoricalFixture/);
@@ -98,7 +111,9 @@ test("photo evidence schema isolates provider-use proof from clean rollback veri
   assert.match(runner, /versionPersistenceHistoryGuards/);
   assert.match(runner, /versionPersistenceHistorySnapshot/);
   assert.match(runner, /versionPersistenceRollbackRestoration/);
-  assert.match(runner, /localProviderVersionCompleteness/);
+  assert.match(storageIdentityRunner, /preUseRollback/);
+  assert.match(storageIdentityRunner, /usedRollbackRefusal/);
+  assert.match(storageIdentityRunner, /localProviderStorageIdentity/);
   assert.equal(
     (runner.match(/runPsql\(readFileSync\(providerNeutralStorageRollbackSqlPath/g) ?? []).length,
     2,
@@ -134,6 +149,22 @@ test("photo evidence schema isolates provider-use proof from clean rollback veri
     runner.indexOf("providerNeutralPreUseRollback")
       < runner.indexOf("const rollbackResidual"),
   );
+});
+
+test("photo media assets persist storage ownership before provider I/O and refuse used rollback", () => {
+  assert.match(assetStorageIdentityMigration, /DEFAULT 'r2'/);
+  assert.match(assetStorageIdentityMigration, /DEFAULT 'eu'/);
+  assert.match(assetStorageIdentityMigration, /ALTER COLUMN provider_adapter_id SET NOT NULL/);
+  assert.match(assetStorageIdentityMigration, /ck_media_asset_storage_provider_jurisdiction/);
+  assert.match(assetStorageIdentityMigration, /provider_adapter_id = 'seaweedfs'/);
+  assert.match(assetStorageIdentityMigration, /jurisdiction = 'onprem'/);
+  assert.match(assetStorageIdentityRollback, /BEGIN;/);
+  assert.match(assetStorageIdentityRollback, /COMMIT;/);
+  assert.match(assetStorageIdentityRollback, /LOCK TABLE audit\.schema_migration/);
+  assert.match(assetStorageIdentityRollback, /LOCK TABLE ops\.media_asset/);
+  assert.match(assetStorageIdentityRollback, /Pre-use rollback refused after local storage identity use/);
+  assert.match(assetStorageIdentityRollback, /DROP COLUMN IF EXISTS provider_adapter_id/);
+  assert.match(assetStorageIdentityRollback, /DROP COLUMN IF EXISTS jurisdiction/);
 });
 
 test("photo evidence schema verification is local-only, synthetic, and rollback-bound", () => {

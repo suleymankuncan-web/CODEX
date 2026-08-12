@@ -16,6 +16,8 @@ import {
 import {
   PhotoMediaAssetRepositoryPort,
   PhotoMediaImageProcessorPort,
+  PhotoMediaObjectCreateConflictError,
+  PhotoMediaObjectReference,
   PhotoMediaObjectStoragePort,
   PhotoMediaSafetyScannerPort,
 } from "./photo-media-storage.ports";
@@ -132,6 +134,9 @@ export class PhotoMediaStorageService {
     }
 
     let uploadLeaseToken: string | null = null;
+    let rawObjectVersionId: string | undefined;
+    // Provider cleanup is deferred on every failure; a failed response or
+    // expired lease may have allowed another worker to adopt the object.
     try {
       uploadLeaseToken = await this.repository.acquireProcessingLease({
         mediaAssetId,
@@ -139,35 +144,25 @@ export class PhotoMediaStorageService {
         concurrentProcessingHardLimit: this.configuration.concurrentProcessingHardLimit,
       });
       const keys = buildPhotoMediaObjectKeys({ companyId: asset.companyId, mediaAssetId });
-      await this.primaryStorage.putObject({
-        objectKey: asset.rawObjectKey ?? keys.raw,
+      const rawObjectKey = asset.rawObjectKey ?? keys.raw;
+      const rawSha256 = createHash("sha256").update(input.contentBody).digest("hex");
+      await this.reserveExactRecoveryOperations();
+      const rawReference = await this.createOrRecoverExactObject(this.primaryStorage, {
+        objectKey: rawObjectKey,
         body: input.contentBody,
         contentType: input.contentType,
-        sha256: createHash("sha256").update(input.contentBody).digest("hex"),
+        sha256: rawSha256,
       });
+      rawObjectVersionId = rawReference.versionId;
       await this.repository.markUploaded({
         mediaAssetId,
         actorUserId: input.actorUserId,
         byteCount: input.contentLength,
         contentType: input.contentType,
+        rawObjectVersionId: rawObjectVersionId ?? null,
+        processingLeaseToken: uploadLeaseToken,
       });
       return { mediaAssetId, state: "uploaded" as const };
-    } catch (error) {
-      const rawObjectKey = asset.rawObjectKey ?? buildPhotoMediaObjectKeys({
-        companyId: asset.companyId,
-        mediaAssetId,
-      }).raw;
-      try {
-        await this.primaryStorage.deleteObject(rawObjectKey);
-        await this.repository.markRejected({
-          mediaAssetId,
-          actorUserId: input.actorUserId,
-          reasonCode: "server_upload_failed",
-        });
-      } catch {
-        // Preserve the reservation and initiated row when compensating cleanup cannot be proven.
-      }
-      throw error;
     } finally {
       if (uploadLeaseToken) {
         await this.repository.releaseProcessingLease({
@@ -257,6 +252,9 @@ export class PhotoMediaStorageService {
       },
     });
     let uploadLeaseToken: string | null = null;
+    let rawObjectVersionId: string | undefined;
+    // Provider cleanup is deferred on every failure; reconciliation owns the
+    // initiated row and any object left by a failed upload response.
     try {
       // The assignment/revision binding must succeed before any customer bytes reach object storage.
       // This closes the revocation race without relying on best-effort object cleanup.
@@ -272,35 +270,24 @@ export class PhotoMediaStorageService {
         companyId: asset.companyId,
         mediaAssetId,
       }).raw;
-      await this.primaryStorage.putObject({
+      const rawSha256 = createHash("sha256").update(input.contentBody).digest("hex");
+      await this.reserveExactRecoveryOperations();
+      const rawReference = await this.createOrRecoverExactObject(this.primaryStorage, {
         objectKey: rawObjectKey,
         body: input.contentBody,
         contentType: input.contentType,
-        sha256: createHash("sha256").update(input.contentBody).digest("hex"),
+        sha256: rawSha256,
       });
+      rawObjectVersionId = rawReference.versionId;
       await this.repository.markUploaded({
         mediaAssetId,
         actorUserId: input.actorUserId,
         byteCount: input.contentLength,
         contentType: input.contentType,
+        rawObjectVersionId: rawObjectVersionId ?? null,
+        processingLeaseToken: uploadLeaseToken,
       });
       return { mediaAssetId, state: "uploaded" as const };
-    } catch (error) {
-      const rawObjectKey = asset.rawObjectKey ?? buildPhotoMediaObjectKeys({
-        companyId: asset.companyId,
-        mediaAssetId,
-      }).raw;
-      try {
-        await this.primaryStorage.deleteObject(rawObjectKey);
-        await this.repository.markRejected({
-          mediaAssetId,
-          actorUserId: input.actorUserId,
-          reasonCode: error instanceof BadRequestException ? "invalid_image" : "server_upload_failed",
-        });
-      } catch {
-        // Preserve the reservation when compensating cleanup cannot be proven.
-      }
-      throw error;
     } finally {
       if (uploadLeaseToken) {
         await this.repository.releaseProcessingLease({ mediaAssetId, processingLeaseToken: uploadLeaseToken });
@@ -329,6 +316,10 @@ export class PhotoMediaStorageService {
     if (!objectKey) {
       throw new ServiceUnavailableException("Photo media object is unavailable");
     }
+    const objectReference = this.toObjectReference(
+      objectKey,
+      input.variant === "thumbnail" ? asset.thumbnailObjectVersionId : asset.canonicalObjectVersionId,
+    );
 
     await this.repository.reserveProviderOperations({
       classAOperations: 0,
@@ -337,7 +328,7 @@ export class PhotoMediaStorageService {
       monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
     });
     const signed = await this.primaryStorage.createSignedRead({
-      objectKey,
+      ...(typeof objectReference === "string" ? { objectKey: objectReference } : objectReference),
       expiresInSeconds: this.configuration.signedReadTtlSeconds,
     });
     await this.repository.recordAccessEvent({
@@ -371,13 +362,17 @@ export class PhotoMediaStorageService {
     if (!objectKey) {
       throw new ServiceUnavailableException("Photo media object is unavailable");
     }
+    const objectReference = this.toObjectReference(
+      objectKey,
+      input.variant === "thumbnail" ? asset.thumbnailObjectVersionId : asset.canonicalObjectVersionId,
+    );
     await this.repository.reserveProviderOperations({
       classAOperations: 0,
       classBOperations: 1,
       monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
       monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
     });
-    const body = await this.primaryStorage.getObject(objectKey);
+    const body = await this.primaryStorage.getObject(objectReference);
     await this.repository.recordAccessEvent({
       actorUserId: input.actorUserId,
       mediaAssetId: asset.mediaAssetId,
@@ -443,13 +438,15 @@ export class PhotoMediaStorageService {
 
     try {
       await this.repository.reserveProviderOperations({
-      classAOperations: 3,
+      classAOperations: this.requiresObjectVersionId() ? 6 : 3,
       classBOperations: 7,
       monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
       monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
     });
 
-    const raw = await this.primaryStorage.getObject(asset.rawObjectKey!);
+    const raw = await this.primaryStorage.getObject(
+      this.toObjectReference(asset.rawObjectKey!, asset.rawObjectVersionId),
+    );
     let assuranceEngine = "strict_image_decode_reencode";
     let assuranceVersion: string | null = null;
     if (!input.realVmPilotAuthorized) {
@@ -465,6 +462,7 @@ export class PhotoMediaStorageService {
           mediaAssetId: asset.mediaAssetId,
           actorUserId: input.actorUserId,
           reasonCode: scan.reasonCode ?? `scanner_${scan.verdict}`,
+          processingLeaseToken,
         });
         throw new BadRequestException("Photo media upload did not pass safety scanning");
       }
@@ -476,43 +474,63 @@ export class PhotoMediaStorageService {
       mediaAssetId: asset.mediaAssetId,
       requiredBytes: raw.byteLength + processed.canonical.byteLength * 2 + processed.thumbnail.byteLength,
       aggregateBytesHardLimit: this.configuration.aggregateBytesHardLimit,
+      processingLeaseToken,
     });
     const keys = buildPhotoMediaObjectKeys({
       companyId: asset.companyId,
       mediaAssetId: asset.mediaAssetId,
       storageAttemptId: asset.storageAttemptId,
     });
+    const checkpoints = await this.repository.findFinalizeObjectCheckpoints(asset.mediaAssetId);
+    let primaryReference: PhotoMediaObjectReference;
+    let thumbnailReference: PhotoMediaObjectReference;
     try {
-      await this.ensureImmutableObject(
-        this.primaryStorage, keys.canonical, processed.canonical, processed.mimeType, processed.canonicalSha256,
+      primaryReference = await this.ensureImmutableObject(
+        this.primaryStorage, keys.canonical, processed.canonical, processed.mimeType,
+        processed.canonicalSha256, checkpoints.primary,
       );
       await this.repository.recordVerifiedReplica({
         mediaAssetId: asset.mediaAssetId,
         actorUserId: input.actorUserId,
         replicaRole: "primary",
         objectKey: keys.canonical,
+        objectVersionId: primaryReference.versionId ?? null,
         sha256: processed.canonicalSha256,
         byteCount: processed.canonical.byteLength,
+        processingLeaseToken,
       });
-      await this.ensureImmutableObject(
-        this.primaryStorage, keys.thumbnail, processed.thumbnail, processed.mimeType, processed.thumbnailSha256,
+      thumbnailReference = await this.ensureImmutableObject(
+        this.primaryStorage, keys.thumbnail, processed.thumbnail, processed.mimeType,
+        processed.thumbnailSha256,
+        asset.thumbnailObjectKey === keys.thumbnail && asset.thumbnailObjectVersionId
+          ? { objectKey: keys.thumbnail, versionId: asset.thumbnailObjectVersionId }
+          : undefined,
       );
+      await this.repository.checkpointThumbnailObject({
+        mediaAssetId: asset.mediaAssetId,
+        thumbnailObjectKey: keys.thumbnail,
+        thumbnailObjectVersionId: thumbnailReference.versionId ?? null,
+        processingLeaseToken,
+      });
       await this.repository.recordProviderFailure({
         mediaAssetId: asset.mediaAssetId,
         actorUserId: input.actorUserId,
         eventType: "checklist_photo_evidence.storage.recovery_copy_started",
         reasonCode: null,
       });
-      await this.ensureImmutableObject(
-        this.recoveryStorage, keys.recovery, processed.canonical, processed.mimeType, processed.canonicalSha256,
+      const recoveryReference = await this.ensureImmutableObject(
+        this.recoveryStorage, keys.recovery, processed.canonical, processed.mimeType,
+        processed.canonicalSha256, checkpoints.recovery,
       );
       await this.repository.recordVerifiedReplica({
         mediaAssetId: asset.mediaAssetId,
         actorUserId: input.actorUserId,
         replicaRole: "recovery",
         objectKey: keys.recovery,
+        objectVersionId: recoveryReference.versionId ?? null,
         sha256: processed.canonicalSha256,
         byteCount: processed.canonical.byteLength,
+        processingLeaseToken,
       });
     } catch (error) {
       await this.repository.recordProviderFailure({
@@ -529,6 +547,7 @@ export class PhotoMediaStorageService {
       actorUserId: input.actorUserId,
       canonicalObjectKey: keys.canonical,
       thumbnailObjectKey: keys.thumbnail,
+      thumbnailObjectVersionId: thumbnailReference.versionId ?? null,
       recoveryObjectKey: keys.recovery,
       originalSha256: createHash("sha256").update(raw).digest("hex"),
       canonicalSha256: processed.canonicalSha256,
@@ -539,6 +558,7 @@ export class PhotoMediaStorageService {
       mimeType: processed.mimeType,
       scannerEngine: assuranceEngine,
       scannerSignatureVersion: assuranceVersion,
+      processingLeaseToken,
     });
 
       return this.disposeFinalizedRaw(asset, input.actorUserId);
@@ -576,7 +596,9 @@ export class PhotoMediaStorageService {
     }
     const candidate = await this.repository.claimQuarantinedDisposal(input.mediaAssetId);
     try {
-      await this.primaryStorage.deleteObject(candidate.rawObjectKey);
+      await this.primaryStorage.deleteObject(
+        this.toObjectReference(candidate.rawObjectKey, candidate.rawObjectVersionId),
+      );
       await this.repository.markPartialUploadDisposed({
         mediaAssetId: candidate.mediaAssetId,
         cleanupLeaseToken: candidate.cleanupLeaseToken,
@@ -605,16 +627,129 @@ export class PhotoMediaStorageService {
     expectedBody: Buffer,
     contentType: string,
     sha256: string,
-  ): Promise<void> {
-    const existing = await storage.headObject(objectKey);
-    if (!existing) {
-      await storage.putObject({ objectKey, body: expectedBody, contentType, sha256 });
+    checkpoint?: PhotoMediaObjectReference,
+  ): Promise<PhotoMediaObjectReference> {
+    let reference: PhotoMediaObjectReference;
+    if (this.requiresObjectVersionId()) {
+      if (checkpoint) {
+        if (checkpoint.objectKey !== objectKey || !checkpoint.versionId) {
+          throw new ServiceUnavailableException("Photo media object checkpoint conflicts with retry");
+        }
+        return this.verifyExactObject(storage, checkpoint, expectedBody, sha256);
+      } else {
+        return this.createOrRecoverExactObject(storage, {
+          objectKey,
+          body: expectedBody,
+          contentType,
+          sha256,
+        });
+      }
+    } else {
+      const existing = await storage.headObject(objectKey);
+      if (existing) {
+        reference = { objectKey, ...(existing.versionId ? { versionId: existing.versionId } : {}) };
+      } else {
+        const putResult = await storage.putObject({ objectKey, body: expectedBody, contentType, sha256 });
+        const versionId = this.resolvePutVersion(putResult);
+        reference = { objectKey, ...(versionId ? { versionId } : {}) };
+      }
     }
-    const storedBody = await storage.getObject(objectKey);
+    const exactReference = this.toObjectReference(reference.objectKey, reference.versionId);
+    const storedBody = await storage.getObject(exactReference);
     const storedDigest = createHash("sha256").update(storedBody).digest("hex");
     if (storedBody.byteLength !== expectedBody.byteLength || storedDigest !== sha256) {
       throw new ServiceUnavailableException("Photo media immutable object integrity verification failed");
     }
+    return typeof exactReference === "string" ? { objectKey: exactReference } : exactReference;
+  }
+
+  private async createOrRecoverExactObject(
+    storage: PhotoMediaObjectStoragePort,
+    input: { objectKey: string; body: Buffer; contentType: string; sha256: string },
+  ): Promise<PhotoMediaObjectReference> {
+    if (!this.requiresObjectVersionId()) {
+      const putResult = await storage.putObject(input);
+      const versionId = this.resolvePutVersion(putResult);
+      return { objectKey: input.objectKey, ...(versionId ? { versionId } : {}) };
+    }
+    const inventory = await storage.listObjectVersions({ objectKey: input.objectKey });
+    if (inventory.versions.length > 1) {
+      throw new ServiceUnavailableException("Photo media object version recovery is ambiguous");
+    }
+    let reference = inventory.versions[0];
+    if (!reference) {
+      try {
+        const putResult = await storage.putObject({ ...input, createOnly: true });
+        reference = {
+          objectKey: input.objectKey,
+          versionId: this.resolvePutVersion(putResult),
+        };
+      } catch (error) {
+        if (!(error instanceof PhotoMediaObjectCreateConflictError)) throw error;
+        const recovered = await storage.listObjectVersions({ objectKey: input.objectKey });
+        if (recovered.versions.length !== 1) {
+          throw new ServiceUnavailableException("Photo media object version recovery is ambiguous");
+        }
+        reference = recovered.versions[0];
+      }
+    }
+    if (reference.objectKey !== input.objectKey) {
+      throw new ServiceUnavailableException("Photo media object version recovery is ambiguous");
+    }
+    return this.verifyExactObject(storage, reference, input.body, input.sha256);
+  }
+
+  private async verifyExactObject(
+    storage: PhotoMediaObjectStoragePort,
+    reference: PhotoMediaObjectReference,
+    expectedBody: Buffer,
+    sha256: string,
+  ): Promise<PhotoMediaObjectReference> {
+    if (!reference.versionId) {
+      throw new ServiceUnavailableException("Photo media object version identity is unavailable");
+    }
+    const head = await storage.headObject(reference);
+    const storedBody = await storage.getObject(reference);
+    const storedDigest = createHash("sha256").update(storedBody).digest("hex");
+    if (
+      !head || head.byteCount !== expectedBody.byteLength || head.sha256 !== sha256 ||
+      storedBody.byteLength !== expectedBody.byteLength || storedDigest !== sha256
+    ) {
+      throw new ServiceUnavailableException("Photo media immutable object integrity verification failed");
+    }
+    return reference;
+  }
+
+  private reserveExactRecoveryOperations(): Promise<void> {
+    if (!this.requiresObjectVersionId()) return Promise.resolve();
+    return this.repository.reserveProviderOperations({
+      classAOperations: 1,
+      classBOperations: 2,
+      monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
+      monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
+    });
+  }
+
+  private resolvePutVersion(result: { versionId?: string } | undefined): string | undefined {
+    const versionId = result?.versionId;
+    if (this.requiresObjectVersionId() && !versionId) {
+      throw new ServiceUnavailableException("Photo media object version identity is unavailable");
+    }
+    return versionId;
+  }
+
+  private toObjectReference(
+    objectKey: string,
+    versionId: string | null | undefined,
+  ): string | PhotoMediaObjectReference {
+    if (this.requiresObjectVersionId() && !versionId) {
+      throw new ServiceUnavailableException("Photo media object version identity is unavailable");
+    }
+    return versionId ? { objectKey, versionId } : objectKey;
+  }
+
+  private requiresObjectVersionId(): boolean {
+    return this.configuration.provider !== "r2";
   }
 
   private async disposeFinalizedRaw(
@@ -629,7 +764,9 @@ export class PhotoMediaStorageService {
       return { mediaAssetId: asset.mediaAssetId, state: "ready" as const, rawDisposal: "pending" as const };
     }
     try {
-      await this.primaryStorage.deleteObject(candidate.rawObjectKey);
+      await this.primaryStorage.deleteObject(
+        this.toObjectReference(candidate.rawObjectKey, candidate.rawObjectVersionId),
+      );
       await this.repository.markRawDisposed({
         mediaAssetId: asset.mediaAssetId,
         actorUserId,

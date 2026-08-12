@@ -3,6 +3,7 @@ import {
   buildS3CompatiblePhotoMediaObjectStorageClientConfiguration,
   S3CompatiblePhotoMediaObjectStorage,
 } from "./s3-compatible-photo-media-object-storage";
+import { PhotoMediaObjectCreateConflictError } from "../application/photo-media-storage.ports";
 
 jest.mock("@aws-sdk/client-s3", () => {
   const actual = jest.requireActual("@aws-sdk/client-s3");
@@ -113,6 +114,63 @@ describe("S3CompatiblePhotoMediaObjectStorage", () => {
       contentType: "image/webp",
       sha256: "a".repeat(64),
     })).resolves.toEqual({ versionId: "opaque-version-1" });
+  });
+
+  it("uses an If-None-Match create-only write when requested", async () => {
+    const send = jest.fn().mockResolvedValue({ VersionId: "create-version-1" });
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      },
+      { send } as never,
+      jest.fn(),
+    );
+
+    await expect(storage.putObject({
+      objectKey: "transient/companies/a/media/b/raw",
+      body: Buffer.from("raw"),
+      contentType: "image/webp",
+      sha256: "a".repeat(64),
+      createOnly: true,
+    })).resolves.toEqual({ versionId: "create-version-1" });
+    expect(send.mock.calls[0]?.[0]?.input).toEqual(expect.objectContaining({
+      IfNoneMatch: "*",
+    }));
+  });
+
+  it("classifies only a create-only precondition conflict without exposing provider details", async () => {
+    const send = jest.fn().mockRejectedValue(Object.assign(
+      new Error("bucket/transient/secret-version-2 already exists"),
+      { name: "PreconditionFailed", $metadata: { httpStatusCode: 412 } },
+    ));
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      },
+      { send } as never,
+      jest.fn(),
+    );
+
+    const error = await storage.putObject({
+      objectKey: "transient/companies/a/media/b/raw",
+      body: Buffer.from("raw"),
+      contentType: "image/webp",
+      sha256: "a".repeat(64),
+      createOnly: true,
+    }).then(() => null, (caught: unknown) => caught as Error);
+    expect(error).toBeInstanceOf(PhotoMediaObjectCreateConflictError);
+    expect(error?.message).toBe("Photo media immutable object create conflicted");
+    expect(error?.message).not.toContain("secret-version-2");
   });
 
   it("passes a typed object version reference to get", async () => {
@@ -372,6 +430,169 @@ describe("S3CompatiblePhotoMediaObjectStorage", () => {
     expect(error?.message).not.toContain(malformedVersionId);
   });
 
+  it.each(["put", "get", "list"])(
+    "rejects the suspended-versioning null sentinel for local exact-version %s",
+    async (operation) => {
+      const objectKey = "locked/companies/a/media/b/canonical.webp";
+      const send = jest.fn().mockResolvedValue(
+        operation === "get"
+          ? { VersionId: "null", Body: { transformToByteArray: async () => Uint8Array.from([1]) } }
+          : operation === "list"
+            ? { Versions: [{ Key: objectKey, VersionId: "null" }], IsTruncated: false }
+            : { VersionId: "null" },
+      );
+      const storage = new S3CompatiblePhotoMediaObjectStorage(
+        {
+          bucket: "hr-axis-media-primary",
+          endpoint: "http://object-storage:8333",
+          region: "us-east-1",
+          forcePathStyle: true,
+          requireObjectVersionId: true,
+          credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+        },
+        { send } as never,
+        jest.fn(),
+      );
+
+      const result = operation === "get"
+        ? storage.getObject({ objectKey, versionId: "null" })
+        : operation === "list"
+          ? storage.listObjectVersions({ objectKey })
+          : storage.putObject({
+            objectKey, body: Buffer.from("canonical"), contentType: "image/webp", sha256: "a".repeat(64),
+          });
+      await expect(result).rejects.toThrow("version");
+      if (operation === "get") expect(send).not.toHaveBeenCalled();
+    },
+  );
+
+  it("fails closed when a local provider omits a response version identity", async () => {
+    const send = jest.fn().mockResolvedValue({});
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      } as never,
+      { send } as never,
+      jest.fn(),
+    );
+
+    await expect(storage.putObject({
+      objectKey: "transient/companies/a/media/b/raw",
+      body: Buffer.from("raw"),
+      contentType: "image/webp",
+      sha256: "a".repeat(64),
+    })).rejects.toThrow("did not return an object version identity");
+
+    send.mockResolvedValueOnce({
+      ContentLength: 3,
+      Metadata: { sha256: "a".repeat(64) },
+      ContentType: "image/webp",
+    });
+    await expect(storage.headObject({ objectKey: "transient/companies/a/media/b/raw", versionId: "known-version" }))
+      .rejects.toThrow("did not return an object version identity");
+
+    send.mockResolvedValueOnce({ DeleteMarker: true });
+    await expect(storage.deleteObject({ objectKey: "transient/companies/a/media/b/raw", versionId: "known-version" }))
+      .rejects.toThrow("delete marker");
+  });
+
+  it("rejects key-only local reads, heads, deletes, and signed references before provider I/O", async () => {
+    const send = jest.fn();
+    const signer = jest.fn();
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      } as never,
+      { send } as never,
+      signer,
+    );
+
+    await expect(storage.getObject("locked/companies/a/media/b/canonical.webp"))
+      .rejects.toThrow("object version identity is required");
+    await expect(storage.headObject("locked/companies/a/media/b/canonical.webp"))
+      .rejects.toThrow("object version identity is required");
+    await expect(storage.deleteObject("locked/companies/a/media/b/canonical.webp"))
+      .rejects.toThrow("object version identity is required");
+    await expect(storage.createSignedRead({
+      objectKey: "locked/companies/a/media/b/canonical.webp",
+      expiresInSeconds: 120,
+    })).rejects.toThrow("object version identity is required");
+
+    expect(send).not.toHaveBeenCalled();
+    expect(signer).not.toHaveBeenCalled();
+  });
+
+  it("rejects local GET and HEAD responses for a different version", async () => {
+    const send = jest.fn()
+      .mockResolvedValueOnce({
+        VersionId: "version-2",
+        Body: { transformToByteArray: async () => Uint8Array.from([1]) },
+      })
+      .mockResolvedValueOnce({
+        VersionId: "version-2",
+        ContentLength: 1,
+        Metadata: { sha256: "a".repeat(64) },
+      });
+    const storage = new S3CompatiblePhotoMediaObjectStorage({
+      bucket: "hr-axis-media-primary", endpoint: "http://object-storage:8333",
+      region: "us-east-1", forcePathStyle: true, requireObjectVersionId: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    }, { send } as never, jest.fn());
+
+    await expect(storage.getObject({ objectKey: "locked/a", versionId: "version-1" }))
+      .rejects.toThrow("requested object version");
+    await expect(storage.headObject({ objectKey: "locked/a", versionId: "version-1" }))
+      .rejects.toThrow("requested object version");
+  });
+
+  it("proves an exact local delete with a post-delete 404", async () => {
+    const notFound = Object.assign(new Error("not found"), { $metadata: { httpStatusCode: 404 } });
+    const send = jest.fn()
+      .mockResolvedValueOnce({ VersionId: "version-1", DeleteMarker: false })
+      .mockRejectedValueOnce(notFound);
+    const storage = new S3CompatiblePhotoMediaObjectStorage({
+      bucket: "hr-axis-media-primary", endpoint: "http://object-storage:8333",
+      region: "us-east-1", forcePathStyle: true, requireObjectVersionId: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    }, { send } as never, jest.fn());
+
+    await expect(storage.deleteObject({ objectKey: "locked/a", versionId: "version-1" }))
+      .resolves.toEqual({ versionId: "version-1", deleteMarker: false });
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a mismatched or still-present local delete", async () => {
+    const mismatched = jest.fn().mockResolvedValue({ VersionId: "version-2", DeleteMarker: false });
+    const mismatchStorage = new S3CompatiblePhotoMediaObjectStorage({
+      bucket: "hr-axis-media-primary", endpoint: "http://object-storage:8333",
+      region: "us-east-1", forcePathStyle: true, requireObjectVersionId: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    }, { send: mismatched } as never, jest.fn());
+    await expect(mismatchStorage.deleteObject({ objectKey: "locked/a", versionId: "version-1" }))
+      .rejects.toThrow("different object version");
+
+    const stillPresent = jest.fn()
+      .mockResolvedValueOnce({ VersionId: "version-1", DeleteMarker: false })
+      .mockResolvedValueOnce({ VersionId: "version-1", ContentLength: 1, Metadata: { sha256: "a".repeat(64) } });
+    const presentStorage = new S3CompatiblePhotoMediaObjectStorage({
+      bucket: "hr-axis-media-primary", endpoint: "http://object-storage:8333",
+      region: "us-east-1", forcePathStyle: true, requireObjectVersionId: true,
+      credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+    }, { send: stillPresent } as never, jest.fn());
+    await expect(presentStorage.deleteObject({ objectKey: "locked/a", versionId: "version-1" }))
+      .rejects.toThrow("still exists");
+  });
+
   it("fails before the S3 client sees an unsafe key", async () => {
     const send = jest.fn();
     const storage = new S3CompatiblePhotoMediaObjectStorage(
@@ -463,5 +684,59 @@ describe("S3CompatiblePhotoMediaObjectStorage", () => {
     );
 
     await expect(storage.listObjectKeys({ prefix: "locked/" })).rejects.toThrow("object key");
+  });
+
+  it("lists exact local object versions for crash recovery", async () => {
+    const objectKey = "locked/companies/a/media/b/canonical.webp";
+    const send = jest.fn().mockResolvedValue({
+      Versions: [
+        { Key: objectKey, VersionId: "opaque-version-1" },
+        { Key: `${objectKey}.other`, VersionId: "ignored-version" },
+      ],
+      DeleteMarkers: [],
+      IsTruncated: false,
+    });
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      },
+      { send } as never,
+      jest.fn(),
+    );
+
+    await expect(storage.listObjectVersions({ objectKey })).resolves.toEqual({
+      versions: [{ objectKey, versionId: "opaque-version-1" }],
+    });
+    expect(send.mock.calls[0]?.[0]?.input).toEqual({
+      Bucket: "hr-axis-media-primary",
+      Prefix: objectKey,
+      MaxKeys: 3,
+    });
+  });
+
+  it.each([
+    [{ Versions: [], DeleteMarkers: [], IsTruncated: true }, "ambiguous"],
+    [{ Versions: [], DeleteMarkers: [{ Key: "locked/a", VersionId: "marker" }], IsTruncated: false }, "delete marker"],
+    [{ Versions: [{ Key: "locked/a" }], DeleteMarkers: [], IsTruncated: false }, "version identity"],
+  ])("fails closed for unsafe local version inventory %#", async (result, message) => {
+    const storage = new S3CompatiblePhotoMediaObjectStorage(
+      {
+        bucket: "hr-axis-media-primary",
+        endpoint: "http://object-storage:8333",
+        region: "us-east-1",
+        forcePathStyle: true,
+        requireObjectVersionId: true,
+        credentials: { accessKeyId: "key", secretAccessKey: "secret" },
+      },
+      { send: jest.fn().mockResolvedValue(result) } as never,
+      jest.fn(),
+    );
+
+    await expect(storage.listObjectVersions({ objectKey: "locked/a" })).rejects.toThrow(message);
   });
 });

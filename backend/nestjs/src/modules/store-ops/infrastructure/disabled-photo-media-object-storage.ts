@@ -12,4 +12,5 @@ export class DisabledPhotoMediaObjectStorage implements PhotoMediaObjectStorageP
   async headObject(): Promise<never> { return this.unavailable(); }
   async deleteObject(): Promise<never> { return this.unavailable(); }
   async listObjectKeys(): Promise<never> { return this.unavailable(); }
+  async listObjectVersions(): Promise<never> { return this.unavailable(); }
 }

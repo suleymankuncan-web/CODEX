@@ -2054,6 +2054,8 @@ CREATE TABLE IF NOT EXISTS ops.media_asset (
     store_id UUID,
     classification TEXT NOT NULL,
     state TEXT NOT NULL DEFAULT 'initiated',
+    provider_adapter_id TEXT NOT NULL DEFAULT 'r2',
+    jurisdiction TEXT NOT NULL DEFAULT 'eu',
     capture_source TEXT NOT NULL,
     raw_object_key TEXT NOT NULL,
     raw_object_version_id TEXT,
@@ -2111,6 +2113,10 @@ CREATE TABLE IF NOT EXISTS ops.media_asset (
         state IN ('initiated', 'uploaded', 'quarantined', 'accepted', 'canonicalized', 'ready', 'rejected', 'expired', 'purge_pending', 'deleted_tombstone')
     ),
     CONSTRAINT ck_media_asset_capture_source CHECK (capture_source IN ('camera', 'gallery', 'system_generated')),
+    CONSTRAINT ck_media_asset_storage_provider_jurisdiction CHECK (
+        (provider_adapter_id = 'r2' AND jurisdiction = 'eu')
+        OR (provider_adapter_id = 'seaweedfs' AND jurisdiction = 'onprem')
+    ),
     CONSTRAINT ck_media_asset_raw_key_private CHECK (
         raw_object_key = btrim(raw_object_key)
         AND length(raw_object_key) > 0

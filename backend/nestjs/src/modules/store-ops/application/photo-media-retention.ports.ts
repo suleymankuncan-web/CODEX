@@ -6,6 +6,7 @@ import {
   PhotoMediaPurgeManifestSource,
   PhotoMediaUsageForecast,
 } from "./photo-media-retention.contract";
+import { PhotoMediaStorageIdentity } from "./photo-media-storage.contract";
 
 export interface PhotoMediaRetentionRepositoryPort {
   createPurgeManifest(input: {
@@ -15,12 +16,14 @@ export interface PhotoMediaRetentionRepositoryPort {
     actorUserId: string | null;
     ttlMinutes: number;
     allowedCompanyIds?: string[];
+    storageIdentity?: PhotoMediaStorageIdentity;
   }): Promise<PhotoMediaPurgeManifestReceipt>;
   claimPurgeManifest(input: {
     manifestId: string;
     manifestDigest: string;
     actorUserId: string | null;
     allowedCompanyIds?: string[];
+    storageIdentity?: PhotoMediaStorageIdentity;
   }): Promise<PhotoMediaPurgeClaim>;
   markPurgeManifestCompleted(input: {
     manifestId: string;

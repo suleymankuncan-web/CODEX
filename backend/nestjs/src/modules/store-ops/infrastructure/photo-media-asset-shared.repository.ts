@@ -3,7 +3,9 @@ import { DatabaseService } from "../../../shared/database/database.service";
 import {
   PHOTO_MEDIA_QUOTA_LOCK_KEY,
   PHOTO_MEDIA_USAGE_SCOPE,
+  HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY,
   PhotoMediaAssetRecord,
+  PhotoMediaStorageIdentity,
 } from "../application/photo-media-storage.contract";
 
 export async function getPhotoMediaUsage(databaseService: DatabaseService) {
@@ -38,31 +40,51 @@ export async function recordPhotoMediaAccess(
 export async function listPhotoMediaReconciliationInventory(
   databaseService: DatabaseService,
   allowedCompanyIds?: string[],
+  storageIdentity?: PhotoMediaStorageIdentity,
 ) {
+  const effectiveStorageIdentity = storageIdentity ?? HISTORICAL_R2_PHOTO_MEDIA_STORAGE_IDENTITY;
   const result = await databaseService.query<{
     media_asset_id: string; state: PhotoMediaAssetRecord["state"];
-    raw_object_key: string | null; raw_disposed_at: Date | null;
+    raw_object_key: string | null; raw_object_version_id: string | null; raw_disposed_at: Date | null;
     canonical_sha256: string | null; byte_count: string | null;
     canonical_object_key: string | null; thumbnail_object_key: string | null;
+    thumbnail_object_version_id: string | null;
   }>(`
-    SELECT ma.media_asset_id, ma.state, ma.raw_object_key, ma.raw_disposed_at,
-           ma.canonical_sha256, ma.byte_count, ma.canonical_object_key, ma.thumbnail_object_key
+    SELECT ma.media_asset_id, ma.state, ma.raw_object_key, ma.raw_object_version_id, ma.raw_disposed_at,
+           ma.canonical_sha256, ma.byte_count, ma.canonical_object_key, ma.thumbnail_object_key,
+           ma.thumbnail_object_version_id
     FROM ops.media_asset ma
     WHERE ma.state <> 'deleted_tombstone'
       AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
+      AND ma.provider_adapter_id = $2
+      AND ma.jurisdiction = $3
+      AND (ma.state <> 'ready' OR EXISTS (
+        SELECT 1 FROM ops.media_asset_replica active_primary
+        WHERE active_primary.media_asset_id = ma.media_asset_id
+          AND active_primary.replica_role = 'primary'
+          AND active_primary.replica_state = 'verified'
+          AND active_primary.is_active
+          AND active_primary.provider_adapter_id = $2
+          AND active_primary.jurisdiction = $3
+      ))
     ORDER BY ma.media_asset_id
-  `, [allowedCompanyIds ?? null]);
+  `, [allowedCompanyIds ?? null, effectiveStorageIdentity.provider, effectiveStorageIdentity.jurisdiction]);
   const replicas = await databaseService.query<{
     media_asset_id: string; replica_role: "primary" | "recovery"; object_key: string;
+    object_version_id: string | null;
     content_sha256: string | null; byte_count: string | null; is_active: boolean;
   }>(`
-    SELECT media_asset_id, replica_role, object_key, content_sha256, byte_count, is_active
+    SELECT media_asset_id, replica_role, object_key, object_version_id, content_sha256, byte_count, is_active
     FROM ops.media_asset_replica replica
     JOIN ops.media_asset ma USING (media_asset_id)
     WHERE replica.replica_state IN ('copying', 'verified')
       AND ($1::uuid[] IS NULL OR ma.company_id = ANY($1::uuid[]))
+      AND ($2::text IS NULL OR replica.provider_adapter_id = $2)
+      AND ($3::text IS NULL OR replica.jurisdiction = $3)
+      AND ma.provider_adapter_id = $2
+      AND ma.jurisdiction = $3
     ORDER BY media_asset_id, replica_role, replica_generation
-  `, [allowedCompanyIds ?? null]);
+  `, [allowedCompanyIds ?? null, effectiveStorageIdentity.provider, effectiveStorageIdentity.jurisdiction]);
   const replicasByAsset = new Map<string, typeof replicas.rows>();
   for (const replica of replicas.rows) {
     const current = replicasByAsset.get(replica.media_asset_id) ?? [];
@@ -78,14 +100,22 @@ export async function listPhotoMediaReconciliationInventory(
       primaryObjects: [
         ...assetReplicas.filter((replica) => replica.replica_role === "primary").map((replica) => ({
           objectKey: replica.object_key,
+          ...(replica.object_version_id ? { versionId: replica.object_version_id } : {}),
           ...(replica.is_active && replica.content_sha256 ? { sha256: replica.content_sha256 } : {}),
           ...(replica.is_active && replica.byte_count ? { byteCount: Number(replica.byte_count) } : {}),
         })),
-        ...(row.thumbnail_object_key ? [{ objectKey: row.thumbnail_object_key }] : []),
-        ...(row.raw_object_key && !row.raw_disposed_at ? [{ objectKey: row.raw_object_key }] : []),
+        ...(row.thumbnail_object_key ? [{
+          objectKey: row.thumbnail_object_key,
+          ...(row.thumbnail_object_version_id ? { versionId: row.thumbnail_object_version_id } : {}),
+        }] : []),
+        ...(row.raw_object_key && !row.raw_disposed_at ? [{
+          objectKey: row.raw_object_key,
+          ...(row.raw_object_version_id ? { versionId: row.raw_object_version_id } : {}),
+        }] : []),
       ],
       recoveryObjects: assetReplicas.filter((replica) => replica.replica_role === "recovery").map((replica) => ({
         objectKey: replica.object_key,
+        ...(replica.object_version_id ? { versionId: replica.object_version_id } : {}),
         ...(replica.is_active
           ? (replica.content_sha256 ? { sha256: replica.content_sha256 } : canonicalProof)
           : {}),
@@ -96,7 +126,9 @@ export async function listPhotoMediaReconciliationInventory(
 }
 
 export async function recordPhotoMediaProviderFailure(
-  databaseService: DatabaseService, input: Record<string, unknown>,
+  databaseService: DatabaseService,
+  storageIdentity: PhotoMediaStorageIdentity,
+  input: Record<string, unknown>,
 ): Promise<void> {
   const allowedEvents = new Set([
     "checklist_photo_evidence.storage.recovery_copy_started",
@@ -115,8 +147,10 @@ export async function recordPhotoMediaProviderFailure(
     )
     SELECT $1::uuid, $4, media_asset_id, company_id, media_asset_id::text, $3
     FROM ops.media_asset WHERE media_asset_id = $2::uuid
+      AND provider_adapter_id = $5 AND jurisdiction = $6
     RETURNING photo_media_storage_event_id
-  `, [input.actorUserId, input.mediaAssetId, input.reasonCode, eventType]);
+  `, [input.actorUserId, input.mediaAssetId, input.reasonCode, eventType,
+    storageIdentity.provider, storageIdentity.jurisdiction]);
   if (result.rows.length !== 1) {
     throw new BadRequestException("Photo media provider failure asset is unavailable");
   }
@@ -192,7 +226,10 @@ export async function reservePhotoMediaProviderOperations(
 export function mapPhotoMediaAsset(row: {
   media_asset_id: string; company_id: string; region_id: string | null; store_id: string | null;
   state: PhotoMediaAssetRecord["state"]; raw_object_key?: string;
+  raw_object_version_id?: string | null;
   canonical_object_key?: string | null; thumbnail_object_key?: string | null;
+  thumbnail_object_version_id?: string | null;
+  primary_object_version_id?: string | null;
   canonical_sha256?: string | null; byte_count?: string | null;
   storage_attempt_id?: string | null; raw_disposed_at?: Date | null;
   classification?: PhotoMediaAssetRecord["classification"];
@@ -204,8 +241,11 @@ export function mapPhotoMediaAsset(row: {
     ...(row.classification ? { classification: row.classification } : {}),
     ...(row.capture_source ? { captureSource: row.capture_source } : {}),
     ...(row.raw_object_key ? { rawObjectKey: row.raw_object_key } : {}),
+    rawObjectVersionId: row.raw_object_version_id ?? null,
     canonicalObjectKey: row.canonical_object_key ?? null,
+    canonicalObjectVersionId: row.primary_object_version_id ?? null,
     thumbnailObjectKey: row.thumbnail_object_key ?? null,
+    thumbnailObjectVersionId: row.thumbnail_object_version_id ?? null,
     canonicalSha256: row.canonical_sha256 ?? null,
     canonicalByteCount: row.byte_count === null || row.byte_count === undefined ? null : Number(row.byte_count),
     storageAttemptId: row.storage_attempt_id ?? null, rawDisposedAt: row.raw_disposed_at ?? null,
