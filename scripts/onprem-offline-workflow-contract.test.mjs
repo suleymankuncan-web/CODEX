@@ -371,7 +371,10 @@ test('offline rehearsal seals downloaded bundle and trust material under a fresh
 
 test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound negative probes', () => {
   const rehearsal = jobSection('offline_rehearsal')
-  assert.match(rehearsal, /docker_egress_chain=HR_AXIS_OFFLINE_DOCKER_EGRESS/)
+  const dockerChain = rehearsal.match(/docker_egress_chain=([A-Z0-9_]+)/)?.[1]
+  assert.equal(dockerChain, 'HR_AXIS_OFF_DOCKER_EGRESS')
+  assert.ok(dockerChain.length <= 28, `iptables chain name exceeds the Linux 28-character limit: ${dockerChain}`)
+  assert.doesNotMatch(rehearsal, /HR_AXIS_OFFLINE_DOCKER_EGRESS/)
   assert.match(rehearsal, /sudo iptables -N "\$docker_egress_chain"/)
   assert.match(rehearsal, /sudo iptables -I DOCKER-USER 1 -j "\$docker_egress_chain"/)
   assert.match(rehearsal, /sudo iptables -I FORWARD 1 -j "\$docker_egress_chain"/)
@@ -427,7 +430,7 @@ test('Docker egress rejection rule is accepted by the Linux iptables parser', (c
     return
   }
   const parsed = spawnSync('iptables-translate', [
-    '-A', 'HR_AXIS_OFFLINE_DOCKER_EGRESS',
+     '-A', 'HR_AXIS_OFF_DOCKER_EGRESS',
     '-i', 'br+', '!', '-o', 'br+',
     '-m', 'conntrack', '--ctstate', 'NEW',
     '-j', 'REJECT', '--reject-with', 'icmp-port-unreachable',

@@ -12,6 +12,7 @@ const operationDir = join(repo, 'infra', 'onprem', 'offline', 'operations')
 const recoveryScripts = ['backup.sh', 'restore.sh', 'upgrade.sh', 'rollback.sh']
 const shell = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\sh.exe' : 'sh'
 const cygpath = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\cygpath.exe' : null
+const cannotCreateRootPrivateFixture = process.platform !== 'win32' && process.getuid?.() !== 0
 
 function shellPath(pathname) {
   if (!cygpath) return pathname
@@ -538,6 +539,7 @@ test('wrong trust, inventory tamper, and exact target collision fail before rest
 })
 
 test('release and backup trust keys remain distinct and cross-key restore fails before Docker mutation', (t) => {
+  if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned restore seal fixture')
   if (process.platform === 'win32' && !existsSync(shell)) return t.skip('POSIX shell unavailable on Windows')
   const value = fixture()
   try {
@@ -586,6 +588,7 @@ test('backup accepts an absent one-shot container but rejects running seed, unkn
 })
 
 test('restore invokes target-bound bootstrap, binder, one migration, health checks, and exact cleanup', (t) => {
+  if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned restore seal fixture')
   if (process.platform === 'win32' && !existsSync(shell)) return t.skip('POSIX shell unavailable on Windows')
   const value = fixture()
   try {

@@ -432,7 +432,7 @@ jobs:
           sudo chown 0:0 "$RUNNER_TEMP/offline-firewall6.snapshot"
           sudo chmod 600 "$RUNNER_TEMP/offline-firewall.snapshot"
           sudo chmod 600 "$RUNNER_TEMP/offline-firewall6.snapshot"
-          docker_egress_chain=HR_AXIS_OFFLINE_DOCKER_EGRESS
+          docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
           host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS
           if sudo iptables -S "$docker_egress_chain" >/dev/null 2>&1; then
@@ -633,7 +633,7 @@ jobs:
           backend_image="$(sudo awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
           printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'
           sudo docker image inspect "$backend_image" --format '{{.Id}}' | grep -Fqx "$backend_image"
-          docker_egress_chain=HR_AXIS_OFFLINE_DOCKER_EGRESS
+          docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
           host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS
           docker_egress_rules="$(sudo iptables -S "$docker_egress_chain")"
@@ -795,7 +795,7 @@ jobs:
             sudo sh -c 'iptables-restore < "$1"' sh "$RUNNER_TEMP/offline-firewall.snapshot"
             test -f "$RUNNER_TEMP/offline-firewall6.snapshot"
             sudo sh -c 'ip6tables-restore < "$1"' sh "$RUNNER_TEMP/offline-firewall6.snapshot"
-            if sudo iptables -S HR_AXIS_OFFLINE_DOCKER_EGRESS >/dev/null 2>&1 || sudo iptables -S HR_AXIS_OFFLINE_HOST_EGRESS >/dev/null 2>&1 || sudo ip6tables -S HR_AXIS_OFFLINE_HOST6_EGRESS >/dev/null 2>&1; then
+            if sudo iptables -S HR_AXIS_OFF_DOCKER_EGRESS >/dev/null 2>&1 || sudo iptables -S HR_AXIS_OFFLINE_HOST_EGRESS >/dev/null 2>&1 || sudo ip6tables -S HR_AXIS_OFFLINE_HOST6_EGRESS >/dev/null 2>&1; then
               echo 'offline egress chain remained after complete firewall restore' >&2
               exit 1
             fi

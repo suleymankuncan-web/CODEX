@@ -5,20 +5,20 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { inspectDockerSaveArchive } from './onprem-offline-archive.mjs'
+import { inspectDockerSaveArchive, MAX_ARCHIVE_JSON_BYTES } from './onprem-offline-archive.mjs'
 
 function header(name, size, type = '0') {
   const value = Buffer.alloc(512); value.write(name, 0, 100, 'ascii'); value.write('0000644\0', 100, 8, 'ascii')
   value.write(`${size.toString(8).padStart(11, '0')}\0`, 124, 12, 'ascii'); value.write('        ', 148, 8, 'ascii'); value.write(type, 156, 1, 'ascii'); value.write('ustar\0', 257, 6, 'ascii'); value.write('00', 263, 2, 'ascii')
   let sum = 0; for (const byte of value) sum += byte; value.write(`${sum.toString(8).padStart(6, '0')}\0 `, 148, 8, 'ascii'); return value
 }
-function archive({ repository = 'registry.example/backend', configBytes = Buffer.from('{"synthetic":true}'), configName, configType = '0', repoTags, layerName = null, layerType = '0', modern = false, manifestFirst = true, extraEntries = [] } = {}) {
+function archive({ repository = 'registry.example/backend', configBytes = Buffer.from('{"synthetic":true}'), configName, configType = '0', repoTags, layerName = null, layerBytes = Buffer.from('layer'), layerType = '0', modern = false, manifestFirst = true, extraEntries = [] } = {}) {
   const id = createHash('sha256').update(configBytes).digest('hex'); const config = configName ?? `${id}.json`
   const configPath = modern ? `blobs/sha256/${id}` : config
   const manifest = Buffer.from(JSON.stringify([{ Config: config, RepoTags: repoTags ?? [`${repository}:synthetic`], Layers: layerName ? [layerName] : [] }]))
   const modernManifest = modern ? Buffer.from(JSON.stringify([{ Config: configPath, RepoTags: repoTags ?? [`${repository}:synthetic`], Layers: layerName ? [layerName] : [] }])) : manifest
   const entries = manifestFirst ? [['manifest.json', modernManifest], [configPath, configBytes, configType]] : [[configPath, configBytes, configType], ['manifest.json', modernManifest]]
-  if (layerName) entries.push([layerName, Buffer.from('layer'), layerType])
+  if (layerName) entries.push([layerName, layerBytes, layerType])
   entries.push(...extraEntries)
   const blocks = []
   for (const [name, body, type = '0'] of entries) blocks.push(header(name, body.length, type), body, Buffer.alloc((512 - (body.length % 512)) % 512))
@@ -55,6 +55,31 @@ test('accepts modern Docker-save OCI blob config paths and validates listed regu
     const result = inspectDockerSaveArchive(file.path, { identity: 'registry.example/backend:synthetic@sha256:' + 'a'.repeat(64), imageId: value.id })
     assert.equal(result.config, 'blobs/sha256/' + value.id.slice('sha256:'.length)); assert.equal(result.imageId, value.id)
     assert.deepEqual(result.layers, ['blobs/sha256/' + 'b'.repeat(64)]); assert.equal(result.layerCount, 1)
+  } finally { rmSync(file.root, { recursive: true, force: true }) }
+})
+
+test('does not apply the bounded JSON config limit to modern OCI layer blobs', () => {
+  const value = archive({
+    modern: true,
+    layerName: 'blobs/sha256/' + 'b'.repeat(64),
+    layerBytes: Buffer.alloc(MAX_ARCHIVE_JSON_BYTES + 512),
+  })
+  const file = fixture(value)
+  try {
+    const result = inspectDockerSaveArchive(file.path, { identity: 'registry.example/backend:synthetic@sha256:' + 'a'.repeat(64), imageId: value.id })
+    assert.equal(result.imageId, value.id)
+    assert.deepEqual(result.layers, ['blobs/sha256/' + 'b'.repeat(64)])
+  } finally { rmSync(file.root, { recursive: true, force: true }) }
+})
+
+test('still rejects an oversized manifest-selected modern OCI config blob', () => {
+  const value = archive({ modern: true, configBytes: Buffer.alloc(MAX_ARCHIVE_JSON_BYTES + 1) })
+  const file = fixture(value)
+  try {
+    assert.throws(
+      () => inspectDockerSaveArchive(file.path, { identity: 'registry.example/backend:synthetic@sha256:' + 'a'.repeat(64), imageId: value.id }),
+      /config.*too large/i,
+    )
   } finally { rmSync(file.root, { recursive: true, force: true }) }
 })
 

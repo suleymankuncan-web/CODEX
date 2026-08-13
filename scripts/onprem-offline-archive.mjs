@@ -188,8 +188,13 @@ export function inspectDockerSaveArchive(archivePath, expected = {}, options = {
       if (parsed.size > MAX_IMAGE_ARCHIVE_BYTES || totalPayload + parsed.size > MAX_IMAGE_ARCHIVE_BYTES) fail('image archive payload exceeds the size limit')
       const dataOffset = offset
       const blocks = Math.ceil(parsed.size / 512)
-      const retainBody = parsed.path === 'manifest.json' || /^[0-9a-f]{64}\.json$/i.test(parsed.path) || /^blobs\/sha256\/[0-9a-f]{64}$/i.test(parsed.path)
-      if (retainBody && parsed.size > MAX_ARCHIVE_JSON_BYTES) fail(`image archive ${parsed.path === 'manifest.json' ? 'manifest.json' : 'config'} is too large`)
+      // The OCI layout uses the same blobs/sha256 namespace for the small JSON
+      // config and potentially very large layer blobs. The manifest is the only
+      // trusted way to identify which blob is the config, so retain only the
+      // manifest during the sequential archive hash pass and read the selected
+      // config from its stable descriptor afterward.
+      const retainBody = parsed.path === 'manifest.json'
+      if (retainBody && parsed.size > MAX_ARCHIVE_JSON_BYTES) fail('image archive manifest.json is too large')
       const body = retainBody ? readAt(fd, dataOffset, parsed.size, archiveHash) : (readDiscard(fd, dataOffset, parsed.size, archiveHash), undefined)
       const padding = blocks * 512 - parsed.size
       if (padding > 0) readDiscard(fd, dataOffset + parsed.size, padding, archiveHash)
@@ -213,8 +218,7 @@ export function inspectDockerSaveArchive(archivePath, expected = {}, options = {
     if (!entries.has(configPath) || !isRegular(entries.get(configPath))) fail('image archive config file is missing or not regular')
     const configEntry = entries.get(configPath)
     if (configEntry.size > MAX_ARCHIVE_JSON_BYTES) fail('image archive config file is too large')
-    if (!configEntry.body) fail('image archive config file is unreadable')
-    const configBytes = configEntry.body
+    const configBytes = configEntry.body ?? readAt(fd, configEntry.dataOffset, configEntry.size)
     const config = parseJson(configBytes, 'config')
     if (!config || typeof config !== 'object' || Array.isArray(config)) fail('image archive config must be a JSON object')
     const configDigest = createHash('sha256').update(configBytes).digest('hex')

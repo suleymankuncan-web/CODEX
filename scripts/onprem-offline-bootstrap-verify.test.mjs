@@ -16,6 +16,7 @@ const runbooks = [
 ]
 const [installRunbook, recoveryRunbook] = runbooks
 const canonical = (value) => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])])) : value
+const cannotCreateRootPrivateFixture = process.platform !== 'win32' && process.getuid?.() !== 0
 
 function fixture({ files = { 'docs/proof.txt': { content: 'synthetic\n', mode: 0o644 } }, manifestPatch = () => {}, bundlePatch = () => {} } = {}) {
   const fixtureParent = process.platform !== 'win32' && process.getuid?.() === 0 ? '/var/lib' : tmpdir()
@@ -61,7 +62,8 @@ test('bootstrap verifier has no pre-verification local import or producer surfac
   assert.doesNotMatch(script, /createPrivateKey|generateKeyPair|\bsign\(/)
 })
 
-test('external pinned bootstrap verifies exact closure and rejects tampering', () => {
+test('external pinned bootstrap verifies exact closure and rejects tampering', (t) => {
+  if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned fixture tree')
   withFixture({}, ({ options, bundle }) => {
     assert.equal(verifyBootstrap(options), true)
     writeFileSync(join(bundle, 'docs', 'proof.txt'), 'substitute\n')
@@ -69,13 +71,15 @@ test('external pinned bootstrap verifies exact closure and rejects tampering', (
   })
 })
 
-test('bootstrap verifier rejects unsigned files and empty directories', () => {
+test('bootstrap verifier rejects unsigned files and empty directories', (t) => {
+  if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned fixture tree')
   withFixture({ bundlePatch: ({ bundle }) => { writeFileSync(join(bundle, 'docs', 'extra.txt'), 'untrusted\n'); mkdirSync(join(bundle, 'docs', 'empty')) } }, ({ options }) => {
     assert.throws(() => verifyBootstrap(options), /closure|extras|directory/i)
   })
 })
 
-test('bootstrap verifier rejects unsafe or duplicate generated paths in a signed manifest', () => {
+test('bootstrap verifier rejects unsafe or duplicate generated paths in a signed manifest', (t) => {
+  if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned fixture tree')
   withFixture({ files: { 'docs/bundle-manifest.json': { content: 'shadow\n', mode: 0o644 } }, manifestPatch: (manifest) => { manifest.files[0].path = 'docs/bundle-manifest.json' } }, ({ options }) => {
     assert.throws(() => verifyBootstrap(options), /path is invalid/i)
   })
@@ -84,7 +88,8 @@ test('bootstrap verifier rejects unsafe or duplicate generated paths in a signed
   })
 })
 
-test('bootstrap verifier checks metadata identity and generated-file mode', () => {
+test('bootstrap verifier checks metadata identity and generated-file mode', (t) => {
+  if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned fixture tree')
   withFixture({ manifestPatch: (manifest) => { manifest.sourceRevision = 'not-a-git-revision' } }, ({ options }) => {
     assert.throws(() => verifyBootstrap(options), /identity mismatch/i)
   })
