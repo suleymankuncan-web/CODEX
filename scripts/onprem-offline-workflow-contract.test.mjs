@@ -108,6 +108,7 @@ test('build job checks out the trusted SHA, consumes proof evidence, and creates
   assert.match(build, /onprem-core-runtime-receipt\.json/)
   assert.match(build, /onprem-keycloak-runtime-receipt\.json/)
   assert.match(build, /onprem-photo-storage-runtime-receipt\.json/)
+  assert.match(build, /copyContentGuardLayerReceipts\(root, output\)/)
   assert.match(build, /onprem-staged-\$\{name\}/)
   assert.match(build, /\['previous', previous[\s\S]*\['next', next/)
   assert.match(build, /same-build-lifecycle-mechanics/)
