@@ -70,19 +70,31 @@ jobs:
           node-version: 24.19.0
 
       - name: Validate caller image-proof run before artifact download
+        id: validate_proof_run
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          PROOF_ARTIFACT_NAME: ${{ inputs.proof_artifact_name }}
           PROOF_RUN_ID: ${{ inputs.proof_run_id }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs'
+
           const expectedSha = process.env.EXPECTED_SHA
+          const proofArtifactName = process.env.PROOF_ARTIFACT_NAME
           const proofRunId = process.env.PROOF_RUN_ID
           const repository = process.env.REPOSITORY
           const token = process.env.GITHUB_TOKEN
-          if (!/^[a-f0-9]{40}$/.test(expectedSha ?? '') || !/^\d+$/.test(proofRunId ?? '') || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository ?? '') || !token) {
+          const isSha = (value) => /^[a-f0-9]{40}$/.test(String(value ?? ''))
+          const isRef = (value) => (
+            typeof value === 'string' && (
+              /^refs\/(?:heads|tags)\/[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(value) ||
+              /^refs\/pull\/[1-9]\d*\/(?:head|merge)$/.test(value)
+            )
+          )
+          if (!isSha(expectedSha) || !/^\d+$/.test(proofRunId ?? '') || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository ?? '') || !token || !/^onprem-image-proof-[a-f0-9]{40}$/.test(proofArtifactName ?? '')) {
             throw new Error('image proof run identity inputs are invalid')
           }
           const endpoint = `https://api.github.com/repos/${repository}/actions/runs/${proofRunId}`
@@ -105,40 +117,84 @@ jobs:
           } catch {
             throw new Error('image proof run response was not valid JSON')
           }
-          if (
-            run?.repository?.full_name !== repository ||
-            run?.path !== '.github/workflows/onprem-image-proof.yml' ||
-            run?.name !== 'on-prem image proof' ||
-            run?.status !== 'completed' ||
-            run?.conclusion !== 'success' ||
-            run?.head_sha !== expectedSha
-          ) {
+          if (run?.repository?.full_name !== repository || run?.status !== 'completed' || run?.conclusion !== 'success' || run?.head_sha !== expectedSha) {
             throw new Error('image proof run identity mismatch')
           }
+          const directStandalone = run?.event === 'workflow_dispatch' && run?.path === '.github/workflows/onprem-image-proof.yml' && run?.name === 'on-prem image proof' && Array.isArray(run?.referenced_workflows) && run.referenced_workflows.length === 0
+          const parentRun = run?.event === 'pull_request' && run?.path === '.github/workflows/required-release-gate.yml' && run?.name === 'Required Release Gate' && Array.isArray(run?.referenced_workflows)
+          let executionSha
+          if (directStandalone) {
+            executionSha = run.head_sha
+          } else if (parentRun) {
+            const workflowReferencePattern = /^([^/]+\/[^/]+)\/(\.github\/workflows\/onprem-image-proof\.yml)@(.*)$/
+            const references = run.referenced_workflows
+              .map((reference) => {
+                const match = typeof reference?.path === 'string' ? reference.path.match(workflowReferencePattern) : undefined
+                return match && match[0] === reference.path ? { reference, repository: match[1], path: match[2], pathSha: match[3] } : undefined
+              })
+              .filter(Boolean)
+            if (references.length !== 1) throw new Error('image proof run referenced workflow identity mismatch')
+            const [{ reference, repository: referenceRepository, path, pathSha }] = references
+            if (referenceRepository !== repository || path !== '.github/workflows/onprem-image-proof.yml' || !/^[a-f0-9]{40}$/.test(pathSha) || reference.sha !== pathSha || !isSha(reference.sha) || !isRef(reference.ref)) {
+              throw new Error('image proof run referenced workflow identity mismatch')
+            }
+            executionSha = reference.sha
+          } else {
+            throw new Error('image proof run identity mismatch')
+          }
+          if (!isSha(executionSha) || proofArtifactName !== `onprem-image-proof-${executionSha}`) {
+            throw new Error('image proof artifact identity mismatch')
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `execution_sha=${executionSha}\n`)
           NODE
 
-      - name: Download exact upstream proof artifacts
+      - name: Download upstream image proof artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           github-token: ${{ github.token }}
           run-id: ${{ inputs.proof_run_id }}
-          pattern: |
-            ${{ inputs.proof_artifact_name }}
-            onprem-core-runtime-proof-${{ inputs.expected_sha }}
-            onprem-keycloak-runtime-proof-${{ inputs.expected_sha }}
-            onprem-photo-storage-proof-${{ inputs.expected_sha }}
+          name: onprem-image-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/onprem-proof-download
+
+      - name: Download upstream core runtime proof
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.proof_run_id }}
+          name: onprem-core-runtime-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/onprem-proof-download
+
+      - name: Download upstream keycloak runtime proof
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.proof_run_id }}
+          name: onprem-keycloak-runtime-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/onprem-proof-download
+
+      - name: Download upstream photo-storage proof
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.proof_run_id }}
+          name: onprem-photo-storage-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
           merge-multiple: true
           path: ${{ runner.temp }}/onprem-proof-download
 
       - name: Validate proof identity and assemble complete evidence
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXECUTION_SHA: ${{ steps.validate_proof_run.outputs.execution_sha }}
           PROOF_ARTIFACT_NAME: ${{ inputs.proof_artifact_name }}
           PROOF_DOWNLOAD: ${{ runner.temp }}/onprem-proof-download
         run: |
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
-          test "$PROOF_ARTIFACT_NAME" = "onprem-image-proof-${EXPECTED_SHA}"
+          [[ "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$PROOF_ARTIFACT_NAME" = "onprem-image-proof-${EXECUTION_SHA}"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           rm -rf proof infra/onprem/core/secret-files infra/onprem/photo-storage/secret-files
           mkdir -p proof
