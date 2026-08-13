@@ -202,6 +202,7 @@ jobs:
           import { createHash } from 'node:crypto'
           import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
           import { basename, join } from 'node:path'
+          import { copyContentGuardLayerReceipts } from './scripts/onprem-offline-content-guard-index.mjs'
           const root = process.env.PROOF_DOWNLOAD
           const output = 'proof'
           const names = [
@@ -234,6 +235,7 @@ jobs:
           for (const name of names) {
             copyNamed(name)
           }
+          copyContentGuardLayerReceipts(root, output)
           for (const name of ['base-license-evidence.tar', 'keycloak-license-paths.txt', 'keycloak-license-reconciliation.json', 'keycloak-license-evidence.tar', 'backend-image-license-reconciliation.json', 'frontend-image-license-reconciliation.json', 'backend-THIRD_PARTY_NOTICES.txt', 'frontend-THIRD_PARTY_NOTICES.txt', 'keycloak-image-manifest.json']) {
             copyNamed(name, false)
           }

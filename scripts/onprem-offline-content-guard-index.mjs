@@ -1,5 +1,6 @@
 import {
   closeSync,
+  copyFileSync,
   constants,
   fstatSync,
   lstatSync,
@@ -174,6 +175,37 @@ function discoverLayerReceiptPaths(baseDir, name) {
   for (const pathValue of names) {
     if (!layerPattern(name).test(pathValue) || seen.has(pathValue)) fail(`content guard ${name} layer receipt path is invalid`)
     seen.add(pathValue)
+  }
+  return names
+}
+
+export function copyContentGuardLayerReceipts(sourceRoot, outputDirectory) {
+  let source
+  let output
+  try {
+    source = realpathSync(sourceRoot)
+    output = realpathSync(outputDirectory)
+  } catch { fail('content guard layer receipt copy roots cannot be resolved') }
+  const receipts = new Map()
+  const receiptPattern = /^(?:backend|frontend|keycloak)-layer-(?:0|[1-9]\d*)-content-guard\.json$/
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const pathname = join(directory, entry.name)
+      if (entry.isSymbolicLink()) fail('content guard proof download contains a symbolic link')
+      if (entry.isDirectory()) {
+        visit(pathname)
+        continue
+      }
+      if (!entry.isFile() || !receiptPattern.test(entry.name)) continue
+      if (receipts.has(entry.name)) fail(`content guard proof download contains duplicate ${entry.name}`)
+      receipts.set(entry.name, pathname)
+    }
+  }
+  visit(source)
+  const names = [...receipts.keys()].sort()
+  for (const name of names) {
+    try { copyFileSync(receipts.get(name), join(output, name), constants.COPYFILE_EXCL) }
+    catch { fail(`content guard layer receipt ${name} could not be copied exclusively`) }
   }
   return names
 }

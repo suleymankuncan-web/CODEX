@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { createHash, generateKeyPairSync } from 'node:crypto'
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { canonicalize, createContentGuardIndex, verifyContentGuardIndex } from './onprem-offline-content-guard-index.mjs'
+import { canonicalize, copyContentGuardLayerReceipts, createContentGuardIndex, verifyContentGuardIndex } from './onprem-offline-content-guard-index.mjs'
 
 function header(name, size, type = '0') {
   const value = Buffer.alloc(512)
@@ -78,6 +78,30 @@ test('generates and verifies a signed workflow-shaped index with complete ordere
     rmSync(join(value.baseDir, 'frontend-content-guard.json'))
     assert.throws(() => createContentGuardIndex({ baseDir: value.baseDir, images: value.images, privateKeyPath: value.privateKeyPath }), /final rootfs receipt|missing/i)
   } finally { rmSync(value.root, { recursive: true, force: true }) }
+})
+
+test('copies the exact downloaded layer receipt closure and rejects ambiguous duplicate names', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-content-guard-copy-'))
+  const source = join(root, 'download')
+  const output = join(root, 'proof')
+  mkdirSync(source)
+  mkdirSync(output)
+  try {
+    write(root, 'download/image/backend-layer-0-content-guard.json', JSON.stringify({ ok: true, violations: [] }))
+    write(root, 'download/image/frontend-layer-0-content-guard.json', JSON.stringify({ ok: true, violations: [] }))
+    write(root, 'download/image/keycloak-layer-0-content-guard.json', JSON.stringify({ ok: true, violations: [] }))
+    assert.deepEqual(copyContentGuardLayerReceipts(source, output), [
+      'backend-layer-0-content-guard.json',
+      'frontend-layer-0-content-guard.json',
+      'keycloak-layer-0-content-guard.json',
+    ])
+    assert.deepEqual(JSON.parse(readFileSync(join(output, 'backend-layer-0-content-guard.json'), 'utf8')), { ok: true, violations: [] })
+
+    const duplicateOutput = join(root, 'duplicate-output')
+    mkdirSync(duplicateOutput)
+    write(root, 'download/other/backend-layer-0-content-guard.json', JSON.stringify({ ok: true, violations: [] }))
+    assert.throws(() => copyContentGuardLayerReceipts(source, duplicateOutput), /duplicate backend-layer-0-content-guard\.json/)
+  } finally { rmSync(root, { recursive: true, force: true }) }
 })
 
 test('rejects omitted, failed, duplicate, wrong-image, wrong-archive, wrong-key, and tampered-signature evidence', () => {
