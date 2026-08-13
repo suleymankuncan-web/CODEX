@@ -10,9 +10,36 @@ export const STORAGE_IMAGE = 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d1324
 const REGION = 'us-east-1'
 const SERVICE = 's3'
 const PROOF_PORT = 18333
+const SANITIZED_RELEASE_ID_PATTERN = /^[A-Za-z0-9._-]{8,128}$/
 export const SYNTHETIC_PROOF_INPUT_ROOT_MODE = 0o700
 export const SYNTHETIC_PROOF_SECRET_FILE_MODE = 0o644
 export const SYNTHETIC_PROOF_ENV_FILE_MODE = 0o600
+
+export function buildSyntheticProofReceipt(options, claims) {
+  if (
+    !options ||
+    typeof options !== 'object' ||
+    options.project !== STORAGE_PROJECT ||
+    typeof options.releaseId !== 'string' ||
+    !SANITIZED_RELEASE_ID_PATTERN.test(options.releaseId)
+  ) {
+    throw new Error('photo-storage proof receipt identity is invalid')
+  }
+  if (!claims || typeof claims !== 'object' || Array.isArray(claims)) {
+    throw new Error('photo-storage proof receipt claims are invalid')
+  }
+  if (Object.keys(claims).some((key) => /(access.?key|password|secret|token)/i.test(key))) {
+    throw new Error('photo-storage proof receipt claims are not sanitized')
+  }
+  return {
+    ...claims,
+    schemaVersion: 1,
+    dataClass: 'synthetic',
+    status: 'passed',
+    project: options.project,
+    releaseId: options.releaseId,
+  }
+}
 
 export function exactObjectStorageVolumeName(options) {
   return `${options.project}_object_storage_data`
@@ -525,7 +552,27 @@ async function runSyntheticProof(options) {
       expectedSha256: fixtureHash,
       ...primary,
     })
-    return { status: 'passed', image: STORAGE_IMAGE, fixtureSha256: fixtureHash, versioning: 'enabled', perObjectRetention30Days: true, lockedPrefixRetention: 'COMPLIANCE_30_DAYS', primaryLockedDeleteDenied: true, recoveryLockedDeleteDenied: true, transientDelete: true, derivedDelete: true, privateAccess: true, crossBucketDenied: true, unsignedDenied: true, wrongCredentialDenied: true, presignedGet: true, presignedExpiryDenied: true, lockedDeleteBucketDenied: true, restartPreserved: true, stoppedVolumeSnapshot: true, restorePreserved: true, dataClass: 'synthetic' }
+    return buildSyntheticProofReceipt(options, {
+      image: STORAGE_IMAGE,
+      fixtureSha256: fixtureHash,
+      versioning: 'enabled',
+      perObjectRetention30Days: true,
+      lockedPrefixRetention: 'COMPLIANCE_30_DAYS',
+      primaryLockedDeleteDenied: true,
+      recoveryLockedDeleteDenied: true,
+      transientDelete: true,
+      derivedDelete: true,
+      privateAccess: true,
+      crossBucketDenied: true,
+      unsignedDenied: true,
+      wrongCredentialDenied: true,
+      presignedGet: true,
+      presignedExpiryDenied: true,
+      lockedDeleteBucketDenied: true,
+      restartPreserved: true,
+      stoppedVolumeSnapshot: true,
+      restorePreserved: true,
+    })
   } catch (error) {
     throw new Error(`${phase}: ${error.message}`)
   } finally {
@@ -584,7 +631,7 @@ function parseArgs(argv) {
     else if (arg === '--cleanup') options.cleanup = true
     else throw new Error(`unknown argument: ${arg}`)
   }
-  if (!options.releaseId || !/^[A-Za-z0-9._-]{8,128}$/.test(options.releaseId)) throw new Error('--release-id must be sanitized')
+  if (!options.releaseId || !SANITIZED_RELEASE_ID_PATTERN.test(options.releaseId)) throw new Error('--release-id must be sanitized')
   if (options.project !== STORAGE_PROJECT) throw new Error(`storage runtime requires project ${STORAGE_PROJECT}`)
   if (!options.execute && !options.cleanup) throw new Error('explicit --execute or --cleanup is required')
   return options
