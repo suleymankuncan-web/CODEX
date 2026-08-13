@@ -416,6 +416,33 @@ jobs:
             keycloak_layer_index=$((keycloak_layer_index + 1))
           done < <(jq -r '.[0].Layers[]' proof/keycloak-saved-image/manifest.json)
 
+      - name: Generate signed complete content-guard index
+        if: inputs.proof_mode == 'full'
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process'
+          import { chmodSync, writeFileSync } from 'node:fs'
+          import { join } from 'node:path'
+          import { generateKeyPairSync } from 'node:crypto'
+          import { createContentGuardIndex } from './scripts/onprem-offline-content-guard-index.mjs'
+
+          const temporaryDirectory = process.env.RUNNER_TEMP
+          const privateKeyPath = join(temporaryDirectory, 'onprem-content-guard-ephemeral-private.pem')
+          const publicKeyPath = join(process.cwd(), 'proof', 'content-guard-index-public.pem')
+          const { privateKey, publicKey } = generateKeyPairSync('ed25519')
+          writeFileSync(privateKeyPath, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 })
+          chmodSync(privateKeyPath, 0o600)
+          writeFileSync(publicKeyPath, publicKey.export({ type: 'spki', format: 'pem' }), { mode: 0o644 })
+          const images = Object.fromEntries(['backend', 'frontend', 'keycloak'].map((name) => {
+            const tag = name === 'keycloak' ? 'hr-axis-onprem-keycloak:proof' : `hr-axis-onprem-${name}:proof`
+            const imageId = execFileSync('docker', ['image', 'inspect', tag, '--format', '{{.Id}}'], { encoding: 'utf8' }).trim()
+            if (!imageId) throw new Error(`missing ${name} image ID`)
+            return [name, { imageId, archivePath: `${name}-image.tar`, finalRootfsPath: `${name}-content-guard.json` }]
+          }))
+          createContentGuardIndex({ baseDir: join(process.cwd(), 'proof'), images, privateKeyPath, outputPath: join(process.cwd(), 'proof', 'content-guard-index.json') })
+          NODE
+
       - name: Generate production license inventories and notices
         if: inputs.proof_mode == 'full'
         run: |
@@ -932,8 +959,13 @@ jobs:
             proof/keycloak-license-paths.txt
             proof/keycloak-license-reconciliation.json
             proof/keycloak-license-evidence.tar
+            proof/backend-image.tar
+            proof/frontend-image.tar
+            proof/keycloak-image.tar
             proof/release-manifest.json
             proof/onprem-proof-receipt.json
+            proof/content-guard-index.json
+            proof/content-guard-index-public.pem
             proof/ephemeral-public.pem
 
   component_proof:

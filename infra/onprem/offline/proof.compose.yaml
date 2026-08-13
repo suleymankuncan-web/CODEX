@@ -1,0 +1,6 @@
+services:
+  caddy:
+    ports: !override []
+
+  object-storage:
+    ports: !override []
