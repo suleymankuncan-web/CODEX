@@ -411,7 +411,7 @@ export function writeRuntimeInputs(options, root) {
     'HR_AXIS_PUBLIC_HOST=onprem-proof.example.invalid',
     'KEYCLOAK_SMTP_HOST=smtp.internal.example.invalid', 'KEYCLOAK_SMTP_FROM=synthetic@example.invalid',
     'HR_AXIS_BACKEND_IMAGE=busybox:1.36.1', 'HR_AXIS_FRONTEND_IMAGE=busybox:1.36.1',
-    'CADDY_IMAGE=caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d',
+    'CADDY_IMAGE=caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648',
     'POSTGRES_IMAGE=postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297',
     'REDIS_IMAGE=redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98',
     `KEYCLOAK_IMAGE=busybox:1.36.1`, `SEAWEEDFS_IMAGE=${STORAGE_IMAGE}`,

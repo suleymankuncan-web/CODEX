@@ -104,7 +104,7 @@ function workflowCaddyBootstrapBodies(activeLines) {
   for (let index = 0; index < activeLines.length; index += 1) {
     if (activeLines[index] !== '--entrypoint /bin/sh "$CADDY_IMAGE" -ec \'') continue
     const end = activeLines.findIndex((line, candidate) => candidate > index && (
-      line === '\' | grep -F \'v2.10.2\'' || line === '\' 2>&1)"; then'
+      line === '\' | grep -F \'v2.11.4\'' || line === '\' 2>&1)"; then'
     ))
     if (end < 0) return []
     bodies.push(activeLines.slice(index + 1, end))
@@ -183,7 +183,7 @@ export function validateOnpremCoreContract(input) {
   const caddyBlock = blocks.get('caddy') ?? ''
   fail(/user: ["']10001:10001["']/.test(caddyBlock) && /cap_drop: \[ALL\]/.test(caddyBlock) && !/cap_add:/.test(caddyBlock), 'caddy must run as fixed numeric non-root with cap_drop ALL and no cap_add')
   fail(/security_opt: \[no-new-privileges:true\]/.test(caddyBlock), 'caddy must keep no-new-privileges enabled')
-  fail(/^    image: \$\{CADDY_IMAGE:-caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\}$/m.test(caddyBlock), 'Compose must retain the exact pinned upstream Caddy image identity')
+  fail(/^    image: \$\{CADDY_IMAGE:-caddy:2\.11\.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648\}$/m.test(caddyBlock), 'Compose must retain the exact pinned upstream Caddy image identity')
   fail(!/--no-check-certificate/.test(caddyBlock), 'Caddy healthcheck must not use the unsupported wget --no-check-certificate flag')
   fail(/wget -q -O \/dev\/null http:\/\/127\.0\.0\.1:8081\/healthz/.test(caddyBlock), 'Caddy healthcheck must use the BusyBox-supported loopback HTTP health endpoint')
   fail(!/(?:ports|expose):[^\n]*(?:\n\s+- ["']?(?:8081|\d+:8081))/m.test(caddyBlock), 'Caddy loopback health port 8081 must not be published or exposed')
@@ -338,7 +338,7 @@ export function validateOnpremCoreContract(input) {
         && (index === 0 || coreProofLines.indexOf(conntrackProvisioning[index - 1]) < coreProofLines.indexOf(line))),
     'GitHub-hosted runtime proof must provision and preflight read-only conntrack observation before applying the reversible firewall',
   )
-  fail(/^  CADDY_IMAGE: caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\r?$/m.test(input.workflow), 'workflow must bind the Caddy bootstrap proof to the exact pinned Caddy image')
+  fail(/^  CADDY_IMAGE: caddy:2\.11\.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648\r?$/m.test(input.workflow), 'workflow must bind the Caddy bootstrap proof to the exact pinned Caddy image')
   const expectedWorkflowBootstrap = [...CADDY_BOOTSTRAP_PREFIX, 'exec "${destination}" version']
   const caddyProofLines = workflowStepActiveLines(input.workflow, 'Prove capability-free Caddy bootstrap under production restrictions')
   const workflowBootstrapBodies = workflowCaddyBootstrapBodies(caddyProofLines)
