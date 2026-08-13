@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-08-11
+Last verified: 2026-08-12
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -67,6 +67,14 @@ the rollback path, and real company SMTP remains an external IT gate.
 Workstation/company-server install, company firewall/DNS/TLS activation, real
 users/data/Nebim/photos, paid services, provider retirement, and production
 remain unauthorized external gates.
+The conditional ONP-4B SeaweedFS 4.41 slice now has repository static and
+synthetic runtime evidence for private scoped access, version/object-lock
+integrity, signed reads, deletion denial, restart, and labelled snapshot/restore.
+This evidence is not production engine acceptance: the proof backup is a
+same-host rehearsal, real photos/AI remain disabled, hosted R2 remains the
+rollback path, and company capacity, separate backup failure domain,
+RPO/RTO/restore drill, secret provisioning, and owner/IT activation gates stay
+open.
 DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Cloudflare env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
 Broad production remains `No-Go`; the detailed PR narrative, route changes,
 release proof, and DG1/DG2/REM history live in the linked historical records.
@@ -162,6 +170,7 @@ The no-delete inventory is
 
 Now:
 - Repository/synthetic ONP-3B merged as PR #1050 at `f03ee302596eb4338b75d9dc4bef3e027d50f365`. ONP-4A is active from that SHA on `codex/onprem-storage-provider-neutral-v1`, limited to provider-neutral S3 adapter/configuration/identity and forward migration; hosted R2 rollback remains and no local engine or real photo is active.
+- The conditional ONP-4B SeaweedFS 4.41 overlay is now documented with its exact digest/license, private internal data-network topology, file-backed distinct bucket-scoped credentials, and synthetic runtime proof. This is a reversible evidence slice only; the same-host backup volume is not production DR, and real photos, visual AI, company-server activation, and hosted rollback retirement remain No-Go.
 - The owner-approved photo-evidence train is complete through logical PR-8A, squash-merged as PR #1028 (`ce1df5c67fd61fc5b9692ad3b54d6dc2c02cb801`). PR #1025 delivered VM reference management; PR #1026 delivered retention/reconciliation and usage controls; PR #1028 locked Qwen `qwen3.7-plus-2026-05-26`, non-thinking, strict structured output, no tools or second model, and Region Manager final authority. On 30 July 2026 the owner replaced the conservative six-gate/personal-data posture with a lean store-photo-only pilot: intended inputs are store, shelf, fixture, display, and product photographs; PR-8B uses a 20-pair synthetic technical smoke and PR-10 a 30-50 comparison controlled pilot. Private storage, image validation plus decode/re-encode and metadata stripping, exact-model/budget/kill-switch controls, manual fallback, advisory-only AI, and zero official-score/KPI/ranking/target/incentive effects remain mandatory. A dedicated antivirus service, 100-150 pair blind benchmark, two independent labelers, and expanded provider legal/subprocessor dossier are deferred unless scope, threat evidence, personal-data intent, automated scoring, or production breadth changes. All VM grants and runtime flags remain disabled by default; no broad-production authority exists. See `docs/plans/qwen-store-photo-lean-pilot-decision-v1.md` and the existing photo/VM execution specs.
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
 - Merged REM-1B evidence explains the stable 70 hits without mutation. All REM-2 owner decisions are locked: domain lifecycles, fresh encrypted backup/verified restore, affected-writer pause, one correction runner, row locks, and old-value predicates. Row-level winners/classifications and history-preserving writers remain unresolved. `D-STAGING-MUTATION` remains unavailable for the blocked ORG/ASSIGN families. `D-CONSTRAINT-WINDOW` is locked only for eligible TARGET DB-C5 as `bounded_5s_add_30s_validate_no_pause_fail_closed`; this does not make the other families eligible or change the overall broad DB-CONSTRAINTS No-Go.
@@ -179,7 +188,7 @@ Now:
 - Incentives and Targets desktop/mobile prototype parity, legacy removal, and protected staging reads pass for Region Manager, Report Viewer, and Store Manager with zero browser mutation requests. Report Viewer remains company-scoped/read-only, Store Manager remains own-store scoped, and broad production remains `No-Go`; see `docs/evidence/store-command-canvas-parity/2026-07-16-controlled-pilot-read-gate.md`.
 - The seven-PR operational-surfaces cutover is merged through PR #1013. Closeout PR #1014 remains open while its repaired head is recertified. Owner-observed KPI, Talep Merkezi and Görevler geometry differences invalidated the first visual PASS assumption. The local repair now gives KPI Özetleri, Talep Merkezi, Norm Kadro and Görevler one shared compact four-cell decision rail, fixed desktop geometry, content-sized page rows, and before/after rectangle assertions at 1440x900, 1024x768, 390x844 and 320x844. Local parity, role and accessibility suites pass; final CI, deployment and protected staging read evidence remain required before merge. See `docs/evidence/store-operational-surfaces-command-canvas/parity-gap-audit-2026-07-17.md`.
 Next:
-1. Complete and merge ONP-4A only after local migration/storage/release proof is green, then create ONP-4B from its merged SHA for the conditional local S3 engine and synthetic runtime proof. No real Keycloak users, SMTP, real photos, or company-server access is authorized.
+1. Complete and merge ONP-4A only after local migration/storage/release proof is green. Preserve the conditional ONP-4B SeaweedFS synthetic receipt and run the owner-selected verification ladder; do not treat it as production engine acceptance. No real Keycloak users, SMTP, real photos, or company-server access is authorized.
 
 2. Logical PR-8B merged as PR #1036 at `01fdd8292e9963c1a8d4c91388f27dfe93459faf`. Logical PR-9 merged as PR #1037 at `a1e7708948e8fb0da0a550dcfbe5a732f8441fb5`: the exact-cohort BullMQ path writes only isolated `shadow` ledger rows, reads private canonical media, retries within fixed bounds and has no controller, UI, auth or official product sink. Logical PR-10 is active on `codex/qwen-pr10-advisory-pilot`: it adds default-off exact-cohort real VM photo intake, mutually exclusive `advisory` enqueue, a Region Manager-only advisory review surface scoped by the intersection of current region-role and action-store assignments, immutable first-review semantics, aggregate-only 30-50-pair receipt tooling, and a provider-neutral Qwen/Luna same-corpus evaluation protocol. AI output remains advisory and cannot update checklist outcomes, Store Actions, KPIs, rankings, targets or incentives. Staging execution, provider calls and gate activation remain separately controlled by the runbook.
 3. Keep retention cleanup disabled and do not execute a purge until a separately approved staging run window and exact sanitized manifest exist.

@@ -124,6 +124,47 @@ describe("ChecklistService", () => {
     });
   });
 
+  it("passes the existing authenticated checklist content route to photo read-url creation", async () => {
+    const checklistRepository = {
+      getMobileChecklistInstanceScope: jest.fn().mockResolvedValue({
+        storeId: "44444444-4444-4444-8444-444444444444",
+        templateType: "BM_STORE_VISIT",
+        status: "in_progress",
+      }),
+      assertMobileChecklistItemEvidenceLink: jest.fn().mockResolvedValue(undefined),
+    };
+    const photoMediaStorageService = {
+      createSignedRead: jest.fn().mockResolvedValue({ url: "signed", expiresInSeconds: 120 }),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      checklistAcknowledgementRepository as never,
+      checklistRepository as never,
+      undefined,
+      undefined,
+      photoMediaStorageService as never,
+    );
+    const checklistInstanceId = "11111111-1111-4111-8111-111111111111";
+    const templateItemId = "22222222-2222-4222-8222-222222222222";
+    const mediaAssetId = "33333333-3333-4333-8333-333333333333";
+
+    await service.readMobileChecklistItemEvidence({
+      checklistInstanceId,
+      templateItemId,
+      mediaAssetId,
+      variant: "thumbnail",
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorScope: { companyIds: [], regionIds: [], storeIds: ["44444444-4444-4444-8444-444444444444"] },
+      actorActionScope: { assignedStoreIds: ["44444444-4444-4444-8444-444444444444"] },
+    });
+
+    expect(photoMediaStorageService.createSignedRead).toHaveBeenCalledWith(expect.objectContaining({
+      mediaAssetId,
+      contentPath: `/api/mobile/checklists/instances/${checklistInstanceId}/items/${templateItemId}/evidence/${mediaAssetId}/content/thumbnail`,
+    }));
+  });
+
   it("creates checklist remediation action plans from acknowledged non-compliant rows", async () => {
     const acknowledgementRepository = {
       getChecklistInstanceScope: jest.fn().mockResolvedValue({

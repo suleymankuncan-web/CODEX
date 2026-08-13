@@ -1,0 +1,147 @@
+services:
+  object-storage:
+    image: ${SEAWEEDFS_IMAGE:?set the exact SeaweedFS image digest}
+    profiles: [infra, runtime, proof]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    entrypoint: ["/bin/sh", "/opt/hr-axis/photo-storage/bootstrap.sh"]
+    expose:
+      - "8333"
+    networks: [data]
+    environment:
+      PHOTO_MEDIA_PRIMARY_BUCKET: ${PHOTO_MEDIA_PRIMARY_BUCKET:?set the primary bucket}
+      PHOTO_MEDIA_RECOVERY_BUCKET: ${PHOTO_MEDIA_RECOVERY_BUCKET:?set the recovery bucket}
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE: /run/secrets/photo_primary_access_key_id
+      PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE: /run/secrets/photo_primary_secret_access_key
+      PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID_FILE: /run/secrets/photo_recovery_access_key_id
+      PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE: /run/secrets/photo_recovery_secret_access_key
+    volumes:
+      - object_storage_data:/data
+      - ../photo-storage/bootstrap.sh:/opt/hr-axis/photo-storage/bootstrap.sh:ro
+    secrets:
+      - source: photo_primary_access_key_id
+        target: photo_primary_access_key_id
+      - source: photo_primary_secret_access_key
+        target: photo_primary_secret_access_key
+      - source: photo_recovery_access_key_id
+        target: photo_recovery_access_key_id
+      - source: photo_recovery_secret_access_key
+        target: photo_recovery_secret_access_key
+    tmpfs:
+      - /run:rw,noexec,nosuid,nodev,size=16m,mode=0755
+      - /tmp:rw,noexec,nosuid,nodev,size=32m
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - |
+          code=$$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8333/ || true)
+          test "$${code}" = "200" || test "$${code}" = "403" || test "$${code}" = "404"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    cpus: 0.5
+    mem_limit: 1024m
+    pids_limit: 256
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.service-class: photo-storage
+
+  api:
+    environment:
+      PHOTO_MEDIA_STORAGE_ENABLED: "true"
+      PHOTO_MEDIA_PROVIDER: seaweedfs
+      PHOTO_MEDIA_SYNTHETIC_ONLY: "true"
+      PHOTO_MEDIA_PRIMARY_BUCKET: ${PHOTO_MEDIA_PRIMARY_BUCKET:?set the primary bucket}
+      PHOTO_MEDIA_RECOVERY_BUCKET: ${PHOTO_MEDIA_RECOVERY_BUCKET:?set the recovery bucket}
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: http://object-storage:8333
+      PHOTO_MEDIA_RECOVERY_ENDPOINT: http://object-storage:8333
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE: /run/secrets/photo_primary_access_key_id
+      PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE: /run/secrets/photo_primary_secret_access_key
+      PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID_FILE: /run/secrets/photo_recovery_access_key_id
+      PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE: /run/secrets/photo_recovery_secret_access_key
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: ${PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST:?set the approved synthetic fixture digest}
+      PHOTO_MEDIA_REAL_VM_PILOT_ENABLED: "false"
+      VISUAL_COMPARISON_ENQUEUE_ENABLED: "false"
+      VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "false"
+      VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED: "false"
+      VISUAL_COMPARISON_WORKER_ENABLED: "false"
+    depends_on:
+      object-storage:
+        condition: service_healthy
+    networks: [proxy, app, data]
+    secrets:
+      - source: photo_primary_access_key_id
+        target: photo_primary_access_key_id
+      - source: photo_primary_secret_access_key
+        target: photo_primary_secret_access_key
+      - source: photo_recovery_access_key_id
+        target: photo_recovery_access_key_id
+      - source: photo_recovery_secret_access_key
+        target: photo_recovery_secret_access_key
+
+  worker:
+    environment:
+      PHOTO_MEDIA_STORAGE_ENABLED: "true"
+      PHOTO_MEDIA_PROVIDER: seaweedfs
+      PHOTO_MEDIA_SYNTHETIC_ONLY: "true"
+      PHOTO_MEDIA_PRIMARY_BUCKET: ${PHOTO_MEDIA_PRIMARY_BUCKET:?set the primary bucket}
+      PHOTO_MEDIA_RECOVERY_BUCKET: ${PHOTO_MEDIA_RECOVERY_BUCKET:?set the recovery bucket}
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: http://object-storage:8333
+      PHOTO_MEDIA_RECOVERY_ENDPOINT: http://object-storage:8333
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE: /run/secrets/photo_primary_access_key_id
+      PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE: /run/secrets/photo_primary_secret_access_key
+      PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID_FILE: /run/secrets/photo_recovery_access_key_id
+      PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE: /run/secrets/photo_recovery_secret_access_key
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: ${PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST:?set the approved synthetic fixture digest}
+      PHOTO_MEDIA_REAL_VM_PILOT_ENABLED: "false"
+      VISUAL_COMPARISON_ENQUEUE_ENABLED: "false"
+      VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "false"
+      VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED: "false"
+      VISUAL_COMPARISON_WORKER_ENABLED: "false"
+    depends_on:
+      object-storage:
+        condition: service_healthy
+    networks: [app, data]
+    secrets:
+      - source: photo_primary_access_key_id
+        target: photo_primary_access_key_id
+      - source: photo_primary_secret_access_key
+        target: photo_primary_secret_access_key
+      - source: photo_recovery_access_key_id
+        target: photo_recovery_access_key_id
+      - source: photo_recovery_secret_access_key
+        target: photo_recovery_secret_access_key
+
+networks:
+  data: {}
+
+volumes:
+  object_storage_data:
+    labels:
+      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.data-class: synthetic
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
+      com.hr-axis.volume-class: photo-object-storage
+
+secrets:
+  photo_primary_access_key_id:
+    file: ${PHOTO_STORAGE_SECRET_ROOT:-../photo-storage/secret-files}/primary-access-key-id
+  photo_primary_secret_access_key:
+    file: ${PHOTO_STORAGE_SECRET_ROOT:-../photo-storage/secret-files}/primary-secret-access-key
+  photo_recovery_access_key_id:
+    file: ${PHOTO_STORAGE_SECRET_ROOT:-../photo-storage/secret-files}/recovery-access-key-id
+  photo_recovery_secret_access_key:
+    file: ${PHOTO_STORAGE_SECRET_ROOT:-../photo-storage/secret-files}/recovery-secret-access-key

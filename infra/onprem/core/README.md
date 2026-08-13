@@ -7,6 +7,15 @@ publishes a host port: TCP 443 maps to its unprivileged 8443 listener. All
 application, database, Redis, and Keycloak ports remain private Compose
 networks.
 
+Photo storage is deliberately a separate, versioned ONP-4B overlay. The base
+core keeps `PHOTO_MEDIA_STORAGE_ENABLED=false`; when the overlay is included,
+it merges into this same Compose project, adds a private SeaweedFS service on
+the internal data network, and supplies synthetic-only API/worker settings.
+Production has no object-storage host port. The proof-only overlay is the sole
+place where an ephemeral loopback port is mapped. See
+`infra/onprem/photo-storage/README.md` for the proof command and production
+stop gates.
+
 Hosted Clerk remains untouched. Keycloak users are recreated later only by an
 authorized company operation; no user migration or e-mail auto-linking is
 performed here. CI and local rehearsal use synthetic accounts and never call a
@@ -101,8 +110,12 @@ rotation; until then the operator must prepare them before `compose up`:
 | public certificates and CA files | operator-controlled | read-only, no group/other write |
 
 Do not create empty Sentry, Qwen, cookie-session, object-storage, or hosted
-provider credential files. Disabled features prove absence through missing
-configuration, not an empty mounted credential.
+provider credential files for the base core. Disabled features prove absence
+through missing configuration, not an empty mounted credential. If the
+optional photo-storage overlay is being exercised, provision its four
+non-empty file-backed credentials outside Git as described in the photo
+storage README; never put values in the repository or the non-secret env
+template.
 
 The PostgreSQL-side `postgres/keycloak-password` and Keycloak-side
 `keycloak/database-password` files are two ownership-bound copies of the same
@@ -132,3 +145,6 @@ target a company or hosted volume.
 
 See `docs/runbooks/onprem-core-data-plane-v1.md` and
 `docs/plans/keycloak-local-auth-runbook.md` for proof and activation gates.
+The optional photo-storage overlay has its own labelled volume cleanup and
+synthetic snapshot/restore rehearsal; a same-host rehearsal volume is not a
+production recovery copy, and ONP-5/IT backup gates remain open.

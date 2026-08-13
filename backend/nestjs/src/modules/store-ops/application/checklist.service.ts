@@ -781,6 +781,7 @@ export class ChecklistService {
       actorUserId: input.actorUserId,
       actorScope: input.actorScope,
       variant: input.variant,
+      contentPath: `/api/mobile/checklists/instances/${input.checklistInstanceId}/items/${input.templateItemId}/evidence/${input.mediaAssetId}/content/${input.variant}`,
     });
   }
 

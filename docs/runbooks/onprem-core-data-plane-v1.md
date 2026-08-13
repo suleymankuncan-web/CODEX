@@ -6,6 +6,11 @@ Risk: R5 database privileges, migration, Redis recovery, secrets, and network is
 
 Scope: ONP-3B synthetic private core (database, Redis, and local Keycloak)
 
+The SeaweedFS photo-storage service is an optional ONP-4B overlay. The base
+core remains storage-disabled and keeps its existing rollback behavior; the
+overlay is joined to the same Compose project only when its separate synthetic
+proof is being exercised.
+
 ## Decision and boundary
 
 ONP-3B supplies one isolated Compose project with Caddy, frontend, API, worker,
@@ -118,6 +123,71 @@ The non-secret `env.template` contains only public host/release/image identity
 fields and immutable image examples. Replace the all-zero application digest
 placeholders. Disabled Sentry, Qwen, browser-cookie session, photo storage, and
 other providers have no credential file or secret environment key.
+
+The optional photo-storage overlay has its own ignored secret-files directory.
+Do not commit or create fixture credentials there. A production-shaped run
+requires four non-empty file-backed values provisioned outside Git (primary and
+recovery access-key IDs and secret keys), two distinct bucket names, the exact
+SeaweedFS image digest, and the signed release identity. The overlay bootstrap
+validates safe credential characters, distinct identities, bucket-scoped
+actions, and private generated configuration before starting the official
+entrypoint. The synthetic proof creates temporary credentials itself and does
+not consume production photo credentials.
+
+## Optional ONP-4B photo-storage overlay
+
+The overlay pins SeaweedFS 4.41 at
+`chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d`.
+Its vendored upstream Apache-2.0 text has SHA-256
+`d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613`.
+Production object storage is attached only to the internal `data` network and
+publishes no host port. A proof-only overlay maps an ephemeral port to
+`127.0.0.1`; never use that mapping in production. API and worker overlay
+configuration uses the internal endpoint `http://object-storage:8333`,
+file-backed credentials, distinct buckets, and synthetic-only/AI-off flags.
+
+Run the static contract and runtime unit tests before any Docker proof:
+
+```powershell
+npm.cmd run test:onprem:photo-storage
+npm.cmd run check:affected-verification
+```
+
+Run the self-contained executable synthetic proof. It creates and uses its own
+temporary synthetic Compose env and secret files; it does not consume
+production env or photo credentials. It uses only synthetic bytes and writes a
+sanitized receipt:
+
+```sh
+sudo node scripts/onprem-photo-storage-runtime-proof.mjs --execute \
+  --core-compose infra/onprem/core/compose.yaml \
+  --compose infra/onprem/photo-storage/compose.yaml \
+  --proof-compose infra/onprem/photo-storage/compose.proof.yaml \
+  --project hr-axis-onprem-photo-storage \
+  --release-id '<exact-signed-release-id>' \
+  --receipt /approved/sanitized-onprem-photo-storage-receipt.json
+```
+
+The proof must show private primary/recovery authorization, cross-bucket and
+unsigned/wrong-credential denial, versioning and per-object 30-day COMPLIANCE
+retention for `locked/` in both buckets (with no whole-bucket default), binary byte and
+metadata SHA-256, HEAD/GET/list, presigned GET and expiry denial, transient
+exact transient/derived deletion, locked `DeleteObject` in primary/recovery and locked non-empty `DeleteBucket`
+denial, restart preservation, and a stopped-volume snapshot restored into a
+fresh labelled volume with the same VersionId, hash, and lock state. The
+receipt contains synthetic status and digest facts only; it must not contain
+credentials, raw object keys, or VersionIds. Cleanup is fail-closed and may
+remove only exact project/release/data-class/volume-class identities.
+
+This stopped-volume backup is a same-host synthetic rehearsal, not production
+disaster recovery. Production still stops for the company server's capacity
+and storage topology, separate backup destination/failure domain, accepted
+backup frequency/retention/encryption/RPO/RTO, named restore operator and
+recurring restore drill, secret provisioning/rotation, host firewall/egress,
+DNS/TLS, Nebim connectivity/credentials, real-data authorization, and owner
+approval for real photos or visual AI. Hosted R2 remains the rollback path;
+ONP-5 offline installation and
+production backup/restore are not complete.
 
 ## Operator sequence
 
@@ -252,7 +322,8 @@ deletion before either volume removal is attempted.
   conntrack visibility, disk encryption, and backup failure domain remain IT
   activation inputs.
 - Identity/login acceptance is ONP-3. Object storage and photo acceptance are
-  ONP-4. Backup/restore/offline installation is ONP-5.
+  ONP-4, including the conditional ONP-4B SeaweedFS synthetic proof described
+  above. Backup/restore/offline installation is ONP-5.
 - Real data, provider calls, company hosts/IPs, production deployment, hosted
   cutover, and hosted rollback deletion remain unauthorized.
 

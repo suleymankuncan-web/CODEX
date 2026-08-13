@@ -300,6 +300,7 @@ export class PhotoMediaStorageService {
     actorUserId: string;
     actorScope: PhotoMediaActorScope;
     variant: "canonical" | "thumbnail";
+    contentPath?: string;
   }) {
     this.assertEnabled();
     const asset = await this.repository.findAssetForRead(input.mediaAssetId);
@@ -309,6 +310,9 @@ export class PhotoMediaStorageService {
     if (!this.isInReadScope(asset, input.actorScope)) {
       throw new ForbiddenException("Photo media asset is outside actor scope");
     }
+    if (this.configuration.provider === "seaweedfs") {
+      assertAuthenticatedPhotoMediaContentPath(input.contentPath, input.mediaAssetId, input.variant);
+    }
 
     const objectKey = input.variant === "thumbnail"
       ? asset.thumbnailObjectKey
@@ -316,11 +320,16 @@ export class PhotoMediaStorageService {
     if (!objectKey) {
       throw new ServiceUnavailableException("Photo media object is unavailable");
     }
+    if (this.configuration.provider === "seaweedfs") {
+      return {
+        url: input.contentPath,
+        expiresInSeconds: this.configuration.signedReadTtlSeconds,
+      };
+    }
     const objectReference = this.toObjectReference(
       objectKey,
       input.variant === "thumbnail" ? asset.thumbnailObjectVersionId : asset.canonicalObjectVersionId,
     );
-
     await this.repository.reserveProviderOperations({
       classAOperations: 0,
       classBOperations: 1,
@@ -800,4 +809,45 @@ function detectImageMimeType(body: Buffer): "image/jpeg" | "image/png" | "image/
   if (body.length >= 8 && body.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
   if (body.length >= 12 && body.subarray(0, 4).toString("ascii") === "RIFF" && body.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
   return null;
+}
+
+const PHOTO_MEDIA_UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+const AUTHENTICATED_PHOTO_MEDIA_CONTENT_PATHS = [
+  new RegExp(`^/api/internal/photo-media/assets/${PHOTO_MEDIA_UUID}/content/(canonical|thumbnail)$`, "i"),
+  new RegExp(
+    `^/api/mobile/checklists/instances/${PHOTO_MEDIA_UUID}/items/${PHOTO_MEDIA_UUID}/evidence/${PHOTO_MEDIA_UUID}/content/(canonical|thumbnail)$`,
+    "i",
+  ),
+  new RegExp(
+    `^/api/mobile/visual-campaigns/${PHOTO_MEDIA_UUID}/items/${PHOTO_MEDIA_UUID}/reference-content/(canonical|thumbnail)$`,
+    "i",
+  ),
+];
+
+function assertAuthenticatedPhotoMediaContentPath(
+  contentPath: string | undefined,
+  mediaAssetId: string,
+  variant: "canonical" | "thumbnail",
+): asserts contentPath is string {
+  // VM routes intentionally omit mediaAssetId; assignment/reference authorization binds that route to the asset.
+  const expectedVariantSuffix = `/${variant}`;
+  const internalOrChecklistAssetBinding =
+    contentPath?.includes(`/assets/${mediaAssetId}/content/${variant}`) ||
+    contentPath?.includes(`/evidence/${mediaAssetId}/content/${variant}`);
+  const vmVariantBinding = contentPath?.endsWith(`/reference-content${expectedVariantSuffix}`);
+  if (
+    !contentPath ||
+    contentPath.includes("?") ||
+    contentPath.includes("#") ||
+    contentPath.includes("\\") ||
+    contentPath.includes("%") ||
+    Array.from(contentPath).some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 0x20 || code === 0x7f;
+    }) ||
+    !AUTHENTICATED_PHOTO_MEDIA_CONTENT_PATHS.some((pattern) => pattern.test(contentPath)) ||
+    (!internalOrChecklistAssetBinding && !vmVariantBinding)
+  ) {
+    throw new BadRequestException("Photo media content path must be an authenticated same-origin API route");
+  }
 }
