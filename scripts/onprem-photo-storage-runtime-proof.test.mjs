@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process'
 import {
   STORAGE_IMAGE,
   STORAGE_PROJECT,
+  buildSyntheticProofReceipt,
   buildAuthorization,
   buildComposeArgs,
   buildPresignedGet,
@@ -509,6 +510,37 @@ test('runtime proof presign includes expiry and signature but no secret key', ()
 test('runtime proof redacts credentials from command and receipt surfaces', () => {
   assert.equal(redact('accessKey=synthetic-key secretKey=synthetic-secret', ['synthetic-key', 'synthetic-secret']), 'accessKey=[redacted] secretKey=[redacted]')
   assert.equal(redact('raw synthetic-secret', ['synthetic-secret']), 'raw [redacted]')
+})
+
+test('successful photo-storage proof receipt binds the exact sanitized project and release identity', () => {
+  const source = readFileSync(resolve('scripts/onprem-photo-storage-runtime-proof.mjs'), 'utf8')
+  assert.match(source, /return buildSyntheticProofReceipt\(options, \{/)
+  const options = { project: STORAGE_PROJECT, releaseId: 'onprem-photo-storage-test-v1' }
+  const claims = { image: STORAGE_IMAGE, fixtureSha256: 'a'.repeat(64), restorePreserved: true }
+  const receipt = buildSyntheticProofReceipt(options, claims)
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(receipt).filter(([key]) => ['schemaVersion', 'dataClass', 'status', 'project', 'releaseId'].includes(key))),
+    { schemaVersion: 1, dataClass: 'synthetic', status: 'passed', project: options.project, releaseId: options.releaseId },
+  )
+  assert.equal(receipt.image, STORAGE_IMAGE)
+  assert.equal(receipt.fixtureSha256, claims.fixtureSha256)
+  assert.equal(receipt.restorePreserved, true)
+  assert.equal(buildSyntheticProofReceipt(options, { ...claims, project: 'wrong-project', releaseId: 'wrong-release' }).project, options.project)
+  assert.equal(buildSyntheticProofReceipt(options, { ...claims, project: 'wrong-project', releaseId: 'wrong-release' }).releaseId, options.releaseId)
+})
+
+test('photo-storage proof receipt cannot be fabricated with missing or wrong identity inputs', () => {
+  const claims = { image: STORAGE_IMAGE, fixtureSha256: 'a'.repeat(64) }
+  for (const options of [
+    undefined,
+    {},
+    { releaseId: 'onprem-photo-storage-test-v1' },
+    { project: 'wrong-project', releaseId: 'onprem-photo-storage-test-v1' },
+    { project: STORAGE_PROJECT },
+    { project: STORAGE_PROJECT, releaseId: '../wrong-release' },
+  ]) {
+    assert.throws(() => buildSyntheticProofReceipt(options, claims), /photo-storage proof receipt identity is invalid/)
+  }
 })
 
 test('runtime cleanup accepts only exact labelled storage identities', () => {
