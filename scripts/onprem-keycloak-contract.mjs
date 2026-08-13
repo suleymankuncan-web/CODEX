@@ -126,6 +126,7 @@ export function validateOnpremKeycloakContract(input) {
     if (!condition) errors.push(message)
   }
   const blocks = serviceBlocks(input.compose)
+  const photoProofCompose = String(input.photoProofCompose ?? '')
   const keycloak = blocks.get('keycloak') ?? ''
   const bootstrap = blocks.get('keycloak-bootstrap') ?? ''
   const binder = blocks.get('identity-binder') ?? ''
@@ -164,11 +165,21 @@ export function validateOnpremKeycloakContract(input) {
   fail(/entrypoint: \["\/bin\/sh"\]/.test(bootstrap) && /command: \["\/opt\/keycloak\/bootstrap\.sh"\]/.test(bootstrap), 'Keycloak bootstrap must override the optimized image entrypoint to execute its script')
   fail(/HR_AXIS_PROCESS_ROLE: identity-binder/.test(binder) && /bind-keycloak-identities\.js/.test(binder), 'identity binder must use the strict-local compiled process role')
   fail(/KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE: \/var\/lib\/keycloak-bootstrap\/subjects\.v1\.json/.test(binder), 'identity binder must consume the private subject manifest')
+  fail(/KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: \$\{KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false\}/.test(binder), 'identity binder must receive the exact synthetic accounts flag interpolation')
+  fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: \$\{KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false\}/.test(binder), 'identity binder must default the dedicated photo-proof gate to false')
   fail(/keycloak_bootstrap_state:\/var\/lib\/keycloak-bootstrap:ro/.test(binder), 'identity binder must mount subject state read-only')
   fail(/keycloak-bootstrap:\s*\n\s+condition: service_completed_successfully/.test(binder), 'identity binder must wait for a successful Keycloak bootstrap')
   fail(/user: ["']1000:1000["']/.test(binder) && /binder_database_url/.test(binder), 'identity binder must run as the subject-state owner and use its dedicated DB URL secret')
   fail(/keycloak_bootstrap_state/.test(input.compose), 'Keycloak bootstrap must persist only its synthetic state manifest volume')
   fail(/state_dir=.*keycloak-bootstrap/.test(input.bootstrapScript) && /manifest_path=.*subjects\.v1\.json/.test(input.bootstrapScript), 'bootstrap must write the versioned subject manifest to the private state path')
+  fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: \$\{KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false\}/.test(bootstrap), 'bootstrap must default the dedicated photo-proof gate to false')
+  fail(!/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE|KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE|keycloak_synthetic_photo_proof_account/.test(input.compose), 'base Compose must remain photo-proof credential-free')
+  if (photoProofCompose) {
+    fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:\s*["']true["']/.test(photoProofCompose), 'photo-proof overlay must enable the dedicated photo-proof gate')
+    fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE:\s*\/run\/secrets\/keycloak_synthetic_photo_proof_account/.test(photoProofCompose), 'photo-proof overlay must wire the exact photo-proof account input')
+    fail(/KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE:\s*\/var\/lib\/keycloak-bootstrap\/photo-proof-subject\.v1\.json/.test(photoProofCompose), 'photo-proof overlay must wire the exact subject manifest output')
+    fail(/keycloak_synthetic_photo_proof_account/.test(photoProofCompose) && /photo-proof-account/.test(photoProofCompose), 'photo-proof overlay must mount the separate photo-proof account secret')
+  }
 
   for (const [service, [cpu, memory]] of Object.entries(STEADY_RESOURCES)) {
     const block = blocks.get(service) ?? ''
@@ -221,14 +232,27 @@ export function validateOnpremKeycloakContract(input) {
       ['onprem.store-personnel', 'STORE_PERSONNEL'],
       ['onprem.visual-merchandiser', 'VISUAL_MERCHANDISER'],
     ]
+    const photoProofAccount = 'onprem.photo-proof-admin'
     const accountValues = personaSeed.match(/INSERT INTO ops\.user_account[\s\S]*?VALUES([\s\S]*?)ON CONFLICT/i)?.[1] ?? ''
-    const accountRows = [...accountValues.matchAll(/\(\s*'[^']+'\s*,\s*NULL\s*,\s*'(onprem\.[a-z-]+)'\s*,\s*'[^']+@onprem\.invalid'\s*,\s*NULL\s*,\s*'local'\s*,\s*NULL\s*,\s*TRUE\s*\)/g)].map((match) => match[1])
+    const collisionPreflight = personaSeed.match(/DO \$\$[\s\S]*?\$\$;/)?.[0] ?? ''
+    fail(collisionPreflight.length > 0
+      && /username = 'onprem\.photo-proof-admin'[\s\S]*?user_id <> '80000000-0000-0000-0000-000000000016'::uuid/.test(collisionPreflight)
+      && /user_id = '80000000-0000-0000-0000-000000000016'::uuid[\s\S]*?username <> 'onprem\.photo-proof-admin'/.test(collisionPreflight)
+      && /user_role_assignment_id = '90000000-0000-0000-0000-000000000016'::uuid[\s\S]*?user_id <> '80000000-0000-0000-0000-000000000016'::uuid/.test(collisionPreflight)
+      && /user_action_store_assignment_id = '91000000-0000-0000-0000-000000000015'::uuid[\s\S]*?user_id <> '80000000-0000-0000-0000-000000000016'::uuid/.test(collisionPreflight)
+      && (collisionPreflight.match(/RAISE EXCEPTION/g) ?? []).length >= 4,
+    'persona seed must preflight all fixed photo-proof identity collisions before mutation')
+    const accountRows = [...accountValues.matchAll(/\(\s*'[^']+'\s*,\s*NULL\s*,\s*'(onprem\.[a-z-]+)'\s*,\s*'[^']+@onprem\.invalid'\s*,\s*NULL\s*,\s*'local'\s*,\s*NULL\s*,\s*(TRUE|FALSE)\s*\)/g)].map((match) => match[1])
     for (const [username, role] of personas) {
       fail(accountRows.includes(username) && personaSeed.includes(`'${role}'`), `persona seed must contain the exact ${role} synthetic account`)
     }
-    fail(accountRows.length === 5 && new Set(accountRows).size === 5, 'persona seed must contain exactly five synthetic usernames')
-    fail((accountValues.match(/NULL\s*,\s*'local'\s*,\s*NULL/g) ?? []).length === 5, 'persona seed must use local provider rows with NULL subjects before binding')
-    fail(accountRows.length === 5 && (accountValues.match(/@onprem\.invalid/g) ?? []).length === 5, 'persona seed must never contain password hashes or real e-mail domains')
+    fail(accountRows.length === 6 && new Set(accountRows).size === 6 && accountRows.includes(photoProofAccount), 'persona seed must contain exactly five approved personas plus the separate photo-proof account')
+    fail(/'onprem\.photo-proof-admin'[^\n]*NULL\s*,\s*FALSE\s*\)/.test(accountValues), 'photo-proof account must be dormant with a NULL provider subject in the seed')
+    fail((accountValues.match(/'onprem\.(?:store-manager|region-manager|report-viewer|store-personnel|visual-merchandiser)'[^\n]*NULL\s*,\s*TRUE\s*\)/g) ?? []).length === 5, 'the exact five approved personas must remain active in the seed')
+    fail((accountValues.match(/NULL\s*,\s*'local'\s*,\s*NULL/g) ?? []).length === 6, 'persona seed must use local provider rows with NULL subjects before binding')
+    fail(accountRows.length === 6 && (accountValues.match(/@onprem\.invalid/g) ?? []).length === 6, 'persona seed must never contain password hashes or real e-mail domains')
+    fail(/'onprem\.photo-proof-admin',\s*'SUPER_ADMIN',\s*'company',\s*'00000000-0000-0000-0000-000000000001'::uuid,\s*NULL::uuid,\s*NULL::uuid/.test(personaSeed), 'photo-proof account must have the exact company-scoped SUPER_ADMIN assignment')
+    fail(/onprem\.photo-proof-admin/.test(personaSeed) && /90000000-0000-0000-0000-000000000016/.test(personaSeed), 'photo-proof account role assignment must use its dedicated deterministic identity')
     fail(!/clerk/i.test(personaSeed), 'persona seed must not contain Clerk references')
     fail(/ON CONFLICT \(username\) DO UPDATE/.test(personaSeed), 'persona seed must reconcile account rows idempotently')
     fail(/ON CONFLICT \(user_role_assignment_id\) DO UPDATE/.test(personaSeed) && /ON CONFLICT \(user_action_store_assignment_id\) DO UPDATE/.test(personaSeed), 'persona seed must reconcile role and action assignments idempotently')
@@ -425,6 +449,37 @@ export function validateOnpremKeycloakContract(input) {
   fail(!/delete\s+realms\//.test(input.bootstrapScript), 'bootstrap must reconcile in place and never delete the realm')
   fail(/subjects\.v1\.json/.test(input.bootstrapScript) && /schemaVersion/.test(input.bootstrapScript), 'bootstrap must emit a versioned sanitized synthetic subject manifest')
   fail(/\\\"subject\\\"/.test(input.bootstrapScript), 'subject manifest writer must persist the exact synthetic Keycloak subject for backend binding')
+  fail(/validate_synthetic_photo_proof_mode/.test(input.bootstrapScript)
+    && /validate_synthetic_photo_proof_mode "\$strict_local" "\$data_class" "\$accounts_enabled" "\$photo_proof_enabled"/.test(input.bootstrapScript)
+    && /case "\$accounts_enabled" in\s+true\|false\)/.test(input.bootstrapScript)
+    && /case "\$photo_proof_enabled" in\s+true\|false\)/.test(input.bootstrapScript)
+    && /if \[ "\$photo_proof_enabled" = true \]; then/.test(input.bootstrapScript)
+    && /\[ "\$accounts_enabled" = true \] \|\| die 'synthetic photo proof requires synthetic accounts to be enabled'/.test(input.bootstrapScript)
+    && /\[ "\$data_class" = synthetic \]/.test(input.bootstrapScript)
+    && /synthetic photo proof account secret is forbidden while photo proof is disabled/.test(input.bootstrapScript), 'photo-proof account creation must be gated by the dedicated strict-local synthetic mode and reject dormant/production secrets')
+  fail(/read_photo_proof_account/.test(input.bootstrapScript)
+    && /photo_proof_key.*onprem\.photo-proof-admin/.test(input.bootstrapScript)
+    && /\[ "\$photo_proof_roles" = 'SUPER_ADMIN' \]/.test(input.bootstrapScript)
+    && /photo_proof_employee_id.*synthetic-employee-photo-proof-admin/.test(input.bootstrapScript)
+    && /photo_proof_company_ids.*company-001/.test(input.bootstrapScript)
+    && /photo_proof_region_ids.*region-001/.test(input.bootstrapScript)
+    && /photo_proof_store_ids.*store-100/.test(input.bootstrapScript)
+    && /photo_proof_read_company_ids.*company-001/.test(input.bootstrapScript)
+    && /photo_proof_read_region_ids.*region-001/.test(input.bootstrapScript)
+    && /photo_proof_read_store_ids.*store-100/.test(input.bootstrapScript)
+    && /photo_proof_assigned_store_ids.*store-100/.test(input.bootstrapScript), 'photo-proof account parser must enforce the exact fixed identity, role, claim, and action scope')
+  fail(/photo_proof_manifest_path=.*photo-proof-subject\.v1\.json/.test(input.bootstrapScript)
+    && /onprem-keycloak-photo-proof-subject-v1/.test(input.bootstrapScript)
+    && /photo-proof-subject\.v1\.json/.test(input.bootstrapScript)
+    && /photo_proof_manifest_tmp/.test(input.bootstrapScript)
+    && /mv -f "\$photo_proof_manifest_tmp" "\$photo_proof_manifest_path"/.test(input.bootstrapScript), 'photo-proof subject must be emitted to a separate atomic private manifest')
+  fail(/if \[ "\$photo_proof_enabled" = true \]; then/.test(input.bootstrapScript)
+    && /rm -f "\$photo_proof_manifest_path" "\$photo_proof_manifest_tmp"/.test(input.bootstrapScript), 'disabled photo-proof reconciliation must remove stale managed proof state')
+  fail(/photo_disable_file/.test(input.bootstrapScript)
+    && /\{"enabled":false\}/.test(input.bootstrapScript)
+    && /stale synthetic photo proof account disable failed/.test(input.bootstrapScript)
+    && /stale synthetic photo proof account remained enabled/.test(input.bootstrapScript)
+    && /stale synthetic photo proof managed role remained assigned/.test(input.bootstrapScript), 'disabled photo-proof reconciliation must disable and verify the exact managed Keycloak user and role revocation')
   const manifestLine = input.bootstrapScript.match(/printf '%s\\n' \"\{\\\"schemaVersion[\s\S]*?manifest_tmp/)?.[0] ?? ''
   fail(!/email|password|token/i.test(manifestLine), 'subject manifest writer must not include emails, passwords, or tokens')
   fail(/scan_server_log/.test(input.bootstrapScript) && /secret value detected/.test(input.bootstrapScript) && /bounded bytes=/.test(input.bootstrapScript), 'bootstrap must scan its temporary server log for exact secret values and emit only bounded sanitized diagnostics')
@@ -450,6 +505,13 @@ export function validateOnpremKeycloakContract(input) {
   fail(!/path \/auth(?:\s|\/\*)/.test(caddy) || /respond @authUnknown/.test(caddy), 'Caddy must fail closed for unlisted /auth paths')
 
   const workflow = String(input.workflow)
+  const syntheticPersonaFixture = workflow.match(/done <<'PERSONAS'([\s\S]*?)\n\s*PERSONAS/)?.[1] ?? ''
+  const syntheticPersonaRows = syntheticPersonaFixture.split(/\r?\n/).map((row) => row.trim()).filter(Boolean)
+  fail(syntheticPersonaRows.length === 5 && !syntheticPersonaRows.some((row) => row.includes('onprem.photo-proof-admin')), 'workflow synthetic account input must contain exactly five approved personas; photo-proof identity is separate')
+  fail(/synthetic_account_count=0/.test(input.bootstrapScript)
+    && /synthetic_account_count=\$\(\(synthetic_account_count \+ 1\)\)/.test(input.bootstrapScript)
+    && /\[ "\$synthetic_account_count" -le 5 \]/.test(input.bootstrapScript)
+    && /\[ "\$synthetic_account_count" -eq 5 \]/.test(input.bootstrapScript), 'bootstrap synthetic account parser must enforce exactly five approved personas')
   const keycloakBuildStep = workflow.match(/- name: Pull pinned Keycloak base and build the optimized ONP-3B image[\s\S]*?(?=\n\s+- name:|$)/)?.[0] ?? ''
   const bootstrapCommandInventory = 'required_bootstrap_commands="cat chmod grep mkdir mktemp mv rm sed sleep tr wc"'
   const keycloakBuildIndex = keycloakBuildStep.indexOf('docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE"')

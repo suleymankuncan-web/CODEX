@@ -65,7 +65,7 @@ services:
         max-size: 10m
         max-file: "5"
     labels: &project-labels
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
 
@@ -298,6 +298,8 @@ services:
         condition: service_healthy
     networks: [proxy, data]
     environment:
+      HR_AXIS_STRICT_LOCAL: "true"
+      HR_AXIS_DATA_CLASS: synthetic
       KEYCLOAK_SERVER: http://127.0.0.1:8080
       KEYCLOAK_DATABASE_URL_FILE: /run/secrets/keycloak_database_url
       KEYCLOAK_DATABASE_USERNAME_FILE: /run/secrets/keycloak_database_username
@@ -317,6 +319,7 @@ services:
       KEYCLOAK_SMTP_PASSWORD_FILE: /run/secrets/keycloak_smtp_password
       KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: ${KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false}
       KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE: /run/secrets/keycloak_synthetic_accounts
+      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: ${KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false}
       KEYCLOAK_SUBJECT_MANIFEST_DIR: /var/lib/keycloak-bootstrap
     volumes:
       - keycloak_data:/opt/keycloak/data
@@ -379,6 +382,8 @@ services:
       DB_SSL_MODE: verify-full
       DATABASE_URL_FILE: /run/secrets/binder_database_url
       DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
+      KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: ${KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false}
+      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: ${KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false}
       KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE: /var/lib/keycloak-bootstrap/subjects.v1.json
     secrets:
       - source: binder_database_url
@@ -568,7 +573,7 @@ networks:
       config:
         - subnet: 172.30.0.0/24
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.network-class: edge
@@ -579,7 +584,7 @@ networks:
       config:
         - subnet: 172.30.10.0/24
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.network-class: proxy
@@ -590,7 +595,7 @@ networks:
       config:
         - subnet: 172.30.20.0/24
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.network-class: app
@@ -601,7 +606,7 @@ networks:
       config:
         - subnet: 172.30.30.0/24
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.network-class: data
@@ -609,83 +614,83 @@ networks:
 volumes:
   postgres_data:
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.volume-class: postgres
   redis_data:
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.volume-class: redis-aof
   keycloak_data:
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.volume-class: keycloak
   keycloak_bootstrap_state:
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.volume-class: keycloak-bootstrap-state
 
 secrets:
   caddy_tls_certificate:
-    file: ./secret-files/caddy/server.crt
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/caddy/server.crt
   caddy_tls_private_key:
-    file: ./secret-files/caddy/server.key
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/caddy/server.key
   caddy_tls_ca:
-    file: ./secret-files/caddy/ca.crt
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/caddy/ca.crt
   postgres_tls_certificate:
-    file: ./secret-files/postgres/server.crt
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/server.crt
   postgres_tls_private_key:
-    file: ./secret-files/postgres/server.key
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/server.key
   postgres_tls_ca:
-    file: ./secret-files/postgres/ca.crt
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/ca.crt
   postgres_bootstrap_password:
-    file: ./secret-files/postgres/bootstrap-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/bootstrap-password
   postgres_migrator_password:
-    file: ./secret-files/postgres/migrator-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/migrator-password
   postgres_api_password:
-    file: ./secret-files/postgres/api-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/api-password
   postgres_worker_password:
-    file: ./secret-files/postgres/worker-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/worker-password
   migrator_database_url:
-    file: ./secret-files/backend/migrator-database-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/migrator-database-url
   api_database_url:
-    file: ./secret-files/backend/api-database-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/api-database-url
   binder_database_url:
-    file: ./secret-files/keycloak/binder-database-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/binder-database-url
   worker_database_url:
-    file: ./secret-files/backend/worker-database-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/worker-database-url
   redis_users_acl:
-    file: ./secret-files/redis/users.acl
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/redis/users.acl
   redis_health_url:
-    file: ./secret-files/redis/health-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/redis/health-url
   redis_api_url:
-    file: ./secret-files/backend/redis-api-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/redis-api-url
   redis_worker_url:
-    file: ./secret-files/backend/redis-worker-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/redis-worker-url
   browser_session_secret:
-    file: ./secret-files/backend/browser-session-secret
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/browser-session-secret
   keycloak_database_url:
-    file: ./secret-files/keycloak/database-url
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/database-url
   keycloak_database_username:
-    file: ./secret-files/keycloak/database-username
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/database-username
   postgres_keycloak_database_password:
-    file: ./secret-files/postgres/keycloak-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/postgres/keycloak-password
   keycloak_database_password:
-    file: ./secret-files/keycloak/database-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/database-password
   keycloak_bootstrap_username:
-    file: ./secret-files/keycloak/bootstrap-username
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/bootstrap-username
   keycloak_bootstrap_password:
-    file: ./secret-files/keycloak/bootstrap-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/bootstrap-password
   keycloak_smtp_auth_user:
-    file: ./secret-files/keycloak/smtp-auth-user
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/smtp-auth-user
   keycloak_smtp_password:
-    file: ./secret-files/keycloak/smtp-password
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/smtp-password
   keycloak_synthetic_accounts:
-    file: ./secret-files/keycloak/synthetic-accounts
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/synthetic-accounts

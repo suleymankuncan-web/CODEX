@@ -21,6 +21,50 @@ phase_marker() {
   printf '%s\n' "keycloak bootstrap: phase=$phase" >&2
 }
 
+validate_synthetic_photo_proof_mode() {
+  strict_local="$1"
+  data_class="$2"
+  accounts_enabled="$3"
+  photo_proof_enabled="$4"
+  proof_file="$5"
+  case "$strict_local" in
+    true|false) ;;
+    *) die 'HR_AXIS_STRICT_LOCAL must be true or false' ;;
+  esac
+  case "$data_class" in
+    synthetic|company) ;;
+    *) die 'HR_AXIS_DATA_CLASS must be synthetic or company' ;;
+  esac
+  case "$accounts_enabled" in
+    true|false) ;;
+    *) die 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED must be true or false' ;;
+  esac
+  case "$photo_proof_enabled" in
+    true|false) ;;
+    *) die 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED must be true or false' ;;
+  esac
+
+  if [ "$accounts_enabled" = true ]; then
+    [ "$strict_local" = true ] || die 'synthetic account contract requires strict-local mode'
+    [ "$data_class" = synthetic ] || die 'synthetic account contract requires synthetic data class'
+  fi
+
+  if [ "$photo_proof_enabled" = true ]; then
+    [ "$accounts_enabled" = true ] || die 'synthetic photo proof requires synthetic accounts to be enabled'
+    [ "$strict_local" = true ] || die 'synthetic photo proof requires strict-local mode'
+    [ "$data_class" = synthetic ] || die 'synthetic photo proof requires synthetic data class'
+    [ -r "$proof_file" ] || die 'synthetic photo proof account contract is enabled but its secret file is unavailable'
+    return 0
+  fi
+
+  # A dormant or production-shaped bootstrap must never silently accept a
+  # mounted proof credential. Operators must remove the secret and keep the
+  # feature disabled instead of relying on a flag to suppress reconciliation.
+  if [ -e "$proof_file" ]; then
+    die 'synthetic photo proof account secret is forbidden while photo proof is disabled'
+  fi
+}
+
 read_secret() {
   file="$1"
   [ -r "$file" ] || die 'required secret file is unavailable'
@@ -194,6 +238,52 @@ csv_item_count() {
   printf '%s' "$count"
 }
 
+read_photo_proof_account() {
+  proof_file="$1"
+  [ -r "$proof_file" ] || die 'synthetic photo proof account contract is enabled but its secret file is unavailable'
+  photo_proof_row_count=0
+  photo_proof_row=''
+  while IFS= read -r row || [ -n "$row" ]; do
+    [ -n "$row" ] || die 'synthetic photo proof account contract contains a blank row'
+    case "$row" in
+      \#*) die 'synthetic photo proof account contract contains a comment row' ;;
+    esac
+    [ "$photo_proof_row_count" -eq 0 ] || die 'synthetic photo proof account contract must contain exactly one row'
+    photo_proof_row="$row"
+    photo_proof_row_count=$((photo_proof_row_count + 1))
+  done < "$proof_file"
+  [ "$photo_proof_row_count" -eq 1 ] || die 'synthetic photo proof account contract must contain exactly one row'
+
+  old_ifs="$IFS"
+  IFS='|'
+  # The final field is checked for a pipe below because POSIX read assigns any
+  # surplus fields to the last variable instead of reporting an arity error.
+  read -r photo_proof_key photo_proof_username photo_proof_password photo_proof_roles \
+    photo_proof_employee_id photo_proof_company_ids photo_proof_region_ids photo_proof_store_ids \
+    photo_proof_read_company_ids photo_proof_read_region_ids photo_proof_read_store_ids photo_proof_assigned_store_ids \
+    <<EOF
+$photo_proof_row
+EOF
+  IFS="$old_ifs"
+  case "$photo_proof_assigned_store_ids" in *'|'*) die 'synthetic photo proof account contract has extra fields' ;; esac
+
+  [ "$photo_proof_key" = 'onprem.photo-proof-admin' ] || die 'synthetic photo proof account key is not the approved proof admin'
+  [ "$photo_proof_username" = 'onprem.photo-proof-admin' ] || die 'synthetic photo proof account username is not the approved proof admin'
+  [ "$photo_proof_roles" = 'SUPER_ADMIN' ] || die 'synthetic photo proof account role must be exactly SUPER_ADMIN'
+  [ "$photo_proof_employee_id" = 'synthetic-employee-photo-proof-admin' ] || die 'synthetic photo proof account employee identity drifted'
+  [ "$photo_proof_company_ids" = 'company-001' ] || die 'synthetic photo proof account company scope drifted'
+  [ "$photo_proof_region_ids" = 'region-001' ] || die 'synthetic photo proof account region scope drifted'
+  [ "$photo_proof_store_ids" = 'store-100' ] || die 'synthetic photo proof account store scope drifted'
+  [ "$photo_proof_read_company_ids" = 'company-001' ] || die 'synthetic photo proof account read-company scope drifted'
+  [ "$photo_proof_read_region_ids" = 'region-001' ] || die 'synthetic photo proof account read-region scope drifted'
+  [ "$photo_proof_read_store_ids" = 'store-100' ] || die 'synthetic photo proof account read-store scope drifted'
+  [ "$photo_proof_assigned_store_ids" = 'store-100' ] || die 'synthetic photo proof account action scope drifted'
+  [ "${#photo_proof_password}" -ge 32 ] || die 'synthetic photo proof account password is below the minimum length'
+  case "$photo_proof_password" in
+    *[!A-Za-z0-9._@+:/=-]*) die 'synthetic photo proof account password contains unsupported characters' ;;
+  esac
+}
+
 kcadm() {
   /opt/keycloak/bin/kcadm.sh "$@" --config "$config_file"
 }
@@ -262,6 +352,7 @@ phase_marker secret-input
 
 state_dir="${KEYCLOAK_SUBJECT_MANIFEST_DIR:-/var/lib/keycloak-bootstrap}"
 manifest_path="$state_dir/subjects.v1.json"
+photo_proof_manifest_path="${KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE:-$state_dir/photo-proof-subject.v1.json}"
 mkdir -p "$state_dir"
 chmod 0700 "$state_dir"
 tmp_dir="$(mktemp -d /tmp/keycloak-bootstrap.XXXXXX)"
@@ -269,8 +360,15 @@ config_file="$tmp_dir/kcadm.config"
 client_file="$tmp_dir/client.json"
 smtp_file="$tmp_dir/smtp.json"
 manifest_tmp="$state_dir/.subjects.v1.json.tmp"
+photo_proof_manifest_tmp="$state_dir/.photo-proof-subject.v1.json.tmp"
 server_log="$tmp_dir/keycloak-server.log"
 accounts_file="${KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE:-/run/secrets/keycloak_synthetic_accounts}"
+photo_proof_account_file="${KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE:-/run/secrets/keycloak_synthetic_photo_proof_account}"
+strict_local="${HR_AXIS_STRICT_LOCAL:-false}"
+data_class="${HR_AXIS_DATA_CLASS:-synthetic}"
+accounts_enabled="${KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false}"
+photo_proof_enabled="${KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false}"
+validate_synthetic_photo_proof_mode "$strict_local" "$data_class" "$accounts_enabled" "$photo_proof_enabled" "$photo_proof_account_file"
 scan_server_log() {
   [ -r "$server_log" ] || {
     printf '%s\n' 'keycloak bootstrap: server log scan skipped (server did not start)' >&2
@@ -299,7 +397,14 @@ scan_server_log() {
       case "$log_text" in *"$account_password"*) secret_found=true ;; esac
     done < "$accounts_file"
   fi
-  unset log_text candidate bootstrap_candidate account_key account_username account_password _rest
+  if [ -r "$photo_proof_account_file" ]; then
+    while IFS='|' read -r _photo_key _photo_username _photo_password _photo_roles _photo_employee _photo_company _photo_region _photo_store _photo_read_company _photo_read_region _photo_read_store _photo_assigned_store; do
+      [ -n "$_photo_key" ] || continue
+      [ -n "$_photo_password" ] || continue
+      case "$log_text" in *"$_photo_password"*) secret_found=true ;; esac
+    done < "$photo_proof_account_file"
+  fi
+  unset log_text candidate bootstrap_candidate account_key account_username account_password _rest _photo_key _photo_username _photo_password _photo_roles _photo_employee _photo_company _photo_region _photo_store _photo_read_company _photo_read_region _photo_read_store _photo_assigned_store
   if [ "$secret_found" = true ]; then
     printf '%s\n' 'keycloak bootstrap: server log scan failed (secret value detected)' >&2
     return 1
@@ -317,8 +422,8 @@ cleanup() {
     phase_marker server-log-scan
   fi
   scan_server_log || [ "$status" -ne 0 ] || status=1
-  rm -rf "$tmp_dir" "$manifest_tmp"
-  unset bootstrap_password smtp_password smtp_auth_user database_password database_username database_url KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
+  rm -rf "$tmp_dir" "$manifest_tmp" "$photo_proof_manifest_tmp"
+  unset bootstrap_password smtp_password smtp_auth_user database_password database_username database_url photo_proof_password KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
   trap - EXIT HUP INT TERM
   exit "$status"
 }
@@ -537,14 +642,17 @@ done
 manifest_subjects=''
 manifest_first=true
 seen_personas=''
-accounts_enabled="${KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false}"
+synthetic_account_count=0
 phase_marker synthetic-account-reconciliation
 accounts_file="${KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE:-/run/secrets/keycloak_synthetic_accounts}"
 if [ "$accounts_enabled" = true ]; then
   [ -r "$accounts_file" ] || die 'synthetic account contract is enabled but its secret file is unavailable'
-  while IFS='|' read -r account_key username password roles employee_id company_ids region_ids store_ids read_company_ids read_region_ids read_store_ids assigned_store_ids; do
+  while IFS='|' read -r account_key username password roles employee_id company_ids region_ids store_ids read_company_ids read_region_ids read_store_ids assigned_store_ids account_extra; do
     [ -n "$account_key" ] || continue
     case "$account_key" in \#*) continue ;; esac
+    synthetic_account_count=$((synthetic_account_count + 1))
+    [ "$synthetic_account_count" -le 5 ] || die 'synthetic account contract must contain exactly five approved personas'
+    [ -z "${account_extra:-}" ] || die 'synthetic account row contains extra fields'
     case "$account_key:$username:$employee_id" in *[!A-Za-z0-9._:-]*) die 'synthetic account identity contains unsupported characters' ;; esac
     case "$account_key:$roles" in
       onprem.store-manager:STORE_MANAGER|onprem.region-manager:REGION_MANAGER|onprem.report-viewer:REPORT_VIEWER|onprem.store-personnel:STORE_PERSONNEL|onprem.visual-merchandiser:VISUAL_MERCHANDISER) ;;
@@ -618,6 +726,119 @@ JSON
   for required_persona in onprem.store-manager onprem.region-manager onprem.report-viewer onprem.store-personnel onprem.visual-merchandiser; do
     case ",$seen_personas," in *,"$required_persona",*) ;; *) die 'synthetic account contract must provide all five approved personas' ;; esac
   done
+  [ "$synthetic_account_count" -eq 5 ] || die 'synthetic account contract must contain exactly five approved personas'
+fi
+
+if [ "$photo_proof_enabled" = true ]; then
+  read_photo_proof_account "$photo_proof_account_file"
+  photo_user_rows="$(kcadm_query get users -r "$realm" -q "username=$photo_proof_username" --fields id --format csv --noquotes)" || die 'synthetic photo proof account inventory read failed'
+  photo_user_matches="$(printf '%s\n' "$photo_user_rows" | csv_first_fields)"
+  photo_user_count="$(printf '%s\n' "$photo_user_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  photo_user_uuid=''
+  case "$photo_user_count" in
+    0) ;;
+    1) photo_user_uuid="$photo_user_matches" ;;
+    *) die 'synthetic photo proof account identity is ambiguous' ;;
+  esac
+  if [ -z "${photo_user_uuid:-}" ]; then
+    kcadm_quiet create users -r "$realm" -s "username=$photo_proof_username" -s enabled=true -s emailVerified=true || die 'synthetic photo proof account creation failed'
+    photo_user_rows="$(kcadm_query get users -r "$realm" -q "username=$photo_proof_username" --fields id --format csv --noquotes)" || die 'synthetic photo proof account subject was not resolved'
+    photo_user_matches="$(printf '%s\n' "$photo_user_rows" | csv_first_fields)"
+    photo_user_count="$(printf '%s\n' "$photo_user_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+    [ "$photo_user_count" -eq 1 ] || die 'synthetic photo proof account subject was not resolved'
+    photo_user_uuid="$photo_user_matches"
+  fi
+  case "$photo_user_uuid" in
+    ''|*[!A-Fa-f0-9-]*) die 'synthetic photo proof account subject contains unsupported characters' ;;
+  esac
+
+  photo_password_file="$tmp_dir/photo-proof.reset-password.json"
+  cat > "$photo_password_file" <<JSON
+{"type":"password","value":"$photo_proof_password","temporary":false}
+JSON
+  chmod 0600 "$photo_password_file"
+  kcadm_quiet update "users/$photo_user_uuid/reset-password" -r "$realm" -f "$photo_password_file" -n || die 'synthetic photo proof account password update failed'
+  unset photo_proof_password
+
+  photo_profile_email="$photo_proof_username@example.invalid"
+  photo_user_json="$tmp_dir/photo-proof-account.json"
+  {
+    printf '{"username":"%s","email":"%s","firstName":"Synthetic","lastName":"PhotoProofAdmin","enabled":true,"emailVerified":true,"requiredActions":[],"attributes":{"employee_id":' "$photo_proof_username" "$photo_profile_email"
+    json_array "$photo_proof_employee_id"
+    printf ',"company_ids":'
+    json_array "$photo_proof_company_ids"
+    printf ',"region_ids":'
+    json_array "$photo_proof_region_ids"
+    printf ',"store_ids":'
+    json_array "$photo_proof_store_ids"
+    printf ',"read_company_ids":'
+    json_array "$photo_proof_read_company_ids"
+    printf ',"read_region_ids":'
+    json_array "$photo_proof_read_region_ids"
+    printf ',"read_store_ids":'
+    json_array "$photo_proof_read_store_ids"
+    printf ',"assigned_store_ids":'
+    json_array "$photo_proof_assigned_store_ids"
+    printf '}}\n'
+  } > "$photo_user_json"
+  kcadm_quiet update "users/$photo_user_uuid" -r "$realm" -f "$photo_user_json" || die 'synthetic photo proof account claim update failed'
+  unset photo_profile_email
+
+  photo_managed_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
+  for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+    case ",$photo_proof_roles," in
+      *,$managed_role,*) ;;
+      *)
+        if printf '%s\n' "$photo_managed_role_names" | grep -Fqx "$managed_role"; then
+          kcadm_quiet remove-roles -r "$realm" --uusername "$photo_proof_username" --rolename "$managed_role" || die 'stale synthetic photo proof account role removal failed'
+        fi
+        ;;
+    esac
+  done
+  kcadm_quiet add-roles -r "$realm" --uusername "$photo_proof_username" --rolename SUPER_ADMIN || die 'synthetic photo proof account role assignment failed'
+  photo_reconciled_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
+  photo_reconciled_managed_role_names="$(printf '%s\n' "$photo_reconciled_role_names" | csv_first_fields | grep -E '^(SUPER_ADMIN|REPORT_VIEWER|STORE_MANAGER|STORE_PERSONNEL|REGION_MANAGER|AUDITOR|HR_ADMIN|INTEGRATION_ADMIN|SNAPSHOT_OPERATOR|VISUAL_MERCHANDISER)$' || true)"
+  photo_reconciled_role_count="$(printf '%s\n' "$photo_reconciled_managed_role_names" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  [ "$photo_reconciled_role_count" -eq 1 ] || die 'synthetic photo proof account role parity mismatch'
+  printf '%s\n' "$photo_reconciled_managed_role_names" | grep -Fqx SUPER_ADMIN || die 'synthetic photo proof account role parity mismatch'
+
+  photo_proof_subject_json="$(printf '{"schemaVersion":"onprem-keycloak-photo-proof-subject-v1","dataClass":"synthetic","provider":"oidc","realm":"%s","clientId":"%s","accountKey":"onprem.photo-proof-admin","username":"onprem.photo-proof-admin","subject":"%s","roleCodes":["SUPER_ADMIN"],"readScope":{"companies":["00000000-0000-0000-0000-000000000001"],"regions":["00000000-0000-0000-0000-000000000010"],"stores":["00000000-0000-0000-0000-000000000100"]},"actionScope":{"assignedStores":["00000000-0000-0000-0000-000000000100"]}}' "$realm" "$client_id" "$photo_user_uuid")"
+  printf '%s\n' "$photo_proof_subject_json" > "$photo_proof_manifest_tmp"
+  chmod 0600 "$photo_proof_manifest_tmp"
+else
+  photo_user_rows="$(kcadm_query get users -r "$realm" -q "username=onprem.photo-proof-admin" --fields id --format csv --noquotes 2>/dev/null)" || die 'stale synthetic photo proof account inventory read failed'
+  photo_user_matches="$(printf '%s\n' "$photo_user_rows" | csv_first_fields)"
+  photo_user_count="$(printf '%s\n' "$photo_user_matches" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+  case "$photo_user_count" in
+    0) ;;
+    1)
+      photo_user_uuid="$photo_user_matches"
+      case "$photo_user_uuid" in
+        ''|*[!A-Fa-f0-9-]*) die 'synthetic photo proof account subject contains unsupported characters' ;;
+      esac
+      photo_managed_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'stale synthetic photo proof role inventory read failed'
+      photo_disable_file="$tmp_dir/photo-proof-disabled.json"
+      printf '%s\n' '{"enabled":false}' > "$photo_disable_file"
+      chmod 0600 "$photo_disable_file"
+      kcadm_quiet update "users/$photo_user_uuid" -r "$realm" -f "$photo_disable_file" || die 'stale synthetic photo proof account disable failed'
+      for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+        if printf '%s\n' "$photo_managed_role_names" | grep -Fqx "$managed_role"; then
+          kcadm_quiet remove-roles -r "$realm" --uusername onprem.photo-proof-admin --rolename "$managed_role" || die 'stale synthetic photo proof role removal failed'
+        fi
+      done
+      photo_disabled_state="$(kcadm_query get "users/$photo_user_uuid" -r "$realm" 2>/dev/null)" || die 'stale synthetic photo proof disable parity read failed'
+      photo_disabled_compact="$(printf '%s' "$photo_disabled_state" | tr -d '[:space:]')"
+      printf '%s' "$photo_disabled_compact" | grep -Fq '"enabled":false' || die 'stale synthetic photo proof account remained enabled'
+      photo_remaining_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'stale synthetic photo proof role parity read failed'
+      for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+        if printf '%s\n' "$photo_remaining_role_names" | grep -Fqx "$managed_role"; then
+          die 'stale synthetic photo proof managed role remained assigned'
+        fi
+      done
+      ;;
+    *) die 'synthetic photo proof account identity is ambiguous' ;;
+  esac
+  rm -f "$photo_proof_manifest_path" "$photo_proof_manifest_tmp"
 fi
 
 phase_marker subject-manifest
@@ -635,4 +856,7 @@ if kcadm_query get "clients/$bootstrap_client_uuid" -r master >/dev/null 2>&1; t
   die 'temporary bootstrap client still exists'
 fi
 mv -f "$manifest_tmp" "$manifest_path"
+if [ "$photo_proof_enabled" = true ]; then
+  mv -f "$photo_proof_manifest_tmp" "$photo_proof_manifest_path"
+fi
 printf '%s\n' 'keycloak bootstrap complete: synthetic realm contract reconciled'

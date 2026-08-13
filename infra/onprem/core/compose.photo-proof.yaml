@@ -1,0 +1,18 @@
+services:
+  keycloak-bootstrap:
+    environment:
+      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "true"
+      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE: /run/secrets/keycloak_synthetic_photo_proof_account
+      KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE: /var/lib/keycloak-bootstrap/photo-proof-subject.v1.json
+    secrets:
+      - source: keycloak_synthetic_photo_proof_account
+        target: keycloak_synthetic_photo_proof_account
+
+  identity-binder:
+    environment:
+      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "true"
+      KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE: /var/lib/keycloak-bootstrap/photo-proof-subject.v1.json
+
+secrets:
+  keycloak_synthetic_photo_proof_account:
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/photo-proof-account

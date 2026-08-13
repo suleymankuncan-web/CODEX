@@ -57,6 +57,18 @@ describe("AppConfigService", () => {
     expect(config.databaseTransportStatus).toBe("encrypted-unverified");
   });
 
+  it("keeps the synthetic photo-proof account contract disabled by default", () => {
+    expect(createConfig({}).keycloakSyntheticPhotoProofEnabled).toBe(false);
+    expect(
+      createConfig({ KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "true" })
+        .keycloakSyntheticPhotoProofEnabled,
+    ).toBe(true);
+    expect(() =>
+      createConfig({ KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "enabled" })
+        .keycloakSyntheticPhotoProofEnabled,
+    ).toThrow("KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED must be true or false");
+  });
+
   it("requires verify-full and provider CA input for broad production", () => {
     expect(
       () =>

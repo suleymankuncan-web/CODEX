@@ -1,10 +1,15 @@
 import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto'
-import { readFileSync } from 'node:fs'
+import { lstatSync, readFileSync } from 'node:fs'
 import { request as httpsRequest } from 'node:https'
 import { fileURLToPath } from 'node:url'
 
 let trustedCa = null
 let authorizationTransport = Object.freeze({ hostname: '127.0.0.1', port: 443 })
+let requestLimits = Object.freeze({
+  timeoutMs: 30_000,
+  maxResponseBytes: 16 * 1024 * 1024,
+  maxRequestBytes: 16 * 1024 * 1024,
+})
 
 const PERSONAS = new Map([
   ['onprem.store-manager', { role: 'STORE_MANAGER', scope: 'store' }],
@@ -20,6 +25,18 @@ function resolveAuthorizationTransport({ connectHost, connectPort }) {
     || (connectHost === 'caddy' && port === 8443)
   if (!approved) throw new Error('authorization transport is not approved')
   return Object.freeze({ hostname: connectHost, port })
+}
+
+function configureAuthorizationClient({ caFile, connectHost = '127.0.0.1', connectPort = 443, timeoutMs = 30_000, maxResponseBytes = 16 * 1024 * 1024, maxRequestBytes = 16 * 1024 * 1024 }) {
+  if (typeof caFile !== 'string' || !caFile) throw new Error('authorization CA file is required')
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 120_000) throw new Error('authorization timeout is outside the bounded range')
+  if (!Number.isInteger(maxResponseBytes) || maxResponseBytes < 1_024 || maxResponseBytes > 20 * 1024 * 1024) throw new Error('authorization response limit is outside the bounded range')
+  if (!Number.isInteger(maxRequestBytes) || maxRequestBytes < 1_024 || maxRequestBytes > 20 * 1024 * 1024) throw new Error('authorization request limit is outside the bounded range')
+  authorizationTransport = resolveAuthorizationTransport({ connectHost, connectPort })
+  try { trustedCa = readFileSync(caFile) } catch { throw new Error('authorization CA file is unavailable') }
+  if (!trustedCa.byteLength || trustedCa.byteLength > 64 * 1024) throw new Error('authorization CA file is outside the bounded range')
+  requestLimits = Object.freeze({ timeoutMs, maxResponseBytes, maxRequestBytes })
+  return { transport: authorizationTransport, timeoutMs, maxResponseBytes, maxRequestBytes }
 }
 
 function parseArgs(argv) {
@@ -61,6 +78,53 @@ function readAccounts(path) {
     throw new Error('all five synthetic personas are required')
   }
   return [...accounts.values()]
+}
+
+/**
+ * Read the separate root-owned photo proof account.  This is deliberately a
+ * different contract from the five-persona account file: exactly one row,
+ * exactly twelve fields, and the one approved SUPER_ADMIN identity.  The
+ * returned password and claims remain process-local and are never emitted.
+ */
+function readPhotoProofAccount(path) {
+  let source
+  try {
+    const stats = lstatSync(path)
+    if (!stats.isFile() || stats.isSymbolicLink() || stats.nlink !== 1) throw new Error('unsafe account file')
+    source = readFileSync(path)
+  } catch {
+    throw new Error('synthetic photo proof account file is unavailable')
+  }
+  if (source.byteLength > 16 * 1024) throw new Error('synthetic photo proof account file is too large')
+  const rows = source.toString('utf8').split(/\r?\n/)
+  if (rows.at(-1) === '') rows.pop()
+  if (rows.length !== 1 || !rows[0] || rows[0].startsWith('#')) throw new Error('synthetic photo proof account contract requires exactly one row')
+  const fields = rows[0].split('|')
+  if (fields.length !== 12) throw new Error('synthetic photo proof account contract requires exactly twelve fields')
+  const [accountKey, username, password, role, employeeId, companyIds, regionIds, storeIds, readCompanyIds, readRegionIds, readStoreIds, assignedStoreIds] = fields
+  if (
+    accountKey !== 'onprem.photo-proof-admin' ||
+    username !== 'onprem.photo-proof-admin' ||
+    role !== 'SUPER_ADMIN' ||
+    employeeId !== 'synthetic-employee-photo-proof-admin' ||
+    companyIds !== 'company-001' ||
+    regionIds !== 'region-001' ||
+    storeIds !== 'store-100' ||
+    readCompanyIds !== 'company-001' ||
+    readRegionIds !== 'region-001' ||
+    readStoreIds !== 'store-100' ||
+    assignedStoreIds !== 'store-100' ||
+    typeof password !== 'string' || password.length < 32 || !/^[A-Za-z0-9._@+:/=-]+$/.test(password)
+  ) throw new Error('synthetic photo proof account contract is invalid')
+  return {
+    accountKey,
+    username,
+    password,
+    role,
+    scope: 'company',
+    providerClaims: { readStoreIds: ['store-100'] },
+    overbroadReadStoreClaims: false,
+  }
 }
 
 function base64url(value) {
@@ -167,6 +231,10 @@ function assertBrowserSessionClearContract(headers) {
 }
 
 function requestRaw(host, path, { method = 'GET', headers = {}, body = '', jar } = {}) {
+  const bodyBuffer = body === '' || body === undefined || body === null
+    ? null
+    : Buffer.isBuffer(body) ? body : Buffer.from(String(body))
+  if (bodyBuffer && bodyBuffer.byteLength > requestLimits.maxRequestBytes) return Promise.reject(new Error('authorization request body exceeds the bounded limit'))
   return new Promise((resolve, reject) => {
     const request = httpsRequest({
       hostname: authorizationTransport.hostname,
@@ -181,22 +249,39 @@ function requestRaw(host, path, { method = 'GET', headers = {}, body = '', jar }
         Connection: 'close',
         ...headers,
         ...(jar?.header() ? { Cookie: jar.header() } : {}),
-        ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {}),
+        ...(bodyBuffer ? { 'Content-Length': bodyBuffer.byteLength } : {}),
       },
     }, (response) => {
       const chunks = []
+      let responseBytes = 0
+      let responseTooLarge = false
       response.on('data', (chunk) => chunks.push(chunk))
       response.on('end', () => {
+        if (responseTooLarge) return
         jar?.ingest(response.headers['set-cookie'])
+        const bodyBuffer = Buffer.concat(chunks)
         resolve({
           status: response.statusCode ?? 0,
           headers: response.headers,
-          body: Buffer.concat(chunks).toString('utf8'),
+          body: bodyBuffer.toString('utf8'),
+          bodyBuffer,
         })
       })
+      response.on('data', (chunk) => {
+        responseBytes += chunk.byteLength
+        if (responseBytes > requestLimits.maxResponseBytes && !responseTooLarge) {
+          responseTooLarge = true
+          response.destroy(new Error('authorization response exceeds the bounded limit'))
+          reject(new Error('authorization response exceeds the bounded limit'))
+        }
+      })
+      response.on('error', (error) => {
+        if (!responseTooLarge) reject(error)
+      })
     })
+    request.setTimeout(requestLimits.timeoutMs, () => request.destroy(new Error('authorization request timed out')))
     request.on('error', reject)
-    if (body) request.write(body)
+    if (bodyBuffer) request.write(bodyBuffer)
     request.end()
   })
 }
@@ -538,8 +623,7 @@ function assertSession(session, account) {
 }
 
 async function run(options) {
-  authorizationTransport = resolveAuthorizationTransport(options)
-  trustedCa = readFileSync(options.caFile)
+  configureAuthorizationClient(options)
   const accounts = readAccounts(options.accountsFile)
   const discoveryResponse = await jsonRequest(options.host, '/realms/store-ops/.well-known/openid-configuration')
   if (discoveryResponse.status !== 200 || !discoveryResponse.json) throw new Error('OIDC discovery endpoint did not return JSON')
@@ -723,9 +807,15 @@ export {
   classifyBrowserSessionCreateFailure,
   classifyLoginCodeFailure,
   classifyRealmLogoutFailure,
+  configureAuthorizationClient,
+  createBrowserSession,
   decodeHtmlAttribute,
+  jsonRequest,
+  loginPersona,
   parseArgs,
   readAccounts,
+  readPhotoProofAccount,
+  requestRaw,
   resolveAuthorizationTransport,
   run as runKeycloakAuthProof,
 }

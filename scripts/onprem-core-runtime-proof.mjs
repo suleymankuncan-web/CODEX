@@ -6,17 +6,9 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { assertControlledKeycloakStop, assertGracefulStopState, assertKeycloakContainerIdentity, assertKeycloakPreStopState, buildKeycloakStopArgs, observeKeycloakGracefulStop } from './onprem-graceful-stop-contract.mjs'
-import {
-  buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE,
-  classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER,
-  verifyCaddyRuntimeInvariants,
-} from './onprem-caddy-runtime-proof.mjs'
+import { buildTlsProbeDockerArgs, CADDY_CMDLINE, CADDY_IMAGE, classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_PROBE_MARKER, verifyCaddyRuntimeInvariants } from './onprem-caddy-runtime-proof.mjs'
 import { assertPostRedisLoadCheckpoint, assertProbeOutput, assertStoppedAofCommandSequence, buildQueueSnapshotComposeArgs, classifyQueueFailureReason, classifyRedisPersistenceLogs, collectRedisRestartLogDelta, collectStoppedAofInventoryEvidence, createRuntimeIsolationControls, parseStoppedAofInventory, sanitizeQueuePersistenceCheckpoint } from './onprem-redis-persistence-diagnostic.mjs'
-export {
-  buildTlsProbeDockerArgs, classifyTlsProbeResult,
-  sanitizeTlsErrorCode, TLS_WRONG_CA_CODES,
-  verifyCaddyRuntimeInvariants,
-} from './onprem-caddy-runtime-proof.mjs'
+export { buildTlsProbeDockerArgs, classifyTlsProbeResult, sanitizeTlsErrorCode, TLS_WRONG_CA_CODES, verifyCaddyRuntimeInvariants } from './onprem-caddy-runtime-proof.mjs'
 export { assertProbeOutput, classifyRedisPersistenceLogs, parseProbeCompletion, parseStoppedAofInventory, sanitizeQueuePersistenceCheckpoint } from './onprem-redis-persistence-diagnostic.mjs'
 const PRIVATE_SUBNETS = ['172.30.0.0/24', '172.30.10.0/24', '172.30.20.0/24', '172.30.30.0/24']
 const LONG_LIVED = ['caddy', 'frontend', 'api', 'worker', 'postgres', 'redis', 'keycloak']
@@ -222,8 +214,7 @@ export function parseSequencePrivilegeMatrix(value) {
 export const EXPECTED_PUBLIC_SECRET_NAMES = Object.freeze(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
 export const EXPECTED_SECRET_UIDS = Object.freeze({ caddy_tls_private_key: 10001, postgres_tls_private_key: 70, postgres_bootstrap_password: 70, postgres_migrator_password: 70, postgres_api_password: 70, postgres_worker_password: 70, redis_users_acl: 999, redis_health_url: 999, migrator_database_url: 65532, api_database_url: 65532, worker_database_url: 65532, redis_api_url: 65532, redis_worker_url: 65532, browser_session_secret: 65532, binder_database_url: 1000, keycloak_database_url: 1000, keycloak_database_username: 1000, keycloak_database_password: 1000, postgres_keycloak_database_password: 70, keycloak_bootstrap_username: 1000, keycloak_bootstrap_password: 1000, keycloak_smtp_auth_user: 1000, keycloak_smtp_password: 1000, keycloak_synthetic_accounts: 1000 })
 function assertSecretPermissions(config) {
-  const publicFiles = new Set(EXPECTED_PUBLIC_SECRET_NAMES)
-  const expectedUid = new Map(Object.entries(EXPECTED_SECRET_UIDS))
+  const publicFiles = new Set(EXPECTED_PUBLIC_SECRET_NAMES), expectedUid = new Map(Object.entries(EXPECTED_SECRET_UIDS))
   for (const [name, descriptor] of Object.entries(config.secrets ?? {})) {
     const path = descriptor.file
     const stat = lstatSync(path)
@@ -238,6 +229,14 @@ function assertSecretPermissions(config) {
       throw new Error(`secret ${name} must be owned by uid ${expectedUid.get(name)} with mode 0400 or 0600`)
     }
   }
+}
+export function assertPhotoProofManifestContract(config, { enabled } = {}) {
+  const expectedPath = '/var/lib/keycloak-bootstrap/photo-proof-subject.v1.json', bootstrap = config?.services?.['keycloak-bootstrap'] ?? {}, binder = config?.services?.['identity-binder'] ?? {}
+  const photoEnabled = enabled ?? String(bootstrap.environment?.KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED ?? 'false') === 'true'
+  const mounted = (bootstrap.secrets ?? []).some((secret) => (typeof secret === 'string' ? secret : secret?.source) === 'keycloak_synthetic_photo_proof_account')
+  if (!photoEnabled) { if (bootstrap.environment?.KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE || binder.environment?.KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE || mounted || config?.secrets?.keycloak_synthetic_photo_proof_account) throw new Error('disabled photo-proof mode exposes proof-only state'); return null }
+  if (bootstrap.environment?.KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE !== expectedPath || binder.environment?.KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE !== expectedPath || !mounted || !config?.secrets?.keycloak_synthetic_photo_proof_account) throw new Error('strict-local photo-proof contract is incomplete')
+  return expectedPath
 }
 function ipv4InCidr(ip, cidr) {
   const [base, bitsText] = cidr.split('/')
@@ -348,6 +347,7 @@ async function main() {
     volumeRecovery: 'same-volume-only', keycloakLifecycleProof: null,
   }
   if (config.name !== options.project) throw new Error('Compose project identity mismatch')
+  assertPhotoProofManifestContract(config)
   if (config.services.caddy.image !== CADDY_IMAGE) throw new Error('Caddy must use the exact approved upstream image identity')
   if (config.services.caddy.environment.HR_AXIS_PUBLIC_HOST === 'hr-axis.example.invalid') throw new Error('placeholder public host is forbidden in executable proof')
   for (const [name, service] of Object.entries(config.services)) {

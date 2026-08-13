@@ -791,6 +791,8 @@ describe("PhotoMediaStorageService", () => {
       mediaAssetId: mediaAsset.mediaAssetId,
       state: "ready",
       rawDisposal: "verified",
+      canonicalSha256,
+      canonicalByteCount: canonical.byteLength,
     });
 
     expect(primary.putObject).toHaveBeenNthCalledWith(1, expect.objectContaining({

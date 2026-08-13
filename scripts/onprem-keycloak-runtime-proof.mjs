@@ -539,6 +539,7 @@ export function assertSecretSafeLogsWithValues(value, label, secretValues) {
 export function collectSecretValues(options) {
   const composePath = resolve(options.compose)
   const composeText = readFileSync(composePath, 'utf8')
+  const environment = options.env ?? process.env
   const publicSecretNames = new Set(['caddy_tls_certificate', 'caddy_tls_ca', 'postgres_tls_certificate', 'postgres_tls_ca'])
   const values = new Set()
   const add = (value) => {
@@ -549,15 +550,19 @@ export function collectSecretValues(options) {
   if (entries.length === 0) throw new Error('Keycloak runtime secret scan could not resolve Compose file-backed secrets')
   for (const [, secretName, configuredPath] of entries) {
     if (publicSecretNames.has(secretName) || !isConfidentialRuntimeSecretName(secretName)) continue
-    const rawPath = configuredPath.trim().replace(/^['"]|['"]$/g, '')
+    let rawPath = configuredPath.trim().replace(/^['"]|['"]$/g, '')
+    rawPath = rawPath.replace(/^\$\{HR_AXIS_SECRET_ROOT:-([^}]*)\}/, (_, defaultRoot) => (
+      String(environment.HR_AXIS_SECRET_ROOT ?? '').trim() || defaultRoot
+    ))
+    if (rawPath.includes('${')) throw new Error(`Keycloak runtime secret scan could not resolve ${secretName} file expression`)
     const filePath = resolve(dirname(composePath), rawPath)
     try {
       const raw = readFileSync(filePath, 'utf8')
-      if (secretName === 'keycloak_synthetic_accounts') {
+      if (secretName === 'keycloak_synthetic_accounts' || secretName === 'keycloak_synthetic_photo_proof_account') {
         for (const line of raw.split(/\r?\n/)) {
           if (!line.trim() || line.trim().startsWith('#')) continue
           const fields = line.split('|')
-          if (fields.length < 3) throw new Error('Keycloak synthetic account secret row is malformed')
+          if (fields.length !== 12) throw new Error('Keycloak synthetic account secret row is malformed')
           add(fields[2])
         }
       } else add(raw)
