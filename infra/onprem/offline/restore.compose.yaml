@@ -1,0 +1,42 @@
+# Disposable restore-only overlay. Load after the production-shaped base,
+# photo-proof, and photo-storage Compose files: `-f core/compose.yaml -f
+# core/compose.photo-proof.yaml -f photo-storage/compose.yaml -f
+# offline/restore.compose.yaml`. Every volume name is supplied by the restore
+# operator so the target can be precreated and identity-checked before startup.
+services:
+  caddy:
+    ports: !override []
+
+  object-storage:
+    ports: !override []
+
+networks:
+  edge:
+    ipam: !override
+      config: []
+  proxy:
+    ipam: !override
+      config: []
+  app:
+    ipam: !override
+      config: []
+  data:
+    ipam: !override
+      config: []
+
+volumes:
+  postgres_data: !override
+    external: true
+    name: ${OFFLINE_RESTORE_POSTGRES_VOLUME:?set the exact restore volume name}
+  redis_data: !override
+    external: true
+    name: ${OFFLINE_RESTORE_REDIS_VOLUME:?set the exact restore volume name}
+  keycloak_data: !override
+    external: true
+    name: ${OFFLINE_RESTORE_KEYCLOAK_VOLUME:?set the exact restore volume name}
+  keycloak_bootstrap_state: !override
+    external: true
+    name: ${OFFLINE_RESTORE_KEYCLOAK_BOOTSTRAP_VOLUME:?set the exact restore volume name}
+  object_storage_data: !override
+    external: true
+    name: ${OFFLINE_RESTORE_PHOTO_VOLUME:?set the exact restore volume name}

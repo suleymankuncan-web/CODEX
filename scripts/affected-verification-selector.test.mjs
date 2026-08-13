@@ -138,6 +138,18 @@ test('selector CLI prints commands and full release reason from changed files en
   assert.match(result.stdout, /targeted auth\/scope positive and negative tests/)
 })
 
+test('offline package and Compose changes select the offline rehearsal contract', () => {
+  const selection = selectAffectedVerification([
+    'infra/onprem/core/compose.photo-proof.yaml',
+  ])
+
+  assert.equal(selection.fullReleaseRequired, true)
+  assert.ok(selection.commands.includes('npm.cmd run check:release'))
+  assert.ok(selection.commands.includes('npm.cmd run test:scripts'))
+  assert.ok(selection.targeted.includes('on-prem offline bundle and clean Linux rehearsal contract'))
+  assert.ok(selection.affectedRoutesOrServices.includes('/onprem-offline'))
+})
+
 test('project health plan keeps affected selector limits explicit', () => {
   const plan = readText('docs/plans/project-health-uplift-pr-train-v1.md')
 

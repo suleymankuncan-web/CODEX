@@ -47,6 +47,23 @@ const rules = [
     fullRelease: true,
   },
   {
+    name: 'on-prem offline package',
+    test: (file) =>
+      file === '.github/workflows/onprem-offline-proof.yml' ||
+      file === 'infra/onprem/core/compose.yaml' ||
+      file === 'infra/onprem/core/compose.photo-proof.yaml' ||
+      file === 'infra/onprem/photo-storage/compose.yaml' ||
+      file.startsWith('infra/onprem/offline/') ||
+      file.startsWith('scripts/onprem-offline-') ||
+      file.startsWith('docs/runbooks/onprem-offline-') ||
+      file === 'package.json',
+    commands: ['diffCheck', 'scriptTests', 'rootRelease'],
+    targeted: ['on-prem offline bundle and clean Linux rehearsal contract'],
+    routes: ['/onprem-offline'],
+    reason: 'offline bundle, operator scripts, Compose inputs, or clean-host rehearsal workflow changed',
+    fullRelease: true,
+  },
+  {
     name: 'frontend app',
     test: (file) => file.startsWith('admin-web/src/') || file.startsWith('admin-web/e2e/'),
     commands: ['frontendLint', 'frontendBuild'],
