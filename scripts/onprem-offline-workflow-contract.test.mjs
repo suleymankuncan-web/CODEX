@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -15,6 +15,48 @@ function jobSection(name) {
   const nextMatch = workflow.slice(start + marker.length).match(/\n  [a-z][a-z0-9_]*:\s*\n/)
   const next = nextMatch ? start + marker.length + nextMatch.index : -1
   return workflow.slice(start, next === -1 ? workflow.length : next)
+}
+
+function stepSection(job, name) {
+  const marker = `      - name: ${name}`
+  const start = job.indexOf(marker)
+  assert.notEqual(start, -1, `missing ${name} step`)
+  const nextMatch = job.slice(start + marker.length).match(/\n      - name:/)
+  const next = nextMatch ? start + marker.length + nextMatch.index : -1
+  return job.slice(start, next === -1 ? job.length : next)
+}
+
+function heredocBody(section, marker) {
+  const start = section.indexOf(marker)
+  assert.ok(start >= 0, `missing heredoc marker: ${marker}`)
+  const source = section.slice(start)
+  const match = source.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/)
+  assert.ok(match, `missing Node heredoc for ${marker}`)
+  return match[1]
+}
+
+function runProofValidator(run, { expectedSha, proofArtifactName }) {
+  const build = jobSection('build_bundle')
+  const body = heredocBody(build, 'Validate caller image-proof run before artifact download')
+  const root = mkdtempSync(join(tmpdir(), 'onprem-offline-proof-validator-'))
+  const script = join(root, 'validator.mjs')
+  const output = join(root, 'github-output')
+  writeFileSync(script, `globalThis.fetch = async () => ({ ok: true, json: async () => (${JSON.stringify(run)}) })\n${body}\n`)
+  const result = spawnSync(process.execPath, [script], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      EXPECTED_SHA: expectedSha,
+      PROOF_ARTIFACT_NAME: proofArtifactName,
+      PROOF_RUN_ID: '31720253857',
+      REPOSITORY: 'suleymankuncan-web/CODEX',
+      GITHUB_TOKEN: 'synthetic-token',
+      GITHUB_OUTPUT: output,
+    },
+  })
+  const outputText = existsSync(output) ? readFileSync(output, 'utf8') : ''
+  rmSync(root, { recursive: true, force: true })
+  return { ...result, outputText }
 }
 
 test('offline proof is a two-job, source-free handoff workflow with pinned actions', () => {
@@ -329,14 +371,132 @@ test('caller proof run identity is validated through GitHub REST before artifact
   assert.match(block, /fetch\(endpoint/)
   assert.match(block, /Authorization:\s*`Bearer \$\{token\}`/)
   assert.match(block, /run\?\.repository\?\.full_name\s*!==\s*repository/)
-  assert.match(block, /run\?\.path\s*!==\s*'\.github\/workflows\/onprem-image-proof\.yml'/)
-  assert.match(block, /run\?\.name\s*!==\s*'on-prem image proof'/)
+  assert.match(block, /required-release-gate\.yml/)
+  assert.match(block, /Required Release Gate/)
+  assert.match(block, /referenced_workflows/)
+  assert.match(block, /onprem-image-proof\.yml/)
+  assert.match(block, /executionSha/)
+  assert.match(block, /GITHUB_OUTPUT/)
   assert.match(block, /run\?\.status\s*!==\s*'completed'/)
   assert.match(block, /run\?\.conclusion\s*!==\s*'success'/)
   assert.match(block, /run\?\.head_sha\s*!==\s*expectedSha/)
   assert.doesNotMatch(block, /response\.text\(|console\.error\(|response\.body/)
-  const artifactCheck = build.indexOf('test "$PROOF_ARTIFACT_NAME" = "onprem-image-proof-${EXPECTED_SHA}"')
+  assert.match(block, /PROOF_ARTIFACT_NAME/)
+  const artifactCheck = build.indexOf('test "$PROOF_ARTIFACT_NAME" = "onprem-image-proof-${EXECUTION_SHA}"')
   assert.ok(artifactCheck > download, 'exact expected proof artifact name must remain enforced')
+  assert.match(build, /id:\s*validate_proof_run/)
+  assert.match(build, /onprem-image-proof-\$\{\{\s*steps\.validate_proof_run\.outputs\.execution_sha\s*\}\}/)
+  assert.match(build, /onprem-core-runtime-proof-\$\{\{\s*steps\.validate_proof_run\.outputs\.execution_sha\s*\}\}/)
+  assert.match(build, /onprem-keycloak-runtime-proof-\$\{\{\s*steps\.validate_proof_run\.outputs\.execution_sha\s*\}\}/)
+  assert.match(build, /onprem-photo-storage-proof-\$\{\{\s*steps\.validate_proof_run\.outputs\.execution_sha\s*\}\}/)
+
+  const executionShaExpression = '${{ steps.validate_proof_run.outputs.execution_sha }}'
+  const downloadSteps = [
+    ['Download upstream image proof artifact', `onprem-image-proof-${executionShaExpression}`],
+    ['Download upstream core runtime proof', `onprem-core-runtime-proof-${executionShaExpression}`],
+    ['Download upstream keycloak runtime proof', `onprem-keycloak-runtime-proof-${executionShaExpression}`],
+    ['Download upstream photo-storage proof', `onprem-photo-storage-proof-${executionShaExpression}`],
+  ].map(([name, artifactName]) => ({ name, artifactName, block: stepSection(build, name) }))
+  assert.equal((build.match(/actions\/download-artifact@[0-9a-f]{40}/g) ?? []).length, 4, 'build must use four exact artifact downloads')
+  assert.doesNotMatch(build, /pattern:\s*\|/, 'exact downloads must not use a multiline pattern')
+  for (const { name, artifactName, block } of downloadSteps) {
+    assert.match(block, /uses:\s*actions\/download-artifact@[0-9a-f]{40}/, name)
+    const nameLines = block.split(/\r?\n/).filter((line) => line.startsWith('          name: '))
+    assert.deepEqual(nameLines, [`          name: ${artifactName}`], `${name} must bind one exact artifact name`)
+    assert.match(block, /github-token:\s*\$\{\{\s*github\.token\s*\}\}/, name)
+    assert.match(block, /run-id:\s*\$\{\{\s*inputs\.proof_run_id\s*\}\}/, name)
+    assert.match(block, /merge-multiple:\s*true/, name)
+    assert.match(block, /path:\s*\$\{\{\s*runner\.temp\s*\}\}\/onprem-proof-download/, name)
+    assert.doesNotMatch(block, /pattern:|continue-on-error:\s*true|if:\s*always\(\)/, `${name} must fail closed when its exact artifact is missing`)
+  }
+})
+
+test('caller proof validator accepts reusable parent provenance and preserves standalone image-proof acceptance', () => {
+  const expectedSha = 'a'.repeat(40)
+  const executionSha = 'b'.repeat(40)
+  const parentRun = {
+    repository: { full_name: 'suleymankuncan-web/CODEX' },
+    event: 'pull_request',
+    path: '.github/workflows/required-release-gate.yml',
+    name: 'Required Release Gate',
+    status: 'completed',
+    conclusion: 'success',
+    head_sha: expectedSha,
+    referenced_workflows: [
+      {
+        path: `suleymankuncan-web/CODEX/.github/workflows/release-check.yml@${executionSha}`,
+        sha: executionSha,
+        ref: 'refs/pull/1062/merge',
+      },
+      {
+        path: `suleymankuncan-web/CODEX/.github/workflows/onprem-image-proof.yml@${executionSha}`,
+        sha: executionSha,
+        ref: 'refs/pull/1062/merge',
+      },
+    ],
+  }
+  const parent = runProofValidator(parentRun, {
+    expectedSha,
+    proofArtifactName: `onprem-image-proof-${executionSha}`,
+  })
+  assert.equal(parent.status, 0, parent.stderr)
+  assert.match(parent.outputText, new RegExp(`^execution_sha=${executionSha}$`, 'm'))
+
+  const standaloneRun = {
+    ...parentRun,
+    event: 'workflow_dispatch',
+    path: '.github/workflows/onprem-image-proof.yml',
+    name: 'on-prem image proof',
+    referenced_workflows: [],
+  }
+  const standalone = runProofValidator(standaloneRun, {
+    expectedSha,
+    proofArtifactName: `onprem-image-proof-${expectedSha}`,
+  })
+  assert.equal(standalone.status, 0, standalone.stderr)
+  assert.match(standalone.outputText, new RegExp(`^execution_sha=${expectedSha}$`, 'm'))
+})
+
+test('caller proof validator rejects missing, wrong, or duplicate image-proof references and wrong execution artifacts', () => {
+  const expectedSha = 'a'.repeat(40)
+  const executionSha = 'b'.repeat(40)
+  const reference = {
+    path: `suleymankuncan-web/CODEX/.github/workflows/onprem-image-proof.yml@${executionSha}`,
+    sha: executionSha,
+    ref: 'refs/pull/1062/merge',
+  }
+  const parentRun = {
+    repository: { full_name: 'suleymankuncan-web/CODEX' },
+    event: 'pull_request',
+    path: '.github/workflows/required-release-gate.yml',
+    name: 'Required Release Gate',
+    status: 'completed',
+    conclusion: 'success',
+    head_sha: expectedSha,
+    referenced_workflows: [reference],
+  }
+  const cases = [
+    ['missing reference', { referenced_workflows: [] }],
+    ['wrong repository', { referenced_workflows: [{ ...reference, path: `other/CODEX/.github/workflows/onprem-image-proof.yml@${executionSha}` }] }],
+    ['wrong path', { referenced_workflows: [{ ...reference, path: `suleymankuncan-web/CODEX/.github/workflows/other.yml@${executionSha}` }] }],
+    ['duplicate reference', { referenced_workflows: [reference, { ...reference }] }],
+    ['valid plus branch suffix', { referenced_workflows: [reference, { ...reference, path: `suleymankuncan-web/CODEX/.github/workflows/onprem-image-proof.yml@main` }] }],
+    ['valid plus tag suffix', { referenced_workflows: [reference, { ...reference, path: `suleymankuncan-web/CODEX/.github/workflows/onprem-image-proof.yml@v2` }] }],
+    ['valid plus malformed suffix', { referenced_workflows: [reference, { ...reference, path: 'suleymankuncan-web/CODEX/.github/workflows/onprem-image-proof.yml@not-a-sha' }] }],
+    ['mismatched reference sha', { referenced_workflows: [{ ...reference, sha: 'c'.repeat(40) }] }],
+    ['invalid reference ref', { referenced_workflows: [{ ...reference, ref: 'main' }] }],
+    ['missing event', { event: undefined }],
+    ['wrong event', { event: 'workflow_dispatch' }],
+    ['wrong artifact execution sha', {}, `onprem-image-proof-${expectedSha}`],
+  ]
+  for (const [label, overrides, artifact = `onprem-image-proof-${executionSha}`] of cases) {
+    const result = runProofValidator({ ...parentRun, ...overrides }, {
+      expectedSha,
+      proofArtifactName: artifact,
+    })
+    assert.notEqual(result.status, 0, `${label} must fail closed`)
+    assert.match(result.stderr, /image proof (?:run identity|artifact identity|run referenced workflow identity) mismatch/i, label)
+  }
 })
 
 test('offline rehearsal seals downloaded bundle and trust material under a fresh root-owned /var/lib root', () => {
