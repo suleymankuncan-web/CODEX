@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -274,6 +274,14 @@ test('Keycloak bootstrap cleanup preserves the primary failure phase before scan
   assert.match(cleanup, /if \[ "\$status" -eq 0 \]; then\s+phase_marker server-log-scan\s+fi\s+scan_server_log/)
 })
 
+test('Keycloak runtime proof scans ownership of the base private subject manifest', () => {
+  const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
+  const ownershipIndex = source.indexOf("'private subject manifest ownership'")
+  const ownershipProbe = ownershipIndex >= 0 ? source.slice(ownershipIndex - 500, ownershipIndex + 80) : ''
+  assert.match(ownershipProbe, /subjects\.v1\.json/)
+  assert.doesNotMatch(ownershipProbe, /photo-proof-subject\.v1\.json/)
+})
+
 test('Keycloak runtime scan keeps credentials but excludes the fixed database role identity', () => {
   const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-secret-scan-'))
   try {
@@ -284,6 +292,36 @@ test('Keycloak runtime scan keeps credentials but excludes the fixed database ro
     const values = collectSecretValues({ compose })
     assert.equal(values.has('keycloak'), false)
     assert.equal(values.has('synthetic-password-canary'), true)
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('Keycloak runtime secret scan resolves the Compose secret-root default expression', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-secret-root-default-'))
+  try {
+    const compose = join(directory, 'compose.yaml')
+    const secretDirectory = join(directory, 'secret-files', 'keycloak')
+    mkdirSync(secretDirectory, { recursive: true })
+    writeFileSync(join(secretDirectory, 'database-password'), 'synthetic-default-root-canary')
+    writeFileSync(compose, 'secrets:\n  keycloak_database_password:\n    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/database-password\n')
+
+    const values = collectSecretValues({ compose, env: {} })
+
+    assert.equal(values.has('synthetic-default-root-canary'), true)
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('Keycloak runtime secret scan includes the separate photo-proof account password', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-photo-proof-secret-scan-'))
+  try {
+    const compose = join(directory, 'compose.yaml')
+    writeFileSync(join(directory, 'photo-proof-account'), 'onprem.photo-proof-admin|onprem.photo-proof-admin|photo-proof-password-canary|SUPER_ADMIN|synthetic-employee-photo-proof-admin|company-001|region-001|store-100|company-001|region-001|store-100|store-100\n')
+    writeFileSync(compose, 'secrets:\n  keycloak_synthetic_photo_proof_account:\n    file: ./photo-proof-account\n')
+    const values = collectSecretValues({ compose })
+    assert.equal(values.has('photo-proof-password-canary'), true)
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
@@ -306,14 +344,17 @@ test('Keycloak inner server-log scan ignores org.keycloak noise but catches a cr
     const serverLog = join(directory, 'server.log')
     const bootstrapPassword = join(directory, 'bootstrap-password')
     const accountsFile = join(directory, 'accounts')
+    const photoProofAccountFile = join(directory, 'photo-proof-account')
     writeFileSync(bootstrapPassword, 'bootstrap-password-canary')
     writeFileSync(accountsFile, 'onprem.store-manager|synthetic-user|synthetic-account-password-canary|STORE_MANAGER\n')
+    writeFileSync(photoProofAccountFile, 'onprem.photo-proof-admin|onprem.photo-proof-admin|photo-proof-password-canary|SUPER_ADMIN|synthetic-employee-photo-proof-admin|company-001|region-001|store-100|company-001|region-001|store-100|store-100\n')
     const runScan = (text) => {
       writeFileSync(serverLog, text)
       const script = `set -eu
 server_log="$1"
 bootstrap_password_file="$2"
 accounts_file="$3"
+photo_proof_account_file="$4"
 bootstrap_password='bootstrap-password-canary'
 smtp_password='smtp-password-canary'
 smtp_auth_user='smtp-user-canary'
@@ -323,7 +364,7 @@ database_url='jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full'
 ${scanFunction}
 scan_server_log
 `
-      return spawnSync('sh', ['-eu', '-c', script, 'scan-test', serverLog, bootstrapPassword, accountsFile], {
+      return spawnSync('sh', ['-eu', '-c', script, 'scan-test', serverLog, bootstrapPassword, accountsFile, photoProofAccountFile], {
         encoding: 'utf8',
         windowsHide: true,
       })
@@ -337,6 +378,7 @@ scan_server_log
       'database-password-canary',
       'jdbc:postgresql://postgres:5432/keycloak?sslmode=verify-full',
       'synthetic-account-password-canary',
+      'photo-proof-password-canary',
     ]) {
       assert.notEqual(runScan(`WARN leaked ${canary}`).status, 0, canary)
     }

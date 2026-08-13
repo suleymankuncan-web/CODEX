@@ -158,6 +158,7 @@ export function validateOnpremCoreContract(input) {
   ]))
   const errors = []
   const blocks = serviceBlocks(input.compose)
+  const photoProofCompose = String(input.photoProofCompose ?? '')
   const services = [...blocks.keys()]
   const fail = (condition, message) => {
     if (!condition) errors.push(message)
@@ -200,7 +201,8 @@ export function validateOnpremCoreContract(input) {
     fail(new RegExp(`^  ${network}:\\n    internal: true`, 'm').test(input.compose), 'proxy, app, and data networks must be internal')
   }
   fail(/^  edge:\n    driver: bridge\n    ipam:\n      config:\n        - subnet: 172\.30\.0\.0\/24/m.test(input.compose), 'edge must be a pinned bridge subnet so egress policy can cover caddy')
-  fail((input.compose.match(/com\.hr-axis\.project: hr-axis-onprem-core/g) ?? []).length >= 7, 'services, networks, and volumes require project labels')
+  fail((input.compose.match(/com\.hr-axis\.project: \$\{HR_AXIS_PROJECT_ID:-hr-axis-onprem-core\}/g) ?? []).length >= 7, 'services, networks, and volumes require project labels parameterized by HR_AXIS_PROJECT_ID')
+  fail(!/com\.hr-axis\.project:\s+hr-axis-onprem-core(?!\s*\})/.test(input.compose), 'project labels must not be hardcoded')
   fail((input.compose.match(/com\.hr-axis\.data-class: synthetic/g) ?? []).length >= 7, 'services, networks, and volumes require synthetic data-class labels')
 
   const safeEndpointEnvironment = new Set([
@@ -217,6 +219,8 @@ export function validateOnpremCoreContract(input) {
   fail(!/\b(?:DATABASE_URL|REDIS_URL|JWT_SECRET|BROWSER_SESSION_SECRET):\s*\S+/.test(input.compose), 'sensitive environment variable must use a _FILE boundary')
   fail(/infra\/onprem\/core\/secret-files\//.test(input.gitignore), 'secret-files directory must be ignored')
   fail(!/(?:password|secret|token|private[_-]?key)\s*=\s*[^\s#]{12,}/i.test(input.envTemplate), 'env.template must contain non-secret values only')
+  const coreSecretFiles = input.compose.match(/^\s+file:\s+[^\n]+$/gm) ?? []
+  fail(coreSecretFiles.length >= 20 && coreSecretFiles.every((line) => line.includes('${HR_AXIS_SECRET_ROOT:-./secret-files}/')), 'core secret file paths must use the external HR_AXIS_SECRET_ROOT root')
 
   for (const service of LONG_LIVED) {
     const block = blocks.get(service) ?? ''
@@ -294,6 +298,19 @@ export function validateOnpremCoreContract(input) {
   fail(/ocsp_stapling off/.test(input.caddy), 'strict-local Caddy must disable external OCSP stapling fetches')
   fail(/AUTH_PROVIDER_KEY: oidc/.test(blocks.get('api') ?? ''), 'strict-local auth provider key must remain oidc until ONP-3')
   fail(!/^\s+(?:SENTRY_DSN|QWEN_API_KEY|PHOTO_MEDIA_[A-Z0-9_]*(?:SECRET|KEY|TOKEN)):/m.test(input.compose), 'disabled providers must omit their credential keys entirely')
+  const bootstrapBlock = blocks.get('keycloak-bootstrap') ?? ''
+  const binderBlock = blocks.get('identity-binder') ?? ''
+  fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: \$\{KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false\}/.test(bootstrapBlock), 'base Keycloak bootstrap must default the dedicated photo-proof gate to false')
+  fail(/KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: \$\{KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false\}/.test(binderBlock), 'identity binder must receive the exact synthetic accounts flag interpolation')
+  fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: \$\{KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false\}/.test(binderBlock), 'base identity binder must default the dedicated photo-proof gate to false')
+  fail(!/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE|KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE|keycloak_synthetic_photo_proof_account/.test(input.compose), 'base Compose must not declare or mount the photo-proof credential or manifest path')
+  if (photoProofCompose) {
+    fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:\s*["']true["']/.test(photoProofCompose), 'photo-proof overlay must enable the dedicated photo-proof gate')
+    fail(/KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE:\s*\/run\/secrets\/keycloak_synthetic_photo_proof_account/.test(photoProofCompose), 'photo-proof overlay must mount the exact proof credential path')
+    fail(/KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE:\s*\/var\/lib\/keycloak-bootstrap\/photo-proof-subject\.v1\.json/.test(photoProofCompose), 'photo-proof overlay must supply the exact subject manifest path')
+    fail(/source:\s*keycloak_synthetic_photo_proof_account[\s\S]*target:\s*keycloak_synthetic_photo_proof_account/.test(photoProofCompose), 'photo-proof overlay must mount the proof credential only on bootstrap')
+    fail(/keycloak_synthetic_photo_proof_account:\s*\n\s+file:\s*\$\{HR_AXIS_SECRET_ROOT:-\.\/secret-files\}\/keycloak\/photo-proof-account/.test(photoProofCompose), 'photo-proof overlay must source the external proof credential root')
+  }
   fail(/\n  keycloak:\n[\s\S]*?image: \$\{KEYCLOAK_IMAGE:\?set an immutable built Keycloak image reference\}/.test(input.compose), 'ONP-3B must run the pinned Keycloak image')
   fail(/\n  keycloak-bootstrap:\n[\s\S]*?command: \["\/opt\/keycloak\/bootstrap\.sh"\]/.test(input.compose), 'ONP-3B must keep stopped-server Keycloak bootstrap explicit')
   fail(/\n  identity-binder:\n[\s\S]*?KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST_FILE:/.test(input.compose), 'ONP-3B must bind synthetic identities through the private subject manifest')
@@ -373,6 +390,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     bootstrap: read('infra/onprem/core/postgres/010-bootstrap-roles.sh'),
     caddy: read('infra/onprem/core/caddy/Caddyfile'),
     compose: read('infra/onprem/core/compose.yaml'),
+    photoProofCompose: read('infra/onprem/core/compose.photo-proof.yaml'),
     envTemplate: read('infra/onprem/core/env.template'),
     frontendDockerfile: read('infra/onprem/images/frontend.Dockerfile'),
     gitignore: read('.gitignore'),

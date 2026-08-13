@@ -474,15 +474,12 @@ export class AppConfigService {
   get isProduction(): boolean {
     return this.readString("NODE_ENV", "development") === "production";
   }
-
   get isStrictLocal(): boolean {
     return this.readBoolean("HR_AXIS_STRICT_LOCAL", false);
   }
-
   get dataClass(): string {
     return this.readString("HR_AXIS_DATA_CLASS", "unspecified");
   }
-
   get databaseUrl(): string {
     return this.readString(
       "DATABASE_URL",
@@ -492,6 +489,9 @@ export class AppConfigService {
 
   get keycloakSyntheticSubjectManifest(): string | undefined {
     return this.readOptionalString("KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST");
+  }
+  get keycloakSyntheticPhotoProofEnabled(): boolean {
+    return this.readBoolean("KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED", false);
   }
 
   get dbPoolMax(): number {

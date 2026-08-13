@@ -23,6 +23,7 @@ function input() {
     bootstrapSql: read('infra/onprem/core/postgres/010-bootstrap-roles.sh'),
     caddy: read('infra/onprem/core/caddy/Caddyfile'),
     compose: read('infra/onprem/core/compose.yaml'),
+    photoProofCompose: read('infra/onprem/core/compose.photo-proof.yaml'),
     envTemplate: read('infra/onprem/core/env.template'),
     realmConfig: read('infra/onprem/core/keycloak/realm-config.json'),
     personaSeed: read('db/seeds/002_onprem_keycloak_personas.sql'),
@@ -35,6 +36,92 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   const result = validateOnpremKeycloakContract(baseline)
   assert.equal(result.ok, true, result.errors.join('; '))
   assert.equal(result.errors.length, 0)
+})
+
+test('ONP-5 photo-proof identity stays separate from the exact five-persona contract', () => {
+  const baseline = input()
+  assert.doesNotMatch(baseline.compose, /keycloak_synthetic_photo_proof_account/)
+  assert.doesNotMatch(baseline.compose, /KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE/)
+  assert.match(baseline.photoProofCompose, /keycloak_synthetic_photo_proof_account/)
+  assert.match(baseline.photoProofCompose, /KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE: \/var\/lib\/keycloak-bootstrap\/photo-proof-subject\.v1\.json/)
+  assert.match(baseline.bootstrapScript, /onprem-keycloak-photo-proof-subject-v1/)
+  assert.match(baseline.bootstrapScript, /photo_proof_roles.*SUPER_ADMIN/)
+  assert.match(baseline.bootstrapScript, /synthetic photo proof account secret is forbidden while photo proof is disabled/)
+  assert.match(baseline.bootstrapScript, /case "\$photo_proof_enabled" in\s+true\|false\)/)
+
+  for (const bootstrapScript of [
+    baseline.bootstrapScript.replace('onprem-keycloak-photo-proof-subject-v1', 'onprem-keycloak-subjects-v1'),
+    baseline.bootstrapScript.replace('photo-proof-subject.v1.json', 'subjects.v1.json'),
+    baseline.bootstrapScript.replaceAll('if [ "$photo_proof_enabled" = true ]; then', 'if [ "$photo_proof_enabled" = false ]; then'),
+    baseline.bootstrapScript.replace('case "$photo_proof_enabled" in\n    true|false)', 'case "$photo_proof_enabled" in\n    true)'),
+    baseline.bootstrapScript.replace('photo_proof_roles" = \'SUPER_ADMIN\'', 'photo_proof_roles" = \'REPORT_VIEWER\''),
+    baseline.bootstrapScript.replace('photo_proof_company_ids" = \'company-001\'', 'photo_proof_company_ids" = \'company-002\''),
+    baseline.bootstrapScript.replace('photo_proof_assigned_store_ids" = \'store-100\'', 'photo_proof_assigned_store_ids" = \'store-999\''),
+  ]) {
+    const result = validateOnpremKeycloakContract({ ...baseline, bootstrapScript })
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /photo-proof|photo proof|strict-local|separate/i.test(error)))
+  }
+})
+
+test('ONP-5 synthetic account input remains exactly five personas and rejects a sixth row', () => {
+  const baseline = input()
+  const personaRows = baseline.workflow.match(/done <<'PERSONAS'([\s\S]*?)\n\s*PERSONAS/)?.[1]
+    ?.split(/\r?\n/)
+    .map((row) => row.trim())
+    .filter(Boolean) ?? []
+  assert.equal(personaRows.length, 5)
+  assert.doesNotMatch(personaRows.join('\n'), /onprem\.photo-proof-admin/)
+
+  const sixthPersona = '          onprem.extra-persona|onprem.extra-persona|REPORT_VIEWER|synthetic-employee-extra|company-001|||company-001|||'
+  const mutated = {
+    ...baseline,
+    workflow: baseline.workflow.replace('          PERSONAS\n', `${sixthPersona}\n          PERSONAS\n`),
+  }
+  const result = validateOnpremKeycloakContract(mutated)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /exactly five|five synthetic persona/i.test(error)))
+})
+
+test('ONP-5 bootstrap parser must retain an explicit exact-five row count guard', () => {
+  const baseline = input()
+  assert.match(baseline.bootstrapScript, /synthetic_account_count=0/)
+  assert.match(baseline.bootstrapScript, /synthetic_account_count=\$\(\(synthetic_account_count \+ 1\)\)/)
+  assert.match(baseline.bootstrapScript, /\[ "\$synthetic_account_count" -eq 5 \]/)
+
+  const mutated = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(/\[ "\$synthetic_account_count" -eq 5 \] \|\| die[^\n]+\n/, ''),
+  }
+  const result = validateOnpremKeycloakContract(mutated)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /exactly five|five synthetic persona/i.test(error)))
+})
+
+test('ONP-5 persona seed rejects fixed-identity collisions before any mutation', () => {
+  const seed = input().personaSeed
+  const firstMutation = seed.search(/^\s*(?:INSERT|UPDATE|DELETE)\b/m)
+  const preflight = seed.match(/DO \$\$[\s\S]*?\$\$;/)?.[0] ?? ''
+
+  assert.ok(firstMutation > 0, 'persona seed must contain a DML mutation')
+  assert.ok(preflight.length > 0, 'persona seed must have an executable preflight block')
+  assert.ok(seed.indexOf(preflight) < firstMutation, 'persona seed preflight must precede every mutation')
+  assert.match(preflight, /username\s*=\s*'onprem\.photo-proof-admin'[\s\S]*?user_id[\s\S]*?80000000-0000-0000-0000-000000000016/)
+  assert.match(preflight, /user_id\s*=\s*'80000000-0000-0000-0000-000000000016'::uuid[\s\S]*?username[\s\S]*?onprem\.photo-proof-admin/)
+  assert.match(preflight, /user_role_assignment_id\s*=\s*'90000000-0000-0000-0000-000000000016'::uuid[\s\S]*?user_id[\s\S]*?80000000-0000-0000-0000-000000000016/)
+  assert.match(preflight, /user_action_store_assignment_id\s*=\s*'91000000-0000-0000-0000-000000000015'::uuid[\s\S]*?user_id[\s\S]*?80000000-0000-0000-0000-000000000016/)
+  assert.match(preflight, /RAISE EXCEPTION[\s\S]*?photo-proof-admin/)
+})
+
+test('ONP-5 collision preflight is the first statement in an executable transaction fixture', () => {
+  const seed = input().personaSeed.trim()
+  const executableSeed = seed.slice(seed.indexOf('DO $$'))
+  const transactionFixture = `BEGIN;\n${executableSeed}\nROLLBACK;`
+
+  assert.match(transactionFixture, /^BEGIN;\nDO \$\$/)
+  assert.match(transactionFixture, /\$\$;\n\nINSERT INTO ops\.user_account/)
+  assert.match(transactionFixture, /\nROLLBACK;$/)
+  assert.doesNotMatch(transactionFixture.slice(0, transactionFixture.indexOf('INSERT INTO ops.user_account')), /\b(?:INSERT|UPDATE|DELETE)\b/)
 })
 
 test('ONP-3B Keycloak runtime remains PID 1 for reliable graceful shutdown', () => {

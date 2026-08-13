@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { assertAccessTokenContract, assertBrowserSessionClearContract, assertBrowserSessionCookieContract, buildAuthorizationRequest, classifyAuthorizationEntryFailure, classifyBrowserSessionCreateFailure, classifyLoginCodeFailure, classifyRealmLogoutFailure, decodeHtmlAttribute, parseArgs, readAccounts, resolveAuthorizationTransport } from './onprem-keycloak-auth-proof.mjs'
+import { assertAccessTokenContract, assertBrowserSessionClearContract, assertBrowserSessionCookieContract, buildAuthorizationRequest, classifyAuthorizationEntryFailure, classifyBrowserSessionCreateFailure, classifyLoginCodeFailure, classifyRealmLogoutFailure, configureAuthorizationClient, createBrowserSession, decodeHtmlAttribute, jsonRequest, loginPersona, parseArgs, readAccounts, readPhotoProofAccount, requestRaw, resolveAuthorizationTransport } from './onprem-keycloak-auth-proof.mjs'
 
 const rows = [
   'onprem.store-manager|onprem.store-manager|synthetic-password-store-manager',
@@ -33,6 +33,21 @@ test('Keycloak auth proof requires the exact five synthetic personas and CA file
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }
+})
+
+test('Keycloak auth proof exposes only bounded reusable OIDC/BFF helpers and the exact separate photo account contract', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'onprem-keycloak-photo-account-'))
+  const accountPath = join(directory, 'photo-account')
+  const caPath = join(directory, 'ca.crt')
+  try {
+    writeFileSync(accountPath, 'onprem.photo-proof-admin|onprem.photo-proof-admin|synthetic-photo-proof-password-0123456789-abcdef|SUPER_ADMIN|synthetic-employee-photo-proof-admin|company-001|region-001|store-100|company-001|region-001|store-100|store-100\n')
+    writeFileSync(caPath, 'synthetic-ca')
+    const account = readPhotoProofAccount(accountPath)
+    assert.deepEqual({ accountKey: account.accountKey, username: account.username, role: account.role, scope: account.scope, providerClaims: account.providerClaims }, { accountKey: 'onprem.photo-proof-admin', username: 'onprem.photo-proof-admin', role: 'SUPER_ADMIN', scope: 'company', providerClaims: { readStoreIds: ['store-100'] } })
+    assert.deepEqual(configureAuthorizationClient({ caFile: caPath, connectHost: 'caddy', connectPort: 8443, timeoutMs: 1000, maxResponseBytes: 2048, maxRequestBytes: 4096 }), { transport: { hostname: 'caddy', port: 8443 }, timeoutMs: 1000, maxResponseBytes: 2048, maxRequestBytes: 4096 })
+    for (const helper of [loginPersona, createBrowserSession, jsonRequest, requestRaw]) assert.equal(typeof helper, 'function')
+    assert.throws(() => readPhotoProofAccount(accountPath.replace('photo-account', 'missing')), /unavailable/i)
+  } finally { rmSync(directory, { recursive: true, force: true }) }
 })
 
 test('Keycloak auth proof permits only the standalone or private Caddy transport', () => {

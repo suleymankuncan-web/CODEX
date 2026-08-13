@@ -54,7 +54,7 @@ services:
         max-size: 10m
         max-file: "5"
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.service-class: photo-storage
@@ -131,7 +131,7 @@ networks:
 volumes:
   object_storage_data:
     labels:
-      com.hr-axis.project: hr-axis-onprem-core
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
       com.hr-axis.data-class: synthetic
       com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
       com.hr-axis.volume-class: photo-object-storage

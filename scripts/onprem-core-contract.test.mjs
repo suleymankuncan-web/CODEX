@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
 import { validateOnpremCoreContract } from './onprem-core-contract.mjs'
@@ -12,6 +12,7 @@ function contractInput() {
     bootstrap: read('infra/onprem/core/postgres/010-bootstrap-roles.sh'),
     caddy: read('infra/onprem/core/caddy/Caddyfile'),
     compose: read('infra/onprem/core/compose.yaml'),
+    photoProofCompose: read('infra/onprem/core/compose.photo-proof.yaml'),
     envTemplate: read('infra/onprem/core/env.template'),
     frontendDockerfile: read('infra/onprem/images/frontend.Dockerfile'),
     gitignore: read('.gitignore'),
@@ -33,6 +34,34 @@ test('ONP-2 contract requires a capability-free tmpfs Caddy bootstrap and loopba
   assert.match(input.caddy, /http:\/\/127\.0\.0\.1:8081/)
   assert.match(input.compose, /CADDY_IMAGE:-caddy:2\.10\.2-alpine@sha256:/)
   assert.match(input.compose, /\/run\/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700/)
+})
+
+test('ONP-5 base Compose keeps the photo-proof contract disabled and credential-free', () => {
+  const input = contractInput()
+
+  assert.match(
+    input.compose,
+    /KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: \$\{KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED:-false\}/,
+  )
+  assert.match(
+    input.compose,
+    /identity-binder:[\s\S]*?KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: \$\{KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED:-false\}/,
+  )
+  assert.doesNotMatch(input.compose, /KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE/)
+  assert.doesNotMatch(input.compose, /KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE/)
+  assert.doesNotMatch(input.compose, /keycloak_synthetic_photo_proof_account/)
+})
+
+test('ONP-5 photo-proof Compose overlay is an explicit opt-in with exact enabled mounts', () => {
+  const overlayPath = 'infra/onprem/core/compose.photo-proof.yaml'
+  assert.equal(existsSync(overlayPath), true, 'photo-proof overlay must be present')
+  const overlay = readFileSync(overlayPath, 'utf8').replaceAll('\r\n', '\n')
+
+  assert.match(overlay, /KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "true"/)
+  assert.match(overlay, /KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ACCOUNT_FILE: \/run\/secrets\/keycloak_synthetic_photo_proof_account/)
+  assert.match(overlay, /KEYCLOAK_PHOTO_PROOF_SUBJECT_MANIFEST_FILE: \/var\/lib\/keycloak-bootstrap\/photo-proof-subject\.v1\.json/)
+  assert.match(overlay, /source: keycloak_synthetic_photo_proof_account[\s\S]*?target: keycloak_synthetic_photo_proof_account/)
+  assert.match(overlay, /keycloak_synthetic_photo_proof_account:[\s\S]*?file: \$\{HR_AXIS_SECRET_ROOT:-\.\/secret-files\}\/keycloak\/photo-proof-account/)
 })
 
 test('ONP-2 contract rejects failed sha256sum, cmp, and getcap bootstrap verifiers in Compose and CI', () => {

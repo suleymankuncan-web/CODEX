@@ -432,7 +432,14 @@ export class PhotoMediaStorageService {
     }
 
     if (existingAsset.state === "ready") {
-      return this.disposeFinalizedRaw(existingAsset, input.actorUserId);
+      if (!existingAsset.canonicalSha256 || !/^[a-f0-9]{64}$/.test(existingAsset.canonicalSha256) || typeof existingAsset.canonicalByteCount !== "number" || !Number.isSafeInteger(existingAsset.canonicalByteCount) || existingAsset.canonicalByteCount <= 0) {
+        throw new ServiceUnavailableException("Photo media canonical identity is unavailable");
+      }
+      return {
+        ...await this.disposeFinalizedRaw(existingAsset, input.actorUserId),
+        canonicalSha256: existingAsset.canonicalSha256,
+        canonicalByteCount: existingAsset.canonicalByteCount!,
+      };
     }
 
     const asset = await this.repository.prepareFinalizeAttempt(existingAsset.mediaAssetId);
@@ -570,7 +577,11 @@ export class PhotoMediaStorageService {
       processingLeaseToken,
     });
 
-      return this.disposeFinalizedRaw(asset, input.actorUserId);
+      return {
+        ...await this.disposeFinalizedRaw(asset, input.actorUserId),
+        canonicalSha256: processed.canonicalSha256,
+        canonicalByteCount: processed.canonical.byteLength,
+      };
     } finally {
       await this.repository.releaseProcessingLease({
         mediaAssetId: asset.mediaAssetId,
