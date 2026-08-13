@@ -32,7 +32,7 @@ test('ONP-2 contract requires a capability-free tmpfs Caddy bootstrap and loopba
   assert.match(input.compose, /cp "\$\$\{source\}" "\$\$\{temporary\}"/)
   assert.match(input.compose, /copy_capabilities="\$\$\(\/usr\/sbin\/getcap/)
   assert.match(input.caddy, /http:\/\/127\.0\.0\.1:8081/)
-  assert.match(input.compose, /CADDY_IMAGE:-caddy:2\.10\.2-alpine@sha256:/)
+  assert.match(input.compose, /CADDY_IMAGE:-caddy:2\.11\.4-alpine@sha256:/)
   assert.match(input.compose, /\/run\/caddy-bin:rw,nosuid,nodev,exec,size=64m,uid=10001,gid=10001,mode=0700/)
 })
 
@@ -184,13 +184,34 @@ test('ONP-2 contract rejects broader executable tmpfs mounts or loss of nosuid/n
 
 test('ONP-2 workflow binds the Caddy bootstrap proof to an exact immutable image reference', () => {
   const input = contractInput()
-  const pinned = /^  CADDY_IMAGE: caddy:2\.10\.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d\r?$/m
+  const pinned = /^  CADDY_IMAGE: caddy:2\.11\.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648\r?$/m
   assert.match(input.workflow, pinned)
 
   input.workflow = input.workflow.replace(pinned, '  CADDY_IMAGE: caddy:latest')
   const result = validateOnpremCoreContract(input)
   assert.equal(result.ok, false)
   assert.ok(result.errors.some((error) => /workflow.*exact pinned Caddy image/i.test(error)))
+})
+
+test('ONP-2 shipping and proof paths share only the approved Caddy 2.11.4 identity', () => {
+  const approved = 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648'
+  const retiredDigest = '4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d'
+  const pinnedPaths = [
+    '.github/workflows/onprem-image-proof.yml',
+    '.github/workflows/onprem-offline-proof.yml',
+    'infra/onprem/core/compose.yaml',
+    'infra/onprem/core/env.template',
+    'scripts/onprem-caddy-runtime-proof.mjs',
+    'scripts/onprem-core-contract.mjs',
+    'scripts/onprem-photo-storage-runtime-proof.mjs',
+  ]
+
+  for (const path of pinnedPaths) {
+    const source = read(path)
+    const normalizedSource = path === 'scripts/onprem-core-contract.mjs' ? source.replaceAll('\\', '') : source
+    assert.ok(normalizedSource.includes(approved), `${path} must use the approved Caddy image identity`)
+    assert.ok(!source.includes(retiredDigest), `${path} must not retain the retired Caddy image digest`)
+  }
 })
 
 test('ONP-2 private core contract accepts the committed fail-closed stack', () => {
