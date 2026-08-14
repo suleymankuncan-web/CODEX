@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -82,6 +82,38 @@ test('stages the exact source-free closure with verifier and auth proof runtime 
       assert.equal(statSync(join(value.output, 'operations/onprem-postgres-vulnerability-exception.mjs')).mode & 0o777, 0o755)
     }
     assert.equal(existsSync(join(value.output, 'secret-files')), false)
+  } finally { cleanup(value) }
+})
+
+test('rejects a proof root nested under the source repository before creating output', () => {
+  const value = fixture()
+  try {
+    const nestedProof = join(value.repo, 'proof')
+    renameSync(value.proof, nestedProof)
+    assert.throws(
+      () => stageOffline({ repoRoot: value.repo, proofDir: nestedProof, outputDir: value.output, metadata: value.metadataPath }),
+      /repo-root and proof-dir must be separate/,
+    )
+    assert.equal(existsSync(value.output), false)
+  } finally { cleanup(value) }
+})
+
+test('rejects a canonical symlink alias to a nested proof root before creating output', (context) => {
+  if (process.platform === 'win32') {
+    context.skip('directory symlink semantics require a Linux host')
+    return
+  }
+  const value = fixture()
+  try {
+    const nestedProof = join(value.repo, 'proof')
+    const proofAlias = join(value.root, 'proof-alias')
+    renameSync(value.proof, nestedProof)
+    symlinkSync(nestedProof, proofAlias, 'dir')
+    assert.throws(
+      () => stageOffline({ repoRoot: value.repo, proofDir: proofAlias, outputDir: value.output, metadata: value.metadataPath }),
+      /repo-root and proof-dir must be separate/,
+    )
+    assert.equal(existsSync(value.output), false)
   } finally { cleanup(value) }
 })
 

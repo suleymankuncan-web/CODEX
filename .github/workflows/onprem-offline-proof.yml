@@ -74,6 +74,16 @@ jobs:
         with:
           node-version: 24.19.0
 
+      - name: Establish external proof root
+        env:
+          PROOF_ROOT: ${{ runner.temp }}/onprem-proof
+        run: |
+          set -euo pipefail
+          test "$PROOF_ROOT" = "$RUNNER_TEMP/onprem-proof"
+          rm -rf "$PROOF_ROOT"
+          mkdir -p "$PROOF_ROOT/download"
+          echo "PROOF_ROOT=$PROOF_ROOT" >> "$GITHUB_ENV"
+
       - name: Validate caller image-proof run before artifact download
         id: validate_proof_run
         env:
@@ -160,7 +170,7 @@ jobs:
           run-id: ${{ inputs.proof_run_id }}
           name: onprem-image-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
           merge-multiple: true
-          path: ${{ runner.temp }}/onprem-proof-download
+          path: ${{ runner.temp }}/onprem-proof/download
 
       - name: Download upstream core runtime proof
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -169,7 +179,7 @@ jobs:
           run-id: ${{ inputs.proof_run_id }}
           name: onprem-core-runtime-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
           merge-multiple: true
-          path: ${{ runner.temp }}/onprem-proof-download
+          path: ${{ runner.temp }}/onprem-proof/download
 
       - name: Download upstream keycloak runtime proof
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -178,7 +188,7 @@ jobs:
           run-id: ${{ inputs.proof_run_id }}
           name: onprem-keycloak-runtime-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
           merge-multiple: true
-          path: ${{ runner.temp }}/onprem-proof-download
+          path: ${{ runner.temp }}/onprem-proof/download
 
       - name: Download upstream photo-storage proof
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -187,29 +197,31 @@ jobs:
           run-id: ${{ inputs.proof_run_id }}
           name: onprem-photo-storage-proof-${{ steps.validate_proof_run.outputs.execution_sha }}
           merge-multiple: true
-          path: ${{ runner.temp }}/onprem-proof-download
+          path: ${{ runner.temp }}/onprem-proof/download
 
       - name: Validate proof identity and assemble complete evidence
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
           EXECUTION_SHA: ${{ steps.validate_proof_run.outputs.execution_sha }}
           PROOF_ARTIFACT_NAME: ${{ inputs.proof_artifact_name }}
-          PROOF_DOWNLOAD: ${{ runner.temp }}/onprem-proof-download
+          PROOF_DOWNLOAD: ${{ runner.temp }}/onprem-proof/download
         run: |
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
           [[ "$EXECUTION_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$PROOF_ARTIFACT_NAME" = "onprem-image-proof-${EXECUTION_SHA}"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          rm -rf proof infra/onprem/core/secret-files infra/onprem/photo-storage/secret-files
-          mkdir -p proof
+          test "$PROOF_ROOT" = "$RUNNER_TEMP/onprem-proof"
+          rm -rf infra/onprem/core/secret-files infra/onprem/photo-storage/secret-files
+          mkdir -p "$PROOF_ROOT"
           node --input-type=module <<'NODE'
           import { createHash } from 'node:crypto'
           import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
           import { basename, join } from 'node:path'
           import { copyContentGuardLayerReceipts } from './scripts/onprem-offline-content-guard-index.mjs'
           const root = process.env.PROOF_DOWNLOAD
-          const output = 'proof'
+          const output = process.env.PROOF_ROOT
+          if (!output) throw new Error('external proof root is missing')
           const names = [
             'backend-image.tar', 'frontend-image.tar', 'keycloak-image.tar',
             'backend-sbom.spdx.json', 'frontend-sbom.spdx.json', 'keycloak-sbom.spdx.json',
@@ -270,9 +282,9 @@ jobs:
           writeFileSync(join(output, 'runtime-receipt.json'), `${JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', releaseId: `onprem-offline-${process.env.EXPECTED_SHA.slice(0, 12)}`, sourceRevision: process.env.EXPECTED_SHA, receipts: receiptSummary, photoStorage: { component: 'photo-storage', fixtureSha256: photoHash } })}\n`)
           writeFileSync(join(output, 'release-receipt.json'), `${JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', releaseId: `onprem-offline-${process.env.EXPECTED_SHA.slice(0, 12)}`, sourceRevision: process.env.EXPECTED_SHA, proof: proofReceipt })}\n`)
           NODE
-          node scripts/onprem-release-manifest.mjs verify --input proof/release-manifest.json --base-dir proof --public-key proof/ephemeral-public.pem
-          content_guard_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('proof/content-guard-index-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
-          node scripts/onprem-offline-content-guard-index.mjs verify --base-dir proof --input proof/content-guard-index.json --public-key proof/content-guard-index-public.pem --trusted-fingerprint "$content_guard_fingerprint"
+          node scripts/onprem-release-manifest.mjs verify --input "$PROOF_ROOT/release-manifest.json" --base-dir "$PROOF_ROOT" --public-key "$PROOF_ROOT/ephemeral-public.pem"
+          content_guard_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync(process.env.PROOF_ROOT + '/content-guard-index-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
+          node scripts/onprem-offline-content-guard-index.mjs verify --base-dir "$PROOF_ROOT" --input "$PROOF_ROOT/content-guard-index.json" --public-key "$PROOF_ROOT/content-guard-index-public.pem" --trusted-fingerprint "$content_guard_fingerprint"
 
       - name: Pull pinned vendor images and save immutable archives
         run: |
@@ -286,7 +298,7 @@ jobs:
           test "$SEAWEEDFS_IMAGE" = 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d'
           test "$SEAWEEDFS_CONFIG_IMAGE_ID" = 'sha256:8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0'
           readonly CADDY_IMAGE CADDY_CONFIG_IMAGE_ID POSTGRES_IMAGE POSTGRES_CONFIG_IMAGE_ID REDIS_IMAGE REDIS_CONFIG_IMAGE_ID SEAWEEDFS_IMAGE SEAWEEDFS_CONFIG_IMAGE_ID
-          vendor_evidence="$RUNNER_TEMP/onprem-vendor-evidence"
+          vendor_evidence="$PROOF_ROOT/vendor-evidence"
           rm -rf "$vendor_evidence"
           mkdir -p "$vendor_evidence"
           cp infra/onprem/offline/postgres-gosu.trivyignore.yaml "$vendor_evidence/postgres-gosu.trivyignore.yaml"
@@ -304,11 +316,11 @@ jobs:
             test "$archive_tag" != "$ref"
             docker tag "$ref" "$archive_tag"
             [[ "$image_id" =~ ^sha256:[a-f0-9]{64}$ ]]
-            printf '%s\n' "$image_id" > "proof/${image}-image-id.txt"
+            printf '%s\n' "$image_id" > "$PROOF_ROOT/${image}-image-id.txt"
             docker save "$archive_tag" -o "$vendor_evidence/${image}-image.tar"
             test -s "$vendor_evidence/${image}-image.tar"
-            cp "$vendor_evidence/${image}-image.tar" "proof/${image}-image.tar"
-            test -s "proof/${image}-image.tar"
+            cp "$vendor_evidence/${image}-image.tar" "$PROOF_ROOT/${image}-image.tar"
+            test -s "$PROOF_ROOT/${image}-image.tar"
             if [ "$image" = postgres ]; then
               postgres_container="$(docker create "$ref")"
               if ! docker cp "$postgres_container:/usr/local/bin/gosu" "$vendor_evidence/postgres-gosu"; then
@@ -337,10 +349,10 @@ jobs:
               test "$main_symbol_present" = true
               test "$runtime_main_symbol_present" = true
               test "$crypto_tls_symbol_count" -eq 0
-              IMAGE_REF="$ref" IMAGE_ID="$image_id" GOSU_SHA256="$gosu_sha256" GOSU_GO_VERSION="$gosu_go_version" GOSU_MODULE="$gosu_module" GOSU_MODULE_VERSION="$gosu_module_version" GOSU_SYMBOL_COUNT="$gosu_symbol_count" MAIN_SYMBOL_PRESENT="$main_symbol_present" RUNTIME_MAIN_SYMBOL_PRESENT="$runtime_main_symbol_present" CRYPTO_TLS_SYMBOL_COUNT="$crypto_tls_symbol_count" node --input-type=module <<'NODE'
+              IMAGE_REF="$ref" IMAGE_ID="$image_id" GOSU_SHA256="$gosu_sha256" GOSU_GO_VERSION="$gosu_go_version" GOSU_MODULE="$gosu_module" GOSU_MODULE_VERSION="$gosu_module_version" GOSU_SYMBOL_COUNT="$gosu_symbol_count" MAIN_SYMBOL_PRESENT="$main_symbol_present" RUNTIME_MAIN_SYMBOL_PRESENT="$runtime_main_symbol_present" VENDOR_EVIDENCE="$vendor_evidence" node --input-type=module <<'NODE'
           import { writeFileSync } from 'node:fs'
           const proof = { schemaVersion: 1, dataClass: 'synthetic', image: process.env.IMAGE_REF, configImageId: process.env.IMAGE_ID, gosuSha256: process.env.GOSU_SHA256, gosuGoVersion: process.env.GOSU_GO_VERSION, gosuModule: process.env.GOSU_MODULE, gosuModuleVersion: process.env.GOSU_MODULE_VERSION, gosuSymbolCount: Number(process.env.GOSU_SYMBOL_COUNT), mainSymbolPresent: process.env.MAIN_SYMBOL_PRESENT === 'true', runtimeMainSymbolPresent: process.env.RUNTIME_MAIN_SYMBOL_PRESENT === 'true', cryptoTlsSymbolCount: Number(process.env.CRYPTO_TLS_SYMBOL_COUNT), inspectToolImage: process.env.POSTGRES_INSPECT_IMAGE }
-          writeFileSync(`${process.env.RUNNER_TEMP}/onprem-vendor-evidence/postgres-gosu-symbol-proof.json`, `${JSON.stringify(proof)}\n`)
+          writeFileSync(`${process.env.VENDOR_EVIDENCE}/postgres-gosu-symbol-proof.json`, `${JSON.stringify(proof)}\n`)
           NODE
             fi
             docker run --rm -v "$vendor_evidence:/out" "$SYFT_IMAGE" \
@@ -377,17 +389,17 @@ jobs:
             test -s "$vendor_evidence/${image}-trivy-vuln.json"
             test -s "$vendor_evidence/${image}-trivy-secret.json"
             test -s "$vendor_evidence/${image}-trivy.json"
-            cp "$vendor_evidence/${image}-sbom.spdx.json" "proof/${image}-sbom.spdx.json"
-            cp "$vendor_evidence/${image}-trivy-vuln.json" "proof/${image}-trivy-vuln.json"
-            cp "$vendor_evidence/${image}-trivy-secret.json" "proof/${image}-trivy-secret.json"
-            cp "$vendor_evidence/${image}-trivy.json" "proof/${image}-trivy.json"
+            cp "$vendor_evidence/${image}-sbom.spdx.json" "$PROOF_ROOT/${image}-sbom.spdx.json"
+            cp "$vendor_evidence/${image}-trivy-vuln.json" "$PROOF_ROOT/${image}-trivy-vuln.json"
+            cp "$vendor_evidence/${image}-trivy-secret.json" "$PROOF_ROOT/${image}-trivy-secret.json"
+            cp "$vendor_evidence/${image}-trivy.json" "$PROOF_ROOT/${image}-trivy.json"
             if [ "$image" = postgres ]; then
               test -s "$vendor_evidence/postgres-gosu-symbol-proof.json"
               test -s "$vendor_evidence/postgres-vulnerability-exception-receipt.json"
-              cp "$vendor_evidence/postgres-gosu-symbol-proof.json" proof/postgres-gosu-symbol-proof.json
-              cp "$vendor_evidence/postgres-vulnerability-exception-receipt.json" proof/postgres-vulnerability-exception-receipt.json
+              cp "$vendor_evidence/postgres-gosu-symbol-proof.json" "$PROOF_ROOT/postgres-gosu-symbol-proof.json"
+              cp "$vendor_evidence/postgres-vulnerability-exception-receipt.json" "$PROOF_ROOT/postgres-vulnerability-exception-receipt.json"
             fi
-            printf '%s\n' '{"schemaVersion":1,"dataClass":"synthetic","image":"'"$ref"'","imageId":"'"$image_id"'","sbom":"'"${image}-sbom.spdx.json"'","vulnerabilityReport":"'"${image}-trivy.json"'","secretReport":"'"${image}-trivy-secret.json"'","licenseSource":"SPDX package license assertions"}' > "proof/${image}-license-inventory.json"
+            printf '%s\n' '{"schemaVersion":1,"dataClass":"synthetic","image":"'"$ref"'","imageId":"'"$image_id"'","sbom":"'"${image}-sbom.spdx.json"'","vulnerabilityReport":"'"${image}-trivy.json"'","secretReport":"'"${image}-trivy-secret.json"'","licenseSource":"SPDX package license assertions"}' > "$PROOF_ROOT/${image}-license-inventory.json"
           done
 
       - name: Generate complete offline metadata and migration compatibility evidence
@@ -399,39 +411,41 @@ jobs:
           node --input-type=module <<'NODE'
           import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync } from 'node:crypto'
           import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-          import { dirname, join, resolve } from 'node:path'
-          import { inspectDockerSaveArchive } from './scripts/onprem-offline-archive.mjs'
-          const expectedSha = process.env.EXPECTED_SHA
-          const releaseId = `onprem-offline-${expectedSha.slice(0, 12)}`
-          const manifest = JSON.parse(readFileSync('proof/release-manifest.json', 'utf8'))
-          const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
-          const imageIds = { ...manifest.imageIds }
-          for (const name of ['caddy', 'postgres', 'redis', 'seaweedfs']) imageIds[name] = readFileSync(`proof/${name}-image-id.txt`, 'utf8').trim()
-          const images = {}
-          const archivePaths = { backend: 'images/backend.tar', frontend: 'images/frontend.tar', keycloak: 'images/keycloak.tar', caddy: 'images/caddy.tar', postgres: 'images/postgres.tar', redis: 'images/redis.tar', seaweedfs: 'images/seaweedfs.tar' }
-          const vendorRefs = Object.freeze({ caddy: 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648', postgres: 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6', redis: 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2', seaweedfs: 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d' })
-          const expectedVendorConfigImageIds = Object.freeze({ caddy: 'sha256:af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe', postgres: 'sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b', redis: 'sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33', seaweedfs: 'sha256:8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0' })
-          for (const name of imageNames) {
-            const archivePath = `proof/${name}-image.tar`
-            const vendor = vendorRefs[name]
-            if (expectedVendorConfigImageIds[name] && imageIds[name] !== expectedVendorConfigImageIds[name]) throw new Error('vendor config image ID mismatch')
-            const archive = inspectDockerSaveArchive(archivePath, { imageId: imageIds[name], ...(vendor ? { identity: vendor } : {}) })
-            images[name] = { name, archive: archivePaths[name], repoTag: archive.repoTag, configImageId: archive.imageId, archiveSha256: archive.archiveSha256, registryDigestAttestedByOwner: Boolean(vendor), ...(vendor ? { registryManifestDigest: vendor.slice(vendor.lastIndexOf('@') + 1) } : {}) }
-          }
-          const appNames = ['backend', 'frontend', 'keycloak']
-          const appEvidence = (prefix) => Object.fromEntries(appNames.map((name) => [name, JSON.parse(readFileSync(`proof/${name}-${prefix}.json`, 'utf8'))]))
-          const fileSha256 = (pathname) => createHash('sha256').update(readFileSync(pathname)).digest('hex')
-          const vendorIdentity = Object.fromEntries(['caddy', 'postgres', 'redis', 'seaweedfs'].map((name) => [name, { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: vendorRefs[name], registryManifestDigest: images[name].registryManifestDigest, sbomSha256: fileSha256(`proof/${name}-sbom.spdx.json`), vulnerabilitySha256: fileSha256(`proof/${name}-trivy.json`), vulnerabilityScanSha256: fileSha256(`proof/${name}-trivy-vuln.json`), secretScanSha256: fileSha256(`proof/${name}-trivy-secret.json`), licenseSha256: fileSha256(`proof/${name}-license-inventory.json`), ...(name === 'postgres' ? { vulnerabilityExceptionReceiptSha256: fileSha256('proof/postgres-vulnerability-exception-receipt.json'), vulnerabilityExceptionSymbolProofSha256: fileSha256('proof/postgres-gosu-symbol-proof.json') } : {}) }]))
-          writeFileSync('proof/sbom.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', components: { ...appEvidence('sbom.spdx'), ...vendorIdentity } }) + '\n')
-          writeFileSync('proof/license-inventory.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', inventories: { ...appEvidence('license-inventory'), ...vendorIdentity } }) + '\n')
-          writeFileSync('proof/vulnerability-report.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', reports: { ...appEvidence('trivy'), ...vendorIdentity } }) + '\n')
+           import { dirname, join, resolve } from 'node:path'
+           import { inspectDockerSaveArchive } from './scripts/onprem-offline-archive.mjs'
+           const expectedSha = process.env.EXPECTED_SHA
+           const releaseId = `onprem-offline-${expectedSha.slice(0, 12)}`
+           const proofRoot = process.env.PROOF_ROOT
+           if (!proofRoot) throw new Error('external proof root is missing')
+           const manifest = JSON.parse(readFileSync(join(proofRoot, 'release-manifest.json'), 'utf8'))
+           const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
+           const imageIds = { ...manifest.imageIds }
+           for (const name of ['caddy', 'postgres', 'redis', 'seaweedfs']) imageIds[name] = readFileSync(join(proofRoot, `${name}-image-id.txt`), 'utf8').trim()
+           const images = {}
+           const archivePaths = { backend: 'images/backend.tar', frontend: 'images/frontend.tar', keycloak: 'images/keycloak.tar', caddy: 'images/caddy.tar', postgres: 'images/postgres.tar', redis: 'images/redis.tar', seaweedfs: 'images/seaweedfs.tar' }
+           const vendorRefs = Object.freeze({ caddy: 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648', postgres: 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6', redis: 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2', seaweedfs: 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d' })
+           const expectedVendorConfigImageIds = Object.freeze({ caddy: 'sha256:af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe', postgres: 'sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b', redis: 'sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33', seaweedfs: 'sha256:8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0' })
+           for (const name of imageNames) {
+             const archivePath = join(proofRoot, `${name}-image.tar`)
+             const vendor = vendorRefs[name]
+             if (expectedVendorConfigImageIds[name] && imageIds[name] !== expectedVendorConfigImageIds[name]) throw new Error('vendor config image ID mismatch')
+             const archive = inspectDockerSaveArchive(archivePath, { imageId: imageIds[name], ...(vendor ? { identity: vendor } : {}) })
+             images[name] = { name, archive: archivePaths[name], repoTag: archive.repoTag, configImageId: archive.imageId, archiveSha256: archive.archiveSha256, registryDigestAttestedByOwner: Boolean(vendor), ...(vendor ? { registryManifestDigest: vendor.slice(vendor.lastIndexOf('@') + 1) } : {}) }
+           }
+           const appNames = ['backend', 'frontend', 'keycloak']
+           const appEvidence = (prefix) => Object.fromEntries(appNames.map((name) => [name, JSON.parse(readFileSync(join(proofRoot, `${name}-${prefix}.json`), 'utf8'))]))
+           const fileSha256 = (pathname) => createHash('sha256').update(readFileSync(pathname)).digest('hex')
+           const vendorIdentity = Object.fromEntries(['caddy', 'postgres', 'redis', 'seaweedfs'].map((name) => [name, { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: vendorRefs[name], registryManifestDigest: images[name].registryManifestDigest, sbomSha256: fileSha256(join(proofRoot, `${name}-sbom.spdx.json`)), vulnerabilitySha256: fileSha256(join(proofRoot, `${name}-trivy.json`)), vulnerabilityScanSha256: fileSha256(join(proofRoot, `${name}-trivy-vuln.json`)), secretScanSha256: fileSha256(join(proofRoot, `${name}-trivy-secret.json`)), licenseSha256: fileSha256(join(proofRoot, `${name}-license-inventory.json`)), ...(name === 'postgres' ? { vulnerabilityExceptionReceiptSha256: fileSha256(join(proofRoot, 'postgres-vulnerability-exception-receipt.json')), vulnerabilityExceptionSymbolProofSha256: fileSha256(join(proofRoot, 'postgres-gosu-symbol-proof.json')) } : {}) }]))
+           writeFileSync(join(proofRoot, 'sbom.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', components: { ...appEvidence('sbom.spdx'), ...vendorIdentity } }) + '\n')
+           writeFileSync(join(proofRoot, 'license-inventory.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', inventories: { ...appEvidence('license-inventory'), ...vendorIdentity } }) + '\n')
+           writeFileSync(join(proofRoot, 'vulnerability-report.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', reports: { ...appEvidence('trivy'), ...vendorIdentity } }) + '\n')
           const resolveMigrationSql = (filePath, activeIncludes = new Set()) => { const absolutePath = resolve(filePath); if (activeIncludes.has(absolutePath)) throw new Error(`circular migration include: ${absolutePath}`); activeIncludes.add(absolutePath); try { const raw = readFileSync(absolutePath, 'utf8'); return raw.replace(/^\\i\s+(.+?)\s*$/gm, (_match, relativePath) => { const trimmed = relativePath.trim(); const unquoted = (trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'")) ? trimmed.slice(1, -1) : trimmed; return resolveMigrationSql(resolve(dirname(absolutePath), unquoted), activeIncludes) }) } finally { activeIncludes.delete(absolutePath) } }
           const migrationFiles = readdirSync('db/migrations').filter((file) => file.endsWith('.sql')).sort()
           if (migrationFiles.length === 0) throw new Error('migration tree is missing')
           const hash = createHash('sha256')
           for (const file of migrationFiles) hash.update(file).update('\0').update(resolveMigrationSql(join('db/migrations', file))).update('\0')
           const migrationTreeDigest = hash.digest('hex')
-          writeFileSync('proof/migration-compatibility.json', JSON.stringify({ schemaVersion: 1, releaseId, migrationTreeDigest, compatibleFrom: [], upgradeCompatible: true, rollbackCompatible: true }) + '\n')
+           writeFileSync(join(proofRoot, 'migration-compatibility.json'), JSON.stringify({ schemaVersion: 1, releaseId, migrationTreeDigest, compatibleFrom: [], upgradeCompatible: true, rollbackCompatible: true }) + '\n')
           const { privateKey, publicKey } = generateKeyPairSync('ed25519')
           const privatePath = join(process.env.RUNNER_TEMP, 'onprem-offline-private.pem')
           const publicPath = join(process.env.RUNNER_TEMP, 'onprem-offline-public.pem')
@@ -439,31 +453,33 @@ jobs:
           writeFileSync(publicPath, publicKey.export({ type: 'spki', format: 'pem' }), { mode: 0o644 })
           const fingerprint = createHash('sha256').update(publicKey.export({ type: 'spki', format: 'der' })).digest('hex')
           const metadata = { schemaVersion: 1, configSchemaVersion: 1, dataClass: 'synthetic', releaseId, sourceRevision: expectedSha, createdAt: new Date(process.env.BUILD_TIMESTAMP || Date.now()).toISOString(), images }
-          writeFileSync(`${process.env.RUNNER_TEMP}/offline-metadata.json`, JSON.stringify(metadata) + '\n')
-          writeFileSync(`${process.env.RUNNER_TEMP}/offline-trust-fingerprint.txt`, `${fingerprint}\n`)
-          writeFileSync(`${process.env.RUNNER_TEMP}/offline-trust-receipt.json`, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', releaseId, sourceRevision: expectedSha, keyFingerprintSha256: fingerprint }) + '\n')
+           writeFileSync(join(proofRoot, 'offline-metadata.json'), JSON.stringify(metadata) + '\n')
+           writeFileSync(join(proofRoot, 'offline-trust-fingerprint.txt'), `${fingerprint}\n`)
+           writeFileSync(join(proofRoot, 'offline-trust-receipt.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', releaseId, sourceRevision: expectedSha, keyFingerprintSha256: fingerprint }) + '\n')
           NODE
 
       - name: Stage source-free release closure
         run: |
           set -euo pipefail
-          node scripts/onprem-offline-stage.mjs --repo-root "$GITHUB_WORKSPACE" --proof-dir "$GITHUB_WORKSPACE/proof" --output-dir "$RUNNER_TEMP/onprem-staged" --metadata "$RUNNER_TEMP/offline-metadata.json"
+          node scripts/onprem-offline-stage.mjs --repo-root "$GITHUB_WORKSPACE" --proof-dir "$PROOF_ROOT" --output-dir "$RUNNER_TEMP/onprem-staged" --metadata "$PROOF_ROOT/offline-metadata.json"
 
       - name: Create and verify signed offline bundle
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
-          upstream_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('proof/ephemeral-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
-          content_guard_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('proof/content-guard-index-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
-          bundle_fingerprint="$(tr -d '\r\n' < "$RUNNER_TEMP/offline-trust-fingerprint.txt")"
+          upstream_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync(process.env.PROOF_ROOT + '/ephemeral-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
+          content_guard_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync(process.env.PROOF_ROOT + '/content-guard-index-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
+          bundle_fingerprint="$(tr -d '\r\n' < "$PROOF_ROOT/offline-trust-fingerprint.txt")"
           mkdir -p "$RUNNER_TEMP/onprem-bundle"
           node --input-type=module <<'NODE'
           import { cpSync, readFileSync, writeFileSync } from 'node:fs'
           import { join } from 'node:path'
-          const root = process.env.RUNNER_TEMP
-          const base = JSON.parse(readFileSync(join(root, 'offline-metadata.json'), 'utf8'))
-          const digest = JSON.parse(readFileSync('proof/migration-compatibility.json', 'utf8')).migrationTreeDigest
+           const root = process.env.RUNNER_TEMP
+           const proofRoot = process.env.PROOF_ROOT
+           if (!proofRoot) throw new Error('external proof root is missing')
+           const base = JSON.parse(readFileSync(join(proofRoot, 'offline-metadata.json'), 'utf8'))
+           const digest = JSON.parse(readFileSync(join(proofRoot, 'migration-compatibility.json'), 'utf8')).migrationTreeDigest
           const previous = `onprem-previous-${process.env.EXPECTED_SHA.slice(0, 12)}`
           const current = base.releaseId
           const next = `onprem-next-${process.env.EXPECTED_SHA.slice(0, 12)}`
@@ -472,16 +488,16 @@ jobs:
             cpSync(join(root, 'onprem-staged'), join(root, `onprem-staged-${name}`), { recursive: true, errorOnExist: true })
             const compatibility = { schemaVersion: 1, releaseId, migrationTreeDigest: digest, compatibleFrom: sourceReleaseId ? [{ sourceReleaseId, sourceMigrationTreeDigest: digest }] : [], upgradeCompatible: true, rollbackCompatible: true }
             writeFileSync(join(root, `onprem-staged-${name}`, 'evidence', 'migration-compatibility.json'), `${JSON.stringify(compatibility)}\n`)
-            writeFileSync(join(root, `offline-metadata-${name}.json`), `${JSON.stringify({ ...base, releaseId })}\n`)
+             writeFileSync(join(proofRoot, `offline-metadata-${name}.json`), `${JSON.stringify({ ...base, releaseId })}\n`)
           }
           console.log(`release transition evidence scope: ${transitionEvidenceScope}`)
           NODE
           for release in previous current next; do
             node scripts/onprem-offline-bundle.mjs create \
-              --input "$RUNNER_TEMP/offline-metadata-${release}.json" --staging-dir "$RUNNER_TEMP/onprem-staged-${release}" --output-dir "$RUNNER_TEMP/onprem-bundle/${release}" \
-              --private-key "$RUNNER_TEMP/onprem-offline-private.pem" --trusted-public-key "$RUNNER_TEMP/onprem-offline-public.pem" --trusted-fingerprint "$bundle_fingerprint" \
-              --upstream-manifest proof/release-manifest.json --upstream-public-key proof/ephemeral-public.pem --upstream-trusted-fingerprint "$upstream_fingerprint" --upstream-base-dir proof \
-              --content-guard-index proof/content-guard-index.json --content-guard-public-key proof/content-guard-index-public.pem --content-guard-trusted-fingerprint "$content_guard_fingerprint"
+               --input "$PROOF_ROOT/offline-metadata-${release}.json" --staging-dir "$RUNNER_TEMP/onprem-staged-${release}" --output-dir "$RUNNER_TEMP/onprem-bundle/${release}" \
+               --private-key "$RUNNER_TEMP/onprem-offline-private.pem" --trusted-public-key "$RUNNER_TEMP/onprem-offline-public.pem" --trusted-fingerprint "$bundle_fingerprint" \
+               --upstream-manifest "$PROOF_ROOT/release-manifest.json" --upstream-public-key "$PROOF_ROOT/ephemeral-public.pem" --upstream-trusted-fingerprint "$upstream_fingerprint" --upstream-base-dir "$PROOF_ROOT" \
+               --content-guard-index "$PROOF_ROOT/content-guard-index.json" --content-guard-public-key "$PROOF_ROOT/content-guard-index-public.pem" --content-guard-trusted-fingerprint "$content_guard_fingerprint"
             node scripts/onprem-offline-bundle.mjs verify --bundle-dir "$RUNNER_TEMP/onprem-bundle/${release}" --public-key "$RUNNER_TEMP/onprem-offline-public.pem" --trusted-fingerprint "$bundle_fingerprint"
           done
 
@@ -491,12 +507,12 @@ jobs:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           set -euo pipefail
-          release_id="$(node -p "JSON.parse(require('fs').readFileSync('$RUNNER_TEMP/offline-metadata-current.json','utf8')).releaseId")"
-          fingerprint="$(tr -d '\r\n' < "$RUNNER_TEMP/offline-trust-fingerprint.txt")"
+          release_id="$(node -p "JSON.parse(require('fs').readFileSync('$PROOF_ROOT/offline-metadata-current.json','utf8')).releaseId")"
+          fingerprint="$(tr -d '\r\n' < "$PROOF_ROOT/offline-trust-fingerprint.txt")"
           mkdir -p "$RUNNER_TEMP/onprem-trust"
           cp "$RUNNER_TEMP/onprem-offline-public.pem" "$RUNNER_TEMP/onprem-trust/public-key.pem"
-          cp "$RUNNER_TEMP/offline-trust-fingerprint.txt" "$RUNNER_TEMP/onprem-trust/fingerprint.txt"
-          cp "$RUNNER_TEMP/offline-trust-receipt.json" "$RUNNER_TEMP/onprem-trust/receipt.json"
+          cp "$PROOF_ROOT/offline-trust-fingerprint.txt" "$RUNNER_TEMP/onprem-trust/fingerprint.txt"
+          cp "$PROOF_ROOT/offline-trust-receipt.json" "$RUNNER_TEMP/onprem-trust/receipt.json"
           cp scripts/onprem-offline-bootstrap-verify.mjs "$RUNNER_TEMP/onprem-trust/onprem-offline-bootstrap-verify.mjs"
           bootstrap_sha256="$(sha256sum "$RUNNER_TEMP/onprem-trust/onprem-offline-bootstrap-verify.mjs" | awk '{print $1}')"
           printf '%s\n' "$bootstrap_sha256" | grep -Eq '^[a-f0-9]{64}$'
