@@ -36,6 +36,7 @@ test('bundle closure reserves the exact PR-B photo-proof deployment overlay', ()
 
 test('producer and self-contained verifier use the exact same signed closure', () => {
   assert.deepEqual(VERIFY_REQUIRED_BUNDLE_PATHS, REQUIRED_BUNDLE_PATHS)
+  assert.ok(REQUIRED_BUNDLE_PATHS.evidence.includes('evidence/postgres-trivy-vuln.json'))
   assert.deepEqual(
     REQUIRED_BUNDLE_PATHS.docs.filter((pathname) => pathname.startsWith('docs/licenses/')),
     [
@@ -60,6 +61,7 @@ const EXECUTABLES = new Set([
   'operations/onprem-offline-bundle.mjs', 'operations/onprem-offline-archive.mjs',
   'operations/onprem-offline-content-guard-index.mjs', 'operations/onprem-release-manifest.mjs',
   'operations/onprem-keycloak-auth-proof.mjs', 'operations/onprem-photo-auth-proof.mjs', 'operations/onprem-offline-target-proof.mjs',
+  'operations/onprem-postgres-vulnerability-exception.mjs',
   'deployment/keycloak/bootstrap.sh', 'deployment/postgres/entrypoint-tls.sh',
   'deployment/postgres/010-bootstrap-roles.sh', 'deployment/photo-storage/bootstrap.sh',
 ])

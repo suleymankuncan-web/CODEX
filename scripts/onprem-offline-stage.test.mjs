@@ -38,6 +38,7 @@ function fixture() {
     ['deployment/compose.yaml', 'infra/onprem/core/compose.yaml'], ['deployment/compose.photo-proof.yaml', 'infra/onprem/core/compose.photo-proof.yaml'], ['deployment/photo-compose.yaml', 'infra/onprem/photo-storage/compose.yaml'], ['deployment/proof.compose.yaml', 'infra/onprem/offline/proof.compose.yaml'], ['deployment/restore.compose.yaml', 'infra/onprem/offline/restore.compose.yaml'],
     ['deployment/templates/core.env.template', 'infra/onprem/core/env.template'], ['deployment/templates/photo.env.template', 'infra/onprem/photo-storage/env.template'], ['deployment/caddy/Caddyfile', 'infra/onprem/core/caddy/Caddyfile'], ['deployment/keycloak/bootstrap.sh', 'infra/onprem/core/keycloak/bootstrap.sh'], ['deployment/keycloak/realm-config.json', 'infra/onprem/core/keycloak/realm-config.json'], ['deployment/postgres/entrypoint-tls.sh', 'infra/onprem/core/postgres/entrypoint-tls.sh'], ['deployment/postgres/010-bootstrap-roles.sh', 'infra/onprem/core/postgres/010-bootstrap-roles.sh'], ['deployment/redis/redis.conf', 'infra/onprem/core/redis/redis.conf'], ['deployment/photo-storage/bootstrap.sh', 'infra/onprem/photo-storage/bootstrap.sh'], ['deployment/photo-storage/LICENSE', 'infra/onprem/photo-storage/LICENSE'],
   ]) write(repo, source, readFileSync(join(REPO, source)), destination.endsWith('.sh') ? 0o755 : 0o644)
+  write(repo, 'infra/onprem/offline/postgres-gosu.trivyignore.yaml', readFileSync(join(REPO, 'infra/onprem/offline/postgres-gosu.trivyignore.yaml')))
   for (const name of ['preflight.sh', 'install.sh', 'migrate.sh', 'activate.sh', 'smoke.sh', 'backup.sh', 'restore.sh', 'upgrade.sh', 'rollback.sh']) write(repo, `infra/onprem/offline/operations/${name}`, '#!/bin/sh\nset -eu\n', 0o755)
   for (const [name, source] of [
     ['onprem-offline-bundle.mjs', 'onprem-offline-bundle-verify.mjs'],
@@ -47,6 +48,7 @@ function fixture() {
     ['onprem-keycloak-auth-proof.mjs', 'onprem-keycloak-auth-proof.mjs'],
     ['onprem-photo-auth-proof.mjs', 'onprem-photo-auth-proof.mjs'],
     ['onprem-offline-target-proof.mjs', 'onprem-offline-target-proof.mjs'],
+    ['onprem-postgres-vulnerability-exception.mjs', 'onprem-postgres-vulnerability-exception.mjs'],
   ]) write(repo, `scripts/${source}`, readFileSync(join(REPO, 'scripts', source)), 0o644)
   write(repo, 'docs/runbooks/onprem-offline-install-v1.md', 'synthetic install runbook\n'); write(repo, 'docs/runbooks/onprem-offline-backup-restore-v1.md', 'synthetic backup restore runbook\n')
   write(proof, 'backend-image-THIRD_PARTY_NOTICES.txt', 'backend notices\n')
@@ -54,7 +56,7 @@ function fixture() {
   write(proof, 'keycloak-LICENSE.txt', 'Keycloak license\n')
   const images = {}
   for (const name of Object.keys(REQUIRED_BUNDLE_PATHS.imageArchives)) { const archive = imageArchive(name); write(proof, `images/${name}.tar`, archive.bytes); images[name] = { name, archive: `images/${name}.tar`, repoTag: `registry.example/${name}:synthetic`, configImageId: archive.imageId, archiveSha256: createHash('sha256').update(archive.bytes).digest('hex'), registryDigestAttestedByOwner: true, registryManifestDigest: `sha256:${'b'.repeat(64)}` } }
-  const evidence = ['sbom.json', 'license-inventory.json', 'vulnerability-report.json', 'release-receipt.json', 'runtime-receipt.json', 'backend-content-guard.json', 'frontend-content-guard.json', 'keycloak-content-guard.json', 'release-manifest.json', 'migration-compatibility.json', 'content-guard-index.json']
+  const evidence = ['sbom.json', 'license-inventory.json', 'vulnerability-report.json', 'release-receipt.json', 'runtime-receipt.json', 'backend-content-guard.json', 'frontend-content-guard.json', 'keycloak-content-guard.json', 'release-manifest.json', 'migration-compatibility.json', 'content-guard-index.json', 'postgres-vulnerability-exception-receipt.json', 'postgres-gosu-symbol-proof.json', 'postgres-trivy-vuln.json']
   for (const name of evidence) write(proof, `evidence/${name}`, name === 'migration-compatibility.json' ? JSON.stringify({ schemaVersion: 1, releaseId: 'stage-test', migrationTreeDigest: 'a'.repeat(64), compatibleFrom: [], upgradeCompatible: true, rollbackCompatible: true }) : name.endsWith('content-guard.json') ? JSON.stringify({ ok: true, violations: [] }) : JSON.stringify({ ok: true, releaseId: 'stage-test', sha256: 'a'.repeat(64) }))
   const metadata = { schemaVersion: 1, configSchemaVersion: 1, dataClass: 'synthetic', releaseId: 'stage-test', sourceRevision: REVISION, createdAt: CREATED_AT, images }
   const metadataPath = join(root, 'metadata.json'); writeFileSync(metadataPath, JSON.stringify(metadata))
@@ -75,7 +77,10 @@ test('stages the exact source-free closure with verifier and auth proof runtime 
     assert.equal(readFileSync(join(value.output, 'deployment/compose.photo-proof.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/core/compose.photo-proof.yaml'), 'utf8'))
     assert.equal(readFileSync(join(value.output, 'deployment/proof.compose.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/offline/proof.compose.yaml'), 'utf8'))
     assert.equal(readFileSync(join(value.output, 'operations/onprem-offline-bundle.mjs'), 'utf8'), readFileSync(join(value.repo, 'scripts/onprem-offline-bundle-verify.mjs'), 'utf8'))
-    if (process.platform !== 'win32') assert.equal(statSync(join(value.output, 'operations/install.sh')).mode & 0o777, 0o755)
+    if (process.platform !== 'win32') {
+      assert.equal(statSync(join(value.output, 'operations/install.sh')).mode & 0o777, 0o755)
+      assert.equal(statSync(join(value.output, 'operations/onprem-postgres-vulnerability-exception.mjs')).mode & 0o777, 0o755)
+    }
     assert.equal(existsSync(join(value.output, 'secret-files')), false)
   } finally { cleanup(value) }
 })

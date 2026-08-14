@@ -33,17 +33,21 @@ export const REQUIRED_BUNDLE_PATHS = Object.freeze({
     'operations/onprem-offline-content-guard-index.mjs', 'operations/onprem-release-manifest.mjs',
     'operations/onprem-keycloak-auth-proof.mjs', 'operations/onprem-offline-target-proof.mjs',
     'operations/onprem-photo-auth-proof.mjs',
+    'operations/onprem-postgres-vulnerability-exception.mjs',
   ]),
   evidence: Object.freeze([
     'evidence/sbom.json', 'evidence/license-inventory.json', 'evidence/vulnerability-report.json',
     'evidence/release-receipt.json', 'evidence/runtime-receipt.json', 'evidence/backend-content-guard.json',
     'evidence/frontend-content-guard.json', 'evidence/keycloak-content-guard.json', 'evidence/release-manifest.json',
     'evidence/migration-compatibility.json', 'evidence/content-guard-index.json',
+    'evidence/postgres-vulnerability-exception-receipt.json', 'evidence/postgres-gosu-symbol-proof.json',
+    'evidence/postgres-trivy-vuln.json',
   ]),
   docs: Object.freeze([
     'docs/runbooks/onprem-offline-install-v1.md', 'docs/runbooks/onprem-offline-backup-restore-v1.md',
     'docs/licenses/backend-THIRD_PARTY_NOTICES.txt', 'docs/licenses/frontend-THIRD_PARTY_NOTICES.txt',
     'docs/licenses/keycloak-LICENSE.txt', 'docs/licenses/seaweedfs-LICENSE.txt',
+    'docs/security/postgres-gosu.trivyignore.yaml',
   ]),
 })
 
@@ -72,6 +76,7 @@ const EXECUTABLE_PATHS = new Set([
   'operations/onprem-offline-content-guard-index.mjs', 'operations/onprem-release-manifest.mjs',
   'operations/onprem-keycloak-auth-proof.mjs', 'operations/onprem-offline-target-proof.mjs',
   'operations/onprem-photo-auth-proof.mjs',
+  'operations/onprem-postgres-vulnerability-exception.mjs',
   'deployment/keycloak/bootstrap.sh', 'deployment/postgres/entrypoint-tls.sh',
   'deployment/postgres/010-bootstrap-roles.sh', 'deployment/photo-storage/bootstrap.sh',
 ])

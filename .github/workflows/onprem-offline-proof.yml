@@ -40,7 +40,9 @@ concurrency:
 
 env:
   CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-  POSTGRES_IMAGE: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+  POSTGRES_IMAGE: postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6
+  POSTGRES_CONFIG_IMAGE_ID: sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b
+  POSTGRES_INSPECT_IMAGE: golang:1.26.3-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d
   REDIS_IMAGE: redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98
   SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
@@ -275,6 +277,8 @@ jobs:
           vendor_evidence="$RUNNER_TEMP/onprem-vendor-evidence"
           rm -rf "$vendor_evidence"
           mkdir -p "$vendor_evidence"
+          cp infra/onprem/offline/postgres-gosu.trivyignore.yaml "$vendor_evidence/postgres-gosu.trivyignore.yaml"
+          docker pull "$POSTGRES_INSPECT_IMAGE"
           for image in caddy postgres redis seaweedfs; do
             case "$image" in
               caddy) ref="$CADDY_IMAGE" ;;
@@ -283,16 +287,62 @@ jobs:
               seaweedfs) ref="$SEAWEEDFS_IMAGE" ;;
             esac
             docker pull "$ref"
-            docker image inspect "$ref" --format '{{.Id}}' > "proof/${image}-image-id.txt"
+            if [ "$image" = postgres ]; then
+              image_id="$POSTGRES_CONFIG_IMAGE_ID"
+            else
+              image_id="$(docker image inspect "$ref" --format '{{.Id}}')"
+            fi
+            [[ "$image_id" =~ ^sha256:[a-f0-9]{64}$ ]]
+            printf '%s\n' "$image_id" > "proof/${image}-image-id.txt"
             docker save "$ref" -o "$vendor_evidence/${image}-image.tar"
             test -s "$vendor_evidence/${image}-image.tar"
             cp "$vendor_evidence/${image}-image.tar" "proof/${image}-image.tar"
             test -s "proof/${image}-image.tar"
+            if [ "$image" = postgres ]; then
+              postgres_container="$(docker create "$ref")"
+              if ! docker cp "$postgres_container:/usr/local/bin/gosu" "$vendor_evidence/postgres-gosu"; then
+                docker rm -f "$postgres_container" >/dev/null 2>&1 || true
+                exit 1
+              fi
+              docker rm "$postgres_container" >/dev/null
+              gosu_sha256="$(sha256sum "$vendor_evidence/postgres-gosu" | awk '{print $1}')"
+              gosu_metadata="$(docker run --rm --network none --volume "$vendor_evidence:/work:ro" "$POSTGRES_INSPECT_IMAGE" go version -m /work/postgres-gosu)"
+              gosu_go_version="$(awk 'NR == 1 { print $2 }' <<< "$gosu_metadata")"
+              gosu_module="$(awk '$1 == "path" { print $2 }' <<< "$gosu_metadata")"
+              gosu_module_version="$(awk '$1 == "mod" { print $3 }' <<< "$gosu_metadata")"
+              gosu_symbols="$(docker run --rm --network none --volume "$vendor_evidence:/work:ro" "$POSTGRES_INSPECT_IMAGE" go tool nm /work/postgres-gosu)"
+              test -n "$gosu_symbols"
+              gosu_symbol_count="$(printf '%s\n' "$gosu_symbols" | wc -l | tr -d ' ')"
+              main_symbol_present=false; printf '%s\n' "$gosu_symbols" | grep -Eq ' T main\.main$' && main_symbol_present=true
+              runtime_main_symbol_present=false; printf '%s\n' "$gosu_symbols" | grep -Eq ' T runtime\.main$' && runtime_main_symbol_present=true
+              crypto_tls_symbol_count="$(printf '%s\n' "$gosu_symbols" | grep -c 'crypto/tls' || true)"
+              test "$gosu_symbol_count" -eq 2614
+              test "$main_symbol_present" = true
+              test "$runtime_main_symbol_present" = true
+              test "$crypto_tls_symbol_count" -eq 0
+              IMAGE_REF="$ref" IMAGE_ID="$image_id" GOSU_SHA256="$gosu_sha256" GOSU_GO_VERSION="$gosu_go_version" GOSU_MODULE="$gosu_module" GOSU_MODULE_VERSION="$gosu_module_version" GOSU_SYMBOL_COUNT="$gosu_symbol_count" MAIN_SYMBOL_PRESENT="$main_symbol_present" RUNTIME_MAIN_SYMBOL_PRESENT="$runtime_main_symbol_present" CRYPTO_TLS_SYMBOL_COUNT="$crypto_tls_symbol_count" node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs'
+          const proof = { schemaVersion: 1, dataClass: 'synthetic', image: process.env.IMAGE_REF, configImageId: process.env.IMAGE_ID, gosuSha256: process.env.GOSU_SHA256, gosuGoVersion: process.env.GOSU_GO_VERSION, gosuModule: process.env.GOSU_MODULE, gosuModuleVersion: process.env.GOSU_MODULE_VERSION, gosuSymbolCount: Number(process.env.GOSU_SYMBOL_COUNT), mainSymbolPresent: process.env.MAIN_SYMBOL_PRESENT === 'true', runtimeMainSymbolPresent: process.env.RUNTIME_MAIN_SYMBOL_PRESENT === 'true', cryptoTlsSymbolCount: Number(process.env.CRYPTO_TLS_SYMBOL_COUNT), inspectToolImage: process.env.POSTGRES_INSPECT_IMAGE }
+          writeFileSync(`${process.env.RUNNER_TEMP}/onprem-vendor-evidence/postgres-gosu-symbol-proof.json`, `${JSON.stringify(proof)}\n`)
+          NODE
+            fi
             docker run --rm -v "$vendor_evidence:/out" "$SYFT_IMAGE" \
               "$ref" -o "spdx-json=/out/${image}-sbom.spdx.json"
-            docker run --rm -v "$vendor_evidence:/out" "$TRIVY_IMAGE" image \
-              --input "/out/${image}-image.tar" --format json --scanners vuln --severity CRITICAL \
-              --exit-code 1 --output "/out/${image}-trivy-vuln.json"
+            if [ "$image" = postgres ]; then
+              docker run --rm -v "$vendor_evidence:/out" -v "$vendor_evidence:/policy:ro" "$TRIVY_IMAGE" image \
+                --input "/out/${image}-image.tar" --format json --scanners vuln --severity CRITICAL \
+                --ignorefile /policy/postgres-gosu.trivyignore.yaml --show-suppressed \
+                --exit-code 1 --output "/out/${image}-trivy-vuln.json"
+              node scripts/onprem-postgres-vulnerability-exception.mjs verify \
+                --scan "$vendor_evidence/postgres-trivy-vuln.json" \
+                --symbol-proof "$vendor_evidence/postgres-gosu-symbol-proof.json" \
+                --policy infra/onprem/offline/postgres-gosu.trivyignore.yaml \
+                --output "$vendor_evidence/postgres-vulnerability-exception-receipt.json"
+            else
+              docker run --rm -v "$vendor_evidence:/out" "$TRIVY_IMAGE" image \
+                --input "/out/${image}-image.tar" --format json --scanners vuln --severity CRITICAL \
+                --exit-code 1 --output "/out/${image}-trivy-vuln.json"
+            fi
             docker run --rm -v "$vendor_evidence:/out" "$TRIVY_IMAGE" image \
               --input "/out/${image}-image.tar" --format json --scanners secret \
               --exit-code 1 --output "/out/${image}-trivy-secret.json"
@@ -314,7 +364,12 @@ jobs:
             cp "$vendor_evidence/${image}-trivy-vuln.json" "proof/${image}-trivy-vuln.json"
             cp "$vendor_evidence/${image}-trivy-secret.json" "proof/${image}-trivy-secret.json"
             cp "$vendor_evidence/${image}-trivy.json" "proof/${image}-trivy.json"
-            image_id="$(cat "proof/${image}-image-id.txt")"
+            if [ "$image" = postgres ]; then
+              test -s "$vendor_evidence/postgres-gosu-symbol-proof.json"
+              test -s "$vendor_evidence/postgres-vulnerability-exception-receipt.json"
+              cp "$vendor_evidence/postgres-gosu-symbol-proof.json" proof/postgres-gosu-symbol-proof.json
+              cp "$vendor_evidence/postgres-vulnerability-exception-receipt.json" proof/postgres-vulnerability-exception-receipt.json
+            fi
             printf '%s\n' '{"schemaVersion":1,"dataClass":"synthetic","image":"'"$ref"'","imageId":"'"$image_id"'","sbom":"'"${image}-sbom.spdx.json"'","vulnerabilityReport":"'"${image}-trivy.json"'","secretReport":"'"${image}-trivy-secret.json"'","licenseSource":"SPDX package license assertions"}' > "proof/${image}-license-inventory.json"
           done
 
@@ -347,7 +402,7 @@ jobs:
           const appNames = ['backend', 'frontend', 'keycloak']
           const appEvidence = (prefix) => Object.fromEntries(appNames.map((name) => [name, JSON.parse(readFileSync(`proof/${name}-${prefix}.json`, 'utf8'))]))
           const fileSha256 = (pathname) => createHash('sha256').update(readFileSync(pathname)).digest('hex')
-          const vendorIdentity = Object.fromEntries(['caddy', 'postgres', 'redis', 'seaweedfs'].map((name) => [name, { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: vendorRefs[name], registryManifestDigest: images[name].registryManifestDigest, sbomSha256: fileSha256(`proof/${name}-sbom.spdx.json`), vulnerabilitySha256: fileSha256(`proof/${name}-trivy.json`), vulnerabilityScanSha256: fileSha256(`proof/${name}-trivy-vuln.json`), secretScanSha256: fileSha256(`proof/${name}-trivy-secret.json`), licenseSha256: fileSha256(`proof/${name}-license-inventory.json`) }]))
+          const vendorIdentity = Object.fromEntries(['caddy', 'postgres', 'redis', 'seaweedfs'].map((name) => [name, { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: vendorRefs[name], registryManifestDigest: images[name].registryManifestDigest, sbomSha256: fileSha256(`proof/${name}-sbom.spdx.json`), vulnerabilitySha256: fileSha256(`proof/${name}-trivy.json`), vulnerabilityScanSha256: fileSha256(`proof/${name}-trivy-vuln.json`), secretScanSha256: fileSha256(`proof/${name}-trivy-secret.json`), licenseSha256: fileSha256(`proof/${name}-license-inventory.json`), ...(name === 'postgres' ? { vulnerabilityExceptionReceiptSha256: fileSha256('proof/postgres-vulnerability-exception-receipt.json'), vulnerabilityExceptionSymbolProofSha256: fileSha256('proof/postgres-gosu-symbol-proof.json') } : {}) }]))
           writeFileSync('proof/sbom.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', components: { ...appEvidence('sbom.spdx'), ...vendorIdentity } }) + '\n')
           writeFileSync('proof/license-inventory.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', inventories: { ...appEvidence('license-inventory'), ...vendorIdentity } }) + '\n')
           writeFileSync('proof/vulnerability-report.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', reports: { ...appEvidence('trivy'), ...vendorIdentity } }) + '\n')

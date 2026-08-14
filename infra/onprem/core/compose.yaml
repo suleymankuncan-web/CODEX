@@ -473,7 +473,7 @@ services:
     labels: *project-labels
 
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297}
+    image: ${POSTGRES_IMAGE:-postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6}
     profiles: [infra, migrate, seed, runtime]
     entrypoint: [/bin/sh, /opt/hr-axis/entrypoint-tls.sh]
     command: [postgres, -c, ssl=on, -c, ssl_cert_file=/var/lib/postgresql/tls/server.crt, -c, ssl_key_file=/var/lib/postgresql/tls/server.key, -c, ssl_ca_file=/var/lib/postgresql/tls/ca.crt, -c, password_encryption=scram-sha-256]
