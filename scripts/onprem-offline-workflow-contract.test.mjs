@@ -614,6 +614,13 @@ test('offline bundle handoff preserves modes and bounds disk use with sequential
   assert.match(rehearsal, /materialize_transition_bundle\(\)/)
   assert.match(rehearsal, /sha256sum --check/)
   assert.match(rehearsal, /sudo rm -- "\$sealed_archive"/)
+  const sealedRootCapacityLines = rehearsal
+    .split('\n')
+    .filter((line) => line.includes('available_kib=') && line.includes('$SEALED_ROOT'))
+    .map((line) => line.trim())
+  assert.deepEqual(sealedRootCapacityLines, [
+    `available_kib="$(sudo df -Pk -- "$SEALED_ROOT" | awk 'NR == 2 { print $4 }')"`,
+  ])
   assert.doesNotMatch(rehearsal, /sudo cp -a -- "\$INCOMING_BUNDLE_ROOT\/\."/)
   assert.doesNotMatch(rehearsal, /onprem-bundle\.tar/)
 })

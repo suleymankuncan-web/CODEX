@@ -814,7 +814,7 @@ jobs:
             assert_archive_members "$sealed_archive" current
             sudo test -f "$sealed_archive" && sudo test ! -L "$sealed_archive"
             archive_kib="$(sudo du -k "$sealed_archive" | awk '{print $1}')"
-            available_kib="$(df -Pk "$SEALED_ROOT" | awk 'NR == 2 { print $4 }')"
+            available_kib="$(sudo df -Pk -- "$SEALED_ROOT" | awk 'NR == 2 { print $4 }')"
             required_kib="$((preflight_reserve_kib + archive_kib))"
             test "$available_kib" -ge "$required_kib" || { echo 'offline release extraction capacity is insufficient' >&2; exit 1; }
             sudo test ! -e "$target" && sudo test ! -L "$target"
