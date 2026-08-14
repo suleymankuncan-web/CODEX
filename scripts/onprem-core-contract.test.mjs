@@ -214,6 +214,23 @@ test('ONP-2 shipping and proof paths share only the approved Caddy 2.11.4 identi
   }
 })
 
+test('ONP-2 shipping and proof paths share only the approved PostgreSQL 16.15 identity', () => {
+  const approved = 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6'
+  const retiredDigest = '029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297'
+  const pinnedPaths = [
+    '.github/workflows/onprem-offline-proof.yml',
+    'infra/onprem/core/compose.yaml',
+    'infra/onprem/core/env.template',
+    'scripts/onprem-photo-storage-runtime-proof.mjs',
+  ]
+
+  for (const path of pinnedPaths) {
+    const source = read(path)
+    assert.ok(source.includes(approved), `${path} must use the approved PostgreSQL image identity`)
+    assert.ok(!source.includes(retiredDigest), `${path} must not retain the retired PostgreSQL image digest`)
+  }
+})
+
 test('ONP-2 private core contract accepts the committed fail-closed stack', () => {
   const result = validateOnpremCoreContract(contractInput())
 

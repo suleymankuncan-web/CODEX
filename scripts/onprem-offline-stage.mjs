@@ -50,11 +50,13 @@ const OPERATION_RUNTIME = Object.freeze([
   ['onprem-keycloak-auth-proof.mjs', 'scripts/onprem-keycloak-auth-proof.mjs'],
   ['onprem-photo-auth-proof.mjs', 'scripts/onprem-photo-auth-proof.mjs'],
   ['onprem-offline-target-proof.mjs', 'scripts/onprem-offline-target-proof.mjs'],
+  ['onprem-postgres-vulnerability-exception.mjs', 'scripts/onprem-postgres-vulnerability-exception.mjs'],
 ])
 const DOC_FILES = Object.freeze([
   ['docs/runbooks/onprem-offline-install-v1.md', 'docs/runbooks/onprem-offline-install-v1.md'],
   ['docs/runbooks/onprem-offline-backup-restore-v1.md', 'docs/runbooks/onprem-offline-backup-restore-v1.md'],
   ['docs/licenses/seaweedfs-LICENSE.txt', 'infra/onprem/photo-storage/LICENSE'],
+  ['docs/security/postgres-gosu.trivyignore.yaml', 'infra/onprem/offline/postgres-gosu.trivyignore.yaml'],
 ])
 const PROOF_LICENSE_FILES = Object.freeze([
   ['docs/licenses/backend-THIRD_PARTY_NOTICES.txt', 'backend-image-THIRD_PARTY_NOTICES.txt'],
@@ -78,6 +80,7 @@ const SOURCE_ROOT_ALLOWLIST = new Set([
   'infra/onprem/photo-storage/compose.yaml', 'infra/onprem/photo-storage/env.template',
   'infra/onprem/photo-storage/LICENSE', 'infra/onprem/photo-storage/README.md',
   'infra/onprem/offline/proof.compose.yaml', 'infra/onprem/offline/restore.compose.yaml',
+  'infra/onprem/offline/postgres-gosu.trivyignore.yaml',
   ...OPERATION_SHELLS.map((name) => `infra/onprem/offline/operations/${name}`),
 ])
 

@@ -616,3 +616,16 @@ test('every vendored runtime image receives separate fail-closed Trivy vulnerabi
   assert.doesNotMatch(vendor, /--scanners vuln,secret/)
   assert.doesNotMatch(vendor, /\/var\/run\/docker\.sock/)
 })
+
+test('offline workflow permits only the signed exact PostgreSQL gosu reachability exception', () => {
+  assert.match(workflow, /POSTGRES_IMAGE: postgres:16\.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6/)
+  assert.match(workflow, /POSTGRES_CONFIG_IMAGE_ID: sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b/)
+  assert.match(workflow, /POSTGRES_INSPECT_IMAGE: golang:1\.26\.3-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d/)
+  assert.match(workflow, /--ignorefile \/policy\/postgres-gosu\.trivyignore\.yaml --show-suppressed/)
+  assert.match(workflow, /onprem-postgres-vulnerability-exception\.mjs verify/)
+  assert.match(workflow, /postgres-vulnerability-exception-receipt\.json/)
+  assert.match(workflow, /if \[ "\$image" = postgres \]; then\s+image_id="\$POSTGRES_CONFIG_IMAGE_ID"/)
+  assert.match(workflow, /gosu_symbols="\$\(docker run[\s\S]*go tool nm \/work\/postgres-gosu\)"/)
+  assert.match(workflow, /gosu_symbol_count[\s\S]*main_symbol_present[\s\S]*runtime_main_symbol_present/)
+  assert.doesNotMatch(workflow, /(?:caddy|redis|seaweedfs)-gosu\.trivyignore/)
+})
