@@ -62,6 +62,7 @@ jobs:
       release_id: ${{ steps.bundle_identity.outputs.release_id }}
       key_fingerprint: ${{ steps.bundle_identity.outputs.key_fingerprint }}
       bootstrap_sha256: ${{ steps.bundle_identity.outputs.bootstrap_sha256 }}
+      bundle_archive_manifest_sha256: ${{ steps.bundle_archive.outputs.bundle_archive_manifest_sha256 }}
     steps:
       - name: Checkout trusted source SHA
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -349,7 +350,7 @@ jobs:
               test "$main_symbol_present" = true
               test "$runtime_main_symbol_present" = true
               test "$crypto_tls_symbol_count" -eq 0
-              IMAGE_REF="$ref" IMAGE_ID="$image_id" GOSU_SHA256="$gosu_sha256" GOSU_GO_VERSION="$gosu_go_version" GOSU_MODULE="$gosu_module" GOSU_MODULE_VERSION="$gosu_module_version" GOSU_SYMBOL_COUNT="$gosu_symbol_count" MAIN_SYMBOL_PRESENT="$main_symbol_present" RUNTIME_MAIN_SYMBOL_PRESENT="$runtime_main_symbol_present" VENDOR_EVIDENCE="$vendor_evidence" node --input-type=module <<'NODE'
+              IMAGE_REF="$ref" IMAGE_ID="$image_id" GOSU_SHA256="$gosu_sha256" GOSU_GO_VERSION="$gosu_go_version" GOSU_MODULE="$gosu_module" GOSU_MODULE_VERSION="$gosu_module_version" GOSU_SYMBOL_COUNT="$gosu_symbol_count" MAIN_SYMBOL_PRESENT="$main_symbol_present" RUNTIME_MAIN_SYMBOL_PRESENT="$runtime_main_symbol_present" CRYPTO_TLS_SYMBOL_COUNT="$crypto_tls_symbol_count" VENDOR_EVIDENCE="$vendor_evidence" node --input-type=module <<'NODE'
           import { writeFileSync } from 'node:fs'
           const proof = { schemaVersion: 1, dataClass: 'synthetic', image: process.env.IMAGE_REF, configImageId: process.env.IMAGE_ID, gosuSha256: process.env.GOSU_SHA256, gosuGoVersion: process.env.GOSU_GO_VERSION, gosuModule: process.env.GOSU_MODULE, gosuModuleVersion: process.env.GOSU_MODULE_VERSION, gosuSymbolCount: Number(process.env.GOSU_SYMBOL_COUNT), mainSymbolPresent: process.env.MAIN_SYMBOL_PRESENT === 'true', runtimeMainSymbolPresent: process.env.RUNTIME_MAIN_SYMBOL_PRESENT === 'true', cryptoTlsSymbolCount: Number(process.env.CRYPTO_TLS_SYMBOL_COUNT), inspectToolImage: process.env.POSTGRES_INSPECT_IMAGE }
           writeFileSync(`${process.env.VENDOR_EVIDENCE}/postgres-gosu-symbol-proof.json`, `${JSON.stringify(proof)}\n`)
@@ -435,7 +436,8 @@ jobs:
            const appNames = ['backend', 'frontend', 'keycloak']
            const appEvidence = (prefix) => Object.fromEntries(appNames.map((name) => [name, JSON.parse(readFileSync(join(proofRoot, `${name}-${prefix}.json`), 'utf8'))]))
            const fileSha256 = (pathname) => createHash('sha256').update(readFileSync(pathname)).digest('hex')
-           const vendorIdentity = Object.fromEntries(['caddy', 'postgres', 'redis', 'seaweedfs'].map((name) => [name, { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: vendorRefs[name], registryManifestDigest: images[name].registryManifestDigest, sbomSha256: fileSha256(join(proofRoot, `${name}-sbom.spdx.json`)), vulnerabilitySha256: fileSha256(join(proofRoot, `${name}-trivy.json`)), vulnerabilityScanSha256: fileSha256(join(proofRoot, `${name}-trivy-vuln.json`)), secretScanSha256: fileSha256(join(proofRoot, `${name}-trivy-secret.json`)), licenseSha256: fileSha256(join(proofRoot, `${name}-license-inventory.json`)), ...(name === 'postgres' ? { vulnerabilityExceptionReceiptSha256: fileSha256(join(proofRoot, 'postgres-vulnerability-exception-receipt.json')), vulnerabilityExceptionSymbolProofSha256: fileSha256(join(proofRoot, 'postgres-gosu-symbol-proof.json')) } : {}) }]))
+           const artifact = (pathname) => ({ path: `evidence/${pathname}`, sha256: fileSha256(join(proofRoot, pathname)) })
+           const vendorIdentity = Object.fromEntries(['caddy', 'postgres', 'redis', 'seaweedfs'].map((name) => [name, { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: vendorRefs[name], registryManifestDigest: images[name].registryManifestDigest, artifacts: { sbom: artifact(`${name}-sbom.spdx.json`), vulnerabilityReport: artifact(`${name}-trivy.json`), vulnerabilityScan: artifact(`${name}-trivy-vuln.json`), sensitiveDataScan: artifact(`${name}-trivy-secret.json`), licenseInventory: artifact(`${name}-license-inventory.json`), ...(name === 'postgres' ? { vulnerabilityExceptionReceipt: artifact('postgres-vulnerability-exception-receipt.json'), vulnerabilityExceptionSymbolProof: artifact('postgres-gosu-symbol-proof.json') } : {}) } }]))
            writeFileSync(join(proofRoot, 'sbom.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', components: { ...appEvidence('sbom.spdx'), ...vendorIdentity } }) + '\n')
            writeFileSync(join(proofRoot, 'license-inventory.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', inventories: { ...appEvidence('license-inventory'), ...vendorIdentity } }) + '\n')
            writeFileSync(join(proofRoot, 'vulnerability-report.json'), JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', reports: { ...appEvidence('trivy'), ...vendorIdentity } }) + '\n')
@@ -471,9 +473,13 @@ jobs:
           upstream_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync(process.env.PROOF_ROOT + '/ephemeral-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
           content_guard_fingerprint="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync(process.env.PROOF_ROOT + '/content-guard-index-public.pem')).export({type:'spki',format:'der'})).digest('hex'))")"
           bundle_fingerprint="$(tr -d '\r\n' < "$PROOF_ROOT/offline-trust-fingerprint.txt")"
-          mkdir -p "$RUNNER_TEMP/onprem-bundle"
+          archives="$RUNNER_TEMP/onprem-bundle-archives"
+          work="$RUNNER_TEMP/onprem-bundle-work"
+          test ! -e "$archives" && test ! -L "$archives"
+          test ! -e "$work" && test ! -L "$work"
+          mkdir -m 0700 "$archives" "$work"
           node --input-type=module <<'NODE'
-          import { cpSync, readFileSync, writeFileSync } from 'node:fs'
+          import { readFileSync, writeFileSync } from 'node:fs'
           import { join } from 'node:path'
            const root = process.env.RUNNER_TEMP
            const proofRoot = process.env.PROOF_ROOT
@@ -485,21 +491,89 @@ jobs:
           const next = `onprem-next-${process.env.EXPECTED_SHA.slice(0, 12)}`
           const transitionEvidenceScope = 'same-build-lifecycle-mechanics'
           for (const [name, releaseId, sourceReleaseId] of [['previous', previous, null], ['current', current, previous], ['next', next, current]]) {
-            cpSync(join(root, 'onprem-staged'), join(root, `onprem-staged-${name}`), { recursive: true, errorOnExist: true })
             const compatibility = { schemaVersion: 1, releaseId, migrationTreeDigest: digest, compatibleFrom: sourceReleaseId ? [{ sourceReleaseId, sourceMigrationTreeDigest: digest }] : [], upgradeCompatible: true, rollbackCompatible: true }
-            writeFileSync(join(root, `onprem-staged-${name}`, 'evidence', 'migration-compatibility.json'), `${JSON.stringify(compatibility)}\n`)
+            writeFileSync(join(proofRoot, `migration-compatibility-${name}.json`), `${JSON.stringify(compatibility)}\n`)
              writeFileSync(join(proofRoot, `offline-metadata-${name}.json`), `${JSON.stringify({ ...base, releaseId })}\n`)
           }
           console.log(`release transition evidence scope: ${transitionEvidenceScope}`)
           NODE
-          for release in previous current next; do
+          staged_kib="$(du -sk "$RUNNER_TEMP/onprem-staged" | awk '{print $1}')"
+          test "$staged_kib" -gt 0
+          preflight_reserve_kib=2000000
+          maximum_bundle_copies=3
+          require_build_capacity() {
+            local available_kib required_kib
+            available_kib="$(df -Pk "$RUNNER_TEMP" | awk 'NR == 2 { print $4 }')"
+            required_kib="$((preflight_reserve_kib + (maximum_bundle_copies * staged_kib)))"
+            echo "offline bundle capacity forecast: available_kib=$available_kib preflight_reserve_kib=$preflight_reserve_kib staged_kib=$staged_kib maximum_bundle_copies=$maximum_bundle_copies required_kib=$required_kib"
+            test "$available_kib" -ge "$required_kib" || { echo "offline bundle build capacity is insufficient" >&2; exit 1; }
+          }
+          create_release_bundle() {
+            local release="$1" staging="$2" bundle_dir="$work/$1"
+            cp -- "$PROOF_ROOT/migration-compatibility-${release}.json" "$staging/evidence/migration-compatibility.json"
             node scripts/onprem-offline-bundle.mjs create \
-               --input "$PROOF_ROOT/offline-metadata-${release}.json" --staging-dir "$RUNNER_TEMP/onprem-staged-${release}" --output-dir "$RUNNER_TEMP/onprem-bundle/${release}" \
+               --input "$PROOF_ROOT/offline-metadata-${release}.json" --staging-dir "$staging" --output-dir "$bundle_dir" \
                --private-key "$RUNNER_TEMP/onprem-offline-private.pem" --trusted-public-key "$RUNNER_TEMP/onprem-offline-public.pem" --trusted-fingerprint "$bundle_fingerprint" \
                --upstream-manifest "$PROOF_ROOT/release-manifest.json" --upstream-public-key "$PROOF_ROOT/ephemeral-public.pem" --upstream-trusted-fingerprint "$upstream_fingerprint" --upstream-base-dir "$PROOF_ROOT" \
                --content-guard-index "$PROOF_ROOT/content-guard-index.json" --content-guard-public-key "$PROOF_ROOT/content-guard-index-public.pem" --content-guard-trusted-fingerprint "$content_guard_fingerprint"
-            node scripts/onprem-offline-bundle.mjs verify --bundle-dir "$RUNNER_TEMP/onprem-bundle/${release}" --public-key "$RUNNER_TEMP/onprem-offline-public.pem" --trusted-fingerprint "$bundle_fingerprint"
+            node scripts/onprem-offline-bundle.mjs verify --bundle-dir "$bundle_dir" --public-key "$RUNNER_TEMP/onprem-offline-public.pem" --trusted-fingerprint "$bundle_fingerprint"
+          }
+          require_build_capacity
+          create_release_bundle current "$RUNNER_TEMP/onprem-staged"
+          rm -rf -- "$RUNNER_TEMP/onprem-staged"
+          test ! -e "$RUNNER_TEMP/onprem-staged" && test ! -L "$RUNNER_TEMP/onprem-staged"
+          for release in previous next; do
+            require_build_capacity
+            staging="$work/${release}-staging"
+            test ! -e "$staging" && test ! -L "$staging"
+            cp -a -- "$work/current" "$staging"
+            rm -f -- "$staging/bundle-manifest.json" "$staging/bundle-signature.json"
+            create_release_bundle "$release" "$staging"
+            bundle_dir="$work/$release"
+            transition_dir="$work/${release}-transition"
+            node --input-type=module - "$work/current" "$bundle_dir" "$transition_dir" "$release" <<'NODE'
+            import { chmodSync, copyFileSync, mkdirSync, readFileSync } from 'node:fs'
+            import { dirname, join } from 'node:path'
+            const [currentRoot, targetRoot, outputRoot, releaseName] = process.argv.slice(2)
+            const readJson = (root, path) => JSON.parse(readFileSync(join(root, path), 'utf8'))
+            const canonical = (value) => Array.isArray(value) ? value.map(canonical) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])])) : value
+            const same = (left, right) => JSON.stringify(canonical(left)) === JSON.stringify(canonical(right))
+            const current = readJson(currentRoot, 'bundle-manifest.json')
+            const target = readJson(targetRoot, 'bundle-manifest.json')
+            const allowedDelta = 'evidence/migration-compatibility.json'
+            if (target.releaseId !== `onprem-${releaseName}-${current.releaseId.slice(current.releaseId.lastIndexOf('-') + 1)}` || !same(current.images, target.images) || current.schemaVersion !== target.schemaVersion || current.configSchemaVersion !== target.configSchemaVersion || current.dataClass !== target.dataClass || current.sourceRevision !== target.sourceRevision || current.createdAt !== target.createdAt || current.archiveConfigImageIdDerived !== target.archiveConfigImageIdDerived || current.files.length !== target.files.length) throw new Error('transition bundle differs outside migration compatibility evidence')
+            for (let index = 0; index < current.files.length; index += 1) {
+              const before = current.files[index]
+              const after = target.files[index]
+              if (before.path !== after.path || before.mode !== after.mode || (after.path !== allowedDelta && !same(before, after)) || (after.path === allowedDelta && (!Number.isSafeInteger(after.bytes) || after.bytes <= 0 || !/^[a-f0-9]{64}$/.test(after.sha256)))) throw new Error('transition bundle differs outside migration compatibility evidence')
+            }
+            for (const path of ['bundle-manifest.json', 'bundle-signature.json', allowedDelta]) {
+              const destination = join(outputRoot, path)
+              mkdirSync(dirname(destination), { recursive: true })
+              copyFileSync(join(targetRoot, path), destination)
+              chmodSync(destination, 0o644)
+            }
+          NODE
+            tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner -C "$work" -cf "$archives/${release}-transition.tar" "${release}-transition"
+            test -s "$archives/${release}-transition.tar" && test ! -L "$archives/${release}-transition.tar"
+            transition_members="$(tar -tf "$archives/${release}-transition.tar")"
+            test "$(printf '%s\n' "$transition_members" | wc -l)" -eq 5
+            printf '%s\n' "$transition_members" | awk -v prefix="${release}-transition" '($0 == prefix "/" || $0 == prefix "/bundle-manifest.json" || $0 == prefix "/bundle-signature.json" || $0 == prefix "/evidence/" || $0 == prefix "/evidence/migration-compatibility.json") { next } { bad = 1 } END { exit bad ? 1 : 0 }'
+            tar -tvf "$archives/${release}-transition.tar" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            rm -rf -- "$bundle_dir"
+            rm -rf -- "$transition_dir"
+            rm -rf -- "$staging"
           done
+          tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner -C "$work" -cf "$archives/current.tar" current
+          test -s "$archives/current.tar" && test ! -L "$archives/current.tar"
+          test "$(tar -tf "$archives/current.tar" | head -n 1)" = 'current/'
+          tar -tf "$archives/current.tar" | awk '$0 ~ /(^|\/)\.\.?($|\/)/ || $0 !~ /^current\// { bad = 1 } END { exit bad ? 1 : 0 }'
+          tar -tvf "$archives/current.tar" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+          bundle_dir="$work/current"
+          rm -rf -- "$bundle_dir"
+          rmdir "$work"
+          (cd "$archives" && sha256sum current.tar next-transition.tar previous-transition.tar > SHA256SUMS)
+          test "$(find "$archives" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort | tr '\n' ' ')" = 'SHA256SUMS current.tar next-transition.tar previous-transition.tar '
 
       - name: Emit trust receipt and bundle identity
         id: bundle_identity
@@ -521,12 +595,29 @@ jobs:
           echo "bootstrap_sha256=$bootstrap_sha256" >> "$GITHUB_OUTPUT"
           rm -f "$RUNNER_TEMP/onprem-offline-private.pem"
 
+      - name: Archive verified offline bundles for mode-preserving handoff
+        id: bundle_archive
+        run: |
+          set -euo pipefail
+          archives="$RUNNER_TEMP/onprem-bundle-archives"
+          test "$(find "$archives" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort | tr '\n' ' ')" = 'SHA256SUMS current.tar next-transition.tar previous-transition.tar '
+          (cd "$archives" && sha256sum --check SHA256SUMS)
+          bundle_archive_manifest_sha256="$(sha256sum "$archives/SHA256SUMS" | awk '{print $1}')"
+          printf '%s\n' "$bundle_archive_manifest_sha256" | grep -Eq '^[a-f0-9]{64}$'
+          echo "bundle_archive_manifest_sha256=$bundle_archive_manifest_sha256" >> "$GITHUB_OUTPUT"
+          test "$PROOF_ROOT" = "$RUNNER_TEMP/onprem-proof"
+          rm -rf -- "$PROOF_ROOT"
+          for ref in "$CADDY_IMAGE" "$POSTGRES_IMAGE" "$REDIS_IMAGE" "$SEAWEEDFS_IMAGE"; do
+            docker image rm "$ref" "${ref%@sha256:*}" >/dev/null 2>&1 || true
+          done
+
       - name: Upload signed offline bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-offline-bundle-${{ inputs.expected_sha }}
           if-no-files-found: error
-          path: ${{ runner.temp }}/onprem-bundle
+          compression-level: 0
+          path: ${{ runner.temp }}/onprem-bundle-archives
 
       - name: Upload public trust evidence (never private key)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -559,7 +650,7 @@ jobs:
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: onprem-offline-bundle-${{ inputs.expected_sha }}
-          path: ${{ runner.temp }}/offline-incoming/bundle
+          path: ${{ runner.temp }}/offline-incoming
 
       - name: Download public trust evidence
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -641,6 +732,7 @@ jobs:
           RELEASE_ID: ${{ needs.build_bundle.outputs.release_id }}
           TRUSTED_FINGERPRINT: ${{ needs.build_bundle.outputs.key_fingerprint }}
           TRUSTED_BOOTSTRAP_SHA256: ${{ needs.build_bundle.outputs.bootstrap_sha256 }}
+          BUNDLE_ARCHIVE_MANIFEST_SHA256: ${{ needs.build_bundle.outputs.bundle_archive_manifest_sha256 }}
         run: |
           set -euo pipefail
           umask 077
@@ -649,7 +741,8 @@ jobs:
           esac
           SEALED_PARENT=/var/lib/hr-axis-onprem-offline-proof
           SEALED_ROOT="$SEALED_PARENT/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          INCOMING_BUNDLE_ROOT="$RUNNER_TEMP/offline-incoming/bundle"
+          INCOMING_ARCHIVE_ROOT="$RUNNER_TEMP/offline-incoming"
+          INCOMING_ARCHIVE_MANIFEST="$INCOMING_ARCHIVE_ROOT/SHA256SUMS"
           INCOMING_TRUST_ROOT="$RUNNER_TEMP/offline-incoming/trust"
           assert_private_directory() {
             local path="$1"
@@ -668,11 +761,69 @@ jobs:
             echo 'offline sealed-root path already exists or is a symlink' >&2
             exit 1
           fi
-          sudo test -d "$INCOMING_BUNDLE_ROOT" && sudo test ! -L "$INCOMING_BUNDLE_ROOT"
+          printf '%s\n' "$BUNDLE_ARCHIVE_MANIFEST_SHA256" | grep -Eq '^[a-f0-9]{64}$'
+          test -f "$INCOMING_ARCHIVE_MANIFEST" && test ! -L "$INCOMING_ARCHIVE_MANIFEST"
+          test "$(sha256sum "$INCOMING_ARCHIVE_MANIFEST" | awk '{print $1}')" = "$BUNDLE_ARCHIVE_MANIFEST_SHA256"
+          test "$(find "$INCOMING_ARCHIVE_ROOT" -mindepth 1 -maxdepth 1 -type f -printf '%f\n' | sort | tr '\n' ' ')" = 'SHA256SUMS current.tar next-transition.tar previous-transition.tar '
+          (cd "$INCOMING_ARCHIVE_ROOT" && sha256sum --check SHA256SUMS)
           sudo test -d "$INCOMING_TRUST_ROOT" && sudo test ! -L "$INCOMING_TRUST_ROOT"
-          sudo install -d -o 0 -g 0 -m 0755 "$SEALED_ROOT/bundle" "$SEALED_ROOT/trust"
-          sudo cp -a -- "$INCOMING_BUNDLE_ROOT/." "$SEALED_ROOT/bundle/"
+          largest_archive_kib="$(du -k "$INCOMING_ARCHIVE_ROOT"/current.tar "$INCOMING_ARCHIVE_ROOT"/next-transition.tar "$INCOMING_ARCHIVE_ROOT"/previous-transition.tar | awk 'max < $1 { max = $1 } END { print max }')"
+          available_kib="$(df -Pk "$RUNNER_TEMP" | awk 'NR == 2 { print $4 }')"
+          preflight_reserve_kib=8000000
+          maximum_archive_copies=2
+          required_kib="$((preflight_reserve_kib + (maximum_archive_copies * largest_archive_kib)))"
+          echo "offline rehearsal capacity forecast: available_kib=$available_kib preflight_reserve_kib=$preflight_reserve_kib largest_archive_kib=$largest_archive_kib maximum_archive_copies=$maximum_archive_copies required_kib=$required_kib"
+          test "$available_kib" -ge "$required_kib" || { echo 'offline rehearsal capacity is insufficient' >&2; exit 1; }
+          sudo install -d -o 0 -g 0 -m 0755 "$SEALED_ROOT/bundle" "$SEALED_ROOT/archives" "$SEALED_ROOT/trust"
+          sudo install -o 0 -g 0 -m 0600 -- "$INCOMING_ARCHIVE_MANIFEST" "$SEALED_ROOT/archives/SHA256SUMS"
+          test "$(sudo sha256sum "$SEALED_ROOT/archives/SHA256SUMS" | awk '{print $1}')" = "$BUNDLE_ARCHIVE_MANIFEST_SHA256"
+          install_release_archive() {
+            local archive_name="$1" source="$INCOMING_ARCHIVE_ROOT/$1.tar" sealed_archive="$SEALED_ROOT/archives/$1.tar" expected
+            expected="$(awk -v file="$archive_name.tar" '$2 == file { print $1 }' "$INCOMING_ARCHIVE_MANIFEST")"
+            printf '%s\n' "$expected" | grep -Eq '^[a-f0-9]{64}$'
+            test "$(awk -v file="$archive_name.tar" '$2 == file { count += 1 } END { print count + 0 }' "$INCOMING_ARCHIVE_MANIFEST")" -eq 1
+            test -f "$source" && test ! -L "$source"
+            test "$(sha256sum "$source" | awk '{print $1}')" = "$expected"
+            sudo install -o 0 -g 0 -m 0600 -- "$source" "$sealed_archive"
+            test "$(sudo sha256sum "$sealed_archive" | awk '{print $1}')" = "$expected"
+            rm -- "$source"
+            test ! -e "$source" && test ! -L "$source"
+          }
+          assert_archive_members() {
+            local archive="$1" root="$2" members
+            sudo test -f "$archive" && sudo test ! -L "$archive"
+            members="$(sudo tar -tf "$archive")"
+            test -n "$members"
+            printf '%s\n' "$members" | awk -v root="$root" '$0 ~ /(^|\/)\.\.?($|\/)/ || $0 !~ ("^" root "(/|$)") { bad = 1 } END { exit bad ? 1 : 0 }'
+            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+          }
+          assert_transition_members() {
+            local archive="$1" prefix="$2" members
+            members="$(sudo tar -tf "$archive")"
+            test "$(printf '%s\n' "$members" | wc -l)" -eq 5
+            printf '%s\n' "$members" | awk -v prefix="$prefix" '($0 == prefix "/" || $0 == prefix "/bundle-manifest.json" || $0 == prefix "/bundle-signature.json" || $0 == prefix "/evidence/" || $0 == prefix "/evidence/migration-compatibility.json") { next } { bad = 1 } END { exit bad ? 1 : 0 }'
+            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+          }
+          extract_current_bundle() {
+            local sealed_archive="$SEALED_ROOT/archives/current.tar" target="$SEALED_ROOT/bundle/current" archive_kib available_kib required_kib
+            assert_archive_members "$sealed_archive" current
+            sudo test -f "$sealed_archive" && sudo test ! -L "$sealed_archive"
+            archive_kib="$(sudo du -k "$sealed_archive" | awk '{print $1}')"
+            available_kib="$(df -Pk "$SEALED_ROOT" | awk 'NR == 2 { print $4 }')"
+            required_kib="$((preflight_reserve_kib + archive_kib))"
+            test "$available_kib" -ge "$required_kib" || { echo 'offline release extraction capacity is insufficient' >&2; exit 1; }
+            sudo test ! -e "$target" && sudo test ! -L "$target"
+            sudo tar --extract --file "$sealed_archive" --directory "$SEALED_ROOT/bundle" --no-same-owner --same-permissions
+            sudo rm -- "$sealed_archive"
+            sudo test -d "$target" && sudo test ! -L "$target"
+          }
+          install_release_archive current
+          install_release_archive next-transition
+          install_release_archive previous-transition
+          extract_current_bundle
           sudo cp -a -- "$INCOMING_TRUST_ROOT/." "$SEALED_ROOT/trust/"
+          rm -rf -- "$INCOMING_ARCHIVE_ROOT"
+          test ! -e "$INCOMING_ARCHIVE_ROOT" && test ! -L "$INCOMING_ARCHIVE_ROOT"
           case "$PINNED_NODE_SOURCE" in /*) ;; *) echo 'pinned Node source path is invalid' >&2; exit 1 ;; esac
           test -f "$PINNED_NODE_SOURCE" && test ! -L "$PINNED_NODE_SOURCE"
           test "$("$PINNED_NODE_SOURCE" --version)" = v24.19.0
@@ -699,19 +850,50 @@ jobs:
           PREVIOUS_BUNDLE_ROOT="$SEALED_ROOT/bundle/previous"
           TRUST_ROOT="$SEALED_ROOT/trust"
           NODE_BIN="$TRUST_ROOT/node"
+          OPERATOR_PATH="$TRUST_ROOT:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+          sudo_operator() { sudo env "PATH=$OPERATOR_PATH" "$@"; }
           OPERATOR_ROOT="$SEALED_ROOT/operator"
           PUBLIC_KEY="$TRUST_ROOT/public-key.pem"
           TRUSTED_BOOTSTRAP="$TRUST_ROOT/onprem-offline-bootstrap-verify.mjs"
           test "$(sudo -- "$NODE_BIN" --version)" = v24.19.0
+          test "$(sudo env "PATH=$OPERATOR_PATH" sh -c 'command -v node')" = "$NODE_BIN"
+          test "$(sudo env "PATH=$OPERATOR_PATH" node --version)" = v24.19.0
           test -f "$BUNDLE_ROOT/bundle-manifest.json"; test -f "$PUBLIC_KEY"
           test ! -d "$BUNDLE_ROOT/.git"; test ! -d "$BUNDLE_ROOT/backend"; test ! -d "$BUNDLE_ROOT/admin-web"; test ! -d "$BUNDLE_ROOT/src"
           printf '%s\n' "$TRUSTED_BOOTSTRAP_SHA256" | grep -Eq '^[a-f0-9]{64}$'
           test "$(sudo sha256sum "$TRUSTED_BOOTSTRAP" | awk '{print $1}')" = "$TRUSTED_BOOTSTRAP_SHA256"
           release_suffix="$(printf '%s' "$RELEASE_ID" | rev | cut -d- -f1 | rev)"
-          sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
-          sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$NEXT_BUNDLE_ROOT" --release-id "onprem-next-$release_suffix" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
-          sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$PREVIOUS_BUNDLE_ROOT" --release-id "onprem-previous-$release_suffix" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
-          sudo -- "$NODE_BIN" "$BUNDLE_ROOT/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$BUNDLE_ROOT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+          assert_release_tree() {
+            local root="$1"
+            sudo test -d "$root" && sudo test ! -L "$root"
+            if sudo find "$root" \( ! -uid 0 -o ! -gid 0 \) -print -quit | grep -q .; then echo 'release bundle ownership drift detected' >&2; exit 1; fi
+            if sudo find "$root" \( -type f -o -type d \) -perm /022 -print -quit | grep -q .; then echo 'release bundle mode drift detected' >&2; exit 1; fi
+          }
+          verify_release_bundle() {
+            local root="$1" release_id="$2"
+            assert_release_tree "$root"
+            sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$root" --release-id "$release_id" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+            sudo -- "$NODE_BIN" "$root/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$root" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+          }
+          materialize_transition_bundle() {
+            local release="$1" target="$2" release_id="$3" archive="$SEALED_ROOT/archives/${release}-transition.tar" materialization_root="$SEALED_ROOT/.${release}-materialize"
+            assert_transition_members "$archive" "${release}-transition"
+            sudo test ! -e "$target" && sudo test ! -L "$target"
+            sudo test ! -e "$materialization_root" && sudo test ! -L "$materialization_root"
+            sudo install -d -o 0 -g 0 -m 0700 "$materialization_root"
+            sudo cp -a -- "$BUNDLE_ROOT/." "$materialization_root/"
+            sudo tar --extract --file "$archive" --directory "$materialization_root" --strip-components=1 --no-same-owner --same-permissions
+            sudo rm -- "$archive"
+            if sudo find "$materialization_root" -type l -print -quit | grep -q .; then
+              echo 'transition materialization contains a symlink' >&2
+              exit 1
+            fi
+            assert_release_tree "$materialization_root"
+            verify_release_bundle "$materialization_root" "$release_id"
+            sudo mv -- "$materialization_root" "$target"
+            sudo test -d "$target" && sudo test ! -L "$target"
+          }
+          verify_release_bundle "$BUNDLE_ROOT" "$RELEASE_ID"
           sudo grep -R -- '--pull never' "$BUNDLE_ROOT/operations" >/dev/null
           test "$(sudo find "$BUNDLE_ROOT/images" -maxdepth 1 -type f -name '*.tar' | wc -l)" -eq 7
           mkdir -p "$RUNNER_TEMP/offline-secrets/core"/{backend,caddy,postgres,redis,keycloak} "$RUNNER_TEMP/offline-secrets/photo"
@@ -763,7 +945,12 @@ jobs:
           sudo find "$OPERATOR_ROOT" -exec chown 0:0 {} +
           sudo find "$OPERATOR_ROOT" -type d -exec chmod 0700 {} +
           sudo find "$OPERATOR_ROOT" -type f -exec chmod 0600 {} +
-          sudo chmod 0644 "$OPERATOR_ROOT/secrets/core/postgres/ca.crt" "$OPERATOR_ROOT/secrets/core/postgres/server.crt" "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" "$OPERATOR_ROOT/secrets/core/caddy/server.crt"
+          sudo chown 10001:10001 "$OPERATOR_ROOT/secrets/core/caddy/server.key" && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/caddy/server.key"
+          sudo chown 70:70 "$OPERATOR_ROOT/secrets/core/postgres/server.key" "$OPERATOR_ROOT/secrets/core/postgres/"*-password && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/postgres/server.key" "$OPERATOR_ROOT/secrets/core/postgres/"*-password
+          sudo chown 1000:1000 "$OPERATOR_ROOT/secrets/core/keycloak/"* && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/keycloak/"*
+          sudo chown 999:1000 "$OPERATOR_ROOT/secrets/core/redis/users.acl" "$OPERATOR_ROOT/secrets/core/redis/health-url" && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/redis/users.acl" "$OPERATOR_ROOT/secrets/core/redis/health-url"
+          sudo chown 65532:65532 "$OPERATOR_ROOT/secrets/core/backend/"* "$OPERATOR_ROOT/secrets/photo/"* && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/backend/"* "$OPERATOR_ROOT/secrets/photo/"*
+          sudo chmod 0444 "$OPERATOR_ROOT/secrets/core/postgres/ca.crt" "$OPERATOR_ROOT/secrets/core/postgres/server.crt" "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" "$OPERATOR_ROOT/secrets/core/caddy/server.crt"
           sudo chmod 0400 "$OPERATOR_ROOT/photo-fixture.webp"
           if sudo find "$OPERATOR_ROOT" -type l -print -quit | grep -q .; then echo 'sealed operator root contains a symlink' >&2; exit 1; fi
           assert_private_directory "$OPERATOR_ROOT"
@@ -771,10 +958,10 @@ jobs:
           owner_key="$OPERATOR_ROOT/owner-signing-key.pem"; owner_public="$OPERATOR_ROOT/owner-signing-public.pem"; photo_fixture="$OPERATOR_ROOT/photo-fixture.webp"
           photo_recovery_handle="$OPERATOR_ROOT/photo-recovery.json"; photo_prebackup_receipt="$OPERATOR_ROOT/receipts/photo-prebackup.json"
           RECEIPT_ROOT="$OPERATOR_ROOT/receipts"; BACKUP_ROOT="$OPERATOR_ROOT/backups"
-          PROOF_COMPOSE="$BUNDLE_ROOT/deployment/proof.compose.yaml"; NEXT_PROOF_COMPOSE="$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml"; PREVIOUS_PROOF_COMPOSE="$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml"
-          test -f "$PROOF_COMPOSE" && test ! -L "$PROOF_COMPOSE"; test -f "$NEXT_PROOF_COMPOSE" && test ! -L "$NEXT_PROOF_COMPOSE"; test -f "$PREVIOUS_PROOF_COMPOSE" && test ! -L "$PREVIOUS_PROOF_COMPOSE"
-          sudo "$BUNDLE_ROOT/operations/preflight.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --allow-unloaded-images --allow-missing-ledger
-          sudo "$BUNDLE_ROOT/operations/install.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          PROOF_COMPOSE="$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          test -f "$PROOF_COMPOSE" && test ! -L "$PROOF_COMPOSE"
+          sudo_operator "$BUNDLE_ROOT/operations/preflight.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --allow-unloaded-images --allow-missing-ledger
+          sudo_operator "$BUNDLE_ROOT/operations/install.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           edge_network="hr-axis-onprem-core_edge"
           edge_meta="$(sudo docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after install' >&2; exit 1; }
           test "$edge_meta" = "false|hr-axis-onprem-core|synthetic|$RELEASE_ID|edge"
@@ -832,9 +1019,9 @@ jobs:
           fs.chmodSync(path, 0o600)
           NODE
           test "$(sudo stat -c '%u:%g:%a' "$RECEIPT_ROOT/egress.json")" = '0:0:600'
-          sudo "$BUNDLE_ROOT/operations/migrate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
-          sudo "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
-          sudo "$BUNDLE_ROOT/operations/smoke.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --receipt "$RECEIPT_ROOT/smoke.json"
+          sudo_operator "$BUNDLE_ROOT/operations/migrate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          sudo_operator "$BUNDLE_ROOT/operations/smoke.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --receipt "$RECEIPT_ROOT/smoke.json"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/smoke.json" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.project !== 'hr-axis-onprem-core' || value.releaseId !== releaseId) process.exit(41); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'smoke', status: 'passed', sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
           NODE
@@ -844,19 +1031,25 @@ jobs:
           NODE
           target_gate_status=0
           release_suffix="$(printf '%s' "$RELEASE_ID" | rev | cut -d- -f1 | rev)"
-          sudo "$BUNDLE_ROOT/operations/backup.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --backup-private-key "$owner_key" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle"
+          sudo_operator "$BUNDLE_ROOT/operations/backup.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --backup-private-key "$owner_key" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle"
           sudo test -s "$BACKUP_ROOT/backup/backup-manifest.json"
           sudo test -s "$BACKUP_ROOT/backup/backup-signature.json"
           sudo test -s "$BACKUP_ROOT/backup/SHA256SUMS"
           sudo -- "$NODE_BIN" - "$BACKUP_ROOT/backup/backup-manifest.json" "$BACKUP_ROOT/backup/backup-signature.json" "$RECEIPT_ROOT/backup.json" "$photo_recovery_handle" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [manifestPath, signaturePath, receiptPath, handlePath] = process.argv.slice(2); const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); const signature = JSON.parse(fs.readFileSync(signaturePath, 'utf8')); const digest = (path) => crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex'); const handle = JSON.parse(fs.readFileSync(handlePath, 'utf8')); if (manifest.photoRecoveryHandleSha256 !== digest(handlePath) || manifest.photoContentSha256 !== handle.contentSha256 || manifest.photoContentLength !== handle.contentLength) process.exit(43); fs.writeFileSync(receiptPath, JSON.stringify({ schemaVersion: 1, operation: 'backup', status: 'passed', dataClass: 'synthetic', releaseId: manifest.releaseId, sourceProject: manifest.sourceProject, targetProject: manifest.sourceProject, manifestSha256: digest(manifestPath), signatureSha256: digest(signaturePath), inventorySha256: manifest.inventorySha }) + '\n', { mode: 0o600 })
           NODE
-          sudo "$BUNDLE_ROOT/operations/restore.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-restore --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --source-project hr-axis-onprem-core --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/restore.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
-          sudo "$BUNDLE_ROOT/operations/upgrade.sh" --bundle-root "$BUNDLE_ROOT" --next-bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$RELEASE_ID" --next-release-id "onprem-next-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-upgrade --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$NEXT_ENV_FILE" --proof-compose "$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/upgrade.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
+          sudo_operator "$BUNDLE_ROOT/operations/restore.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-restore --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --source-project hr-axis-onprem-core --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/restore.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
+          materialize_transition_bundle next "$NEXT_BUNDLE_ROOT" "onprem-next-$release_suffix"
+          NEXT_PROOF_COMPOSE="$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml"
+          test -f "$NEXT_PROOF_COMPOSE" && test ! -L "$NEXT_PROOF_COMPOSE"
+          sudo_operator "$BUNDLE_ROOT/operations/upgrade.sh" --bundle-root "$BUNDLE_ROOT" --next-bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$RELEASE_ID" --next-release-id "onprem-next-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-upgrade --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$NEXT_ENV_FILE" --proof-compose "$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/upgrade.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/upgrade.json" "onprem-next-$release_suffix" "$RELEASE_ID" "hr-axis-onprem-upgrade" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [path, releaseId, sourceReleaseId, targetProject] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== 'hr-axis-onprem-core' || value.targetProject !== targetProject) process.exit(42); const sourceReceiptSha256 = crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'upgrade-mechanics', status: 'mechanics-passed', evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false, sourceReleaseId, sourceProject: 'hr-axis-onprem-core', targetProject, sourceReceiptSha256 }) + '\n', { mode: 0o600 })
           NODE
-          sudo "$BUNDLE_ROOT/operations/rollback.sh" --bundle-root "$BUNDLE_ROOT" --previous-bundle-root "$PREVIOUS_BUNDLE_ROOT" --release-id "$RELEASE_ID" --previous-release-id "onprem-previous-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-rollback --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$PREVIOUS_ENV_FILE" --proof-compose "$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/rollback.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
+          materialize_transition_bundle previous "$PREVIOUS_BUNDLE_ROOT" "onprem-previous-$release_suffix"
+          PREVIOUS_PROOF_COMPOSE="$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml"
+          test -f "$PREVIOUS_PROOF_COMPOSE" && test ! -L "$PREVIOUS_PROOF_COMPOSE"
+          sudo_operator "$BUNDLE_ROOT/operations/rollback.sh" --bundle-root "$BUNDLE_ROOT" --previous-bundle-root "$PREVIOUS_BUNDLE_ROOT" --release-id "$RELEASE_ID" --previous-release-id "onprem-previous-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-rollback --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$PREVIOUS_ENV_FILE" --proof-compose "$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/rollback.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/rollback.json" "onprem-previous-$release_suffix" "$RELEASE_ID" "hr-axis-onprem-rollback" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [path, releaseId, sourceReleaseId, targetProject] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== 'hr-axis-onprem-core' || value.targetProject !== targetProject) process.exit(42); const sourceReceiptSha256 = crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'rollback-mechanics', status: 'mechanics-passed', evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false, sourceReleaseId, sourceProject: 'hr-axis-onprem-core', targetProject, sourceReceiptSha256 }) + '\n', { mode: 0o600 })
           NODE
@@ -909,6 +1102,9 @@ jobs:
           fs.writeFileSync(`${directory}/operations.json`, JSON.stringify(aggregate) + '\n', { mode: 0o600 })
           fs.writeFileSync(`${directory}/rehearsal.json`, JSON.stringify({ schemaVersion: 1, operation: 'offline-rehearsal', status: 'passed', gate: null, dataClass: 'synthetic', releaseId, egressDisabledDuringOperations: true, egressProofSha256: egressDigest, ...egressSummary, releaseTransitionEvidence, commandsCompleteBeforeEgressRestore: true, sanitized: true }) + '\n', { mode: 0o600 })
           NODE
+          sudo rm -rf -- "$NEXT_BUNDLE_ROOT" "$PREVIOUS_BUNDLE_ROOT"
+          sudo test ! -e "$NEXT_BUNDLE_ROOT" && sudo test ! -L "$NEXT_BUNDLE_ROOT"
+          sudo test ! -e "$PREVIOUS_BUNDLE_ROOT" && sudo test ! -L "$PREVIOUS_BUNDLE_ROOT"
           sudo cp -a -- "$OPERATOR_ROOT/receipts/." "$RUNNER_TEMP/offline-receipts/"
           sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/offline-receipts"
           chmod 700 "$RUNNER_TEMP/offline-receipts"

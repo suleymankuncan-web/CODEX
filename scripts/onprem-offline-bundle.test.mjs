@@ -19,7 +19,7 @@ import { test } from 'node:test'
 
 import { createReleaseManifest } from './onprem-release-manifest.mjs'
 import { createContentGuardIndex } from './onprem-offline-content-guard-index.mjs'
-import { REQUIRED_BUNDLE_PATHS, copyStable, createOfflineBundle, inventory, validateBundleMetadata, validateOfflineJsonContent, validateOfflineTextContent, verifyOfflineBundle } from './onprem-offline-bundle.mjs'
+import { REQUIRED_BUNDLE_PATHS, copyStable, createOfflineBundle, inventory, validateBundleMetadata, validateOfflineJsonContent, validateOfflineTextContent, validateVendorEvidenceClosure, verifyOfflineBundle } from './onprem-offline-bundle.mjs'
 import { REQUIRED_BUNDLE_PATHS as VERIFY_REQUIRED_BUNDLE_PATHS } from './onprem-offline-bundle-verify.mjs'
 
 const REVISION = '0123456789abcdef0123456789abcdef01234567'
@@ -37,6 +37,11 @@ test('bundle closure reserves the exact PR-B photo-proof deployment overlay', ()
 test('producer and self-contained verifier use the exact same signed closure', () => {
   assert.deepEqual(VERIFY_REQUIRED_BUNDLE_PATHS, REQUIRED_BUNDLE_PATHS)
   assert.ok(REQUIRED_BUNDLE_PATHS.evidence.includes('evidence/postgres-trivy-vuln.json'))
+  for (const name of ['caddy', 'postgres', 'redis', 'seaweedfs']) {
+    for (const suffix of ['sbom.spdx.json', 'trivy-vuln.json', 'trivy-secret.json', 'trivy.json', 'license-inventory.json']) {
+      assert.ok(REQUIRED_BUNDLE_PATHS.evidence.includes(`evidence/${name}-${suffix}`), `${name}-${suffix} must be delivered in the signed closure`)
+    }
+  }
   assert.deepEqual(
     REQUIRED_BUNDLE_PATHS.docs.filter((pathname) => pathname.startsWith('docs/licenses/')),
     [
@@ -122,6 +127,31 @@ function fixture() {
       : (path === 'evidence/release-manifest.json' ? '{}' : (/\.json$/i.test(path) ? JSON.stringify({ synthetic: path }) : `synthetic:${path}\n`))
     writeFile(stagingDir, path, content, mode)
   }
+  const vendorRecords = {}
+  for (const name of ['caddy', 'postgres', 'redis', 'seaweedfs']) {
+    const rawEvidence = {
+      sbom: [`evidence/${name}-sbom.spdx.json`, { spdxVersion: 'SPDX-2.3', name: `registry.example/${name}`, packages: [{ name: '@aws-sdk/credential-provider-node' }] }],
+      vulnerabilityScan: [`evidence/${name}-trivy-vuln.json`, { ArtifactID: `sha256:${'c'.repeat(64)}`, ArtifactName: `/out/${name}-image.tar`, ArtifactType: 'container_image', Metadata: { ImageID: images[name].configImageId, RepoTags: [images[name].repoTag] }, Results: [] }],
+      sensitiveDataScan: [`evidence/${name}-trivy-secret.json`, { ArtifactID: `sha256:${'c'.repeat(64)}`, ArtifactName: `/out/${name}-image.tar`, ArtifactType: 'container_image', Metadata: { ImageID: images[name].configImageId, RepoTags: [images[name].repoTag] }, Results: [] }],
+      licenseInventory: [`evidence/${name}-license-inventory.json`, { schemaVersion: 1, dataClass: 'synthetic', image: `${images[name].repoTag}@${images[name].registryManifestDigest}`, imageId: images[name].configImageId, sbom: `${name}-sbom.spdx.json`, vulnerabilityReport: `${name}-trivy.json`, secretReport: `${name}-trivy-secret.json`, licenseSource: 'SPDX package license assertions' }],
+    }
+    rawEvidence.vulnerabilityReport = [`evidence/${name}-trivy.json`, { schemaVersion: 1, image: name, scans: { vulnerability: structuredClone(rawEvidence.vulnerabilityScan[1]), secret: structuredClone(rawEvidence.sensitiveDataScan[1]) } }]
+    const artifacts = {}
+    for (const [key, [path, value]] of Object.entries(rawEvidence)) {
+      writeFile(stagingDir, path, JSON.stringify(value))
+      artifacts[key] = { path, sha256: createHash('sha256').update(readFileSync(join(stagingDir, ...path.split('/')))).digest('hex') }
+    }
+    if (name === 'postgres') {
+      for (const [key, path] of [
+        ['vulnerabilityExceptionReceipt', 'evidence/postgres-vulnerability-exception-receipt.json'],
+        ['vulnerabilityExceptionSymbolProof', 'evidence/postgres-gosu-symbol-proof.json'],
+      ]) artifacts[key] = { path, sha256: createHash('sha256').update(readFileSync(join(stagingDir, ...path.split('/')))).digest('hex') }
+    }
+    vendorRecords[name] = { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: `${images[name].repoTag}@${images[name].registryManifestDigest}`, registryManifestDigest: images[name].registryManifestDigest, artifacts }
+  }
+  writeFile(stagingDir, 'evidence/sbom.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', components: vendorRecords }))
+  writeFile(stagingDir, 'evidence/license-inventory.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', inventories: vendorRecords }))
+  writeFile(stagingDir, 'evidence/vulnerability-report.json', JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', reports: vendorRecords }))
 
   const upstreamBaseDir = join(root, 'upstream'); mkdirSync(upstreamBaseDir)
   const upstreamKeys = generateKeyPairSync('ed25519'); const upstreamPrivatePath = join(root, 'upstream-private.pem'); const upstreamPublicPath = join(root, 'upstream-public.pem')
@@ -172,6 +202,13 @@ test('creates deterministic signed source-free bundle and verifies with external
     rmSync(value.outputDir, { recursive: true, force: true }); const second = createOfflineBundle(options(value))
     assert.deepEqual(first, second); assert.equal(firstManifest, readFileSync(join(value.outputDir, 'bundle-manifest.json'), 'utf8'))
     assert.equal(verifyOfflineBundle({ bundleDir: value.outputDir, publicKeyPath: value.publicKeyPath, trustedKeyFingerprintSha256: value.trustedKeyFingerprintSha256 }), true)
+    const selfContained = spawnSync(process.execPath, [
+      join(process.cwd(), 'scripts/onprem-offline-bundle-verify.mjs'), 'verify',
+      '--bundle-dir', value.outputDir,
+      '--public-key', value.publicKeyPath,
+      '--trusted-fingerprint', value.trustedKeyFingerprintSha256,
+    ], { encoding: 'utf8' })
+    assert.equal(selfContained.status, 0, `${selfContained.stdout}\n${selfContained.stderr}`)
   } finally { cleanup(value) }
 })
 
@@ -236,6 +273,111 @@ test('scanner rejects structured sensitive fields and quoted assignments on ever
   assert.doesNotThrow(() => validateOfflineTextContent('clientSecret = process.env.CLIENT_SECRET\npassword: "$(cat /run/secrets/password)"\n', 'operations/runtime.mjs'))
   assert.doesNotThrow(() => validateOfflineTextContent('endpoint: "http://object-storage:8333"\npassword: migrator_password\n', 'operations/runtime.mjs'))
   assert.doesNotThrow(() => validateOfflineTextContent('BACKUP_PRIVATE_KEY=$2;\n', 'operations/backup.sh'))
+})
+
+test('scanner accepts schema-owned SBOM and Trivy prose but rejects actual secret evidence', () => {
+  const sbom = JSON.stringify({
+    spdxVersion: 'SPDX-2.3',
+    packages: [
+      { name: '@aws-sdk/credential-provider-node', externalRefs: [{ referenceLocator: 'cpe:2.3:a:smallrye-private-key:provider:1.0:*:*:*:*:*:*:*' }] },
+      { name: 'wildfly-elytron-password', comment: "advisory example: secret='LEAKED' and unexpected token:" },
+    ],
+  })
+  const emptySecretScan = { ArtifactName: 'caddy:synthetic', ArtifactType: 'container_image', Results: [{ Target: 'caddy', Secrets: [] }] }
+  const vulnerabilityScan = { ArtifactName: 'caddy:synthetic', ArtifactType: 'container_image', Results: [{ Vulnerabilities: [{ Description: "PoC uses secret='LEAKED' and reports unexpected token:" }] }] }
+  const combined = JSON.stringify({ schemaVersion: 1, image: 'caddy', scans: { vulnerability: vulnerabilityScan, secret: emptySecretScan } })
+
+  assert.doesNotThrow(() => validateOfflineJsonContent(sbom, 'evidence/caddy-sbom.spdx.json'))
+  assert.doesNotThrow(() => validateOfflineJsonContent(JSON.stringify(vulnerabilityScan), 'evidence/caddy-trivy-vuln.json'))
+  assert.doesNotThrow(() => validateOfflineJsonContent(JSON.stringify(emptySecretScan), 'evidence/caddy-trivy-secret.json'))
+  assert.doesNotThrow(() => validateOfflineJsonContent(combined, 'evidence/caddy-trivy.json'))
+  assert.throws(
+    () => validateOfflineJsonContent(JSON.stringify({ ...emptySecretScan, Results: [{ Secrets: [{ RuleID: 'aws-access-key', Match: 'real-secret' }] }] }), 'evidence/caddy-trivy-secret.json'),
+    /secret finding|sensitive|secret material/i,
+  )
+  assert.throws(() => validateOfflineJsonContent(JSON.stringify({ spdxVersion: 'SPDX-2.3', password: 'real-secret' }), 'evidence/caddy-sbom.spdx.json'), /sensitive/i)
+  assert.throws(() => validateOfflineJsonContent(JSON.stringify({ spdxVersion: 'SPDX-2.3', comment: '-----BEGIN PRIVATE KEY-----' }), 'evidence/caddy-sbom.spdx.json'), /secret material/i)
+})
+
+test('vendor aggregate evidence resolves every advertised digest to a signed raw file', () => {
+  const vendors = ['caddy', 'postgres', 'redis', 'seaweedfs']
+  const suffixes = {
+    sbom: 'sbom.spdx.json',
+    vulnerabilityReport: 'trivy.json',
+    vulnerabilityScan: 'trivy-vuln.json',
+    sensitiveDataScan: 'trivy-secret.json',
+    licenseInventory: 'license-inventory.json',
+  }
+  const files = []
+  const images = {}
+  const records = {}
+  vendors.forEach((name, vendorIndex) => {
+    images[name] = { archive: `images/${name}.tar`, repoTag: `registry.example/${name}:synthetic`, configImageId: `sha256:${String(vendorIndex + 1).repeat(64)}`, registryManifestDigest: `sha256:${String(vendorIndex + 5).repeat(64)}` }
+    const artifacts = {}
+    Object.entries(suffixes).forEach(([key, suffix], artifactIndex) => {
+      const path = `evidence/${name}-${suffix}`
+      const sha256 = String((vendorIndex + artifactIndex + 1) % 10).repeat(64)
+      let value
+      if (key === 'sbom') value = { spdxVersion: 'SPDX-2.3', name: `registry.example/${name}`, packages: [] }
+      else if (key === 'vulnerabilityScan' || key === 'sensitiveDataScan') value = { ArtifactID: `sha256:${String(vendorIndex + 1).repeat(64)}`, ArtifactName: `/out/${name}-image.tar`, ArtifactType: 'container_image', Metadata: { ImageID: images[name].configImageId, RepoTags: [images[name].repoTag] }, Results: [] }
+      else if (key === 'licenseInventory') value = { schemaVersion: 1, dataClass: 'synthetic', image: `${images[name].repoTag}@${images[name].registryManifestDigest}`, imageId: images[name].configImageId, sbom: `${name}-sbom.spdx.json`, vulnerabilityReport: `${name}-trivy.json`, secretReport: `${name}-trivy-secret.json`, licenseSource: 'SPDX package license assertions' }
+      files.push({ path, sha256, content: value })
+      artifacts[key] = { path, sha256 }
+    })
+    if (name === 'postgres') {
+      for (const [key, path, digit] of [
+        ['vulnerabilityExceptionReceipt', 'evidence/postgres-vulnerability-exception-receipt.json', '7'],
+        ['vulnerabilityExceptionSymbolProof', 'evidence/postgres-gosu-symbol-proof.json', '8'],
+      ]) {
+        const sha256 = digit.repeat(64)
+        files.push({ path, sha256 })
+        artifacts[key] = { path, sha256 }
+      }
+    }
+    records[name] = { configImageId: images[name].configImageId, archive: images[name].archive, registryReference: `${images[name].repoTag}@${images[name].registryManifestDigest}`, registryManifestDigest: images[name].registryManifestDigest, artifacts }
+  })
+  for (const name of vendors) {
+    const vuln = files.find((file) => file.path === `evidence/${name}-trivy-vuln.json`).content
+    const secret = files.find((file) => file.path === `evidence/${name}-trivy-secret.json`).content
+    files.find((file) => file.path === `evidence/${name}-trivy.json`).content = { schemaVersion: 1, image: name, scans: { vulnerability: structuredClone(vuln), secret: structuredClone(secret) } }
+  }
+  const aggregates = {
+    sbom: { schemaVersion: 1, dataClass: 'synthetic', components: structuredClone(records) },
+    license: { schemaVersion: 1, dataClass: 'synthetic', inventories: structuredClone(records) },
+    vulnerability: { schemaVersion: 1, dataClass: 'synthetic', reports: structuredClone(records) },
+  }
+  assert.equal(validateVendorEvidenceClosure({ images }, aggregates, files), true)
+  aggregates.vulnerability.reports.caddy.artifacts.sbom.sha256 = 'f'.repeat(64)
+  assert.throws(() => validateVendorEvidenceClosure({ images }, aggregates, files), /vendor evidence|digest|hash/i)
+})
+
+test('vendor evidence closure rejects misattributed and internally divergent raw reports', () => {
+  const value = fixture()
+  try {
+    const options = { bundleDir: value.stagingDir }
+    const load = (path) => JSON.parse(readFileSync(join(value.stagingDir, ...path.split('/')), 'utf8'))
+    const files = ALL_REQUIRED.map((path) => ({ path, sha256: createHash('sha256').update(readFileSync(join(value.stagingDir, ...path.split('/')))).digest('hex') }))
+    const aggregates = {
+      sbom: load('evidence/sbom.json'),
+      license: load('evidence/license-inventory.json'),
+      vulnerability: load('evidence/vulnerability-report.json'),
+    }
+    assert.equal(validateVendorEvidenceClosure(value.input, aggregates, files, load), true)
+
+    const caddyVulnPath = 'evidence/caddy-trivy-vuln.json'
+    const original = load(caddyVulnPath)
+    const mutations = [
+      { ...original, Metadata: { ...original.Metadata, ImageID: value.images.redis.configImageId } },
+      { ...original, Metadata: { ...original.Metadata, RepoTags: [value.images.redis.repoTag] } },
+      { ...original, ArtifactName: '/out/redis-image.tar' },
+    ]
+    for (const mutation of mutations) {
+      assert.throws(() => validateVendorEvidenceClosure(value.input, aggregates, files, (path) => path === caddyVulnPath ? mutation : load(path)), /vendor evidence|identity|trivy/i)
+    }
+    assert.throws(() => validateVendorEvidenceClosure(value.input, aggregates, files, (path) => path === 'evidence/caddy-trivy.json' ? { ...load(path), scans: { ...load(path).scans, vulnerability: { ...original, ReportID: 'diverged' } } } : load(path)), /combined|agree|diverg/i)
+    assert.throws(() => validateVendorEvidenceClosure(value.input, aggregates, files, (path) => path === 'evidence/caddy-sbom.spdx.json' ? { spdxVersion: 'SPDX-2.3', name: 'redis', packages: [] } : load(path)), /sbom|identity/i)
+    assert.throws(() => validateVendorEvidenceClosure(value.input, aggregates, files, (path) => path === 'evidence/caddy-license-inventory.json' ? { ...load(path), imageId: value.images.redis.configImageId } : load(path)), /license|identity/i)
+  } finally { rmSync(value.root, { recursive: true, force: true }) }
 })
 
 test('verify-only runtime entrypoints reject producer modes, private-key flags, and producer exports', async () => {

@@ -109,13 +109,18 @@ test('build job checks out the trusted SHA, consumes proof evidence, and creates
   assert.match(build, /onprem-keycloak-runtime-receipt\.json/)
   assert.match(build, /onprem-photo-storage-runtime-receipt\.json/)
   assert.match(build, /copyContentGuardLayerReceipts\(root, output\)/)
-  assert.match(build, /onprem-staged-\$\{name\}/)
+  assert.match(build, /onprem-bundle-archives/)
+  assert.match(build, /current\.tar/)
+  assert.match(build, /next-transition\.tar/)
+  assert.match(build, /previous-transition\.tar/)
+  assert.match(build, /transition_members/)
+  assert.match(build, /maximum_bundle_copies=3/)
+  assert.match(build, /preflight_reserve_kib/)
   assert.match(build, /\['previous', previous[\s\S]*\['next', next/)
   assert.match(build, /same-build-lifecycle-mechanics/)
   assert.match(build, /registryManifestDigest/)
-  assert.match(build, /sbomSha256/)
-  assert.match(build, /vulnerabilitySha256/)
-  assert.match(build, /licenseSha256/)
+  assert.match(build, /artifacts:[\s\S]*vulnerabilityScan/)
+  assert.match(build, /sensitiveDataScan/)
   assert.match(build, /configImageId/)
   assert.match(build, /private-key|privateKey/i)
   assert.match(build, /public-key|publicKey/i)
@@ -233,15 +238,9 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.doesNotMatch(rehearsal, /sudo .*operations\/(?:preflight|install|migrate|activate|smoke|backup|restore|upgrade|rollback)\.sh[^\n]*\$RUNNER_TEMP\/offline/)
   assert.match(rehearsal, /onprem-offline-target-proof\.mjs[\s\S]*--require-complete[\s\S]*--photo-fixture[\s\S]*--photo-sha256/)
   assert.match(rehearsal, /photo\.canonicalIdentityVerified !== true/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/preflight\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/install\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/migrate\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/activate\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/smoke\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/backup\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/restore\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/upgrade\.sh"/)
-  assert.match(rehearsal, /sudo "\$BUNDLE_ROOT\/operations\/rollback\.sh"/)
+  for (const operation of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'backup', 'restore', 'upgrade', 'rollback']) {
+    assert.match(rehearsal, new RegExp(`sudo_operator "\\$BUNDLE_ROOT/operations/${operation}\\.sh"`), `${operation} remains under pinned sudo operator`)
+  }
   assert.match(rehearsal, /operations\.json/)
   assert.match(rehearsal, /bundleManifests[\s\S]*current[\s\S]*next[\s\S]*previous/)
   assert.match(rehearsal, /\$RECEIPT_ROOT\/backup\.json/)
@@ -303,7 +302,7 @@ test('offline rehearsal keeps the ordered operator calls privileged and exactly 
   const operators = ['preflight', 'install', 'migrate', 'activate', 'smoke', 'backup', 'restore', 'upgrade', 'rollback']
   const positions = []
   for (const operator of operators) {
-    const expression = new RegExp(`sudo \\\"\\$[^\\n]*?/operations/${operator}\\.sh\\\"`, 'g')
+    const expression = new RegExp(`(?:sudo|sudo_operator) \\\"\\$[^\\n]*?/operations/${operator}\\.sh\\\"`, 'g')
     const calls = [...rehearsal.matchAll(expression)]
     assert.equal(calls.length, 1, `${operator}.sh must run exactly once under sudo`)
     positions.push(calls[0].index)
@@ -312,7 +311,7 @@ test('offline rehearsal keeps the ordered operator calls privileged and exactly 
   assert.match(rehearsal, /sudo -- "\$NODE_BIN" "\$BUNDLE_ROOT\/operations\/onprem-offline-target-proof\.mjs"/)
   assert.equal((rehearsal.match(/sudo -- "\$NODE_BIN" "\$BUNDLE_ROOT\/operations\/onprem-offline-target-proof\.mjs"/g) ?? []).length, 1)
   assert.doesNotMatch(rehearsal, /target_gate_status=\$\?/)
-  assert.doesNotMatch(rehearsal, /(?:^|\s)(?<!sudo )"\$BUNDLE_ROOT\/operations\/(?:preflight|install|migrate|activate|smoke|backup|restore|upgrade|rollback)\.sh"/m)
+  assert.doesNotMatch(rehearsal, /^\s*"\$BUNDLE_ROOT\/operations\/(?:preflight|install|migrate|activate|smoke|backup|restore|upgrade|rollback)\.sh"/m)
 })
 
 test('restore, upgrade, and rollback remain complete photo-gated operations', () => {
@@ -323,7 +322,7 @@ test('restore, upgrade, and rollback remain complete photo-gated operations', ()
     rollback: ['--release-id "$RELEASE_ID"', '--previous-release-id "onprem-previous-$release_suffix"', '--source-project hr-axis-onprem-core', '--target-project hr-axis-onprem-rollback'],
   }
   for (const operator of Object.keys(identities)) {
-    const calls = [...rehearsal.matchAll(new RegExp(`sudo "[^\\n]+/operations/${operator}\\.sh"[^\\n]+`, 'g'))]
+    const calls = [...rehearsal.matchAll(new RegExp(`(?:sudo|sudo_operator) "[^\\n]+/operations/${operator}\\.sh"[^\\n]+`, 'g'))]
     assert.equal(calls.length, 1, `${operator}.sh must have one workflow invocation`)
     const call = calls[0][0]
     for (const identity of identities[operator]) assert.match(call, new RegExp(identity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${operator}.sh identity ${identity}`)
@@ -554,8 +553,19 @@ test('offline rehearsal seals downloaded bundle and trust material under a fresh
   assert.match(rehearsal, /SEALED_PARENT=\/var\/lib\/hr-axis-onprem-offline-proof/)
   assert.match(rehearsal, /SEALED_ROOT="\$SEALED_PARENT\/\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}"/)
   assert.match(rehearsal, /if sudo test -e "\$SEALED_ROOT" \|\| sudo test -L "\$SEALED_ROOT"/)
-  assert.match(rehearsal, /sudo install -d -o 0 -g 0 -m 0755 "\$SEALED_ROOT\/bundle" "\$SEALED_ROOT\/trust"/)
-  assert.match(rehearsal, /sudo cp -a -- "\$INCOMING_BUNDLE_ROOT\/\." "\$SEALED_ROOT\/bundle\/"/)
+  assert.match(rehearsal, /sudo install -d -o 0 -g 0 -m 0755 "\$SEALED_ROOT\/bundle" "\$SEALED_ROOT\/archives" "\$SEALED_ROOT\/trust"/)
+  assert.match(rehearsal, /install_release_archive\(\)/)
+  for (const archive of ['current', 'next-transition', 'previous-transition']) {
+    assert.equal(
+      [...rehearsal.matchAll(new RegExp(`^\\s*install_release_archive ${archive}$`, 'gm'))].length,
+      1,
+      `${archive} must be sealed exactly once`,
+    )
+  }
+  const incomingRemoval = rehearsal.indexOf('rm -rf -- "$INCOMING_ARCHIVE_ROOT"')
+  assert.ok(incomingRemoval > 0)
+  assert.doesNotMatch(rehearsal.slice(incomingRemoval), /^\s*install_release_archive /m)
+  assert.match(rehearsal, /extract_current_bundle\(\)/)
   assert.match(rehearsal, /sudo cp -a -- "\$INCOMING_TRUST_ROOT\/\." "\$SEALED_ROOT\/trust\/"/)
   assert.match(rehearsal, /sudo find "\$SEALED_ROOT" -exec chown 0:0 \{\} \+/)
   assert.match(rehearsal, /find "\$SEALED_ROOT" -type l/)
@@ -568,15 +578,44 @@ test('offline rehearsal seals downloaded bundle and trust material under a fresh
   assert.match(rehearsal, /PUBLIC_KEY="\$TRUST_ROOT\/public-key\.pem"/)
   assert.match(rehearsal, /TRUSTED_BOOTSTRAP="\$TRUST_ROOT\/onprem-offline-bootstrap-verify\.mjs"/)
   assert.match(rehearsal, /sha256sum "\$TRUSTED_BOOTSTRAP"/)
-  assert.match(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify --bundle-dir "\$BUNDLE_ROOT" --release-id "\$RELEASE_ID"/)
-  assert.match(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify --bundle-dir "\$NEXT_BUNDLE_ROOT" --release-id "onprem-next-\$release_suffix"/)
-  assert.match(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify --bundle-dir "\$PREVIOUS_BUNDLE_ROOT" --release-id "onprem-previous-\$release_suffix"/)
+  assert.match(rehearsal, /verify_release_bundle "\$BUNDLE_ROOT" "\$RELEASE_ID"/)
+  assert.match(rehearsal, /materialize_transition_bundle next "\$NEXT_BUNDLE_ROOT" "onprem-next-\$release_suffix"/)
+  assert.match(rehearsal, /materialize_transition_bundle previous "\$PREVIOUS_BUNDLE_ROOT" "onprem-previous-\$release_suffix"/)
+  assert.match(rehearsal, /verify_release_bundle "\$materialization_root" "\$release_id"/)
   assert.match(rehearsal, /NODE_BIN="\$TRUST_ROOT\/node"/)
   assert.match(rehearsal, /sudo install -o 0 -g 0 -m 0755 -- "\$PINNED_NODE_SOURCE" "\$SEALED_ROOT\/trust\/node"/)
   assert.match(rehearsal, /test "\$\(sudo -- "\$NODE_BIN" --version\)" = v24\.19\.0/)
   assert.doesNotMatch(rehearsal, /sudo node(?:\s|$)/)
   assert.match(rehearsal, /\/var\/lib\/hr-axis-onprem-offline-proof\/\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}/)
   assert.match(rehearsal, /sudo test -e "\$sensitive_path" \|\| sudo test -L "\$sensitive_path"/)
+})
+
+test('offline bundle handoff preserves modes and bounds disk use with sequential signed release archives', () => {
+  const build = jobSection('build_bundle')
+  const rehearsal = jobSection('offline_rehearsal')
+  assert.doesNotMatch(build, /onprem-bundle\.tar/)
+  assert.match(build, /onprem-bundle-archives/)
+  assert.match(build, /current\.tar/)
+  assert.match(build, /next-transition\.tar/)
+  assert.match(build, /previous-transition\.tar/)
+  assert.doesNotMatch(build, /(?:next|previous)\.tar/)
+  assert.match(build, /transition bundle differs outside migration compatibility evidence/)
+  assert.match(build, /SHA256SUMS/)
+  assert.match(build, /bundle_archive_manifest_sha256/)
+  assert.match(build, /compression-level:\s*0/)
+  assert.match(build, /rm -rf -- "\$bundle_dir"/)
+  assert.match(build, /rm -rf -- "\$staging"/)
+  assert.match(build, /available_kib[\s\S]*required_kib/)
+
+  assert.match(rehearsal, /BUNDLE_ARCHIVE_MANIFEST_SHA256/)
+  assert.match(rehearsal, /SHA256SUMS/)
+  assert.match(rehearsal, /install_release_archive\(\)/)
+  assert.match(rehearsal, /extract_current_bundle\(\)/)
+  assert.match(rehearsal, /materialize_transition_bundle\(\)/)
+  assert.match(rehearsal, /sha256sum --check/)
+  assert.match(rehearsal, /sudo rm -- "\$sealed_archive"/)
+  assert.doesNotMatch(rehearsal, /sudo cp -a -- "\$INCOMING_BUNDLE_ROOT\/\."/)
+  assert.doesNotMatch(rehearsal, /onprem-bundle\.tar/)
 })
 
 test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound negative probes', () => {
@@ -620,9 +659,9 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.match(rehearsal, /sudo sh -c 'ip6tables-restore < "\$1"' sh "\$RUNNER_TEMP\/offline-firewall6\.snapshot"/)
   assert.doesNotMatch(rehearsal, /sudo ip6?tables-restore < /)
   assert.match(rehearsal, /offline egress chain remained after complete firewall restore/)
-  const install = rehearsal.indexOf('sudo "$BUNDLE_ROOT/operations/install.sh"')
+  const install = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/install.sh"')
   const probe = rehearsal.indexOf('sudo docker run --pull=never --rm --network "$edge_network"')
-  const migrate = rehearsal.indexOf('sudo "$BUNDLE_ROOT/operations/migrate.sh"')
+  const migrate = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/migrate.sh"')
   assert.ok(install >= 0 && install < probe && probe < migrate, 'negative probe must run after install and before later private operations')
   assert.match(rehearsal, /operation: 'egress-probe'/)
   assert.match(rehearsal, /dockerIpv4CounterDelta: Number\(dockerDelta\)/)
@@ -705,5 +744,6 @@ test('offline workflow permits only the signed exact PostgreSQL gosu reachabilit
   assert.doesNotMatch(workflow, /printf '%s\\n' "\$gosu_symbols" \| grep -Eq ' T (?:main\\\.main|runtime\\\.main)\$'/)
   assert.match(workflow, /if grep -Eq ' T main\\\.main\$' <<< "\$gosu_symbols"; then\s+main_symbol_present=true\s+fi/)
   assert.match(workflow, /if grep -Eq ' T runtime\\\.main\$' <<< "\$gosu_symbols"; then\s+runtime_main_symbol_present=true\s+fi/)
+  assert.match(workflow, /CRYPTO_TLS_SYMBOL_COUNT="\$crypto_tls_symbol_count"[\s\S]{0,500}?VENDOR_EVIDENCE="\$vendor_evidence"[\s\S]{0,200}?node --input-type=module/, 'the verified gosu symbol count and external evidence root must both reach the proof emitter')
   assert.doesNotMatch(workflow, /(?:caddy|redis|seaweedfs)-gosu\.trivyignore/)
 })

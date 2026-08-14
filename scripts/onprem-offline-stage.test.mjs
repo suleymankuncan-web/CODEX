@@ -56,8 +56,17 @@ function fixture() {
   write(proof, 'keycloak-LICENSE.txt', 'Keycloak license\n')
   const images = {}
   for (const name of Object.keys(REQUIRED_BUNDLE_PATHS.imageArchives)) { const archive = imageArchive(name); write(proof, `images/${name}.tar`, archive.bytes); images[name] = { name, archive: `images/${name}.tar`, repoTag: `registry.example/${name}:synthetic`, configImageId: archive.imageId, archiveSha256: createHash('sha256').update(archive.bytes).digest('hex'), registryDigestAttestedByOwner: true, registryManifestDigest: `sha256:${'b'.repeat(64)}` } }
-  const evidence = ['sbom.json', 'license-inventory.json', 'vulnerability-report.json', 'release-receipt.json', 'runtime-receipt.json', 'backend-content-guard.json', 'frontend-content-guard.json', 'keycloak-content-guard.json', 'release-manifest.json', 'migration-compatibility.json', 'content-guard-index.json', 'postgres-vulnerability-exception-receipt.json', 'postgres-gosu-symbol-proof.json', 'postgres-trivy-vuln.json']
-  for (const name of evidence) write(proof, `evidence/${name}`, name === 'migration-compatibility.json' ? JSON.stringify({ schemaVersion: 1, releaseId: 'stage-test', migrationTreeDigest: 'a'.repeat(64), compatibleFrom: [], upgradeCompatible: true, rollbackCompatible: true }) : name.endsWith('content-guard.json') ? JSON.stringify({ ok: true, violations: [] }) : JSON.stringify({ ok: true, releaseId: 'stage-test', sha256: 'a'.repeat(64) }))
+  const evidence = REQUIRED_BUNDLE_PATHS.evidence.map((pathname) => pathname.slice('evidence/'.length))
+  for (const name of evidence) {
+    let content = { ok: true, releaseId: 'stage-test', sha256: 'a'.repeat(64) }
+    if (name === 'migration-compatibility.json') content = { schemaVersion: 1, releaseId: 'stage-test', migrationTreeDigest: 'a'.repeat(64), compatibleFrom: [], upgradeCompatible: true, rollbackCompatible: true }
+    else if (name.endsWith('content-guard.json')) content = { ok: true, violations: [] }
+    else if (name.endsWith('-sbom.spdx.json')) content = { spdxVersion: 'SPDX-2.3', packages: [{ name: '@aws-sdk/credential-provider-node' }] }
+    else if (name.endsWith('-trivy-secret.json')) content = { ArtifactName: 'synthetic', ArtifactType: 'container_image', Results: [] }
+    else if (name.endsWith('-trivy-vuln.json')) content = { ArtifactName: 'synthetic', ArtifactType: 'container_image', Results: [{ Vulnerabilities: [] }] }
+    else if (name.endsWith('-trivy.json')) content = { schemaVersion: 1, image: name.split('-')[0], scans: { vulnerability: { Results: [] }, secret: { Results: [] } } }
+    write(proof, `evidence/${name}`, JSON.stringify(content))
+  }
   const metadata = { schemaVersion: 1, configSchemaVersion: 1, dataClass: 'synthetic', releaseId: 'stage-test', sourceRevision: REVISION, createdAt: CREATED_AT, images }
   const metadataPath = join(root, 'metadata.json'); writeFileSync(metadataPath, JSON.stringify(metadata))
   return { root, repo, proof, output, metadataPath, metadata }
