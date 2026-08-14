@@ -129,6 +129,55 @@ test('build job checks out the trusted SHA, consumes proof evidence, and creates
   assert.doesNotMatch(uploadBlocks, /private|signing-private/i)
 })
 
+test('build proof material uses one external runner-temp root from assembly through bundle verification', () => {
+  const build = jobSection('build_bundle')
+  const rootSetup = stepSection(build, 'Establish external proof root')
+  assert.match(rootSetup, /PROOF_ROOT:\s*\$\{\{\s*runner\.temp\s*\}\}\/onprem-proof/)
+  const rootTestIndex = rootSetup.indexOf('test "$PROOF_ROOT" = "$RUNNER_TEMP/onprem-proof"')
+  const rootCleanupIndex = rootSetup.indexOf('rm -rf "$PROOF_ROOT"')
+  assert.ok(rootTestIndex >= 0, 'external proof root must be pinned before cleanup')
+  assert.ok(rootCleanupIndex >= 0, 'external proof root cleanup must be explicit')
+  assert.ok(rootTestIndex < rootCleanupIndex, 'external proof root pin must be checked before cleanup')
+  assert.match(rootSetup, /mkdir -p "\$PROOF_ROOT\/download"/)
+  assert.match(rootSetup, /PROOF_ROOT=\$PROOF_ROOT.*GITHUB_ENV/)
+
+  for (const name of ['Download upstream image proof artifact', 'Download upstream core runtime proof', 'Download upstream keycloak runtime proof', 'Download upstream photo-storage proof']) {
+    assert.match(stepSection(build, name), /path:\s*\$\{\{\s*runner\.temp\s*\}\}\/onprem-proof\/download/, `${name} must download under PROOF_ROOT`)
+  }
+
+  const assembly = stepSection(build, 'Validate proof identity and assemble complete evidence')
+  assert.match(assembly, /PROOF_DOWNLOAD:\s*\$\{\{\s*runner\.temp\s*\}\}\/onprem-proof\/download/)
+  assert.match(assembly, /const output = process\.env\.PROOF_ROOT/)
+  assert.match(assembly, /copyContentGuardLayerReceipts\(root, output\)/)
+  assert.match(assembly, /--base-dir "\$PROOF_ROOT"/)
+
+  const vendor = stepSection(build, 'Pull pinned vendor images and save immutable archives')
+  assert.match(vendor, /vendor_evidence="\$PROOF_ROOT\/vendor-evidence"/)
+  assert.match(vendor, /"\$PROOF_ROOT\/\$\{image\}-image\.tar"/)
+
+  const metadata = stepSection(build, 'Generate complete offline metadata and migration compatibility evidence')
+  assert.match(metadata, /process\.env\.PROOF_ROOT/)
+  assert.match(metadata, /join\(proofRoot, 'migration-compatibility\.json'\)/)
+
+  const stage = stepSection(build, 'Stage source-free release closure')
+  assert.match(stage, /--proof-dir "\$PROOF_ROOT"/)
+  assert.match(stage, /--metadata "\$PROOF_ROOT\/offline-metadata\.json"/)
+
+  const bundle = stepSection(build, 'Create and verify signed offline bundle')
+  assert.match(bundle, /process\.env\.PROOF_ROOT/)
+  assert.match(bundle, /--upstream-manifest "\$PROOF_ROOT\/release-manifest\.json"/)
+  assert.match(bundle, /--upstream-public-key "\$PROOF_ROOT\/ephemeral-public\.pem"/)
+  assert.match(bundle, /--upstream-base-dir "\$PROOF_ROOT"/)
+  assert.match(bundle, /--content-guard-index "\$PROOF_ROOT\/content-guard-index\.json"/)
+  assert.match(bundle, /--content-guard-public-key "\$PROOF_ROOT\/content-guard-index-public\.pem"/)
+
+  assert.doesNotMatch(build, /\$GITHUB_WORKSPACE\/proof/)
+  assert.doesNotMatch(build, /\$RUNNER_TEMP\/onprem-proof-download|\$RUNNER_TEMP\/onprem-vendor-evidence/)
+  assert.doesNotMatch(build, /\$RUNNER_TEMP\/offline-(?:metadata|trust)/)
+  assert.doesNotMatch(build, /(?:['"`])proof\//)
+  assert.doesNotMatch(build, /(?:--(?:base-dir|input|public-key|upstream-manifest|upstream-public-key|upstream-base-dir|content-guard-index|content-guard-public-key)\s+)(?:proof(?:\/|\b))/)
+})
+
 test('offline rehearsal downloads only the bundle, cuts egress before verification, and never checks out source', () => {
   const rehearsal = jobSection('offline_rehearsal')
   assert.doesNotMatch(rehearsal, /actions\/checkout@/)
@@ -407,7 +456,7 @@ test('caller proof run identity is validated through GitHub REST before artifact
     assert.match(block, /github-token:\s*\$\{\{\s*github\.token\s*\}\}/, name)
     assert.match(block, /run-id:\s*\$\{\{\s*inputs\.proof_run_id\s*\}\}/, name)
     assert.match(block, /merge-multiple:\s*true/, name)
-    assert.match(block, /path:\s*\$\{\{\s*runner\.temp\s*\}\}\/onprem-proof-download/, name)
+    assert.match(block, /path:\s*\$\{\{\s*runner\.temp\s*\}\}\/onprem-proof\/download/, name)
     assert.doesNotMatch(block, /pattern:|continue-on-error:\s*true|if:\s*always\(\)/, `${name} must fail closed when its exact artifact is missing`)
   }
 })
