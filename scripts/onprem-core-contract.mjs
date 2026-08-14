@@ -59,6 +59,7 @@ const EXPECTED_REDIS_ACL_RULES = [
 ]
 const EXPECTED_REDIS_ACL_WRITE_COMMAND = `printf '${EXPECTED_REDIS_ACL_RULES.join('\\n')}\\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"`
 const EXPECTED_REDIS_ACL_PERMISSION_COMMAND = 'sudo chown 999:1000 "$secret_root/redis/users.acl" "$secret_root/redis/health-url" && sudo chmod 0400 "$secret_root/redis/users.acl" "$secret_root/redis/health-url"'
+const EXPECTED_REDIS_IMAGE = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
 
 function activeShellLines(value) {
   return String(value)
@@ -148,6 +149,17 @@ function envValue(text, name) {
   return text.match(new RegExp(`^${name}=(.+)$`, 'm'))?.[1]?.trim() ?? ''
 }
 
+function envValues(text, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const assignment = new RegExp(`^(?:export\\s+)?${escapedName}\\s*(?:=|:)\\s*(.*)$`)
+  return String(text)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => line.match(assignment)?.[1]?.trim())
+    .filter((value) => value !== undefined)
+}
+
 export function validateOnpremCoreContract(input) {
   // Repository files are checked out with either LF or CRLF depending on the
   // runner.  Contract semantics are line based, so normalize once at the
@@ -170,6 +182,8 @@ export function validateOnpremCoreContract(input) {
   for (const name of ['HR_AXIS_BACKEND_IMAGE', 'HR_AXIS_FRONTEND_IMAGE', 'CADDY_IMAGE', 'POSTGRES_IMAGE', 'REDIS_IMAGE']) {
     fail(hasImmutableDigest(envValue(input.envTemplate, name)), `env.template must provide an immutable application image or infrastructure digest for ${name}`)
   }
+  const redisEnvValues = envValues(input.envTemplate, 'REDIS_IMAGE')
+  fail(redisEnvValues.length === 1 && redisEnvValues[0] === EXPECTED_REDIS_IMAGE, 'env.template must retain exactly one active pinned upstream Redis image identity')
   for (const [service, block] of blocks) {
     fail(/^    image:/m.test(block), `${service} must declare an image`)
   }
@@ -255,7 +269,8 @@ export function validateOnpremCoreContract(input) {
   fail(/fetch\('http:\/\/127\.0\.0\.1:3000\/api\/health'\)/.test(blocks.get('api') ?? ''), 'API container health must use dependency-aware readiness')
 
   fail(/postgres:16\.[0-9]+-alpine@sha256:[0-9a-f]{64}/i.test(input.compose), 'PostgreSQL 16 image must be pinned')
-  fail(/redis:7\.[0-9.]+-alpine@sha256:[0-9a-f]{64}/i.test(input.compose), 'Redis 7 image must be pinned')
+  const redisImageLines = activeShellLines(blocks.get('redis') ?? '').filter((line) => line.startsWith('image:'))
+  fail(redisImageLines.length === 1 && redisImageLines[0] === `image: \${REDIS_IMAGE:-${EXPECTED_REDIS_IMAGE}}`, 'Compose must retain exactly one active pinned upstream Redis image identity')
   fail(/DB_SSL_MODE: verify-full/.test(input.compose), 'backend database TLS must remain verify-full')
   fail(/ssl=on/.test(blocks.get('postgres') ?? '') && /ssl_ca_file=/.test(blocks.get('postgres') ?? ''), 'PostgreSQL server TLS must be mandatory')
   fail(/\/var\/lib\/postgresql\/tls:rw,noexec,nosuid,size=16m,uid=70,gid=70/.test(blocks.get('postgres') ?? ''), 'PostgreSQL TLS material must be copied into its bounded uid-70 tmpfs')

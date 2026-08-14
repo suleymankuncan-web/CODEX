@@ -413,7 +413,7 @@ export function writeRuntimeInputs(options, root) {
     'HR_AXIS_BACKEND_IMAGE=busybox:1.36.1', 'HR_AXIS_FRONTEND_IMAGE=busybox:1.36.1',
     'CADDY_IMAGE=caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648',
     'POSTGRES_IMAGE=postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6',
-    'REDIS_IMAGE=redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98',
+    'REDIS_IMAGE=redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2',
     `KEYCLOAK_IMAGE=busybox:1.36.1`, `SEAWEEDFS_IMAGE=${STORAGE_IMAGE}`,
     'PHOTO_MEDIA_PRIMARY_BUCKET=hr-axis-media-primary', 'PHOTO_MEDIA_RECOVERY_BUCKET=hr-axis-media-recovery',
     `PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST=${'a'.repeat(64)}`,

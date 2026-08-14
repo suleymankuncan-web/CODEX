@@ -67,7 +67,12 @@ test('synthetic runtime inputs use userns-readable secret files inside a private
       assert.equal(readFileSync(path, 'utf8'), `${expected}\n`)
       assert.ok(expected.length > 0)
     }
-    assert.ok(readFileSync(input.env, 'utf8').length > 0)
+    const envLines = readFileSync(input.env, 'utf8').split(/\r?\n/)
+    assert.deepEqual(
+      envLines.filter((line) => line.startsWith('REDIS_IMAGE=')),
+      ['REDIS_IMAGE=redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'],
+    )
+    assert.ok(envLines.join('\n').length > 0)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
