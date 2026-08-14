@@ -627,5 +627,8 @@ test('offline workflow permits only the signed exact PostgreSQL gosu reachabilit
   assert.match(workflow, /if \[ "\$image" = postgres \]; then\s+image_id="\$POSTGRES_CONFIG_IMAGE_ID"/)
   assert.match(workflow, /gosu_symbols="\$\(docker run[\s\S]*go tool nm \/work\/postgres-gosu\)"/)
   assert.match(workflow, /gosu_symbol_count[\s\S]*main_symbol_present[\s\S]*runtime_main_symbol_present/)
+  assert.doesNotMatch(workflow, /printf '%s\\n' "\$gosu_symbols" \| grep -Eq ' T (?:main\\\.main|runtime\\\.main)\$'/)
+  assert.match(workflow, /if grep -Eq ' T main\\\.main\$' <<< "\$gosu_symbols"; then\s+main_symbol_present=true\s+fi/)
+  assert.match(workflow, /if grep -Eq ' T runtime\\\.main\$' <<< "\$gosu_symbols"; then\s+runtime_main_symbol_present=true\s+fi/)
   assert.doesNotMatch(workflow, /(?:caddy|redis|seaweedfs)-gosu\.trivyignore/)
 })
