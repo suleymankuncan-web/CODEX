@@ -635,6 +635,9 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.doesNotMatch(rehearsal, /-i br\+ ! -o br\+ ! -o docker0/)
   assert.match(rehearsal, /-i docker0 ! -o docker0 -m conntrack --ctstate NEW -j REJECT/)
   assert.match(rehearsal, /docker_egress_rules=.*iptables -S/)
+  assert.match(rehearsal, /conntrack_accept_rule=.*sed -n '2p'/)
+  assert.match(rehearsal, /--ctstate ESTABLISHED,RELATED -j ACCEPT"\|\\\s*\n\s*"-A \$docker_egress_chain -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT"/)
+  assert.match(rehearsal, /offline Docker conntrack accept rule identity mismatch/)
   assert.match(rehearsal, /for hook in DOCKER-USER FORWARD/)
   assert.match(rehearsal, /reject_rule_line=6/)
   assert.match(rehearsal, /iptables -L "\$docker_egress_chain" -v -x -n --line-numbers/)
@@ -686,6 +689,48 @@ test('Docker egress rejection rule is accepted by the Linux iptables parser', (c
   ], { encoding: 'utf8' })
   assert.equal(parsed.status, 0, `${parsed.stdout}\n${parsed.stderr}`)
   assert.match(parsed.stdout, /reject/i)
+})
+
+test('Docker egress identity accepts only the two equivalent conntrack serializations', () => {
+  const rehearsal = jobSection('offline_rehearsal')
+  const caseBlock = rehearsal.match(/case "\$conntrack_accept_rule" in[\s\S]*?\n\s*esac/)?.[0]
+  assert.ok(caseBlock, 'production conntrack identity case block is required')
+  const normalizedCaseBlock = caseBlock.split('\n').map((line) => line.trim()).join('\n')
+  const expectedCaseBlock = [
+    'case "$conntrack_accept_rule" in',
+    '"-A $docker_egress_chain -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT"|\\',
+    '"-A $docker_egress_chain -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT") ;;',
+    "*) echo 'offline Docker conntrack accept rule identity mismatch' >&2; exit 1 ;;",
+    'esac',
+  ].join('\n')
+  assert.equal(normalizedCaseBlock, expectedCaseBlock)
+  const chain = 'HR_AXIS_OFF_DOCKER_EGRESS'
+  const extractAcceptedPatterns = (source) => [...source.matchAll(/"(-A \$docker_egress_chain -m conntrack --ctstate [A-Z,]+ -j ACCEPT)"/g)]
+    .map((match) => match[1])
+  const acceptedPatterns = extractAcceptedPatterns(caseBlock)
+  assert.deepEqual(acceptedPatterns, [
+    '-A $docker_egress_chain -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT',
+    '-A $docker_egress_chain -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT',
+  ])
+  assert.equal(caseBlock.match(/\*\)/g)?.length, 1)
+  const failClosedPattern = /\*\) echo 'offline Docker conntrack accept rule identity mismatch' >&2; exit 1 ;;/
+  assert.match(caseBlock, failClosedPattern)
+  const extraStateMutation = normalizedCaseBlock.replace(
+    '*) echo',
+    '"-A $docker_egress_chain -m conntrack --ctstate NEW,RELATED,ESTABLISHED -j ACCEPT") ;;\n*) echo',
+  )
+  assert.notEqual(extraStateMutation, expectedCaseBlock)
+  const broadAcceptMutation = normalizedCaseBlock.replace(
+    '*) echo',
+    '"-A $docker_egress_chain -j ACCEPT") ;;\n*) echo',
+  )
+  assert.notEqual(broadAcceptMutation, expectedCaseBlock)
+  assert.doesNotMatch(normalizedCaseBlock.replace(failClosedPattern, '*) ;;'), failClosedPattern)
+  const accepted = new Set(acceptedPatterns.map((pattern) => pattern.replace('$docker_egress_chain', chain)))
+  assert.equal(accepted.has(`-A ${chain} -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT`), true)
+  assert.equal(accepted.has(`-A ${chain} -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT`), true)
+  assert.equal(accepted.has(`-A ${chain} -m conntrack --ctstate NEW,RELATED,ESTABLISHED -j ACCEPT`), false)
+  assert.equal(accepted.has(`-A ${chain} -m conntrack --ctstate RELATED,ESTABLISHED,INVALID -j ACCEPT`), false)
 })
 
 test('every vendored runtime image receives separate fail-closed Trivy vulnerability and secret scans', () => {

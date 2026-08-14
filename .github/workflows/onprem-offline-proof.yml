@@ -697,8 +697,13 @@ jobs:
           sudo iptables -I FORWARD 1 -j "$docker_egress_chain"
           docker_egress_rules="$(sudo iptables -S "$docker_egress_chain")"
           test "$(printf '%s\n' "$docker_egress_rules" | wc -l)" -eq 9
+          conntrack_accept_rule="$(printf '%s\n' "$docker_egress_rules" | sed -n '2p')"
+          case "$conntrack_accept_rule" in
+            "-A $docker_egress_chain -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT"|\
+            "-A $docker_egress_chain -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT") ;;
+            *) echo 'offline Docker conntrack accept rule identity mismatch' >&2; exit 1 ;;
+          esac
           for expected_rule in \
-            "-A $docker_egress_chain -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT" \
             "-A $docker_egress_chain -i br+ -o br+ -j ACCEPT" \
             "-A $docker_egress_chain -i docker0 -o docker0 -j ACCEPT" \
             "-A $docker_egress_chain -i br+ -o docker0 -j ACCEPT" \
