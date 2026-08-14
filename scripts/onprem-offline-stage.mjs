@@ -152,7 +152,7 @@ function evidenceProofCandidates(name) {
   return [`evidence/${name}`, name]
 }
 function stageOne(source, destination, mode, label, scanAssignments = true) {
-  const observed = readAndHashStable(source, MAX_SOURCE_BYTES, label, { scan: true, scanAssignments, relativePath: destination })
+  const observed = readAndHashStable(source, MAX_SOURCE_BYTES, label, { scan: true, scanAssignments, relativePath: label })
   mkdirSync(dirname(destination), { recursive: true })
   copyStable(source, destination, observed.bytes, observed.sha256, mode, observed.identity)
   return { path: label, bytes: observed.bytes, sha256: observed.sha256 }

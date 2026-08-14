@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url'
 import { inspectDockerSaveArchive } from './onprem-offline-archive.mjs'
 
 export const IMAGE_NAMES = Object.freeze(['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs'])
+const VENDOR_NAMES = Object.freeze(['caddy', 'postgres', 'redis', 'seaweedfs'])
+const VENDOR_EVIDENCE_SUFFIXES = Object.freeze({ sbom: 'sbom.spdx.json', vulnerabilityReport: 'trivy.json', vulnerabilityScan: 'trivy-vuln.json', sensitiveDataScan: 'trivy-secret.json', licenseInventory: 'license-inventory.json' })
 export const REQUIRED_BUNDLE_PATHS = Object.freeze({
   imageArchives: Object.freeze(Object.fromEntries(IMAGE_NAMES.map((name) => [name, `images/${name}.tar`]))),
   deployment: Object.freeze([
@@ -41,7 +43,11 @@ export const REQUIRED_BUNDLE_PATHS = Object.freeze({
     'evidence/frontend-content-guard.json', 'evidence/keycloak-content-guard.json', 'evidence/release-manifest.json',
     'evidence/migration-compatibility.json', 'evidence/content-guard-index.json',
     'evidence/postgres-vulnerability-exception-receipt.json', 'evidence/postgres-gosu-symbol-proof.json',
-    'evidence/postgres-trivy-vuln.json',
+    ...VENDOR_NAMES.flatMap((name) => [
+      `evidence/${name}-sbom.spdx.json`, `evidence/${name}-trivy-vuln.json`,
+      `evidence/${name}-trivy-secret.json`, `evidence/${name}-trivy.json`,
+      `evidence/${name}-license-inventory.json`,
+    ]),
   ]),
   docs: Object.freeze([
     'docs/runbooks/onprem-offline-install-v1.md', 'docs/runbooks/onprem-offline-backup-restore-v1.md',
@@ -201,6 +207,63 @@ function validateMetadata(input) {
   return { schemaVersion: 1, configSchemaVersion: 1, dataClass: 'synthetic', releaseId: input.releaseId, sourceRevision: input.sourceRevision.toLowerCase(), createdAt: input.createdAt, images }
 }
 export function validateBundleMetadata(input) { return validateMetadata(input) }
+function assertNoTrivySecretFindings(report, path) {
+  if (!object(report) || !Array.isArray(report.Results)) fail(`vendor evidence ${path} secret scan is invalid`)
+  for (const result of report.Results) {
+    if (!object(result) || (result.Secrets !== undefined && !Array.isArray(result.Secrets)) || (result.Secrets ?? []).length !== 0) fail(`vendor evidence ${path} contains a secret finding`)
+  }
+}
+function validateTrivyVendorScan(scan, image, name, label) {
+  if (!object(scan) || scan.ArtifactType !== 'container_image' || scan.ArtifactName !== `/out/${name}-image.tar` || !DIGEST.test(scan.ArtifactID ?? '') || !object(scan.Metadata) || scan.Metadata.ImageID !== image.configImageId || !Array.isArray(scan.Metadata.RepoTags) || scan.Metadata.RepoTags.length !== 1 || scan.Metadata.RepoTags[0] !== image.repoTag || !Array.isArray(scan.Results)) fail(`vendor evidence ${name} ${label} Trivy identity is invalid`)
+  return scan
+}
+function validateVendorRawEvidence(image, name, paths, loadJson) {
+  const sbom = loadJson(paths.sbom)
+  const vulnerability = validateTrivyVendorScan(loadJson(paths.vulnerabilityScan), image, name, 'vulnerability')
+  const secret = validateTrivyVendorScan(loadJson(paths.sensitiveDataScan), image, name, 'secret')
+  const combined = loadJson(paths.vulnerabilityReport)
+  const license = loadJson(paths.licenseInventory)
+  const expectedRepository = imageTag(image.repoTag, `vendor evidence ${name}`).repository
+  if (!object(sbom) || sbom.spdxVersion !== 'SPDX-2.3' || sbom.name !== expectedRepository || !Array.isArray(sbom.packages)) fail(`vendor evidence ${name} SBOM identity is invalid`)
+  if (!object(combined) || combined.schemaVersion !== 1 || combined.image !== name || !object(combined.scans) || canonicalize(combined.scans.vulnerability) !== canonicalize(vulnerability) || canonicalize(combined.scans.secret) !== canonicalize(secret)) fail(`vendor evidence ${name} combined Trivy report does not agree with raw scans`)
+  if (vulnerability.ArtifactID !== secret.ArtifactID || vulnerability.ArtifactName !== secret.ArtifactName) fail(`vendor evidence ${name} Trivy scans do not agree`)
+  assertNoTrivySecretFindings(secret, paths.sensitiveDataScan)
+  const expectedLicense = { schemaVersion: 1, dataClass: 'synthetic', image: `${image.repoTag}@${image.registryManifestDigest}`, imageId: image.configImageId, sbom: `${name}-sbom.spdx.json`, vulnerabilityReport: `${name}-trivy.json`, secretReport: `${name}-trivy-secret.json`, licenseSource: 'SPDX package license assertions' }
+  if (canonicalize(license) !== canonicalize(expectedLicense)) fail(`vendor evidence ${name} license identity is invalid`)
+}
+function validateVendorEvidenceClosure(metadata, aggregates, files, loadJson) {
+  if (!object(metadata) || !object(metadata.images) || !object(aggregates)) fail('vendor evidence metadata is invalid')
+  const fileMap = new Map(files.map((entry) => [entry?.path, entry]))
+  let referenceRecords
+  for (const [aggregateName, recordsKey] of [['sbom', 'components'], ['license', 'inventories'], ['vulnerability', 'reports']]) {
+    const aggregate = aggregates[aggregateName]
+    if (!object(aggregate) || aggregate.schemaVersion !== 1 || aggregate.dataClass !== 'synthetic' || !object(aggregate[recordsKey])) fail('vendor evidence aggregate is invalid')
+    const records = Object.fromEntries(VENDOR_NAMES.map((name) => [name, aggregate[recordsKey][name]]))
+    if (Object.values(records).some((record) => !object(record))) fail('vendor evidence record is missing')
+    if (referenceRecords && canonicalize(records) !== canonicalize(referenceRecords)) fail('vendor evidence aggregates do not agree')
+    referenceRecords = records
+  }
+  for (const name of VENDOR_NAMES) {
+    const image = metadata.images[name]
+    const record = referenceRecords[name]
+    exact(record, new Set(['configImageId', 'archive', 'registryReference', 'registryManifestDigest', 'artifacts']), `vendor evidence ${name}`)
+    if (!object(image) || record.configImageId !== image.configImageId || record.archive !== image.archive || record.registryManifestDigest !== image.registryManifestDigest || record.registryReference !== `${image.repoTag}@${image.registryManifestDigest}`) fail(`vendor evidence ${name} image identity mismatch`)
+    const expectedArtifacts = Object.fromEntries(Object.entries(VENDOR_EVIDENCE_SUFFIXES).map(([key, suffix]) => [key, `evidence/${name}-${suffix}`]))
+    if (name === 'postgres') {
+      expectedArtifacts.vulnerabilityExceptionReceipt = 'evidence/postgres-vulnerability-exception-receipt.json'
+      expectedArtifacts.vulnerabilityExceptionSymbolProof = 'evidence/postgres-gosu-symbol-proof.json'
+    }
+    exact(record.artifacts, new Set(Object.keys(expectedArtifacts)), `vendor evidence ${name} artifacts`)
+    for (const [key, expectedPath] of Object.entries(expectedArtifacts)) {
+      const artifact = record.artifacts[key]
+      exact(artifact, new Set(['path', 'sha256']), `vendor evidence ${name} ${key}`)
+      const file = fileMap.get(expectedPath)
+      if (artifact.path !== expectedPath || !file || artifact.sha256 !== file.sha256) fail(`vendor evidence ${name} ${key} digest mismatch`)
+    }
+    validateVendorRawEvidence(image, name, expectedArtifacts, loadJson)
+  }
+  return true
+}
 function parseJson(pathname, cap, label) { try { return JSON.parse(readStable(pathname, cap, label).content) } catch (error) { if (error instanceof OfflineBundleVerifyError) throw error; fail(`${label} is invalid JSON`) } }
 function inventory(rootPath, expectedImages) {
   regular(rootPath, 'bundle root', { directory: true }); const root = realRoot(rootPath, 'bundle root'); const files = []; const seenFolded = new Set(); const stack = [{ absolute: rootPath, relative: '' }]; let total = 0; let entriesSeen = 0
@@ -274,7 +337,7 @@ function verifyFiles(bundleDir, manifest) {
   if (actual.size !== expected.size || [...actual.keys()].some((pathname) => !expected.has(pathname))) fail('bundle contains an unmanifested extra file')
   for (const item of manifest.files) { const file = actual.get(item.path); if (!file || file.bytes !== item.bytes || file.sha256 !== item.sha256 || file.mode !== item.mode) fail('bundle file digest, size, or mode mismatch') }
   for (const [name, item] of Object.entries(manifest.images)) { const archive = actual.get(item.archive); if (!archive || archive.archiveSha256 !== archive.sha256) fail(`image ${name} archive digest mismatch`) }
-  return true
+  return entries.files.filter((file) => !GENERATED_FILES.has(file.path))
 }
 export function verifyOfflineBundle(options = {}) {
   if (typeof options === 'string') options = { bundleDir: options }
@@ -284,7 +347,12 @@ export function verifyOfflineBundle(options = {}) {
   if (typeof options.trustedFingerprint !== 'string' || !SHA.test(options.trustedFingerprint) || trusted.fingerprint !== options.trustedFingerprint.toLowerCase()) fail('trusted fingerprint mismatch')
   if (trusted.fingerprint !== signature.keyFingerprintSha256.toLowerCase()) fail('bundle signature fingerprint mismatch')
   if (!verifySignatureValue(null, Buffer.from(canonicalize(manifest)), trusted.key, Buffer.from(signature.value, 'base64url'))) fail('bundle signature mismatch')
-  verifyFiles(options.bundleDir, manifest)
+  const files = verifyFiles(options.bundleDir, manifest)
+  validateVendorEvidenceClosure(manifest, {
+    sbom: parseJson(join(options.bundleDir, 'evidence', 'sbom.json'), LIMITS.totalBytes, 'vendor SBOM aggregate'),
+    license: parseJson(join(options.bundleDir, 'evidence', 'license-inventory.json'), LIMITS.totalBytes, 'vendor license aggregate'),
+    vulnerability: parseJson(join(options.bundleDir, 'evidence', 'vulnerability-report.json'), LIMITS.totalBytes, 'vendor vulnerability aggregate'),
+  }, files, (path) => parseJson(join(options.bundleDir, ...path.split('/')), LIMITS.totalBytes, path))
   return true
 }
 

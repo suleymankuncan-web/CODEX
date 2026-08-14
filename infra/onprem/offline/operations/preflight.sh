@@ -41,6 +41,7 @@ case "$ENV_FILE" in "$BUNDLE_ROOT"/*) die "approved env file must be outside the
 
 file_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || die "cannot inspect file mode"; }
 file_uid() { stat -c '%u' "$1" 2>/dev/null || stat -f '%u' "$1" 2>/dev/null || die "cannot inspect file owner"; }
+file_gid() { stat -c '%g' "$1" 2>/dev/null || stat -f '%g' "$1" 2>/dev/null || die "cannot inspect file group"; }
 file_links() { stat -c '%h' "$1" 2>/dev/null || stat -f '%l' "$1" 2>/dev/null || die "cannot inspect hard-link count"; }
 file_size() { stat -c '%s' "$1" 2>/dev/null || stat -f '%z' "$1" 2>/dev/null || die "cannot inspect file size"; }
 mode_is() { wanted=$1; shift; for mode in "$@"; do [ "$wanted" = "$mode" ] && return 0; done; return 1; }
@@ -258,6 +259,17 @@ for (const [kind, entries] of Object.entries({ services: c.services, networks: c
 SECRET_LINES=$(printf '%s' "$CONFIG" | node -e 'const c=JSON.parse(require("fs").readFileSync(0,"utf8")); for(const [n,v] of Object.entries(c.secrets||{})){if(v&&typeof v.file==="string") process.stdout.write(`${n}\t${v.file}\n`)}' 2>/dev/null) || die "cannot extract rendered secret sources"
 [ -n "$SECRET_LINES" ] || die "merged Compose rendered no secret sources"
 secret_path() { printf '%s\n' "$SECRET_LINES"|awk -F '	' -v n="$1" '$1==n{print $2;exit}'; }
+rendered_secret_identity() {
+  case "$1" in
+    caddy_tls_certificate|caddy_tls_ca|postgres_tls_certificate|postgres_tls_ca) printf '%s' 0:0:444;;
+    caddy_tls_private_key) printf '%s' 10001:10001:400;;
+    postgres_tls_private_key|postgres_bootstrap_password|postgres_migrator_password|postgres_api_password|postgres_worker_password|postgres_keycloak_database_password) printf '%s' 70:70:400;;
+    keycloak_*|binder_database_url) printf '%s' 1000:1000:400;;
+    redis_users_acl|redis_health_url) printf '%s' 999:1000:400;;
+    migrator_database_url|api_database_url|worker_database_url|redis_api_url|redis_worker_url|browser_session_secret|photo_primary_access_key_id|photo_primary_secret_access_key|photo_recovery_access_key_id|photo_recovery_secret_access_key) printf '%s' 65532:65532:400;;
+    *) die "rendered secret source has no approved identity policy: $1";;
+  esac
+}
 while IFS='	' read -r secret_name secret_file; do
   [ -n "$secret_name" ] || continue
   case "$secret_file" in /*) ;; *) die "rendered secret source is not absolute: $secret_name";; esac
@@ -265,13 +277,9 @@ while IFS='	' read -r secret_name secret_file; do
   [ -f "$secret_file" ] && [ ! -L "$secret_file" ] || die "rendered secret source is missing or symlinked: $secret_name"
   [ "$(file_links "$secret_file")" = 1 ] || die "rendered secret source is a hard link: $secret_name"
   require_external_input_path "$secret_file" "rendered secret source: $secret_name"
-  owner=$(file_uid "$secret_file"); [ "$owner" = 0 ] || [ "$owner" = "$operator_uid" ] || die "rendered secret source owner is unsafe: $secret_name"
-  mode=$(file_mode "$secret_file")
-  case "$secret_name:$secret_file" in
-    *private*:*|*key*:*) mode_is "$mode" 400 600 || die "private rendered secret mode is unsafe: $secret_name";;
-    *cert*:*|*ca*:*|*.crt*) mode_is "$mode" 400 440 444 600 640 644 || die "public rendered secret mode is unsafe: $secret_name";;
-    *) mode_is "$mode" 400 600 || die "credential rendered secret mode is unsafe: $secret_name";;
-  esac
+  expected_identity=$(rendered_secret_identity "$secret_name")
+  observed_identity="$(file_uid "$secret_file"):$(file_gid "$secret_file"):$(file_mode "$secret_file")"
+  [ "$observed_identity" = "$expected_identity" ] || die "rendered secret source identity is unsafe: $secret_name"
   bytes=$(file_size "$secret_file"); case "$bytes" in *[!0-9]*|"") die "cannot bound rendered secret source: $secret_name";; esac
   [ "$bytes" -le 1048576 ] || die "rendered secret source is too large: $secret_name"
   value=$(cat "$secret_file"); [ -z "$value" ] || case "$CONFIG" in *"$value"*) die "Compose config contains a rendered secret value: $secret_name";; esac

@@ -95,8 +95,10 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /\.Labels/)
   assert.match(preflightSource, /HR_AXIS_SECRET_ROOT/)
   assert.match(preflightSource, /mode must be 0700/)
-  assert.match(preflightSource, /private rendered secret mode is unsafe/)
-  assert.match(preflightSource, /mode_is "\$mode" 400 600/)
+  assert.match(preflightSource, /rendered_secret_identity/)
+  assert.match(preflightSource, /file_gid/)
+  for (const identity of ['10001:10001:400', '70:70:400', '1000:1000:400', '999:1000:400', '65532:65532:400', '0:0:444']) assert.match(preflightSource, new RegExp(identity.replaceAll(':', '\\:')))
+  assert.match(preflightSource, /rendered secret source identity is unsafe/)
   assert.match(preflightSource, /PHOTO_STORAGE_SECRET_ROOT/)
   assert.match(preflightSource, /file_links|hard link/)
   assert.match(preflightSource, /SECRET_LINES/)
@@ -226,7 +228,30 @@ function makeFixture() {
   executable(join(fakeBin, 'df'), '#!/bin/sh\ncase "$*" in *-Pi*) echo "Filesystem Inodes IUsed IFree IUse% Mounted"; echo "fake 1000000 1 999999 1% /";; *) echo "Filesystem 1024-blocks Used Available Capacity Mounted"; echo "fake 100000000 1 90000000 1% /";; esac\n')
   executable(join(fakeBin, 'free'), '#!/bin/sh\necho "              total        used        free      shared  buff/cache   available"; echo "Mem: 10000000000 1 9000000000 1 1 9000000000"\n')
   executable(join(fakeBin, 'nproc'), '#!/bin/sh\necho 8\n')
-  executable(join(fakeBin, 'stat'), `#!/bin/sh\npathname=; for arg do pathname=$arg; done\ncase "$*" in *%a*) case "$pathname" in *writable-receipt-grandparent*) exec /usr/bin/stat "$@";; '${shellPath(secretRoot)}'|'${shellPath(photoSecretRoot)}') echo 700;; '${shellPath(inputRoot)}') [ -f '${shellPath(unsafeInputAncestorMode)}' ] && echo 777 || echo 600;; *hr-axis-secrets* ) [ -f '${shellPath(broadMode)}' ] && echo 644 || echo 600;; *operations/*|*deployment/keycloak/bootstrap.sh*|*deployment/postgres/entrypoint-tls.sh*|*deployment/postgres/010-bootstrap-roles.sh*|*deployment/photo-storage/bootstrap.sh*) echo 755;; *) echo 600;; esac;; *%d:%i*) exec /usr/bin/stat "$@";; *%u*) [ -f '${shellPath(nonRootMode)}' ] && echo 1000 || echo 0;; *%h*) [ -f '${shellPath(hardlinkPath)}' ] && echo 2 || echo 1;; *%s*) echo 10;; *) exit 1;; esac\n`)
+  executable(join(fakeBin, 'stat'), `#!/bin/sh
+pathname=; for arg do pathname=$arg; done
+case "$*" in
+  *%a*)
+    [ -f '${shellPath(broadMode)}' ] && { echo 644; exit 0; }
+    case "$pathname" in
+      *writable-receipt-grandparent*) exec /usr/bin/stat "$@";;
+      '${shellPath(secretRoot)}'|'${shellPath(photoSecretRoot)}') echo 700;;
+      '${shellPath(inputRoot)}') [ -f '${shellPath(unsafeInputAncestorMode)}' ] && echo 777 || echo 600;;
+      '${shellPath(join(secretRoot, 'caddy.crt'))}'|'${shellPath(join(secretRoot, 'caddy.ca'))}') echo 444;;
+      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400;;
+      *operations/*|*deployment/keycloak/bootstrap.sh*|*deployment/postgres/entrypoint-tls.sh*|*deployment/postgres/010-bootstrap-roles.sh*|*deployment/photo-storage/bootstrap.sh*) echo 755;;
+      *) echo 600;;
+    esac;;
+  *%d:%i*) exec /usr/bin/stat "$@";;
+  *%u*)
+    [ -f '${shellPath(nonRootMode)}' ] && { echo 1000; exit 0; }
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+  *%g*) case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+  *%h*) [ -f '${shellPath(hardlinkPath)}' ] && echo 2 || echo 1;;
+  *%s*) echo 10;;
+  *) exit 1;;
+esac
+`)
   executable(join(fakeBin, 'openssl'), `#!/bin/sh
 case "$*" in *verify*) [ -f '${shellPath(wrongCaMode)}' ] && exit 9;; esac
 case "$*" in *dgst*key.der*) [ -f '${shellPath(wrongKeyMode)}' ] && { echo 'SHA2-256= bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'; exit 0; };; esac
