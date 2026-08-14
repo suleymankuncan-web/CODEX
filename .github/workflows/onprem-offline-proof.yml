@@ -313,8 +313,14 @@ jobs:
               gosu_symbols="$(docker run --rm --network none --volume "$vendor_evidence:/work:ro" "$POSTGRES_INSPECT_IMAGE" go tool nm /work/postgres-gosu)"
               test -n "$gosu_symbols"
               gosu_symbol_count="$(printf '%s\n' "$gosu_symbols" | wc -l | tr -d ' ')"
-              main_symbol_present=false; printf '%s\n' "$gosu_symbols" | grep -Eq ' T main\.main$' && main_symbol_present=true
-              runtime_main_symbol_present=false; printf '%s\n' "$gosu_symbols" | grep -Eq ' T runtime\.main$' && runtime_main_symbol_present=true
+              main_symbol_present=false
+              if grep -Eq ' T main\.main$' <<< "$gosu_symbols"; then
+                main_symbol_present=true
+              fi
+              runtime_main_symbol_present=false
+              if grep -Eq ' T runtime\.main$' <<< "$gosu_symbols"; then
+                runtime_main_symbol_present=true
+              fi
               crypto_tls_symbol_count="$(printf '%s\n' "$gosu_symbols" | grep -c 'crypto/tls' || true)"
               test "$gosu_symbol_count" -eq 2614
               test "$main_symbol_present" = true
