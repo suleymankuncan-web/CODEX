@@ -43,7 +43,7 @@ env:
   POSTGRES_IMAGE: postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6
   POSTGRES_CONFIG_IMAGE_ID: sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b
   POSTGRES_INSPECT_IMAGE: golang:1.26.3-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d
-  REDIS_IMAGE: redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98
+  REDIS_IMAGE: redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
   SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   SYFT_IMAGE: anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026
@@ -274,6 +274,8 @@ jobs:
       - name: Pull pinned vendor images and save immutable archives
         run: |
           set -euo pipefail
+          test "$REDIS_IMAGE" = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
+          readonly REDIS_IMAGE
           vendor_evidence="$RUNNER_TEMP/onprem-vendor-evidence"
           rm -rf "$vendor_evidence"
           mkdir -p "$vendor_evidence"
@@ -394,11 +396,13 @@ jobs:
           const releaseId = `onprem-offline-${expectedSha.slice(0, 12)}`
           const manifest = JSON.parse(readFileSync('proof/release-manifest.json', 'utf8'))
           const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
+          const expectedRedisImage = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
           const imageIds = { ...manifest.imageIds }
           for (const name of ['caddy', 'postgres', 'redis', 'seaweedfs']) imageIds[name] = readFileSync(`proof/${name}-image-id.txt`, 'utf8').trim()
           const images = {}
           const archivePaths = { backend: 'images/backend.tar', frontend: 'images/frontend.tar', keycloak: 'images/keycloak.tar', caddy: 'images/caddy.tar', postgres: 'images/postgres.tar', redis: 'images/redis.tar', seaweedfs: 'images/seaweedfs.tar' }
-          const vendorRefs = { caddy: process.env.CADDY_IMAGE, postgres: process.env.POSTGRES_IMAGE, redis: process.env.REDIS_IMAGE, seaweedfs: process.env.SEAWEEDFS_IMAGE }
+          const vendorRefs = Object.freeze({ caddy: process.env.CADDY_IMAGE, postgres: process.env.POSTGRES_IMAGE, redis: expectedRedisImage, seaweedfs: process.env.SEAWEEDFS_IMAGE })
+          if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')
           for (const name of imageNames) {
             const archivePath = `proof/${name}-image.tar`
             const archive = inspectDockerSaveArchive(archivePath, { imageId: imageIds[name] })

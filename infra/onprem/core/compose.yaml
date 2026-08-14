@@ -532,7 +532,7 @@ services:
     labels: *project-labels
 
   redis:
-    image: ${REDIS_IMAGE:-redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98}
+    image: ${REDIS_IMAGE:-redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}
     profiles: [infra, migrate, seed, runtime]
     command: [redis-server, /usr/local/etc/redis/redis.conf]
     restart: unless-stopped

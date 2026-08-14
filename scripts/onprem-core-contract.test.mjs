@@ -6,6 +6,29 @@ import { validateOnpremCoreContract } from './onprem-core-contract.mjs'
 
 const read = (path) => readFileSync(path, 'utf8').replaceAll('\r\n', '\n')
 
+function workflowEnvValues(source, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const assignment = new RegExp(`^\\s+${escapedName}:\\s*(.+)$`)
+  return String(source)
+    .split(/\r?\n/)
+    .map((line) => line.match(assignment)?.[1]?.trim())
+    .filter((value) => value !== undefined)
+}
+
+function workflowStepActiveLines(source, name) {
+  const lines = String(source).split(/\r?\n/)
+  const start = lines.findIndex((line) => line === `      - name: ${name}`)
+  if (start < 0) return []
+  const endOffset = lines.slice(start + 1).findIndex((line) => /^      - name: /.test(line))
+  const end = endOffset < 0 ? lines.length : start + 1 + endOffset
+  const runOffset = lines.slice(start, end).findIndex((line) => line === '        run: |')
+  if (runOffset < 0) return []
+  return lines
+    .slice(start + runOffset + 1, end)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+}
+
 function contractInput() {
   return {
     backendDockerfile: read('infra/onprem/images/backend.Dockerfile'),
@@ -228,6 +251,173 @@ test('ONP-2 shipping and proof paths share only the approved PostgreSQL 16.15 id
     const source = read(path)
     assert.ok(source.includes(approved), `${path} must use the approved PostgreSQL image identity`)
     assert.ok(!source.includes(retiredDigest), `${path} must not retain the retired PostgreSQL image digest`)
+  }
+})
+
+test('ONP-2 shipping and proof paths share only the approved Redis 7.4.10 identity', () => {
+  const approved = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
+  const retiredDigest = '3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98'
+  const pinnedPaths = [
+    'infra/onprem/core/compose.yaml',
+    'infra/onprem/core/env.template',
+    'scripts/onprem-core-contract.mjs',
+  ]
+
+  for (const path of pinnedPaths) {
+    const source = read(path)
+    const normalizedSource = path === 'scripts/onprem-core-contract.mjs' ? source.replaceAll('\\', '') : source
+    assert.ok(normalizedSource.includes(approved), `${path} must use the approved Redis image identity`)
+    assert.ok(!source.includes(retiredDigest), `${path} must not retain the retired Redis image digest`)
+  }
+
+  const offlineWorkflow = read('.github/workflows/onprem-offline-proof.yml')
+  assert.deepEqual(workflowEnvValues(offlineWorkflow, 'REDIS_IMAGE'), [approved])
+  const vendorLines = workflowStepActiveLines(offlineWorkflow, 'Pull pinned vendor images and save immutable archives')
+  const metadataLines = workflowStepActiveLines(offlineWorkflow, 'Generate complete offline metadata and migration compatibility evidence')
+  const runtimePin = `test "$REDIS_IMAGE" = '${approved}'`
+  const runtimeReadonly = 'readonly REDIS_IMAGE'
+  const redisVendorArm = 'redis) ref="$REDIS_IMAGE" ;;'
+  const metadataPin = `const expectedRedisImage = '${approved}'`
+  const metadataGuard = "if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')"
+  assert.equal(vendorLines.filter((line) => line === runtimePin).length, 1)
+  assert.equal(vendorLines.filter((line) => line === runtimeReadonly).length, 1)
+  assert.equal(vendorLines.filter((line) => line === redisVendorArm).length, 1)
+  assert.equal(vendorLines.indexOf(runtimeReadonly), vendorLines.indexOf(runtimePin) + 1)
+  assert.ok(vendorLines.indexOf(runtimeReadonly) < vendorLines.indexOf(redisVendorArm))
+  assert.ok(vendorLines.indexOf(redisVendorArm) < vendorLines.indexOf('docker pull "$ref"'))
+  assert.equal(metadataLines.filter((line) => line === metadataPin).length, 1)
+  assert.equal(metadataLines.filter((line) => line.startsWith('const vendorRefs = Object.freeze({')).length, 1)
+  assert.ok(metadataLines.some((line) => line.includes('redis: expectedRedisImage')))
+  assert.ok(metadataLines.every((line) => !line.includes('redis: process.env.REDIS_IMAGE')))
+  assert.equal(metadataLines.filter((line) => line === metadataGuard).length, 1)
+  assert.ok(metadataLines.indexOf(metadataGuard) < metadataLines.indexOf('for (const name of imageNames) {'))
+  assert.ok(!offlineWorkflow.includes(retiredDigest), 'offline workflow must not retain the retired Redis image digest')
+
+  const runtimeProof = read('scripts/onprem-photo-storage-runtime-proof.mjs')
+  assert.ok(!runtimeProof.includes(retiredDigest), 'photo runtime proof must not retain the retired Redis image digest')
+})
+
+test('ONP-2 offline workflow Redis pin check rejects comments and narrower-scope overrides', () => {
+  const approved = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
+  const wrong = `redis:7.4.10-alpine@sha256:${'f'.repeat(64)}`
+  const metadataGuard = "if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')"
+  const source = read('.github/workflows/onprem-offline-proof.yml')
+  const mutations = [
+    source.replace(
+      `  REDIS_IMAGE: ${approved}`,
+      `  # REDIS_IMAGE: ${approved}\n  REDIS_IMAGE: ${wrong}`,
+    ),
+    source.replace(
+      '  build_bundle:\n',
+      `  build_bundle:\n    env:\n      REDIS_IMAGE: ${wrong}\n`,
+    ),
+    source.replace(
+      '      - name: Pull pinned vendor images and save immutable archives\n',
+      `      - name: Pull pinned vendor images and save immutable archives\n        env:\n          REDIS_IMAGE: ${wrong}\n`,
+    ),
+  ]
+
+  for (const workflow of mutations) {
+    assert.notDeepEqual(workflowEnvValues(workflow, 'REDIS_IMAGE'), [approved])
+  }
+
+  const missingRuntimeGate = source.replace(
+    `          test "$REDIS_IMAGE" = '${approved}'`,
+    `          # test "$REDIS_IMAGE" = '${approved}'`,
+  )
+  assert.equal(
+    workflowStepActiveLines(missingRuntimeGate, 'Pull pinned vendor images and save immutable archives')
+      .includes(`test "$REDIS_IMAGE" = '${approved}'`),
+    false,
+  )
+
+  const mutableAfterCheck = source.replace(
+    '          readonly REDIS_IMAGE',
+    '          # readonly REDIS_IMAGE',
+  )
+  assert.equal(
+    workflowStepActiveLines(mutableAfterCheck, 'Pull pinned vendor images and save immutable archives')
+      .includes('readonly REDIS_IMAGE'),
+    false,
+  )
+
+  const mutableMetadata = source.replace(
+    `          const expectedRedisImage = '${approved}'`,
+    `          // const expectedRedisImage = '${approved}'\n          const expectedRedisImage = '${wrong}'`,
+  )
+  assert.equal(
+    workflowStepActiveLines(mutableMetadata, 'Generate complete offline metadata and migration compatibility evidence')
+      .includes(`const expectedRedisImage = '${approved}'`),
+    false,
+  )
+
+  const missingMetadataGuard = source.replace(
+    "          if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')",
+    "          // if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')",
+  )
+  assert.equal(
+    workflowStepActiveLines(missingMetadataGuard, 'Generate complete offline metadata and migration compatibility evidence')
+      .includes(metadataGuard),
+    false,
+  )
+
+  for (const wrongArm of [
+    'redis) ref="$SEAWEEDFS_IMAGE" ;;',
+    `redis) ref="${wrong}" ;;`,
+  ]) {
+    const wrongRedisConsumer = source.replace('redis) ref="$REDIS_IMAGE" ;;', wrongArm)
+    assert.equal(
+      workflowStepActiveLines(wrongRedisConsumer, 'Pull pinned vendor images and save immutable archives')
+        .includes('redis) ref="$REDIS_IMAGE" ;;'),
+      false,
+    )
+  }
+})
+
+test('ONP-2 contract rejects any Redis image identity other than the approved security pin', () => {
+  const input = contractInput()
+  input.compose = input.compose.replace(
+    'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2',
+    'redis:7.4.10-alpine@sha256:' + 'f'.repeat(64),
+  )
+
+  const result = validateOnpremCoreContract(input)
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /exactly one active pinned upstream Redis image identity/i.test(error)))
+})
+
+test('ONP-2 contract rejects Redis image comment decoys and duplicate active image keys', () => {
+  const approvedLine = '    image: ${REDIS_IMAGE:-redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}'
+  const wrongLine = '    image: redis:7.4.10-alpine@sha256:' + 'f'.repeat(64)
+
+  for (const replacement of [
+    `    # ${approvedLine.trim()}\n${wrongLine}`,
+    `${approvedLine}\n${wrongLine}`,
+  ]) {
+    const input = contractInput()
+    input.compose = input.compose.replace(approvedLine, replacement)
+    assert.equal(input.compose.includes(replacement), true, 'Redis image bypass fixture must apply')
+
+    const result = validateOnpremCoreContract(input)
+    assert.equal(result.ok, false)
+    assert.ok(result.errors.some((error) => /exactly one active pinned upstream Redis image identity/i.test(error)))
+  }
+})
+
+test('ONP-2 contract rejects every Compose-supported duplicate Redis env assignment form', () => {
+  const wrong = `redis:7.4.10-alpine@sha256:${'f'.repeat(64)}`
+  for (const assignment of [
+    `REDIS_IMAGE=${wrong}`,
+    `REDIS_IMAGE = ${wrong}`,
+    `REDIS_IMAGE: ${wrong}`,
+    `export REDIS_IMAGE=${wrong}`,
+  ]) {
+    const input = contractInput()
+    input.envTemplate += `\n${assignment}\n`
+
+    const result = validateOnpremCoreContract(input)
+    assert.equal(result.ok, false, `${assignment} must be counted as an active Redis assignment`)
+    assert.ok(result.errors.some((error) => /exactly one active pinned upstream Redis image identity/i.test(error)))
   }
 })
 
