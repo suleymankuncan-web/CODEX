@@ -275,22 +275,22 @@ test('ONP-2 shipping and proof paths share only the approved Redis 7.4.10 identi
   const vendorLines = workflowStepActiveLines(offlineWorkflow, 'Pull pinned vendor images and save immutable archives')
   const metadataLines = workflowStepActiveLines(offlineWorkflow, 'Generate complete offline metadata and migration compatibility evidence')
   const runtimePin = `test "$REDIS_IMAGE" = '${approved}'`
-  const runtimeReadonly = 'readonly REDIS_IMAGE'
-  const redisVendorArm = 'redis) ref="$REDIS_IMAGE" ;;'
-  const metadataPin = `const expectedRedisImage = '${approved}'`
-  const metadataGuard = "if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')"
+  const runtimeReadonly = 'readonly CADDY_IMAGE CADDY_CONFIG_IMAGE_ID POSTGRES_IMAGE POSTGRES_CONFIG_IMAGE_ID REDIS_IMAGE REDIS_CONFIG_IMAGE_ID SEAWEEDFS_IMAGE SEAWEEDFS_CONFIG_IMAGE_ID'
+  const redisVendorArm = 'redis) ref="$REDIS_IMAGE"; image_id="$REDIS_CONFIG_IMAGE_ID" ;;'
+  const metadataGuard = "if (expectedVendorConfigImageIds[name] && imageIds[name] !== expectedVendorConfigImageIds[name]) throw new Error('vendor config image ID mismatch')"
   assert.equal(vendorLines.filter((line) => line === runtimePin).length, 1)
   assert.equal(vendorLines.filter((line) => line === runtimeReadonly).length, 1)
   assert.equal(vendorLines.filter((line) => line === redisVendorArm).length, 1)
-  assert.equal(vendorLines.indexOf(runtimeReadonly), vendorLines.indexOf(runtimePin) + 1)
+  assert.ok(vendorLines.indexOf(runtimeReadonly) > vendorLines.indexOf(runtimePin))
   assert.ok(vendorLines.indexOf(runtimeReadonly) < vendorLines.indexOf(redisVendorArm))
   assert.ok(vendorLines.indexOf(redisVendorArm) < vendorLines.indexOf('docker pull "$ref"'))
-  assert.equal(metadataLines.filter((line) => line === metadataPin).length, 1)
   assert.equal(metadataLines.filter((line) => line.startsWith('const vendorRefs = Object.freeze({')).length, 1)
-  assert.ok(metadataLines.some((line) => line.includes('redis: expectedRedisImage')))
+  assert.ok(metadataLines.some((line) => line.includes(`redis: '${approved}'`)))
+  assert.ok(metadataLines.some((line) => line.includes("redis: 'sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33'")))
   assert.ok(metadataLines.every((line) => !line.includes('redis: process.env.REDIS_IMAGE')))
   assert.equal(metadataLines.filter((line) => line === metadataGuard).length, 1)
-  assert.ok(metadataLines.indexOf(metadataGuard) < metadataLines.indexOf('for (const name of imageNames) {'))
+  assert.ok(metadataLines.indexOf(metadataGuard) > metadataLines.indexOf('for (const name of imageNames) {'))
+  assert.ok(metadataLines.indexOf(metadataGuard) < metadataLines.findIndex((line) => line.startsWith('const archive = inspectDockerSaveArchive(')))
   assert.ok(!offlineWorkflow.includes(retiredDigest), 'offline workflow must not retain the retired Redis image digest')
 
   const runtimeProof = read('scripts/onprem-photo-storage-runtime-proof.mjs')
@@ -300,7 +300,8 @@ test('ONP-2 shipping and proof paths share only the approved Redis 7.4.10 identi
 test('ONP-2 offline workflow Redis pin check rejects comments and narrower-scope overrides', () => {
   const approved = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
   const wrong = `redis:7.4.10-alpine@sha256:${'f'.repeat(64)}`
-  const metadataGuard = "if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')"
+  const runtimeReadonly = 'readonly CADDY_IMAGE CADDY_CONFIG_IMAGE_ID POSTGRES_IMAGE POSTGRES_CONFIG_IMAGE_ID REDIS_IMAGE REDIS_CONFIG_IMAGE_ID SEAWEEDFS_IMAGE SEAWEEDFS_CONFIG_IMAGE_ID'
+  const metadataGuard = "if (expectedVendorConfigImageIds[name] && imageIds[name] !== expectedVendorConfigImageIds[name]) throw new Error('vendor config image ID mismatch')"
   const source = read('.github/workflows/onprem-offline-proof.yml')
   const mutations = [
     source.replace(
@@ -332,28 +333,28 @@ test('ONP-2 offline workflow Redis pin check rejects comments and narrower-scope
   )
 
   const mutableAfterCheck = source.replace(
-    '          readonly REDIS_IMAGE',
-    '          # readonly REDIS_IMAGE',
+    `          ${runtimeReadonly}`,
+    `          # ${runtimeReadonly}`,
   )
   assert.equal(
     workflowStepActiveLines(mutableAfterCheck, 'Pull pinned vendor images and save immutable archives')
-      .includes('readonly REDIS_IMAGE'),
+      .includes(runtimeReadonly),
     false,
   )
 
   const mutableMetadata = source.replace(
-    `          const expectedRedisImage = '${approved}'`,
-    `          // const expectedRedisImage = '${approved}'\n          const expectedRedisImage = '${wrong}'`,
+    `redis: '${approved}'`,
+    `redis: '${wrong}'`,
   )
   assert.equal(
     workflowStepActiveLines(mutableMetadata, 'Generate complete offline metadata and migration compatibility evidence')
-      .includes(`const expectedRedisImage = '${approved}'`),
+      .some((line) => line.includes(`redis: '${approved}'`)),
     false,
   )
 
   const missingMetadataGuard = source.replace(
-    "          if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')",
-    "          // if (vendorRefs.redis !== expectedRedisImage) throw new Error('Redis vendor reference mismatch')",
+    `          ${metadataGuard}`,
+    `          // ${metadataGuard}`,
   )
   assert.equal(
     workflowStepActiveLines(missingMetadataGuard, 'Generate complete offline metadata and migration compatibility evidence')
@@ -362,13 +363,13 @@ test('ONP-2 offline workflow Redis pin check rejects comments and narrower-scope
   )
 
   for (const wrongArm of [
-    'redis) ref="$SEAWEEDFS_IMAGE" ;;',
-    `redis) ref="${wrong}" ;;`,
+    'redis) ref="$SEAWEEDFS_IMAGE"; image_id="$REDIS_CONFIG_IMAGE_ID" ;;',
+    `redis) ref="${wrong}"; image_id="$REDIS_CONFIG_IMAGE_ID" ;;`,
   ]) {
-    const wrongRedisConsumer = source.replace('redis) ref="$REDIS_IMAGE" ;;', wrongArm)
+    const wrongRedisConsumer = source.replace('redis) ref="$REDIS_IMAGE"; image_id="$REDIS_CONFIG_IMAGE_ID" ;;', wrongArm)
     assert.equal(
       workflowStepActiveLines(wrongRedisConsumer, 'Pull pinned vendor images and save immutable archives')
-        .includes('redis) ref="$REDIS_IMAGE" ;;'),
+        .includes('redis) ref="$REDIS_IMAGE"; image_id="$REDIS_CONFIG_IMAGE_ID" ;;'),
       false,
     )
   }

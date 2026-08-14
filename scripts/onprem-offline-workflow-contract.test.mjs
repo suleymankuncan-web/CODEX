@@ -609,12 +609,38 @@ test('every vendored runtime image receives separate fail-closed Trivy vulnerabi
   for (const image of ['caddy', 'postgres', 'redis', 'seaweedfs']) {
     assert.match(vendor, new RegExp(`${image}\\)`), `${image} vendor reference is required`)
   }
+  const vendors = {
+    caddy: { ref: 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648', configImageId: 'af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe' },
+    postgres: { ref: 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6', configImageId: '75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b' },
+    redis: { ref: 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2', configImageId: '2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33' },
+    seaweedfs: { ref: 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d', configImageId: '8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0' },
+  }
+  for (const [image, { ref, configImageId }] of Object.entries(vendors)) {
+    const variable = image.toUpperCase()
+    assert.match(workflow, new RegExp(`\\n  ${variable}_CONFIG_IMAGE_ID: sha256:${configImageId}\\n`), `${variable} config image ID is required`)
+    assert.match(vendor, new RegExp(`${image}\\) ref="\\$${variable}_IMAGE"; image_id="\\$${variable}_CONFIG_IMAGE_ID" ;;`), `${variable} config image ID is not bound to its archive`)
+    assert.match(vendor, new RegExp(`test "\\$${variable}_IMAGE" = '${ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'`), `${variable} image ref is not guarded`)
+    assert.match(vendor, new RegExp(`test "\\$${variable}_CONFIG_IMAGE_ID" = 'sha256:${configImageId}'`), `${variable} config image ID is not guarded`)
+  }
+  assert.match(vendor, /readonly CADDY_IMAGE CADDY_CONFIG_IMAGE_ID POSTGRES_IMAGE POSTGRES_CONFIG_IMAGE_ID REDIS_IMAGE REDIS_CONFIG_IMAGE_ID SEAWEEDFS_IMAGE SEAWEEDFS_CONFIG_IMAGE_ID/)
   assert.match(vendor, /\$\{image\}-trivy-vuln\.json/)
   assert.match(vendor, /\$\{image\}-trivy-secret\.json/)
   assert.match(vendor, /--scanners vuln --severity CRITICAL[\s\S]*--exit-code 1/)
   assert.match(vendor, /--scanners secret[\s\S]*--exit-code 1/)
   assert.doesNotMatch(vendor, /--scanners vuln,secret/)
   assert.doesNotMatch(vendor, /\/var\/run\/docker\.sock/)
+  assert.match(vendor, /\[\[ "\$ref" =~ @sha256:\[a-f0-9\]\{64\}\$ \]\]/)
+  assert.match(vendor, /archive_tag="\$\{ref%@sha256:\*\}"/)
+  assert.match(vendor, /docker tag "\$ref" "\$archive_tag"[\s\S]*docker save "\$archive_tag"/)
+  assert.doesNotMatch(vendor, /docker image inspect "\$ref" --format '\{\{\.Id\}\}'/)
+  assert.doesNotMatch(vendor, /docker save "\$ref"/)
+  const metadata = build.slice(end)
+  for (const { ref, configImageId } of Object.values(vendors)) {
+    assert.match(metadata, new RegExp(ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    assert.match(metadata, new RegExp(`sha256:${configImageId}`))
+  }
+  assert.match(metadata, /if \(expectedVendorConfigImageIds\[name\] && imageIds\[name\] !== expectedVendorConfigImageIds\[name\]\) throw new Error\('vendor config image ID mismatch'\)/)
+  assert.match(metadata, /const vendor = vendorRefs\[name\][\s\S]*inspectDockerSaveArchive\(archivePath, \{ imageId: imageIds\[name\], \.\.\.\(vendor \? \{ identity: vendor \} : \{\}\) \}\)/)
 })
 
 test('offline workflow permits only the signed exact PostgreSQL gosu reachability exception', () => {
@@ -624,7 +650,7 @@ test('offline workflow permits only the signed exact PostgreSQL gosu reachabilit
   assert.match(workflow, /--ignorefile \/policy\/postgres-gosu\.trivyignore\.yaml --show-suppressed/)
   assert.match(workflow, /onprem-postgres-vulnerability-exception\.mjs verify/)
   assert.match(workflow, /postgres-vulnerability-exception-receipt\.json/)
-  assert.match(workflow, /if \[ "\$image" = postgres \]; then\s+image_id="\$POSTGRES_CONFIG_IMAGE_ID"/)
+  assert.match(workflow, /postgres\) ref="\$POSTGRES_IMAGE"; image_id="\$POSTGRES_CONFIG_IMAGE_ID" ;;/)
   assert.match(workflow, /gosu_symbols="\$\(docker run[\s\S]*go tool nm \/work\/postgres-gosu\)"/)
   assert.match(workflow, /gosu_symbol_count[\s\S]*main_symbol_present[\s\S]*runtime_main_symbol_present/)
   assert.doesNotMatch(workflow, /printf '%s\\n' "\$gosu_symbols" \| grep -Eq ' T (?:main\\\.main|runtime\\\.main)\$'/)
