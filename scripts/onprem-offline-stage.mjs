@@ -9,6 +9,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  writeFileSync,
 } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -24,6 +25,9 @@ import { inspectDockerSaveArchive } from './onprem-offline-archive.mjs'
 const MAX_SOURCE_BYTES = 32 * 1024 * 1024
 const HEX = /^[0-9a-f]{64}$/i
 const PATH = /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*$/
+const PHOTO_COMPOSE_BIND_SOURCE = Buffer.from('      - ../photo-storage/bootstrap.sh:/opt/hr-axis/photo-storage/bootstrap.sh:ro')
+const PHOTO_COMPOSE_BIND_STAGED = Buffer.from('      - ./photo-storage/bootstrap.sh:/opt/hr-axis/photo-storage/bootstrap.sh:ro')
+const PHOTO_COMPOSE_BIND_TARGET = Buffer.from(':/opt/hr-axis/photo-storage/bootstrap.sh:')
 const STAGE_FILES = Object.freeze([
   ['deployment/compose.yaml', 'infra/onprem/core/compose.yaml'],
   ['deployment/compose.photo-proof.yaml', 'infra/onprem/core/compose.photo-proof.yaml'],
@@ -157,6 +161,34 @@ function stageOne(source, destination, mode, label, scanAssignments = true) {
   copyStable(source, destination, observed.bytes, observed.sha256, mode, observed.identity)
   return { path: label, bytes: observed.bytes, sha256: observed.sha256 }
 }
+function countBytes(value, needle) {
+  let count = 0
+  let offset = 0
+  while ((offset = value.indexOf(needle, offset)) !== -1) {
+    count += 1
+    offset += needle.length
+  }
+  return count
+}
+function stagePhotoCompose(source, destination, label) {
+  stageOne(source, destination, 0o644, label)
+  const original = readFileSync(destination)
+  if (countBytes(original, PHOTO_COMPOSE_BIND_TARGET) !== 1 || countBytes(original, PHOTO_COMPOSE_BIND_SOURCE) !== 1 || countBytes(original, PHOTO_COMPOSE_BIND_STAGED) !== 0) {
+    fail(`${label} must contain exactly one canonical photo-storage bootstrap bind`)
+  }
+  const offset = original.indexOf(PHOTO_COMPOSE_BIND_SOURCE)
+  const transformed = Buffer.concat([
+    original.subarray(0, offset),
+    PHOTO_COMPOSE_BIND_STAGED,
+    original.subarray(offset + PHOTO_COMPOSE_BIND_SOURCE.length),
+  ])
+  writeFileSync(destination, transformed)
+  if (countBytes(transformed, PHOTO_COMPOSE_BIND_TARGET) !== 1 || countBytes(transformed, PHOTO_COMPOSE_BIND_SOURCE) !== 0 || countBytes(transformed, PHOTO_COMPOSE_BIND_STAGED) !== 1) {
+    fail(`${label} staged photo-storage bootstrap bind is invalid`)
+  }
+  const copied = readAndHashStable(destination, MAX_SOURCE_BYTES, label, { scan: true, relativePath: label })
+  return { path: label, bytes: copied.bytes, sha256: copied.sha256 }
+}
 function stageImage(source, destination, expected, label) {
   let archive
   try { archive = inspectDockerSaveArchive(source, { imageId: expected?.configImageId }) } catch (error) { fail(`${label} is not a valid Docker image archive: ${error?.message ?? 'invalid archive'}`) }
@@ -203,7 +235,10 @@ export function stageOffline(options = {}) {
     for (const [destination, sourceRelative] of STAGE_FILES) {
       const source = sourcePath(repoRoot, sourceRelative, destination)
       validateNoSecretPath(sourceRelative, destination)
-      staged.push(stageOne(source, join(temp, ...destination.split('/')), EXECUTABLES.has(destination) ? 0o755 : 0o644, destination))
+      const destinationPath = join(temp, ...destination.split('/'))
+      staged.push(destination === 'deployment/photo-compose.yaml'
+        ? stagePhotoCompose(source, destinationPath, destination)
+        : stageOne(source, destinationPath, EXECUTABLES.has(destination) ? 0o755 : 0o644, destination))
     }
     for (const name of OPERATION_SHELLS) {
       const destination = `operations/${name}`

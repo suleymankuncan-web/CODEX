@@ -12,6 +12,8 @@ import { stageOffline } from './onprem-offline-stage.mjs'
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const REVISION = '0123456789abcdef0123456789abcdef01234567'
 const CREATED_AT = '2026-08-13T12:00:00.000Z'
+const PHOTO_BIND_SOURCE = '      - ../photo-storage/bootstrap.sh:/opt/hr-axis/photo-storage/bootstrap.sh:ro'
+const PHOTO_BIND_STAGED = '      - ./photo-storage/bootstrap.sh:/opt/hr-axis/photo-storage/bootstrap.sh:ro'
 
 function header(name, size, type = '0') {
   const value = Buffer.alloc(512)
@@ -85,6 +87,16 @@ test('stages the exact source-free closure with verifier and auth proof runtime 
     assert.equal(result.releaseId, value.metadata.releaseId)
     assert.equal(readFileSync(join(value.output, 'deployment/compose.photo-proof.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/core/compose.photo-proof.yaml'), 'utf8'))
     assert.equal(readFileSync(join(value.output, 'deployment/proof.compose.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/offline/proof.compose.yaml'), 'utf8'))
+    const sourcePhotoCompose = readFileSync(join(value.repo, 'infra/onprem/photo-storage/compose.yaml'), 'utf8')
+    const stagedPhotoCompose = readFileSync(join(value.output, 'deployment/photo-compose.yaml'), 'utf8')
+    assert.equal(sourcePhotoCompose.includes(PHOTO_BIND_SOURCE), true)
+    assert.equal(stagedPhotoCompose, sourcePhotoCompose.replace(PHOTO_BIND_SOURCE, PHOTO_BIND_STAGED))
+    assert.equal(stagedPhotoCompose.includes(PHOTO_BIND_SOURCE), false)
+    assert.equal(existsSync(join(value.output, 'deployment/photo-storage/bootstrap.sh')), true)
+    assert.equal(existsSync(join(value.output, 'photo-storage')), false)
+    const stagedPhotoEntry = result.files.find((entry) => entry.path === 'deployment/photo-compose.yaml')
+    assert.equal(stagedPhotoEntry.bytes, Buffer.byteLength(stagedPhotoCompose))
+    assert.equal(stagedPhotoEntry.sha256, createHash('sha256').update(stagedPhotoCompose).digest('hex'))
     assert.equal(readFileSync(join(value.output, 'operations/onprem-offline-bundle.mjs'), 'utf8'), readFileSync(join(value.repo, 'scripts/onprem-offline-bundle-verify.mjs'), 'utf8'))
     if (process.platform !== 'win32') {
       assert.equal(statSync(join(value.output, 'operations/install.sh')).mode & 0o777, 0o755)
@@ -92,6 +104,26 @@ test('stages the exact source-free closure with verifier and auth proof runtime 
     }
     assert.equal(existsSync(join(value.output, 'secret-files')), false)
   } finally { cleanup(value) }
+})
+
+test('rejects duplicate or escaped photo bootstrap binds before creating output', () => {
+  const cases = [
+    ['duplicate', (source) => `${source}\n${PHOTO_BIND_SOURCE}\n`],
+    ['path escape', (source) => source.replace(PHOTO_BIND_SOURCE, PHOTO_BIND_SOURCE.replace('../photo-storage/bootstrap.sh', '../../photo-storage/bootstrap.sh'))],
+  ]
+  for (const [label, mutate] of cases) {
+    const value = fixture()
+    try {
+      const sourcePath = join(value.repo, 'infra/onprem/photo-storage/compose.yaml')
+      writeFileSync(sourcePath, mutate(readFileSync(sourcePath, 'utf8')))
+      assert.throws(
+        () => stageOffline({ repoRoot: value.repo, proofDir: value.proof, outputDir: value.output, metadata: value.metadataPath }),
+        /canonical photo-storage bootstrap bind/,
+        label,
+      )
+      assert.equal(existsSync(value.output), false)
+    } finally { cleanup(value) }
+  }
 })
 
 test('rejects a proof root nested under the source repository before creating output', () => {
