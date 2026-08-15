@@ -61,6 +61,19 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.doesNotMatch(activate, /MIGRATION_LEDGER_FILE.*required|migration ledger is incompatible/i)
   assert.match(activate, /keycloak-bootstrap[\s\S]*identity-binder[\s\S]*synthetic-seed/)
   assert.match(activate, /up --pull never/)
+  const expectedPrivatePrerequisiteUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage >/dev/null || die "private prerequisite startup failed"'
+  const expectedApplicationUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || die "application service startup failed"'
+  const activationUpLines = activate.split(/\r?\n/).filter((line) => line.startsWith('compose --profile infra --profile runtime up --pull never'))
+  assert.deepEqual(activationUpLines, [expectedPrivatePrerequisiteUp, expectedApplicationUp], 'activation Compose up commands must stay exact and service-scoped')
+  assert.doesNotMatch(activate, /compose --profile infra --profile runtime up --pull never -d\b/, 'activation Compose up must not be unbounded')
+  assert.doesNotMatch(activate, /compose --profile '\*'[^\n]*\bup\b/, 'wildcard Compose profiles must not drive activation mutations')
+  const postStatusIndex = activate.indexOf('POST_STATUS=$(read_status)')
+  const privatePrerequisiteIndex = activate.indexOf(expectedPrivatePrerequisiteUp)
+  const keycloakInspectIndex = activate.indexOf('KEYCLOAK_ID=$(compose ps -q keycloak 2>/dev/null || true)')
+  const applicationUpIndex = activate.indexOf(expectedApplicationUp)
+  assert.ok(postStatusIndex >= 0 && postStatusIndex < privatePrerequisiteIndex && privatePrerequisiteIndex < keycloakInspectIndex && keycloakInspectIndex < applicationUpIndex, 'activation ordering must be migration status, prerequisite wait, Keycloak inspect/bootstrap, application wait')
+  assert.match(activate, /KEYCLOAK_ID=\$\(compose ps -q keycloak 2>\/dev\/null \|\| true\); \[ -n "\$KEYCLOAK_ID" \] \|\| die "Keycloak prerequisite is not running"/)
+  assert.match(activate, /\[ "\$\(docker inspect "\$KEYCLOAK_ID" --format '\{\{\.State\.Health\.Status\}\}' 2>\/dev\/null \|\| true\)" = healthy \] \|\| die "Keycloak prerequisite is not healthy"/)
 
   const migrate = source['migrate.sh']
   assert.match(migrate, /dirty|orphanCount|checksumValid/i)
