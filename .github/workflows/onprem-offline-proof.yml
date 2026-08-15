@@ -982,8 +982,10 @@ jobs:
           sudo test -f "$PROOF_COMPOSE" && sudo test ! -L "$PROOF_COMPOSE"
           sudo_operator "$BUNDLE_ROOT/operations/preflight.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --allow-unloaded-images --allow-missing-ledger
           sudo_operator "$BUNDLE_ROOT/operations/install.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          sudo_operator "$BUNDLE_ROOT/operations/migrate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           edge_network="hr-axis-onprem-core_edge"
-          edge_meta="$(sudo docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after install' >&2; exit 1; }
+          edge_meta="$(sudo docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
           test "$edge_meta" = "false|hr-axis-onprem-core|synthetic|$RELEASE_ID|edge"
           backend_image="$(sudo awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
           printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'
@@ -1039,8 +1041,6 @@ jobs:
           fs.chmodSync(path, 0o600)
           NODE
           test "$(sudo stat -c '%u:%g:%a' "$RECEIPT_ROOT/egress.json")" = '0:0:600'
-          sudo_operator "$BUNDLE_ROOT/operations/migrate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
-          sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo_operator "$BUNDLE_ROOT/operations/smoke.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --receipt "$RECEIPT_ROOT/smoke.json"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/smoke.json" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.project !== 'hr-axis-onprem-core' || value.releaseId !== releaseId) process.exit(41); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'smoke', status: 'passed', sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
