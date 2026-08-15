@@ -33,6 +33,7 @@ case "$RECEIPT_PATH" in "$BUNDLE_ROOT"/*) die "receipt must be outside the bundl
 
 env_value() { awk -F= -v wanted="$1" '$0 !~ /^[[:space:]]*#/ && $1 == wanted { sub(/^[^=]*=/, ""); print; exit }' "$ENV_FILE"; }
 file_mode() { stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1" 2>/dev/null || die "cannot inspect file mode"; }
+file_gid() { stat -c '%g' "$1" 2>/dev/null || stat -f '%g' "$1" 2>/dev/null || die "cannot inspect file group"; }
 file_links() { stat -c '%h' "$1" 2>/dev/null || stat -f '%l' "$1" 2>/dev/null || die "cannot inspect hard-link count"; }
 file_size() { stat -c '%s' "$1" 2>/dev/null || stat -f '%z' "$1" 2>/dev/null || die "cannot inspect file size"; }
 file_uid() { stat -c '%u' "$1" 2>/dev/null || stat -f '%u' "$1" 2>/dev/null || die "cannot inspect file owner"; }
@@ -65,7 +66,6 @@ revalidate_receipt_parent() {
   [ "$(file_mode "$RECEIPT_PARENT")" = "$RECEIPT_PARENT_MODE" ] || die "receipt parent mode changed"
 }
 [ ! -e "$RECEIPT_PATH" ] && [ ! -L "$RECEIPT_PATH" ] || die "receipt destination must be absent"
-external_file() { name=$1; value=$(env_value "$name"); [ -n "$value" ] || die "approved env is missing $name"; case "$value" in /*) ;; *) die "$name must be an absolute path";; esac; case "$value" in "$BUNDLE_ROOT"/*) die "$name must be outside the bundle";; esac; [ -f "$value" ] && [ ! -L "$value" ] || die "$name is missing or symlinked"; [ "$(file_links "$value")" = 1 ] || die "$name must not be a hard link"; printf '%s' "$value"; }
 
 VERIFIER="$BUNDLE_ROOT/operations/onprem-offline-bundle.mjs"; [ -f "$VERIFIER" ] || VERIFIER="$BUNDLE_ROOT/onprem-offline-bundle.mjs"; [ -f "$VERIFIER" ] || die "bundled offline verifier is missing"
 node "$VERIFIER" verify --bundle-dir "$BUNDLE_ROOT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" >/dev/null 2>&1 || die "bundle signature/digest verification failed"
@@ -78,7 +78,7 @@ fi
 CORE_COMPOSE="$BUNDLE_ROOT/deployment/compose.yaml"; PHOTO_PROOF_COMPOSE="$BUNDLE_ROOT/deployment/compose.photo-proof.yaml"; PHOTO_COMPOSE="$BUNDLE_ROOT/deployment/photo-compose.yaml"
 [ -f "$CORE_COMPOSE" ] && [ -f "$PHOTO_PROOF_COMPOSE" ] && [ -f "$PHOTO_COMPOSE" ] || die "merged Compose files are missing"
 compose() {
-  if [ -n "$PROOF_COMPOSE" ]; then docker compose --project-name "$TARGET_PROJECT" --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" --file "$PROOF_COMPOSE" "$@"; else docker compose --project-name "$TARGET_PROJECT" --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" "$@"; fi
+  if [ -n "$PROOF_COMPOSE" ]; then docker compose --project-name "$TARGET_PROJECT" --profile '*' --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" --file "$PROOF_COMPOSE" "$@"; else docker compose --project-name "$TARGET_PROJECT" --profile '*' --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" "$@"; fi
 }
 expected_project=$(env_value HR_AXIS_PROJECT_ID); [ -n "$expected_project" ] || expected_project=$TARGET_PROJECT
 [ "$(env_value HR_AXIS_DATA_CLASS)" = synthetic ] || die "runtime smoke requires HR_AXIS_DATA_CLASS=synthetic"
@@ -109,7 +109,37 @@ object_network=$(docker inspect "$object_storage_id" --format '{{range $name,$va
 [ -n "$object_network" ] || die "object-storage private network is missing"
 docker network inspect "$object_network" --format '{{.Internal}}' 2>/dev/null | grep -qx true || die "object-storage network is not internal"
 
-ACCOUNTS_FILE=$(external_file KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE); TLS_CA_FILE=$(external_file TLS_CA_FILE)
+RENDERED_CONFIG=$(compose config --format json 2>/dev/null) || die "cannot inspect rendered Compose config for auth secrets"
+RENDERED_SECRET_SOURCES=$(printf '%s' "$RENDERED_CONFIG" | node -e '
+const c = JSON.parse(require("fs").readFileSync(0, "utf8"))
+for (const name of ["keycloak_synthetic_accounts", "caddy_tls_ca"]) {
+  const source = c.secrets?.[name]
+  if (!source || typeof source !== "object" || typeof source.file !== "string" || source.file.length === 0) process.exit(2)
+  process.stdout.write(`${name}\t${source.file}\n`)
+}
+' 2>/dev/null) || die "rendered auth secrets keycloak_synthetic_accounts and caddy_tls_ca must each have exactly one string file source"
+rendered_secret_path() {
+  secret_name=$1
+  printf '%s\n' "$RENDERED_SECRET_SOURCES" | awk -F '	' -v wanted="$secret_name" '$1 == wanted { count++; path=$2 } END { if (count != 1 || path == "") exit 1; print path }' || die "rendered auth secret must have exactly one string file source: $secret_name"
+}
+validate_rendered_secret_source() {
+  secret_name=$1; expected_identity=$2; secret_file=$3
+  case "$secret_file" in /*) ;; *) die "rendered secret source is not absolute: $secret_name";; esac
+  case "$secret_file" in "$BUNDLE_ROOT"/*) die "rendered secret source is inside bundle: $secret_name";; esac
+  [ -f "$secret_file" ] && [ ! -L "$secret_file" ] || die "rendered secret source is missing or symlinked: $secret_name"
+  [ "$(file_links "$secret_file")" = 1 ] || die "rendered secret source is a hard link: $secret_name"
+  canonical_secret=$(realpath -e -- "$secret_file" 2>/dev/null) || die "rendered secret source cannot be resolved canonically: $secret_name"
+  [ "$canonical_secret" = "$secret_file" ] || die "rendered secret source must use a canonical path: $secret_name"
+  require_trusted_directory_tree "$(dirname "$secret_file")" "rendered secret source: $secret_name"
+  observed_identity="$(file_uid "$secret_file"):$(file_gid "$secret_file"):$(file_mode "$secret_file")"
+  [ "$observed_identity" = "$expected_identity" ] || die "rendered secret source identity is unsafe: $secret_name"
+  bytes=$(file_size "$secret_file"); case "$bytes" in ''|*[!0-9]*) die "cannot bound rendered secret source: $secret_name";; esac
+  [ "$bytes" -le 1048576 ] || die "rendered secret source is too large: $secret_name"
+}
+ACCOUNTS_SOURCE=$(rendered_secret_path keycloak_synthetic_accounts)
+CA_SOURCE=$(rendered_secret_path caddy_tls_ca)
+validate_rendered_secret_source keycloak_synthetic_accounts 1000:1000:400 "$ACCOUNTS_SOURCE"
+validate_rendered_secret_source caddy_tls_ca 0:0:444 "$CA_SOURCE"
 AUTH_PROOF="$BUNDLE_ROOT/operations/onprem-keycloak-auth-proof.mjs"; [ -f "$AUTH_PROOF" ] && [ ! -L "$AUTH_PROOF" ] || die "bundled Keycloak auth proof is missing"
 PUBLIC_HOST=$(env_value HR_AXIS_PUBLIC_HOST); [ -n "$PUBLIC_HOST" ] || die "approved public host is missing"
 if [ -n "$PROOF_COMPOSE" ]; then
@@ -117,12 +147,12 @@ if [ -n "$PROOF_COMPOSE" ]; then
   printf '%s' "$BACKEND_IMAGE" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "approved backend image identity is invalid"
   AUTH_OUTPUT=$(docker run --pull=never --rm --network "${TARGET_PROJECT}_proxy" \
     --volume "$AUTH_PROOF:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro" \
-    --volume "$ACCOUNTS_FILE:/run/hr-axis/synthetic-accounts:ro" \
-    --volume "$TLS_CA_FILE:/run/hr-axis/caddy-ca.crt:ro" \
+    --volume "$ACCOUNTS_SOURCE:/run/hr-axis/synthetic-accounts:ro" \
+    --volume "$CA_SOURCE:/run/hr-axis/caddy-ca.crt:ro" \
     "$BACKEND_IMAGE" node /run/hr-axis/onprem-keycloak-auth-proof.mjs --host "$PUBLIC_HOST" --connect-host caddy --connect-port 8443 \
     --accounts-file /run/hr-axis/synthetic-accounts --ca-file /run/hr-axis/caddy-ca.crt 2>/dev/null) || die "Keycloak synthetic auth proof failed"
 else
-  AUTH_OUTPUT=$(node "$AUTH_PROOF" --host "$PUBLIC_HOST" --connect-host 127.0.0.1 --connect-port 443 --accounts-file "$ACCOUNTS_FILE" --ca-file "$TLS_CA_FILE" 2>/dev/null) || die "Keycloak synthetic auth proof failed"
+  AUTH_OUTPUT=$(node "$AUTH_PROOF" --host "$PUBLIC_HOST" --connect-host 127.0.0.1 --connect-port 443 --accounts-file "$ACCOUNTS_SOURCE" --ca-file "$CA_SOURCE" 2>/dev/null) || die "Keycloak synthetic auth proof failed"
 fi
 printf '%s' "$AUTH_OUTPUT" | node -e 'const v=JSON.parse(require("fs").readFileSync(0,"utf8")); if(v.dataClass!=="synthetic"||v.personas?.count!==5||v.scopeAuthorization?.crossScopeDenied!==true||v.scopeAuthorization?.deniedActionWriteDelta!==0)process.exit(2)' 2>/dev/null || die "Keycloak receipt is not a sanitized five-persona cross-scope proof"
 
@@ -142,7 +172,15 @@ printf '{"schemaVersion":1,"project":"%s","releaseId":"%s","dataClass":"syntheti
 chmod 0600 "$receipt_tmp"; [ "$(file_mode "$receipt_tmp")" = 600 ] || die "receipt mode is not 0600"
 receipt_content=$(cat "$receipt_tmp")
 SECRET_LINES=$(compose config --format json 2>/dev/null | node -e 'const c=JSON.parse(require("fs").readFileSync(0,"utf8")); for(const [n,v] of Object.entries(c.secrets||{})){if(v&&typeof v.file==="string")process.stdout.write(`${n}\t${v.file}\n`)}' 2>/dev/null) || die "cannot inspect rendered secrets for receipt scan"
-while IFS='	' read -r secret_name secret_file; do [ -n "$secret_name" ] || continue; bytes=$(file_size "$secret_file"); [ "$bytes" -le 1048576 ] || die "secret source exceeds bounded receipt scan"; value=$(cat "$secret_file"); [ -z "$value" ] || case "$receipt_content" in *"$value"*) die "runtime receipt contains an external secret value";; esac; done <<EOF
+while IFS='	' read -r secret_name secret_file; do
+  [ -n "$secret_name" ] || continue
+  bytes=$(file_size "$secret_file"); [ "$bytes" -le 1048576 ] || die "secret source exceeds bounded receipt scan"
+  value=$(cat "$secret_file")
+  case "$secret_name" in
+    keycloak_database_username) ;;
+    *) [ -z "$value" ] || case "$receipt_content" in *"$value"*) die "runtime receipt contains an external secret value";; esac;;
+  esac
+done <<EOF
 $SECRET_LINES
 EOF
 revalidate_receipt_parent

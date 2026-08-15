@@ -365,7 +365,9 @@ if [ -n "$ledger_file" ]; then
   ledger_parent=$(dirname "$ledger_file")
   [ -d "$ledger_parent" ] && [ ! -L "$ledger_parent" ] || die "migration ledger parent is missing or symlinked"
   require_external_input_path "$ledger_parent" "migration ledger parent"
-  [ "$(file_links "$ledger_parent")" = 1 ] || die "migration ledger parent is a hard link"
+  ledger_parent_links=$(file_links "$ledger_parent")
+  case "$ledger_parent_links" in ''|*[!0-9]*) die "migration ledger parent link count cannot be inspected";; esac
+  [ "$ledger_parent_links" -ge 1 ] || die "migration ledger parent link count is invalid"
   ledger_parent_owner=$(file_uid "$ledger_parent")
   [ "$ledger_parent_owner" = 0 ] || [ "$ledger_parent_owner" = "$operator_uid" ] || die "migration ledger parent owner is unsafe"
   parent_mode=$(file_mode "$ledger_parent"); mode_is "$parent_mode" 700 750 || die "migration ledger parent mode is too broad"

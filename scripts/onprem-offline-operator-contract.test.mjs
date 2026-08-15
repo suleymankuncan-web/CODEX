@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs'
+import { chmodSync, chownSync, existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -74,7 +74,15 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(smoke, /HR_AXIS_DATA_CLASS|synthetic/)
   assert.match(smoke, /hr_axis_bootstrap/)
   assert.match(smoke, /redis_health_url/)
-  assert.match(smoke, /KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE/)
+  assert.match(smoke, /keycloak_synthetic_accounts/)
+  assert.match(smoke, /caddy_tls_ca/)
+  assert.match(smoke, /config --format json/)
+  assert.match(smoke, /file_gid/)
+  assert.match(smoke, /1000:1000:400/)
+  assert.match(smoke, /0:0:444/)
+  assert.doesNotMatch(smoke, /KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE|TLS_CA_FILE/)
+  assert.match(smoke, /case "\$secret_name" in[\s\S]*keycloak_database_username\) ;;[\s\S]*\*\) \[ -z "\$value" \]/)
+  assert.doesNotMatch(smoke, /keycloak_\*username|keycloak_\*\)/, 'receipt value scan exemption must stay exact-name coupled')
   assert.match(smoke, /runtime-receipt|mktemp/)
   const preflightSource = source['preflight.sh']
   for (const variable of ['HR_AXIS_BACKEND_IMAGE', 'HR_AXIS_FRONTEND_IMAGE', 'KEYCLOAK_IMAGE', 'CADDY_IMAGE', 'POSTGRES_IMAGE', 'REDIS_IMAGE', 'SEAWEEDFS_IMAGE']) {
@@ -89,6 +97,10 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /configImageId/)
   assert.match(preflightSource, /repoTag/)
   assert.match(preflightSource, /migration ledger parent/)
+  assert.doesNotMatch(preflightSource, /\[ "\$\(file_links "\$ledger_parent"\)" = 1 \]/, 'directory link counts must not require the POSIX empty-directory value')
+  assert.match(preflightSource, /ledger_parent_links=\$\(file_links "\$ledger_parent"\)/)
+  assert.match(preflightSource, /case "\$ledger_parent_links" in[\s\S]*\[ "\$ledger_parent_links" -ge 1 \]/)
+  assert.match(preflightSource, /\[ "\$\(file_links "\$ledger_file"\)" = 1 \]/, 'ledger regular files retain the single-link guard')
   assert.match(preflightSource, /docker inspect/)
   assert.match(preflightSource, /Config\.Labels/)
   assert.match(preflightSource, /docker network inspect/)
@@ -160,7 +172,7 @@ function shellPath(pathname) {
   return result.status === 0 ? result.stdout.trim() : pathname
 }
 
-function makeFixture() {
+function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'onprem-operator-contract-'))
   const bundle = join(root, 'bundle')
   const operations = join(bundle, 'operations')
@@ -176,17 +188,25 @@ function makeFixture() {
   const runtimeImageMode = join(root, 'runtime-image-mismatch')
   const nonRootMode = join(root, 'non-root-owner')
   const unsafeInputAncestorMode = join(root, 'unsafe-input-ancestor')
+  const unsafeSecretAncestorMode = join(root, 'unsafe-secret-ancestor')
+  const largeSecretMode = join(root, 'large-rendered-secret')
+  const wrongSecretIdentityMode = join(root, 'wrong-rendered-secret-identity')
+  const missingAccountsSecretMode = join(root, 'missing-accounts-secret')
+  const wrongAccountsSecretTypeMode = join(root, 'wrong-accounts-secret-type')
   const composeVersionFile = join(root, 'compose-version')
   const inputRoot = join(root, 'operator-inputs')
   const envFile = join(inputRoot, 'approved.env')
   const publicKey = join(inputRoot, 'trusted.pub')
   const tlsDir = join(root, 'tls')
   const receiptDir = join(root, 'receipts')
-  const authAccounts = join(root, 'synthetic-accounts')
   const secretRoot = join(inputRoot, 'hr-axis-secrets')
+  const authAccounts = join(secretRoot, 'keycloak', 'synthetic-accounts')
   const photoSecretRoot = join(inputRoot, 'photo-secrets')
+  const ledgerParent = join(inputRoot, 'migration-ledger')
+  const ledgerFile = join(ledgerParent, 'migration-ledger.json')
   const hardlinkPath = join(photoSecretRoot, 'photo-hardlink')
-  for (const directory of [operations, deployment, fakeBin, tlsDir, inputRoot, secretRoot, photoSecretRoot, receiptDir, join(bundle, 'images')]) mkdirSync(directory, { recursive: true })
+  for (const directory of [operations, deployment, fakeBin, tlsDir, inputRoot, secretRoot, photoSecretRoot, receiptDir, join(bundle, 'images'), ...(ledger ? [ledgerParent] : [])]) mkdirSync(directory, { recursive: true })
+  if (ledger) chmodSync(ledgerParent, 0o700)
   writeFileSync(join(bundle, 'bundle-manifest.json'), '{}\n')
   writeFileSync(join(bundle, 'bundle-signature.json'), '{}\n')
   writeFileSync(join(bundle, 'operations', 'onprem-offline-bundle.mjs'), '// fake verifier\n')
@@ -199,19 +219,23 @@ function makeFixture() {
   for (const image of ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']) writeFileSync(join(bundle, 'images', `${image}.tar`), `synthetic:${image}\n`)
   for (const pathname of [publicKey, join(tlsDir, 'server.crt'), join(tlsDir, 'server.key'), join(tlsDir, 'ca.crt')]) writeFileSync(pathname, 'synthetic\n')
   mkdirSync(join(secretRoot, 'keycloak'), { recursive: true })
-  for (const pathname of [join(secretRoot, 'caddy.crt'), join(secretRoot, 'caddy.key'), join(secretRoot, 'caddy.ca'), join(secretRoot, 'keycloak', 'photo-proof-account'), join(photoSecretRoot, 'photo.key')]) writeFileSync(pathname, 'synthetic\n')
+  writeFileSync(join(secretRoot, 'caddy.crt'), 'canary-caddy-certificate-v1\n')
+  writeFileSync(join(secretRoot, 'caddy.key'), 'canary-caddy-private-key-v1\n')
+  writeFileSync(join(secretRoot, 'caddy.ca'), 'canary-caddy-ca-v1\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'photo-proof-account'), 'canary-photo-proof-account-v1\n')
+  writeFileSync(join(photoSecretRoot, 'photo.key'), 'canary-photo-primary-v1\n')
   writeFileSync(join(secretRoot, 'keycloak', 'database-username'), 'hr-axis-onprem-core\n')
-  writeFileSync(join(secretRoot, 'keycloak', 'bootstrap-username'), 'bootstrap-ci\n')
-  writeFileSync(join(secretRoot, 'keycloak', 'bootstrap-password'), 'synthetic-bootstrap-password\n')
-  writeFileSync(join(secretRoot, 'keycloak', 'smtp-auth-user'), 'synthetic-smtp-user\n')
-  writeFileSync(authAccounts, 'synthetic-accounts\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'bootstrap-username'), 'canary-keycloak-bootstrap-user-v1\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'bootstrap-password'), 'canary-keycloak-bootstrap-password-v1\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'smtp-auth-user'), 'canary-keycloak-smtp-user-v1\n')
+  writeFileSync(authAccounts, 'canary-keycloak-accounts-v1\n', { mode: 0o400 })
+  chmodSync(authAccounts, 0o400)
   const imageDigests = { backend: 'a'.repeat(64), frontend: 'a'.repeat(64), keycloak: 'b'.repeat(64), caddy: 'a'.repeat(64), postgres: 'a'.repeat(64), redis: 'a'.repeat(64), seaweedfs: 'a'.repeat(64) }
   const imageVariables = { backend: 'HR_AXIS_BACKEND_IMAGE', frontend: 'HR_AXIS_FRONTEND_IMAGE', keycloak: 'KEYCLOAK_IMAGE', caddy: 'CADDY_IMAGE', postgres: 'POSTGRES_IMAGE', redis: 'REDIS_IMAGE', seaweedfs: 'SEAWEEDFS_IMAGE' }
   writeFileSync(envFile, [
     'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', 'HR_AXIS_RELEASE_ID=release-test', 'HR_AXIS_PUBLIC_HOST=onprem.example.invalid',
     `HR_AXIS_SECRET_ROOT=${shellPath(secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(photoSecretRoot)}`, 'HR_AXIS_PROJECT_ID=hr-axis-onprem-core',
-    `TLS_CERT_FILE=${shellPath(join(tlsDir, 'server.crt'))}`, `TLS_KEY_FILE=${shellPath(join(tlsDir, 'server.key'))}`, `TLS_CA_FILE=${shellPath(join(tlsDir, 'ca.crt'))}`,
-    `KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE=${shellPath(authAccounts)}`,
+    ...(ledger ? [`MIGRATION_LEDGER_FILE=${shellPath(ledgerFile)}`] : []),
     ...Object.entries(imageVariables).map(([name, variable]) => `${variable}=sha256:${imageDigests[name]}`),
     'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
   ].join('\n') + '\n')
@@ -225,6 +249,7 @@ function makeFixture() {
     `caddy_tls_certificate\t${shellPath(join(secretRoot, 'caddy.crt'))}`,
     `caddy_tls_private_key\t${shellPath(join(secretRoot, 'caddy.key'))}`,
     `caddy_tls_ca\t${shellPath(join(secretRoot, 'caddy.ca'))}`,
+    `keycloak_synthetic_accounts\t${shellPath(authAccounts)}`,
     `photo_primary_secret_access_key\t${shellPath(join(photoSecretRoot, 'photo.key'))}`,
     `keycloak_synthetic_photo_proof_account\t${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}`,
     `keycloak_database_username\t${shellPath(join(secretRoot, 'keycloak', 'database-username'))}`,
@@ -238,7 +263,9 @@ function makeFixture() {
     '[ "$1" = "--version" ] && { echo v20.11.0; exit 0; }',
     `case "$*" in *verify*) case "$*" in *bbbbbbbbbbbb*) exit 9;; esac; [ -f '${shellPath(mode)}' ] && exit 9 || exit 0;; esac`,
     `case "$*" in *Object.keys*services*) exit 0;; esac`,
-    `case "$*" in *Object.entries*secrets*) ${renderedSecrets.map((line) => `printf '%s\\n' '${line}'`).join('; ')}; exit 0;; esac`,
+    `case "$*" in *Object.entries*secrets*) if [ -f '${shellPath(missingAccountsSecretMode)}' ]; then ${renderedSecrets.filter((line) => !line.startsWith('keycloak_synthetic_accounts\t')).map((line) => `printf '%s\\n' '${line}'`).join('; ')}; elif [ -f '${shellPath(wrongAccountsSecretTypeMode)}' ]; then ${renderedSecrets.filter((line) => !line.startsWith('keycloak_synthetic_accounts\t')).map((line) => `printf '%s\\n' '${line}'`).join('; ')}; printf '%s\\n' 'keycloak_synthetic_accounts'; else ${renderedSecrets.map((line) => `printf '%s\\n' '${line}'`).join('; ')}; fi; exit 0;; esac`,
+    `case "$*" in *keycloak_synthetic_accounts*) if [ -f '${shellPath(missingAccountsSecretMode)}' ]; then ${renderedSecrets.filter((line) => !line.startsWith('keycloak_synthetic_accounts\t')).map((line) => `printf '%s\\n' '${line}'`).join('; ')}; elif [ -f '${shellPath(wrongAccountsSecretTypeMode)}' ]; then ${renderedSecrets.filter((line) => !line.startsWith('keycloak_synthetic_accounts\t')).map((line) => `printf '%s\\n' '${line}'`).join('; ')}; printf '%s\\n' 'keycloak_synthetic_accounts'; else ${renderedSecrets.map((line) => `printf '%s\\n' '${line}'`).join('; ')}; fi; exit 0;; esac`,
+    'case "$*" in *JSON.parse*) cat >/dev/null; exit 0;; esac',
     `case "$1" in *onprem-keycloak-auth-proof.mjs) echo '{"dataClass":"synthetic","personas":{"count":5},"scopeAuthorization":{"crossScopeDenied":true,"deniedActionWriteDelta":0}}'; exit 0;; esac`,
     `[ "$1" = "-" ] && { cat >/dev/null; printf '%s\\n' '${records}'; }`,
   ].join('\n') + '\n')
@@ -249,25 +276,32 @@ function makeFixture() {
   executable(join(fakeBin, 'nproc'), '#!/bin/sh\necho 8\n')
   executable(join(fakeBin, 'stat'), `#!/bin/sh
 pathname=; for arg do pathname=$arg; done
-case "$*" in
+${nativeLedgerStat ? `case "$pathname" in
+  '${shellPath(ledgerParent)}'|'${shellPath(ledgerFile)}') exec /usr/bin/stat "$@";;
+esac
+` : ''}case "$*" in
   *%a*)
     [ -f '${shellPath(broadMode)}' ] && { echo 644; exit 0; }
     case "$pathname" in
       *writable-receipt-grandparent*) exec /usr/bin/stat "$@";;
       '${shellPath(secretRoot)}'|'${shellPath(photoSecretRoot)}') echo 700;;
+      '${shellPath(join(secretRoot, 'keycloak'))}') [ -f '${shellPath(unsafeSecretAncestorMode)}' ] && echo 777 || echo 700;;
       '${shellPath(inputRoot)}') [ -f '${shellPath(unsafeInputAncestorMode)}' ] && echo 777 || echo 600;;
       '${shellPath(join(secretRoot, 'caddy.crt'))}'|'${shellPath(join(secretRoot, 'caddy.ca'))}') echo 444;;
-      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400;;
+      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(join(secretRoot, 'keycloak', 'synthetic-accounts'))}'|'${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400;;
       *operations/*|*deployment/keycloak/bootstrap.sh*|*deployment/postgres/entrypoint-tls.sh*|*deployment/postgres/010-bootstrap-roles.sh*|*deployment/photo-storage/bootstrap.sh*) echo 755;;
       *) echo 600;;
     esac;;
   *%d:%i*) exec /usr/bin/stat "$@";;
   *%u*)
+    [ -f '${shellPath(wrongSecretIdentityMode)}' ] && case "$pathname" in '${shellPath(join(secretRoot, 'caddy.ca'))}'|'${shellPath(authAccounts)}') echo 1; exit 0;; esac
     [ -f '${shellPath(nonRootMode)}' ] && { echo 1000; exit 0; }
-    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
-  *%g*) case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+  *%g*)
+    [ -f '${shellPath(wrongSecretIdentityMode)}' ] && case "$pathname" in '${shellPath(join(secretRoot, 'caddy.ca'))}'|'${shellPath(authAccounts)}') echo 1; exit 0;; esac
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
   *%h*) [ -f '${shellPath(hardlinkPath)}' ] && echo 2 || echo 1;;
-  *%s*) echo 10;;
+  *%s*) [ -f '${shellPath(largeSecretMode)}' ] && echo 1048577 || echo 10;;
   *) exit 1;;
 esac
 `)
@@ -288,12 +322,12 @@ exit 0
     'ps) echo container-id; exit 0;;',
     'network) case "$2" in ls) echo network-id;; inspect) case "$*" in *Internal*) echo true;; *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
     'volume) case "$2" in ls) echo volume-id;; inspect) case "$*" in *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
-    `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; else echo "keycloak|sha256:${'b'.repeat(64)}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
+    `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; else echo "keycloak|sha256:${'b'.repeat(64)}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *json*) case "$2" in caddy-id) echo '{"HostConfig":{"HostPort":null,"PortBindings":{"443/tcp":[{"HostPort":"443"}]}},"NetworkSettings":{"Ports":{"443/tcp":[{"HostPort":"443"}]}}}';; *) echo '{"HostConfig":{},"NetworkSettings":{"Ports":{}}}';; esac;; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
     `exec) case "$2" in postgres-id) echo t;; redis-id) echo PONG;; esac; exit 0;;`,
-    `compose) case "$*" in *version*) [ -f '${shellPath(composeVersionFile)}' ] && cat '${shellPath(composeVersionFile)}' || echo 2.30.0; exit 0;; *' ps -q caddy'*) echo caddy-id; exit 0;; *' ps -q frontend'*) echo frontend-id; exit 0;; *' ps -q api'*) echo api-id; exit 0;; *' ps -q worker'*) echo worker-id; exit 0;; *' ps -q postgres'*) echo postgres-id; exit 0;; *' ps -q redis'*) echo redis-id; exit 0;; *' ps -q keycloak'*) echo keycloak-id; exit 0;; *' ps -q object-storage'*) echo object-storage-id; exit 0;; *'config --format json'*) echo '{"name":"hr-axis-onprem-core","release":"release-test","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}'; exit 0;; *'config --quiet'*) exit 0;; *'up --pull never'*|*'run --pull never'*) echo MUTATE >> '${shellPath(log)}'; echo '{"migrationTreeDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'; exit 0;; esac;;`,
+    `compose) case "$*" in *version*) [ -f '${shellPath(composeVersionFile)}' ] && cat '${shellPath(composeVersionFile)}' || echo 2.30.0; exit 0;; *' ps -q caddy'*) echo caddy-id; exit 0;; *' ps -q frontend'*) echo frontend-id; exit 0;; *' ps -q api'*) echo api-id; exit 0;; *' ps -q worker'*) echo worker-id; exit 0;; *' ps -q postgres'*) echo postgres-id; exit 0;; *' ps -q redis'*) echo redis-id; exit 0;; *' ps -q keycloak'*) echo keycloak-id; exit 0;; *' ps -q object-storage'*) echo object-storage-id; exit 0;; *'config --format json'*) echo '{"name":"hr-axis-onprem-core","release":"release-test","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}'; exit 0;; *'config --quiet'*) exit 0;; *'up --pull never'*|*'run --pull never'*) echo MUTATE >> '${shellPath(log)}'; echo '{"migrationTreeDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'; exit 0;; esac;;`,
     'esac', 'exit 0',
   ].join('\n') + '\n')
-  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, receiptDir }
+  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
 }
 
 const VALID_FINGERPRINT = 'a'.repeat(64)
@@ -305,7 +339,7 @@ function runInstall(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixtu
 }
 function runSmoke(fixture, receipt) {
   return spawnSync(POSIX_SHELL, [shellPath(join(operationDir, 'smoke.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile), '--receipt', shellPath(receipt)], {
-    encoding: 'utf8', env: shellEnv(fixture),
+    encoding: 'utf8', env: shellEnv(fixture), timeout: 45_000,
   })
 }
 function shellEnv(fixture) {
@@ -315,6 +349,185 @@ function shellEnv(fixture) {
 function commandLog(fixture) {
   return existsSync(fixture.log) ? readFileSync(fixture.log, 'utf8') : ''
 }
+function nodeLog(fixture) {
+  return existsSync(fixture.nodeLog) ? readFileSync(fixture.nodeLog, 'utf8') : ''
+}
+function regexLiteral(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+function stubPreflight(fixture) {
+  executable(join(fixture.bundle, 'operations', 'preflight.sh'), '#!/bin/sh\nexit 0\n')
+}
+
+test('smoke derives exact rendered secret sources and ignores legacy env aliases', (t) => {
+  if (process.platform === 'win32' && !existsSync(POSIX_SHELL) || process.platform !== 'win32' && !existsSync('/bin/sh')) {
+    t.skip('behavioral POSIX harness requires a shell')
+    return
+  }
+  const fixture = makeFixture()
+  const receipt = join(fixture.receiptDir, 'rendered-secrets.json')
+  const aliasAccounts = join(fixture.root, 'legacy-accounts')
+  const aliasCa = join(fixture.root, 'legacy-ca.crt')
+  try {
+    chmodSync(fixture.authAccounts, 0o600)
+    for (const [pathname, value] of [
+      [join(fixture.secretRoot, 'caddy.crt'), 'fixture-cert-value\n'],
+      [join(fixture.secretRoot, 'caddy.key'), 'fixture-key-value\n'],
+      [join(fixture.secretRoot, 'caddy.ca'), 'fixture-ca-value\n'],
+      [fixture.authAccounts, 'fixture-accounts-value\n'],
+      [join(fixture.secretRoot, 'keycloak', 'photo-proof-account'), 'fixture-photo-proof-value\n'],
+      [join(fixture.secretRoot, 'keycloak', 'bootstrap-username'), 'fixture-bootstrap-user-value\n'],
+      [join(fixture.secretRoot, 'keycloak', 'bootstrap-password'), 'fixture-bootstrap-password-value\n'],
+      [join(fixture.secretRoot, 'keycloak', 'smtp-auth-user'), 'fixture-smtp-user-value\n'],
+      [join(fixture.photoSecretRoot, 'photo.key'), 'fixture-photo-value\n'],
+    ]) writeFileSync(pathname, value)
+    chmodSync(fixture.authAccounts, 0o400)
+    writeFileSync(aliasAccounts, 'legacy-accounts\n')
+    writeFileSync(aliasCa, 'legacy-ca\n')
+    writeFileSync(fixture.envFile, `${readFileSync(fixture.envFile, 'utf8')}KEYCLOAK_SYNTHETIC_ACCOUNTS_FILE=${shellPath(aliasAccounts)}\nTLS_CA_FILE=${shellPath(aliasCa)}\n`)
+    const result = runSmoke(fixture, receipt)
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${commandLog(fixture)}`)
+    assert.match(result.stdout, /smoke: PASS/)
+    assert.match(commandLog(fixture), /compose .*--profile \* .*config --format json/)
+    assert.match(nodeLog(fixture), /onprem-keycloak-auth-proof\.mjs/)
+    assert.match(nodeLog(fixture), new RegExp(`--accounts-file ${regexLiteral(shellPath(fixture.authAccounts))} --ca-file ${regexLiteral(shellPath(join(fixture.secretRoot, 'caddy.ca')))}`))
+    assert.doesNotMatch(nodeLog(fixture), new RegExp(`${regexLiteral(aliasAccounts)}|${regexLiteral(aliasCa)}`), 'auth proof must not receive legacy alias paths')
+    assert.match(readFileSync(receipt, 'utf8'), /"project":"hr-axis-onprem-core"/)
+
+    stubPreflight(fixture)
+    writeFileSync(join(fixture.secretRoot, 'caddy.key'), 'hr-axis-onprem-core\n')
+    const rejectedReceipt = join(fixture.receiptDir, 'credential-collision.json')
+    const rejected = runSmoke(fixture, rejectedReceipt)
+    assert.notEqual(rejected.status, 0)
+    assert.match(rejected.stderr, /runtime receipt contains an external secret value/)
+    assert.equal(existsSync(rejectedReceipt), false)
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('smoke rejects unsafe rendered auth secret sources before auth or receipt publication', (t) => {
+  if (process.platform !== 'linux' || process.getuid?.() !== 0) {
+    t.skip('rendered secret ownership and pathname negatives require the Linux root proof')
+    return
+  }
+  const cases = [
+    ['missing rendered account source', 'missingAccountsSecretMode', /rendered auth secret must have exactly one string file source: keycloak_synthetic_accounts/],
+    ['wrong rendered account source type', 'wrongAccountsSecretTypeMode', /rendered auth secret must have exactly one string file source: keycloak_synthetic_accounts/],
+    ['unsafe rendered account ancestor', 'unsafeSecretAncestorMode', /rendered secret source: keycloak_synthetic_accounts ancestor is group\/world writable/],
+    ['oversized rendered account source', 'largeSecretMode', /rendered secret source is too large: keycloak_synthetic_accounts/],
+    ['wrong rendered account identity', 'wrongSecretIdentityMode', /rendered secret source identity is unsafe: keycloak_synthetic_accounts/],
+  ]
+  for (const [label, mode, errorPattern] of cases) {
+    const fixture = makeFixture()
+    const receipt = join(fixture.receiptDir, `${mode}.json`)
+    try {
+      stubPreflight(fixture)
+      writeFileSync(fixture[mode], `${label}\n`)
+      const result = runSmoke(fixture, receipt)
+      assert.notEqual(result.status, 0, label)
+      assert.match(result.stderr, errorPattern, label)
+      assert.doesNotMatch(nodeLog(fixture), /onprem-keycloak-auth-proof\.mjs/, `${label}: auth proof must not run`)
+      assert.equal(existsSync(receipt), false, `${label}: receipt must not publish`)
+      assert.doesNotMatch(commandLog(fixture), /MUTATE/, `${label}: no mutation command may run`)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  }
+
+  for (const [label, prepare, errorPattern] of [
+    ['rendered account symlink', (fixture) => {
+      const target = join(fixture.secretRoot, 'caddy.key')
+      rmSync(fixture.authAccounts)
+      symlinkSync(target, fixture.authAccounts)
+    }, /rendered secret source is missing or symlinked: keycloak_synthetic_accounts/],
+    ['rendered account hard link', (fixture) => {
+      linkSync(fixture.authAccounts, fixture.hardlinkPath)
+    }, /rendered secret source is a hard link: keycloak_synthetic_accounts/],
+  ]) {
+    const fixture = makeFixture()
+    const receipt = join(fixture.receiptDir, `${label.replaceAll(' ', '-')}.json`)
+    try {
+      stubPreflight(fixture)
+      prepare(fixture)
+      const result = runSmoke(fixture, receipt)
+      assert.notEqual(result.status, 0, label)
+      assert.match(result.stderr, errorPattern, label)
+      assert.doesNotMatch(nodeLog(fixture), /onprem-keycloak-auth-proof\.mjs/, `${label}: auth proof must not run`)
+      assert.equal(existsSync(receipt), false, `${label}: receipt must not publish`)
+      assert.doesNotMatch(commandLog(fixture), /MUTATE/, `${label}: no mutation command may run`)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('preflight accepts native Linux root-private ledger parents with empty and child-containing directory link counts', (t) => {
+  if (process.platform !== 'linux' || process.getuid?.() !== 0) {
+    t.skip('native ledger directory link-count proof requires Linux root; run in the root Docker proof')
+    return
+  }
+  const fixture = makeFixture({ ledger: true, nativeLedgerStat: true })
+  try {
+    assert.equal(statSync(fixture.ledgerParent).nlink, 2, 'an empty Linux directory has two links')
+    let result = runInstall(fixture)
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${commandLog(fixture)}`)
+
+    mkdirSync(join(fixture.ledgerParent, 'child-directory'), { mode: 0o700 })
+    assert.equal(statSync(fixture.ledgerParent).nlink, 3, 'a directory with one child directory has three links')
+    rmSync(fixture.log, { force: true })
+    result = runInstall(fixture)
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${commandLog(fixture)}`)
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('ledger parent and regular-file guards fail closed before Docker load or Compose mutation', (t) => {
+  if (process.platform !== 'linux' || process.getuid?.() !== 0) {
+    t.skip('native ledger filesystem guard proof requires Linux root; run in the root Docker proof')
+    return
+  }
+  const fixture = makeFixture({ ledger: true, nativeLedgerStat: true })
+  const symlinkTarget = join(fixture.root, 'ledger-target')
+  try {
+    rmSync(fixture.ledgerParent, { recursive: true, force: true })
+    mkdirSync(symlinkTarget, { mode: 0o700 })
+    symlinkSync(symlinkTarget, fixture.ledgerParent)
+    const symlinkParent = runInstall(fixture)
+    assert.notEqual(symlinkParent.status, 0)
+    assert.match(symlinkParent.stderr, /migration ledger parent is missing or symlinked/)
+    assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+    rmSync(fixture.ledgerParent, { force: true })
+    mkdirSync(fixture.ledgerParent, { mode: 0o700 })
+
+    chmodSync(fixture.ledgerParent, 0o770)
+    rmSync(fixture.log, { force: true })
+    const unsafeMode = runInstall(fixture)
+    assert.notEqual(unsafeMode.status, 0)
+    assert.match(unsafeMode.stderr, /group\/world writable: migration ledger parent/)
+    assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+    chmodSync(fixture.ledgerParent, 0o700)
+
+    chownSync(fixture.ledgerParent, 1000, 1000)
+    rmSync(fixture.log, { force: true })
+    const nonRootParent = runInstall(fixture)
+    assert.notEqual(nonRootParent.status, 0)
+    assert.match(nonRootParent.stderr, /root-owned: migration ledger parent|migration ledger parent owner is unsafe/)
+    assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+    chownSync(fixture.ledgerParent, 0, 0)
+
+    writeFileSync(fixture.ledgerFile, 'synthetic-ledger\n', { mode: 0o600 })
+    linkSync(fixture.ledgerFile, join(fixture.ledgerParent, 'ledger-hardlink'))
+    rmSync(fixture.log, { force: true })
+    const hardLinkedLedger = runInstall(fixture)
+    assert.notEqual(hardLinkedLedger.status, 0)
+    assert.match(hardLinkedLedger.stderr, /migration ledger is a hard link/)
+    assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
 
 test('fake commands prove verification failure causes zero Docker mutation and imports precede Compose', (t) => {
   if (process.platform === 'win32' && !existsSync(POSIX_SHELL) || process.platform !== 'win32' && !existsSync('/bin/sh')) {
@@ -470,7 +683,7 @@ test('rendered secret source failures stay before Docker load or Compose mutatio
   }
   const fixture = makeFixture()
   const certificate = join(fixture.secretRoot, 'caddy.crt')
-  const restoreCertificate = () => writeFileSync(certificate, 'synthetic\n')
+  const restoreCertificate = () => writeFileSync(certificate, 'canary-caddy-certificate-v1\n')
   try {
     rmSync(certificate)
     let result = runInstall(fixture)
@@ -528,11 +741,11 @@ test('preflight exempts only the fixed Keycloak database role identity from rend
     assert.match(result.stderr, /Compose config contains a rendered secret value: caddy_tls_private_key/)
     assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
 
-    writeFileSync(join(fixture.secretRoot, 'caddy.key'), 'synthetic\n')
+    writeFileSync(join(fixture.secretRoot, 'caddy.key'), 'canary-caddy-private-key-v1\n')
     for (const [relativePath, secretName, original] of [
-      ['keycloak/bootstrap-username', 'keycloak_bootstrap_username', 'bootstrap-ci\n'],
-      ['keycloak/bootstrap-password', 'keycloak_bootstrap_password', 'synthetic-bootstrap-password\n'],
-      ['keycloak/smtp-auth-user', 'keycloak_smtp_auth_user', 'synthetic-smtp-user\n'],
+      ['keycloak/bootstrap-username', 'keycloak_bootstrap_username', 'canary-keycloak-bootstrap-user-v1\n'],
+      ['keycloak/bootstrap-password', 'keycloak_bootstrap_password', 'canary-keycloak-bootstrap-password-v1\n'],
+      ['keycloak/smtp-auth-user', 'keycloak_smtp_auth_user', 'canary-keycloak-smtp-user-v1\n'],
     ]) {
       rmSync(fixture.log, { force: true })
       const pathname = join(fixture.secretRoot, ...relativePath.split('/'))
