@@ -84,6 +84,15 @@ function workflowStepActiveLines(workflow, name) {
   return activeShellLines(lines.slice(start + run + 1, end).join('\n'))
 }
 
+function workflowJobBlock(workflow, name) {
+  const lines = String(workflow).split(/\r?\n/)
+  const start = lines.findIndex((line) => line === `  ${name}:`)
+  if (start < 0) return ''
+  const endOffset = lines.slice(start + 1).findIndex((line) => /^  [a-z][a-z0-9_-]*:\s*$/u.test(line))
+  const end = endOffset < 0 ? lines.length : start + 1 + endOffset
+  return lines.slice(start, end).join('\n')
+}
+
 function joinShellContinuations(lines) {
   const commands = []
   let current = ''
@@ -334,8 +343,9 @@ export function validateOnpremCoreContract(input) {
   fail(/COPY db\/seeds\/001_reference_seed\.sql \/app\/db\/seeds\/001_reference_seed\.sql/.test(input.backendDockerfile), 'backend image must copy the unchanged deterministic seed')
   fail(/VITE_SENTRY_ENABLED=false/.test(input.frontendDockerfile), 'frontend on-prem image must force Sentry off')
   fail(/onprem-core-runtime-proof\.mjs/.test(input.workflow), 'the existing on-prem image proof workflow must own core runtime proof')
-  fail(/proof:\s*\n\s+runs-on: ubuntu-latest/m.test(input.workflow), 'core runtime proof must run inside the required GitHub-hosted Linux proof job')
-  fail(!/proof:\s*\n\s+if:/m.test(input.workflow), 'the required proof job must not be optional or conditionally skipped')
+  const proofJob = workflowJobBlock(input.workflow, 'proof')
+  fail(/^  proof:\n[\s\S]*^    runs-on: ubuntu-latest$/m.test(proofJob), 'core runtime proof must run inside the required GitHub-hosted Linux proof job')
+  fail(!/^    if:/m.test(proofJob), 'the required proof job must not be optional or conditionally skipped')
   fail(!/core-runtime-proof:/m.test(input.workflow), 'runtime proof must reuse the exact scanned images in one proof job')
   fail(!/:core-proof/.test(input.workflow), 'runtime proof must not rebuild or exercise an unscanned image identity')
   fail(/docker image inspect hr-axis-onprem-backend:proof/.test(input.workflow) && /docker image inspect hr-axis-onprem-frontend:proof/.test(input.workflow), 'runtime proof must bind Compose to the scanned proof image IDs')

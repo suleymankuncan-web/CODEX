@@ -132,7 +132,9 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /mode must be 0700/)
   assert.match(preflightSource, /rendered_secret_identity/)
   assert.match(preflightSource, /file_gid/)
-  for (const identity of ['10001:10001:400', '70:70:400', '1000:1000:400', '999:1000:400', '65532:65532:400', '0:0:444']) assert.match(preflightSource, new RegExp(identity.replaceAll(':', '\\:')))
+  for (const identity of ['10001:10001:400', '70:70:400', '1000:1000:400', '999:1000:400', '65532:65532:400', '0:65532:440', '0:0:444']) assert.match(preflightSource, new RegExp(identity.replaceAll(':', '\\:')))
+  assert.match(preflightSource, /photo_primary_access_key_id\|photo_primary_secret_access_key\|photo_recovery_access_key_id\|photo_recovery_secret_access_key\) printf '%s' 0:65532:440/)
+  assert.doesNotMatch(preflightSource, /photo_primary_access_key_id\|photo_primary_secret_access_key\|photo_recovery_access_key_id\|photo_recovery_secret_access_key\) printf '%s' 65532:65532:400/)
   assert.match(preflightSource, /rendered secret source identity is unsafe/)
   assert.match(preflightSource, /PHOTO_STORAGE_SECRET_ROOT/)
   assert.match(preflightSource, /file_links|hard link/)
@@ -157,6 +159,38 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /required 0755 mode/)
   assert.match(preflightSource, /external input ancestor must be root-owned/)
   assert.match(preflightSource, /external input ancestor is group\/world writable/)
+})
+
+test('photo secret leaf identity permits root and backend-group reads while denying unrelated users', (t) => {
+  if (process.platform !== 'linux' || process.getuid?.() !== 0) {
+    t.skip('POSIX UID/GID permission proof requires the Linux root run')
+    return
+  }
+  const root = mkdtempSync(join('/var/lib', 'onprem-photo-secret-identity-'))
+  const secret = join(root, 'primary-secret-access-key')
+  try {
+    chmodSync(root, 0o755)
+    writeFileSync(secret, 'synthetic-photo-secret\n', { mode: 0o440 })
+    chownSync(secret, 0, 65532)
+    chmodSync(secret, 0o440)
+    const readAs = (uid, gid) => spawnSync(process.execPath, ['-e', 'process.stdout.write(require("node:fs").readFileSync(process.argv[1], "utf8"))', secret], {
+      encoding: 'utf8', uid, gid,
+    })
+    const metadata = statSync(secret)
+    assert.equal(metadata.uid, 0)
+    assert.equal(metadata.gid, 65532)
+    assert.equal(metadata.mode & 0o777, 0o440)
+    const rootRead = readAs(0, 0)
+    assert.equal(rootRead.status, 0, rootRead.stderr)
+    assert.equal(rootRead.stdout, 'synthetic-photo-secret\n')
+    const backendRead = readAs(65532, 65532)
+    assert.equal(backendRead.status, 0, backendRead.stderr)
+    assert.equal(backendRead.stdout, 'synthetic-photo-secret\n')
+    const unrelatedRead = readAs(65531, 65531)
+    assert.notEqual(unrelatedRead.status, 0, 'unrelated UID/GID must not read photo secret')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('offline lifecycle composes the signed photo-proof overlay in locked order', () => {
@@ -213,6 +247,7 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const unsafeSecretAncestorMode = join(root, 'unsafe-secret-ancestor')
   const largeSecretMode = join(root, 'large-rendered-secret')
   const wrongSecretIdentityMode = join(root, 'wrong-rendered-secret-identity')
+  const legacyPhotoIdentityMode = join(root, 'legacy-photo-identity')
   const missingAccountsSecretMode = join(root, 'missing-accounts-secret')
   const wrongAccountsSecretTypeMode = join(root, 'wrong-accounts-secret-type')
   const composeVersionFile = join(root, 'compose-version')
@@ -304,22 +339,26 @@ esac
 ` : ''}case "$*" in
   *%a*)
     [ -f '${shellPath(broadMode)}' ] && { echo 644; exit 0; }
+    [ -f '${shellPath(legacyPhotoIdentityMode)}' ] && case "$pathname" in '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400; exit 0;; esac
     case "$pathname" in
       *writable-receipt-grandparent*) exec /usr/bin/stat "$@";;
       '${shellPath(secretRoot)}'|'${shellPath(photoSecretRoot)}') echo 700;;
       '${shellPath(join(secretRoot, 'keycloak'))}') [ -f '${shellPath(unsafeSecretAncestorMode)}' ] && echo 777 || echo 700;;
       '${shellPath(inputRoot)}') [ -f '${shellPath(unsafeInputAncestorMode)}' ] && echo 777 || echo 600;;
       '${shellPath(join(secretRoot, 'caddy.crt'))}'|'${shellPath(join(secretRoot, 'caddy.ca'))}') echo 444;;
-      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(join(secretRoot, 'keycloak', 'synthetic-accounts'))}'|'${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400;;
+      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(join(secretRoot, 'keycloak', 'synthetic-accounts'))}') echo 400;;
+      '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 440;;
       *operations/*|*deployment/keycloak/bootstrap.sh*|*deployment/postgres/entrypoint-tls.sh*|*deployment/postgres/010-bootstrap-roles.sh*|*deployment/photo-storage/bootstrap.sh*) echo 755;;
       *) echo 600;;
     esac;;
   *%d:%i*) exec /usr/bin/stat "$@";;
   *%u*)
+    [ -f '${shellPath(legacyPhotoIdentityMode)}' ] && case "$pathname" in '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532; exit 0;; esac
     [ -f '${shellPath(wrongSecretIdentityMode)}' ] && case "$pathname" in '${shellPath(join(secretRoot, 'caddy.ca'))}'|'${shellPath(authAccounts)}') echo 1; exit 0;; esac
     [ -f '${shellPath(nonRootMode)}' ] && { echo 1000; exit 0; }
-    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 0;; *) echo 0;; esac;;
   *%g*)
+    [ -f '${shellPath(legacyPhotoIdentityMode)}' ] && case "$pathname" in '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532; exit 0;; esac
     [ -f '${shellPath(wrongSecretIdentityMode)}' ] && case "$pathname" in '${shellPath(join(secretRoot, 'caddy.ca'))}'|'${shellPath(authAccounts)}') echo 1; exit 0;; esac
     case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
   *%h*) [ -f '${shellPath(hardlinkPath)}' ] && echo 2 || echo 1;;
@@ -349,7 +388,7 @@ exit 0
     `compose) case "$*" in *version*) [ -f '${shellPath(composeVersionFile)}' ] && cat '${shellPath(composeVersionFile)}' || echo 2.30.0; exit 0;; *' ps -q caddy'*) echo caddy-id; exit 0;; *' ps -q frontend'*) echo frontend-id; exit 0;; *' ps -q api'*) echo api-id; exit 0;; *' ps -q worker'*) echo worker-id; exit 0;; *' ps -q postgres'*) echo postgres-id; exit 0;; *' ps -q redis'*) echo redis-id; exit 0;; *' ps -q keycloak'*) echo keycloak-id; exit 0;; *' ps -q object-storage'*) echo object-storage-id; exit 0;; *'config --format json'*) case "$*" in *'--profile *'*'config --format json'*) echo '{"name":"hr-axis-onprem-core","release":"release-test","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; *) echo '{"name":"hr-axis-onprem-core","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; esac; exit 0;; *'config --quiet'*) exit 0;; *'up --pull never'*|*'run --pull never'*) echo MUTATE >> '${shellPath(log)}'; echo '{"migrationTreeDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'; exit 0;; esac;;`,
     'esac', 'exit 0',
   ].join('\n') + '\n')
-  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
+  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, legacyPhotoIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
 }
 
 const VALID_FINGERPRINT = 'a'.repeat(64)
@@ -713,6 +752,14 @@ test('rendered secret source failures stay before Docker load or Compose mutatio
     assert.notEqual(result.status, 0)
     assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
     restoreCertificate()
+
+    rmSync(fixture.log, { force: true })
+    writeFileSync(fixture.legacyPhotoIdentityMode, 'legacy-photo-identity\n')
+    result = runInstall(fixture)
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /rendered secret source identity is unsafe: photo_primary_secret_access_key/)
+    assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+    rmSync(fixture.legacyPhotoIdentityMode, { force: true })
 
     rmSync(fixture.log, { force: true })
     writeFileSync(fixture.broadMode, 'broad\n')

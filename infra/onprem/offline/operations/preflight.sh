@@ -266,7 +266,8 @@ rendered_secret_identity() {
     postgres_tls_private_key|postgres_bootstrap_password|postgres_migrator_password|postgres_api_password|postgres_worker_password|postgres_keycloak_database_password) printf '%s' 70:70:400;;
     keycloak_*|binder_database_url) printf '%s' 1000:1000:400;;
     redis_users_acl|redis_health_url) printf '%s' 999:1000:400;;
-    migrator_database_url|api_database_url|worker_database_url|redis_api_url|redis_worker_url|browser_session_secret|photo_primary_access_key_id|photo_primary_secret_access_key|photo_recovery_access_key_id|photo_recovery_secret_access_key) printf '%s' 65532:65532:400;;
+    migrator_database_url|api_database_url|worker_database_url|redis_api_url|redis_worker_url|browser_session_secret) printf '%s' 65532:65532:400;;
+    photo_primary_access_key_id|photo_primary_secret_access_key|photo_recovery_access_key_id|photo_recovery_secret_access_key) printf '%s' 0:65532:440;;
     *) die "rendered secret source has no approved identity policy: $1";;
   esac
 }
