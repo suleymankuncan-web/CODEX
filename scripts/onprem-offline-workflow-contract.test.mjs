@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -32,6 +32,14 @@ function heredocBody(section, marker) {
   const source = section.slice(start)
   const match = source.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/)
   assert.ok(match, `missing Node heredoc for ${marker}`)
+  return match[1]
+}
+
+function inlineNodeHeredocBody(section, marker) {
+  const start = section.indexOf(marker)
+  assert.ok(start >= 0, `missing inline Node heredoc marker: ${marker}`)
+  const match = section.slice(start).match(/<<'NODE'\r?\n([\s\S]*?)\r?\n\s*NODE/)
+  assert.ok(match, `missing inline Node heredoc body: ${marker}`)
   return match[1]
 }
 
@@ -282,10 +290,10 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /Quiesce exact rehearsal runtimes before restoring egress[\s\S]*Restore runner egress only after runtime quiescence[\s\S]*Upload sanitized offline rehearsal receipt/)
   assert.match(rehearsal, /cleanup|remove|down/i)
   assert.match(rehearsal, /sanitized|receipt/i)
-  const envCopies = rehearsal.indexOf('for release in previous current next')
+  const envCreation = rehearsal.indexOf("writeEnv('offline-previous.env'")
   const ownerKey = rehearsal.indexOf('owner_key_source=')
   const rootChown = rehearsal.indexOf('sudo find "$OPERATOR_ROOT" -exec chown 0:0')
-  assert.ok(envCopies >= 0 && ownerKey > envCopies && rootChown > ownerKey, 'all envs and backup key must exist before root ownership hardening')
+  assert.ok(envCreation >= 0 && ownerKey > envCreation && rootChown > ownerKey, 'all root-private envs and backup key must exist before ownership hardening')
   const backupCommand = rehearsal.indexOf('operations/backup.sh')
   const backupReceipt = rehearsal.indexOf('$RECEIPT_ROOT/backup.json')
   assert.ok(backupCommand >= 0 && backupReceipt > backupCommand, 'backup receipt must be generated after backup artifacts')
@@ -588,6 +596,82 @@ test('offline rehearsal seals downloaded bundle and trust material under a fresh
   assert.doesNotMatch(rehearsal, /sudo node(?:\s|$)/)
   assert.match(rehearsal, /\/var\/lib\/hr-axis-onprem-offline-proof\/\$\{GITHUB_RUN_ID\}-\$\{GITHUB_RUN_ATTEMPT\}/)
   assert.match(rehearsal, /sudo test -e "\$sensitive_path" \|\| sudo test -L "\$sensitive_path"/)
+})
+
+test('offline rehearsal keeps every sealed bundle and operator input behind the privileged boundary', () => {
+  const rehearsal = stepSection(
+    jobSection('offline_rehearsal'),
+    'Verify bundle before docker load and run bundled operations',
+  )
+  const plainSealedPathConsumers = rehearsal
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^(?:test|node)\b/.test(line))
+    .filter((line) => !/^test "\$\(sudo /.test(line))
+    .filter((line) => /\$(?:BUNDLE_ROOT|NEXT_BUNDLE_ROOT|PREVIOUS_BUNDLE_ROOT|TRUST_ROOT|OPERATOR_ROOT|PUBLIC_KEY|PROOF_COMPOSE|NEXT_PROOF_COMPOSE|PREVIOUS_PROOF_COMPOSE)\b/.test(line))
+  assert.deepEqual(plainSealedPathConsumers, [])
+  assert.match(rehearsal, /sudo test -f "\$BUNDLE_ROOT\/bundle-manifest\.json" && sudo test ! -L "\$BUNDLE_ROOT\/bundle-manifest\.json"/)
+  assert.match(rehearsal, /sudo test -f "\$PUBLIC_KEY" && sudo test ! -L "\$PUBLIC_KEY"/)
+  for (const forbiddenPath of ['.git', 'backend', 'admin-web', 'src']) {
+    assert.match(rehearsal, new RegExp(`sudo test ! -e "\\$BUNDLE_ROOT/${forbiddenPath.replace('.', '\\.')}" && sudo test ! -L "\\$BUNDLE_ROOT/${forbiddenPath.replace('.', '\\.')}"`))
+  }
+  assert.match(rehearsal, /sudo -- "\$NODE_BIN" - "\$BUNDLE_ROOT\/bundle-manifest\.json" "\$OPERATOR_ROOT"/)
+  assert.match(rehearsal, /flag: 'wx'/)
+  for (const operatorEnv of ['offline.env', 'offline-current.env', 'offline-next.env', 'offline-previous.env']) {
+    assert.match(rehearsal, new RegExp(`writeEnv\\('${operatorEnv.replace('.', '\\.')}'`))
+    assert.match(rehearsal, new RegExp(`sudo test -f "\\$OPERATOR_ROOT/\\$operator_env"`))
+  }
+  assert.doesNotMatch(rehearsal, /"\$RUNNER_TEMP\/offline(?:-(?:previous|current|next))?\.env"/)
+  for (const proofCompose of ['PROOF_COMPOSE', 'NEXT_PROOF_COMPOSE', 'PREVIOUS_PROOF_COMPOSE']) {
+    assert.match(rehearsal, new RegExp(`sudo test -f "\\$${proofCompose}" && sudo test ! -L "\\$${proofCompose}"`))
+  }
+})
+
+test('sealed operator env generation is exact and refuses every overwrite', () => {
+  const rehearsal = stepSection(
+    jobSection('offline_rehearsal'),
+    'Verify bundle before docker load and run bundled operations',
+  )
+  const body = inlineNodeHeredocBody(
+    rehearsal,
+    'sudo -- "$NODE_BIN" - "$BUNDLE_ROOT/bundle-manifest.json" "$OPERATOR_ROOT"',
+  )
+  const root = mkdtempSync(join(tmpdir(), 'onprem-offline-sealed-env-'))
+  const manifestPath = join(root, 'bundle-manifest.json')
+  const operatorRoot = join(root, 'operator')
+  const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
+  const images = Object.fromEntries(imageNames.map((name, index) => [name, {
+    configImageId: `sha256:${String(index + 1).repeat(64)}`,
+  }]))
+  const expectedReleases = {
+    'offline.env': 'onprem-test-abc123',
+    'offline-current.env': 'onprem-test-abc123',
+    'offline-next.env': 'onprem-next-abc123',
+    'offline-previous.env': 'onprem-previous-abc123',
+  }
+  try {
+    mkdirSync(operatorRoot, { mode: 0o700 })
+    writeFileSync(manifestPath, JSON.stringify({ images }))
+    const args = ['-', manifestPath, operatorRoot, 'onprem-test-abc123', 'abc123', '/sealed/core', '/sealed/photo', '/sealed/ledger.json', 'a'.repeat(64)]
+    const first = spawnSync(process.execPath, args, { input: `${body}\n`, encoding: 'utf8' })
+    assert.equal(first.status, 0, first.stderr)
+    const original = {}
+    for (const [file, releaseId] of Object.entries(expectedReleases)) {
+      const pathname = join(operatorRoot, file)
+      const content = readFileSync(pathname, 'utf8')
+      if (process.platform !== 'win32') assert.equal(statSync(pathname).mode & 0o777, 0o600, `${file} mode`)
+      assert.match(content, new RegExp(`^HR_AXIS_RELEASE_ID=${releaseId}$`, 'm'))
+      for (const image of Object.values(images)) assert.ok(content.includes(`=${image.configImageId}`), `${file} image identity`)
+      original[file] = content
+    }
+    const second = spawnSync(process.execPath, args, { input: `${body}\n`, encoding: 'utf8' })
+    assert.notEqual(second.status, 0, 'pre-existing env files must fail closed')
+    for (const [file, content] of Object.entries(original)) {
+      assert.equal(readFileSync(join(operatorRoot, file), 'utf8'), content, `${file} must not be overwritten`)
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('offline bundle handoff preserves modes and bounds disk use with sequential signed release archives', () => {
