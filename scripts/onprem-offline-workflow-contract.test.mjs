@@ -674,6 +674,67 @@ test('sealed operator env generation is exact and refuses every overwrite', () =
   }
 })
 
+test('offline rehearsal maps every service secret through exact privileged paths without runner-side globs', () => {
+  const rehearsal = stepSection(
+    jobSection('offline_rehearsal'),
+    'Verify bundle before docker load and run bundled operations',
+  )
+  assert.match(rehearsal, /set_secret_identity\(\)/)
+  assert.doesNotMatch(rehearsal, /\$OPERATOR_ROOT\/secrets\/[^\n]*\*/)
+  const expected = new Map([
+    ['10001:10001:0400', ['core/caddy/server.key']],
+    ['70:70:0400', ['core/postgres/server.key', 'core/postgres/bootstrap-password', 'core/postgres/migrator-password', 'core/postgres/api-password', 'core/postgres/worker-password', 'core/postgres/keycloak-password']],
+    ['1000:1000:0400', ['core/keycloak/binder-database-url', 'core/keycloak/database-password', 'core/keycloak/database-url', 'core/keycloak/database-username', 'core/keycloak/bootstrap-username', 'core/keycloak/bootstrap-password', 'core/keycloak/smtp-auth-user', 'core/keycloak/smtp-password', 'core/keycloak/synthetic-accounts', 'core/keycloak/photo-proof-account']],
+    ['999:1000:0400', ['core/redis/users.acl', 'core/redis/health-url']],
+    ['65532:65532:0400', ['core/backend/api-database-url', 'core/backend/worker-database-url', 'core/backend/migrator-database-url', 'core/backend/redis-api-url', 'core/backend/redis-worker-url', 'core/backend/browser-session-secret', 'photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
+    ['0:0:0444', ['core/postgres/ca.crt', 'core/postgres/server.crt', 'core/caddy/ca.crt', 'core/caddy/server.crt']],
+  ])
+  const actualEntries = []
+  const seenPaths = new Set()
+  const invocations = rehearsal.split('\n').map((line) => line.trim()).filter((line) => /^set_secret_identity \d+:\d+ 0\d+ /.test(line))
+  assert.equal(invocations.length, expected.size)
+  for (const invocation of invocations) {
+    const [, ownerGroup, mode, argumentsText] = invocation.match(/^set_secret_identity (\d+:\d+) (0\d+) (.+)$/) ?? []
+    assert.ok(ownerGroup && mode && argumentsText, `invalid secret identity invocation: ${invocation}`)
+    const paths = [...argumentsText.matchAll(/"\$OPERATOR_ROOT\/secrets\/([^"\n]+)"/g)].map((match) => match[1])
+    assert.ok(paths.length > 0, `secret identity invocation has no exact paths: ${invocation}`)
+    assert.equal(argumentsText, paths.map((path) => `"$OPERATOR_ROOT/secrets/${path}"`).join(' '), `secret identity invocation contains an unparsed operand: ${invocation}`)
+    for (const path of paths) {
+      assert.equal(seenPaths.has(path), false, `duplicate secret identity path: ${path}`)
+      seenPaths.add(path)
+      actualEntries.push([path, `${ownerGroup}:${mode}`])
+    }
+  }
+  const expectedEntries = [...expected].flatMap(([identity, paths]) => paths.map((path) => [path, identity]))
+  assert.deepEqual(actualEntries.sort(), expectedEntries.sort())
+})
+
+test('secret identity helper validates every path before any ownership mutation', (t) => {
+  const shell = process.platform === 'win32' && existsSync('C:\\Program Files\\Git\\usr\\bin\\bash.exe')
+    ? 'C:\\Program Files\\Git\\usr\\bin\\bash.exe' : 'bash'
+  const available = spawnSync(shell, ['--version'], { encoding: 'utf8' })
+  if (available.status !== 0) return t.skip('Bash is unavailable')
+  const rehearsal = stepSection(jobSection('offline_rehearsal'), 'Verify bundle before docker load and run bundled operations')
+  const functionMatch = rehearsal.match(/\n\s*(set_secret_identity\(\) \{[\s\S]*?\n\s*\})\n\s*set_secret_identity 10001:/)
+  assert.ok(functionMatch, 'missing production secret identity helper')
+  const helper = functionMatch[1].split('\n').map((line) => line.replace(/^\s{10}/, '')).join('\n')
+  const runCase = (...kinds) => spawnSync(shell, ['-c', `${helper}\nsudo() {\n  command_name=$1; shift\n  case "$command_name:$1:$2" in\n    test:-f:valid|test:-f:symlink) return 0 ;;\n    test:-L:symlink) return 0 ;;\n    test:-L:valid) return 1 ;;\n    chown:*|chmod:*) printf '%s\\n' "$command_name"; return 0 ;;\n    *) return 1 ;;\n  esac\n}\nset_secret_identity 1:1 0400 "$@"\n`, '--', ...kinds], {
+    encoding: 'utf8',
+    env: process.env,
+  })
+  for (const kind of ['missing', 'directory', 'symlink']) {
+    const result = runCase(kind)
+    assert.notEqual(result.status, 0, `${kind} must fail closed`)
+    assert.doesNotMatch(result.stdout + result.stderr, /chown|chmod/, `${kind} must not reach mutation`)
+    const afterValid = runCase('valid', kind)
+    assert.notEqual(afterValid.status, 0, `valid followed by ${kind} must fail closed`)
+    assert.doesNotMatch(afterValid.stdout + afterValid.stderr, /chown|chmod/, `valid followed by ${kind} must not partially mutate`)
+  }
+  const valid = runCase('valid')
+  assert.equal(valid.status, 0, valid.stderr)
+  assert.equal(valid.stdout, 'chown\nchmod\n')
+})
+
 test('offline bundle handoff preserves modes and bounds disk use with sequential signed release archives', () => {
   const build = jobSection('build_bundle')
   const rehearsal = jobSection('offline_rehearsal')

@@ -952,12 +952,25 @@ jobs:
           sudo find "$OPERATOR_ROOT" -exec chown 0:0 {} +
           sudo find "$OPERATOR_ROOT" -type d -exec chmod 0700 {} +
           sudo find "$OPERATOR_ROOT" -type f -exec chmod 0600 {} +
-          sudo chown 10001:10001 "$OPERATOR_ROOT/secrets/core/caddy/server.key" && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/caddy/server.key"
-          sudo chown 70:70 "$OPERATOR_ROOT/secrets/core/postgres/server.key" "$OPERATOR_ROOT/secrets/core/postgres/"*-password && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/postgres/server.key" "$OPERATOR_ROOT/secrets/core/postgres/"*-password
-          sudo chown 1000:1000 "$OPERATOR_ROOT/secrets/core/keycloak/"* && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/keycloak/"*
-          sudo chown 999:1000 "$OPERATOR_ROOT/secrets/core/redis/users.acl" "$OPERATOR_ROOT/secrets/core/redis/health-url" && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/redis/users.acl" "$OPERATOR_ROOT/secrets/core/redis/health-url"
-          sudo chown 65532:65532 "$OPERATOR_ROOT/secrets/core/backend/"* "$OPERATOR_ROOT/secrets/photo/"* && sudo chmod 0400 "$OPERATOR_ROOT/secrets/core/backend/"* "$OPERATOR_ROOT/secrets/photo/"*
-          sudo chmod 0444 "$OPERATOR_ROOT/secrets/core/postgres/ca.crt" "$OPERATOR_ROOT/secrets/core/postgres/server.crt" "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" "$OPERATOR_ROOT/secrets/core/caddy/server.crt"
+          set_secret_identity() {
+            local owner_group="$1" secret_mode="$2" secret_path
+            shift 2
+            test "$#" -gt 0
+            for secret_path in "$@"; do
+              if ! sudo test -f "$secret_path" || sudo test -L "$secret_path"; then
+                echo "sealed service secret is missing, symlinked, or not a regular file: $secret_path" >&2
+                return 1
+              fi
+            done
+            sudo chown "$owner_group" -- "$@"
+            sudo chmod "$secret_mode" -- "$@"
+          }
+          set_secret_identity 10001:10001 0400 "$OPERATOR_ROOT/secrets/core/caddy/server.key"
+          set_secret_identity 70:70 0400 "$OPERATOR_ROOT/secrets/core/postgres/server.key" "$OPERATOR_ROOT/secrets/core/postgres/bootstrap-password" "$OPERATOR_ROOT/secrets/core/postgres/migrator-password" "$OPERATOR_ROOT/secrets/core/postgres/api-password" "$OPERATOR_ROOT/secrets/core/postgres/worker-password" "$OPERATOR_ROOT/secrets/core/postgres/keycloak-password"
+          set_secret_identity 1000:1000 0400 "$OPERATOR_ROOT/secrets/core/keycloak/binder-database-url" "$OPERATOR_ROOT/secrets/core/keycloak/database-password" "$OPERATOR_ROOT/secrets/core/keycloak/database-url" "$OPERATOR_ROOT/secrets/core/keycloak/database-username" "$OPERATOR_ROOT/secrets/core/keycloak/bootstrap-username" "$OPERATOR_ROOT/secrets/core/keycloak/bootstrap-password" "$OPERATOR_ROOT/secrets/core/keycloak/smtp-auth-user" "$OPERATOR_ROOT/secrets/core/keycloak/smtp-password" "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account"
+          set_secret_identity 999:1000 0400 "$OPERATOR_ROOT/secrets/core/redis/users.acl" "$OPERATOR_ROOT/secrets/core/redis/health-url"
+          set_secret_identity 65532:65532 0400 "$OPERATOR_ROOT/secrets/core/backend/api-database-url" "$OPERATOR_ROOT/secrets/core/backend/worker-database-url" "$OPERATOR_ROOT/secrets/core/backend/migrator-database-url" "$OPERATOR_ROOT/secrets/core/backend/redis-api-url" "$OPERATOR_ROOT/secrets/core/backend/redis-worker-url" "$OPERATOR_ROOT/secrets/core/backend/browser-session-secret" "$OPERATOR_ROOT/secrets/photo/primary-access-key-id" "$OPERATOR_ROOT/secrets/photo/primary-secret-access-key" "$OPERATOR_ROOT/secrets/photo/recovery-access-key-id" "$OPERATOR_ROOT/secrets/photo/recovery-secret-access-key"
+          set_secret_identity 0:0 0444 "$OPERATOR_ROOT/secrets/core/postgres/ca.crt" "$OPERATOR_ROOT/secrets/core/postgres/server.crt" "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" "$OPERATOR_ROOT/secrets/core/caddy/server.crt"
           sudo chmod 0400 "$OPERATOR_ROOT/photo-fixture.webp"
           if sudo find "$OPERATOR_ROOT" -type l -print -quit | grep -q .; then echo 'sealed operator root contains a symlink' >&2; exit 1; fi
           assert_private_directory "$OPERATOR_ROOT"

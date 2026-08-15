@@ -226,9 +226,9 @@ cpu_count=$(nproc 2>/dev/null||true); case "$cpu_count" in *[!0-9]*|"") die "CPU
 
 compose_config() {
   if [ -n "$PROOF_COMPOSE" ]; then
-    docker compose --project-name "$TARGET_PROJECT" --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" --file "$PROOF_COMPOSE" "$@"
+    docker compose --project-name "$TARGET_PROJECT" --profile '*' --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" --file "$PROOF_COMPOSE" "$@"
   else
-    docker compose --project-name "$TARGET_PROJECT" --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" "$@"
+    docker compose --project-name "$TARGET_PROJECT" --profile '*' --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" "$@"
   fi
 }
 CONFIG=$(compose_config config --format json 2>/dev/null) || die "merged Compose config rendering failed"
