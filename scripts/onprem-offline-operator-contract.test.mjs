@@ -340,6 +340,7 @@ exit 0
 }
 
 const VALID_FINGERPRINT = 'a'.repeat(64)
+const SMOKE_TIMEOUT_MS = process.platform === 'win32' ? 120_000 : 45_000
 
 function runInstall(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
   return spawnSync(POSIX_SHELL, [shellPath(join(operationDir, 'install.sh')), '--bundle-root', shellPath(bundleRoot), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', fingerprint, '--env-file', shellPath(fixture.envFile)], {
@@ -348,7 +349,7 @@ function runInstall(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixtu
 }
 function runSmoke(fixture, receipt) {
   return spawnSync(POSIX_SHELL, [shellPath(join(operationDir, 'smoke.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile), '--receipt', shellPath(receipt)], {
-    encoding: 'utf8', env: shellEnv(fixture), timeout: 45_000,
+    encoding: 'utf8', env: shellEnv(fixture), timeout: SMOKE_TIMEOUT_MS,
   })
 }
 function shellEnv(fixture) {
