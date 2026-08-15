@@ -102,7 +102,7 @@ compose() {
     docker compose --project-name "$TARGET_PROJECT" --env-file "$ENV_FILE" --file "$CORE_COMPOSE" --file "$PHOTO_PROOF_COMPOSE" --file "$PHOTO_COMPOSE" "$@"
   fi
 }
-CONFIG=$(compose config --format json 2>/dev/null) || die "Compose config rendering failed after image import"
+CONFIG=$(compose --profile '*' config --format json 2>/dev/null) || die "Compose config rendering failed after image import"
 case "$CONFIG" in *"$TARGET_PROJECT"*"$RELEASE_ID"*|*"$RELEASE_ID"*"$TARGET_PROJECT"*) ;; *) die "Compose project/release identity mismatch" ;; esac
 
 
