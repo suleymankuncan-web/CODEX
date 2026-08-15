@@ -83,6 +83,7 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /approved env image identity mismatch/)
   assert.match(preflightSource, /HR_AXIS_PROJECT_ID/)
   assert.match(preflightSource, /merged Compose labels are missing or mismatched/)
+  assert.match(preflightSource, /docker compose --project-name "\$TARGET_PROJECT" --profile '\*' --env-file "\$ENV_FILE"/)
   assert.match(preflightSource, /com\.hr-axis\.project/)
   assert.match(preflightSource, /com\.hr-axis\.release-id/)
   assert.match(preflightSource, /configImageId/)
