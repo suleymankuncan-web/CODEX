@@ -282,7 +282,11 @@ while IFS='	' read -r secret_name secret_file; do
   [ "$observed_identity" = "$expected_identity" ] || die "rendered secret source identity is unsafe: $secret_name"
   bytes=$(file_size "$secret_file"); case "$bytes" in *[!0-9]*|"") die "cannot bound rendered secret source: $secret_name";; esac
   [ "$bytes" -le 1048576 ] || die "rendered secret source is too large: $secret_name"
-  value=$(cat "$secret_file"); [ -z "$value" ] || case "$CONFIG" in *"$value"*) die "Compose config contains a rendered secret value: $secret_name";; esac
+  value=$(cat "$secret_file")
+  case "$secret_name" in
+    keycloak_database_username) ;;
+    *) [ -z "$value" ] || case "$CONFIG" in *"$value"*) die "Compose config contains a rendered secret value: $secret_name";; esac;;
+  esac
 done <<EOF
 $SECRET_LINES
 EOF

@@ -103,6 +103,16 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /PHOTO_STORAGE_SECRET_ROOT/)
   assert.match(preflightSource, /file_links|hard link/)
   assert.match(preflightSource, /SECRET_LINES/)
+  const renderedValuePolicy = preflightSource.match(/  case "\$secret_name" in\n    keycloak_database_username\) ;;\n    \*\) \[ -z "\$value" \] \|\| case "\$CONFIG" in \*"\$value"\*\) die "Compose config contains a rendered secret value: \$secret_name";; esac;;\n  esac/)?.[0]
+  assert.equal(renderedValuePolicy, `  case "$secret_name" in
+    keycloak_database_username) ;;
+    *) [ -z "$value" ] || case "$CONFIG" in *"$value"*) die "Compose config contains a rendered secret value: $secret_name";; esac;;
+  esac`)
+  const renderedPolicyIndex = preflightSource.indexOf(renderedValuePolicy)
+  for (const requiredCheck of ['rendered secret source is missing or symlinked', 'rendered secret source is a hard link', 'rendered secret source identity is unsafe', 'rendered secret source is too large']) {
+    const checkIndex = preflightSource.indexOf(requiredCheck)
+    assert.ok(checkIndex >= 0 && checkIndex < renderedPolicyIndex, `${requiredCheck} must precede the sole value-scan exemption`)
+  }
   assert.match(preflightSource, /openssl verify -CAfile/)
   assert.match(preflightSource, /cert_public_digest|key_public_digest/)
   assert.match(preflightSource, /bundle root must not be the filesystem root/)
@@ -190,6 +200,10 @@ function makeFixture() {
   for (const pathname of [publicKey, join(tlsDir, 'server.crt'), join(tlsDir, 'server.key'), join(tlsDir, 'ca.crt')]) writeFileSync(pathname, 'synthetic\n')
   mkdirSync(join(secretRoot, 'keycloak'), { recursive: true })
   for (const pathname of [join(secretRoot, 'caddy.crt'), join(secretRoot, 'caddy.key'), join(secretRoot, 'caddy.ca'), join(secretRoot, 'keycloak', 'photo-proof-account'), join(photoSecretRoot, 'photo.key')]) writeFileSync(pathname, 'synthetic\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'database-username'), 'hr-axis-onprem-core\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'bootstrap-username'), 'bootstrap-ci\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'bootstrap-password'), 'synthetic-bootstrap-password\n')
+  writeFileSync(join(secretRoot, 'keycloak', 'smtp-auth-user'), 'synthetic-smtp-user\n')
   writeFileSync(authAccounts, 'synthetic-accounts\n')
   const imageDigests = { backend: 'a'.repeat(64), frontend: 'a'.repeat(64), keycloak: 'b'.repeat(64), caddy: 'a'.repeat(64), postgres: 'a'.repeat(64), redis: 'a'.repeat(64), seaweedfs: 'a'.repeat(64) }
   const imageVariables = { backend: 'HR_AXIS_BACKEND_IMAGE', frontend: 'HR_AXIS_FRONTEND_IMAGE', keycloak: 'KEYCLOAK_IMAGE', caddy: 'CADDY_IMAGE', postgres: 'POSTGRES_IMAGE', redis: 'REDIS_IMAGE', seaweedfs: 'SEAWEEDFS_IMAGE' }
@@ -213,6 +227,10 @@ function makeFixture() {
     `caddy_tls_ca\t${shellPath(join(secretRoot, 'caddy.ca'))}`,
     `photo_primary_secret_access_key\t${shellPath(join(photoSecretRoot, 'photo.key'))}`,
     `keycloak_synthetic_photo_proof_account\t${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}`,
+    `keycloak_database_username\t${shellPath(join(secretRoot, 'keycloak', 'database-username'))}`,
+    `keycloak_bootstrap_username\t${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}`,
+    `keycloak_bootstrap_password\t${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}`,
+    `keycloak_smtp_auth_user\t${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}`,
   ]
   executable(join(fakeBin, 'node'), [
     '#!/bin/sh',
@@ -239,15 +257,15 @@ case "$*" in
       '${shellPath(secretRoot)}'|'${shellPath(photoSecretRoot)}') echo 700;;
       '${shellPath(inputRoot)}') [ -f '${shellPath(unsafeInputAncestorMode)}' ] && echo 777 || echo 600;;
       '${shellPath(join(secretRoot, 'caddy.crt'))}'|'${shellPath(join(secretRoot, 'caddy.ca'))}') echo 444;;
-      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400;;
+      '${shellPath(join(secretRoot, 'caddy.key'))}'|'${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 400;;
       *operations/*|*deployment/keycloak/bootstrap.sh*|*deployment/postgres/entrypoint-tls.sh*|*deployment/postgres/010-bootstrap-roles.sh*|*deployment/photo-storage/bootstrap.sh*) echo 755;;
       *) echo 600;;
     esac;;
   *%d:%i*) exec /usr/bin/stat "$@";;
   *%u*)
     [ -f '${shellPath(nonRootMode)}' ] && { echo 1000; exit 0; }
-    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
-  *%g*) case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+  *%g*) case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
   *%h*) [ -f '${shellPath(hardlinkPath)}' ] && echo 2 || echo 1;;
   *%s*) echo 10;;
   *) exit 1;;
@@ -488,6 +506,56 @@ test('rendered secret source failures stay before Docker load or Compose mutatio
     assert.notEqual(result.status, 0)
     assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
     rmSync(hardlink, { force: true })
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('preflight exempts only the fixed Keycloak database role identity from rendered secret leak checks', (t) => {
+  if (process.platform === 'win32' && !existsSync(POSIX_SHELL) || process.platform !== 'win32' && !existsSync('/bin/sh')) {
+    t.skip('behavioral POSIX harness runs on Linux only')
+    return
+  }
+  const fixture = makeFixture()
+  try {
+    let result = runInstall(fixture)
+    assert.equal(result.status, 0, result.stderr)
+
+    rmSync(fixture.log, { force: true })
+    writeFileSync(join(fixture.secretRoot, 'caddy.key'), 'hr-axis-onprem-core\n')
+    result = runInstall(fixture)
+    assert.notEqual(result.status, 0)
+    assert.match(result.stderr, /Compose config contains a rendered secret value: caddy_tls_private_key/)
+    assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+
+    writeFileSync(join(fixture.secretRoot, 'caddy.key'), 'synthetic\n')
+    for (const [relativePath, secretName, original] of [
+      ['keycloak/bootstrap-username', 'keycloak_bootstrap_username', 'bootstrap-ci\n'],
+      ['keycloak/bootstrap-password', 'keycloak_bootstrap_password', 'synthetic-bootstrap-password\n'],
+      ['keycloak/smtp-auth-user', 'keycloak_smtp_auth_user', 'synthetic-smtp-user\n'],
+    ]) {
+      rmSync(fixture.log, { force: true })
+      const pathname = join(fixture.secretRoot, ...relativePath.split('/'))
+      writeFileSync(pathname, 'hr-axis-onprem-core\n')
+      result = runInstall(fixture)
+      assert.notEqual(result.status, 0)
+      assert.match(result.stderr, new RegExp(`Compose config contains a rendered secret value: ${secretName}`))
+      assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+      writeFileSync(pathname, original)
+    }
+
+    rmSync(fixture.log, { force: true })
+    const databaseUsername = join(fixture.secretRoot, 'keycloak', 'database-username')
+    rmSync(databaseUsername)
+    try {
+      symlinkSync(join(fixture.secretRoot, 'caddy.key'), databaseUsername)
+      result = runInstall(fixture)
+      assert.notEqual(result.status, 0)
+      assert.match(result.stderr, /rendered secret source is missing or symlinked: keycloak_database_username/)
+      assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
+    } catch (error) {
+      if (error?.code !== 'EPERM' && error?.code !== 'EACCES') throw error
+    }
   } finally {
     rmSync(fixture.root, { recursive: true, force: true })
   }
