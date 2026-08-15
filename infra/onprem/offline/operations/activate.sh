@@ -76,12 +76,13 @@ process.stdout.write(JSON.stringify(value))
 # trust input; migrate.sh may have written one as post-run evidence only.
 POST_STATUS=$(read_status) || die "activation requires a clean target migration status"
 
+compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage >/dev/null || die "private prerequisite startup failed"
 KEYCLOAK_ID=$(compose ps -q keycloak 2>/dev/null || true); [ -n "$KEYCLOAK_ID" ] || die "Keycloak prerequisite is not running"
 [ "$(docker inspect "$KEYCLOAK_ID" --format '{{.State.Health.Status}}' 2>/dev/null || true)" = healthy ] || die "Keycloak prerequisite is not healthy"
 compose --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null || die "Keycloak bootstrap reconcile failed"
 compose --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null || die "identity binder failed"
 compose --profile seed run --pull never --rm --no-deps synthetic-seed >/dev/null || die "synthetic seed failed"
-compose --profile infra --profile runtime up --pull never -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || die "application service startup failed"
+compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || die "application service startup failed"
 check_service() { service=$1; id=$(compose ps -q "$service" 2>/dev/null || true); [ -n "$id" ] || die "activated service is not running: $service"; labels=$(docker inspect "$id" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{.State.Health.Status}}' 2>/dev/null || true); [ "$labels" = "$TARGET_PROJECT|$RELEASE_ID|synthetic|healthy" ] || die "activated service labels/health mismatch: $service"; }
 for service in postgres redis keycloak object-storage caddy frontend api worker; do check_service "$service"; done
 say "PASS project=$TARGET_PROJECT release=$RELEASE_ID activation=synthetic"
