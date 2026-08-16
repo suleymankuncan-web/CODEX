@@ -59,7 +59,7 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(activate, /migration-status\.js/)
   assert.match(activate, /read-only migration status|clean target migration status/)
   assert.doesNotMatch(activate, /MIGRATION_LEDGER_FILE.*required|migration ledger is incompatible/i)
-  assert.match(activate, /keycloak-bootstrap[\s\S]*identity-binder[\s\S]*synthetic-seed/)
+  assert.match(activate, /keycloak-bootstrap[\s\S]*synthetic-seed[\s\S]*identity-binder/)
   assert.match(activate, /up --pull never/)
   const expectedPrivatePrerequisiteUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage >/dev/null || die "private prerequisite startup failed"'
   const expectedApplicationUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || die "application service startup failed"'
@@ -79,7 +79,7 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   const expectedSeedRun = 'compose --profile seed run --pull never --rm --no-deps synthetic-seed >/dev/null || die "synthetic seed failed"'
   assert.deepEqual(
     activate.split(/\r?\n/).filter((line) => line.includes('keycloak-bootstrap run --pull never --rm --no-deps') || line.includes('identity-binder run --pull never --rm --no-deps') || line.includes('profile seed run --pull never --rm --no-deps synthetic-seed')),
-    [expectedKeycloakBootstrapRun, expectedIdentityBinderRun, expectedSeedRun],
+    [expectedKeycloakBootstrapRun, expectedSeedRun, expectedIdentityBinderRun],
     'activation one-shot services must activate every dependency-sharing profile explicitly',
   )
 
