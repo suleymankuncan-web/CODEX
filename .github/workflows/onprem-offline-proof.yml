@@ -746,20 +746,28 @@ jobs:
             hook_rules="$(sudo iptables -S "$hook")"
             test "$(printf '%s\n' "$hook_rules" | grep -Fxc -- "-A $hook -j $docker_egress_chain")" -eq 1
           done
+          runner_control_uid="$(id -u)"
+          host_probe_uid="$(id -u nobody)"
+          printf '%s:%s\n' "$runner_control_uid" "$host_probe_uid" | grep -Eq '^[0-9]+:[0-9]+$'
+          test "$runner_control_uid" -gt 0
+          test "$host_probe_uid" -gt 0
+          test "$runner_control_uid" -ne "$host_probe_uid"
           sudo iptables -N "$host_egress_chain"
+          sudo iptables -A "$host_egress_chain" -m owner --uid-owner "$runner_control_uid" -j ACCEPT
           sudo iptables -A "$host_egress_chain" -o lo -j ACCEPT
           sudo iptables -A "$host_egress_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
           sudo iptables -A "$host_egress_chain" -j REJECT --reject-with icmp-port-unreachable
           sudo iptables -I OUTPUT 1 -j "$host_egress_chain"
           sudo ip6tables -N "$host6_egress_chain"
+          sudo ip6tables -A "$host6_egress_chain" -m owner --uid-owner "$runner_control_uid" -j ACCEPT
           sudo ip6tables -A "$host6_egress_chain" -o lo -j ACCEPT
           sudo ip6tables -A "$host6_egress_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
           sudo ip6tables -A "$host6_egress_chain" -j REJECT --reject-with icmp6-port-unreachable
           sudo ip6tables -I OUTPUT 1 -j "$host6_egress_chain"
           test "$(sudo iptables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host_egress_chain"
           test "$(sudo ip6tables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host6_egress_chain"
-          test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 4
-          test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 4
+          test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 5
+          test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 5
 
       - name: Verify bundle before docker load and run bundled operations
         env:
@@ -1057,16 +1065,17 @@ jobs:
           read_host_reject_packets() {
             local tool="$1" chain="$2"
             local packets
-            packets="$(sudo "$tool" -L "$chain" -v -x -n --line-numbers | awk '$1 == 3 && $4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
+            local host_reject_rule_line=4
+            packets="$(sudo "$tool" -L "$chain" -v -x -n --line-numbers | awk -v line="$host_reject_rule_line" '$1 == line && $4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
             printf '%s\n' "$packets" | grep -Eq '^[0-9]+$'
             printf '%s\n' "$packets"
           }
           host4_before="$(read_host_reject_packets iptables "$host_egress_chain")"
-          node --input-type=module -e "import net from 'node:net'; const socket=net.createConnection({host:'198.51.100.1',port:443}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
+          sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'198.51.100.1',port:443}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           host4_after="$(read_host_reject_packets iptables "$host_egress_chain")"
           test "$host4_after" -gt "$host4_before"
           host6_before="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
-          node --input-type=module -e "import net from 'node:net'; const socket=net.createConnection({host:'2001:db8::1',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
+          sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'2001:db8::1',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           host6_after="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
           test "$host6_after" -gt "$host6_before"
           docker_network_ids="$(sudo docker network ls -q --filter 'label=com.hr-axis.project=hr-axis-onprem-core')"
@@ -1077,11 +1086,11 @@ jobs:
           done
           host4_counter_delta=$((host4_after - host4_before))
           host6_counter_delta=$((host6_after - host6_before))
-          sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/egress.json" "$RELEASE_ID" "$docker_reject_counter_delta" "$host4_counter_delta" "$host6_counter_delta" <<'NODE'
+          sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/egress.json" "$RELEASE_ID" "$docker_reject_counter_delta" "$host4_counter_delta" "$host6_counter_delta" "$host_probe_uid" <<'NODE'
           const fs = require('node:fs')
-          const [path, releaseId, dockerDelta, host4Delta, host6Delta] = process.argv.slice(2)
-          if (![dockerDelta, host4Delta, host6Delta].every((value) => /^\d+$/.test(value) && Number(value) >= 1)) process.exit(41)
-          fs.writeFileSync(path, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', operation: 'egress-probe', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core', dockerIpv4CounterDelta: Number(dockerDelta), hostIpv4CounterDelta: Number(host4Delta), hostIpv6CounterDelta: Number(host6Delta), dockerIpv6Disabled: true, rejectRulesVerified: true, sanitized: true }) + '\n', { mode: 0o600 })
+          const [path, releaseId, dockerDelta, host4Delta, host6Delta, hostProbeUid] = process.argv.slice(2)
+          if (![dockerDelta, host4Delta, host6Delta, hostProbeUid].every((value) => /^\d+$/.test(value) && Number(value) >= 1)) process.exit(41)
+          fs.writeFileSync(path, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', operation: 'egress-probe', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core', dockerIpv4CounterDelta: Number(dockerDelta), hostIpv4CounterDelta: Number(host4Delta), hostIpv6CounterDelta: Number(host6Delta), hostControlPlaneException: true, hostProbeUid: Number(hostProbeUid), dockerIpv6Disabled: true, rejectRulesVerified: true, sanitized: true }) + '\n', { mode: 0o600 })
           fs.chownSync(path, 0, 0)
           fs.chmodSync(path, 0o600)
           NODE
@@ -1144,7 +1153,7 @@ jobs:
           const releaseTransitionEvidence = { evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false }
           const egress = JSON.parse(fs.readFileSync(egressReceiptPath, 'utf8'))
           const positiveCounter = (value) => Number.isInteger(value) && value >= 1
-          if (egress.schemaVersion !== 1 || egress.dataClass !== 'synthetic' || egress.operation !== 'egress-probe' || egress.status !== 'passed' || egress.releaseId !== releaseId || egress.sourceProject !== 'hr-axis-onprem-core' || egress.targetProject !== 'hr-axis-onprem-core' || egress.rejectRulesVerified !== true || egress.dockerIpv6Disabled !== true || !positiveCounter(egress.dockerIpv4CounterDelta) || !positiveCounter(egress.hostIpv4CounterDelta) || !positiveCounter(egress.hostIpv6CounterDelta)) throw new Error('egress proof receipt is invalid or not passed')
+          if (egress.schemaVersion !== 1 || egress.dataClass !== 'synthetic' || egress.operation !== 'egress-probe' || egress.status !== 'passed' || egress.releaseId !== releaseId || egress.sourceProject !== 'hr-axis-onprem-core' || egress.targetProject !== 'hr-axis-onprem-core' || egress.rejectRulesVerified !== true || egress.dockerIpv6Disabled !== true || egress.hostControlPlaneException !== true || !Number.isInteger(egress.hostProbeUid) || egress.hostProbeUid <= 0 || !positiveCounter(egress.dockerIpv4CounterDelta) || !positiveCounter(egress.hostIpv4CounterDelta) || !positiveCounter(egress.hostIpv6CounterDelta)) throw new Error('egress proof receipt is invalid or not passed')
           const expected = {
             smoke: ['smoke', 'passed', releaseId, 'hr-axis-onprem-core', 'hr-axis-onprem-core', 'current'],
             backup: ['backup', 'passed', releaseId, 'hr-axis-onprem-core', 'hr-axis-onprem-core', 'current'],
@@ -1168,7 +1177,7 @@ jobs:
             operations[name] = { schemaVersion: 1, operation, status, releaseId: value.releaseId, sourceProject, targetProject, manifestSha256: manifestDigests[manifestName], receiptSha256: digest(path), ...(name === 'upgrade' || name === 'rollback' ? releaseTransitionEvidence : {}) }
           }
           const egressDigest = digest(egressReceiptPath)
-          const egressSummary = { status: egress.status, receiptSha256: egressDigest, dockerIpv4CounterDelta: egress.dockerIpv4CounterDelta, hostIpv4CounterDelta: egress.hostIpv4CounterDelta, hostIpv6CounterDelta: egress.hostIpv6CounterDelta, dockerIpv6Disabled: true, rejectRulesVerified: true }
+          const egressSummary = { status: egress.status, receiptSha256: egressDigest, dockerIpv4CounterDelta: egress.dockerIpv4CounterDelta, hostIpv4CounterDelta: egress.hostIpv4CounterDelta, hostIpv6CounterDelta: egress.hostIpv6CounterDelta, hostControlPlaneException: true, hostProbeUid: egress.hostProbeUid, dockerIpv6Disabled: true, rejectRulesVerified: true }
           const aggregate = { schemaVersion: 1, dataClass: 'synthetic', operation: 'offline-rehearsal', status: 'passed', gate: null, releaseId, bundleManifests: { current: manifestDigests.current, next: manifestDigests.next, previous: manifestDigests.previous }, releaseTransitionEvidence, egress: egressSummary, operations, sanitized: true }
           fs.writeFileSync(`${directory}/operations.json`, JSON.stringify(aggregate) + '\n', { mode: 0o600 })
           fs.writeFileSync(`${directory}/rehearsal.json`, JSON.stringify({ schemaVersion: 1, operation: 'offline-rehearsal', status: 'passed', gate: null, dataClass: 'synthetic', releaseId, egressDisabledDuringOperations: true, egressProofSha256: egressDigest, ...egressSummary, releaseTransitionEvidence, commandsCompleteBeforeEgressRestore: true, sanitized: true }) + '\n', { mode: 0o600 })
