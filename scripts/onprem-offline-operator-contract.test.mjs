@@ -62,7 +62,7 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(activate, /keycloak-bootstrap[\s\S]*synthetic-seed[\s\S]*identity-binder/)
   assert.match(activate, /up --pull never/)
   const expectedPrivatePrerequisiteUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage >/dev/null || die "private prerequisite startup failed"'
-  const expectedApplicationUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || die "application service startup failed"'
+  const expectedApplicationUp = 'compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || { diagnose_application_startup_failure; die "application service startup failed"; }'
   const activationUpLines = activate.split(/\r?\n/).filter((line) => line.startsWith('compose --profile infra --profile runtime up --pull never'))
   assert.deepEqual(activationUpLines, [expectedPrivatePrerequisiteUp, expectedApplicationUp], 'activation Compose up commands must stay exact and service-scoped')
   assert.doesNotMatch(activate, /compose --profile infra --profile runtime up --pull never -d\b/, 'activation Compose up must not be unbounded')
@@ -74,6 +74,12 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.ok(postStatusIndex >= 0 && postStatusIndex < privatePrerequisiteIndex && privatePrerequisiteIndex < keycloakInspectIndex && keycloakInspectIndex < applicationUpIndex, 'activation ordering must be migration status, prerequisite wait, Keycloak inspect/bootstrap, application wait')
   assert.match(activate, /KEYCLOAK_ID=\$\(compose ps -q keycloak 2>\/dev\/null \|\| true\); \[ -n "\$KEYCLOAK_ID" \] \|\| die "Keycloak prerequisite is not running"/)
   assert.match(activate, /\[ "\$\(docker inspect "\$KEYCLOAK_ID" --format '\{\{\.State\.Health\.Status\}\}' 2>\/dev\/null \|\| true\)" = healthy \] \|\| die "Keycloak prerequisite is not healthy"/)
+  assert.match(activate, /diagnose_application_startup_failure\(\)/, 'activation must emit bounded failure diagnostics')
+  for (const field of ['State.ExitCode', 'State.OOMKilled', 'State.Restarting', 'State.Health.Status', 'State.Health.FailingStreak']) {
+    assert.match(activate, new RegExp(field.replaceAll('.', '\\.'), 'g'), `diagnostics include ${field}`)
+  }
+  assert.match(activate, /for service_name in postgres redis keycloak object-storage caddy frontend api worker/, 'diagnostics cover every activated service')
+  assert.doesNotMatch(activate, /docker logs/, 'diagnostics must not dump potentially sensitive application logs')
   const expectedKeycloakBootstrapRun = 'compose --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null || die "Keycloak bootstrap reconcile failed"'
   const expectedIdentityBinderRun = 'compose --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null || die "identity binder failed"'
   const expectedSeedRun = 'compose --profile seed run --pull never --rm --no-deps synthetic-seed >/dev/null || die "synthetic seed failed"'
@@ -241,6 +247,34 @@ function shellPath(pathname) {
   const result = spawnSync(CYGPATH, ['-u', pathname], { encoding: 'utf8' })
   return result.status === 0 ? result.stdout.trim() : pathname
 }
+
+test('activation failure diagnostics report bounded service state without logs or secrets', (t) => {
+  if (process.platform === 'win32' && !existsSync(POSIX_SHELL)) {
+    t.skip('POSIX shell unavailable on Windows')
+    return
+  }
+  const start = source['activate.sh'].indexOf('diagnose_service_state() {')
+  const end = source['activate.sh'].indexOf('\n# Activation re-reads', start)
+  assert.ok(start >= 0 && end > start, 'activation diagnostic block must remain source-coupled')
+  const diagnosticBlock = source['activate.sh'].slice(start, end)
+  const harness = [
+    '#!/bin/sh',
+    'set -eu',
+    'say() { printf "%s\\n" "activate: $*"; }',
+    'compose() { printf "%s\\n" 0123456789abcdef0123456789abcdef; }',
+    'docker() { if [ "$1" = inspect ]; then case "$*" in *Health*) echo "unhealthy|3";; *) echo "exited|1|true|false";; esac; fi; }',
+    diagnosticBlock,
+    'diagnose_application_startup_failure',
+  ].join('\n') + '\n'
+  const result = spawnSync(POSIX_SHELL, ['-c', harness], { encoding: 'utf8' })
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+  assert.match(result.stdout, /diagnostic phase=application-startup-failure/)
+  for (const service of ['postgres', 'redis', 'keycloak', 'object-storage', 'caddy', 'frontend', 'api', 'worker']) {
+    assert.match(result.stdout, new RegExp(`diagnostic service=${service} container=0123456789abcdef0123456789abcdef state=exited\\|1\\|true\\|false health=unhealthy\\|3`))
+  }
+  assert.equal((result.stdout.match(/^activate: diagnostic service=/gm) ?? []).length, 8)
+  assert.doesNotMatch(result.stdout, /State\.|Health\.|password|postgresql:|redis:|\{\{/)
+})
 
 function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'onprem-operator-contract-'))
