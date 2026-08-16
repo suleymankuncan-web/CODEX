@@ -782,8 +782,8 @@ RESTORED_VOLUME_AGGREGATE=$(printf '%b' "$restored_volume_digest_input" | LC_ALL
 
 compose_core --profile infra --profile runtime up --pull never -d redis keycloak >/dev/null 2>&1 || die "fresh redis/keycloak startup failed"
 compose_photo up --pull never -d object-storage >/dev/null 2>&1 || die "fresh object-storage startup failed"
-compose_core --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"
-compose_core --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"
+compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"
+compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"
 MIGRATOR_OUTPUT=$(compose_core --profile migrate run --pull never --rm --no-deps migrator 2>&1) || die "migration rehearsal failed"
 MIGRATOR_DIGESTS=$(printf '%s\n' "$MIGRATOR_OUTPUT" | sed -n 's/.*migrationTreeDigest[^0-9a-fA-F]*\([0-9a-fA-F]\{64\}\).*/\1/p')
 [ "$(printf '%s\n' "$MIGRATOR_DIGESTS" | sed '/^$/d' | wc -l | tr -d ' ')" = 1 ] || die "migrator must emit exactly one migration tree digest"

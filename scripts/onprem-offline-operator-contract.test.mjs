@@ -74,6 +74,20 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.ok(postStatusIndex >= 0 && postStatusIndex < privatePrerequisiteIndex && privatePrerequisiteIndex < keycloakInspectIndex && keycloakInspectIndex < applicationUpIndex, 'activation ordering must be migration status, prerequisite wait, Keycloak inspect/bootstrap, application wait')
   assert.match(activate, /KEYCLOAK_ID=\$\(compose ps -q keycloak 2>\/dev\/null \|\| true\); \[ -n "\$KEYCLOAK_ID" \] \|\| die "Keycloak prerequisite is not running"/)
   assert.match(activate, /\[ "\$\(docker inspect "\$KEYCLOAK_ID" --format '\{\{\.State\.Health\.Status\}\}' 2>\/dev\/null \|\| true\)" = healthy \] \|\| die "Keycloak prerequisite is not healthy"/)
+  const expectedKeycloakBootstrapRun = 'compose --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null || die "Keycloak bootstrap reconcile failed"'
+  const expectedIdentityBinderRun = 'compose --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null || die "identity binder failed"'
+  const expectedSeedRun = 'compose --profile seed run --pull never --rm --no-deps synthetic-seed >/dev/null || die "synthetic seed failed"'
+  assert.deepEqual(
+    activate.split(/\r?\n/).filter((line) => line.includes('keycloak-bootstrap run --pull never --rm --no-deps') || line.includes('identity-binder run --pull never --rm --no-deps') || line.includes('profile seed run --pull never --rm --no-deps synthetic-seed')),
+    [expectedKeycloakBootstrapRun, expectedIdentityBinderRun, expectedSeedRun],
+    'activation one-shot services must activate every dependency-sharing profile explicitly',
+  )
+
+  const restore = readFileSync(join(operationDir, 'restore.sh'), 'utf8')
+  const expectedRestoreKeycloakBootstrapRun = 'compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"'
+  const expectedRestoreIdentityBinderRun = 'compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"'
+  assert.ok(restore.includes(expectedRestoreKeycloakBootstrapRun), 'restore bootstrap must activate dependency-sharing profiles explicitly')
+  assert.ok(restore.includes(expectedRestoreIdentityBinderRun), 'restore identity binder must activate dependency-sharing profiles explicitly')
 
   const migrate = source['migrate.sh']
   assert.match(migrate, /dirty|orphanCount|checksumValid/i)
