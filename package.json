@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "check:release": "node scripts/check-release.mjs",
+    "check:onprem:dispatch": "node scripts/onprem-proof-dispatch.mjs",
     "bundle:onprem:offline": "node scripts/onprem-offline-bundle.mjs",
     "stage:onprem:offline": "node scripts/onprem-offline-stage.mjs",
     "system-flow:generate": "node scripts/generate-system-flow.mjs",

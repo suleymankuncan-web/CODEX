@@ -590,6 +590,10 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.match(workflow, /run:\s*npm run test:scripts/)
   assert.doesNotMatch(workflow, /frontend-targeted:/)
   assert.match(workflow, /actions:\s*read/)
+  const onpremCaller = workflow.split('  onprem-image-proof:')[1]?.split('  required-release-gate:')[0] ?? ''
+  const rootReleaseCaller = workflow.split('  root-release:')[1]?.split('  release-rehearsal-observer:')[0] ?? ''
+  assert.match(onpremCaller, /permissions:[\s\S]*contents:\s*read[\s\S]*statuses:\s*read/)
+  assert.doesNotMatch(rootReleaseCaller, /statuses:\s*read/)
   assert.doesNotMatch(workflow, /checks:\s*read/)
   assert.match(workflow, /REQUIRED_RELEASE_GATE_PR_NUMBER:\s*\$\{\{ github\.event\.pull_request\.number \}\}/)
   assert.match(workflow, /REQUIRED_RELEASE_GATE_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/)

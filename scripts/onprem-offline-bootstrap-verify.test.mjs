@@ -170,7 +170,7 @@ test('operator runbooks validate release and trust identities before deriving pr
 
 test('runbook trust digest block rejects a missing or malformed release-key fingerprint', (t) => {
   if (process.platform === 'win32') return t.skip('POSIX shell behavior is Linux-only')
-  const lines = installRunbook.split('\n')
+  const lines = installRunbook.split(/\r?\n/u)
   const start = lines.findIndex((line) => line.startsWith('for approved_sha in '))
   const end = lines.findIndex((line, index) => index > start && line === 'done')
   assert.ok(start > 0 && end > start)

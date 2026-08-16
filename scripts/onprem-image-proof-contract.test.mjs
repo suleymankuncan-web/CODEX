@@ -184,7 +184,17 @@ test('tiered proof workflow requires mode, image scope, and exact expected SHA i
   for (const input of ['proof_mode', 'image_scope', 'expected_sha']) {
     assert.match(workflow, new RegExp(`${input}:[\\s\\S]{0,180}?required:\\s*true`))
   }
-  assert.match(workflow, /ref:\s*\$\{\{ inputs\.expected_sha \|\| github\.sha \}\}/)
+  assert.match(workflow, /ref:\s*\$\{\{ inputs\.expected_sha \}\}/)
+  assert.doesNotMatch(workflow, /inputs\.expected_sha\s*\|\|\s*github\.sha/)
+  assert.match(workflow, /local-proof-gate:/)
+  assert.match(workflow, /needs:\s*local-proof-gate/)
+  assert.match(workflow, /statuses:\s*read/)
+  assert.match(workflow, /onprem-proof-dispatch\.mjs verify-status/)
+  const localGate = workflow.split('  proof:')[0]
+  assert.match(localGate, /local-proof-gate:[\s\S]*permissions:[\s\S]*statuses:\s*read/)
+  assert.match(localGate, /GITHUB_EVENT_NAME:\s*\$\{\{\s*github\.event_name\s*\}\}/)
+  assert.match(localGate, /GITHUB_EXECUTION_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/)
+  assert.doesNotMatch(workflow.slice(workflow.indexOf('  proof:')), /permissions:[\s\S]*statuses:\s*read/)
   assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/)
   assert.match(workflow, /proof_mode:\s*\n\s+description:/)
   assert.match(workflow, /image_scope:\s*\n\s+description:/)
@@ -200,8 +210,14 @@ test('manual dispatch is fail-closed with full/both defaults bound to the dispat
   const dispatch = workflow.match(/  workflow_dispatch:[\s\S]*?\n\npermissions:/)?.[0] ?? ''
   assert.match(dispatch, /proof_mode:[\s\S]{0,220}?required:\s*false[\s\S]{0,220}?default:\s*full/)
   assert.match(dispatch, /image_scope:[\s\S]{0,220}?required:\s*false[\s\S]{0,220}?default:\s*both/)
-  assert.doesNotMatch(dispatch, /expected_sha:/)
-  assert.match(workflow, /EXPECTED_SHA:\s*\$\{\{ inputs\.expected_sha \|\| github\.sha \}\}/)
+  assert.match(dispatch, /expected_sha:[\s\S]{0,220}?required:\s*true/)
+  assert.match(workflow, /EXPECTED_SHA:\s*\$\{\{ inputs\.expected_sha \}\}/)
+  for (const artifact of ['onprem-core-runtime-proof', 'onprem-keycloak-runtime-proof', 'onprem-photo-storage-proof', 'onprem-image-proof', 'onprem-image-component-proof']) {
+    const artifactIndex = workflow.indexOf(`name: ${artifact}-`)
+    assert.ok(artifactIndex >= 0, `${artifact} upload is required`)
+    assert.match(workflow.slice(artifactIndex, artifactIndex + 120), /\$\{\{ github\.sha \}\}/)
+  }
+  assert.doesNotMatch(workflow, /name:\s*onprem-(?:core-runtime-proof|keycloak-runtime-proof|photo-storage-proof|image-proof|image-component-proof)-\$\{\{ inputs\.expected_sha \}\}/)
   assert.match(workflow, /case "\$PROOF_MODE:\$IMAGE_SCOPE" in\s+full:both\|component:frontend\|component:backend\|component:both\) ;;\s+\*\) exit 1 ;;\s+esac/)
   assert.doesNotMatch(workflow, /case "\$PROOF_MODE:\$IMAGE_SCOPE" in[\s\S]{0,180}full:frontend/)
 })

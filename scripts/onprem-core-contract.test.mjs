@@ -525,7 +525,7 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
   assert.match(input.redis, /appendfsync everysec/)
   assert.match(input.redis, /maxmemory-policy noeviction/)
   assert.match(input.workflow, /onprem-core-runtime-proof\.mjs/)
-  assert.match(input.workflow, /proof:\s*\n\s+runs-on: ubuntu-latest/)
+  assert.match(input.workflow, /  proof:\r?\n    needs: local-proof-gate\r?\n    runs-on: ubuntu-latest/)
   assert.doesNotMatch(input.workflow, /^\s{2}core-runtime-proof:/m)
   assert.doesNotMatch(input.workflow, /hr-axis-onprem-(?:frontend|backend):core-proof/)
   assert.match(input.runtimeProof, /42501/)
@@ -639,7 +639,7 @@ test('ONP-2 contract rejects ambiguous PostgreSQL boolean migration identity ser
 test('ONP-2 contract rejects an optional or unproven runtime CI gate', () => {
   const input = contractInput()
   input.workflow = input.workflow
-    .replace(/proof:\r?\n    runs-on: ubuntu-latest/, 'proof:\n    if: ${{ false }}\n    runs-on: [self-hosted, linux]')
+    .replace('  proof:\n    needs: local-proof-gate\n    runs-on: ubuntu-latest', '  proof:\n    needs: local-proof-gate\n    if: ${{ false }}\n    runs-on: [self-hosted, linux]')
     .replace('          trap cleanup EXIT', '          # cleanup trap removed')
 
   const result = validateOnpremCoreContract(input)

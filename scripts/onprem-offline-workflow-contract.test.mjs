@@ -72,14 +72,21 @@ test('offline proof is a two-job, source-free handoff workflow with pinned actio
   assert.match(workflow, /workflow_call:/)
   assert.match(workflow, /workflow_dispatch:/)
   const jobs = workflow.slice(workflow.indexOf('\njobs:'))
-  assert.deepEqual([...jobs.matchAll(/^  ([a-z][a-z0-9_]*)\s*:/gm)].map((match) => match[1]), [
+  assert.deepEqual([...jobs.matchAll(/^  ([a-z][a-z0-9_-]*)\s*:/gm)].map((match) => match[1]), [
+    'local-proof-gate',
     'build_bundle',
     'offline_rehearsal',
   ])
+  assert.match(workflow, /statuses:\s*read/)
+  assert.match(workflow, /local-proof-gate:[\s\S]*onprem-proof-dispatch\.mjs verify-status/)
+  const localGate = jobSection('local-proof-gate')
+  assert.match(localGate, /GITHUB_EVENT_NAME:\s*\$\{\{\s*github\.event_name\s*\}\}/)
+  assert.match(localGate, /GITHUB_EXECUTION_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/)
+  assert.match(workflow, /build_bundle:[\s\S]*needs:\s*local-proof-gate/)
   for (const input of ['expected_sha', 'proof_artifact_name', 'proof_run_id']) {
     assert.match(workflow, new RegExp(`${input}:[\\s\\S]{0,220}?required:\\s*true`), input)
   }
-  const actions = [...workflow.matchAll(/uses:\s*([^\s#]+)/g)].map((match) => match[1])
+  const actions = [...workflow.matchAll(/(?:^|\n)\s*uses:\s*([^\s#]+)/g)].map((match) => match[1])
   assert.ok(actions.length >= 4)
   for (const action of actions) assert.match(action, /@[0-9a-f]{40}$/i, `action is not pinned: ${action}`)
 })
@@ -686,7 +693,8 @@ test('offline rehearsal maps every service secret through exact privileged paths
     ['70:70:0400', ['core/postgres/server.key', 'core/postgres/bootstrap-password', 'core/postgres/migrator-password', 'core/postgres/api-password', 'core/postgres/worker-password', 'core/postgres/keycloak-password']],
     ['1000:1000:0400', ['core/keycloak/binder-database-url', 'core/keycloak/database-password', 'core/keycloak/database-url', 'core/keycloak/database-username', 'core/keycloak/bootstrap-username', 'core/keycloak/bootstrap-password', 'core/keycloak/smtp-auth-user', 'core/keycloak/smtp-password', 'core/keycloak/synthetic-accounts', 'core/keycloak/photo-proof-account']],
     ['999:1000:0400', ['core/redis/users.acl', 'core/redis/health-url']],
-    ['65532:65532:0400', ['core/backend/api-database-url', 'core/backend/worker-database-url', 'core/backend/migrator-database-url', 'core/backend/redis-api-url', 'core/backend/redis-worker-url', 'core/backend/browser-session-secret', 'photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
+    ['65532:65532:0400', ['core/backend/api-database-url', 'core/backend/worker-database-url', 'core/backend/migrator-database-url', 'core/backend/redis-api-url', 'core/backend/redis-worker-url', 'core/backend/browser-session-secret']],
+    ['0:65532:0440', ['photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
     ['0:0:0444', ['core/postgres/ca.crt', 'core/postgres/server.crt', 'core/caddy/ca.crt', 'core/caddy/server.crt']],
   ])
   const actualEntries = []
