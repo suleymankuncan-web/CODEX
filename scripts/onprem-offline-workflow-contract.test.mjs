@@ -848,6 +848,8 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.doesNotMatch(rehearsal, /offline edge network is missing after install/)
   assert.match(rehearsal, /backend_image="\$\(sudo awk -F= '\$1 == "HR_AXIS_BACKEND_IMAGE" \{ print \$2; exit \}' "\$ENV_FILE"\)/)
   assert.match(rehearsal, /sudo docker image inspect "\$backend_image" --format '\{\{\.Id\}\}' \| grep -Fqx "\$backend_image"/)
+  assert.match(rehearsal, /--entrypoint \/nodejs\/bin\/node "\$backend_image" --input-type=module -e/)
+  assert.doesNotMatch(rehearsal, /--entrypoint node "\$backend_image"/)
   const install = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/install.sh"')
   const migrate = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/migrate.sh"')
   const activate = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/activate.sh"')

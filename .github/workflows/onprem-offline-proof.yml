@@ -1058,7 +1058,7 @@ jobs:
             printf '%s\n' "$packets"
           }
           reject_packets_before="$(read_reject_packets)"
-          sudo docker run --pull=never --rm --network "$edge_network" --entrypoint node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
+          sudo docker run --pull=never --rm --network "$edge_network" --entrypoint /nodejs/bin/node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
           reject_packets_after="$(read_reject_packets)"
           test "$reject_packets_after" -gt "$reject_packets_before"
           docker_reject_counter_delta=$((reject_packets_after - reject_packets_before))
