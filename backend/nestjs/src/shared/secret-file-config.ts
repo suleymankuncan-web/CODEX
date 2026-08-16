@@ -39,6 +39,13 @@ const STRICT_LOCAL_PHOTO_MEDIA_SETTINGS = [
   "PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE",
 ] as const;
 
+const PHOTO_GROUP_READABLE_FILE_KEYS = new Set([
+  "PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE",
+  "PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE",
+  "PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID_FILE",
+  "PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY_FILE",
+]);
+
 const STRICT_LOCAL_OIDC_URL_SETTINGS = [
   "AUTH_AUTHORIZATION_URL",
   "AUTH_LOGOUT_URL",
@@ -144,7 +151,11 @@ function normalize(value: string | undefined): string | undefined {
 }
 
 export function assertSecretFilePermissions(key: string, mode: number): void {
-  if ((mode & 0o077) !== 0) {
+  const permissions = mode & 0o777;
+  const ownerOnly = (permissions & 0o077) === 0;
+  const exactPhotoGroupReadableMode =
+    PHOTO_GROUP_READABLE_FILE_KEYS.has(key) && permissions === 0o440;
+  if (!ownerOnly && !exactPhotoGroupReadableMode) {
     throw new Error(`${key} permissions are too permissive`);
   }
 }

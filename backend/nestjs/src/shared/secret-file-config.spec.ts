@@ -71,6 +71,18 @@ describe("file-backed settings", () => {
     expect(() => assertSecretFilePermissions("DATABASE_URL_FILE", 0o100600)).not.toThrow();
   });
 
+  it("allows only the exact group-readable mode for photo credential files", () => {
+    expect(() =>
+      assertSecretFilePermissions("PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID_FILE", 0o100440),
+    ).not.toThrow();
+    expect(() =>
+      assertSecretFilePermissions("PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE", 0o100444),
+    ).toThrow("PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY_FILE permissions are too permissive");
+    expect(() =>
+      assertSecretFilePermissions("REDIS_URL_FILE", 0o100440),
+    ).toThrow("REDIS_URL_FILE permissions are too permissive");
+  });
+
   it("allows a public CA to be readable but never group/world writable", () => {
     expect(() =>
       assertPublicTrustFilePermissions("DB_SSL_CA_FILE", 0o100444),
