@@ -769,6 +769,17 @@ jobs:
           BUNDLE_ARCHIVE_MANIFEST_SHA256: ${{ needs.build_bundle.outputs.bundle_archive_manifest_sha256 }}
         run: |
           set -euo pipefail
+          offline_rehearsal_heartbeat() {
+            local offline_heartbeat_seq=0
+            while :; do
+              offline_heartbeat_seq=$((offline_heartbeat_seq + 1))
+              printf 'offline rehearsal heartbeat seq=%s\n' "$offline_heartbeat_seq"
+              sleep 30
+            done
+          }
+          offline_rehearsal_heartbeat &
+          offline_heartbeat_pid=$!
+          trap 'if [ -n "${offline_heartbeat_pid:-}" ]; then kill "$offline_heartbeat_pid" 2>/dev/null || true; wait "$offline_heartbeat_pid" 2>/dev/null || true; fi' EXIT
           umask 077
           case "$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT" in
             ''|*[!0-9:]*|*:*:*) echo 'offline sealed-root identity is invalid' >&2; exit 1 ;;
@@ -1010,9 +1021,13 @@ jobs:
           RECEIPT_ROOT="$OPERATOR_ROOT/receipts"; BACKUP_ROOT="$OPERATOR_ROOT/backups"
           PROOF_COMPOSE="$BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo test -f "$PROOF_COMPOSE" && sudo test ! -L "$PROOF_COMPOSE"
+          printf '%s\n' 'offline phase=preflight'
           sudo_operator "$BUNDLE_ROOT/operations/preflight.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --allow-unloaded-images --allow-missing-ledger
+          printf '%s\n' 'offline phase=install'
           sudo_operator "$BUNDLE_ROOT/operations/install.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          printf '%s\n' 'offline phase=migrate'
           sudo_operator "$BUNDLE_ROOT/operations/migrate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          printf '%s\n' 'offline phase=activate'
           sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           edge_network="hr-axis-onprem-core_edge"
           edge_meta="$(sudo docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
@@ -1071,16 +1086,19 @@ jobs:
           fs.chmodSync(path, 0o600)
           NODE
           test "$(sudo stat -c '%u:%g:%a' "$RECEIPT_ROOT/egress.json")" = '0:0:600'
+          printf '%s\n' 'offline phase=smoke'
           sudo_operator "$BUNDLE_ROOT/operations/smoke.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --receipt "$RECEIPT_ROOT/smoke.json"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/smoke.json" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.project !== 'hr-axis-onprem-core' || value.releaseId !== releaseId) process.exit(41); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'smoke', status: 'passed', sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
           NODE
+          printf '%s\n' 'offline phase=photo-prebackup'
           sudo -- "$NODE_BIN" "$BUNDLE_ROOT/operations/onprem-offline-target-proof.mjs" --execute --require-complete --compose "$BUNDLE_ROOT/deployment/compose.yaml" --compose "$BUNDLE_ROOT/deployment/compose.photo-proof.yaml" --compose "$BUNDLE_ROOT/deployment/photo-compose.yaml" --compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --env-file "$ENV_FILE" --project hr-axis-onprem-core --release-id "$RELEASE_ID" --host offline.synthetic.invalid --accounts-file "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" --photo-account-file "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account" --ca-file "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" --photo-auth-image "$backend_image" --connect-host caddy --connect-port 8443 --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256" --photo-mode prepare --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$photo_prebackup_receipt"
           sudo -- "$NODE_BIN" - "$photo_prebackup_receipt" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); const photo = value.photo; if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.releaseClaimVerified !== true || value.recoveredPreBackupPhoto !== false || !photo || photo.photoAdminAuthenticated !== true || photo.nonSuperAdminDenied !== true || photo.deniedWriteDelta !== 0 || photo.exactWebpRead !== true || photo.repeatReadExact !== true || photo.canonicalIdentityVerified !== true || !/^[a-f0-9]{64}$/.test(photo.contentSha256) || !Number.isSafeInteger(photo.contentLength) || photo.contentLength <= 0) process.exit(43); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'target-proof-prebackup', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
           NODE
           target_gate_status=0
           release_suffix="$(printf '%s' "$RELEASE_ID" | rev | cut -d- -f1 | rev)"
+          printf '%s\n' 'offline phase=backup'
           sudo_operator "$BUNDLE_ROOT/operations/backup.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --backup-private-key "$owner_key" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle"
           sudo test -s "$BACKUP_ROOT/backup/backup-manifest.json"
           sudo test -s "$BACKUP_ROOT/backup/backup-signature.json"
@@ -1088,10 +1106,12 @@ jobs:
           sudo -- "$NODE_BIN" - "$BACKUP_ROOT/backup/backup-manifest.json" "$BACKUP_ROOT/backup/backup-signature.json" "$RECEIPT_ROOT/backup.json" "$photo_recovery_handle" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [manifestPath, signaturePath, receiptPath, handlePath] = process.argv.slice(2); const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); const signature = JSON.parse(fs.readFileSync(signaturePath, 'utf8')); const digest = (path) => crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex'); const handle = JSON.parse(fs.readFileSync(handlePath, 'utf8')); if (manifest.photoRecoveryHandleSha256 !== digest(handlePath) || manifest.photoContentSha256 !== handle.contentSha256 || manifest.photoContentLength !== handle.contentLength) process.exit(43); fs.writeFileSync(receiptPath, JSON.stringify({ schemaVersion: 1, operation: 'backup', status: 'passed', dataClass: 'synthetic', releaseId: manifest.releaseId, sourceProject: manifest.sourceProject, targetProject: manifest.sourceProject, manifestSha256: digest(manifestPath), signatureSha256: digest(signaturePath), inventorySha256: manifest.inventorySha }) + '\n', { mode: 0o600 })
           NODE
+          printf '%s\n' 'offline phase=restore'
           sudo_operator "$BUNDLE_ROOT/operations/restore.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-restore --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --source-project hr-axis-onprem-core --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/restore.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           materialize_transition_bundle next "$NEXT_BUNDLE_ROOT" "onprem-next-$release_suffix"
           NEXT_PROOF_COMPOSE="$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo test -f "$NEXT_PROOF_COMPOSE" && sudo test ! -L "$NEXT_PROOF_COMPOSE"
+          printf '%s\n' 'offline phase=upgrade'
           sudo_operator "$BUNDLE_ROOT/operations/upgrade.sh" --bundle-root "$BUNDLE_ROOT" --next-bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$RELEASE_ID" --next-release-id "onprem-next-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-upgrade --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$NEXT_ENV_FILE" --proof-compose "$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/upgrade.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/upgrade.json" "onprem-next-$release_suffix" "$RELEASE_ID" "hr-axis-onprem-upgrade" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [path, releaseId, sourceReleaseId, targetProject] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== 'hr-axis-onprem-core' || value.targetProject !== targetProject) process.exit(42); const sourceReceiptSha256 = crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'upgrade-mechanics', status: 'mechanics-passed', evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false, sourceReleaseId, sourceProject: 'hr-axis-onprem-core', targetProject, sourceReceiptSha256 }) + '\n', { mode: 0o600 })
@@ -1099,6 +1119,7 @@ jobs:
           materialize_transition_bundle previous "$PREVIOUS_BUNDLE_ROOT" "onprem-previous-$release_suffix"
           PREVIOUS_PROOF_COMPOSE="$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo test -f "$PREVIOUS_PROOF_COMPOSE" && sudo test ! -L "$PREVIOUS_PROOF_COMPOSE"
+          printf '%s\n' 'offline phase=rollback'
           sudo_operator "$BUNDLE_ROOT/operations/rollback.sh" --bundle-root "$BUNDLE_ROOT" --previous-bundle-root "$PREVIOUS_BUNDLE_ROOT" --release-id "$RELEASE_ID" --previous-release-id "onprem-previous-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-rollback --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$PREVIOUS_ENV_FILE" --proof-compose "$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/rollback.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/rollback.json" "onprem-previous-$release_suffix" "$RELEASE_ID" "hr-axis-onprem-rollback" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [path, releaseId, sourceReleaseId, targetProject] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== 'hr-axis-onprem-core' || value.targetProject !== targetProject) process.exit(42); const sourceReceiptSha256 = crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'rollback-mechanics', status: 'mechanics-passed', evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false, sourceReleaseId, sourceProject: 'hr-axis-onprem-core', targetProject, sourceReceiptSha256 }) + '\n', { mode: 0o600 })

@@ -200,6 +200,15 @@ test('build proof material uses one external runner-temp root from assembly thro
 
 test('offline rehearsal downloads only the bundle, cuts egress before verification, and never checks out source', () => {
   const rehearsal = jobSection('offline_rehearsal')
+  const heartbeatDefinition = rehearsal.indexOf('offline_rehearsal_heartbeat()')
+  const heartbeatStart = rehearsal.indexOf('offline_rehearsal_heartbeat &')
+  const firstOperator = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/preflight.sh"')
+  assert.ok(heartbeatDefinition >= 0 && heartbeatStart > heartbeatDefinition && heartbeatStart < firstOperator, 'offline rehearsal must start its bounded heartbeat before operator work')
+  assert.match(rehearsal, /offline rehearsal heartbeat seq=/)
+  assert.match(rehearsal, /trap 'if \[ -n "\$\{offline_heartbeat_pid:-\}" \]; then kill "\$offline_heartbeat_pid"/)
+  for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {
+    assert.equal((rehearsal.match(new RegExp(`offline phase=${phase}`, 'g')) ?? []).length, 1, `${phase} phase marker must be unique`)
+  }
   assert.doesNotMatch(rehearsal, /actions\/checkout@/)
   assert.match(rehearsal, /actions\/download-artifact@[0-9a-f]{40}/)
   assert.match(rehearsal, /onprem-offline-bundle-/)
