@@ -50,8 +50,9 @@ receipts.
 files. For a production-shaped run, provision the four non-empty values in an
 IT/owner-controlled directory and set `PHOTO_STORAGE_SECRET_ROOT` in the
 private Compose env file. Use the approved secret ownership, mode, rotation,
-and recovery policy: each photo-storage secret file is `0:65532` with mode
-`0440`, so UID-0 SeaweedFS and UID/GID-65532 API/worker processes can read it;
+and recovery policy: each photo-storage secret file is `65532:0` with mode
+`0440`, so UID/GID-65532 API/worker processes read as the owner and UID-0
+SeaweedFS reads through its root group;
 do not grant DAC capabilities or broaden the mode. Never use the template
 placeholder or an empty file.
 The executable synthetic proof creates temporary credentials outside the

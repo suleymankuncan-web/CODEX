@@ -703,7 +703,7 @@ test('offline rehearsal maps every service secret through exact privileged paths
     ['1000:1000:0400', ['core/keycloak/binder-database-url', 'core/keycloak/database-password', 'core/keycloak/database-url', 'core/keycloak/database-username', 'core/keycloak/bootstrap-username', 'core/keycloak/bootstrap-password', 'core/keycloak/smtp-auth-user', 'core/keycloak/smtp-password', 'core/keycloak/synthetic-accounts', 'core/keycloak/photo-proof-account']],
     ['999:1000:0400', ['core/redis/users.acl', 'core/redis/health-url']],
     ['65532:65532:0400', ['core/backend/api-database-url', 'core/backend/worker-database-url', 'core/backend/migrator-database-url', 'core/backend/redis-api-url', 'core/backend/redis-worker-url', 'core/backend/browser-session-secret']],
-    ['0:65532:0440', ['photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
+    ['65532:0:0440', ['photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
     ['0:0:0444', ['core/postgres/ca.crt', 'core/postgres/server.crt', 'core/caddy/ca.crt', 'core/caddy/server.crt']],
   ])
   const actualEntries = []

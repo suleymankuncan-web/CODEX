@@ -152,9 +152,9 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /mode must be 0700/)
   assert.match(preflightSource, /rendered_secret_identity/)
   assert.match(preflightSource, /file_gid/)
-  for (const identity of ['10001:10001:400', '70:70:400', '1000:1000:400', '999:1000:400', '65532:65532:400', '0:65532:440', '0:0:444']) assert.match(preflightSource, new RegExp(identity.replaceAll(':', '\\:')))
-  assert.match(preflightSource, /photo_primary_access_key_id\|photo_primary_secret_access_key\|photo_recovery_access_key_id\|photo_recovery_secret_access_key\) printf '%s' 0:65532:440/)
-  assert.doesNotMatch(preflightSource, /photo_primary_access_key_id\|photo_primary_secret_access_key\|photo_recovery_access_key_id\|photo_recovery_secret_access_key\) printf '%s' 65532:65532:400/)
+  for (const identity of ['10001:10001:400', '70:70:400', '1000:1000:400', '999:1000:400', '65532:65532:400', '65532:0:440', '0:0:444']) assert.match(preflightSource, new RegExp(identity.replaceAll(':', '\\:')))
+  assert.match(preflightSource, /photo_primary_access_key_id\|photo_primary_secret_access_key\|photo_recovery_access_key_id\|photo_recovery_secret_access_key\) printf '%s' 65532:0:440/)
+  assert.doesNotMatch(preflightSource, /photo_primary_access_key_id\|photo_primary_secret_access_key\|photo_recovery_access_key_id\|photo_recovery_secret_access_key\) printf '%s' 0:65532:440/)
   assert.match(preflightSource, /rendered secret source identity is unsafe/)
   assert.match(preflightSource, /PHOTO_STORAGE_SECRET_ROOT/)
   assert.match(preflightSource, /file_links|hard link/)
@@ -181,7 +181,7 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /external input ancestor is group\/world writable/)
 })
 
-test('photo secret leaf identity permits root and backend-group reads while denying unrelated users', (t) => {
+test('photo secret leaf identity permits backend-owner and root-group reads while denying unrelated users', (t) => {
   if (process.platform !== 'linux' || process.getuid?.() !== 0) {
     t.skip('POSIX UID/GID permission proof requires the Linux root run')
     return
@@ -191,14 +191,13 @@ test('photo secret leaf identity permits root and backend-group reads while deny
   try {
     chmodSync(root, 0o755)
     writeFileSync(secret, 'synthetic-photo-secret\n', { mode: 0o440 })
-    chownSync(secret, 0, 65532)
-    chmodSync(secret, 0o440)
+    chownSync(secret, 65532, 0)
     const readAs = (uid, gid) => spawnSync(process.execPath, ['-e', 'process.stdout.write(require("node:fs").readFileSync(process.argv[1], "utf8"))', secret], {
       encoding: 'utf8', uid, gid,
     })
     const metadata = statSync(secret)
-    assert.equal(metadata.uid, 0)
-    assert.equal(metadata.gid, 65532)
+    assert.equal(metadata.uid, 65532)
+    assert.equal(metadata.gid, 0)
     assert.equal(metadata.mode & 0o777, 0o440)
     const rootRead = readAs(0, 0)
     assert.equal(rootRead.status, 0, rootRead.stderr)
@@ -401,14 +400,14 @@ esac
     esac;;
   *%d:%i*) exec /usr/bin/stat "$@";;
   *%u*)
-    [ -f '${shellPath(legacyPhotoIdentityMode)}' ] && case "$pathname" in '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532; exit 0;; esac
+    [ -f '${shellPath(legacyPhotoIdentityMode)}' ] && case "$pathname" in '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 0; exit 0;; esac
     [ -f '${shellPath(wrongSecretIdentityMode)}' ] && case "$pathname" in '${shellPath(join(secretRoot, 'caddy.ca'))}'|'${shellPath(authAccounts)}') echo 1; exit 0;; esac
     [ -f '${shellPath(nonRootMode)}' ] && { echo 1000; exit 0; }
-    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 0;; *) echo 0;; esac;;
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
   *%g*)
     [ -f '${shellPath(legacyPhotoIdentityMode)}' ] && case "$pathname" in '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532; exit 0;; esac
     [ -f '${shellPath(wrongSecretIdentityMode)}' ] && case "$pathname" in '${shellPath(join(secretRoot, 'caddy.ca'))}'|'${shellPath(authAccounts)}') echo 1; exit 0;; esac
-    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 65532;; *) echo 0;; esac;;
+    case "$pathname" in '${shellPath(join(secretRoot, 'caddy.key'))}') echo 10001;; '${shellPath(join(secretRoot, 'keycloak', 'photo-proof-account'))}'|'${shellPath(join(secretRoot, 'keycloak', 'database-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-username'))}'|'${shellPath(join(secretRoot, 'keycloak', 'bootstrap-password'))}'|'${shellPath(join(secretRoot, 'keycloak', 'smtp-auth-user'))}'|'${shellPath(authAccounts)}') echo 1000;; '${shellPath(join(photoSecretRoot, 'photo.key'))}') echo 0;; *) echo 0;; esac;;
   *%h*) [ -f '${shellPath(hardlinkPath)}' ] && echo 2 || echo 1;;
   *%s*) [ -f '${shellPath(largeSecretMode)}' ] && echo 1048577 || echo 10;;
   *) exit 1;;

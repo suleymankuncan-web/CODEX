@@ -267,7 +267,7 @@ rendered_secret_identity() {
     keycloak_*|binder_database_url) printf '%s' 1000:1000:400;;
     redis_users_acl|redis_health_url) printf '%s' 999:1000:400;;
     migrator_database_url|api_database_url|worker_database_url|redis_api_url|redis_worker_url|browser_session_secret) printf '%s' 65532:65532:400;;
-    photo_primary_access_key_id|photo_primary_secret_access_key|photo_recovery_access_key_id|photo_recovery_secret_access_key) printf '%s' 0:65532:440;;
+    photo_primary_access_key_id|photo_primary_secret_access_key|photo_recovery_access_key_id|photo_recovery_secret_access_key) printf '%s' 65532:0:440;;
     *) die "rendered secret source has no approved identity policy: $1";;
   esac
 }

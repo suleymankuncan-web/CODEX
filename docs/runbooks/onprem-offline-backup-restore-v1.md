@@ -29,8 +29,9 @@ read-only modes: the Caddy private key is `10001:10001 0400`; PostgreSQL
 private keys and passwords are `70:70 0400`; Keycloak bootstrap and
 identity-binder secrets are `1000:1000 0400`; Redis ACL and health credentials
 are `999:1000 0400`; API and worker credentials remain `65532:65532 0400`;
-and the four photo-storage access/secret files are `0:65532 0440`, allowing
-UID-0 SeaweedFS and UID/GID-65532 API/worker reads without DAC capabilities.
+and the four photo-storage access/secret files are `65532:0 0440`, allowing
+UID/GID-65532 API/worker owner reads and UID-0 SeaweedFS root-group reads
+without DAC capabilities.
 The public certificate and CA files remain `root:root 0444`.
 The containing secret roots and their ancestor chain remain root-owned mode
 `0700`; do not replace this exact leaf policy with blanket root-owned `0600`
