@@ -35,6 +35,9 @@ test('compose arguments preserve explicit project, env, file order and no host p
     'compose', '--project-name', project, '--env-file', 'C:/safe/core.env',
     '--file', 'C:/safe/core.yaml', '--file', 'C:/safe/photo.yaml',
   ])
+  assert.deepEqual(buildComposeArgs({ project, envFile: 'C:/safe/core.env', profiles: ['*'], compose: ['C:/safe/core.yaml'] }), [
+    'compose', '--profile', '*', '--project-name', project, '--env-file', 'C:/safe/core.env', '--file', 'C:/safe/core.yaml',
+  ])
   const config = {
     services: {
       redis: { networks: [`${project}_data`], ports: [], labels: {
@@ -63,6 +66,54 @@ test('compose arguments preserve explicit project, env, file order and no host p
   assert.equal(assertTargetComposeConfig(renderedWithoutAutoLabels, { project, releaseId, services: ['redis', 'worker', 'api'] }).releaseClaimVerified, true)
   const mismatchedAutoLabel = { ...renderedWithoutAutoLabels, services: { ...renderedWithoutAutoLabels.services, api: { ...renderedWithoutAutoLabels.services.api, labels: { ...renderedWithoutAutoLabels.services.api.labels, 'com.docker.compose.project': 'wrong-project' } } } }
   assert.throws(() => assertTargetComposeConfig(mismatchedAutoLabel, { project, releaseId, services: ['api'] }), /project label/i)
+})
+
+test('target proof renders every Compose profile only for read-only config inspection', () => {
+  const configLabels = { 'com.docker.compose.project': project, 'com.hr-axis.project': project, 'com.hr-axis.data-class': 'synthetic', 'com.hr-axis.release-id': releaseId }
+  const redisImage = `sha256:${'a'.repeat(64)}`
+  const workerImage = `sha256:${'b'.repeat(64)}`
+  const config = {
+    services: {
+      redis: { image: redisImage, networks: [`${project}_data`], ports: [], labels: configLabels },
+      worker: { image: workerImage, networks: [`${project}_app`, `${project}_data`], ports: [], labels: configLabels },
+    },
+  }
+  const redisLabels = { ...configLabels, 'com.docker.compose.service': 'redis', 'com.docker.compose.container-number': '1', 'com.docker.compose.oneoff': 'False' }
+  const workerLabels = { ...configLabels, 'com.docker.compose.service': 'worker', 'com.docker.compose.container-number': '1', 'com.docker.compose.oneoff': 'False' }
+  let redisRunning = true
+  let workerRunning = true
+  const calls = []
+  const composeCommand = (actualOptions, args, label) => {
+    calls.push({ profiles: actualOptions.profiles ?? [], args: [...args], label })
+    if (args[0] === 'config') return { status: 0, stdout: `${JSON.stringify(config)}\n`, stderr: '' }
+    if (args[0] === 'stop' && args[1] === 'worker') workerRunning = false
+    if (args[0] === 'stop' && args[1] === 'redis') redisRunning = false
+    if (args[0] === 'start' && args[1] === 'redis') redisRunning = true
+    if (args[0] === 'start' && args[1] === 'worker') workerRunning = true
+    if (args[0] === 'run') {
+      const mode = args.at(-1)
+      const output = mode === 'enqueue'
+        ? { event: 'onprem.synthetic_queue_probe.completed', durability: 'local-aof-fsynced', mode, queuedCount: 1, state: 'delayed', status: 'queued' }
+        : mode === 'process'
+          ? { event: 'onprem.synthetic_queue_probe.completed', mode, processedCount: 1, duplicateCount: 0, status: 'completed' }
+          : { event: 'onprem.synthetic_queue_probe.completed', markerCount: 1, mode, state: 'completed' }
+      return { status: 0, stdout: `${JSON.stringify(output)}\n`, stderr: '' }
+    }
+    return { status: 0, stdout: '', stderr: '' }
+  }
+  const inspect = (id) => id === 'redis-id'
+    ? { Id: id, Config: { Image: redisImage, Labels: redisLabels }, State: { Running: redisRunning, Restarting: false, OOMKilled: false, Dead: false, Error: '', Health: { Status: 'healthy' } }, Mounts: [{ Destination: '/data', Type: 'volume', Name: 'redis-data', Source: '/var/lib/redis-data' }] }
+    : { Id: id, Config: { Image: workerImage, Labels: workerLabels }, State: { Running: workerRunning, Restarting: false, OOMKilled: false, Dead: false, Error: '', Health: { Status: 'healthy' } } }
+  runQueueProof({ project, releaseId, envFile: 'C:/safe/core.env', compose: ['C:/safe/core.yaml'], timeoutMs: 1000, healthAttempts: 1, intervalMs: 1 }, {
+    composeCommand,
+    inspect,
+    redisContainerId: 'redis-id',
+    workerContainerId: 'worker-id',
+    skipNetwork: true,
+  })
+  const configCall = calls.find(({ args }) => args[0] === 'config')
+  assert.deepEqual(configCall?.profiles, ['*'])
+  assert.ok(calls.filter(({ args }) => args[0] !== 'config').every(({ profiles }) => profiles.length === 0), 'wildcard profiles must not widen queue mutations')
 })
 
 test('target proof rejects host bindings reported by actual service containers', () => {
@@ -123,8 +174,12 @@ test('photo command is source-free, exact, and bounded to the protected HTTP pro
 })
 
 test('photo auth proof runs only inside the exact private target network with the immutable backend image', () => {
-  const args = buildPhotoAuthDockerArgs({ project, image: 'sha256:' + 'a'.repeat(64), host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs' })
+  const image = 'sha256:' + 'a'.repeat(64)
+  const args = buildPhotoAuthDockerArgs({ project, image, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs' })
   assert.deepEqual(args.slice(0, 8), ['run', '--pull=never', '--rm', '--network', `${project}_proxy`, '--volume', 'C:/proof/onprem-photo-auth-proof.mjs:/run/hr-axis/onprem-photo-auth-proof.mjs:ro', '--volume'])
+  const imageIndex = args.indexOf(image)
+  assert.deepEqual(args.slice(imageIndex - 2, imageIndex + 2), ['--entrypoint', '/nodejs/bin/node', image, '/run/hr-axis/onprem-photo-auth-proof.mjs'])
+  assert.equal(args.includes('node'), false, 'distroless backend auth proof must not pass a node token through the image entrypoint')
   assert.equal(args.includes('127.0.0.1'), false)
   assert.deepEqual(args.slice(-4), ['--connect-host', 'caddy', '--connect-port', '8443'])
   assert.throws(() => buildPhotoAuthDockerArgs({ project, image: 'backend:latest', host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64) }), /immutable digest/i)

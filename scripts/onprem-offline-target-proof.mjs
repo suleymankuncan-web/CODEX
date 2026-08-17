@@ -37,11 +37,12 @@ export function command(file, args, { timeoutMs = 120_000, label = file, env, in
   return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
 }
 
-export function buildComposeArgs({ project, envFile, compose }) {
+export function buildComposeArgs({ project, envFile, compose, profiles = [] }) {
   safeId(project, 'Compose project')
   safePath(envFile, 'env-file', { requireAbsolute: false })
   if (!Array.isArray(compose) || compose.length === 0) fail('at least one Compose file is required')
-  return ['compose', '--project-name', project, '--env-file', envFile, ...compose.flatMap((file) => { safePath(file, 'Compose file', { requireAbsolute: false }); return ['--file', file] })]
+  if (!Array.isArray(profiles) || profiles.length > 16 || profiles.some((profile) => typeof profile !== 'string' || (profile !== '*' && !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(profile)))) fail('Compose profiles are invalid')
+  return ['compose', ...profiles.flatMap((profile) => ['--profile', profile]), '--project-name', project, '--env-file', envFile, ...compose.flatMap((file) => { safePath(file, 'Compose file', { requireAbsolute: false }); return ['--file', file] })]
 }
 
 export function buildQueueProbeArgs(mode = 'enqueue') {
@@ -74,7 +75,7 @@ export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, p
     '--volume', `${photoAccountFile}:${photoAccountMount}:ro`,
     '--volume', `${caFile}:${caMount}:ro`,
     '--volume', `${fixturePath}:${fixtureMount}:ro`,
-    image, 'node', scriptMount,
+    '--entrypoint', '/nodejs/bin/node', image, scriptMount,
     '--host', host, '--accounts-file', accountsMount, '--photo-account-file', photoAccountMount,
     '--ca-file', caMount, '--fixture', fixtureMount, '--sha256', sha256.toLowerCase(),
     '--connect-host', 'caddy', '--connect-port', '8443',
@@ -231,7 +232,10 @@ export function assertPhotoProofOutput(value, { expectedSha256 = null, expectedL
 
 function composeCommand(options, args, label) { return command('docker', [...buildComposeArgs(options), ...args], { timeoutMs: options.timeoutMs, label }) }
 function inspectDocker(id, options, label) { return JSON.parse(command('docker', ['inspect', id], { timeoutMs: options.timeoutMs, label }).stdout)[0] }
-function composeConfig(options) { return parseOutput(composeCommand(options, ['config', '--format', 'json'], 'target Compose config'), 'target Compose config') }
+function composeConfig(options, invoke = composeCommand) {
+  const result = invoke({ ...options, profiles: ['*'] }, ['config', '--format', 'json'], 'target Compose config')
+  return parseOutput(result.stdout, 'target Compose config')
+}
 function redisContainerId(options) { const id = composeCommand(options, ['ps', '--all', '--quiet', 'redis'], 'Redis container inventory').stdout.trim(); if (!/^[A-Za-z0-9_.-]+$/.test(id)) fail('Redis container inventory was empty or unsafe'); return id }
 function workerContainerId(options) { const id = composeCommand(options, ['ps', '--all', '--quiet', 'worker'], 'worker container inventory').stdout.trim(); if (!/^[A-Za-z0-9_.-]+$/.test(id)) fail('worker container inventory was empty or unsafe'); return id }
 function assertActualServicePorts(options, config, deps) {
@@ -263,7 +267,7 @@ export function runPhotoProof(options, deps = {}) {
   const sha256 = validatePhotoFixture(options.photoFixture, options.photoSha256)
   if (!options.host || !options.accountsFile || !options.photoAccountFile || !options.caFile) fail('complete photo target proof requires protected HTTP auth inputs')
   if (!options.photoAuthImage) fail('complete photo target proof requires the signed backend image digest')
-  const config = deps.config ?? composeConfig(options)
+  const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const renderedImage = config?.services?.api?.image
   if (!/^sha256:[a-f0-9]{64}$/i.test(renderedImage ?? '') || renderedImage.toLowerCase() !== options.photoAuthImage.toLowerCase()) fail('photo auth image does not match the signed rendered API image')
   const inspectImage = deps.imageInspect ?? ((image) => command('docker', ['image', 'inspect', image, '--format', '{{.Id}}'], { timeoutMs: options.timeoutMs, label: 'photo auth image inspect' }))
@@ -307,7 +311,7 @@ export function runPhotoProof(options, deps = {}) {
 export function runQueueProof(options, deps = {}) {
   const invoke = deps.composeCommand ?? composeCommand
   const inspect = deps.inspectDocker ?? deps.inspect ?? ((id) => inspectDocker(id, options, 'Redis container inspect'))
-  const config = deps.config ?? composeConfig(options)
+  const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const composeClaim = assertTargetComposeConfig(config, { project: options.project, releaseId: options.releaseId, services: ['redis', 'worker'] })
   assertActualServicePorts(options, config, {
     ...deps,
@@ -482,7 +486,7 @@ export function parseArgs(argv) {
 }
 
 export function run(options, deps = {}) {
-  const config = deps.config ?? composeConfig(options)
+  const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const sharedDeps = { ...deps, config }
   const queue = runQueueProof(options, sharedDeps)
   const photo = options.queueOnly || !options.photoFixture ? null : runPhotoProof(options, sharedDeps)
