@@ -800,6 +800,10 @@ jobs:
               sleep 30
             done
           }
+          host_probe_uid="$(id -u nobody)"
+          printf '%s\n' "$host_probe_uid" | grep -Eq '^[1-9][0-9]*$'
+          host6_probe_target=fd42:6872:6178:6973::2
+          test "$host6_probe_target" = "fd42:6872:6178:6973::2"
           offline_rehearsal_heartbeat &
           offline_heartbeat_pid=$!
           trap 'if [ -n "${offline_heartbeat_pid:-}" ]; then kill "$offline_heartbeat_pid" 2>/dev/null || true; wait "$offline_heartbeat_pid" 2>/dev/null || true; fi' EXIT

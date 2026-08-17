@@ -789,6 +789,7 @@ test('offline bundle handoff preserves modes and bounds disk use with sequential
 
 test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound negative probes', () => {
   const rehearsal = jobSection('offline_rehearsal')
+  const verifyStep = stepSection(rehearsal, 'Verify bundle before docker load and run bundled operations')
   const dockerChain = rehearsal.match(/docker_egress_chain=([A-Z0-9_]+)/)?.[1]
   assert.equal(dockerChain, 'HR_AXIS_OFF_DOCKER_EGRESS')
   assert.ok(dockerChain.length <= 28, `iptables chain name exceeds the Linux 28-character limit: ${dockerChain}`)
@@ -833,6 +834,10 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.match(rehearsal, /sudo ip -6 addr add "\$host6_probe_source\/128" dev "\$host6_probe_interface"/)
   assert.match(rehearsal, /sudo ip -6 route add "\$host6_probe_target\/128" dev "\$host6_probe_interface"/)
   assert.match(rehearsal, /test "\$host6_probe_target" = "fd42:6872:6178:6973::2"/)
+  assert.match(verifyStep, /host_probe_uid="\$\(id -u nobody\)"/)
+  assert.match(verifyStep, /host6_probe_target=fd42:6872:6178:6973::2/)
+  assert.ok(verifyStep.indexOf('host_probe_uid="$(id -u nobody)"') < verifyStep.indexOf('host6_probe_target=fd42:6872:6178:6973::2'))
+  assert.ok(verifyStep.indexOf('host6_probe_target=fd42:6872:6178:6973::2') < verifyStep.indexOf("host:'$host6_probe_target'"))
   assert.match(rehearsal, /host_reject_rule_line=4/)
   assert.match(rehearsal, /sudo -u nobody -- "\$PINNED_NODE_SOURCE" --input-type=module -e/)
   assert.doesNotMatch(rehearsal, /(?<!sudo -u nobody -- )node --input-type=module -e "import net from 'node:net'/)
