@@ -145,7 +145,7 @@ PUBLIC_HOST=$(env_value HR_AXIS_PUBLIC_HOST); [ -n "$PUBLIC_HOST" ] || die "appr
 if [ -n "$PROOF_COMPOSE" ]; then
   BACKEND_IMAGE=$(env_value HR_AXIS_BACKEND_IMAGE)
   printf '%s' "$BACKEND_IMAGE" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "approved backend image identity is invalid"
-  AUTH_OUTPUT=$(docker run --pull=never --rm --network "${TARGET_PROJECT}_proxy" \
+  AUTH_OUTPUT=$(docker run --pull=never --rm --user 1000:1000 --network "${TARGET_PROJECT}_proxy" \
     --volume "$AUTH_PROOF:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro" \
     --volume "$ACCOUNTS_SOURCE:/run/hr-axis/synthetic-accounts:ro" \
     --volume "$CA_SOURCE:/run/hr-axis/caddy-ca.crt:ro" \
