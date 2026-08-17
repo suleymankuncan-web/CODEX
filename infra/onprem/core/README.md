@@ -91,6 +91,13 @@ and 8 GiB container memory. The 2 GiB Keycloak cap is a rehearsal ceiling,
 not a production-capacity claim; host overhead, JVM sizing, disk latency, and
 failure-recovery load must be measured by IT before any activation decision.
 
+The stopped-server `keycloak-bootstrap` one-shot is separate from the steady
+budget. It is capped at `1.5` vCPU, `1g` memory, and 128 processes because it
+starts a second short-lived Keycloak JVM and performs many sequential `kcadm`
+reconciliation calls during the offline rehearsal. It publishes no runtime
+service and the bounded cap remains fail-closed; lowering this CPU ceiling can
+make a valid rehearsal exceed the workflow deadline.
+
 ## Secret files
 
 `secret-files/` is ignored. Compose file-backed secrets are bind mounts and do

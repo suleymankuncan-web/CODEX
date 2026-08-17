@@ -538,14 +538,14 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
 
 test('ONP-3B fresh-Linux Keycloak bootstrap rehearsal uses the corrected one-shot ceiling', () => {
   const input = contractInput()
-  assert.match(input.compose, /keycloak-bootstrap:[\s\S]*?cpus: 0\.5\n    mem_limit: 1g\n    pids_limit: 128/)
+  assert.match(input.compose, /keycloak-bootstrap:[\s\S]*?cpus: 1\.5\n    mem_limit: 1g\n    pids_limit: 128/)
   assert.equal(validateOnpremCoreContract(input).ok, true)
 
   const underprovisioned = {
     ...input,
     compose: input.compose.replace(
-      '    cpus: 0.5\n    mem_limit: 1g\n    pids_limit: 128',
-      '    cpus: 0.25\n    mem_limit: 512m\n    pids_limit: 128',
+      '    cpus: 1.5\n    mem_limit: 1g\n    pids_limit: 128',
+      '    cpus: 0.5\n    mem_limit: 512m\n    pids_limit: 128',
     ),
   }
   const result = validateOnpremCoreContract(underprovisioned)

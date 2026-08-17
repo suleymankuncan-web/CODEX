@@ -30,7 +30,7 @@ const EXPECTED_RESOURCES = {
   redis: ['0.5', '768m'],
   migrator: ['0.5', '512m'],
   'synthetic-seed': ['0.5', '512m'],
-  'keycloak-bootstrap': ['0.5', '1g'],
+  'keycloak-bootstrap': ['1.5', '1g'],
   'identity-binder': ['0.5', '512m'],
 }
 const CADDY_BOOTSTRAP_PREFIX = [
