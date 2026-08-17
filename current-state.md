@@ -149,11 +149,10 @@ test-data input.
   selection is fail-closed and requires the branch to be current with main.
   Post-merge exact-tree reuse does not weaken this gate: a missing or mismatched
   proof runs the full release instead.
-- Automatic GitHub Actions now starts with the bounded exact-SHA
-  `github-source-preflight` before any expensive image/offline runtime job;
-  those runtime jobs remain final evidence, not a blind diagnostic loop.
-  Manual image/offline dispatch still requires the full local proof wrapper and
-  owner-published status before dispatch.
+- Automatic GitHub Actions begins with bounded exact-SHA `github-source-preflight`
+  before expensive image/offline runtime jobs; those jobs remain final evidence,
+  not a blind diagnostic loop. Manual image/offline dispatch still requires the
+  full local proof wrapper and owner-published status before dispatch.
 
 ## Workspace Hygiene
 
