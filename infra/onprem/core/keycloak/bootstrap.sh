@@ -284,7 +284,8 @@ EOF
   esac
 }
 
-readonly KCADM_TIMEOUT_SECONDS=20
+readonly KCADM_TIMEOUT_SECONDS=90
+readonly BOOTSTRAP_AUTH_ATTEMPTS=8
 readonly BOOTSTRAP_TIMEOUT_SECONDS=900
 bootstrap_watchdog_pid=''
 
@@ -471,7 +472,7 @@ server_pid="$!"
 credentials_ready=false
 attempt=0
 phase_marker bootstrap-authentication
-while [ "$attempt" -lt 30 ]; do
+while [ "$attempt" -lt "$BOOTSTRAP_AUTH_ATTEMPTS" ]; do
   if KC_CLI_CLIENT_SECRET="$(tr -d '\r\n' < "$bootstrap_password_file")" kcadm_timeout config credentials \
       --server "$server" --realm master --client "$bootstrap_user" --config "$config_file" >/dev/null 2>&1; then
     credentials_ready=true
