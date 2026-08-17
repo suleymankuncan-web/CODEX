@@ -149,7 +149,7 @@ if [ -n "$PROOF_COMPOSE" ]; then
     --volume "$AUTH_PROOF:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro" \
     --volume "$ACCOUNTS_SOURCE:/run/hr-axis/synthetic-accounts:ro" \
     --volume "$CA_SOURCE:/run/hr-axis/caddy-ca.crt:ro" \
-    "$BACKEND_IMAGE" node /run/hr-axis/onprem-keycloak-auth-proof.mjs --host "$PUBLIC_HOST" --connect-host caddy --connect-port 8443 \
+    --entrypoint /nodejs/bin/node "$BACKEND_IMAGE" /run/hr-axis/onprem-keycloak-auth-proof.mjs --host "$PUBLIC_HOST" --connect-host caddy --connect-port 8443 \
     --accounts-file /run/hr-axis/synthetic-accounts --ca-file /run/hr-axis/caddy-ca.crt 2>/dev/null) || die "Keycloak synthetic auth proof failed"
 else
   AUTH_OUTPUT=$(node "$AUTH_PROOF" --host "$PUBLIC_HOST" --connect-host 127.0.0.1 --connect-port 443 --accounts-file "$ACCOUNTS_SOURCE" --ca-file "$CA_SOURCE" 2>/dev/null) || die "Keycloak synthetic auth proof failed"

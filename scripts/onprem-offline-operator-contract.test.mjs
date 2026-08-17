@@ -123,6 +123,8 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   const authRunEnd = smoke.indexOf('2>/dev/null) || die "Keycloak synthetic auth proof failed"', authRunStart)
   assert.ok(authRunStart >= 0 && authRunEnd > authRunStart, 'offline smoke auth proof invocation remains source-coupled')
   assert.match(smoke.slice(authRunStart, authRunEnd), /--user 1000:1000[\s\\]*--network/, 'offline auth proof must run as the Keycloak-readable synthetic secret owner')
+  assert.match(smoke.slice(authRunStart, authRunEnd), /--entrypoint \/nodejs\/bin\/node[\s\\]*["']\$BACKEND_IMAGE["']/, 'distroless backend auth proof must override its application entrypoint with the Node binary')
+  assert.doesNotMatch(smoke.slice(authRunStart, authRunEnd), /["']\$BACKEND_IMAGE["']\s+node\s+\/run\//, 'distroless backend auth proof must not pass a node token through the application entrypoint')
   assert.match(smoke, /file_gid/)
   assert.match(smoke, /1000:1000:400/)
   assert.match(smoke, /0:0:444/)
