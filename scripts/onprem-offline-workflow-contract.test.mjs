@@ -73,16 +73,19 @@ test('offline proof is a two-job, source-free handoff workflow with pinned actio
   assert.match(workflow, /workflow_dispatch:/)
   const jobs = workflow.slice(workflow.indexOf('\njobs:'))
   assert.deepEqual([...jobs.matchAll(/^  ([a-z][a-z0-9_-]*)\s*:/gm)].map((match) => match[1]), [
-    'local-proof-gate',
+    'source-preflight',
     'build_bundle',
     'offline_rehearsal',
   ])
-  assert.match(workflow, /statuses:\s*read/)
-  assert.match(workflow, /local-proof-gate:[\s\S]*onprem-proof-dispatch\.mjs verify-status/)
-  const localGate = jobSection('local-proof-gate')
-  assert.match(localGate, /GITHUB_EVENT_NAME:\s*\$\{\{\s*github\.event_name\s*\}\}/)
-  assert.match(localGate, /GITHUB_EXECUTION_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/)
-  assert.match(workflow, /build_bundle:[\s\S]*needs:\s*local-proof-gate/)
+  assert.doesNotMatch(workflow, /onprem-proof-dispatch\.mjs verify-status/)
+  const sourceGate = jobSection('source-preflight')
+  assert.match(sourceGate, /name:\s*github-source-preflight/)
+  assert.match(sourceGate, /Run bounded exact-SHA on-prem source preflight/)
+  assert.match(sourceGate, /node --check scripts\/onprem-offline-target-proof\.mjs/)
+  assert.match(sourceGate, /onprem-offline-target-proof\.test\.mjs/)
+  assert.match(sourceGate, /onprem-offline-workflow-contract\.test\.mjs/)
+  assert.doesNotMatch(sourceGate, /GITHUB_EVENT_NAME|GITHUB_EXECUTION_SHA|GITHUB_TOKEN|statuses:\s*read/)
+  assert.match(workflow, /build_bundle:[\s\S]*needs:\s*source-preflight/)
   for (const input of ['expected_sha', 'proof_artifact_name', 'proof_run_id']) {
     assert.match(workflow, new RegExp(`${input}:[\\s\\S]{0,220}?required:\\s*true`), input)
   }

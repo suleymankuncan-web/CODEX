@@ -372,11 +372,13 @@ optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
   eski bir basari yeni pending veya failure'i maskeleyemez. Yalniz ag hatasi,
   HTTP 429 ve 5xx 55-60 saniyelik butce icinde yeniden denenir; diger provider
   contract hatalari ve tukenen butce fail-closed kalir.
-- Push/PR veya manual image/offline proof dispatch oncesinde exact clean
-  committed HEAD icin `npm.cmd run check:onprem:dispatch -- prove` zorunludur;
-  push sonrasinda yalniz `publish`, ardindan wrapper `dispatch image|offline`
-  kullanilir. GitHub prooflari bagimsiz final kanittir, hata ayiklama ortami
-  degildir; coverage veya retry azaltimi yapilmaz.
+- Manual image/offline proof dispatch oncesinde exact clean committed HEAD
+  icin `npm.cmd run check:onprem:dispatch -- prove` zorunludur; push sonrasinda
+  yalniz `publish`, ardindan wrapper `dispatch image|offline` kullanilir.
+  Automatic PR/reusable workflows once bounded exact-SHA
+  `github-source-preflight` kosar; GitHub runtime prooflari bagimsiz final
+  kanittir, hata ayiklama ortami degildir; coverage veya retry azaltimi
+  yapilmaz.
 - Release rehearsal Docker/live fixture ve smoke kanitini korur, fakat ayni
   required gate'in zaten calistirdigi backend lint/Jest/build/audit paketini
   ikinci kez kosturmaz. Post-merge exact-tree reuse kesin degilse full release

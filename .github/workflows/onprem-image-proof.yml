@@ -75,13 +75,12 @@ env:
   SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d
 
 jobs:
-  local-proof-gate:
-    name: local-proof-gate
+  source-preflight:
+    name: github-source-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-      statuses: read
     steps:
       - name: Checkout exact expected SHA
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -89,22 +88,29 @@ jobs:
           ref: ${{ inputs.expected_sha }}
           fetch-depth: 1
 
-      - name: Pin local proof gate Node
+      - name: Pin source preflight Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.19.0
 
-      - name: Require owner-published local proof
+      - name: Run bounded exact-SHA on-prem source preflight
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EXECUTION_SHA: ${{ github.sha }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/onprem-proof-dispatch.mjs verify-status
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node --check scripts/onprem-offline-target-proof.mjs
+          node --test \
+            scripts/onprem-offline-target-proof.test.mjs \
+            scripts/onprem-offline-bundle.test.mjs \
+            scripts/onprem-offline-stage.test.mjs \
+            scripts/onprem-image-proof-contract.test.mjs \
+            scripts/onprem-offline-workflow-contract.test.mjs
+          git diff --check
 
   proof:
-    needs: local-proof-gate
+    needs: source-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -1002,7 +1008,7 @@ jobs:
             proof/ephemeral-public.pem
 
   component_proof:
-    needs: local-proof-gate
+    needs: source-preflight
     name: component-proof
     if: inputs.proof_mode == 'component'
     runs-on: ubuntu-latest
