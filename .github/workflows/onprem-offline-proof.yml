@@ -768,6 +768,21 @@ jobs:
           test "$(sudo ip6tables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host6_egress_chain"
           test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 5
           test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 5
+          host6_probe_interface=HRAXIS_OFFLINE6
+          host6_probe_source=fd42:6872:6178:6973::1
+          host6_probe_target=fd42:6872:6178:6973::2
+          test "$host6_probe_interface" = "HRAXIS_OFFLINE6"
+          test "$host6_probe_source" = "fd42:6872:6178:6973::1"
+          test "$host6_probe_target" = "fd42:6872:6178:6973::2"
+          command -v ip >/dev/null 2>&1
+          if sudo ip link show "$host6_probe_interface" >/dev/null 2>&1; then
+            echo 'offline IPv6 probe interface already exists; refusing to reuse mutable host state' >&2
+            exit 1
+          fi
+          sudo ip link add "$host6_probe_interface" type dummy
+          sudo ip link set "$host6_probe_interface" up
+          sudo ip -6 addr add "$host6_probe_source/128" dev "$host6_probe_interface"
+          sudo ip -6 route add "$host6_probe_target/128" dev "$host6_probe_interface"
 
       - name: Verify bundle before docker load and run bundled operations
         env:
@@ -1075,7 +1090,7 @@ jobs:
           host4_after="$(read_host_reject_packets iptables "$host_egress_chain")"
           test "$host4_after" -gt "$host4_before"
           host6_before="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
-          sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'2001:db8::1',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
+          sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'$host6_probe_target',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           host6_after="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
           test "$host6_after" -gt "$host6_before"
           docker_network_ids="$(sudo docker network ls -q --filter 'label=com.hr-axis.project=hr-axis-onprem-core')"
@@ -1214,6 +1229,14 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
+          cleanup_host6_probe_interface() {
+            if sudo ip link show HRAXIS_OFFLINE6 >/dev/null 2>&1; then
+              sudo ip -6 route del fd42:6872:6178:6973::2/128 dev HRAXIS_OFFLINE6 2>/dev/null || true
+              sudo ip -6 addr del fd42:6872:6178:6973::1/128 dev HRAXIS_OFFLINE6 2>/dev/null || true
+              sudo ip link del HRAXIS_OFFLINE6 2>/dev/null || true
+            fi
+          }
+          trap cleanup_host6_probe_interface EXIT
           test -f "$RUNNER_TEMP/offline-runtime-quiesced"
           if test -f "$RUNNER_TEMP/offline-firewall.snapshot"; then
             sudo sh -c 'iptables-restore < "$1"' sh "$RUNNER_TEMP/offline-firewall.snapshot"
@@ -1225,6 +1248,11 @@ jobs:
             fi
           else
             echo 'offline firewall snapshot is missing; egress cannot be restored safely' >&2
+            exit 1
+          fi
+          cleanup_host6_probe_interface
+          if sudo ip link show HRAXIS_OFFLINE6 >/dev/null 2>&1; then
+            echo 'offline IPv6 probe interface remained after cleanup' >&2
             exit 1
           fi
 
