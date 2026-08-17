@@ -260,6 +260,23 @@ test('Keycloak bootstrap diagnostics classify SIGKILL and exit 137 as external t
   }
 })
 
+test('Keycloak bootstrap watchdog timeout is a bounded resource diagnostic', () => {
+  assert.deepEqual(
+    classifyKeycloakBootstrapDiagnostic({
+      status: 124,
+      signal: null,
+      stdout: '',
+      stderr: 'keycloak bootstrap: phase=synthetic-account-reconciliation\nkeycloak bootstrap: failed closed (bootstrap watchdog timeout)',
+    }),
+    {
+      category: 'resource-or-external-termination',
+      phase: 'synthetic-account-reconciliation',
+      exitCode: 124,
+      signal: null,
+    },
+  )
+})
+
 test('Keycloak bootstrap failure diagnostics scan child output before classification', () => {
   const source = readFileSync('scripts/onprem-keycloak-runtime-proof.mjs', 'utf8')
   const scan = source.indexOf('inspectOutput?.(output)')
@@ -270,7 +287,7 @@ test('Keycloak bootstrap failure diagnostics scan child output before classifica
 
 test('Keycloak bootstrap cleanup preserves the primary failure phase before scanning logs', () => {
   const source = readFileSync('infra/onprem/core/keycloak/bootstrap.sh', 'utf8')
-  const cleanup = source.match(/cleanup\(\) \{[\s\S]*?\n\}\ntrap cleanup/)?.[0] ?? ''
+  const cleanup = source.match(/cleanup\(\) \{[\s\S]*?\n\}\nhandle_termination/)?.[0] ?? ''
   assert.match(cleanup, /if \[ "\$status" -eq 0 \]; then\s+phase_marker server-log-scan\s+fi\s+scan_server_log/)
 })
 

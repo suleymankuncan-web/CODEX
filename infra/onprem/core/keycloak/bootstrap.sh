@@ -286,7 +286,7 @@ EOF
 
 readonly KCADM_TIMEOUT_SECONDS=90
 readonly BOOTSTRAP_AUTH_ATTEMPTS=8
-readonly BOOTSTRAP_TIMEOUT_SECONDS=900
+readonly BOOTSTRAP_TIMEOUT_SECONDS=1800
 bootstrap_watchdog_pid=''
 
 kcadm_timeout() {
@@ -448,7 +448,19 @@ cleanup() {
   trap - EXIT HUP INT TERM
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+handle_termination() {
+  signal_name="$1"
+  if [ "$signal_name" = TERM ]; then
+    printf '%s\n' 'keycloak bootstrap: failed closed (bootstrap watchdog timeout)' >&2
+  else
+    printf '%s\n' 'keycloak bootstrap: failed closed (bootstrap interrupted)' >&2
+  fi
+  exit 124
+}
+trap cleanup EXIT
+trap 'handle_termination TERM' TERM
+trap 'handle_termination INT' INT
+trap 'handle_termination HUP' HUP
 
 start_bootstrap_watchdog
 
