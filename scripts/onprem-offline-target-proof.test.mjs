@@ -16,6 +16,8 @@ import {
   enforceCompleteGate,
   parseArgs,
   runQueueProof,
+  command,
+  sanitizeCommandFailureDetail,
   sanitizeReceipt,
   waitForHealthy,
   writeSanitizedReceipt,
@@ -29,6 +31,14 @@ const compose = [
   'compose', '--project-name', project, '--env-file', 'C:/safe/core.env',
   '--file', 'C:/safe/core.yaml', '--file', 'C:/safe/photo.yaml', '--file', 'C:/safe/restore.yaml',
 ]
+
+test('protected proof command exposes only bounded sanitized child diagnostics', () => {
+  const diagnostic = 'on-prem photo auth proof: photo retention usage before returned an unexpected status (500)'
+  assert.equal(sanitizeCommandFailureDetail(`${diagnostic}\n`), diagnostic)
+  assert.equal(sanitizeCommandFailureDetail('on-prem photo auth proof: https://offline.synthetic.invalid?token=secret-value'), 'on-prem photo auth proof: <url>')
+  assert.equal(sanitizeCommandFailureDetail('unrelated child stderr'), '')
+  assert.throws(() => command(process.execPath, ['-e', `console.error(${JSON.stringify(`${diagnostic}\n`)}); process.exit(1)`], { label: 'protected HTTP photo auth proof' }), (error) => error?.message === `protected HTTP photo auth proof failed: ${diagnostic}`)
+})
 
 test('compose arguments preserve explicit project, env, file order and no host ports', () => {
   assert.deepEqual(buildComposeArgs({ project, envFile: 'C:/safe/core.env', compose: ['C:/safe/core.yaml', 'C:/safe/photo.yaml'] }), [

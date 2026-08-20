@@ -12,6 +12,17 @@ const URL = /https?:\/\//i
 
 function fail(message) { throw new Error(message) }
 function object(value) { return value !== null && typeof value === 'object' && !Array.isArray(value) }
+export function sanitizeCommandFailureDetail(stderr) {
+  const line = String(stderr ?? '').split(/\r?\n/).map((value) => value.trim()).find((value) => /^(?:on-prem (?:photo|Keycloak) auth proof):\s*.+$/i.test(value))
+  if (!line) return ''
+  const detail = line
+    .replace(/https?:\/\/[^\s)]+/gi, '<url>')
+    .replace(/\b(?:bearer|basic)\s+[^\s]+/gi, '<credential>')
+    .replace(/\b(?:password|secret|token|access[_-]?key|private[_-]?key)\s*[:=]\s*[^\s,;)]+/gi, '$1=<redacted>')
+    .replace(/\b[0-9a-f]{32,}\b/gi, '<hex>')
+    .slice(0, 320)
+  return /^[\x20-\x7e]+$/.test(detail) ? detail : ''
+}
 function exactFields(value, keys, label) {
   if (!object(value)) fail(`${label} object is required`)
   const actual = Object.keys(value)
@@ -33,7 +44,10 @@ function safePath(value, label, { requireAbsolute = true } = {}) {
 export function command(file, args, { timeoutMs = 120_000, label = file, env, input } = {}) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 600_000) fail('command timeout is outside the bounded range')
   const result = spawnSync(file, args, { encoding: 'utf8', windowsHide: true, timeout: timeoutMs, env, input })
-  if (result.error || result.status !== 0) throw new Error(`${label} failed`)
+  if (result.error || result.status !== 0) {
+    const detail = sanitizeCommandFailureDetail(result.stderr)
+    throw new Error(`${label} failed${detail ? `: ${detail}` : ''}`)
+  }
   return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
 }
 
