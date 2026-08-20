@@ -177,6 +177,8 @@ test('photo auth proof runs only inside the exact private target network with th
   const image = 'sha256:' + 'a'.repeat(64)
   const args = buildPhotoAuthDockerArgs({ project, image, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs', keycloakAuthProofScriptPath: 'C:/proof/onprem-keycloak-auth-proof.mjs' })
   assert.deepEqual(args.slice(0, 8), ['run', '--pull=never', '--rm', '--network', `${project}_proxy`, '--volume', 'C:/proof/onprem-photo-auth-proof.mjs:/run/hr-axis/onprem-photo-auth-proof.mjs:ro', '--volume'])
+  const userIndex = args.indexOf('--user')
+  assert.equal(args[userIndex + 1], '1000:1000', 'photo auth proof must run as the Keycloak-readable synthetic proof UID/GID')
   const imageIndex = args.indexOf(image)
   assert.deepEqual(args.slice(imageIndex - 2, imageIndex + 2), ['--entrypoint', '/nodejs/bin/node', image, '/run/hr-axis/onprem-photo-auth-proof.mjs'])
   assert.ok(args.includes('C:/proof/onprem-keycloak-auth-proof.mjs:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro'))

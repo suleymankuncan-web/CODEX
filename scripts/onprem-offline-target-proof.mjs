@@ -78,6 +78,7 @@ export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, p
     '--volume', `${photoAccountFile}:${photoAccountMount}:ro`,
     '--volume', `${caFile}:${caMount}:ro`,
     '--volume', `${fixturePath}:${fixtureMount}:ro`,
+    '--user', '1000:1000',
     '--entrypoint', '/nodejs/bin/node', image, scriptMount,
     '--host', host, '--accounts-file', accountsMount, '--photo-account-file', photoAccountMount,
     '--ca-file', caMount, '--fixture', fixtureMount, '--sha256', sha256.toLowerCase(),
