@@ -232,6 +232,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /OPERATOR_ROOT="\$SEALED_ROOT\/operator"/)
   assert.match(rehearsal, /sudo install -d -o 0 -g 0 -m 0700 "\$OPERATOR_ROOT"/)
   assert.match(rehearsal, /sudo cp -a -- "\$RUNNER_TEMP\/offline-secrets" "\$OPERATOR_ROOT\/secrets"/)
+  assert.match(rehearsal, /sudo chown 1000:1000 -- "\$OPERATOR_ROOT\/photo-fixture\.webp"/, 'photo fixture must be readable by the UID used by protected photo auth proof')
   assert.match(rehearsal, /sudo chmod 0400 "\$OPERATOR_ROOT\/photo-fixture\.webp"/)
   assert.match(rehearsal, /sudo cp -a -- "\$OPERATOR_ROOT\/receipts\/\." "\$RUNNER_TEMP\/offline-receipts\/"/)
   assert.match(rehearsal, /chmod 700 "\$RUNNER_TEMP\/offline-receipts"/)
