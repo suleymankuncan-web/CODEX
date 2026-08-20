@@ -49,7 +49,7 @@ export function buildQueueProbeArgs(mode = 'enqueue') {
   if (!['enqueue', 'process', 'status'].includes(mode)) fail('queue probe mode is invalid')
   return ['run', '--pull', 'never', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', mode]
 }
-export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, photoAccountFile, caFile, fixturePath, sha256, mode = 'prepare', recoveryHandleFile = null, connectHost = 'caddy', connectPort = 8443, scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-photo-auth-proof.mjs') }) {
+export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, photoAccountFile, caFile, fixturePath, sha256, mode = 'prepare', recoveryHandleFile = null, connectHost = 'caddy', connectPort = 8443, scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-photo-auth-proof.mjs'), keycloakAuthProofScriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-keycloak-auth-proof.mjs') }) {
   safeId(project, 'Compose project')
   if (typeof image !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(image)) fail('photo auth image must be an exact immutable digest')
   safePath(accountsFile, 'synthetic accounts file')
@@ -57,6 +57,7 @@ export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, p
   safePath(caFile, 'authorization CA file')
   safePath(fixturePath, 'photo fixture')
   safePath(scriptPath, 'photo auth proof script')
+  safePath(keycloakAuthProofScriptPath, 'Keycloak auth proof support script')
   if (!['prepare', 'recover'].includes(mode)) fail('photo proof mode is invalid')
   if (mode === 'recover' && !recoveryHandleFile) fail('recover mode requires a photo recovery handle')
   if (recoveryHandleFile) safePath(recoveryHandleFile, 'photo recovery handle')
@@ -64,13 +65,15 @@ export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, p
   if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(sha256)) fail('photo fixture SHA-256 is invalid')
   if (connectHost !== 'caddy' || Number(connectPort) !== 8443) fail('photo proof must use the private Caddy transport')
   const scriptMount = '/run/hr-axis/onprem-photo-auth-proof.mjs'
+  const keycloakAuthProofScriptMount = '/run/hr-axis/onprem-keycloak-auth-proof.mjs'
   const accountsMount = '/run/hr-axis/synthetic-accounts'
   const photoAccountMount = '/run/hr-axis/photo-proof-account'
   const caMount = '/run/hr-axis/caddy-ca.crt'
   const fixtureMount = '/run/hr-axis/synthetic-photo-fixture.webp'
   const args = [
     'run', '--pull=never', '--rm', '--network', `${project}_proxy`,
-    '--volume', `${scriptPath}:${scriptMount}:ro`,
+      '--volume', `${scriptPath}:${scriptMount}:ro`,
+      '--volume', `${keycloakAuthProofScriptPath}:${keycloakAuthProofScriptMount}:ro`,
     '--volume', `${accountsFile}:${accountsMount}:ro`,
     '--volume', `${photoAccountFile}:${photoAccountMount}:ro`,
     '--volume', `${caFile}:${caMount}:ro`,
