@@ -228,6 +228,8 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /keycloak\/photo-proof-account/)
   assert.match(rehearsal, /offline-photo-fixture\.webp/)
   assert.match(rehearsal, /base64 --decode/)
+  assert.match(rehearsal, /UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoCAAIAAUAmJaQAA3AA\/vz0AAA=/, 'offline photo fixture must be a known decodable WebP')
+  assert.doesNotMatch(rehearsal, /UklGRiIAAABXRUJQVlA4IBAAAADwAQCdASoBAAEAAUAmJaQAA3AA\/vuUAAA=/, 'offline photo fixture must not use the header-only invalid WebP')
   assert.match(rehearsal, /chmod 400 "\$photo_fixture"/)
   assert.match(rehearsal, /OPERATOR_ROOT="\$SEALED_ROOT\/operator"/)
   assert.match(rehearsal, /sudo install -d -o 0 -g 0 -m 0700 "\$OPERATOR_ROOT"/)
