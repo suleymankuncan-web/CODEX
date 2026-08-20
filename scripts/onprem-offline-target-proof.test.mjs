@@ -85,7 +85,7 @@ test('target proof renders every Compose profile only for read-only config inspe
   const calls = []
   const composeCommand = (actualOptions, args, label) => {
     calls.push({ profiles: actualOptions.profiles ?? [], args: [...args], label })
-    if (args[0] === 'config') return { status: 0, stdout: `${JSON.stringify(config)}\n`, stderr: '' }
+    if (args[0] === 'config') return { status: 0, stdout: `${JSON.stringify(config, null, 2)}\n`, stderr: '' }
     if (args[0] === 'stop' && args[1] === 'worker') workerRunning = false
     if (args[0] === 'stop' && args[1] === 'redis') redisRunning = false
     if (args[0] === 'start' && args[1] === 'redis') redisRunning = true

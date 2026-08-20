@@ -201,7 +201,14 @@ function sameIdentity(before, after) {
   return before.containerId === after.containerId && before.volumeName === after.volumeName && before.volumeSource === after.volumeSource
 }
 function parseOutput(stdout, label) {
-  const lines = String(stdout).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const text = String(stdout).trim()
+  if (text) {
+    try {
+      const value = JSON.parse(text)
+      if (object(value)) return value
+    } catch { /* Compose may prefix or suffix its JSON with progress text. */ }
+  }
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     try { const value = JSON.parse(lines[index]); if (object(value)) return value } catch { /* compose may print progress before the JSON */ }
   }
