@@ -205,6 +205,11 @@ test('ONP-2 contract rejects broader executable tmpfs mounts or loss of nosuid/n
   assert.ok(validateOnpremCoreContract(broadened).errors.some((error) => /broaden executable tmpfs/i.test(error)))
 })
 
+test('ONP-5 deterministic seed provides an active retention policy for synthetic photo uploads', () => {
+  const seed = read('db/seeds/001_reference_seed.sql')
+  assert.match(seed, /INSERT INTO ops\.evidence_retention_policy\s*\([\s\S]*?\)\s*VALUES\s*\([\s\S]*?'72000000-0000-4000-8000-000000000001'[\s\S]*?'00000000-0000-0000-0000-000000000001'[\s\S]*?\b1,\s*365,\s*365,\s*30,\s*NOW\(\)[\s\S]*?'80000000-0000-0000-0000-000000000001'[\s\S]*?\)\s*ON CONFLICT \(company_id, version_no\) DO NOTHING;/i)
+})
+
 test('ONP-2 workflow binds the Caddy bootstrap proof to an exact immutable image reference', () => {
   const input = contractInput()
   const pinned = /^  CADDY_IMAGE: caddy:2\.11\.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648\r?$/m
