@@ -323,7 +323,7 @@ FOUND_KEYCLOAK_BOOTSTRAP= FOUND_IDENTITY_BINDER= FOUND_MIGRATOR= FOUND_SYNTHETIC
 CONTAINER_IDS=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null || true)
 [ -n "$CONTAINER_IDS" ] || die "no target Compose containers were found"
 for id in $CONTAINER_IDS; do
-  meta=$(docker inspect "$id" --format '{{.Config.Labels.com.docker.compose.project}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}|{{.State.Running}}|{{.Image}}' 2>/dev/null) || die "service identity could not be inspected"
+  meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Running}}|{{.Image}}' 2>/dev/null) || die "service identity could not be inspected"
   IFS='|' read -r compose_project project data_class release service running image <<EOF
 $meta
 EOF
@@ -358,7 +358,7 @@ V_POSTGRES= V_REDIS= V_KEYCLOAK= V_BOOTSTRAP= V_PHOTO=
 volume_ids=$(docker volume ls -q --filter "label=com.hr-axis.project=$TARGET_PROJECT" 2>/dev/null || true)
 [ -n "$volume_ids" ] || die "no labelled target volumes were found"
 for volume_id in $volume_ids; do
-  meta=$(docker volume inspect "$volume_id" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}|{{.Labels.com.hr-axis.volume-class}}' 2>/dev/null) || die "target volume identity could not be inspected"
+  meta=$(docker volume inspect "$volume_id" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.volume-class"}}' 2>/dev/null) || die "target volume identity could not be inspected"
   IFS='|' read -r volume_name project data_class release volume_class <<EOF
 $meta
 EOF
@@ -397,7 +397,7 @@ resume_services() {
   fi
   validate_resumed_service() {
     id=$1; expected_service=$2
-    meta=$(docker inspect "$id" --format '{{.Config.Labels.com.docker.compose.project}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}|{{.State.Running}}|{{.State.Status}}|{{.State.Restarting}}|{{.State.Dead}}|{{.State.Error}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.RestartCount}}|{{.Image}}' 2>/dev/null) || return 1
+    meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Running}}|{{.State.Status}}|{{.State.Restarting}}|{{.State.Dead}}|{{.State.Error}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.RestartCount}}|{{.Image}}' 2>/dev/null) || return 1
     IFS='|' read -r compose_project project data_class release service running state_status restarting dead state_error health restart_count image <<EOF
 $meta
 EOF

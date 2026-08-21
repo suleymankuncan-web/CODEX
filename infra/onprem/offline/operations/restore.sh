@@ -688,7 +688,7 @@ cleanup_failed=0
 cleanup_resources() {
   ids=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null) || { cleanup_failed=1; ids=; }
   for id in $ids; do
-    meta=$(docker inspect "$id" --format '{{.Name}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
+    meta=$(docker inspect "$id" --format '{{.Name}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
     IFS='|' read -r resource_name project data_class release service <<EOF
 $meta
 EOF
@@ -699,13 +699,13 @@ EOF
     fi
   done
   for volume_name in $CREATED_VOLUMES; do
-    meta=$(docker volume inspect "$volume_name" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
+    meta=$(docker volume inspect "$volume_name" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
     if [ "$meta" = "$volume_name|$TARGET_PROJECT|synthetic|$RELEASE_ID" ]; then
       docker volume rm "$volume_name" >/dev/null 2>&1 || cleanup_failed=1
     fi
   done
   for network_name in "${TARGET_PROJECT}_edge" "${TARGET_PROJECT}_proxy" "${TARGET_PROJECT}_app" "${TARGET_PROJECT}_data"; do
-    meta=$(docker network inspect "$network_name" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}' 2>/dev/null) || { cleanup_failed=1; meta=; continue; }
+    meta=$(docker network inspect "$network_name" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}' 2>/dev/null) || { cleanup_failed=1; meta=; continue; }
     case "$meta" in "$network_name|$TARGET_PROJECT|synthetic|$RELEASE_ID") docker network rm "$network_name" >/dev/null 2>&1 || cleanup_failed=1 ;; esac
   done
 }
@@ -757,7 +757,7 @@ restore_volume photo-object-storage "$V_PHOTO"
 compose_core --profile infra up --pull never -d postgres >/dev/null 2>&1 || die "fresh postgres startup failed"
 POSTGRES_CONTAINER=$(compose_core ps -q postgres 2>/dev/null | tail -n 1)
 [ -n "$POSTGRES_CONTAINER" ] || die "fresh postgres container is unavailable"
-POSTGRES_META=$(docker inspect "$POSTGRES_CONTAINER" --format '{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "fresh postgres identity could not be inspected"
+POSTGRES_META=$(docker inspect "$POSTGRES_CONTAINER" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "fresh postgres identity could not be inspected"
 IFS='|' read -r project data_class release running health <<EOF
 $POSTGRES_META
 EOF
@@ -804,7 +804,7 @@ service_id() {
 }
 require_healthy() {
   compose_name=$1; service=$2; id=$(service_id "$compose_name" "$service"); [ -n "$id" ] || die "restored service is missing: $service"
-  meta=$(docker inspect "$id" --format '{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "restored service identity could not be inspected: $service"
+  meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "restored service identity could not be inspected: $service"
   IFS='|' read -r project data_class release compose_service running health <<EOF
 $meta
 EOF

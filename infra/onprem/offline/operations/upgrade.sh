@@ -270,7 +270,7 @@ for service_name in caddy frontend api worker keycloak redis postgres object-sto
 done
 TARGET_CONTAINERS=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null) || die "target container inventory could not be inspected"
 for id in $TARGET_CONTAINERS; do
-  meta=$(docker inspect "$id" --format '{{.Config.Labels.com.docker.compose.project}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}' 2>/dev/null) || die "target container identity could not be inspected"
+  meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}' 2>/dev/null) || die "target container identity could not be inspected"
   IFS='|' read -r compose_project project data_class release <<EOF
 $meta
 EOF
@@ -279,7 +279,7 @@ EOF
 done
 TARGET_VOLUMES=$(docker volume ls -q --filter "label=com.hr-axis.project=$TARGET_PROJECT" 2>/dev/null) || die "target volume inventory could not be inspected"
 for id in $TARGET_VOLUMES; do
-  meta=$(docker volume inspect "$id" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}' 2>/dev/null) || die "target volume identity could not be inspected"
+  meta=$(docker volume inspect "$id" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}' 2>/dev/null) || die "target volume identity could not be inspected"
   IFS='|' read -r name project data_class release <<EOF
 $meta
 EOF

@@ -89,6 +89,14 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
     'activation one-shot services must activate every dependency-sharing profile explicitly',
   )
 
+  for (const name of ['backup.sh', 'restore.sh', 'upgrade.sh', 'rollback.sh']) {
+    const lifecycle = readFileSync(join(operationDir, name), 'utf8')
+    assert.doesNotMatch(lifecycle, /\{\{\.(?:Config\.)?Labels\.com\./, `${name} must index dotted Docker label keys`)
+    if (/Labels/.test(lifecycle)) {
+      assert.match(lifecycle, /\{\{index \.(?:Config\.)?Labels "com\./, `${name} must use indexed Docker label keys`)
+    }
+  }
+
   const restore = readFileSync(join(operationDir, 'restore.sh'), 'utf8')
   const expectedRestoreKeycloakBootstrapRun = 'compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"'
   const expectedRestoreIdentityBinderRun = 'compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"'
