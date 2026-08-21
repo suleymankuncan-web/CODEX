@@ -274,7 +274,10 @@ export async function runPhotoAuthProofInternal(options, deps = {}) {
     const readUrl = await json(options.host, readUrlPath, {
       method: 'POST', headers: requestHeaders(options.host, adminSession.browser, { 'Content-Type': 'application/json' }), body: JSON.stringify({ variant: 'canonical' }), jar: adminSession.browser.jar,
     })
-    assertStatus(readUrl, 200, 'photo read-url')
+    if (!readUrl || readUrl.status !== 200) {
+      const detail = summarizePhotoInitiateFailure(readUrl)
+      fail(`photo read-url returned an unexpected status${detail ? ` (${detail})` : ''}`)
+    }
     const readUrlBody = parseJsonBody(readUrl, 'photo read-url')
     const contentPath = `/api/internal/photo-media/assets/${mediaAssetId}/content/canonical`
     if (!object(readUrlBody) || readUrlBody.url !== contentPath || !Number.isSafeInteger(readUrlBody.expiresInSeconds) || readUrlBody.expiresInSeconds <= 0) fail('photo read-url response contract failed')
