@@ -66,6 +66,10 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.ok(parentTrust >= 0 && parentTrust < quiesce, 'backup parent trust must precede writer quiesce')
 
   const restore = source['restore.sh']
+  for (const name of ['OFFLINE_RESTORE_POSTGRES_VOLUME', 'OFFLINE_RESTORE_REDIS_VOLUME', 'OFFLINE_RESTORE_KEYCLOAK_VOLUME', 'OFFLINE_RESTORE_KEYCLOAK_BOOTSTRAP_VOLUME', 'OFFLINE_RESTORE_PHOTO_VOLUME']) {
+    assert.match(restore, new RegExp(`${name}=\\$V_`), `restore env must bind ${name} to the target project volume`)
+  }
+  assert.match(restore, /awk -F= '[^']*OFFLINE_RESTORE_REDIS_VOLUME[^']*OFFLINE_RESTORE_PHOTO_VOLUME/)
   assert.match(source['backup.sh'], /docker run --pull=never --rm --network none --volume/)
   assert.match(restore, /docker run --pull=never --rm --network none --volume "\$name:\/target"/)
   assert.match(restore, /docker run --pull=never --rm --network none --volume "\$volume_name:\/source:ro"/)
