@@ -213,5 +213,11 @@ test('photo storage proof locks only locked-prefix objects in both buckets', () 
     "'primary locked DeleteObject denial'",
     "'recovery locked DeleteObject denial'",
   ]) assert.match(proof.runtimeProof, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-  assert.doesNotMatch(proof.runtimeProof, /ObjectLockConfiguration/)
+  assert.match(proof.runtimeProof, /waitForBucketConfiguration/)
+  assert.match(proof.runtimeProof, /query: \{ versioning: '' \}/)
+  assert.match(proof.runtimeProof, /query: \{ 'object-lock': '' \}/)
+  assert.match(proof.runtimeProof, /ObjectLockConfiguration/)
+  const readback = proof.runtimeProof.indexOf('await waitForBucketConfiguration')
+  const lockedFixture = proof.runtimeProof.indexOf("const lockedKey = 'locked/companies/synthetic/media/fixture/canonical.webp'")
+  assert.ok(readback >= 0 && readback < lockedFixture)
 })

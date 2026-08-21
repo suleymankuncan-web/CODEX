@@ -24,6 +24,7 @@ import {
   validateCleanupVolumeIdentity,
   validateFreshExecutionInventory,
   waitForProofPortReady,
+  waitForBucketConfiguration,
   waitForExactVersion,
 } from './onprem-photo-storage-runtime-proof.mjs'
 
@@ -340,6 +341,55 @@ test('exact-version readiness retries restart transients before accepting the ex
     assert.equal(request.secretKey, 'synthetic-secret')
     assert.ok(request.signal)
   }
+})
+
+test('bucket configuration readiness retries transient readback failures before accepting exact state', async () => {
+  const responses = [
+    { status: 500, headers: new Headers(), body: Buffer.from('transient') },
+    { status: 200, headers: new Headers(), body: Buffer.from('<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>') },
+  ]
+  const calls = []
+  const result = await waitForBucketConfiguration({
+    endpoint: 'http://127.0.0.1:18333',
+    bucket: 'primary',
+    query: { versioning: '' },
+    accessKey: 'synthetic-key',
+    secretKey: 'synthetic-secret',
+    expected: (body) => /<Status>Enabled<\/Status>/.test(body.toString('utf8')),
+    request: async (request) => {
+      calls.push(request)
+      return responses.shift()
+    },
+    sleep: async () => {},
+  })
+
+  assert.equal(result.status, 200)
+  assert.equal(calls.length, 2)
+  assert.deepEqual(calls[0].query, { versioning: '' })
+  assert.equal(calls[0].accessKey, 'synthetic-key')
+  assert.equal(calls[0].secretKey, 'synthetic-secret')
+  assert.ok(calls.every((call) => call.signal))
+})
+
+test('bucket configuration readiness fails immediately on deterministic auth/status responses', async () => {
+  let attempts = 0
+  await assert.rejects(
+    waitForBucketConfiguration({
+      endpoint: 'http://127.0.0.1:18333',
+      bucket: 'primary',
+      query: { 'object-lock': '' },
+      accessKey: 'synthetic-key',
+      secretKey: 'synthetic-secret',
+      expected: () => true,
+      request: async () => {
+        attempts += 1
+        return { status: 403, headers: new Headers(), body: Buffer.alloc(0) }
+      },
+      sleep: async () => {},
+    }),
+    /bucket configuration GET failed/,
+  )
+  assert.equal(attempts, 1)
 })
 
 test('exact-version readiness retries request timeout errors', async () => {
