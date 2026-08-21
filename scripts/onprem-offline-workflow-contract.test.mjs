@@ -267,6 +267,8 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   }
   assert.doesNotMatch(rehearsal, /sudo .*operations\/(?:preflight|install|migrate|activate|smoke|backup|restore|upgrade|rollback)\.sh[^\n]*\$RUNNER_TEMP\/offline/)
   assert.match(rehearsal, /onprem-offline-target-proof\.mjs[\s\S]*--require-complete[\s\S]*--photo-fixture[\s\S]*--photo-sha256/)
+  assert.match(rehearsal, /onprem-offline-target-proof\.mjs[^\n]*--photo-storage-secret-root "\$PHOTO_STORAGE_SECRET_ROOT"/)
+  assert.match(rehearsal, /PHOTO_STORAGE_SECRET_ROOT="\$OPERATOR_ROOT\/secrets\/photo"/)
   assert.match(rehearsal, /photo\.canonicalIdentityVerified !== true/)
   for (const operation of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'backup', 'restore', 'upgrade', 'rollback']) {
     assert.match(rehearsal, new RegExp(`sudo_operator "\\$BUNDLE_ROOT/operations/${operation}\\.sh"`), `${operation} remains under pinned sudo operator`)

@@ -362,6 +362,10 @@ SECRET_ROOT=$(env_value HR_AXIS_SECRET_ROOT)
 [ -n "$SECRET_ROOT" ] || die "safe synthetic auth account/CA derivation requires HR_AXIS_SECRET_ROOT"
 require_dir "$SECRET_ROOT" HR_AXIS_SECRET_ROOT
 case "$SECRET_ROOT" in "$BUNDLE_ROOT"|"$BUNDLE_ROOT"/*) die "HR_AXIS_SECRET_ROOT must be outside bundle" ;; esac
+PHOTO_STORAGE_SECRET_ROOT=$(env_value PHOTO_STORAGE_SECRET_ROOT)
+[ -n "$PHOTO_STORAGE_SECRET_ROOT" ] || die "safe photo storage credential derivation requires PHOTO_STORAGE_SECRET_ROOT"
+require_dir "$PHOTO_STORAGE_SECRET_ROOT" PHOTO_STORAGE_SECRET_ROOT
+case "$PHOTO_STORAGE_SECRET_ROOT" in "$BUNDLE_ROOT"|"$BUNDLE_ROOT"/*) die "PHOTO_STORAGE_SECRET_ROOT must be outside bundle" ;; esac
 AUTH_ACCOUNTS="$SECRET_ROOT/keycloak/synthetic-accounts"
 AUTH_PHOTO_ACCOUNT="$SECRET_ROOT/keycloak/photo-proof-account"
 AUTH_CA="$SECRET_ROOT/caddy/ca.crt"
@@ -586,6 +590,7 @@ run_complete_target_proof() {
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$PROOF_COMPOSE" --compose "$RESTORE_COMPOSE" \
       --env-file "$RESTORE_ENV_FILE" --project "$TARGET_PROJECT" --release-id "$RELEASE_ID" \
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
+      --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
       --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
       >/dev/null 2>&1 || die "complete target network proof failed"
@@ -594,6 +599,7 @@ run_complete_target_proof() {
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$RESTORE_COMPOSE" \
       --env-file "$RESTORE_ENV_FILE" --project "$TARGET_PROJECT" --release-id "$RELEASE_ID" \
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
+      --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
       --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
       >/dev/null 2>&1 || die "complete target network proof failed"

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
+import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -12,6 +13,8 @@ import {
   assertNoPublishedPorts,
   buildComposeArgs,
   buildPhotoAuthDockerArgs,
+  buildPhotoStorageInitDockerArgs,
+  PHOTO_STORAGE_INIT_SCRIPT,
   buildQueueProbeArgs,
   enforceCompleteGate,
   parseArgs,
@@ -208,6 +211,76 @@ test('photo proof command has explicit prepare/recover modes and mounts the reco
   assert.ok(args.includes('C:/proof/recovery.json:/run/hr-axis/photo-recovery.json:ro'))
 })
 
+test('photo proof initializes the exact offline Seaweed buckets before HTTP auth', () => {
+  const image = 'sha256:' + 'a'.repeat(64)
+  const args = buildPhotoStorageInitDockerArgs({
+    project,
+    image,
+    primaryBucket: 'synthetic-primary',
+    recoveryBucket: 'synthetic-recovery',
+    primaryAccessKeyFile: 'C:/proof/photo/primary-access-key-id',
+    primarySecretKeyFile: 'C:/proof/photo/primary-secret-access-key',
+    recoveryAccessKeyFile: 'C:/proof/photo/recovery-access-key-id',
+    recoverySecretKeyFile: 'C:/proof/photo/recovery-secret-access-key',
+  })
+  assert.deepEqual(args.slice(0, 8), ['run', '--pull=never', '--rm', '--network', `${project}_data`, '--volume', 'C:/proof/photo/primary-access-key-id:/run/hr-axis/photo/primary-access-key-id:ro', '--volume'])
+  assert.ok(args.includes('--user') && args.includes('65532:0'))
+  assert.ok(args.includes('synthetic-primary') && args.includes('synthetic-recovery'))
+  assert.equal(args.includes('127.0.0.1'), false)
+  assert.equal(args.includes('node'), false)
+  assert.throws(() => buildPhotoStorageInitDockerArgs({
+    project, image: 'backend:latest', primaryBucket: 'synthetic-primary', recoveryBucket: 'synthetic-recovery',
+    primaryAccessKeyFile: 'C:/proof/photo/primary-access-key-id', primarySecretKeyFile: 'C:/proof/photo/primary-secret-access-key',
+    recoveryAccessKeyFile: 'C:/proof/photo/recovery-access-key-id', recoverySecretKeyFile: 'C:/proof/photo/recovery-secret-access-key',
+  }), /immutable digest/i)
+})
+
+test('photo bucket initializer is syntactically valid source-free Node code', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-photo-init-syntax-'))
+  const pathname = join(root, 'photo-storage-init.mjs')
+  try {
+    writeFileSync(pathname, PHOTO_STORAGE_INIT_SCRIPT)
+    const result = spawnSync(process.execPath, ['--check', pathname], { encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(PHOTO_STORAGE_INIT_SCRIPT, /x-amz-bucket-object-lock-enabled/)
+    assert.match(PHOTO_STORAGE_INIT_SCRIPT, /versioning/)
+    assert.doesNotMatch(PHOTO_STORAGE_INIT_SCRIPT, /process\.env|AWS_SECRET|primary-secret-access-key=/)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('photo proof runs bucket initialization before the protected auth command', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-photo-init-order-'))
+  const fixturePath = join(root, 'fixture.webp')
+  const fixture = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x18, 0, 0, 0]), Buffer.from('WEBP'), Buffer.from('VP8 '), Buffer.from('synthetic-photo-fixture')])
+  const sha256 = createHash('sha256').update(fixture).digest('hex')
+  const calls = []
+  writeFileSync(fixturePath, fixture)
+  writeFileSync(join(root, 'core.env'), 'PHOTO_MEDIA_PRIMARY_BUCKET=synthetic-primary\nPHOTO_MEDIA_RECOVERY_BUCKET=synthetic-recovery\n')
+  try {
+    const result = runPhotoProof({
+      project, releaseId, envFile: join(root, 'core.env'), compose: ['core.yaml'], timeoutMs: 1000,
+      photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid',
+      accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt',
+      photoAuthImage: 'sha256:' + 'a'.repeat(64), photoStorageSecretRoot: 'C:/proof/photo',
+      photoPrimaryBucket: 'synthetic-primary', photoRecoveryBucket: 'synthetic-recovery',
+      connectHost: 'caddy', connectPort: 8443,
+    }, {
+      config: { services: { api: { image: 'sha256:' + 'a'.repeat(64) } } },
+      imageInspect: (image) => ({ status: 0, stdout: `${image}\n`, stderr: '' }),
+      photoStorageInitCommand: (args, label) => { calls.push({ kind: 'init', args, label }); return { status: 0, stdout: '', stderr: '' } },
+      photoAuthCommand: (args, label) => {
+        calls.push({ kind: 'auth', args, label })
+        return { status: 0, stdout: JSON.stringify({
+          photoAdminAuthenticated: true, nonSuperAdminDenied: true, deniedWriteDelta: 0, exactWebpRead: true,
+          repeatReadExact: true, canonicalIdentityVerified: true, contentSha256: 'c'.repeat(64), contentLength: fixture.byteLength,
+        }), stderr: '' }
+      },
+    })
+    assert.equal(result.photoAdminAuthenticated, true)
+    assert.deepEqual(calls.map(({ kind }) => kind), ['init', 'auth'])
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 test('photo proof invokes the protected HTTP auth proof with exact fixture and returns only sanitized flags/hash/bytes', () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-photo-target-proof-'))
   const fixturePath = join(root, 'fixture.bin')
@@ -292,7 +365,7 @@ test('CLI args require explicit queue-only or complete mode and target release i
   assert.equal(options.healthAttempts, 5)
   assert.equal(options.intervalMs, 250)
   assert.deepEqual(options.compose, ['core.yaml', 'restore.yaml'])
-  const authArgs = ['--host', 'offline.synthetic.invalid', '--accounts-file', 'C:/safe/accounts', '--photo-account-file', 'C:/safe/photo-account', '--ca-file', 'C:/safe/ca.crt']
+  const authArgs = ['--host', 'offline.synthetic.invalid', '--accounts-file', 'C:/safe/accounts', '--photo-account-file', 'C:/safe/photo-account', '--photo-storage-secret-root', 'C:/safe/photo', '--ca-file', 'C:/safe/ca.crt']
   assert.equal(parseArgs(['--execute', '--require-complete', ...authArgs, '--compose', 'core.yaml', '--env-file', 'core.env', '--project', project, '--release-id', releaseId]).requireComplete, true)
   const withPhoto = parseArgs(['--execute', '--require-complete', ...authArgs, '--photo-fixture', 'C:/safe/fixture.jpg', '--photo-sha256', 'a'.repeat(64), '--compose', 'core.yaml', '--env-file', 'core.env', '--project', project, '--release-id', releaseId])
   assert.equal(withPhoto.photoFixture, 'C:/safe/fixture.jpg')

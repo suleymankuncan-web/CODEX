@@ -99,6 +99,7 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
     assert.match(source[name], /capture_receipt_parent/)
     assert.match(source[name], /revalidate_receipt_parent/)
   }
+  assert.match(restore, /--photo-storage-secret-root "\$PHOTO_STORAGE_SECRET_ROOT"/)
   assert.match(restore, /backup-signature\.json/)
   assert.match(restore, /exact target volume|target volume already exists/)
   assert.match(restore, /keycloak-bootstrap[\s\S]*identity-binder[\s\S]*migrator/)
@@ -173,7 +174,8 @@ function fixture(options = {}) {
   const secretRoot = join(root, 'secrets')
   const photoFixture = join(root, 'photo-fixture.webp')
   const photoRecoveryHandle = join(root, 'photo-recovery.json')
-  for (const directory of [operations, nextOperations, deployment, nextDeployment, evidence, nextEvidence, fakeBin, state, join(secretRoot, 'keycloak'), join(secretRoot, 'caddy')]) mkdirSync(directory, { recursive: true })
+  const photoSecretRoot = join(root, 'photo-secrets')
+  for (const directory of [operations, nextOperations, deployment, nextDeployment, evidence, nextEvidence, fakeBin, state, join(secretRoot, 'keycloak'), join(secretRoot, 'caddy'), photoSecretRoot]) mkdirSync(directory, { recursive: true })
   writeFileSync(photoFixture, 'synthetic-photo-fixture\n', { mode: 0o600 })
   writeFileSync(photoRecoveryHandle, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', mediaAssetId: '11111111-1111-4111-8111-111111111111', contentSha256: 'b'.repeat(64), contentLength: 22 }) + '\n', { mode: 0o600 })
   const photoFixtureSha256 = createHash('sha256').update(readFileSync(photoFixture)).digest('hex')
@@ -181,6 +183,7 @@ function fixture(options = {}) {
   writeFileSync(join(secretRoot, 'keycloak', 'synthetic-accounts'), 'synthetic-accounts\n', { mode: 0o600 })
   writeFileSync(join(secretRoot, 'keycloak', 'photo-proof-account'), 'photo-proof-account\n', { mode: 0o600 })
   writeFileSync(join(secretRoot, 'caddy', 'ca.crt'), 'synthetic-ca\n', { mode: 0o644 })
+  for (const name of ['primary-access-key-id', 'primary-secret-access-key', 'recovery-access-key-id', 'recovery-secret-access-key']) writeFileSync(join(photoSecretRoot, name), 'synthetic-photo-secret\n', { mode: 0o600 })
 
   const { publicKey: releasePub } = generateKeyPairSync('ed25519')
   const { publicKey: backupPub, privateKey: backupPriv } = generateKeyPairSync('ed25519')
@@ -194,7 +197,7 @@ function fixture(options = {}) {
   writeFileSync(ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'release-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: migrationDigest }))
   writeFileSync(envFile, [
     'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=release-test',
-    'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(secretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+    'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
   ].join('\n') + '\n')
 
   function makeBundle(rootDir, opsDir, deploymentDir, evidenceDir, releaseId, compatibility, imagePrefix = 'c') {
@@ -421,7 +424,7 @@ fi
 if [ "$1" = load ] || [ "$1" = volume ] || [ "$1" = network ]; then exit 0; fi
 exit 0
 `)
-  return { root, bundle, nextBundle, fakeBin, log, gateLog, nodeLog, restoreLog, state, envFile, ledger, publicKey, backupPublicKey, privateKey, fingerprint, backupFingerprint, backupDir, receipt, photoFixture, photoFixtureSha256, photoRecoveryHandle, photoRecoveryHandleSha256, secretRoot, migrationDigest, options }
+  return { root, bundle, nextBundle, fakeBin, log, gateLog, nodeLog, restoreLog, state, envFile, ledger, publicKey, backupPublicKey, privateKey, fingerprint, backupFingerprint, backupDir, receipt, photoFixture, photoFixtureSha256, photoRecoveryHandle, photoRecoveryHandleSha256, secretRoot, photoSecretRoot, migrationDigest, options }
 }
 
 function envFor(value, extra = {}) {
@@ -746,7 +749,7 @@ test('rollback rejects a noncanonical target label collision before importing im
     writeFileSync(value.ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'next-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: nextDigest }))
     writeFileSync(nextEnv, [
       'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=next-test',
-      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(value.photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
     ].join('\n') + '\n')
     writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
     writeFileSync(join(value.state, 'release'), 'next-test')
@@ -780,7 +783,7 @@ test('rollback authority allows a historical previous bundle with no forward com
     writeFileSync(value.ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'next-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: nextDigest }))
     writeFileSync(nextEnv, [
       'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=next-test',
-      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(value.photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
     ].join('\n') + '\n')
     writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
     writeFileSync(join(value.state, 'release'), 'next-test')

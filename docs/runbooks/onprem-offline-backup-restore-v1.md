@@ -206,6 +206,7 @@ the sealed root is `root:root` mode `0700`, all later operation invocations use
    OPERATOR_ROOT=/var/lib/hr-axis/operator-inputs/$RELEASE_ID
    PHOTO_RECOVERY_HANDLE="$OPERATOR_ROOT/photo-recovery.json"
    PHOTO_PREPARE_RECEIPT=/var/lib/hr-axis/receipts/$RELEASE_ID/photo-prebackup.json
+   PHOTO_STORAGE_SECRET_ROOT="$OPERATOR_ROOT/secrets/photo"
 
    require_root_private_ancestors "$OPERATOR_ROOT"
    sudo test ! -e "$PHOTO_RECOVERY_HANDLE" && sudo test ! -L "$PHOTO_RECOVERY_HANDLE" || exit 1
@@ -219,6 +220,7 @@ the sealed root is `root:root` mode `0700`, all later operation invocations use
      --host "$HR_AXIS_PUBLIC_HOST" \
      --accounts-file "$HR_AXIS_SECRET_ROOT/keycloak/synthetic-accounts" \
      --photo-account-file "$HR_AXIS_SECRET_ROOT/keycloak/photo-proof-account" \
+     --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
      --ca-file "$HR_AXIS_SECRET_ROOT/caddy/ca.crt" \
      --photo-auth-image "$BACKEND_CONFIG_IMAGE_ID" \
      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_FIXTURE_SHA256" \

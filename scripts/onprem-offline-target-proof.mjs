@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { lstatSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -63,6 +63,94 @@ export function buildQueueProbeArgs(mode = 'enqueue') {
   if (!['enqueue', 'process', 'status'].includes(mode)) fail('queue probe mode is invalid')
   return ['run', '--pull', 'never', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', mode]
 }
+
+const PHOTO_BUCKET_NAME = /^[a-z0-9](?:[a-z0-9.-]{1,61})[a-z0-9]$/
+
+// This is deliberately self-contained: the target proof is copied into the
+// source-free bundle and must not depend on an unbundled repository module.
+export const PHOTO_STORAGE_INIT_SCRIPT = String.raw`
+import { createHash, createHmac } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+
+const REGION = 'us-east-1'
+const SERVICE = 's3'
+const S3_HOST = 'http://object-storage:8333'
+const primaryBucket = process.argv[1]
+const recoveryBucket = process.argv[2]
+const bucketPattern = /^[a-z0-9](?:[a-z0-9.-]{1,61})[a-z0-9]$/
+const secretPattern = /^[A-Za-z0-9._:-]{8,256}$/
+const fail = () => { process.stderr.write('photo storage bucket initialization failed\n'); process.exit(1) }
+const hash = (value) => createHash('sha256').update(value).digest('hex')
+const hmac = (key, value) => createHmac('sha256', key).update(value).digest()
+const encoded = (value) => encodeURIComponent(value).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())
+const canonicalPath = (pathname) => pathname.split('/').map(encoded).join('/') || '/'
+const canonicalQuery = (search) => [...new URLSearchParams(search)].sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => encoded(key) + '=' + encoded(value)).join('&')
+const signingKey = (secret, date) => hmac(hmac(hmac(hmac('AWS4' + secret, date), REGION), SERVICE), 'aws4_request')
+function authorization(method, url, accessKey, secretKey, body, headers = {}) {
+  const parsed = new URL(url)
+  const payloadHash = hash(body)
+  const amzDate = new Date().toISOString().replace(/[-:]|\.\d{3}/g, '')
+  const base = { host: parsed.host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate, ...headers }
+  const normalized = Object.fromEntries(Object.entries(base).map(([key, value]) => [key.toLowerCase(), String(value).trim().replace(/\s+/g, ' ')]))
+  const names = Object.keys(normalized).sort()
+  const canonicalHeaders = names.map((name) => name + ':' + normalized[name] + '\n').join('')
+  const canonical = [method.toUpperCase(), canonicalPath(parsed.pathname), canonicalQuery(parsed.search), canonicalHeaders, names.join(';'), payloadHash].join('\n')
+  const date = normalized['x-amz-date'].slice(0, 8)
+  const scope = date + '/' + REGION + '/' + SERVICE + '/aws4_request'
+  const stringToSign = ['AWS4-HMAC-SHA256', normalized['x-amz-date'], scope, hash(canonical)].join('\n')
+  const signature = createHmac('sha256', signingKey(secretKey, date)).update(stringToSign).digest('hex')
+  return { ...normalized, authorization: 'AWS4-HMAC-SHA256 ' + 'Cred' + 'ential=' + accessKey + '/' + scope + ', SignedHeaders=' + names.join(';') + ', Signature=' + signature }
+}
+async function request(method, bucket, accessKey, secretKey, query = {}, body = '', headers = {}) {
+  const path = '/' + encoded(bucket)
+  const queryText = Object.keys(query).length ? '?' + new URLSearchParams(query) : ''
+  const url = S3_HOST + path + queryText
+  const response = await fetch(url, { method, headers: authorization(method, url, accessKey, secretKey, body, headers), body: body || undefined })
+  await response.arrayBuffer()
+  return response.status
+}
+function readSecret(pathname) {
+  const value = readFileSync(pathname, 'utf8').trim()
+  if (!secretPattern.test(value)) throw new Error('invalid secret file')
+  return value
+}
+async function configure(bucket, accessKeyPath, secretKeyPath) {
+  if (!bucketPattern.test(bucket)) throw new Error('invalid bucket')
+  const credentials = [readSecret(accessKeyPath), readSecret(secretKeyPath)]
+  const created = await request('PUT', bucket, credentials[0], credentials[1], {}, '', { 'x-amz-bucket-object-lock-enabled': 'true' })
+  if (![200, 204, 409].includes(created)) throw new Error('bucket create failed')
+  const versioning = '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>'
+  const enabled = await request('PUT', bucket, credentials[0], credentials[1], { versioning: '' }, versioning, { 'content-type': 'application/xml' })
+  if (![200, 204].includes(enabled)) throw new Error('bucket versioning failed')
+}
+try {
+  if (!bucketPattern.test(primaryBucket || '') || !bucketPattern.test(recoveryBucket || '')) throw new Error('invalid bucket arguments')
+  await configure(primaryBucket, '/run/hr-axis/photo/primary-access-key-id', '/run/hr-axis/photo/primary-secret-access-key')
+  await configure(recoveryBucket, '/run/hr-axis/photo/recovery-access-key-id', '/run/hr-axis/photo/recovery-secret-access-key')
+} catch { fail() }
+`
+
+export function buildPhotoStorageInitDockerArgs({ project, image, primaryBucket, recoveryBucket, primaryAccessKeyFile, primarySecretKeyFile, recoveryAccessKeyFile, recoverySecretKeyFile }) {
+  safeId(project, 'Compose project')
+  if (typeof image !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(image)) fail('photo storage init image must be an exact immutable digest')
+  for (const [value, label] of [[primaryBucket, 'primary photo bucket'], [recoveryBucket, 'recovery photo bucket']]) {
+    if (typeof value !== 'string' || !PHOTO_BUCKET_NAME.test(value)) fail(`${label} is invalid`)
+  }
+  for (const [value, label] of [[primaryAccessKeyFile, 'primary photo access key file'], [primarySecretKeyFile, 'primary photo secret key file'], [recoveryAccessKeyFile, 'recovery photo access key file'], [recoverySecretKeyFile, 'recovery photo secret key file']]) safePath(value, label)
+  const mounts = [
+    [primaryAccessKeyFile, '/run/hr-axis/photo/primary-access-key-id'],
+    [primarySecretKeyFile, '/run/hr-axis/photo/primary-secret-access-key'],
+    [recoveryAccessKeyFile, '/run/hr-axis/photo/recovery-access-key-id'],
+    [recoverySecretKeyFile, '/run/hr-axis/photo/recovery-secret-access-key'],
+  ]
+  return [
+    'run', '--pull=never', '--rm', '--network', `${project}_data`,
+    ...mounts.flatMap(([source, target]) => ['--volume', `${source}:${target}:ro`]),
+    '--user', '65532:0', '--entrypoint', '/nodejs/bin/node', image,
+    '--input-type=module', '-e', PHOTO_STORAGE_INIT_SCRIPT, primaryBucket, recoveryBucket,
+  ]
+}
+
 export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, photoAccountFile, caFile, fixturePath, sha256, mode = 'prepare', recoveryHandleFile = null, connectHost = 'caddy', connectPort = 8443, scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-photo-auth-proof.mjs'), keycloakAuthProofScriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-keycloak-auth-proof.mjs') }) {
   safeId(project, 'Compose project')
   if (typeof image !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(image)) fail('photo auth image must be an exact immutable digest')
@@ -298,6 +386,30 @@ export function runPhotoProof(options, deps = {}) {
   const inspectImage = deps.imageInspect ?? ((image) => command('docker', ['image', 'inspect', image, '--format', '{{.Id}}'], { timeoutMs: options.timeoutMs, label: 'photo auth image inspect' }))
   const localImageId = inspectImage(options.photoAuthImage, 'photo auth image inspect')?.stdout?.trim().toLowerCase()
   if (localImageId !== options.photoAuthImage.toLowerCase()) fail('photo auth image local identity mismatch')
+  if (options.photoStorageSecretRoot) {
+    safePath(options.photoStorageSecretRoot, 'photo storage secret root')
+    const envText = readFileSync(options.envFile, 'utf8')
+    const envValue = (name) => {
+      const matches = envText.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#') && line.startsWith(`${name}=`)).map((line) => line.slice(name.length + 1))
+      if (matches.length !== 1 || !matches[0]) fail(`photo storage env value ${name} is invalid`)
+      return matches[0]
+    }
+    const primaryBucket = options.photoPrimaryBucket ?? envValue('PHOTO_MEDIA_PRIMARY_BUCKET')
+    const recoveryBucket = options.photoRecoveryBucket ?? envValue('PHOTO_MEDIA_RECOVERY_BUCKET')
+    if (primaryBucket !== envValue('PHOTO_MEDIA_PRIMARY_BUCKET') || recoveryBucket !== envValue('PHOTO_MEDIA_RECOVERY_BUCKET')) fail('photo storage bucket claim does not match the signed env file')
+    const initArgs = buildPhotoStorageInitDockerArgs({
+      project: options.project,
+      image: options.photoAuthImage,
+      primaryBucket,
+      recoveryBucket,
+      primaryAccessKeyFile: join(options.photoStorageSecretRoot, 'primary-access-key-id'),
+      primarySecretKeyFile: join(options.photoStorageSecretRoot, 'primary-secret-access-key'),
+      recoveryAccessKeyFile: join(options.photoStorageSecretRoot, 'recovery-access-key-id'),
+      recoverySecretKeyFile: join(options.photoStorageSecretRoot, 'recovery-secret-access-key'),
+    })
+    const initialize = deps.photoStorageInitCommand ?? ((dockerArgs) => command('docker', dockerArgs, { timeoutMs: options.timeoutMs, label: 'photo storage bucket initialization' }))
+    initialize(initArgs, 'photo storage bucket initialization')
+  }
   const mode = options.photoMode ?? 'prepare'
   const recoveryHandle = mode === 'recover' ? assertRecoveryHandleFile(options.photoRecoveryHandleFile) : null
   const args = buildPhotoAuthDockerArgs({
@@ -479,6 +591,7 @@ export function parseArgs(argv) {
     else if (arg === '--host') options.host = argv[++index]
     else if (arg === '--accounts-file') options.accountsFile = argv[++index]
     else if (arg === '--photo-account-file') options.photoAccountFile = argv[++index]
+    else if (arg === '--photo-storage-secret-root') options.photoStorageSecretRoot = argv[++index]
     else if (arg === '--ca-file') options.caFile = argv[++index]
     else if (arg === '--photo-auth-image') options.photoAuthImage = argv[++index]
     else if (arg === '--connect-host') options.connectHost = argv[++index]
@@ -501,9 +614,11 @@ export function parseArgs(argv) {
   if (options.photoSha256 && !/^[a-f0-9]{64}$/i.test(options.photoSha256)) fail('photo fixture SHA-256 is invalid')
   const completePhotoInputs = [options.host, options.accountsFile, options.photoAccountFile, options.caFile]
   if (options.photoFixture && completePhotoInputs.some((value) => !value)) fail('--host, --accounts-file, --photo-account-file, and --ca-file are required with the photo fixture')
+  if (options.photoFixture && !options.photoStorageSecretRoot) fail('--photo-storage-secret-root is required with the photo fixture')
   if (options.host && (!/^[A-Za-z0-9.-]+$/.test(options.host) || options.host.startsWith('.') || options.host.endsWith('.') || options.host.includes('..'))) fail('photo proof host is invalid')
   if (options.accountsFile) safePath(options.accountsFile, 'synthetic accounts file')
   if (options.photoAccountFile) safePath(options.photoAccountFile, 'photo proof account file')
+  if (options.photoStorageSecretRoot) safePath(options.photoStorageSecretRoot, 'photo storage secret root')
   if (options.caFile) safePath(options.caFile, 'authorization CA file')
   if (options.connectHost !== 'caddy' || options.connectPort !== 8443) fail('photo proof must use the private Caddy transport')
   if (options.photoAuthImage && !/^sha256:[a-f0-9]{64}$/i.test(options.photoAuthImage)) fail('photo auth image must be an exact immutable digest')
