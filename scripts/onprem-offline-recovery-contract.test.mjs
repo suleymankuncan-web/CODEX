@@ -140,6 +140,11 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   const signedPhotoMatch = restore.indexOf('BACKUP_PHOTO_HANDLE_SHA256')
   assert.ok(signedPhotoMatch >= 0 && restore.indexOf('revalidate_recovery_handle', signedPhotoMatch) > signedPhotoMatch, 'restore must recapture handle identity after signed-manifest matching')
   assert.match(restore, /--require-complete[\s\S]*--photo-fixture[\s\S]*--photo-sha256/)
+  assert.match(restore, /prepare_photo_proof_handle\(\)/)
+  assert.match(restore, /chown 1000:1000 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.match(restore, /chmod 0400 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.match(restore, /--photo-recovery-handle-file "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.match(restore, /discard_photo_proof_handle\(\)/)
   assert.match(restore, /docker run --pull=never --rm --network "\$\{TARGET_PROJECT\}_proxy"/)
   assert.match(restore, /--entrypoint \/nodejs\/bin\/node[\s\S]*"\$BACKEND_IMAGE"[\s\S]*onprem-keycloak-auth-proof\.mjs/)
   assert.doesNotMatch(restore, /"\$BACKEND_IMAGE" node .*onprem-keycloak-auth-proof\.mjs/)
@@ -315,6 +320,11 @@ for value in "$@"; do
   previous=$value
 done
 case "$pathname" in
+  "$FIXTURE_ROOT"*/.photo-recovery-handle-proof.*)
+    case "$format" in
+      %u|%g) printf '1000\\n'; exit 0 ;;
+    esac
+    ;;
   /|/tmp|"$FIXTURE_ROOT"|"$FIXTURE_ROOT"/*)
     case "$format" in
       %u|%g) printf '0\\n'; exit 0 ;;

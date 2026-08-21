@@ -29,6 +29,7 @@ PROOF_COMPOSE=
 ROLLBACK_AUTHORITY_BUNDLE_ROOT=
 ROLLBACK_AUTHORITY_RELEASE_ID=
 PHOTO_RECOVERY_HANDLE_FILE=
+PHOTO_PROOF_HANDLE_FILE=
 KEYCLOAK_BOOTSTRAP_LOG=
 TARGET_PROOF_LOG=
 
@@ -646,10 +647,40 @@ compose_start() {
 TARGET_PROOF_SHA256=
 AUTH_RECEIPT_SHA256=
 AUTH_TMP=
+prepare_photo_proof_handle() {
+  revalidate_recovery_handle
+  photo_proof_handle_candidate="$RECEIPT_PARENT/.photo-recovery-handle-proof.$$"
+  [ ! -e "$photo_proof_handle_candidate" ] && [ ! -L "$photo_proof_handle_candidate" ] || die "photo proof recovery handle destination is already in use"
+  PHOTO_PROOF_HANDLE_FILE=$photo_proof_handle_candidate
+  # The durable handle remains root-private.  The signed photo-auth image runs
+  # as UID/GID 1000, so give that disposable container-only copy the minimum
+  # read access it needs; never relax the durable handle's mode or ownership.
+  photo_proof_handle_fail() {
+    rm -f -- "$PHOTO_PROOF_HANDLE_FILE" 2>/dev/null || true
+    PHOTO_PROOF_HANDLE_FILE=
+    die "$1"
+  }
+  (umask 077; set -C; cat -- "$PHOTO_RECOVERY_HANDLE_FILE" >"$PHOTO_PROOF_HANDLE_FILE") || photo_proof_handle_fail "photo proof recovery handle copy could not be created"
+  chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy owner could not be set"
+  chmod 0400 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy mode could not be set"
+  [ -f "$PHOTO_PROOF_HANDLE_FILE" ] && [ ! -L "$PHOTO_PROOF_HANDLE_FILE" ] || photo_proof_handle_fail "photo proof recovery handle copy is not a regular file"
+  [ "$(file_links "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 1 ] || photo_proof_handle_fail "photo proof recovery handle copy must not be hard-linked"
+  [ "$(file_uid "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 1000 ] || photo_proof_handle_fail "photo proof recovery handle copy owner mismatch"
+  [ "$(file_mode "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 400 ] || photo_proof_handle_fail "photo proof recovery handle copy mode mismatch"
+  [ "$(sha256_file "$PHOTO_PROOF_HANDLE_FILE")" = "$PHOTO_RECOVERY_HANDLE_SHA256" ] || photo_proof_handle_fail "photo proof recovery handle copy digest mismatch"
+}
+discard_photo_proof_handle() {
+  if [ -n "$PHOTO_PROOF_HANDLE_FILE" ]; then
+    rm -f -- "$PHOTO_PROOF_HANDLE_FILE" || die "photo proof recovery handle cleanup failed"
+    [ ! -e "$PHOTO_PROOF_HANDLE_FILE" ] && [ ! -L "$PHOTO_PROOF_HANDLE_FILE" ] || die "photo proof recovery handle remained after cleanup"
+    PHOTO_PROOF_HANDLE_FILE=
+  fi
+}
 run_complete_target_proof() {
   revalidate_recovery_handle
   rm -f "$PROOF_RECEIPT" 2>/dev/null || die "target proof receipt destination could not be prepared"
   TARGET_PROOF_LOG=$(mktemp "$RECEIPT_PARENT/.target-proof.XXXXXX") || die "target proof diagnostic log could not be created"
+  prepare_photo_proof_handle
   if [ -n "$PROOF_COMPOSE" ]; then
     if ! node "$TARGET_PROOF" --execute --require-complete \
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$PROOF_COMPOSE" --compose "$RESTORE_COMPOSE" \
@@ -657,8 +688,9 @@ run_complete_target_proof() {
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
       --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
-      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
+      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_PROOF_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
       >"$TARGET_PROOF_LOG" 2>&1; then
+      discard_photo_proof_handle
       printf '%s\n' 'restore: complete target proof diagnostics' >&2
       tail -n 160 "$TARGET_PROOF_LOG" | sanitize_compose_diagnostics >&2
       compose_failure_context core 'redis worker api caddy'
@@ -674,8 +706,9 @@ run_complete_target_proof() {
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
       --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
-      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
+      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_PROOF_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
       >"$TARGET_PROOF_LOG" 2>&1; then
+      discard_photo_proof_handle
       printf '%s\n' 'restore: complete target proof diagnostics' >&2
       tail -n 160 "$TARGET_PROOF_LOG" | sanitize_compose_diagnostics >&2
       compose_failure_context core 'redis worker api caddy'
@@ -685,6 +718,7 @@ run_complete_target_proof() {
       die "complete target network proof failed"
     fi
   fi
+  discard_photo_proof_handle
   rm -f -- "$TARGET_PROOF_LOG" || die "target proof diagnostic cleanup failed"
   TARGET_PROOF_LOG=
   TARGET_PROOF_SHA256=$(node - "$PROOF_RECEIPT" "$PHOTO_RECOVERY_CONTENT_SHA256" "$PHOTO_RECOVERY_CONTENT_LENGTH" <<'NODE'
