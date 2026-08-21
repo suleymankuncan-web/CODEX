@@ -30,6 +30,7 @@ ROLLBACK_AUTHORITY_BUNDLE_ROOT=
 ROLLBACK_AUTHORITY_RELEASE_ID=
 PHOTO_RECOVERY_HANDLE_FILE=
 KEYCLOAK_BOOTSTRAP_LOG=
+TARGET_PROOF_LOG=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -637,25 +638,44 @@ AUTH_TMP=
 run_complete_target_proof() {
   revalidate_recovery_handle
   rm -f "$PROOF_RECEIPT" 2>/dev/null || die "target proof receipt destination could not be prepared"
+  TARGET_PROOF_LOG=$(mktemp "$RECEIPT_PARENT/.target-proof.XXXXXX") || die "target proof diagnostic log could not be created"
   if [ -n "$PROOF_COMPOSE" ]; then
-    node "$TARGET_PROOF" --execute --require-complete \
+    if ! node "$TARGET_PROOF" --execute --require-complete \
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$PROOF_COMPOSE" --compose "$RESTORE_COMPOSE" \
       --env-file "$RESTORE_ENV_FILE" --project "$TARGET_PROJECT" --release-id "$RELEASE_ID" \
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
       --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
       --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
-      >/dev/null 2>&1 || die "complete target network proof failed"
+      >"$TARGET_PROOF_LOG" 2>&1; then
+      printf '%s\n' 'restore: complete target proof diagnostics' >&2
+      tail -n 160 "$TARGET_PROOF_LOG" | sanitize_compose_diagnostics >&2
+      compose_failure_context core 'redis worker api caddy'
+      compose_failure_context photo 'object-storage'
+      rm -f -- "$TARGET_PROOF_LOG" || true
+      TARGET_PROOF_LOG=
+      die "complete target network proof failed"
+    fi
   else
-    node "$TARGET_PROOF" --execute --require-complete \
+    if ! node "$TARGET_PROOF" --execute --require-complete \
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$RESTORE_COMPOSE" \
       --env-file "$RESTORE_ENV_FILE" --project "$TARGET_PROJECT" --release-id "$RELEASE_ID" \
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
       --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
       --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
-      >/dev/null 2>&1 || die "complete target network proof failed"
+      >"$TARGET_PROOF_LOG" 2>&1; then
+      printf '%s\n' 'restore: complete target proof diagnostics' >&2
+      tail -n 160 "$TARGET_PROOF_LOG" | sanitize_compose_diagnostics >&2
+      compose_failure_context core 'redis worker api caddy'
+      compose_failure_context photo 'object-storage'
+      rm -f -- "$TARGET_PROOF_LOG" || true
+      TARGET_PROOF_LOG=
+      die "complete target network proof failed"
+    fi
   fi
+  rm -f -- "$TARGET_PROOF_LOG" || die "target proof diagnostic cleanup failed"
+  TARGET_PROOF_LOG=
   TARGET_PROOF_SHA256=$(node - "$PROOF_RECEIPT" "$PHOTO_RECOVERY_CONTENT_SHA256" "$PHOTO_RECOVERY_CONTENT_LENGTH" <<'NODE'
 const fs = require('node:fs')
 const { createHash } = require('node:crypto')
@@ -775,6 +795,7 @@ cleanup() {
   if [ "${PROOF_RECEIPT_PRIVATE:-0}" -eq 1 ] && [ -n "${PROOF_RECEIPT:-}" ]; then rm -f "$PROOF_RECEIPT" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${RESTORE_ENV_FILE:-}" ]; then rm -f "$RESTORE_ENV_FILE" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${KEYCLOAK_BOOTSTRAP_LOG:-}" ]; then rm -f "$KEYCLOAK_BOOTSTRAP_LOG" 2>/dev/null || cleanup_failed=1; fi
+  if [ -n "${TARGET_PROOF_LOG:-}" ]; then rm -f "$TARGET_PROOF_LOG" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${SEALED_BACKUP_DIR:-}" ]; then rm -rf -- "$SEALED_BACKUP_DIR" 2>/dev/null || cleanup_failed=1; fi
   [ "$cleanup_failed" -eq 0 ] || status=1
   exit "$status"
