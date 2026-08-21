@@ -1045,15 +1045,18 @@ compose_start core redis "fresh redis startup failed" --profile infra --profile 
 compose_start core keycloak "fresh keycloak startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d keycloak
 compose_start photo object-storage "fresh object-storage startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d object-storage
 KEYCLOAK_BOOTSTRAP_LOG=$(mktemp "$RECEIPT_PARENT/.keycloak-bootstrap.XXXXXX") || die "Keycloak bootstrap diagnostic log could not be created"
+say 'phase=keycloak-bootstrap start'
 if ! compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >"$KEYCLOAK_BOOTSTRAP_LOG" 2>&1; then
   printf '%s\n' 'restore: keycloak bootstrap diagnostics' >&2
   tail -n 160 "$KEYCLOAK_BOOTSTRAP_LOG" | sanitize_compose_diagnostics >&2
   compose_failure_context core keycloak-bootstrap
   die "Keycloak bootstrap reconcile failed"
 fi
+say 'phase=keycloak-bootstrap complete'
 rm -f "$KEYCLOAK_BOOTSTRAP_LOG" || die "Keycloak bootstrap diagnostic log cleanup failed"
 KEYCLOAK_BOOTSTRAP_LOG=
 IDENTITY_BINDER_LOG=$(mktemp "$RECEIPT_PARENT/.identity-binder.XXXXXX") || die "identity binder diagnostic log could not be created"
+say 'phase=identity-binder start'
 if ! compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >"$IDENTITY_BINDER_LOG" 2>&1; then
   printf '%s\n' 'restore: identity binder diagnostics' >&2
   tail -n 160 "$IDENTITY_BINDER_LOG" | sanitize_compose_diagnostics >&2
@@ -1063,12 +1066,15 @@ if ! compose_core --profile infra --profile keycloak-bootstrap --profile identit
   die "identity binder failed"
 fi
 rm -f -- "$IDENTITY_BINDER_LOG" || die "identity binder diagnostic cleanup failed"
+say 'phase=identity-binder complete'
 IDENTITY_BINDER_LOG=
+say 'phase=migrator start'
 MIGRATOR_OUTPUT=$(compose_core --profile migrate run --pull never --rm --no-deps migrator 2>&1) || die "migration rehearsal failed"
 MIGRATOR_DIGESTS=$(printf '%s\n' "$MIGRATOR_OUTPUT" | sed -n 's/.*migrationTreeDigest[^0-9a-fA-F]*\([0-9a-fA-F]\{64\}\).*/\1/p')
 [ "$(printf '%s\n' "$MIGRATOR_DIGESTS" | sed '/^$/d' | wc -l | tr -d ' ')" = 1 ] || die "migrator must emit exactly one migration tree digest"
 MIGRATOR_DIGEST=$(printf '%s' "$MIGRATOR_DIGESTS" | tr 'A-F' 'a-f')
 [ "$MIGRATOR_DIGEST" = "$TARGET_MIGRATION_DIGEST" ] || die "migrator tree digest does not match signed target"
+say 'phase=migrator complete'
 compose_start core postgres "fresh core runtime startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d
 compose_start photo object-storage "fresh photo runtime startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d
 

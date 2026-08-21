@@ -180,6 +180,37 @@ revalidate_receipt_parent() {
   [ "$RECEIPT_PARENT_UID" = "$old_uid" ] || die "receipt parent owner changed"
   [ "$RECEIPT_PARENT_MODE" = "$old_mode" ] || die "receipt parent mode changed"
 }
+
+# A target restore may include the Keycloak reconciliation command, whose
+# internal watchdog is deliberately much longer than the rehearsal's useful
+# phase budget. Keep the outer lifecycle bounded and retain only a sanitized
+# tail for diagnosis instead of silently waiting until the hosted job timeout.
+readonly TARGET_RESTORE_TIMEOUT_SECONDS=900
+readonly TARGET_RESTORE_KILL_AFTER_SECONDS=30
+sanitize_restore_diagnostics() {
+  sed -E 's/(password|secret|token|postgresql:\/\/|redis:\/\/)[^[:space:]]*/\1[redacted]/gi' | tail -n 160
+}
+run_target_restore() {
+  restore_label=$1
+  shift
+  command -v timeout >/dev/null 2>&1 || die "timeout command is required for $restore_label target restore"
+  restore_log=$(mktemp "$RECEIPT_PARENT/.$restore_label-target-restore.XXXXXX") || die "$restore_label target restore diagnostic log could not be created"
+  say "target-restore: start label=$restore_label timeout=${TARGET_RESTORE_TIMEOUT_SECONDS}s"
+  if timeout --signal=TERM --kill-after="${TARGET_RESTORE_KILL_AFTER_SECONDS}s" "${TARGET_RESTORE_TIMEOUT_SECONDS}s" "$@" >"$restore_log" 2>&1; then
+    rm -f -- "$restore_log" || die "$restore_label target restore diagnostic cleanup failed"
+    say "target-restore: complete label=$restore_label"
+    return 0
+  else
+    restore_status=$?
+  fi
+  printf '%s\n' "upgrade: $restore_label target restore diagnostics" >&2
+  tail -n 160 "$restore_log" | sanitize_restore_diagnostics >&2
+  rm -f -- "$restore_log" || true
+  if [ "$restore_status" -eq 124 ] || [ "$restore_status" -eq 137 ]; then
+    die "$restore_label target restore timed out after ${TARGET_RESTORE_TIMEOUT_SECONDS}s"
+  fi
+  die "$restore_label target restore failed (exit $restore_status)"
+}
 require_dir "$BUNDLE_ROOT" current-bundle
 require_dir "$NEXT_BUNDLE_ROOT" next-bundle
 require_file "$PUBLIC_KEY" public-key
@@ -344,9 +375,9 @@ if [ -n "$PROOF_RECEIPT" ]; then
   revalidate_recovery_handle
   revalidate_receipt_parent
   if [ -n "$PROOF_COMPOSE" ]; then
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT" --proof-compose "$PROOF_COMPOSE" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT" --proof-compose "$PROOF_COMPOSE"
   else
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT"
   fi
   proof_digest=$(sha256_file "$PROOF_RECEIPT") || die "target proof receipt digest is unavailable"
   node - "$RECEIPT" "$proof_digest" <<'NODE' >/dev/null 2>&1 || die "target proof receipt digest does not match restore receipt"
@@ -360,9 +391,9 @@ else
   revalidate_recovery_handle
   revalidate_receipt_parent
   if [ -n "$PROOF_COMPOSE" ]; then
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-compose "$PROOF_COMPOSE" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-compose "$PROOF_COMPOSE"
   else
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256"
   fi
 fi
 node - "$RECEIPT" "$NEXT_RELEASE_ID" "$SOURCE_PROJECT" "$TARGET_PROJECT" "$BACKUP_TRUSTED_FINGERPRINT" "$PHOTO_RECOVERY_HANDLE_SHA256" <<'NODE' >/dev/null 2>&1 || die "target-bound complete proof receipt is invalid"
