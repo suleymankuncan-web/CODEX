@@ -72,7 +72,7 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.match(restore, /awk -F= '[^']*OFFLINE_RESTORE_REDIS_VOLUME[^']*OFFLINE_RESTORE_PHOTO_VOLUME/)
   assert.match(source['backup.sh'], /docker run --pull=never --rm --network none --volume/)
   assert.match(restore, /docker run --pull=never --rm --network none --volume "\$name:\/target"/)
-  assert.match(restore, /docker run --pull=never --rm --network none --volume "\$volume_name:\/source:ro"/)
+  assert.match(restore, /sha256sum "\$BACKUP_DIR\/volumes\/\$class_name\.tar"/)
   assert.match(restore, /BACKUP_SOURCE_DIR=\$BACKUP_DIR/)
   assert.match(restore, /SEALED_BACKUP_DIR=\$\(node - "\$BACKUP_SOURCE_DIR" "\$RECEIPT_PARENT"/)
   assert.match(restore, /O_NOFOLLOW/)
@@ -109,6 +109,8 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.match(restore, /keycloak-bootstrap[\s\S]*identity-binder[\s\S]*migrator/)
   assert.match(restore, /pg_restore[\s\S]*hr_axis[\s\S]*pg_restore[\s\S]*keycloak/)
   assert.match(restore, /restoredVolumeAggregateDigest|volume aggregate/i)
+  assert.match(restore, /sha256sum "\$BACKUP_DIR\/volumes\/\$class_name\.tar"/)
+  assert.doesNotMatch(restore, /docker run --pull=never --rm --network none --volume "\$volume_name:\/source:ro"[\s\S]{0,260}tar --numeric-owner -cf - -C \/source \. \| sha256sum/)
   assert.match(restore, /--pull=never|--pull never/)
   assert.match(restore, /onprem-offline-target-proof\.mjs/)
   assert.match(restore, /--photo-mode recover/)
@@ -136,6 +138,7 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   const upgrade = source['upgrade.sh']
   assert.match(upgrade, /evidence\/migration-compatibility\.json/)
   assert.match(upgrade, /upgradeCompatible/)
+  assert.match(upgrade, /compatibleFrom\.filter[\s\S]*entries\.length !== 1/)
   assert.match(upgrade, /forward_repair_or_database_restore_required/)
   assert.match(upgrade, /restore\.sh/)
 

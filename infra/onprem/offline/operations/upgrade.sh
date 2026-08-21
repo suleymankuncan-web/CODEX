@@ -246,9 +246,9 @@ const [currentPath, nextPath, compatibilityPath, currentRelease, nextRelease, ba
 let current, next, value
 try { current = JSON.parse(fs.readFileSync(currentPath, 'utf8')); next = JSON.parse(fs.readFileSync(nextPath, 'utf8')); value = JSON.parse(fs.readFileSync(compatibilityPath, 'utf8')) } catch { process.exit(41) }
 if (!current || !next || current.releaseId !== currentRelease || next.releaseId !== nextRelease || !value || value.schemaVersion !== 1 || value.releaseId !== nextRelease || value.upgradeCompatible !== true || typeof value.migrationTreeDigest !== 'string' || !/^[0-9a-f]{64}$/.test(value.migrationTreeDigest) || !Array.isArray(value.compatibleFrom)) process.exit(42)
-const entry = value.compatibleFrom.find((item) => item && item.sourceReleaseId === currentRelease)
-if (!entry || entry.sourceMigrationTreeDigest !== backupDigest) process.exit(43)
-process.stdout.write(`${entry.sourceMigrationTreeDigest}|${value.migrationTreeDigest}`)
+const entries = value.compatibleFrom.filter((item) => item && item.sourceReleaseId === currentRelease)
+if (entries.length !== 1 || entries[0].sourceMigrationTreeDigest !== backupDigest) process.exit(43)
+process.stdout.write(`${entries[0].sourceMigrationTreeDigest}|${value.migrationTreeDigest}`)
 NODE
 ) || die "forward_repair_or_database_restore_required"
 IFS='|' read -r CURRENT_DIGEST NEXT_DIGEST <<EOF

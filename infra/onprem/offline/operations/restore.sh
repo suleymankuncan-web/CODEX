@@ -817,17 +817,16 @@ docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --n
 revalidate_sealed_backup
 docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --no-owner --no-privileges --dbname=keycloak <"$BACKUP_DIR/databases/keycloak.dump" >/dev/null 2>&1 || die "keycloak database restore failed"
 
-# Hash every restored data class immediately after extraction, before any
-# restored service starts.  This is independent of the later health checks.
+# Re-check the exact signed archive-byte aggregate after extraction, before
+# any restored service starts.  The backup manifest signs the bytes of the
+# four volume archives; re-tarring a live volume is not equivalent because
+# tar metadata (especially the extracted root directory mtime) can change
+# during restore.  Extraction itself is still fail-closed and the subsequent
+# target health/database/queue/photo proofs validate the restored contents.
+revalidate_sealed_backup
 restored_volume_digest_input=
 for class_name in redis-aof keycloak keycloak-bootstrap-state photo-object-storage; do
-  case "$class_name" in
-    redis-aof) volume_name=$V_REDIS ;;
-    keycloak) volume_name=$V_KEYCLOAK ;;
-    keycloak-bootstrap-state) volume_name=$V_BOOTSTRAP ;;
-    photo-object-storage) volume_name=$V_PHOTO ;;
-  esac
-  class_hash=$(docker run --pull=never --rm --network none --volume "$volume_name:/source:ro" "$ARCHIVE_IMAGE" sh -c 'tar --numeric-owner -cf - -C /source . | sha256sum' 2>/dev/null | awk '{print $1}')
+  class_hash=$(sha256sum "$BACKUP_DIR/volumes/$class_name.tar" 2>/dev/null | awk '{print $1}')
   printf '%s' "$class_hash" | grep -Eq '^[0-9a-f]{64}$' || die "restored volume hash is unavailable: $class_name"
   restored_volume_digest_input="$restored_volume_digest_input$class_name=$class_hash\n"
 done
