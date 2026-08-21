@@ -147,6 +147,7 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.match(restore, /discard_photo_proof_handle\(\)/)
   assert.match(restore, /run_auth_proof\(\)[\s\S]*--user 1000:1000/)
   assert.match(restore, /run_auth_proof\(\)[\s\S]*\$AUTH_ACCOUNTS/)
+  assert.match(restore, /deniedMutationCount !== undefined && value\.personas\.deniedMutationCount !== 5/)
   assert.match(restore, /docker run --pull=never --rm --network "\$\{TARGET_PROJECT\}_proxy"/)
   assert.match(restore, /--entrypoint \/nodejs\/bin\/node[\s\S]*"\$BACKEND_IMAGE"[\s\S]*onprem-keycloak-auth-proof\.mjs/)
   assert.doesNotMatch(restore, /"\$BACKEND_IMAGE" node .*onprem-keycloak-auth-proof\.mjs/)
@@ -479,7 +480,7 @@ if [ "$1" = run ]; then
   args="$*"
   case "$args" in
     *'/backup/volumes/'*) host=; class=; for value in "$@"; do case "$value" in *:/backup*) host=\${value%%:/backup*};; esac; done; class=$(printf '%s' "$args" | sed -n 's#.*volumes/\\([^./ ]*\\)\\.tar.*#\\1#p'); [ -n "$host" ] || exit 1; mkdir -p "$host/volumes"; [ -f "$host/volumes/$class.tar" ] || printf 'archive-%s\\n' "$class" > "$host/volumes/$class.tar"; exit 0 ;;
-    *onprem-keycloak-auth-proof.mjs*) printf '%s\\n' '{"schemaVersion":1,"dataClass":"synthetic","personas":{"count":5,"sessionsVerified":5,"crossScopeDenied":5,"deniedMutationCount":4},"scopeAuthorization":{"crossScopeDenied":true,"deniedActionWriteDelta":0},"noRawCredentials":true}'; exit 0 ;;
+    *onprem-keycloak-auth-proof.mjs*) printf '%s\\n' '{"schemaVersion":1,"dataClass":"synthetic","personas":{"count":5,"sessionsVerified":5,"crossScopeDenied":5,"deniedMutationCount":5},"scopeAuthorization":{"crossScopeDenied":true,"deniedActionWriteDelta":0},"noRawCredentials":true}'; exit 0 ;;
     *sha256sum*) volume=; for value in "$@"; do case "$value" in *:/source:ro) volume=\${value%%:/source:ro};; esac; done; case "$volume" in *redis*) printf '%s  -\\n' "$HASH_REDIS";; *keycloak_bootstrap*) printf '%s  -\\n' "$HASH_BOOTSTRAP";; *keycloak*) printf '%s  -\\n' "$HASH_KEYCLOAK";; *object_storage*) printf '%s  -\\n' "$HASH_PHOTO";; esac; exit 0 ;;
     *) exit 0 ;;
   esac

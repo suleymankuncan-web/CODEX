@@ -768,7 +768,7 @@ if (
 ) process.exit(43)
 if (value.personas.sessionsVerified !== undefined && value.personas.sessionsVerified !== 5) process.exit(44)
 if (value.personas.crossScopeDenied !== undefined && value.personas.crossScopeDenied !== 5) process.exit(45)
-if (value.personas.deniedMutationCount !== undefined && value.personas.deniedMutationCount !== 4) process.exit(46)
+if (value.personas.deniedMutationCount !== undefined && value.personas.deniedMutationCount !== 5) process.exit(46)
 process.stdout.write(createHash('sha256').update(fs.readFileSync(pathname)).digest('hex'))
 NODE
   ) || die "five-persona auth proof receipt is not an exact sanitized cross-scope proof"
