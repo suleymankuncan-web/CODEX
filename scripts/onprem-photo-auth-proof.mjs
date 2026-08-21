@@ -154,6 +154,38 @@ function parseJsonBody(response, label) {
   try { return JSON.parse(response?.body ?? '') } catch { fail(`${label} response was not JSON`) }
 }
 
+const SAFE_ERROR_CODE = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/
+const SENSITIVE_ERROR_TEXT = /(?:https?:\/\/|password|secret|token|access[\s_-]?key|private[\s_-]?key|authorization|cookie|bearer|set-cookie)/i
+
+function sanitizeErrorText(value) {
+  if (typeof value !== 'string') return ''
+  let text = value.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+  text = text
+    .replace(/https?:\/\/\S+/gi, '<redacted-url>')
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, '<redacted-id>')
+    .replace(/\b[0-9a-f]{64}\b/gi, '<redacted-digest>')
+  if (SENSITIVE_ERROR_TEXT.test(text)) return '<redacted-sensitive-message>'
+  return text.slice(0, 160)
+}
+
+export function summarizePhotoInitiateFailure(response) {
+  const status = Number(response?.status)
+  const parts = [Number.isInteger(status) && status >= 100 && status <= 599 ? `status=${status}` : 'status=unknown']
+  let body = response?.json
+  if (!object(body)) {
+    try { body = JSON.parse(String(response?.body ?? '')) } catch { body = null }
+  }
+  if (object(body)) {
+    const code = typeof body.errorCode === 'string' && SAFE_ERROR_CODE.test(body.errorCode) ? body.errorCode : ''
+    if (code) parts.push(`code=${code}`)
+    const rawMessage = Array.isArray(body.message) ? body.message.find((entry) => typeof entry === 'string') : body.message
+    const message = sanitizeErrorText(rawMessage)
+    if (message) parts.push(`message=${message}`)
+  }
+  return parts.join(' ')
+}
+
 export function assertPhotoAuthProofOutput(value) {
   exactFields(value, ['photoAdminAuthenticated', 'nonSuperAdminDenied', 'deniedWriteDelta', 'exactWebpRead', 'repeatReadExact', 'canonicalIdentityVerified', 'contentSha256', 'contentLength'], 'photo auth proof output')
   if (value.photoAdminAuthenticated !== true || value.nonSuperAdminDenied !== true || value.exactWebpRead !== true || value.repeatReadExact !== true || value.canonicalIdentityVerified !== true || value.deniedWriteDelta !== 0 || !SHA256.test(value.contentSha256) || !Number.isSafeInteger(value.contentLength) || value.contentLength <= 0) fail('photo auth proof output mismatch')
@@ -228,7 +260,7 @@ export async function runPhotoAuthProofInternal(options, deps = {}) {
       const initiated = await raw(options.host, INITIATE_PATH, {
         method: 'POST', headers: requestHeaders(options.host, adminSession.browser, { 'Content-Type': multipart.contentType, 'Content-Length': multipart.body.byteLength }), body: multipart.body, jar: adminSession.browser.jar,
       })
-      if (![200, 201].includes(initiated.status)) fail('photo-admin photo initiate was not accepted')
+      if (![200, 201].includes(initiated.status)) fail(`photo-admin photo initiate was not accepted (${summarizePhotoInitiateFailure(initiated)})`)
       const initiatedBody = parseJsonBody(initiated, 'photo initiate')
       if (!UUID.test(initiatedBody.mediaAssetId) || initiatedBody.state !== 'uploaded') fail('photo initiate response contract failed')
       mediaAssetId = initiatedBody.mediaAssetId

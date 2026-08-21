@@ -14,6 +14,7 @@ import {
   parseArgs,
   runPhotoAuthProof,
   assertRecoveryHandle,
+  summarizePhotoInitiateFailure,
 } from './onprem-photo-auth-proof.mjs'
 
 const accountRow = 'onprem.photo-proof-admin|onprem.photo-proof-admin|synthetic-photo-proof-password-0123456789-abcdef|SUPER_ADMIN|synthetic-employee-photo-proof-admin|company-001|region-001|store-100|company-001|region-001|store-100|store-100'
@@ -80,6 +81,28 @@ test('photo proof retention usage is strict, sanitized, and canonical', () => {
   assert.deepEqual(canonicalRetentionUsage({ ...usage, classifications: [...usage.classifications].reverse() }), canonicalRetentionUsage(usage))
   assert.throws(() => assertRetentionUsage({ ...usage, current: { ...usage.current, assetCount: 1 } }), /field set/i)
   assert.throws(() => assertRetentionUsage({ ...usage, alerts: [{ ...usage.alerts[0], url: 'https://sensitive.invalid' }] }), /invalid/i)
+})
+
+test('photo initiate failure diagnostics preserve only bounded safe status details', () => {
+  assert.equal(
+    summarizePhotoInitiateFailure({
+      status: 503,
+      body: JSON.stringify({
+        errorCode: 'SERVICE_UNAVAILABLE',
+        message: 'Photo media retention policy is not configured',
+        correlationId: '11111111-1111-4111-8111-111111111111',
+      }),
+    }),
+    'status=503 code=SERVICE_UNAVAILABLE message=Photo media retention policy is not configured',
+  )
+  assert.equal(
+    summarizePhotoInitiateFailure({
+      status: 500,
+      json: { errorCode: 'INTERNAL_SERVER_ERROR', message: 'secret=do-not-print https://storage.invalid/object' },
+    }),
+    'status=500 code=INTERNAL_SERVER_ERROR message=<redacted-sensitive-message>',
+  )
+  assert.equal(summarizePhotoInitiateFailure({ status: 422, body: 'not-json' }), 'status=422')
 })
 
 test('photo multipart body keeps fixture bytes and only approved fields', () => {
