@@ -591,25 +591,27 @@ sanitize_compose_diagnostics() {
 }
 compose_failure_context() {
   compose_mode=$1
-  service=$2
-  if [ "$compose_mode" = photo ]; then
-    compose_status=$(compose_photo ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
-    compose_logs=$(compose_photo logs --no-color --tail 80 "$service" 2>/dev/null || true)
-  else
-    compose_status=$(compose_core ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
-    compose_logs=$(compose_core logs --no-color --tail 80 "$service" 2>/dev/null || true)
-  fi
-  printf '%s\n' "restore: compose diagnostic service=$service" >&2
-  if [ -n "$compose_status" ]; then
-    printf '%s\n' "$compose_status" | sanitize_compose_diagnostics >&2
-  else
-    printf '%s\n' 'restore: compose status unavailable' >&2
-  fi
-  if [ -n "$compose_logs" ]; then
-    printf '%s\n' "$compose_logs" | sanitize_compose_diagnostics >&2
-  else
-    printf '%s\n' 'restore: compose logs unavailable' >&2
-  fi
+  services=$2
+  for service in $services; do
+    if [ "$compose_mode" = photo ]; then
+      compose_status=$(compose_photo ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
+      compose_logs=$(compose_photo logs --no-color --tail 80 "$service" 2>/dev/null || true)
+    else
+      compose_status=$(compose_core ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
+      compose_logs=$(compose_core logs --no-color --tail 80 "$service" 2>/dev/null || true)
+    fi
+    printf '%s\n' "restore: compose diagnostic service=$service" >&2
+    if [ -n "$compose_status" ]; then
+      printf '%s\n' "$compose_status" | sanitize_compose_diagnostics >&2
+    else
+      printf '%s\n' 'restore: compose status unavailable' >&2
+    fi
+    if [ -n "$compose_logs" ]; then
+      printf '%s\n' "$compose_logs" | sanitize_compose_diagnostics >&2
+    else
+      printf '%s\n' 'restore: compose logs unavailable' >&2
+    fi
+  done
 }
 compose_start() {
   compose_mode=$1
@@ -834,7 +836,8 @@ RESTORED_VOLUME_AGGREGATE=$(printf '%b' "$restored_volume_digest_input" | LC_ALL
 [ -n "$RESTORED_VOLUME_AGGREGATE" ] || die "restored volume aggregate hash is unavailable"
 [ "$RESTORED_VOLUME_AGGREGATE" = "$BACKUP_VOLUME_DIGEST" ] || die "restored volume aggregate hash does not match the signed backup"
 
-compose_start core redis "fresh redis/keycloak startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d redis keycloak
+compose_start core redis "fresh redis startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d redis
+compose_start core keycloak "fresh keycloak startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d keycloak
 compose_start photo object-storage "fresh object-storage startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d object-storage
 compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"
 compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"

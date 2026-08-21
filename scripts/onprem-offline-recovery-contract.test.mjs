@@ -131,6 +131,7 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.match(restore, /sanitize_compose_diagnostics\(\)/)
   assert.match(restore, /compose_start core postgres .*--wait --wait-timeout 180/)
   assert.match(restore, /compose_start core redis .*--wait --wait-timeout 180/)
+  assert.match(restore, /compose_start core keycloak .*--wait --wait-timeout 180/)
   assert.match(restore, /compose_start photo object-storage .*--wait --wait-timeout 180/)
   assert.doesNotMatch(restore, /compose_core --profile infra up --pull never -d postgres\s*>\/dev\/null/)
   assert.doesNotMatch(restore, /compose_photo up --pull never -d object-storage\s*>\/dev\/null/)
