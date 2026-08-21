@@ -145,6 +145,8 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.match(restore, /chmod 0400 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
   assert.match(restore, /--photo-recovery-handle-file "\$PHOTO_PROOF_HANDLE_FILE"/)
   assert.match(restore, /discard_photo_proof_handle\(\)/)
+  assert.match(restore, /run_auth_proof\(\)[\s\S]*--user 1000:1000/)
+  assert.match(restore, /run_auth_proof\(\)[\s\S]*\$AUTH_ACCOUNTS/)
   assert.match(restore, /docker run --pull=never --rm --network "\$\{TARGET_PROJECT\}_proxy"/)
   assert.match(restore, /--entrypoint \/nodejs\/bin\/node[\s\S]*"\$BACKEND_IMAGE"[\s\S]*onprem-keycloak-auth-proof\.mjs/)
   assert.doesNotMatch(restore, /"\$BACKEND_IMAGE" node .*onprem-keycloak-auth-proof\.mjs/)

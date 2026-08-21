@@ -749,6 +749,7 @@ run_auth_proof() {
     --volume "$AUTH_PROOF:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro" \
     --volume "$AUTH_ACCOUNTS:/run/hr-axis/synthetic-accounts:ro" \
     --volume "$AUTH_CA:/run/hr-axis/caddy-ca.crt:ro" \
+    --user 1000:1000 \
     --entrypoint /nodejs/bin/node "$BACKEND_IMAGE" /run/hr-axis/onprem-keycloak-auth-proof.mjs \
       --host "$(env_value HR_AXIS_PUBLIC_HOST)" --connect-host caddy --connect-port 8443 \
       --accounts-file /run/hr-axis/synthetic-accounts --ca-file /run/hr-axis/caddy-ca.crt \
