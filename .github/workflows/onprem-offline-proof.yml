@@ -958,7 +958,9 @@ jobs:
             sudo -- "$NODE_BIN" "$root/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$root" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
           }
           materialize_transition_bundle() {
-            local release="$1" target="$2" release_id="$3" archive="$SEALED_ROOT/archives/${release}-transition.tar" materialization_root="$SEALED_ROOT/.${release}-materialize"
+            local release="$1" target="$2" release_id="$3" archive materialization_root
+            archive="$SEALED_ROOT/archives/${release}-transition.tar"
+            materialization_root="$SEALED_ROOT/.${release}-materialize"
             assert_transition_members "$archive" "${release}-transition"
             sudo test ! -e "$target" && sudo test ! -L "$target"
             sudo test ! -e "$materialization_root" && sudo test ! -L "$materialization_root"
