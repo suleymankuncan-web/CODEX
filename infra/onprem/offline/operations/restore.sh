@@ -29,6 +29,7 @@ PROOF_COMPOSE=
 ROLLBACK_AUTHORITY_BUNDLE_ROOT=
 ROLLBACK_AUTHORITY_RELEASE_ID=
 PHOTO_RECOVERY_HANDLE_FILE=
+KEYCLOAK_BOOTSTRAP_LOG=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -773,6 +774,7 @@ cleanup() {
   if [ -n "${AUTH_TMP:-}" ]; then rm -f "$AUTH_TMP" 2>/dev/null || cleanup_failed=1; fi
   if [ "${PROOF_RECEIPT_PRIVATE:-0}" -eq 1 ] && [ -n "${PROOF_RECEIPT:-}" ]; then rm -f "$PROOF_RECEIPT" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${RESTORE_ENV_FILE:-}" ]; then rm -f "$RESTORE_ENV_FILE" 2>/dev/null || cleanup_failed=1; fi
+  if [ -n "${KEYCLOAK_BOOTSTRAP_LOG:-}" ]; then rm -f "$KEYCLOAK_BOOTSTRAP_LOG" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${SEALED_BACKUP_DIR:-}" ]; then rm -rf -- "$SEALED_BACKUP_DIR" 2>/dev/null || cleanup_failed=1; fi
   [ "$cleanup_failed" -eq 0 ] || status=1
   exit "$status"
@@ -839,7 +841,15 @@ RESTORED_VOLUME_AGGREGATE=$(printf '%b' "$restored_volume_digest_input" | LC_ALL
 compose_start core redis "fresh redis startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d redis
 compose_start core keycloak "fresh keycloak startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d keycloak
 compose_start photo object-storage "fresh object-storage startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d object-storage
-compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"
+KEYCLOAK_BOOTSTRAP_LOG=$(mktemp "$RECEIPT_PARENT/.keycloak-bootstrap.XXXXXX") || die "Keycloak bootstrap diagnostic log could not be created"
+if ! compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >"$KEYCLOAK_BOOTSTRAP_LOG" 2>&1; then
+  printf '%s\n' 'restore: keycloak bootstrap diagnostics' >&2
+  tail -n 160 "$KEYCLOAK_BOOTSTRAP_LOG" | sanitize_compose_diagnostics >&2
+  compose_failure_context core keycloak-bootstrap
+  die "Keycloak bootstrap reconcile failed"
+fi
+rm -f "$KEYCLOAK_BOOTSTRAP_LOG" || die "Keycloak bootstrap diagnostic log cleanup failed"
+KEYCLOAK_BOOTSTRAP_LOG=
 compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"
 MIGRATOR_OUTPUT=$(compose_core --profile migrate run --pull never --rm --no-deps migrator 2>&1) || die "migration rehearsal failed"
 MIGRATOR_DIGESTS=$(printf '%s\n' "$MIGRATOR_OUTPUT" | sed -n 's/.*migrationTreeDigest[^0-9a-fA-F]*\([0-9a-fA-F]\{64\}\).*/\1/p')
