@@ -579,6 +579,51 @@ compose_core() {
 }
 compose_photo() { compose_core "$@"; }
 
+# Compose output is intentionally quiet on the success path, but a failed
+# disposable target must retain enough bounded, sanitized context to diagnose
+# startup failures without leaking credentials into the rehearsal log.
+sanitize_compose_diagnostics() {
+  sed -E 's/(password|secret|token|postgresql:\/\/|redis:\/\/)[^[:space:]]*/\1[redacted]/gi' | tail -n 80
+}
+compose_failure_context() {
+  compose_mode=$1
+  service=$2
+  if [ "$compose_mode" = photo ]; then
+    compose_status=$(compose_photo ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
+    compose_logs=$(compose_photo logs --no-color --tail 80 "$service" 2>/dev/null || true)
+  else
+    compose_status=$(compose_core ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
+    compose_logs=$(compose_core logs --no-color --tail 80 "$service" 2>/dev/null || true)
+  fi
+  printf '%s\n' "restore: compose diagnostic service=$service" >&2
+  if [ -n "$compose_status" ]; then
+    printf '%s\n' "$compose_status" | sanitize_compose_diagnostics >&2
+  else
+    printf '%s\n' 'restore: compose status unavailable' >&2
+  fi
+  if [ -n "$compose_logs" ]; then
+    printf '%s\n' "$compose_logs" | sanitize_compose_diagnostics >&2
+  else
+    printf '%s\n' 'restore: compose logs unavailable' >&2
+  fi
+}
+compose_start() {
+  compose_mode=$1
+  service=$2
+  failure_message=$3
+  shift 3
+  if [ "$compose_mode" = photo ]; then
+    if compose_start_output=$(compose_photo "$@" 2>&1); then return 0; fi
+  else
+    if compose_start_output=$(compose_core "$@" 2>&1); then return 0; fi
+  fi
+  if [ -n "$compose_start_output" ]; then
+    printf '%s\n' "$compose_start_output" | sanitize_compose_diagnostics >&2
+  fi
+  compose_failure_context "$compose_mode" "$service"
+  die "$failure_message"
+}
+
 TARGET_PROOF_SHA256=
 AUTH_RECEIPT_SHA256=
 AUTH_TMP=
@@ -754,7 +799,7 @@ restore_volume keycloak "$V_KEYCLOAK"
 restore_volume keycloak-bootstrap-state "$V_BOOTSTRAP"
 restore_volume photo-object-storage "$V_PHOTO"
 
-compose_core --profile infra up --pull never -d postgres >/dev/null 2>&1 || die "fresh postgres startup failed"
+compose_start core postgres "fresh postgres startup failed" --profile infra up --pull never --wait --wait-timeout 180 -d postgres
 POSTGRES_CONTAINER=$(compose_core ps -q postgres 2>/dev/null | tail -n 1)
 [ -n "$POSTGRES_CONTAINER" ] || die "fresh postgres container is unavailable"
 POSTGRES_META=$(docker inspect "$POSTGRES_CONTAINER" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "fresh postgres identity could not be inspected"
@@ -786,8 +831,8 @@ RESTORED_VOLUME_AGGREGATE=$(printf '%b' "$restored_volume_digest_input" | LC_ALL
 [ -n "$RESTORED_VOLUME_AGGREGATE" ] || die "restored volume aggregate hash is unavailable"
 [ "$RESTORED_VOLUME_AGGREGATE" = "$BACKUP_VOLUME_DIGEST" ] || die "restored volume aggregate hash does not match the signed backup"
 
-compose_core --profile infra --profile runtime up --pull never -d redis keycloak >/dev/null 2>&1 || die "fresh redis/keycloak startup failed"
-compose_photo up --pull never -d object-storage >/dev/null 2>&1 || die "fresh object-storage startup failed"
+compose_start core redis "fresh redis/keycloak startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d redis keycloak
+compose_start photo object-storage "fresh object-storage startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d object-storage
 compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"
 compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"
 MIGRATOR_OUTPUT=$(compose_core --profile migrate run --pull never --rm --no-deps migrator 2>&1) || die "migration rehearsal failed"
@@ -795,8 +840,8 @@ MIGRATOR_DIGESTS=$(printf '%s\n' "$MIGRATOR_OUTPUT" | sed -n 's/.*migrationTreeD
 [ "$(printf '%s\n' "$MIGRATOR_DIGESTS" | sed '/^$/d' | wc -l | tr -d ' ')" = 1 ] || die "migrator must emit exactly one migration tree digest"
 MIGRATOR_DIGEST=$(printf '%s' "$MIGRATOR_DIGESTS" | tr 'A-F' 'a-f')
 [ "$MIGRATOR_DIGEST" = "$TARGET_MIGRATION_DIGEST" ] || die "migrator tree digest does not match signed target"
-compose_core --profile infra --profile runtime up --pull never -d >/dev/null 2>&1 || die "fresh core runtime startup failed"
-compose_photo up --pull never -d >/dev/null 2>&1 || die "fresh photo runtime startup failed"
+compose_start core postgres "fresh core runtime startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d
+compose_start photo object-storage "fresh photo runtime startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d
 
 service_id() {
   compose_name=$1; service=$2
