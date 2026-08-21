@@ -827,17 +827,53 @@ docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --n
 # databases to the same least-privilege ownership model created by the fresh
 # PostgreSQL init script; otherwise Keycloak fails during Liquibase startup on
 # tables such as public.databasechangelog with a misleading health failure.
+repair_database_ownership() {
+  repair_label=$1
+  repair_log="$RECEIPT_PARENT/.restore-db-repair-$repair_label.log"
+  rm -f -- "$repair_log" || die "stale $repair_label database repair diagnostic could not be removed"
+  revalidate_receipt_parent
+  if [ "$repair_label" = hr-axis ]; then
+    db_name=hr_axis
+    repair_sql='GRANT hr_axis_migrator TO hr_axis_bootstrap;
+REASSIGN OWNED BY hr_axis_bootstrap TO hr_axis_migrator;'
+    revoke_sql='REVOKE hr_axis_migrator FROM hr_axis_bootstrap;'
+  elif [ "$repair_label" = keycloak ]; then
+    db_name=keycloak
+    repair_sql='GRANT keycloak TO hr_axis_bootstrap;
+REASSIGN OWNED BY hr_axis_bootstrap TO keycloak;'
+    revoke_sql='REVOKE keycloak FROM hr_axis_bootstrap;'
+  else
+    die "unknown database repair label"
+  fi
+  if ! printf '%s\n' "$repair_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname="$db_name" >"$repair_log" 2>&1
+  then
+    printf '%s\n' "restore: $repair_label database ownership repair diagnostic" >&2
+    sed -n '1,80p' "$repair_log" >&2 || true
+    rm -f -- "$repair_log" || true
+    die "$repair_label database ownership repair failed"
+  fi
+  revalidate_receipt_parent
+  if ! printf '%s\n' "$revoke_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname="$db_name" >"$repair_log" 2>&1
+  then
+    printf '%s\n' "restore: $repair_label database ownership revoke diagnostic" >&2
+    sed -n '1,80p' "$repair_log" >&2 || true
+    rm -f -- "$repair_log" || true
+    die "$repair_label database ownership revoke failed"
+  fi
+  rm -f -- "$repair_log" || die "$repair_label database repair diagnostic cleanup failed"
+}
+
+repair_database_ownership hr-axis
 revalidate_sealed_backup
-docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=hr_axis <<'SQL' >/dev/null 2>&1 || die "hr_axis database ownership repair failed"
-REASSIGN OWNED BY hr_axis_bootstrap TO hr_axis_migrator;
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=hr_axis <<'SQL' >/dev/null 2>&1 || die "hr_axis runtime grants repair failed"
 GRANT USAGE ON SCHEMA public TO hr_axis_migrator, hr_axis_api, hr_axis_worker;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hr_axis_api, hr_axis_worker;
 GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA public TO hr_axis_api, hr_axis_worker;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO hr_axis_api, hr_axis_worker;
 SQL
+repair_database_ownership keycloak
 revalidate_sealed_backup
-docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=keycloak <<'SQL' >/dev/null 2>&1 || die "keycloak database ownership repair failed"
-REASSIGN OWNED BY hr_axis_bootstrap TO keycloak;
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=keycloak <<'SQL' >/dev/null 2>&1 || die "keycloak runtime grants repair failed"
 GRANT USAGE, CREATE ON SCHEMA public TO keycloak;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO keycloak;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO keycloak;
