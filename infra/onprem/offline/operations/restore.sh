@@ -848,18 +848,22 @@ repair_database_ownership() {
   revalidate_receipt_parent
   if [ "$repair_label" = hr-axis ]; then
     db_name=hr_axis
-    repair_sql='GRANT hr_axis_migrator TO hr_axis_restore;
+    repair_sql='SET ROLE hr_axis_restore;
+GRANT hr_axis_migrator TO hr_axis_restore;
 REASSIGN OWNED BY hr_axis_restore TO hr_axis_migrator;'
-    revoke_sql='REVOKE hr_axis_migrator FROM hr_axis_restore;'
+    revoke_sql='SET ROLE hr_axis_restore;
+REVOKE hr_axis_migrator FROM hr_axis_restore;'
   elif [ "$repair_label" = keycloak ]; then
     db_name=keycloak
-    repair_sql='GRANT keycloak TO hr_axis_restore;
+    repair_sql='SET ROLE hr_axis_restore;
+GRANT keycloak TO hr_axis_restore;
 REASSIGN OWNED BY hr_axis_restore TO keycloak;'
-    revoke_sql='REVOKE keycloak FROM hr_axis_restore;'
+    revoke_sql='SET ROLE hr_axis_restore;
+REVOKE keycloak FROM hr_axis_restore;'
   else
     die "unknown database repair label"
   fi
-  if ! printf '%s\n' "$repair_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --role=hr_axis_restore --dbname="$db_name" >"$repair_log" 2>&1
+  if ! printf '%s\n' "$repair_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname="$db_name" >"$repair_log" 2>&1
   then
     printf '%s\n' "restore: $repair_label database ownership repair diagnostic" >&2
     sed -n '1,80p' "$repair_log" >&2 || true
@@ -867,7 +871,7 @@ REASSIGN OWNED BY hr_axis_restore TO keycloak;'
     die "$repair_label database ownership repair failed"
   fi
   revalidate_receipt_parent
-  if ! printf '%s\n' "$revoke_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --role=hr_axis_restore --dbname="$db_name" >"$repair_log" 2>&1
+  if ! printf '%s\n' "$revoke_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname="$db_name" >"$repair_log" 2>&1
   then
     printf '%s\n' "restore: $repair_label database ownership revoke diagnostic" >&2
     sed -n '1,80p' "$repair_log" >&2 || true
