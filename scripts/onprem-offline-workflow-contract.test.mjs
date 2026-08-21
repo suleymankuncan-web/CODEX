@@ -211,7 +211,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /offline_heartbeat_phase=.*unknown/)
   assert.match(rehearsal, /OPERATOR_TIMEOUT_SECONDS=1200/)
   assert.match(rehearsal, /OPERATOR_KILL_AFTER_SECONDS=30/)
-  assert.match(rehearsal, /timeout --signal=TERM --kill-after="\$\{OPERATOR_KILL_AFTER_SECONDS\}s" "\$\{OPERATOR_TIMEOUT_SECONDS\}s" sudo env/)
+  assert.match(rehearsal, /sudo env "PATH=\$OPERATOR_PATH" timeout --signal=TERM --kill-after="\$\{OPERATOR_KILL_AFTER_SECONDS\}s" "\$\{OPERATOR_TIMEOUT_SECONDS\}s"/)
   assert.match(rehearsal, /offline operator failure script=/)
   assert.match(rehearsal, /trap 'if \[ -n "\$\{offline_heartbeat_pid:-\}" \]; then kill "\$offline_heartbeat_pid"/)
   for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {

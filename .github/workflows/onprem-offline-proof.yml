@@ -950,7 +950,7 @@ jobs:
               *) operator_name=unknown ;;
             esac
             printf 'offline operator start script=%s timeout_seconds=%s\n' "$operator_name" "$OPERATOR_TIMEOUT_SECONDS"
-            if timeout --signal=TERM --kill-after="${OPERATOR_KILL_AFTER_SECONDS}s" "${OPERATOR_TIMEOUT_SECONDS}s" sudo env "PATH=$OPERATOR_PATH" "$@"; then
+            if sudo env "PATH=$OPERATOR_PATH" timeout --signal=TERM --kill-after="${OPERATOR_KILL_AFTER_SECONDS}s" "${OPERATOR_TIMEOUT_SECONDS}s" "$@"; then
               printf 'offline operator complete script=%s\n' "$operator_name"
               return 0
             else
