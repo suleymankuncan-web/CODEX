@@ -821,6 +821,29 @@ docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --n
 revalidate_sealed_backup
 docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --no-owner --no-privileges --dbname=keycloak <"$BACKUP_DIR/databases/keycloak.dump" >/dev/null 2>&1 || die "keycloak database restore failed"
 
+# Logical dumps are intentionally restored without owner/ACL metadata.  The
+# bootstrap role therefore owns every restored object unless ownership and the
+# runtime grants are repaired before any application starts.  Restore both
+# databases to the same least-privilege ownership model created by the fresh
+# PostgreSQL init script; otherwise Keycloak fails during Liquibase startup on
+# tables such as public.databasechangelog with a misleading health failure.
+revalidate_sealed_backup
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=hr_axis <<'SQL' >/dev/null 2>&1 || die "hr_axis database ownership repair failed"
+REASSIGN OWNED BY hr_axis_bootstrap TO hr_axis_migrator;
+GRANT USAGE ON SCHEMA public TO hr_axis_migrator, hr_axis_api, hr_axis_worker;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hr_axis_api, hr_axis_worker;
+GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA public TO hr_axis_api, hr_axis_worker;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO hr_axis_api, hr_axis_worker;
+SQL
+revalidate_sealed_backup
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=keycloak <<'SQL' >/dev/null 2>&1 || die "keycloak database ownership repair failed"
+REASSIGN OWNED BY hr_axis_bootstrap TO keycloak;
+GRANT USAGE, CREATE ON SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO keycloak;
+SQL
+
 # Re-check the exact signed archive-byte aggregate after extraction, before
 # any restored service starts.  The backup manifest signs the bytes of the
 # four volume archives; re-tarring a live volume is not equivalent because
