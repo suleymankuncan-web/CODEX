@@ -884,10 +884,65 @@ REVOKE keycloak FROM hr_axis_restore;'
 repair_database_ownership hr-axis
 revalidate_sealed_backup
 docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=hr_axis <<'SQL' >/dev/null 2>&1 || die "hr_axis runtime grants repair failed"
-GRANT USAGE ON SCHEMA public TO hr_axis_migrator, hr_axis_api, hr_axis_worker;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO hr_axis_api, hr_axis_worker;
-GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA public TO hr_axis_api, hr_axis_worker;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO hr_axis_api, hr_axis_worker;
+REVOKE CREATE ON DATABASE hr_axis FROM PUBLIC, hr_axis_api, hr_axis_worker;
+DO $runtime_grants$
+DECLARE
+  application_schema TEXT;
+BEGIN
+  FOR application_schema IN
+    SELECT nspname
+    FROM pg_namespace
+    WHERE nspname NOT LIKE 'pg_%'
+      AND nspname <> 'information_schema'
+    ORDER BY nspname
+  LOOP
+    EXECUTE format(
+      'REVOKE CREATE ON SCHEMA %I FROM PUBLIC, hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT USAGE ON SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'REVOKE UPDATE ON ALL SEQUENCES IN SCHEMA %I FROM hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I REVOKE ALL ON TABLES FROM PUBLIC',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I GRANT USAGE, SELECT ON SEQUENCES TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I GRANT EXECUTE ON FUNCTIONS TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+  END LOOP;
+  REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+    ON audit.schema_migration
+    FROM hr_axis_api, hr_axis_worker;
+  GRANT SELECT ON audit.schema_migration TO hr_axis_api, hr_axis_worker;
+END
+$runtime_grants$;
 SQL
 repair_database_ownership keycloak
 revalidate_sealed_backup
@@ -931,7 +986,17 @@ if ! compose_core --profile infra --profile keycloak-bootstrap run --pull never 
 fi
 rm -f "$KEYCLOAK_BOOTSTRAP_LOG" || die "Keycloak bootstrap diagnostic log cleanup failed"
 KEYCLOAK_BOOTSTRAP_LOG=
-compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"
+IDENTITY_BINDER_LOG=$(mktemp "$RECEIPT_PARENT/.identity-binder.XXXXXX") || die "identity binder diagnostic log could not be created"
+if ! compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >"$IDENTITY_BINDER_LOG" 2>&1; then
+  printf '%s\n' 'restore: identity binder diagnostics' >&2
+  tail -n 160 "$IDENTITY_BINDER_LOG" | sanitize_compose_diagnostics >&2
+  compose_failure_context core identity-binder
+  rm -f -- "$IDENTITY_BINDER_LOG" || true
+  IDENTITY_BINDER_LOG=
+  die "identity binder failed"
+fi
+rm -f -- "$IDENTITY_BINDER_LOG" || die "identity binder diagnostic cleanup failed"
+IDENTITY_BINDER_LOG=
 MIGRATOR_OUTPUT=$(compose_core --profile migrate run --pull never --rm --no-deps migrator 2>&1) || die "migration rehearsal failed"
 MIGRATOR_DIGESTS=$(printf '%s\n' "$MIGRATOR_OUTPUT" | sed -n 's/.*migrationTreeDigest[^0-9a-fA-F]*\([0-9a-fA-F]\{64\}\).*/\1/p')
 [ "$(printf '%s\n' "$MIGRATOR_DIGESTS" | sed '/^$/d' | wc -l | tr -d ' ')" = 1 ] || die "migrator must emit exactly one migration tree digest"
