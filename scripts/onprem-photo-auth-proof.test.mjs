@@ -134,7 +134,7 @@ test('photo proof performs admin usage-before/manager-denied/usage-after then ex
     denied: () => ({ status: 403, json: null, body: '', headers: {}, bodyBuffer: Buffer.alloc(0) }),
     initiate: () => ({ status: 201, json: { mediaAssetId: '11111111-1111-4111-8111-111111111111', state: 'uploaded' }, body: JSON.stringify({ mediaAssetId: '11111111-1111-4111-8111-111111111111', state: 'uploaded' }), headers: {}, bodyBuffer: Buffer.alloc(0) }),
     finalize: () => ({ status: 200, json: { mediaAssetId: '11111111-1111-4111-8111-111111111111', state: 'ready', canonicalSha256, canonicalByteCount: canonical.byteLength }, body: JSON.stringify({ state: 'ready', canonicalSha256, canonicalByteCount: canonical.byteLength }), headers: {}, bodyBuffer: Buffer.alloc(0) }),
-    readUrl: () => ({ status: 200, json: { url: '/api/internal/photo-media/assets/11111111-1111-4111-8111-111111111111/content/canonical', expiresInSeconds: 60 }, body: '{}', headers: {}, bodyBuffer: Buffer.alloc(0) }),
+    readUrl: () => ({ status: 201, json: { url: '/api/internal/photo-media/assets/11111111-1111-4111-8111-111111111111/content/canonical', expiresInSeconds: 60 }, body: '{}', headers: {}, bodyBuffer: Buffer.alloc(0) }),
     content: () => ({ status: 200, headers: { 'content-type': 'image/webp' }, body: canonical.toString('utf8'), bodyBuffer: canonical }),
     logout: () => ({ status: 200, json: {}, body: '{}', headers: {}, bodyBuffer: Buffer.from('{}') }),
   }

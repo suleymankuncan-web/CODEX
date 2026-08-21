@@ -274,7 +274,7 @@ export async function runPhotoAuthProofInternal(options, deps = {}) {
     const readUrl = await json(options.host, readUrlPath, {
       method: 'POST', headers: requestHeaders(options.host, adminSession.browser, { 'Content-Type': 'application/json' }), body: JSON.stringify({ variant: 'canonical' }), jar: adminSession.browser.jar,
     })
-    if (!readUrl || readUrl.status !== 200) {
+    if (!readUrl || ![200, 201].includes(readUrl.status)) {
       const detail = summarizePhotoInitiateFailure(readUrl)
       fail(`photo read-url returned an unexpected status${detail ? ` (${detail})` : ''}`)
     }
