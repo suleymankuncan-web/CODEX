@@ -1207,7 +1207,7 @@ jobs:
             const value = JSON.parse(fs.readFileSync(path, 'utf8'))
             if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.operation !== operation || value.status !== status || value.releaseId !== expectedRelease || value.sourceProject !== sourceProject || value.targetProject !== targetProject) throw new Error(`invalid ${name} receipt identity`)
             if (name === 'restore' || name === 'upgrade' || name === 'rollback') {
-              if (value.recoveredPreBackupPhoto !== true || value.photoRecoveryHandleSha256 !== recoveryHandleSha256 || value.photoContentSha256 !== recoveryHandle.contentSha256 || value.photoContentLength !== recoveryHandle.contentLength) throw new Error(`invalid recovered photo evidence for ${name}`)
+              if (value.recoveredPreBackupPhoto !== true || value.queueProbeStateReset !== true || value.photoRecoveryHandleSha256 !== recoveryHandleSha256 || value.photoContentSha256 !== recoveryHandle.contentSha256 || value.photoContentLength !== recoveryHandle.contentLength) throw new Error(`invalid recovered photo/queue evidence for ${name}`)
             }
             if ((name === 'upgrade' || name === 'rollback') && (value.evidenceScope !== releaseTransitionEvidence.evidenceScope || value.realVersionTransitionProved !== false || value.incompatibleMigrationHandlingProved !== false)) throw new Error(`invalid ${name} evidence scope`)
             operations[name] = { schemaVersion: 1, operation, status, releaseId: value.releaseId, sourceProject, targetProject, manifestSha256: manifestDigests[manifestName], receiptSha256: digest(path), ...(name === 'upgrade' || name === 'rollback' ? releaseTransitionEvidence : {}) }

@@ -313,6 +313,15 @@ if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.
 process.stdout.write(image.toLowerCase())
 NODE
 ) || die "signed backend image identity is unavailable"
+REDIS_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
+const fs = require('node:fs')
+let value
+try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
+const image = value?.images?.redis?.configImageId
+if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.exit(42)
+process.stdout.write(image.toLowerCase())
+NODE
+) || die "signed Redis image identity is unavailable"
 
 CORE_COMPOSE="$BUNDLE_ROOT/deployment/compose.yaml"
 PHOTO_PROOF_COMPOSE="$BUNDLE_ROOT/deployment/compose.photo-proof.yaml"
@@ -368,6 +377,8 @@ SECRET_ROOT=$(env_value HR_AXIS_SECRET_ROOT)
 [ -n "$SECRET_ROOT" ] || die "safe synthetic auth account/CA derivation requires HR_AXIS_SECRET_ROOT"
 require_dir "$SECRET_ROOT" HR_AXIS_SECRET_ROOT
 case "$SECRET_ROOT" in "$BUNDLE_ROOT"|"$BUNDLE_ROOT"/*) die "HR_AXIS_SECRET_ROOT must be outside bundle" ;; esac
+REDIS_WORKER_URL_FILE="$SECRET_ROOT/backend/redis-worker-url"
+require_external_secret_file redis-worker-url "$REDIS_WORKER_URL_FILE" private
 PHOTO_STORAGE_SECRET_ROOT=$(env_value PHOTO_STORAGE_SECRET_ROOT)
 [ -n "$PHOTO_STORAGE_SECRET_ROOT" ] || die "safe photo storage credential derivation requires PHOTO_STORAGE_SECRET_ROOT"
 require_dir "$PHOTO_STORAGE_SECRET_ROOT" PHOTO_STORAGE_SECRET_ROOT
@@ -1052,6 +1063,44 @@ docker exec "$POSTGRES_CONTAINER" psql --username=hr_axis_bootstrap --dbname=hr_
 redis_ping=$(docker exec "$REDIS_CONTAINER" sh -c 'redis-cli -u "$(cat /run/secrets/redis_health_url)" --no-auth-warning PING' 2>/dev/null || true)
 [ "$redis_ping" = PONG ] || die "restored Redis PING failed"
 
+# The pre-backup synthetic queue proof deliberately leaves one exact probe job
+# and its AOF markers behind so that the source-side proof can verify durable
+# processing.  Those probe-only keys must not become the "dirty" starting
+# state for the disposable restore proof.  Remove only the known probe job,
+# markers, and memberships; never flush the database or touch any other queue
+# data.  The worker ACL is used for the bounded key patterns it owns, and the
+# post-delete checks fail closed before the target proof runs.
+reset_synthetic_queue_probe_state() {
+  queue_name=hr-axis-onprem-synthetic-recovery-v1
+  job_id=synthetic-recovery-v1
+  docker run --pull=never --rm --network "${TARGET_PROJECT}_data" \
+    --volume "$REDIS_WORKER_URL_FILE:/run/hr-axis/redis-worker-url:ro" \
+    "$REDIS_IMAGE" sh -ec '
+      set -eu
+      url=$(cat /run/hr-axis/redis-worker-url)
+      cli() { redis-cli --raw -u "$url" --no-auth-warning "$@"; }
+      queue="$1"; job="$2"
+      job_key="bull:$queue:$job"
+      marker="hr-axis:onprem:synthetic-recovery-v1:processed"
+      sentinel="hr-axis:onprem:synthetic-recovery-v1:enqueued"
+      cli DEL "$job_key" "$marker" "$sentinel" >/dev/null
+      for key in \
+        "bull:$queue:delayed" "bull:$queue:prioritized" "bull:$queue:waiting-children" \
+        "bull:$queue:completed" "bull:$queue:failed"; do
+        cli ZREM "$key" "$job" >/dev/null
+      done
+      for key in "bull:$queue:wait" "bull:$queue:paused" "bull:$queue:active"; do
+        cli LREM "$key" 0 "$job" >/dev/null
+      done
+      cli SREM "bull:$queue:stalled" "$job" >/dev/null
+      test "$(cli EXISTS "$job_key")" = 0
+      test "$(cli EXISTS "$marker")" = 0
+      test "$(cli EXISTS "$sentinel")" = 0
+      test -z "$(cli ZSCORE "bull:$queue:delayed" "$job")"
+    ' sh "$queue_name" "$job_id" >/dev/null 2>&1 || die "restored synthetic queue probe state could not be reset"
+}
+reset_synthetic_queue_probe_state
+
 # The target is not considered recovered until the complete queue/photo proof
 # and the five-persona authorization proof run against this exact target. Both
 # receipts are validated and hashed before any disposable-target cleanup.
@@ -1062,7 +1111,7 @@ FINISHED_AT=$(date +%s)
 STARTED_AT=${STARTED_AT:-$FINISHED_AT}
 ELAPSED=$((FINISHED_AT - STARTED_AT))
 cat >"$RECEIPT_TMP" <<EOF
-{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":false}
+{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"queueProbeStateReset":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":false}
 EOF
 mv "$RECEIPT_TMP" "$RECEIPT"
 # Publish provisional evidence before exact-label cleanup, then publish the
@@ -1071,7 +1120,7 @@ cleanup_failed=0
 cleanup_resources
 [ "$cleanup_failed" -eq 0 ] || die "exact disposable-target cleanup failed"
 cat >"$RECEIPT_TMP" <<EOF
-{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":true,"cleanup":{"resourcesRemoved":true,"errors":0}}
+{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"queueProbeStateReset":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":true,"cleanup":{"resourcesRemoved":true,"errors":0}}
 EOF
 mv "$RECEIPT_TMP" "$RECEIPT"
 MUTATION_STARTED=0
