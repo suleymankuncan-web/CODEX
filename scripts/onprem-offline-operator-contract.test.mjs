@@ -98,9 +98,10 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   }
 
   const restore = readFileSync(join(operationDir, 'restore.sh'), 'utf8')
-  const expectedRestoreKeycloakBootstrapRun = 'compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"'
+  const expectedRestoreKeycloakBootstrapRun = 'compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >"$KEYCLOAK_BOOTSTRAP_LOG" 2>&1'
   const expectedRestoreIdentityBinderRun = 'compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"'
   assert.ok(restore.includes(expectedRestoreKeycloakBootstrapRun), 'restore bootstrap must activate dependency-sharing profiles explicitly')
+  assert.match(restore, /restore: keycloak bootstrap diagnostics[\s\S]*tail -n 160[\s\S]*sanitize_compose_diagnostics/, 'restore bootstrap failures must retain bounded sanitized diagnostics')
   assert.ok(restore.includes(expectedRestoreIdentityBinderRun), 'restore identity binder must activate dependency-sharing profiles explicitly')
 
   const migrate = source['migrate.sh']
