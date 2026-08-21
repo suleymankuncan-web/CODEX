@@ -207,7 +207,12 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   const heartbeatStart = rehearsal.indexOf('offline_rehearsal_heartbeat &')
   const firstOperator = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/preflight.sh"')
   assert.ok(heartbeatDefinition >= 0 && heartbeatStart > heartbeatDefinition && heartbeatStart < firstOperator, 'offline rehearsal must start its bounded heartbeat before operator work')
-  assert.match(rehearsal, /offline rehearsal heartbeat seq=/)
+  assert.match(rehearsal, /offline rehearsal heartbeat seq=.*phase=.*elapsed_seconds=/)
+  assert.match(rehearsal, /offline_heartbeat_phase=.*unknown/)
+  assert.match(rehearsal, /OPERATOR_TIMEOUT_SECONDS=1200/)
+  assert.match(rehearsal, /OPERATOR_KILL_AFTER_SECONDS=30/)
+  assert.match(rehearsal, /timeout --signal=TERM --kill-after="\$\{OPERATOR_KILL_AFTER_SECONDS\}s" "\$\{OPERATOR_TIMEOUT_SECONDS\}s" sudo env/)
+  assert.match(rehearsal, /offline operator failure script=/)
   assert.match(rehearsal, /trap 'if \[ -n "\$\{offline_heartbeat_pid:-\}" \]; then kill "\$offline_heartbeat_pid"/)
   for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {
     assert.equal((rehearsal.match(new RegExp(`offline phase=${phase}`, 'g')) ?? []).length, 1, `${phase} phase marker must be unique`)

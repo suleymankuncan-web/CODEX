@@ -800,9 +800,21 @@ jobs:
           set -euo pipefail
           offline_rehearsal_heartbeat() {
             local offline_heartbeat_seq=0
+            local offline_heartbeat_started offline_heartbeat_now offline_heartbeat_elapsed offline_heartbeat_phase
+            offline_heartbeat_started="$(date +%s)"
             while :; do
               offline_heartbeat_seq=$((offline_heartbeat_seq + 1))
-              printf 'offline rehearsal heartbeat seq=%s\n' "$offline_heartbeat_seq"
+              offline_heartbeat_phase=unknown
+              if [ -f "$RUNNER_TEMP/offline-phase" ]; then
+                offline_heartbeat_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
+              fi
+              case "$offline_heartbeat_phase" in
+                preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
+                *) offline_heartbeat_phase=unknown ;;
+              esac
+              offline_heartbeat_now="$(date +%s)"
+              offline_heartbeat_elapsed=$((offline_heartbeat_now - offline_heartbeat_started))
+              printf 'offline rehearsal heartbeat seq=%s phase=%s elapsed_seconds=%s\n' "$offline_heartbeat_seq" "$offline_heartbeat_phase" "$offline_heartbeat_elapsed"
               sleep 30
             done
           }
@@ -929,7 +941,32 @@ jobs:
           TRUST_ROOT="$SEALED_ROOT/trust"
           NODE_BIN="$TRUST_ROOT/node"
           OPERATOR_PATH="$TRUST_ROOT:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          sudo_operator() { sudo env "PATH=$OPERATOR_PATH" "$@"; }
+          OPERATOR_TIMEOUT_SECONDS=1200
+          OPERATOR_KILL_AFTER_SECONDS=30
+          sudo_operator() {
+            local operator_script="${1:-}" operator_name offline_operator_phase offline_operator_status
+            case "$operator_script" in
+              "$BUNDLE_ROOT"/operations/*.sh) operator_name="${operator_script##*/}" ;;
+              *) operator_name=unknown ;;
+            esac
+            printf 'offline operator start script=%s timeout_seconds=%s\n' "$operator_name" "$OPERATOR_TIMEOUT_SECONDS"
+            if timeout --signal=TERM --kill-after="${OPERATOR_KILL_AFTER_SECONDS}s" "${OPERATOR_TIMEOUT_SECONDS}s" sudo env "PATH=$OPERATOR_PATH" "$@"; then
+              printf 'offline operator complete script=%s\n' "$operator_name"
+              return 0
+            else
+              offline_operator_status=$?
+            fi
+            offline_operator_phase=unknown
+            if [ -f "$RUNNER_TEMP/offline-phase" ]; then
+              offline_operator_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
+            fi
+            case "$offline_operator_phase" in
+              preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
+              *) offline_operator_phase=unknown ;;
+            esac
+            printf 'offline operator failure script=%s status=%s phase=%s timeout_seconds=%s\n' "$operator_name" "$offline_operator_status" "$offline_operator_phase" "$OPERATOR_TIMEOUT_SECONDS" >&2
+            return "$offline_operator_status"
+          }
           OPERATOR_ROOT="$SEALED_ROOT/operator"
           PUBLIC_KEY="$TRUST_ROOT/public-key.pem"
           TRUSTED_BOOTSTRAP="$TRUST_ROOT/onprem-offline-bootstrap-verify.mjs"
