@@ -1179,7 +1179,10 @@ jobs:
                 kill -TERM -- "-$process_group_id" 2>/dev/null || true
                 sleep "$kill_after_seconds"
                 kill -KILL -- "-$process_group_id" 2>/dev/null || true
-              ' offline-watchdog "$timeout_seconds" "$kill_after_seconds" "$process_group_id" "$bounded_label" &
+              # A bounded command may run inside command substitution.  Keep the
+              # watchdog out of that stdout pipe or the parent shell can wait for
+              # its inherited descriptor even after the real command has exited.
+              ' offline-watchdog "$timeout_seconds" "$kill_after_seconds" "$process_group_id" "$bounded_label" </dev/null >/dev/null &
               watchdog_pid=$!
               watchdog_group_id="$(wait_for_distinct_process_group "$watchdog_pid")" || watchdog_group_id=''
               offline_watchdog_pid="$watchdog_pid"

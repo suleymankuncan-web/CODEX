@@ -240,6 +240,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /heartbeat_script\+=\$'\\noffline_rehearsal_heartbeat'/)
   assert.match(rehearsal, /if ! offline_heartbeat_group_id="\$\(wait_for_distinct_process_group "\$offline_heartbeat_pid"\)"/)
   assert.match(rehearsal, /offline_watchdog_group_id="\$watchdog_group_id"/)
+  assert.match(rehearsal, /' offline-watchdog "\$timeout_seconds" "\$kill_after_seconds" "\$process_group_id" "\$bounded_label" <\/dev\/null >\/dev\/null &/)
   assert.match(rehearsal, /kill -TERM -- "-\$process_group_id"/)
   assert.match(rehearsal, /kill -KILL -- "-\$process_group_id"/)
   assert.match(rehearsal, /process_group_id" =~ \^\[0-9\]\+\$/)
