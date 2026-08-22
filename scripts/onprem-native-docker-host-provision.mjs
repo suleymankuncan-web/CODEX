@@ -300,9 +300,13 @@ function listDockerd(commandRunner) {
       continue
     }
     const pid = Number(match[1])
-    if (!Number.isSafeInteger(pid) || pid <= 1) fail('dockerd process inventory is invalid')
     const argv = match[2].trim()
-    if (commandTokens(argv).some((token) => path.basename(token) === 'dockerd')) entries.push({ pid, argv })
+    const isDockerd = commandTokens(argv).some((token) => path.basename(token) === 'dockerd')
+    // Validate PID safety only for rows that are actually dockerd
+    // candidates.  Ordinary system rows (including PID 1) are irrelevant.
+    if (!isDockerd) continue
+    if (!Number.isSafeInteger(pid) || pid <= 1) fail('dockerd process inventory is invalid')
+    entries.push({ pid, argv })
   }
   return entries
 }

@@ -177,6 +177,16 @@ test('legacy dockerd requires the exact dedicated argv and permits only /var/run
   assert.equal(exactLegacyDockerdCommand(observedSiblingPidfile.replace('.pid', '.pid.bak')), false)
   assert.equal(exactLegacyDockerdCommand(observedSiblingPidfile.replace('rehearsal-docker --pidfile', 'rehearsal-docker-other --pidfile')), false)
   assert.throws(() => detectLegacyDockerd((file) => file === 'sudo' ? { status: 0, stdout: '421 /usr/bin/dockerd --host=unix:///tmp/foreign.sock\n', stderr: '' } : { status: 0, stdout: '', stderr: '' }), /unknown|ambiguous/)
+  const ordinaryPidOne = (file, args) => file === 'sudo' && args[1] === '/usr/bin/ps'
+    ? { status: 0, stdout: '1 /sbin/init\n2 /usr/bin/other-daemon\n', stderr: '' }
+    : { status: 0, stdout: '', stderr: '' }
+  assert.equal(detectLegacyDockerd(ordinaryPidOne), null)
+  assert.throws(() => detectLegacyDockerd((file, args) => file === 'sudo' && args[1] === '/usr/bin/ps'
+    ? { status: 0, stdout: '1 /usr/bin/dockerd --host=unix:///tmp/foreign.sock\n', stderr: '' }
+    : { status: 0, stdout: '', stderr: '' }), /process inventory is invalid/)
+  assert.throws(() => detectLegacyDockerd((file, args) => file === 'sudo' && args[1] === '/usr/bin/ps'
+    ? { status: 0, stdout: 'dockerd --host=unix:///tmp/foreign.sock\n', stderr: '' }
+    : { status: 0, stdout: '', stderr: '' }), /process inventory is invalid/)
 })
 
 test('direct self-bind is the only mount accepted for unmount', () => {
