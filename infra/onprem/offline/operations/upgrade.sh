@@ -196,7 +196,7 @@ run_target_restore() {
   command -v timeout >/dev/null 2>&1 || die "timeout command is required for $restore_label target restore"
   restore_log=$(mktemp "$RECEIPT_PARENT/.$restore_label-target-restore.XXXXXX") || die "$restore_label target restore diagnostic log could not be created"
   say "target-restore: start label=$restore_label timeout=${TARGET_RESTORE_TIMEOUT_SECONDS}s"
-  if timeout --signal=TERM --kill-after="${TARGET_RESTORE_KILL_AFTER_SECONDS}s" "${TARGET_RESTORE_TIMEOUT_SECONDS}s" "$@" >"$restore_log" 2>&1; then
+  if timeout --foreground --signal=TERM --kill-after="${TARGET_RESTORE_KILL_AFTER_SECONDS}s" "${TARGET_RESTORE_TIMEOUT_SECONDS}s" "$@" >"$restore_log" 2>&1; then
     rm -f -- "$restore_log" || die "$restore_label target restore diagnostic cleanup failed"
     say "target-restore: complete label=$restore_label"
     return 0

@@ -840,6 +840,30 @@ jobs:
               return "$wait_status"
             fi
           }
+          process_group_id_for_pid() {
+            local pid="$1" group_id
+            group_id="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
+            printf '%s' "$group_id"
+          }
+          wait_for_distinct_process_group() {
+            local pid="$1" group_id=''
+            for _ in {1..100}; do
+              group_id="$(process_group_id_for_pid "$pid")"
+              if offline_process_group_is_safe "$group_id"; then
+                printf '%s' "$group_id"
+                return 0
+              fi
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 0.1
+            done
+            return 125
+          }
+          offline_process_group_is_safe() {
+            local group_id="$1"
+            [[ "$group_id" =~ ^[0-9]+$ ]] || return 1
+            [ "$group_id" -gt 1 ] || return 1
+            [ -z "${offline_main_group_id:-}" ] || [ "$group_id" != "$offline_main_group_id" ]
+          }
           process_group_alive() {
             local group_id="$1"
             [[ "$group_id" =~ ^[0-9]+$ ]] && kill -0 -- "-$group_id" 2>/dev/null
@@ -847,6 +871,14 @@ jobs:
           stop_offline_process_group() {
             local pid="$1" group_id="$2" grace_seconds="$3" wait_status
             [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+            if [ "$pid" = "$$" ] || { [[ "$group_id" =~ ^[0-9]+$ ]] && ! offline_process_group_is_safe "$group_id"; }; then
+              printf 'offline process-group isolation refused self-group pid=%s group=%s\n' "$pid" "$group_id" >&2
+              if [ "$pid" != "$$" ] && [ "$group_id" != "${offline_main_group_id:-}" ]; then
+                kill -TERM "$pid" 2>/dev/null || true
+                wait_for_pid_exit "$pid" "$grace_seconds" >/dev/null 2>&1 || true
+              fi
+              return 125
+            fi
             if [[ "$group_id" =~ ^[0-9]+$ ]]; then
               kill -TERM -- "-$group_id" 2>/dev/null || true
             else
@@ -866,6 +898,27 @@ jobs:
             fi
             wait_for_pid_exit "$pid" 5 >/dev/null 2>&1 || true
           }
+          declare -A offline_process_groups=()
+          register_offline_process_group() {
+            local pid="$1" group_id="$2"
+            [[ "$pid" =~ ^[0-9]+$ ]] && offline_process_group_is_safe "$group_id" || return 125
+            offline_process_groups["$pid"]="$group_id"
+          }
+          unregister_offline_process_group() {
+            local pid="$1"
+            [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+            unset 'offline_process_groups[$pid]'
+          }
+          stop_registered_offline_process_groups() {
+            local pid group_id
+            local -a registered_pids=("${!offline_process_groups[@]}")
+            for pid in "${registered_pids[@]}"; do
+              group_id="${offline_process_groups[$pid]}"
+              unset 'offline_process_groups[$pid]'
+              stop_offline_process_group "$pid" "$group_id" 5 || true
+            done
+          }
+          offline_main_group_id=''
           offline_heartbeat_pid=''
           offline_heartbeat_group_id=''
           offline_active_pid=''
@@ -878,6 +931,7 @@ jobs:
             offline_heartbeat_pid=''
             offline_heartbeat_group_id=''
             [[ "$heartbeat_pid" =~ ^[0-9]+$ ]] || return 0
+            unregister_offline_process_group "$heartbeat_pid"
             stop_offline_process_group "$heartbeat_pid" "$heartbeat_group_id" 5
           }
           stop_offline_active_processes() {
@@ -889,8 +943,18 @@ jobs:
             offline_active_group_id=''
             offline_watchdog_pid=''
             offline_watchdog_group_id=''
-            stop_offline_process_group "$active_pid" "$active_group_id" 5
-            stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5
+            unregister_offline_process_group "$active_pid"
+            unregister_offline_process_group "$watchdog_pid"
+            stop_offline_process_group "$active_pid" "$active_group_id" 5 || true
+            stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5 || true
+          }
+          offline_rehearsal_exit_cleanup() {
+            local rehearsal_status=$?
+            trap - EXIT TERM INT
+            stop_offline_active_processes || true
+            stop_offline_rehearsal_heartbeat || true
+            stop_registered_offline_process_groups
+            exit "$rehearsal_status"
           }
           start_offline_rehearsal_heartbeat() {
             local heartbeat_script
@@ -900,12 +964,21 @@ jobs:
             heartbeat_script+=$'\noffline_rehearsal_heartbeat'
             "$SETSID_BIN" bash -c "$heartbeat_script" 2>/dev/null &
             offline_heartbeat_pid=$!
-            offline_heartbeat_group_id="$offline_heartbeat_pid"
+            if ! offline_heartbeat_group_id="$(wait_for_distinct_process_group "$offline_heartbeat_pid")"; then
+              printf 'offline heartbeat process-group isolation unavailable pid=%s group=%s\n' "$offline_heartbeat_pid" "$offline_heartbeat_group_id" >&2
+              stop_offline_process_group "$offline_heartbeat_pid" "$offline_heartbeat_group_id" 2 || true
+              return 125
+            fi
+            if ! register_offline_process_group "$offline_heartbeat_pid" "$offline_heartbeat_group_id"; then
+              printf 'offline heartbeat process-group registration failed pid=%s group=%s\n' "$offline_heartbeat_pid" "$offline_heartbeat_group_id" >&2
+              stop_offline_process_group "$offline_heartbeat_pid" "$offline_heartbeat_group_id" 2 || true
+              return 125
+            fi
           }
           abort_offline_rehearsal_on_signal() {
             trap - TERM INT
-            stop_offline_active_processes
-            stop_offline_rehearsal_heartbeat
+            stop_offline_active_processes || true
+            stop_offline_rehearsal_heartbeat || true
             exit 143
           }
           host_probe_uid="$(id -u nobody)"
@@ -914,8 +987,10 @@ jobs:
           test "$host6_probe_target" = "fd42:6872:6178:6973::2"
           SETSID_BIN="$(command -v setsid || true)"
           test -n "$SETSID_BIN"
+          offline_main_group_id="$(process_group_id_for_pid "$$")"
+          test -n "$offline_main_group_id"
           start_offline_rehearsal_heartbeat
-          trap stop_offline_rehearsal_heartbeat EXIT
+          trap offline_rehearsal_exit_cleanup EXIT
           trap abort_offline_rehearsal_on_signal TERM INT
           umask 077
           case "$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT" in
@@ -1060,7 +1135,7 @@ jobs:
               kill_after_seconds="$3"
               operator_path="$4"
               shift 4
-              printf "%s\n" "$$" > "$pid_file"
+              printf "%s|%s\n" "$$" "$(ps -o pgid= -p $$ | tr -d " ")" > "$pid_file"
               exec sudo env "PATH=$operator_path" timeout --foreground --signal=TERM --kill-after="${kill_after_seconds}s" "${timeout_seconds}s" "$@"
             ' offline-process-group "$group_pid_file" "$timeout_seconds" "$kill_after_seconds" "$OPERATOR_PATH" "$@" &
             pid=$!
@@ -1076,8 +1151,22 @@ jobs:
               sleep 0.1
             done
             rm -f -- "$group_pid_file"
+            process_group_id="$(printf '%s\n' "$process_group_id" | awk -F'|' '$2 ~ /^[0-9]+$/ { print $2; exit }')"
+            if ! offline_process_group_is_safe "$process_group_id"; then
+              printf 'offline process-group isolation unavailable label=%s pid=%s group=%s\n' "$bounded_label" "$pid" "$process_group_id" >&2
+              kill -TERM "$pid" 2>/dev/null || true
+              wait_for_pid_exit "$pid" 5 >/dev/null 2>&1 || true
+              return 125
+            fi
             offline_active_pid="$pid"
             offline_active_group_id="$process_group_id"
+            if ! register_offline_process_group "$pid" "$process_group_id"; then
+              printf 'offline process-group registration failed label=%s pid=%s group=%s\n' "$bounded_label" "$pid" "$process_group_id" >&2
+              stop_offline_process_group "$pid" "$process_group_id" 2 || true
+              offline_active_pid=''
+              offline_active_group_id=''
+              return 125
+            fi
             watchdog_pid=''
             watchdog_group_id=''
             if [[ "$process_group_id" =~ ^[0-9]+$ ]]; then
@@ -1092,9 +1181,19 @@ jobs:
                 kill -KILL -- "-$process_group_id" 2>/dev/null || true
               ' offline-watchdog "$timeout_seconds" "$kill_after_seconds" "$process_group_id" "$bounded_label" &
               watchdog_pid=$!
-              watchdog_group_id="$watchdog_pid"
+              watchdog_group_id="$(wait_for_distinct_process_group "$watchdog_pid")" || watchdog_group_id=''
               offline_watchdog_pid="$watchdog_pid"
               offline_watchdog_group_id="$watchdog_group_id"
+              if [ -n "$watchdog_group_id" ]; then
+                if ! register_offline_process_group "$watchdog_pid" "$watchdog_group_id"; then
+                  printf 'offline watchdog process-group registration failed label=%s pid=%s group=%s\n' "$bounded_label" "$watchdog_pid" "$watchdog_group_id" >&2
+                  stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 2 || true
+                  watchdog_group_id=''
+                  offline_watchdog_group_id=''
+                fi
+              else
+                printf 'offline watchdog process-group isolation unavailable label=%s pid=%s\n' "$bounded_label" "$watchdog_pid" >&2
+              fi
             else
               printf 'offline process-group watchdog unavailable label=%s pid=%s\n' "$bounded_label" "$pid" >&2
             fi
@@ -1104,9 +1203,11 @@ jobs:
               bounded_status=$?
             fi
             if [ -n "$watchdog_pid" ]; then
-              stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5
+              stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5 || true
             fi
-            stop_offline_process_group "$pid" "$process_group_id" 2
+            stop_offline_process_group "$pid" "$process_group_id" 2 || true
+            unregister_offline_process_group "$pid"
+            unregister_offline_process_group "$watchdog_pid"
             if [ "${offline_active_pid:-}" = "$pid" ]; then offline_active_pid=''; offline_active_group_id=''; fi
             if [ "${offline_watchdog_pid:-}" = "$watchdog_pid" ]; then offline_watchdog_pid=''; offline_watchdog_group_id=''; fi
             return "$bounded_status"
