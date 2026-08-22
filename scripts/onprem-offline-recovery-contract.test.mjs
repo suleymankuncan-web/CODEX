@@ -143,6 +143,14 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.match(restore, /prepare_photo_proof_handle\(\)/)
   assert.match(restore, /chown 1000:1000 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
   assert.match(restore, /chmod 0400 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.ok(
+    restore.indexOf('chmod 0400 -- "$PHOTO_PROOF_HANDLE_FILE"') < restore.indexOf('chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE"'),
+    'photo proof handle mode must be fixed before the final ownership transition',
+  )
+  assert.ok(
+    restore.indexOf('sha256_file "$PHOTO_PROOF_HANDLE_FILE"') < restore.indexOf('chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE"'),
+    'photo proof handle content must be verified before the final ownership transition',
+  )
   assert.match(restore, /--photo-recovery-handle-file "\$PHOTO_PROOF_HANDLE_FILE"/)
   assert.match(restore, /discard_photo_proof_handle\(\)/)
   assert.match(restore, /run_auth_proof\(\)[\s\S]*--user 1000:1000/)

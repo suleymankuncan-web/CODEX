@@ -661,13 +661,18 @@ prepare_photo_proof_handle() {
     die "$1"
   }
   (umask 077; set -C; cat -- "$PHOTO_RECOVERY_HANDLE_FILE" >"$PHOTO_PROOF_HANDLE_FILE") || photo_proof_handle_fail "photo proof recovery handle copy could not be created"
-  chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy owner could not be set"
-  chmod 0400 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy mode could not be set"
+  # Set the restrictive mode while the copy is still root-owned.  The
+  # hardened rehearsal container deliberately drops CAP_FOWNER, so chmod after
+  # handing ownership to UID 1000 is not portable even when the shell remains
+  # UID 0.  Chown is the final identity transition; it does not widen 0400.
   [ -f "$PHOTO_PROOF_HANDLE_FILE" ] && [ ! -L "$PHOTO_PROOF_HANDLE_FILE" ] || photo_proof_handle_fail "photo proof recovery handle copy is not a regular file"
   [ "$(file_links "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 1 ] || photo_proof_handle_fail "photo proof recovery handle copy must not be hard-linked"
+  [ "$(sha256_file "$PHOTO_PROOF_HANDLE_FILE")" = "$PHOTO_RECOVERY_HANDLE_SHA256" ] || photo_proof_handle_fail "photo proof recovery handle copy digest mismatch"
+  chmod 0400 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy mode could not be set"
+  [ "$(file_mode "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 400 ] || photo_proof_handle_fail "photo proof recovery handle copy mode could not be set"
+  chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy owner could not be set"
   [ "$(file_uid "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 1000 ] || photo_proof_handle_fail "photo proof recovery handle copy owner mismatch"
   [ "$(file_mode "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 400 ] || photo_proof_handle_fail "photo proof recovery handle copy mode mismatch"
-  [ "$(sha256_file "$PHOTO_PROOF_HANDLE_FILE")" = "$PHOTO_RECOVERY_HANDLE_SHA256" ] || photo_proof_handle_fail "photo proof recovery handle copy digest mismatch"
 }
 discard_photo_proof_handle() {
   if [ -n "$PHOTO_PROOF_HANDLE_FILE" ]; then
