@@ -20,15 +20,29 @@ function directoryStat(mode = 0o700, uid = 0, gid = 0) {
   return { uid, gid, mode, dev: 8, ino: 100, isDirectory: () => true, isSymbolicLink: () => false }
 }
 
-function fakeFs(receiptPath) {
+function fakeFs(receiptPath, { missingPaths = [], symlinkPaths = [], unsafeStats = {} } = {}) {
   const files = new Map()
   const writes = []
+  const created = new Set()
+  const missing = new Set(missingPaths)
+  const symlinks = new Set(symlinkPaths)
   const rootPaths = [hostContract.dockerDataRoot, hostContract.dockerExecRoot, hostContract.containerdRoot, hostContract.containerdState]
+  const isCoveredByCreatedPath = (target) => [...created].some((pathname) => target === pathname || target.startsWith(`${pathname}/`))
+  const isMissing = (target) => !isCoveredByCreatedPath(target) && [...missing].some((pathname) => target === pathname || target.startsWith(`${pathname}/`))
   return {
     writes,
+    created,
+    markCreated(target) {
+      created.add(target)
+      missing.delete(target)
+    },
     lstatSync(target) {
       if (target === receiptPath) throw Object.assign(new Error('missing'), { code: 'ENOENT' })
       if (files.has(target)) return files.get(target).stat
+      if (isMissing(target)) throw Object.assign(new Error('missing'), { code: 'ENOENT' })
+      if (symlinks.has(target)) return { ...directoryStat(), isSymbolicLink: () => true }
+      if (Object.prototype.hasOwnProperty.call(unsafeStats, target)) return unsafeStats[target]
+      if (created.has(target)) return directoryStat()
       if (rootPaths.includes(target)) return directoryStat()
       if (target === '/var/lib/hr-axis-onprem-rehearsal') return directoryStat(0o755)
       if (target === hostContract.lockDirectory) return directoryStat(0o1770, 0, 123)
@@ -64,7 +78,7 @@ function fakeFs(receiptPath) {
   }
 }
 
-function baseRunner({ record = [], mountMode = 'none', inspectOrder = [], disableKeepsEnabled = false, dockerServiceInitiallyEnabled = false } = {}) {
+function baseRunner({ record = [], mountMode = 'none', inspectOrder = [], disableKeepsEnabled = false, dockerServiceInitiallyEnabled = false, onInstall } = {}) {
   let unmounted = false
   const state = new Map([
     ['docker.service', { active: false, enabled: dockerServiceInitiallyEnabled }],
@@ -114,6 +128,10 @@ function baseRunner({ record = [], mountMode = 'none', inspectOrder = [], disabl
     }
     if (actualFile === 'test') {
       if (actualArgs[0] === '-L' || actualArgs[0] === '-e') return { status: 1, stdout: '', stderr: '' }
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    if (actualFile === 'install' && actualArgs[0] === '-d') {
+      onInstall?.(actualArgs.at(-1))
       return { status: 0, stdout: '', stderr: '' }
     }
     if (actualFile === 'tee' || actualFile === 'chmod' || actualFile === 'chown' || actualFile === 'find') {
@@ -254,6 +272,119 @@ test('provision order is default Docker stop/disable, roots, units, containerd, 
   assert.ok(privilegedStagingCalls.every(({ args }) => args.every((value) => !String(value).includes('/tmp/shared/writable'))))
   assert.ok(fsApi.writes.some((entry) => entry.target === `${receiptPath}.attacker-bait`))
   assert.ok(runner.record.some(({ file, args }) => file === 'sudo' && args.includes('01770')))
+})
+
+test('clean and partially missing fixed roots are created safely before any recursive removal', () => {
+  const receiptPath = '/tmp/native-host-partial-roots.json'
+  const fsApi = fakeFs(receiptPath, {
+    missingPaths: [hostContract.containerdRoot, hostContract.containerdState],
+  })
+  const record = []
+  const runner = baseRunner({ record, onInstall: (target) => fsApi.markCreated(target) })
+  const result = provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath,
+    platform: 'linux',
+    arch: 'x64',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi,
+    commandRunner: runner.run,
+    inspect: () => ({ inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }),
+    engineIdentity: { engineId: 'engine-test-id' },
+    env: {},
+  })
+  assert.equal(result.receipt.status, 'passed')
+
+  const rootCreates = record.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/install' && args[2] === '-d')
+  const rootRemoves = record.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/rm' && args.includes('--recursive'))
+  assert.equal(rootRemoves.length, 4)
+  assert.ok(rootCreates.some(({ args }) => args.includes(hostContract.containerdRoot)))
+  assert.ok(rootCreates.some(({ args }) => args.includes(hostContract.containerdState)))
+  for (const target of [hostContract.containerdRoot, hostContract.containerdState]) {
+    const create = rootCreates.find(({ args }) => args.includes(target))
+    assert.ok(create)
+    assert.ok(create.args.includes('-o') && create.args.includes('root'))
+    assert.ok(create.args.includes('-g') && create.args.includes('root'))
+    assert.ok(create.args.includes('-m') && create.args.includes('0700'))
+  }
+  const firstRemove = record.indexOf(rootRemoves[0])
+  assert.ok(firstRemove > -1)
+  for (const target of [hostContract.containerdRoot, hostContract.containerdState]) {
+    const preflightCreate = rootCreates.find((entry) => entry.args.includes(target) && record.indexOf(entry) < firstRemove)
+    assert.ok(preflightCreate)
+  }
+})
+
+test('missing fixed-root parents are created only beneath a validated existing ancestor', () => {
+  const receiptPath = '/tmp/native-host-missing-parent.json'
+  const parent = '/var/lib/hr-axis-onprem-rehearsal'
+  const fsApi = fakeFs(receiptPath, { missingPaths: [parent] })
+  const record = []
+  const runner = baseRunner({ record, onInstall: (target) => fsApi.markCreated(target) })
+  const result = provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath,
+    platform: 'linux',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi,
+    commandRunner: runner.run,
+    inspect: () => ({ inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }),
+    engineIdentity: { engineId: 'engine-test-id' },
+    env: {},
+  })
+  assert.equal(result.receipt.status, 'passed')
+  const parentCreate = record.find(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/install' && args[2] === '-d' && args.includes(parent))
+  assert.ok(parentCreate)
+  assert.ok(parentCreate.args.includes('-o') && parentCreate.args.includes('root'))
+  assert.ok(parentCreate.args.includes('-g') && parentCreate.args.includes('root'))
+  assert.ok(parentCreate.args.includes('-m') && parentCreate.args.includes('0700'))
+  const firstRemove = record.findIndex(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/rm' && args.includes('--recursive'))
+  assert.ok(firstRemove > record.indexOf(parentCreate))
+})
+
+test('unsafe fixed roots and parents fail closed before recursive removal', () => {
+  const symlinkReceipt = '/tmp/native-host-symlink-root.json'
+  const symlinkFs = fakeFs(symlinkReceipt, { symlinkPaths: [hostContract.containerdRoot] })
+  const symlinkRecord = []
+  const symlinkRunner = baseRunner({ record: symlinkRecord })
+  assert.throws(() => provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath: symlinkReceipt,
+    platform: 'linux',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi: symlinkFs,
+    commandRunner: symlinkRunner.run,
+    env: {},
+  }), /non-symlink|symlink/)
+  assert.equal(symlinkRecord.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/rm' && args.includes('--recursive')).length, 0)
+
+  const unsafeReceipt = '/tmp/native-host-unsafe-parent.json'
+  const parent = '/var/lib/hr-axis-onprem-rehearsal'
+  const unsafeFs = fakeFs(unsafeReceipt, { unsafeStats: { [parent]: directoryStat(0o755, 1000, 123) } })
+  const unsafeRecord = []
+  const unsafeRunner = baseRunner({ record: unsafeRecord })
+  assert.throws(() => provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath: unsafeReceipt,
+    platform: 'linux',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi: unsafeFs,
+    commandRunner: unsafeRunner.run,
+    env: {},
+  }), /root-owned|writable/)
+  assert.equal(unsafeRecord.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/rm' && args.includes('--recursive')).length, 0)
 })
 
 test('inspect failure writes only a failed receipt and never a success receipt', () => {

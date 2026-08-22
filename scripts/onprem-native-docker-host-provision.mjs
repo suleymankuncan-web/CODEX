@@ -476,7 +476,73 @@ function validateRoots(fsApi, platform, commandRunner) {
   }
 }
 
+function optionalLstat(fsApi, target, label) {
+  try {
+    return fsApi.lstatSync(target)
+  } catch (error) {
+    if (error?.code === 'ENOENT') return null
+    fail(`${label} state cannot be proved`)
+  }
+}
+
+function validateExistingDirectoryChain(fsApi, target, platform, label) {
+  let cursor = target
+  while (true) {
+    const stats = optionalLstat(fsApi, cursor, label)
+    if (!stats) fail(`${label} ancestor is missing`)
+    if (!(stats.isDirectory?.() || stats.isDirectory === true) || stats.isSymbolicLink?.() || stats.isSymbolicLink === true) {
+      fail(`${label} ancestor must be a non-symlink directory`)
+    }
+    if (platform === 'linux') {
+      if (stats.uid !== 0 || stats.gid !== 0) fail(`${label} ancestor must be root-owned`)
+      if (!Number.isInteger(stats.mode) || (stats.mode & 0o022) !== 0) fail(`${label} ancestor must not be group/world writable`)
+    }
+    let resolved
+    try { resolved = fsApi.realpathSync(cursor) } catch { fail(`${label} ancestor cannot be canonicalized`) }
+    if (resolved !== cursor) fail(`${label} ancestor is not canonical`)
+    if (cursor === path.parse(cursor).root) break
+    cursor = path.dirname(cursor)
+  }
+}
+
+function missingFixedPathSegments(fsApi, target, platform, label) {
+  const missing = []
+  let cursor = target
+  while (true) {
+    const stats = optionalLstat(fsApi, cursor, label)
+    if (stats) {
+      validateExistingDirectoryChain(fsApi, cursor, platform, label)
+      return missing.reverse()
+    }
+    missing.push(cursor)
+    const parent = path.dirname(cursor)
+    if (parent === cursor) fail(`${label} has no safe existing ancestor`)
+    cursor = parent
+  }
+}
+
+function ensureFixedRootPresent(commandRunner, fsApi, platform, kind, target) {
+  const label = `${kind} target`
+  const existing = optionalLstat(fsApi, target, label)
+  if (existing) {
+    validateCanonicalDestructiveTarget(target, kind, { fsApi, platform, commandRunner })
+    return
+  }
+  const missing = missingFixedPathSegments(fsApi, target, platform, label)
+  for (const pathname of missing) {
+    const parent = path.dirname(pathname)
+    validateExistingDirectoryChain(fsApi, parent, platform, label)
+    privileged(commandRunner, 'install', ['-d', '-o', 'root', '-g', 'root', '-m', '0700', '--', pathname], {}, `create ${kind} path`)
+    validateExistingDirectoryChain(fsApi, pathname, platform, label)
+  }
+  validateCanonicalDestructiveTarget(target, kind, { fsApi, platform, commandRunner })
+}
+
 function cleanRoots(commandRunner, fsApi, platform) {
+  // Materialize only absent fixed roots after validating their nearest
+  // existing ancestor.  No recursive removal is possible until every target
+  // (existing or newly created) has passed the canonical/mount checks.
+  for (const [kind, target] of REQUIRED_ROOTS) ensureFixedRootPresent(commandRunner, fsApi, platform, kind, target)
   validateRoots(fsApi, platform, commandRunner)
   for (const [kind, target] of REQUIRED_ROOTS) {
     validateCanonicalDestructiveTarget(target, kind, { fsApi, platform, commandRunner })
