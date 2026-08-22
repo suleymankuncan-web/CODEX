@@ -168,10 +168,14 @@ test('legacy dockerd requires the exact dedicated argv and permits only /var/run
     .replace(`--exec-root=${hostContract.dockerExecRoot}`, '--exec-root=/var/run/hr-axis-onprem-rehearsal-docker')
     .replace(`--pidfile=${hostContract.dockerPidfile}`, '--pidfile=/var/run/hr-axis-onprem-rehearsal-docker/dockerd.pid')
     .replace(`--iptables=true`, `--containerd=/var/run/hr-axis-onprem-rehearsal-containerd/containerd.sock --iptables=true`)
+  const observedSiblingPidfile = `/usr/bin/dockerd --host=unix:///var/run/docker.sock --data-root=${hostContract.dockerDataRoot} --exec-root=/var/run/hr-axis-onprem-rehearsal-docker --pidfile=/var/run/hr-axis-onprem-rehearsal-docker.pid --iptables=true --ip6tables=true`
   assert.equal(exactLegacyDockerdCommand(normal), true)
   assert.equal(exactLegacyDockerdCommand(compat), true)
   assert.equal(exactLegacyDockerdCommand(`${normal} --containerd=${hostContract.containerdSocket}`), true)
+  assert.equal(exactLegacyDockerdCommand(observedSiblingPidfile), true)
   assert.equal(exactLegacyDockerdCommand(`${normal} --log-level=debug`), false)
+  assert.equal(exactLegacyDockerdCommand(observedSiblingPidfile.replace('.pid', '.pid.bak')), false)
+  assert.equal(exactLegacyDockerdCommand(observedSiblingPidfile.replace('rehearsal-docker --pidfile', 'rehearsal-docker-other --pidfile')), false)
   assert.throws(() => detectLegacyDockerd((file) => file === 'sudo' ? { status: 0, stdout: '421 /usr/bin/dockerd --host=unix:///tmp/foreign.sock\n', stderr: '' } : { status: 0, stdout: '', stderr: '' }), /unknown|ambiguous/)
 })
 

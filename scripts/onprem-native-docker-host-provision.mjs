@@ -83,6 +83,9 @@ const LEGACY_COMMON_FLAGS = Object.freeze({
 const LEGACY_SHAPES = Object.freeze([
   LEGACY_COMMON_FLAGS,
   Object.freeze({ ...LEGACY_COMMON_FLAGS, '--containerd': hostContract.containerdSocket }),
+  // Exact observed historical launch: the old runtime used a sibling
+  // pidfile under /var/run rather than the newer nested pidfile path.
+  Object.freeze({ ...LEGACY_COMMON_FLAGS, '--pidfile': '/var/run/hr-axis-onprem-rehearsal-docker.pid' }),
 ])
 
 function fail(message) {
