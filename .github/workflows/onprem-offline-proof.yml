@@ -730,7 +730,7 @@ jobs:
           sudo iptables -A "$docker_egress_chain" -j RETURN
           sudo iptables -I DOCKER-USER 1 -j "$docker_egress_chain"
           sudo iptables -I FORWARD 1 -j "$docker_egress_chain"
-          docker_egress_rules="$(sudo iptables -S "$docker_egress_chain")"
+          docker_egress_rules="$(sudo_bounded "docker-egress-rules" iptables -S "$docker_egress_chain")"
           test "$(printf '%s\n' "$docker_egress_rules" | wc -l)" -eq 9
           conntrack_accept_rule="$(printf '%s\n' "$docker_egress_rules" | sed -n '2p')"
           case "$conntrack_accept_rule" in
@@ -1182,8 +1182,11 @@ jobs:
           edge_network="hr-axis-onprem-core_edge"
           edge_meta="$(sudo_bounded "edge-network-inspect" docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}')" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
           test "$edge_meta" = "false|hr-axis-onprem-core|synthetic|$RELEASE_ID|edge"
-          backend_image="$(sudo awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
+          printf '%s\n' 'offline checkpoint=edge-meta-verified'
+          backend_image="$(sudo_bounded "edge-env-image" awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
+          printf '%s\n' 'offline checkpoint=edge-image-read'
           printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          printf '%s\n' 'offline checkpoint=edge-image-identity-format'
           sudo_bounded "edge-image-inspect" docker image inspect "$backend_image" --format '{{.Id}}' | grep -Fqx "$backend_image"
           docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
@@ -1193,7 +1196,7 @@ jobs:
           reject_rule_text="-A $docker_egress_chain -i br+ ! -o br+ -m conntrack --ctstate NEW -j REJECT --reject-with icmp-port-unreachable"
           printf '%s\n' "$docker_egress_rules" | sed -n '7p' | grep -Fqx -- "$reject_rule_text"
           read_reject_packets() {
-            reject_line="$(sudo iptables -L "$docker_egress_chain" -v -x -n --line-numbers | awk -v line="$reject_rule_line" '$1 == line { print; exit }')"
+            reject_line="$(sudo_bounded "docker-egress-counters" iptables -L "$docker_egress_chain" -v -x -n --line-numbers | awk -v line="$reject_rule_line" '$1 == line { print; exit }')"
             test -n "$reject_line"
             packets="$(printf '%s\n' "$reject_line" | awk '$4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
             printf '%s\n' "$packets" | grep -Eq '^[0-9]+$'
@@ -1208,7 +1211,7 @@ jobs:
             local tool="$1" chain="$2"
             local packets
             local host_reject_rule_line=4
-            packets="$(sudo "$tool" -L "$chain" -v -x -n --line-numbers | awk -v line="$host_reject_rule_line" '$1 == line && $4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
+            packets="$(sudo_bounded "host-egress-counters" "$tool" -L "$chain" -v -x -n --line-numbers | awk -v line="$host_reject_rule_line" '$1 == line && $4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
             printf '%s\n' "$packets" | grep -Eq '^[0-9]+$'
             printf '%s\n' "$packets"
           }
@@ -1220,11 +1223,11 @@ jobs:
           sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'$host6_probe_target',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           host6_after="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
           test "$host6_after" -gt "$host6_before"
-          docker_network_ids="$(sudo docker network ls -q --filter 'label=com.hr-axis.project=hr-axis-onprem-core')"
+          docker_network_ids="$(sudo_bounded "docker-network-list" docker network ls -q --filter 'label=com.hr-axis.project=hr-axis-onprem-core')"
           test -n "$docker_network_ids"
           test "$(sudo docker network inspect bridge --format '{{.EnableIPv6}}')" = false
           for network_id in $docker_network_ids; do
-            test "$(sudo docker network inspect "$network_id" --format '{{.EnableIPv6}}')" = false
+            test "$(sudo_bounded "docker-network-inspect" docker network inspect "$network_id" --format '{{.EnableIPv6}}')" = false
           done
           host4_counter_delta=$((host4_after - host4_before))
           host6_counter_delta=$((host6_after - host6_before))
