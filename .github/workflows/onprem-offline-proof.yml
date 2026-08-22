@@ -941,8 +941,34 @@ jobs:
           TRUST_ROOT="$SEALED_ROOT/trust"
           NODE_BIN="$TRUST_ROOT/node"
           OPERATOR_PATH="$TRUST_ROOT:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          OPERATOR_TIMEOUT_SECONDS=1200
+          OPERATOR_TIMEOUT_SECONDS=960
           OPERATOR_KILL_AFTER_SECONDS=30
+          DIRECT_TIMEOUT_SECONDS=600
+          DIRECT_KILL_AFTER_SECONDS=30
+          current_offline_phase() {
+            local offline_phase=unknown
+            if [ -f "$RUNNER_TEMP/offline-phase" ]; then
+              offline_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
+            fi
+            case "$offline_phase" in
+              preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
+              *) offline_phase=unknown ;;
+            esac
+            printf '%s' "$offline_phase"
+          }
+          sudo_bounded() {
+            local bounded_label="${1:-unknown}" bounded_status
+            shift
+            printf 'offline bounded start command=%s timeout_seconds=%s\n' "$bounded_label" "$DIRECT_TIMEOUT_SECONDS" >&2
+            if sudo env "PATH=$OPERATOR_PATH" timeout --signal=TERM --kill-after="${DIRECT_KILL_AFTER_SECONDS}s" "${DIRECT_TIMEOUT_SECONDS}s" "$@"; then
+              printf 'offline bounded complete command=%s\n' "$bounded_label" >&2
+              return 0
+            else
+              bounded_status=$?
+            fi
+            printf 'offline bounded failure command=%s status=%s phase=%s timeout_seconds=%s\n' "$bounded_label" "$bounded_status" "$(current_offline_phase)" "$DIRECT_TIMEOUT_SECONDS" >&2
+            return "$bounded_status"
+          }
           sudo_operator() {
             local operator_script="${1:-}" operator_name offline_operator_phase offline_operator_status
             case "$operator_script" in
@@ -956,14 +982,7 @@ jobs:
             else
               offline_operator_status=$?
             fi
-            offline_operator_phase=unknown
-            if [ -f "$RUNNER_TEMP/offline-phase" ]; then
-              offline_operator_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
-            fi
-            case "$offline_operator_phase" in
-              preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
-              *) offline_operator_phase=unknown ;;
-            esac
+            offline_operator_phase="$(current_offline_phase)"
             printf 'offline operator failure script=%s status=%s phase=%s timeout_seconds=%s\n' "$operator_name" "$offline_operator_status" "$offline_operator_phase" "$OPERATOR_TIMEOUT_SECONDS" >&2
             return "$offline_operator_status"
           }
@@ -1107,11 +1126,11 @@ jobs:
           printf '%s\n' 'activate' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           edge_network="hr-axis-onprem-core_edge"
-          edge_meta="$(sudo docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
+          edge_meta="$(sudo_bounded "edge-network-inspect" docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
           test "$edge_meta" = "false|hr-axis-onprem-core|synthetic|$RELEASE_ID|edge"
           backend_image="$(sudo awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
           printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'
-          sudo docker image inspect "$backend_image" --format '{{.Id}}' | grep -Fqx "$backend_image"
+          sudo_bounded "edge-image-inspect" docker image inspect "$backend_image" --format '{{.Id}}' | grep -Fqx "$backend_image"
           docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
           host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS
@@ -1127,7 +1146,7 @@ jobs:
             printf '%s\n' "$packets"
           }
           reject_packets_before="$(read_reject_packets)"
-          sudo docker run --pull=never --rm --network "$edge_network" --entrypoint /nodejs/bin/node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
+          sudo_bounded "docker-egress-probe" docker run --pull=never --rm --network "$edge_network" --entrypoint /nodejs/bin/node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
           reject_packets_after="$(read_reject_packets)"
           test "$reject_packets_after" -gt "$reject_packets_before"
           docker_reject_counter_delta=$((reject_packets_after - reject_packets_before))
@@ -1172,7 +1191,7 @@ jobs:
           NODE
           printf '%s\n' 'offline phase=photo-prebackup'
           printf '%s\n' 'photo-prebackup' > "$RUNNER_TEMP/offline-phase"
-          sudo -- "$NODE_BIN" "$BUNDLE_ROOT/operations/onprem-offline-target-proof.mjs" --execute --require-complete --compose "$BUNDLE_ROOT/deployment/compose.yaml" --compose "$BUNDLE_ROOT/deployment/compose.photo-proof.yaml" --compose "$BUNDLE_ROOT/deployment/photo-compose.yaml" --compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --env-file "$ENV_FILE" --project hr-axis-onprem-core --release-id "$RELEASE_ID" --host offline.synthetic.invalid --accounts-file "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" --photo-account-file "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account" --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" --ca-file "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" --photo-auth-image "$backend_image" --connect-host caddy --connect-port 8443 --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256" --photo-mode prepare --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$photo_prebackup_receipt"
+          sudo_bounded "photo-prebackup-target-proof" "$NODE_BIN" "$BUNDLE_ROOT/operations/onprem-offline-target-proof.mjs" --execute --require-complete --compose "$BUNDLE_ROOT/deployment/compose.yaml" --compose "$BUNDLE_ROOT/deployment/compose.photo-proof.yaml" --compose "$BUNDLE_ROOT/deployment/photo-compose.yaml" --compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --env-file "$ENV_FILE" --project hr-axis-onprem-core --release-id "$RELEASE_ID" --host offline.synthetic.invalid --accounts-file "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" --photo-account-file "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account" --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" --ca-file "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" --photo-auth-image "$backend_image" --connect-host caddy --connect-port 8443 --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256" --photo-mode prepare --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$photo_prebackup_receipt"
           sudo -- "$NODE_BIN" - "$photo_prebackup_receipt" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); const photo = value.photo; if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.releaseClaimVerified !== true || value.recoveredPreBackupPhoto !== false || !photo || photo.photoAdminAuthenticated !== true || photo.nonSuperAdminDenied !== true || photo.deniedWriteDelta !== 0 || photo.exactWebpRead !== true || photo.repeatReadExact !== true || photo.canonicalIdentityVerified !== true || !/^[a-f0-9]{64}$/.test(photo.contentSha256) || !Number.isSafeInteger(photo.contentLength) || photo.contentLength <= 0) process.exit(43); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'target-proof-prebackup', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
           NODE
