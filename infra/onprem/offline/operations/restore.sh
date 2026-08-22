@@ -846,7 +846,17 @@ cleanup() {
   [ "$cleanup_failed" -eq 0 ] || status=1
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+abort_on_signal() {
+  # A timeout signal must not enter Docker cleanup.  Cleanup invokes several
+  # Docker API calls and can itself block while the daemon is quiescing, which
+  # would defeat the outer operator timeout and leave the hosted job waiting
+  # until its hard execution limit.  The workflow's exact-target cleanup step
+  # owns recovery after an interrupted operator.
+  trap - EXIT HUP INT TERM
+  exit 124
+}
+trap cleanup EXIT
+trap abort_on_signal HUP INT TERM
 
 create_volume() {
   class=$1; name=$2

@@ -428,7 +428,16 @@ cleanup() {
   if [ -n "${TEMP_DIR:-}" ] && [ -d "$TEMP_DIR" ]; then rm -r "$TEMP_DIR" 2>/dev/null || true; fi
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+abort_on_signal() {
+  # Do not run resume/Compose cleanup from a timeout signal.  Those Docker
+  # calls may block while the daemon is stopping and can prevent the bounded
+  # operator from returning.  The workflow cleanup step removes only the
+  # exact synthetic targets after the interrupted operation exits.
+  trap - EXIT HUP INT TERM
+  exit 124
+}
+trap cleanup EXIT
+trap abort_on_signal HUP INT TERM
 
 # Quiesce is a mechanical Compose action.  No env flag or made-up writer
 # label can substitute for these exact service names and post-stop checks.
