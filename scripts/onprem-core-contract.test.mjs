@@ -675,6 +675,16 @@ test('ONP-2 contract requires conntrack provisioning and read-only preflight bef
   assert.equal(validateOnpremCoreContract(lateProvisioning).ok, false, 'conntrack preflight after firewall mutation must fail closed')
 })
 
+test('ONP-2 contract keeps root-run temporary TLS material inside the fresh runner temp directory', () => {
+  const input = contractInput()
+  input.workflow = input.workflow.replace('--temporary-directory "$RUNNER_TEMP"', '--temporary-directory /tmp')
+
+  const result = validateOnpremCoreContract(input)
+
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /temporary TLS material inside RUNNER_TEMP/i.test(error)))
+})
+
 test('ONP-2 contract keeps wrong-host verification distinct from the valid TLS SNI', () => {
   const input = contractInput()
   const active = "const wrongHostname = runTlsProbe({ caPath: approvedCaPath, host: publicHost, label: 'wrong-hostname TLS rejection proof', verifyHost: 'wrong-host.example.invalid' })"

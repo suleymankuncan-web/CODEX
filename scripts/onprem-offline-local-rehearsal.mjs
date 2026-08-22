@@ -4,6 +4,14 @@ import path from 'node:path'
 import { createHash, createPublicKey } from 'node:crypto'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import {
+  acquireHostLock,
+  expectedNativeDockerHostMarker,
+  hostContract,
+  inspectDedicatedNativeDockerHost,
+  releaseHostLock,
+  resetDedicatedNativeDockerHost,
+} from './onprem-native-docker-host.mjs'
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url))
 const REPOSITORY_ROOT = path.resolve(SCRIPT_ROOT, '..')
@@ -39,6 +47,43 @@ const RUN_NUMBER = /^[1-9][0-9]*$/
 const ALLOWED_PHASES = new Set(['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback'])
 const SENSITIVE_ENV = /(?:TOKEN|PASSWORD|SECRET|PRIVATE|CREDENTIAL|AUTH|DOCKER_TLS|DOCKER_CERT|DOCKER_HOST|DOCKER_CONTEXT)/i
 export const REQUIRED_HOST_TOOLS = Object.freeze(['bash', 'sudo', 'setsid', 'timeout', 'iptables-save', 'ip6tables-save', 'iptables-restore', 'ip6tables-restore', 'iptables', 'ip6tables', 'nft', 'ip', 'tar', 'sha256sum', 'openssl', 'base64', 'awk', 'stat', 'find', 'git', 'uname', 'docker'])
+export const RECOVERY_POLICY = Object.freeze({
+  budgetMs: 15 * 60 * 1000,
+  firewallFamilyReserveMs: 2 * 60 * 1000,
+})
+const RECOVERY_BINARIES = Object.freeze({
+  sudo: '/usr/bin/sudo',
+  ipv4Save: '/usr/sbin/iptables-save',
+  ipv4Restore: '/usr/sbin/iptables-restore',
+  ipv6Save: '/usr/sbin/ip6tables-save',
+  ipv6Restore: '/usr/sbin/ip6tables-restore',
+})
+const RECOVERY_ENV = Object.freeze({
+  LANG: 'C',
+  LC_ALL: 'C',
+  PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+})
+const RECOVERY_DEADLINE_CODE = 'OFFLINE_RECOVERY_DEADLINE'
+const NATIVE_RECOVERY_DEADLINE_CODE = 'NATIVE_DOCKER_RECOVERY_DEADLINE'
+const RECOVERY_COMMAND_CODE = 'OFFLINE_RECOVERY_COMMAND'
+const RECOVERY_FIXED_COMMANDS = new Map([
+  ['git', '/usr/bin/git'],
+  ['sudo', RECOVERY_BINARIES.sudo],
+  ['iptables-save', RECOVERY_BINARIES.ipv4Save],
+  ['iptables-restore', RECOVERY_BINARIES.ipv4Restore],
+  ['ip6tables-save', RECOVERY_BINARIES.ipv6Save],
+  ['ip6tables-restore', RECOVERY_BINARIES.ipv6Restore],
+])
+const RECOVERY_FIXED_PATHS = new Set([
+  ...RECOVERY_FIXED_COMMANDS.values(),
+  '/usr/bin/cat', '/usr/bin/containerd', '/usr/bin/docker', '/usr/bin/dockerd', '/usr/bin/find', '/usr/bin/findmnt',
+  '/usr/bin/id', '/usr/bin/install', '/usr/bin/kill', '/usr/bin/readlink', '/usr/bin/rm', '/usr/bin/ps', '/usr/bin/ss',
+  '/usr/bin/stat', '/usr/bin/systemctl', '/usr/bin/test',
+])
+const FIREWALLS = Object.freeze([
+  Object.freeze({ key: 'ipv4', save: RECOVERY_BINARIES.ipv4Save, restore: RECOVERY_BINARIES.ipv4Restore }),
+  Object.freeze({ key: 'ipv6', save: RECOVERY_BINARIES.ipv6Save, restore: RECOVERY_BINARIES.ipv6Restore }),
+])
 
 function fail(message) {
   throw new Error(message)
@@ -372,32 +417,143 @@ export function workflowBodyDigest(blocks) {
   return hashBytes(source)
 }
 
+function resultOf(result) {
+  if (!result || typeof result !== 'object') return { status: -1, stdout: '', stderr: '' }
+  return {
+    status: Number.isInteger(result.status) ? result.status : -1,
+    stdout: typeof result.stdout === 'string' ? result.stdout : Buffer.isBuffer(result.stdout) ? result.stdout.toString('utf8') : '',
+    stderr: typeof result.stderr === 'string' ? result.stderr : Buffer.isBuffer(result.stderr) ? result.stderr.toString('utf8') : '',
+  }
+}
+
 function commandOutput(command, args, options = {}) {
+  if (options.commandRunner) {
+    let result
+    try { result = resultOf(options.commandRunner(command, args, options)) } catch (error) { if (isRecoveryDeadlineError(error)) throw error; fail(`${options.label ?? command} failed`) }
+    if (result.status !== 0) fail(`${options.label ?? command} failed (exit ${result.status})`)
+    return result.stdout.trim()
+  }
   try {
-    return execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: options.maxBuffer ?? 4 * 1024 * 1024 }).trim()
+    return execFileSync(command, args, {
+      encoding: 'utf8',
+      stdio: options.input === undefined ? ['ignore', 'pipe', 'pipe'] : ['pipe', 'pipe', 'pipe'],
+      input: options.input,
+      env: options.env,
+      timeout: options.timeout,
+      maxBuffer: options.maxBuffer ?? 4 * 1024 * 1024,
+    }).trim()
   } catch (error) {
     const detail = error?.status === undefined ? 'not available' : `exit ${error.status}`
     fail(`${options.label ?? command} failed (${detail})`)
   }
 }
 
-function sudoOutput(args, label) {
-  return commandOutput('sudo', ['-n', ...args], { label: label ?? `sudo ${args[0]}` })
+function commandBytes(command, args, options = {}) {
+  if (options.commandRunner) {
+    let raw
+    try { raw = options.commandRunner(command, args, options) } catch (error) { if (isRecoveryDeadlineError(error)) throw error; fail(`${options.label ?? command} failed`) }
+    const result = resultOf(raw)
+    if (result.status !== 0) fail(`${options.label ?? command} failed (exit ${result.status})`)
+    if (Buffer.isBuffer(raw?.stdout)) return Buffer.from(raw.stdout)
+    if (raw?.stdout instanceof Uint8Array) return Buffer.from(raw.stdout)
+    return Buffer.from(typeof raw?.stdout === 'string' ? raw.stdout : result.stdout, 'utf8')
+  }
+  try {
+    return execFileSync(command, args, {
+      encoding: null,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      input: options.input,
+      env: options.env,
+      timeout: options.timeout,
+      maxBuffer: options.maxBuffer ?? 16 * 1024 * 1024,
+    })
+  } catch (error) {
+    const detail = error?.status === undefined ? 'not available' : `exit ${error.status}`
+    fail(`${options.label ?? command} failed (${detail})`)
+  }
 }
 
-function executableAvailable(name) {
+class RecoveryDeadlineError extends Error {
+  constructor(stage, deadlineAt) {
+    super(`offline recovery deadline exhausted during ${stage}`)
+    this.code = RECOVERY_DEADLINE_CODE
+    this.stage = stage
+    this.deadlineAt = deadlineAt
+  }
+}
+
+class RecoveryCommandError extends Error {
+  constructor(command) {
+    super(`offline recovery command is not approved: ${command}`)
+    this.code = RECOVERY_COMMAND_CODE
+    this.command = command
+  }
+}
+
+function isRecoveryDeadlineError(error) {
+  return error?.code === RECOVERY_DEADLINE_CODE || error?.code === NATIVE_RECOVERY_DEADLINE_CODE
+}
+
+function defaultRecoveryCommandRunner(file, args, options = {}) {
+  const result = spawnSync(file, args, {
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: options.timeout,
+    env: { ...RECOVERY_ENV },
+    input: options.input,
+  })
+  return {
+    status: Number.isInteger(result.status) ? result.status : -1,
+    stdout: typeof result.stdout === 'string' ? result.stdout : '',
+    stderr: typeof result.stderr === 'string' ? result.stderr : '',
+    timedOut: result.error?.code === 'ETIMEDOUT',
+  }
+}
+
+function fixedRecoveryCommand(file) {
+  if (RECOVERY_FIXED_COMMANDS.has(file)) return RECOVERY_FIXED_COMMANDS.get(file)
+  if (RECOVERY_FIXED_PATHS.has(file)) return file
+  throw new RecoveryCommandError(file)
+}
+
+function boundedRecoveryCommandRunner(commandRunner, deadlineAt, now, stage) {
+  const baseRunner = commandRunner ?? defaultRecoveryCommandRunner
+  return (file, args, options = {}) => {
+    const remaining = deadlineAt - now()
+    if (!Number.isFinite(remaining) || remaining < 1) throw new RecoveryDeadlineError(stage, deadlineAt)
+    const inheritedTimeout = Number.isFinite(options.timeout) && options.timeout > 0 ? options.timeout : Number.POSITIVE_INFINITY
+    const timeout = Math.max(1, Math.min(Math.floor(remaining), inheritedTimeout))
+    const approvedFile = fixedRecoveryCommand(file)
+    let result
+    try {
+      result = baseRunner(approvedFile, args, { ...options, timeout, env: RECOVERY_ENV })
+    } catch (error) {
+      if (isRecoveryDeadlineError(error)) throw error
+      throw new Error(`offline recovery command failed during ${stage}`)
+    }
+    if (result?.timedOut === true || result?.error?.code === 'ETIMEDOUT') throw new RecoveryDeadlineError(stage, deadlineAt)
+    if (now() >= deadlineAt) throw new RecoveryDeadlineError(stage, deadlineAt)
+    return result
+  }
+}
+
+function sudoOutput(args, label, options = {}) {
+  return commandOutput('sudo', ['-n', ...args], { ...options, label: label ?? `sudo ${args[0]}` })
+}
+
+function executableAvailable(name, commandRunner) {
   try {
-    const output = commandOutput('bash', ['-lc', `command -v -- ${JSON.stringify(name)}`], { label: `required tool ${name}` })
+    const output = commandOutput('bash', ['-lc', `command -v -- ${JSON.stringify(name)}`], { commandRunner, label: `required tool ${name}` })
     if (!output || output.includes('\n')) fail(`required tool ${name} has an ambiguous path`)
   } catch {
     fail(`required tool is unavailable: ${name}`)
   }
 }
 
-function validateNodeRuntime(nodePath, expectedDigest) {
+function validateNodeRuntime(nodePath, expectedDigest, commandRunner) {
   assertAbsolutePath(nodePath, 'pinned Node path')
   assertRegularFile(nodePath, 'pinned Node runtime')
-  const version = commandOutput(nodePath, ['--version'], { label: 'pinned Node runtime' })
+  const version = commandOutput(nodePath, ['--version'], { commandRunner, label: 'pinned Node runtime' })
   if (version !== 'v24.19.0') fail('pinned Node runtime must be v24.19.0')
   const sha256 = hashFile(nodePath)
   if (sha256 !== expectedDigest) fail('pinned Node runtime SHA256 mismatch')
@@ -408,15 +564,24 @@ function parseDockerJson(value, label) {
   try { return JSON.parse(value) } catch { fail(`${label} returned invalid JSON`) }
 }
 
-function validateDockerRuntime() {
-  const server = parseDockerJson(sudoOutput(['docker', 'version', '--format', '{{json .Server}}'], 'docker server version'), 'docker server identity')
-  const info = parseDockerJson(sudoOutput(['docker', 'info', '--format', '{{json .}}'], 'docker info'), 'docker info')
-  const compose = sudoOutput(['docker', 'compose', 'version', '--short'], 'docker compose version')
-  const context = sudoOutput(['docker', 'context', 'show'], 'docker context')
-  if (!context || context.includes('\n')) fail('docker context identity is invalid')
-  const endpointOutput = sudoOutput(['docker', 'context', 'inspect', context, '--format', '{{(index .Endpoints "docker").Host}}'], 'docker context endpoint')
-  const endpoint = endpointOutput.trim()
-  if (!/^unix:\/\/(?:\/var\/run\/docker\.sock|\/run\/docker\.sock|\/run\/user\/[0-9]+\/docker\.sock)$/.test(endpoint)) fail('Docker endpoint must be a native local Unix socket')
+export function assertDockerEnvironmentSafe(env = process.env) {
+  for (const name of ['DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_CONFIG']) {
+    if (Object.prototype.hasOwnProperty.call(env ?? {}, name)) fail(`${name} override is not allowed`)
+  }
+}
+
+function dockerCliArgs(...args) {
+  return ['docker', '--host', `unix://${hostContract.socket}`, ...args]
+}
+
+function validateDockerRuntime(commandRunner, dockerEnv) {
+  assertDockerEnvironmentSafe(process.env)
+  const options = { commandRunner, env: dockerEnv }
+  const server = parseDockerJson(sudoOutput(dockerCliArgs('version', '--format', '{{json .Server}}'), 'docker server version', options), 'docker server identity')
+  const info = parseDockerJson(sudoOutput(dockerCliArgs('info', '--format', '{{json .}}'), 'docker info', options), 'docker info')
+  const compose = sudoOutput(dockerCliArgs('compose', 'version', '--short'), 'docker compose version', options)
+  const context = 'default'
+  const endpoint = `unix://${hostContract.socket}`
   const osName = String(server.Os ?? info.OSType ?? '').toLowerCase()
   const architecture = String(server.Arch ?? info.Architecture ?? '').toLowerCase()
   if (osName !== 'linux' || !['amd64', 'x86_64'].includes(architecture)) fail('Docker daemon must be native Linux amd64')
@@ -426,30 +591,47 @@ function validateDockerRuntime() {
   return identity
 }
 
-function validateDockerTargets() {
+/**
+ * `sudo` commonly applies env_reset, so bare workflow `sudo docker` calls
+ * cannot rely on the child DOCKER_* variables.  Prove the root client's
+ * selected context and endpoint before any body is allowed to run.
+ */
+export function validateDockerRootContext(commandRunner) {
+  const context = sudoOutput(['docker', 'context', 'show'], 'root Docker context', { commandRunner })
+  if (context !== 'default') fail('root Docker context must be default')
+  const endpointValue = sudoOutput(['docker', 'context', 'inspect', 'default', '--format', '{{json .Endpoints.docker.Host}}'], 'root Docker context endpoint', { commandRunner })
+  let endpoint
+  try { endpoint = JSON.parse(endpointValue) } catch { fail('root Docker context endpoint is invalid') }
+  if (endpoint !== `unix://${hostContract.socket}`) fail('root Docker context endpoint is not the fixed Docker socket')
+  const info = parseDockerJson(sudoOutput(['docker', 'info', '--format', '{{json .}}'], 'root Docker info', { commandRunner }), 'root Docker info')
+  if (info.DockerRootDir !== hostContract.dockerDataRoot) fail('root Docker info data-root is not fixed')
+  return Object.freeze({ context, endpoint, dockerRootDir: info.DockerRootDir })
+}
+
+function validateDockerTargets(commandRunner, dockerEnv) {
   for (const project of PROJECT_NAMES) {
     for (const resource of ['container', 'volume', 'network']) {
-      const command = resource === 'container' ? ['docker', 'ps', '-aq'] : ['docker', resource, 'ls', '-q']
-      const output = sudoOutput([...command, '--filter', `label=com.docker.compose.project=${project}`, '--filter', `label=com.hr-axis.project=${project}`], `docker ${resource} preflight`)
+      const command = resource === 'container' ? ['ps', '-aq'] : [resource, 'ls', '-q']
+      const output = sudoOutput([...dockerCliArgs(...command), '--filter', `label=com.docker.compose.project=${project}`, '--filter', `label=com.hr-axis.project=${project}`], `docker ${resource} preflight`, { commandRunner, env: dockerEnv })
       if (output) fail(`dedicated offline ${resource} already exists for ${project}`)
     }
   }
 }
 
-function validateFirewallTargets() {
+function validateFirewallTargets(commandRunner) {
   const chains = ['HR_AXIS_OFF_DOCKER_EGRESS', 'HR_AXIS_OFFLINE_HOST_EGRESS', 'HR_AXIS_OFFLINE_HOST6_EGRESS']
   for (const chain of chains) {
     const command = chain.endsWith('HOST6_EGRESS') ? 'ip6tables' : 'iptables'
     try {
-      sudoOutput([command, '-S', chain], `${command} ${chain}`)
+      sudoOutput([command, '-S', chain], `${command} ${chain}`, { commandRunner })
       fail(`dedicated firewall chain already exists: ${chain}`)
     } catch (error) {
       if (!(error instanceof Error) || !String(error.message).includes('failed')) throw error
     }
   }
-  for (const hook of ['DOCKER-USER', 'FORWARD', 'OUTPUT']) sudoOutput(['iptables', '-S', hook], `iptables ${hook}`)
-  sudoOutput(['ip6tables', '-S', 'OUTPUT'], 'ip6tables OUTPUT')
-  try { sudoOutput(['ip', 'link', 'show', 'HRAXIS_OFFLINE6'], 'offline IPv6 probe interface'); fail('offline IPv6 probe interface already exists') } catch (error) { if (!(error instanceof Error) || !String(error.message).includes('failed')) throw error }
+  for (const hook of ['DOCKER-USER', 'FORWARD', 'OUTPUT']) sudoOutput(['iptables', '-S', hook], `iptables ${hook}`, { commandRunner })
+  sudoOutput(['ip6tables', '-S', 'OUTPUT'], 'ip6tables OUTPUT', { commandRunner })
+  try { sudoOutput(['ip', 'link', 'show', 'HRAXIS_OFFLINE6'], 'offline IPv6 probe interface', { commandRunner }); fail('offline IPv6 probe interface already exists') } catch (error) { if (!(error instanceof Error) || !String(error.message).includes('failed')) throw error }
 }
 
 function validateHostFilesystem(runId, attempt) {
@@ -465,37 +647,39 @@ function validateHostFilesystem(runId, attempt) {
   return sealedRoot
 }
 
-function readGitState(workspaceRoot) {
+function readGitState(workspaceRoot, commandRunner) {
   assertDirectory(workspaceRoot, 'workspace root')
-  const status = commandOutput('git', ['-C', workspaceRoot, 'status', '--porcelain=v1', '--untracked-files=all', '--ignore-submodules=none'], { label: 'git clean-tree preflight' })
+  const status = commandOutput('git', ['-C', workspaceRoot, 'status', '--porcelain=v1', '--untracked-files=all', '--ignore-submodules=none'], { commandRunner, label: 'git clean-tree preflight' })
   if (status) fail('workspace tree is not clean')
-  const head = commandOutput('git', ['-C', workspaceRoot, 'rev-parse', 'HEAD'], { label: 'git HEAD preflight' })
-  const tree = commandOutput('git', ['-C', workspaceRoot, 'rev-parse', 'HEAD^{tree}'], { label: 'git tree preflight' })
+  const head = commandOutput('git', ['-C', workspaceRoot, 'rev-parse', 'HEAD'], { commandRunner, label: 'git HEAD preflight' })
+  const tree = commandOutput('git', ['-C', workspaceRoot, 'rev-parse', 'HEAD^{tree}'], { commandRunner, label: 'git tree preflight' })
   assertHex(head, 'git HEAD', 40)
   if (!/^[a-f0-9]{40}$/.test(tree)) fail('git tree identity is invalid')
   return { head, tree }
 }
 
-function currentKernelEnvironment() {
-  const kernel = commandOutput('uname', ['-srvo'], { label: 'kernel identity' })
+function currentKernelEnvironment(commandRunner) {
+  const kernel = commandOutput('uname', ['-srvo'], { commandRunner, label: 'kernel identity' })
   const isWsl = /microsoft|wsl/i.test(kernel) || Boolean(process.env.WSL_INTEROP)
   return { kernel, platform: process.platform, architecture: process.arch, isWsl }
 }
 
-export function validatePreflight(options, { workflowBlocks, roots } = {}) {
+export function validatePreflight(options, { workflowBlocks, roots, commandRunner, dockerEnv, platform = process.platform, uid = typeof process.getuid === 'function' ? process.getuid() : null } = {}) {
   if (options.inputError) fail('immutable input validation failed before host mutation')
   const workspaceRoot = assertCanonicalWorkspaceRoot(options.workspaceRoot)
-  if (process.platform !== 'linux') fail('local offline rehearsal is Linux-only; run it inside native Linux or WSL with a native Linux Docker socket')
-  if (typeof process.getuid !== 'function' || process.getuid() <= 0) fail('local offline rehearsal must run as a non-root user')
-  commandOutput('sudo', ['-n', 'true'], { label: 'non-interactive sudo preflight' })
-  for (const tool of REQUIRED_HOST_TOOLS) executableAvailable(tool)
-  const environment = currentKernelEnvironment()
-  const node = validateNodeRuntime(options.nodePath, options.nodeSha256)
-  const docker = validateDockerRuntime()
-  validateDockerTargets()
-  validateFirewallTargets()
+  if (platform !== 'linux') fail('local offline rehearsal is Linux-only; run it inside native Linux or WSL with a native Linux Docker socket')
+  if (!Number.isInteger(uid) || uid <= 0) fail('local offline rehearsal must run as a non-root user')
+  assertDockerEnvironmentSafe(process.env)
+  commandOutput('sudo', ['-n', 'true'], { commandRunner, label: 'non-interactive sudo preflight' })
+  for (const tool of REQUIRED_HOST_TOOLS) executableAvailable(tool, commandRunner)
+  const environment = currentKernelEnvironment(commandRunner)
+  const node = validateNodeRuntime(options.nodePath, options.nodeSha256, commandRunner)
+  validateDockerRootContext(commandRunner)
+  const docker = validateDockerRuntime(commandRunner, dockerEnv)
+  validateDockerTargets(commandRunner, dockerEnv)
+  validateFirewallTargets(commandRunner)
   const sealedRoot = validateHostFilesystem(options.runId, options.runAttempt)
-  const git = readGitState(workspaceRoot)
+  const git = readGitState(workspaceRoot, commandRunner)
   if (git.head !== options.sourceSha) fail('current git HEAD does not match expected source SHA')
   if (git.tree !== options.treeSha) fail('current git tree does not match expected tree SHA')
   const inputIdentity = validateImmutableInputs(options, roots)
@@ -516,12 +700,14 @@ function makeRunRoot(requested) {
 }
 
 function sanitizeChildEnvironment(context) {
+  assertDockerEnvironmentSafe(process.env)
   const inherited = {}
   for (const name of ['PATH', 'LANG', 'LC_ALL', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'TERM']) {
     if (process.env[name] && !SENSITIVE_ENV.test(name)) inherited[name] = process.env[name]
   }
   const env = {
     ...inherited,
+    HOME: context.dockerHome,
     GITHUB_WORKSPACE: context.workspace,
     RUNNER_TEMP: context.runnerTemp,
     GITHUB_RUN_ID: context.options.runId,
@@ -535,19 +721,101 @@ function sanitizeChildEnvironment(context) {
     PINNED_NODE_SOURCE: context.options.nodePath,
   }
   for (const name of Object.keys(env)) if (SENSITIVE_ENV.test(name) && !['TRUSTED_FINGERPRINT', 'TRUSTED_BOOTSTRAP_SHA256'].includes(name)) delete env[name]
+  // The workflow bodies contain bare `sudo docker` calls.  Keep their
+  // unprivileged Docker client configuration fixed after the sensitive-env
+  // scrub so an inherited context/socket/config can never reappear.
+  Object.assign(env, {
+    PATH: RECOVERY_ENV.PATH,
+    HOME: context.dockerHome,
+    DOCKER_CONFIG: context.dockerConfig,
+    DOCKER_CONTEXT: 'default',
+    DOCKER_HOST: `unix://${hostContract.socket}`,
+  })
   return env
 }
 
 export function executeWorkflowBody(body, context, { timeoutMs = 60 * 60 * 1000 } = {}) {
-  const result = spawnSync('bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', body], {
+  const identityCheck = context.dockerIdentityCheck ?? (() => inspectDedicatedNativeDockerHost({ env: {}, allowMutableInventory: true }))
+  identityCheck()
+  const rootContextCheck = context.dockerContextCheck ?? (() => validateDockerRootContext())
+  rootContextCheck()
+  const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1000))
+  const timeoutMarker = path.join(context.runnerTemp, `.workflow-timeout-${process.pid}`)
+  const leaderMarker = path.join(context.runnerTemp, `.workflow-leader-${process.pid}`)
+  const containmentMarker = path.join(context.runnerTemp, `.workflow-contained-${process.pid}`)
+  const supervisor = [
+    'set -eu',
+    'marker="$1"; leader_marker="$2"; containment_marker="$3"; body="$4"; deadline="$5"',
+    'rm -f -- "$marker" "$leader_marker" "$containment_marker"',
+    // The inner shell writes its own $$ after setsid has established the
+    // session.  This avoids treating a possible setsid fork/wait helper as
+    // the process-group leader that must be terminated.
+    `setsid --wait bash --noprofile --norc -e -u -o pipefail -c 'leader_marker="$1"; body="$2"; printf "%s\\n" "$$" > "$leader_marker"; exec bash --noprofile --norc -e -u -o pipefail -c "$body"' offline-workflow-child "$leader_marker" "$body" &`,
+    'child="$!"',
+    'leader=""',
+    'attempt=0',
+    'while test "$attempt" -lt 20 && test -z "$leader"; do',
+    '  if test -s "$leader_marker"; then IFS= read -r leader < "$leader_marker"; fi',
+    '  test -n "$leader" || sleep 0.05',
+    '  attempt=$((attempt + 1))',
+    'done',
+    'case "$leader" in ""|*[!0-9]*) kill -TERM "$child" 2>/dev/null || true; kill -KILL "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 125 ;; esac',
+    '(',
+    '  sleep "$deadline"',
+    '  : > "$marker"',
+    '  kill -TERM -- "-$leader" 2>/dev/null || true',
+    '  sleep 10',
+    '  kill -KILL -- "-$leader" 2>/dev/null || true',
+    ') &',
+    'watchdog="$!"',
+    'set +e; wait "$child"; status="$?"; set -e',
+    'if test -f "$marker"; then wait "$watchdog" || true; else kill "$watchdog" 2>/dev/null || true; wait "$watchdog" 2>/dev/null || true; fi',
+    // A child can reap before descendants do.  Poll the complete process
+    // group, then TERM/KILL the negative PGID and poll again before recovery
+    // is allowed to continue.  A successful marker is the proof consumed by
+    // the outer Node supervisor; no PID is exposed in the receipt.
+    'group_gone=0',
+    'attempt=0',
+    'while test "$attempt" -lt 20; do',
+    '  if kill -0 -- "-$leader" 2>/dev/null; then sleep 0.25; else group_gone=1; break; fi',
+    '  attempt=$((attempt + 1))',
+    'done',
+    'if test "$group_gone" -ne 1; then',
+    '  kill -TERM -- "-$leader" 2>/dev/null || true',
+    '  sleep 1',
+    '  kill -KILL -- "-$leader" 2>/dev/null || true',
+    '  wait "$child" 2>/dev/null || true',
+    '  attempt=0',
+    '  while test "$attempt" -lt 20; do',
+    '    if kill -0 -- "-$leader" 2>/dev/null; then sleep 0.25; else group_gone=1; break; fi',
+    '    attempt=$((attempt + 1))',
+    '  done',
+    'fi',
+    'printf "%s\\n" "$group_gone" > "$containment_marker"',
+    'if test "$group_gone" -ne 1; then exit 125; fi',
+    'exit "$status"',
+  ].join('\n')
+  // The outer shell captures the exact inner setsid leader PID, sends TERM
+  // then bounded KILL to the negative process-group ID, and waits/reaps it
+  // before returning to the caller's recovery supervisor.
+  const result = spawnSync('bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', supervisor, 'offline-workflow-supervisor', timeoutMarker, leaderMarker, containmentMarker, body, String(timeoutSeconds)], {
     cwd: context.workspace,
     env: sanitizeChildEnvironment(context),
     stdio: ['ignore', 'inherit', 'inherit'],
-    timeout: timeoutMs,
     windowsHide: true,
   })
-  if (result.error) return { status: 'failed', exitCode: result.error.code ?? null, signal: result.error.signal ?? null, timedOut: result.error.code === 'ETIMEDOUT' }
-  return { status: result.status === 0 ? 'passed' : 'failed', exitCode: result.status, signal: result.signal ?? null, timedOut: false }
+  let timedOut = false
+  let containmentComplete = false
+  try {
+    timedOut = fs.existsSync(timeoutMarker)
+    containmentComplete = fs.existsSync(containmentMarker) && fs.readFileSync(containmentMarker, 'utf8').trim() === '1'
+  } finally {
+    for (const marker of [timeoutMarker, leaderMarker, containmentMarker]) {
+      try { fs.rmSync(marker, { force: true }) } catch { /* cleanup is represented by the outer receipt */ }
+    }
+  }
+  if (result.error) return { status: 'failed', exitCode: result.error.code ?? null, signal: result.error.signal ?? null, timedOut, containmentComplete }
+  return { status: result.status === 0 && containmentComplete ? 'passed' : 'failed', exitCode: result.status, signal: result.signal ?? null, timedOut, containmentComplete }
 }
 
 function phaseNow() { return new Date().toISOString() }
@@ -555,9 +823,9 @@ function phaseNow() { return new Date().toISOString() }
 function runPhase(name, marker, context, phases, execute) {
   const startedAt = phaseNow()
   let outcome
-  try { outcome = execute(context.workflowBlocks[marker].body, context) } catch { outcome = { status: 'failed', exitCode: null, signal: null, threw: true } }
+  try { outcome = execute(context.workflowBlocks[marker].body, context) } catch { outcome = { status: 'failed', exitCode: null, signal: null, threw: true, containmentComplete: false } }
   const completedAt = phaseNow()
-  const phase = { name, marker, startedAt, completedAt, status: outcome?.status === 'passed' ? 'passed' : 'failed', exitCode: Number.isInteger(outcome?.exitCode) ? outcome.exitCode : null, signal: outcome?.signal ?? null, timedOut: outcome?.timedOut === true }
+  const phase = { name, marker, startedAt, completedAt, status: outcome?.status === 'passed' ? 'passed' : 'failed', exitCode: Number.isInteger(outcome?.exitCode) ? outcome.exitCode : null, signal: outcome?.signal ?? null, timedOut: outcome?.timedOut === true, containmentComplete: outcome?.containmentComplete === true }
   phases.push(phase)
   return phase
 }
@@ -619,10 +887,42 @@ function sanitizeInternalReceipt(directory, options, phases) {
   return { passed, lastPhase, files, safeAggregate, quiesced: quiescePhase?.status === 'passed', restored: egressPhase?.status === 'passed' }
 }
 
-function writeExternalReceipt(receiptPath, value) {
+function safeReceiptErrorCode(error) {
+  const code = error && typeof error.code === 'string' ? error.code : ''
+  return /^[A-Za-z0-9._-]{1,80}$/.test(code) ? code : 'LOCK_RELEASE_FAILED'
+}
+
+function receiptWithLockReleaseState(value, state) {
+  const lockStatus = state.status === 'pending' || state.status === 'released' || state.status === 'failed' ? state.status : 'failed'
+  const receipt = {
+    ...value,
+    status: lockStatus === 'pending' || lockStatus === 'failed' ? 'failed' : value.status,
+    lockRelease: {
+      status: lockStatus,
+      attempted: lockStatus !== 'pending',
+      ownerHeld: lockStatus === 'pending' ? true : lockStatus === 'released' ? false : null,
+      errorCode: lockStatus === 'failed' ? safeReceiptErrorCode(state.error) : null,
+    },
+  }
+  if (lockStatus === 'pending') receipt.status = 'pending'
+  if (lockStatus === 'failed') {
+    receipt.failure = {
+      ...(value.failure && typeof value.failure === 'object' ? value.failure : {}),
+      phase: 'lock-release',
+      reason: 'host-lock-release-failed',
+      errorCode: receipt.lockRelease.errorCode,
+    }
+  }
+  return receipt
+}
+
+function writeExternalReceipt(receiptPath, value, { replaceExisting = false } = {}) {
   assertAbsolutePath(receiptPath, 'external receipt path')
   assertNoSymlinkAncestors(receiptPath, 'external receipt path')
-  if (fs.existsSync(receiptPath)) fail('external receipt path must be fresh and absent')
+  if (fs.existsSync(receiptPath)) {
+    if (!replaceExisting) fail('external receipt path must be fresh and absent')
+    assertRegularFile(receiptPath, 'external receipt')
+  }
   const parent = path.dirname(receiptPath)
   if (fs.existsSync(parent)) {
     const parentStats = assertDirectory(parent, 'external receipt parent')
@@ -638,16 +938,165 @@ function writeExternalReceipt(receiptPath, value) {
   const temporary = `${receiptPath}.tmp-${process.pid}`
   fs.writeFileSync(temporary, `${stableJson(payload)}\n`, { mode: 0o600, flag: 'wx' })
   mode0600(temporary)
-  fs.renameSync(temporary, receiptPath)
+  try {
+    // A rename is atomic on the native Linux filesystem used by this harness.
+    // If the target already exists on a platform that refuses replacement,
+    // fail closed rather than unlinking it and creating a visibility window.
+    fs.renameSync(temporary, receiptPath)
+  } catch (error) {
+    try { fs.rmSync(temporary, { force: true }) } catch { /* preserve the original failure */ }
+    throw error
+  }
   return payload.receiptSha256
 }
 
-function buildReceipt(context, preflight, phases, internal, cleanup) {
+function recoveryCommandOptions(commandRunner, label, input) {
+  const options = { commandRunner, env: RECOVERY_ENV, label }
+  if (input !== undefined) options.input = input
+  return options
+}
+
+function captureFirewallSnapshot(firewall, commandRunner) {
+  const bytes = commandBytes(RECOVERY_BINARIES.sudo, ['-n', firewall.save], recoveryCommandOptions(commandRunner, `${firewall.key} firewall snapshot`))
+  return Object.freeze({ bytes, byteLength: bytes.length, sha256: hashBytes(bytes) })
+}
+
+export function captureFirewallSnapshots({ commandRunner } = {}) {
+  return Object.freeze(Object.fromEntries(FIREWALLS.map((firewall) => [firewall.key, captureFirewallSnapshot(firewall, commandRunner)])))
+}
+
+function restoreFirewallSnapshot(firewall, snapshot, commandRunner) {
+  commandOutput(RECOVERY_BINARIES.sudo, ['-n', firewall.restore, '--counters'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall restore`, snapshot.bytes))
+  const restored = captureFirewallSnapshot(firewall, commandRunner)
+  return Object.freeze({ byteEqual: Buffer.compare(snapshot.bytes, restored.bytes) === 0, sha256: restored.sha256, byteLength: restored.byteLength })
+}
+
+function inventorySummary(value) {
+  const inventory = value?.inventory
+  if (!inventory || typeof inventory !== 'object') return null
+  return Object.freeze({
+    containers: Number.isInteger(inventory.containers) ? inventory.containers : null,
+    networks: Number.isInteger(inventory.networks) ? inventory.networks : null,
+    volumes: Number.isInteger(inventory.volumes) ? inventory.volumes : null,
+    images: Number.isInteger(inventory.images) ? inventory.images : null,
+  })
+}
+
+function fixedControllerIdentity() {
+  const marker = expectedNativeDockerHostMarker()
+  return Object.freeze({
+    contractVersion: hostContract.version,
+    markerSchema: marker.schema,
+    markerVersion: marker.version,
+    socket: hostContract.socket,
+    dockerDataRoot: hostContract.dockerDataRoot,
+    dockerExecRoot: hostContract.dockerExecRoot,
+    containerdRoot: hostContract.containerdRoot,
+    containerdState: hostContract.containerdState,
+    containerdSocket: hostContract.containerdSocket,
+    containerdUnit: hostContract.containerdUnit,
+    dockerdUnit: hostContract.dockerdUnit,
+  })
+}
+
+function generatedCleanupState(context, fsApi = fs) {
+  const exists = typeof fsApi.existsSync === 'function' ? (target) => fsApi.existsSync(target) : (target) => fs.existsSync(target)
+  return Object.freeze({ runRootAbsent: !exists(context.runRoot), runnerTempAbsent: !exists(context.runnerTemp), clean: !exists(context.runRoot) && !exists(context.runnerTemp) })
+}
+
+function controllerArgs(commandRunner, fsApi, platform, uid, callerGid, recoveryDeadlineAt) {
+  return { commandRunner, fsApi, platform, uid, callerGid, recoveryDeadlineAt, env: RECOVERY_ENV }
+}
+
+export function recoverAfterLifecycle({ context, preflight, lock, beforeHost, snapshots, commandRunner, fsApi, platform = 'linux', uid, callerGid, controller = {}, finalGit, phases = [], now = Date.now, recoveryBudgetMs = RECOVERY_POLICY.budgetMs, firewallFamilyReserveMs = RECOVERY_POLICY.firewallFamilyReserveMs } = {}) {
+  const faults = []
+  const activeController = { resetDedicatedNativeDockerHost, inspectDedicatedNativeDockerHost, ...controller }
+  if (!Number.isSafeInteger(recoveryBudgetMs) || recoveryBudgetMs <= 0) fail('offline recovery budget is invalid')
+  if (!Number.isSafeInteger(firewallFamilyReserveMs) || firewallFamilyReserveMs <= 0) fail('offline firewall restore reserve is invalid')
+  if (recoveryBudgetMs <= firewallFamilyReserveMs * 2) fail('offline recovery budget cannot reserve both firewall families')
+  const startedAtMs = now()
+  const deadlineAtMs = startedAtMs + recoveryBudgetMs
+  const resetDeadlineAt = deadlineAtMs - (firewallFamilyReserveMs * 2)
+  const ipv4DeadlineAt = deadlineAtMs - firewallFamilyReserveMs
+  const recoveryCommandRunner = boundedRecoveryCommandRunner(commandRunner, deadlineAtMs, now, 'recovery')
+  const resetCommandRunner = boundedRecoveryCommandRunner(commandRunner, resetDeadlineAt, now, 'reset')
+  const ipv4CommandRunner = boundedRecoveryCommandRunner(commandRunner, ipv4DeadlineAt, now, 'ipv4-restore')
+  const ipv6CommandRunner = boundedRecoveryCommandRunner(commandRunner, deadlineAtMs, now, 'ipv6-restore')
+  const controllerOptions = controllerArgs(resetCommandRunner, fsApi, platform, uid, callerGid, resetDeadlineAt)
+  let resetAttempted = false
+  let resetVerified = false
+  let afterHost = null
+  let ipv4 = null
+  let ipv6 = null
+  const recoveryTimeouts = []
+  const noteRecoveryError = (stage, error) => {
+    if (isRecoveryDeadlineError(error)) recoveryTimeouts.push({ stage, reason: error.message, deadlineAt: error.deadlineAt ?? deadlineAtMs })
+  }
+  const containmentComplete = phases.filter((phase) => phase?.marker).every((phase) => phase.containmentComplete === true)
+  if (!containmentComplete) faults.push('workflow-containment')
+  resetAttempted = true
+  try {
+    const reset = activeController.resetDedicatedNativeDockerHost({ ...controllerOptions, lock, recoveryDeadlineAt: resetDeadlineAt })
+    if (reset?.dockerDaemonReset !== true) faults.push('reset-unverified')
+    else resetVerified = true
+  } catch (error) {
+    noteRecoveryError('reset', error)
+    faults.push('reset')
+  }
+  try { ipv4 = restoreFirewallSnapshot(FIREWALLS[0], snapshots.ipv4, ipv4CommandRunner); if (!ipv4.byteEqual) faults.push('ipv4-byte-mismatch') } catch (error) { noteRecoveryError('ipv4-restore', error); faults.push('ipv4-restore') }
+  try { ipv6 = restoreFirewallSnapshot(FIREWALLS[1], snapshots.ipv6, ipv6CommandRunner); if (!ipv6.byteEqual) faults.push('ipv6-byte-mismatch') } catch (error) { noteRecoveryError('ipv6-restore', error); faults.push('ipv6-restore') }
+  const postControllerOptions = controllerArgs(recoveryCommandRunner, fsApi, platform, uid, callerGid, deadlineAtMs)
+  try {
+    afterHost = activeController.inspectDedicatedNativeDockerHost({ ...postControllerOptions, allowMutableInventory: false, recoveryDeadlineAt: deadlineAtMs })
+    if (afterHost?.inventory && Object.values(afterHost.inventory).some((value) => value !== 0)) faults.push('postreset-inventory')
+  } catch (error) { noteRecoveryError('post-inspection', error); faults.push('post-inspection') }
+  let finalSource = null
+  try {
+    finalSource = finalGit ?? readGitState(context.options.workspaceRoot, recoveryCommandRunner)
+    if (finalSource.head !== context.options.sourceSha || finalSource.tree !== context.options.treeSha) faults.push('final-git')
+  } catch (error) { noteRecoveryError('final-git', error); faults.push('final-git') }
+  const generatedCleanup = generatedCleanupState(context, fsApi)
+  if (!generatedCleanup.clean) faults.push('generated-cleanup')
+  if (recoveryTimeouts.length > 0) faults.push('recovery-deadline')
+  const completedAtMs = now()
+  const recovery = Object.freeze({
+    ok: faults.length === 0,
+    faultCount: faults.length,
+    faults: Object.freeze([...faults]),
+    contractVersion: fixedControllerIdentity().contractVersion,
+    markerVersion: fixedControllerIdentity().markerVersion,
+    fixedIdentity: fixedControllerIdentity(),
+    lockHeld: lock !== undefined && lock !== null,
+    startedAt: new Date(startedAtMs).toISOString(),
+    deadlineAt: new Date(deadlineAtMs).toISOString(),
+    completedAt: new Date(completedAtMs).toISOString(),
+    budgetMs: recoveryBudgetMs,
+    resetDeadlineAt: new Date(resetDeadlineAt).toISOString(),
+    firewallReserveMs: firewallFamilyReserveMs,
+    timeoutReason: recoveryTimeouts[0]?.reason ?? null,
+    timeoutReasons: Object.freeze(recoveryTimeouts.map((entry) => Object.freeze({ ...entry }))),
+    resetAttempted,
+    resetVerified,
+    containmentComplete,
+    beforeInventory: inventorySummary(beforeHost),
+    afterInventory: inventorySummary(afterHost),
+    firewall: Object.freeze({
+      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true }),
+      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true }),
+    }),
+    generatedCleanup,
+    finalSource: finalSource ? Object.freeze({ head: finalSource.head, tree: finalSource.tree, exactMatch: finalSource.head === context.options.sourceSha && finalSource.tree === context.options.treeSha }) : null,
+  })
+  return recovery
+}
+
+function buildReceipt(context, preflight, phases, internal, cleanup, recovery = null) {
   const verifyPhase = phases.find((phase) => phase.name === 'verify-rehearse')
   const restorePhase = phases.find((phase) => phase.name === 'restore-egress')
   const failurePhase = phases.find((phase) => phase.name === 'failure-receipt')
   const materializePhase = phases.find((phase) => phase.name === 'materialize-receipt')
-  const status = preflight ? (internal.passed && verifyPhase?.status === 'passed' && restorePhase?.status === 'passed' && materializePhase?.status === 'passed' && cleanup.status === 'passed') : false
+  const lifecyclePassed = preflight ? (internal.passed && verifyPhase?.status === 'passed' && restorePhase?.status === 'passed' && materializePhase?.status === 'passed' && cleanup.status === 'passed') : false
+  const status = lifecyclePassed && (recovery === null || recovery.ok === true)
   return {
     schemaVersion: 1,
     operation: 'onprem-offline-local-rehearsal',
@@ -660,6 +1109,7 @@ function buildReceipt(context, preflight, phases, internal, cleanup) {
     workflow: { path: '.github/workflows/onprem-offline-proof.yml', sha256: preflight?.workflowSha256 ?? hashFile(WORKFLOW_PATH), bodySha256: preflight?.workflowBodySha256 ?? workflowBodyDigest(context.workflowBlocks), bodies: Object.fromEntries(WORKFLOW_STEPS.map((marker) => [marker, context.workflowBlocks[marker].bodySha256])) },
     phases,
     egress: { attempted: phases.some((phase) => phase.name === 'disable-egress'), quiesced: internal.quiesced, restored: internal.restored, restoreStatus: restorePhase?.status ?? 'not-attempted', failureReceiptAfterRestore: !failurePhase || (restorePhase && failurePhase.startedAt >= restorePhase.completedAt), receiptFiles: internal.files, aggregate: internal.safeAggregate },
+    recovery,
     cleanup,
     lastPhase: internal.lastPhase,
     sanitized: true,
@@ -676,13 +1126,17 @@ function createContext(options, workflowBlocks) {
   const runRoot = makeRunRoot(options.runRoot)
   const runnerTemp = path.join(runRoot, 'runner-temp')
   const workspace = path.join(runRoot, 'workspace')
+  const dockerHome = path.join(runnerTemp, 'docker-home')
+  const dockerConfig = path.join(runnerTemp, 'docker-config')
   fs.mkdirSync(runnerTemp, { mode: 0o700 })
   fs.mkdirSync(workspace, { mode: 0o700 })
-  mode0700(runnerTemp); mode0700(workspace)
+  fs.mkdirSync(dockerHome, { mode: 0o700 })
+  fs.mkdirSync(dockerConfig, { mode: 0o700 })
+  mode0700(runnerTemp); mode0700(workspace); mode0700(dockerHome); mode0700(dockerConfig)
   const incoming = path.join(runnerTemp, 'offline-incoming')
   let inputError = null
   try { strictCopyImmutableInputs(options.bundleRoot, options.trustRoot, incoming) } catch (error) { inputError = error }
-  return { options: { ...options, runnerTemp, inputError }, runRoot, runnerTemp, workspace, workflowBlocks }
+  return { options: { ...options, runnerTemp, inputError }, runRoot, runnerTemp, workspace, dockerHome, dockerConfig, workflowBlocks }
 }
 
 export function runLifecycle(context, preflight, { execute = executeWorkflowBody } = {}) {
@@ -717,6 +1171,44 @@ export function runLifecycle(context, preflight, { execute = executeWorkflowBody
   return { phases, internal, cleanup, receipt, mutationAttempted }
 }
 
+export function runSupervisedLifecycle(context, preflight, options = {}) {
+  if (!preflight) return runLifecycle(context, null, options)
+  const snapshots = options.snapshots ?? captureFirewallSnapshots({ commandRunner: options.commandRunner })
+  let lifecycle
+  try {
+    lifecycle = runLifecycle(context, preflight, { execute: options.execute ?? executeWorkflowBody })
+  } catch {
+    lifecycle = {
+      phases: [],
+      internal: { passed: false, lastPhase: 'unknown', files: {}, safeAggregate: null, quiesced: false, restored: false },
+      cleanup: { status: 'failed', runRootRemoved: false },
+      receipt: buildReceipt(context, preflight, [], { passed: false, lastPhase: 'unknown', files: {}, safeAggregate: null, quiesced: false, restored: false }, { status: 'failed', runRootRemoved: false }),
+      mutationAttempted: true,
+    }
+  }
+  const recovery = recoverAfterLifecycle({
+    context,
+    preflight,
+    lock: options.lock,
+    beforeHost: options.beforeHost,
+    snapshots,
+    commandRunner: options.commandRunner,
+    fsApi: options.fsApi,
+    platform: options.platform ?? 'linux',
+    uid: options.uid,
+    callerGid: options.callerGid,
+    controller: options.controller,
+    finalGit: options.finalGit,
+    phases: lifecycle.phases,
+    now: options.now ?? Date.now,
+    recoveryBudgetMs: options.recoveryBudgetMs ?? RECOVERY_POLICY.budgetMs,
+    firewallFamilyReserveMs: options.firewallFamilyReserveMs ?? RECOVERY_POLICY.firewallFamilyReserveMs,
+  })
+  lifecycle.recovery = recovery
+  lifecycle.receipt = buildReceipt(context, preflight, lifecycle.phases, lifecycle.internal, lifecycle.cleanup, recovery)
+  return lifecycle
+}
+
 function parseArguments(argv) {
   if (argv.includes('--help')) {
     if (argv.length !== 1) fail('--help cannot be combined with other options')
@@ -728,6 +1220,11 @@ function parseArguments(argv) {
   const parsed = {}
   for (let index = 0; index < argv.length; index += 1) {
     const option = argv[index]
+    if (option === '--allow-disposable-daemon-reset') {
+      if (parsed.allowDisposableDaemonReset) fail(`duplicate option: ${option}`)
+      parsed.allowDisposableDaemonReset = true
+      continue
+    }
     if (!Object.hasOwn(names, option)) fail(`unknown option: ${option}`)
     const key = names[option]
     if (Object.hasOwn(parsed, key)) fail(`duplicate option: ${option}`)
@@ -736,6 +1233,7 @@ function parseArguments(argv) {
     parsed[key] = value
     index += 1
   }
+  if (parsed.allowDisposableDaemonReset !== true) fail('missing required option: --allow-disposable-daemon-reset')
   const required = ['bundleRoot', 'trustRoot', 'manifestSha256', 'releaseId', 'trustedFingerprint', 'bootstrapSha256', 'nodePath', 'nodeSha256', 'sourceSha', 'treeSha', 'runId', 'runAttempt', 'receiptPath']
   for (const key of required) if (!parsed[key]) fail(`missing required option: ${key}`)
   parsed.bundleRoot = assertAbsolutePath(parsed.bundleRoot, '--bundle-root')
@@ -762,26 +1260,157 @@ function parseArguments(argv) {
 export const parseCliArguments = parseArguments
 
 export function helpText() {
-  return `Usage: npm run check:onprem:offline:local -- --bundle-root ABS --trust-root ABS --manifest-sha256 SHA256 --release-id ID --trusted-fingerprint SHA256 --bootstrap-sha256 SHA256 --node ABS --node-sha256 SHA256 --source-sha SHA1 --tree-sha SHA1 --run-id N --run-attempt N --receipt ABS [--workspace-root ABS] [--run-root ABS]\n\nLinux-only, source-free, disposable rehearsal. Inputs are immutable and copied into a fresh 0700 runner temp. The runner extracts and executes the six exact workflow run bodies in order; it never fetches, builds, pulls, or edits the workflow. A sanitized external receipt is written only after restore and cleanup.\n`
+  return `Usage: npm run check:onprem:offline:local -- --allow-disposable-daemon-reset --bundle-root ABS --trust-root ABS --manifest-sha256 SHA256 --release-id ID --trusted-fingerprint SHA256 --bootstrap-sha256 SHA256 --node ABS --node-sha256 SHA256 --source-sha SHA1 --tree-sha SHA1 --run-id N --run-attempt N --receipt ABS [--workspace-root ABS] [--run-root ABS]\n\nLinux-only, source-free, disposable rehearsal. The explicit reset opt-in is required before mutable work. Inputs are immutable and copied into a fresh 0700 runner temp. The runner extracts and executes the six exact workflow run bodies in order; it never fetches, builds, pulls, or edits the workflow. A sanitized external receipt is written only after controller recovery.\n`
+}
+
+export function runLocalRehearsal(options, dependencies = {}) {
+  if (!options || options.allowDisposableDaemonReset !== true) fail('explicit disposable daemon reset opt-in is required')
+  const commandRunner = dependencies.commandRunner
+  const fsApi = dependencies.fsApi ?? fs
+  const platform = dependencies.platform ?? process.platform
+  const uid = dependencies.uid ?? (typeof process.getuid === 'function' ? process.getuid() : null)
+  const controller = { acquireHostLock, inspectDedicatedNativeDockerHost, releaseHostLock, ...dependencies.controller }
+  const writeReceipt = dependencies.writeReceipt ?? writeExternalReceipt
+  assertDockerEnvironmentSafe(dependencies.env ?? process.env)
+  if (platform !== 'linux') fail('local offline rehearsal is Linux-only; run it inside native Linux or WSL with a native Linux Docker socket')
+  if (!Number.isInteger(uid) || uid <= 0) fail('local offline rehearsal must run as a non-root user')
+  let lock = null
+  let context = null
+  let preflight = null
+  let receiptBase = null
+  let receiptMaterialized = false
+  let releaseAttempted = false
+  let releaseState = { status: 'pending', error: null }
+  let terminalReceipt = null
+  const materializeReceipt = (receipt) => {
+    receiptBase = receipt
+    const pending = receiptWithLockReleaseState(receiptBase, releaseState)
+    writeReceipt(options.receiptPath, pending)
+    receiptMaterialized = true
+    terminalReceipt = pending
+    return pending
+  }
+  const finalizeReceipt = () => {
+    if (!receiptMaterialized || !receiptBase) return null
+    const terminal = receiptWithLockReleaseState(receiptBase, releaseState)
+    writeReceipt(options.receiptPath, terminal, { replaceExisting: true })
+    terminalReceipt = terminal
+    return terminal
+  }
+  const releaseHeldLock = () => {
+    if (releaseAttempted) return releaseState.status === 'released'
+    releaseAttempted = true
+    try {
+      controller.releaseHostLock(lock, controllerArgs(commandRunner, fsApi, platform, uid, dependencies.callerGid))
+      releaseState = { status: 'released', error: null }
+      lock = null
+      return true
+    } catch (error) {
+      // The controller's ownership is unknown after a failed release.  Do not
+      // retry it from finally, and do not claim the host is safely released.
+      releaseState = { status: 'failed', error }
+      lock = null
+      throw error
+    }
+  }
+  const lockReleaseError = () => new Error(`offline host lock release failed (${safeReceiptErrorCode(releaseState.error)})`)
+  try {
+    lock = controller.acquireHostLock(controllerArgs(commandRunner, fsApi, platform, uid, dependencies.callerGid))
+    const beforeHost = controller.inspectDedicatedNativeDockerHost({ ...controllerArgs(commandRunner, fsApi, platform, uid, dependencies.callerGid), allowMutableInventory: false })
+    if (!beforeHost?.inventory || Object.values(beforeHost.inventory).some((value) => value !== 0)) fail('dedicated Docker host inventory is not empty')
+    commandOutput('sudo', ['-n', 'true'], { commandRunner, label: 'non-interactive sudo preflight' })
+    const blocks = dependencies.workflowBlocks ?? extractWorkflowBlocks()
+    context = dependencies.context ?? createContext(options, blocks)
+    if (!context.dockerIdentityCheck) {
+      context.dockerIdentityCheck = () => controller.inspectDedicatedNativeDockerHost({ ...controllerArgs(commandRunner, fsApi, platform, uid, dependencies.callerGid), allowMutableInventory: true })
+    }
+    if (!context.dockerContextCheck) context.dockerContextCheck = () => validateDockerRootContext(commandRunner)
+    try {
+      preflight = dependencies.preflight ?? validatePreflight(context.options, {
+        workflowBlocks: blocks,
+        roots: { bundleRoot: path.join(context.runnerTemp, 'offline-incoming'), trustRoot: path.join(context.runnerTemp, 'offline-incoming', 'trust') },
+        commandRunner,
+        dockerEnv: { HOME: context.dockerHome, DOCKER_CONFIG: context.dockerConfig, DOCKER_CONTEXT: 'default' },
+        platform,
+        uid,
+      })
+    } catch (error) {
+      const failed = runLifecycle(context, null, { execute: () => ({ status: 'failed', exitCode: null }) })
+      const receipt = { ...failed.receipt, failure: { phase: 'preflight', reason: 'validation-failed-before-egress-mutation' } }
+      materializeReceipt(receipt)
+      throw error
+    }
+    let snapshots
+    try {
+      snapshots = dependencies.snapshots ?? captureFirewallSnapshots({ commandRunner })
+    } catch (error) {
+      // Firewall capture is before the mutable lifecycle.  Still leave a
+      // sanitized failed receipt behind so callers can distinguish this
+      // pre-mutation stop from a lock/recovery failure.
+      const failed = runLifecycle(context, null, { execute: () => ({ status: 'failed', exitCode: null, containmentComplete: true }) })
+      const receipt = { ...failed.receipt, failure: { phase: 'firewall-snapshot', reason: 'snapshot-capture-failed-before-egress-mutation' } }
+      materializeReceipt(receipt)
+      throw error
+    }
+    const result = runSupervisedLifecycle(context, preflight, {
+      lock,
+      beforeHost,
+      commandRunner,
+      fsApi,
+      platform,
+      uid,
+      callerGid: dependencies.callerGid,
+      controller,
+      execute: dependencies.execute,
+      snapshots,
+      finalGit: dependencies.finalGit,
+      now: dependencies.now,
+      recoveryBudgetMs: dependencies.recoveryBudgetMs,
+      firewallFamilyReserveMs: dependencies.firewallFamilyReserveMs,
+    })
+    materializeReceipt(result.receipt)
+    let releaseError = null
+    try {
+      releaseHeldLock()
+    } catch (error) {
+      releaseError = error
+    }
+    let finalReceipt
+    try {
+      finalReceipt = finalizeReceipt()
+    } catch (error) {
+      if (releaseError) throw new Error('offline host lock release failed; failed receipt rewrite unavailable')
+      throw error
+    }
+    result.receipt = finalReceipt
+    if (releaseError) throw lockReleaseError()
+    if (result.receipt.status !== 'passed') fail('offline local rehearsal failed; inspect the sanitized receipt')
+    return result
+  } finally {
+    if (lock && !releaseAttempted) {
+      let releaseError = null
+      try {
+        releaseHeldLock()
+      } catch (error) {
+        releaseError = error
+      }
+      try {
+        finalizeReceipt()
+      } catch (error) {
+        if (releaseError) throw new Error('offline host lock release failed; failed receipt rewrite unavailable')
+        throw error
+      }
+      if (releaseError) throw lockReleaseError()
+    }
+  }
 }
 
 function main() {
   try {
     const options = parseArguments(process.argv.slice(2))
     if (options.help) { process.stdout.write(helpText()); return }
-    const blocks = extractWorkflowBlocks()
-    const context = createContext(options, blocks)
-    let preflight
-    try { preflight = validatePreflight(context.options, { workflowBlocks: blocks, roots: { bundleRoot: path.join(context.runnerTemp, 'offline-incoming'), trustRoot: path.join(context.runnerTemp, 'offline-incoming', 'trust') } }) } catch (error) {
-      const failed = runLifecycle(context, null, { execute: () => ({ status: 'failed', exitCode: null }) })
-      const receipt = { ...failed.receipt, failure: { phase: 'preflight', reason: 'validation-failed-before-egress-mutation' } }
-      writeExternalReceipt(options.receiptPath, receipt)
-      throw error
-    }
-    const result = runLifecycle(context, preflight)
-    writeExternalReceipt(options.receiptPath, result.receipt)
-    if (result.receipt.status !== 'passed') fail('offline local rehearsal failed; inspect the sanitized receipt')
-    process.stdout.write(`offline local rehearsal passed: ${options.receiptPath}\n`)
+    const result = runLocalRehearsal(options)
+    process.stdout.write(`offline local rehearsal ${result.receipt.status}: ${options.receiptPath}\n`)
   } catch (error) {
     process.stderr.write(`offline local rehearsal stopped: ${error.message}\n`)
     process.exitCode = 1

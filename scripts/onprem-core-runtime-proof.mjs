@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -71,7 +71,39 @@ export function command(command, args, options = {}) {
   }
   if (inspectionFailed) throw new Error(`${options.label ?? command} output inspection failed`); return output
 }
-function parseArgs(argv) {
+export function validateTemporaryDirectory(value) {
+  if (typeof value !== 'string' || !value || !isAbsolute(value)) {
+    throw new Error('--temporary-directory must be an absolute canonical directory')
+  }
+  if (value.includes('\u0000') || value.split(/[\\/]+/).some((segment) => segment === '.' || segment === '..')) {
+    throw new Error('--temporary-directory must not contain traversal segments')
+  }
+  const resolved = resolve(value)
+  if (resolved !== value) throw new Error('--temporary-directory must be an absolute canonical directory')
+  let metadata
+  try {
+    metadata = lstatSync(value)
+  } catch {
+    throw new Error('--temporary-directory must be an existing directory')
+  }
+  if (!metadata.isDirectory() || metadata.isSymbolicLink()) {
+    throw new Error('--temporary-directory must be a non-symlink directory')
+  }
+  let canonical
+  try {
+    canonical = realpathSync(value)
+  } catch {
+    throw new Error('--temporary-directory must resolve to a canonical directory')
+  }
+  if (canonical !== resolved) throw new Error('--temporary-directory must not contain symlinked path components')
+  return resolved
+}
+
+export function createWrongCaTemporaryDirectory(parentDirectory = tmpdir()) {
+  return mkdtempSync(join(parentDirectory, 'hr-axis-wrong-ca-'))
+}
+
+export function parseArgs(argv) {
   const options = {
     compose: 'infra/onprem/core/compose.yaml',
     project: 'hr-axis-onprem-core',
@@ -86,6 +118,11 @@ function parseArgs(argv) {
     else if (arg === '--release-id') options.releaseId = argv[++index]
     else if (arg === '--ssh-admin-cidr') options.sshAdminCidrs.push(argv[++index])
     else if (arg === '--receipt') options.receipt = argv[++index]
+    else if (arg === '--temporary-directory') {
+      const temporaryDirectory = argv[++index]
+      if (temporaryDirectory === undefined) throw new Error('--temporary-directory requires a path')
+      options.temporaryDirectory = temporaryDirectory
+    }
     else if (arg === '--require-fresh-volumes') options.requireFreshVolumes = true
     else if (arg === '--execute') options.execute = true
     else if (arg === '--cleanup') options.cleanup = true
@@ -97,6 +134,7 @@ function parseArgs(argv) {
   if (options.execute && options.sshAdminCidrs.length === 0) throw new Error('at least one --ssh-admin-cidr is required')
   if (options.cleanup && options.project !== 'hr-axis-onprem-core') throw new Error('core runtime cleanup refuses an unapproved Compose project')
   if (options.execute && process.platform !== 'linux') throw new Error('full runtime proof is Linux-only; docker compose config remains portable')
+  if (options.temporaryDirectory !== undefined) options.temporaryDirectory = validateTemporaryDirectory(options.temporaryDirectory)
   return options
 }
 function coreComposeBaseArgs(options) {
@@ -683,7 +721,7 @@ async function main() {
       return result
     }
     const approvedCaPath = resolve(config.secrets.caddy_tls_ca.file)
-    tlsTempDirectory = mkdtempSync(join(tmpdir(), 'hr-axis-wrong-ca-'))
+    tlsTempDirectory = createWrongCaTemporaryDirectory(options.temporaryDirectory)
     const wrongCaPath = join(tlsTempDirectory, 'unrelated-ca.crt')
     const wrongCaKeyPath = join(tlsTempDirectory, 'unrelated-ca.key')
     command('openssl', [

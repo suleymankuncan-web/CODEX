@@ -100,11 +100,19 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node --check scripts/onprem-image-local-proof.mjs
+          node --check scripts/onprem-image-local-proof-recovery.mjs
+          node --check scripts/onprem-native-docker-host.mjs
+          node --check scripts/onprem-native-docker-host-provision.mjs
           node --check scripts/onprem-offline-target-proof.mjs
           node --test \
             scripts/onprem-offline-target-proof.test.mjs \
             scripts/onprem-offline-bundle.test.mjs \
             scripts/onprem-offline-stage.test.mjs \
+            scripts/onprem-image-local-proof-contract.test.mjs \
+            scripts/onprem-image-local-proof-recovery-contract.test.mjs \
+            scripts/onprem-native-docker-host-contract.test.mjs \
+            scripts/onprem-native-docker-host-provision-contract.test.mjs \
             scripts/onprem-image-proof-contract.test.mjs \
             scripts/onprem-offline-workflow-contract.test.mjs
           git diff --check
@@ -882,6 +890,7 @@ jobs:
             --release-id "$RELEASE_ID" \
             --ssh-admin-cidr 192.0.2.0/24 \
             --require-fresh-volumes \
+            --temporary-directory "$RUNNER_TEMP" \
             --receipt "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
           sudo chown "$(id -u):$(id -g)" "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
           chmod 0600 "$RUNNER_TEMP/onprem-core-runtime-receipt.json"
