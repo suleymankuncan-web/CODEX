@@ -818,23 +818,93 @@ jobs:
               sleep 30
             done
           }
-          stop_offline_rehearsal_heartbeat() {
-            local heartbeat_pid="${offline_heartbeat_pid:-}"
-            offline_heartbeat_pid=''
-            [[ "$heartbeat_pid" =~ ^[0-9]+$ ]] || return 0
-            kill -TERM "$heartbeat_pid" 2>/dev/null || true
-            for _ in {1..50}; do
-              if ! kill -0 "$heartbeat_pid" 2>/dev/null; then
-                wait "$heartbeat_pid" 2>/dev/null || true
-                return 0
+          wait_for_pid_exit() {
+            local pid="$1" max_wait_seconds="$2" max_iterations iteration pid_state wait_status
+            max_iterations=$((max_wait_seconds * 10))
+            iteration=0
+            while kill -0 "$pid" 2>/dev/null; do
+              pid_state="$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null || true)"
+              [ "$pid_state" = Z ] && break
+              if [ "$iteration" -ge "$max_iterations" ]; then
+                return 124
               fi
+              iteration=$((iteration + 1))
               sleep 0.1
             done
-            kill -KILL "$heartbeat_pid" 2>/dev/null || true
-            wait "$heartbeat_pid" 2>/dev/null || true
+            # The PID has already exited (or is a zombie), so this reap is
+            # bounded by the poll above instead of being an unbounded bare wait.
+            if wait "$pid" 2>/dev/null; then
+              return 0
+            else
+              wait_status=$?
+              return "$wait_status"
+            fi
+          }
+          process_group_alive() {
+            local group_id="$1"
+            [[ "$group_id" =~ ^[0-9]+$ ]] && kill -0 -- "-$group_id" 2>/dev/null
+          }
+          stop_offline_process_group() {
+            local pid="$1" group_id="$2" grace_seconds="$3" wait_status
+            [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+            if [[ "$group_id" =~ ^[0-9]+$ ]]; then
+              kill -TERM -- "-$group_id" 2>/dev/null || true
+            else
+              kill -TERM "$pid" 2>/dev/null || true
+            fi
+            if wait_for_pid_exit "$pid" "$grace_seconds"; then
+              wait_status=0
+            else
+              wait_status=$?
+            fi
+            if [ "$wait_status" -eq 124 ] || { [[ "$group_id" =~ ^[0-9]+$ ]] && process_group_alive "$group_id"; }; then
+              if [[ "$group_id" =~ ^[0-9]+$ ]]; then
+                kill -KILL -- "-$group_id" 2>/dev/null || true
+              else
+                kill -KILL "$pid" 2>/dev/null || true
+              fi
+            fi
+            wait_for_pid_exit "$pid" 5 >/dev/null 2>&1 || true
+          }
+          offline_heartbeat_pid=''
+          offline_heartbeat_group_id=''
+          offline_active_pid=''
+          offline_active_group_id=''
+          offline_watchdog_pid=''
+          offline_watchdog_group_id=''
+          stop_offline_rehearsal_heartbeat() {
+            local heartbeat_pid="${offline_heartbeat_pid:-}"
+            local heartbeat_group_id="${offline_heartbeat_group_id:-$heartbeat_pid}"
+            offline_heartbeat_pid=''
+            offline_heartbeat_group_id=''
+            [[ "$heartbeat_pid" =~ ^[0-9]+$ ]] || return 0
+            stop_offline_process_group "$heartbeat_pid" "$heartbeat_group_id" 5
+          }
+          stop_offline_active_processes() {
+            local active_pid="${offline_active_pid:-}"
+            local active_group_id="${offline_active_group_id:-}"
+            local watchdog_pid="${offline_watchdog_pid:-}"
+            local watchdog_group_id="${offline_watchdog_group_id:-}"
+            offline_active_pid=''
+            offline_active_group_id=''
+            offline_watchdog_pid=''
+            offline_watchdog_group_id=''
+            stop_offline_process_group "$active_pid" "$active_group_id" 5
+            stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5
+          }
+          start_offline_rehearsal_heartbeat() {
+            local heartbeat_script
+            heartbeat_script="$(declare -f offline_rehearsal_heartbeat)"
+            heartbeat_script+=$'\n'
+            heartbeat_script+="trap 'exit 143' TERM INT"
+            heartbeat_script+=$'\noffline_rehearsal_heartbeat'
+            "$SETSID_BIN" bash -c "$heartbeat_script" 2>/dev/null &
+            offline_heartbeat_pid=$!
+            offline_heartbeat_group_id="$offline_heartbeat_pid"
           }
           abort_offline_rehearsal_on_signal() {
             trap - TERM INT
+            stop_offline_active_processes
             stop_offline_rehearsal_heartbeat
             exit 143
           }
@@ -842,8 +912,9 @@ jobs:
           printf '%s\n' "$host_probe_uid" | grep -Eq '^[1-9][0-9]*$'
           host6_probe_target=fd42:6872:6178:6973::2
           test "$host6_probe_target" = "fd42:6872:6178:6973::2"
-          offline_rehearsal_heartbeat &
-          offline_heartbeat_pid=$!
+          SETSID_BIN="$(command -v setsid || true)"
+          test -n "$SETSID_BIN"
+          start_offline_rehearsal_heartbeat
           trap stop_offline_rehearsal_heartbeat EXIT
           trap abort_offline_rehearsal_on_signal TERM INT
           umask 077
@@ -966,8 +1037,6 @@ jobs:
           OPERATOR_KILL_AFTER_SECONDS=30
           DIRECT_TIMEOUT_SECONDS=600
           DIRECT_KILL_AFTER_SECONDS=30
-          SETSID_BIN="$(command -v setsid || true)"
-          test -n "$SETSID_BIN" || { echo 'setsid is required for bounded offline process groups' >&2; exit 1; }
           current_offline_phase() {
             local offline_phase=unknown
             if [ -f "$RUNNER_TEMP/offline-phase" ]; then
@@ -981,7 +1050,7 @@ jobs:
           }
           run_bounded_group() {
             local bounded_label="$1" timeout_seconds="$2" kill_after_seconds="$3"
-            local bounded_status pid watchdog_pid group_pid_file process_group_id
+            local bounded_status pid watchdog_pid group_pid_file process_group_id watchdog_group_id
             shift 3
             group_pid_file="$(mktemp "$RUNNER_TEMP/offline-process-group.XXXXXX")"
             rm -f -- "$group_pid_file"
@@ -1007,28 +1076,39 @@ jobs:
               sleep 0.1
             done
             rm -f -- "$group_pid_file"
+            offline_active_pid="$pid"
+            offline_active_group_id="$process_group_id"
             watchdog_pid=''
+            watchdog_group_id=''
             if [[ "$process_group_id" =~ ^[0-9]+$ ]]; then
-              (
+              "$SETSID_BIN" sh -c '
+                timeout_seconds="$1"
+                kill_after_seconds="$2"
+                process_group_id="$3"
                 sleep "$timeout_seconds"
-                printf 'offline process-group watchdog timeout label=%s timeout_seconds=%s process_group=%s\n' "$bounded_label" "$timeout_seconds" "$process_group_id" >&2
+                printf "offline process-group watchdog timeout label=%s timeout_seconds=%s process_group=%s\n" "$4" "$timeout_seconds" "$process_group_id" >&2
                 kill -TERM -- "-$process_group_id" 2>/dev/null || true
                 sleep "$kill_after_seconds"
                 kill -KILL -- "-$process_group_id" 2>/dev/null || true
-              ) &
+              ' offline-watchdog "$timeout_seconds" "$kill_after_seconds" "$process_group_id" "$bounded_label" &
               watchdog_pid=$!
+              watchdog_group_id="$watchdog_pid"
+              offline_watchdog_pid="$watchdog_pid"
+              offline_watchdog_group_id="$watchdog_group_id"
             else
               printf 'offline process-group watchdog unavailable label=%s pid=%s\n' "$bounded_label" "$pid" >&2
             fi
-            if wait "$pid"; then
+            if wait_for_pid_exit "$pid" "$((timeout_seconds + kill_after_seconds + 30))"; then
               bounded_status=0
             else
               bounded_status=$?
             fi
             if [ -n "$watchdog_pid" ]; then
-              kill "$watchdog_pid" 2>/dev/null || true
-              wait "$watchdog_pid" 2>/dev/null || true
+              stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5
             fi
+            stop_offline_process_group "$pid" "$process_group_id" 2
+            if [ "${offline_active_pid:-}" = "$pid" ]; then offline_active_pid=''; offline_active_group_id=''; fi
+            if [ "${offline_watchdog_pid:-}" = "$watchdog_pid" ]; then offline_watchdog_pid=''; offline_watchdog_group_id=''; fi
             return "$bounded_status"
           }
           sudo_bounded() {
@@ -1208,11 +1288,15 @@ jobs:
           printf '%s\n' 'offline checkpoint=edge-image-read'
           printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'
           printf '%s\n' 'offline checkpoint=edge-image-identity-format'
+          printf '%s\n' 'offline checkpoint=edge-image-inspect-start'
           sudo_bounded "edge-image-inspect" docker image inspect "$backend_image" --format '{{.Id}}' | grep -Fqx "$backend_image"
+          printf '%s\n' 'offline checkpoint=edge-image-inspect-verified'
           docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
           host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS
+          printf '%s\n' 'offline checkpoint=docker-egress-rules-start'
           docker_egress_rules="$(sudo_bounded "docker-egress-rules" iptables -S "$docker_egress_chain")"
+          printf '%s\n' 'offline checkpoint=docker-egress-rules-verified'
           reject_rule_line=6
           reject_rule_text="-A $docker_egress_chain -i br+ ! -o br+ -m conntrack --ctstate NEW -j REJECT --reject-with icmp-port-unreachable"
           printf '%s\n' "$docker_egress_rules" | sed -n '7p' | grep -Fqx -- "$reject_rule_text"
@@ -1224,7 +1308,9 @@ jobs:
             printf '%s\n' "$packets"
           }
           reject_packets_before="$(read_reject_packets)"
+          printf '%s\n' 'offline checkpoint=docker-egress-probe-start'
           sudo_bounded "docker-egress-probe" docker run --pull=never --rm --network "$edge_network" --entrypoint /nodejs/bin/node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
+          printf '%s\n' 'offline checkpoint=docker-egress-probe-verified'
           reject_packets_after="$(read_reject_packets)"
           test "$reject_packets_after" -gt "$reject_packets_before"
           docker_reject_counter_delta=$((reject_packets_after - reject_packets_before))
