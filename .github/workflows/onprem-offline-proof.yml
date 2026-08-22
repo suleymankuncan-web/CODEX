@@ -818,13 +818,34 @@ jobs:
               sleep 30
             done
           }
+          stop_offline_rehearsal_heartbeat() {
+            local heartbeat_pid="${offline_heartbeat_pid:-}"
+            offline_heartbeat_pid=''
+            [[ "$heartbeat_pid" =~ ^[0-9]+$ ]] || return 0
+            kill -TERM "$heartbeat_pid" 2>/dev/null || true
+            for _ in {1..50}; do
+              if ! kill -0 "$heartbeat_pid" 2>/dev/null; then
+                wait "$heartbeat_pid" 2>/dev/null || true
+                return 0
+              fi
+              sleep 0.1
+            done
+            kill -KILL "$heartbeat_pid" 2>/dev/null || true
+            wait "$heartbeat_pid" 2>/dev/null || true
+          }
+          abort_offline_rehearsal_on_signal() {
+            trap - TERM INT
+            stop_offline_rehearsal_heartbeat
+            exit 143
+          }
           host_probe_uid="$(id -u nobody)"
           printf '%s\n' "$host_probe_uid" | grep -Eq '^[1-9][0-9]*$'
           host6_probe_target=fd42:6872:6178:6973::2
           test "$host6_probe_target" = "fd42:6872:6178:6973::2"
           offline_rehearsal_heartbeat &
           offline_heartbeat_pid=$!
-          trap 'if [ -n "${offline_heartbeat_pid:-}" ]; then kill "$offline_heartbeat_pid" 2>/dev/null || true; wait "$offline_heartbeat_pid" 2>/dev/null || true; fi' EXIT
+          trap stop_offline_rehearsal_heartbeat EXIT
+          trap abort_offline_rehearsal_on_signal TERM INT
           umask 077
           case "$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT" in
             ''|*[!0-9:]*|*:*:*) echo 'offline sealed-root identity is invalid' >&2; exit 1 ;;
@@ -1340,6 +1361,8 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/offline-receipts"
           chmod 700 "$RUNNER_TEMP/offline-receipts"
           chmod 600 "$RUNNER_TEMP/offline-receipts"/*.json
+          stop_offline_rehearsal_heartbeat
+          printf '%s\n' 'offline rehearsal heartbeat stopped before quiescence'
 
       - name: Quiesce exact rehearsal runtimes before restoring egress
         if: always()

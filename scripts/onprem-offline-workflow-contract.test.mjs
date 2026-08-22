@@ -226,6 +226,11 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /run_bounded_group "\$bounded_label" "\$DIRECT_TIMEOUT_SECONDS" "\$DIRECT_KILL_AFTER_SECONDS"/)
   assert.match(rehearsal, /run_bounded_group "\$operator_name" "\$OPERATOR_TIMEOUT_SECONDS" "\$OPERATOR_KILL_AFTER_SECONDS"/)
   assert.match(rehearsal, /offline operator failure script=/)
+  assert.match(rehearsal, /stop_offline_rehearsal_heartbeat\(\)/)
+  assert.match(rehearsal, /trap stop_offline_rehearsal_heartbeat EXIT/)
+  assert.match(rehearsal, /trap abort_offline_rehearsal_on_signal TERM INT/)
+  assert.match(rehearsal, /offline rehearsal heartbeat stopped before quiescence/)
+  assert.doesNotMatch(rehearsal, /trap '\s*if \[ -n "\$\{offline_heartbeat_pid:-\}" \].*wait "\$offline_heartbeat_pid".*' EXIT/)
   assert.match(rehearsal, /sudo_bounded "verify-bootstrap-\$release_id" "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
   assert.match(rehearsal, /sudo_bounded "verify-bundle-\$release_id" "\$NODE_BIN" "\$root\/operations\/onprem-offline-bundle\.mjs" verify/)
   assert.doesNotMatch(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
@@ -233,7 +238,6 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /sudo_bounded "edge-env-image" awk -F=/)
   assert.match(rehearsal, /offline checkpoint=edge-meta-verified/)
   assert.match(rehearsal, /offline checkpoint=edge-image-read/)
-  assert.match(rehearsal, /trap 'if \[ -n "\$\{offline_heartbeat_pid:-\}" \]; then kill "\$offline_heartbeat_pid"/)
   for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {
     assert.equal((rehearsal.match(new RegExp(`offline phase=${phase}`, 'g')) ?? []).length, 1, `${phase} phase marker must be unique`)
   }
