@@ -971,7 +971,7 @@ jobs:
               operator_path="$4"
               shift 4
               printf "%s\n" "$$" > "$pid_file"
-              exec sudo env "PATH=$operator_path" timeout --signal=TERM --kill-after="${kill_after_seconds}s" "${timeout_seconds}s" "$@"
+              exec sudo env "PATH=$operator_path" timeout --foreground --signal=TERM --kill-after="${kill_after_seconds}s" "${timeout_seconds}s" "$@"
             ' offline-process-group "$group_pid_file" "$timeout_seconds" "$kill_after_seconds" "$OPERATOR_PATH" "$@" &
             pid=$!
             process_group_id=''
@@ -1180,7 +1180,7 @@ jobs:
           printf '%s\n' 'activate' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           edge_network="hr-axis-onprem-core_edge"
-          edge_meta="$(sudo_bounded "edge-network-inspect" docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
+          edge_meta="$(sudo_bounded "edge-network-inspect" docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}')" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
           test "$edge_meta" = "false|hr-axis-onprem-core|synthetic|$RELEASE_ID|edge"
           backend_image="$(sudo awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
           printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'

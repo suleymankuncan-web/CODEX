@@ -219,7 +219,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /group_pid_file="\$\(mktemp "\$RUNNER_TEMP\/offline-process-group\.XXXXXX"\)"/)
   assert.match(rehearsal, /"\$SETSID_BIN" sh -c '/)
   assert.match(rehearsal, /printf "%s\\n" "\$\$" > "\$pid_file"/)
-  assert.match(rehearsal, /exec sudo env "PATH=\$operator_path" timeout --signal=TERM --kill-after="\$\{kill_after_seconds\}s" "\$\{timeout_seconds\}s"/)
+  assert.match(rehearsal, /exec sudo env "PATH=\$operator_path" timeout --foreground --signal=TERM --kill-after="\$\{kill_after_seconds\}s" "\$\{timeout_seconds\}s"/)
   assert.match(rehearsal, /kill -TERM -- "-\$process_group_id"/)
   assert.match(rehearsal, /kill -KILL -- "-\$process_group_id"/)
   assert.match(rehearsal, /process_group_id" =~ \^\[0-9\]\+\$/)
@@ -229,6 +229,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /sudo_bounded "verify-bootstrap-\$release_id" "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
   assert.match(rehearsal, /sudo_bounded "verify-bundle-\$release_id" "\$NODE_BIN" "\$root\/operations\/onprem-offline-bundle\.mjs" verify/)
   assert.doesNotMatch(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
+  assert.doesNotMatch(rehearsal, /edge-network-inspect[^\n]*2>\/dev\/null/)
   assert.match(rehearsal, /trap 'if \[ -n "\$\{offline_heartbeat_pid:-\}" \]; then kill "\$offline_heartbeat_pid"/)
   for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {
     assert.equal((rehearsal.match(new RegExp(`offline phase=${phase}`, 'g')) ?? []).length, 1, `${phase} phase marker must be unique`)
