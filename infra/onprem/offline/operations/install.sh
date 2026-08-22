@@ -3,6 +3,7 @@ set -eu
 
 # ONP-5 install is intentionally one-way only after all signed material has
 # been checked.  It never builds, pulls, fetches, or deletes Docker data.
+umask 077
 
 die() { printf '%s\n' "install: FAIL: $*" >&2; exit 1; }
 say() { printf '%s\n' "install: $*"; }
@@ -68,18 +69,36 @@ for (const name of names) {
   const image = manifest.images[name]
   const required = ['archive', 'archiveSha256', 'configImageId', 'name', 'registryDigestAttestedByOwner', 'repoTag']
   if (!image || Object.keys(image).some((key) => ![...required, 'registryManifestDigest'].includes(key)) || required.some((key) => !(key in image))) process.exit(42)
-  if (image.name !== name || !/^sha256:[0-9a-f]{64}$/.test(image.configImageId) || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || typeof image.repoTag !== 'string' || !image.repoTag.includes(':')) process.exit(43)
-  process.stdout.write(`${name}|${image.archive}|${image.configImageId}\n`)
+  if (image.name !== name || !/^sha256:[0-9a-f]{64}$/.test(image.configImageId) || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || typeof image.repoTag !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image.repoTag)) process.exit(43)
+  process.stdout.write(`${name}|${image.archive}|${image.configImageId}|${image.repoTag}\n`)
 }
 NODE
 ) || die "signed image manifest is invalid"
 
 image_count=0
+IMAGE_SAVE_TEMP_DIR=
+IMAGE_SAVE_ARCHIVE=
+cleanup_image_save_temp() {
+  status=$?
+  if [ -n "${IMAGE_SAVE_TEMP_DIR:-}" ]; then
+    rm -f -- "$IMAGE_SAVE_TEMP_DIR/image.tar" 2>/dev/null || status=1
+    rmdir "$IMAGE_SAVE_TEMP_DIR" 2>/dev/null || status=1
+  fi
+  exit "$status"
+}
+abort_image_save_on_signal() {
+  trap - HUP INT TERM
+  exit 124
+}
+trap cleanup_image_save_temp EXIT
+trap abort_image_save_on_signal HUP INT TERM
+
 for image_record in $IMAGE_LINES; do
   image_count=$((image_count + 1))
   image_name=$(printf '%s' "$image_record" | cut -d'|' -f1)
   image_archive=$(printf '%s' "$image_record" | cut -d'|' -f2)
   expected_image_id=$(printf '%s' "$image_record" | cut -d'|' -f3)
+  image_repo_tag=$(printf '%s' "$image_record" | cut -d'|' -f4)
   archive_path="$BUNDLE_ROOT/$image_archive"
   [ -f "$archive_path" ] && [ ! -L "$archive_path" ] || die "exact image archive is missing: $image_name"
 
@@ -89,7 +108,32 @@ for image_record in $IMAGE_LINES; do
   # docker load is not required to restore RepoDigests locally.
   docker load -i "$archive_path" >/dev/null || die "docker load failed for $image_name"
   actual_image_id=$(docker image inspect --format '{{.Id}}' "$expected_image_id" 2>/dev/null || true)
-  [ "$actual_image_id" = "$expected_image_id" ] || die "loaded image id mismatch for $image_name"
+  if [ "$actual_image_id" != "$expected_image_id" ]; then
+    # Docker Engine 29 with the containerd image store can expose the OCI
+    # manifest digest as .Id.  Re-export the exact signed RepoTag and let the
+    # bundled archive verifier derive and check the signed config image ID.
+    ARCHIVE_VERIFIER="$BUNDLE_ROOT/operations/onprem-offline-archive.mjs"
+    [ -f "$ARCHIVE_VERIFIER" ] && [ ! -L "$ARCHIVE_VERIFIER" ] || die "bundled image archive verifier is missing"
+    if [ -z "$IMAGE_SAVE_TEMP_DIR" ]; then
+      # Keep root-run verification material under the fixed system temp root;
+      # a caller-controlled TMPDIR could redirect it through an unsafe parent.
+      IMAGE_SAVE_TEMP_DIR=$(mktemp -d "/tmp/hr-axis-offline-image.XXXXXX") || die "temporary image verification directory could not be created"
+      chmod 700 "$IMAGE_SAVE_TEMP_DIR" || die "temporary image verification directory permissions could not be restricted"
+    fi
+    IMAGE_SAVE_ARCHIVE="$IMAGE_SAVE_TEMP_DIR/image.tar"
+    rm -f -- "$IMAGE_SAVE_ARCHIVE" || die "temporary image verification archive could not be reset"
+    docker image save --output "$IMAGE_SAVE_ARCHIVE" "$image_repo_tag" >/dev/null || die "image re-export failed for $image_name"
+    [ -f "$IMAGE_SAVE_ARCHIVE" ] && [ ! -L "$IMAGE_SAVE_ARCHIVE" ] && [ -s "$IMAGE_SAVE_ARCHIVE" ] || die "image re-export produced no archive for $image_name"
+    chmod 600 "$IMAGE_SAVE_ARCHIVE" || die "temporary image verification archive permissions could not be restricted"
+    node --input-type=module - "$ARCHIVE_VERIFIER" "$IMAGE_SAVE_ARCHIVE" "$image_repo_tag" "$expected_image_id" <<'NODE' >/dev/null 2>&1 || die "re-exported image identity verification failed for $image_name"
+const [archiveModule, archivePath, expectedRepoTag, expectedImageId] = process.argv.slice(2)
+const { inspectDockerSaveArchive } = await import(archiveModule)
+const observed = inspectDockerSaveArchive(archivePath, { identity: `${expectedRepoTag}@${expectedImageId}`, imageId: expectedImageId })
+if (observed.repoTag !== expectedRepoTag || observed.imageId !== expectedImageId || observed.archiveConfigImageIdDerived !== true) throw new Error('re-exported image identity mismatch')
+NODE
+  else
+    [ "$actual_image_id" = "$expected_image_id" ] || die "loaded image id mismatch for $image_name"
+  fi
 done
 [ "$image_count" -eq 7 ] || die "exactly seven manifest image archives are required"
 

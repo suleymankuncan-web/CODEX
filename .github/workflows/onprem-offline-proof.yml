@@ -85,6 +85,7 @@ jobs:
             scripts/onprem-offline-bundle.test.mjs \
             scripts/onprem-offline-stage.test.mjs \
             scripts/onprem-image-proof-contract.test.mjs \
+            scripts/onprem-offline-local-rehearsal-contract.test.mjs \
             scripts/onprem-offline-workflow-contract.test.mjs
           git diff --check
 

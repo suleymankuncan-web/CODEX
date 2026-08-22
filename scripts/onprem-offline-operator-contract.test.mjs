@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { chmodSync, chownSync, existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs'
+import { chmodSync, chownSync, copyFileSync, existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
@@ -38,6 +39,17 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(install, /docker image inspect --format '\{\{\.Id\}\}'/)
   assert.doesNotMatch(install, /docker image inspect[^\n]*RepoDigests/)
   assert.match(install, /expected_image_id/)
+  assert.match(install, /image_repo_tag/)
+  assert.match(install, /docker image save --output "\$IMAGE_SAVE_ARCHIVE" "\$image_repo_tag"/)
+  assert.match(install, /operations\/onprem-offline-archive\.mjs/)
+  assert.match(install, /inspectDockerSaveArchive/)
+  assert.match(install, /archiveConfigImageIdDerived/)
+  assert.match(install, /observed\.repoTag !== expectedRepoTag[\s\S]*observed\.imageId !== expectedImageId/)
+  assert.match(install, /mktemp -d "\/tmp\/hr-axis-offline-image\.XXXXXX"/)
+  assert.doesNotMatch(install, /\$\{TMPDIR/)
+  assert.match(install, /trap cleanup_image_save_temp EXIT/)
+  const reexport = install.indexOf('docker image save --output')
+  assert.ok(firstLoad < reexport && reexport < firstComposeMutation, 'Docker 29 re-export verification must precede Compose mutation')
   assert.doesNotMatch(install, /migrator/)
   assert.match(install, /separate-migrate\.sh/)
   assert.doesNotMatch(install, /keycloak-bootstrap|identity-binder|synthetic-seed/)
@@ -301,6 +313,16 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const nodeLog = join(root, 'node-commands.log')
   const mode = join(root, 'mode')
   const idMode = join(root, 'id-mismatch')
+  const reexportMode = join(root, 'reexport-mode')
+  const reexportTempDir = join(root, 'reexport-temp')
+  const reexportArchiveRoot = join(root, 'reexport-archives')
+  const validReexportRoot = join(reexportArchiveRoot, 'valid')
+  const validReexportArchives = Object.fromEntries(REEXPORT_IMAGE_NAMES.map((name) => [name, join(validReexportRoot, `${name}.tar`)]))
+  const wrongIdReexportArchive = join(reexportArchiveRoot, 'wrong-id.tar')
+  const wrongTagReexportArchive = join(reexportArchiveRoot, 'wrong-tag.tar')
+  const missingTagReexportArchive = join(reexportArchiveRoot, 'missing-tag.tar')
+  const malformedReexportArchive = join(reexportArchiveRoot, 'malformed.tar')
+  const tamperedReexportArchive = join(reexportArchiveRoot, 'tampered.tar')
   const broadMode = join(root, 'broad-secret-mode')
   const wrongKeyMode = join(root, 'wrong-key')
   const wrongCaMode = join(root, 'wrong-ca')
@@ -325,18 +347,19 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const ledgerParent = join(inputRoot, 'migration-ledger')
   const ledgerFile = join(ledgerParent, 'migration-ledger.json')
   const hardlinkPath = join(photoSecretRoot, 'photo-hardlink')
-  for (const directory of [operations, deployment, fakeBin, tlsDir, inputRoot, secretRoot, photoSecretRoot, receiptDir, join(bundle, 'images'), ...(ledger ? [ledgerParent] : [])]) mkdirSync(directory, { recursive: true })
+  for (const directory of [operations, deployment, fakeBin, tlsDir, inputRoot, secretRoot, photoSecretRoot, receiptDir, reexportArchiveRoot, validReexportRoot, join(bundle, 'images'), ...(ledger ? [ledgerParent] : [])]) mkdirSync(directory, { recursive: true })
   if (ledger) chmodSync(ledgerParent, 0o700)
   writeFileSync(join(bundle, 'bundle-manifest.json'), '{}\n')
   writeFileSync(join(bundle, 'bundle-signature.json'), '{}\n')
   writeFileSync(join(bundle, 'operations', 'onprem-offline-bundle.mjs'), '// fake verifier\n')
+  copyFileSync(join(repo, 'scripts', 'onprem-offline-archive.mjs'), join(bundle, 'operations', 'onprem-offline-archive.mjs'))
   writeFileSync(join(bundle, 'deployment', 'compose.yaml'), 'name: hr-axis-onprem-core\n')
   writeFileSync(join(bundle, 'deployment', 'compose.photo-proof.yaml'), 'services: {}\n')
   writeFileSync(join(bundle, 'deployment', 'photo-compose.yaml'), 'services: { object-storage: {} }\n')
   writeFileSync(join(bundle, 'operations', 'onprem-keycloak-auth-proof.mjs'), '// fake auth proof\n')
   mkdirSync(join(bundle, 'evidence'), { recursive: true })
   writeFileSync(join(bundle, 'evidence', 'runtime-receipt.json'), `{"releaseId":"release-test","photo":{"version":"v1","sha256":"${'a'.repeat(64)}"}}\n`)
-  for (const image of ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']) writeFileSync(join(bundle, 'images', `${image}.tar`), `synthetic:${image}\n`)
+  for (const image of REEXPORT_IMAGE_NAMES) writeFileSync(join(bundle, 'images', `${image}.tar`), `synthetic:${image}\n`)
   for (const pathname of [publicKey, join(tlsDir, 'server.crt'), join(tlsDir, 'server.key'), join(tlsDir, 'ca.crt')]) writeFileSync(pathname, 'synthetic\n')
   mkdirSync(join(secretRoot, 'keycloak'), { recursive: true })
   writeFileSync(join(secretRoot, 'caddy.crt'), 'canary-caddy-certificate-v1\n')
@@ -350,7 +373,7 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   writeFileSync(join(secretRoot, 'keycloak', 'smtp-auth-user'), 'canary-keycloak-smtp-user-v1\n')
   writeFileSync(authAccounts, 'canary-keycloak-accounts-v1\n', { mode: 0o400 })
   chmodSync(authAccounts, 0o400)
-  const imageDigests = { backend: 'a'.repeat(64), frontend: 'a'.repeat(64), keycloak: 'b'.repeat(64), caddy: 'a'.repeat(64), postgres: 'a'.repeat(64), redis: 'a'.repeat(64), seaweedfs: 'a'.repeat(64) }
+  const imageDigests = Object.fromEntries(REEXPORT_IMAGE_NAMES.map((name) => [name, createHash('sha256').update(reexportConfig(name)).digest('hex')]))
   const imageVariables = { backend: 'HR_AXIS_BACKEND_IMAGE', frontend: 'HR_AXIS_FRONTEND_IMAGE', keycloak: 'KEYCLOAK_IMAGE', caddy: 'CADDY_IMAGE', postgres: 'POSTGRES_IMAGE', redis: 'REDIS_IMAGE', seaweedfs: 'SEAWEEDFS_IMAGE' }
   writeFileSync(envFile, [
     'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', 'HR_AXIS_RELEASE_ID=release-test', 'HR_AXIS_PUBLIC_HOST=onprem.example.invalid',
@@ -362,9 +385,21 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const preflightFixture = readFileSync(join(operationDir, 'preflight.sh'), 'utf8')
     .replace('"services":{"object-storage":{}}', '"services":{"object-storage":{"labels":{"com.hr-axis.project":"hr-axis-onprem-core","com.hr-axis.release-id":"release-test","com.hr-axis.data-class":"synthetic"}}}')
   executable(join(operations, 'preflight.sh'), preflightFixture)
-  const digest = `sha256:${imageDigests.backend}`
+  for (const name of REEXPORT_IMAGE_NAMES) {
+    writeDockerSaveArchive(validReexportArchives[name], {
+      configBytes: reexportConfig(name),
+      repoTags: [`registry.example/${name}:synthetic`],
+    })
+  }
+  writeDockerSaveArchive(wrongIdReexportArchive, { configBytes: Buffer.from('{"architecture":"amd64","config":{"Env":["wrong"]}}\n') })
+  writeDockerSaveArchive(wrongTagReexportArchive, { configBytes: REEXPORT_CONFIG, repoTags: ['registry.example/wrong:synthetic'] })
+  writeDockerSaveArchive(missingTagReexportArchive, { configBytes: REEXPORT_CONFIG, repoTags: [] })
+  writeFileSync(malformedReexportArchive, 'not a docker archive\n')
+  writeDockerSaveArchive(tamperedReexportArchive, { configBytes: REEXPORT_CONFIG, tampered: true })
   const records = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
     .map((name) => `${name}|images/${name}.tar|registry.example/${name}:synthetic|sha256:${imageDigests[name]}`).join('\n')
+  const installRecords = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
+    .map((name) => `${name}|images/${name}.tar|sha256:${imageDigests[name]}|registry.example/${name}:synthetic`).join('\n')
   const renderedSecrets = [
     `caddy_tls_certificate\t${shellPath(join(secretRoot, 'caddy.crt'))}`,
     `caddy_tls_private_key\t${shellPath(join(secretRoot, 'caddy.key'))}`,
@@ -380,6 +415,7 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   executable(join(fakeBin, 'node'), [
     '#!/bin/sh',
     `printf '%s\\n' "$*" >> '${shellPath(nodeLog)}'`,
+    `[ "$1" = "--input-type=module" ] && exec '${shellPath(process.execPath)}' "$@"`,
     '[ "$1" = "--version" ] && { echo v20.11.0; exit 0; }',
     `case "$*" in *verify*) case "$*" in *bbbbbbbbbbbb*) exit 9;; esac; [ -f '${shellPath(mode)}' ] && exit 9 || exit 0;; esac`,
     `case "$*" in *Object.keys*services*) exit 0;; esac`,
@@ -387,7 +423,12 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
     `case "$*" in *keycloak_synthetic_accounts*) if [ -f '${shellPath(missingAccountsSecretMode)}' ]; then ${renderedSecrets.filter((line) => !line.startsWith('keycloak_synthetic_accounts\t')).map((line) => `printf '%s\\n' '${line}'`).join('; ')}; elif [ -f '${shellPath(wrongAccountsSecretTypeMode)}' ]; then ${renderedSecrets.filter((line) => !line.startsWith('keycloak_synthetic_accounts\t')).map((line) => `printf '%s\\n' '${line}'`).join('; ')}; printf '%s\\n' 'keycloak_synthetic_accounts'; else ${renderedSecrets.map((line) => `printf '%s\\n' '${line}'`).join('; ')}; fi; exit 0;; esac`,
     'case "$*" in *JSON.parse*) cat >/dev/null; exit 0;; esac',
     `case "$1" in *onprem-keycloak-auth-proof.mjs) echo '{"dataClass":"synthetic","personas":{"count":5},"scopeAuthorization":{"crossScopeDenied":true,"deniedActionWriteDelta":0}}'; exit 0;; esac`,
-    `[ "$1" = "-" ] && { cat >/dev/null; printf '%s\\n' '${records}'; }`,
+    `[ "$1" = "-" ] && { script=$(cat); case "$script" in *image.repoTag*) printf '%s\\n' '${installRecords}';; *) printf '%s\\n' '${records}';; esac; }`,
+  ].join('\n') + '\n')
+  executable(join(fakeBin, 'mktemp'), [
+    '#!/bin/sh',
+    `if [ "$1" = "-d" ] && [ "$2" = "/tmp/hr-axis-offline-image.XXXXXX" ]; then mkdir -p '${shellPath(reexportTempDir)}'; chmod 700 '${shellPath(reexportTempDir)}'; printf '%s\\n' '${shellPath(reexportTempDir)}'; exit 0; fi`,
+    'exec /usr/bin/mktemp "$@"',
   ].join('\n') + '\n')
   executable(join(fakeBin, 'uname'), '#!/bin/sh\necho Linux\n')
   executable(join(fakeBin, 'id'), '#!/bin/sh\n[ "$1" = "-u" ] && echo 0\n')
@@ -441,25 +482,33 @@ exit 0
     '#!/bin/sh', `printf '%s\\n' "$*" >> '${shellPath(log)}'`,
     'case "$1" in',
     'version) echo 27.0.0; exit 0;;',
-    `image) echo IMAGE >> '${shellPath(log)}'; if [ -f '${shellPath(idMode)}' ]; then echo 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'; else echo "$5"; fi; exit 0;;`,
+    `image) echo IMAGE >> '${shellPath(log)}'; case "$2" in inspect) if [ -f '${shellPath(idMode)}' ]; then echo 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'; else echo "$5"; fi; exit 0;; save) echo SAVE >> '${shellPath(log)}'; reexport_case=missing; [ -f '${shellPath(reexportMode)}' ] && reexport_case=$(cat '${shellPath(reexportMode)}'); case "$reexport_case" in valid|signal) image_key=\${5##*/}; image_key=\${image_key%:*}; cp '${shellPath(validReexportRoot)}'/"\$image_key.tar" "$4"; [ "$reexport_case" = signal ] && sleep 30;; wrong-id) cp '${shellPath(wrongIdReexportArchive)}' "$4";; wrong-tag) cp '${shellPath(wrongTagReexportArchive)}' "$4";; missing-tag) cp '${shellPath(missingTagReexportArchive)}' "$4";; malformed|verifier-failure) cp '${shellPath(malformedReexportArchive)}' "$4";; tampered) cp '${shellPath(tamperedReexportArchive)}' "$4";; save-failure) exit 19;; esac; exit 0;; esac; exit 0;;`,
     `load) echo LOAD >> '${shellPath(log)}'; exit 0;;`,
     'ps) echo container-id; exit 0;;',
     'network) case "$2" in ls) echo network-id;; inspect) case "$*" in *Internal*) echo true;; *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
     'volume) case "$2" in ls) echo volume-id;; inspect) case "$*" in *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
-    `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; else echo "keycloak|sha256:${'b'.repeat(64)}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *json*) case "$2" in caddy-id) echo '{"HostConfig":{"HostPort":null,"PortBindings":{"443/tcp":[{"HostPort":"443"}]}},"NetworkSettings":{"Ports":{"443/tcp":[{"HostPort":"443"}]}}}';; *) echo '{"HostConfig":{},"NetworkSettings":{"Ports":{}}}';; esac;; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
+    `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; else echo "keycloak|sha256:${imageDigests.keycloak}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *json*) case "$2" in caddy-id) echo '{"HostConfig":{"HostPort":null,"PortBindings":{"443/tcp":[{"HostPort":"443"}]}},"NetworkSettings":{"Ports":{"443/tcp":[{"HostPort":"443"}]}}}';; *) echo '{"HostConfig":{},"NetworkSettings":{"Ports":{}}}';; esac;; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
     `exec) case "$2" in postgres-id) echo t;; redis-id) echo PONG;; esac; exit 0;;`,
     `compose) case "$*" in *version*) [ -f '${shellPath(composeVersionFile)}' ] && cat '${shellPath(composeVersionFile)}' || echo 2.30.0; exit 0;; *' ps -q caddy'*) echo caddy-id; exit 0;; *' ps -q frontend'*) echo frontend-id; exit 0;; *' ps -q api'*) echo api-id; exit 0;; *' ps -q worker'*) echo worker-id; exit 0;; *' ps -q postgres'*) echo postgres-id; exit 0;; *' ps -q redis'*) echo redis-id; exit 0;; *' ps -q keycloak'*) echo keycloak-id; exit 0;; *' ps -q object-storage'*) echo object-storage-id; exit 0;; *'config --format json'*) case "$*" in *'--profile *'*'config --format json'*) echo '{"name":"hr-axis-onprem-core","release":"release-test","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; *) echo '{"name":"hr-axis-onprem-core","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; esac; exit 0;; *'config --quiet'*) exit 0;; *'up --pull never'*|*'run --pull never'*) echo MUTATE >> '${shellPath(log)}'; echo '{"migrationTreeDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'; exit 0;; esac;;`,
     'esac', 'exit 0',
   ].join('\n') + '\n')
-  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, legacyPhotoIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
+  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, reexportMode, reexportTempDir, reexportArchiveRoot, validReexportRoot, validReexportArchives, wrongIdReexportArchive, wrongTagReexportArchive, missingTagReexportArchive, malformedReexportArchive, tamperedReexportArchive, imageDigests, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, legacyPhotoIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
 }
 
 const VALID_FINGERPRINT = 'a'.repeat(64)
 const SMOKE_TIMEOUT_MS = process.platform === 'win32' ? 120_000 : 45_000
 
+function installArgs(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
+  return [shellPath(join(operationDir, 'install.sh')), '--bundle-root', shellPath(bundleRoot), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', fingerprint, '--env-file', shellPath(fixture.envFile)]
+}
 function runInstall(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
-  return spawnSync(POSIX_SHELL, [shellPath(join(operationDir, 'install.sh')), '--bundle-root', shellPath(bundleRoot), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', fingerprint, '--env-file', shellPath(fixture.envFile)], {
+  return spawnSync(POSIX_SHELL, installArgs(fixture, fingerprint, bundleRoot), {
     encoding: 'utf8', env: shellEnv(fixture),
+  })
+}
+function runInstallBounded(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
+  return spawnSync(POSIX_SHELL, installArgs(fixture, fingerprint, bundleRoot), {
+    encoding: 'utf8', env: shellEnv(fixture), timeout: 30_000,
   })
 }
 function runSmoke(fixture, receipt) {
@@ -482,6 +531,49 @@ function regexLiteral(value) {
 }
 function stubPreflight(fixture) {
   executable(join(fixture.bundle, 'operations', 'preflight.sh'), '#!/bin/sh\nexit 0\n')
+}
+
+const REEXPORT_CONFIG = Buffer.from('{"architecture":"amd64","config":{}}\n')
+const REEXPORT_CONFIG_ID = createHash('sha256').update(REEXPORT_CONFIG).digest('hex')
+const REEXPORT_IMAGE_NAMES = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
+
+function reexportConfig(name) {
+  if (name === 'backend') return REEXPORT_CONFIG
+  return Buffer.from(`${JSON.stringify({ architecture: 'amd64', config: {}, synthetic: name })}\n`)
+}
+
+function tarEntry(name, body, type = '0') {
+  const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body)
+  const header = Buffer.alloc(512)
+  header.write(name, 0, 100, 'utf8')
+  header.write('0000644\0', 100, 8, 'ascii')
+  header.write('0000000\0', 108, 8, 'ascii')
+  header.write('0000000\0', 116, 8, 'ascii')
+  header.write(bytes.length.toString(8).padStart(11, '0') + '\0', 124, 12, 'ascii')
+  header.write('00000000000\0', 136, 12, 'ascii')
+  header.fill(0x20, 148, 156)
+  header[156] = type.charCodeAt(0)
+  header.write('ustar\0', 257, 6, 'ascii')
+  header.write('00', 263, 2, 'ascii')
+  let checksum = 0
+  for (const byte of header) checksum += byte
+  header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 8, 'ascii')
+  const padding = Buffer.alloc((512 - (bytes.length % 512)) % 512)
+  return Buffer.concat([header, bytes, padding])
+}
+
+function writeDockerSaveArchive(pathname, { repoTags = ['registry.example/backend:synthetic'], configBytes = REEXPORT_CONFIG, tampered = false } = {}) {
+  const configId = createHash('sha256').update(configBytes).digest('hex')
+  const manifest = Buffer.from(JSON.stringify([{ Config: `${configId}.json`, RepoTags: repoTags, Layers: ['layer.tar'] }]))
+  const archive = Buffer.concat([
+    tarEntry('manifest.json', manifest),
+    tarEntry(`${configId}.json`, configBytes),
+    tarEntry('layer.tar', Buffer.from('synthetic-layer\n')),
+    Buffer.alloc(1024),
+  ])
+  if (tampered) archive[archive.length - 1] = 1
+  writeFileSync(pathname, archive)
+  return `sha256:${configId}`
 }
 
 test('smoke derives exact rendered secret sources and ignores legacy env aliases', (t) => {
@@ -746,6 +838,108 @@ test('fake commands prove verification failure causes zero Docker mutation and i
     const loadIndexes = lines.map((line, index) => line === 'LOAD' ? index : -1).filter((index) => index >= 0)
     assert.ok(firstMutation > loadIndexes.at(-1), 'Compose mutation follows all image loads')
   } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('Docker 29 identity fallback verifies the signed RepoTag/archive and fails closed', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('bundled Node archive verifier requires native Linux/WSL path semantics')
+    return
+  }
+  if (!existsSync('/bin/sh')) {
+    t.skip('behavioral POSIX harness requires a POSIX shell')
+    return
+  }
+  const cases = [
+    ['valid re-export', 'valid', true, true],
+    ['wrong config identity', 'wrong-id', false, true],
+    ['wrong RepoTag', 'wrong-tag', false, true],
+    ['missing RepoTag', 'missing-tag', false, true],
+    ['malformed archive', 'malformed', false, true],
+    ['tampered archive', 'tampered', false, true],
+    ['save failure', 'save-failure', false, false],
+    ['verifier failure', 'verifier-failure', false, true],
+  ]
+  for (const [label, mode, expectedPass, verifierExpected] of cases) {
+    const fixture = makeFixture()
+    try {
+      writeFileSync(fixture.idMode, 'docker-29-manifest-id\n')
+      writeFileSync(fixture.reexportMode, `${mode}\n`)
+      const result = runInstallBounded(fixture)
+      if (expectedPass) {
+        assert.equal(result.status, 0, `${label}: ${result.stdout}\n${result.stderr}\n${commandLog(fixture)}`)
+      } else {
+        assert.notEqual(result.status, 0, label)
+        assert.doesNotMatch(commandLog(fixture), /MUTATE/, `${label}: Compose must not mutate after failed identity proof`)
+      }
+      const lines = commandLog(fixture).split(/\r?\n/).filter(Boolean)
+      assert.equal(lines.filter((line) => line === 'LOAD').length, expectedPass ? 7 : 1, `${label}: load count`)
+      const saveCommands = lines.filter((line) => line.startsWith('image save --output'))
+      assert.equal(saveCommands.length, expectedPass ? 7 : 1, `${label}: re-export count`)
+      assert.deepEqual(
+        saveCommands.map((line) => line.slice(line.lastIndexOf(' ') + 1)),
+        expectedPass ? REEXPORT_IMAGE_NAMES.map((name) => `registry.example/${name}:synthetic`) : ['registry.example/backend:synthetic'],
+        `${label}: exact signed RepoTags are re-exported`,
+      )
+      if (expectedPass) {
+        assert.equal(lines.filter((line) => line === 'MUTATE').length, 1, `${label}: Compose mutation count`)
+        assert.ok(lines.indexOf('MUTATE') > lines.indexOf('SAVE'), `${label}: Compose mutation follows re-export`)
+        const loadIndexes = lines.map((line, index) => line === 'LOAD' ? index : -1).filter((index) => index >= 0)
+        assert.equal(loadIndexes.length, 7, `${label}: all seven images load`)
+        assert.ok(lines.indexOf('MUTATE') > Math.max(...loadIndexes), `${label}: Compose mutation follows all image loads`)
+      }
+      if (verifierExpected) {
+        const verifierCalls = nodeLog(fixture).split(/\r?\n/).filter((line) => line.includes('--input-type=module'))
+        assert.equal(verifierCalls.length, expectedPass ? 7 : 1, `${label}: bundled archive verifier invocation count`)
+        for (const [index, verifierCall] of verifierCalls.entries()) {
+          assert.match(verifierCall, /onprem-offline-archive\.mjs/)
+          const imageName = expectedPass ? REEXPORT_IMAGE_NAMES[index] : 'backend'
+          assert.match(verifierCall, new RegExp(`registry\\.example/${imageName}:synthetic sha256:${fixture.imageDigests[imageName]}`), `${label}: verifier receives signed RepoTag/config ID for ${imageName}`)
+        }
+      }
+      assert.equal(existsSync(fixture.reexportTempDir), false, `${label}: temporary re-export material is cleaned`)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('Docker 29 identity fallback cleans its temporary archive on TERM', async (t) => {
+  if (process.platform === 'win32' || !existsSync('/bin/sh')) {
+    t.skip('signal cleanup proof requires a native POSIX process group')
+    return
+  }
+  const fixture = makeFixture()
+  let child
+  try {
+    stubPreflight(fixture)
+    writeFileSync(fixture.idMode, 'docker-29-manifest-id\n')
+    writeFileSync(fixture.reexportMode, 'signal\n')
+    child = spawn(POSIX_SHELL, installArgs(fixture), { env: shellEnv(fixture), detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+    const tempCreated = await new Promise((resolveCreated) => {
+      const started = Date.now()
+      const poll = () => {
+        if (existsSync(fixture.reexportTempDir)) return resolveCreated(true)
+        if (Date.now() - started > 5_000) return resolveCreated(false)
+        setTimeout(poll, 25)
+      }
+      poll()
+    })
+    assert.equal(tempCreated, true, 'TERM proof reaches the temporary archive phase')
+    try { process.kill(-child.pid, 'SIGTERM') } catch (error) { if (error?.code !== 'ESRCH') throw error }
+    const outcome = await new Promise((resolveOutcome) => {
+      child.once('close', (code, signal) => resolveOutcome({ code, signal }))
+      child.once('error', (error) => resolveOutcome({ error }))
+    })
+    assert.equal(outcome.error, undefined, `TERM proof child process failed: ${outcome.error?.message}`)
+    assert.notEqual(outcome.code, 0, 'TERM must interrupt installation')
+    assert.doesNotMatch(commandLog(fixture), /MUTATE/, 'TERM must interrupt before Compose mutation')
+    assert.equal(existsSync(fixture.reexportTempDir), false, 'TERM cleanup removes temporary re-export material')
+  } finally {
+    if (child && child.exitCode === null) {
+      try { process.kill(-child.pid, 'SIGKILL') } catch { /* process already exited */ }
+    }
     rmSync(fixture.root, { recursive: true, force: true })
   }
 })
