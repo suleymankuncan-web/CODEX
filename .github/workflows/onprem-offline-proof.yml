@@ -730,7 +730,7 @@ jobs:
           sudo iptables -A "$docker_egress_chain" -j RETURN
           sudo iptables -I DOCKER-USER 1 -j "$docker_egress_chain"
           sudo iptables -I FORWARD 1 -j "$docker_egress_chain"
-          docker_egress_rules="$(sudo_bounded "docker-egress-rules" iptables -S "$docker_egress_chain")"
+          docker_egress_rules="$(sudo iptables -S "$docker_egress_chain")"
           test "$(printf '%s\n' "$docker_egress_rules" | wc -l)" -eq 9
           conntrack_accept_rule="$(printf '%s\n' "$docker_egress_rules" | sed -n '2p')"
           case "$conntrack_accept_rule" in
@@ -1191,7 +1191,7 @@ jobs:
           docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
           host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS
-          docker_egress_rules="$(sudo iptables -S "$docker_egress_chain")"
+          docker_egress_rules="$(sudo_bounded "docker-egress-rules" iptables -S "$docker_egress_chain")"
           reject_rule_line=6
           reject_rule_text="-A $docker_egress_chain -i br+ ! -o br+ -m conntrack --ctstate NEW -j REJECT --reject-with icmp-port-unreachable"
           printf '%s\n' "$docker_egress_rules" | sed -n '7p' | grep -Fqx -- "$reject_rule_text"
