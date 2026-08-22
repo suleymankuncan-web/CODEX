@@ -960,25 +960,54 @@ jobs:
           }
           run_bounded_group() {
             local bounded_label="$1" timeout_seconds="$2" kill_after_seconds="$3"
-            local bounded_status pid watchdog_pid
+            local bounded_status pid watchdog_pid group_pid_file process_group_id
             shift 3
-            "$SETSID_BIN" sudo env "PATH=$OPERATOR_PATH" timeout --signal=TERM --kill-after="${kill_after_seconds}s" "${timeout_seconds}s" "$@" &
+            group_pid_file="$(mktemp "$RUNNER_TEMP/offline-process-group.XXXXXX")"
+            rm -f -- "$group_pid_file"
+            "$SETSID_BIN" sh -c '
+              pid_file="$1"
+              timeout_seconds="$2"
+              kill_after_seconds="$3"
+              operator_path="$4"
+              shift 4
+              printf "%s\n" "$$" > "$pid_file"
+              exec sudo env "PATH=$operator_path" timeout --signal=TERM --kill-after="${kill_after_seconds}s" "${timeout_seconds}s" "$@"
+            ' offline-process-group "$group_pid_file" "$timeout_seconds" "$kill_after_seconds" "$OPERATOR_PATH" "$@" &
             pid=$!
-            (
-              sleep "$timeout_seconds"
-              printf 'offline process-group watchdog timeout label=%s timeout_seconds=%s\n' "$bounded_label" "$timeout_seconds" >&2
-              kill -TERM -- "-$pid" 2>/dev/null || true
-              sleep "$kill_after_seconds"
-              kill -KILL -- "-$pid" 2>/dev/null || true
-            ) &
-            watchdog_pid=$!
+            process_group_id=''
+            for _ in {1..100}; do
+              if [ -s "$group_pid_file" ]; then
+                process_group_id="$(cat "$group_pid_file" 2>/dev/null || true)"
+                break
+              fi
+              if ! kill -0 "$pid" 2>/dev/null; then
+                break
+              fi
+              sleep 0.1
+            done
+            rm -f -- "$group_pid_file"
+            watchdog_pid=''
+            if [[ "$process_group_id" =~ ^[0-9]+$ ]]; then
+              (
+                sleep "$timeout_seconds"
+                printf 'offline process-group watchdog timeout label=%s timeout_seconds=%s process_group=%s\n' "$bounded_label" "$timeout_seconds" "$process_group_id" >&2
+                kill -TERM -- "-$process_group_id" 2>/dev/null || true
+                sleep "$kill_after_seconds"
+                kill -KILL -- "-$process_group_id" 2>/dev/null || true
+              ) &
+              watchdog_pid=$!
+            else
+              printf 'offline process-group watchdog unavailable label=%s pid=%s\n' "$bounded_label" "$pid" >&2
+            fi
             if wait "$pid"; then
               bounded_status=0
             else
               bounded_status=$?
             fi
-            kill "$watchdog_pid" 2>/dev/null || true
-            wait "$watchdog_pid" 2>/dev/null || true
+            if [ -n "$watchdog_pid" ]; then
+              kill "$watchdog_pid" 2>/dev/null || true
+              wait "$watchdog_pid" 2>/dev/null || true
+            fi
             return "$bounded_status"
           }
           sudo_bounded() {
