@@ -226,6 +226,9 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /run_bounded_group "\$bounded_label" "\$DIRECT_TIMEOUT_SECONDS" "\$DIRECT_KILL_AFTER_SECONDS"/)
   assert.match(rehearsal, /run_bounded_group "\$operator_name" "\$OPERATOR_TIMEOUT_SECONDS" "\$OPERATOR_KILL_AFTER_SECONDS"/)
   assert.match(rehearsal, /offline operator failure script=/)
+  assert.match(rehearsal, /sudo_bounded "verify-bootstrap-\$release_id" "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
+  assert.match(rehearsal, /sudo_bounded "verify-bundle-\$release_id" "\$NODE_BIN" "\$root\/operations\/onprem-offline-bundle\.mjs" verify/)
+  assert.doesNotMatch(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
   assert.match(rehearsal, /trap 'if \[ -n "\$\{offline_heartbeat_pid:-\}" \]; then kill "\$offline_heartbeat_pid"/)
   for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {
     assert.equal((rehearsal.match(new RegExp(`offline phase=${phase}`, 'g')) ?? []).length, 1, `${phase} phase marker must be unique`)
@@ -281,7 +284,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /operations\/rollback\.sh"[^\n]*--proof-compose "\$PREVIOUS_BUNDLE_ROOT\/deployment\/proof\.compose\.yaml"/)
   assert.match(rehearsal, /--compose "\$BUNDLE_ROOT\/deployment\/compose\.yaml" --compose "\$BUNDLE_ROOT\/deployment\/compose\.photo-proof\.yaml" --compose "\$BUNDLE_ROOT\/deployment\/photo-compose\.yaml" --compose "\$BUNDLE_ROOT\/deployment\/proof\.compose\.yaml"/)
   assert.match(rehearsal, /no repo|no source|GITHUB_WORKSPACE.*\.git|repo.*dirs/i)
-  const bootstrap = rehearsal.indexOf('sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify')
+  const bootstrap = rehearsal.indexOf('sudo_bounded "verify-bootstrap-$release_id" "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify')
   const verify = rehearsal.search(/offline-bundle\.mjs["']?\s+verify/)
   const install = rehearsal.indexOf('operations/install.sh')
   assert.ok(bootstrap >= 0 && verify > bootstrap && install > verify, 'external bootstrap and bundle verification must precede bundled install/docker load')

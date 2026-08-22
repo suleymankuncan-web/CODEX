@@ -1064,8 +1064,8 @@ jobs:
           verify_release_bundle() {
             local root="$1" release_id="$2"
             assert_release_tree "$root"
-            sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$root" --release-id "$release_id" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
-            sudo -- "$NODE_BIN" "$root/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$root" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+            sudo_bounded "verify-bootstrap-$release_id" "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$root" --release-id "$release_id" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+            sudo_bounded "verify-bundle-$release_id" "$NODE_BIN" "$root/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$root" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
           }
           materialize_transition_bundle() {
             local release="$1" target="$2" release_id="$3" archive materialization_root
