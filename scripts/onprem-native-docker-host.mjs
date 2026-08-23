@@ -319,6 +319,24 @@ function resetMountFailure(kind, target, classification) {
   fail(`reset mount topology rejected for ${kind} ${target}: ${classification}`)
 }
 
+// The disposable data directory may be presented by findmnt as a bind mount
+// whose SOURCE names the backing device followed by the exact source subtree.
+// Keep this check pure and intentionally literal: no trimming, normalization,
+// case folding, or SOURCE parsing is permitted.  The caller separately proves
+// that this is the sole direct match and that no descendants exist.
+const NATIVE_DEVICE_SOURCE = /^\/dev\/[A-Za-z0-9][A-Za-z0-9._+-]*(?:\/[A-Za-z0-9][A-Za-z0-9._+-]*)*$/
+
+export function isExactDockerDataSelfBind(rootMount, directMount) {
+  if (!object(rootMount) || !object(directMount)) return false
+  const target = hostContract.dockerDataRoot
+  if (rootMount.target !== '/' || rootMount.fsroot !== '/' || rootMount.fstype !== 'ext4') return false
+  if (typeof rootMount.source !== 'string' || !NATIVE_DEVICE_SOURCE.test(rootMount.source)) return false
+  if (directMount.target !== target) return false
+  if (directMount.source !== `${rootMount.source}[${target}]`) return false
+  if (directMount.fstype !== rootMount.fstype || directMount.fsroot !== target) return false
+  return true
+}
+
 function parseResetMountTopology(text) {
   let parsed
   try { parsed = JSON.parse(text) } catch { fail('reset mount topology cannot be proved') }
@@ -368,7 +386,8 @@ function classifyResetMounts(commandRunner) {
   const states = []
   for (const [kind, target] of Object.entries(destructiveTargets)) {
     const matches = mounts.filter((mount) => mount.target === target || mount.target.startsWith(`${target}/`))
-    const direct = matches.find((mount) => mount.target === target)
+    const directMatches = matches.filter((mount) => mount.target === target)
+    const direct = directMatches[0]
     if (matches.length === 0) {
       states.push(Object.freeze({ kind, path: target, classification: 'absent', mounted: false, descendants: 0 }))
       continue
@@ -378,11 +397,13 @@ function classifyResetMounts(commandRunner) {
       continue
     }
     let classification = 'allowed-direct-self-bind'
-    if (!direct) classification = 'descendant-only-mount'
+    if (directMatches.length > 1) classification = 'duplicate-direct-mount'
+    else if (!direct) classification = 'descendant-only-mount'
     else if (matches.length !== 1) classification = 'descendant-mount'
-    else if (!root?.source || direct.source !== root.source) classification = 'foreign-source'
-    else if (!direct.fstype || direct.fstype.toLowerCase().includes('overlay')) classification = 'overlay-filesystem'
-    else if (!direct.fsroot || !path.isAbsolute(direct.fsroot) || path.normalize(direct.fsroot) !== target) classification = 'fsroot-mismatch'
+    else if (direct.fsroot !== target || root?.fsroot !== '/') classification = 'fsroot-mismatch'
+    else if (root?.fstype?.toLowerCase?.().includes('overlay') || direct.fstype?.toLowerCase?.().includes('overlay')) classification = 'overlay-filesystem'
+    else if (root?.fstype !== 'ext4' || direct.fstype !== root?.fstype) classification = 'filesystem-type-mismatch'
+    else if (!isExactDockerDataSelfBind(root, direct)) classification = 'bind-source-notation-mismatch'
     states.push(Object.freeze({ kind, path: target, classification, mounted: true, descendants: Math.max(0, matches.length - (direct ? 1 : 0)) }))
   }
   return states

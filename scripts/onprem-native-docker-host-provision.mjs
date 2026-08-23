@@ -6,6 +6,7 @@ import {
   expectedNativeDockerHostMarker,
   hostContract,
   inspectDedicatedNativeDockerHost,
+  isExactDockerDataSelfBind,
   validateCanonicalDestructiveTarget,
 } from './onprem-native-docker-host.mjs'
 
@@ -87,9 +88,27 @@ const LEGACY_SHAPES = Object.freeze([
   // pidfile under /var/run rather than the newer nested pidfile path.
   Object.freeze({ ...LEGACY_COMMON_FLAGS, '--pidfile': '/var/run/hr-axis-onprem-rehearsal-docker.pid' }),
 ])
+const MOUNT_FAILURE_CLASSIFICATIONS = Object.freeze([
+  'target-not-fixed',
+  'duplicate-direct-mount',
+  'descendant-mount',
+  'bind-source-notation-mismatch',
+  'filesystem-type-mismatch',
+  'overlay-filesystem',
+  'fsroot-mismatch',
+  'mount-state-unreadable',
+  'unmount-failed',
+  'self-bind-remains-mounted',
+])
 
 function fail(message) {
   throw new Error(message)
+}
+
+function failMount(classification, message) {
+  const error = new Error(message)
+  error.mountClassification = MOUNT_FAILURE_CLASSIFICATIONS.includes(classification) ? classification : 'mount-state-unreadable'
+  throw error
 }
 
 function object(value) {
@@ -399,24 +418,67 @@ function mountIdentity(commandRunner, target) {
   return mounts.find((mount) => mount.target === target) ?? null
 }
 
+function sameMountFields(left, right) {
+  return ['target', 'source', 'fstype', 'fsroot'].every((field) => left?.[field] === right?.[field])
+}
+
+function requirePostUnmountClear(commandRunner, target) {
+  let targetView
+  let tree
+  try {
+    targetView = mountIdentity(commandRunner, target)
+    tree = findMounts(commandRunner, '/', true)
+  } catch (error) {
+    if (MOUNT_FAILURE_CLASSIFICATIONS.includes(error?.mountClassification)) throw error
+    failMount('mount-state-unreadable', 'fixed target mount state cannot be proved after unmount')
+  }
+  const directMatches = tree.filter((mount) => mount.target === target)
+  const descendants = tree.filter((mount) => mount.target !== target && mount.target.startsWith(`${target}/`))
+  if (!targetView && directMatches.length !== 0) failMount('mount-state-unreadable', 'fixed target mount state cannot be proved after unmount')
+  if (targetView && (directMatches.length !== 1 || !sameMountFields(targetView, directMatches[0]))) {
+    failMount('mount-state-unreadable', 'fixed target mount state cannot be proved after unmount')
+  }
+  if (descendants.length > 0) {
+    failMount('descendant-mount', 'fixed target has an unapproved nested mount after unmount')
+  }
+  if (targetView) failMount('self-bind-remains-mounted', 'fixed target self-bind remains mounted')
+  return true
+}
+
 export function proveAndUnmountDirectSelfBind(commandRunner, target = hostContract.dockerDataRoot) {
-  const direct = mountIdentity(commandRunner, target)
-  const all = findMounts(commandRunner, '/', true)
+  if (target !== hostContract.dockerDataRoot) failMount('target-not-fixed', 'mount target is not the fixed Docker data root')
+  let targetMount
+  let all
+  try {
+    targetMount = mountIdentity(commandRunner, target)
+    all = findMounts(commandRunner, '/', true)
+  } catch (error) {
+    if (MOUNT_FAILURE_CLASSIFICATIONS.includes(error?.mountClassification)) throw error
+    failMount('mount-state-unreadable', 'fixed target mount state cannot be proved')
+  }
+  const directMatches = all.filter((mount) => mount.target === target)
+  const direct = directMatches[0] ?? targetMount
   const descendants = all.filter((mount) => mount.target === target || mount.target.startsWith(`${target}/`))
+  const targetAndTreeDisagree = (targetMount && directMatches.length === 0) || (!targetMount && directMatches.length > 0) || (targetMount && directMatches.length > 0 && ['target', 'source', 'fstype', 'fsroot'].some((field) => targetMount[field] !== directMatches[0][field]))
+  if (targetAndTreeDisagree) failMount('mount-state-unreadable', 'fixed target mount state cannot be proved consistently')
+  if (directMatches.length > 1) failMount('duplicate-direct-mount', 'fixed target has duplicate direct mounts')
   if (!direct) {
-    if (descendants.length > 0) fail('fixed target has an unapproved nested mount')
+    if (descendants.length > 0) failMount('descendant-mount', 'fixed target has an unapproved nested mount')
     return false
   }
-  if (descendants.some((mount) => mount.target !== target)) fail('fixed target has an unapproved nested mount')
+  if (directMatches.length !== 1 || descendants.some((mount) => mount.target !== target)) failMount('descendant-mount', 'fixed target has an unapproved nested mount')
   const root = all.find((mount) => mount.target === '/')
-  if (!root || !direct.source || !root.source || direct.source !== root.source || !direct.fstype || direct.fstype.toLowerCase() === 'overlay' || !direct.fsroot || normalizeLegacyPath(direct.fsroot) !== target) {
-    fail('fixed target mount is not the exact direct self-bind')
+  if (direct.fsroot !== target || root?.fsroot !== '/') failMount('fsroot-mismatch', 'fixed target mount is not the exact direct self-bind')
+  if (root?.fstype?.toLowerCase?.().includes('overlay') || direct.fstype?.toLowerCase?.().includes('overlay')) failMount('overlay-filesystem', 'fixed target mount is not the exact direct self-bind')
+  if (root?.fstype !== 'ext4' || direct.fstype !== root?.fstype) failMount('filesystem-type-mismatch', 'fixed target mount is not the exact direct self-bind')
+  if (!isExactDockerDataSelfBind(root, direct)) failMount('bind-source-notation-mismatch', 'fixed target mount is not the exact direct self-bind')
+  try {
+    privileged(commandRunner, 'umount', ['--', target], {}, 'unmount direct self-bind')
+  } catch (error) {
+    if (MOUNT_FAILURE_CLASSIFICATIONS.includes(error?.mountClassification)) throw error
+    failMount('unmount-failed', 'fixed target self-bind unmount failed')
   }
-  privileged(commandRunner, 'umount', ['--', target], {}, 'unmount direct self-bind')
-  if (mountIdentity(commandRunner, target) || findMounts(commandRunner, '/', true).some((mount) => mount.target.startsWith(`${target}/`))) {
-    fail('direct self-bind remains mounted')
-  }
-  return true
+  return requirePostUnmountClear(commandRunner, target)
 }
 
 function fixedUnit(kind) {
@@ -602,7 +664,7 @@ function dockerEngineIdentity(commandRunner) {
   return { engineId, dockerRootDir: hostContract.dockerDataRoot }
 }
 
-function buildReceipt({ status, identity, initialUnits, finalUnits, actions, cleanup, inspect, fsApi, failureStage = null }) {
+function buildReceipt({ status, identity, initialUnits, finalUnits, actions, cleanup, inspect, fsApi, failureStage = null, failureClassification = null }) {
   const receipt = {
     schema: RECEIPT_SCHEMA,
     version: RECEIPT_VERSION,
@@ -643,6 +705,7 @@ function buildReceipt({ status, identity, initialUnits, finalUnits, actions, cle
       normalDockerDisabled: cleanup.normalDockerDisabled === true,
     },
     failureStage,
+    failureClassification: MOUNT_FAILURE_CLASSIFICATIONS.includes(failureClassification) ? failureClassification : null,
   }
   if (status === 'passed') receipt.inspect = { passed: true, inventory: inspect?.inventory ?? null }
   return receipt
@@ -747,7 +810,10 @@ export function provisionNativeDockerHost(options = {}) {
     if (stagingPrepared) {
       try { cleanProvisionStaging(commandRunner) } catch { /* preserve the original failure without exposing command output */ }
     }
-    const failure = buildReceipt({ status: 'failed', identity: identity ?? { platform: options.platform ?? process.platform, arch: options.arch ?? process.arch, release: { id: '', versionId: '' } }, initialUnits, finalUnits: finalUnitsForReceipt ?? error?.defaultUnits ?? null, actions, cleanup, inspect: null, fsApi, failureStage: stage })
+    const failureClassification = stage === 'mount-preflight' && MOUNT_FAILURE_CLASSIFICATIONS.includes(error?.mountClassification)
+      ? error.mountClassification
+      : null
+    const failure = buildReceipt({ status: 'failed', identity: identity ?? { platform: options.platform ?? process.platform, arch: options.arch ?? process.arch, release: { id: '', versionId: '' } }, initialUnits, finalUnits: finalUnitsForReceipt ?? error?.defaultUnits ?? null, actions, cleanup, inspect: null, fsApi, failureStage: stage, failureClassification })
     try { writeReceipt(fsApi, receiptPath, failure) } catch { /* receipt path may be unavailable; never expose command output */ }
     throw error
   }

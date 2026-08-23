@@ -99,10 +99,16 @@ function baseRunner({ record = [], mountMode = 'none', inspectOrder = [], disabl
     if (actualFile === 'ps') return { status: 0, stdout: '', stderr: '' }
     if (actualFile === 'findmnt') {
       if (mountMode === 'direct' && !unmounted && actualArgs.includes('--mountpoint') && actualArgs.at(-1) === hostContract.dockerDataRoot) {
-        return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: hostContract.dockerDataRoot, source: '/dev/vda1', fstype: 'ext4', fsroot: hostContract.dockerDataRoot }] }), stderr: '' }
+        return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: hostContract.dockerDataRoot, source: `/dev/sdf[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }] }), stderr: '' }
       }
       if (mountMode === 'foreign' && actualArgs.includes('--mountpoint') && actualArgs.at(-1) === hostContract.dockerDataRoot) {
-        return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: hostContract.dockerDataRoot, source: '/dev/vdb1', fstype: 'ext4', fsroot: '/foreign' }] }), stderr: '' }
+        return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: hostContract.dockerDataRoot, source: `/dev/vdb1[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }] }), stderr: '' }
+      }
+      if (mountMode === 'direct' && !unmounted && actualArgs.includes('--json') && actualArgs.includes('--submounts') && actualArgs.at(-1) === '/') {
+        return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: '/', source: '/dev/sdf', fstype: 'ext4', fsroot: '/' }, { target: hostContract.dockerDataRoot, source: `/dev/sdf[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }] }), stderr: '' }
+      }
+      if (mountMode === 'foreign' && actualArgs.includes('--json') && actualArgs.includes('--submounts') && actualArgs.at(-1) === '/') {
+        return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: '/', source: '/dev/sdf', fstype: 'ext4', fsroot: '/' }, { target: hostContract.dockerDataRoot, source: `/dev/vdb1[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }] }), stderr: '' }
       }
       if (mountMode === 'nested' && actualArgs.at(-1) === '/') {
         return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: '/', source: '/dev/vda1', fstype: 'ext4', fsroot: '/' }, { target: `${hostContract.dockerDataRoot}/nested`, source: '/dev/vdb1', fstype: 'ext4', fsroot: '/' }] }), stderr: '' }
@@ -171,6 +177,56 @@ function baseRunner({ record = [], mountMode = 'none', inspectOrder = [], disabl
   return { run, record, state, inspectOrder }
 }
 
+function mountVariantRunner(variant, record = []) {
+  const runner = baseRunner({ record, mountMode: 'direct' })
+  const originalRun = runner.run
+  let unmountSeen = false
+  const run = (file, args, options) => {
+    const executable = file === 'sudo' && args[0] === '-n' ? args[1] : file
+    const actualFile = executable.replace(/^.*\//, '')
+    const actualArgs = file === 'sudo' && args[0] === '-n' ? args.slice(2) : args
+    if (actualFile === 'umount') unmountSeen = true
+    const result = originalRun(file, args, options)
+    if (unmountSeen && ['post-target-present-full-absent', 'post-remains'].includes(variant) && actualFile === 'findmnt' && actualArgs.includes('--mountpoint')) {
+      return { status: 0, stdout: JSON.stringify({ filesystems: [{ target: hostContract.dockerDataRoot, source: `/dev/sdf[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }] }), stderr: '' }
+    }
+    if (actualFile !== 'findmnt' || result.status !== 0 || !result.stdout.trim()) return result
+    let parsed
+    try { parsed = JSON.parse(result.stdout) } catch { return result }
+    const mounts = parsed.filesystems
+    if (!Array.isArray(mounts)) return result
+    const root = mounts.find((mount) => mount.target === '/')
+    let direct = mounts.find((mount) => mount.target === hostContract.dockerDataRoot)
+    if (unmountSeen && actualArgs.at(-1) === '/' && ['post-target-absent-full-direct', 'post-remains'].includes(variant) && root && !direct) {
+      mounts.push({ target: hostContract.dockerDataRoot, source: `/dev/sdf[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot })
+      direct = mounts.find((mount) => mount.target === hostContract.dockerDataRoot)
+    }
+    if (unmountSeen && actualArgs.at(-1) === '/' && variant === 'post-descendant' && root && !direct) {
+      mounts.push({ target: `${hostContract.dockerDataRoot}/nested`, source: '/dev/sdf', fstype: 'ext4', fsroot: '/' })
+    }
+    if (!direct) return { ...result, stdout: JSON.stringify(parsed) }
+    if (variant === 'source-equality') direct.source = '/dev/sdf'
+    if (variant === 'source-suffix') direct.source = `${direct.source}/suffix`
+    if (variant === 'source-prefix') direct.source = `/prefix${direct.source}`
+    if (root && variant === 'root-bracket') root.source = '/dev/sdf[part]'
+    if (root && variant === 'root-whitespace') root.source = '/dev/sdf bad'
+    if (root && variant === 'root-non-device') root.source = 'tmpfs'
+    if (root && variant === 'root-fstype') root.fstype = 'xfs'
+    if (root && variant === 'root-overlay') root.fstype = 'overlay'
+    if (variant === 'direct-fstype') direct.fstype = 'xfs'
+    if (variant === 'overlay') direct.fstype = 'overlay'
+    if (root && variant === 'root-fsroot') root.fsroot = '/foreign'
+    if (variant === 'direct-fsroot') direct.fsroot = '/foreign'
+    if (variant === 'duplicate' && actualArgs.at(-1) === '/') mounts.push({ ...direct })
+    if (variant === 'descendant' && actualArgs.at(-1) === '/') mounts.push({ target: `${hostContract.dockerDataRoot}/nested`, source: '/dev/sdf', fstype: 'ext4', fsroot: '/' })
+    if (variant === 'disagree' && actualArgs.includes('--mountpoint')) direct.source = '/dev/sdf'
+    if (variant === 'disagree' && actualArgs.at(-1) === '/') direct.source = `/dev/vdb1[${hostContract.dockerDataRoot}]`
+    return { ...result, stdout: JSON.stringify(parsed) }
+  }
+  runner.run = run
+  return runner
+}
+
 test('CLI and Ubuntu identity are explicit', () => {
   assert.deepEqual(parseProvisionArguments(['--confirm-disposable-native-host', '--receipt', '/tmp/native-host.json']), {
     confirmDisposableNativeHost: true,
@@ -213,6 +269,94 @@ test('direct self-bind is the only mount accepted for unmount', () => {
   assert.ok(direct.inspectOrder.includes('umount'))
   assert.throws(() => proveAndUnmountDirectSelfBind(baseRunner({ mountMode: 'foreign' }).run), /exact direct self-bind/)
   assert.throws(() => proveAndUnmountDirectSelfBind(baseRunner({ mountMode: 'nested' }).run), /nested mount/)
+})
+
+test('provisioner rejects non-contract mount identity and records finite mount classification', () => {
+  const variants = [
+    ['source-equality', 'bind-source-notation-mismatch'],
+    ['source-suffix', 'bind-source-notation-mismatch'],
+    ['source-prefix', 'bind-source-notation-mismatch'],
+    ['root-bracket', 'bind-source-notation-mismatch'],
+    ['root-whitespace', 'bind-source-notation-mismatch'],
+    ['root-non-device', 'bind-source-notation-mismatch'],
+    ['root-fstype', 'filesystem-type-mismatch'],
+    ['direct-fstype', 'filesystem-type-mismatch'],
+    ['root-overlay', 'overlay-filesystem'],
+    ['overlay', 'overlay-filesystem'],
+    ['root-fsroot', 'fsroot-mismatch'],
+    ['direct-fsroot', 'fsroot-mismatch'],
+    ['duplicate', 'duplicate-direct-mount'],
+    ['descendant', 'descendant-mount'],
+    ['disagree', 'mount-state-unreadable'],
+  ]
+  for (const [variant, classification] of variants) {
+    const receiptPath = `/tmp/native-host-mount-${variant}.json`
+    const fsApi = fakeFs(receiptPath)
+    const record = []
+    const runner = mountVariantRunner(variant, record)
+    assert.throws(() => provisionNativeDockerHost({
+      confirmDisposableNativeHost: true,
+      receiptPath,
+      platform: 'linux',
+      arch: 'x64',
+      uid: 1000,
+      callerGid: 123,
+      osRelease: release,
+      uname: 'Linux',
+      fsApi,
+      commandRunner: runner.run,
+      env: {},
+    }), /exact direct self-bind|nested mount|duplicate direct|mount state cannot be proved/)
+    const receipt = JSON.parse(fsApi.writes.find((entry) => entry.target === receiptPath).content)
+    assert.equal(receipt.status, 'failed')
+    assert.equal(receipt.failureStage, 'mount-preflight')
+    assert.equal(receipt.failureClassification, classification, variant)
+    assert.equal(record.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/umount').length, 0)
+  }
+})
+
+test('provisioner rejects every non-contract umount target before host commands', () => {
+  const record = []
+  const runner = baseRunner({ record, mountMode: 'direct' })
+  assert.throws(() => proveAndUnmountDirectSelfBind(runner.run, '/tmp/not-the-fixed-docker-root'), /fixed Docker data root/)
+  assert.equal(record.length, 0)
+})
+
+test('post-unmount target/tree disagreement and remaining mounts fail closed before root cleanup', () => {
+  const variants = [
+    ['post-target-absent-full-direct', 'mount-state-unreadable'],
+    ['post-target-present-full-absent', 'mount-state-unreadable'],
+    ['post-remains', 'self-bind-remains-mounted'],
+    ['post-descendant', 'descendant-mount'],
+  ]
+  for (const [variant, classification] of variants) {
+    const receiptPath = `/tmp/native-host-post-unmount-${variant}.json`
+    const fsApi = fakeFs(receiptPath)
+    const record = []
+    const runner = mountVariantRunner(variant, record)
+    assert.throws(() => provisionNativeDockerHost({
+      confirmDisposableNativeHost: true,
+      receiptPath,
+      platform: 'linux',
+      arch: 'x64',
+      uid: 1000,
+      callerGid: 123,
+      osRelease: release,
+      uname: 'Linux',
+      fsApi,
+      commandRunner: runner.run,
+      env: {},
+    }), /mount state cannot be proved|self-bind remains mounted|nested mount/)
+    const receipt = JSON.parse(fsApi.writes.find((entry) => entry.target === receiptPath).content)
+    assert.equal(receipt.failureStage, 'mount-preflight')
+    assert.equal(receipt.failureClassification, classification, variant)
+    assert.equal(record.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/umount').length, 1)
+    assert.equal(record.filter(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/rm' && args.includes('--recursive')).length, 0)
+    const umountIndex = record.findIndex(({ file, args }) => file === 'sudo' && args[1] === '/usr/bin/umount')
+    const postTargetIndex = record.findIndex((entry, index) => index > umountIndex && entry.file === 'sudo' && entry.args[1] === '/usr/bin/findmnt' && entry.args.includes('--mountpoint') && entry.args.at(-1) === hostContract.dockerDataRoot)
+    const postTreeIndex = record.findIndex((entry, index) => index > umountIndex && entry.file === 'sudo' && entry.args[1] === '/usr/bin/findmnt' && entry.args.includes('--submounts') && entry.args.at(-1) === '/')
+    assert.ok(umountIndex >= 0 && postTargetIndex > umountIndex && postTreeIndex > postTargetIndex, variant)
+  }
 })
 
 test('unit contents have exact daemon arguments, controlled cgroups, and runtime preservation', () => {

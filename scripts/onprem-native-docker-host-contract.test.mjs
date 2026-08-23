@@ -6,6 +6,7 @@ import {
   expectedNativeDockerHostMarker,
   hostContract,
   inspectDedicatedNativeDockerHost,
+  isExactDockerDataSelfBind,
   releaseHostLock,
   resetDedicatedNativeDockerHost,
   validateCanonicalDestructiveTarget,
@@ -176,14 +177,27 @@ function topologyRunner({ mode = 'none', record = [] } = {}) {
       if (effectiveMode === 'post-foreign-source') effectiveMode = 'foreign-source'
       if (effectiveMode === 'post-overlay') effectiveMode = 'overlay'
       if (effectiveMode === 'post-nested') effectiveMode = 'nested'
-      const mounts = [{ target: '/', source: '/dev/vda1', fstype: 'ext4', fsroot: '/' }]
+      const rootMount = { target: '/', source: '/dev/vda1', fstype: 'ext4', fsroot: '/' }
+      if (effectiveMode === 'root-bracket') rootMount.source = '/dev/vda1[part]'
+      if (effectiveMode === 'root-whitespace') rootMount.source = '/dev/vda1 bad'
+      if (effectiveMode === 'root-non-device') rootMount.source = 'tmpfs'
+      if (effectiveMode === 'root-fstype') rootMount.fstype = 'xfs'
+      if (effectiveMode === 'root-overlay') rootMount.fstype = 'overlay'
+      if (effectiveMode === 'root-fsroot') rootMount.fsroot = '/foreign'
+      const mounts = [rootMount]
       if (mounted && effectiveMode !== 'none') {
-        const direct = { target: hostContract.dockerDataRoot, source: '/dev/vda1', fstype: 'ext4', fsroot: hostContract.dockerDataRoot }
-        if (effectiveMode === 'foreign-source') direct.source = '/dev/vdb1'
+        const direct = { target: hostContract.dockerDataRoot, source: `/dev/vda1[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }
+        if (effectiveMode === 'foreign-source') direct.source = `/dev/vdb1[${hostContract.dockerDataRoot}]`
+        if (effectiveMode === 'source-equality') direct.source = '/dev/vda1'
+        if (effectiveMode === 'source-extra') direct.source = `${direct.source}/suffix`
+        if (effectiveMode === 'source-prefix') direct.source = `/prefix${direct.source}`
         if (effectiveMode === 'fsroot-mismatch') direct.fsroot = '/foreign'
+        if (effectiveMode === 'direct-fstype') direct.fstype = 'xfs'
         if (effectiveMode === 'overlay') direct.fstype = 'overlay'
         mounts.push(direct)
+        if (effectiveMode === 'duplicate') mounts.push({ ...direct })
         if (effectiveMode === 'nested') mounts.push({ target: `${hostContract.dockerDataRoot}/nested`, source: '/dev/vda1', fstype: 'ext4', fsroot: '/' })
+        if (effectiveMode === 'other-root') mounts.push({ target: hostContract.dockerExecRoot, source: '/dev/sdf[/other]', fstype: 'ext4', fsroot: '/' })
       }
       return { status: 0, stdout: JSON.stringify({ filesystems: mounts }), stderr: '' }
     }
@@ -254,6 +268,28 @@ test('inspector permits only the /var/run -> /run compatibility binding and matc
   assert.throws(() => inspectDedicatedNativeDockerHost(inspectorOptions(baseRunner().run, fakeFs({ aliasSame: false }))), /aliases do not identify/)
 })
 
+test('exact Docker data self-bind predicate accepts observed literal source notation only', () => {
+  const root = { target: '/', source: '/dev/sdf', fstype: 'ext4', fsroot: '/' }
+  const direct = { target: hostContract.dockerDataRoot, source: `/dev/sdf[${hostContract.dockerDataRoot}]`, fstype: 'ext4', fsroot: hostContract.dockerDataRoot }
+  assert.equal(isExactDockerDataSelfBind(root, direct), true)
+  for (const candidate of [
+    { ...direct, source: '/dev/sdf' },
+    { ...direct, source: `${direct.source}/suffix` },
+    { ...direct, source: `/prefix${direct.source}` },
+    { ...direct, source: `/dev/sdf [${hostContract.dockerDataRoot}]` },
+    { ...direct, source: `/dev/sdf[${hostContract.dockerDataRoot}]\n` },
+    { ...direct, source: `/dev/sdf;[${hostContract.dockerDataRoot}]` },
+    { ...direct, fstype: 'xfs' },
+    { ...direct, fsroot: '/foreign' },
+    { ...direct, target: `${hostContract.dockerDataRoot}/nested` },
+  ]) assert.equal(isExactDockerDataSelfBind(root, candidate), false)
+  for (const source of ['/dev/[sdf]', '/dev/sdf[part]', '/dev/sdf other', 'overlay', 'tmpfs', '/run/docker.sock', '/dev/sdf:part']) {
+    assert.equal(isExactDockerDataSelfBind({ ...root, source }, direct), false)
+  }
+  assert.equal(isExactDockerDataSelfBind({ ...root, fstype: 'EXT4' }, direct), false)
+  assert.equal(isExactDockerDataSelfBind({ ...root, fsroot: '/var' }, direct), false)
+})
+
 test('reset ordering is dockerd stop, containerd stop, fixed-root reset, then starts and inspect', () => {
   const record = []
   const runner = baseRunner({ record })
@@ -292,9 +328,20 @@ test('reset permits only the exact docker-data self-bind and unmounts it after p
 })
 
 for (const [mode, classification] of [
-  ['foreign-source', 'foreign-source'],
+  ['foreign-source', 'bind-source-notation-mismatch'],
+  ['source-equality', 'bind-source-notation-mismatch'],
+  ['source-extra', 'bind-source-notation-mismatch'],
+  ['source-prefix', 'bind-source-notation-mismatch'],
+  ['root-bracket', 'bind-source-notation-mismatch'],
+  ['root-whitespace', 'bind-source-notation-mismatch'],
+  ['root-non-device', 'bind-source-notation-mismatch'],
   ['fsroot-mismatch', 'fsroot-mismatch'],
+  ['root-fsroot', 'fsroot-mismatch'],
+  ['direct-fstype', 'filesystem-type-mismatch'],
+  ['root-fstype', 'filesystem-type-mismatch'],
   ['overlay', 'overlay-filesystem'],
+  ['root-overlay', 'overlay-filesystem'],
+  ['duplicate', 'duplicate-direct-mount'],
   ['nested', 'descendant-mount'],
 ]) {
   test(`reset rejects ${mode} topology before any stop, unmount, or delete`, () => {
@@ -310,11 +357,20 @@ for (const [mode, classification] of [
 test('post-stop unapproved topology compensates custom units and never deletes', () => {
   const record = []
   const runner = topologyRunner({ mode: 'post-foreign-source', record })
-  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 19), pid: 789 }), new RegExp(`reset mount topology rejected for dockerDataRoot ${hostContract.dockerDataRoot}: foreign-source`))
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 19), pid: 789 }), new RegExp(`reset mount topology rejected for dockerDataRoot ${hostContract.dockerDataRoot}: bind-source-notation-mismatch`))
   const starts = record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3])
   assert.deepEqual(starts, [hostContract.containerdUnit, hostContract.dockerdUnit])
   assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 0)
   assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+})
+
+test('reset rejects a direct mount on any other fixed root before lifecycle mutation', () => {
+  const record = []
+  const runner = topologyRunner({ mode: 'other-root', record })
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 20), pid: 790 }), new RegExp(`reset mount topology rejected for dockerExecRoot ${hostContract.dockerExecRoot}: unexpected-direct-mount`))
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'stop').length, 0)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 0)
 })
 
 test('reset binds every injected command to the remaining absolute recovery deadline', () => {
@@ -344,7 +400,7 @@ test('expired recovery deadline fails before lock or lifecycle mutation', () => 
 test('reset preflight mount failure records no lifecycle stop', () => {
   const record = []
   const runner = topologyRunner({ mode: 'foreign-source', record })
-  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 14), pid: 783 }), /reset mount topology rejected for dockerDataRoot .*foreign-source/)
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 14), pid: 783 }), /reset mount topology rejected for dockerDataRoot .*bind-source-notation-mismatch/)
   assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1]?.endsWith('/systemctl') && entry.args[2] === 'stop').length, 0)
   assert.equal(runner.active, true)
 })
