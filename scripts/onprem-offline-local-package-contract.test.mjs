@@ -21,6 +21,7 @@ import {
   runWorkflowBody,
   stagePinnedNode,
   stableJson,
+  validatePackageOptions,
   validateNodeRuntime,
   validateImageProofInput,
   validateProofArtifactManifest,
@@ -32,6 +33,22 @@ const workflowPath = path.resolve('.github/workflows/onprem-offline-proof.yml')
 
 function tempDirectory() { return fs.mkdtempSync(path.join(os.tmpdir(), 'onprem-offline-package-contract-')) }
 function sha256(value) { return crypto.createHash('sha256').update(value).digest('hex') }
+
+function enterNonRootPackageContractIdentity() {
+  if (process.platform !== 'linux' || typeof process.getuid !== 'function' || process.getuid() !== 0) return
+  const uid = 1000
+  const temporaryRoot = fs.mkdtempSync('/var/lib/onprem-offline-package-contract-')
+  fs.chownSync(temporaryRoot, uid, uid)
+  fs.chmodSync(temporaryRoot, 0o700)
+  process.env.TMPDIR = temporaryRoot
+  process.setgid(uid)
+  process.setuid(uid)
+  if (process.getuid() !== uid) throw new Error('package contract test could not enter its non-root identity')
+  process.once('exit', () => { try { fs.rmSync(temporaryRoot, { recursive: true, force: true }) } catch {} })
+}
+
+enterNonRootPackageContractIdentity()
+
 function validArguments(overrides = {}) {
   const values = {
     '--confirm-disposable-native-host': true,
@@ -244,6 +261,7 @@ test('package argument parser requires both disposable-host confirmations and re
   assert.deepEqual(parsePackageArguments(['--help']), { help: true })
   assert.doesNotThrow(() => assertDockerEnvironmentSafe({ PATH: '/usr/bin' }))
   assert.throws(() => assertDockerEnvironmentSafe({ DOCKER_TLS_VERIFY: '1' }), /DOCKER_TLS_VERIFY/)
+  assert.throws(() => validatePackageOptions(parsed, { platform: 'linux', uid: 0, arch: 'x64', env: {} }), /non-root user/)
 })
 
 test('every caller and detached-checkout Git operation disables repository-local execution surfaces', () => {
