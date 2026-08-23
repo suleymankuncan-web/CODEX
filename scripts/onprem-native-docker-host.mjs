@@ -21,6 +21,7 @@ const SAFE_BINARIES = Object.freeze({
   readlink: '/usr/bin/readlink',
   rm: '/usr/bin/rm',
   ps: '/usr/bin/ps',
+  sleep: '/usr/bin/sleep',
   ss: '/usr/bin/ss',
   stat: '/usr/bin/stat',
   sudo: '/usr/bin/sudo',
@@ -131,6 +132,13 @@ class RecoveryDeadlineError extends Error {
   }
 }
 
+class QuiescenceDeadlineError extends Error {
+  constructor() {
+    super('post-stop runtime quiescence was not proved before deadline')
+    this.code = 'NATIVE_DOCKER_QUIESCENCE_DEADLINE'
+  }
+}
+
 function assertRecoveryDeadline(deadlineAt) {
   if (deadlineAt !== undefined && Date.now() >= deadlineAt) fail('native Docker host recovery deadline exceeded')
 }
@@ -159,7 +167,7 @@ function commandResult(commandRunner, file, args, options = {}, label = file) {
   try {
     return resultOf(commandRunner(file, args, options))
   } catch (error) {
-    if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw error
+    if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE' || error?.code === 'NATIVE_DOCKER_QUIESCENCE_DEADLINE') throw error
     fail(`${label} command failed`)
   }
 }
@@ -502,6 +510,7 @@ function unitActive(commandRunner, unit, expected = true) {
   if (expected && result.status !== 0) fail(`required systemd unit is not active: ${unit}`)
   if (!expected && result.status === 0) fail(`forbidden systemd unit is active: ${unit}`)
   if (!expected && ![1, 3, 4].includes(result.status)) fail(`systemd ${unit} state cannot be proved`)
+  if (!expected && (result.stdout !== '' || result.stderr !== '')) fail(`systemd ${unit} state cannot be proved`)
   return expected ? 'active' : 'inactive'
 }
 
@@ -849,39 +858,124 @@ function privileged(commandRunner, file, args, label) {
   return requireStatus(commandRunner, 'sudo', ['-n', safeExecutable(file, label), ...args], label)
 }
 
-function proveCgroupEmpty(commandRunner, cgroup, label) {
+function parseSafeObservationPath(value, root) {
+  if (typeof value !== 'string' || !value || value.includes('..') || /[\0\r\n\t ]/.test(value)) return false
+  if (!path.isAbsolute(value) || path.normalize(value) !== value) return false
+  const prefix = `${root}/`
+  if (!value.startsWith(prefix)) return false
+  const suffix = value.slice(prefix.length)
+  return /^[A-Za-z0-9._~+@,-]+(?:\/[A-Za-z0-9._~+@,-]+)*$/.test(suffix)
+}
+
+function strictObservationLines(text, label) {
+  const lines = text.split(/\r?\n/)
+  if (lines.at(-1) === '') lines.pop()
+  if (lines.some((line) => line.length === 0)) fail(`${label} output is invalid`)
+  return lines
+}
+
+function runtimeResidue(commandRunner, root, label) {
+  const result = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('find'), root, '-mindepth', '1', '(', '-type', 's', '-o', '-type', 'p', ')', '-print'], {}, `${label} runtime state`)
+  if (result.status !== 0 || result.stderr.trim()) fail(`${label} runtime state cannot be proved`)
+  const lines = strictObservationLines(result.stdout, label)
+  for (const line of lines) if (!parseSafeObservationPath(line, root)) fail(`${label} runtime state is invalid`)
+  return lines.length !== 0
+}
+
+function controlGroupResidue(commandRunner, cgroup, label) {
   if (typeof cgroup !== 'string' || !/^\/system\.slice\/[A-Za-z0-9_.@/-]+\.service$/.test(cgroup) || cgroup.includes('..')) fail(`${label} control group is invalid`)
   const root = `/sys/fs/cgroup${cgroup}`
   // systemd may remove an empty service cgroup after stop.  Accept only an
   // explicit root-verified absence of this exact, previously verified path;
   // any other status is ambiguous and must fail closed.
   const absent = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-e', root], {}, `${label} control group state`)
-  if (absent.status === 0) return
-  if (absent.status !== 1) fail(`${label} control group state cannot be proved`)
+  if (absent.status === 0) {
+    if (absent.stdout !== '' || absent.stderr !== '') fail(`${label} control group state cannot be proved`)
+    return false
+  }
+  if (absent.status !== 1 || absent.stdout !== '' || absent.stderr !== '') fail(`${label} control group state cannot be proved`)
   const processes = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('find'), root, '-type', 'f', '-name', 'cgroup.procs', '-exec', safeExecutable('cat'), '{}', '+'], {}, `${label} process members`)
-  if (processes.status !== 0 || processes.stdout.trim()) fail(`${label} control group still has process members`)
+  if (processes.status !== 0 || processes.stderr.trim()) fail(`${label} process members cannot be proved`)
+  const processLines = strictObservationLines(processes.stdout, `${label} process members`)
+  for (const member of processLines) if (!/^\d+$/.test(member) || !Number.isSafeInteger(Number(member)) || Number(member) <= 1) fail(`${label} control group process state is invalid`)
   const children = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('find'), root, '-mindepth', '1', '-type', 'd', '-print'], {}, `${label} child cgroups`)
-  if (children.status !== 0 || children.stdout.trim()) fail(`${label} child cgroups remain`)
+  if (children.status !== 0 || children.stderr.trim()) fail(`${label} child cgroups cannot be proved`)
+  const childLines = strictObservationLines(children.stdout, `${label} child cgroups`)
+  for (const child of childLines) {
+    if (!parseSafeObservationPath(child, root)) fail(`${label} child cgroup state is invalid`)
+  }
+  return processLines.length !== 0 || childLines.length !== 0
 }
 
-function proveStopped(commandRunner, before) {
+function proveStoppedAttempt(commandRunner, before) {
+  // Every component is checked during every attempt. A retryable observation
+  // never short-circuits the remaining invariant, so a different residue
+  // cannot be missed on the attempt that eventually appears clean.
+  let retryable = false
   unitActive(commandRunner, hostContract.dockerdUnit, false)
   unitActive(commandRunner, hostContract.containerdUnit, false)
   for (const [label, pid] of [['dockerd', before.pids.dockerd], ['containerd', before.pids.containerd]]) {
     const result = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('kill'), '-0', String(pid)], {}, `${label} process state`)
     if (result.status === 0) fail(`${label} process did not stop`)
-    if (result.status !== 1) fail(`${label} process state cannot be proved`)
+    if (result.status !== 1 || result.stdout !== '' || result.stderr !== '') fail(`${label} process state cannot be proved`)
   }
-  for (const socket of [hostContract.socket, hostContract.containerdSocket]) {
-    const result = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-S', socket], {}, `${socket} socket state`)
-    if (result.status !== 0) fail('stopped daemon socket remains present')
+
+  const dockerSocket = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-S', hostContract.socket], {}, 'Docker socket state')
+  if (dockerSocket.status === 1) fail('stopped daemon socket remains present')
+  if (dockerSocket.status !== 0 || dockerSocket.stdout !== '' || dockerSocket.stderr !== '') fail('Docker socket state cannot be proved')
+  const containerdSocket = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-S', hostContract.containerdSocket], {}, 'private containerd socket state')
+  if (containerdSocket.status === 1) {
+    if (containerdSocket.stdout !== '' || containerdSocket.stderr !== '') fail('private containerd socket state is invalid')
+    retryable = true
   }
-  for (const root of [hostContract.dockerExecRoot, hostContract.containerdState]) {
-    const shims = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('find'), root, '-mindepth', '1', '(', '-type', 's', '-o', '-type', 'p', ')', '-print'], {}, 'runtime shim state')
-    if (shims.status !== 0 || shims.stdout.trim()) fail('runtime shims remain present')
+  else if (containerdSocket.status !== 0 || containerdSocket.stdout !== '' || containerdSocket.stderr !== '') fail('private containerd socket state cannot be proved')
+
+  if (runtimeResidue(commandRunner, hostContract.dockerExecRoot, 'Docker exec root')) retryable = true
+  if (runtimeResidue(commandRunner, hostContract.containerdState, 'private containerd state')) retryable = true
+  if (controlGroupResidue(commandRunner, before.processes.dockerd.cgroup, 'custom dockerd')) retryable = true
+  if (controlGroupResidue(commandRunner, before.processes.containerd.cgroup, 'private containerd')) retryable = true
+  return retryable
+}
+
+function quiescenceCommandRunner(commandRunner, deadlineAt) {
+  return (file, args, options = {}) => {
+    const remaining = deadlineAt - Date.now()
+    if (!Number.isFinite(remaining) || remaining < 1) throw new QuiescenceDeadlineError()
+    const inherited = Number.isFinite(options.timeout) && options.timeout > 0 ? options.timeout : Number.POSITIVE_INFINITY
+    const timeout = Math.max(1, Math.min(Math.floor(remaining), inherited))
+    let result
+    try {
+      result = commandRunner(file, args, { ...options, timeout })
+    } catch (error) {
+      if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw new QuiescenceDeadlineError()
+      throw error
+    }
+    if (Date.now() >= deadlineAt) throw new QuiescenceDeadlineError()
+    return result
   }
-  proveCgroupEmpty(commandRunner, before.processes.dockerd.cgroup, 'custom dockerd')
-  proveCgroupEmpty(commandRunner, before.processes.containerd.cgroup, 'private containerd')
+}
+
+function proveStopped(commandRunner, before, { recoveryDeadlineAt } = {}) {
+  const started = Date.now()
+  const quiescenceDeadline = Math.min(recoveryDeadlineAt ?? Number.POSITIVE_INFINITY, started + 5_000)
+  const boundedRunner = quiescenceCommandRunner(commandRunner, quiescenceDeadline)
+  let delayMs = 25
+  while (true) {
+    if (Date.now() >= quiescenceDeadline) throw new QuiescenceDeadlineError()
+    let retryable
+    try {
+      retryable = proveStoppedAttempt(boundedRunner, before)
+    } catch (error) {
+      if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw new QuiescenceDeadlineError()
+      throw error
+    }
+    if (!retryable) return
+    if (Date.now() >= quiescenceDeadline) throw new QuiescenceDeadlineError()
+    const delay = Math.min(delayMs, 250)
+    const slept = commandResult(boundedRunner, 'sleep', [String(delay / 1_000)], {}, 'post-stop quiescence backoff')
+    if (slept.status !== 0 || slept.stdout !== '' || slept.stderr !== '') fail('post-stop quiescence backoff cannot be proved')
+    delayMs = Math.min(delayMs * 2, 250)
+  }
 }
 
 export function resetDedicatedNativeDockerHost(options = {}) {
@@ -927,7 +1021,7 @@ export function resetDedicatedNativeDockerHost(options = {}) {
       '--address': hostContract.containerdSocket,
     }, { pid: before.pids.containerd, ...before.processes.containerd }, 'private containerd')
     privileged(commandRunner, 'systemctl', ['stop', hostContract.containerdUnit], 'stop private containerd')
-    proveStopped(commandRunner, before)
+    proveStopped(commandRunner, before, { recoveryDeadlineAt })
     reconcileResetMounts(commandRunner)
     for (const [kind, target] of Object.entries(destructiveTargets)) {
       validateCanonicalDestructiveTarget(target, kind, operationOptions)

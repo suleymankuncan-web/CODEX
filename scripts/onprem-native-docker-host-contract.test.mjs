@@ -135,7 +135,7 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
     if (actualFile === 'find') {
       if (cgroupState === 'error' && actualArgs[0]?.startsWith('/sys/fs/cgroup/')) return { status: 2, stdout: '', stderr: 'permission denied' }
       if (cgroupState === 'member' && actualArgs.includes('cgroup.procs')) return { status: 0, stdout: '421\n', stderr: '' }
-      if (cgroupState === 'child' && actualArgs[0]?.startsWith('/sys/fs/cgroup/') && actualArgs.includes('-print')) return { status: 0, stdout: '/sys/fs/cgroup/system.slice/child.scope\n', stderr: '' }
+      if (cgroupState === 'child' && actualArgs[0]?.startsWith('/sys/fs/cgroup/') && actualArgs.includes('-print')) return { status: 0, stdout: `${actualArgs[0]}/child.scope\n`, stderr: '' }
       return { status: 0, stdout: '', stderr: '' }
     }
     if (actualFile === 'stat') {
@@ -152,6 +152,72 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
     return { status: 0, stdout: '', stderr: '' }
   }
   return { run, record, get active() { return active }, set active(value) { active = value } }
+}
+
+function quiescenceRunner({ mode = 'clean', record = [] } = {}) {
+  const runner = baseRunner({ record })
+  const originalRun = runner.run
+  let stopped = false
+  let attempts = 0
+  const run = (file, args, options = {}) => {
+    const actualExecutable = file === 'sudo' && args[0] === '-n' ? args[1] : file
+    const actualFile = actualExecutable.replace(/^.*\//, '')
+    const actualArgs = file === 'sudo' && args[0] === '-n' ? args.slice(2) : args
+    const isSystemctl = actualFile === 'systemctl'
+    const isCustomUnit = [hostContract.dockerdUnit, hostContract.containerdUnit].includes(actualArgs.at(-1))
+    if (isSystemctl && actualArgs[0] === 'stop' && isCustomUnit) {
+      stopped = true
+      runner.active = false
+    }
+    if (isSystemctl && actualArgs[0] === 'start' && isCustomUnit) {
+      stopped = false
+      runner.active = true
+    }
+    if (stopped && isSystemctl && actualArgs[0] === 'is-active' && actualArgs.at(-1) === hostContract.dockerdUnit) attempts += 1
+    if (stopped && actualFile === 'find') {
+      const root = actualArgs[0]
+      const isDockerRuntime = root === hostContract.dockerExecRoot
+      const isContainerdRuntime = root === hostContract.containerdState
+      if (mode === 'find-nonzero' && (isDockerRuntime || isContainerdRuntime)) return { status: 2, stdout: '', stderr: 'permission denied' }
+      if (mode === 'find-malformed' && (isDockerRuntime || isContainerdRuntime)) return { status: 0, stdout: '/outside/not-a-runtime-entry\n', stderr: '' }
+      if ((mode === 'docker-runtime-once' || mode === 'different-attempts' || mode === 'persistent-runtime') && isDockerRuntime && (mode === 'persistent-runtime' || attempts === 1)) return { status: 0, stdout: `${root}/shim.sock\n`, stderr: '' }
+      if (mode === 'containerd-runtime-once' && isContainerdRuntime && attempts === 1) return { status: 0, stdout: `${root}/shim.pipe\n`, stderr: '' }
+      const isCgroupProbe = root?.startsWith('/sys/fs/cgroup/')
+      const isDockerdCgroup = root?.endsWith(`${hostContract.dockerdUnit}`)
+      if (isCgroupProbe && mode === 'different-attempts' && actualArgs.includes('cgroup.procs') && attempts === 2) return { status: 0, stdout: '421\n', stderr: '' }
+      if (isCgroupProbe && mode === 'dockerd-cgroup-once' && actualArgs.includes('cgroup.procs') && attempts === 1) return { status: 0, stdout: '421\n', stderr: '' }
+      if (isCgroupProbe && isDockerdCgroup && mode === 'child-cgroup-once' && actualArgs.includes('-print') && attempts === 1) return { status: 0, stdout: '/sys/fs/cgroup/system.slice/hr-axis-onprem-rehearsal-dockerd.service/child.scope\n', stderr: '' }
+      if (isCgroupProbe && mode === 'cgroup-malformed' && actualArgs.includes('cgroup.procs')) return { status: 0, stdout: 'not-a-pid\n', stderr: '' }
+      if (isCgroupProbe && mode === 'cgroup-malformed' && actualArgs.includes('-print')) return { status: 0, stdout: '/sys/fs/cgroup/outside/child.scope\n', stderr: '' }
+    }
+    if (stopped && actualFile === 'test') {
+      const target = actualArgs[2]
+      if (actualArgs[0] === '!' && actualArgs[1] === '-S' && target === hostContract.containerdSocket) {
+        if (mode === 'containerd-socket-once' && attempts === 1) return { status: 1, stdout: '', stderr: '' }
+        if (mode === 'socket-unexpected') return { status: 2, stdout: '', stderr: 'permission denied' }
+      }
+      if (actualArgs[0] === '!' && actualArgs[1] === '-S' && target === hostContract.socket && mode === 'socket-missing') return { status: 2, stdout: '', stderr: 'permission denied' }
+      if (actualArgs[0] === '!' && actualArgs[1] === '-e' && target?.startsWith('/sys/fs/cgroup/')) {
+        const dockerdCgroup = target.endsWith(`${hostContract.dockerdUnit}`)
+        const first = (attempts === 1 && (mode === 'dockerd-cgroup-once' || mode === 'child-cgroup-once' || mode === 'cgroup-malformed')) || (mode === 'different-attempts' && dockerdCgroup && attempts === 2)
+        if (first) return { status: 1, stdout: '', stderr: '' }
+      }
+    }
+    if (stopped && actualFile === 'kill' && mode === 'pid-live') return { status: 0, stdout: '', stderr: '' }
+    if (stopped && isSystemctl && actualArgs[0] === 'is-active' && actualArgs.at(-1) === hostContract.dockerdUnit && mode === 'unit-unexpected') return { status: 2, stdout: '', stderr: 'unknown' }
+    if (stopped && isSystemctl && actualArgs[0] === 'is-active' && actualArgs.at(-1) === hostContract.dockerdUnit && mode === 'slow-recheck') {
+      // Leave the outer recovery deadline ample room for all lifecycle
+      // preconditions and compensation.  Consume the controller's fixed
+      // five-second post-stop quiescence window only after the first complete
+      // recheck begins.
+      const until = Date.now() + 5_250
+      while (Date.now() < until) {}
+    }
+    return originalRun(file, args, options)
+  }
+  runner.run = run
+  Object.defineProperty(runner, 'attempts', { get: () => attempts })
+  return runner
 }
 
 function inspectorOptions(runner, fsApi, env = {}) {
@@ -314,6 +380,79 @@ test('reset ordering is dockerd stop, containerd stop, fixed-root reset, then st
   assert.ok(record.filter((entry) => entry.file === 'sudo' && ['systemctl', 'rm', 'install'].some((name) => entry.args[1].endsWith(`/${name}`))).every((entry) => !entry.args.includes('docker.service') && !entry.args.includes('containerd.service')))
 })
 
+test('post-stop quiescence proves the complete invariant in one clean attempt', () => {
+  const record = []
+  const runner = quiescenceRunner({ record })
+  const result = resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 21), pid: 791 })
+  assert.equal(result.dockerDaemonReset, true)
+  assert.equal(runner.attempts, 1)
+  assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+})
+
+for (const mode of ['docker-runtime-once', 'containerd-runtime-once', 'containerd-socket-once', 'dockerd-cgroup-once', 'child-cgroup-once']) {
+  test(`post-stop quiescence retries transient ${mode} residue`, () => {
+    const record = []
+    const runner = quiescenceRunner({ mode, record })
+    const result = resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 2_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 22), pid: 792 })
+    assert.equal(result.dockerDaemonReset, true)
+    assert.equal(runner.attempts, 2)
+    assert.ok(record.some((entry) => entry.file === 'sleep'))
+  })
+}
+
+test('post-stop quiescence requires one same-attempt clean invariant', () => {
+  const record = []
+  const runner = quiescenceRunner({ mode: 'different-attempts', record })
+  const result = resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 2_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 23), pid: 793 })
+  assert.equal(result.dockerDaemonReset, true)
+  assert.equal(runner.attempts, 3)
+})
+
+test('persistent post-stop residue expires with compensation and no destructive cleanup', () => {
+  const record = []
+  const runner = quiescenceRunner({ mode: 'persistent-runtime', record })
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 6_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 24), pid: 794 }), /post-stop runtime quiescence was not proved before deadline/)
+  assert.ok(record.some((entry) => entry.file === 'sleep'))
+  assert.ok(record.some((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start' && entry.args[3] === hostContract.containerdUnit))
+  assert.ok(record.some((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start' && entry.args[3] === hostContract.dockerdUnit))
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && ['/usr/bin/umount', '/usr/bin/rm', '/usr/bin/install'].includes(entry.args[1])).length, 0)
+})
+
+for (const [mode, expected] of [
+  ['find-nonzero', /runtime state cannot be proved/],
+  ['find-malformed', /runtime state is invalid/],
+  ['cgroup-malformed', /control group process state is invalid/],
+  ['socket-missing', /Docker socket state cannot be proved/],
+  ['socket-unexpected', /private containerd socket state cannot be proved/],
+  ['pid-live', /dockerd process did not stop/],
+  ['unit-unexpected', /systemd .* state cannot be proved/],
+]) {
+  test(`post-stop ${mode} fails immediately without polling`, () => {
+    const record = []
+    const runner = quiescenceRunner({ mode, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 2_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 25), pid: 795 }), expected)
+    assert.equal(runner.attempts, 1)
+    assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  })
+}
+
+test('deadline during a recheck prevents any post-deadline command', () => {
+  const record = []
+  const runner = quiescenceRunner({ mode: 'slow-recheck', record })
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 10_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 26), pid: 796 }), /post-stop runtime quiescence was not proved before deadline/)
+  const stopIndex = record.findIndex((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'stop' && entry.args[3] === hostContract.containerdUnit)
+  const recheckIndex = record.findIndex((entry, index) => index > stopIndex && entry.file === 'systemctl' && entry.args[0] === 'is-active' && entry.args.at(-1) === hostContract.dockerdUnit)
+  assert.ok(stopIndex >= 0 && recheckIndex > stopIndex, 'deadline must be consumed during post-stop recheck')
+  const starts = record.slice(recheckIndex + 1).filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3])
+  assert.deepEqual(starts, [hostContract.containerdUnit, hostContract.dockerdUnit], 'compensation remains custom-only and ordered')
+  const postRecheckProbeCommands = record.slice(recheckIndex + 1).filter((entry) => {
+    if (entry.file !== 'sudo' || entry.args[0] !== '-n') return false
+    const executable = entry.args[1].split('/').at(-1)
+    return ['kill', 'find', 'sleep'].includes(executable)
+  })
+  assert.equal(postRecheckProbeCommands.length, 0, 'no post-deadline probe or sleep command is issued')
+})
+
 test('reset permits only the exact docker-data self-bind and unmounts it after private units stop', () => {
   const record = []
   const runner = topologyRunner({ mode: 'allowed', record })
@@ -465,8 +604,8 @@ test('reset accepts verified nonempty pre-inventory and requires empty post-inve
   assert.equal(result.after.inventory.containers, 0)
 })
 
-test('reset accepts removed empty cgroups but rejects ambiguous, populated, or child cgroups', () => {
-  const runReset = (cgroupState) => {
+test('reset accepts removed empty cgroups but retries valid residue and rejects malformed state', () => {
+  const runReset = (cgroupState, recoveryDeadlineAt) => {
     const runner = baseRunner({ cgroupState })
     const originalRun = runner.run
     runner.run = (file, args, options) => {
@@ -474,14 +613,14 @@ test('reset accepts removed empty cgroups but rejects ambiguous, populated, or c
       if (file === 'sudo' && args[0] === '-n' && args[1].endsWith('/systemctl') && args[2] === 'start') runner.active = true
       return originalRun(file, args, options)
     }
-    return resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 13), pid: 782 })
+    return resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 13), pid: 782 })
   }
 
   assert.doesNotThrow(() => runReset('absent'), 'systemd may remove an empty cgroup after stop')
   assert.doesNotThrow(() => runReset('present'), 'an existing cgroup with no members or children is empty')
   assert.throws(() => runReset('error'), /control group state cannot be proved/)
-  assert.throws(() => runReset('member'), /control group still has process members/)
-  assert.throws(() => runReset('child'), /child cgroups remain/)
+  assert.throws(() => runReset('member', Date.now() + 60), /post-stop runtime quiescence was not proved before deadline|compensation failed/)
+  assert.throws(() => runReset('child', Date.now() + 60), /post-stop runtime quiescence was not proved before deadline|compensation failed/)
 })
 
 test('reset still rejects nonempty inventory when daemon identity is wrong', () => {
