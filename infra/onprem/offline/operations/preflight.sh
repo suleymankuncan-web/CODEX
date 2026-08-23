@@ -379,7 +379,11 @@ verify_runtime_image_provenance() {
   image_name=$1
   image_repo_tag=$2
   expected_image_id=$3
+  expected_container_runtime_id=${4:-}
   observed_runtime_id=$(runtime_image_id "$image_repo_tag")
+  if [ -n "$expected_container_runtime_id" ] && [ "$observed_runtime_id" != "$expected_container_runtime_id" ]; then
+    die "existing target container image identity mismatch: $image_name"
+  fi
   if [ "$observed_runtime_id" = "$expected_image_id" ]; then
     return 0
   fi
@@ -410,8 +414,7 @@ while IFS= read -r runtime_container_id; do
   [ -n "$runtime_service" ] || die "existing target container has no Compose service label"
   expected_runtime_repo_tag=$(runtime_image_for_service "$runtime_service") || die "existing target container has an unsupported Compose service: $runtime_service"
   expected_runtime_config_id=$(config_image_for_service "$runtime_service") || die "existing target container has an unsupported Compose service: $runtime_service"
-  [ "$runtime_image" = "$expected_runtime_config_id" ] || die "existing target container image identity mismatch: $runtime_service"
-  verify_runtime_image_provenance "$runtime_service" "$expected_runtime_repo_tag" "$expected_runtime_config_id"
+  verify_runtime_image_provenance "$runtime_service" "$expected_runtime_repo_tag" "$expected_runtime_config_id" "$runtime_image"
 done <<EOF
 $runtime_container_ids
 EOF

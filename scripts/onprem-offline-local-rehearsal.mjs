@@ -70,6 +70,10 @@ const RECOVERY_COMMAND_CODE = 'OFFLINE_RECOVERY_COMMAND'
 const RECOVERY_FIXED_COMMANDS = new Map([
   ['git', '/usr/bin/git'],
   ['sudo', RECOVERY_BINARIES.sudo],
+  ['systemctl', '/usr/bin/systemctl'],
+  ['findmnt', '/usr/bin/findmnt'],
+  ['docker', '/usr/bin/docker'],
+  ['id', '/usr/bin/id'],
   ['iptables-save', RECOVERY_BINARIES.ipv4Save],
   ['iptables-restore', RECOVERY_BINARIES.ipv4Restore],
   ['ip6tables-save', RECOVERY_BINARIES.ipv6Save],

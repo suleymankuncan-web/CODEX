@@ -365,6 +365,82 @@ test('supervised recovery orders reset, both firewall restores, post-inspection,
   }
 })
 
+test('bounded recovery normalizes native controller bare commands to fixed absolute binaries', () => {
+  const fixture = supervisedFixture()
+  const expectedPaths = new Set(['/usr/bin/systemctl', '/usr/bin/findmnt', '/usr/bin/docker', '/usr/bin/id'])
+  const requestedNames = new Set(['systemctl', 'findmnt', 'docker', 'id'])
+  const normalized = []
+  const commandRunner = (file, args, commandOptions = {}) => {
+    assert.equal(requestedNames.has(file), false, `bare recovery command reached the injected runner: ${file}`)
+    if (expectedPaths.has(file)) {
+      normalized.push(file)
+      assert.deepEqual(commandOptions.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' })
+      assert.ok(Number.isSafeInteger(commandOptions.timeout) && commandOptions.timeout > 0)
+    }
+    return fixture.commandRunner(file, args, commandOptions)
+  }
+  const nativeBareCommands = [
+    ['systemctl', ['is-active', '--quiet', 'hr-axis-onprem-rehearsal-dockerd.service']],
+    ['findmnt', ['--noheadings', '--output', 'TARGET', '--mountpoint', '/var/lib/hr-axis-onprem-rehearsal/docker']],
+    ['docker', ['info', '--format', '{{json .}}']],
+    ['id', ['-g']],
+  ]
+  const invokeNativeBareCommands = ({ commandRunner: boundedRunner }) => {
+    for (const [file, args] of nativeBareCommands) assert.equal(boundedRunner(file, args).status, 0)
+  }
+  const controller = {
+    resetDedicatedNativeDockerHost(options) {
+      invokeNativeBareCommands(options)
+      return { dockerDaemonReset: true }
+    },
+    inspectDedicatedNativeDockerHost(options) {
+      invokeNativeBareCommands(options)
+      return { inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }
+    },
+  }
+  try {
+    const result = runSupervisedLifecycle(fixture.context, { git: { head: fixture.options.sourceSha, tree: fixture.options.treeSha }, inputIdentity: { manifest: { sourceRevision: fixture.options.sourceSha } } }, {
+      lock: { path: 'lock-held' }, beforeHost: fixture.beforeHost, snapshots: fixture.snapshots, commandRunner, platform: 'linux', uid: 1000,
+      controller, execute: fixture.execute, finalGit: { head: fixture.options.sourceSha, tree: fixture.options.treeSha },
+    })
+    assert.equal(result.recovery.ok, true)
+    assert.equal(result.recovery.faults.includes('reset'), false)
+    assert.equal(result.recovery.faults.includes('post-inspection'), false)
+    for (const expectedPath of expectedPaths) assert.ok(normalized.includes(expectedPath), `${expectedPath} was not normalized`)
+  } finally {
+    fs.rmSync(fixture.directory, { recursive: true, force: true })
+  }
+})
+
+test('bounded recovery keeps rejecting non-allowlisted bare commands', () => {
+  const fixture = supervisedFixture()
+  let reachedRunner = false
+  const commandRunner = (file, args, commandOptions = {}) => {
+    if (file === 'sh') reachedRunner = true
+    return fixture.commandRunner(file, args, commandOptions)
+  }
+  const controller = {
+    resetDedicatedNativeDockerHost({ commandRunner: boundedRunner }) {
+      boundedRunner('sh', ['-c', 'true'])
+      return { dockerDaemonReset: true }
+    },
+    inspectDedicatedNativeDockerHost() {
+      return { inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }
+    },
+  }
+  try {
+    const result = runSupervisedLifecycle(fixture.context, { git: { head: fixture.options.sourceSha, tree: fixture.options.treeSha }, inputIdentity: { manifest: { sourceRevision: fixture.options.sourceSha } } }, {
+      lock: { path: 'lock-held' }, beforeHost: fixture.beforeHost, snapshots: fixture.snapshots, commandRunner, platform: 'linux', uid: 1000,
+      controller, execute: fixture.execute, finalGit: { head: fixture.options.sourceSha, tree: fixture.options.treeSha },
+    })
+    assert.equal(reachedRunner, false)
+    assert.equal(result.recovery.ok, false)
+    assert.equal(result.recovery.faults.includes('reset'), true)
+  } finally {
+    fs.rmSync(fixture.directory, { recursive: true, force: true })
+  }
+})
+
 test('offline recovery accepts timestamp-only IPv4/IPv6 drift while preserving raw and semantic flags', () => {
   const fixture = supervisedFixture({ semanticTimestampDrift: true })
   try {

@@ -181,8 +181,9 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /com\.hr-axis\.release-id/)
   assert.match(preflightSource, /configImageId/)
   assert.match(preflightSource, /repoTag/)
-  assert.match(preflightSource, /\[ "\$runtime_image" = "\$expected_runtime_config_id" \]/, 'existing containers use signed configImageId')
-  assert.match(preflightSource, /verify_runtime_image_provenance "\$runtime_service" "\$expected_runtime_repo_tag" "\$expected_runtime_config_id"/, 'existing containers independently verify signed RepoTag provenance')
+  assert.match(preflightSource, /expected_container_runtime_id=\$\{4:-\}/, 'provenance helper accepts the container runtime identity binding')
+  assert.match(preflightSource, /\[ "\$observed_runtime_id" != "\$expected_container_runtime_id" \]/, 'provenance helper fails closed on a RepoTag/container runtime identity race')
+  assert.match(preflightSource, /verify_runtime_image_provenance "\$runtime_service" "\$expected_runtime_repo_tag" "\$expected_runtime_config_id" "\$runtime_image"/, 'existing containers bind runtime M before verifying signed config C provenance')
   assert.match(preflightSource, /migration ledger parent/)
   assert.doesNotMatch(preflightSource, /\[ "\$\(file_links "\$ledger_parent"\)" = 1 \]/, 'directory link counts must not require the POSIX empty-directory value')
   assert.match(preflightSource, /ledger_parent_links=\$\(file_links "\$ledger_parent"\)/)
@@ -509,7 +510,7 @@ ${runtimeImageInspectCases}
     `ps) [ -f '${shellPath(noTargetContainersMode)}' ] && exit 0; echo container-id; exit 0;;`,
     'network) case "$2" in ls) echo network-id;; inspect) case "$*" in *Internal*) echo true;; *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
     'volume) case "$2" in ls) echo volume-id;; inspect) case "$*" in *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
-    `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; else echo "keycloak|sha256:${imageDigests.keycloak}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *json*) case "$2" in caddy-id) echo '{"HostConfig":{"HostPort":null,"PortBindings":{"443/tcp":[{"HostPort":"443"}]}},"NetworkSettings":{"Ports":{"443/tcp":[{"HostPort":"443"}]}}}';; *) echo '{"HostConfig":{},"NetworkSettings":{"Ports":{}}}';; esac;; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
+    `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; elif [ -f '${shellPath(idMode)}' ] && [ "$(cat '${shellPath(idMode)}')" = docker-29-runtime-id ]; then echo "keycloak|sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; else echo "keycloak|sha256:${imageDigests.keycloak}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *json*) case "$2" in caddy-id) echo '{"HostConfig":{"HostPort":null,"PortBindings":{"443/tcp":[{"HostPort":"443"}]}},"NetworkSettings":{"Ports":{"443/tcp":[{"HostPort":"443"}]}}}';; *) echo '{"HostConfig":{},"NetworkSettings":{"Ports":{}}}';; esac;; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
     `exec) case "$2" in postgres-id) echo t;; redis-id) echo PONG;; esac; exit 0;;`,
     `compose) case "$*" in *version*) [ -f '${shellPath(composeVersionFile)}' ] && cat '${shellPath(composeVersionFile)}' || echo 2.30.0; exit 0;; *' ps -q caddy'*) echo caddy-id; exit 0;; *' ps -q frontend'*) echo frontend-id; exit 0;; *' ps -q api'*) echo api-id; exit 0;; *' ps -q worker'*) echo worker-id; exit 0;; *' ps -q postgres'*) echo postgres-id; exit 0;; *' ps -q redis'*) echo redis-id; exit 0;; *' ps -q keycloak'*) echo keycloak-id; exit 0;; *' ps -q object-storage'*) echo object-storage-id; exit 0;; *'config --format json'*) case "$*" in *'--profile *'*'config --format json'*) echo '{"name":"hr-axis-onprem-core","release":"release-test","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; *) echo '{"name":"hr-axis-onprem-core","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; esac; exit 0;; *'config --quiet'*) exit 0;; *'up --pull never'*|*'run --pull never'*) echo MUTATE >> '${shellPath(log)}'; echo '{"migrationTreeDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'; exit 0;; esac;;`,
     'esac', 'exit 0',
@@ -940,14 +941,16 @@ test('Docker 29 existing container keeps signed config identity separate from ru
 
   const valid = makeFixture()
   try {
-    // The fake container reports signed config C while Docker image inspect
-    // reports runtime identity M. Only the signed RepoTag re-export proof can
-    // establish that M came from the expected config C.
+    // Docker 29 reports container .Image as runtime/manifest identity M, while
+    // the signed Docker-save archive carries config identity C. Only the
+    // signed RepoTag re-export proof can establish C provenance when C != M.
     writeFileSync(valid.idMode, 'docker-29-runtime-id\n')
     writeFileSync(valid.reexportMode, 'valid\n')
     const result = spawnSync(POSIX_SHELL, [shellPath(join(valid.bundle, 'operations', 'preflight.sh')), '--bundle-root', shellPath(valid.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(valid.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(valid.envFile), '--allow-unloaded-images', '--allow-missing-ledger'], { encoding: 'utf8', env: shellEnv(valid) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${commandLog(valid)}`)
+    assert.notEqual(`sha256:${'b'.repeat(64)}`, `sha256:${valid.imageDigests.keycloak}`, 'Docker 29 fixture must exercise distinct runtime M and config C identities')
     const lines = commandLog(valid).split(/\r?\n/).filter(Boolean)
+    assert.equal(lines.filter((line) => line.startsWith('image inspect --format')).length, 1, 'existing-container runtime identity is read once before signed re-export')
     assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, 1, 'existing-container runtime identity requires one signed re-export proof')
     assert.match(lines.find((line) => line.startsWith('image save --output')) ?? '', /registry\.example\/keycloak:synthetic$/)
     const verifierCalls = nodeLog(valid).split(/\r?\n/).filter((line) => line.includes('--input-type=module'))
@@ -957,21 +960,33 @@ test('Docker 29 existing container keeps signed config identity separate from ru
     rmSync(valid.root, { recursive: true, force: true })
   }
 
-  const wrongConfig = makeFixture()
+  const wrongRuntime = makeFixture()
   try {
-    // Keep the runtime identity mismatch and a valid re-export available, but
-    // reject the container before provenance/re-export work on config mismatch.
-    writeFileSync(wrongConfig.idMode, 'docker-29-runtime-id\n')
-    writeFileSync(wrongConfig.runtimeImageMode, 'wrong-container-config\n')
-    writeFileSync(wrongConfig.reexportMode, 'valid\n')
-    const result = runInstallBounded(wrongConfig)
+    // Keep a valid signed config C and expected runtime M available, but make
+    // the container report a wrong runtime identity; reject before re-export.
+    writeFileSync(wrongRuntime.idMode, 'docker-29-runtime-id\n')
+    writeFileSync(wrongRuntime.runtimeImageMode, 'wrong-container-runtime\n')
+    writeFileSync(wrongRuntime.reexportMode, 'valid\n')
+    const result = runInstallBounded(wrongRuntime)
     assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(`${result.stdout}\n${result.stderr}`, /existing target container image identity mismatch: keycloak/)
-    const lines = commandLog(wrongConfig).split(/\r?\n/).filter(Boolean)
-    assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, 0, 'wrong container config identity fails before re-export')
-    assert.equal(lines.filter((line) => line === 'MUTATE').length, 0, 'wrong container config identity fails before Compose mutation')
+    const lines = commandLog(wrongRuntime).split(/\r?\n/).filter(Boolean)
+    assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, 0, 'wrong container runtime identity fails before re-export')
+    assert.equal(lines.filter((line) => line === 'MUTATE').length, 0, 'wrong container runtime identity fails before Compose mutation')
   } finally {
-    rmSync(wrongConfig.root, { recursive: true, force: true })
+    rmSync(wrongRuntime.root, { recursive: true, force: true })
+  }
+
+  const sameIdentity = makeFixture()
+  try {
+    // The compatibility case remains M == C: no archive fallback is needed.
+    const result = spawnSync(POSIX_SHELL, [shellPath(join(sameIdentity.bundle, 'operations', 'preflight.sh')), '--bundle-root', shellPath(sameIdentity.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(sameIdentity.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(sameIdentity.envFile), '--allow-unloaded-images', '--allow-missing-ledger'], { encoding: 'utf8', env: shellEnv(sameIdentity) })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${commandLog(sameIdentity)}`)
+    const lines = commandLog(sameIdentity).split(/\r?\n/).filter(Boolean)
+    assert.equal(lines.filter((line) => line.startsWith('image inspect --format')).length, 1, 'M == C compatibility reads the RepoTag runtime identity once')
+    assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, 0, 'M == C compatibility does not re-export')
+  } finally {
+    rmSync(sameIdentity.root, { recursive: true, force: true })
   }
 })
 
