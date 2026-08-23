@@ -1027,8 +1027,11 @@ function selectedProofFiles(proofRoot, pattern) {
 function validateSelectedFile(file, label) {
   const stat = lstatSync(file.source)
   if (stat.isSymbolicLink() || !stat.isFile() || stat.nlink !== 1) fail(`${label} is not a safe regular file`)
-  const parts = normalizedPath(file.relative).split('/')
-  if (parts.some((part) => part === '..' || part === '.' || /(?:rootfs|layer|secret|credential|token|password|private[-_. ]?key|access[-_. ]?key)/i.test(part))) fail(`${label} has an unsafe path`)
+  const relativePath = normalizedPath(file.relative)
+  const parts = relativePath.split('/')
+  const knownLayerContentGuard = /^(?:backend|frontend|keycloak)-layer-[0-9]+-content-guard\.json$/.test(relativePath)
+  if (parts.some((part) => part === '..' || part === '.' || /(?:rootfs|secret|credential|token|password|private[-_. ]?key|access[-_. ]?key)/i.test(part))
+    || (parts.some((part) => /layer/i.test(part)) && !knownLayerContentGuard)) fail(`${label} has an unsafe path`)
   return { ...file, bytes: stat.size, sha256: sha256File(file.source) }
 }
 

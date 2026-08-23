@@ -586,6 +586,7 @@ function createUploadFixture(root, plan) {
   mkdirSync(runTemp, { recursive: true })
   const names = [
     'backend-content-guard.json', 'frontend-content-guard.json', 'keycloak-content-guard.json',
+    'backend-layer-0-content-guard.json', 'frontend-layer-1-content-guard.json', 'keycloak-layer-2-content-guard.json',
     'backend-sbom.spdx.json', 'frontend-sbom.spdx.json', 'keycloak-sbom.spdx.json',
     'backend-trivy.json', 'frontend-trivy.json', 'keycloak-trivy.json',
     'backend-license-inventory.json', 'frontend-license-inventory.json', 'keycloak-license-inventory.json',
@@ -651,6 +652,20 @@ test('artifact collector rejects sensitive selected paths while allowing public-
     assert.ok(baseline.manifest.artifacts.some((artifact) => artifact.path.endsWith('content-guard-index-public.pem')))
     writeFileSync(join(root, 'proof', 'backend-token-content-guard.json'), '{}\n')
     assert.throws(() => collectUploadArtifacts({ ...fixture, outputRoot: join(root, 'sensitive-output'), expectedSha: sourceSha }), /unsafe path/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('artifact collector permits only known generated layer content guards', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-layer-artifact-contract-'))
+  try {
+    const plan = extractFullProofPlan(workflow)
+    const fixture = createUploadFixture(root, plan)
+    const collected = collectUploadArtifacts({ ...fixture, outputRoot: join(root, 'baseline-output'), expectedSha: sourceSha })
+    assert.ok(collected.manifest.artifacts.some((artifact) => artifact.path.endsWith('backend-layer-0-content-guard.json')))
+    writeFileSync(join(root, 'proof', 'unapproved-layer-content-guard.json'), '{}\n')
+    assert.throws(() => collectUploadArtifacts({ ...fixture, outputRoot: join(root, 'unsafe-output'), expectedSha: sourceSha }), /unsafe path/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
