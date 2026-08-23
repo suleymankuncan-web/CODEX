@@ -907,6 +907,10 @@ function controlGroupResidue(commandRunner, cgroup, label) {
   return processLines.length !== 0 || childLines.length !== 0
 }
 
+function isExactAbsentPidEsrch(result, pid) {
+  return result.status === 1 && result.stdout === '' && result.stderr === `/usr/bin/kill: (${String(pid)}): No such process\n`
+}
+
 function proveStoppedAttempt(commandRunner, before) {
   // Every component is checked during every attempt. A retryable observation
   // never short-circuits the remaining invariant, so a different residue
@@ -917,7 +921,7 @@ function proveStoppedAttempt(commandRunner, before) {
   for (const [label, pid] of [['dockerd', before.pids.dockerd], ['containerd', before.pids.containerd]]) {
     const result = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('kill'), '-0', String(pid)], {}, `${label} process state`)
     if (result.status === 0) fail(`${label} process did not stop`)
-    if (result.status !== 1 || result.stdout !== '' || result.stderr !== '') fail(`${label} process state cannot be proved`)
+    if (!isExactAbsentPidEsrch(result, pid)) fail(`${label} process state cannot be proved`)
   }
 
   const dockerSocket = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-S', hostContract.socket], {}, 'Docker socket state')

@@ -124,7 +124,10 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
       return { status: 0, stdout: `0::/system.slice/${wrongCgroup ? 'other.service' : (pid === 421 ? hostContract.dockerdUnit : hostContract.containerdUnit)}\n`, stderr: '' }
     }
     if (actualFile === 'readlink') return { status: 0, stdout: wrongExecutable ? '/tmp/not-approved\n' : (actualArgs.at(-1).includes('/421/') ? '/usr/bin/dockerd\n' : '/usr/bin/containerd\n'), stderr: '' }
-    if (actualFile === 'kill') return { status: active ? 0 : 1, stdout: '', stderr: '' }
+    if (actualFile === 'kill') {
+      const pid = actualArgs.at(-1)
+      return { status: active ? 0 : 1, stdout: '', stderr: active ? '' : `/usr/bin/kill: (${pid}): No such process\n` }
+    }
     if (actualFile === 'test') {
       if (actualArgs[0] === '!' && actualArgs[1] === '-e' && actualArgs[2]?.startsWith('/sys/fs/cgroup/')) {
         if (cgroupState === 'error') return { status: 2, stdout: '', stderr: 'permission denied' }
@@ -154,7 +157,7 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
   return { run, record, get active() { return active }, set active(value) { active = value } }
 }
 
-function quiescenceRunner({ mode = 'clean', record = [] } = {}) {
+function quiescenceRunner({ mode = 'clean', pidVariant = '', record = [] } = {}) {
   const runner = baseRunner({ record })
   const originalRun = runner.run
   let stopped = false
@@ -203,7 +206,29 @@ function quiescenceRunner({ mode = 'clean', record = [] } = {}) {
         if (first) return { status: 1, stdout: '', stderr: '' }
       }
     }
-    if (stopped && actualFile === 'kill' && mode === 'pid-live') return { status: 0, stdout: '', stderr: '' }
+    if (stopped && actualFile === 'kill' && (mode === 'pid-live' || pidVariant)) {
+      if (mode === 'pid-live' || pidVariant === 'status0') return { status: 0, stdout: '', stderr: '' }
+      const pid = actualArgs.at(-1)
+      const exact = `/usr/bin/kill: (${pid}): No such process\n`
+      const variants = {
+        'empty-stderr': { status: 1, stdout: '', stderr: '' },
+        'other-pid': { status: 1, stdout: '', stderr: '/usr/bin/kill: (999999): No such process\n' },
+        'operation-not-permitted': { status: 1, stdout: '', stderr: `/usr/bin/kill: (${pid}): Operation not permitted\n` },
+        'invalid-argument': { status: 1, stdout: '', stderr: `/usr/bin/kill: (${pid}): Invalid argument\n` },
+        sudo: { status: 1, stdout: '', stderr: '/usr/bin/sudo: permission denied\n' },
+        arbitrary: { status: 1, stdout: '', stderr: 'No such process\n' },
+        'non-english': { status: 1, stdout: '', stderr: `/usr/bin/kill: (${pid}): Aucun processus de ce type\n` },
+        crlf: { status: 1, stdout: '', stderr: exact.replace('\n', '\r\n') },
+        'no-lf': { status: 1, stdout: '', stderr: exact.slice(0, -1) },
+        extra: { status: 1, stdout: '', stderr: `${exact}extra` },
+        stdout: { status: 1, stdout: 'unexpected\n', stderr: exact },
+        status2: { status: 2, stdout: '', stderr: exact },
+        status126: { status: 126, stdout: '', stderr: exact },
+        status127: { status: 127, stdout: '', stderr: exact },
+        statusNegative: { status: -1, stdout: '', stderr: exact },
+      }
+      return variants[pidVariant] ?? { status: 1, stdout: '', stderr: exact }
+    }
     if (stopped && isSystemctl && actualArgs[0] === 'is-active' && actualArgs.at(-1) === hostContract.dockerdUnit && mode === 'unit-unexpected') return { status: 2, stdout: '', stderr: 'unknown' }
     if (stopped && isSystemctl && actualArgs[0] === 'is-active' && actualArgs.at(-1) === hostContract.dockerdUnit && mode === 'slow-recheck') {
       // Leave the outer recovery deadline ample room for all lifecycle
@@ -387,6 +412,8 @@ test('post-stop quiescence proves the complete invariant in one clean attempt', 
   assert.equal(result.dockerDaemonReset, true)
   assert.equal(runner.attempts, 1)
   assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  const killCalls = record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/kill').map((entry) => entry.args.at(-1))
+  assert.deepEqual(killCalls, ['421', '422'])
 })
 
 for (const mode of ['docker-runtime-once', 'containerd-runtime-once', 'containerd-socket-once', 'dockerd-cgroup-once', 'child-cgroup-once']) {
@@ -433,6 +460,36 @@ for (const [mode, expected] of [
     assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 2_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 25), pid: 795 }), expected)
     assert.equal(runner.attempts, 1)
     assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  })
+}
+
+for (const [pidVariant, expected] of [
+  ['empty-stderr', /dockerd process state cannot be proved/],
+  ['other-pid', /dockerd process state cannot be proved/],
+  ['operation-not-permitted', /dockerd process state cannot be proved/],
+  ['invalid-argument', /dockerd process state cannot be proved/],
+  ['sudo', /dockerd process state cannot be proved/],
+  ['arbitrary', /dockerd process state cannot be proved/],
+  ['non-english', /dockerd process state cannot be proved/],
+  ['crlf', /dockerd process state cannot be proved/],
+  ['no-lf', /dockerd process state cannot be proved/],
+  ['extra', /dockerd process state cannot be proved/],
+  ['stdout', /dockerd process state cannot be proved/],
+  ['status2', /dockerd process state cannot be proved/],
+  ['status126', /dockerd process state cannot be proved/],
+  ['status127', /dockerd process state cannot be proved/],
+  ['statusNegative', /dockerd process state cannot be proved/],
+  ['status0', /dockerd process did not stop/],
+]) {
+  test(`post-stop PID probe rejects ${pidVariant} ESRCH variant with immediate compensation`, () => {
+    const record = []
+    const runner = quiescenceRunner({ pidVariant, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), recoveryDeadlineAt: Date.now() + 2_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 27), pid: 797 }), expected)
+    assert.equal(runner.attempts, 1)
+    const starts = record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3])
+    assert.deepEqual(starts, [hostContract.containerdUnit, hostContract.dockerdUnit])
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && ['/usr/bin/umount', '/usr/bin/rm', '/usr/bin/install'].includes(entry.args[1])).length, 0)
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/sleep').length, 0)
   })
 }
 
