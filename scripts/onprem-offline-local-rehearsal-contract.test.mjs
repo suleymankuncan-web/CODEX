@@ -28,6 +28,7 @@ import {
   validateChecksumManifest,
   workflowBodyDigest,
 } from './onprem-offline-local-rehearsal.mjs'
+import { FIREWALL_DIAGNOSTIC_LINE_CAP } from './onprem-image-local-proof-recovery.mjs'
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const scriptPath = path.join(repositoryRoot, 'scripts', 'onprem-offline-local-rehearsal.mjs')
@@ -256,7 +257,7 @@ test('all outcomes finalize in quiesce, restore, failure receipt, materialize, c
   assert.doesNotMatch(stableJson(result.receipt), /PASSWORD|TOKEN|PRIVATE_KEY/)
 })
 
-function supervisedFixture({ phaseFailure = false, resetFailure = false, resetUnverified = false, ipv6Mismatch = false, postInventory = null, finalGit = null } = {}) {
+function supervisedFixture({ phaseFailure = false, resetFailure = false, resetUnverified = false, ipv6Mismatch = false, ipv6CounterOnlyMismatch = false, ipv6DiagnosticOverflow = false, postInventory = null, finalGit = null } = {}) {
   const directory = temporaryDirectory()
   const runnerTemp = path.join(directory, 'runner-temp')
   const workspace = repositoryRoot
@@ -269,9 +270,21 @@ function supervisedFixture({ phaseFailure = false, resetFailure = false, resetUn
     trustedFingerprint: 'b'.repeat(64), bootstrapSha256: 'c'.repeat(64), manifestSha256: 'a'.repeat(64), nodePath: '/opt/node-v24.19.0/bin/node', nodeSha256: 'd'.repeat(64),
   }
   const context = { runRoot: directory, runnerTemp, workspace, dockerHome: path.join(runnerTemp, 'docker-home'), dockerConfig: path.join(runnerTemp, 'docker-config'), options, workflowBlocks: blocks }
+  const ipv4Bytes = Buffer.from('ipv4-before\n')
+  const overflowRules = (start) => Array.from({ length: FIREWALL_DIAGNOSTIC_LINE_CAP + 1 }, (_, index) => `:INPUT ACCEPT [${start + index}:${start + index}]`).join('\n')
+  const ipv6Bytes = ipv6DiagnosticOverflow
+    ? Buffer.from(overflowRules(0))
+    : ipv6CounterOnlyMismatch
+    ? Buffer.from('*filter\n:INPUT ACCEPT [0:0]\n-A INPUT -c 0 0 -j ACCEPT\nCOMMIT\n')
+    : Buffer.from('ipv6-before\n')
+  const ipv6AfterBytes = ipv6DiagnosticOverflow
+    ? Buffer.from(overflowRules(1))
+    : ipv6CounterOnlyMismatch
+    ? Buffer.from('*filter\n:INPUT ACCEPT [12:34]\n-A INPUT -c 5 6 -j ACCEPT\nCOMMIT\n')
+    : ipv6Mismatch ? Buffer.from('ipv6-after-drift\n') : ipv6Bytes
   const snapshots = {
-    ipv4: { bytes: Buffer.from('ipv4-before\n'), byteLength: 12, sha256: digest(Buffer.from('ipv4-before\n')) },
-    ipv6: { bytes: Buffer.from('ipv6-before\n'), byteLength: 12, sha256: digest(Buffer.from('ipv6-before\n')) },
+    ipv4: { bytes: ipv4Bytes, byteLength: ipv4Bytes.length, sha256: digest(ipv4Bytes) },
+    ipv6: { bytes: ipv6Bytes, byteLength: ipv6Bytes.length, sha256: digest(ipv6Bytes) },
   }
   const order = []
   const commandRunner = (file, args, commandOptions = {}) => {
@@ -290,7 +303,7 @@ function supervisedFixture({ phaseFailure = false, resetFailure = false, resetUn
       assert.deepEqual(commandOptions.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' })
       assert.deepEqual(actualArgs, [])
       order.push(path.basename(actualFile))
-      const bytes = actualFile === '/usr/sbin/ip6tables-save' && ipv6Mismatch ? Buffer.from('ipv6-after-drift\n') : (actualFile === '/usr/sbin/ip6tables-save' ? snapshots.ipv6.bytes : snapshots.ipv4.bytes)
+      const bytes = actualFile === '/usr/sbin/ip6tables-save' ? ipv6AfterBytes : snapshots.ipv4.bytes
       return { status: 0, stdout: bytes.toString('utf8'), stderr: '' }
     }
     if (actualFile === 'git') {
@@ -338,6 +351,59 @@ test('supervised recovery orders reset, both firewall restores, post-inspection,
     assert.ok(fixture.order.indexOf('ip6tables-restore') < fixture.order.indexOf('post-inspect'))
     assert.equal(result.recovery.firewall.ipv4.byteEqual, true)
     assert.equal(result.recovery.firewall.ipv6.byteEqual, true)
+    assert.equal(result.recovery.firewall.ipv4.diagnostic, null)
+    assert.equal(result.recovery.firewall.ipv6.diagnostic, null)
+  } finally {
+    fs.rmSync(fixture.directory, { recursive: true, force: true })
+  }
+})
+
+test('counter-only-shaped firewall drift remains a failed recovery with sanitized diagnostics', () => {
+  const fixture = supervisedFixture({ ipv6CounterOnlyMismatch: true })
+  try {
+    const result = runSupervisedLifecycle(fixture.context, { git: { head: fixture.options.sourceSha, tree: fixture.options.treeSha }, inputIdentity: { manifest: { sourceRevision: fixture.options.sourceSha } } }, {
+      lock: { path: 'lock-held' }, beforeHost: fixture.beforeHost, snapshots: fixture.snapshots, commandRunner: fixture.commandRunner, platform: 'linux', uid: 1000,
+      controller: fixture.controller, execute: fixture.execute, finalGit: { head: fixture.options.sourceSha, tree: fixture.options.treeSha },
+    })
+    assert.equal(result.recovery.ok, false)
+    assert.equal(result.recovery.firewall.ipv6.byteEqual, false)
+    assert.equal(result.recovery.firewall.ipv6.diagnostic.counterOnly, true)
+    assert.equal(result.receipt.status, 'failed')
+
+    const serializedRecovery = stableJson(result.recovery)
+    const serializedReceipt = stableJson(result.receipt)
+    for (const serialized of [serializedRecovery, serializedReceipt]) {
+      assert.doesNotMatch(serialized, /\*filter\n:INPUT ACCEPT \[[0-9]+:[0-9]+\]/)
+      assert.doesNotMatch(serialized, /-A INPUT -c [0-9]+ [0-9]+ -j ACCEPT/)
+      assert.doesNotMatch(serialized, /"(?:bytes|text)"\s*:/)
+    }
+  } finally {
+    fs.rmSync(fixture.directory, { recursive: true, force: true })
+  }
+})
+
+test('offline recovery and its receipt stay bounded when firewall line digests overflow', () => {
+  const fixture = supervisedFixture({ ipv6DiagnosticOverflow: true })
+  try {
+    const result = runSupervisedLifecycle(fixture.context, { git: { head: fixture.options.sourceSha, tree: fixture.options.treeSha }, inputIdentity: { manifest: { sourceRevision: fixture.options.sourceSha } } }, {
+      lock: { path: 'lock-held' }, beforeHost: fixture.beforeHost, snapshots: fixture.snapshots, commandRunner: fixture.commandRunner, platform: 'linux', uid: 1000,
+      controller: fixture.controller, execute: fixture.execute, finalGit: { head: fixture.options.sourceSha, tree: fixture.options.treeSha },
+    })
+    const recoveryDiagnostic = result.recovery.firewall.ipv6.diagnostic
+    const receiptDiagnostic = result.receipt.recovery.firewall.ipv6.diagnostic
+    assert.equal(result.recovery.ok, false)
+    assert.equal(result.receipt.status, 'failed')
+    for (const diagnostic of [recoveryDiagnostic, receiptDiagnostic]) {
+      assert.equal(diagnostic.lineDigestTruncated, true)
+      assert.equal(diagnostic.counterOnly, false)
+      assert.equal(diagnostic.preLines.length, FIREWALL_DIAGNOSTIC_LINE_CAP)
+      assert.equal(diagnostic.postLines.length, FIREWALL_DIAGNOSTIC_LINE_CAP)
+    }
+    assert.equal(receiptDiagnostic.lineDigestTruncated, recoveryDiagnostic.lineDigestTruncated)
+    for (const serialized of [stableJson(result.recovery), stableJson(result.receipt)]) {
+      assert.doesNotMatch(serialized, /:INPUT ACCEPT|\[[0-9]+:[0-9]+\]/)
+      assert.doesNotMatch(serialized, /"(?:bytes|text)"\s*:/)
+    }
   } finally {
     fs.rmSync(fixture.directory, { recursive: true, force: true })
   }
@@ -414,6 +480,9 @@ test('IPv6 byte mismatch, nonempty post-reset inventory, and dirty final Git blo
       })
       assert.equal(result.receipt.status, 'failed')
       assert.equal(result.recovery.ok, false)
+      if (change.ipv6Mismatch) {
+        assert.equal(result.recovery.firewall.ipv6.diagnostic.counterOnly, false)
+      }
     } finally {
       fs.rmSync(fixture.directory, { recursive: true, force: true })
     }

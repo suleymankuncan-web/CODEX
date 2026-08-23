@@ -6,10 +6,12 @@ import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 
 import {
+  analyzeFirewallMismatch,
   acquireVerifiedHost,
   captureFirewallSnapshots,
   cleanupFreshWorkspace,
   FIREWALL_COMMAND_CAP_MS,
+  FIREWALL_DIAGNOSTIC_LINE_CAP,
   FIREWALL_RECOVERY_RESERVE_MS,
   recoverDedicatedHost,
   RECOVERY_COMMAND_BINARIES,
@@ -44,15 +46,16 @@ function hostFixture(events, { resetError = null, seen = null } = {}) {
   }
 }
 
-function firewallRunner(events, { ipv4 = 'v4-rules\n', ipv6 = 'v6-rules\n', restoreStatus = 0 } = {}) {
+function firewallRunner(events, { ipv4 = 'v4-rules\n', ipv6 = 'v6-rules\n', postIpv4 = ipv4, postIpv6 = ipv6, restoreStatus = 0 } = {}) {
+  const restored = { ipv4: false, ipv6: false }
   return (_file, args, options = {}) => {
     if (args.includes('context') && args.includes('show')) return { status: 0, stdout: 'default\n', stderr: '' }
     if (args.includes('context') && args.includes('inspect')) return { status: 0, stdout: '"unix:///var/run/docker.sock"\n', stderr: '' }
     if (args.includes('info') && args.includes('--format')) return { status: 0, stdout: JSON.stringify({ DockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker' }), stderr: '' }
-    if (args.some((arg) => arg.endsWith('/iptables-save'))) { events.push('save-ipv4'); assert.equal(_file, '/usr/bin/sudo'); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: 0, stdout: ipv4, stderr: '' } }
-    if (args.some((arg) => arg.endsWith('/ip6tables-save'))) { events.push('save-ipv6'); assert.equal(_file, '/usr/bin/sudo'); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: 0, stdout: ipv6, stderr: '' } }
-    if (args.some((arg) => arg.endsWith('/iptables-restore'))) { events.push('restore-ipv4'); assert.equal(_file, '/usr/bin/sudo'); assert.equal(options.input, ipv4); assert.ok(args.includes('--counters')); assert.ok(options.timeoutMs <= FIREWALL_COMMAND_CAP_MS); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: restoreStatus, stdout: '', stderr: '' } }
-    if (args.some((arg) => arg.endsWith('/ip6tables-restore'))) { events.push('restore-ipv6'); assert.equal(_file, '/usr/bin/sudo'); assert.equal(options.input, ipv6); assert.ok(args.includes('--counters')); assert.ok(options.timeoutMs <= FIREWALL_COMMAND_CAP_MS); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: restoreStatus, stdout: '', stderr: '' } }
+    if (args.some((arg) => arg.endsWith('/iptables-save'))) { events.push('save-ipv4'); assert.equal(_file, '/usr/bin/sudo'); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: 0, stdout: restored.ipv4 ? postIpv4 : ipv4, stderr: '' } }
+    if (args.some((arg) => arg.endsWith('/ip6tables-save'))) { events.push('save-ipv6'); assert.equal(_file, '/usr/bin/sudo'); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: 0, stdout: restored.ipv6 ? postIpv6 : ipv6, stderr: '' } }
+    if (args.some((arg) => arg.endsWith('/iptables-restore'))) { events.push('restore-ipv4'); restored.ipv4 = true; assert.equal(_file, '/usr/bin/sudo'); assert.equal(options.input, ipv4); assert.ok(args.includes('--counters')); assert.ok(options.timeoutMs <= FIREWALL_COMMAND_CAP_MS); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: restoreStatus, stdout: '', stderr: '' } }
+    if (args.some((arg) => arg.endsWith('/ip6tables-restore'))) { events.push('restore-ipv6'); restored.ipv6 = true; assert.equal(_file, '/usr/bin/sudo'); assert.equal(options.input, ipv6); assert.ok(args.includes('--counters')); assert.deepEqual(options.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' }); return { status: restoreStatus, stdout: '', stderr: '' } }
     return { status: 0, stdout: '', stderr: '' }
   }
 }
@@ -68,6 +71,93 @@ test('firewall lifecycle captures and restores complete IPv4/IPv6 bytes in order
   assert.equal(restored.outcome.equal, true)
   assert.equal(restored.outcome.ipv4.byteEqual, true)
   assert.equal(restored.outcome.ipv6.byteEqual, true)
+  assert.equal(restored.outcome.ipv4.diagnostic, null)
+  assert.equal(restored.outcome.ipv6.diagnostic, null)
+})
+
+test('raw mismatch diagnostics stay sanitized and classify only counter-token drift', () => {
+  const before = '*table\n:CHAIN ACCEPT [1:2]\n-A CHAIN -c 3 4 -j ACCEPT\nCOMMIT\n'
+  const after = '*table\n:CHAIN ACCEPT [11:22]\n-A CHAIN -c 33 44 -j ACCEPT\nCOMMIT\n'
+  const events = []
+  const commandRunner = firewallRunner(events, { ipv4: before, postIpv4: after })
+  const snapshots = captureFirewallSnapshots({ commandRunner, cwd: resolve('.'), deadlineAt: Date.now() + 10_000 })
+  const restored = restoreFirewallSnapshots({ snapshots, commandRunner, cwd: resolve('.'), deadlineAt: Date.now() + 10_000 })
+  const diagnostic = restored.outcome.ipv4.diagnostic
+
+  assert.equal(restored.outcome.equal, false)
+  assert.equal(restored.outcome.ipv4.byteEqual, false)
+  assert.equal(restored.outcome.ipv4.preSha256, snapshots.ipv4.sha256)
+  assert.notEqual(restored.outcome.ipv4.postSha256, snapshots.ipv4.sha256)
+  assert.equal(diagnostic.counterOnly, true)
+  assert.equal(diagnostic.lineDigestTruncated, false)
+  assert.equal(diagnostic.preByteLength, Buffer.byteLength(before))
+  assert.equal(diagnostic.postByteLength, Buffer.byteLength(after))
+  assert.equal(diagnostic.preSha256, createHash('sha256').update(before).digest('hex'))
+  assert.equal(diagnostic.postSha256, createHash('sha256').update(after).digest('hex'))
+  assert.equal(typeof diagnostic.firstDifferingByteOffset, 'number')
+  assert.equal(diagnostic.preLines.length, 5)
+  assert.equal(diagnostic.postLines.length, 5)
+  assert.equal(diagnostic.preLines[1].byteLength, Buffer.byteLength(':CHAIN ACCEPT [1:2]'))
+  assert.equal(Object.isFrozen(diagnostic), true)
+  assert.equal(Object.isFrozen(diagnostic.preLines), true)
+  const diagnosticText = JSON.stringify(diagnostic)
+  for (const raw of ['*table', ':CHAIN ACCEPT [1:2]', '-A CHAIN -c 3 4 -j ACCEPT', 'COMMIT']) assert.equal(diagnosticText.includes(raw), false)
+})
+
+test('firewall mismatch diagnostics preserve Buffer bytes and fail closed for non-text output', () => {
+  const before = Buffer.from('*table\n:CHAIN ACCEPT [1:2]\n-A CHAIN -c 3 4 -j ACCEPT\nCOMMIT\n', 'ascii')
+  const after = Buffer.from('*table\n:CHAIN ACCEPT [11:22]\n-A CHAIN -c 33 44 -j ACCEPT\nCOMMIT\n', 'ascii')
+  const diagnostic = analyzeFirewallMismatch(before, after)
+
+  assert.equal(diagnostic.counterOnly, true)
+  assert.equal(diagnostic.preSha256, createHash('sha256').update(before).digest('hex'))
+  assert.equal(diagnostic.postSha256, createHash('sha256').update(after).digest('hex'))
+  assert.equal(diagnostic.firstDifferingByteOffset, before.findIndex((value, index) => value !== after[index]))
+
+  const nonText = analyzeFirewallMismatch(Buffer.from([0xff, 0x0a]), Buffer.from([0xfe, 0x0a]))
+  assert.equal(nonText.counterOnly, false)
+  assert.equal(nonText.lineDigestTruncated, false)
+  assert.equal(nonText.preSha256, createHash('sha256').update(Buffer.from([0xff, 0x0a])).digest('hex'))
+  assert.equal(nonText.firstDifferingByteOffset, 0)
+})
+
+test('firewall mismatch digest evidence stops at the fixed cap and fails closed for overflow', () => {
+  const lineCount = FIREWALL_DIAGNOSTIC_LINE_CAP + 1
+  const before = Array.from({ length: lineCount }, (_, index) => `:CHAIN ACCEPT [${index}:${index}]`).join('\n')
+  const after = Array.from({ length: lineCount }, (_, index) => `:CHAIN ACCEPT [${index + 1}:${index + 1}]`).join('\n')
+  const diagnostic = analyzeFirewallMismatch(before, after)
+
+  assert.equal(diagnostic.preLines.length, FIREWALL_DIAGNOSTIC_LINE_CAP)
+  assert.equal(diagnostic.postLines.length, FIREWALL_DIAGNOSTIC_LINE_CAP)
+  assert.equal(diagnostic.lineDigestTruncated, true)
+  assert.equal(diagnostic.counterOnly, false)
+  assert.equal(diagnostic.preSha256, createHash('sha256').update(before).digest('hex'))
+  assert.equal(diagnostic.postSha256, createHash('sha256').update(after).digest('hex'))
+  assert.equal(diagnostic.firstDifferingByteOffset, before.indexOf('0:0'))
+  assert.doesNotMatch(JSON.stringify(diagnostic), /CHAIN|ACCEPT|\[[0-9]+:[0-9]+\]/)
+})
+
+test('counter-only classifier fails closed for non-counter, ordering, line-count, and malformed drift', () => {
+  const before = '*table\n:CHAIN ACCEPT [1:2]\n-A CHAIN -c 3 4 -j ACCEPT\n-A CHAIN -c 5 6 -j DROP\nCOMMIT\n'
+  const cases = [
+    ['rule target', before.replace('-j ACCEPT', '-j REJECT')],
+    ['policy', before.replace(':CHAIN ACCEPT [1:2]', ':CHAIN DROP [11:22]')],
+    ['order', before.replace('-A CHAIN -c 3 4 -j ACCEPT\n-A CHAIN -c 5 6 -j DROP', '-A CHAIN -c 5 6 -j DROP\n-A CHAIN -c 3 4 -j ACCEPT')],
+    ['timestamp', before.replace('*table', '# generated-at=synthetic-a').replace('# generated-at=synthetic-a', '# generated-at=synthetic-b')],
+    ['malformed counter', before.replace('-c 3 4', '-c malformed 4')],
+    ['extra line', `${before}# extra-synthetic-line\n`],
+    ['whitespace', before.replace('-c 3 4', '  -c 33 44')],
+  ]
+
+  for (const [label, after] of cases) {
+    const events = []
+    const commandRunner = firewallRunner(events, { ipv4: before, postIpv4: after })
+    const snapshots = captureFirewallSnapshots({ commandRunner, cwd: resolve('.'), deadlineAt: Date.now() + 10_000 })
+    const restored = restoreFirewallSnapshots({ snapshots, commandRunner, cwd: resolve('.'), deadlineAt: Date.now() + 10_000 })
+    assert.equal(restored.outcome.equal, false, label)
+    assert.equal(restored.outcome.ipv4.byteEqual, false, label)
+    assert.equal(restored.outcome.ipv4.diagnostic.counterOnly, false, label)
+  }
 })
 
 test('daemon reset is attempted before both firewall restores even when reset fails', () => {
@@ -102,6 +192,35 @@ test('daemon reset is attempted before both firewall restores even when reset fa
   assert.equal(recovery.firewallBudgetMs, FIREWALL_RECOVERY_RESERVE_MS)
   assert.ok(recovery.resetBudgetMs <= recoveryDeadlineAt - recoveryStarted - FIREWALL_RECOVERY_RESERVE_MS)
   assert.ok(recovery.resetBudgetMs > recoveryDeadlineAt - recoveryStarted - FIREWALL_RECOVERY_RESERVE_MS - 1_000)
+})
+
+test('successful daemon reset does not relax raw firewall equality after counter-only drift', () => {
+  const before = '*table\n:CHAIN ACCEPT [1:2]\n-A CHAIN -c 3 4 -j ACCEPT\nCOMMIT\n'
+  const after = '*table\n:CHAIN ACCEPT [11:22]\n-A CHAIN -c 33 44 -j ACCEPT\nCOMMIT\n'
+  const events = []
+  const commandRunner = firewallRunner(events, { ipv4: before, postIpv4: after })
+  const snapshots = captureFirewallSnapshots({ commandRunner, cwd: resolve('.'), deadlineAt: Date.now() + 10_000 })
+  events.length = 0
+  const recovery = recoverDedicatedHost({
+    lock: { path: '/mock/lock', version: 1, pid: 42, uid: 1000, nonce: 'a'.repeat(48) },
+    inspectionBefore: hostFixture([], {}).inspectDedicatedNativeDockerHost(),
+    hostController: hostFixture(events),
+    commandRunner,
+    cwd: resolve('.'),
+    env: {},
+    snapshots,
+    deadlineAt: Date.now() + 10_000,
+    recoveryDeadlineAt: Date.now() + 300_000,
+    allowDisposableDaemonReset: true,
+  })
+
+  assert.equal(recovery.dockerDaemonReset, true)
+  assert.ok(recovery.hostAfter)
+  assert.equal(recovery.firewall.equal, false)
+  assert.equal(recovery.firewall.ipv4.byteEqual, false)
+  assert.equal(recovery.firewall.ipv4.diagnostic.counterOnly, true)
+  assert.ok(recovery.failures.includes('ipv4 firewall bytes differ after restore'))
+  assert.deepEqual(events, ['daemon-reset', 'restore-ipv4', 'restore-ipv6', 'save-ipv4', 'save-ipv6', 'host-inspect'])
 })
 
 test('recovery refuses daemon reset without the explicit disposable reset opt-in', () => {

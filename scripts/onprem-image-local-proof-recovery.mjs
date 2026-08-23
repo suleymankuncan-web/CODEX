@@ -26,6 +26,10 @@ const RECOVERY_ENV = Object.freeze({
 export const DEFAULT_RECOVERY_BUDGET_MS = 5 * 60_000
 export const FIREWALL_COMMAND_CAP_MS = 30_000
 export const FIREWALL_RECOVERY_RESERVE_MS = 150_000
+// Keep mismatch receipts useful for small rulesets while bounding every
+// positional digest collection, including the offline rehearsal path that
+// copies recovery diagnostics directly into its receipt.
+export const FIREWALL_DIAGNOSTIC_LINE_CAP = 1_024
 const FIXED_RECOVERY_BINARY = /^\/usr\/(?:sbin|bin)\/[A-Za-z0-9._-]+$/
 for (const executable of [...FIREWALLS.flatMap(({ save, restore }) => [save, restore]), ...Object.values(RECOVERY_BINARIES)]) {
   if (!FIXED_RECOVERY_BINARY.test(executable)) throw new Error('recovery executable path is not fixed')
@@ -36,12 +40,15 @@ const GENERATED_WORKSPACE_PATHS = Object.freeze([
   Object.freeze({ label: 'photo-storage-secret-files', relative: 'infra/onprem/photo-storage/secret-files' }),
 ])
 const MAX_FAILURE_LENGTH = 320
+const DECIMAL_COUNTER = /^[0-9]+$/
+const SAFE_CHAIN_TOKEN = /^[A-Za-z0-9][A-Za-z0-9_.:+-]*$/
+const SAFE_POLICY_TOKEN = /^[A-Za-z0-9_.:+-]+$/
 
 const fail = (message) => { throw new Error(message) }
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 function sha256(value) {
-  return createHash('sha256').update(Buffer.from(String(value ?? ''), 'utf8')).digest('hex')
+  return createHash('sha256').update(Buffer.isBuffer(value) ? value : Buffer.from(String(value ?? ''), 'utf8')).digest('hex')
 }
 
 function timeoutMs(deadlineAt, capMs = 120_000) {
@@ -81,6 +88,144 @@ function assertSnapshot(snapshot, key) {
   if (!snapshot || typeof snapshot.text !== 'string' || typeof snapshot.sha256 !== 'string') fail(`${key} firewall snapshot is unavailable`)
 }
 
+function firewallBytes(value) {
+  if (Buffer.isBuffer(value)) return Buffer.from(value)
+  if (typeof value === 'string') return Buffer.from(value, 'utf8')
+  fail('firewall mismatch input is invalid')
+}
+
+function positionalLineDigests(bytes) {
+  const lines = []
+  let start = 0
+  for (let offset = 0; offset <= bytes.length; offset += 1) {
+    if (offset < bytes.length && bytes[offset] !== 0x0a) continue
+    if (lines.length >= FIREWALL_DIAGNOSTIC_LINE_CAP) {
+      return Object.freeze({ lines: Object.freeze(lines), truncated: true })
+    }
+    const line = bytes.subarray(start, offset)
+    lines.push(Object.freeze({
+      sha256: sha256(line),
+      byteLength: line.length,
+    }))
+    start = offset + 1
+  }
+  return Object.freeze({ lines: Object.freeze(lines), truncated: false })
+}
+
+function firstDifferingByteOffset(before, after) {
+  const commonLength = Math.min(before.length, after.length)
+  for (let offset = 0; offset < commonLength; offset += 1) {
+    if (before[offset] !== after[offset]) return offset
+  }
+  return before.length === after.length ? null : commonLength
+}
+
+/**
+ * Parse only the counter-bearing line forms emitted by iptables-save.
+ *
+ * This intentionally does not attempt to parse the complete iptables grammar.
+ * A changed line must be one of these narrow forms; unchanged lines need no
+ * interpretation. Any quoting/comment syntax is rejected so a `-c` string
+ * cannot be mistaken for a counter token.
+ */
+function parseCounterLine(line) {
+  if (typeof line !== 'string' || line.length === 0 || /[\r\t\0"'\\]/.test(line)) return null
+  if (line.includes('--comment') || line.startsWith('#')) return null
+  const tokens = line.split(' ')
+  if (tokens.some((token) => token.length === 0)) return null
+
+  if (tokens[0]?.startsWith(':')) {
+    if (tokens.length !== 3) return null
+    const chain = tokens[0].slice(1)
+    const policy = tokens[1]
+    const counter = /^\[([0-9]+):([0-9]+)\]$/.exec(tokens[2])
+    if (!SAFE_CHAIN_TOKEN.test(chain) || !SAFE_POLICY_TOKEN.test(policy) || !counter) return null
+    return { kind: 'chain', counterIndex: 2 }
+  }
+
+  if (tokens[0] !== '-A' || !SAFE_CHAIN_TOKEN.test(tokens[1] ?? '')) return null
+  let counterIndexes = null
+  for (let index = 2; index < tokens.length; index += 1) {
+    if (tokens[index] !== '-c') continue
+    if (counterIndexes || !DECIMAL_COUNTER.test(tokens[index + 1] ?? '') || !DECIMAL_COUNTER.test(tokens[index + 2] ?? '')) return null
+    counterIndexes = [index + 1, index + 2]
+    index += 2
+  }
+  return { kind: 'rule', counterIndexes: counterIndexes ?? [] }
+}
+
+function canonicalCounterLine(line, parsed) {
+  const tokens = line.split(' ')
+  if (parsed.kind === 'chain') {
+    tokens[parsed.counterIndex] = '[PACKETS:BYTES]'
+  } else {
+    for (const index of parsed.counterIndexes) tokens[index] = index === parsed.counterIndexes[0] ? 'PACKETS' : 'BYTES'
+  }
+  return tokens.join(' ')
+}
+
+function counterOnlyRuleset(beforeText, afterText) {
+  const beforeLines = String(beforeText).split('\n')
+  const afterLines = String(afterText).split('\n')
+  if (beforeLines.length !== afterLines.length) return false
+
+  let changedCounterLine = false
+  for (let index = 0; index < beforeLines.length; index += 1) {
+    const beforeLine = beforeLines[index]
+    const afterLine = afterLines[index]
+    if (beforeLine === afterLine) continue
+
+    const beforeParsed = parseCounterLine(beforeLine)
+    const afterParsed = parseCounterLine(afterLine)
+    if (!beforeParsed || !afterParsed || beforeParsed.kind !== afterParsed.kind) return false
+    if (beforeParsed.kind === 'chain' && afterParsed.kind === 'chain') {
+      if (beforeParsed.counterIndex !== afterParsed.counterIndex) return false
+    } else if (JSON.stringify(beforeParsed.counterIndexes) !== JSON.stringify(afterParsed.counterIndexes)) {
+      return false
+    }
+    if (canonicalCounterLine(beforeLine, beforeParsed) !== canonicalCounterLine(afterLine, afterParsed)) return false
+    changedCounterLine = true
+  }
+  return changedCounterLine
+}
+
+function exactAsciiFirewallText(bytes) {
+  for (const value of bytes) {
+    if (value === 0x0a || (value >= 0x20 && value <= 0x7e)) continue
+    return null
+  }
+  return bytes.toString('ascii')
+}
+
+/**
+ * Return sanitized mismatch evidence without relaxing byte-for-byte recovery.
+ * Buffers are retained as bytes for every hash and offset; textual parsing is
+ * allowed only for exact ASCII iptables-save output and otherwise fails closed.
+ */
+export function analyzeFirewallMismatch(beforeValue, afterValue) {
+  const before = firewallBytes(beforeValue)
+  const after = firewallBytes(afterValue)
+  const preLineDigests = positionalLineDigests(before)
+  const postLineDigests = positionalLineDigests(after)
+  const lineDigestTruncated = preLineDigests.truncated || postLineDigests.truncated
+  // Do not parse/classify a full textual ruleset after either family has
+  // exceeded the positional evidence cap. Hashes and byte offsets remain
+  // useful, while classification must fail closed for incomplete evidence.
+  const beforeText = lineDigestTruncated ? null : exactAsciiFirewallText(before)
+  const afterText = lineDigestTruncated ? null : exactAsciiFirewallText(after)
+  return Object.freeze({
+    preByteLength: before.length,
+    postByteLength: after.length,
+    preSha256: sha256(before),
+    postSha256: sha256(after),
+    firstDifferingByteOffset: firstDifferingByteOffset(before, after),
+    preLines: preLineDigests.lines,
+    postLines: postLineDigests.lines,
+    counterOnly: beforeText !== null && afterText !== null && counterOnlyRuleset(beforeText, afterText),
+    lineDigestTruncated,
+  })
+}
+
 /** Capture complete in-memory IPv4 and IPv6 rulesets. Rules never leave this process. */
 export function captureFirewallSnapshots({ commandRunner, cwd, env, deadlineAt, perCommandTimeoutMs = 120_000 } = {}) {
   if (typeof commandRunner !== 'function') fail('firewall command runner is required')
@@ -102,8 +247,8 @@ export function restoreFirewallSnapshots({ snapshots, commandRunner, cwd, env, d
   const outcome = {
     status: 'failed',
     timedOut: false,
-    ipv4: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false },
-    ipv6: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false },
+    ipv4: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false, diagnostic: null },
+    ipv6: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false, diagnostic: null },
     equal: false,
     failures: [],
   }
@@ -145,7 +290,10 @@ export function restoreFirewallSnapshots({ snapshots, commandRunner, cwd, env, d
     if (current) {
       state.postSha256 = current.sha256
       state.byteEqual = available[firewall.key]?.text === current.text
-      if (!state.byteEqual) outcome.failures.push(`${firewall.key} firewall bytes differ after restore`)
+      if (!state.byteEqual) {
+        state.diagnostic = analyzeFirewallMismatch(available[firewall.key]?.text, current.text)
+        outcome.failures.push(`${firewall.key} firewall bytes differ after restore`)
+      }
     }
   }
   outcome.equal = FIREWALLS.every(({ key }) => outcome[key].status === 'passed' && outcome[key].byteEqual)

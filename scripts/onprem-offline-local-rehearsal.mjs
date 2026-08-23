@@ -12,6 +12,7 @@ import {
   releaseHostLock,
   resetDedicatedNativeDockerHost,
 } from './onprem-native-docker-host.mjs'
+import { analyzeFirewallMismatch } from './onprem-image-local-proof-recovery.mjs'
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url))
 const REPOSITORY_ROOT = path.resolve(SCRIPT_ROOT, '..')
@@ -968,7 +969,8 @@ export function captureFirewallSnapshots({ commandRunner } = {}) {
 function restoreFirewallSnapshot(firewall, snapshot, commandRunner) {
   commandOutput(RECOVERY_BINARIES.sudo, ['-n', firewall.restore, '--counters'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall restore`, snapshot.bytes))
   const restored = captureFirewallSnapshot(firewall, commandRunner)
-  return Object.freeze({ byteEqual: Buffer.compare(snapshot.bytes, restored.bytes) === 0, sha256: restored.sha256, byteLength: restored.byteLength })
+  const byteEqual = Buffer.compare(snapshot.bytes, restored.bytes) === 0
+  return Object.freeze({ byteEqual, sha256: restored.sha256, byteLength: restored.byteLength, diagnostic: byteEqual ? null : analyzeFirewallMismatch(snapshot.bytes, restored.bytes) })
 }
 
 function inventorySummary(value) {
@@ -1081,8 +1083,8 @@ export function recoverAfterLifecycle({ context, preflight, lock, beforeHost, sn
     beforeInventory: inventorySummary(beforeHost),
     afterInventory: inventorySummary(afterHost),
     firewall: Object.freeze({
-      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true }),
-      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true }),
+      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true, diagnostic: ipv4?.diagnostic ?? null }),
+      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true, diagnostic: ipv6?.diagnostic ?? null }),
     }),
     generatedCleanup,
     finalSource: finalSource ? Object.freeze({ head: finalSource.head, tree: finalSource.tree, exactMatch: finalSource.head === context.options.sourceSha && finalSource.tree === context.options.treeSha }) : null,

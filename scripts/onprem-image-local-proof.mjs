@@ -1130,6 +1130,61 @@ function sanitizeHostIdentity(value) {
   }
 }
 
+const INVALID_FIREWALL_DIAGNOSTIC_VALUE = Symbol('invalid-firewall-diagnostic-value')
+const MAX_FIREWALL_DIAGNOSTIC_LINES = 16_384
+
+function ownDataProperty(value, key) {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key)
+  return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : INVALID_FIREWALL_DIAGNOSTIC_VALUE
+}
+
+function nonNegativeSafeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0
+}
+
+function sanitizeFirewallDiagnosticLines(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_FIREWALL_DIAGNOSTIC_LINES) return null
+  const lines = []
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.hasOwn(value, index)) return null
+    const line = ownDataProperty(value, index)
+    if (!isObject(line)) return null
+    const sha256 = ownDataProperty(line, 'sha256')
+    const byteLength = ownDataProperty(line, 'byteLength')
+    if (typeof sha256 !== 'string' || !SHA256.test(sha256) || !nonNegativeSafeInteger(byteLength)) return null
+    lines.push({ sha256, byteLength })
+  }
+  return lines
+}
+
+/** Keep only fixed, hash/length/offset/boolean mismatch evidence at the receipt boundary. */
+export function sanitizeFirewallDiagnostic(value) {
+  try {
+    if (!isObject(value)) return null
+    const preByteLength = ownDataProperty(value, 'preByteLength')
+    const postByteLength = ownDataProperty(value, 'postByteLength')
+    const preSha256 = ownDataProperty(value, 'preSha256')
+    const postSha256 = ownDataProperty(value, 'postSha256')
+    const firstDifferingByteOffset = ownDataProperty(value, 'firstDifferingByteOffset')
+    const preLines = sanitizeFirewallDiagnosticLines(ownDataProperty(value, 'preLines'))
+    const postLines = sanitizeFirewallDiagnosticLines(ownDataProperty(value, 'postLines'))
+    const counterOnly = ownDataProperty(value, 'counterOnly')
+    const lineDigestTruncated = ownDataProperty(value, 'lineDigestTruncated')
+    if (!nonNegativeSafeInteger(preByteLength)
+      || !nonNegativeSafeInteger(postByteLength)
+      || typeof preSha256 !== 'string' || !SHA256.test(preSha256)
+      || typeof postSha256 !== 'string' || !SHA256.test(postSha256)
+      || !nonNegativeSafeInteger(firstDifferingByteOffset)
+      || firstDifferingByteOffset > Math.min(preByteLength, postByteLength)
+      || preLines === null || postLines === null
+      || typeof counterOnly !== 'boolean'
+      || typeof lineDigestTruncated !== 'boolean') return null
+    return { preByteLength, postByteLength, preSha256, postSha256, firstDifferingByteOffset, preLines, postLines, counterOnly, lineDigestTruncated }
+  } catch {
+    return null
+  }
+}
+
 function sanitizePostflight(value) {
   if (!isObject(value)) return { status: 'not-run', clean: false }
   const resources = Object.fromEntries(TARGET_PROJECTS.map((project) => [project, isObject(value.resources?.[project]) ? Object.fromEntries(['containers', 'volumes', 'networks'].map((kind) => [kind, value.resources[project][kind] === true])) : {}]))
@@ -1142,8 +1197,8 @@ function sanitizePostflight(value) {
     equal: value.firewall.equal === true,
     preSha256: value.firewall.preSha256 ?? null,
     postSha256: value.firewall.postSha256 ?? null,
-    ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true } : null,
-    ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true } : null,
+    ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv4.diagnostic) } : null,
+    ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv6.diagnostic) } : null,
   } : null
   return { status: typeof value.status === 'string' ? value.status : 'failed', clean: value.clean === true, resources, firewallChains, firewall }
 }
@@ -1171,8 +1226,8 @@ function buildReceipt({ options, node, docker, phases, failureReason, artifact, 
     firewall: recovery?.firewall ? {
       status: recovery.firewall.status ?? 'failed',
       equal: recovery.firewall.equal === true,
-      ipv4: { preSha256: recovery.firewall.ipv4?.preSha256 ?? null, postSha256: recovery.firewall.ipv4?.postSha256 ?? null, status: recovery.firewall.ipv4?.status ?? 'missing', byteEqual: recovery.firewall.ipv4?.byteEqual === true },
-      ipv6: { preSha256: recovery.firewall.ipv6?.preSha256 ?? null, postSha256: recovery.firewall.ipv6?.postSha256 ?? null, status: recovery.firewall.ipv6?.status ?? 'missing', byteEqual: recovery.firewall.ipv6?.byteEqual === true },
+      ipv4: { preSha256: recovery.firewall.ipv4?.preSha256 ?? null, postSha256: recovery.firewall.ipv4?.postSha256 ?? null, status: recovery.firewall.ipv4?.status ?? 'missing', byteEqual: recovery.firewall.ipv4?.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv4?.diagnostic) },
+      ipv6: { preSha256: recovery.firewall.ipv6?.preSha256 ?? null, postSha256: recovery.firewall.ipv6?.postSha256 ?? null, status: recovery.firewall.ipv6?.status ?? 'missing', byteEqual: recovery.firewall.ipv6?.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv6?.diagnostic) },
     } : recovery ? { status: 'failed', equal: false, ipv4: null, ipv6: null } : { status: 'not-run', equal: false, ipv4: null, ipv6: null },
     recovery: recovery ? { attempted: recovery.attempted === true, timedOut: recovery.timedOut === true, budgetMs: Number.isSafeInteger(recovery.budgetMs) ? recovery.budgetMs : null, resetBudgetMs: Number.isSafeInteger(recovery.resetBudgetMs) ? recovery.resetBudgetMs : null, firewallBudgetMs: Number.isSafeInteger(recovery.firewallBudgetMs) ? recovery.firewallBudgetMs : null, dockerDaemonReset: recovery.dockerDaemonReset === true, failures: recovery.failures ?? [] } : { attempted: false, timedOut: false, budgetMs: null, resetBudgetMs: null, firewallBudgetMs: null, dockerDaemonReset: false, failures: [] },
     cleanup: cleanup ? { ...cleanup, proofOutput: partialProofOutput ?? cleanup.proofOutput } : { status: 'not-run', failures: [] },

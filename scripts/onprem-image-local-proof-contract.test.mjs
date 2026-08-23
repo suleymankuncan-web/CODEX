@@ -18,6 +18,7 @@ import {
   assertFreshWorkspaceOutputs,
   inspectPostflight,
   runLocalProof,
+  sanitizeFirewallDiagnostic,
   validateDockerRootContext,
   validateCliOptions,
 } from './onprem-image-local-proof.mjs'
@@ -304,6 +305,93 @@ test('firewall snapshots are read-only, hash-only, and fail closed on drift', ()
   assert.equal(drift.clean, false)
   assert.equal(drift.firewall.equal, false)
   assert.deepEqual(dockerIdentityFromOutput(JSON.stringify({ ID: 'docker-id', ServerVersion: '29.0.0', OSType: 'linux', Architecture: 'x86_64' })), { id: 'docker-id', serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64' })
+})
+
+test('receipt firewall diagnostics keep only the allowlisted sanitized shape', () => {
+  const valid = {
+    preByteLength: 12,
+    postByteLength: 14,
+    preSha256: 'a'.repeat(64),
+    postSha256: 'b'.repeat(64),
+    firstDifferingByteOffset: 11,
+    preLines: [{ sha256: 'c'.repeat(64), byteLength: 8 }],
+    postLines: [{ sha256: 'd'.repeat(64), byteLength: 10 }],
+    counterOnly: true,
+    lineDigestTruncated: false,
+  }
+  const untrusted = Object.assign(Object.create({ inheritedRuleText: '*filter\n-A INPUT -j ACCEPT' }), valid, {
+    rawRules: '*filter\n-A INPUT -j ACCEPT\nCOMMIT',
+    preLines: [{ ...valid.preLines[0], rawRule: ':INPUT ACCEPT [1:2]' }],
+    postLines: [{ ...valid.postLines[0], bytes: Buffer.from('raw firewall bytes') }],
+  })
+  const sanitized = sanitizeFirewallDiagnostic(untrusted)
+  assert.deepEqual(sanitized, valid)
+  assert.equal(Object.hasOwn(sanitized, 'rawRules'), false)
+  assert.equal(Object.hasOwn(sanitized.preLines[0], 'rawRule'), false)
+  assert.equal(Object.hasOwn(sanitized.postLines[0], 'bytes'), false)
+  assert.doesNotMatch(JSON.stringify(sanitized), /filter|INPUT|COMMIT|raw firewall bytes/)
+  assert.equal(sanitizeFirewallDiagnostic(Object.create(valid)), null)
+  assert.equal(sanitizeFirewallDiagnostic({ ...valid, preSha256: '*filter\n-A INPUT -j ACCEPT' }), null)
+  assert.equal(sanitizeFirewallDiagnostic({ ...valid, firstDifferingByteOffset: 13 }), null)
+  assert.equal(sanitizeFirewallDiagnostic({ ...valid, preLines: new Array(16_385).fill(valid.preLines[0]) }), null)
+  assert.equal(sanitizeFirewallDiagnostic({ ...valid, lineDigestTruncated: true }).lineDigestTruncated, true)
+  assert.equal(sanitizeFirewallDiagnostic({ ...valid, lineDigestTruncated: 'true' }), null)
+  const inheritedTruncation = { ...valid }
+  delete inheritedTruncation.lineDigestTruncated
+  Object.setPrototypeOf(inheritedTruncation, { lineDigestTruncated: true })
+  assert.equal(sanitizeFirewallDiagnostic(inheritedTruncation), null)
+})
+
+test('counter-only firewall mismatch remains failed through recovery and both receipt boundaries', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-receipt-firewall-diagnostic-'))
+  try {
+    const runRoot = join(root, 'run')
+    const output = join(root, 'output')
+    const receipt = join(root, 'receipt.json')
+    const sameSha = hashFile(process.execPath)
+    const beforeIpv4 = '*filter\n:INPUT ACCEPT [1:2]\nCOMMIT\n'
+    const afterIpv4 = '*filter\n:INPUT ACCEPT [11:22]\nCOMMIT\n'
+    const makeSnapshot = (text) => ({ status: 0, text, sha256: createHash('sha256').update(text).digest('hex') })
+    const snapshots = { ipv4: makeSnapshot(beforeIpv4), ipv6: makeSnapshot('v6-rules\n') }
+    const inspection = { contract: 'native-docker-host-v1', marker: { schema: 'mock', version: 1 }, units: { containerd: 'mock-containerd', dockerd: 'mock-dockerd' }, pids: { containerd: 11, dockerd: 12 }, socket: '/var/run/docker.sock', dockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker', inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }
+    const controller = {
+      acquireHostLock: () => ({ version: 1, pid: 42, uid: 1000, nonce: 'a'.repeat(48), path: '/mock/lock' }),
+      inspectDedicatedNativeDockerHost: () => inspection,
+      resetDedicatedNativeDockerHost: () => ({ dockerDaemonReset: true, before: inspection, after: inspection }),
+      releaseHostLock: () => true,
+    }
+    const commandRunner = (_file, args) => {
+      if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: afterIpv4, stderr: '' }
+      if (args.some((arg) => arg.endsWith('/ip6tables-save'))) return { status: 0, stdout: snapshots.ipv6.text, stderr: '' }
+      if (args.some((arg) => arg.endsWith('/iptables-restore')) || args.some((arg) => arg.endsWith('/ip6tables-restore'))) return { status: 0, stdout: '', stderr: '' }
+      if (args[0] === 'rev-parse' && args[1] === 'HEAD') return { status: 0, stdout: `${sourceSha}\n`, stderr: '' }
+      if (args[0] === 'rev-parse' && args[1] === 'HEAD^{tree}') return { status: 0, stdout: `${treeSha}\n`, stderr: '' }
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    await assert.rejects(() => runLocalProof({
+      'source-sha': sourceSha, 'tree-sha': treeSha, 'run-number': '5', node: process.execPath,
+      'node-sha256': sameSha, 'run-root': runRoot, 'proof-output': output, receipt, 'workspace-root': resolve('.'), 'deadline-minutes': '1', 'allow-disposable-daemon-reset': true,
+    }, {
+      hostController: controller,
+      commandRunner,
+      rootContextCheck: () => ({}),
+      preflight: () => ({ node: { version: 'v24.19.0', sha256: sameSha }, docker: { id: 'docker-id', serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64' }, firewallSnapshots: snapshots }),
+      executor: async () => ({ status: 'timed-out', timedOut: true, exitCode: null }),
+      postflight: () => ({ clean: true, resources: {}, firewallChains: {} }),
+    }), /proof phase timed out/)
+    const localReceipt = JSON.parse(readFileSync(receipt, 'utf8'))
+    assert.equal(localReceipt.status, 'failed')
+    assert.equal(localReceipt.firewall.equal, false)
+    assert.equal(localReceipt.postflight.clean, false)
+    assert.equal(localReceipt.firewall.ipv4.diagnostic.counterOnly, true)
+    assert.equal(localReceipt.firewall.ipv4.diagnostic.lineDigestTruncated, false)
+    assert.deepEqual(localReceipt.postflight.firewall.ipv4.diagnostic, localReceipt.firewall.ipv4.diagnostic)
+    assert.equal(localReceipt.firewall.ipv6.diagnostic, null)
+    assert.ok(localReceipt.phases.some((phase) => phase.name === 'recovery' && phase.status === 'failed'))
+    assert.match(localReceipt.failureReason, /proof phase timed out/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('bare sudo Docker context is fixed and rejects a root-context escape', () => {
