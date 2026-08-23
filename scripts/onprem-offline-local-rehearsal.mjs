@@ -12,7 +12,7 @@ import {
   releaseHostLock,
   resetDedicatedNativeDockerHost,
 } from './onprem-native-docker-host.mjs'
-import { analyzeFirewallMismatch } from './onprem-image-local-proof-recovery.mjs'
+import { analyzeFirewallMismatch, compareFirewallSnapshots } from './onprem-image-local-proof-recovery.mjs'
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url))
 const REPOSITORY_ROOT = path.resolve(SCRIPT_ROOT, '..')
@@ -82,8 +82,8 @@ const RECOVERY_FIXED_PATHS = new Set([
   '/usr/bin/stat', '/usr/bin/systemctl', '/usr/bin/test',
 ])
 const FIREWALLS = Object.freeze([
-  Object.freeze({ key: 'ipv4', save: RECOVERY_BINARIES.ipv4Save, restore: RECOVERY_BINARIES.ipv4Restore }),
-  Object.freeze({ key: 'ipv6', save: RECOVERY_BINARIES.ipv6Save, restore: RECOVERY_BINARIES.ipv6Restore }),
+  Object.freeze({ key: 'ipv4', save: RECOVERY_BINARIES.ipv4Save, restore: RECOVERY_BINARIES.ipv4Restore, expectedFamily: 'iptables-save' }),
+  Object.freeze({ key: 'ipv6', save: RECOVERY_BINARIES.ipv6Save, restore: RECOVERY_BINARIES.ipv6Restore, expectedFamily: 'ip6tables-save' }),
 ])
 
 function fail(message) {
@@ -967,10 +967,17 @@ export function captureFirewallSnapshots({ commandRunner } = {}) {
 }
 
 function restoreFirewallSnapshot(firewall, snapshot, commandRunner) {
-  commandOutput(RECOVERY_BINARIES.sudo, ['-n', firewall.restore, '--counters'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall restore`, snapshot.bytes))
+  commandOutput(RECOVERY_BINARIES.sudo, ['-n', firewall.restore, '--counters'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall restore`, Buffer.from(snapshot.bytes)))
   const restored = captureFirewallSnapshot(firewall, commandRunner)
-  const byteEqual = Buffer.compare(snapshot.bytes, restored.bytes) === 0
-  return Object.freeze({ byteEqual, sha256: restored.sha256, byteLength: restored.byteLength, diagnostic: byteEqual ? null : analyzeFirewallMismatch(snapshot.bytes, restored.bytes) })
+  const comparison = compareFirewallSnapshots(snapshot.bytes, restored.bytes, firewall.expectedFamily)
+  return Object.freeze({
+    byteEqual: comparison.byteEqual,
+    timestampOnlyEquivalent: comparison.timestampOnlyEquivalent,
+    equivalent: comparison.equivalent,
+    sha256: restored.sha256,
+    byteLength: restored.byteLength,
+    diagnostic: comparison.equivalent ? null : analyzeFirewallMismatch(snapshot.bytes, restored.bytes, firewall.expectedFamily),
+  })
 }
 
 function inventorySummary(value) {
@@ -1045,8 +1052,8 @@ export function recoverAfterLifecycle({ context, preflight, lock, beforeHost, sn
     noteRecoveryError('reset', error)
     faults.push('reset')
   }
-  try { ipv4 = restoreFirewallSnapshot(FIREWALLS[0], snapshots.ipv4, ipv4CommandRunner); if (!ipv4.byteEqual) faults.push('ipv4-byte-mismatch') } catch (error) { noteRecoveryError('ipv4-restore', error); faults.push('ipv4-restore') }
-  try { ipv6 = restoreFirewallSnapshot(FIREWALLS[1], snapshots.ipv6, ipv6CommandRunner); if (!ipv6.byteEqual) faults.push('ipv6-byte-mismatch') } catch (error) { noteRecoveryError('ipv6-restore', error); faults.push('ipv6-restore') }
+  try { ipv4 = restoreFirewallSnapshot(FIREWALLS[0], snapshots.ipv4, ipv4CommandRunner); if (!ipv4.equivalent) faults.push('ipv4-byte-mismatch') } catch (error) { noteRecoveryError('ipv4-restore', error); faults.push('ipv4-restore') }
+  try { ipv6 = restoreFirewallSnapshot(FIREWALLS[1], snapshots.ipv6, ipv6CommandRunner); if (!ipv6.equivalent) faults.push('ipv6-byte-mismatch') } catch (error) { noteRecoveryError('ipv6-restore', error); faults.push('ipv6-restore') }
   const postControllerOptions = controllerArgs(recoveryCommandRunner, fsApi, platform, uid, callerGid, deadlineAtMs)
   try {
     afterHost = activeController.inspectDedicatedNativeDockerHost({ ...postControllerOptions, allowMutableInventory: false, recoveryDeadlineAt: deadlineAtMs })
@@ -1083,8 +1090,12 @@ export function recoverAfterLifecycle({ context, preflight, lock, beforeHost, sn
     beforeInventory: inventorySummary(beforeHost),
     afterInventory: inventorySummary(afterHost),
     firewall: Object.freeze({
-      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true, diagnostic: ipv4?.diagnostic ?? null }),
-      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true, diagnostic: ipv6?.diagnostic ?? null }),
+      equal: ipv4?.byteEqual === true && ipv6?.byteEqual === true,
+      byteEqual: ipv4?.byteEqual === true && ipv6?.byteEqual === true,
+      timestampOnlyEquivalent: ipv4?.equivalent === true && ipv6?.equivalent === true && (ipv4?.timestampOnlyEquivalent === true || ipv6?.timestampOnlyEquivalent === true),
+      equivalent: ipv4?.equivalent === true && ipv6?.equivalent === true,
+      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true, timestampOnlyEquivalent: ipv4?.timestampOnlyEquivalent === true, equivalent: ipv4?.equivalent === true, diagnostic: ipv4?.diagnostic ?? null }),
+      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true, timestampOnlyEquivalent: ipv6?.timestampOnlyEquivalent === true, equivalent: ipv6?.equivalent === true, diagnostic: ipv6?.diagnostic ?? null }),
     }),
     generatedCleanup,
     finalSource: finalSource ? Object.freeze({ head: finalSource.head, tree: finalSource.tree, exactMatch: finalSource.head === context.options.sourceSha && finalSource.tree === context.options.treeSha }) : null,
@@ -1100,7 +1111,7 @@ function buildReceipt(context, preflight, phases, internal, cleanup, recovery = 
   const lifecyclePassed = preflight ? (internal.passed && verifyPhase?.status === 'passed' && restorePhase?.status === 'passed' && materializePhase?.status === 'passed' && cleanup.status === 'passed') : false
   const status = lifecyclePassed && (recovery === null || recovery.ok === true)
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     operation: 'onprem-offline-local-rehearsal',
     status: status ? 'passed' : 'failed',
     dataClass: 'synthetic',

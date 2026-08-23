@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url'
 import {
   acquireVerifiedHost,
   captureFirewallSnapshots,
+  compareFirewallSnapshots,
   cleanupFreshWorkspace,
   DEFAULT_RECOVERY_BUDGET_MS,
   DISPOSABLE_DAEMON_ROOTS,
@@ -525,7 +526,7 @@ function defaultReadOnlyCommand(file, args, options = {}) {
   const result = spawnSync(file, args, {
     cwd: options.cwd,
     env: options.env,
-    encoding: 'utf8',
+    encoding: options.binaryOutput === true ? null : 'utf8',
     timeout: options.timeoutMs,
     input: options.input,
     windowsHide: true,
@@ -642,13 +643,34 @@ export function captureFirewallSnapshot({ commandRunner = defaultReadOnlyCommand
   return captureFirewallSnapshots({ commandRunner, cwd, env, deadlineAt }).ipv4
 }
 
-export function inspectPostflight({ commandRunner = defaultReadOnlyCommand, cwd, env, deadlineAt = Date.now() + 120_000, firewallBaseline = null, firewallAfter = null, firewallCaptureError = null } = {}) {
+export function inspectPostflight({ commandRunner = defaultReadOnlyCommand, cwd, env, deadlineAt = Date.now() + 120_000, firewallBaseline = null, firewallAfter = null, firewallComparison = null, firewallCaptureError = null } = {}) {
   const resources = {}
   for (const project of TARGET_PROJECTS) resources[project] = inspectResourceGroup(commandRunner, cwd, env, deadlineAt, project)
   const chains = inspectFirewallChains(commandRunner, cwd, env, deadlineAt)
-  let firewall = { preSha256: firewallBaseline?.sha256 ?? null, postSha256: firewallAfter?.sha256 ?? null, equal: false }
-  if (!firewallCaptureError && firewallBaseline?.sha256 && firewallAfter?.sha256) firewall.equal = firewallBaseline.sha256 === firewallAfter.sha256
-  const clean = Object.values(resources).every((group) => Object.values(group).every(Boolean)) && Object.values(chains).every((exists) => !exists) && firewall.equal
+  let firewall = {
+    preSha256: firewallBaseline?.sha256 ?? null,
+    postSha256: firewallAfter?.sha256 ?? null,
+    equal: false,
+    byteEqual: false,
+    timestampOnlyEquivalent: false,
+    equivalent: false,
+  }
+  if (!firewallCaptureError && firewallComparison && typeof firewallComparison === 'object') {
+    const byteEqual = firewallComparison.byteEqual === true
+    const timestampOnlyEquivalent = !byteEqual && firewallComparison.timestampOnlyEquivalent === true
+    const equivalent = firewallComparison.equivalent === true && (byteEqual || timestampOnlyEquivalent)
+    firewall = {
+      ...firewall,
+      equal: byteEqual,
+      byteEqual,
+      timestampOnlyEquivalent,
+      equivalent,
+    }
+  } else if (!firewallCaptureError && Buffer.isBuffer(firewallBaseline?.bytes) && Buffer.isBuffer(firewallAfter?.bytes)) {
+    const comparison = compareFirewallSnapshots(firewallBaseline.bytes, firewallAfter.bytes, 'iptables-save')
+    firewall = { ...firewall, ...comparison, equal: comparison.byteEqual }
+  }
+  const clean = Object.values(resources).every((group) => Object.values(group).every(Boolean)) && Object.values(chains).every((exists) => !exists) && firewall.equivalent
   return { clean, resources, firewallChains: chains, firewall }
 }
 
@@ -1131,7 +1153,7 @@ function sanitizeHostIdentity(value) {
 }
 
 const INVALID_FIREWALL_DIAGNOSTIC_VALUE = Symbol('invalid-firewall-diagnostic-value')
-const MAX_FIREWALL_DIAGNOSTIC_LINES = 16_384
+const MAX_FIREWALL_DIAGNOSTIC_LINES = 1_024
 
 function ownDataProperty(value, key) {
   const descriptor = Object.getOwnPropertyDescriptor(value, key)
@@ -1170,6 +1192,9 @@ export function sanitizeFirewallDiagnostic(value) {
     const postLines = sanitizeFirewallDiagnosticLines(ownDataProperty(value, 'postLines'))
     const counterOnly = ownDataProperty(value, 'counterOnly')
     const lineDigestTruncated = ownDataProperty(value, 'lineDigestTruncated')
+    const byteEqual = ownDataProperty(value, 'byteEqual')
+    const timestampOnlyEquivalent = ownDataProperty(value, 'timestampOnlyEquivalent')
+    const equivalent = ownDataProperty(value, 'equivalent')
     if (!nonNegativeSafeInteger(preByteLength)
       || !nonNegativeSafeInteger(postByteLength)
       || typeof preSha256 !== 'string' || !SHA256.test(preSha256)
@@ -1178,8 +1203,13 @@ export function sanitizeFirewallDiagnostic(value) {
       || firstDifferingByteOffset > Math.min(preByteLength, postByteLength)
       || preLines === null || postLines === null
       || typeof counterOnly !== 'boolean'
-      || typeof lineDigestTruncated !== 'boolean') return null
-    return { preByteLength, postByteLength, preSha256, postSha256, firstDifferingByteOffset, preLines, postLines, counterOnly, lineDigestTruncated }
+      || typeof lineDigestTruncated !== 'boolean'
+      || typeof byteEqual !== 'boolean'
+      || typeof timestampOnlyEquivalent !== 'boolean'
+      || typeof equivalent !== 'boolean'
+      || equivalent !== (byteEqual || timestampOnlyEquivalent)
+      || (byteEqual && timestampOnlyEquivalent)) return null
+    return { preByteLength, postByteLength, preSha256, postSha256, firstDifferingByteOffset, preLines, postLines, counterOnly, lineDigestTruncated, byteEqual, timestampOnlyEquivalent, equivalent }
   } catch {
     return null
   }
@@ -1195,17 +1225,20 @@ function sanitizePostflight(value) {
   const firewall = isObject(value.firewall) ? {
     status: value.firewall.status ?? null,
     equal: value.firewall.equal === true,
+    byteEqual: value.firewall.byteEqual === true,
+    timestampOnlyEquivalent: value.firewall.timestampOnlyEquivalent === true,
+    equivalent: value.firewall.equivalent === true,
     preSha256: value.firewall.preSha256 ?? null,
     postSha256: value.firewall.postSha256 ?? null,
-    ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv4.diagnostic) } : null,
-    ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv6.diagnostic) } : null,
+    ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv4.timestampOnlyEquivalent === true, equivalent: value.firewall.ipv4.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv4.diagnostic) } : null,
+    ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv6.timestampOnlyEquivalent === true, equivalent: value.firewall.ipv6.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv6.diagnostic) } : null,
   } : null
   return { status: typeof value.status === 'string' ? value.status : 'failed', clean: value.clean === true, resources, firewallChains, firewall }
 }
 
 function buildReceipt({ options, node, docker, phases, failureReason, artifact, postflight, recovery, cleanup, partialProofOutput }) {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     tool: 'onprem-image-local-proof',
     status: failureReason ? 'failed' : 'passed',
     hostedEvidence: false,
@@ -1226,9 +1259,12 @@ function buildReceipt({ options, node, docker, phases, failureReason, artifact, 
     firewall: recovery?.firewall ? {
       status: recovery.firewall.status ?? 'failed',
       equal: recovery.firewall.equal === true,
-      ipv4: { preSha256: recovery.firewall.ipv4?.preSha256 ?? null, postSha256: recovery.firewall.ipv4?.postSha256 ?? null, status: recovery.firewall.ipv4?.status ?? 'missing', byteEqual: recovery.firewall.ipv4?.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv4?.diagnostic) },
-      ipv6: { preSha256: recovery.firewall.ipv6?.preSha256 ?? null, postSha256: recovery.firewall.ipv6?.postSha256 ?? null, status: recovery.firewall.ipv6?.status ?? 'missing', byteEqual: recovery.firewall.ipv6?.byteEqual === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv6?.diagnostic) },
-    } : recovery ? { status: 'failed', equal: false, ipv4: null, ipv6: null } : { status: 'not-run', equal: false, ipv4: null, ipv6: null },
+      byteEqual: recovery.firewall.byteEqual === true,
+      timestampOnlyEquivalent: recovery.firewall.timestampOnlyEquivalent === true,
+      equivalent: recovery.firewall.equivalent === true,
+      ipv4: { preSha256: recovery.firewall.ipv4?.preSha256 ?? null, postSha256: recovery.firewall.ipv4?.postSha256 ?? null, status: recovery.firewall.ipv4?.status ?? 'missing', byteEqual: recovery.firewall.ipv4?.byteEqual === true, timestampOnlyEquivalent: recovery.firewall.ipv4?.timestampOnlyEquivalent === true, equivalent: recovery.firewall.ipv4?.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv4?.diagnostic) },
+      ipv6: { preSha256: recovery.firewall.ipv6?.preSha256 ?? null, postSha256: recovery.firewall.ipv6?.postSha256 ?? null, status: recovery.firewall.ipv6?.status ?? 'missing', byteEqual: recovery.firewall.ipv6?.byteEqual === true, timestampOnlyEquivalent: recovery.firewall.ipv6?.timestampOnlyEquivalent === true, equivalent: recovery.firewall.ipv6?.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv6?.diagnostic) },
+    } : recovery ? { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, ipv4: null, ipv6: null } : { status: 'not-run', equal: false, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, ipv4: null, ipv6: null },
     recovery: recovery ? { attempted: recovery.attempted === true, timedOut: recovery.timedOut === true, budgetMs: Number.isSafeInteger(recovery.budgetMs) ? recovery.budgetMs : null, resetBudgetMs: Number.isSafeInteger(recovery.resetBudgetMs) ? recovery.resetBudgetMs : null, firewallBudgetMs: Number.isSafeInteger(recovery.firewallBudgetMs) ? recovery.firewallBudgetMs : null, dockerDaemonReset: recovery.dockerDaemonReset === true, failures: recovery.failures ?? [] } : { attempted: false, timedOut: false, budgetMs: null, resetBudgetMs: null, firewallBudgetMs: null, dockerDaemonReset: false, failures: [] },
     cleanup: cleanup ? { ...cleanup, proofOutput: partialProofOutput ?? cleanup.proofOutput } : { status: 'not-run', failures: [] },
   }
@@ -1339,12 +1375,12 @@ export async function runLocalProof(rawOptions, dependencies = {}) {
           allowDisposableDaemonReset: options.allowDisposableDaemonReset,
         })
         for (const [name, phase] of Object.entries(recovery.phases ?? {})) phases.push({ name: `recovery-${name}`, status: phase.status, exitCode: phase.status === 'passed' ? 0 : 1, signal: null, timedOut: phase.timedOut === true, durationMs: phase.durationMs })
-        phases.push({ name: 'recovery', status: recovery.failures.length === 0 && recovery.dockerDaemonReset && recovery.firewall?.equal === true && recovery.hostAfter ? 'passed' : 'failed', exitCode: recovery.failures.length === 0 ? 0 : 1, signal: null, timedOut: recovery.timedOut === true, durationMs: Date.now() - recoveryStart })
-        if (recovery.failures.length > 0 || !recovery.dockerDaemonReset || recovery.firewall?.equal !== true || !recovery.hostAfter) {
+        phases.push({ name: 'recovery', status: recovery.failures.length === 0 && recovery.dockerDaemonReset && recovery.firewall?.equivalent === true && recovery.hostAfter ? 'passed' : 'failed', exitCode: recovery.failures.length === 0 ? 0 : 1, signal: null, timedOut: recovery.timedOut === true, durationMs: Date.now() - recoveryStart })
+        if (recovery.failures.length > 0 || !recovery.dockerDaemonReset || recovery.firewall?.equivalent !== true || !recovery.hostAfter) {
           failureReason ??= `recovery failed: ${(recovery.failures ?? []).join('; ') || 'identity or firewall recovery was not verified'}`
         }
       } catch (error) {
-        recovery = { attempted: true, timedOut: /deadline/.test(String(error?.message)).valueOf(), dockerDaemonReset: false, hostBefore: verifiedHost?.inspection ?? null, hostAfter: null, firewall: { status: 'failed', equal: false, failures: [] }, failures: [safeFailureReason(error)] }
+        recovery = { attempted: true, timedOut: /deadline/.test(String(error?.message)).valueOf(), dockerDaemonReset: false, hostBefore: verifiedHost?.inspection ?? null, hostAfter: null, firewall: { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, failures: [] }, failures: [safeFailureReason(error)] }
         phases.push({ name: 'recovery', status: 'failed', exitCode: null, signal: null, timedOut: recovery.timedOut, durationMs: Date.now() - recoveryStart })
         failureReason ??= `recovery failed: ${error instanceof Error ? error.message : 'unknown error'}`
       }
@@ -1352,9 +1388,9 @@ export async function runLocalProof(rawOptions, dependencies = {}) {
       try {
         const firewallBaseline = firewallSnapshots?.ipv4 ?? null
         const firewallAfter = recovery?.firewall?.ipv4?.postSha256 ? { sha256: recovery.firewall.ipv4.postSha256 } : null
-        const firewallCaptureError = recovery?.firewall?.equal === true ? null : new Error('firewall recovery was not verified')
-        const inspectedPostflight = (dependencies.postflight ?? inspectPostflight)({ commandRunner, cwd: options.workspaceRoot, env: bodyResult.env, deadlineAt: recoveryDeadlineAt ?? deadlineAt, firewallBaseline, firewallAfter, firewallCaptureError })
-        postflight = { ...inspectedPostflight, firewall: recovery?.firewall ?? inspectedPostflight.firewall ?? null, clean: Boolean(inspectedPostflight.clean && recovery?.dockerDaemonReset === true && recovery?.firewall?.equal === true && recovery?.hostAfter) }
+        const firewallCaptureError = recovery?.firewall?.equivalent === true ? null : new Error('firewall recovery was not verified')
+        const inspectedPostflight = (dependencies.postflight ?? inspectPostflight)({ commandRunner, cwd: options.workspaceRoot, env: bodyResult.env, deadlineAt: recoveryDeadlineAt ?? deadlineAt, firewallBaseline, firewallAfter, firewallComparison: recovery?.firewall ?? null, firewallCaptureError })
+        postflight = { ...inspectedPostflight, firewall: recovery?.firewall ?? inspectedPostflight.firewall ?? null, clean: Boolean(inspectedPostflight.clean && recovery?.dockerDaemonReset === true && recovery?.firewall?.equivalent === true && recovery?.hostAfter) }
         phases.push({ name: 'postflight', status: postflight.clean ? 'passed' : 'failed', exitCode: postflight.clean ? 0 : 1, signal: null, timedOut: false, durationMs: Date.now() - postflightStart })
         if (!postflight.clean) failureReason ??= 'postflight cleanup residue or recovery identity was not verified'
       } catch (error) {

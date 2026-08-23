@@ -32,6 +32,10 @@ function hashFile(pathname) {
   return createHash('sha256').update(readFileSync(pathname)).digest('hex')
 }
 
+function hashBytesForTest(bytes) {
+  return createHash('sha256').update(bytes).digest('hex')
+}
+
 test('local runner extracts exactly the full proof run bodies in declared order', () => {
   const plan = extractFullProofPlan(workflow)
   assert.equal(plan.steps.length, 22)
@@ -288,7 +292,7 @@ test('timed-out shell phase also contains its process group before returning', a
   assert.equal(phase.containment.groupAbsent, true)
 })
 
-test('firewall snapshots are read-only, hash-only, and fail closed on drift', () => {
+test('firewall snapshots are read-only raw bytes and fail closed on drift', () => {
   const firewallText = 'iptables-save-synthetic\n'
   const commandRunner = (_file, args) => {
     if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: firewallText, stderr: '' }
@@ -301,10 +305,30 @@ test('firewall snapshots are read-only, hash-only, and fail closed on drift', ()
   assert.equal(equal.firewall.preSha256, baseline.sha256)
   assert.equal(equal.firewall.postSha256, baseline.sha256)
   assert.equal(equal.firewall.equal, true)
+  assert.equal(equal.firewall.byteEqual, true)
+  assert.equal(equal.firewall.equivalent, true)
   const drift = inspectPostflight({ commandRunner, cwd: resolve('.'), env: {}, deadlineAt: Date.now() + 10_000, firewallBaseline: baseline, firewallAfter: { sha256: 'f'.repeat(64) } })
   assert.equal(drift.clean, false)
   assert.equal(drift.firewall.equal, false)
   assert.deepEqual(dockerIdentityFromOutput(JSON.stringify({ ID: 'docker-id', ServerVersion: '29.0.0', OSType: 'linux', Architecture: 'x86_64' })), { id: 'docker-id', serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64' })
+})
+
+test('image firewall capture and restore retain invalid bytes without UTF-8 collapse', () => {
+  const raw = Buffer.from([0xff, 0x00, 0x80, 0x0a])
+  let restoreInput = null
+  const commandRunner = (_file, args, options = {}) => {
+    if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: raw, stderr: '' }
+    if (args.some((arg) => arg.endsWith('/iptables-restore'))) { restoreInput = options.input; return { status: 0, stdout: '', stderr: '' } }
+    return { status: 0, stdout: '', stderr: '' }
+  }
+  const snapshot = captureFirewallSnapshot({ commandRunner, cwd: resolve('.'), env: {}, deadlineAt: Date.now() + 10_000 })
+  assert.ok(Buffer.isBuffer(snapshot.bytes))
+  assert.deepEqual(snapshot.bytes, raw)
+  assert.deepEqual(snapshot.bytes, Buffer.from([0xff, 0x00, 0x80, 0x0a]))
+  // The read-only capture path itself never restores; this check guards the
+  // explicit raw snapshot contract used by the recovery caller.
+  commandRunner('/usr/bin/sudo', ['/usr/sbin/iptables-restore', '--counters'], { input: snapshot.bytes })
+  assert.deepEqual(restoreInput, raw)
 })
 
 test('receipt firewall diagnostics keep only the allowlisted sanitized shape', () => {
@@ -318,6 +342,9 @@ test('receipt firewall diagnostics keep only the allowlisted sanitized shape', (
     postLines: [{ sha256: 'd'.repeat(64), byteLength: 10 }],
     counterOnly: true,
     lineDigestTruncated: false,
+    byteEqual: false,
+    timestampOnlyEquivalent: false,
+    equivalent: false,
   }
   const untrusted = Object.assign(Object.create({ inheritedRuleText: '*filter\n-A INPUT -j ACCEPT' }), valid, {
     rawRules: '*filter\n-A INPUT -j ACCEPT\nCOMMIT',
@@ -351,7 +378,7 @@ test('counter-only firewall mismatch remains failed through recovery and both re
     const sameSha = hashFile(process.execPath)
     const beforeIpv4 = '*filter\n:INPUT ACCEPT [1:2]\nCOMMIT\n'
     const afterIpv4 = '*filter\n:INPUT ACCEPT [11:22]\nCOMMIT\n'
-    const makeSnapshot = (text) => ({ status: 0, text, sha256: createHash('sha256').update(text).digest('hex') })
+    const makeSnapshot = (text) => { const bytes = Buffer.from(text); return { status: 0, bytes, byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } }
     const snapshots = { ipv4: makeSnapshot(beforeIpv4), ipv6: makeSnapshot('v6-rules\n') }
     const inspection = { contract: 'native-docker-host-v1', marker: { schema: 'mock', version: 1 }, units: { containerd: 'mock-containerd', dockerd: 'mock-dockerd' }, pids: { containerd: 11, dockerd: 12 }, socket: '/var/run/docker.sock', dockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker', inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }
     const controller = {
@@ -362,7 +389,7 @@ test('counter-only firewall mismatch remains failed through recovery and both re
     }
     const commandRunner = (_file, args) => {
       if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: afterIpv4, stderr: '' }
-      if (args.some((arg) => arg.endsWith('/ip6tables-save'))) return { status: 0, stdout: snapshots.ipv6.text, stderr: '' }
+      if (args.some((arg) => arg.endsWith('/ip6tables-save'))) return { status: 0, stdout: snapshots.ipv6.bytes, stderr: '' }
       if (args.some((arg) => arg.endsWith('/iptables-restore')) || args.some((arg) => arg.endsWith('/ip6tables-restore'))) return { status: 0, stdout: '', stderr: '' }
       if (args[0] === 'rev-parse' && args[1] === 'HEAD') return { status: 0, stdout: `${sourceSha}\n`, stderr: '' }
       if (args[0] === 'rev-parse' && args[1] === 'HEAD^{tree}') return { status: 0, stdout: `${treeSha}\n`, stderr: '' }
@@ -392,6 +419,32 @@ test('counter-only firewall mismatch remains failed through recovery and both re
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+test('image postflight accepts timestamp-only firewall equivalence without turning raw flags true', () => {
+  const document = (family, timestamp) => Buffer.from([
+    `# Generated by ${family} v1.8.9 (nf_tables) on ${timestamp}`,
+    '*filter', ':INPUT ACCEPT [0:0]', '-A INPUT -j ACCEPT', 'COMMIT', `# Completed on ${timestamp}`,
+  ].join('\n') + '\n', 'ascii')
+  const before = document('iptables-save', 'Mon Jun 10 09:18:34 2024')
+  const after = document('iptables-save', 'Tue Jun 11 10:19:35 2024')
+  const commandRunner = (_file, args) => {
+    if (args.includes('-S')) return { status: 1, stdout: '', stderr: '' }
+    return { status: 0, stdout: '', stderr: '' }
+  }
+  const result = inspectPostflight({
+    commandRunner,
+    cwd: resolve('.'),
+    env: {},
+    deadlineAt: Date.now() + 10_000,
+    firewallBaseline: { bytes: before, sha256: hashBytesForTest(before) },
+    firewallAfter: { bytes: after, sha256: hashBytesForTest(after) },
+  })
+  assert.equal(result.clean, true)
+  assert.equal(result.firewall.equal, false)
+  assert.equal(result.firewall.byteEqual, false)
+  assert.equal(result.firewall.timestampOnlyEquivalent, true)
+  assert.equal(result.firewall.equivalent, true)
 })
 
 test('bare sudo Docker context is fixed and rejects a root-context escape', () => {
@@ -471,7 +524,7 @@ test('timed-out body receives an independent recovery budget and restores both f
     const output = join(root, 'output')
     const receipt = join(root, 'receipt.json')
     const sameSha = hashFile(process.execPath)
-    const makeSnapshot = (text) => ({ status: 0, text, sha256: createHash('sha256').update(text).digest('hex') })
+    const makeSnapshot = (text) => { const bytes = Buffer.from(text); return { status: 0, bytes, byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } }
     const snapshots = { ipv4: makeSnapshot('v4-rules\n'), ipv6: makeSnapshot('v6-rules\n') }
     const inspection = { contract: 'native-docker-host-v1', marker: { schema: 'mock', version: 1 }, units: { containerd: 'mock-containerd', dockerd: 'mock-dockerd' }, pids: { containerd: 11, dockerd: 12 }, socket: '/var/run/docker.sock', dockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker', inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }
     const events = []
@@ -491,8 +544,8 @@ test('timed-out body receives an independent recovery budget and restores both f
       if (args.includes('context') && args.includes('show')) return { status: 0, stdout: 'default\n', stderr: '' }
       if (args.includes('context') && args.includes('inspect')) return { status: 0, stdout: '"unix:///var/run/docker.sock"\n', stderr: '' }
       if (args.includes('info') && args.includes('--format')) return { status: 0, stdout: JSON.stringify({ DockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker' }), stderr: '' }
-      if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: snapshots.ipv4.text, stderr: '' }
-      if (args.some((arg) => arg.endsWith('/ip6tables-save'))) return { status: 0, stdout: snapshots.ipv6.text, stderr: '' }
+      if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: snapshots.ipv4.bytes, stderr: '' }
+      if (args.some((arg) => arg.endsWith('/ip6tables-save'))) return { status: 0, stdout: snapshots.ipv6.bytes, stderr: '' }
       if (args.some((arg) => arg.endsWith('/iptables-restore'))) { events.push('restore-ipv4'); restoreTimeouts.push(options.timeoutMs); return { status: 0, stdout: '', stderr: '' } }
       if (args.some((arg) => arg.endsWith('/ip6tables-restore'))) { events.push('restore-ipv6'); restoreTimeouts.push(options.timeoutMs); return { status: 0, stdout: '', stderr: '' } }
       if (args[0] === 'rev-parse' && args[1] === 'HEAD') { cleanupTimeouts.push(options.timeoutMs); return { status: 0, stdout: `${sourceSha}\n`, stderr: '' } }

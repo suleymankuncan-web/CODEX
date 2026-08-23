@@ -367,7 +367,7 @@ function parseVerifiedHostAfter(value) {
 }
 
 export function parsePassedImageReceipt(value, expected) {
-  if (!object(value) || value.status !== 'passed' || value.hostedEvidence !== false || value.dataClass !== 'synthetic' || value.proofMode !== 'full' || value.imageScope !== 'both') fail('image receipt is not passed')
+  if (!object(value) || value.schemaVersion !== 2 || value.status !== 'passed' || value.hostedEvidence !== false || value.dataClass !== 'synthetic' || value.proofMode !== 'full' || value.imageScope !== 'both') fail('image receipt is not passed')
   if (value.sourceSha !== expected.sourceSha || value.treeSha !== expected.treeSha) fail('image receipt source identity does not match')
   if (!object(value.node) || value.node.sha256 !== expected.nodeSha256 || value.node.version !== NODE_VERSION) fail('image receipt Node identity does not match')
   if (value.dockerDaemonReset !== true || value.recovery?.dockerDaemonReset !== true) fail('image receipt daemon reset is not verified')
@@ -375,7 +375,16 @@ export function parsePassedImageReceipt(value, expected) {
   const verifiedHost = parseVerifiedHostAfter(value.verifiedHost.after)
   if (!object(value.docker) || typeof value.docker.id !== 'string' || !/^[A-Za-z0-9:_-]{1,128}$/.test(value.docker.id) || value.docker.operatingSystem !== 'linux' || value.docker.architecture !== 'amd64' || !object(value.docker.rootContext) || value.docker.rootContext.context !== 'default' || value.docker.rootContext.endpoint !== DOCKER_ENDPOINT || value.docker.rootContext.dockerRootDir !== hostContract.dockerDataRoot) fail('image receipt Docker identity is not fixed')
   const firewall = value.firewall
-  if (!object(firewall) || firewall.status !== 'passed' || firewall.equal !== true || firewall.ipv4?.status !== 'passed' || firewall.ipv4?.byteEqual !== true || firewall.ipv6?.status !== 'passed' || firewall.ipv6?.byteEqual !== true) fail('image receipt IPv4/IPv6 firewall restoration is not verified')
+  if (!object(firewall) || firewall.status !== 'passed' || typeof firewall.equal !== 'boolean' || typeof firewall.byteEqual !== 'boolean' || typeof firewall.timestampOnlyEquivalent !== 'boolean' || typeof firewall.equivalent !== 'boolean') fail('image receipt IPv4/IPv6 firewall restoration is not verified')
+  const familyStates = [firewall.ipv4, firewall.ipv6]
+  if (familyStates.some((family) => !object(family) || family.status !== 'passed' || typeof family.byteEqual !== 'boolean' || typeof family.timestampOnlyEquivalent !== 'boolean' || typeof family.equivalent !== 'boolean')) fail('image receipt IPv4/IPv6 firewall restoration is not verified')
+  for (const family of familyStates) {
+    if (family.equivalent !== (family.byteEqual || family.timestampOnlyEquivalent) || (family.byteEqual && family.timestampOnlyEquivalent)) fail('image receipt firewall boolean consistency is invalid')
+  }
+  const aggregateByteEqual = familyStates.every((family) => family.byteEqual)
+  const aggregateTimestampOnly = !aggregateByteEqual && familyStates.every((family) => family.equivalent) && familyStates.some((family) => family.timestampOnlyEquivalent)
+  const aggregateEquivalent = familyStates.every((family) => family.equivalent)
+  if (firewall.equal !== firewall.byteEqual || firewall.byteEqual !== aggregateByteEqual || firewall.timestampOnlyEquivalent !== aggregateTimestampOnly || firewall.equivalent !== aggregateEquivalent || firewall.equivalent !== (firewall.byteEqual || firewall.timestampOnlyEquivalent)) fail('image receipt firewall aggregate consistency is invalid')
   if (!object(value.postflight) || value.postflight.clean !== true) fail('image receipt postflight is not clean')
   if (!object(value.cleanup) || value.cleanup.status !== 'passed' || value.cleanup.runRoot !== 'removed' || value.cleanup.proofOutput !== 'preserved') fail('image receipt workspace cleanup is not verified')
   if (!Array.isArray(value.phases) || value.phases.length === 0) fail('image receipt phases are missing')
@@ -398,7 +407,15 @@ export function parsePassedImageReceipt(value, expected) {
     verifiedHost,
     cleanup: Object.freeze({ status: value.cleanup.status, runRoot: value.cleanup.runRoot, proofOutput: value.cleanup.proofOutput }),
     postflight: Object.freeze({ clean: true, status: value.postflight.status ?? null }),
-    firewall: Object.freeze({ status: firewall.status, equal: true, ipv4: Object.freeze({ status: firewall.ipv4.status, byteEqual: true }), ipv6: Object.freeze({ status: firewall.ipv6.status, byteEqual: true }) }),
+    firewall: Object.freeze({
+      status: firewall.status,
+      equal: firewall.equal,
+      byteEqual: firewall.byteEqual,
+      timestampOnlyEquivalent: firewall.timestampOnlyEquivalent,
+      equivalent: firewall.equivalent,
+      ipv4: Object.freeze({ status: firewall.ipv4.status, byteEqual: firewall.ipv4.byteEqual, timestampOnlyEquivalent: firewall.ipv4.timestampOnlyEquivalent, equivalent: firewall.ipv4.equivalent }),
+      ipv6: Object.freeze({ status: firewall.ipv6.status, byteEqual: firewall.ipv6.byteEqual, timestampOnlyEquivalent: firewall.ipv6.timestampOnlyEquivalent, equivalent: firewall.ipv6.equivalent }),
+    }),
   })
 }
 
@@ -465,7 +482,7 @@ export async function runNativeSession(raw, dependencies = {}) {
   const parsedImage = parsePassedImageReceipt(imageSnapshot.value, options)
   recheckFreshPath(fsApi, options.sessionReceipt, 'session receipt', dependencies)
   const sessionReceipt = materializeReceipt(fsApi, options.sessionReceipt, {
-    schemaVersion: 1,
+    schemaVersion: 2,
     operation: 'local-native-session',
     status: 'passed',
     hostedEvidence: false,
