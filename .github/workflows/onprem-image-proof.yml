@@ -468,26 +468,33 @@ jobs:
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
-          import { execFileSync } from 'node:child_process'
           import { chmodSync, writeFileSync } from 'node:fs'
           import { join } from 'node:path'
           import { generateKeyPairSync } from 'node:crypto'
+          import { inspectDockerSaveArchive } from './scripts/onprem-offline-archive.mjs'
           import { createContentGuardIndex } from './scripts/onprem-offline-content-guard-index.mjs'
 
           const temporaryDirectory = process.env.RUNNER_TEMP
+          const proofDirectory = join(process.cwd(), 'proof')
           const privateKeyPath = join(temporaryDirectory, 'onprem-content-guard-ephemeral-private.pem')
-          const publicKeyPath = join(process.cwd(), 'proof', 'content-guard-index-public.pem')
+          const publicKeyPath = join(proofDirectory, 'content-guard-index-public.pem')
           const { privateKey, publicKey } = generateKeyPairSync('ed25519')
           writeFileSync(privateKeyPath, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 })
           chmodSync(privateKeyPath, 0o600)
           writeFileSync(publicKeyPath, publicKey.export({ type: 'spki', format: 'pem' }), { mode: 0o644 })
+          const archiveImageId = (name, tag) => {
+            const archivePath = join(proofDirectory, `${name}-image.tar`)
+            const observed = inspectDockerSaveArchive(archivePath)
+            if (observed.repoTag !== tag) throw new Error(`${name} Docker-save RepoTag is not the fixed local tag`)
+            if (observed.archiveConfigImageIdDerived !== true) throw new Error(`${name} Docker-save config identity was not canonically derived`)
+            return observed.imageId
+          }
           const images = Object.fromEntries(['backend', 'frontend', 'keycloak'].map((name) => {
             const tag = name === 'keycloak' ? 'hr-axis-onprem-keycloak:proof' : `hr-axis-onprem-${name}:proof`
-            const imageId = execFileSync('docker', ['image', 'inspect', tag, '--format', '{{.Id}}'], { encoding: 'utf8' }).trim()
-            if (!imageId) throw new Error(`missing ${name} image ID`)
+            const imageId = archiveImageId(name, tag)
             return [name, { imageId, archivePath: `${name}-image.tar`, finalRootfsPath: `${name}-content-guard.json` }]
           }))
-          createContentGuardIndex({ baseDir: join(process.cwd(), 'proof'), images, privateKeyPath, outputPath: join(process.cwd(), 'proof', 'content-guard-index.json') })
+          createContentGuardIndex({ baseDir: proofDirectory, images, privateKeyPath, outputPath: join(proofDirectory, 'content-guard-index.json') })
           NODE
 
       - name: Generate production license inventories and notices
@@ -636,16 +643,29 @@ jobs:
           private_key="$RUNNER_TEMP/onprem-proof-private.pem"
           manifest_input="$RUNNER_TEMP/onprem-proof-manifest-input.json"
           trap 'rm -f "$private_key" "$manifest_input"' EXIT
-          export FRONTEND_IMAGE_ID="$(docker image inspect hr-axis-onprem-frontend:proof --format '{{.Id}}')"
-          export BACKEND_IMAGE_ID="$(docker image inspect hr-axis-onprem-backend:proof --format '{{.Id}}')"
           export PRIVATE_KEY_PATH="$private_key"
           export MANIFEST_INPUT_PATH="$manifest_input"
           node --input-type=module <<'NODE'
           import { generateKeyPairSync } from 'node:crypto'
           import { writeFileSync } from 'node:fs'
+          import { join } from 'node:path'
+          import { inspectDockerSaveArchive } from './scripts/onprem-offline-archive.mjs'
           const keys = generateKeyPairSync('ed25519')
           writeFileSync(process.env.PRIVATE_KEY_PATH, keys.privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 })
           writeFileSync('proof/ephemeral-public.pem', keys.publicKey.export({ type: 'spki', format: 'pem' }))
+          const proofDirectory = join(process.cwd(), 'proof')
+          const archiveImageId = (name, tag) => {
+            const archivePath = join(proofDirectory, `${name}-image.tar`)
+            const observed = inspectDockerSaveArchive(archivePath)
+            if (observed.repoTag !== tag) throw new Error(`${name} Docker-save RepoTag is not the fixed local tag`)
+            if (observed.archiveConfigImageIdDerived !== true) throw new Error(`${name} Docker-save config identity was not canonically derived`)
+            return observed.imageId
+          }
+          const imageIds = Object.fromEntries([
+            ['backend', 'hr-axis-onprem-backend:proof'],
+            ['frontend', 'hr-axis-onprem-frontend:proof'],
+            ['keycloak', 'hr-axis-onprem-keycloak:proof'],
+          ].map(([name, tag]) => [name, archiveImageId(name, tag)]))
           const input = {
             dataClass: 'synthetic',
             sourceRevision: process.env.SOURCE_REVISION,
@@ -687,11 +707,7 @@ jobs:
               frontendImageNotices: 'proof/frontend-image-THIRD_PARTY_NOTICES.txt',
               baseLicenseEvidenceBundle: 'proof/base-license-evidence.tar',
             },
-            imageIds: {
-              backend: process.env.BACKEND_IMAGE_ID,
-              frontend: process.env.FRONTEND_IMAGE_ID,
-              keycloak: process.env.KEYCLOAK_IMAGE_ID,
-            },
+            imageIds,
           }
           writeFileSync(process.env.MANIFEST_INPUT_PATH, JSON.stringify(input))
           NODE
@@ -828,7 +844,7 @@ jobs:
           sudo env DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends conntrack
           sudo conntrack -L -o extended >/dev/null
           firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"
-          sudo iptables-save > "$firewall_snapshot"
+          sudo iptables-save --counters > "$firewall_snapshot"
           cleanup() {
             local original_status=$?
             local cleanup_status=0
@@ -849,7 +865,7 @@ jobs:
               container_cleanup_status=$?
               if [ "$cleanup_status" -eq 0 ]; then cleanup_status="$container_cleanup_status"; fi
             fi
-            if sudo iptables-restore < "$firewall_snapshot"; then
+            if sudo iptables-restore --counters < "$firewall_snapshot"; then
               :
             else
               local firewall_restore_status=$?

@@ -306,7 +306,7 @@ function supervisedFixture({ phaseFailure = false, resetFailure = false, resetUn
     if (actualFile === '/usr/sbin/iptables-save' || actualFile === '/usr/sbin/ip6tables-save') {
       assert.equal(file, '/usr/bin/sudo')
       assert.deepEqual(commandOptions.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' })
-      assert.deepEqual(actualArgs, [])
+      assert.deepEqual(actualArgs, ['--counters'])
       order.push(path.basename(actualFile))
       const bytes = actualFile === '/usr/sbin/ip6tables-save' ? ipv6AfterBytes : ipv4AfterBytes
       return { status: 0, stdout: bytes.toString('utf8'), stderr: '' }

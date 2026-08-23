@@ -222,9 +222,11 @@ export function inspectDockerSaveArchive(archivePath, expected = {}, options = {
     const config = parseJson(configBytes, 'config')
     if (!config || typeof config !== 'object' || Array.isArray(config)) fail('image archive config must be a JSON object')
     const configDigest = createHash('sha256').update(configBytes).digest('hex')
-    const imageId = String(expected.imageId ?? '').replace(/^sha256:/i, '').toLowerCase()
+    const expectedImageId = expected.imageId === undefined
+      ? undefined
+      : String(expected.imageId).replace(/^sha256:/i, '').toLowerCase()
     const configBasename = configPath.split('/').at(-1).replace(/\.json$/i, '')
-    if (!HEX64.test(imageId) || configDigest !== imageId || configBasename.toLowerCase() !== imageId) fail('image archive config digest does not match image identity')
+    if (configBasename.toLowerCase() !== configDigest || (expectedImageId !== undefined && (!HEX64.test(expectedImageId) || configDigest !== expectedImageId))) fail('image archive config digest does not match image identity')
     if (!Array.isArray(image.Layers)) fail('image archive layer membership is invalid')
     const layers = image.Layers.map((layer) => {
       if (typeof layer !== 'string') fail('image archive layer membership is invalid')

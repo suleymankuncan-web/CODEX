@@ -958,7 +958,7 @@ function recoveryCommandOptions(commandRunner, label, input) {
 }
 
 function captureFirewallSnapshot(firewall, commandRunner) {
-  const bytes = commandBytes(RECOVERY_BINARIES.sudo, ['-n', firewall.save], recoveryCommandOptions(commandRunner, `${firewall.key} firewall snapshot`))
+  const bytes = commandBytes(RECOVERY_BINARIES.sudo, ['-n', firewall.save, '--counters'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall snapshot`))
   return Object.freeze({ bytes, byteLength: bytes.length, sha256: hashBytes(bytes) })
 }
 

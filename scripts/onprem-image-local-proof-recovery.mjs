@@ -396,7 +396,7 @@ export function captureFirewallSnapshots({ commandRunner, cwd, env, deadlineAt, 
   if (typeof commandRunner !== 'function') fail('firewall command runner is required')
   const snapshots = {}
   for (const firewall of FIREWALLS) {
-    const result = commandResult(commandRunner, RECOVERY_BINARIES.sudo, ['-n', firewall.save], recoveryCommandOptions({ cwd, deadlineAt, capMs: perCommandTimeoutMs, binaryOutput: true }), `${firewall.key} firewall snapshot`)
+    const result = commandResult(commandRunner, RECOVERY_BINARIES.sudo, ['-n', firewall.save, '--counters'], recoveryCommandOptions({ cwd, deadlineAt, capMs: perCommandTimeoutMs, binaryOutput: true }), `${firewall.key} firewall snapshot`)
     if (result.status !== 0) fail(`${firewall.key} firewall snapshot failed`)
     snapshots[firewall.key] = {
       status: result.status,

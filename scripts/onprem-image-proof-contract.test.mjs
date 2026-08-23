@@ -12,6 +12,12 @@ const requiredGateWorkflow = readFileSync('.github/workflows/required-release-ga
 const sameImageSmoke = workflow
   .split('- name: Start API and worker from the same backend image')[1]
   ?.split('- name: Generate SPDX SBOMs with pinned Syft')[0] ?? ''
+const signedContentGuardStep = workflow
+  .split('- name: Generate signed complete content-guard index')[1]
+  ?.split('- name: Generate production license inventories and notices')[0] ?? ''
+const signedReleaseManifestStep = workflow
+  .split('- name: Self-test signed synthetic release manifest')[1]
+  ?.split('- name: Prepare UID-bound ephemeral synthetic secret files')[0] ?? ''
 const coreRuntimeProof = workflow
   .split('- name: Prepare UID-bound ephemeral synthetic secret files')[1]
   ?.split('- name: Upload sanitized runtime receipt')[0] ?? ''
@@ -79,8 +85,7 @@ test('ONP-2 runtime proof executes the exact image identities scanned and bound 
 
 test('ONP-1 workflow self-tests with an external public-key file and defers the owner trust anchor to ONP-5', () => {
   assert.doesNotMatch(workflow, /BUILD_TIMESTAMP=synthetic/)
-  assert.match(workflow, /docker image inspect hr-axis-onprem-frontend:proof --format '\{\{\.Id\}\}'/)
-  assert.match(workflow, /docker image inspect hr-axis-onprem-backend:proof --format '\{\{\.Id\}\}'/)
+  assert.match(workflow, /docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'/)
   assert.match(workflow, /buildTimestamp:\s*process\.env\.BUILD_TIMESTAMP/)
   assert.match(workflow, /configSchemaVersion:\s*1/)
   assert.match(workflow, /imageIds:/)
@@ -90,6 +95,26 @@ test('ONP-1 workflow self-tests with an external public-key file and defers the 
   assert.match(workflow, /pins the owner-controlled offline signing and verification keys/i)
   assert.match(workflow, /trap ['"]rm -f/)
   assert.doesNotMatch(workflow, /proof\/ephemeral-private\.pem/)
+})
+
+test('full signed image proofs derive Config-byte IDs from saved archives and bind exact local tags', () => {
+  for (const step of [signedContentGuardStep, signedReleaseManifestStep]) {
+    assert.match(step, /inspectDockerSaveArchive\(archivePath\)/)
+    assert.match(step, /\$\{name\}-image\.tar/)
+    assert.match(step, /observed\.repoTag !== tag/)
+    assert.match(step, /archiveConfigImageIdDerived !== true/)
+    assert.match(step, /return observed\.imageId/)
+    assert.doesNotMatch(step, /docker image inspect/)
+    assert.doesNotMatch(step, /\.Id/)
+  }
+  assert.match(signedContentGuardStep, /createContentGuardIndex\(\{ baseDir: proofDirectory, images/)
+  assert.match(signedContentGuardStep, /\{ imageId, archivePath: `\$\{name\}-image\.tar`/)
+  assert.match(signedReleaseManifestStep, /\['backend', 'hr-axis-onprem-backend:proof'\]/)
+  assert.match(signedReleaseManifestStep, /\['frontend', 'hr-axis-onprem-frontend:proof'\]/)
+  assert.match(signedReleaseManifestStep, /\['keycloak', 'hr-axis-onprem-keycloak:proof'\]/)
+  assert.match(signedReleaseManifestStep, /const imageIds = Object\.fromEntries/)
+  assert.match(signedReleaseManifestStep, /imageIds,\n/)
+  assert.doesNotMatch(signedReleaseManifestStep, /FRONTEND_IMAGE_ID|BACKEND_IMAGE_ID|KEYCLOAK_IMAGE_ID/)
 })
 
 test('ONP-1 reconciles every final-image SBOM component and requires complete license text evidence', () => {
@@ -131,7 +156,8 @@ test('ONP runtime cleanup uses guarded exact-project CLIs and still restores the
   assert.match(cleanup, /--project hr-axis-onprem-keycloak/)
   assert.match(cleanup, /--project hr-axis-onprem-core/)
   assert.match(cleanup, /--release-id "\$RELEASE_ID"/)
-  assert.match(cleanup, /iptables-restore < "\$firewall_snapshot"/)
+  assert.match(coreRuntimeProof, /sudo iptables-save --counters > "\$firewall_snapshot"/)
+  assert.match(cleanup, /iptables-restore --counters < "\$firewall_snapshot"/)
   assert.match(cleanup, /cleanup_status/)
   assert.match(cleanup, /return "\$cleanup_status"/)
   assert.doesNotMatch(cleanup, /docker compose[^\n]*down --remove-orphans/)
