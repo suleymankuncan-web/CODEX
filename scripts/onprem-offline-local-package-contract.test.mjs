@@ -38,8 +38,8 @@ function enterNonRootPackageContractIdentity() {
   if (process.platform !== 'linux' || typeof process.getuid !== 'function' || process.getuid() !== 0) return
   const uid = 1000
   const temporaryRoot = fs.mkdtempSync('/var/lib/onprem-offline-package-contract-')
-  fs.chownSync(temporaryRoot, uid, uid)
   fs.chmodSync(temporaryRoot, 0o700)
+  fs.chownSync(temporaryRoot, uid, uid)
   process.env.TMPDIR = temporaryRoot
   process.setgid(uid)
   process.setuid(uid)
