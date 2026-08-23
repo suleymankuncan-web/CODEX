@@ -301,7 +301,8 @@ function verifyRemovableDirectory(target, expected, label, ownerUid, { allowRoot
   }
   if (stats.isSymbolicLink() || !stats.isDirectory()) fail(`${label} is not a safe directory`)
   if (realpathSync(target) !== resolve(target)) fail(`${label} is not canonical`)
-  if (stats.nlink !== undefined && stats.nlink !== 1) fail(`${label} has unsafe links`)
+  // Directory nlink counts child directories; it is not a hardlink-alias
+  // signal. File and symlink safety remains enforced by the checks above.
   if (ownerUid !== undefined && stats.uid !== undefined && stats.uid !== ownerUid && (!allowRootOwner || stats.uid !== 0)) fail(`${label} ownership is not fresh`)
   return true
 }

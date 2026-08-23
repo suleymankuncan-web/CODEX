@@ -175,6 +175,35 @@ test('native host controller receives no generic runner by default and only rece
   assert.equal(seen.inspect.at(-1).commandRunner, injected)
 })
 
+test('cleanup removes a safe nonempty proof tree with child directories', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-recovery-proof-tree-'))
+  try {
+    const workspace = join(root, 'workspace')
+    const runRoot = join(root, 'run')
+    const proof = join(workspace, 'proof')
+    mkdirSync(join(proof, 'nested', 'child'), { recursive: true })
+    writeFileSync(join(proof, 'nested', 'child', 'evidence.txt'), 'synthetic evidence\n')
+    mkdirSync(runRoot, { recursive: true })
+    const cleaned = cleanupFreshWorkspace({
+      workspaceRoot: workspace,
+      runRoot,
+      sourceSha,
+      treeSha,
+      commandRunner: () => ({ status: 0, stdout: '', stderr: '' }),
+      env: {},
+      deadlineAt: Date.now() + 10_000,
+      includeWorkspaceGenerated: true,
+      reproveGit: false,
+    })
+    assert.equal(cleaned.status, 'passed')
+    assert.equal(cleaned.generated.proof, 'removed')
+    assert.equal(existsSync(proof), false)
+    assert.equal(existsSync(runRoot), false)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test('cleanup fails closed on unsafe generated roots and removes only an external partial output', () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-recovery-cleanup-'))
   try {
