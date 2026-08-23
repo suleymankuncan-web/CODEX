@@ -36,6 +36,7 @@ for (const executable of [...FIREWALLS.flatMap(({ save, restore }) => [save, res
 }
 const GENERATED_WORKSPACE_PATHS = Object.freeze([
   Object.freeze({ label: 'proof', relative: 'proof' }),
+  Object.freeze({ label: 'onprem-license-node-modules', relative: 'tools/onprem-license/node_modules' }),
   Object.freeze({ label: 'core-secret-files', relative: 'infra/onprem/core/secret-files' }),
   Object.freeze({ label: 'photo-storage-secret-files', relative: 'infra/onprem/photo-storage/secret-files' }),
 ])

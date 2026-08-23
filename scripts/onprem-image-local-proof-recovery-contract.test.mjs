@@ -372,6 +372,12 @@ test('cleanup removes a safe nonempty proof tree with child directories', () => 
     const proof = join(workspace, 'proof')
     mkdirSync(join(proof, 'nested', 'child'), { recursive: true })
     writeFileSync(join(proof, 'nested', 'child', 'evidence.txt'), 'synthetic evidence\n')
+    const licenseNodeModules = join(workspace, 'tools/onprem-license/node_modules')
+    mkdirSync(join(licenseNodeModules, 'spdx-license-list/licenses'), { recursive: true })
+    writeFileSync(join(licenseNodeModules, 'spdx-license-list/package.json'), '{}\n')
+    const driftedLicenseNodeModules = join(workspace, 'tools/onprem-license/node_modules-extra')
+    mkdirSync(driftedLicenseNodeModules, { recursive: true })
+    writeFileSync(join(driftedLicenseNodeModules, 'should-remain.txt'), 'outside exact allowlist\n')
     mkdirSync(runRoot, { recursive: true })
     const cleaned = cleanupFreshWorkspace({
       workspaceRoot: workspace,
@@ -386,7 +392,10 @@ test('cleanup removes a safe nonempty proof tree with child directories', () => 
     })
     assert.equal(cleaned.status, 'passed')
     assert.equal(cleaned.generated.proof, 'removed')
+    assert.equal(cleaned.generated['onprem-license-node-modules'], 'removed')
     assert.equal(existsSync(proof), false)
+    assert.equal(existsSync(licenseNodeModules), false)
+    assert.equal(existsSync(driftedLicenseNodeModules), true)
     assert.equal(existsSync(runRoot), false)
   } finally {
     rmSync(root, { recursive: true, force: true })
@@ -411,6 +420,23 @@ test('cleanup fails closed on unsafe generated roots and removes only an externa
     assert.equal(failed.status, 'failed')
     assert.equal(existsSync(outside), true)
     rmSync(unsafeProof, { force: true })
+    const licenseOutside = join(root, 'license-outside')
+    mkdirSync(licenseOutside)
+    const unsafeLicenseNodeModules = join(workspace, 'tools/onprem-license/node_modules')
+    mkdirSync(join(workspace, 'tools/onprem-license'), { recursive: true })
+    try { symlinkSync(licenseOutside, unsafeLicenseNodeModules) } catch (error) {
+      if (error?.code !== 'EPERM') throw error
+      writeFileSync(unsafeLicenseNodeModules, 'unsafe')
+    }
+    const failedLicensePath = cleanupFreshWorkspace({ workspaceRoot: workspace, runRoot, sourceSha, treeSha, commandRunner: () => ({ status: 0, stdout: '', stderr: '' }), env: {}, deadlineAt: Date.now() + 10_000, includeWorkspaceGenerated: true, reproveGit: false })
+    assert.equal(failedLicensePath.status, 'failed')
+    assert.equal(existsSync(licenseOutside), true)
+    rmSync(unsafeLicenseNodeModules, { recursive: true, force: true })
+    writeFileSync(unsafeLicenseNodeModules, 'regular file at exact generated path\n')
+    const failedLicenseFile = cleanupFreshWorkspace({ workspaceRoot: workspace, runRoot, sourceSha, treeSha, commandRunner: () => ({ status: 0, stdout: '', stderr: '' }), env: {}, deadlineAt: Date.now() + 10_000, includeWorkspaceGenerated: true, reproveGit: false })
+    assert.equal(failedLicenseFile.status, 'failed')
+    assert.equal(existsSync(unsafeLicenseNodeModules), true)
+    assert.equal(existsSync(licenseOutside), true)
     const proofOutput = join(root, 'proof-output')
     mkdirSync(proofOutput)
     writeFileSync(join(proofOutput, 'partial.txt'), 'partial')
