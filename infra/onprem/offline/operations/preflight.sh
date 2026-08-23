@@ -189,14 +189,14 @@ image_env_name() {
 }
 IMAGE_LINES=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
 const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync(process.argv[2],'utf8')); const names=['backend','frontend','keycloak','caddy','postgres','redis','seaweedfs'];
-if(!m.images||Object.keys(m.images).length!==7) process.exit(41); for(const n of names){const i=m.images[n]; if(!i||i.name!==n||!i.archive||!i.repoTag||typeof i.archiveSha256!=='string'||!/^[0-9a-f]{64}$/.test(i.archiveSha256)||!/^sha256:[0-9a-f]{64}$/.test(i.configImageId)) process.exit(42); process.stdout.write(`${n}|${i.archive}|${i.repoTag}|${i.configImageId}\n`)}
+if(!m.images||Object.keys(m.images).length!==7) process.exit(41); for(const n of names){const i=m.images[n]; if(!i||i.name!==n||!i.archive||typeof i.repoTag!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(i.repoTag)||typeof i.archiveSha256!=='string'||!/^[0-9a-f]{64}$/.test(i.archiveSha256)||!/^sha256:[0-9a-f]{64}$/.test(i.configImageId)) process.exit(42); process.stdout.write(`${n}|${i.archive}|${i.repoTag}|${i.configImageId}\n`)}
 NODE
 ) || die "signed image manifest is invalid"
 image_count=0
-while IFS='|' read -r name archive identity image_id; do
+while IFS='|' read -r name archive repo_tag image_id; do
   [ -n "$name" ] || continue
   image_count=$((image_count+1)); var=$(image_env_name "$name")
-  [ "$(env_value "$var")" = "$image_id" ] || die "approved env image identity mismatch: $var"
+  [ "$(env_value "$var")" = "$repo_tag" ] || die "approved env image repoTag mismatch: $var"
 done <<EOF
 $IMAGE_LINES
 EOF
@@ -300,8 +300,19 @@ openssl x509 -in "$TLS_CERT_FILE" -noout >/dev/null 2>&1 || die "TLS certificate
 openssl verify -CAfile "$TLS_CA_FILE" "$TLS_CERT_FILE" >/dev/null 2>&1 || die "TLS certificate chain does not verify"
 openssl pkey -in "$TLS_KEY_FILE" -noout -check >/dev/null 2>&1 || die "TLS private key is invalid"
 TLS_TMP=$(mktemp -d "${TMPDIR:-/tmp}/onprem-preflight-tls.XXXXXX") || die "cannot create TLS verification workspace"
-cleanup_tls() { rm -f "$TLS_TMP/cert.pub" "$TLS_TMP/cert.der" "$TLS_TMP/key.der"; rmdir "$TLS_TMP" 2>/dev/null || true; }
-trap cleanup_tls EXIT HUP INT TERM
+cleanup_preflight_temp() {
+  status=$?
+  rm -f "$TLS_TMP/cert.pub" "$TLS_TMP/cert.der" "$TLS_TMP/key.der" 2>/dev/null || true
+  rmdir "$TLS_TMP" 2>/dev/null || true
+  if [ -n "${IMAGE_SAVE_TEMP_DIR:-}" ]; then
+    rm -f -- "$IMAGE_SAVE_TEMP_DIR/image.tar" 2>/dev/null || true
+    rmdir "$IMAGE_SAVE_TEMP_DIR" 2>/dev/null || true
+  fi
+  exit "$status"
+}
+abort_preflight_on_signal() { trap - HUP INT TERM; exit 124; }
+trap cleanup_preflight_temp EXIT
+trap abort_preflight_on_signal HUP INT TERM
 openssl x509 -in "$TLS_CERT_FILE" -pubkey -noout > "$TLS_TMP/cert.pub" || die "cannot extract TLS certificate public key"
 openssl pkey -pubin -in "$TLS_TMP/cert.pub" -outform DER -out "$TLS_TMP/cert.der" >/dev/null 2>&1 || die "cannot encode TLS certificate public key"
 openssl pkey -in "$TLS_KEY_FILE" -pubout -outform DER -out "$TLS_TMP/key.der" >/dev/null 2>&1 || die "cannot encode TLS private key public key"
@@ -326,20 +337,69 @@ $ids
 EOF
 }
 check_labels container; check_labels network; check_labels volume
-manifest_image_id() {
+manifest_image_repo_tag() {
+  printf '%s\n' "$IMAGE_LINES" | awk -F '|' -v wanted="$1" '$1 == wanted { print $3; exit }'
+}
+manifest_image_config_id() {
   printf '%s\n' "$IMAGE_LINES" | awk -F '|' -v wanted="$1" '$1 == wanted { print $4; exit }'
 }
 runtime_image_for_service() {
   case "$1" in
-    api|worker|identity-binder|migrator|synthetic-seed) manifest_image_id backend;;
-    keycloak|keycloak-bootstrap) manifest_image_id keycloak;;
-    frontend) manifest_image_id frontend;;
-    caddy) manifest_image_id caddy;;
-    postgres) manifest_image_id postgres;;
-    redis) manifest_image_id redis;;
-    object-storage) manifest_image_id seaweedfs;;
+    api|worker|identity-binder|migrator|synthetic-seed) manifest_image_repo_tag backend;;
+    keycloak|keycloak-bootstrap) manifest_image_repo_tag keycloak;;
+    frontend) manifest_image_repo_tag frontend;;
+    caddy) manifest_image_repo_tag caddy;;
+    postgres) manifest_image_repo_tag postgres;;
+    redis) manifest_image_repo_tag redis;;
+    object-storage) manifest_image_repo_tag seaweedfs;;
     *) return 1;;
   esac
+}
+config_image_for_service() {
+  case "$1" in
+    api|worker|identity-binder|migrator|synthetic-seed) manifest_image_config_id backend;;
+    keycloak|keycloak-bootstrap) manifest_image_config_id keycloak;;
+    frontend) manifest_image_config_id frontend;;
+    caddy) manifest_image_config_id caddy;;
+    postgres) manifest_image_config_id postgres;;
+    redis) manifest_image_config_id redis;;
+    object-storage) manifest_image_config_id seaweedfs;;
+    *) return 1;;
+  esac
+}
+runtime_image_id() {
+  runtime_repo_tag=$1
+  runtime_id=$(docker image inspect --format '{{.Id}}' "$runtime_repo_tag" 2>/dev/null || true)
+  printf '%s' "$runtime_id" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "loaded image runtime id is invalid: $runtime_repo_tag"
+  printf '%s' "$runtime_id"
+}
+IMAGE_SAVE_TEMP_DIR=
+IMAGE_SAVE_ARCHIVE=
+verify_runtime_image_provenance() {
+  image_name=$1
+  image_repo_tag=$2
+  expected_image_id=$3
+  observed_runtime_id=$(runtime_image_id "$image_repo_tag")
+  if [ "$observed_runtime_id" = "$expected_image_id" ]; then
+    return 0
+  fi
+  ARCHIVE_VERIFIER="$BUNDLE_ROOT/operations/onprem-offline-archive.mjs"
+  [ -f "$ARCHIVE_VERIFIER" ] && [ ! -L "$ARCHIVE_VERIFIER" ] || die "bundled image archive verifier is missing"
+  if [ -z "$IMAGE_SAVE_TEMP_DIR" ]; then
+    IMAGE_SAVE_TEMP_DIR=$(mktemp -d "/tmp/hr-axis-offline-preflight-image.XXXXXX") || die "temporary image verification directory could not be created"
+    chmod 700 "$IMAGE_SAVE_TEMP_DIR" || die "temporary image verification directory permissions could not be restricted"
+  fi
+  IMAGE_SAVE_ARCHIVE="$IMAGE_SAVE_TEMP_DIR/image.tar"
+  rm -f -- "$IMAGE_SAVE_ARCHIVE" || die "temporary image verification archive could not be reset"
+  docker image save --output "$IMAGE_SAVE_ARCHIVE" "$image_repo_tag" >/dev/null || die "image re-export failed for $image_name"
+  [ -f "$IMAGE_SAVE_ARCHIVE" ] && [ ! -L "$IMAGE_SAVE_ARCHIVE" ] && [ -s "$IMAGE_SAVE_ARCHIVE" ] || die "image re-export produced no archive for $image_name"
+  chmod 600 "$IMAGE_SAVE_ARCHIVE" || die "temporary image verification archive permissions could not be restricted"
+  node --input-type=module - "$ARCHIVE_VERIFIER" "$IMAGE_SAVE_ARCHIVE" "$image_repo_tag" "$expected_image_id" <<'NODE' >/dev/null 2>&1 || die "re-exported image identity verification failed for $image_name"
+const [archiveModule, archivePath, expectedRepoTag, expectedImageId] = process.argv.slice(2)
+const { inspectDockerSaveArchive } = await import(archiveModule)
+const observed = inspectDockerSaveArchive(archivePath, { identity: `${expectedRepoTag}@${expectedImageId}`, imageId: expectedImageId })
+if (observed.repoTag !== expectedRepoTag || observed.imageId !== expectedImageId || observed.archiveConfigImageIdDerived !== true) throw new Error('re-exported image identity mismatch')
+NODE
 }
 runtime_container_ids=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null || true)
 while IFS= read -r runtime_container_id; do
@@ -348,15 +408,17 @@ while IFS= read -r runtime_container_id; do
   runtime_service=$(printf '%s' "$runtime_record" | cut -d'|' -f1)
   runtime_image=$(printf '%s' "$runtime_record" | cut -d'|' -f2)
   [ -n "$runtime_service" ] || die "existing target container has no Compose service label"
-  expected_runtime_image=$(runtime_image_for_service "$runtime_service") || die "existing target container has an unsupported Compose service: $runtime_service"
-  [ "$runtime_image" = "$expected_runtime_image" ] || die "existing target container image identity mismatch: $runtime_service"
+  expected_runtime_repo_tag=$(runtime_image_for_service "$runtime_service") || die "existing target container has an unsupported Compose service: $runtime_service"
+  expected_runtime_config_id=$(config_image_for_service "$runtime_service") || die "existing target container has an unsupported Compose service: $runtime_service"
+  [ "$runtime_image" = "$expected_runtime_config_id" ] || die "existing target container image identity mismatch: $runtime_service"
+  verify_runtime_image_provenance "$runtime_service" "$expected_runtime_repo_tag" "$expected_runtime_config_id"
 done <<EOF
 $runtime_container_ids
 EOF
 for image_record in $IMAGE_LINES; do
-  image_name=$(printf '%s' "$image_record"|cut -d'|' -f1); image_archive=$(printf '%s' "$image_record"|cut -d'|' -f2); image_id=$(printf '%s' "$image_record"|cut -d'|' -f4)
+  image_name=$(printf '%s' "$image_record"|cut -d'|' -f1); image_archive=$(printf '%s' "$image_record"|cut -d'|' -f2); image_repo_tag=$(printf '%s' "$image_record"|cut -d'|' -f3); image_id=$(printf '%s' "$image_record"|cut -d'|' -f4)
   [ -f "$BUNDLE_ROOT/$image_archive" ] && [ ! -L "$BUNDLE_ROOT/$image_archive" ] || die "image archive is missing: $image_name"
-  if [ "$ALLOW_UNLOADED_IMAGES" -eq 0 ]; then [ "$(docker image inspect --format '{{.Id}}' "$image_id" 2>/dev/null||true)" = "$image_id" ] || die "exact image is unavailable or has wrong image id: $image_name"; fi
+  if [ "$ALLOW_UNLOADED_IMAGES" -eq 0 ]; then verify_runtime_image_provenance "$image_name" "$image_repo_tag" "$image_id" || die "exact image provenance is unavailable: $image_name"; fi
 done
 ledger_file=$(env_value MIGRATION_LEDGER_FILE); ledger_required=$(env_value MIGRATION_LEDGER_REQUIRED)
 if [ -n "$ledger_file" ]; then

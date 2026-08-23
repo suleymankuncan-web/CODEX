@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { assertPhotoAuthProofOutput, assertRecoveryHandle } from './onprem-photo-auth-proof.mjs'
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
+const IMAGE_REPOSITORY = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/
+const IMAGE_TAG = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 const URL = /https?:\/\//i
 
@@ -30,6 +32,16 @@ function exactFields(value, keys, label) {
 }
 function safeId(value, label) {
   if (typeof value !== 'string' || !SAFE_ID.test(value)) fail(`${label} is invalid`)
+  return value
+}
+function safeRepoTag(value, label) {
+  if (typeof value !== 'string') fail(`${label} is invalid`)
+  if (/^sha256:[a-f0-9]{64}$/i.test(value)) fail(`${label} must be a signed runnable repoTag, not a config image digest`)
+  const separator = value.lastIndexOf(':')
+  if (separator <= value.lastIndexOf('/') || separator < 1) fail(`${label} must be a signed runnable repoTag`)
+  const repository = value.slice(0, separator)
+  const tag = value.slice(separator + 1)
+  if (!IMAGE_REPOSITORY.test(repository) || !IMAGE_TAG.test(tag)) fail(`${label} must be a signed runnable repoTag`)
   return value
 }
 function safePath(value, label, { requireAbsolute = true } = {}) {
@@ -132,7 +144,7 @@ try {
 
 export function buildPhotoStorageInitDockerArgs({ project, image, primaryBucket, recoveryBucket, primaryAccessKeyFile, primarySecretKeyFile, recoveryAccessKeyFile, recoverySecretKeyFile }) {
   safeId(project, 'Compose project')
-  if (typeof image !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(image)) fail('photo storage init image must be an exact immutable digest')
+  safeRepoTag(image, 'photo storage init image')
   for (const [value, label] of [[primaryBucket, 'primary photo bucket'], [recoveryBucket, 'recovery photo bucket']]) {
     if (typeof value !== 'string' || !PHOTO_BUCKET_NAME.test(value)) fail(`${label} is invalid`)
   }
@@ -153,7 +165,7 @@ export function buildPhotoStorageInitDockerArgs({ project, image, primaryBucket,
 
 export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, photoAccountFile, caFile, fixturePath, sha256, mode = 'prepare', recoveryHandleFile = null, connectHost = 'caddy', connectPort = 8443, scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-photo-auth-proof.mjs'), keycloakAuthProofScriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-keycloak-auth-proof.mjs') }) {
   safeId(project, 'Compose project')
-  if (typeof image !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(image)) fail('photo auth image must be an exact immutable digest')
+  safeRepoTag(image, 'photo auth image')
   safePath(accountsFile, 'synthetic accounts file')
   safePath(photoAccountFile, 'photo proof account file')
   safePath(caFile, 'authorization CA file')
@@ -379,13 +391,14 @@ export function runPhotoProof(options, deps = {}) {
   if (!options.photoFixture || !options.photoSha256) fail('complete photo target proof requires --photo-fixture and --photo-sha256')
   const sha256 = validatePhotoFixture(options.photoFixture, options.photoSha256)
   if (!options.host || !options.accountsFile || !options.photoAccountFile || !options.caFile) fail('complete photo target proof requires protected HTTP auth inputs')
-  if (!options.photoAuthImage) fail('complete photo target proof requires the signed backend image digest')
+  if (!options.photoAuthImage) fail('complete photo target proof requires the signed backend image repoTag')
   const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const renderedImage = config?.services?.api?.image
-  if (!/^sha256:[a-f0-9]{64}$/i.test(renderedImage ?? '') || renderedImage.toLowerCase() !== options.photoAuthImage.toLowerCase()) fail('photo auth image does not match the signed rendered API image')
+  safeRepoTag(options.photoAuthImage, 'photo auth image')
+  if (renderedImage !== options.photoAuthImage) fail('photo auth image does not match the signed rendered API image')
   const inspectImage = deps.imageInspect ?? ((image) => command('docker', ['image', 'inspect', image, '--format', '{{.Id}}'], { timeoutMs: options.timeoutMs, label: 'photo auth image inspect' }))
-  const localImageId = inspectImage(options.photoAuthImage, 'photo auth image inspect')?.stdout?.trim().toLowerCase()
-  if (localImageId !== options.photoAuthImage.toLowerCase()) fail('photo auth image local identity mismatch')
+  const runtimeImageId = inspectImage(options.photoAuthImage, 'photo auth image inspect')?.stdout?.trim().toLowerCase()
+  if (!/^sha256:[a-f0-9]{64}$/.test(runtimeImageId ?? '')) fail('photo auth image runtime identity is invalid')
   if (options.photoStorageSecretRoot) {
     safePath(options.photoStorageSecretRoot, 'photo storage secret root')
     const envText = readFileSync(options.envFile, 'utf8')
@@ -621,7 +634,7 @@ export function parseArgs(argv) {
   if (options.photoStorageSecretRoot) safePath(options.photoStorageSecretRoot, 'photo storage secret root')
   if (options.caFile) safePath(options.caFile, 'authorization CA file')
   if (options.connectHost !== 'caddy' || options.connectPort !== 8443) fail('photo proof must use the private Caddy transport')
-  if (options.photoAuthImage && !/^sha256:[a-f0-9]{64}$/i.test(options.photoAuthImage)) fail('photo auth image must be an exact immutable digest')
+  if (options.photoAuthImage) safeRepoTag(options.photoAuthImage, 'photo auth image')
   return options
 }
 

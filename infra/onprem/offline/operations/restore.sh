@@ -300,27 +300,27 @@ ARCHIVE_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
 const fs = require('node:fs')
 let value
 try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
-const image = value?.images?.postgres?.configImageId
-if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.exit(42)
-process.stdout.write(image.toLowerCase())
+const image = value?.images?.postgres?.repoTag
+if (typeof image !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image)) process.exit(42)
+process.stdout.write(image)
 NODE
 ) || die "signed postgres image identity is unavailable"
 BACKEND_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
 const fs = require('node:fs')
 let value
 try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
-const image = value?.images?.backend?.configImageId
-if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.exit(42)
-process.stdout.write(image.toLowerCase())
+const image = value?.images?.backend?.repoTag
+if (typeof image !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image)) process.exit(42)
+process.stdout.write(image)
 NODE
 ) || die "signed backend image identity is unavailable"
 REDIS_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
 const fs = require('node:fs')
 let value
 try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
-const image = value?.images?.redis?.configImageId
-if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.exit(42)
-process.stdout.write(image.toLowerCase())
+const image = value?.images?.redis?.repoTag
+if (typeof image !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image)) process.exit(42)
+process.stdout.write(image)
 NODE
 ) || die "signed Redis image identity is unavailable"
 

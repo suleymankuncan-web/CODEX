@@ -107,6 +107,13 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
     if (/Labels/.test(lifecycle)) {
       assert.match(lifecycle, /\{\{index \.(?:Config\.)?Labels "com\./, `${name} must use indexed Docker label keys`)
     }
+    if (name === 'upgrade.sh' || name === 'rollback.sh') {
+      assert.match(lifecycle, /docker image inspect --format '\{\{\.Id\}\}' "\$image_repo_tag"/)
+      assert.match(lifecycle, /docker image save --output "\$IMAGE_SAVE_ARCHIVE" "\$image_repo_tag"/)
+      assert.match(lifecycle, /trap cleanup_target_env EXIT/)
+      assert.match(lifecycle, /trap abort_target_operation_on_signal HUP INT TERM/)
+      assert.doesNotMatch(lifecycle, /trap cleanup_target_env EXIT HUP INT TERM/)
+    }
   }
 
   const restore = readFileSync(join(operationDir, 'restore.sh'), 'utf8')
@@ -158,7 +165,15 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   for (const variable of ['HR_AXIS_BACKEND_IMAGE', 'HR_AXIS_FRONTEND_IMAGE', 'KEYCLOAK_IMAGE', 'CADDY_IMAGE', 'POSTGRES_IMAGE', 'REDIS_IMAGE', 'SEAWEEDFS_IMAGE']) {
     assert.match(preflightSource, new RegExp(variable), `preflight maps ${variable}`)
   }
-  assert.match(preflightSource, /approved env image identity mismatch/)
+  assert.match(preflightSource, /approved env image repoTag mismatch/)
+  assert.match(preflightSource, /manifest_image_repo_tag\(\)/)
+  assert.match(preflightSource, /manifest_image_config_id\(\)/)
+  assert.match(preflightSource, /config_image_for_service\(\)/)
+  assert.match(preflightSource, /runtime_image_id\(\)/)
+  assert.match(preflightSource, /docker image save --output "\$IMAGE_SAVE_ARCHIVE" "\$image_repo_tag"/)
+  assert.match(preflightSource, /trap cleanup_preflight_temp EXIT/)
+  assert.match(preflightSource, /trap abort_preflight_on_signal HUP INT TERM/)
+  assert.match(preflightSource, /exit 124/)
   assert.match(preflightSource, /HR_AXIS_PROJECT_ID/)
   assert.match(preflightSource, /merged Compose labels are missing or mismatched/)
   assert.match(preflightSource, /docker compose --project-name "\$TARGET_PROJECT" --profile '\*' --env-file "\$ENV_FILE"/)
@@ -166,6 +181,8 @@ test('ONP-5 operation scripts expose the locked fail-closed contract', () => {
   assert.match(preflightSource, /com\.hr-axis\.release-id/)
   assert.match(preflightSource, /configImageId/)
   assert.match(preflightSource, /repoTag/)
+  assert.match(preflightSource, /\[ "\$runtime_image" = "\$expected_runtime_config_id" \]/, 'existing containers use signed configImageId')
+  assert.match(preflightSource, /verify_runtime_image_provenance "\$runtime_service" "\$expected_runtime_repo_tag" "\$expected_runtime_config_id"/, 'existing containers independently verify signed RepoTag provenance')
   assert.match(preflightSource, /migration ledger parent/)
   assert.doesNotMatch(preflightSource, /\[ "\$\(file_links "\$ledger_parent"\)" = 1 \]/, 'directory link counts must not require the POSIX empty-directory value')
   assert.match(preflightSource, /ledger_parent_links=\$\(file_links "\$ledger_parent"\)/)
@@ -327,6 +344,7 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   const wrongKeyMode = join(root, 'wrong-key')
   const wrongCaMode = join(root, 'wrong-ca')
   const runtimeImageMode = join(root, 'runtime-image-mismatch')
+  const noTargetContainersMode = join(root, 'no-target-containers')
   const nonRootMode = join(root, 'non-root-owner')
   const unsafeInputAncestorMode = join(root, 'unsafe-input-ancestor')
   const unsafeSecretAncestorMode = join(root, 'unsafe-secret-ancestor')
@@ -379,7 +397,7 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
     'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', 'HR_AXIS_RELEASE_ID=release-test', 'HR_AXIS_PUBLIC_HOST=onprem.example.invalid',
     `HR_AXIS_SECRET_ROOT=${shellPath(secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(photoSecretRoot)}`, 'HR_AXIS_PROJECT_ID=hr-axis-onprem-core',
     ...(ledger ? [`MIGRATION_LEDGER_FILE=${shellPath(ledgerFile)}`] : []),
-    ...Object.entries(imageVariables).map(([name, variable]) => `${variable}=sha256:${imageDigests[name]}`),
+    ...Object.entries(imageVariables).map(([name, variable]) => `${variable}=registry.example/${name}:synthetic`),
     'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
   ].join('\n') + '\n')
   const preflightFixture = readFileSync(join(operationDir, 'preflight.sh'), 'utf8')
@@ -427,7 +445,7 @@ function makeFixture({ ledger = false, nativeLedgerStat = false } = {}) {
   ].join('\n') + '\n')
   executable(join(fakeBin, 'mktemp'), [
     '#!/bin/sh',
-    `if [ "$1" = "-d" ] && [ "$2" = "/tmp/hr-axis-offline-image.XXXXXX" ]; then mkdir -p '${shellPath(reexportTempDir)}'; chmod 700 '${shellPath(reexportTempDir)}'; printf '%s\\n' '${shellPath(reexportTempDir)}'; exit 0; fi`,
+    `if [ "$1" = "-d" ] && { [ "$2" = "/tmp/hr-axis-offline-image.XXXXXX" ] || [ "$2" = "/tmp/hr-axis-offline-preflight-image.XXXXXX" ]; }; then mkdir -p '${shellPath(reexportTempDir)}'; chmod 700 '${shellPath(reexportTempDir)}'; printf '%s\\n' '${shellPath(reexportTempDir)}'; exit 0; fi`,
     'exec /usr/bin/mktemp "$@"',
   ].join('\n') + '\n')
   executable(join(fakeBin, 'uname'), '#!/bin/sh\necho Linux\n')
@@ -478,13 +496,17 @@ case "$*" in *-pubkey*) printf '%s\\n' '-----BEGIN PUBLIC KEY-----' 'synthetic' 
 case "$*" in *-outform*DER*) out=; previous=; for arg do if [ "$previous" = 1 ]; then out=$arg; previous=; elif [ "$arg" = -out ]; then previous=1; fi; done; [ -n "$out" ] && printf '%s\\n' der > "$out"; exit 0;; esac
 exit 0
 `)
+  const runtimeImageInspectCases = REEXPORT_IMAGE_NAMES.map((name) => `      registry.example/${name}:synthetic) echo "sha256:${imageDigests[name]}";;`).join('\n')
   executable(join(fakeBin, 'docker'), [
     '#!/bin/sh', `printf '%s\\n' "$*" >> '${shellPath(log)}'`,
     'case "$1" in',
     'version) echo 27.0.0; exit 0;;',
-    `image) echo IMAGE >> '${shellPath(log)}'; case "$2" in inspect) if [ -f '${shellPath(idMode)}' ]; then echo 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'; else echo "$5"; fi; exit 0;; save) echo SAVE >> '${shellPath(log)}'; reexport_case=missing; [ -f '${shellPath(reexportMode)}' ] && reexport_case=$(cat '${shellPath(reexportMode)}'); case "$reexport_case" in valid|signal) image_key=\${5##*/}; image_key=\${image_key%:*}; cp '${shellPath(validReexportRoot)}'/"\$image_key.tar" "$4"; [ "$reexport_case" = signal ] && sleep 30;; wrong-id) cp '${shellPath(wrongIdReexportArchive)}' "$4";; wrong-tag) cp '${shellPath(wrongTagReexportArchive)}' "$4";; missing-tag) cp '${shellPath(missingTagReexportArchive)}' "$4";; malformed|verifier-failure) cp '${shellPath(malformedReexportArchive)}' "$4";; tampered) cp '${shellPath(tamperedReexportArchive)}' "$4";; save-failure) exit 19;; esac; exit 0;; esac; exit 0;;`,
+    `image) echo IMAGE >> '${shellPath(log)}'; case "$2" in inspect) if [ -f '${shellPath(idMode)}' ]; then echo 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'; else case "$5" in
+${runtimeImageInspectCases}
+      *) echo invalid-runtime-ref; exit 19;;
+    esac; fi; exit 0;; save) echo SAVE >> '${shellPath(log)}'; reexport_case=missing; [ -f '${shellPath(reexportMode)}' ] && reexport_case=$(cat '${shellPath(reexportMode)}'); case "$reexport_case" in valid|signal) image_key=\${5##*/}; image_key=\${image_key%:*}; cp '${shellPath(validReexportRoot)}'/"\$image_key.tar" "$4"; [ "$reexport_case" = signal ] && sleep 30;; wrong-id) cp '${shellPath(wrongIdReexportArchive)}' "$4";; wrong-tag) cp '${shellPath(wrongTagReexportArchive)}' "$4";; missing-tag) cp '${shellPath(missingTagReexportArchive)}' "$4";; malformed|verifier-failure) cp '${shellPath(malformedReexportArchive)}' "$4";; tampered) cp '${shellPath(tamperedReexportArchive)}' "$4";; save-failure) exit 19;; esac; exit 0;; esac; exit 0;;`,
     `load) echo LOAD >> '${shellPath(log)}'; exit 0;;`,
-    'ps) echo container-id; exit 0;;',
+    `ps) [ -f '${shellPath(noTargetContainersMode)}' ] && exit 0; echo container-id; exit 0;;`,
     'network) case "$2" in ls) echo network-id;; inspect) case "$*" in *Internal*) echo true;; *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
     'volume) case "$2" in ls) echo volume-id;; inspect) case "$*" in *Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac;; esac; exit 0;;',
     `inspect) case "$*" in *Config.Labels*Image*) if [ -f '${shellPath(runtimeImageMode)}' ]; then echo "keycloak|sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"; else echo "keycloak|sha256:${imageDigests.keycloak}"; fi;; *State.Health.Status*) echo "hr-axis-onprem-core|hr-axis-onprem-core|release-test|synthetic|healthy";; *json*) case "$2" in caddy-id) echo '{"HostConfig":{"HostPort":null,"PortBindings":{"443/tcp":[{"HostPort":"443"}]}},"NetworkSettings":{"Ports":{"443/tcp":[{"HostPort":"443"}]}}}';; *) echo '{"HostConfig":{},"NetworkSettings":{"Ports":{}}}';; esac;; *NetworkSettings.Networks*) echo data;; *NetworkSettings.Ports*) case "$2" in caddy-id) echo "{\\"443/tcp\\":[{\\"HostPort\\":\\"443\\"}]}";; *) echo "{}";; esac;; *Config.Labels*) echo "hr-axis-onprem-core|release-test|synthetic";; *) echo wrong-label-path;; esac; exit 0;;`,
@@ -492,7 +514,7 @@ exit 0
     `compose) case "$*" in *version*) [ -f '${shellPath(composeVersionFile)}' ] && cat '${shellPath(composeVersionFile)}' || echo 2.30.0; exit 0;; *' ps -q caddy'*) echo caddy-id; exit 0;; *' ps -q frontend'*) echo frontend-id; exit 0;; *' ps -q api'*) echo api-id; exit 0;; *' ps -q worker'*) echo worker-id; exit 0;; *' ps -q postgres'*) echo postgres-id; exit 0;; *' ps -q redis'*) echo redis-id; exit 0;; *' ps -q keycloak'*) echo keycloak-id; exit 0;; *' ps -q object-storage'*) echo object-storage-id; exit 0;; *'config --format json'*) case "$*" in *'--profile *'*'config --format json'*) echo '{"name":"hr-axis-onprem-core","release":"release-test","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; *) echo '{"name":"hr-axis-onprem-core","services":{"object-storage":{}},"secrets":{"caddy_tls_certificate":{"file":"${shellPath(join(secretRoot, 'caddy.crt'))}"},"caddy_tls_private_key":{"file":"${shellPath(join(secretRoot, 'caddy.key'))}"},"caddy_tls_ca":{"file":"${shellPath(join(secretRoot, 'caddy.ca'))}"},"keycloak_synthetic_accounts":{"file":"${shellPath(authAccounts)}"},"photo_primary_secret_access_key":{"file":"${shellPath(join(photoSecretRoot, 'photo.key'))}"}}}';; esac; exit 0;; *'config --quiet'*) exit 0;; *'up --pull never'*|*'run --pull never'*) echo MUTATE >> '${shellPath(log)}'; echo '{"migrationTreeDigest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}'; exit 0;; esac;;`,
     'esac', 'exit 0',
   ].join('\n') + '\n')
-  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, reexportMode, reexportTempDir, reexportArchiveRoot, validReexportRoot, validReexportArchives, wrongIdReexportArchive, wrongTagReexportArchive, missingTagReexportArchive, malformedReexportArchive, tamperedReexportArchive, imageDigests, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, legacyPhotoIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
+  return { root, bundle, fakeBin, log, nodeLog, mode, idMode, reexportMode, reexportTempDir, reexportArchiveRoot, validReexportRoot, validReexportArchives, wrongIdReexportArchive, wrongTagReexportArchive, missingTagReexportArchive, malformedReexportArchive, tamperedReexportArchive, imageDigests, broadMode, wrongKeyMode, wrongCaMode, runtimeImageMode, noTargetContainersMode, nonRootMode, unsafeInputAncestorMode, unsafeSecretAncestorMode, largeSecretMode, wrongSecretIdentityMode, legacyPhotoIdentityMode, missingAccountsSecretMode, wrongAccountsSecretTypeMode, composeVersionFile, envFile, publicKey, secretRoot, photoSecretRoot, authAccounts, hardlinkPath, ledgerParent, ledgerFile, receiptDir }
 }
 
 const VALID_FINGERPRINT = 'a'.repeat(64)
@@ -792,7 +814,7 @@ test('fake commands prove verification failure causes zero Docker mutation and i
     assert.notEqual(missingFingerprint.status, 0)
     assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
     const approvedEnv = readFileSync(fixture.envFile, 'utf8')
-    writeFileSync(fixture.envFile, approvedEnv.replace(/HR_AXIS_BACKEND_IMAGE=sha256:[0-9a-f]{64}/, `HR_AXIS_BACKEND_IMAGE=sha256:${'b'.repeat(64)}`))
+    writeFileSync(fixture.envFile, approvedEnv.replace(/HR_AXIS_BACKEND_IMAGE=registry\.example\/backend:synthetic/, 'HR_AXIS_BACKEND_IMAGE=registry.example/backend:wrong'))
     const imageEnvMismatch = runInstall(fixture)
     assert.notEqual(imageEnvMismatch.status, 0)
     assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
@@ -865,6 +887,7 @@ test('Docker 29 identity fallback verifies the signed RepoTag/archive and fails 
     const fixture = makeFixture()
     try {
       writeFileSync(fixture.idMode, 'docker-29-manifest-id\n')
+      writeFileSync(fixture.noTargetContainersMode, 'no-target-containers\n')
       writeFileSync(fixture.reexportMode, `${mode}\n`)
       const result = runInstallBounded(fixture)
       if (expectedPass) {
@@ -899,6 +922,95 @@ test('Docker 29 identity fallback verifies the signed RepoTag/archive and fails 
         }
       }
       assert.equal(existsSync(fixture.reexportTempDir), false, `${label}: temporary re-export material is cleaned`)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('Docker 29 existing container keeps signed config identity separate from runtime RepoTag identity', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('bundled Node archive verifier requires native Linux/WSL path semantics')
+    return
+  }
+  if (!existsSync('/bin/sh')) {
+    t.skip('behavioral POSIX harness requires a POSIX shell')
+    return
+  }
+
+  const valid = makeFixture()
+  try {
+    // The fake container reports signed config C while Docker image inspect
+    // reports runtime identity M. Only the signed RepoTag re-export proof can
+    // establish that M came from the expected config C.
+    writeFileSync(valid.idMode, 'docker-29-runtime-id\n')
+    writeFileSync(valid.reexportMode, 'valid\n')
+    const result = spawnSync(POSIX_SHELL, [shellPath(join(valid.bundle, 'operations', 'preflight.sh')), '--bundle-root', shellPath(valid.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(valid.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(valid.envFile), '--allow-unloaded-images', '--allow-missing-ledger'], { encoding: 'utf8', env: shellEnv(valid) })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${commandLog(valid)}`)
+    const lines = commandLog(valid).split(/\r?\n/).filter(Boolean)
+    assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, 1, 'existing-container runtime identity requires one signed re-export proof')
+    assert.match(lines.find((line) => line.startsWith('image save --output')) ?? '', /registry\.example\/keycloak:synthetic$/)
+    const verifierCalls = nodeLog(valid).split(/\r?\n/).filter((line) => line.includes('--input-type=module'))
+    assert.equal(verifierCalls.length, 1, 'existing-container runtime identity reaches the bundled archive verifier')
+    assert.match(verifierCalls[0], new RegExp(`registry\\.example/keycloak:synthetic sha256:${valid.imageDigests.keycloak}`))
+  } finally {
+    rmSync(valid.root, { recursive: true, force: true })
+  }
+
+  const wrongConfig = makeFixture()
+  try {
+    // Keep the runtime identity mismatch and a valid re-export available, but
+    // reject the container before provenance/re-export work on config mismatch.
+    writeFileSync(wrongConfig.idMode, 'docker-29-runtime-id\n')
+    writeFileSync(wrongConfig.runtimeImageMode, 'wrong-container-config\n')
+    writeFileSync(wrongConfig.reexportMode, 'valid\n')
+    const result = runInstallBounded(wrongConfig)
+    assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(`${result.stdout}\n${result.stderr}`, /existing target container image identity mismatch: keycloak/)
+    const lines = commandLog(wrongConfig).split(/\r?\n/).filter(Boolean)
+    assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, 0, 'wrong container config identity fails before re-export')
+    assert.equal(lines.filter((line) => line === 'MUTATE').length, 0, 'wrong container config identity fails before Compose mutation')
+  } finally {
+    rmSync(wrongConfig.root, { recursive: true, force: true })
+  }
+})
+
+test('Docker 29 preflight loaded-image fallback re-exports signed RepoTags before any mutation', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('bundled Node archive verifier requires native Linux/WSL path semantics')
+    return
+  }
+  if (!existsSync('/bin/sh')) {
+    t.skip('behavioral POSIX harness requires a POSIX shell')
+    return
+  }
+  const cases = [
+    ['valid re-export', 'valid', true, 7],
+    ['wrong config', 'wrong-id', false, 1],
+    ['wrong RepoTag', 'wrong-tag', false, 1],
+    ['malformed archive', 'malformed', false, 1],
+    ['tampered archive', 'tampered', false, 1],
+    ['save failure', 'save-failure', false, 1],
+    ['verifier failure', 'verifier-failure', false, 1],
+  ]
+  for (const [label, mode, expectedPass, expectedSaves] of cases) {
+    const fixture = makeFixture()
+    try {
+      writeFileSync(fixture.idMode, 'docker-29-loaded-image\n')
+      writeFileSync(fixture.noTargetContainersMode, 'no-target-containers\n')
+      writeFileSync(fixture.reexportMode, `${mode}\n`)
+      const result = spawnSync(POSIX_SHELL, [shellPath(join(fixture.bundle, 'operations', 'preflight.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile)], { encoding: 'utf8', env: shellEnv(fixture) })
+      if (expectedPass) assert.equal(result.status, 0, `${label}: ${result.stdout}\n${result.stderr}\n${commandLog(fixture)}`)
+      else assert.notEqual(result.status, 0, label)
+      const lines = commandLog(fixture).split(/\r?\n/).filter(Boolean)
+      assert.equal(lines.filter((line) => line.startsWith('image save --output')).length, expectedSaves, `${label}: first loaded-image mismatch is fail-closed`)
+      assert.doesNotMatch(commandLog(fixture), /MUTATE/, `${label}: preflight must not mutate Compose`)
+      if (expectedPass) {
+        assert.deepEqual(lines.filter((line) => line.startsWith('image save --output')).map((line) => line.slice(line.lastIndexOf(' ') + 1)), REEXPORT_IMAGE_NAMES.map((name) => `registry.example/${name}:synthetic`), `${label}: every signed RepoTag is re-exported`)
+        const verifierCalls = nodeLog(fixture).split(/\r?\n/).filter((line) => line.includes('--input-type=module'))
+        assert.equal(verifierCalls.length, 7, `${label}: every re-export reaches the bundled archive verifier`)
+      }
+      assert.equal(existsSync(fixture.reexportTempDir), false, `${label}: temporary preflight re-export material is cleaned`)
     } finally {
       rmSync(fixture.root, { recursive: true, force: true })
     }

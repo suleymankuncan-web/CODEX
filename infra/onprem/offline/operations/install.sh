@@ -107,7 +107,7 @@ for image_record in $IMAGE_LINES; do
   # passed. Registry digest attestation remains in the signed bundle manifest;
   # docker load is not required to restore RepoDigests locally.
   docker load -i "$archive_path" >/dev/null || die "docker load failed for $image_name"
-  actual_image_id=$(docker image inspect --format '{{.Id}}' "$expected_image_id" 2>/dev/null || true)
+  actual_image_id=$(docker image inspect --format '{{.Id}}' "$image_repo_tag" 2>/dev/null || true)
   if [ "$actual_image_id" != "$expected_image_id" ]; then
     # Docker Engine 29 with the containerd image store can expose the OCI
     # manifest digest as .Id.  Re-export the exact signed RepoTag and let the

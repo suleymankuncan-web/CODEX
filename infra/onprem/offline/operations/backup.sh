@@ -258,9 +258,9 @@ const seen = new Set()
 for (const name of names) {
   const image = value.images[name]
   const imageId = image?.configImageId
-  if (!image || image.name !== name || typeof image.archive !== 'string' || typeof image.repoTag !== 'string' || typeof image.archiveSha256 !== 'string' || typeof imageId !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(imageId) || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || seen.has(imageId.toLowerCase())) process.exit(43)
+  if (!image || image.name !== name || typeof image.archive !== 'string' || typeof image.repoTag !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image.repoTag) || typeof image.archiveSha256 !== 'string' || typeof imageId !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(imageId) || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || seen.has(imageId.toLowerCase())) process.exit(43)
   seen.add(imageId.toLowerCase())
-  process.stdout.write(`${name}|${imageId.toLowerCase()}\n`)
+  process.stdout.write(`${name}|${image.repoTag}|${imageId.toLowerCase()}\n`)
 }
 NODE
 ) || die "signed image identities are unavailable"
@@ -280,6 +280,12 @@ signed_image_for_service() {
   image=$(printf '%s\n' "$SIGNED_IMAGE_LINES" | awk -F'|' -v wanted="$image_name" '$1 == wanted { print $2; exit }')
   [ -n "$image" ] || die "signed image is missing for Compose service: $1"
   printf '%s' "$image"
+}
+signed_image_runtime_id_for_service() {
+  image_repo_tag=$(signed_image_for_service "$1")
+  image_runtime_id=$(docker image inspect --format '{{.Id}}' "$image_repo_tag" 2>/dev/null || true)
+  printf '%s' "$image_runtime_id" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "signed image runtime id is invalid: $1"
+  printf '%s' "$image_runtime_id"
 }
 
 env_value() { awk -F= -v wanted="$1" '$0 !~ /^[[:space:]]*#/ && $1 == wanted { sub(/^[^=]*=/, ""); print; exit }' "$ENV_FILE"; }
@@ -333,7 +339,7 @@ EOF
     caddy|frontend|api|worker|keycloak|redis|postgres|object-storage|keycloak-bootstrap|identity-binder|migrator|synthetic-seed) ;;
     *) die "unknown Compose service: $service" ;;
   esac
-  expected_image=$(signed_image_for_service "$service")
+  expected_image=$(signed_image_runtime_id_for_service "$service")
   [ "$image" = "$expected_image" ] || die "runtime image identity mismatch: $service"
   case "$service" in
     caddy) [ -z "$FOUND_CADDY" ] || die "duplicate caddy service"; FOUND_CADDY=$id ;;
@@ -404,7 +410,7 @@ EOF
     [ "$compose_project" = "$TARGET_PROJECT" ] && [ "$project" = "$TARGET_PROJECT" ] && [ "$data_class" = synthetic ] && [ "$release" = "$RELEASE_ID" ] && [ "$service" = "$expected_service" ] || return 1
     [ "$running" = true ] && [ "$state_status" = running ] && [ "$restarting" = false ] && [ "$dead" = false ] && [ -z "$state_error" ] && [ "$health" = healthy ] || return 1
     case "$restart_count" in ''|*[!0-9]*) return 1 ;; esac
-    [ "$image" = "$(signed_image_for_service "$service")" ] || return 1
+    [ "$image" = "$(signed_image_runtime_id_for_service "$service")" ] || return 1
   }
   for service in api worker keycloak redis; do
     case " $RESTART_CORE_SERVICES " in *" $service "*)

@@ -187,7 +187,7 @@ test('photo command is source-free, exact, and bounded to the protected HTTP pro
 })
 
 test('photo auth proof runs only inside the exact private target network with the immutable backend image', () => {
-  const image = 'sha256:' + 'a'.repeat(64)
+  const image = 'registry.example/backend:synthetic'
   const args = buildPhotoAuthDockerArgs({ project, image, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs', keycloakAuthProofScriptPath: 'C:/proof/onprem-keycloak-auth-proof.mjs' })
   assert.deepEqual(args.slice(0, 8), ['run', '--pull=never', '--rm', '--network', `${project}_proxy`, '--volume', 'C:/proof/onprem-photo-auth-proof.mjs:/run/hr-axis/onprem-photo-auth-proof.mjs:ro', '--volume'])
   const userIndex = args.indexOf('--user')
@@ -198,21 +198,21 @@ test('photo auth proof runs only inside the exact private target network with th
   assert.equal(args.includes('node'), false, 'distroless backend auth proof must not pass a node token through the image entrypoint')
   assert.equal(args.includes('127.0.0.1'), false)
   assert.deepEqual(args.slice(-4), ['--connect-host', 'caddy', '--connect-port', '8443'])
-  assert.throws(() => buildPhotoAuthDockerArgs({ project, image: 'backend:latest', host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64) }), /immutable digest/i)
+  assert.throws(() => buildPhotoAuthDockerArgs({ project, image: 'sha256:' + 'a'.repeat(64), host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64) }), /repoTag/i)
 })
 
 test('photo proof command has explicit prepare/recover modes and mounts the recovery handle read-only', () => {
-  const prepare = buildPhotoAuthDockerArgs({ project, image: 'sha256:' + 'a'.repeat(64), host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), mode: 'prepare', recoveryHandleFile: 'C:/proof/recovery.json', scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs' })
+  const prepare = buildPhotoAuthDockerArgs({ project, image: 'registry.example/backend:synthetic', host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), mode: 'prepare', recoveryHandleFile: 'C:/proof/recovery.json', scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs' })
   assert.ok(prepare.includes('--internal'))
   assert.ok(!prepare.some((value) => String(value).includes('recovery.json:')), 'prepare must not bind-mount the absent handle destination')
-  const args = buildPhotoAuthDockerArgs({ project, image: 'sha256:' + 'a'.repeat(64), host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), mode: 'recover', recoveryHandleFile: 'C:/proof/recovery.json', scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs' })
+  const args = buildPhotoAuthDockerArgs({ project, image: 'registry.example/backend:synthetic', host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', fixturePath: 'C:/proof/fixture.webp', sha256: 'b'.repeat(64), mode: 'recover', recoveryHandleFile: 'C:/proof/recovery.json', scriptPath: 'C:/proof/onprem-photo-auth-proof.mjs' })
   assert.ok(args.includes('--mode') && args.includes('recover'))
   assert.ok(args.includes('--recovery-handle-file') && args.includes('/run/hr-axis/photo-recovery.json'))
   assert.ok(args.includes('C:/proof/recovery.json:/run/hr-axis/photo-recovery.json:ro'))
 })
 
 test('photo proof initializes the exact offline Seaweed buckets before HTTP auth', () => {
-  const image = 'sha256:' + 'a'.repeat(64)
+  const image = 'registry.example/backend:synthetic'
   const args = buildPhotoStorageInitDockerArgs({
     project,
     image,
@@ -229,10 +229,10 @@ test('photo proof initializes the exact offline Seaweed buckets before HTTP auth
   assert.equal(args.includes('127.0.0.1'), false)
   assert.equal(args.includes('node'), false)
   assert.throws(() => buildPhotoStorageInitDockerArgs({
-    project, image: 'backend:latest', primaryBucket: 'synthetic-primary', recoveryBucket: 'synthetic-recovery',
+    project, image: 'sha256:' + 'a'.repeat(64), primaryBucket: 'synthetic-primary', recoveryBucket: 'synthetic-recovery',
     primaryAccessKeyFile: 'C:/proof/photo/primary-access-key-id', primarySecretKeyFile: 'C:/proof/photo/primary-secret-access-key',
     recoveryAccessKeyFile: 'C:/proof/photo/recovery-access-key-id', recoverySecretKeyFile: 'C:/proof/photo/recovery-secret-access-key',
-  }), /immutable digest/i)
+  }), /repoTag/i)
 })
 
 test('photo bucket initializer is syntactically valid source-free Node code', () => {
@@ -261,12 +261,12 @@ test('photo proof runs bucket initialization before the protected auth command',
       project, releaseId, envFile: join(root, 'core.env'), compose: ['core.yaml'], timeoutMs: 1000,
       photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid',
       accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt',
-      photoAuthImage: 'sha256:' + 'a'.repeat(64), photoStorageSecretRoot: 'C:/proof/photo',
+      photoAuthImage: 'registry.example/backend:synthetic', photoStorageSecretRoot: 'C:/proof/photo',
       photoPrimaryBucket: 'synthetic-primary', photoRecoveryBucket: 'synthetic-recovery',
       connectHost: 'caddy', connectPort: 8443,
     }, {
-      config: { services: { api: { image: 'sha256:' + 'a'.repeat(64) } } },
-      imageInspect: (image) => ({ status: 0, stdout: `${image}\n`, stderr: '' }),
+      config: { services: { api: { image: 'registry.example/backend:synthetic' } } },
+      imageInspect: () => ({ status: 0, stdout: `sha256:${'a'.repeat(64)}\n`, stderr: '' }),
       photoStorageInitCommand: (args, label) => { calls.push({ kind: 'init', args, label }); return { status: 0, stdout: '', stderr: '' } },
       photoAuthCommand: (args, label) => {
         calls.push({ kind: 'auth', args, label })
@@ -291,10 +291,10 @@ test('photo proof invokes the protected HTTP auth proof with exact fixture and r
   try {
     const result = runPhotoProof({
       project, releaseId, envFile: 'core.env', compose: ['core.yaml'], timeoutMs: 1000,
-      photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', photoAuthImage: 'sha256:' + 'a'.repeat(64), connectHost: 'caddy', connectPort: 8443,
+      photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', photoAuthImage: 'registry.example/backend:synthetic', connectHost: 'caddy', connectPort: 8443,
     }, {
-      config: { services: { api: { image: 'sha256:' + 'a'.repeat(64) } } },
-      imageInspect: (image) => ({ status: 0, stdout: `${image}\n`, stderr: '' }),
+      config: { services: { api: { image: 'registry.example/backend:synthetic' } } },
+      imageInspect: () => ({ status: 0, stdout: `sha256:${'a'.repeat(64)}\n`, stderr: '' }),
       photoAuthCommand: (args, label) => {
         calls.push({ args, label })
         return { status: 0, stdout: JSON.stringify({
@@ -323,13 +323,33 @@ test('photo proof rejects a valid-looking image that differs from the signed ren
   try {
     assert.throws(() => runPhotoProof({
       project, releaseId, envFile: 'core.env', compose: ['core.yaml'], timeoutMs: 1000,
-      photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', photoAuthImage: 'sha256:' + 'a'.repeat(64), connectHost: 'caddy', connectPort: 8443,
+      photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', photoAuthImage: 'registry.example/backend:synthetic', connectHost: 'caddy', connectPort: 8443,
     }, {
-      config: { services: { api: { image: 'sha256:' + 'b'.repeat(64) } } },
+      config: { services: { api: { image: 'registry.example/other:synthetic' } } },
       imageInspect: () => { imageInspects += 1; return { status: 0, stdout: '', stderr: '' } },
       photoAuthCommand: () => { photoCalls += 1; return { status: 0, stdout: '', stderr: '' } },
     }), /does not match the signed rendered API image/)
     assert.equal(imageInspects, 0)
+    assert.equal(photoCalls, 0)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('photo proof rejects an invalid runtime image ID after resolving the signed repoTag', () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-photo-runtime-image-invalid-'))
+  const fixturePath = join(root, 'fixture.webp')
+  const fixture = Buffer.from('synthetic-photo-fixture')
+  const sha256 = createHash('sha256').update(fixture).digest('hex')
+  writeFileSync(fixturePath, fixture)
+  let photoCalls = 0
+  try {
+    assert.throws(() => runPhotoProof({
+      project, releaseId, envFile: 'core.env', compose: ['core.yaml'], timeoutMs: 1000,
+      photoFixture: fixturePath, photoSha256: sha256, host: 'offline.synthetic.invalid', accountsFile: 'C:/proof/accounts', photoAccountFile: 'C:/proof/photo-account', caFile: 'C:/proof/ca.crt', photoAuthImage: 'registry.example/backend:synthetic', connectHost: 'caddy', connectPort: 8443,
+    }, {
+      config: { services: { api: { image: 'registry.example/backend:synthetic' } } },
+      imageInspect: () => ({ status: 0, stdout: 'registry.example/backend:synthetic\n', stderr: '' }),
+      photoAuthCommand: () => { photoCalls += 1; return { status: 0, stdout: '', stderr: '' } },
+    }), /runtime identity is invalid/)
     assert.equal(photoCalls, 0)
   } finally { rmSync(root, { recursive: true, force: true }) }
 })

@@ -728,6 +728,7 @@ test('sealed operator env generation is exact and refuses every overwrite', () =
   const operatorRoot = join(root, 'operator')
   const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
   const images = Object.fromEntries(imageNames.map((name, index) => [name, {
+    repoTag: `registry.example/${name}:synthetic`,
     configImageId: `sha256:${String(index + 1).repeat(64)}`,
   }]))
   const expectedReleases = {
@@ -748,7 +749,10 @@ test('sealed operator env generation is exact and refuses every overwrite', () =
       const content = readFileSync(pathname, 'utf8')
       if (process.platform !== 'win32') assert.equal(statSync(pathname).mode & 0o777, 0o600, `${file} mode`)
       assert.match(content, new RegExp(`^HR_AXIS_RELEASE_ID=${releaseId}$`, 'm'))
-      for (const image of Object.values(images)) assert.ok(content.includes(`=${image.configImageId}`), `${file} image identity`)
+      for (const image of Object.values(images)) {
+        assert.ok(content.includes(`=${image.repoTag}`), `${file} runnable image repoTag`)
+        assert.equal(content.includes(`=${image.configImageId}`), false, `${file} must not use config image provenance as a runnable ref`)
+      }
       original[file] = content
     }
     const second = spawnSync(process.execPath, args, { input: `${body}\n`, encoding: 'utf8' })
@@ -936,7 +940,10 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.match(rehearsal, /offline edge network is missing after activation/)
   assert.doesNotMatch(rehearsal, /offline edge network is missing after install/)
   assert.match(rehearsal, /backend_image="\$\(sudo_bounded "edge-env-image" awk -F= '\$1 == "HR_AXIS_BACKEND_IMAGE" \{ print \$2; exit \}' "\$ENV_FILE"\)/)
-  assert.match(rehearsal, /sudo_bounded "edge-image-inspect" docker image inspect "\$backend_image" --format '\{\{\.Id\}\}' \| grep -Fqx "\$backend_image"/)
+  assert.match(rehearsal, /backend_config_image_id="\$\(sudo -- "\$NODE_BIN" - "\$BUNDLE_ROOT\/bundle-manifest\.json" "\$backend_image"/)
+  assert.match(rehearsal, /image\.repoTag !== repoTag[\s\S]*image\.configImageId/)
+  assert.match(rehearsal, /backend_runtime_id="\$\(sudo_bounded "edge-image-inspect" docker image inspect "\$backend_image" --format '\{\{\.Id\}\}'\)/)
+  assert.match(rehearsal, /printf '%s' "\$backend_runtime_id" \| grep -Eq '\^sha256:\[0-9a-f\]\{64\}\$'/)
   assert.match(rehearsal, /--entrypoint \/nodejs\/bin\/node "\$backend_image" --input-type=module -e/)
   assert.doesNotMatch(rehearsal, /--entrypoint node "\$backend_image"/)
   const install = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/install.sh"')
