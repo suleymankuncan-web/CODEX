@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import crypto from 'node:crypto'
-import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -106,8 +105,8 @@ function packageFixture({ executeBody, controller } = {}) {
   const artifact = Buffer.from('synthetic proof artifact\n')
   const artifactPath = path.join(imageProofRoot, 'proof.txt')
   fs.writeFileSync(artifactPath, artifact)
-  const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
-  const treeSha = execFileSync('git', ['rev-parse', 'HEAD^{tree}'], { encoding: 'utf8' }).trim()
+  const sourceSha = 'a'.repeat(40)
+  const treeSha = 'b'.repeat(40)
   const node = process.execPath
   const nodeSha256 = sha256(fs.readFileSync(node))
   const proofReceipt = Buffer.from(`${JSON.stringify({ proofMode: 'full', imageScope: 'both', expectedSha: sourceSha, dataClass: 'synthetic', evidenceSha: 'e'.repeat(64) })}\n`)
@@ -273,6 +272,11 @@ test('every caller and detached-checkout Git operation disables repository-local
 test('producer-shaped proof manifest binds its declared inner receipt and rejects mismatch or absence', () => {
   const root = tempDirectory()
   try {
+    const writeManifest = (manifest) => {
+      const manifestPath = path.join(root, 'artifact-manifest.json')
+      fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`)
+      privateMode(manifestPath)
+    }
     const file = path.join(root, 'onprem-image-proof', 'release-manifest.json')
     fs.mkdirSync(path.dirname(file), { recursive: true })
     const bytes = Buffer.from('{"sourceRevision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}\n')
@@ -284,25 +288,25 @@ test('producer-shaped proof manifest binds its declared inner receipt and reject
       { group: 'onprem-image-proof', path: 'onprem-image-proof/release-manifest.json', bytes: bytes.length, sha256: sha256(bytes) },
       { group: 'onprem-image-proof', path: 'onprem-image-proof/onprem-proof-receipt.json', bytes: proofReceipt.length, sha256: sha256(proofReceipt) },
     ]
-    fs.writeFileSync(path.join(root, 'artifact-manifest.json'), `${JSON.stringify({
+    writeManifest({
       schemaVersion: 1, dataClass: 'synthetic', proofMode: 'full', imageScope: 'both', expectedSha: 'a'.repeat(40), evidenceSha: 'b'.repeat(64), receiptSha256: sha256(proofReceipt), artifacts,
-    })}\n`)
+    })
     const facts = validateProofArtifactManifest(root, { sourceSha: 'a'.repeat(40) })
     assert.match(facts.manifestSha256, /^[a-f0-9]{64}$/)
     assert.equal(facts.proofReceiptSha256, sha256(proofReceipt))
     assert.equal(facts.files[0].bytes, bytes.length)
-    fs.writeFileSync(path.join(root, 'artifact-manifest.json'), `${JSON.stringify({
+    writeManifest({
       schemaVersion: 1, dataClass: 'synthetic', proofMode: 'full', imageScope: 'both', expectedSha: 'a'.repeat(40), evidenceSha: 'b'.repeat(64), receiptSha256: 'd'.repeat(64), artifacts,
-    })}\n`)
+    })
     assert.throws(() => validateProofArtifactManifest(root, { sourceSha: 'a'.repeat(40) }), /does not match producer proof receipt/)
-    fs.writeFileSync(path.join(root, 'artifact-manifest.json'), `${JSON.stringify({
+    writeManifest({
       schemaVersion: 1, dataClass: 'synthetic', proofMode: 'full', imageScope: 'both', expectedSha: 'a'.repeat(40), evidenceSha: 'b'.repeat(64), receiptSha256: sha256(proofReceipt), artifacts: artifacts.slice(0, 1),
-    })}\n`)
+    })
     assert.throws(() => validateProofArtifactManifest(root, { sourceSha: 'a'.repeat(40) }), /exactly one producer proof receipt/)
-    fs.writeFileSync(path.join(root, 'artifact-manifest.json'), `${JSON.stringify({
+    writeManifest({
       schemaVersion: 1, dataClass: 'synthetic', proofMode: 'full', imageScope: 'both', expectedSha: 'a'.repeat(40), evidenceSha: 'b'.repeat(64), receiptSha256: 'd'.repeat(64),
       artifacts: [{ group: 'onprem-image-proof', path: '../outside.txt', bytes: 1, sha256: 'c'.repeat(64) }],
-    })}\n`)
+    })
     assert.throws(() => validateProofArtifactManifest(root, { sourceSha: 'a'.repeat(40) }), /unsafe/)
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })
@@ -775,6 +779,7 @@ test('archive-size files are streamed into a digest-bound destination copy', () 
   const destination = path.join(root, 'handoff-current.tar')
   const bytes = Buffer.alloc(3 * 64 * 1024 + 17, 0x5a)
   fs.writeFileSync(source, bytes)
+  privateMode(source)
   try {
     const copied = copyStableFile(source, destination, 'current archive')
     assert.equal(copied.bytes, bytes.length)

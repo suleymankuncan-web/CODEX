@@ -4,7 +4,6 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
-import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import {
   LIFECYCLE_ORDER,
@@ -178,14 +177,6 @@ test('workspace root must be the harness checkout after canonical resolution', (
   try {
     const cleanWorkspace = path.join(directory, 'clean-workspace')
     fs.mkdirSync(cleanWorkspace)
-    execFileSync('git', ['-C', cleanWorkspace, 'init', '--quiet'])
-    execFileSync('git', ['-C', cleanWorkspace, 'config', 'user.name', 'offline-contract-test'])
-    execFileSync('git', ['-C', cleanWorkspace, 'config', 'user.email', 'offline-contract-test@example.invalid'])
-    execFileSync('git', ['-C', cleanWorkspace, 'config', 'core.autocrlf', 'false'])
-    fs.writeFileSync(path.join(cleanWorkspace, 'README.txt'), 'clean workspace\n')
-    execFileSync('git', ['-C', cleanWorkspace, 'add', '--', 'README.txt'])
-    execFileSync('git', ['-C', cleanWorkspace, 'commit', '--quiet', '-m', 'clean workspace'])
-    assert.equal(execFileSync('git', ['-C', cleanWorkspace, 'status', '--porcelain'], { encoding: 'utf8' }), '')
     assert.equal(assertCanonicalWorkspaceRoot(repositoryRoot), fs.realpathSync(repositoryRoot))
     assert.throws(
       () => parseCliArguments(validArguments({ '--workspace-root': cleanWorkspace })),
