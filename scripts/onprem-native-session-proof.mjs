@@ -283,7 +283,7 @@ export function validateSessionOptions(raw, dependencies = {}) {
 }
 
 function sanitizePhase(value) {
-  if (!object(value) || typeof value.name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9 ._:-]{0,200}$/.test(value.name) || !['passed', 'failed'].includes(value.status)) fail('image receipt phase is invalid')
+  if (!object(value) || typeof value.name !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9 ._,:-]{0,200}$/.test(value.name) || !['passed', 'failed'].includes(value.status)) fail('image receipt phase is invalid')
   return {
     name: value.name,
     status: value.status,

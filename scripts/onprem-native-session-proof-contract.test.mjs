@@ -326,6 +326,34 @@ test('passed image receipt preserves timestamp-only firewall success with false 
   } finally { fs.rmSync(fixture.directory, { recursive: true, force: true }) }
 })
 
+test('passed image receipt accepts current comma-bearing workflow phase names and rejects unsafe names', () => {
+  const fixture = validFixture()
+  try {
+    const options = validateSessionOptions(fixture.raw, fixture.dependencies)
+    const currentWorkflowPhases = [
+      'Prove ONP-2 static Compose, network, and firewall contracts',
+      'Generate SeaweedFS storage SBOM, license, and vulnerability evidence',
+    ]
+    const parsed = parsePassedImageReceipt(imageReceipt(options, {
+      phases: currentWorkflowPhases.map((name) => ({ name, status: 'passed' })),
+    }), options)
+    assert.deepEqual(parsed.phases.map((phase) => phase.name), currentWorkflowPhases)
+
+    for (const unsafeName of [
+      'unsafe\nphase',
+      'unsafe\u0007phase',
+      'phase && echo unsafe',
+      '../escape',
+      'phase/../../escape',
+      'phase!',
+    ]) {
+      assert.throws(() => parsePassedImageReceipt(imageReceipt(options, {
+        phases: [{ name: unsafeName, status: 'passed' }],
+      }), options), /image receipt phase is invalid/, JSON.stringify(unsafeName))
+    }
+  } finally { fs.rmSync(fixture.directory, { recursive: true, force: true }) }
+})
+
 test('provision is synchronous-first, proof receives exact identity, and session receipt is sanitized', async () => {
   const fixture = validFixture()
   try {
