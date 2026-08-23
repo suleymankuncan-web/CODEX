@@ -1335,7 +1335,7 @@ jobs:
             test "$(sudo stat -c '%u:%g:%a' "$OPERATOR_ROOT/$operator_env")" = '0:0:600'
           done
           owner_key_source="$RUNNER_TEMP/offline-owner-signing-key.pem"; owner_public_source="$RUNNER_TEMP/offline-owner-signing-public.pem"; openssl genpkey -algorithm ED25519 -out "$owner_key_source" >/dev/null 2>&1; openssl pkey -in "$owner_key_source" -pubout -out "$owner_public_source" >/dev/null 2>&1; chmod 600 "$owner_key_source" "$owner_public_source"
-          BACKUP_TRUSTED_FINGERPRINT="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('$owner_public_source')).export({type:'spki',format:'der'})).digest('hex'))")"
+          BACKUP_TRUSTED_FINGERPRINT="$("$NODE_BIN" --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('$owner_public_source')).export({type:'spki',format:'der'})).digest('hex'))")"
           sudo cp -a -- "$RUNNER_TEMP/offline-secrets" "$OPERATOR_ROOT/secrets"
           sudo cp -a -- "$owner_key_source" "$OPERATOR_ROOT/owner-signing-key.pem"
           sudo cp -a -- "$owner_public_source" "$OPERATOR_ROOT/owner-signing-public.pem"

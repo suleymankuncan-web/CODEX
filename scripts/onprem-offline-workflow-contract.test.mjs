@@ -256,6 +256,8 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.doesNotMatch(rehearsal, /trap '\s*if \[ -n "\$\{offline_heartbeat_pid:-\}" \].*wait "\$offline_heartbeat_pid".*' EXIT/)
   assert.match(rehearsal, /sudo_bounded "verify-bootstrap-\$release_id" "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
   assert.match(rehearsal, /sudo_bounded "verify-bundle-\$release_id" "\$NODE_BIN" "\$root\/operations\/onprem-offline-bundle\.mjs" verify/)
+  assert.match(rehearsal, /BACKUP_TRUSTED_FINGERPRINT="\$\("\$NODE_BIN" --input-type=module -e/)
+  assert.doesNotMatch(rehearsal, /BACKUP_TRUSTED_FINGERPRINT="\$\(node\b/)
   assert.doesNotMatch(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
   assert.doesNotMatch(rehearsal, /edge-network-inspect[^\n]*2>\/dev\/null/)
   assert.match(rehearsal, /sudo_bounded "edge-env-image" awk -F=/)
