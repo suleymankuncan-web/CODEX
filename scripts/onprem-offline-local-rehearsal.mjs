@@ -13,6 +13,7 @@ import {
   resetDedicatedNativeDockerHost,
 } from './onprem-native-docker-host.mjs'
 import { analyzeFirewallMismatch, compareFirewallSnapshots } from './onprem-image-local-proof-recovery.mjs'
+import { createRecoveryFixedCommands } from './onprem-recovery-command-allowlist.mjs'
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url))
 const REPOSITORY_ROOT = path.resolve(SCRIPT_ROOT, '..')
@@ -67,18 +68,7 @@ const RECOVERY_ENV = Object.freeze({
 const RECOVERY_DEADLINE_CODE = 'OFFLINE_RECOVERY_DEADLINE'
 const NATIVE_RECOVERY_DEADLINE_CODE = 'NATIVE_DOCKER_RECOVERY_DEADLINE'
 const RECOVERY_COMMAND_CODE = 'OFFLINE_RECOVERY_COMMAND'
-const RECOVERY_FIXED_COMMANDS = new Map([
-  ['git', '/usr/bin/git'],
-  ['sudo', RECOVERY_BINARIES.sudo],
-  ['systemctl', '/usr/bin/systemctl'],
-  ['findmnt', '/usr/bin/findmnt'],
-  ['docker', '/usr/bin/docker'],
-  ['id', '/usr/bin/id'],
-  ['iptables-save', RECOVERY_BINARIES.ipv4Save],
-  ['iptables-restore', RECOVERY_BINARIES.ipv4Restore],
-  ['ip6tables-save', RECOVERY_BINARIES.ipv6Save],
-  ['ip6tables-restore', RECOVERY_BINARIES.ipv6Restore],
-])
+const RECOVERY_FIXED_COMMANDS = createRecoveryFixedCommands(RECOVERY_BINARIES)
 const RECOVERY_FIXED_PATHS = new Set([
   ...RECOVERY_FIXED_COMMANDS.values(),
   '/usr/bin/cat', '/usr/bin/containerd', '/usr/bin/docker', '/usr/bin/dockerd', '/usr/bin/find', '/usr/bin/findmnt',
