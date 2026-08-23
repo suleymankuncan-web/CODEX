@@ -27,6 +27,7 @@ const SAFE_BINARIES = Object.freeze({
   sudo: '/usr/bin/sudo',
   systemctl: '/usr/bin/systemctl',
   test: '/usr/bin/test',
+  unlink: '/usr/bin/unlink',
   umount: '/usr/bin/umount',
 })
 const SAFE_ENVIRONMENT = Object.freeze({
@@ -630,7 +631,58 @@ function validateUnixSocket(fsApi, socket, label, platform = 'linux') {
   }
 }
 
+function parsePrivilegedSocketStat(result, label) {
+  if (result.status !== 0 || result.stdout === '' || result.stderr !== '') fail(`${label} cannot be proved`)
+  const fields = result.stdout.match(/^socket (\d+) (\d+) ([0-7]{3,4}) (\d+) (\d+)\n$/)
+  if (!fields) fail(`${label} metadata is invalid`)
+  const uid = Number(fields[1])
+  const gid = Number(fields[2])
+  const mode = Number.parseInt(fields[3], 8)
+  const dev = Number(fields[4])
+  const ino = Number(fields[5])
+  if (uid !== 0 || !Number.isSafeInteger(gid) || !Number.isSafeInteger(mode) || (mode & 0o007) !== 0 || !Number.isSafeInteger(dev) || dev <= 0 || !Number.isSafeInteger(ino) || ino <= 0) fail(`${label} metadata is unsafe`)
+  return Object.freeze({ uid, gid, mode, dev, ino })
+}
+
+function socketPathPattern(socket) {
+  return socket.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function listenerLinesForSocket(stdout, socket, label) {
+  const lines = stdout.split(/\r?\n/)
+  if (lines.at(-1) === '') lines.pop()
+  if (lines.some((line) => line === '')) fail(`${label} listener output is invalid`)
+  const pattern = new RegExp(`(?:^|[\\s"'])${socketPathPattern(socket)}(?=$|[\\s,\")'])`)
+  return lines.filter((line) => /\bLISTEN\b/.test(line) && pattern.test(line))
+}
+
+function provePrivateContainerdListener(commandRunner, socket, pid, label) {
+  const listeners = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('ss'), '-xlpn'], {}, `${label} listener`)
+  if (listeners.status !== 0 || listeners.stderr !== '') fail(`${label} listener cannot be proved`)
+  const matches = listenerLinesForSocket(listeners.stdout, socket, label)
+  if (matches.length !== 1) fail(`${label} listener is ambiguous`)
+  const pids = [...matches[0].matchAll(/pid=(\d+)/g)].map((match) => Number(match[1]))
+  if (pids.length !== 1 || pids[0] !== pid) fail(`${label} is not owned by the verified process`)
+}
+
+function privateContainerdSocketIsOwnedByPid(commandRunner, socket, pid, label = 'private containerd socket') {
+  exactPath(socket, hostContract.containerdSocket, `${label} path`)
+  const readlink = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('readlink'), '-e', '--', hostContract.containerdSocket], {}, `${label} canonical path`)
+  if (readlink.status !== 0 || readlink.stdout !== `${hostContract.containerdSocket}\n` || readlink.stderr !== '') fail(`${label} canonical path is not exact`)
+  const noSymlink = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-L', hostContract.containerdSocket], {}, `${label} symlink state`)
+  if (noSymlink.status !== 0 || noSymlink.stdout !== '' || noSymlink.stderr !== '') fail(`${label} must be a non-symlink socket`)
+  const statArgs = ['-n', safeExecutable('stat'), '-Lc', '%F %u %g %a %d %i', '--', hostContract.containerdSocket]
+  const first = parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', statArgs, {}, `${label} stat`), `${label} stat`)
+  provePrivateContainerdListener(commandRunner, hostContract.containerdSocket, pid, label)
+  const second = parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', statArgs, {}, `${label} repeat stat`), `${label} repeat stat`)
+  if (first.dev !== second.dev || first.ino !== second.ino) fail(`${label} identity changed while proving listener`)
+}
+
 function socketIsOwnedByPid(commandRunner, fsApi, socket, pid, platform, label = 'Docker socket', aliases = []) {
+  if (socket === hostContract.containerdSocket) {
+    privateContainerdSocketIsOwnedByPid(commandRunner, socket, pid, label)
+    return
+  }
   validateUnixSocket(fsApi, socket, label, platform)
   const stat = requireStatus(commandRunner, 'sudo', ['-n', safeExecutable('stat'), '-Lc', '%F %u %g %a %d %i', socket], `${label} stat`)
   const statFields = stat.stdout.trim().match(/^socket\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+)\s+(\d+))?\s*$/i)
@@ -879,7 +931,7 @@ function runtimeResidue(commandRunner, root, label) {
   if (result.status !== 0 || result.stderr.trim()) fail(`${label} runtime state cannot be proved`)
   const lines = strictObservationLines(result.stdout, label)
   for (const line of lines) if (!parseSafeObservationPath(line, root)) fail(`${label} runtime state is invalid`)
-  return lines.length !== 0
+  return lines
 }
 
 function controlGroupResidue(commandRunner, cgroup, label) {
@@ -911,7 +963,7 @@ function isExactAbsentPidEsrch(result, pid) {
   return result.status === 1 && result.stdout === '' && result.stderr === `/usr/bin/kill: (${String(pid)}): No such process\n`
 }
 
-function proveStoppedAttempt(commandRunner, before) {
+function proveStoppedAttempt(commandRunner, before, { allowContainerdTtrpcCandidate = false } = {}) {
   // Every component is checked during every attempt. A retryable observation
   // never short-circuits the remaining invariant, so a different residue
   // cannot be missed on the attempt that eventually appears clean.
@@ -934,11 +986,18 @@ function proveStoppedAttempt(commandRunner, before) {
   }
   else if (containerdSocket.status !== 0 || containerdSocket.stdout !== '' || containerdSocket.stderr !== '') fail('private containerd socket state cannot be proved')
 
-  if (runtimeResidue(commandRunner, hostContract.dockerExecRoot, 'Docker exec root')) retryable = true
-  if (runtimeResidue(commandRunner, hostContract.containerdState, 'private containerd state')) retryable = true
+  const dockerResidue = runtimeResidue(commandRunner, hostContract.dockerExecRoot, 'Docker exec root')
+  if (dockerResidue.length !== 0) retryable = true
+  const containerdResidue = runtimeResidue(commandRunner, hostContract.containerdState, 'private containerd state')
+  const expectedCandidate = `${hostContract.containerdSocket}.ttrpc`
+  let staleCandidate
+  if (containerdResidue.length !== 0) {
+    if (allowContainerdTtrpcCandidate && containerdResidue.length === 1 && containerdResidue[0] === expectedCandidate) staleCandidate = expectedCandidate
+    else retryable = true
+  }
   if (controlGroupResidue(commandRunner, before.processes.dockerd.cgroup, 'custom dockerd')) retryable = true
   if (controlGroupResidue(commandRunner, before.processes.containerd.cgroup, 'private containerd')) retryable = true
-  return retryable
+  return Object.freeze({ retryable, staleCandidate })
 }
 
 function quiescenceCommandRunner(commandRunner, deadlineAt) {
@@ -959,21 +1018,70 @@ function quiescenceCommandRunner(commandRunner, deadlineAt) {
   }
 }
 
-function proveStopped(commandRunner, before, { recoveryDeadlineAt } = {}) {
+function validatePrivateContainerdStateDirectory(commandRunner, options = {}) {
+  const target = hostContract.containerdState
+  const fsApi = options.fsApi ?? fs
+  const platform = options.platform ?? 'linux'
+  validateResetDestructiveDirectory(target, 'containerdState', { ...options, commandRunner })
+  const stats = lstat(fsApi, target, 'private containerd state directory')
+  if (platform === 'linux' && (stats.uid !== 0 || stats.gid !== 0 || (stats.mode & 0o777) !== 0o700)) fail('private containerd state directory ownership or mode is unsafe')
+  assertNotMountpoint(target, { ...options, commandRunner })
+  assertNoSubmounts(target, { ...options, commandRunner })
+  return true
+}
+
+function validatePrivateContainerdTtrpcCandidate(commandRunner, candidate) {
+  const expected = `${hostContract.containerdSocket}.ttrpc`
+  exactPath(candidate, expected, 'private containerd stale ttrpc candidate')
+  const readlink = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('readlink'), '-e', '--', expected], {}, 'private containerd stale ttrpc canonical path')
+  if (readlink.status !== 0 || readlink.stdout !== `${expected}\n` || readlink.stderr !== '') fail('private containerd stale ttrpc canonical path is not exact')
+  const noSymlink = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-L', expected], {}, 'private containerd stale ttrpc symlink state')
+  if (noSymlink.status !== 0 || noSymlink.stdout !== '' || noSymlink.stderr !== '') fail('private containerd stale ttrpc candidate must be a non-symlink')
+  parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', ['-n', safeExecutable('stat'), '-Lc', '%F %u %g %a %d %i', '--', expected], {}, 'private containerd stale ttrpc stat'), 'private containerd stale ttrpc stat')
+  const listeners = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('ss'), '-xlpn'], {}, 'private containerd stale ttrpc listener')
+  if (listeners.status !== 0 || listeners.stderr !== '') fail('private containerd stale ttrpc listener cannot be proved')
+  if (listenerLinesForSocket(listeners.stdout, expected, 'private containerd stale ttrpc').length !== 0) fail('private containerd stale ttrpc candidate has an active listener')
+}
+
+function unlinkPrivateContainerdTtrpc(commandRunner, candidate) {
+  const expected = `${hostContract.containerdSocket}.ttrpc`
+  exactPath(candidate, expected, 'private containerd stale ttrpc candidate')
+  const result = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('unlink'), '--', expected], {}, 'unlink private containerd stale ttrpc')
+  if (result.status !== 0 || result.stdout !== '' || result.stderr !== '') fail('private containerd stale ttrpc unlink failed')
+}
+
+function reconcilePrivateContainerdTtrpc(commandRunner, before, candidate, options = {}) {
+  const expected = `${hostContract.containerdSocket}.ttrpc`
+  if (candidate !== expected) fail('private containerd stale ttrpc candidate is not exact')
+  validatePrivateContainerdStateDirectory(commandRunner, options)
+  const confirmed = proveStopped(commandRunner, before, { recoveryDeadlineAt: options.recoveryDeadlineAt, allowContainerdTtrpcCandidate: true })
+  if (confirmed.staleCandidate !== expected) fail('private containerd stale ttrpc candidate changed or disappeared')
+  validatePrivateContainerdStateDirectory(commandRunner, options)
+  validatePrivateContainerdTtrpcCandidate(commandRunner, expected)
+  unlinkPrivateContainerdTtrpc(commandRunner, expected)
+  validatePrivateContainerdStateDirectory(commandRunner, options)
+  proveStopped(commandRunner, before, { recoveryDeadlineAt: options.recoveryDeadlineAt, allowContainerdTtrpcCandidate: false })
+}
+
+function proveStopped(commandRunner, before, { recoveryDeadlineAt, allowContainerdTtrpcCandidate = false } = {}) {
   const started = Date.now()
   const quiescenceDeadline = Math.min(recoveryDeadlineAt ?? Number.POSITIVE_INFINITY, started + 5_000)
   const boundedRunner = quiescenceCommandRunner(commandRunner, quiescenceDeadline)
   let delayMs = 25
+  let sawContainerdTtrpcCandidate = false
   while (true) {
     if (Date.now() >= quiescenceDeadline) throw new QuiescenceDeadlineError()
     let retryable
     try {
-      retryable = proveStoppedAttempt(boundedRunner, before)
+      const attempt = proveStoppedAttempt(boundedRunner, before, { allowContainerdTtrpcCandidate })
+      retryable = attempt.retryable
+      if (allowContainerdTtrpcCandidate && sawContainerdTtrpcCandidate && attempt.staleCandidate === undefined) fail('private containerd stale ttrpc candidate changed or disappeared')
+      if (attempt.staleCandidate !== undefined) sawContainerdTtrpcCandidate = true
+      if (!retryable) return Object.freeze({ staleCandidate: attempt.staleCandidate })
     } catch (error) {
       if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw new QuiescenceDeadlineError()
       throw error
     }
-    if (!retryable) return
     if (Date.now() >= quiescenceDeadline) throw new QuiescenceDeadlineError()
     const delay = Math.min(delayMs, 250)
     const slept = commandResult(boundedRunner, 'sleep', [String(delay / 1_000)], {}, 'post-stop quiescence backoff')
@@ -1025,7 +1133,8 @@ export function resetDedicatedNativeDockerHost(options = {}) {
       '--address': hostContract.containerdSocket,
     }, { pid: before.pids.containerd, ...before.processes.containerd }, 'private containerd')
     privileged(commandRunner, 'systemctl', ['stop', hostContract.containerdUnit], 'stop private containerd')
-    proveStopped(commandRunner, before, { recoveryDeadlineAt })
+    const stoppedProof = proveStopped(commandRunner, before, { recoveryDeadlineAt, allowContainerdTtrpcCandidate: true })
+    if (stoppedProof.staleCandidate) reconcilePrivateContainerdTtrpc(commandRunner, before, stoppedProof.staleCandidate, operationOptions)
     reconcileResetMounts(commandRunner)
     for (const [kind, target] of Object.entries(destructiveTargets)) {
       validateCanonicalDestructiveTarget(target, kind, operationOptions)

@@ -20,7 +20,7 @@ const lockStat = { uid: 0, gid: 0, mode: 0o600, nlink: 1, isFile: () => true, is
 const socketStat = { uid: 0, gid: 123, mode: 0o660, dev: 9, ino: 99, isSocket: () => true, isSymbolicLink: () => false }
 const containerdSocketStat = { uid: 0, gid: 123, mode: 0o660, dev: 10, ino: 200, isSocket: () => true, isSymbolicLink: () => false }
 
-function fakeFs({ symlink = '', varRunTarget = '/run', aliasSame = true, existingLock = false, lockDirectoryMode = 0o1770, lockDirectoryGid = 0, ancestorMode = 0o700, marker = markerText, lockContents = '' } = {}) {
+function fakeFs({ symlink = '', varRunTarget = '/run', aliasSame = true, existingLock = false, lockDirectoryMode = 0o1770, lockDirectoryGid = 0, ancestorMode = 0o700, marker = markerText, lockContents = '', inaccessibleContainerdSocket = false, containerdStateMode = 0o700 } = {}) {
   let lock = existingLock
   const writes = []
   return {
@@ -31,7 +31,11 @@ function fakeFs({ symlink = '', varRunTarget = '/run', aliasSame = true, existin
       if (target === hostContract.lockFile) throw new Error('missing')
       if (target === hostContract.lockDirectory) return { ...lockDirStat, mode: lockDirectoryMode, gid: lockDirectoryGid }
       if (target === hostContract.socket) return socketStat
-      if (target === hostContract.containerdSocket) return containerdSocketStat
+      if (target === hostContract.containerdSocket) {
+        if (inaccessibleContainerdSocket) throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
+        return containerdSocketStat
+      }
+      if (target === hostContract.containerdState) return { ...dirStat, mode: containerdStateMode }
       if (target === '/var/run') return { isSymbolicLink: () => true }
       if (target === '/run/docker.sock') return aliasSame ? socketStat : { ...socketStat, ino: 100 }
       if (target === symlink) return { ...dirStat, isSymbolicLink: () => true }
@@ -68,9 +72,10 @@ function fakeFs({ symlink = '', varRunTarget = '/run', aliasSame = true, existin
   }
 }
 
-function baseRunner({ sharedContainerd = false, enabledDockerService = false, enabledDockerSocket = false, wrongSocket = false, wrongContainerdSocket = false, wrongContainerdListener = false, wrongRoot = false, wrongPid = false, wrongExecutable = false, wrongCgroup = false, execExtra = false, alternateHostAlias = false, wrongFirewallFlags = false, bareFirewallAlias = false, mutable = false, cgroupState = 'absent', record = [] } = {}) {
+function baseRunner({ sharedContainerd = false, enabledDockerService = false, enabledDockerSocket = false, wrongSocket = false, wrongContainerdSocket = false, wrongContainerdListener = false, privateReadlinkWrong = false, privateReadlinkError = false, privateSocketSymlink = false, privateStatMalformed = false, privateStatOwner = false, privateStatChange = false, privateListenerMissing = false, privateListenerAmbiguous = false, privateListenerError = false, wrongRoot = false, wrongPid = false, wrongExecutable = false, wrongCgroup = false, execExtra = false, alternateHostAlias = false, wrongFirewallFlags = false, bareFirewallAlias = false, mutable = false, cgroupState = 'absent', record = [] } = {}) {
   let active = true
   let inventoryMutable = mutable
+  let privateStatCalls = 0
   const pids = { dockerd: 421, containerd: 422 }
   const run = (file, args, options = {}) => {
     record.push({ file, args: [...args], options })
@@ -123,12 +128,22 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
       }
       return { status: 0, stdout: `0::/system.slice/${wrongCgroup ? 'other.service' : (pid === 421 ? hostContract.dockerdUnit : hostContract.containerdUnit)}\n`, stderr: '' }
     }
-    if (actualFile === 'readlink') return { status: 0, stdout: wrongExecutable ? '/tmp/not-approved\n' : (actualArgs.at(-1).includes('/421/') ? '/usr/bin/dockerd\n' : '/usr/bin/containerd\n'), stderr: '' }
+    if (actualFile === 'readlink') {
+      if (actualArgs[0] === '-e' && actualArgs[1] === '--' && actualArgs.at(-1) === hostContract.containerdSocket) {
+        if (privateReadlinkError) return { status: 1, stdout: '', stderr: 'permission denied' }
+        if (privateReadlinkWrong) return { status: 0, stdout: '/run/containerd/other.sock\n', stderr: '' }
+        return { status: 0, stdout: `${hostContract.containerdSocket}\n`, stderr: '' }
+      }
+      return { status: 0, stdout: wrongExecutable ? '/tmp/not-approved\n' : (actualArgs.at(-1).includes('/421/') ? '/usr/bin/dockerd\n' : '/usr/bin/containerd\n'), stderr: '' }
+    }
     if (actualFile === 'kill') {
       const pid = actualArgs.at(-1)
       return { status: active ? 0 : 1, stdout: '', stderr: active ? '' : `/usr/bin/kill: (${pid}): No such process\n` }
     }
     if (actualFile === 'test') {
+      if (actualArgs[0] === '!' && actualArgs[1] === '-L' && actualArgs.at(-1) === hostContract.containerdSocket) {
+        return privateSocketSymlink ? { status: 1, stdout: '', stderr: '' } : { status: 0, stdout: '', stderr: '' }
+      }
       if (actualArgs[0] === '!' && actualArgs[1] === '-e' && actualArgs[2]?.startsWith('/sys/fs/cgroup/')) {
         if (cgroupState === 'error') return { status: 2, stdout: '', stderr: 'permission denied' }
         return { status: cgroupState === 'absent' ? 0 : 1, stdout: '', stderr: '' }
@@ -142,11 +157,24 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
       return { status: 0, stdout: '', stderr: '' }
     }
     if (actualFile === 'stat') {
-      if (actualArgs.at(-1) === hostContract.containerdSocket) return { status: 0, stdout: 'socket 0 123 660 10 200\n', stderr: '' }
+      if (actualArgs.at(-1) === hostContract.containerdSocket) {
+        privateStatCalls += 1
+        if (privateStatMalformed) return { status: 0, stdout: 'socket malformed\n', stderr: '' }
+        if (privateStatOwner) return { status: 0, stdout: 'socket 1000 123 660 10 200\n', stderr: '' }
+        if (privateStatChange && privateStatCalls > 1) return { status: 0, stdout: 'socket 0 123 660 10 201\n', stderr: '' }
+        return { status: 0, stdout: 'socket 0 123 660 10 200\n', stderr: '' }
+      }
       if (actualArgs.at(-1) === '/usr/bin/dockerd' || actualArgs.at(-1) === '/usr/bin/containerd') return { status: 0, stdout: 'regular file 0 755\n', stderr: '' }
       return { status: 0, stdout: 'socket 0 123 660 9 99\n', stderr: '' }
     }
-    if (actualFile === 'ss') return { status: 0, stdout: `u_str LISTEN 0 4096 ${hostContract.socket} users:(("dockerd",pid=421,fd=3))\nu_str LISTEN 0 4096 ${hostContract.containerdSocket} users:(("containerd",pid=${wrongContainerdListener ? 999 : 422},fd=4))\n`, stderr: '' }
+    if (actualFile === 'ss') {
+      if (privateListenerError) return { status: 2, stdout: '', stderr: 'permission denied' }
+      const containerdLine = privateListenerMissing
+        ? ''
+        : `u_str LISTEN 0 4096 ${hostContract.containerdSocket} users:(("containerd",pid=${wrongContainerdListener ? 999 : 422},fd=4))\n`
+      const duplicate = privateListenerAmbiguous ? containerdLine : ''
+      return { status: 0, stdout: `u_str LISTEN 0 4096 ${hostContract.socket} users:(("dockerd",pid=421,fd=3))\n${containerdLine}${duplicate}`, stderr: '' }
+    }
     if (actualFile === 'docker') {
       if (actualArgs.includes('info')) return { status: 0, stdout: JSON.stringify({ DockerRootDir: wrongRoot ? '/var/lib/docker' : hostContract.dockerDataRoot }), stderr: '' }
       return { status: 0, stdout: inventoryMutable ? 'item-1\n' : '', stderr: '' }
@@ -245,6 +273,75 @@ function quiescenceRunner({ mode = 'clean', pidVariant = '', record = [] } = {})
   return runner
 }
 
+function staleTtrpcRunner({ mode = 'exact', record = [] } = {}) {
+  const runner = quiescenceRunner({ record })
+  const originalRun = runner.run
+  const candidate = `${hostContract.containerdSocket}.ttrpc`
+  let stopped = false
+  let unlinked = false
+  let stateFinds = 0
+  const respond = (file, args, options, result) => {
+    record.push({ file, args: [...args], options })
+    return result
+  }
+  const run = (file, args, options = {}) => {
+    const executable = file === 'sudo' && args[0] === '-n' ? args[1] : file
+    const actualFile = executable.replace(/^.*\//, '')
+    const actualArgs = file === 'sudo' && args[0] === '-n' ? args.slice(2) : args
+    const isSystemctl = actualFile === 'systemctl'
+    const isCustomUnit = [hostContract.dockerdUnit, hostContract.containerdUnit].includes(actualArgs.at(-1))
+    if (isSystemctl && actualArgs[0] === 'stop' && isCustomUnit) stopped = true
+    if (isSystemctl && actualArgs[0] === 'start' && isCustomUnit) stopped = false
+    if (stopped && actualFile === 'find' && actualArgs[0] === hostContract.containerdState) {
+      stateFinds += 1
+      if (mode === 'wrong') {
+        if (stateFinds > 1) return respond(file, args, options, { status: 2, stdout: '', stderr: 'state changed' })
+        return respond(file, args, options, { status: 0, stdout: `${hostContract.containerdState}/other.sock\n`, stderr: '' })
+      }
+      if (mode === 'extra') {
+        if (stateFinds > 1) return respond(file, args, options, { status: 2, stdout: '', stderr: 'state changed' })
+        return respond(file, args, options, { status: 0, stdout: `${candidate}\n${hostContract.containerdState}/extra.pipe\n`, stderr: '' })
+      }
+      if (mode === 'disappear' && stateFinds > 1) return respond(file, args, options, { status: 0, stdout: '', stderr: '' })
+      if (mode === 'reappear' && unlinked) {
+        if (stateFinds > 2) return respond(file, args, options, { status: 2, stdout: '', stderr: 'residue reappeared' })
+        return respond(file, args, options, { status: 0, stdout: `${candidate}\n`, stderr: '' })
+      }
+      if (mode === 'exact' && unlinked) return respond(file, args, options, { status: 0, stdout: '', stderr: '' })
+      if (mode === 'malformed') return respond(file, args, options, { status: 0, stdout: `${candidate}\n `, stderr: '' })
+      return respond(file, args, options, { status: 0, stdout: `${candidate}\n`, stderr: '' })
+    }
+    if (stopped && actualFile === 'findmnt' && actualArgs.includes('--mountpoint') && actualArgs.at(-1) === hostContract.containerdState && mode === 'state-mounted') return respond(file, args, options, { status: 0, stdout: `${hostContract.containerdState}\n`, stderr: '' })
+    if (stopped && actualFile === 'findmnt' && actualArgs.includes('--json') && actualArgs.includes('--submounts') && actualArgs.at(-1) === '/' && mode === 'state-submount') return respond(file, args, options, { status: 0, stdout: JSON.stringify({ filesystems: [{ target: '/' }, { target: `${hostContract.containerdState}/child` }] }), stderr: '' })
+    if (stopped && actualFile === 'readlink' && actualArgs[0] === '-e' && actualArgs[1] === '--' && actualArgs.at(-1) === candidate) {
+      if (mode === 'candidate-readlink-error') return respond(file, args, options, { status: 1, stdout: '', stderr: 'permission denied' })
+      if (mode === 'candidate-readlink-drift') return respond(file, args, options, { status: 0, stdout: '/run/other.ttrpc\n', stderr: '' })
+      return respond(file, args, options, { status: 0, stdout: `${candidate}\n`, stderr: '' })
+    }
+    if (stopped && actualFile === 'test' && actualArgs[0] === '!' && actualArgs[1] === '-L' && actualArgs.at(-1) === candidate && mode === 'candidate-symlink') return respond(file, args, options, { status: 1, stdout: '', stderr: '' })
+    if (stopped && actualFile === 'stat' && actualArgs.at(-1) === candidate) {
+      if (mode === 'candidate-stat-type') return respond(file, args, options, { status: 0, stdout: 'regular file 0 0 660 11 201\n', stderr: '' })
+      if (mode === 'candidate-stat-owner') return respond(file, args, options, { status: 0, stdout: 'socket 1000 0 660 11 201\n', stderr: '' })
+      return respond(file, args, options, { status: 0, stdout: 'socket 0 123 660 11 201\n', stderr: '' })
+    }
+    if (stopped && actualFile === 'ss' && ['candidate-listener', 'candidate-ambiguous'].includes(mode)) {
+      const base = originalRun(file, args, options)
+      const suffix = mode === 'candidate-listener'
+        ? `u_str LISTEN 0 4096 ${candidate} users:(("shim",pid=999,fd=5))\n`
+        : `u_str LISTEN 0 4096 ${candidate} users:(("shim",pid=999,fd=5))\nu_str LISTEN 0 4096 ${candidate} users:(("shim",pid=998,fd=6))\n`
+      return { ...base, stdout: `${base.stdout}${suffix}` }
+    }
+    if (stopped && actualFile === 'unlink' && actualArgs.at(-1) === candidate) {
+      if (mode === 'unlink-fail') return respond(file, args, options, { status: 1, stdout: '', stderr: 'permission denied' })
+      unlinked = true
+      return respond(file, args, options, { status: 0, stdout: '', stderr: '' })
+    }
+    return originalRun(file, args, options)
+  }
+  runner.run = run
+  return runner
+}
+
 function inspectorOptions(runner, fsApi, env = {}) {
   return { commandRunner: runner, fsApi, platform: 'linux', env }
 }
@@ -337,6 +434,15 @@ for (const [name, change, expected] of [
   ['wrong dockerd socket', { wrongSocket: true }, /arguments are not exact/],
   ['wrong private containerd socket', { wrongContainerdSocket: true }, /arguments are not exact/],
   ['private containerd listener PID mismatch', { wrongContainerdListener: true }, /private containerd socket is not owned/],
+  ['private containerd canonical-path error', { privateReadlinkError: true }, /private containerd socket canonical path is not exact/],
+  ['private containerd canonical-path drift', { privateReadlinkWrong: true }, /private containerd socket canonical path is not exact/],
+  ['private containerd symlink', { privateSocketSymlink: true }, /private containerd socket must be a non-symlink/],
+  ['private containerd malformed stat', { privateStatMalformed: true }, /private containerd socket stat metadata is invalid/],
+  ['private containerd untrusted owner', { privateStatOwner: true }, /private containerd socket stat metadata is unsafe/],
+  ['private containerd changing identity', { privateStatChange: true }, /identity changed while proving listener/],
+  ['private containerd missing listener', { privateListenerMissing: true }, /private containerd socket listener is ambiguous/],
+  ['private containerd ambiguous listener', { privateListenerAmbiguous: true }, /private containerd socket listener is ambiguous/],
+  ['private containerd listener error', { privateListenerError: true }, /private containerd socket listener cannot be proved/],
   ['wrong Docker root', { wrongRoot: true }, /data-root identity|arguments are not exact/],
   ['wrong dockerd pidfile', { wrongPid: true }, /arguments are not exact/],
   ['untrusted process executable', { wrongExecutable: true }, /executable path is not exact/],
@@ -357,6 +463,10 @@ test('inspector permits only the /var/run -> /run compatibility binding and matc
   assert.doesNotThrow(() => inspectDedicatedNativeDockerHost(inspectorOptions(baseRunner().run, fakeFs())))
   assert.throws(() => inspectDedicatedNativeDockerHost(inspectorOptions(baseRunner().run, fakeFs({ varRunTarget: '/opt' }))), /approved \/var\/run/)
   assert.throws(() => inspectDedicatedNativeDockerHost(inspectorOptions(baseRunner().run, fakeFs({ aliasSame: false }))), /aliases do not identify/)
+})
+
+test('private containerd socket inspection uses privileged identity when child lstat is inaccessible', () => {
+  assert.doesNotThrow(() => inspectDedicatedNativeDockerHost(inspectorOptions(baseRunner().run, fakeFs({ inaccessibleContainerdSocket: true }))))
 })
 
 test('exact Docker data self-bind predicate accepts observed literal source notation only', () => {
@@ -434,6 +544,58 @@ test('post-stop quiescence requires one same-attempt clean invariant', () => {
   assert.equal(result.dockerDaemonReset, true)
   assert.equal(runner.attempts, 3)
 })
+
+test('reset unlinks exactly one stale private containerd ttrpc socket then reproves quiescence', () => {
+  const record = []
+  const runner = staleTtrpcRunner({ record })
+  const result = resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs({ containerdStateMode: 0o40700 })), recoveryDeadlineAt: Date.now() + 2_000, callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 28), pid: 798 })
+  assert.equal(result.dockerDaemonReset, true)
+  const unlinks = record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/unlink')
+  assert.deepEqual(unlinks.map((entry) => entry.args), [['-n', '/usr/bin/unlink', '--', `${hostContract.containerdSocket}.ttrpc`]])
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 4)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/install').length, 4)
+})
+
+for (const [mode, fsOptions, expectedUnlinks] of [
+  ['state-mode', { containerdStateMode: 0o40750 }, 0],
+  ['state-mounted', {}, 0],
+  ['state-submount', {}, 0],
+  ['wrong', {}, 0],
+  ['extra', {}, 0],
+  ['malformed', {}, 0],
+  ['disappear', {}, 0],
+  ['candidate-readlink-error', {}, 0],
+  ['candidate-readlink-drift', {}, 0],
+  ['candidate-symlink', {}, 0],
+  ['candidate-stat-type', {}, 0],
+  ['candidate-stat-owner', {}, 0],
+  ['candidate-listener', {}, 0],
+  ['candidate-ambiguous', {}, 0],
+  ['unlink-fail', {}, 1],
+  ['reappear', {}, 1],
+]) {
+  test(`reset rejects private containerd stale ttrpc mode ${mode} without root cleanup`, () => {
+    const record = []
+    const runner = staleTtrpcRunner({ mode, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({
+      ...inspectorOptions(runner.run, fakeFs(fsOptions)),
+      recoveryDeadlineAt: Date.now() + 1_000,
+      callerGid: 0,
+      uid: 0,
+      randomBytes: () => Buffer.alloc(24, 29),
+      pid: 799,
+    }), /private containerd|post-stop runtime quiescence|native Docker host reset compensation failed|mountpoint/)
+    const starts = record
+      .filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start')
+      .map((entry) => entry.args[3])
+    assert.deepEqual(starts, [hostContract.containerdUnit, hostContract.dockerdUnit])
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 0)
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/install').length, 0)
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/unlink').length, expectedUnlinks)
+  })
+}
 
 test('persistent post-stop residue expires with compensation and no destructive cleanup', () => {
   const record = []

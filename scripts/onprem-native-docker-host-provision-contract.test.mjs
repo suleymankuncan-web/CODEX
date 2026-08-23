@@ -366,6 +366,8 @@ test('unit contents have exact daemon arguments, controlled cgroups, and runtime
   assert.match(dockerd, /ExecStart=\/usr\/bin\/dockerd --host=unix:\/\/\/var\/run\/docker\.sock --data-root=\/var\/lib\/hr-axis-onprem-rehearsal\/docker --exec-root=\/run\/hr-axis-onprem-rehearsal-docker --pidfile=\/run\/hr-axis-onprem-rehearsal-docker\/dockerd\.pid --containerd=\/run\/hr-axis-onprem-rehearsal-containerd\/containerd\.sock --iptables=true --ip6tables=true\n/)
   assert.match(containerd, /KillMode=control-group/)
   assert.match(dockerd, /KillMode=control-group/)
+  assert.match(containerd, /RuntimeDirectory=hr-axis-onprem-rehearsal-containerd\nRuntimeDirectoryMode=0700\nRuntimeDirectoryPreserve=yes/)
+  assert.doesNotMatch(containerd, /RuntimeDirectoryMode=(?!0700\n)/)
   assert.match(containerd, /RuntimeDirectoryPreserve=yes/)
   assert.match(dockerd, /RuntimeDirectoryPreserve=yes/)
   assert.equal(SAFE_BINARIES.dockerd, '/usr/bin/dockerd')

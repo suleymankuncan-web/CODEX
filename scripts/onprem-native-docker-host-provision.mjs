@@ -482,7 +482,7 @@ export function proveAndUnmountDirectSelfBind(commandRunner, target = hostContra
 }
 
 function fixedUnit(kind) {
-  if (kind === 'containerd') return `[Unit]\nDescription=HR Axis disposable private containerd\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/containerd --root=${hostContract.containerdRoot} --state=${hostContract.containerdState} --address=${hostContract.containerdSocket}\nKillMode=control-group\nDelegate=yes\nRuntimeDirectory=hr-axis-onprem-rehearsal-containerd\nRuntimeDirectoryPreserve=yes\nRestart=no\n\n[Install]\nWantedBy=multi-user.target\n`
+  if (kind === 'containerd') return `[Unit]\nDescription=HR Axis disposable private containerd\nAfter=network.target\n\n[Service]\nType=simple\nExecStart=/usr/bin/containerd --root=${hostContract.containerdRoot} --state=${hostContract.containerdState} --address=${hostContract.containerdSocket}\nKillMode=control-group\nDelegate=yes\nRuntimeDirectory=hr-axis-onprem-rehearsal-containerd\nRuntimeDirectoryMode=0700\nRuntimeDirectoryPreserve=yes\nRestart=no\n\n[Install]\nWantedBy=multi-user.target\n`
   if (kind === 'dockerd') return `[Unit]\nDescription=HR Axis disposable native dockerd\nRequires=${hostContract.containerdUnit}\nAfter=${hostContract.containerdUnit}\n\n[Service]\nType=simple\nExecStart=/usr/bin/dockerd --host=unix://${hostContract.socket} --data-root=${hostContract.dockerDataRoot} --exec-root=${hostContract.dockerExecRoot} --pidfile=${hostContract.dockerPidfile} --containerd=${hostContract.containerdSocket} --iptables=true --ip6tables=true\nKillMode=control-group\nDelegate=yes\nRuntimeDirectory=hr-axis-onprem-rehearsal-docker\nRuntimeDirectoryPreserve=yes\nRestart=no\n\n[Install]\nWantedBy=multi-user.target\n`
   fail('unknown native unit')
 }
