@@ -26,6 +26,7 @@ const SAFE_BINARIES = Object.freeze({
   sudo: '/usr/bin/sudo',
   systemctl: '/usr/bin/systemctl',
   test: '/usr/bin/test',
+  umount: '/usr/bin/umount',
 })
 const SAFE_ENVIRONMENT = Object.freeze({
   LANG: 'C',
@@ -314,6 +315,105 @@ function assertNoSubmounts(target, { commandRunner, mountpointSubtreeChecker } =
   }
 }
 
+function resetMountFailure(kind, target, classification) {
+  fail(`reset mount topology rejected for ${kind} ${target}: ${classification}`)
+}
+
+function parseResetMountTopology(text) {
+  let parsed
+  try { parsed = JSON.parse(text) } catch { fail('reset mount topology cannot be proved') }
+  const mounts = []
+  const visit = (value) => {
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry)
+      return
+    }
+    if (!object(value)) return
+    if (Object.prototype.hasOwnProperty.call(value, 'target')) {
+      const target = value.target
+      if (typeof target !== 'string' || !path.isAbsolute(target) || path.normalize(target) !== target) fail('reset mount topology cannot be proved')
+      const source = value.source ?? ''
+      const fstype = value.fstype ?? value['fs-type'] ?? ''
+      const fsroot = value.fsroot ?? value['fs-root'] ?? ''
+      if (typeof source !== 'string' || typeof fstype !== 'string' || typeof fsroot !== 'string') fail('reset mount topology cannot be proved')
+      mounts.push({ target, source, fstype, fsroot })
+    }
+    for (const child of Object.values(value)) if (child && typeof child === 'object') visit(child)
+  }
+  visit(parsed)
+  if (!mounts.some((mount) => mount.target === '/')) fail('reset mount topology cannot be proved')
+  return mounts
+}
+
+function readResetMountTopology(commandRunner) {
+  try {
+    const result = privileged(commandRunner, 'findmnt', ['--json', '--output', 'TARGET,SOURCE,FSTYPE,FSROOT', '--submounts', '/'], 'reset mount topology')
+    if (result.stderr.trim()) fail('reset mount topology cannot be proved')
+    return parseResetMountTopology(result.stdout)
+  } catch (error) {
+    if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw error
+    fail('reset mount topology cannot be proved')
+  }
+}
+
+function classifyResetMounts(commandRunner) {
+  let mounts
+  try {
+    mounts = readResetMountTopology(commandRunner)
+  } catch (error) {
+    if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw error
+    resetMountFailure('dockerDataRoot', hostContract.dockerDataRoot, 'unreadable')
+  }
+  const root = mounts.find((mount) => mount.target === '/')
+  const states = []
+  for (const [kind, target] of Object.entries(destructiveTargets)) {
+    const matches = mounts.filter((mount) => mount.target === target || mount.target.startsWith(`${target}/`))
+    const direct = matches.find((mount) => mount.target === target)
+    if (matches.length === 0) {
+      states.push(Object.freeze({ kind, path: target, classification: 'absent', mounted: false, descendants: 0 }))
+      continue
+    }
+    if (kind !== 'dockerDataRoot') {
+      states.push(Object.freeze({ kind, path: target, classification: direct ? 'unexpected-direct-mount' : 'unexpected-descendant-mount', mounted: true, descendants: Math.max(0, matches.length - (direct ? 1 : 0)) }))
+      continue
+    }
+    let classification = 'allowed-direct-self-bind'
+    if (!direct) classification = 'descendant-only-mount'
+    else if (matches.length !== 1) classification = 'descendant-mount'
+    else if (!root?.source || direct.source !== root.source) classification = 'foreign-source'
+    else if (!direct.fstype || direct.fstype.toLowerCase().includes('overlay')) classification = 'overlay-filesystem'
+    else if (!direct.fsroot || !path.isAbsolute(direct.fsroot) || path.normalize(direct.fsroot) !== target) classification = 'fsroot-mismatch'
+    states.push(Object.freeze({ kind, path: target, classification, mounted: true, descendants: Math.max(0, matches.length - (direct ? 1 : 0)) }))
+  }
+  return states
+}
+
+function assertResetMountsAllowed(states) {
+  for (const state of states) {
+    if (state.classification === 'absent' || state.classification === 'allowed-direct-self-bind') continue
+    resetMountFailure(state.kind, state.path, state.classification)
+  }
+  return states
+}
+
+function reconcileResetMounts(commandRunner) {
+  let states = assertResetMountsAllowed(classifyResetMounts(commandRunner))
+  const dataRoot = states.find((state) => state.kind === 'dockerDataRoot')
+  if (dataRoot?.classification === 'allowed-direct-self-bind') {
+    try {
+      privileged(commandRunner, 'umount', ['--', hostContract.dockerDataRoot], 'unmount docker data self-bind')
+    } catch (error) {
+      if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE') throw error
+      resetMountFailure(dataRoot.kind, dataRoot.path, 'unmount-failed')
+    }
+    states = classifyResetMounts(commandRunner)
+    const afterDataRoot = states.find((state) => state.kind === 'dockerDataRoot')
+    if (afterDataRoot?.classification !== 'absent') resetMountFailure(afterDataRoot.kind, afterDataRoot.path, 'self-bind-remains-mounted')
+    assertResetMountsAllowed(states)
+  }
+  return states
+}
+
 /** Validate one of the four fixed roots immediately before a destructive operation. */
 export function validateCanonicalDestructiveTarget(target, kind, options = {}) {
   const expected = destructiveTargets[kind]
@@ -332,6 +432,20 @@ export function validateCanonicalDestructiveTarget(target, kind, options = {}) {
 }
 
 export const assertCanonicalFixedDirectory = validateCanonicalDestructiveTarget
+
+// Reset may encounter the one explicitly approved docker-data self-bind.  Its
+// mount topology is validated separately, but the fixed directory identity
+// (exact path, root-private canonical directory and trusted ancestors) must
+// still be proved before either private service is stopped.
+function validateResetDestructiveDirectory(target, kind, options = {}) {
+  const expected = destructiveTargets[kind]
+  if (!expected) fail('destructive target kind is not allowed')
+  exactPath(target, expected, `${kind} target`)
+  const fsApi = options.fsApi ?? fs
+  const platform = options.platform ?? 'linux'
+  assertDirectory(fsApi, target, `${kind} target`, platform)
+  assertCanonicalRealpath(fsApi, target, `${kind} target`)
+}
 
 function validateFixedPrivateFile(target, expected, label, { fsApi = fs, platform = 'linux', allowRead = false, ownerUid } = {}) {
   exactPath(target, expected, label)
@@ -763,8 +877,9 @@ export function resetDedicatedNativeDockerHost(options = {}) {
     // running.  A known mount/ownership failure must not leave the daemon
     // stopped merely because reset was attempted.
     for (const [kind, target] of Object.entries(destructiveTargets)) {
-      validateCanonicalDestructiveTarget(target, kind, operationOptions)
+      validateResetDestructiveDirectory(target, kind, operationOptions)
     }
+    assertResetMountsAllowed(classifyResetMounts(commandRunner))
     verifyProcessIdentityStill(commandRunner, hostContract.dockerdUnit, 'dockerd', {
       '--host': `unix://${hostContract.socket}`,
       '--data-root': hostContract.dockerDataRoot,
@@ -792,6 +907,7 @@ export function resetDedicatedNativeDockerHost(options = {}) {
     }, { pid: before.pids.containerd, ...before.processes.containerd }, 'private containerd')
     privileged(commandRunner, 'systemctl', ['stop', hostContract.containerdUnit], 'stop private containerd')
     proveStopped(commandRunner, before)
+    reconcileResetMounts(commandRunner)
     for (const [kind, target] of Object.entries(destructiveTargets)) {
       validateCanonicalDestructiveTarget(target, kind, operationOptions)
       privileged(commandRunner, 'rm', ['--recursive', '--force', '--', target], `delete ${kind}`)

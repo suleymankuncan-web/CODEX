@@ -157,6 +157,49 @@ function inspectorOptions(runner, fsApi, env = {}) {
   return { commandRunner: runner, fsApi, platform: 'linux', env }
 }
 
+function topologyRunner({ mode = 'none', record = [] } = {}) {
+  const runner = baseRunner({ record })
+  const originalRun = runner.run
+  let stopped = false
+  let mounted = mode !== 'none'
+  const run = (file, args, options) => {
+    const actualExecutable = file === 'sudo' && args[0] === '-n' ? args[1] : file
+    const actualFile = actualExecutable.replace(/^.*\//, '')
+    const actualArgs = file === 'sudo' && args[0] === '-n' ? args.slice(2) : args
+    if (file === 'sudo' && args[0] === '-n' && args[1].endsWith('/systemctl') && args[2] === 'stop') {
+      stopped = true
+      runner.active = false
+    }
+    if (file === 'sudo' && args[0] === '-n' && args[1].endsWith('/systemctl') && args[2] === 'start') runner.active = true
+    if (actualFile === 'findmnt' && actualArgs.includes('--json') && actualArgs.includes('--submounts') && actualArgs.at(-1) === '/') {
+      let effectiveMode = stopped ? mode : (mode.startsWith('post-') ? 'allowed' : mode)
+      if (effectiveMode === 'post-foreign-source') effectiveMode = 'foreign-source'
+      if (effectiveMode === 'post-overlay') effectiveMode = 'overlay'
+      if (effectiveMode === 'post-nested') effectiveMode = 'nested'
+      const mounts = [{ target: '/', source: '/dev/vda1', fstype: 'ext4', fsroot: '/' }]
+      if (mounted && effectiveMode !== 'none') {
+        const direct = { target: hostContract.dockerDataRoot, source: '/dev/vda1', fstype: 'ext4', fsroot: hostContract.dockerDataRoot }
+        if (effectiveMode === 'foreign-source') direct.source = '/dev/vdb1'
+        if (effectiveMode === 'fsroot-mismatch') direct.fsroot = '/foreign'
+        if (effectiveMode === 'overlay') direct.fstype = 'overlay'
+        mounts.push(direct)
+        if (effectiveMode === 'nested') mounts.push({ target: `${hostContract.dockerDataRoot}/nested`, source: '/dev/vda1', fstype: 'ext4', fsroot: '/' })
+      }
+      return { status: 0, stdout: JSON.stringify({ filesystems: mounts }), stderr: '' }
+    }
+    if (actualFile === 'umount') {
+      record.push({ file, args: [...args], options })
+      if (actualArgs.at(-1) !== hostContract.dockerDataRoot) return { status: 1, stdout: '', stderr: 'unexpected target' }
+      if (mode === 'post-selfbind-remains') return { status: 0, stdout: '', stderr: '' }
+      mounted = false
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    return originalRun(file, args, options)
+  }
+  runner.run = run
+  return runner
+}
+
 test('fixed-root validator rejects traversal, symlink, mountpoint, and nonfixed paths', () => {
   const fsApi = fakeFs()
   const valid = { fsApi, platform: 'linux', mountpointChecker: () => false, mountpointSubtreeChecker: () => false }
@@ -235,6 +278,45 @@ test('reset ordering is dockerd stop, containerd stop, fixed-root reset, then st
   assert.ok(record.filter((entry) => entry.file === 'sudo' && ['systemctl', 'rm', 'install'].some((name) => entry.args[1].endsWith(`/${name}`))).every((entry) => !entry.args.includes('docker.service') && !entry.args.includes('containerd.service')))
 })
 
+test('reset permits only the exact docker-data self-bind and unmounts it after private units stop', () => {
+  const record = []
+  const runner = topologyRunner({ mode: 'allowed', record })
+  const result = resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 17), pid: 787 })
+  assert.equal(result.dockerDaemonReset, true)
+  const umounts = record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount')
+  assert.deepEqual(umounts.map((entry) => entry.args), [['-n', '/usr/bin/umount', '--', hostContract.dockerDataRoot]])
+  const stopIndex = record.findIndex((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'stop' && entry.args[3] === hostContract.containerdUnit)
+  const unmountIndex = record.findIndex((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount')
+  const deleteIndex = record.findIndex((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm')
+  assert.ok(stopIndex >= 0 && unmountIndex > stopIndex && deleteIndex > unmountIndex)
+})
+
+for (const [mode, classification] of [
+  ['foreign-source', 'foreign-source'],
+  ['fsroot-mismatch', 'fsroot-mismatch'],
+  ['overlay', 'overlay-filesystem'],
+  ['nested', 'descendant-mount'],
+]) {
+  test(`reset rejects ${mode} topology before any stop, unmount, or delete`, () => {
+    const record = []
+    const runner = topologyRunner({ mode, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 18), pid: 788 }), new RegExp(`reset mount topology rejected for dockerDataRoot ${hostContract.dockerDataRoot}: ${classification}`))
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'stop').length, 0)
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+    assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 0)
+  })
+}
+
+test('post-stop unapproved topology compensates custom units and never deletes', () => {
+  const record = []
+  const runner = topologyRunner({ mode: 'post-foreign-source', record })
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 19), pid: 789 }), new RegExp(`reset mount topology rejected for dockerDataRoot ${hostContract.dockerDataRoot}: foreign-source`))
+  const starts = record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3])
+  assert.deepEqual(starts, [hostContract.containerdUnit, hostContract.dockerdUnit])
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 0)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+})
+
 test('reset binds every injected command to the remaining absolute recovery deadline', () => {
   const record = []
   const runner = baseRunner({ record })
@@ -261,15 +343,19 @@ test('expired recovery deadline fails before lock or lifecycle mutation', () => 
 
 test('reset preflight mount failure records no lifecycle stop', () => {
   const record = []
-  const runner = baseRunner({ record })
-  const originalRun = runner.run
-  runner.run = (file, args, options) => {
-    if (file === 'findmnt' && args.includes('--mountpoint')) return { status: 0, stdout: `${hostContract.dockerDataRoot}\n`, stderr: '' }
-    return originalRun(file, args, options)
-  }
-  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 14), pid: 783 }), /must not be a mountpoint/)
+  const runner = topologyRunner({ mode: 'foreign-source', record })
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs()), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 14), pid: 783 }), /reset mount topology rejected for dockerDataRoot .*foreign-source/)
   assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1]?.endsWith('/systemctl') && entry.args[2] === 'stop').length, 0)
   assert.equal(runner.active, true)
+})
+
+test('reset proves fixed directory identity before any lifecycle stop', () => {
+  const record = []
+  const runner = topologyRunner({ mode: 'allowed', record })
+  assert.throws(() => resetDedicatedNativeDockerHost({ ...inspectorOptions(runner.run, fakeFs({ symlink: hostContract.dockerExecRoot })), callerGid: 0, uid: 0, randomBytes: () => Buffer.alloc(24, 15), pid: 784 }), /non-symlink directory/)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1]?.endsWith('/systemctl') && entry.args[2] === 'stop').length, 0)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/umount').length, 0)
+  assert.equal(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/rm').length, 0)
 })
 
 test('post-stop target revalidation failure compensates in containerd-then-dockerd order', () => {
