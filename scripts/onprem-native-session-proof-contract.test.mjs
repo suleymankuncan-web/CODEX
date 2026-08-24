@@ -20,6 +20,22 @@ const sourceSha = 'a'.repeat(40)
 const treeSha = 'b'.repeat(40)
 const nodeSha256 = 'c'.repeat(64)
 const engineId = 'engine-contract-id'
+
+function enterNonRootNativeSessionContractIdentity() {
+  if (process.platform !== 'linux' || typeof process.getuid !== 'function' || process.getuid() !== 0) return
+  const uid = 1000
+  const temporaryRoot = fs.mkdtempSync('/var/lib/native-session-contract-')
+  fs.chmodSync(temporaryRoot, 0o700)
+  fs.chownSync(temporaryRoot, uid, uid)
+  process.env.TMPDIR = temporaryRoot
+  process.setgid(uid)
+  process.setuid(uid)
+  if (process.getuid() !== uid) throw new Error('native session contract test could not enter its non-root identity')
+  process.once('exit', () => { try { fs.rmSync(temporaryRoot, { recursive: true, force: true }) } catch {} })
+}
+
+enterNonRootNativeSessionContractIdentity()
+
 const fixtureUid = process.platform === 'linux' && typeof process.getuid === 'function' ? process.getuid() : 1000
 
 function temporaryDirectory() {
