@@ -420,6 +420,103 @@ test('provision order is default Docker stop/disable, roots, units, containerd, 
   assert.ok(runner.record.some(({ file, args }) => file === 'sudo' && args.includes('01770')))
 })
 
+test('provision retries only declared post-start readiness lag before controller inspection', () => {
+  const receiptPath = '/tmp/native-host-post-start-readiness.json'
+  const fsApi = fakeFs(receiptPath)
+  const record = []
+  const runner = baseRunner({ record })
+  let inspectCalls = 0
+  const result = provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath,
+    platform: 'linux',
+    arch: 'x64',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi,
+    commandRunner: runner.run,
+    inspect: (options) => {
+      inspectCalls += 1
+      assert.equal(options.allowStartupReadiness, true)
+      if (inspectCalls < 3) {
+        const error = new Error('native Docker host post-start readiness is not yet proved')
+        error.code = 'NATIVE_DOCKER_POST_START_NOT_READY'
+        throw error
+      }
+      return { inventory: { containers: 0, networks: 0, volumes: 0, images: 0 } }
+    },
+    engineIdentity: { engineId: 'engine-test-id' },
+    env: {},
+  })
+  assert.equal(result.receipt.status, 'passed')
+  assert.equal(inspectCalls, 3)
+  assert.equal(record.filter((entry) => entry.file === 'sleep').length, 2)
+})
+
+test('provision readiness retry has a finite deadline and never produces a success receipt', () => {
+  const receiptPath = '/tmp/native-host-post-start-readiness-timeout.json'
+  const fsApi = fakeFs(receiptPath)
+  const record = []
+  const runner = baseRunner({ record })
+  let inspectCalls = 0
+  assert.throws(() => provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath,
+    platform: 'linux',
+    arch: 'x64',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi,
+    commandRunner: runner.run,
+    inspect: () => {
+      inspectCalls += 1
+      const error = new Error('native Docker host post-start readiness is not yet proved')
+      error.code = 'NATIVE_DOCKER_POST_START_NOT_READY'
+      throw error
+    },
+    env: {},
+  }), /post-start readiness was not proved before deadline/)
+  assert.equal(inspectCalls, 32)
+  assert.equal(record.filter((entry) => entry.file === 'sleep').length, 31)
+  const receipt = JSON.parse(fsApi.writes.find((entry) => entry.target === receiptPath).content)
+  assert.equal(receipt.status, 'failed')
+  assert.equal(receipt.failureStage, 'controller-inspect')
+})
+
+test('provision does not retry an inspection identity failure that resembles socket drift', () => {
+  const receiptPath = '/tmp/native-host-post-start-identity-failure.json'
+  const fsApi = fakeFs(receiptPath)
+  const record = []
+  const runner = baseRunner({ record })
+  let inspectCalls = 0
+  assert.throws(() => provisionNativeDockerHost({
+    confirmDisposableNativeHost: true,
+    receiptPath,
+    platform: 'linux',
+    arch: 'x64',
+    uid: 1000,
+    callerGid: 123,
+    osRelease: release,
+    uname: 'Linux',
+    fsApi,
+    commandRunner: runner.run,
+    inspect: () => {
+      inspectCalls += 1
+      throw new Error('private containerd socket canonical path is not exact')
+    },
+    env: {},
+  }), /private containerd socket canonical path is not exact/)
+  assert.equal(inspectCalls, 1)
+  assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  const receipt = JSON.parse(fsApi.writes.find((entry) => entry.target === receiptPath).content)
+  assert.equal(receipt.status, 'failed')
+  assert.equal(receipt.failureStage, 'controller-inspect')
+})
+
 test('clean and partially missing fixed roots are created safely before any recursive removal', () => {
   const receiptPath = '/tmp/native-host-partial-roots.json'
   const fsApi = fakeFs(receiptPath, {

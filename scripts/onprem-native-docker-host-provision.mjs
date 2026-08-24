@@ -100,6 +100,19 @@ const MOUNT_FAILURE_CLASSIFICATIONS = Object.freeze([
   'unmount-failed',
   'self-bind-remains-mounted',
 ])
+const POST_START_READINESS_CAP_MS = 5_000
+const POST_START_READINESS_MAX_ATTEMPTS = 32
+const POST_START_READINESS_INITIAL_DELAY_MS = 25
+const POST_START_READINESS_MAX_DELAY_MS = 250
+const POST_START_READINESS_CODE = 'NATIVE_DOCKER_POST_START_NOT_READY'
+const POST_START_READINESS_DEADLINE_CODE = 'NATIVE_DOCKER_POST_START_READINESS_DEADLINE'
+
+class PostStartReadinessDeadlineError extends Error {
+  constructor() {
+    super('native Docker host post-start readiness was not proved before deadline')
+    this.code = POST_START_READINESS_DEADLINE_CODE
+  }
+}
 
 function fail(message) {
   throw new Error(message)
@@ -725,6 +738,60 @@ function controllerRunner(commandRunner) {
   }
 }
 
+function postStartReadinessCommandRunner(commandRunner, readinessDeadlineAt) {
+  return (file, args, options = {}) => {
+    const remaining = readinessDeadlineAt - Date.now()
+    if (!Number.isFinite(remaining) || remaining < 1) throw new PostStartReadinessDeadlineError()
+    const inherited = Number.isFinite(options.timeout) && options.timeout > 0 ? options.timeout : Number.POSITIVE_INFINITY
+    const timeout = Math.max(1, Math.min(Math.floor(remaining), inherited))
+    let result
+    try {
+      result = commandRunner(file, args, { ...options, timeout })
+    } catch (error) {
+      if (error?.code === POST_START_READINESS_DEADLINE_CODE) throw error
+      throw error
+    }
+    if (Date.now() >= readinessDeadlineAt) throw new PostStartReadinessDeadlineError()
+    return result
+  }
+}
+
+function inspectWithPostStartReadiness({ inspect, commandRunner, fsApi, platform, env }) {
+  const readinessDeadlineAt = Date.now() + POST_START_READINESS_CAP_MS
+  const boundedRunner = postStartReadinessCommandRunner(commandRunner, readinessDeadlineAt)
+  const inspectionOptions = {
+    commandRunner: controllerRunner(boundedRunner),
+    fsApi,
+    platform,
+    env,
+    allowStartupReadiness: true,
+  }
+  let delayMs = POST_START_READINESS_INITIAL_DELAY_MS
+  for (let attempt = 0; attempt < POST_START_READINESS_MAX_ATTEMPTS; attempt += 1) {
+    if (Date.now() >= readinessDeadlineAt) throw new PostStartReadinessDeadlineError()
+    try {
+      const inspection = inspect(inspectionOptions)
+      if (Date.now() >= readinessDeadlineAt) throw new PostStartReadinessDeadlineError()
+      return inspection
+    } catch (error) {
+      if (error?.code !== POST_START_READINESS_CODE) throw error
+      const remaining = readinessDeadlineAt - Date.now()
+      if (!Number.isFinite(remaining) || remaining < 1 || attempt === POST_START_READINESS_MAX_ATTEMPTS - 1) throw new PostStartReadinessDeadlineError()
+      const delay = Math.min(delayMs, POST_START_READINESS_MAX_DELAY_MS, remaining)
+      let slept
+      try {
+        slept = resultOf(boundedRunner('sleep', [String(delay / 1_000)]))
+      } catch (sleepError) {
+        if (sleepError?.code === POST_START_READINESS_DEADLINE_CODE) throw sleepError
+        throw sleepError
+      }
+      if (slept.status !== 0 || slept.stdout !== '' || slept.stderr !== '') fail('post-start readiness backoff cannot be proved')
+      delayMs = Math.min(delayMs * 2, POST_START_READINESS_MAX_DELAY_MS)
+    }
+  }
+  throw new PostStartReadinessDeadlineError()
+}
+
 function assertInitialContainerdUnchanged(initial, final) {
   if (!initial || !final || JSON.stringify(initial[PROTECTED_CONTAINERD_UNIT]) !== JSON.stringify(final[PROTECTED_CONTAINERD_UNIT])) {
     fail('system containerd state changed')
@@ -788,8 +855,9 @@ export function provisionNativeDockerHost(options = {}) {
     if (DOCKER_UNITS.some((unit) => !finalUnitsBeforeInspect[unit]?.inactive || finalUnitsBeforeInspect[unit]?.enabled || !finalUnitsBeforeInspect[unit]?.disabled)) fail('default Docker unit remains active or enabled')
 
     stage = 'controller-inspect'
-    const inspection = (options.inspect ?? inspectDedicatedNativeDockerHost)({
-      commandRunner: controllerRunner(commandRunner),
+    const inspection = inspectWithPostStartReadiness({
+      inspect: options.inspect ?? inspectDedicatedNativeDockerHost,
+      commandRunner,
       fsApi,
       platform: identity.platform,
       env,
