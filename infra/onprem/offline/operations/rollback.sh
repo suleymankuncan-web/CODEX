@@ -187,25 +187,78 @@ revalidate_receipt_parent() {
 # hosted job timeout.
 readonly TARGET_RESTORE_TIMEOUT_SECONDS=900
 readonly TARGET_RESTORE_KILL_AFTER_SECONDS=30
+readonly TARGET_RESTORE_HEARTBEAT_SECONDS=30
+readonly TARGET_RESTORE_TAIL_LINES=40
+TARGET_RESTORE_LOG=
+TARGET_RESTORE_MONITOR_PID=
 sanitize_restore_diagnostics() {
   sed -E 's/(password|secret|token|postgresql:\/\/|redis:\/\/)[^[:space:]]*/\1[redacted]/gi' | tail -n 160
+}
+stop_target_restore_monitor() {
+  if [ -n "${TARGET_RESTORE_MONITOR_PID:-}" ]; then
+    kill "$TARGET_RESTORE_MONITOR_PID" 2>/dev/null || true
+    wait "$TARGET_RESTORE_MONITOR_PID" 2>/dev/null || true
+    TARGET_RESTORE_MONITOR_PID=
+  fi
+}
+monitor_target_restore() {
+  restore_label=$1
+  restore_log=$2
+  restore_shell_pid=$3
+  trap - EXIT
+  restore_started_at=$(date +%s 2>/dev/null || printf '%s' 0)
+  case "$restore_started_at" in ''|*[!0-9]*) restore_started_at=0 ;; esac
+  monitor_sleep_pid=
+  abort_monitor_on_signal() {
+    trap - HUP INT TERM
+    if [ -n "${monitor_sleep_pid:-}" ]; then
+      kill "$monitor_sleep_pid" 2>/dev/null || true
+      wait "$monitor_sleep_pid" 2>/dev/null || true
+    fi
+    exit 0
+  }
+  trap abort_monitor_on_signal HUP INT TERM
+  checkpoint=0
+  while [ -f "$restore_log" ]; do
+    sleep "$TARGET_RESTORE_HEARTBEAT_SECONDS" &
+    monitor_sleep_pid=$!
+    wait "$monitor_sleep_pid" 2>/dev/null || return 0
+    monitor_sleep_pid=
+    [ -f "$restore_log" ] || return 0
+    checkpoint=$((checkpoint + 1))
+    restore_now=$(date +%s 2>/dev/null || printf '%s' "$restore_started_at")
+    case "$restore_now" in ''|*[!0-9]*) restore_now=$restore_started_at ;; esac
+    elapsed=$((restore_now - restore_started_at))
+    [ "$elapsed" -ge 0 ] || elapsed=0
+    restore_timeout_pid=$(ps -eo pid=,ppid=,comm= 2>/dev/null | awk -v parent="$restore_shell_pid" '$2 == parent && ($3 == "timeout" || $3 ~ /(^|\/)timeout$/) { print $1; exit }' || true)
+    [ -n "$restore_timeout_pid" ] || restore_timeout_pid=unknown
+    printf '%s\n' "rollback: target-restore: checkpoint label=$restore_label count=$checkpoint pid=$restore_timeout_pid elapsed_seconds=$elapsed" >&2
+    tail -n "$TARGET_RESTORE_TAIL_LINES" "$restore_log" 2>/dev/null | sanitize_restore_diagnostics >&2 || true
+  done
 }
 run_target_restore() {
   restore_label=$1
   shift
   command -v timeout >/dev/null 2>&1 || die "timeout command is required for $restore_label target restore"
   restore_log=$(mktemp "$RECEIPT_PARENT/.$restore_label-target-restore.XXXXXX") || die "$restore_label target restore diagnostic log could not be created"
+  TARGET_RESTORE_LOG=$restore_log
   say "target-restore: start label=$restore_label timeout=${TARGET_RESTORE_TIMEOUT_SECONDS}s"
+  monitor_target_restore "$restore_label" "$restore_log" "$$" &
+  TARGET_RESTORE_MONITOR_PID=$!
   if timeout --foreground --signal=TERM --kill-after="${TARGET_RESTORE_KILL_AFTER_SECONDS}s" "${TARGET_RESTORE_TIMEOUT_SECONDS}s" "$@" >"$restore_log" 2>&1; then
+    stop_target_restore_monitor
     rm -f -- "$restore_log" || die "$restore_label target restore diagnostic cleanup failed"
+    TARGET_RESTORE_LOG=
     say "target-restore: complete label=$restore_label"
     return 0
   else
     restore_status=$?
   fi
+  stop_target_restore_monitor
   printf '%s\n' "rollback: $restore_label target restore diagnostics" >&2
   tail -n 160 "$restore_log" | sanitize_restore_diagnostics >&2
   rm -f -- "$restore_log" || true
+  TARGET_RESTORE_LOG=
   if [ "$restore_status" -eq 124 ] || [ "$restore_status" -eq 137 ]; then
     die "$restore_label target restore timed out after ${TARGET_RESTORE_TIMEOUT_SECONDS}s"
   fi
@@ -327,6 +380,11 @@ TARGET_ENV_FILE=$(mktemp "$RECEIPT_PARENT/.rollback-target-env.tmp.XXXXXX") || d
 chmod 600 "$TARGET_ENV_FILE"
 cleanup_target_env() {
   status=$?
+  stop_target_restore_monitor
+  if [ -n "${TARGET_RESTORE_LOG:-}" ]; then
+    rm -f -- "$TARGET_RESTORE_LOG" 2>/dev/null || status=1
+    TARGET_RESTORE_LOG=
+  fi
   rm -f "$TARGET_ENV_FILE" 2>/dev/null || status=1
   if [ -n "${IMAGE_SAVE_TEMP_DIR:-}" ]; then
     rm -f -- "$IMAGE_SAVE_TEMP_DIR/image.tar" 2>/dev/null || status=1
@@ -334,7 +392,7 @@ cleanup_target_env() {
   fi
   exit "$status"
 }
-abort_target_operation_on_signal() { trap - HUP INT TERM; exit 124; }
+abort_target_operation_on_signal() { trap - HUP INT TERM; stop_target_restore_monitor; exit 124; }
 trap cleanup_target_env EXIT
 trap abort_target_operation_on_signal HUP INT TERM
 TARGET_IMAGE_ENV=$(printf '%s\n' "$TARGET_IMAGE_LINES" | awk -F'|' 'BEGIN { env["backend"]="HR_AXIS_BACKEND_IMAGE"; env["frontend"]="HR_AXIS_FRONTEND_IMAGE"; env["keycloak"]="KEYCLOAK_IMAGE"; env["caddy"]="CADDY_IMAGE"; env["postgres"]="POSTGRES_IMAGE"; env["redis"]="REDIS_IMAGE"; env["seaweedfs"]="SEAWEEDFS_IMAGE" } { if ($1 in env) print env[$1] "=" $3 }')
