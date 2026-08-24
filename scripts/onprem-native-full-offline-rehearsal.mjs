@@ -6,6 +6,7 @@ import { DISPOSABLE_DAEMON_ROOTS } from './onprem-image-local-proof-recovery.mjs
 import { runNativeSession } from './onprem-native-session-proof.mjs'
 import { assertDockerEnvironmentSafe, runLocalPackage } from './onprem-offline-local-package.mjs'
 import { parseCliArguments as parseRehearsalArguments, runLocalRehearsal } from './onprem-offline-local-rehearsal.mjs'
+import { writePackageCheckpoint } from './onprem-offline-resume-from-package.mjs'
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url))
 const CHECKOUT_ROOT = fs.realpathSync(path.resolve(SCRIPT_ROOT, '..'))
@@ -95,6 +96,7 @@ function derivePaths(sessionRoot) {
     bundleRoot: path.join(sessionRoot, 'offline-bundle'),
     trustRoot: path.join(sessionRoot, 'offline-trust'),
     packageReceipt: path.join(sessionRoot, 'offline-package.json'),
+    packageCheckpoint: path.join(sessionRoot, 'offline-package-checkpoint.json'),
     rehearsalRunRoot: path.join(sessionRoot, 'offline-rehearsal-run'),
     rehearsalReceipt: path.join(sessionRoot, 'offline-rehearsal.json'),
   }
@@ -287,6 +289,8 @@ export async function runSingleSession(rawOptions, dependencies = {}) {
   } catch { stageFailure('offline package') }
   let handoff
   try { handoff = requirePackageHandoff(packageResult, options) } catch { stageFailure('offline package handoff') }
+  const checkpointWriter = dependencies.writePackageCheckpoint ?? writePackageCheckpoint
+  try { checkpointWriter(options, packageResult, nativeResult.receipt) } catch { stageFailure('offline package checkpoint') }
   let rehearsalResult
   try {
     const parsed = parseRehearsal(rehearsalArguments(options, handoff))
@@ -298,6 +302,7 @@ export async function runSingleSession(rawOptions, dependencies = {}) {
     receipts: Object.freeze({
       nativeSession: options.paths.nativeSessionReceipt,
       offlinePackage: options.paths.packageReceipt,
+      offlinePackageCheckpoint: options.paths.packageCheckpoint,
       offlineRehearsal: options.paths.rehearsalReceipt,
     }),
     handoff,

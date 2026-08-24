@@ -612,6 +612,10 @@ export function buildPackageReceipt(options, facts = {}) {
     hostedEvidence: false,
     dataClass: 'synthetic',
     source: { sourceSha: options.sourceSha, treeSha: options.treeSha },
+    // Bind a reusable package checkpoint to the exact local invocation.  A
+    // resume may reuse only this completed package, never an arbitrary log
+    // line or an unbound output directory.
+    execution: { runNumber: options.runNumber === undefined ? null : String(options.runNumber), runId: options.runId === undefined ? null : String(options.runId), runAttempt: options.runAttempt === undefined ? null : String(options.runAttempt) },
     runner: facts.runner ?? null,
     workflow: facts.workflow ?? null,
     imageProof: facts.imageProof ?? null,

@@ -55,7 +55,7 @@ function fixture() {
     nativeDeadlineMinutes: '12',
     packageDeadlineMinutes: '13',
   }
-  const dependencies = { platform: 'linux', uid: 1000, arch: 'x64', env: {}, fsApi: linuxFsApi() }
+  const dependencies = { platform: 'linux', uid: 1000, arch: 'x64', env: {}, fsApi: linuxFsApi(), writePackageCheckpoint: () => {} }
   return { directory, sessionRoot, raw, dependencies }
 }
 
@@ -156,13 +156,14 @@ test('one process performs native session, package, then rehearsal with exact ha
         calls.push({ stage: 'rehearsal', pid: process.pid, options })
         return { receipt: { status: 'passed' } }
       },
+      writePackageCheckpoint: () => calls.push({ stage: 'checkpoint', pid: process.pid }),
     })
     assert.equal(result.status, 'passed')
-    assert.deepEqual(calls.map((call) => call.stage), ['native', 'package', 'parse-rehearsal', 'rehearsal'])
-    assert.deepEqual(calls.map((call) => call.pid), [process.pid, process.pid, process.pid, process.pid])
+    assert.deepEqual(calls.map((call) => call.stage), ['native', 'package', 'checkpoint', 'parse-rehearsal', 'rehearsal'])
+    assert.deepEqual(calls.map((call) => call.pid), [process.pid, process.pid, process.pid, process.pid, process.pid])
     assert.equal(calls[1].options.imageProofRoot, calls[0].options.proofOutput)
     assert.equal(calls[1].options.imageReceipt, calls[0].options.imageReceipt)
-    const rehearsal = optionMap(calls[2].values)
+    const rehearsal = optionMap(calls[3].values)
     assert.equal(rehearsal['--bundle-root'], calls[1].options.outputRoot)
     assert.equal(rehearsal['--trust-root'], calls[1].options.trustRoot)
     assert.equal(rehearsal['--source-sha'], sourceSha)
@@ -175,6 +176,21 @@ test('one process performs native session, package, then rehearsal with exact ha
     assert.equal(rehearsal['--bootstrap-sha256'], 'f'.repeat(64))
     assert.equal(result.receipts.offlineRehearsal, path.join(value.sessionRoot, 'offline-rehearsal.json'))
     assert.deepEqual(fs.readdirSync(value.sessionRoot), [])
+  } finally { fs.rmSync(value.directory, { recursive: true, force: true }) }
+})
+
+test('checkpoint writer failure blocks rehearsal and preserves child evidence', async () => {
+  const value = fixture()
+  try {
+    let rehearsals = 0
+    await assert.rejects(() => runSingleSession(value.raw, {
+      ...value.dependencies,
+      runNativeSession: async () => ({ receipt: { status: 'passed' } }),
+      runLocalPackage: handoff,
+      writePackageCheckpoint: () => { throw new Error('checkpoint failed') },
+      runLocalRehearsal: () => { rehearsals += 1; return { receipt: { status: 'passed' } } },
+    }), /single-session offline package checkpoint failed/)
+    assert.equal(rehearsals, 0)
   } finally { fs.rmSync(value.directory, { recursive: true, force: true }) }
 })
 
