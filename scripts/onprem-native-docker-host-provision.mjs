@@ -47,7 +47,6 @@ export const SAFE_BINARIES = Object.freeze({
   uname: '/usr/bin/uname',
   true: '/usr/bin/true',
 })
-
 const ROOT = '/var/lib/hr-axis-onprem-rehearsal'
 export const PROVISION_STAGING_DIRECTORY = `${ROOT}/.native-docker-host-provisioning`
 const SYSTEMD_DIRECTORY = '/etc/systemd/system'
@@ -106,7 +105,6 @@ const POST_START_READINESS_INITIAL_DELAY_MS = 25
 const POST_START_READINESS_MAX_DELAY_MS = 250
 const POST_START_READINESS_CODE = 'NATIVE_DOCKER_POST_START_NOT_READY'
 const POST_START_READINESS_DEADLINE_CODE = 'NATIVE_DOCKER_POST_START_READINESS_DEADLINE'
-
 class PostStartReadinessDeadlineError extends Error {
   constructor() {
     super('native Docker host post-start readiness was not proved before deadline')
@@ -117,17 +115,14 @@ class PostStartReadinessDeadlineError extends Error {
 function fail(message) {
   throw new Error(message)
 }
-
 function failMount(classification, message) {
   const error = new Error(message)
   error.mountClassification = MOUNT_FAILURE_CLASSIFICATIONS.includes(classification) ? classification : 'mount-state-unreadable'
   throw error
 }
-
 function object(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
-
 function resultOf(result) {
   if (!result || typeof result !== 'object') return { status: -1, stdout: '', stderr: '' }
   return {
@@ -136,13 +131,11 @@ function resultOf(result) {
     stderr: typeof result.stderr === 'string' ? result.stderr : '',
   }
 }
-
 function approved(file) {
   const executable = SAFE_BINARIES[file]
   if (!executable) fail(`unapproved executable: ${file}`)
   return executable
 }
-
 export function defaultCommandRunner(file, args, options = {}) {
   const executable = SAFE_BINARIES[file]
   if (!executable || !Array.isArray(args) || args.some((arg) => typeof arg !== 'string')) {
@@ -168,17 +161,14 @@ function command(commandRunner, file, args, options = {}, label = file) {
   }
   return result
 }
-
 function requireCommand(commandRunner, file, args, options = {}, label = file, accepted = [0]) {
   const result = command(commandRunner, file, args, options, label)
   if (!accepted.includes(result.status)) fail(`${label} command failed`)
   return result
 }
-
 function privileged(commandRunner, file, args, options = {}, label = file, accepted = [0]) {
   return requireCommand(commandRunner, 'sudo', ['-n', approved(file), ...args], options, label, accepted)
 }
-
 function parseKeyValueFile(text) {
   const values = {}
   for (const line of String(text).split(/\r?\n/)) {
@@ -190,7 +180,6 @@ function parseKeyValueFile(text) {
   }
   return values
 }
-
 export function parseUbuntuRelease(text) {
   const values = parseKeyValueFile(text)
   return {
@@ -199,7 +188,6 @@ export function parseUbuntuRelease(text) {
     prettyName: values.PRETTY_NAME ?? '',
   }
 }
-
 function readIdentity(commandRunner, fsApi, options) {
   const platform = options.platform ?? process.platform
   const arch = options.arch ?? process.arch
@@ -223,14 +211,12 @@ function readIdentity(commandRunner, fsApi, options) {
   if (!fsApi || typeof fsApi.lstatSync !== 'function') fail('filesystem adapter is invalid')
   return Object.freeze({ platform: 'linux', arch, uid, gid, release })
 }
-
 function assertDockerEnvironment(env) {
   const source = env ?? {}
   for (const key of ['DOCKER_HOST', 'DOCKER_CONTEXT', 'DOCKER_CONFIG']) {
     if (Object.prototype.hasOwnProperty.call(source, key)) fail(`${key} override is not allowed`)
   }
 }
-
 function assertFreshReceiptPath(fsApi, receiptPath) {
   if (typeof receiptPath !== 'string' || !path.isAbsolute(receiptPath) || path.normalize(receiptPath) !== receiptPath || receiptPath === path.parse(receiptPath).root) {
     fail('receipt path must be a fresh absolute path')
@@ -257,14 +243,12 @@ function assertFreshReceiptPath(fsApi, receiptPath) {
     cursor = parent
   }
 }
-
 function unitState(commandRunner, unit) {
   const active = command(commandRunner, 'sudo', ['-n', approved('systemctl'), 'is-active', '--quiet', unit], {}, `systemd ${unit} active state`)
   const enabled = command(commandRunner, 'sudo', ['-n', approved('systemctl'), 'is-enabled', '--quiet', unit], {}, `systemd ${unit} enabled state`)
   if (![0, 1, 3, 4].includes(active.status) || ![0, 1, 3, 4].includes(enabled.status)) fail(`systemd ${unit} state cannot be proved`)
   return Object.freeze({ active: active.status === 0, inactive: active.status === 3, enabled: enabled.status === 0, disabled: enabled.status === 1 })
 }
-
 function captureUnitStates(commandRunner) {
   const units = [...DOCKER_UNITS, PROTECTED_CONTAINERD_UNIT, hostContract.containerdUnit, hostContract.dockerdUnit]
   return Object.fromEntries(units.map((unit) => [unit, unitState(commandRunner, unit)]))
@@ -886,7 +870,6 @@ export function provisionNativeDockerHost(options = {}) {
     throw error
   }
 }
-
 export function parseProvisionArguments(argv) {
   const args = [...argv]
   let confirm = false

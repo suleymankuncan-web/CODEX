@@ -35,7 +35,7 @@ const oversizedBaseline = new Map([
   ['scripts/onprem-core-runtime-proof.mjs', 938],
   ['scripts/onprem-image-local-proof.mjs', 1471],
   ['scripts/onprem-native-docker-host.mjs', 1175],
-  ['scripts/onprem-offline-local-rehearsal.mjs', 1427],
+  ['scripts/onprem-offline-local-rehearsal.mjs', 1387],
 ])
 
 function git(args) {

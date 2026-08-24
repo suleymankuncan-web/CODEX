@@ -124,7 +124,7 @@ function verifiedHost() {
 }
 
 function passedImageReceipt(options, artifact) {
-  const equalFirewall = { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, equivalent: true }
+  const equalFirewall = { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: true }
   return {
     schemaVersion: 2, tool: 'onprem-image-local-proof', status: 'passed', hostedEvidence: false,
     dataClass: 'synthetic', proofMode: 'full', imageScope: 'both', sourceSha: options.sourceSha, treeSha: options.treeSha,

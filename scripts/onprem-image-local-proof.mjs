@@ -558,7 +558,6 @@ function assertDockerEnvironmentSafe(env = {}) {
 function rootDockerOptions(cwd, deadlineAt) {
   return { cwd, env: ROOT_DOCKER_ENV, timeoutMs: boundedCommandTimeout(deadlineAt) }
 }
-
 /** Prove the root sudo Docker client cannot escape to another context/socket. */
 export function validateDockerRootContext({ commandRunner = defaultReadOnlyCommand, cwd, env, deadlineAt } = {}) {
   assertDockerEnvironmentSafe(env)
@@ -579,7 +578,6 @@ function command(commandRunner, file, args, options, label) {
   const result = commandRunner(file, args, options)
   return commandSucceeded(result, label)
 }
-
 function isSecretName(name) {
   return /(?:TOKEN|PASSWORD|SECRET|CREDENTIAL|PRIVATE.?KEY|ACCESS.?KEY)/i.test(name)
 }
@@ -638,7 +636,6 @@ function assertFreshWorkspaceOutputs(workspaceRoot) {
     }
   }
 }
-
 export function captureFirewallSnapshot({ commandRunner = defaultReadOnlyCommand, cwd, env, deadlineAt = Date.now() + 120_000 } = {}) {
   return captureFirewallSnapshots({ commandRunner, cwd, env, deadlineAt }).ipv4
 }
@@ -758,7 +755,6 @@ function normalizePhaseResult(result) {
     containmentObserved,
   }
 }
-
 function processGroupState(processApi, pgid) {
   if (!processApi || typeof processApi.kill !== 'function' || !Number.isInteger(pgid) || pgid <= 0) return 'unknown'
   try {
@@ -835,7 +831,6 @@ function safeContainment(result) {
     escalated: result?.escalated === true,
   }
 }
-
 export function executeShellPhase({
   body,
   cwd,
@@ -965,7 +960,6 @@ export async function executeProofBodies({ steps, context, baseEnv, cwd, githubE
   }
   return { phases, failureReason, env: currentEnv }
 }
-
 function safeFailureReason(error) {
   const message = error instanceof Error ? error.message : String(error ?? 'proof failed')
   return message
@@ -979,7 +973,6 @@ function safeFailureReason(error) {
 }
 
 function escapeRegex(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') }
-
 function patternRegex(pattern) {
   const segments = pattern.split('/')
   const expression = segments.map((segment) => {
@@ -1160,7 +1153,6 @@ function sanitizeHostIdentity(value) {
 
 const INVALID_FIREWALL_DIAGNOSTIC_VALUE = Symbol('invalid-firewall-diagnostic-value')
 const MAX_FIREWALL_DIAGNOSTIC_LINES = 1_024
-
 function ownDataProperty(value, key) {
   const descriptor = Object.getOwnPropertyDescriptor(value, key)
   return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : INVALID_FIREWALL_DIAGNOSTIC_VALUE
@@ -1466,7 +1458,6 @@ export async function runLocalProof(rawOptions, dependencies = {}) {
 function cliUsage() {
   return 'Usage: node scripts/onprem-image-local-proof.mjs --source-sha <sha> --tree-sha <tree> --run-number <n> --node <absolute> --node-sha256 <sha256> --run-root <fresh-absolute> --proof-output <fresh-absolute> --receipt <fresh-absolute> --allow-disposable-daemon-reset [--workspace-root <checkout>] [--deadline-minutes <1-60>]'
 }
-
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(SCRIPT_PATH)) {
   try {
     const raw = parseArgv(process.argv.slice(2))
