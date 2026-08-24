@@ -385,7 +385,7 @@ export function parsePassedImageReceipt(value, expected) {
   const aggregateTimestampOnly = !aggregateByteEqual && familyStates.every((family) => family.equivalent) && familyStates.some((family) => family.timestampOnlyEquivalent)
   const aggregateEquivalent = familyStates.every((family) => family.equivalent)
   if (firewall.equal !== firewall.byteEqual || firewall.byteEqual !== aggregateByteEqual || firewall.timestampOnlyEquivalent !== aggregateTimestampOnly || firewall.equivalent !== aggregateEquivalent || firewall.equivalent !== (firewall.byteEqual || firewall.timestampOnlyEquivalent)) fail('image receipt firewall aggregate consistency is invalid')
-  if (!object(value.postflight) || value.postflight.clean !== true) fail('image receipt postflight is not clean')
+  if (!object(value.postflight) || value.postflight.status !== 'passed' || value.postflight.clean !== true) fail('image receipt postflight is not clean')
   if (!object(value.cleanup) || value.cleanup.status !== 'passed' || value.cleanup.runRoot !== 'removed' || value.cleanup.proofOutput !== 'preserved') fail('image receipt workspace cleanup is not verified')
   if (!Array.isArray(value.phases) || value.phases.length === 0) fail('image receipt phases are missing')
   const phases = value.phases.map(sanitizePhase)

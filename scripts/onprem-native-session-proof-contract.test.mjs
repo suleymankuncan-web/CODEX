@@ -290,6 +290,7 @@ test('passed image receipt requires reset, both firewall families, postflight, c
       { dockerDaemonReset: false },
       { firewall: { status: 'passed', equal: true, ipv4: { status: 'passed', byteEqual: true }, ipv6: { status: 'passed', byteEqual: false } } },
       { postflight: { clean: false } },
+      { postflight: { status: 'failed', clean: true } },
       { cleanup: { status: 'failed', runRoot: 'removed', proofOutput: 'preserved' } },
       { node: { version: 'v24.19.0', sha256: 'e'.repeat(64) } },
       { hostedEvidence: true },

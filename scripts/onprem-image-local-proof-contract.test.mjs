@@ -331,6 +331,103 @@ test('image firewall capture and restore retain invalid bytes without UTF-8 coll
   assert.deepEqual(restoreInput, raw)
 })
 
+test('successful local proof derives passed postflight status from clean shape', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-postflight-status-'))
+  const proofRoot = resolve('proof')
+  assert.equal(existsSync(proofRoot), false)
+  try {
+    const runRoot = join(root, 'run')
+    const output = join(root, 'output')
+    const receipt = join(root, 'receipt.json')
+    const sameSha = hashFile(process.execPath)
+    const makeSnapshot = (text) => {
+      const bytes = Buffer.from(`${text}\n`)
+      return { status: 0, bytes, byteLength: bytes.length, sha256: hashBytesForTest(bytes) }
+    }
+    const snapshots = { ipv4: makeSnapshot('ipv4-rules'), ipv6: makeSnapshot('ipv6-rules') }
+    const inspection = {
+      contract: 'native-docker-host-v1',
+      marker: { schema: 'mock', version: 1 },
+      units: { containerd: 'mock-containerd', dockerd: 'mock-dockerd' },
+      pids: { containerd: 11, dockerd: 12 },
+      socket: '/var/run/docker.sock',
+      dockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker',
+      inventory: { containers: 0, networks: 0, volumes: 0, images: 0 },
+    }
+    const controller = {
+      acquireHostLock: () => ({ version: 1, pid: 42, uid: 1000, nonce: 'a'.repeat(48), path: '/mock/lock' }),
+      inspectDedicatedNativeDockerHost: () => inspection,
+      resetDedicatedNativeDockerHost: () => ({ dockerDaemonReset: true, before: inspection, after: inspection }),
+      releaseHostLock: () => true,
+    }
+    const commandRunner = (_file, args) => {
+      if (args.some((arg) => arg.endsWith('/iptables-save'))) return { status: 0, stdout: snapshots.ipv4.bytes, stderr: '' }
+      if (args.some((arg) => arg.endsWith('/ip6tables-save'))) return { status: 0, stdout: snapshots.ipv6.bytes, stderr: '' }
+      if (args[0] === 'rev-parse' && args[1] === 'HEAD') return { status: 0, stdout: `${sourceSha}\n`, stderr: '' }
+      if (args[0] === 'rev-parse' && args[1] === 'HEAD^{tree}') return { status: 0, stdout: `${treeSha}\n`, stderr: '' }
+      if (args[0] === 'status') return { status: 0, stdout: '', stderr: '' }
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    const writeProofFixture = (env) => {
+      mkdirSync(proofRoot, { recursive: true, mode: 0o700 })
+      const required = [
+        'backend-content-guard.json', 'frontend-content-guard.json', 'keycloak-content-guard.json',
+        'backend-image.tar', 'frontend-image.tar', 'keycloak-image.tar',
+        'content-guard-index.json', 'content-guard-index-public.pem', 'ephemeral-public.pem',
+      ]
+      for (const name of required) writeFileSync(join(proofRoot, name), '{}\n', { mode: 0o600 })
+      for (const name of ['photo-storage-sbom.spdx.json', 'photo-storage-trivy.json', 'photo-storage-license-receipt.json']) writeFileSync(join(proofRoot, name), '{}\n', { mode: 0o600 })
+      for (const name of ['onprem-core-runtime-receipt.json', 'onprem-keycloak-runtime-receipt.json', 'onprem-photo-storage-runtime-receipt.json']) writeFileSync(join(env.RUNNER_TEMP, name), '{}\n', { mode: 0o600 })
+      const releaseManifest = {
+        dataClass: 'synthetic', sourceRevision: sourceSha,
+        imageIds: { backend: `sha256:${'a'.repeat(64)}`, frontend: `sha256:${'b'.repeat(64)}`, keycloak: `sha256:${'c'.repeat(64)}` },
+      }
+      writeFileSync(join(proofRoot, 'release-manifest.json'), `${JSON.stringify(releaseManifest)}\n`, { mode: 0o600 })
+      const evidenceSha = hashFile(join(proofRoot, 'release-manifest.json'))
+      const proofReceipt = { dataClass: 'synthetic', proofMode: 'full', imageScope: 'both', expectedSha: sourceSha, evidenceSha }
+      writeFileSync(join(proofRoot, 'onprem-proof-receipt.json'), `${JSON.stringify(proofReceipt)}\n`, { mode: 0o600 })
+      writeFileSync(env.GITHUB_OUTPUT, `proof_mode=full\nimage_scope=both\nevidence_sha=${evidenceSha}\nreceipt_sha256=${hashFile(join(proofRoot, 'onprem-proof-receipt.json'))}\nproven_sha=${sourceSha}\n`, { mode: 0o600 })
+    }
+    const postflight = {
+      clean: true,
+      resources: {
+        'hr-axis-onprem-core': { containers: true, volumes: true, networks: true },
+        'hr-axis-onprem-keycloak': { containers: true, volumes: true, networks: true },
+        'hr-axis-onprem-photo-storage': { containers: true, volumes: true, networks: true },
+      },
+      firewallChains: {
+        'iptables:HR_AXIS_OFF_DOCKER_EGRESS': false,
+        'iptables:HR_AXIS_OFFLINE_HOST_EGRESS': false,
+        'ip6tables:HR_AXIS_OFFLINE_HOST6_EGRESS': false,
+      },
+    }
+    const result = await runLocalProof({
+      'source-sha': sourceSha, 'tree-sha': treeSha, 'run-number': '6', node: process.execPath,
+      'node-sha256': sameSha, 'run-root': runRoot, 'proof-output': output, receipt, 'workspace-root': resolve('.'), 'deadline-minutes': '1', 'allow-disposable-daemon-reset': true,
+    }, {
+      hostController: controller,
+      commandRunner,
+      rootContextCheck: () => ({}),
+      preflight: () => ({ node: { version: 'v24.19.0', sha256: sameSha }, docker: { id: 'docker-id', serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64' }, firewallSnapshots: snapshots }),
+      executor: async ({ step, env }) => {
+        if (step.name === 'Emit fresh full proof identity and receipt') writeProofFixture(env)
+        return { status: 'passed', exitCode: 0 }
+      },
+      postflight: () => postflight,
+    })
+    const localReceipt = JSON.parse(readFileSync(receipt, 'utf8'))
+    assert.equal(result.receipt, receipt)
+    assert.equal(localReceipt.status, 'passed')
+    assert.equal(localReceipt.postflight.clean, true)
+    assert.equal(localReceipt.postflight.status, 'passed')
+    assert.ok(localReceipt.phases.length > 0)
+    assert.ok(localReceipt.phases.every((phase) => phase.status === 'passed'))
+  } finally {
+    rmSync(proofRoot, { recursive: true, force: true })
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test('receipt firewall diagnostics keep only the allowlisted sanitized shape', () => {
   const valid = {
     preByteLength: 12,
@@ -410,6 +507,7 @@ test('counter-only firewall mismatch remains failed through recovery and both re
     assert.equal(localReceipt.status, 'failed')
     assert.equal(localReceipt.firewall.equal, false)
     assert.equal(localReceipt.postflight.clean, false)
+    assert.equal(localReceipt.postflight.status, 'failed')
     assert.equal(localReceipt.firewall.ipv4.diagnostic.counterOnly, true)
     assert.equal(localReceipt.firewall.ipv4.diagnostic.lineDigestTruncated, false)
     assert.deepEqual(localReceipt.postflight.firewall.ipv4.diagnostic, localReceipt.firewall.ipv4.diagnostic)

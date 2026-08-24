@@ -1220,6 +1220,7 @@ export function sanitizeFirewallDiagnostic(value) {
 
 function sanitizePostflight(value) {
   if (!isObject(value)) return { status: 'not-run', clean: false }
+  const clean = value.clean === true
   const resources = Object.fromEntries(TARGET_PROJECTS.map((project) => [project, isObject(value.resources?.[project]) ? Object.fromEntries(['containers', 'volumes', 'networks'].map((kind) => [kind, value.resources[project][kind] === true])) : {}]))
   const firewallChains = Object.fromEntries(RUNNER_FIREWALL_CHAINS.map(([tool, chain]) => {
     const key = `${tool}:${chain}`
@@ -1236,7 +1237,7 @@ function sanitizePostflight(value) {
     ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv4.timestampOnlyEquivalent === true, equivalent: value.firewall.ipv4.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv4.diagnostic) } : null,
     ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv6.timestampOnlyEquivalent === true, equivalent: value.firewall.ipv6.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv6.diagnostic) } : null,
   } : null
-  return { status: typeof value.status === 'string' ? value.status : 'failed', clean: value.clean === true, resources, firewallChains, firewall }
+  return { status: clean ? 'passed' : 'failed', clean, resources, firewallChains, firewall }
 }
 
 function buildReceipt({ options, node, docker, phases, failureReason, artifact, postflight, recovery, cleanup, partialProofOutput }) {
