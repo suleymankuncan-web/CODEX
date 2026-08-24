@@ -34,6 +34,28 @@ const workflowPath = path.resolve('.github/workflows/onprem-offline-proof.yml')
 function tempDirectory() { return fs.mkdtempSync(path.join(os.tmpdir(), 'onprem-offline-package-contract-')) }
 function sha256(value) { return crypto.createHash('sha256').update(value).digest('hex') }
 
+function watchdogSleeps(seconds, cwd) {
+  if (process.platform !== 'linux') return []
+  const expectedCommand = `sleep\0${seconds}\0`
+  const expectedCwd = fs.realpathSync(cwd)
+  return fs.readdirSync('/proc').flatMap((entry) => {
+    if (!/^[1-9][0-9]*$/.test(entry)) return []
+    try {
+      if (fs.readFileSync(`/proc/${entry}/cmdline`, 'utf8') !== expectedCommand) return []
+      if (fs.realpathSync(`/proc/${entry}/cwd`) !== expectedCwd) return []
+      return [Number(entry)]
+    } catch {
+      return []
+    }
+  })
+}
+
+function terminateWatchdogSleeps(seconds, cwd) {
+  for (const pid of watchdogSleeps(seconds, cwd)) {
+    try { process.kill(pid, 'SIGTERM') } catch { /* process already exited */ }
+  }
+}
+
 function enterNonRootPackageContractIdentity() {
   if (process.platform !== 'linux' || typeof process.getuid !== 'function' || process.getuid() !== 0) return
   const uid = 1000
@@ -753,6 +775,27 @@ test('workflow body result requires process-group containment proof before advan
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })
 
+test('local package workflow supervisor reaps its normal-completion watchdog child', { skip: process.platform !== 'linux' }, async () => {
+  const root = tempDirectory()
+  const deadlineSeconds = 61
+  try {
+    const result = runWorkflowBody('set -euo pipefail\n:\n', {
+      workspaceRoot: root,
+      runnerTemp: root,
+      env: { RUNNER_TEMP: root, HOME: root, PATH: process.env.PATH ?? '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' },
+      timeoutMs: deadlineSeconds * 1000,
+      bashPath: '/usr/bin/bash',
+      setsidPath: '/usr/bin/setsid',
+    })
+    assert.equal(result.status, 'passed')
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.deepEqual(watchdogSleeps(deadlineSeconds, root), [])
+  } finally {
+    terminateWatchdogSleeps(deadlineSeconds, root)
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test('pinned Node staging rejects a replacement after source validation and exposes only the private copy', () => {
   const root = tempDirectory()
   const source = path.join(root, 'node-source')
@@ -918,7 +961,7 @@ test('receipt self-hash is stable and excludes only the self field', () => {
 test('workflow parser uses pinned top-level env and package source has no archive-stage duplication', () => {
   const env = parseWorkflowEnv(workflowPath)
   for (const key of ['CADDY_IMAGE', 'POSTGRES_IMAGE', 'REDIS_IMAGE', 'SEAWEEDFS_IMAGE', 'TRIVY_IMAGE', 'SYFT_IMAGE']) assert.match(env[key], /@sha256:[a-f0-9]{64}$/)
-  const packageSources = ['scripts/onprem-offline-local-package.mjs', 'scripts/onprem-offline-local-package-artifacts.mjs']
+  const packageSources = ['scripts/onprem-offline-local-package.mjs', 'scripts/onprem-offline-local-package-artifacts.mjs', 'scripts/onprem-local-workflow-supervisor.mjs']
   const source = packageSources.map((name) => fs.readFileSync(path.resolve(name), 'utf8')).join('\n')
   assert.doesNotMatch(source, /tar\s+--sort=name/)
   assert.doesNotMatch(source, /docker\s+save\s+[^\n]*\$CADDY_IMAGE/)

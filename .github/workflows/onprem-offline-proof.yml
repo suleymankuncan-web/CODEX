@@ -590,21 +590,21 @@ jobs:
               chmodSync(destination, 0o644)
             }
           NODE
-            tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner -C "$work" -cf "$archives/${release}-transition.tar" "${release}-transition"
+            tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner --mode=go-w -C "$work" -cf "$archives/${release}-transition.tar" "${release}-transition"
             test -s "$archives/${release}-transition.tar" && test ! -L "$archives/${release}-transition.tar"
             transition_members="$(tar -tf "$archives/${release}-transition.tar")"
             test "$(printf '%s\n' "$transition_members" | wc -l)" -eq 5
             printf '%s\n' "$transition_members" | awk -v prefix="${release}-transition" '($0 == prefix "/" || $0 == prefix "/bundle-manifest.json" || $0 == prefix "/bundle-signature.json" || $0 == prefix "/evidence/" || $0 == prefix "/evidence/migration-compatibility.json") { next } { bad = 1 } END { exit bad ? 1 : 0 }'
-            tar -tvf "$archives/${release}-transition.tar" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            tar -tvf "$archives/${release}-transition.tar" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
             rm -rf -- "$bundle_dir"
             rm -rf -- "$transition_dir"
             rm -rf -- "$staging"
           done
-          tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner -C "$work" -cf "$archives/current.tar" current
+          tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner --mode=go-w -C "$work" -cf "$archives/current.tar" current
           test -s "$archives/current.tar" && test ! -L "$archives/current.tar"
           test "$(tar -tf "$archives/current.tar" | head -n 1)" = 'current/'
           tar -tf "$archives/current.tar" | awk '$0 ~ /(^|\/)\.\.?($|\/)/ || $0 !~ /^current\// { bad = 1 } END { exit bad ? 1 : 0 }'
-          tar -tvf "$archives/current.tar" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+          tar -tvf "$archives/current.tar" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
           bundle_dir="$work/current"
           rm -rf -- "$bundle_dir"
           rmdir "$work"
@@ -1036,14 +1036,14 @@ jobs:
             members="$(sudo tar -tf "$archive")"
             test -n "$members"
             printf '%s\n' "$members" | awk -v root="$root" '$0 ~ /(^|\/)\.\.?($|\/)/ || $0 !~ ("^" root "(/|$)") { bad = 1 } END { exit bad ? 1 : 0 }'
-            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
           }
           assert_transition_members() {
             local archive="$1" prefix="$2" members
             members="$(sudo tar -tf "$archive")"
             test "$(printf '%s\n' "$members" | wc -l)" -eq 5
             printf '%s\n' "$members" | awk -v prefix="$prefix" '($0 == prefix "/" || $0 == prefix "/bundle-manifest.json" || $0 == prefix "/bundle-signature.json" || $0 == prefix "/evidence/" || $0 == prefix "/evidence/migration-compatibility.json") { next } { bad = 1 } END { exit bad ? 1 : 0 }'
-            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
           }
           extract_current_bundle() {
             local sealed_archive="$SEALED_ROOT/archives/current.tar" target="$SEALED_ROOT/bundle/current" archive_kib available_kib required_kib

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { createHash, createPublicKey } from 'node:crypto'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { buildWorkflowSupervisor } from './onprem-local-workflow-supervisor.mjs'
 import {
   acquireHostLock,
   expectedNativeDockerHostMarker,
@@ -278,7 +279,7 @@ export function validateArchiveMemberPath(member, label = 'archive') {
   return { normalized, directory }
 }
 
-function validateArchiveEnvelope(archivePath, label) {
+export function validateArchiveEnvelope(archivePath, label) {
   let listing
   let verbose
   try {
@@ -295,7 +296,10 @@ function validateArchiveEnvelope(archivePath, label) {
     folded.add(key)
   }
   for (const line of verbose.split(/\r?\n/).filter(Boolean)) {
-    if (!['-', 'd'].includes(line[0])) fail(`${label} contains a non-file/non-directory member`)
+    const mode = line.match(/^([d-][rwxStTs-]{9})(?:\s|$)/)?.[1]
+    if (!mode) fail(`${label} contains an invalid member mode`)
+    if (!['-', 'd'].includes(mode[0])) fail(`${label} contains a non-file/non-directory member`)
+    if (mode[5] === 'w' || mode[8] === 'w') fail(`${label} contains a group/world-writable member`)
   }
   if (!members.some((member) => member.endsWith('/bundle-manifest.json'))) fail(`${label} has no bundle manifest`)
   return { members: members.length }
@@ -738,58 +742,7 @@ export function executeWorkflowBody(body, context, { timeoutMs = 60 * 60 * 1000 
   const timeoutMarker = path.join(context.runnerTemp, `.workflow-timeout-${process.pid}`)
   const leaderMarker = path.join(context.runnerTemp, `.workflow-leader-${process.pid}`)
   const containmentMarker = path.join(context.runnerTemp, `.workflow-contained-${process.pid}`)
-  const supervisor = [
-    'set -eu',
-    'marker="$1"; leader_marker="$2"; containment_marker="$3"; body="$4"; deadline="$5"',
-    'rm -f -- "$marker" "$leader_marker" "$containment_marker"',
-    // The inner shell writes its own $$ after setsid has established the
-    // session.  This avoids treating a possible setsid fork/wait helper as
-    // the process-group leader that must be terminated.
-    `setsid --wait bash --noprofile --norc -e -u -o pipefail -c 'leader_marker="$1"; body="$2"; printf "%s\\n" "$$" > "$leader_marker"; exec bash --noprofile --norc -e -u -o pipefail -c "$body"' offline-workflow-child "$leader_marker" "$body" &`,
-    'child="$!"',
-    'leader=""',
-    'attempt=0',
-    'while test "$attempt" -lt 20 && test -z "$leader"; do',
-    '  if test -s "$leader_marker"; then IFS= read -r leader < "$leader_marker"; fi',
-    '  test -n "$leader" || sleep 0.05',
-    '  attempt=$((attempt + 1))',
-    'done',
-    'case "$leader" in ""|*[!0-9]*) kill -TERM "$child" 2>/dev/null || true; kill -KILL "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 125 ;; esac',
-    '(',
-    '  sleep "$deadline"',
-    '  : > "$marker"',
-    '  kill -TERM -- "-$leader" 2>/dev/null || true',
-    '  sleep 10',
-    '  kill -KILL -- "-$leader" 2>/dev/null || true',
-    ') &',
-    'watchdog="$!"',
-    'set +e; wait "$child"; status="$?"; set -e',
-    'if test -f "$marker"; then wait "$watchdog" || true; else kill "$watchdog" 2>/dev/null || true; wait "$watchdog" 2>/dev/null || true; fi',
-    // A child can reap before descendants do.  Poll the complete process
-    // group, then TERM/KILL the negative PGID and poll again before recovery
-    // is allowed to continue.  A successful marker is the proof consumed by
-    // the outer Node supervisor; no PID is exposed in the receipt.
-    'group_gone=0',
-    'attempt=0',
-    'while test "$attempt" -lt 20; do',
-    '  if kill -0 -- "-$leader" 2>/dev/null; then sleep 0.25; else group_gone=1; break; fi',
-    '  attempt=$((attempt + 1))',
-    'done',
-    'if test "$group_gone" -ne 1; then',
-    '  kill -TERM -- "-$leader" 2>/dev/null || true',
-    '  sleep 1',
-    '  kill -KILL -- "-$leader" 2>/dev/null || true',
-    '  wait "$child" 2>/dev/null || true',
-    '  attempt=0',
-    '  while test "$attempt" -lt 20; do',
-    '    if kill -0 -- "-$leader" 2>/dev/null; then sleep 0.25; else group_gone=1; break; fi',
-    '    attempt=$((attempt + 1))',
-    '  done',
-    'fi',
-    'printf "%s\\n" "$group_gone" > "$containment_marker"',
-    'if test "$group_gone" -ne 1; then exit 125; fi',
-    'exit "$status"',
-  ].join('\n')
+  const supervisor = buildWorkflowSupervisor({ bashPath: 'bash', setsidPath: 'setsid' })
   // The outer shell captures the exact inner setsid leader PID, sends TERM
   // then bounded KILL to the negative process-group ID, and waits/reaps it
   // before returning to the caller's recovery supervisor.

@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
+import { execFileSync, spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import {
   LIFECYCLE_ORDER,
@@ -23,14 +24,17 @@ import {
   runSupervisedLifecycle,
   stableJson,
   strictCopyImmutableInputs,
+  validateArchiveEnvelope,
   validateArchiveMemberPath,
   validateChecksumManifest,
   workflowBodyDigest,
 } from './onprem-offline-local-rehearsal.mjs'
+import { buildWorkflowSupervisor } from './onprem-local-workflow-supervisor.mjs'
 import { FIREWALL_DIAGNOSTIC_LINE_CAP } from './onprem-image-local-proof-recovery.mjs'
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const scriptPath = path.join(repositoryRoot, 'scripts', 'onprem-offline-local-rehearsal.mjs')
+const supervisorPath = path.join(repositoryRoot, 'scripts', 'onprem-local-workflow-supervisor.mjs')
 const workflowPath = path.join(repositoryRoot, '.github', 'workflows', 'onprem-offline-proof.yml')
 
 function temporaryDirectory() {
@@ -39,6 +43,51 @@ function temporaryDirectory() {
 
 function digest(value) {
   return createHash('sha256').update(value).digest('hex')
+}
+
+function watchdogSleeps(seconds, cwd) {
+  if (process.platform !== 'linux') return []
+  const expectedCommand = `sleep\0${seconds}\0`
+  const expectedCwd = fs.realpathSync(cwd)
+  return fs.readdirSync('/proc').flatMap((entry) => {
+    if (!/^[1-9][0-9]*$/.test(entry)) return []
+    try {
+      if (fs.readFileSync(`/proc/${entry}/cmdline`, 'utf8') !== expectedCommand) return []
+      if (fs.realpathSync(`/proc/${entry}/cwd`) !== expectedCwd) return []
+      return [Number(entry)]
+    } catch {
+      return []
+    }
+  })
+}
+
+function terminateWatchdogSleeps(seconds, cwd) {
+  for (const pid of watchdogSleeps(seconds, cwd)) {
+    try { process.kill(pid, 'SIGTERM') } catch { /* process already exited */ }
+  }
+}
+
+async function waitForFile(target, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (fs.existsSync(target)) return
+    await new Promise((resolve) => setTimeout(resolve, 20))
+  }
+  throw new Error(`timed out waiting for ${target}`)
+}
+
+function waitForProcessClose(child, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('supervisor stdout pipe did not close')), timeoutMs)
+    child.once('error', (error) => {
+      clearTimeout(timer)
+      reject(error)
+    })
+    child.once('close', (code, signal) => {
+      clearTimeout(timer)
+      resolve({ code, signal })
+    })
+  })
 }
 
 function validArguments(overrides = {}) {
@@ -105,14 +154,20 @@ test('fails closed for missing, duplicated, or malformed workflow markers', () =
 
 test('runner source only delegates operation semantics to extracted workflow bodies', () => {
   const source = fs.readFileSync(scriptPath, 'utf8')
+  const supervisor = fs.readFileSync(supervisorPath, 'utf8')
   assert.doesNotMatch(source, /sudo\s+iptables\s+-N/)
   assert.doesNotMatch(source, /docker\s+run\s+--pull=never/)
   assert.doesNotMatch(source, /operations\/(?:preflight|install|migrate|activate|smoke|backup|restore)\.sh/)
   assert.deepEqual(REQUIRED_HOST_TOOLS.includes('nft'), true)
   assert.match(source, /stdio:\s*\['ignore', 'inherit', 'inherit'\]/)
-  assert.match(source, /setsid --wait bash/)
-  assert.match(source, /kill -TERM -- "-\$leader"/)
-  assert.match(source, /kill -KILL -- "-\$leader"/)
+  assert.match(source, /buildWorkflowSupervisor/)
+  assert.match(supervisor, /\$\{setsid\} --wait/)
+  assert.match(supervisor, /kill -TERM -- "-\$leader"/)
+  assert.match(supervisor, /kill -KILL -- "-\$leader"/)
+  assert.match(supervisor, /stop_watchdog\(\)/)
+  assert.match(supervisor, /abort_supervisor\(\)/)
+  assert.match(supervisor, /trap "cleanup_watchdog; exit 0" TERM INT HUP/)
+  assert.match(supervisor, /\) <\/dev\/null >\/dev\/null 2>&1 &/)
   assert.match(source, /containmentComplete/)
   assert.match(source, /dockerIdentityCheck/)
   assert.deepEqual(lifecyclePlan(), LIFECYCLE_ORDER)
@@ -143,11 +198,83 @@ test('workflow process-group supervisor proves containment before returning', { 
   }
 })
 
+test('workflow process-group supervisor reaps its normal-completion watchdog child', { skip: process.platform !== 'linux' }, async () => {
+  const directory = temporaryDirectory()
+  const deadlineSeconds = 61
+  const context = {
+    runnerTemp: directory,
+    workspace: repositoryRoot,
+    dockerHome: directory,
+    dockerConfig: directory,
+    dockerIdentityCheck: () => undefined,
+    dockerContextCheck: () => undefined,
+    options: {
+      runId: '42', runAttempt: '1', sourceSha: 'e'.repeat(40), treeSha: 'f'.repeat(40), releaseId: 'onprem-offline-1234567890ab',
+      trustedFingerprint: 'b'.repeat(64), bootstrapSha256: 'c'.repeat(64), manifestSha256: 'a'.repeat(64), nodePath: '/opt/node-v24.19.0/bin/node',
+    },
+  }
+  try {
+    const result = executeWorkflowBody('set -euo pipefail\n:\n', context, { timeoutMs: deadlineSeconds * 1000 })
+    assert.equal(result.status, 'passed')
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.deepEqual(watchdogSleeps(deadlineSeconds, repositoryRoot), [])
+  } finally {
+    terminateWatchdogSleeps(deadlineSeconds, repositoryRoot)
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('workflow process-group supervisor closes active and watchdog descendants on TERM', { skip: process.platform !== 'linux' }, async () => {
+  const directory = temporaryDirectory()
+  const deadlineSeconds = 62
+  const marker = path.join(directory, 'timeout-marker')
+  const leaderMarker = path.join(directory, 'leader-marker')
+  const containmentMarker = path.join(directory, 'containment-marker')
+  const supervisor = buildWorkflowSupervisor({ bashPath: '/usr/bin/bash', setsidPath: '/usr/bin/setsid' })
+  const child = spawn('/usr/bin/bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', supervisor, 'offline-workflow-supervisor', marker, leaderMarker, containmentMarker, 'sleep 62', String(deadlineSeconds)], {
+    cwd: directory,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  try {
+    await waitForFile(leaderMarker, 2000)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.equal(child.kill('SIGTERM'), true)
+    assert.deepEqual(await waitForProcessClose(child, 3000), { code: 125, signal: null })
+    assert.deepEqual(watchdogSleeps(deadlineSeconds, directory), [])
+  } finally {
+    try { child.kill('SIGKILL') } catch { /* process already exited */ }
+    terminateWatchdogSleeps(deadlineSeconds, directory)
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})
+
 test('archive envelope allows canonical directory members but rejects unsafe paths', () => {
   assert.deepEqual(validateArchiveMemberPath('current/'), { normalized: 'current', directory: true })
   assert.deepEqual(validateArchiveMemberPath('current/bundle-manifest.json'), { normalized: 'current/bundle-manifest.json', directory: false })
   for (const member of ['', '/', '/current', 'current//', 'current/./manifest', 'current/../manifest', 'current\\manifest']) {
     assert.throws(() => validateArchiveMemberPath(member), /unsafe member path/)
+  }
+})
+
+test('local preflight rejects writable tar members before lifecycle and accepts go-w normalization', { skip: process.platform !== 'linux' }, () => {
+  const directory = temporaryDirectory()
+  try {
+    const source = path.join(directory, 'source')
+    const current = path.join(source, 'current')
+    const manifest = path.join(current, 'bundle-manifest.json')
+    const unsafeArchive = path.join(directory, 'unsafe.tar')
+    const normalizedArchive = path.join(directory, 'normalized.tar')
+    fs.mkdirSync(current, { recursive: true, mode: 0o775 })
+    fs.chmodSync(current, 0o775)
+    fs.writeFileSync(manifest, '{}\n')
+    fs.chmodSync(manifest, 0o664)
+    const tarBase = ['--sort=name', '--format=posix', '--owner=0', '--group=0', '--numeric-owner', '-C', source]
+    execFileSync('tar', [...tarBase, '-cf', unsafeArchive, 'current'], { stdio: 'ignore' })
+    assert.throws(() => validateArchiveEnvelope(unsafeArchive, 'unsafe archive'), /group\/world-writable member/)
+    execFileSync('tar', [...tarBase, '--mode=go-w', '-cf', normalizedArchive, 'current'], { stdio: 'ignore' })
+    assert.doesNotThrow(() => validateArchiveEnvelope(normalizedArchive, 'normalized archive'))
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true })
   }
 })
 

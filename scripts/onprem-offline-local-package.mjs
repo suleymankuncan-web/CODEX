@@ -4,6 +4,7 @@ import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { buildWorkflowSupervisor } from './onprem-local-workflow-supervisor.mjs'
 import {
   acquireHostLock,
   inspectDedicatedNativeDockerHost,
@@ -542,56 +543,7 @@ export function runWorkflowBody(body, options) {
   const timeoutMarker = path.join(runnerTemp, `.workflow-timeout-${suffix}`)
   const leaderMarker = path.join(runnerTemp, `.workflow-leader-${suffix}`)
   const containmentMarker = path.join(runnerTemp, `.workflow-contained-${suffix}`)
-  const supervisor = [
-    'set -eu',
-    'marker="$1"; leader_marker="$2"; containment_marker="$3"; body="$4"; deadline="$5"',
-    'rm -f -- "$marker" "$leader_marker" "$containment_marker"',
-    // The inner shell writes its own $$ after setsid has established the
-    // session.  This avoids treating a possible setsid fork/wait helper as
-    // the process-group leader that must be terminated.
-    `${setsidPath} --wait ${bashPath} --noprofile --norc -e -u -o pipefail -c 'leader_marker="$1"; body="$2"; printf "%s\\n" "$$" > "$leader_marker"; exec ${bashPath} --noprofile --norc -e -u -o pipefail -c "$body"' offline-workflow-child "$leader_marker" "$body" &`,
-    'child="$!"',
-    'leader=""',
-    'attempt=0',
-    'while test "$attempt" -lt 20 && test -z "$leader"; do',
-    '  if test -s "$leader_marker"; then IFS= read -r leader < "$leader_marker"; fi',
-    '  test -n "$leader" || sleep 0.05',
-    '  attempt=$((attempt + 1))',
-    'done',
-    'case "$leader" in ""|*[!0-9]*) kill -TERM "$child" 2>/dev/null || true; kill -KILL "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 125 ;; esac',
-    '(',
-    '  sleep "$deadline"',
-    '  : > "$marker"',
-    '  kill -TERM -- "-$leader" 2>/dev/null || true',
-    '  sleep 10',
-    '  kill -KILL -- "-$leader" 2>/dev/null || true',
-    ') &',
-    'watchdog="$!"',
-    'set +e; wait "$child"; status="$?"; set -e',
-    'if test -f "$marker"; then wait "$watchdog" || true; else kill "$watchdog" 2>/dev/null || true; wait "$watchdog" 2>/dev/null || true; fi',
-    // A child can reap before descendants do.  Poll the complete process
-    // group, then TERM/KILL the negative PGID and poll again before recovery.
-    'group_gone=0',
-    'attempt=0',
-    'while test "$attempt" -lt 20; do',
-    '  if kill -0 -- "-$leader" 2>/dev/null; then sleep 0.25; else group_gone=1; break; fi',
-    '  attempt=$((attempt + 1))',
-    'done',
-    'if test "$group_gone" -ne 1; then',
-    '  kill -TERM -- "-$leader" 2>/dev/null || true',
-    '  sleep 1',
-    '  kill -KILL -- "-$leader" 2>/dev/null || true',
-    '  wait "$child" 2>/dev/null || true',
-    '  attempt=0',
-    '  while test "$attempt" -lt 20; do',
-    '    if kill -0 -- "-$leader" 2>/dev/null; then sleep 0.25; else group_gone=1; break; fi',
-    '    attempt=$((attempt + 1))',
-    '  done',
-    'fi',
-    'printf "%s\\n" "$group_gone" > "$containment_marker"',
-    'if test "$group_gone" -ne 1; then exit 125; fi',
-    'exit "$status"',
-  ].join('\n')
+  const supervisor = buildWorkflowSupervisor({ bashPath, setsidPath })
   const invoke = supervisorRunner ?? ((file, args, spawnOptions) => spawnSync(file, args, spawnOptions))
   let result
   try {
