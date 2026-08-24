@@ -51,7 +51,8 @@ function statSnapshot(target, stats, sha256, bytes = stats.size) {
   })
 }
 function sameFileIdentity(before, after) {
-  return ['dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeMs', 'ctimeMs'].every((key) => before[key] === after[key])
+  // Pathname replacement can update Linux ctime without changing descriptor bytes; receipt snapshots still retain ctime.
+  return ['dev', 'ino', 'mode', 'uid', 'gid', 'nlink', 'size', 'mtimeMs'].every((key) => before[key] === after[key])
 }
 function descriptorStats(fd, label, { platform = process.platform, uid, privateMode = true } = {}) {
   const stats = fs.fstatSync(fd)

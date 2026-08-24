@@ -913,6 +913,19 @@ test('descriptor-captured manifest and receipt JSON remain bound to bytes across
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })
 
+test('descriptor capture rejects in-place content and size mutation during read', { skip: process.platform !== 'linux' }, () => {
+  const root = tempDirectory()
+  try {
+    const target = path.join(root, 'manifest.json')
+    const originalBytes = Buffer.from('{"identity":"manifest-original"}\n')
+    fs.writeFileSync(target, originalBytes, { mode: 0o600 })
+    assert.throws(() => readStableJsonFile(target, 'manifest', {
+      platform: 'linux', uid: process.getuid?.(),
+      afterRead: () => fs.writeFileSync(target, Buffer.concat([originalBytes, Buffer.from('x')]))
+    }), /manifest changed during descriptor read/)
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
 test('image proof binding keeps outer receipt, inner proof receipt, manifest, and evidence identities distinct', (t) => {
   const fixture = packageFixture()
   try {

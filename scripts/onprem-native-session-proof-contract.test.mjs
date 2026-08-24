@@ -20,6 +20,7 @@ const sourceSha = 'a'.repeat(40)
 const treeSha = 'b'.repeat(40)
 const nodeSha256 = 'c'.repeat(64)
 const engineId = 'engine-contract-id'
+const fixtureUid = process.platform === 'linux' && typeof process.getuid === 'function' ? process.getuid() : 1000
 
 function temporaryDirectory() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'native-session-contract-'))
@@ -69,7 +70,7 @@ function validFixture() {
     deadlineMinutes: '12',
   }
   const dependencies = {
-    platform: 'linux', uid: 1000, arch: 'x64', env: {}, execPath: nodePath, nodeVersion: 'v24.19.0',
+    platform: 'linux', uid: fixtureUid, arch: 'x64', env: {}, execPath: nodePath, nodeVersion: 'v24.19.0',
     checkoutRoot,
     gitState: { head: sourceSha, tree: treeSha, clean: true },
   }
@@ -223,7 +224,7 @@ test('receipt snapshots reject unsafe files and stat identity changes', () => {
   try {
     const target = path.join(fixture.directory, 'receipt.json')
     writeFile(target, JSON.stringify(provisionReceipt()))
-    const snapshot = readImmutableReceiptSnapshot(fs, target, 'receipt', { uid: 1000, platform: 'linux', strictPermissions: false })
+    const snapshot = readImmutableReceiptSnapshot(fs, target, 'receipt', { uid: fixtureUid, platform: 'linux', strictPermissions: false })
     assert.equal(snapshot.sha256, createHash('sha256').update(fs.readFileSync(target)).digest('hex'))
     const baseLstat = fs.lstatSync.bind(fs)
     const changedAdapter = {
@@ -241,7 +242,7 @@ test('receipt snapshots reject unsafe files and stat identity changes', () => {
       readFileSync: fs.readFileSync.bind(fs),
     }
     changedAdapter.calls = 0
-    assert.throws(() => readImmutableReceiptSnapshot(changedAdapter, target, 'receipt', { uid: 1000, platform: 'linux', strictPermissions: false }), /changed while being read/)
+    assert.throws(() => readImmutableReceiptSnapshot(changedAdapter, target, 'receipt', { uid: fixtureUid, platform: 'linux', strictPermissions: false }), /changed while being read/)
 
     const unsafeAdapter = {
       lstatSync: (pathname) => {
@@ -251,7 +252,7 @@ test('receipt snapshots reject unsafe files and stat identity changes', () => {
       },
       readFileSync: fs.readFileSync.bind(fs),
     }
-    assert.throws(() => readImmutableReceiptSnapshot(unsafeAdapter, target, 'receipt', { uid: 1000, platform: 'linux', strictPermissions: true }), /permissions are not private/)
+    assert.throws(() => readImmutableReceiptSnapshot(unsafeAdapter, target, 'receipt', { uid: fixtureUid, platform: 'linux', strictPermissions: true }), /permissions are not private/)
   } finally { fs.rmSync(fixture.directory, { recursive: true, force: true }) }
 })
 
