@@ -269,13 +269,12 @@ function parseFirewallDocument(bytes, expectedFamily) {
   if (!EXPECTED_FIREWALL_FAMILIES.has(expectedFamily)) return null
   const records = parseFirewallRecords(bytes)
   if (!records || records.length === 0 || records.length > FIREWALL_DIAGNOSTIC_LINE_CAP) return null
-  const parsed = []
+  const segments = []
   let index = 0
-  let segments = 0
   while (index < records.length) {
     const generated = parseGeneratedHeader(records[index], expectedFamily)
     if (!generated || index + 1 >= records.length || !TABLE_OPEN_PATTERN.test(records[index + 1].text)) return null
-    parsed.push(generated, { ...records[index + 1], kind: 'table' })
+    const parsed = [generated, { ...records[index + 1], kind: 'table' }]
     index += 2
     let sawCommit = false
     while (index < records.length) {
@@ -303,9 +302,9 @@ function parseFirewallDocument(bytes, expectedFamily) {
     if (!completed) return null
     parsed.push(completed)
     index += 1
-    segments += 1
+    segments.push(Object.freeze(parsed))
   }
-  return segments > 0 ? parsed : null
+  return segments.length > 0 ? Object.freeze(segments) : null
 }
 
 function metadataBytesEqual(before, after) {
@@ -321,6 +320,52 @@ function fixedExpectedFamily(value) {
   return null
 }
 
+function compareFirewallRecordSequences(beforeRecords, afterRecords) {
+  if (!Array.isArray(beforeRecords) || !Array.isArray(afterRecords) || beforeRecords.length !== afterRecords.length) {
+    return Object.freeze({ valid: false, timestampOnlyEquivalent: false })
+  }
+  let changedTimestamp = false
+  for (let index = 0; index < beforeRecords.length; index += 1) {
+    const before = beforeRecords[index]
+    const after = afterRecords[index]
+    if (before.kind === 'generated' || before.kind === 'completed') {
+      if (!metadataBytesEqual(before, after)) return Object.freeze({ valid: false, timestampOnlyEquivalent: false })
+      if (before.timestamp !== after.timestamp) changedTimestamp = true
+    } else if (Buffer.compare(before.bytes, after.bytes) !== 0) {
+      return Object.freeze({ valid: false, timestampOnlyEquivalent: false })
+    }
+  }
+  return Object.freeze({ valid: true, timestampOnlyEquivalent: changedTimestamp })
+}
+
+function tableName(segment) {
+  return segment?.[1]?.kind === 'table' ? segment[1].text : null
+}
+
+function isEmptyAutoRawTableSegment(segment, expectedFamily) {
+  if (!Array.isArray(segment) || segment.length !== 6 || tableName(segment) !== '*raw') return false
+  const [generated, table, prerouting, output, commit, completed] = segment
+  return generated.kind === 'generated'
+    && generated.text.startsWith(`${GENERATED_HEADER_PREFIX}${expectedFamily} `)
+    && table.kind === 'table'
+    && /^:PREROUTING ACCEPT \[[0-9]+:[0-9]+\]$/.test(prerouting.text)
+    && /^:OUTPUT ACCEPT \[[0-9]+:[0-9]+\]$/.test(output.text)
+    && commit.kind === 'commit'
+    && completed.kind === 'completed'
+}
+
+function hasRawTable(segments) {
+  return segments.some((segment) => tableName(segment) === '*raw')
+}
+
+function emptyAutoRawTableDifference(beforeSegments, afterSegments, expectedFamily) {
+  if (hasRawTable(beforeSegments) || afterSegments.length !== beforeSegments.length + 1) return false
+  if (!isEmptyAutoRawTableSegment(afterSegments[0], expectedFamily)) return false
+  const remaining = afterSegments.slice(1)
+  if (hasRawTable(remaining)) return false
+  return compareFirewallRecordSequences(beforeSegments.flat(), remaining.flat()).valid
+}
+
 /**
  * Compare one fixed iptables-save family without decoding or normalizing raw
  * bytes. Timestamp-only equivalence is deliberately narrower than equality:
@@ -331,32 +376,22 @@ export function compareFirewallSnapshots(before, after, expectedFamily) {
   if (!Buffer.isBuffer(before) || !Buffer.isBuffer(after)) fail('firewall comparison requires raw Buffers')
   const family = fixedExpectedFamily(expectedFamily)
   const byteEqual = Buffer.compare(before, after) === 0
-  if (byteEqual) return Object.freeze({ byteEqual: true, timestampOnlyEquivalent: false, equivalent: true, lineDigestTruncated: false })
+  if (byteEqual) return Object.freeze({ byteEqual: true, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: true, lineDigestTruncated: false })
   const beforeLines = positionalLineDigests(before)
   const afterLines = positionalLineDigests(after)
   const lineDigestTruncated = beforeLines.truncated || afterLines.truncated
   let timestampOnlyEquivalent = false
+  let emptyAutoRawTableEquivalent = false
   if (!lineDigestTruncated) {
-    const beforeRecords = parseFirewallDocument(before, family)
-    const afterRecords = parseFirewallDocument(after, family)
-    if (beforeRecords && afterRecords && beforeRecords.length === afterRecords.length) {
-      let changedTimestamp = false
-      let valid = true
-      for (let index = 0; index < beforeRecords.length; index += 1) {
-        const pre = beforeRecords[index]
-        const post = afterRecords[index]
-        if (pre.kind === 'generated' || pre.kind === 'completed') {
-          if (!metadataBytesEqual(pre, post)) { valid = false; break }
-          if (pre.timestamp !== post.timestamp) changedTimestamp = true
-        } else if (Buffer.compare(pre.bytes, post.bytes) !== 0) {
-          valid = false
-          break
-        }
-      }
-      timestampOnlyEquivalent = valid && changedTimestamp
+    const beforeSegments = parseFirewallDocument(before, family)
+    const afterSegments = parseFirewallDocument(after, family)
+    if (beforeSegments && afterSegments) {
+      const strict = compareFirewallRecordSequences(beforeSegments.flat(), afterSegments.flat())
+      emptyAutoRawTableEquivalent = emptyAutoRawTableDifference(beforeSegments, afterSegments, family)
+      timestampOnlyEquivalent = !emptyAutoRawTableEquivalent && strict.valid && strict.timestampOnlyEquivalent
     }
   }
-  return Object.freeze({ byteEqual: false, timestampOnlyEquivalent, equivalent: timestampOnlyEquivalent, lineDigestTruncated })
+  return Object.freeze({ byteEqual: false, timestampOnlyEquivalent, emptyAutoRawTableEquivalent, equivalent: timestampOnlyEquivalent || emptyAutoRawTableEquivalent, lineDigestTruncated })
 }
 
 /**
@@ -388,6 +423,7 @@ export function analyzeFirewallMismatch(beforeValue, afterValue, expectedFamily)
     lineDigestTruncated,
     byteEqual: comparison.byteEqual,
     timestampOnlyEquivalent: comparison.timestampOnlyEquivalent,
+    emptyAutoRawTableEquivalent: comparison.emptyAutoRawTableEquivalent,
     equivalent: comparison.equivalent,
   })
 }
@@ -416,10 +452,11 @@ export function restoreFirewallSnapshots({ snapshots, commandRunner, cwd, env, d
   const outcome = {
     status: 'failed',
     timedOut: false,
-    ipv4: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, diagnostic: null },
-    ipv6: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, diagnostic: null },
+    ipv4: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, diagnostic: null },
+    ipv6: { status: 'missing', preSha256: null, postSha256: null, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, diagnostic: null },
     byteEqual: false,
     timestampOnlyEquivalent: false,
+    emptyAutoRawTableEquivalent: false,
     equivalent: false,
     equal: false,
     failures: [],
@@ -463,9 +500,10 @@ export function restoreFirewallSnapshots({ snapshots, commandRunner, cwd, env, d
       state.postSha256 = current.sha256
       const comparison = available[firewall.key]?.bytes && current.bytes
         ? compareFirewallSnapshots(available[firewall.key].bytes, current.bytes, firewall.expectedFamily)
-        : { byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, lineDigestTruncated: false }
+        : { byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, lineDigestTruncated: false }
       state.byteEqual = comparison.byteEqual
       state.timestampOnlyEquivalent = comparison.timestampOnlyEquivalent
+      state.emptyAutoRawTableEquivalent = comparison.emptyAutoRawTableEquivalent
       state.equivalent = comparison.equivalent
       if (!state.equivalent) {
         state.diagnostic = analyzeFirewallMismatch(available[firewall.key]?.bytes, current.bytes, firewall.expectedFamily)
@@ -478,6 +516,10 @@ export function restoreFirewallSnapshots({ snapshots, commandRunner, cwd, env, d
   outcome.timestampOnlyEquivalent = !outcome.byteEqual
     && FIREWALLS.every(({ key }) => outcome[key].equivalent)
     && FIREWALLS.some(({ key }) => outcome[key].timestampOnlyEquivalent)
+    && FIREWALLS.every(({ key }) => !outcome[key].emptyAutoRawTableEquivalent)
+  outcome.emptyAutoRawTableEquivalent = !outcome.byteEqual
+    && FIREWALLS.every(({ key }) => outcome[key].equivalent)
+    && FIREWALLS.some(({ key }) => outcome[key].emptyAutoRawTableEquivalent)
   outcome.equivalent = FIREWALLS.every(({ key }) => outcome[key].status === 'passed' && outcome[key].equivalent)
   outcome.status = outcome.equivalent ? 'passed' : 'failed'
   return Object.freeze({ outcome, fresh })
@@ -581,7 +623,7 @@ export function recoverDedicatedHost({ lock, inspectionBefore, hostController = 
     if (recovery.firewall.equivalent !== true) recovery.failures.push(...(recovery.firewall.failures ?? []))
     recovery.phases.firewall = { status: recovery.firewall.equivalent === true ? 'passed' : 'failed', timedOut: recovery.firewall.timedOut === true, durationMs: Date.now() - firewallStarted }
   } catch (error) {
-    recovery.firewall = { status: 'failed', equal: false, failures: [safeFailure(error)] }
+    recovery.firewall = { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, failures: [safeFailure(error)] }
     recovery.failures.push(safeFailure(error))
     recovery.timedOut ||= Date.now() >= recoveryDeadline
     recovery.phases.firewall = { status: 'failed', timedOut: recovery.timedOut, durationMs: Date.now() - firewallStarted }

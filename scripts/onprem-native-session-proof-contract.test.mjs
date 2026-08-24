@@ -92,7 +92,7 @@ function imageReceipt(options, overrides = {}) {
     docker: { id: engineId, serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64', digest: 'sha256:' + 'd'.repeat(64), rootContext: { context: 'default', endpoint: 'unix:///var/run/docker.sock', dockerRootDir: '/var/lib/hr-axis-onprem-rehearsal/docker' } },
     recovery: { dockerDaemonReset: true },
     verifiedHost: { after: verifiedHost() },
-    firewall: { status: 'passed', equal: true, byteEqual: true, timestampOnlyEquivalent: false, equivalent: true, ipv4: { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, equivalent: true }, ipv6: { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, equivalent: true } },
+    firewall: { status: 'passed', equal: true, byteEqual: true, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: true, ipv4: { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: true }, ipv6: { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: true } },
     postflight: { status: 'passed', clean: true },
     cleanup: { status: 'passed', runRoot: 'removed', proofOutput: 'preserved' },
     phases: [{ name: 'preflight', status: 'passed', exitCode: 0, signal: null, timedOut: false, durationMs: 1 }, { name: 'recovery', status: 'passed', exitCode: 0, signal: null, timedOut: false, durationMs: 2 }],
@@ -307,9 +307,9 @@ test('passed image receipt preserves timestamp-only firewall success with false 
     const options = validateSessionOptions(fixture.raw, fixture.dependencies)
     const semantic = imageReceipt(options, {
       firewall: {
-        status: 'passed', equal: false, byteEqual: false, timestampOnlyEquivalent: true, equivalent: true,
-        ipv4: { status: 'passed', byteEqual: false, timestampOnlyEquivalent: true, equivalent: true },
-        ipv6: { status: 'passed', byteEqual: false, timestampOnlyEquivalent: true, equivalent: true },
+        status: 'passed', equal: false, byteEqual: false, timestampOnlyEquivalent: true, emptyAutoRawTableEquivalent: false, equivalent: true,
+        ipv4: { status: 'passed', byteEqual: false, timestampOnlyEquivalent: true, emptyAutoRawTableEquivalent: false, equivalent: true },
+        ipv6: { status: 'passed', byteEqual: false, timestampOnlyEquivalent: true, emptyAutoRawTableEquivalent: false, equivalent: true },
       },
     })
     const parsed = parsePassedImageReceipt(semantic, options)
@@ -322,6 +322,30 @@ test('passed image receipt preserves timestamp-only firewall success with false 
       { firewall: { ...semantic.firewall, equal: true } },
       { firewall: { ...semantic.firewall, equivalent: false } },
       { firewall: { ...semantic.firewall, timestampOnlyEquivalent: false } },
+      { firewall: { ...semantic.firewall, ipv4: { ...semantic.firewall.ipv4, equivalent: false } } },
+    ]) assert.throws(() => parsePassedImageReceipt({ ...semantic, ...mutation }, options))
+  } finally { fs.rmSync(fixture.directory, { recursive: true, force: true }) }
+})
+
+test('passed image receipt preserves the narrow empty automatic raw-table allowance', () => {
+  const fixture = validFixture()
+  try {
+    const options = validateSessionOptions(fixture.raw, fixture.dependencies)
+    const semantic = imageReceipt(options, {
+      firewall: {
+        status: 'passed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: true, equivalent: true,
+        ipv4: { status: 'passed', byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: true, equivalent: true },
+        ipv6: { status: 'passed', byteEqual: true, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: true },
+      },
+    })
+    const parsed = parsePassedImageReceipt(semantic, options)
+    assert.equal(parsed.firewall.emptyAutoRawTableEquivalent, true)
+    assert.equal(parsed.firewall.ipv4.emptyAutoRawTableEquivalent, true)
+    assert.equal(parsed.firewall.ipv6.byteEqual, true)
+    for (const mutation of [
+      { firewall: { ...semantic.firewall, emptyAutoRawTableEquivalent: false } },
+      { firewall: { ...semantic.firewall, timestampOnlyEquivalent: true } },
+      { firewall: { ...semantic.firewall, ipv4: { ...semantic.firewall.ipv4, byteEqual: true } } },
       { firewall: { ...semantic.firewall, ipv4: { ...semantic.firewall.ipv4, equivalent: false } } },
     ]) assert.throws(() => parsePassedImageReceipt({ ...semantic, ...mutation }, options))
   } finally { fs.rmSync(fixture.directory, { recursive: true, force: true }) }

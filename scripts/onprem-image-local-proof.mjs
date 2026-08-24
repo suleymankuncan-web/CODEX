@@ -653,17 +653,20 @@ export function inspectPostflight({ commandRunner = defaultReadOnlyCommand, cwd,
     equal: false,
     byteEqual: false,
     timestampOnlyEquivalent: false,
+    emptyAutoRawTableEquivalent: false,
     equivalent: false,
   }
   if (!firewallCaptureError && firewallComparison && typeof firewallComparison === 'object') {
     const byteEqual = firewallComparison.byteEqual === true
     const timestampOnlyEquivalent = !byteEqual && firewallComparison.timestampOnlyEquivalent === true
-    const equivalent = firewallComparison.equivalent === true && (byteEqual || timestampOnlyEquivalent)
+    const emptyAutoRawTableEquivalent = !byteEqual && firewallComparison.emptyAutoRawTableEquivalent === true
+    const equivalent = firewallComparison.equivalent === true && (byteEqual || timestampOnlyEquivalent || emptyAutoRawTableEquivalent)
     firewall = {
       ...firewall,
       equal: byteEqual,
       byteEqual,
       timestampOnlyEquivalent,
+      emptyAutoRawTableEquivalent,
       equivalent,
     }
   } else if (!firewallCaptureError && Buffer.isBuffer(firewallBaseline?.bytes) && Buffer.isBuffer(firewallAfter?.bytes)) {
@@ -1197,6 +1200,7 @@ export function sanitizeFirewallDiagnostic(value) {
     const lineDigestTruncated = ownDataProperty(value, 'lineDigestTruncated')
     const byteEqual = ownDataProperty(value, 'byteEqual')
     const timestampOnlyEquivalent = ownDataProperty(value, 'timestampOnlyEquivalent')
+    const emptyAutoRawTableEquivalent = ownDataProperty(value, 'emptyAutoRawTableEquivalent')
     const equivalent = ownDataProperty(value, 'equivalent')
     if (!nonNegativeSafeInteger(preByteLength)
       || !nonNegativeSafeInteger(postByteLength)
@@ -1209,10 +1213,12 @@ export function sanitizeFirewallDiagnostic(value) {
       || typeof lineDigestTruncated !== 'boolean'
       || typeof byteEqual !== 'boolean'
       || typeof timestampOnlyEquivalent !== 'boolean'
+      || typeof emptyAutoRawTableEquivalent !== 'boolean'
       || typeof equivalent !== 'boolean'
-      || equivalent !== (byteEqual || timestampOnlyEquivalent)
-      || (byteEqual && timestampOnlyEquivalent)) return null
-    return { preByteLength, postByteLength, preSha256, postSha256, firstDifferingByteOffset, preLines, postLines, counterOnly, lineDigestTruncated, byteEqual, timestampOnlyEquivalent, equivalent }
+      || equivalent !== (byteEqual || timestampOnlyEquivalent || emptyAutoRawTableEquivalent)
+      || (byteEqual && (timestampOnlyEquivalent || emptyAutoRawTableEquivalent))
+      || (timestampOnlyEquivalent && emptyAutoRawTableEquivalent)) return null
+    return { preByteLength, postByteLength, preSha256, postSha256, firstDifferingByteOffset, preLines, postLines, counterOnly, lineDigestTruncated, byteEqual, timestampOnlyEquivalent, emptyAutoRawTableEquivalent, equivalent }
   } catch {
     return null
   }
@@ -1231,11 +1237,12 @@ function sanitizePostflight(value) {
     equal: value.firewall.equal === true,
     byteEqual: value.firewall.byteEqual === true,
     timestampOnlyEquivalent: value.firewall.timestampOnlyEquivalent === true,
+    emptyAutoRawTableEquivalent: value.firewall.emptyAutoRawTableEquivalent === true,
     equivalent: value.firewall.equivalent === true,
     preSha256: value.firewall.preSha256 ?? null,
     postSha256: value.firewall.postSha256 ?? null,
-    ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv4.timestampOnlyEquivalent === true, equivalent: value.firewall.ipv4.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv4.diagnostic) } : null,
-    ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv6.timestampOnlyEquivalent === true, equivalent: value.firewall.ipv6.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv6.diagnostic) } : null,
+    ipv4: isObject(value.firewall.ipv4) ? { preSha256: value.firewall.ipv4.preSha256 ?? null, postSha256: value.firewall.ipv4.postSha256 ?? null, status: value.firewall.ipv4.status ?? null, byteEqual: value.firewall.ipv4.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv4.timestampOnlyEquivalent === true, emptyAutoRawTableEquivalent: value.firewall.ipv4.emptyAutoRawTableEquivalent === true, equivalent: value.firewall.ipv4.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv4.diagnostic) } : null,
+    ipv6: isObject(value.firewall.ipv6) ? { preSha256: value.firewall.ipv6.preSha256 ?? null, postSha256: value.firewall.ipv6.postSha256 ?? null, status: value.firewall.ipv6.status ?? null, byteEqual: value.firewall.ipv6.byteEqual === true, timestampOnlyEquivalent: value.firewall.ipv6.timestampOnlyEquivalent === true, emptyAutoRawTableEquivalent: value.firewall.ipv6.emptyAutoRawTableEquivalent === true, equivalent: value.firewall.ipv6.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(value.firewall.ipv6.diagnostic) } : null,
   } : null
   return { status: clean ? 'passed' : 'failed', clean, resources, firewallChains, firewall }
 }
@@ -1265,10 +1272,11 @@ function buildReceipt({ options, node, docker, phases, failureReason, artifact, 
       equal: recovery.firewall.equal === true,
       byteEqual: recovery.firewall.byteEqual === true,
       timestampOnlyEquivalent: recovery.firewall.timestampOnlyEquivalent === true,
+      emptyAutoRawTableEquivalent: recovery.firewall.emptyAutoRawTableEquivalent === true,
       equivalent: recovery.firewall.equivalent === true,
-      ipv4: { preSha256: recovery.firewall.ipv4?.preSha256 ?? null, postSha256: recovery.firewall.ipv4?.postSha256 ?? null, status: recovery.firewall.ipv4?.status ?? 'missing', byteEqual: recovery.firewall.ipv4?.byteEqual === true, timestampOnlyEquivalent: recovery.firewall.ipv4?.timestampOnlyEquivalent === true, equivalent: recovery.firewall.ipv4?.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv4?.diagnostic) },
-      ipv6: { preSha256: recovery.firewall.ipv6?.preSha256 ?? null, postSha256: recovery.firewall.ipv6?.postSha256 ?? null, status: recovery.firewall.ipv6?.status ?? 'missing', byteEqual: recovery.firewall.ipv6?.byteEqual === true, timestampOnlyEquivalent: recovery.firewall.ipv6?.timestampOnlyEquivalent === true, equivalent: recovery.firewall.ipv6?.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv6?.diagnostic) },
-    } : recovery ? { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, ipv4: null, ipv6: null } : { status: 'not-run', equal: false, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, ipv4: null, ipv6: null },
+      ipv4: { preSha256: recovery.firewall.ipv4?.preSha256 ?? null, postSha256: recovery.firewall.ipv4?.postSha256 ?? null, status: recovery.firewall.ipv4?.status ?? 'missing', byteEqual: recovery.firewall.ipv4?.byteEqual === true, timestampOnlyEquivalent: recovery.firewall.ipv4?.timestampOnlyEquivalent === true, emptyAutoRawTableEquivalent: recovery.firewall.ipv4?.emptyAutoRawTableEquivalent === true, equivalent: recovery.firewall.ipv4?.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv4?.diagnostic) },
+      ipv6: { preSha256: recovery.firewall.ipv6?.preSha256 ?? null, postSha256: recovery.firewall.ipv6?.postSha256 ?? null, status: recovery.firewall.ipv6?.status ?? 'missing', byteEqual: recovery.firewall.ipv6?.byteEqual === true, timestampOnlyEquivalent: recovery.firewall.ipv6?.timestampOnlyEquivalent === true, emptyAutoRawTableEquivalent: recovery.firewall.ipv6?.emptyAutoRawTableEquivalent === true, equivalent: recovery.firewall.ipv6?.equivalent === true, diagnostic: sanitizeFirewallDiagnostic(recovery.firewall.ipv6?.diagnostic) },
+    } : recovery ? { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, ipv4: null, ipv6: null } : { status: 'not-run', equal: false, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, ipv4: null, ipv6: null },
     recovery: recovery ? { attempted: recovery.attempted === true, timedOut: recovery.timedOut === true, budgetMs: Number.isSafeInteger(recovery.budgetMs) ? recovery.budgetMs : null, resetBudgetMs: Number.isSafeInteger(recovery.resetBudgetMs) ? recovery.resetBudgetMs : null, firewallBudgetMs: Number.isSafeInteger(recovery.firewallBudgetMs) ? recovery.firewallBudgetMs : null, dockerDaemonReset: recovery.dockerDaemonReset === true, failures: recovery.failures ?? [] } : { attempted: false, timedOut: false, budgetMs: null, resetBudgetMs: null, firewallBudgetMs: null, dockerDaemonReset: false, failures: [] },
     cleanup: cleanup ? { ...cleanup, proofOutput: partialProofOutput ?? cleanup.proofOutput } : { status: 'not-run', failures: [] },
   }
@@ -1384,7 +1392,7 @@ export async function runLocalProof(rawOptions, dependencies = {}) {
           failureReason ??= `recovery failed: ${(recovery.failures ?? []).join('; ') || 'identity or firewall recovery was not verified'}`
         }
       } catch (error) {
-        recovery = { attempted: true, timedOut: /deadline/.test(String(error?.message)).valueOf(), dockerDaemonReset: false, hostBefore: verifiedHost?.inspection ?? null, hostAfter: null, firewall: { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, equivalent: false, failures: [] }, failures: [safeFailureReason(error)] }
+        recovery = { attempted: true, timedOut: /deadline/.test(String(error?.message)).valueOf(), dockerDaemonReset: false, hostBefore: verifiedHost?.inspection ?? null, hostAfter: null, firewall: { status: 'failed', equal: false, byteEqual: false, timestampOnlyEquivalent: false, emptyAutoRawTableEquivalent: false, equivalent: false, failures: [] }, failures: [safeFailureReason(error)] }
         phases.push({ name: 'recovery', status: 'failed', exitCode: null, signal: null, timedOut: recovery.timedOut, durationMs: Date.now() - recoveryStart })
         failureReason ??= `recovery failed: ${error instanceof Error ? error.message : 'unknown error'}`
       }

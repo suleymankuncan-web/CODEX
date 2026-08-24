@@ -925,6 +925,7 @@ function restoreFirewallSnapshot(firewall, snapshot, commandRunner) {
   return Object.freeze({
     byteEqual: comparison.byteEqual,
     timestampOnlyEquivalent: comparison.timestampOnlyEquivalent,
+    emptyAutoRawTableEquivalent: comparison.emptyAutoRawTableEquivalent,
     equivalent: comparison.equivalent,
     sha256: restored.sha256,
     byteLength: restored.byteLength,
@@ -1044,10 +1045,11 @@ export function recoverAfterLifecycle({ context, preflight, lock, beforeHost, sn
     firewall: Object.freeze({
       equal: ipv4?.byteEqual === true && ipv6?.byteEqual === true,
       byteEqual: ipv4?.byteEqual === true && ipv6?.byteEqual === true,
-      timestampOnlyEquivalent: ipv4?.equivalent === true && ipv6?.equivalent === true && (ipv4?.timestampOnlyEquivalent === true || ipv6?.timestampOnlyEquivalent === true),
+      timestampOnlyEquivalent: ipv4?.equivalent === true && ipv6?.equivalent === true && (ipv4?.timestampOnlyEquivalent === true || ipv6?.timestampOnlyEquivalent === true) && ipv4?.emptyAutoRawTableEquivalent !== true && ipv6?.emptyAutoRawTableEquivalent !== true,
+      emptyAutoRawTableEquivalent: ipv4?.equivalent === true && ipv6?.equivalent === true && (ipv4?.emptyAutoRawTableEquivalent === true || ipv6?.emptyAutoRawTableEquivalent === true),
       equivalent: ipv4?.equivalent === true && ipv6?.equivalent === true,
-      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true, timestampOnlyEquivalent: ipv4?.timestampOnlyEquivalent === true, equivalent: ipv4?.equivalent === true, diagnostic: ipv4?.diagnostic ?? null }),
-      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true, timestampOnlyEquivalent: ipv6?.timestampOnlyEquivalent === true, equivalent: ipv6?.equivalent === true, diagnostic: ipv6?.diagnostic ?? null }),
+      ipv4: Object.freeze({ attempted: true, sha256: snapshots.ipv4.sha256, byteLength: snapshots.ipv4.byteLength, restoredSha256: ipv4?.sha256 ?? null, byteEqual: ipv4?.byteEqual === true, timestampOnlyEquivalent: ipv4?.timestampOnlyEquivalent === true, emptyAutoRawTableEquivalent: ipv4?.emptyAutoRawTableEquivalent === true, equivalent: ipv4?.equivalent === true, diagnostic: ipv4?.diagnostic ?? null }),
+      ipv6: Object.freeze({ attempted: true, sha256: snapshots.ipv6.sha256, byteLength: snapshots.ipv6.byteLength, restoredSha256: ipv6?.sha256 ?? null, byteEqual: ipv6?.byteEqual === true, timestampOnlyEquivalent: ipv6?.timestampOnlyEquivalent === true, emptyAutoRawTableEquivalent: ipv6?.emptyAutoRawTableEquivalent === true, equivalent: ipv6?.equivalent === true, diagnostic: ipv6?.diagnostic ?? null }),
     }),
     generatedCleanup,
     finalSource: finalSource ? Object.freeze({ head: finalSource.head, tree: finalSource.tree, exactMatch: finalSource.head === context.options.sourceSha && finalSource.tree === context.options.treeSha }) : null,

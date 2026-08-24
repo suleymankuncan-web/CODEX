@@ -484,6 +484,7 @@ test('receipt firewall diagnostics keep only the allowlisted sanitized shape', (
     lineDigestTruncated: false,
     byteEqual: false,
     timestampOnlyEquivalent: false,
+    emptyAutoRawTableEquivalent: false,
     equivalent: false,
   }
   const untrusted = Object.assign(Object.create({ inheritedRuleText: '*filter\n-A INPUT -j ACCEPT' }), valid, {
@@ -507,6 +508,9 @@ test('receipt firewall diagnostics keep only the allowlisted sanitized shape', (
   delete inheritedTruncation.lineDigestTruncated
   Object.setPrototypeOf(inheritedTruncation, { lineDigestTruncated: true })
   assert.equal(sanitizeFirewallDiagnostic(inheritedTruncation), null)
+  const emptyAuto = { ...valid, equivalent: true, emptyAutoRawTableEquivalent: true }
+  assert.deepEqual(sanitizeFirewallDiagnostic(emptyAuto), emptyAuto)
+  assert.equal(sanitizeFirewallDiagnostic({ ...emptyAuto, timestampOnlyEquivalent: true }), null)
 })
 
 test('counter-only firewall mismatch remains failed through recovery and both receipt boundaries', async () => {
