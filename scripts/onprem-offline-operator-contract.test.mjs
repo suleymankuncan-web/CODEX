@@ -276,7 +276,7 @@ test('operation scripts pass shell syntax when POSIX sh is available', (t) => {
     return
   }
   for (const name of scriptNames) {
-    const result = spawnSync(shell, ['-n', join(operationDir, name)], { encoding: 'utf8' })
+    const result = runShell(shell, ['-n', join(operationDir, name)], { label: `${name} syntax check` })
     assert.equal(result.status, 0, `${name}: ${result.stderr}`)
   }
 })
@@ -312,7 +312,7 @@ test('activation failure diagnostics report bounded service state without logs o
     diagnosticBlock,
     'diagnose_application_startup_failure',
   ].join('\n') + '\n'
-  const result = spawnSync(POSIX_SHELL, ['-c', harness], { encoding: 'utf8' })
+  const result = runShell(POSIX_SHELL, ['-c', harness], { label: 'activation diagnostics harness' })
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
   assert.match(result.stdout, /diagnostic phase=application-startup-failure/)
   for (const service of ['postgres', 'redis', 'keycloak', 'object-storage', 'caddy', 'frontend', 'api', 'worker']) {
@@ -520,24 +520,34 @@ ${runtimeImageInspectCases}
 }
 
 const VALID_FINGERPRINT = 'a'.repeat(64)
+const OPERATION_TIMEOUT_MS = process.platform === 'win32' ? 120_000 : 60_000
+const DOCKER29_REEXPORT_TIMEOUT_MS = 30_000
 const SMOKE_TIMEOUT_MS = process.platform === 'win32' ? 120_000 : 45_000
+
+function runShell(command, args, { timeoutMs = OPERATION_TIMEOUT_MS, label = command, ...options } = {}) {
+  const result = spawnSync(command, args, { ...options, encoding: 'utf8', timeout: timeoutMs })
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new Error(`offline contract ${label} subprocess timed out after ${timeoutMs} ms`)
+  }
+  return result
+}
 
 function installArgs(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
   return [shellPath(join(operationDir, 'install.sh')), '--bundle-root', shellPath(bundleRoot), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', fingerprint, '--env-file', shellPath(fixture.envFile)]
 }
 function runInstall(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
-  return spawnSync(POSIX_SHELL, installArgs(fixture, fingerprint, bundleRoot), {
-    encoding: 'utf8', env: shellEnv(fixture),
+  return runShell(POSIX_SHELL, installArgs(fixture, fingerprint, bundleRoot), {
+    env: shellEnv(fixture), label: 'install.sh',
   })
 }
 function runInstallBounded(fixture, fingerprint = VALID_FINGERPRINT, bundleRoot = fixture.bundle) {
-  return spawnSync(POSIX_SHELL, installArgs(fixture, fingerprint, bundleRoot), {
-    encoding: 'utf8', env: shellEnv(fixture), timeout: 30_000,
+  return runShell(POSIX_SHELL, installArgs(fixture, fingerprint, bundleRoot), {
+    env: shellEnv(fixture), timeoutMs: DOCKER29_REEXPORT_TIMEOUT_MS, label: 'install.sh Docker 29 re-export',
   })
 }
 function runSmoke(fixture, receipt) {
-  return spawnSync(POSIX_SHELL, [shellPath(join(operationDir, 'smoke.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile), '--receipt', shellPath(receipt)], {
-    encoding: 'utf8', env: shellEnv(fixture), timeout: SMOKE_TIMEOUT_MS,
+  return runShell(POSIX_SHELL, [shellPath(join(operationDir, 'smoke.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile), '--receipt', shellPath(receipt)], {
+    env: shellEnv(fixture), timeoutMs: SMOKE_TIMEOUT_MS, label: 'smoke.sh',
   })
 }
 function shellEnv(fixture) {
@@ -810,8 +820,8 @@ test('fake commands prove verification failure causes zero Docker mutation and i
       rmSync(symlinkAncestor, { recursive: true, force: true })
     }
 
-    const missingFingerprint = spawnSync(POSIX_SHELL, [shellPath(join(operationDir, 'install.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--env-file', shellPath(fixture.envFile)], {
-      encoding: 'utf8', env: shellEnv(fixture),
+    const missingFingerprint = runShell(POSIX_SHELL, [shellPath(join(operationDir, 'install.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--env-file', shellPath(fixture.envFile)], {
+      env: shellEnv(fixture), label: 'install.sh missing fingerprint',
     })
     assert.notEqual(missingFingerprint.status, 0)
     assert.doesNotMatch(commandLog(fixture), /LOAD|MUTATE/)
@@ -959,7 +969,7 @@ test('Docker 29 preflight loaded-image fallback re-exports signed RepoTags befor
       writeFileSync(fixture.idMode, 'docker-29-loaded-image\n')
       writeFileSync(fixture.noTargetContainersMode, 'no-target-containers\n')
       writeFileSync(fixture.reexportMode, `${mode}\n`)
-      const result = spawnSync(POSIX_SHELL, [shellPath(join(fixture.bundle, 'operations', 'preflight.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile)], { encoding: 'utf8', env: shellEnv(fixture) })
+      const result = runShell(POSIX_SHELL, [shellPath(join(fixture.bundle, 'operations', 'preflight.sh')), '--bundle-root', shellPath(fixture.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(fixture.publicKey), '--trusted-fingerprint', VALID_FINGERPRINT, '--env-file', shellPath(fixture.envFile)], { env: shellEnv(fixture), label: 'preflight.sh' })
       if (expectedPass) assert.equal(result.status, 0, `${label}: ${result.stdout}\n${result.stderr}\n${commandLog(fixture)}`)
       else assert.notEqual(result.status, 0, label)
       const lines = commandLog(fixture).split(/\r?\n/).filter(Boolean)

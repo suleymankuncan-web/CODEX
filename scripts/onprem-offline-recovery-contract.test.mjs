@@ -13,6 +13,7 @@ const recoveryScripts = ['backup.sh', 'restore.sh', 'upgrade.sh', 'rollback.sh']
 const shell = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\sh.exe' : 'sh'
 const cygpath = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\cygpath.exe' : null
 const cannotCreateRootPrivateFixture = process.platform !== 'win32' && process.getuid?.() !== 0
+const OPERATION_TIMEOUT_MS = process.platform === 'win32' ? 120_000 : 60_000
 
 const recoveryImageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
 
@@ -259,7 +260,7 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
 test('recovery scripts pass POSIX shell syntax', (t) => {
   if (process.platform === 'win32' && !existsSync(shell)) return t.skip('POSIX shell unavailable on Windows')
   for (const name of recoveryScripts) {
-    const result = spawnSync(shell, ['-n', join(operationDir, name)], { encoding: 'utf8' })
+    const result = runShell(['-n', join(operationDir, name)], { label: `${name} syntax check` })
     assert.equal(result.status, 0, `${name}: ${result.stderr}`)
   }
 })
@@ -643,9 +644,21 @@ function envFor(value, extra = {}) {
   }
 }
 
+function runShell(args, { timeoutMs = OPERATION_TIMEOUT_MS, label = 'offline operation', ...options } = {}) {
+  const result = spawnSync(shell, args, { ...options, encoding: 'utf8', timeout: timeoutMs })
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new Error(`offline contract ${label} subprocess timed out after ${timeoutMs} ms`)
+  }
+  return result
+}
+
+function runOperation(name, args, options = {}) {
+  return runShell([shellPath(join(operationDir, name)), ...args], { ...options, label: options.label ?? name })
+}
+
 function run(name, value, args = [], extraEnv = {}) {
   const base = ['--bundle-root', shellPath(value.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, '--env-file', shellPath(value.envFile)]
-  return spawnSync(shell, [shellPath(join(operationDir, name)), ...base, ...args], { encoding: 'utf8', env: envFor(value, extraEnv) })
+  return runOperation(name, [...base, ...args], { env: envFor(value, extraEnv) })
 }
 
 function backupTrustArgs(value) {
@@ -922,7 +935,7 @@ test('upgrade compatibility mismatch stops before target restore mutation', (t) 
   try {
     const backup = run('backup.sh', value, backupArgs(value))
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
-    const result = spawnSync(shell, [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)], { encoding: 'utf8', env: envFor(value) })
+    const result = runOperation('upgrade.sh', ['--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)], { env: envFor(value) })
     assert.notEqual(result.status, 0)
     assert.match(`${result.stdout}\n${result.stderr}`, /forward_repair_or_database_restore_required/)
     assert.doesNotMatch(readLog(value), /volume create|restore\.sh/)
@@ -936,7 +949,7 @@ test('upgrade loads every signed target archive and checks its config id before 
     const backup = run('backup.sh', value, backupArgs(value))
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const args = [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
-    const result = spawnSync(shell, args, { encoding: 'utf8', env: envFor(value) })
+    const result = runOperation('upgrade.sh', args.slice(1), { env: envFor(value) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const log = readLog(value)
     for (const name of ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']) {
@@ -955,7 +968,7 @@ test('Docker 29 upgrade target import re-exports all seven signed RepoTags befor
     const backup = run('backup.sh', value, backupArgs(value))
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const args = [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
-    const result = spawnSync(shell, args, { encoding: 'utf8', env: envFor(value) })
+    const result = runOperation('upgrade.sh', args.slice(1), { env: envFor(value) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const log = readLog(value)
     const saves = log.split(/\r?\n/).filter((line) => line.startsWith('image save --output'))
@@ -977,7 +990,7 @@ test('Docker 29 upgrade target import fails on the first tampered re-export befo
     const postBackupLogOffset = readLog(value).length
     writeFileSync(value.reexportMode, 'tampered\n')
     const args = [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
-    const result = spawnSync(shell, args, { encoding: 'utf8', env: envFor(value) })
+    const result = runOperation('upgrade.sh', args.slice(1), { env: envFor(value) })
     assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(`${result.stdout}\n${result.stderr}`, /re-export identity verification failed|image archive/i)
     assert.equal(existsSync(value.restoreLog), false, 'failed first image must not invoke target restore')
@@ -1005,7 +1018,7 @@ test('rollback rejects a noncanonical target label collision before importing im
       '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       '--env-file', shellPath(nextEnv), ...backupArgs(value),
     ]
-    const backup = spawnSync(shell, [shellPath(join(operationDir, 'backup.sh')), ...backupArgsForNext], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const before = readLog(value)
     const rollbackArgs = [
@@ -1013,7 +1026,7 @@ test('rollback rejects a noncanonical target label collision before importing im
       '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value),
     ]
-    const rollback = spawnSync(shell, [shellPath(join(operationDir, 'rollback.sh')), ...rollbackArgs], { encoding: 'utf8', env: envFor(value, { TARGET_COLLISION: '1' }) })
+    const rollback = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { TARGET_COLLISION: '1' }) })
     assert.notEqual(rollback.status, 0, `${rollback.stdout}\n${rollback.stderr}`)
     const tail = readLog(value).slice(before.length)
     assert.match(tail, /ps -aq .*label=com\.docker\.compose\.project=hr-axis-onprem-upgrade/)
@@ -1036,10 +1049,10 @@ test('Docker 29 rollback target import re-exports all seven historical signed Re
     writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
     writeFileSync(join(value.state, 'release'), 'next-test')
     const backupArgsForNext = ['--bundle-root', shellPath(value.nextBundle), '--release-id', 'next-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, '--env-file', shellPath(nextEnv), ...backupArgs(value)]
-    const backup = spawnSync(shell, [shellPath(join(operationDir, 'backup.sh')), ...backupArgsForNext], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const rollbackArgs = ['--bundle-root', shellPath(value.nextBundle), '--previous-bundle-root', shellPath(value.bundle), '--release-id', 'next-test', '--previous-release-id', 'release-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-restore', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
-    const result = spawnSync(shell, [shellPath(join(operationDir, 'rollback.sh')), ...rollbackArgs], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const result = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const log = readLog(value)
     const saves = log.split(/\r?\n/).filter((line) => line.startsWith('image save --output'))
@@ -1066,12 +1079,12 @@ test('Docker 29 rollback target import fails on the first wrong-config re-export
     writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
     writeFileSync(join(value.state, 'release'), 'next-test')
     const backupArgsForNext = ['--bundle-root', shellPath(value.nextBundle), '--release-id', 'next-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, '--env-file', shellPath(nextEnv), ...backupArgs(value)]
-    const backup = spawnSync(shell, [shellPath(join(operationDir, 'backup.sh')), ...backupArgsForNext], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const postBackupLogOffset = readLog(value).length
     writeFileSync(value.reexportMode, 'wrong-id\n')
     const rollbackArgs = ['--bundle-root', shellPath(value.nextBundle), '--previous-bundle-root', shellPath(value.bundle), '--release-id', 'next-test', '--previous-release-id', 'release-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-restore', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
-    const result = spawnSync(shell, [shellPath(join(operationDir, 'rollback.sh')), ...rollbackArgs], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const result = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.match(`${result.stdout}\n${result.stderr}`, /re-export identity verification failed|image archive/i)
     assert.equal(existsSync(value.restoreLog), false, 'failed first rollback image must not invoke target restore')
@@ -1099,14 +1112,14 @@ test('rollback authority allows a historical previous bundle with no forward com
       '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       '--env-file', shellPath(nextEnv), ...backupArgs(value),
     ]
-    const backup = spawnSync(shell, [shellPath(join(operationDir, 'backup.sh')), ...backupArgsForNext], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const rollbackArgs = [
       '--bundle-root', shellPath(value.nextBundle), '--previous-bundle-root', shellPath(value.bundle), '--release-id', 'next-test', '--previous-release-id', 'release-test',
       '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-restore', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value),
     ]
-    const result = spawnSync(shell, [shellPath(join(operationDir, 'rollback.sh')), ...rollbackArgs], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const result = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const restoreArgs = readFileSync(value.restoreLog, 'utf8')
     assert.match(restoreArgs, new RegExp(`--rollback-authority-bundle-root ${shellPath(value.nextBundle).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))

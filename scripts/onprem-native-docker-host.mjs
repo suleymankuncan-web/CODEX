@@ -140,10 +140,12 @@ class QuiescenceDeadlineError extends Error {
   }
 }
 
+class PostStartReadinessError extends Error { constructor() { super('native Docker host post-start readiness is not yet proved'); this.code = 'NATIVE_DOCKER_POST_START_NOT_READY' } }
+class PostStartReadinessDeadlineError extends Error { constructor() { super('native Docker host post-start readiness was not proved before deadline'); this.code = 'NATIVE_DOCKER_POST_START_READINESS_DEADLINE' } }
+const POST_START_READINESS_CAP_MS = 5_000; const POST_START_COMPENSATION_RESERVE_MS = 1_000
 function assertRecoveryDeadline(deadlineAt) {
   if (deadlineAt !== undefined && Date.now() >= deadlineAt) fail('native Docker host recovery deadline exceeded')
 }
-
 function deadlineCommandRunner(commandRunner, deadlineAt) {
   if (deadlineAt === undefined) return commandRunner
   return (file, args, options = {}) => {
@@ -163,28 +165,24 @@ function deadlineCommandRunner(commandRunner, deadlineAt) {
     return result
   }
 }
-
 function commandResult(commandRunner, file, args, options = {}, label = file) {
   try {
     return resultOf(commandRunner(file, args, options))
   } catch (error) {
-    if (error?.code === 'NATIVE_DOCKER_RECOVERY_DEADLINE' || error?.code === 'NATIVE_DOCKER_QUIESCENCE_DEADLINE') throw error
+    if (['NATIVE_DOCKER_RECOVERY_DEADLINE', 'NATIVE_DOCKER_QUIESCENCE_DEADLINE', 'NATIVE_DOCKER_POST_START_READINESS_DEADLINE'].includes(error?.code)) throw error
     fail(`${label} command failed`)
   }
 }
-
 function requireStatus(commandRunner, file, args, label = file) {
   const result = commandResult(commandRunner, file, args, {}, label)
   if (result.status !== 0) fail(`${label} command failed`)
   return result
 }
-
 function safeExecutable(file, label = file) {
   const executable = SAFE_BINARIES[file]
   if (!executable) fail(`${label} executable is not approved`)
   return executable
 }
-
 function exactPath(target, expected, label) {
   if (typeof target !== 'string' || target !== expected || !path.isAbsolute(target)) {
     fail(`${label} must be the fixed absolute path`)
@@ -194,15 +192,9 @@ function exactPath(target, expected, label) {
   }
   return target
 }
-
-function lstat(fsApi, target, label) {
-  try {
-    return fsApi.lstatSync(target)
-  } catch {
-    fail(`${label} is missing`)
-  }
+function lstat(fsApi, target, label, { allowMissing = false } = {}) {
+  try { return fsApi.lstatSync(target) } catch (error) { if (allowMissing && error?.code === 'ENOENT') throw new PostStartReadinessError(); fail(`${label} is missing`) }
 }
-
 function assertKnownVarRunCompatibility(fsApi, label) {
   const stats = lstat(fsApi, '/var/run', label)
   if (!(stats.isSymbolicLink?.() || stats.isSymbolicLink === true)) fail(`${label} has an unapproved /var/run binding`)
@@ -210,11 +202,10 @@ function assertKnownVarRunCompatibility(fsApi, label) {
   try { resolved = fsApi.realpathSync('/var/run') } catch { fail(`${label} /var/run binding cannot be canonicalized`) }
   if (resolved !== '/run') fail(`${label} has an unapproved /var/run binding`)
 }
-
-function assertNoSymlinkAncestors(fsApi, target, label, { allowVarRunCompatibility = false } = {}) {
-  let cursor = target
+function assertNoSymlinkAncestors(fsApi, target, label, { allowVarRunCompatibility = false, allowMissingTarget = false } = {}) {
+  let cursor = target; let isTarget = true
   while (true) {
-    const stats = lstat(fsApi, cursor, label)
+    const stats = lstat(fsApi, cursor, label, { allowMissing: allowMissingTarget && isTarget })
     if (stats.isSymbolicLink?.() || stats.isSymbolicLink === true) {
       if (allowVarRunCompatibility && cursor === '/var/run') {
         assertKnownVarRunCompatibility(fsApi, label)
@@ -227,17 +218,15 @@ function assertNoSymlinkAncestors(fsApi, target, label, { allowVarRunCompatibili
       }
     }
     if (cursor === path.parse(cursor).root) break
-    cursor = cursor === '/run' ? path.parse(cursor).root : path.dirname(cursor)
+    cursor = cursor === '/run' ? path.parse(cursor).root : path.dirname(cursor); isTarget = false
   }
 }
-
 function assertRootPrivate(stats, label, platform) {
   if (platform === 'linux') {
     if (stats.uid !== 0 || stats.gid !== 0) fail(`${label} must be root-owned`)
     if (!Number.isInteger(stats.mode) || (stats.mode & 0o022) !== 0) fail(`${label} must not be group/world writable`)
   }
 }
-
 function assertDirectory(fsApi, target, label, platform) {
   let cursor = target
   while (true) {
@@ -250,7 +239,6 @@ function assertDirectory(fsApi, target, label, platform) {
   }
   return lstat(fsApi, target, label)
 }
-
 function assertCanonicalRealpath(fsApi, target, label, { allowVarRunCompatibility = false } = {}) {
   let resolved
   try {
@@ -267,7 +255,6 @@ function assertCanonicalRealpath(fsApi, target, label, { allowVarRunCompatibilit
   if (resolved !== target) fail(`${label} is not canonical`)
   return resolved
 }
-
 function assertNotMountpoint(target, { commandRunner, mountpointChecker } = {}) {
   if (mountpointChecker) {
     let mounted
@@ -283,7 +270,6 @@ function assertNotMountpoint(target, { commandRunner, mountpointChecker } = {}) 
   if (result.status === 0 && result.stdout.trim() !== target) fail('mountpoint state cannot be proved')
   if (result.status !== 1) fail('mountpoint state cannot be proved')
 }
-
 function assertNoSubmounts(target, { commandRunner, mountpointSubtreeChecker } = {}) {
   if (mountpointSubtreeChecker) {
     let mounted
@@ -323,7 +309,6 @@ function assertNoSubmounts(target, { commandRunner, mountpointSubtreeChecker } =
     if (mounted === target || mounted.startsWith(prefix)) fail('fixed destructive target has a nested mountpoint')
   }
 }
-
 function resetMountFailure(kind, target, classification) {
   fail(`reset mount topology rejected for ${kind} ${target}: ${classification}`)
 }
@@ -334,7 +319,6 @@ function resetMountFailure(kind, target, classification) {
 // case folding, or SOURCE parsing is permitted.  The caller separately proves
 // that this is the sole direct match and that no descendants exist.
 const NATIVE_DEVICE_SOURCE = /^\/dev\/[A-Za-z0-9][A-Za-z0-9._+-]*(?:\/[A-Za-z0-9][A-Za-z0-9._+-]*)*$/
-
 export function isExactDockerDataSelfBind(rootMount, directMount) {
   if (!object(rootMount) || !object(directMount)) return false
   const target = hostContract.dockerDataRoot
@@ -345,7 +329,6 @@ export function isExactDockerDataSelfBind(rootMount, directMount) {
   if (directMount.fstype !== rootMount.fstype || directMount.fsroot !== target) return false
   return true
 }
-
 function parseResetMountTopology(text) {
   let parsed
   try { parsed = JSON.parse(text) } catch { fail('reset mount topology cannot be proved') }
@@ -371,7 +354,6 @@ function parseResetMountTopology(text) {
   if (!mounts.some((mount) => mount.target === '/')) fail('reset mount topology cannot be proved')
   return mounts
 }
-
 function readResetMountTopology(commandRunner) {
   try {
     const result = privileged(commandRunner, 'findmnt', ['--json', '--output', 'TARGET,SOURCE,FSTYPE,FSROOT', '--submounts', '/'], 'reset mount topology')
@@ -382,7 +364,6 @@ function readResetMountTopology(commandRunner) {
     fail('reset mount topology cannot be proved')
   }
 }
-
 function classifyResetMounts(commandRunner) {
   let mounts
   try {
@@ -417,7 +398,6 @@ function classifyResetMounts(commandRunner) {
   }
   return states
 }
-
 function assertResetMountsAllowed(states) {
   for (const state of states) {
     if (state.classification === 'absent' || state.classification === 'allowed-direct-self-bind') continue
@@ -425,7 +405,6 @@ function assertResetMountsAllowed(states) {
   }
   return states
 }
-
 function reconcileResetMounts(commandRunner) {
   let states = assertResetMountsAllowed(classifyResetMounts(commandRunner))
   const dataRoot = states.find((state) => state.kind === 'dockerDataRoot')
@@ -443,7 +422,6 @@ function reconcileResetMounts(commandRunner) {
   }
   return states
 }
-
 /** Validate one of the four fixed roots immediately before a destructive operation. */
 export function validateCanonicalDestructiveTarget(target, kind, options = {}) {
   const expected = destructiveTargets[kind]
@@ -460,7 +438,6 @@ export function validateCanonicalDestructiveTarget(target, kind, options = {}) {
   assertNoSubmounts(target, options)
   return Object.freeze({ kind, path: expected })
 }
-
 export const assertCanonicalFixedDirectory = validateCanonicalDestructiveTarget
 
 // Reset may encounter the one explicitly approved docker-data self-bind.  Its
@@ -476,7 +453,6 @@ function validateResetDestructiveDirectory(target, kind, options = {}) {
   assertDirectory(fsApi, target, `${kind} target`, platform)
   assertCanonicalRealpath(fsApi, target, `${kind} target`)
 }
-
 function validateFixedPrivateFile(target, expected, label, { fsApi = fs, platform = 'linux', allowRead = false, ownerUid } = {}) {
   exactPath(target, expected, label)
   assertNoSymlinkAncestors(fsApi, target, label)
@@ -489,7 +465,6 @@ function validateFixedPrivateFile(target, expected, label, { fsApi = fs, platfor
   assertCanonicalRealpath(fsApi, target, label)
   return stats
 }
-
 function readMarker(options = {}) {
   const fsApi = options.fsApi ?? fs
   validateFixedPrivateFile(hostContract.marker, hostContract.marker, 'native Docker host marker', { ...options, allowRead: true })
@@ -505,7 +480,6 @@ function readMarker(options = {}) {
   for (const key of markerKeys) if (parsed[key] !== markerValues[key]) fail('native Docker host marker identity is invalid')
   return { schema: markerSchema, version: markerValues.version }
 }
-
 function unitActive(commandRunner, unit, expected = true) {
   const result = commandResult(commandRunner, 'systemctl', ['is-active', '--quiet', unit], {}, `systemd ${unit}`)
   if (expected && result.status !== 0) fail(`required systemd unit is not active: ${unit}`)
@@ -514,7 +488,6 @@ function unitActive(commandRunner, unit, expected = true) {
   if (!expected && (result.stdout !== '' || result.stderr !== '')) fail(`systemd ${unit} state cannot be proved`)
   return expected ? 'active' : 'inactive'
 }
-
 function unitDisabled(commandRunner, unit) {
   // A disabled unit reports status 1 and the literal `disabled` state.  Static,
   // masked, indirect, unknown, or otherwise ambiguous states are rejected so
@@ -523,14 +496,12 @@ function unitDisabled(commandRunner, unit) {
   if (result.status !== 1 || result.stdout.trim() !== 'disabled' || result.stderr.trim()) fail(`forbidden systemd unit enablement cannot be proved: ${unit}`)
   return 'disabled'
 }
-
 function unitPid(commandRunner, unit) {
   const result = requireStatus(commandRunner, 'systemctl', ['show', '--property=MainPID', '--value', unit], `systemd ${unit} MainPID`)
   const pid = Number(result.stdout.trim())
   if (!Number.isSafeInteger(pid) || pid <= 1) fail(`systemd ${unit} has no verified process`)
   return pid
 }
-
 function processStartTime(commandRunner, pid, label) {
   const result = requireStatus(commandRunner, 'sudo', ['-n', safeExecutable('cat'), `/proc/${pid}/stat`], `${label} start identity`)
   const close = result.stdout.lastIndexOf(')')
@@ -540,7 +511,6 @@ function processStartTime(commandRunner, pid, label) {
   if (!Number.isSafeInteger(startTime) || startTime <= 0) fail(`${label} start identity is invalid`)
   return startTime
 }
-
 function processCgroup(commandRunner, pid, label) {
   const result = requireStatus(commandRunner, 'sudo', ['-n', safeExecutable('cat'), `/proc/${pid}/cgroup`], `${label} cgroup identity`)
   const line = result.stdout.split(/\r?\n/).map((value) => value.trim()).find((value) => /^\d+::\//.test(value))
@@ -548,14 +518,12 @@ function processCgroup(commandRunner, pid, label) {
   if (!cgroup || !/^\/[A-Za-z0-9_.@/-]+$/.test(cgroup) || cgroup.includes('..')) fail(`${label} cgroup identity is invalid`)
   return cgroup
 }
-
 function unitControlGroup(commandRunner, unit, label) {
   const result = requireStatus(commandRunner, 'systemctl', ['show', '--property=ControlGroup', '--value', unit], `${label} control group`)
   const cgroup = result.stdout.trim()
   if (cgroup !== `/system.slice/${unit}`) fail(`${label} control group is not exact`)
   return cgroup
 }
-
 function processExecutable(commandRunner, pid, binary, label) {
   const expected = SAFE_BINARIES[binary]
   if (!expected) fail(`${label} executable is not approved`)
@@ -565,7 +533,6 @@ function processExecutable(commandRunner, pid, binary, label) {
   if (!stat || Number(stat[1]) !== 0 || (Number.parseInt(stat[2], 8) & 0o022) !== 0) fail(`${label} executable ownership or mode is unsafe`)
   return expected
 }
-
 function processCommandLine(commandRunner, pid, label) {
   const result = requireStatus(commandRunner, 'sudo', ['-n', safeExecutable('ps'), '-ww', '-p', String(pid), '-o', 'args='], `${label} command line`)
   const line = result.stdout.trim().split(/\r?\n/, 1)[0].trim()
@@ -606,10 +573,10 @@ function assertUnitExecStart(commandRunner, unit, binary, requiredFlags, label) 
   return line
 }
 
-function validateUnixSocket(fsApi, socket, label, platform = 'linux') {
+function validateUnixSocket(fsApi, socket, label, platform = 'linux', { allowStartupReadiness = false } = {}) {
   exactPath(socket, socket, label)
-  assertNoSymlinkAncestors(fsApi, socket, label, { allowVarRunCompatibility: socket === hostContract.socket })
-  const stats = lstat(fsApi, socket, label)
+  assertNoSymlinkAncestors(fsApi, socket, label, { allowVarRunCompatibility: socket === hostContract.socket, allowMissingTarget: allowStartupReadiness && socket === hostContract.socket })
+  const stats = lstat(fsApi, socket, label, { allowMissing: allowStartupReadiness && socket === hostContract.socket })
   if (!(stats.isSocket?.() || stats.isSocket === true) || stats.isSymbolicLink?.() || stats.isSymbolicLink === true) fail(`${label} must be an exact Unix socket`)
   if (platform === 'linux') {
     if (stats.uid !== 0) fail(`${label} must be root-owned`)
@@ -631,7 +598,12 @@ function validateUnixSocket(fsApi, socket, label, platform = 'linux') {
   }
 }
 
-function parsePrivilegedSocketStat(result, label) {
+function expectedAbsentPathResult(result, executable, expectedPath) {
+  const stderr = result.stderr.replace(/\n$/, ''); return result.status === 1 && result.stdout === '' && (result.stderr === '' || (stderr.includes(expectedPath) && /no such file or directory/i.test(stderr) && new RegExp(`(?:^|[\\s:])${executable}(?:$|[\\s:])`, 'i').test(stderr)))
+}
+
+function parsePrivilegedSocketStat(result, label, { allowStartupReadiness = false, expectedPath } = {}) {
+  if (allowStartupReadiness && expectedPath && expectedAbsentPathResult(result, 'stat', expectedPath)) throw new PostStartReadinessError()
   if (result.status !== 0 || result.stdout === '' || result.stderr !== '') fail(`${label} cannot be proved`)
   const fields = result.stdout.match(/^socket (\d+) (\d+) ([0-7]{3,4}) (\d+) (\d+)\n$/)
   if (!fields) fail(`${label} metadata is invalid`)
@@ -656,35 +628,37 @@ function listenerLinesForSocket(stdout, socket, label) {
   return lines.filter((line) => /\bLISTEN\b/.test(line) && pattern.test(line))
 }
 
-function provePrivateContainerdListener(commandRunner, socket, pid, label) {
+function provePrivateContainerdListener(commandRunner, socket, pid, label, { allowStartupReadiness = false } = {}) {
   const listeners = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('ss'), '-xlpn'], {}, `${label} listener`)
   if (listeners.status !== 0 || listeners.stderr !== '') fail(`${label} listener cannot be proved`)
-  const matches = listenerLinesForSocket(listeners.stdout, socket, label)
+  const matches = listenerLinesForSocket(listeners.stdout, socket, label); const lines = listeners.stdout.split(/\r?\n/)
+  if (matches.length === 0 && lines.some((line) => /\bLISTEN\b/.test(line) && line.includes(`pid=${pid}`))) fail(`${label} is not owned by the verified process`); if (matches.length === 0 && allowStartupReadiness && lines.some((line) => /\bLISTEN\b/.test(line))) throw new PostStartReadinessError()
   if (matches.length !== 1) fail(`${label} listener is ambiguous`)
   const pids = [...matches[0].matchAll(/pid=(\d+)/g)].map((match) => Number(match[1]))
   if (pids.length !== 1 || pids[0] !== pid) fail(`${label} is not owned by the verified process`)
 }
 
-function privateContainerdSocketIsOwnedByPid(commandRunner, socket, pid, label = 'private containerd socket') {
+function privateContainerdSocketIsOwnedByPid(commandRunner, socket, pid, label = 'private containerd socket', { allowStartupReadiness = false } = {}) {
   exactPath(socket, hostContract.containerdSocket, `${label} path`)
   const readlink = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('readlink'), '-e', '--', hostContract.containerdSocket], {}, `${label} canonical path`)
+  if (allowStartupReadiness && expectedAbsentPathResult(readlink, 'readlink', hostContract.containerdSocket)) throw new PostStartReadinessError()
   if (readlink.status !== 0 || readlink.stdout !== `${hostContract.containerdSocket}\n` || readlink.stderr !== '') fail(`${label} canonical path is not exact`)
   const noSymlink = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('test'), '!', '-L', hostContract.containerdSocket], {}, `${label} symlink state`)
   if (noSymlink.status !== 0 || noSymlink.stdout !== '' || noSymlink.stderr !== '') fail(`${label} must be a non-symlink socket`)
   const statArgs = ['-n', safeExecutable('stat'), '-Lc', '%F %u %g %a %d %i', '--', hostContract.containerdSocket]
-  const first = parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', statArgs, {}, `${label} stat`), `${label} stat`)
-  provePrivateContainerdListener(commandRunner, hostContract.containerdSocket, pid, label)
-  const second = parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', statArgs, {}, `${label} repeat stat`), `${label} repeat stat`)
+  const first = parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', statArgs, {}, `${label} stat`), `${label} stat`, { allowStartupReadiness, expectedPath: hostContract.containerdSocket }); provePrivateContainerdListener(commandRunner, hostContract.containerdSocket, pid, label, { allowStartupReadiness })
+  const second = parsePrivilegedSocketStat(commandResult(commandRunner, 'sudo', statArgs, {}, `${label} repeat stat`), `${label} repeat stat`, { allowStartupReadiness, expectedPath: hostContract.containerdSocket })
   if (first.dev !== second.dev || first.ino !== second.ino) fail(`${label} identity changed while proving listener`)
 }
 
-function socketIsOwnedByPid(commandRunner, fsApi, socket, pid, platform, label = 'Docker socket', aliases = []) {
+function socketIsOwnedByPid(commandRunner, fsApi, socket, pid, platform, label = 'Docker socket', aliases = [], { allowStartupReadiness = false } = {}) {
   if (socket === hostContract.containerdSocket) {
-    privateContainerdSocketIsOwnedByPid(commandRunner, socket, pid, label)
+    privateContainerdSocketIsOwnedByPid(commandRunner, socket, pid, label, { allowStartupReadiness })
     return
   }
-  validateUnixSocket(fsApi, socket, label, platform)
-  const stat = requireStatus(commandRunner, 'sudo', ['-n', safeExecutable('stat'), '-Lc', '%F %u %g %a %d %i', socket], `${label} stat`)
+  validateUnixSocket(fsApi, socket, label, platform, { allowStartupReadiness }); const stat = commandResult(commandRunner, 'sudo', ['-n', safeExecutable('stat'), '-Lc', '%F %u %g %a %d %i', socket], {}, `${label} stat`)
+  if (allowStartupReadiness && expectedAbsentPathResult(stat, 'stat', socket)) throw new PostStartReadinessError()
+  if (stat.status !== 0) fail(`${label} stat command failed`)
   const statFields = stat.stdout.trim().match(/^socket\s+(\d+)\s+(\d+)\s+(\d+)(?:\s+(\d+)\s+(\d+))?\s*$/i)
   if (!statFields || Number(statFields[1]) !== 0 || (Number.parseInt(statFields[3], 8) & 0o007) !== 0) fail(`${label} is not a private Unix socket`)
   const socketStats = fsApi.lstatSync(socket)
@@ -692,7 +666,8 @@ function socketIsOwnedByPid(commandRunner, fsApi, socket, pid, platform, label =
   if (statFields[5] !== undefined && Number.isInteger(socketStats.ino) && Number(statFields[5]) !== socketStats.ino) fail('Docker socket identity changed')
   const listeners = requireStatus(commandRunner, 'sudo', ['-n', safeExecutable('ss'), '-xlpn'], `${label} listener`)
   const paths = [socket, ...aliases].map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const line = listeners.stdout.split(/\r?\n/).find((entry) => paths.some((alias) => new RegExp(alias).test(entry)))
+  const lines = listeners.stdout.split(/\r?\n/); const line = lines.find((entry) => paths.some((alias) => new RegExp(alias).test(entry)))
+  if (!line && lines.some((entry) => /\bLISTEN\b/.test(entry) && entry.includes(`pid=${pid}`))) fail(`${label} is not owned by the verified process`); if (!line && allowStartupReadiness && lines.some((entry) => /\bLISTEN\b/.test(entry))) throw new PostStartReadinessError()
   if (!line || !new RegExp(`pid=${pid}(?:[,)]|$)`).test(line)) fail(`${label} is not owned by the verified process`)
 }
 
@@ -711,8 +686,14 @@ function dockerCommand(commandRunner, args, env, label) {
   return commandResult(commandRunner, 'docker', dockerArgs(...args), { env: cleanDockerEnvironment(env) }, label)
 }
 
-function inspectDocker(commandRunner, env, { allowMutableInventory = false } = {}) {
+function expectedDockerApiUnavailable(result) {
+  if (result.status !== 1 || result.stdout !== '' || result.stderr === '') return false; const stderr = result.stderr.trim(); const socket = `unix://${hostContract.socket}`; const index = stderr.indexOf(socket); const prefix = index < 0 ? '' : stderr[index - 1]; const tail = index < 0 ? '' : stderr.slice(index + socket.length)
+  if (index < 0 || (index > 0 && !/[\s"'([{]/.test(prefix)) || !/^(?:$|[\s"'(),]|\.(?=\s|$)|:(?=\s|$))/.test(tail)) return false; return /cannot connect to the docker daemon|error during connect|dial unix/i.test(stderr)
+}
+
+function inspectDocker(commandRunner, env, { allowMutableInventory = false, allowStartupReadiness = false } = {}) {
   const info = dockerCommand(commandRunner, ['info', '--format', '{{json .}}'], env, 'Docker info')
+  if (allowStartupReadiness && expectedDockerApiUnavailable(info)) throw new PostStartReadinessError()
   let parsed
   try { parsed = JSON.parse(info.stdout) } catch { fail('Docker info identity is invalid') }
   if (!object(parsed) || parsed.DockerRootDir !== hostContract.dockerDataRoot) fail('Docker data-root identity is not exact')
@@ -724,7 +705,7 @@ function inspectDocker(commandRunner, env, { allowMutableInventory = false } = {
   ]
   const inventory = {}
   for (const [kind, args] of queries) {
-    const result = dockerCommand(commandRunner, args, env, `Docker ${kind} inventory`)
+    const result = dockerCommand(commandRunner, args, env, `Docker ${kind} inventory`); if (allowStartupReadiness && expectedDockerApiUnavailable(result)) throw new PostStartReadinessError()
     if (result.status !== 0) fail(`Docker ${kind} inventory cannot be proved`)
     const entries = result.stdout.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)
     if (entries.length !== 0 && !allowMutableInventory) fail(`Docker ${kind} inventory is not empty`)
@@ -787,9 +768,8 @@ export function inspectDedicatedNativeDockerHost(options = {}) {
     '--iptables': 'true',
     '--ip6tables': 'true',
   }, 'custom dockerd')
-  socketIsOwnedByPid(commandRunner, options.fsApi ?? fs, hostContract.containerdSocket, containerd.pid, options.platform ?? 'linux', 'private containerd socket', [])
-  socketIsOwnedByPid(commandRunner, options.fsApi ?? fs, hostContract.socket, dockerd.pid, options.platform ?? 'linux', 'Docker socket', ['/run/docker.sock'])
-  const docker = inspectDocker(commandRunner, env, { allowMutableInventory: options.allowMutableInventory === true })
+  const allowStartupReadiness = options.allowStartupReadiness === true; socketIsOwnedByPid(commandRunner, options.fsApi ?? fs, hostContract.containerdSocket, containerd.pid, options.platform ?? 'linux', 'private containerd socket', [], { allowStartupReadiness }); socketIsOwnedByPid(commandRunner, options.fsApi ?? fs, hostContract.socket, dockerd.pid, options.platform ?? 'linux', 'Docker socket', ['/run/docker.sock'], { allowStartupReadiness })
+  const docker = inspectDocker(commandRunner, env, { allowMutableInventory: options.allowMutableInventory === true, allowStartupReadiness })
 
   return Object.freeze({
     contract: CONTRACT_VERSION,
@@ -1018,6 +998,26 @@ function quiescenceCommandRunner(commandRunner, deadlineAt) {
   }
 }
 
+function postStartReadinessCommandRunner(commandRunner, readinessDeadline, recoveryDeadlineAt) {
+  return (file, args, options = {}) => {
+    const now = Date.now(); const remainingRecovery = recoveryDeadlineAt === undefined ? Number.POSITIVE_INFINITY : recoveryDeadlineAt - now; const remainingReadiness = readinessDeadline - now; const remaining = Math.min(remainingRecovery, remainingReadiness)
+    if (!Number.isFinite(remaining) || remaining < 1) { if (recoveryDeadlineAt !== undefined && remainingRecovery <= 0) throw new RecoveryDeadlineError('before'); throw new PostStartReadinessDeadlineError() }
+    const inherited = Number.isFinite(options.timeout) && options.timeout > 0 ? options.timeout : Number.POSITIVE_INFINITY; const timeout = Math.max(1, Math.min(Math.floor(remaining), inherited))
+    const result = commandRunner(file, args, { ...options, timeout }); if (recoveryDeadlineAt !== undefined && Date.now() >= recoveryDeadlineAt) throw new RecoveryDeadlineError('after'); if (Date.now() >= readinessDeadline) throw new PostStartReadinessDeadlineError(); return result
+  }
+}
+
+function provePostStartReadiness(options = {}) {
+  const recoveryDeadlineAt = options.recoveryDeadlineAt; const started = Date.now(); const capDeadline = started + POST_START_READINESS_CAP_MS; const reserveDeadline = options.reserveCompensation !== true || recoveryDeadlineAt === undefined ? Number.POSITIVE_INFINITY : recoveryDeadlineAt - POST_START_COMPENSATION_RESERVE_MS; const readinessDeadline = Math.min(capDeadline, reserveDeadline); const boundedRunner = postStartReadinessCommandRunner(options.commandRunner ?? defaultCommandRunner, readinessDeadline, recoveryDeadlineAt)
+  let delayMs = 25
+  while (true) {
+    if (recoveryDeadlineAt !== undefined && Date.now() >= recoveryDeadlineAt) throw new RecoveryDeadlineError('before'); if (Date.now() >= readinessDeadline) throw new PostStartReadinessDeadlineError()
+    try { return inspectDedicatedNativeDockerHost({ ...options, commandRunner: boundedRunner, allowStartupReadiness: true }) } catch (error) { if (error?.code !== 'NATIVE_DOCKER_POST_START_NOT_READY') throw error }
+    if (recoveryDeadlineAt !== undefined && Date.now() >= recoveryDeadlineAt) throw new RecoveryDeadlineError('before'); const remaining = readinessDeadline - Date.now(); if (remaining < 1) throw new PostStartReadinessDeadlineError(); const delay = Math.min(delayMs, 250, remaining); const slept = commandResult(boundedRunner, 'sleep', [String(delay / 1_000)], {}, 'post-start readiness backoff')
+    if (slept.status !== 0 || slept.stdout !== '' || slept.stderr !== '') fail('post-start readiness backoff cannot be proved'); delayMs = Math.min(delayMs * 2, 250)
+  }
+}
+
 function validatePrivateContainerdStateDirectory(commandRunner, options = {}) {
   const target = hostContract.containerdState
   const fsApi = options.fsApi ?? fs
@@ -1143,7 +1143,7 @@ export function resetDedicatedNativeDockerHost(options = {}) {
     }
     privileged(commandRunner, 'systemctl', ['start', hostContract.containerdUnit], 'start private containerd')
     privileged(commandRunner, 'systemctl', ['start', hostContract.dockerdUnit], 'start custom dockerd')
-    const after = inspectDedicatedNativeDockerHost({ ...operationOptions, allowMutableInventory: false })
+    const after = provePostStartReadiness({ ...operationOptions, allowMutableInventory: false, reserveCompensation: true })
     assertRecoveryDeadline(recoveryDeadlineAt)
     return Object.freeze({ before, after, dockerDaemonReset: true })
   } catch (error) {
@@ -1156,7 +1156,7 @@ export function resetDedicatedNativeDockerHost(options = {}) {
         // compensation failure and never claim a successful reset.
         privileged(commandRunner, 'systemctl', ['start', hostContract.containerdUnit], 'compensate private containerd')
         privileged(commandRunner, 'systemctl', ['start', hostContract.dockerdUnit], 'compensate custom dockerd')
-        inspectDedicatedNativeDockerHost({ ...operationOptions, allowMutableInventory: true })
+        provePostStartReadiness({ ...operationOptions, allowMutableInventory: true, reserveCompensation: false })
         compensationSucceeded = true
       } catch {
         compensationSucceeded = false

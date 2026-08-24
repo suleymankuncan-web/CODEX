@@ -185,6 +185,76 @@ function baseRunner({ sharedContainerd = false, enabledDockerService = false, en
   return { run, record, get active() { return active }, set active(value) { active = value } }
 }
 
+function postStartRunner({ privateReadlinkLag = {}, dockerApiLag = {}, dockerApiError = 'exact', dockerApiPrefix = '', dockerApiSuffix = '', identityMismatchAfterStart = false, injectNormalInventory = false, deadlineReadlinkAt = 0, sleepWorkMs = 0, record = [] } = {}) {
+  const runner = baseRunner({ record })
+  const originalRun = runner.run
+  let startCycle = 0
+  let privateReadlinkCalls = 0
+  let dockerApiCalls = 0
+  let normalInventoryInjected = false
+  const lateCalls = []
+  const run = (file, args, options = {}) => {
+    const actualExecutable = file === 'sudo' && args[0] === '-n' ? args[1] : file
+    const actualFile = actualExecutable.replace(/^.*\//, '')
+    const actualArgs = file === 'sudo' && args[0] === '-n' ? args.slice(2) : args
+    const isSystemctl = actualFile === 'systemctl'
+    const isCustomUnit = [hostContract.dockerdUnit, hostContract.containerdUnit].includes(actualArgs.at(-1))
+    const entry = { file, args: [...args], options, calledAt: Date.now() }
+    if (deadlineReadlinkAt > 0 && entry.calledAt >= deadlineReadlinkAt) lateCalls.push(entry)
+    if (actualFile === 'sleep' && sleepWorkMs > 0) {
+      record.push(entry)
+      const until = Date.now() + sleepWorkMs
+      while (Date.now() < until) {}
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    if (isSystemctl && actualArgs[0] === 'stop' && isCustomUnit) runner.active = false
+    if (isSystemctl && actualArgs[0] === 'start' && actualArgs.at(-1) === hostContract.containerdUnit) {
+      startCycle += 1
+      privateReadlinkCalls = 0
+      dockerApiCalls = 0
+      runner.active = true
+    }
+    if (isSystemctl && actualArgs[0] === 'start' && actualArgs.at(-1) === hostContract.dockerdUnit) runner.active = true
+    const target = actualArgs.at(-1)
+    if (startCycle > 0 && actualFile === 'readlink' && actualArgs[0] === '-e' && target === hostContract.containerdSocket) {
+      privateReadlinkCalls += 1
+      const lag = Number(privateReadlinkLag[startCycle] ?? 0)
+      if (deadlineReadlinkAt > 0 && startCycle === 1 && privateReadlinkCalls === 1) {
+        while (Date.now() < deadlineReadlinkAt + 100) {}
+        record.push(entry)
+        return { status: 1, stdout: '', stderr: '' }
+      }
+      if (privateReadlinkCalls <= lag) {
+        record.push(entry)
+        return { status: 1, stdout: '', stderr: '' }
+      }
+    }
+    if (startCycle > 0 && actualFile === 'cat' && target?.endsWith('/cgroup') && identityMismatchAfterStart) {
+      record.push(entry)
+      return { status: 0, stdout: '0::/system.slice/not-the-declared-unit.service\n', stderr: '' }
+    }
+    if (startCycle > 0 && actualFile === 'docker' && actualArgs.includes('info')) {
+      dockerApiCalls += 1
+      const lag = Number(dockerApiLag[startCycle] ?? 0)
+      if (dockerApiCalls <= lag) {
+        const stderr = dockerApiError === 'blank' ? '' : dockerApiError === 'unknown' ? `permission denied for unix://${hostContract.socket}\n` : `Cannot connect to the Docker daemon at ${dockerApiPrefix}unix://${hostContract.socket}${dockerApiSuffix}. Is the docker daemon running?\n`
+        record.push(entry)
+        return { status: 1, stdout: '', stderr }
+      }
+    }
+    if (startCycle === 1 && actualFile === 'docker' && actualArgs.includes('ps') && actualArgs.includes('-aq') && injectNormalInventory && !normalInventoryInjected) {
+      normalInventoryInjected = true
+      record.push(entry)
+      return { status: 0, stdout: 'item-1\n', stderr: '' }
+    }
+    return originalRun(file, args, options)
+  }
+  runner.run = run
+  Object.defineProperty(runner, 'startCycle', { get: () => startCycle })
+  Object.defineProperty(runner, 'lateCalls', { get: () => lateCalls })
+  return runner
+}
+
 function quiescenceRunner({ mode = 'clean', pidVariant = '', record = [] } = {}) {
   const runner = baseRunner({ record })
   const originalRun = runner.run
@@ -513,6 +583,150 @@ test('reset ordering is dockerd stop, containerd stop, fixed-root reset, then st
   assert.equal(destructive.length, 4)
   assert.ok(destructive.every((args) => Object.values(hostContract).includes(args.at(-1))))
   assert.ok(record.filter((entry) => entry.file === 'sudo' && ['systemctl', 'rm', 'install'].some((name) => entry.args[1].endsWith(`/${name}`))).every((entry) => !entry.args.includes('docker.service') && !entry.args.includes('containerd.service')))
+})
+
+test('reset retries deterministic post-start private containerd socket lag with bounded backoff', () => {
+  const record = []
+  const runner = postStartRunner({ privateReadlinkLag: { 1: 2 }, record })
+  const result = resetDedicatedNativeDockerHost({
+    ...inspectorOptions(runner.run, fakeFs()),
+    recoveryDeadlineAt: Date.now() + 2_000,
+    callerGid: 0,
+    uid: 0,
+    randomBytes: () => Buffer.alloc(24, 30),
+    pid: 800,
+  })
+  assert.equal(result.dockerDaemonReset, true)
+  assert.deepEqual(result.after.inventory, { containers: 0, networks: 0, volumes: 0, images: 0 })
+  assert.ok(record.filter((entry) => entry.file === 'sleep').length >= 2)
+  assert.deepEqual(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3]), [hostContract.containerdUnit, hostContract.dockerdUnit])
+})
+
+test('reset retries only the exact declared Docker socket connection error with readiness backoff', () => {
+  const record = []
+  const runner = postStartRunner({ dockerApiLag: { 1: 2 }, record })
+  const result = resetDedicatedNativeDockerHost({
+    ...inspectorOptions(runner.run, fakeFs()),
+    recoveryDeadlineAt: Date.now() + 2_000,
+    callerGid: 0,
+    uid: 0,
+    randomBytes: () => Buffer.alloc(24, 35),
+    pid: 805,
+  })
+  assert.equal(result.dockerDaemonReset, true)
+  assert.ok(record.filter((entry) => entry.file === 'sleep').length >= 2)
+})
+
+for (const [index, dockerApiSuffix] of ['?x', '#x', '@x', '/child', '.evil', ':x'].entries()) {
+  test(`post-start Docker API rejects URI continuation suffix ${dockerApiSuffix}`, () => {
+    const record = []
+    const runner = postStartRunner({ dockerApiLag: { 1: Number.MAX_SAFE_INTEGER, 2: Number.MAX_SAFE_INTEGER }, dockerApiSuffix, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({
+      ...inspectorOptions(runner.run, fakeFs()),
+      callerGid: 0,
+      uid: 0,
+      randomBytes: () => Buffer.alloc(24, 38 + index),
+      pid: 808 + index,
+    }), /compensation failed|Docker info identity is invalid/)
+    assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  })
+}
+
+for (const [index, dockerApiPrefix] of [':', '?', '@'].entries()) {
+  test(`post-start Docker API rejects URI continuation prefix ${dockerApiPrefix}`, () => {
+    const record = []
+    const runner = postStartRunner({ dockerApiLag: { 1: Number.MAX_SAFE_INTEGER, 2: Number.MAX_SAFE_INTEGER }, dockerApiPrefix, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({
+      ...inspectorOptions(runner.run, fakeFs()),
+      callerGid: 0,
+      uid: 0,
+      randomBytes: () => Buffer.alloc(24, 44 + index),
+      pid: 814 + index,
+    }), /compensation failed|Docker info identity is invalid/)
+    assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  })
+}
+
+for (const dockerApiError of ['blank', 'unknown']) {
+  test(`post-start Docker API ${dockerApiError} exit-1 result fails immediately without readiness sleep`, () => {
+    const record = []
+    const runner = postStartRunner({ dockerApiLag: { 1: Number.MAX_SAFE_INTEGER, 2: Number.MAX_SAFE_INTEGER }, dockerApiError, record })
+    assert.throws(() => resetDedicatedNativeDockerHost({
+      ...inspectorOptions(runner.run, fakeFs()),
+      callerGid: 0,
+      uid: 0,
+      randomBytes: () => Buffer.alloc(24, dockerApiError === 'blank' ? 36 : 37),
+      pid: dockerApiError === 'blank' ? 806 : 807,
+    }), /compensation failed|Docker info identity is invalid/)
+    assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+  })
+}
+
+test('post-start process identity mismatch fails immediately without readiness retry', () => {
+  const record = []
+  const runner = postStartRunner({ identityMismatchAfterStart: true, record })
+  assert.throws(() => resetDedicatedNativeDockerHost({
+    ...inspectorOptions(runner.run, fakeFs()),
+    callerGid: 0,
+    uid: 0,
+    randomBytes: () => Buffer.alloc(24, 31),
+    pid: 801,
+  }), /outside its systemd control group|compensation failed/)
+  assert.equal(record.filter((entry) => entry.file === 'sleep').length, 0)
+})
+
+test('compensation reuses bounded readiness and never turns a failed reset into success', () => {
+  const record = []
+  const runner = postStartRunner({ injectNormalInventory: true, privateReadlinkLag: { 2: 2 }, dockerApiLag: { 2: 2 }, record })
+  assert.throws(() => resetDedicatedNativeDockerHost({
+    ...inspectorOptions(runner.run, fakeFs()),
+    callerGid: 0,
+    uid: 0,
+    randomBytes: () => Buffer.alloc(24, 32),
+    pid: 802,
+  }), /Docker containers inventory is not empty/)
+  assert.deepEqual(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3]), [
+    hostContract.containerdUnit,
+    hostContract.dockerdUnit,
+    hostContract.containerdUnit,
+    hostContract.dockerdUnit,
+  ])
+  assert.ok(record.filter((entry) => entry.file === 'sleep').length >= 2)
+})
+
+test('normal readiness cap leaves a finite compensation window inside the recovery deadline', () => {
+  const record = []
+  const runner = postStartRunner({ privateReadlinkLag: { 1: Number.MAX_SAFE_INTEGER, 2: Number.MAX_SAFE_INTEGER }, sleepWorkMs: 25, record })
+  const recoveryDeadlineAt = Date.now() + 1_500
+  assert.throws(() => resetDedicatedNativeDockerHost({
+    ...inspectorOptions(runner.run, fakeFs()),
+    recoveryDeadlineAt,
+    callerGid: 0,
+    uid: 0,
+    randomBytes: () => Buffer.alloc(24, 34),
+    pid: 804,
+  }), /post-start readiness|deadline exceeded|compensation failed/)
+  assert.deepEqual(record.filter((entry) => entry.file === 'sudo' && entry.args[1] === '/usr/bin/systemctl' && entry.args[2] === 'start').map((entry) => entry.args[3]), [
+    hostContract.containerdUnit,
+    hostContract.dockerdUnit,
+    hostContract.containerdUnit,
+    hostContract.dockerdUnit,
+  ])
+})
+
+test('post-start readiness deadline fails closed without issuing a post-deadline command', () => {
+  const record = []
+  const deadlineAt = Date.now() + 500
+  const runner = postStartRunner({ deadlineReadlinkAt: deadlineAt, record })
+  assert.throws(() => resetDedicatedNativeDockerHost({
+    ...inspectorOptions(runner.run, fakeFs()),
+    recoveryDeadlineAt: deadlineAt,
+    callerGid: 0,
+    uid: 0,
+    randomBytes: () => Buffer.alloc(24, 33),
+    pid: 803,
+  }), /post-start readiness|recovery deadline exceeded|compensation failed/)
+  assert.equal(runner.lateCalls.length, 0)
 })
 
 test('post-stop quiescence proves the complete invariant in one clean attempt', () => {

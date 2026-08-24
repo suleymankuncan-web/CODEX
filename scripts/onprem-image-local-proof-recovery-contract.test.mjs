@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { test } from 'node:test'
 
 import {
@@ -20,10 +21,27 @@ import {
   removePartialProofOutput,
   restoreFirewallSnapshots,
 } from './onprem-image-local-proof-recovery.mjs'
-import { runLocalProof } from './onprem-image-local-proof.mjs'
 
 const sourceSha = 'a'.repeat(40)
 const treeSha = 'b'.repeat(40)
+
+const ISOLATED_PROOF_WORKSPACE_FILES = [
+  '.github/workflows/onprem-image-proof.yml',
+  'scripts/onprem-image-local-proof.mjs',
+  'scripts/onprem-image-local-proof-recovery.mjs',
+  'scripts/onprem-native-docker-host.mjs',
+]
+
+async function runLocalProofInIsolatedWorkspace(workspaceRoot, rawOptions, dependencies) {
+  for (const relativePath of ISOLATED_PROOF_WORKSPACE_FILES) {
+    const source = resolve(relativePath)
+    const destination = join(workspaceRoot, relativePath)
+    mkdirSync(dirname(destination), { recursive: true })
+    copyFileSync(source, destination)
+  }
+  const { runLocalProof: isolatedRunLocalProof } = await import(pathToFileURL(join(workspaceRoot, 'scripts/onprem-image-local-proof.mjs')).href)
+  return isolatedRunLocalProof({ ...rawOptions, 'workspace-root': workspaceRoot }, dependencies)
+}
 
 function snapshot(text) {
   const bytes = Buffer.isBuffer(text) ? Buffer.from(text) : Buffer.from(text, 'utf8')
@@ -497,11 +515,13 @@ test('run-root cleanup permits only the checked fresh root sudo fallback and ref
 test('runner receipt keeps recovery state sanitized after failed output and daemon reset', async () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-recovery-receipt-'))
   try {
+    const workspaceRoot = join(root, 'workspace')
     const runRoot = join(root, 'run')
     const proofOutput = join(root, 'proof-output')
     const receipt = join(root, 'receipt.json')
     const nodeSha256 = createHash('sha256').update(readFileSync(process.execPath)).digest('hex')
     const events = []
+    let observedWorkspaceRoot = null
     const baseController = hostFixture(events, { resetError: 'password=supersecret /tmp/secret-reset-path' })
     const controller = {
       ...baseController,
@@ -513,7 +533,7 @@ test('runner receipt keeps recovery state sanitized after failed output and daem
     }
     const snapshots = { ipv4: snapshot('v4-rules\n'), ipv6: snapshot('v6-rules\n') }
     const commandRunner = firewallRunner(events)
-    await assert.rejects(() => runLocalProof({
+    await assert.rejects(() => runLocalProofInIsolatedWorkspace(workspaceRoot, {
       'source-sha': sourceSha,
       'tree-sha': treeSha,
       'run-number': '5',
@@ -522,16 +542,16 @@ test('runner receipt keeps recovery state sanitized after failed output and daem
       'run-root': runRoot,
       'proof-output': proofOutput,
       receipt,
-      'workspace-root': resolve('.'),
       'deadline-minutes': '1',
       'allow-disposable-daemon-reset': true,
     }, {
       hostController: controller,
       commandRunner,
       preflight: () => ({ node: { version: 'v24.19.0', sha256: nodeSha256 }, docker: { id: 'mock', serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64' }, firewallSnapshots: snapshots }),
-      executor: async () => ({ status: 'passed', exitCode: 0 }),
+      executor: async ({ env }) => { observedWorkspaceRoot = env.GITHUB_WORKSPACE; return { status: 'passed', exitCode: 0 } },
       postflight: () => ({ clean: true, resources: {}, firewallChains: {} }),
     }), /GITHUB_OUTPUT identity is invalid/)
+    assert.equal(observedWorkspaceRoot, workspaceRoot)
     const receiptText = readFileSync(receipt, 'utf8')
     assert.equal(receiptText.includes('supersecret'), false)
     assert.equal(receiptText.includes('secret-reset-path'), false)
