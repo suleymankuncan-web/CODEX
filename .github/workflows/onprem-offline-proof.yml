@@ -799,25 +799,23 @@ jobs:
           BUNDLE_ARCHIVE_MANIFEST_SHA256: ${{ needs.build_bundle.outputs.bundle_archive_manifest_sha256 }}
         run: |
           set -euo pipefail
-          offline_rehearsal_heartbeat() {
-            local offline_heartbeat_seq=0
-            local offline_heartbeat_started offline_heartbeat_now offline_heartbeat_elapsed offline_heartbeat_phase
-            offline_heartbeat_started="$(date +%s)"
-            while :; do
-              offline_heartbeat_seq=$((offline_heartbeat_seq + 1))
-              offline_heartbeat_phase=unknown
-              if [ -f "$RUNNER_TEMP/offline-phase" ]; then
-                offline_heartbeat_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
-              fi
-              case "$offline_heartbeat_phase" in
-                preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
-                *) offline_heartbeat_phase=unknown ;;
-              esac
-              offline_heartbeat_now="$(date +%s)"
-              offline_heartbeat_elapsed=$((offline_heartbeat_now - offline_heartbeat_started))
-              printf 'offline rehearsal heartbeat seq=%s phase=%s elapsed_seconds=%s\n' "$offline_heartbeat_seq" "$offline_heartbeat_phase" "$offline_heartbeat_elapsed"
-              sleep 30
-            done
+          emit_offline_rehearsal_heartbeat() {
+            local offline_heartbeat_now offline_heartbeat_elapsed offline_heartbeat_phase
+            [ "${offline_heartbeat_enabled:-0}" = 1 ] || return 0
+            offline_heartbeat_now="$(date +%s)"
+            [ "$offline_heartbeat_now" -ge "${offline_heartbeat_next_at:-0}" ] || return 0
+            offline_heartbeat_phase=unknown
+            if [ -f "$RUNNER_TEMP/offline-phase" ]; then
+              offline_heartbeat_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
+            fi
+            case "$offline_heartbeat_phase" in
+              preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
+              *) offline_heartbeat_phase=unknown ;;
+            esac
+            offline_heartbeat_seq=$((offline_heartbeat_seq + 1))
+            offline_heartbeat_elapsed=$((offline_heartbeat_now - offline_heartbeat_started))
+            offline_heartbeat_next_at=$((offline_heartbeat_now + 30))
+            printf 'offline rehearsal heartbeat seq=%s phase=%s elapsed_seconds=%s\n' "$offline_heartbeat_seq" "$offline_heartbeat_phase" "$offline_heartbeat_elapsed" >&2
           }
           wait_for_pid_exit() {
             local pid="$1" max_wait_seconds="$2" max_iterations iteration pid_state wait_status
@@ -829,6 +827,7 @@ jobs:
               if [ "$iteration" -ge "$max_iterations" ]; then
                 return 124
               fi
+              emit_offline_rehearsal_heartbeat
               iteration=$((iteration + 1))
               sleep 0.1
             done
@@ -920,20 +919,16 @@ jobs:
             done
           }
           offline_main_group_id=''
-          offline_heartbeat_pid=''
-          offline_heartbeat_group_id=''
+          offline_heartbeat_enabled=0
+          offline_heartbeat_seq=0
+          offline_heartbeat_started=''
+          offline_heartbeat_next_at=0
           offline_active_pid=''
           offline_active_group_id=''
           offline_watchdog_pid=''
           offline_watchdog_group_id=''
           stop_offline_rehearsal_heartbeat() {
-            local heartbeat_pid="${offline_heartbeat_pid:-}"
-            local heartbeat_group_id="${offline_heartbeat_group_id:-$heartbeat_pid}"
-            offline_heartbeat_pid=''
-            offline_heartbeat_group_id=''
-            [[ "$heartbeat_pid" =~ ^[0-9]+$ ]] || return 0
-            unregister_offline_process_group "$heartbeat_pid"
-            stop_offline_process_group "$heartbeat_pid" "$heartbeat_group_id" 5
+            offline_heartbeat_enabled=0
           }
           stop_offline_active_processes() {
             local active_pid="${offline_active_pid:-}"
@@ -958,23 +953,11 @@ jobs:
             exit "$rehearsal_status"
           }
           start_offline_rehearsal_heartbeat() {
-            local heartbeat_script
-            heartbeat_script="$(declare -f offline_rehearsal_heartbeat)"
-            heartbeat_script+=$'\n'
-            heartbeat_script+="trap 'exit 143' TERM INT"
-            heartbeat_script+=$'\noffline_rehearsal_heartbeat'
-            "$SETSID_BIN" bash -c "$heartbeat_script" 2>/dev/null &
-            offline_heartbeat_pid=$!
-            if ! offline_heartbeat_group_id="$(wait_for_distinct_process_group "$offline_heartbeat_pid")"; then
-              printf 'offline heartbeat process-group isolation unavailable pid=%s group=%s\n' "$offline_heartbeat_pid" "$offline_heartbeat_group_id" >&2
-              stop_offline_process_group "$offline_heartbeat_pid" "$offline_heartbeat_group_id" 2 || true
-              return 125
-            fi
-            if ! register_offline_process_group "$offline_heartbeat_pid" "$offline_heartbeat_group_id"; then
-              printf 'offline heartbeat process-group registration failed pid=%s group=%s\n' "$offline_heartbeat_pid" "$offline_heartbeat_group_id" >&2
-              stop_offline_process_group "$offline_heartbeat_pid" "$offline_heartbeat_group_id" 2 || true
-              return 125
-            fi
+            offline_heartbeat_seq=0
+            offline_heartbeat_started="$(date +%s)"
+            offline_heartbeat_next_at=0
+            offline_heartbeat_enabled=1
+            emit_offline_rehearsal_heartbeat
           }
           abort_offline_rehearsal_on_signal() {
             trap - TERM INT

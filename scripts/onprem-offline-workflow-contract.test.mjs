@@ -203,11 +203,12 @@ test('build proof material uses one external runner-temp root from assembly thro
 
 test('offline rehearsal downloads only the bundle, cuts egress before verification, and never checks out source', () => {
   const rehearsal = jobSection('offline_rehearsal')
-  const heartbeatDefinition = rehearsal.indexOf('offline_rehearsal_heartbeat()')
+  const heartbeatDefinition = rehearsal.indexOf('emit_offline_rehearsal_heartbeat()')
   const heartbeatStart = rehearsal.indexOf('start_offline_rehearsal_heartbeat')
   const firstOperator = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/preflight.sh"')
-  assert.ok(heartbeatDefinition >= 0 && heartbeatStart > heartbeatDefinition && heartbeatStart < firstOperator, 'offline rehearsal must start its bounded heartbeat before operator work')
+  assert.ok(heartbeatDefinition >= 0 && heartbeatStart > heartbeatDefinition && heartbeatStart < firstOperator, 'offline rehearsal must enable its parent-supervised heartbeat before operator work')
   assert.match(rehearsal, /offline rehearsal heartbeat seq=.*phase=.*elapsed_seconds=/)
+  assert.match(rehearsal, /printf 'offline rehearsal heartbeat seq=%s phase=%s elapsed_seconds=%s\\n' "\$offline_heartbeat_seq" "\$offline_heartbeat_phase" "\$offline_heartbeat_elapsed" >&2/)
   assert.match(rehearsal, /offline_heartbeat_phase=.*unknown/)
   assert.match(rehearsal, /OPERATOR_TIMEOUT_SECONDS=960/)
   assert.match(rehearsal, /OPERATOR_KILL_AFTER_SECONDS=30/)
@@ -234,11 +235,15 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /\[ "\$pid" = "\$\$" \] \|\|/)
   assert.match(rehearsal, /\[ "\$pid" != "\$\$" \] && \[ "\$group_id" != "\$\{offline_main_group_id:-\}" \]/)
   assert.match(rehearsal, /start_offline_rehearsal_heartbeat\(\)/)
-  assert.match(rehearsal, /heartbeat_script="\$\(declare -f offline_rehearsal_heartbeat\)"/)
-  assert.match(rehearsal, /heartbeat_script\+=\$'\\n'/)
-  assert.match(rehearsal, /heartbeat_script\+="trap 'exit 143' TERM INT"/)
-  assert.match(rehearsal, /heartbeat_script\+=\$'\\noffline_rehearsal_heartbeat'/)
-  assert.match(rehearsal, /if ! offline_heartbeat_group_id="\$\(wait_for_distinct_process_group "\$offline_heartbeat_pid"\)"/)
+  const waitForPidExit = rehearsal.slice(rehearsal.indexOf('wait_for_pid_exit()'), rehearsal.indexOf('process_group_id_for_pid()'))
+  const heartbeatStartFunction = rehearsal.slice(rehearsal.indexOf('start_offline_rehearsal_heartbeat()'), rehearsal.indexOf('abort_offline_rehearsal_on_signal()'))
+  assert.match(waitForPidExit, /emit_offline_rehearsal_heartbeat/)
+  assert.match(heartbeatStartFunction, /offline_heartbeat_enabled=1/)
+  assert.match(heartbeatStartFunction, /emit_offline_rehearsal_heartbeat/)
+  assert.match(rehearsal, /offline_heartbeat_enabled=0/)
+  assert.match(rehearsal, /offline_heartbeat_next_at=\$\(\(offline_heartbeat_now \+ 30\)\)/)
+  assert.doesNotMatch(heartbeatStartFunction, /"\$SETSID_BIN" bash -c/)
+  assert.doesNotMatch(rehearsal, /offline_heartbeat_(?:pid|group_id)/)
   assert.match(rehearsal, /offline_watchdog_group_id="\$watchdog_group_id"/)
   assert.match(rehearsal, /' offline-watchdog "\$timeout_seconds" "\$kill_after_seconds" "\$process_group_id" "\$bounded_label" <\/dev\/null >\/dev\/null &/)
   assert.match(rehearsal, /kill -TERM -- "-\$process_group_id"/)
@@ -385,6 +390,92 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
     assert.match(rehearsal, new RegExp(`docker ps -aq[^\\n]*com\.docker\.compose\.project=\\$project`), project)
     assert.match(rehearsal, new RegExp(`docker volume ls -q[^\\n]*com\.docker\.compose\.project=\\$project`), project)
     assert.match(rehearsal, new RegExp(`docker network ls -q[^\\n]*com\.docker\.compose\.project=\\$project`), project)
+  }
+})
+
+test('Linux exact workflow supervisor keeps command substitution clean and closes active and watchdog groups after TERM', { skip: process.platform !== 'linux' }, () => {
+  const rehearsal = jobSection('offline_rehearsal')
+  const supervisorStart = rehearsal.indexOf('          emit_offline_rehearsal_heartbeat()')
+  const supervisorEnd = rehearsal.indexOf('          host_probe_uid=', supervisorStart)
+  assert.ok(supervisorStart >= 0 && supervisorEnd > supervisorStart, 'workflow supervisor functions must remain extractable for Linux signal proof')
+  const supervisor = rehearsal.slice(supervisorStart, supervisorEnd).replace(/^ {10}/gmu, '')
+  const root = mkdtempSync(join(tmpdir(), 'onprem-offline-workflow-supervisor-'))
+  const activePidPath = join(root, 'active.pid')
+  const activeGroupPath = join(root, 'active.pgid')
+  const watchdogPidPath = join(root, 'watchdog.pid')
+  const watchdogGroupPath = join(root, 'watchdog.pgid')
+  const psShimPath = join(root, 'ps')
+  const processIds = []
+  const processGroups = []
+  try {
+    // The pinned source-proof image intentionally excludes procps.  Keep the
+    // extracted workflow function intact while giving this isolated Linux
+    // signal proof the one `ps -o pgid= -p <pid>` capability it requires.
+    writeFileSync(psShimPath, '#!/bin/sh\n[ "$1" = -o ] && [ "$2" = pgid= ] && [ "$3" = -p ] || exit 64\nawk \'{print $5}\' "/proc/$4/stat"\n', { mode: 0o755 })
+    const script = [
+      supervisor,
+      'set -euo pipefail',
+      'active_pid_file="$1"',
+      'active_group_file="$2"',
+      'watchdog_pid_file="$3"',
+      'watchdog_group_file="$4"',
+      'export RUNNER_TEMP="$5"',
+      'export PATH="$5:$PATH"',
+      'printf \'%s\\n\' upgrade > "$RUNNER_TEMP/offline-phase"',
+      'SETSID_BIN="$(command -v setsid)"',
+      'offline_main_group_id="$(process_group_id_for_pid "$$")"',
+      'test -n "$offline_main_group_id"',
+      'start_offline_rehearsal_heartbeat',
+      'offline_heartbeat_next_at=0',
+      'captured="$(',
+      '  "$SETSID_BIN" sh -c \'exec sleep 0.2\' &',
+      '  probe_pid=$!',
+      '  wait_for_pid_exit "$probe_pid" 3',
+      ')"',
+      'test -z "$captured"',
+      `"$SETSID_BIN" sh -c 'child=""; trap "wait \\"\\$child\\" 2>/dev/null || true; exit 0" TERM; sleep 120 & child=$!; wait "$child"' &`,
+      'offline_active_pid=$!',
+      'offline_active_group_id="$(wait_for_distinct_process_group "$offline_active_pid")"',
+      'printf \'%s\\n\' "$offline_active_pid" > "$active_pid_file"',
+      'printf \'%s\\n\' "$offline_active_group_id" > "$active_group_file"',
+      'register_offline_process_group "$offline_active_pid" "$offline_active_group_id"',
+      `"$SETSID_BIN" sh -c 'child=""; trap "wait \\"\\$child\\" 2>/dev/null || true; exit 0" TERM; sleep 120 & child=$!; wait "$child"' &`,
+      'offline_watchdog_pid=$!',
+      'offline_watchdog_group_id="$(wait_for_distinct_process_group "$offline_watchdog_pid")"',
+      'printf \'%s\\n\' "$offline_watchdog_pid" > "$watchdog_pid_file"',
+      'printf \'%s\\n\' "$offline_watchdog_group_id" > "$watchdog_group_file"',
+      'register_offline_process_group "$offline_watchdog_pid" "$offline_watchdog_group_id"',
+      'trap offline_rehearsal_exit_cleanup EXIT',
+      'trap abort_offline_rehearsal_on_signal TERM INT',
+      'parent_pid="$$"',
+      '( sleep 0.2; kill -TERM "$parent_pid" ) &',
+      'while :; do sleep 1; done',
+    ].join('\n')
+    const result = spawnSync('bash', ['-c', script, 'offline-parent', activePidPath, activeGroupPath, watchdogPidPath, watchdogGroupPath, root], { encoding: 'utf8', timeout: 7000 })
+    for (const [pidPath, groupPath] of [[activePidPath, activeGroupPath], [watchdogPidPath, watchdogGroupPath]]) {
+      const pid = Number(readFileSync(pidPath, 'utf8').trim())
+      const group = Number(readFileSync(groupPath, 'utf8').trim())
+      assert.ok(Number.isSafeInteger(pid) && pid > 1)
+      assert.ok(Number.isSafeInteger(group) && group > 1)
+      processIds.push(pid)
+      processGroups.push(group)
+    }
+    assert.equal(result.error, undefined, result.error?.message)
+    assert.equal(result.signal, null, result.stderr)
+    assert.equal(result.status, 143, result.stderr)
+    assert.equal(result.stdout, '')
+    assert.match(result.stderr, /offline rehearsal heartbeat seq=1 phase=upgrade elapsed_seconds=/)
+    assert.match(result.stderr, /offline rehearsal heartbeat seq=2 phase=upgrade elapsed_seconds=/)
+    for (const pid of processIds) assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' })
+    for (const group of processGroups) assert.throws(() => process.kill(-group, 0), { code: 'ESRCH' })
+  } finally {
+    for (const group of processGroups) {
+      try { process.kill(-group, 'SIGKILL') } catch {}
+    }
+    for (const pid of processIds) {
+      try { process.kill(pid, 'SIGKILL') } catch {}
+    }
+    rmSync(root, { recursive: true, force: true })
   }
 })
 
