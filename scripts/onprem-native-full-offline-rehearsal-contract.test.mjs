@@ -163,6 +163,7 @@ test('one process performs native session, package, then rehearsal with exact ha
     assert.deepEqual(calls.map((call) => call.pid), [process.pid, process.pid, process.pid, process.pid, process.pid])
     assert.equal(calls[1].options.imageProofRoot, calls[0].options.proofOutput)
     assert.equal(calls[1].options.imageReceipt, calls[0].options.imageReceipt)
+    assert.equal(calls[1].options.runNumber, '71')
     const rehearsal = optionMap(calls[3].values)
     assert.equal(rehearsal['--bundle-root'], calls[1].options.outputRoot)
     assert.equal(rehearsal['--trust-root'], calls[1].options.trustRoot)

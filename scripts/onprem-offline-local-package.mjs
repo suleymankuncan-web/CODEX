@@ -219,7 +219,7 @@ export function parsePackageArguments(argv) {
   const values = {}
   const options = new Map([
     ['--image-proof-root', 'imageProofRoot'], ['--image-receipt', 'imageReceipt'], ['--output-root', 'outputRoot'], ['--trust-root', 'trustRoot'], ['--receipt', 'receipt'],
-    ['--source-sha', 'sourceSha'], ['--tree-sha', 'treeSha'], ['--node', 'node'], ['--node-sha256', 'nodeSha256'], ['--run-id', 'runId'], ['--run-attempt', 'runAttempt'],
+    ['--source-sha', 'sourceSha'], ['--tree-sha', 'treeSha'], ['--node', 'node'], ['--node-sha256', 'nodeSha256'], ['--run-number', 'runNumber'], ['--run-id', 'runId'], ['--run-attempt', 'runAttempt'],
     ['--deadline-minutes', 'deadlineMinutes'], ['--workspace-root', 'workspaceRoot'],
   ])
   const flags = new Map([['--confirm-disposable-native-host', 'confirmDisposableNativeHost'], ['--allow-disposable-daemon-reset', 'allowDisposableDaemonReset']])
@@ -246,6 +246,7 @@ export function parsePackageArguments(argv) {
   assertHash(values.sourceSha, 'source SHA', SHA1)
   assertHash(values.treeSha, 'tree SHA', SHA1)
   assertHash(values.nodeSha256, 'Node SHA-256', SHA256)
+  if (values.runNumber !== undefined && !POSITIVE.test(String(values.runNumber))) fail('run number must be a positive decimal number')
   if (!POSITIVE.test(String(values.runId)) || !POSITIVE.test(String(values.runAttempt))) fail('run ID and run attempt must be positive decimal numbers')
   return Object.freeze(values)
 }
@@ -277,6 +278,7 @@ export function validatePackageOptions(raw, dependencies = {}) {
   const sourceSha = assertHash(raw.sourceSha, 'source SHA', SHA1)
   const treeSha = assertHash(raw.treeSha, 'tree SHA', SHA1)
   const nodeSha256 = assertHash(raw.nodeSha256, 'Node SHA-256', SHA256)
+  if (raw.runNumber !== undefined && !POSITIVE.test(String(raw.runNumber))) fail('run number must be a positive decimal number')
   if (!POSITIVE.test(String(raw.runId)) || !POSITIVE.test(String(raw.runAttempt))) fail('run ID and run attempt must be positive decimal numbers')
   const deadlineMinutes = raw.deadlineMinutes === undefined ? 60 : Number(raw.deadlineMinutes)
   if (!Number.isInteger(deadlineMinutes) || deadlineMinutes < MIN_DEADLINE_MINUTES || deadlineMinutes > MAX_DEADLINE_MINUTES) fail(`deadline-minutes must be between ${MIN_DEADLINE_MINUTES} and ${MAX_DEADLINE_MINUTES}`)
@@ -308,7 +310,7 @@ export function validatePackageOptions(raw, dependencies = {}) {
     if (isWithin(a, b) || isWithin(b, a)) fail('package input/output paths may not overlap')
   }
   if (nodeSnapshot.sha256 !== nodeSha256) fail('pinned Node SHA-256 mismatch')
-  return Object.freeze({ sourceSha, treeSha, node, nodeSha256, nodeSnapshot, workspaceRoot, imageProofRoot, imageProofRootSnapshot, imageReceipt, imageReceiptSnapshot, outputRoot, trustRoot, receipt, runId: String(raw.runId), runAttempt: String(raw.runAttempt), deadlineMinutes, confirmDisposableNativeHost: true, allowDisposableDaemonReset: true, platform, uid })
+  return Object.freeze({ sourceSha, treeSha, node, nodeSha256, nodeSnapshot, workspaceRoot, imageProofRoot, imageProofRootSnapshot, imageReceipt, imageReceiptSnapshot, outputRoot, trustRoot, receipt, runNumber: raw.runNumber === undefined ? undefined : String(raw.runNumber), runId: String(raw.runId), runAttempt: String(raw.runAttempt), deadlineMinutes, confirmDisposableNativeHost: true, allowDisposableDaemonReset: true, platform, uid })
 }
 export const validateCliOptions = validatePackageOptions
 
@@ -835,7 +837,7 @@ export function runLocalPackage(rawOptions, dependencies = {}) {
 export const runOfflinePackage = runLocalPackage
 
 function usage() {
-  return `Usage: node scripts/onprem-offline-local-package.mjs --confirm-disposable-native-host --allow-disposable-daemon-reset --image-proof-root ABS --image-receipt ABS --output-root ABS --trust-root ABS --receipt ABS --source-sha SHA1 --tree-sha SHA1 --node ABS --node-sha256 SHA256 --run-id N --run-attempt N [--deadline-minutes ${MIN_DEADLINE_MINUTES}-${MAX_DEADLINE_MINUTES}] [--workspace-root ABS]`
+  return `Usage: node scripts/onprem-offline-local-package.mjs --confirm-disposable-native-host --allow-disposable-daemon-reset --image-proof-root ABS --image-receipt ABS --output-root ABS --trust-root ABS --receipt ABS --source-sha SHA1 --tree-sha SHA1 --node ABS --node-sha256 SHA256 [--run-number N] --run-id N --run-attempt N [--deadline-minutes ${MIN_DEADLINE_MINUTES}-${MAX_DEADLINE_MINUTES}] [--workspace-root ABS]`
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   try {

@@ -281,6 +281,7 @@ export async function runSingleSession(rawOptions, dependencies = {}) {
       treeSha: options.treeSha,
       node: options.node,
       nodeSha256: options.nodeSha256,
+      runNumber: options.runNumber,
       runId: options.runId,
       runAttempt: options.runAttempt,
       deadlineMinutes: String(options.packageDeadlineMinutes),

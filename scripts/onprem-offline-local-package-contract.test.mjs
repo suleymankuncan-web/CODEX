@@ -275,6 +275,8 @@ test('package argument parser requires both disposable-host confirmations and re
   assert.equal(parsed.confirmDisposableNativeHost, true)
   assert.equal(parsed.allowDisposableDaemonReset, true)
   assert.equal(parsed.runId, '42')
+  assert.equal(parsePackageArguments(validArguments({ '--run-number': '71' })).runNumber, '71')
+  assert.throws(() => parsePackageArguments(validArguments({ '--run-number': '0' })), /run number/)
   assert.throws(() => parsePackageArguments(validArguments().filter((value) => value !== '--confirm-disposable-native-host')), /confirmDisposableNativeHost|confirm-disposable-native-host/)
   assert.throws(() => parsePackageArguments(validArguments().filter((value) => value !== '--allow-disposable-daemon-reset')), /allowDisposableDaemonReset|allow-disposable-daemon-reset/)
   assert.throws(() => parsePackageArguments([...validArguments(), '--unknown', 'x']), /unknown or positional/)
@@ -969,6 +971,8 @@ test('receipt self-hash is stable and excludes only the self field', () => {
   const receipt = buildPackageReceipt({ sourceSha: 'a'.repeat(40), treeSha: 'b'.repeat(40) }, { status: 'failed' })
   assert.equal(receipt.receiptSha256, receiptSelfHash(receipt))
   assert.doesNotMatch(JSON.stringify(receipt), /BEGIN (?:RSA|EC|OPENSSH|PRIVATE) KEY/)
+  const numbered = buildPackageReceipt({ sourceSha: 'a'.repeat(40), treeSha: 'b'.repeat(40), runNumber: '71', runId: '72', runAttempt: '1' }, { status: 'failed' })
+  assert.deepEqual(numbered.execution, { runNumber: '71', runId: '72', runAttempt: '1' })
 })
 
 test('workflow parser uses pinned top-level env and package source has no archive-stage duplication', () => {
