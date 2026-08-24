@@ -22,6 +22,7 @@ import {
   validateDockerRootContext,
   validateCliOptions,
 } from './onprem-image-local-proof.mjs'
+import { captureFirewallSnapshots } from './onprem-image-local-proof-recovery.mjs'
 
 const workflowPath = resolve('.github/workflows/onprem-image-proof.yml')
 const workflow = readFileSync(workflowPath, 'utf8')
@@ -311,6 +312,48 @@ test('firewall snapshots are read-only raw bytes and fail closed on drift', () =
   assert.equal(drift.clean, false)
   assert.equal(drift.firewall.equal, false)
   assert.deepEqual(dockerIdentityFromOutput(JSON.stringify({ ID: 'docker-id', ServerVersion: '29.0.0', OSType: 'linux', Architecture: 'x86_64' })), { id: 'docker-id', serverVersion: '29.0.0', operatingSystem: 'linux', architecture: 'amd64' })
+})
+
+test('image firewall capture probes the raw table immediately before each save', () => {
+  const events = []
+  const commandRunner = (_file, args) => {
+    const binary = args[1]
+    if (binary === '/usr/sbin/iptables' || binary === '/usr/sbin/ip6tables') {
+      events.push(`${binary}:probe`)
+      assert.deepEqual(args.slice(2), ['-t', 'raw', '-L'])
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    if (binary === '/usr/sbin/iptables-save' || binary === '/usr/sbin/ip6tables-save') {
+      events.push(`${binary}:save`)
+      assert.deepEqual(args.slice(2), ['--counters'])
+      return { status: 0, stdout: `${binary}\n`, stderr: '' }
+    }
+    throw new Error(`unexpected command: ${args.join(' ')}`)
+  }
+  const snapshots = captureFirewallSnapshots({ commandRunner, cwd: resolve('.'), env: {}, deadlineAt: Date.now() + 10_000 })
+  assert.deepEqual(Object.keys(snapshots), ['ipv4', 'ipv6'])
+  assert.deepEqual(events, [
+    '/usr/sbin/iptables:probe', '/usr/sbin/iptables-save:save',
+    '/usr/sbin/ip6tables:probe', '/usr/sbin/ip6tables-save:save',
+  ])
+})
+
+test('image firewall capture aborts before save when a raw-table probe fails', () => {
+  const events = []
+  const commandRunner = (_file, args) => {
+    const binary = args[1]
+    if (binary === '/usr/sbin/iptables') {
+      events.push('ipv4-probe')
+      return { status: 7, stdout: '', stderr: 'raw table unavailable' }
+    }
+    events.push(binary)
+    return { status: 0, stdout: 'unexpected\n', stderr: '' }
+  }
+  assert.throws(
+    () => captureFirewallSnapshots({ commandRunner, cwd: resolve('.'), env: {}, deadlineAt: Date.now() + 10_000 }),
+    /ipv4 firewall raw-table probe failed/,
+  )
+  assert.deepEqual(events, ['ipv4-probe'])
 })
 
 test('image firewall capture and restore retain invalid bytes without UTF-8 collapse', () => {

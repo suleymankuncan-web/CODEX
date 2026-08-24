@@ -699,7 +699,9 @@ jobs:
           set -euo pipefail
           test ! -d "$GITHUB_WORKSPACE/.git"
           test ! -d "$GITHUB_WORKSPACE/backend"; test ! -d "$GITHUB_WORKSPACE/admin-web"; test ! -d "$GITHUB_WORKSPACE/node_modules"
+          sudo /usr/sbin/iptables -t raw -L >/dev/null
           sudo iptables-save --counters | sudo tee "$RUNNER_TEMP/offline-firewall.snapshot" >/dev/null
+          sudo /usr/sbin/ip6tables -t raw -L >/dev/null
           sudo ip6tables-save --counters | sudo tee "$RUNNER_TEMP/offline-firewall6.snapshot" >/dev/null
           test -s "$RUNNER_TEMP/offline-firewall.snapshot"
           test -s "$RUNNER_TEMP/offline-firewall6.snapshot"

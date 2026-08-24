@@ -11,8 +11,8 @@ import {
 } from './onprem-native-docker-host.mjs'
 
 const FIREWALLS = Object.freeze([
-  Object.freeze({ key: 'ipv4', save: '/usr/sbin/iptables-save', restore: '/usr/sbin/iptables-restore', expectedFamily: 'iptables-save' }),
-  Object.freeze({ key: 'ipv6', save: '/usr/sbin/ip6tables-save', restore: '/usr/sbin/ip6tables-restore', expectedFamily: 'ip6tables-save' }),
+  Object.freeze({ key: 'ipv4', probe: '/usr/sbin/iptables', save: '/usr/sbin/iptables-save', restore: '/usr/sbin/iptables-restore', expectedFamily: 'iptables-save' }),
+  Object.freeze({ key: 'ipv6', probe: '/usr/sbin/ip6tables', save: '/usr/sbin/ip6tables-save', restore: '/usr/sbin/ip6tables-restore', expectedFamily: 'ip6tables-save' }),
 ])
 const RECOVERY_BINARIES = Object.freeze({
   sudo: '/usr/bin/sudo',
@@ -31,7 +31,7 @@ export const FIREWALL_RECOVERY_RESERVE_MS = 150_000
 // copies recovery diagnostics directly into its receipt.
 export const FIREWALL_DIAGNOSTIC_LINE_CAP = 1_024
 const FIXED_RECOVERY_BINARY = /^\/usr\/(?:sbin|bin)\/[A-Za-z0-9._-]+$/
-for (const executable of [...FIREWALLS.flatMap(({ save, restore }) => [save, restore]), ...Object.values(RECOVERY_BINARIES)]) {
+for (const executable of [...FIREWALLS.flatMap(({ probe, save, restore }) => [probe, save, restore]), ...Object.values(RECOVERY_BINARIES)]) {
   if (!FIXED_RECOVERY_BINARY.test(executable)) throw new Error('recovery executable path is not fixed')
 }
 const GENERATED_WORKSPACE_PATHS = Object.freeze([
@@ -397,6 +397,8 @@ export function captureFirewallSnapshots({ commandRunner, cwd, env, deadlineAt, 
   if (typeof commandRunner !== 'function') fail('firewall command runner is required')
   const snapshots = {}
   for (const firewall of FIREWALLS) {
+    const probe = commandResult(commandRunner, RECOVERY_BINARIES.sudo, ['-n', firewall.probe, '-t', 'raw', '-L'], recoveryCommandOptions({ cwd, deadlineAt, capMs: perCommandTimeoutMs }), `${firewall.key} firewall raw-table probe`)
+    if (probe.status !== 0) fail(`${firewall.key} firewall raw-table probe failed`)
     const result = commandResult(commandRunner, RECOVERY_BINARIES.sudo, ['-n', firewall.save, '--counters'], recoveryCommandOptions({ cwd, deadlineAt, capMs: perCommandTimeoutMs, binaryOutput: true }), `${firewall.key} firewall snapshot`)
     if (result.status !== 0) fail(`${firewall.key} firewall snapshot failed`)
     snapshots[firewall.key] = {

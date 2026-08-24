@@ -13,7 +13,7 @@ import {
   releaseHostLock,
   resetDedicatedNativeDockerHost,
 } from './onprem-native-docker-host.mjs'
-import { analyzeFirewallMismatch, compareFirewallSnapshots } from './onprem-image-local-proof-recovery.mjs'
+import { analyzeFirewallMismatch, compareFirewallSnapshots, FIREWALL_COMMAND_CAP_MS } from './onprem-image-local-proof-recovery.mjs'
 import { createRecoveryFixedCommands } from './onprem-recovery-command-allowlist.mjs'
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url))
@@ -56,8 +56,10 @@ export const RECOVERY_POLICY = Object.freeze({
 })
 const RECOVERY_BINARIES = Object.freeze({
   sudo: '/usr/bin/sudo',
+  ipv4Probe: '/usr/sbin/iptables',
   ipv4Save: '/usr/sbin/iptables-save',
   ipv4Restore: '/usr/sbin/iptables-restore',
+  ipv6Probe: '/usr/sbin/ip6tables',
   ipv6Save: '/usr/sbin/ip6tables-save',
   ipv6Restore: '/usr/sbin/ip6tables-restore',
 })
@@ -72,13 +74,15 @@ const RECOVERY_COMMAND_CODE = 'OFFLINE_RECOVERY_COMMAND'
 const RECOVERY_FIXED_COMMANDS = createRecoveryFixedCommands(RECOVERY_BINARIES)
 const RECOVERY_FIXED_PATHS = new Set([
   ...RECOVERY_FIXED_COMMANDS.values(),
+  RECOVERY_BINARIES.ipv4Probe,
+  RECOVERY_BINARIES.ipv6Probe,
   '/usr/bin/cat', '/usr/bin/containerd', '/usr/bin/docker', '/usr/bin/dockerd', '/usr/bin/find', '/usr/bin/findmnt',
   '/usr/bin/id', '/usr/bin/install', '/usr/bin/kill', '/usr/bin/readlink', '/usr/bin/rm', '/usr/bin/ps', '/usr/bin/ss',
   '/usr/bin/stat', '/usr/bin/systemctl', '/usr/bin/test',
 ])
 const FIREWALLS = Object.freeze([
-  Object.freeze({ key: 'ipv4', save: RECOVERY_BINARIES.ipv4Save, restore: RECOVERY_BINARIES.ipv4Restore, expectedFamily: 'iptables-save' }),
-  Object.freeze({ key: 'ipv6', save: RECOVERY_BINARIES.ipv6Save, restore: RECOVERY_BINARIES.ipv6Restore, expectedFamily: 'ip6tables-save' }),
+  Object.freeze({ key: 'ipv4', probe: RECOVERY_BINARIES.ipv4Probe, save: RECOVERY_BINARIES.ipv4Save, restore: RECOVERY_BINARIES.ipv4Restore, expectedFamily: 'iptables-save' }),
+  Object.freeze({ key: 'ipv6', probe: RECOVERY_BINARIES.ipv6Probe, save: RECOVERY_BINARIES.ipv6Save, restore: RECOVERY_BINARIES.ipv6Restore, expectedFamily: 'ip6tables-save' }),
 ])
 
 function fail(message) {
@@ -899,12 +903,13 @@ function writeExternalReceipt(receiptPath, value, { replaceExisting = false } = 
 }
 
 function recoveryCommandOptions(commandRunner, label, input) {
-  const options = { commandRunner, env: RECOVERY_ENV, label }
+  const options = { commandRunner, env: RECOVERY_ENV, label, timeout: FIREWALL_COMMAND_CAP_MS }
   if (input !== undefined) options.input = input
   return options
 }
 
 function captureFirewallSnapshot(firewall, commandRunner) {
+  commandOutput(RECOVERY_BINARIES.sudo, ['-n', firewall.probe, '-t', 'raw', '-L'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall raw-table probe`))
   const bytes = commandBytes(RECOVERY_BINARIES.sudo, ['-n', firewall.save, '--counters'], recoveryCommandOptions(commandRunner, `${firewall.key} firewall snapshot`))
   return Object.freeze({ bytes, byteLength: bytes.length, sha256: hashBytes(bytes) })
 }

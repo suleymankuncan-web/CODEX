@@ -30,7 +30,7 @@ import {
   workflowBodyDigest,
 } from './onprem-offline-local-rehearsal.mjs'
 import { buildWorkflowSupervisor } from './onprem-local-workflow-supervisor.mjs'
-import { FIREWALL_DIAGNOSTIC_LINE_CAP } from './onprem-image-local-proof-recovery.mjs'
+import { FIREWALL_COMMAND_CAP_MS, FIREWALL_DIAGNOSTIC_LINE_CAP } from './onprem-image-local-proof-recovery.mjs'
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const scriptPath = path.join(repositoryRoot, 'scripts', 'onprem-offline-local-rehearsal.mjs')
@@ -126,6 +126,42 @@ test('extracts exactly the named workflow bodies and preserves their order', () 
   assert.match(blocks[WORKFLOW_STEPS[3]].body, /iptables-restore/)
   assert.match(blocks[WORKFLOW_STEPS[4]].body, /rehearsal-failure\.json/)
   assert.match(blocks[WORKFLOW_STEPS[5]].body, /sensitive_paths=/)
+})
+
+test('offline firewall capture probes the raw table immediately before each save and fails closed', () => {
+  const events = []
+  const commandRunner = (_file, args, commandOptions = {}) => {
+    const binary = args[1]
+    if (binary === '/usr/sbin/iptables' || binary === '/usr/sbin/ip6tables') {
+      events.push(`${binary}:probe`)
+      assert.equal(commandOptions.timeout, FIREWALL_COMMAND_CAP_MS)
+      assert.ok(commandOptions.timeout > 0 && commandOptions.timeout <= FIREWALL_COMMAND_CAP_MS)
+      assert.deepEqual(commandOptions.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' })
+      assert.deepEqual(args.slice(2), ['-t', 'raw', '-L'])
+      return { status: 0, stdout: '', stderr: '' }
+    }
+    if (binary === '/usr/sbin/iptables-save' || binary === '/usr/sbin/ip6tables-save') {
+      events.push(`${binary}:save`)
+      assert.equal(commandOptions.timeout, FIREWALL_COMMAND_CAP_MS)
+      assert.ok(commandOptions.timeout > 0 && commandOptions.timeout <= FIREWALL_COMMAND_CAP_MS)
+      assert.deepEqual(commandOptions.env, { LANG: 'C', LC_ALL: 'C', PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' })
+      assert.deepEqual(args.slice(2), ['--counters'])
+      return { status: 0, stdout: `${binary}\n`, stderr: '' }
+    }
+    throw new Error(`unexpected command: ${args.join(' ')}`)
+  }
+  const snapshots = captureFirewallSnapshots({ commandRunner })
+  assert.deepEqual(Object.keys(snapshots), ['ipv4', 'ipv6'])
+  assert.deepEqual(events, [
+    '/usr/sbin/iptables:probe', '/usr/sbin/iptables-save:save',
+    '/usr/sbin/ip6tables:probe', '/usr/sbin/ip6tables-save:save',
+  ])
+
+  const failingRunner = (_file, args, commandOptions) => {
+    if (args[1] === '/usr/sbin/ip6tables') return { status: 9, stdout: '', stderr: 'raw table unavailable' }
+    return commandRunner(_file, args, commandOptions)
+  }
+  assert.throws(() => captureFirewallSnapshots({ commandRunner: failingRunner }), /ipv6 firewall raw-table probe failed/)
 })
 
 test('fails closed for missing, duplicated, or malformed workflow markers', () => {
