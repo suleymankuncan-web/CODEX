@@ -3,6 +3,7 @@ import {
   closeSync,
   constants,
   existsSync,
+  fchmodSync,
   fstatSync,
   lstatSync,
   mkdirSync,
@@ -564,6 +565,9 @@ export function copyStable(source, destination, expectedBytes, expectedHash, mod
     if (!sameFileIdentity(before, opened) || (expectedIdentity && !sameFileIdentity(expectedIdentity, opened)) || !opened.isFile() || opened.size !== expectedBytes) fail('staged file changed during copy')
     hooks.afterOpen?.({ source, destination, identity: fileIdentity(opened) })
     destinationFd = openSync(destination, 'wx', mode)
+    // open(2)'s creation mode is filtered by the caller's umask. The signed
+    // bundle contract requires exact modes regardless of that host setting.
+    if (process.platform !== 'win32') fchmodSync(destinationFd, mode)
     const hash = createHash('sha256')
     const buffer = Buffer.allocUnsafe(1024 * 1024)
     let bytes = 0
