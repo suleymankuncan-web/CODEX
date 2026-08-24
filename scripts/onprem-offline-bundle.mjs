@@ -729,8 +729,17 @@ export function createOfflineBundle(inputOrOptions, maybeOptions) {
       const observed = copiedByPath.get(file.path)
       if (!observed || observed.bytes !== file.bytes || observed.sha256 !== file.sha256 || observed.mode !== file.mode) fail(`private copied file rescan mismatch: ${file.path}`)
     }
-    writeFileSync(join(temp, 'bundle-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o644 })
-    writeFileSync(join(temp, 'bundle-signature.json'), `${JSON.stringify(signature, null, 2)}\n`, { mode: 0o644 })
+    const generatedManifest = join(temp, 'bundle-manifest.json')
+    const generatedSignature = join(temp, 'bundle-signature.json')
+    writeFileSync(generatedManifest, `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o644 })
+    writeFileSync(generatedSignature, `${JSON.stringify(signature, null, 2)}\n`, { mode: 0o644 })
+    // writeFileSync creation modes are filtered by the caller's umask. The
+    // independent bootstrap verifier requires these signed metadata files to
+    // retain their exact public bundle mode after archive handoff.
+    if (process.platform !== 'win32') {
+      chmodSync(generatedManifest, 0o644)
+      chmodSync(generatedSignature, 0o644)
+    }
     verifyOfflineBundle({ bundleDir: temp, publicKeyPath: publicPath, trustedKeyFingerprintSha256: options.trustedKeyFingerprintSha256 })
     if (existsSync(output)) fail('output directory appeared during bundle creation')
     renameSync(temp, output)
