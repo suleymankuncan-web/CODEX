@@ -797,8 +797,8 @@ jobs:
           sudo ip6tables -I OUTPUT 1 -j "$host6_egress_chain"
           test "$(sudo iptables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host_egress_chain"
           test "$(sudo ip6tables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host6_egress_chain"
-          test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 8
-          test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 8
+          test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 7
+          test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 7
           host6_probe_interface=HRAXIS_OFFLINE6
           host6_probe_source=fd42:6872:6178:6973::1
           host6_probe_target=fd42:6872:6178:6973::2
