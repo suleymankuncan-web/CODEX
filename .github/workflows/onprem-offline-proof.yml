@@ -842,6 +842,22 @@ jobs:
               return "$wait_status"
             fi
           }
+          offline_natural_exit_status=''
+          reap_naturally_exited_process() {
+            local pid="$1" pid_state wait_status
+            offline_natural_exit_status=''
+            if kill -0 "$pid" 2>/dev/null; then
+              pid_state="$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null || true)"
+              [ "$pid_state" = Z ] || return 1
+            fi
+            if wait "$pid" 2>/dev/null; then
+              offline_natural_exit_status=0
+            else
+              wait_status=$?
+              offline_natural_exit_status="$wait_status"
+            fi
+            return 0
+          }
           process_group_id_for_pid() {
             local pid="$1" group_id
             group_id="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
@@ -1175,6 +1191,10 @@ jobs:
             [ -n "$process_group_id" ] || process_group_id="$(process_group_id_for_pid "$pid")"
             process_starttime="$(process_starttime_for_pid "$pid" 2>/dev/null || true)"
             if ! offline_process_group_is_safe "$process_group_id" || ! [[ "$process_starttime" =~ ^[0-9]+$ ]]; then
+              if reap_naturally_exited_process "$pid"; then
+                bounded_status="$offline_natural_exit_status"
+                return "$bounded_status"
+              fi
               printf 'offline process-group isolation unavailable label=%s pid=%s group=%s\n' "$bounded_label" "$pid" "$process_group_id" >&2
               stop_offline_process_group "$pid" "$process_group_id" 5 "$process_starttime" || true
               return 125
