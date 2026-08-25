@@ -748,9 +748,8 @@ export function executeWorkflowBody(body, context, { timeoutMs = 60 * 60 * 1000 
   const containmentMarker = path.join(context.runnerTemp, `.workflow-contained-${process.pid}`)
   const watchdogReadyMarker = `${containmentMarker}.watchdog-ready`
   const supervisor = buildWorkflowSupervisor({ bashPath: 'bash', setsidPath: 'setsid' })
-  // The outer shell captures the exact inner setsid leader PID, sends TERM
-  // then bounded KILL to the negative process-group ID, and waits/reaps it
-  // before returning to the caller's recovery supervisor.
+  // The outer shell captures the exact inner setsid leader PID, sends bounded TERM/KILL
+  // to the negative process-group ID, and waits/reaps it before returning to recovery.
   const result = spawnSync('bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', supervisor, 'offline-workflow-supervisor', timeoutMarker, leaderMarker, containmentMarker, body, String(timeoutSeconds)], {
     cwd: context.workspace,
     env: sanitizeChildEnvironment(context),
