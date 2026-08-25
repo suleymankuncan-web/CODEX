@@ -774,8 +774,11 @@ jobs:
           # exception is DNS-only: name resolution stays possible while every
           # other NEW outbound flow from the host is still rejected, so the
           # offline egress proof keeps its meaning.
-          host_dns_uid="$(id -u systemd-resolve)"
-          test "$host_dns_uid" -gt 0
+          host_dns_uid="$(id -u systemd-resolved 2>/dev/null || id -u systemd-resolve 2>/dev/null || true)"
+          test -n "$host_dns_uid" && test "$host_dns_uid" -gt 0 || {
+            echo 'systemd-resolved uid unavailable; refusing to continue' >&2
+            exit 1
+          }
           sudo iptables -N "$host_egress_chain"
           sudo iptables -A "$host_egress_chain" -m owner --uid-owner "$runner_control_uid" -j ACCEPT
           sudo iptables -A "$host_egress_chain" -o lo -j ACCEPT
