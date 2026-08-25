@@ -1021,7 +1021,7 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.match(verifyStep, /host6_probe_target=fd42:6872:6178:6973::2/)
   assert.ok(verifyStep.indexOf('host_probe_uid="$(id -u nobody)"') < verifyStep.indexOf('host6_probe_target=fd42:6872:6178:6973::2'))
   assert.ok(verifyStep.indexOf('host6_probe_target=fd42:6872:6178:6973::2') < verifyStep.indexOf("host:'$host6_probe_target'"))
-  assert.match(rehearsal, /host_reject_rule_line=4/)
+  assert.match(rehearsal, /host_reject_rule_line=6/)
   assert.match(rehearsal, /sudo -u nobody -- "\$PINNED_NODE_SOURCE" --input-type=module -e/)
   assert.doesNotMatch(rehearsal, /(?<!sudo -u nobody -- )node --input-type=module -e "import net from 'node:net'/)
   assert.match(rehearsal, /host:'198\.51\.100\.1'/)
