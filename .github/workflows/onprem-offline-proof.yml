@@ -666,7 +666,12 @@ jobs:
     name: clean Linux offline rehearsal
     needs: build_bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Bundle verification, Docker image loading, and the serial bounded
+    # lifecycle operations must share one explicit hosted ceiling. Repeated
+    # exact-SHA runs reached the old 60-minute limit while the local native
+    # rehearsal completed successfully, so retain the same fail-closed job
+    # boundary with enough bounded headroom for the hosted runner.
+    timeout-minutes: 120
     steps:
       - name: Pin rehearsal Node runtime
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
