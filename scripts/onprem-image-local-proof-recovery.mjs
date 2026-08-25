@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { lstatSync, realpathSync, rmSync } from 'node:fs'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 import {
   acquireHostLock,
@@ -736,7 +736,7 @@ export function removePartialProofOutput({ proofOutput, workspaceRoot, runRoot, 
   if (!proofOutput) return 'absent'
   const overlaps = (left, right) => {
     const rel = relative(resolve(left), resolve(right))
-    return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !rel.startsWith(sep))
+    return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !rel.startsWith(sep) && !isAbsolute(rel))
   }
   if (overlaps(workspaceRoot, proofOutput) || overlaps(proofOutput, workspaceRoot) || overlaps(runRoot, proofOutput) || overlaps(proofOutput, runRoot)) fail('proof output removal target is unsafe')
   return removeDirectory({ target: proofOutput, expected: proofOutput, label: 'proof output', commandRunner, cwd: workspaceRoot, env, deadlineAt, ownerUid, allowSudo: false, allowRootOwner: false, removePath })
