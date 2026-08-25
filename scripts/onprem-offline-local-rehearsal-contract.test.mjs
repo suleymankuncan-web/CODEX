@@ -201,6 +201,11 @@ test('runner source only delegates operation semantics to extracted workflow bod
   assert.match(supervisor, /kill -TERM -- "-\$leader"/)
   assert.match(supervisor, /kill -KILL -- "-\$leader"/)
   assert.match(supervisor, /stop_watchdog\(\)/)
+  assert.match(supervisor, /wait_watchdog_ready\(\)/)
+  assert.match(supervisor, /printf "%s\\\\n" "\$watchdog_timer" > "\$watchdog_ready_marker"/)
+  assert.match(supervisor, /if ! wait_watchdog_ready; then abort_supervisor; fi/)
+  assert.match(supervisor, /trap "watchdog_stop_requested=1" TERM INT HUP/)
+  assert.match(supervisor, /if test "\$watchdog_stop_requested" -eq 1; then exit 0; fi/)
   assert.match(supervisor, /abort_supervisor\(\)/)
   assert.match(supervisor, /trap "cleanup_watchdog; exit 0" TERM INT HUP/)
   assert.match(supervisor, /\) <\/dev\/null >\/dev\/null 2>&1 &/)
@@ -256,6 +261,75 @@ test('workflow process-group supervisor reaps its normal-completion watchdog chi
     assert.deepEqual(watchdogSleeps(deadlineSeconds, directory), [])
   } finally {
     terminateWatchdogSleeps(deadlineSeconds, directory)
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('workflow process-group supervisor waits through delayed watchdog timer registration', { skip: process.platform !== 'linux' }, async () => {
+  const directory = temporaryDirectory()
+  const deadlineSeconds = 63
+  const marker = path.join(directory, 'timeout-marker')
+  const leaderMarker = path.join(directory, 'leader-marker')
+  const containmentMarker = path.join(directory, 'containment-marker')
+  const supervisor = buildWorkflowSupervisor({ bashPath: '/usr/bin/bash', setsidPath: '/usr/bin/setsid' })
+    .replace('    watchdog_timer="$!"', '    sleep 0.25\n    watchdog_timer="$!"')
+  const child = spawn('/usr/bin/bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', supervisor, 'offline-workflow-supervisor', marker, leaderMarker, containmentMarker, ':', String(deadlineSeconds)], {
+    cwd: directory,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  try {
+    assert.deepEqual(await waitForProcessClose(child, 3000), { code: 0, signal: null })
+    assert.deepEqual(watchdogSleeps(deadlineSeconds, directory), [])
+  } finally {
+    try { child.kill('SIGKILL') } catch { /* process already exited */ }
+    terminateWatchdogSleeps(deadlineSeconds, directory)
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('workflow process-group supervisor fails closed without an orphan when watchdog registration stalls', { skip: process.platform !== 'linux' }, async () => {
+  const directory = temporaryDirectory()
+  const deadlineSeconds = 64
+  const marker = path.join(directory, 'timeout-marker')
+  const leaderMarker = path.join(directory, 'leader-marker')
+  const containmentMarker = path.join(directory, 'containment-marker')
+  const supervisor = buildWorkflowSupervisor({ bashPath: '/usr/bin/bash', setsidPath: '/usr/bin/setsid' })
+    .replace('    watchdog_timer="$!"', '    sleep 3\n    watchdog_timer="$!"')
+  const child = spawn('/usr/bin/bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', supervisor, 'offline-workflow-supervisor', marker, leaderMarker, containmentMarker, ':', String(deadlineSeconds)], {
+    cwd: directory,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  try {
+    assert.deepEqual(await waitForProcessClose(child, 7000), { code: 125, signal: null })
+    assert.deepEqual(watchdogSleeps(deadlineSeconds, directory), [])
+  } finally {
+    try { child.kill('SIGKILL') } catch { /* process already exited */ }
+    terminateWatchdogSleeps(deadlineSeconds, directory)
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})
+
+test('workflow process-group supervisor reaps a stalled escalation timer on external TERM', { skip: process.platform !== 'linux' }, async () => {
+  const directory = temporaryDirectory()
+  const deadlineSeconds = 1
+  const marker = path.join(directory, 'timeout-marker')
+  const leaderMarker = path.join(directory, 'leader-marker')
+  const containmentMarker = path.join(directory, 'containment-marker')
+  const secondTimerGapMarker = `${containmentMarker}.second-timer-gap`
+  const supervisor = buildWorkflowSupervisor({ bashPath: '/usr/bin/bash', setsidPath: '/usr/bin/setsid' })
+    .replace('    watchdog_timer="$!"', '    if test "$duration" = "10"; then : > "${containment_marker}.second-timer-gap"; sleep 3; fi\n    watchdog_timer="$!"')
+  const child = spawn('/usr/bin/bash', ['--noprofile', '--norc', '-e', '-u', '-o', 'pipefail', '-c', supervisor, 'offline-workflow-supervisor', marker, leaderMarker, containmentMarker, 'sleep 30', String(deadlineSeconds)], {
+    cwd: directory,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  try {
+    await waitForFile(secondTimerGapMarker, 4000)
+    assert.equal(child.kill('SIGTERM'), true)
+    assert.deepEqual(await waitForProcessClose(child, 7000), { code: 125, signal: null })
+    assert.deepEqual(watchdogSleeps(10, directory), [])
+  } finally {
+    try { child.kill('SIGKILL') } catch { /* process already exited */ }
+    terminateWatchdogSleeps(10, directory)
     fs.rmSync(directory, { recursive: true, force: true })
   }
 })

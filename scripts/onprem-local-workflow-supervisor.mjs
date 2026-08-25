@@ -9,7 +9,8 @@ export function buildWorkflowSupervisor({ bashPath, setsidPath }) {
   return [
     'set -eu',
     'marker="$1"; leader_marker="$2"; containment_marker="$3"; body="$4"; deadline="$5"',
-    'rm -f -- "$marker" "$leader_marker" "$containment_marker"',
+    'watchdog_ready_marker="${containment_marker}.watchdog-ready"',
+    'rm -f -- "$marker" "$leader_marker" "$containment_marker" "$watchdog_ready_marker"',
     // The inner shell writes its own $$ after setsid has established the
     // session. This avoids treating a possible setsid fork/wait helper as
     // the process-group leader that must be terminated.
@@ -17,11 +18,26 @@ export function buildWorkflowSupervisor({ bashPath, setsidPath }) {
     'child="$!"',
     'leader=""',
     'watchdog=""',
+    'wait_watchdog_ready() {',
+    '  local ready_attempt=0',
+    '  while test "$ready_attempt" -lt 20; do',
+    '    if test -s "$watchdog_ready_marker"; then return 0; fi',
+    '    if test -z "$watchdog" || ! kill -0 "$watchdog" 2>/dev/null; then return 1; fi',
+    '    sleep 0.05',
+    '    ready_attempt=$((ready_attempt + 1))',
+    '  done',
+    '  return 1',
+    '}',
     'stop_watchdog() {',
     '  if test -n "$watchdog"; then',
+    // Do not signal the watchdog shell until it has recorded the timer PID.
+    // Otherwise TERM can land between `sleep &` and `$!`, leaving the timer
+    // orphaned even though the watchdog shell itself was reaped.
+    '    wait_watchdog_ready || true',
     '    kill -TERM "$watchdog" 2>/dev/null || true',
     '    wait "$watchdog" 2>/dev/null || true',
     '  fi',
+    '  rm -f -- "$watchdog_ready_marker"',
     '  watchdog=""',
     '}',
     'abort_supervisor() {',
@@ -49,6 +65,7 @@ export function buildWorkflowSupervisor({ bashPath, setsidPath }) {
     'case "$leader" in ""|*[!0-9]*) abort_supervisor ;; esac',
     '(',
     '  watchdog_timer=""',
+    '  watchdog_stop_requested=0',
     '  cleanup_watchdog() {',
     '    trap - EXIT TERM INT HUP',
     '    if test -n "$watchdog_timer"; then',
@@ -56,21 +73,36 @@ export function buildWorkflowSupervisor({ bashPath, setsidPath }) {
     '      wait "$watchdog_timer" 2>/dev/null || true',
     '    fi',
     '  }',
-    '  trap "cleanup_watchdog; exit 0" TERM INT HUP',
+    '  start_watchdog_timer() {',
+    '    local duration="$1"',
+    '    watchdog_timer=""',
+    '    watchdog_stop_requested=0',
+    '    rm -f -- "$watchdog_ready_marker"',
+    '    trap "watchdog_stop_requested=1" TERM INT HUP',
+    '    sleep "$duration" &',
+    '    watchdog_timer="$!"',
+    '    printf "%s\\n" "$watchdog_timer" > "$watchdog_ready_marker"',
+    '    trap "cleanup_watchdog; exit 0" TERM INT HUP',
+    '    if test "$watchdog_stop_requested" -eq 1; then exit 0; fi',
+    '  }',
+    // TERM may arrive after the timer child is forked but before `$!` is
+    // assigned. Defer cleanup through that critical section so the timer can
+    // never escape without a captured PID and wait. The same helper protects
+    // both the deadline timer and the bounded KILL-escalation timer.
     '  trap cleanup_watchdog EXIT',
-    '  sleep "$deadline" &',
-    '  watchdog_timer="$!"',
+    '  start_watchdog_timer "$deadline"',
     '  if ! wait "$watchdog_timer"; then exit 0; fi',
     '  : > "$marker"',
     '  kill -TERM -- "-$leader" 2>/dev/null || true',
-    '  sleep 10 &',
-    '  watchdog_timer="$!"',
+    '  start_watchdog_timer 10',
     '  if ! wait "$watchdog_timer"; then exit 0; fi',
     '  kill -KILL -- "-$leader" 2>/dev/null || true',
     ') </dev/null >/dev/null 2>&1 &',
     'watchdog="$!"',
+    'if ! wait_watchdog_ready; then abort_supervisor; fi',
     'set +e; wait "$child"; status="$?"; set -e',
     'if test -f "$marker"; then wait "$watchdog" || true; watchdog=""; else stop_watchdog; fi',
+    'rm -f -- "$watchdog_ready_marker"',
     // A child can reap before descendants do. Poll the complete process
     // group, then TERM/KILL the negative PGID and poll again before recovery.
     'group_gone=0',

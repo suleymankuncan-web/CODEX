@@ -746,6 +746,7 @@ export function executeWorkflowBody(body, context, { timeoutMs = 60 * 60 * 1000 
   const timeoutMarker = path.join(context.runnerTemp, `.workflow-timeout-${process.pid}`)
   const leaderMarker = path.join(context.runnerTemp, `.workflow-leader-${process.pid}`)
   const containmentMarker = path.join(context.runnerTemp, `.workflow-contained-${process.pid}`)
+  const watchdogReadyMarker = `${containmentMarker}.watchdog-ready`
   const supervisor = buildWorkflowSupervisor({ bashPath: 'bash', setsidPath: 'setsid' })
   // The outer shell captures the exact inner setsid leader PID, sends TERM
   // then bounded KILL to the negative process-group ID, and waits/reaps it
@@ -762,7 +763,7 @@ export function executeWorkflowBody(body, context, { timeoutMs = 60 * 60 * 1000 
     timedOut = fs.existsSync(timeoutMarker)
     containmentComplete = fs.existsSync(containmentMarker) && fs.readFileSync(containmentMarker, 'utf8').trim() === '1'
   } finally {
-    for (const marker of [timeoutMarker, leaderMarker, containmentMarker]) {
+    for (const marker of [timeoutMarker, leaderMarker, containmentMarker, watchdogReadyMarker]) {
       try { fs.rmSync(marker, { force: true }) } catch { /* cleanup is represented by the outer receipt */ }
     }
   }
