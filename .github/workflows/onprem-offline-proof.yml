@@ -54,13 +54,12 @@ env:
   KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: 'true'
 
 jobs:
-  local-proof-gate:
-    name: local-proof-gate
+  source-preflight:
+    name: github-source-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-      statuses: read
     steps:
       - name: Checkout exact expected SHA
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -68,23 +67,31 @@ jobs:
           ref: ${{ inputs.expected_sha }}
           fetch-depth: 1
 
-      - name: Pin local proof gate Node
+      - name: Pin source preflight Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.19.0
 
-      - name: Require owner-published local proof
+      - name: Run bounded exact-SHA on-prem source preflight
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EXECUTION_SHA: ${{ github.sha }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/onprem-proof-dispatch.mjs verify-status
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          node --check scripts/onprem-offline-target-proof.mjs
+          node --test \
+            scripts/onprem-offline-target-proof.test.mjs \
+            scripts/onprem-offline-bundle.test.mjs \
+            scripts/onprem-offline-stage.test.mjs \
+            scripts/onprem-image-proof-contract.test.mjs \
+            scripts/onprem-offline-local-rehearsal-contract.test.mjs \
+            scripts/onprem-offline-workflow-contract.test.mjs
+          git diff --check
 
   build_bundle:
     name: build signed offline bundle
-    needs: local-proof-gate
+    needs: source-preflight
     runs-on: ubuntu-latest
     timeout-minutes: 45
     outputs:
@@ -583,21 +590,21 @@ jobs:
               chmodSync(destination, 0o644)
             }
           NODE
-            tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner -C "$work" -cf "$archives/${release}-transition.tar" "${release}-transition"
+            tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner --mode=go-w -C "$work" -cf "$archives/${release}-transition.tar" "${release}-transition"
             test -s "$archives/${release}-transition.tar" && test ! -L "$archives/${release}-transition.tar"
             transition_members="$(tar -tf "$archives/${release}-transition.tar")"
             test "$(printf '%s\n' "$transition_members" | wc -l)" -eq 5
             printf '%s\n' "$transition_members" | awk -v prefix="${release}-transition" '($0 == prefix "/" || $0 == prefix "/bundle-manifest.json" || $0 == prefix "/bundle-signature.json" || $0 == prefix "/evidence/" || $0 == prefix "/evidence/migration-compatibility.json") { next } { bad = 1 } END { exit bad ? 1 : 0 }'
-            tar -tvf "$archives/${release}-transition.tar" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            tar -tvf "$archives/${release}-transition.tar" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
             rm -rf -- "$bundle_dir"
             rm -rf -- "$transition_dir"
             rm -rf -- "$staging"
           done
-          tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner -C "$work" -cf "$archives/current.tar" current
+          tar --sort=name --format=posix --owner=0 --group=0 --numeric-owner --mode=go-w -C "$work" -cf "$archives/current.tar" current
           test -s "$archives/current.tar" && test ! -L "$archives/current.tar"
           test "$(tar -tf "$archives/current.tar" | head -n 1)" = 'current/'
           tar -tf "$archives/current.tar" | awk '$0 ~ /(^|\/)\.\.?($|\/)/ || $0 !~ /^current\// { bad = 1 } END { exit bad ? 1 : 0 }'
-          tar -tvf "$archives/current.tar" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+          tar -tvf "$archives/current.tar" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
           bundle_dir="$work/current"
           rm -rf -- "$bundle_dir"
           rmdir "$work"
@@ -659,7 +666,12 @@ jobs:
     name: clean Linux offline rehearsal
     needs: build_bundle
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Bundle verification, Docker image loading, and the serial bounded
+    # lifecycle operations must share one explicit hosted ceiling. Repeated
+    # exact-SHA runs reached the old 60-minute limit while the local native
+    # rehearsal completed successfully, so retain the same fail-closed job
+    # boundary with enough bounded headroom for the hosted runner.
+    timeout-minutes: 120
     steps:
       - name: Pin rehearsal Node runtime
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
@@ -692,8 +704,10 @@ jobs:
           set -euo pipefail
           test ! -d "$GITHUB_WORKSPACE/.git"
           test ! -d "$GITHUB_WORKSPACE/backend"; test ! -d "$GITHUB_WORKSPACE/admin-web"; test ! -d "$GITHUB_WORKSPACE/node_modules"
-          sudo iptables-save | sudo tee "$RUNNER_TEMP/offline-firewall.snapshot" >/dev/null
-          sudo ip6tables-save | sudo tee "$RUNNER_TEMP/offline-firewall6.snapshot" >/dev/null
+          sudo /usr/sbin/iptables -t raw -L >/dev/null
+          sudo iptables-save --counters | sudo tee "$RUNNER_TEMP/offline-firewall.snapshot" >/dev/null
+          sudo /usr/sbin/ip6tables -t raw -L >/dev/null
+          sudo ip6tables-save --counters | sudo tee "$RUNNER_TEMP/offline-firewall6.snapshot" >/dev/null
           test -s "$RUNNER_TEMP/offline-firewall.snapshot"
           test -s "$RUNNER_TEMP/offline-firewall6.snapshot"
           sudo chown 0:0 "$RUNNER_TEMP/offline-firewall.snapshot"
@@ -746,20 +760,60 @@ jobs:
             hook_rules="$(sudo iptables -S "$hook")"
             test "$(printf '%s\n' "$hook_rules" | grep -Fxc -- "-A $hook -j $docker_egress_chain")" -eq 1
           done
+          runner_control_uid="$(id -u)"
+          host_probe_uid="$(id -u nobody)"
+          printf '%s:%s\n' "$runner_control_uid" "$host_probe_uid" | grep -Eq '^[0-9]+:[0-9]+$'
+          test "$runner_control_uid" -gt 0
+          test "$host_probe_uid" -gt 0
+          test "$runner_control_uid" -ne "$host_probe_uid"
+          # The runner agent resolves GitHub endpoints through systemd-resolved,
+          # whose upstream queries leave under the systemd-resolve uid.  Without
+          # this narrow exception the REJECT below strands the agent once its
+          # established control connection rotates, the job dies mid-step
+          # ("runner lost communication") and no rehearsal logs survive.  The
+          # exception is DNS-only: name resolution stays possible while every
+          # other NEW outbound flow from the host is still rejected, so the
+          # offline egress proof keeps its meaning.
+          host_dns_uid="$(id -u systemd-resolved 2>/dev/null || id -u systemd-resolve 2>/dev/null || true)"
+          test -n "$host_dns_uid" && test "$host_dns_uid" -gt 0 || {
+            echo 'systemd-resolved uid unavailable; refusing to continue' >&2
+            exit 1
+          }
           sudo iptables -N "$host_egress_chain"
+          sudo iptables -A "$host_egress_chain" -m owner --uid-owner "$runner_control_uid" -j ACCEPT
           sudo iptables -A "$host_egress_chain" -o lo -j ACCEPT
+          sudo iptables -A "$host_egress_chain" -m owner --uid-owner "$host_dns_uid" -p udp --dport 53 -j ACCEPT
+          sudo iptables -A "$host_egress_chain" -m owner --uid-owner "$host_dns_uid" -p tcp --dport 53 -j ACCEPT
           sudo iptables -A "$host_egress_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
           sudo iptables -A "$host_egress_chain" -j REJECT --reject-with icmp-port-unreachable
           sudo iptables -I OUTPUT 1 -j "$host_egress_chain"
           sudo ip6tables -N "$host6_egress_chain"
+          sudo ip6tables -A "$host6_egress_chain" -m owner --uid-owner "$runner_control_uid" -j ACCEPT
           sudo ip6tables -A "$host6_egress_chain" -o lo -j ACCEPT
+          sudo ip6tables -A "$host6_egress_chain" -m owner --uid-owner "$host_dns_uid" -p udp --dport 53 -j ACCEPT
+          sudo ip6tables -A "$host6_egress_chain" -m owner --uid-owner "$host_dns_uid" -p tcp --dport 53 -j ACCEPT
           sudo ip6tables -A "$host6_egress_chain" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
           sudo ip6tables -A "$host6_egress_chain" -j REJECT --reject-with icmp6-port-unreachable
           sudo ip6tables -I OUTPUT 1 -j "$host6_egress_chain"
           test "$(sudo iptables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host_egress_chain"
           test "$(sudo ip6tables -S OUTPUT | sed -n '2p')" = "-A OUTPUT -j $host6_egress_chain"
-          test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 4
-          test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 4
+          test "$(sudo iptables -S "$host_egress_chain" | wc -l)" -eq 7
+          test "$(sudo ip6tables -S "$host6_egress_chain" | wc -l)" -eq 7
+          host6_probe_interface=HRAXIS_OFFLINE6
+          host6_probe_source=fd42:6872:6178:6973::1
+          host6_probe_target=fd42:6872:6178:6973::2
+          test "$host6_probe_interface" = "HRAXIS_OFFLINE6"
+          test "$host6_probe_source" = "fd42:6872:6178:6973::1"
+          test "$host6_probe_target" = "fd42:6872:6178:6973::2"
+          command -v ip >/dev/null 2>&1
+          if sudo ip link show "$host6_probe_interface" >/dev/null 2>&1; then
+            echo 'offline IPv6 probe interface already exists; refusing to reuse mutable host state' >&2
+            exit 1
+          fi
+          sudo ip link add "$host6_probe_interface" type dummy
+          sudo ip link set "$host6_probe_interface" up
+          sudo ip -6 addr add "$host6_probe_source/128" dev "$host6_probe_interface"
+          sudo ip -6 route add "$host6_probe_target/128" dev "$host6_probe_interface"
 
       - name: Verify bundle before docker load and run bundled operations
         env:
@@ -769,6 +823,232 @@ jobs:
           BUNDLE_ARCHIVE_MANIFEST_SHA256: ${{ needs.build_bundle.outputs.bundle_archive_manifest_sha256 }}
         run: |
           set -euo pipefail
+          emit_offline_rehearsal_heartbeat() {
+            local offline_heartbeat_now offline_heartbeat_elapsed offline_heartbeat_phase
+            [ "${offline_heartbeat_enabled:-0}" = 1 ] || return 0
+            offline_heartbeat_now="$(date +%s)"
+            [ "$offline_heartbeat_now" -ge "${offline_heartbeat_next_at:-0}" ] || return 0
+            offline_heartbeat_phase=unknown
+            if [ -f "$RUNNER_TEMP/offline-phase" ]; then
+              offline_heartbeat_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
+            fi
+            case "$offline_heartbeat_phase" in
+              preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
+              *) offline_heartbeat_phase=unknown ;;
+            esac
+            offline_heartbeat_seq=$((offline_heartbeat_seq + 1))
+            offline_heartbeat_elapsed=$((offline_heartbeat_now - offline_heartbeat_started))
+            offline_heartbeat_next_at=$((offline_heartbeat_now + 30))
+            printf 'offline rehearsal heartbeat seq=%s phase=%s elapsed_seconds=%s\n' "$offline_heartbeat_seq" "$offline_heartbeat_phase" "$offline_heartbeat_elapsed" >&2
+          }
+          wait_for_pid_exit() {
+            local pid="$1" max_wait_seconds="$2" max_iterations iteration pid_state wait_status
+            max_iterations=$((max_wait_seconds * 10))
+            iteration=0
+            while kill -0 "$pid" 2>/dev/null; do
+              pid_state="$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null || true)"
+              [ "$pid_state" = Z ] && break
+              if [ "$iteration" -ge "$max_iterations" ]; then
+                return 124
+              fi
+              emit_offline_rehearsal_heartbeat
+              iteration=$((iteration + 1))
+              sleep 0.1
+            done
+            # The PID has already exited (or is a zombie), so this reap is
+            # bounded by the poll above instead of being an unbounded bare wait.
+            if wait "$pid" 2>/dev/null; then
+              return 0
+            else
+              wait_status=$?
+              return "$wait_status"
+            fi
+          }
+          offline_natural_exit_status=''
+          reap_naturally_exited_process() {
+            local pid="$1" pid_state wait_status
+            offline_natural_exit_status=''
+            if kill -0 "$pid" 2>/dev/null; then
+              pid_state="$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null || true)"
+              [ "$pid_state" = Z ] || return 1
+            fi
+            if wait "$pid" 2>/dev/null; then
+              offline_natural_exit_status=0
+            else
+              wait_status=$?
+              offline_natural_exit_status="$wait_status"
+            fi
+            return 0
+          }
+          process_group_id_for_pid() {
+            local pid="$1" group_id
+            group_id="$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
+            printf '%s' "$group_id"
+          }
+          process_starttime_for_pid() {
+            local pid="$1" stat_line
+            stat_line="$(cat "/proc/$pid/stat" 2>/dev/null || true)"
+            [ -n "$stat_line" ] || return 1
+            printf '%s\n' "$stat_line" | awk '{ line = $0; sub(/^.*\) [[:alpha:]] /, "", line); count = split(line, fields, /[[:space:]]+/); if (count >= 19 && fields[19] ~ /^[0-9]+$/) print fields[19] }'
+          }
+          offline_process_identity_is_current() {
+            local pid="$1" group_id="$2" expected_starttime="$3" current_starttime current_group_id
+            [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+            [[ "$group_id" =~ ^[0-9]+$ ]] || return 1
+            [[ "$expected_starttime" =~ ^[0-9]+$ ]] || return 1
+            current_starttime="$(process_starttime_for_pid "$pid" 2>/dev/null || true)"
+            [ "$current_starttime" = "$expected_starttime" ] || return 1
+            current_group_id="$(process_group_id_for_pid "$pid")"
+            [ "$current_group_id" = "$group_id" ]
+          }
+          wait_for_distinct_process_group() {
+            local pid="$1" group_id=''
+            for _ in {1..100}; do
+              group_id="$(process_group_id_for_pid "$pid")"
+              if offline_process_group_is_safe "$group_id"; then
+                printf '%s' "$group_id"
+                return 0
+              fi
+              kill -0 "$pid" 2>/dev/null || break
+              sleep 0.1
+            done
+            return 125
+          }
+          offline_process_group_is_safe() {
+            local group_id="$1"
+            [[ "$group_id" =~ ^[0-9]+$ ]] || return 1
+            [ "$group_id" -gt 1 ] || return 1
+            [ -z "${offline_main_group_id:-}" ] || [ "$group_id" != "$offline_main_group_id" ]
+          }
+          process_group_alive() {
+            local group_id="$1"
+            [[ "$group_id" =~ ^[0-9]+$ ]] && kill -0 -- "-$group_id" 2>/dev/null
+          }
+          stop_offline_process_group() {
+            local pid="$1" group_id="$2" grace_seconds="$3" expected_starttime="${4:-}" wait_status
+            [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+            if [ -z "$expected_starttime" ] && [ -n "${offline_process_groups[$pid]:-}" ]; then
+              expected_starttime="${offline_process_groups[$pid]#*|}"
+            fi
+            if ! offline_process_identity_is_current "$pid" "$group_id" "$expected_starttime"; then
+              printf 'offline process-group identity changed or unavailable; skipping signal pid=%s group=%s\n' "$pid" "$group_id" >&2
+              return 125
+            fi
+            if [ "$pid" = "$$" ] || { [[ "$group_id" =~ ^[0-9]+$ ]] && ! offline_process_group_is_safe "$group_id"; }; then
+              printf 'offline process-group isolation refused self-group pid=%s group=%s\n' "$pid" "$group_id" >&2
+              if [ "$pid" != "$$" ] && [ "$group_id" != "${offline_main_group_id:-}" ]; then
+                kill -TERM "$pid" 2>/dev/null || true
+                wait_for_pid_exit "$pid" "$grace_seconds" >/dev/null 2>&1 || true
+              fi
+              return 125
+            fi
+            if [[ "$group_id" =~ ^[0-9]+$ ]]; then
+              kill -TERM -- "-$group_id" 2>/dev/null || true
+            else
+              kill -TERM "$pid" 2>/dev/null || true
+            fi
+            if wait_for_pid_exit "$pid" "$grace_seconds"; then
+              wait_status=0
+            else
+              wait_status=$?
+            fi
+            if [ "$wait_status" -eq 124 ] || { [[ "$group_id" =~ ^[0-9]+$ ]] && process_group_alive "$group_id"; }; then
+              if offline_process_identity_is_current "$pid" "$group_id" "$expected_starttime" && [[ "$group_id" =~ ^[0-9]+$ ]]; then
+                kill -KILL -- "-$group_id" 2>/dev/null || true
+              elif offline_process_identity_is_current "$pid" "$group_id" "$expected_starttime"; then
+                kill -KILL "$pid" 2>/dev/null || true
+              fi
+            fi
+            wait_for_pid_exit "$pid" 5 >/dev/null 2>&1 || true
+          }
+          declare -A offline_process_groups=()
+          register_offline_process_group() {
+            local pid="$1" group_id="$2" starttime="${3:-}"
+            [[ "$pid" =~ ^[0-9]+$ ]] && offline_process_group_is_safe "$group_id" || return 125
+            [ -n "$starttime" ] || starttime="$(process_starttime_for_pid "$pid" 2>/dev/null || true)"
+            [[ "$starttime" =~ ^[0-9]+$ ]] || return 125
+            offline_process_groups["$pid"]="$group_id|$starttime"
+          }
+          unregister_offline_process_group() {
+            local pid="$1"
+            [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+            unset 'offline_process_groups[$pid]'
+          }
+          stop_registered_offline_process_groups() {
+            local pid group_id starttime identity
+            local -a registered_pids=("${!offline_process_groups[@]}")
+            for pid in "${registered_pids[@]}"; do
+              identity="${offline_process_groups[$pid]}"
+              group_id="${identity%%|*}"
+              starttime="${identity#*|}"
+              unset 'offline_process_groups[$pid]'
+              stop_offline_process_group "$pid" "$group_id" 5 "$starttime" || true
+            done
+          }
+          offline_main_group_id=''
+          offline_heartbeat_enabled=0
+          offline_heartbeat_seq=0
+          offline_heartbeat_started=''
+          offline_heartbeat_next_at=0
+          offline_active_pid=''
+          offline_active_group_id=''
+          offline_active_starttime=''
+          offline_watchdog_pid=''
+          offline_watchdog_group_id=''
+          offline_watchdog_starttime=''
+          stop_offline_rehearsal_heartbeat() {
+            offline_heartbeat_enabled=0
+          }
+          stop_offline_active_processes() {
+            local active_pid="${offline_active_pid:-}"
+            local active_group_id="${offline_active_group_id:-}"
+            local active_starttime="${offline_active_starttime:-}"
+            local watchdog_pid="${offline_watchdog_pid:-}"
+            local watchdog_group_id="${offline_watchdog_group_id:-}"
+            local watchdog_starttime="${offline_watchdog_starttime:-}"
+            offline_active_pid=''
+            offline_active_group_id=''
+            offline_active_starttime=''
+            offline_watchdog_pid=''
+            offline_watchdog_group_id=''
+            offline_watchdog_starttime=''
+            stop_offline_process_group "$active_pid" "$active_group_id" 5 "$active_starttime" || true
+            stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5 "$watchdog_starttime" || true
+            unregister_offline_process_group "$active_pid"
+            unregister_offline_process_group "$watchdog_pid"
+          }
+          offline_rehearsal_exit_cleanup() {
+            local rehearsal_status=$?
+            trap - EXIT TERM INT
+            stop_offline_active_processes || true
+            stop_offline_rehearsal_heartbeat || true
+            stop_registered_offline_process_groups
+            exit "$rehearsal_status"
+          }
+          start_offline_rehearsal_heartbeat() {
+            offline_heartbeat_seq=0
+            offline_heartbeat_started="$(date +%s)"
+            offline_heartbeat_next_at=0
+            offline_heartbeat_enabled=1
+            emit_offline_rehearsal_heartbeat
+          }
+          abort_offline_rehearsal_on_signal() {
+            trap - TERM INT
+            stop_offline_active_processes || true
+            stop_offline_rehearsal_heartbeat || true
+            exit 143
+          }
+          host_probe_uid="$(id -u nobody)"
+          printf '%s\n' "$host_probe_uid" | grep -Eq '^[1-9][0-9]*$'
+          host6_probe_target=fd42:6872:6178:6973::2
+          test "$host6_probe_target" = "fd42:6872:6178:6973::2"
+          SETSID_BIN="$(command -v setsid || true)"
+          test -n "$SETSID_BIN"
+          offline_main_group_id="$(process_group_id_for_pid "$$")"
+          test -n "$offline_main_group_id"
+          start_offline_rehearsal_heartbeat
+          trap offline_rehearsal_exit_cleanup EXIT
+          trap abort_offline_rehearsal_on_signal TERM INT
           umask 077
           case "$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT" in
             ''|*[!0-9:]*|*:*:*) echo 'offline sealed-root identity is invalid' >&2; exit 1 ;;
@@ -829,14 +1109,14 @@ jobs:
             members="$(sudo tar -tf "$archive")"
             test -n "$members"
             printf '%s\n' "$members" | awk -v root="$root" '$0 ~ /(^|\/)\.\.?($|\/)/ || $0 !~ ("^" root "(/|$)") { bad = 1 } END { exit bad ? 1 : 0 }'
-            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
           }
           assert_transition_members() {
             local archive="$1" prefix="$2" members
             members="$(sudo tar -tf "$archive")"
             test "$(printf '%s\n' "$members" | wc -l)" -eq 5
             printf '%s\n' "$members" | awk -v prefix="$prefix" '($0 == prefix "/" || $0 == prefix "/bundle-manifest.json" || $0 == prefix "/bundle-signature.json" || $0 == prefix "/evidence/" || $0 == prefix "/evidence/migration-compatibility.json") { next } { bad = 1 } END { exit bad ? 1 : 0 }'
-            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ { bad = 1 } END { exit bad ? 1 : 0 }'
+            sudo tar -tvf "$archive" | awk '$1 !~ /^[-d]/ || substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { bad = 1 } END { exit bad ? 1 : 0 }'
           }
           extract_current_bundle() {
             local sealed_archive="$SEALED_ROOT/archives/current.tar" target="$SEALED_ROOT/bundle/current" archive_kib available_kib required_kib
@@ -885,7 +1165,156 @@ jobs:
           TRUST_ROOT="$SEALED_ROOT/trust"
           NODE_BIN="$TRUST_ROOT/node"
           OPERATOR_PATH="$TRUST_ROOT:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-          sudo_operator() { sudo env "PATH=$OPERATOR_PATH" "$@"; }
+          OPERATOR_TIMEOUT_SECONDS=960
+          OPERATOR_KILL_AFTER_SECONDS=30
+          DIRECT_TIMEOUT_SECONDS=600
+          DIRECT_KILL_AFTER_SECONDS=30
+          current_offline_phase() {
+            local offline_phase=unknown
+            if [ -f "$RUNNER_TEMP/offline-phase" ]; then
+              offline_phase="$(cat "$RUNNER_TEMP/offline-phase" 2>/dev/null || true)"
+            fi
+            case "$offline_phase" in
+              preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;;
+              *) offline_phase=unknown ;;
+            esac
+            printf '%s' "$offline_phase"
+          }
+          run_bounded_group() {
+            local bounded_label="$1" timeout_seconds="$2" kill_after_seconds="$3"
+            local bounded_status pid watchdog_pid group_pid_file process_group_id process_starttime watchdog_group_id watchdog_starttime process_identity
+            shift 3
+            group_pid_file="$(mktemp "$RUNNER_TEMP/offline-process-group.XXXXXX")"
+            rm -f -- "$group_pid_file"
+            "$SETSID_BIN" sh -c '
+              pid_file="$1"
+              timeout_seconds="$2"
+              kill_after_seconds="$3"
+              operator_path="$4"
+              shift 4
+              printf "%s|%s\n" "$$" "$(ps -o pgid= -p $$ | tr -d " ")" > "$pid_file"
+              exec sudo env "PATH=$operator_path" timeout --foreground --signal=TERM --kill-after="${kill_after_seconds}s" "${timeout_seconds}s" "$@"
+            ' offline-process-group "$group_pid_file" "$timeout_seconds" "$kill_after_seconds" "$OPERATOR_PATH" "$@" &
+            pid=$!
+            process_group_id=''
+            process_identity=''
+            for _ in {1..100}; do
+              if [ -s "$group_pid_file" ]; then
+                process_identity="$(cat "$group_pid_file" 2>/dev/null || true)"
+                break
+              fi
+              if ! kill -0 "$pid" 2>/dev/null; then
+                break
+              fi
+              sleep 0.1
+            done
+            rm -f -- "$group_pid_file"
+            process_group_id="$(printf '%s\n' "$process_identity" | awk -F'|' '$2 ~ /^[0-9]+$/ { print $2; exit }')"
+            [ -n "$process_group_id" ] || process_group_id="$(process_group_id_for_pid "$pid")"
+            process_starttime="$(process_starttime_for_pid "$pid" 2>/dev/null || true)"
+            if ! offline_process_group_is_safe "$process_group_id" || ! [[ "$process_starttime" =~ ^[0-9]+$ ]]; then
+              if reap_naturally_exited_process "$pid"; then
+                bounded_status="$offline_natural_exit_status"
+                return "$bounded_status"
+              fi
+              printf 'offline process-group isolation unavailable label=%s pid=%s group=%s\n' "$bounded_label" "$pid" "$process_group_id" >&2
+              stop_offline_process_group "$pid" "$process_group_id" 5 "$process_starttime" || true
+              return 125
+            fi
+            offline_active_pid="$pid"
+            offline_active_group_id="$process_group_id"
+            offline_active_starttime="$process_starttime"
+            if ! register_offline_process_group "$pid" "$process_group_id" "$process_starttime"; then
+              printf 'offline process-group registration failed label=%s pid=%s group=%s\n' "$bounded_label" "$pid" "$process_group_id" >&2
+              stop_offline_process_group "$pid" "$process_group_id" 2 "$process_starttime" || true
+              offline_active_pid=''
+              offline_active_group_id=''
+              offline_active_starttime=''
+              return 125
+            fi
+            watchdog_pid=''
+            watchdog_group_id=''
+            watchdog_starttime=''
+            if [[ "$process_group_id" =~ ^[0-9]+$ ]]; then
+              "$SETSID_BIN" sh -c '
+                timeout_seconds="$1"
+                kill_after_seconds="$2"
+                process_group_id="$3"
+                sleep "$timeout_seconds"
+                printf "offline process-group watchdog timeout label=%s timeout_seconds=%s process_group=%s\n" "$4" "$timeout_seconds" "$process_group_id" >&2
+                kill -TERM -- "-$process_group_id" 2>/dev/null || true
+                sleep "$kill_after_seconds"
+                kill -KILL -- "-$process_group_id" 2>/dev/null || true
+              # A bounded command may run inside command substitution.  Keep the
+              # watchdog out of that stdout pipe or the parent shell can wait for
+              # its inherited descriptor even after the real command has exited.
+              ' offline-watchdog "$timeout_seconds" "$kill_after_seconds" "$process_group_id" "$bounded_label" </dev/null >/dev/null &
+              watchdog_pid=$!
+              watchdog_group_id="$(wait_for_distinct_process_group "$watchdog_pid")" || watchdog_group_id=''
+              watchdog_starttime="$(process_starttime_for_pid "$watchdog_pid" 2>/dev/null || true)"
+              offline_watchdog_pid="$watchdog_pid"
+              offline_watchdog_group_id="$watchdog_group_id"
+              offline_watchdog_starttime="$watchdog_starttime"
+              if [ -n "$watchdog_group_id" ] && [[ "$watchdog_starttime" =~ ^[0-9]+$ ]]; then
+                if ! register_offline_process_group "$watchdog_pid" "$watchdog_group_id" "$watchdog_starttime"; then
+                  printf 'offline watchdog process-group registration failed label=%s pid=%s group=%s\n' "$bounded_label" "$watchdog_pid" "$watchdog_group_id" >&2
+                  stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 2 "$watchdog_starttime" || true
+                  watchdog_group_id=''
+                  watchdog_starttime=''
+                  offline_watchdog_group_id=''
+                  offline_watchdog_starttime=''
+                fi
+              else
+                printf 'offline watchdog process-group isolation unavailable label=%s pid=%s\n' "$bounded_label" "$watchdog_pid" >&2
+              fi
+            else
+              printf 'offline process-group watchdog unavailable label=%s pid=%s\n' "$bounded_label" "$pid" >&2
+            fi
+            if wait_for_pid_exit "$pid" "$((timeout_seconds + kill_after_seconds + 30))"; then
+              bounded_status=0
+            else
+              bounded_status=$?
+            fi
+            if [ -n "$watchdog_pid" ]; then
+              stop_offline_process_group "$watchdog_pid" "$watchdog_group_id" 5 "$watchdog_starttime" || true
+            fi
+            stop_offline_process_group "$pid" "$process_group_id" 2 "$process_starttime" || true
+            unregister_offline_process_group "$pid"
+            unregister_offline_process_group "$watchdog_pid"
+            if [ "${offline_active_pid:-}" = "$pid" ]; then offline_active_pid=''; offline_active_group_id=''; offline_active_starttime=''; fi
+            if [ "${offline_watchdog_pid:-}" = "$watchdog_pid" ]; then offline_watchdog_pid=''; offline_watchdog_group_id=''; offline_watchdog_starttime=''; fi
+            return "$bounded_status"
+          }
+          sudo_bounded() {
+            local bounded_label="${1:-unknown}" bounded_status
+            shift
+            printf 'offline bounded start command=%s timeout_seconds=%s\n' "$bounded_label" "$DIRECT_TIMEOUT_SECONDS" >&2
+            if run_bounded_group "$bounded_label" "$DIRECT_TIMEOUT_SECONDS" "$DIRECT_KILL_AFTER_SECONDS" "$@"; then
+              printf 'offline bounded complete command=%s\n' "$bounded_label" >&2
+              return 0
+            else
+              bounded_status=$?
+            fi
+            printf 'offline bounded failure command=%s status=%s phase=%s timeout_seconds=%s\n' "$bounded_label" "$bounded_status" "$(current_offline_phase)" "$DIRECT_TIMEOUT_SECONDS" >&2
+            return "$bounded_status"
+          }
+          sudo_operator() {
+            local operator_script="${1:-}" operator_name offline_operator_phase offline_operator_status
+            case "$operator_script" in
+              "$BUNDLE_ROOT"/operations/*.sh) operator_name="${operator_script##*/}" ;;
+              *) operator_name=unknown ;;
+            esac
+            printf 'offline operator start script=%s timeout_seconds=%s\n' "$operator_name" "$OPERATOR_TIMEOUT_SECONDS"
+            if run_bounded_group "$operator_name" "$OPERATOR_TIMEOUT_SECONDS" "$OPERATOR_KILL_AFTER_SECONDS" "$@"; then
+              printf 'offline operator complete script=%s\n' "$operator_name"
+              return 0
+            else
+              offline_operator_status=$?
+            fi
+            offline_operator_phase="$(current_offline_phase)"
+            printf 'offline operator failure script=%s status=%s phase=%s timeout_seconds=%s\n' "$operator_name" "$offline_operator_status" "$offline_operator_phase" "$OPERATOR_TIMEOUT_SECONDS" >&2
+            return "$offline_operator_status"
+          }
           OPERATOR_ROOT="$SEALED_ROOT/operator"
           PUBLIC_KEY="$TRUST_ROOT/public-key.pem"
           TRUSTED_BOOTSTRAP="$TRUST_ROOT/onprem-offline-bootstrap-verify.mjs"
@@ -910,11 +1339,13 @@ jobs:
           verify_release_bundle() {
             local root="$1" release_id="$2"
             assert_release_tree "$root"
-            sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$root" --release-id "$release_id" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
-            sudo -- "$NODE_BIN" "$root/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$root" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+            sudo_bounded "verify-bootstrap-$release_id" "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify --bundle-dir "$root" --release-id "$release_id" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
+            sudo_bounded "verify-bundle-$release_id" "$NODE_BIN" "$root/operations/onprem-offline-bundle.mjs" verify --bundle-dir "$root" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT"
           }
           materialize_transition_bundle() {
-            local release="$1" target="$2" release_id="$3" archive="$SEALED_ROOT/archives/${release}-transition.tar" materialization_root="$SEALED_ROOT/.${release}-materialize"
+            local release="$1" target="$2" release_id="$3" archive materialization_root
+            archive="$SEALED_ROOT/archives/${release}-transition.tar"
+            materialization_root="$SEALED_ROOT/.${release}-materialize"
             assert_transition_members "$archive" "${release}-transition"
             sudo test ! -e "$target" && sudo test ! -L "$target"
             sudo test ! -e "$materialization_root" && sudo test ! -L "$materialization_root"
@@ -957,7 +1388,7 @@ jobs:
           printf '%s\n' 'bootstrap-ci' > "$RUNNER_TEMP/offline-secrets/core/keycloak/bootstrap-username"; printf '%s\n' "$keycloak_bootstrap_password" > "$RUNNER_TEMP/offline-secrets/core/keycloak/bootstrap-password"; printf '%s\n' 'synthetic-smtp-user' > "$RUNNER_TEMP/offline-secrets/core/keycloak/smtp-auth-user"; printf '%s\n' "$keycloak_smtp_password" > "$RUNNER_TEMP/offline-secrets/core/keycloak/smtp-password"; printf '%s\n' "$browser_session_secret" > "$RUNNER_TEMP/offline-secrets/core/backend/browser-session-secret"
           printf '%s\n' "onprem.store-manager|onprem.store-manager|$store_manager_password|STORE_MANAGER|synthetic-employee-store-manager|company-001|region-001|store-100|company-001|region-001|store-100,store-999|store-100" "onprem.region-manager|onprem.region-manager|$region_manager_password|REGION_MANAGER|synthetic-employee-region-manager|company-001|region-001|store-100,store-101|company-001|region-001|store-100,store-101|store-100,store-101" "onprem.report-viewer|onprem.report-viewer|$report_viewer_password|REPORT_VIEWER|synthetic-employee-report-viewer|company-001|||company-001|||" "onprem.store-personnel|onprem.store-personnel|$store_personnel_password|STORE_PERSONNEL|synthetic-employee-store-personnel|company-001|region-001|store-100|company-001|region-001|store-100|store-100" "onprem.visual-merchandiser|onprem.visual-merchandiser|$visual_merchandiser_password|VISUAL_MERCHANDISER|synthetic-employee-visual-merchandiser|company-001|region-001|store-100|company-001|region-001|store-100|store-100" > "$RUNNER_TEMP/offline-secrets/core/keycloak/synthetic-accounts"
           printf '%s\n' "onprem.photo-proof-admin|onprem.photo-proof-admin|$photo_proof_password|SUPER_ADMIN|synthetic-employee-photo-proof-admin|company-001|region-001|store-100|company-001|region-001|store-100|store-100" > "$RUNNER_TEMP/offline-secrets/core/keycloak/photo-proof-account"
-          photo_fixture="$RUNNER_TEMP/offline-photo-fixture.webp"; printf '%s' 'UklGRiIAAABXRUJQVlA4IBAAAADwAQCdASoBAAEAAUAmJaQAA3AA/vuUAAA=' | base64 --decode > "$photo_fixture"; test -s "$photo_fixture"; photo_fixture_sha256="$(sha256sum "$photo_fixture" | awk '{print $1}')"; test "${#photo_fixture_sha256}" -eq 64; chmod 400 "$photo_fixture"
+          photo_fixture="$RUNNER_TEMP/offline-photo-fixture.webp"; printf '%s' 'UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoCAAIAAUAmJaQAA3AA/vz0AAA=' | base64 --decode > "$photo_fixture"; test -s "$photo_fixture"; photo_fixture_sha256="$(sha256sum "$photo_fixture" | awk '{print $1}')"; test "${#photo_fixture_sha256}" -eq 64; chmod 400 "$photo_fixture"
           primary_access_key_id="$(openssl rand -hex 16)"; primary_secret_access_key="$(openssl rand -hex 32)"; recovery_access_key_id="$(openssl rand -hex 16)"; recovery_secret_access_key="$(openssl rand -hex 32)"
           printf '%s\n' "$primary_access_key_id" > "$RUNNER_TEMP/offline-secrets/photo/primary-access-key-id"; printf '%s\n' "$primary_secret_access_key" > "$RUNNER_TEMP/offline-secrets/photo/primary-secret-access-key"; printf '%s\n' "$recovery_access_key_id" > "$RUNNER_TEMP/offline-secrets/photo/recovery-access-key-id"; printf '%s\n' "$recovery_secret_access_key" > "$RUNNER_TEMP/offline-secrets/photo/recovery-secret-access-key"
           find "$RUNNER_TEMP/offline-secrets" -type f -exec chmod 600 {} +
@@ -966,14 +1397,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/offline-ledger"; chmod 700 "$RUNNER_TEMP/offline-ledger"
           sudo install -d -o 0 -g 0 -m 0700 "$OPERATOR_ROOT" "$OPERATOR_ROOT/receipts" "$OPERATOR_ROOT/backups" "$OPERATOR_ROOT/restore" "$OPERATOR_ROOT/ledger"
           sudo -- "$NODE_BIN" - "$BUNDLE_ROOT/bundle-manifest.json" "$OPERATOR_ROOT" "$RELEASE_ID" "$release_suffix" "$OPERATOR_ROOT/secrets/core" "$OPERATOR_ROOT/secrets/photo" "$OPERATOR_ROOT/ledger/migration-ledger.json" "$photo_fixture_sha256" <<'NODE'
-          const fs = require('node:fs'); const path = require('node:path'); const [manifestPath, operatorRoot, releaseId, releaseSuffix, coreSecrets, photoSecrets, ledger, photoFixtureSha256] = process.argv.slice(2); const m = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); if (!/^[a-f0-9]{64}$/.test(photoFixtureSha256) || !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(releaseId) || !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(releaseSuffix)) process.exit(44); const names = { backend:'HR_AXIS_BACKEND_IMAGE', frontend:'HR_AXIS_FRONTEND_IMAGE', keycloak:'KEYCLOAK_IMAGE', caddy:'CADDY_IMAGE', postgres:'POSTGRES_IMAGE', redis:'REDIS_IMAGE', seaweedfs:'SEAWEEDFS_IMAGE' }; const writeEnv = (file, targetReleaseId) => { const lines = [`COMPOSE_PROJECT_NAME=hr-axis-onprem-core`,`HR_AXIS_PROJECT_ID=hr-axis-onprem-core`,`HR_AXIS_RELEASE_ID=${targetReleaseId}`,`HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid`,`HR_AXIS_DATA_CLASS=synthetic`,`HR_AXIS_STRICT_LOCAL=true`,`MIGRATION_LEDGER_FILE=${ledger}`,`MIGRATION_LEDGER_REQUIRED=true`,`HR_AXIS_SECRET_ROOT=${coreSecrets}`,`PHOTO_STORAGE_SECRET_ROOT=${photoSecrets}`,`PHOTO_MEDIA_PRIMARY_BUCKET=synthetic-primary`,`PHOTO_MEDIA_RECOVERY_BUCKET=synthetic-recovery`,`PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST=${photoFixtureSha256}`]; lines.push('KEYCLOAK_SMTP_HOST=smtp.internal.example.invalid','KEYCLOAK_SMTP_PORT=587','KEYCLOAK_SMTP_FROM=hr-axis@example.invalid','KEYCLOAK_SMTP_STARTTLS=true','KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true','KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true'); for (const [name, variable] of Object.entries(names)) lines.push(`${variable}=${m.images[name].configImageId}`); fs.writeFileSync(path.join(operatorRoot, file), `${lines.join('\n')}\n`, { mode: 0o600, flag: 'wx' }) }; writeEnv('offline.env', releaseId); writeEnv('offline-current.env', releaseId); writeEnv('offline-next.env', `onprem-next-${releaseSuffix}`); writeEnv('offline-previous.env', `onprem-previous-${releaseSuffix}`)
+          const fs = require('node:fs'); const path = require('node:path'); const [manifestPath, operatorRoot, releaseId, releaseSuffix, coreSecrets, photoSecrets, ledger, photoFixtureSha256] = process.argv.slice(2); const m = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); if (!/^[a-f0-9]{64}$/.test(photoFixtureSha256) || !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(releaseId) || !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(releaseSuffix)) process.exit(44); const names = { backend:'HR_AXIS_BACKEND_IMAGE', frontend:'HR_AXIS_FRONTEND_IMAGE', keycloak:'KEYCLOAK_IMAGE', caddy:'CADDY_IMAGE', postgres:'POSTGRES_IMAGE', redis:'REDIS_IMAGE', seaweedfs:'SEAWEEDFS_IMAGE' }; const writeEnv = (file, targetReleaseId) => { const lines = [`COMPOSE_PROJECT_NAME=hr-axis-onprem-core`,`HR_AXIS_PROJECT_ID=hr-axis-onprem-core`,`HR_AXIS_RELEASE_ID=${targetReleaseId}`,`HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid`,`HR_AXIS_DATA_CLASS=synthetic`,`HR_AXIS_STRICT_LOCAL=true`,`MIGRATION_LEDGER_FILE=${ledger}`,`MIGRATION_LEDGER_REQUIRED=true`,`HR_AXIS_SECRET_ROOT=${coreSecrets}`,`PHOTO_STORAGE_SECRET_ROOT=${photoSecrets}`,`PHOTO_MEDIA_PRIMARY_BUCKET=synthetic-primary`,`PHOTO_MEDIA_RECOVERY_BUCKET=synthetic-recovery`,`PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST=${photoFixtureSha256}`]; lines.push('KEYCLOAK_SMTP_HOST=smtp.internal.example.invalid','KEYCLOAK_SMTP_PORT=587','KEYCLOAK_SMTP_FROM=hr-axis@example.invalid','KEYCLOAK_SMTP_STARTTLS=true','KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true','KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true'); for (const [name, variable] of Object.entries(names)) { const image = m.images[name]; if (!image || typeof image.repoTag !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image.repoTag) || !/^sha256:[0-9a-f]{64}$/.test(image.configImageId)) process.exit(45); lines.push(`${variable}=${image.repoTag}`) }; fs.writeFileSync(path.join(operatorRoot, file), `${lines.join('\n')}\n`, { mode: 0o600, flag: 'wx' }) }; writeEnv('offline.env', releaseId); writeEnv('offline-current.env', releaseId); writeEnv('offline-next.env', `onprem-next-${releaseSuffix}`); writeEnv('offline-previous.env', `onprem-previous-${releaseSuffix}`)
           NODE
           for operator_env in offline.env offline-current.env offline-next.env offline-previous.env; do
             sudo test -f "$OPERATOR_ROOT/$operator_env" && sudo test ! -L "$OPERATOR_ROOT/$operator_env"
             test "$(sudo stat -c '%u:%g:%a' "$OPERATOR_ROOT/$operator_env")" = '0:0:600'
           done
           owner_key_source="$RUNNER_TEMP/offline-owner-signing-key.pem"; owner_public_source="$RUNNER_TEMP/offline-owner-signing-public.pem"; openssl genpkey -algorithm ED25519 -out "$owner_key_source" >/dev/null 2>&1; openssl pkey -in "$owner_key_source" -pubout -out "$owner_public_source" >/dev/null 2>&1; chmod 600 "$owner_key_source" "$owner_public_source"
-          BACKUP_TRUSTED_FINGERPRINT="$(node --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('$owner_public_source')).export({type:'spki',format:'der'})).digest('hex'))")"
+          BACKUP_TRUSTED_FINGERPRINT="$(sudo -- "$NODE_BIN" --input-type=module -e "import { createHash, createPublicKey } from 'node:crypto'; import { readFileSync } from 'node:fs'; console.log(createHash('sha256').update(createPublicKey(readFileSync('$owner_public_source')).export({type:'spki',format:'der'})).digest('hex'))")"
           sudo cp -a -- "$RUNNER_TEMP/offline-secrets" "$OPERATOR_ROOT/secrets"
           sudo cp -a -- "$owner_key_source" "$OPERATOR_ROOT/owner-signing-key.pem"
           sudo cp -a -- "$owner_public_source" "$OPERATOR_ROOT/owner-signing-public.pem"
@@ -999,88 +1430,120 @@ jobs:
           set_secret_identity 1000:1000 0400 "$OPERATOR_ROOT/secrets/core/keycloak/binder-database-url" "$OPERATOR_ROOT/secrets/core/keycloak/database-password" "$OPERATOR_ROOT/secrets/core/keycloak/database-url" "$OPERATOR_ROOT/secrets/core/keycloak/database-username" "$OPERATOR_ROOT/secrets/core/keycloak/bootstrap-username" "$OPERATOR_ROOT/secrets/core/keycloak/bootstrap-password" "$OPERATOR_ROOT/secrets/core/keycloak/smtp-auth-user" "$OPERATOR_ROOT/secrets/core/keycloak/smtp-password" "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account"
           set_secret_identity 999:1000 0400 "$OPERATOR_ROOT/secrets/core/redis/users.acl" "$OPERATOR_ROOT/secrets/core/redis/health-url"
           set_secret_identity 65532:65532 0400 "$OPERATOR_ROOT/secrets/core/backend/api-database-url" "$OPERATOR_ROOT/secrets/core/backend/worker-database-url" "$OPERATOR_ROOT/secrets/core/backend/migrator-database-url" "$OPERATOR_ROOT/secrets/core/backend/redis-api-url" "$OPERATOR_ROOT/secrets/core/backend/redis-worker-url" "$OPERATOR_ROOT/secrets/core/backend/browser-session-secret"
-          set_secret_identity 0:65532 0440 "$OPERATOR_ROOT/secrets/photo/primary-access-key-id" "$OPERATOR_ROOT/secrets/photo/primary-secret-access-key" "$OPERATOR_ROOT/secrets/photo/recovery-access-key-id" "$OPERATOR_ROOT/secrets/photo/recovery-secret-access-key"
+          set_secret_identity 65532:0 0440 "$OPERATOR_ROOT/secrets/photo/primary-access-key-id" "$OPERATOR_ROOT/secrets/photo/primary-secret-access-key" "$OPERATOR_ROOT/secrets/photo/recovery-access-key-id" "$OPERATOR_ROOT/secrets/photo/recovery-secret-access-key"
           set_secret_identity 0:0 0444 "$OPERATOR_ROOT/secrets/core/postgres/ca.crt" "$OPERATOR_ROOT/secrets/core/postgres/server.crt" "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" "$OPERATOR_ROOT/secrets/core/caddy/server.crt"
+          sudo chown 1000:1000 -- "$OPERATOR_ROOT/photo-fixture.webp"
           sudo chmod 0400 "$OPERATOR_ROOT/photo-fixture.webp"
           if sudo find "$OPERATOR_ROOT" -type l -print -quit | grep -q .; then echo 'sealed operator root contains a symlink' >&2; exit 1; fi
           assert_private_directory "$OPERATOR_ROOT"
-          ENV_FILE="$OPERATOR_ROOT/offline.env"; NEXT_ENV_FILE="$OPERATOR_ROOT/offline-next.env"; PREVIOUS_ENV_FILE="$OPERATOR_ROOT/offline-previous.env"
+          ENV_FILE="$OPERATOR_ROOT/offline.env"; NEXT_ENV_FILE="$OPERATOR_ROOT/offline-next.env"; PREVIOUS_ENV_FILE="$OPERATOR_ROOT/offline-previous.env"; PHOTO_STORAGE_SECRET_ROOT="$OPERATOR_ROOT/secrets/photo"
           owner_key="$OPERATOR_ROOT/owner-signing-key.pem"; owner_public="$OPERATOR_ROOT/owner-signing-public.pem"; photo_fixture="$OPERATOR_ROOT/photo-fixture.webp"
           photo_recovery_handle="$OPERATOR_ROOT/photo-recovery.json"; photo_prebackup_receipt="$OPERATOR_ROOT/receipts/photo-prebackup.json"
           RECEIPT_ROOT="$OPERATOR_ROOT/receipts"; BACKUP_ROOT="$OPERATOR_ROOT/backups"
           PROOF_COMPOSE="$BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo test -f "$PROOF_COMPOSE" && sudo test ! -L "$PROOF_COMPOSE"
+          printf '%s\n' 'offline phase=preflight'
+          printf '%s\n' 'preflight' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/preflight.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --allow-unloaded-images --allow-missing-ledger
+          printf '%s\n' 'offline phase=install'
+          printf '%s\n' 'install' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/install.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          printf '%s\n' 'offline phase=migrate'
+          printf '%s\n' 'migrate' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/migrate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
+          printf '%s\n' 'offline phase=activate'
+          printf '%s\n' 'activate' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/activate.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml"
           edge_network="hr-axis-onprem-core_edge"
-          edge_meta="$(sudo docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}' 2>/dev/null)" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
+          edge_meta="$(sudo_bounded "edge-network-inspect" docker network inspect "$edge_network" --format '{{.Internal}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.network-class"}}')" || { echo 'offline edge network is missing after activation' >&2; exit 1; }
           test "$edge_meta" = "false|hr-axis-onprem-core|synthetic|$RELEASE_ID|edge"
-          backend_image="$(sudo awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
-          printf '%s' "$backend_image" | grep -Eq '^sha256:[0-9a-f]{64}$'
-          sudo docker image inspect "$backend_image" --format '{{.Id}}' | grep -Fqx "$backend_image"
+          printf '%s\n' 'offline checkpoint=edge-meta-verified'
+          backend_image="$(sudo_bounded "edge-env-image" awk -F= '$1 == "HR_AXIS_BACKEND_IMAGE" { print $2; exit }' "$ENV_FILE")"
+          printf '%s\n' 'offline checkpoint=edge-image-read'
+          printf '%s' "$backend_image" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$'
+          printf '%s\n' 'offline checkpoint=edge-image-identity-format'
+          backend_config_image_id="$(sudo -- "$NODE_BIN" - "$BUNDLE_ROOT/bundle-manifest.json" "$backend_image" <<'NODE'
+          const fs = require('node:fs'); const [manifestPath, repoTag] = process.argv.slice(2); const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); const image = manifest.images?.backend; if (!image || image.repoTag !== repoTag || !/^sha256:[0-9a-f]{64}$/.test(image.configImageId)) process.exit(41); process.stdout.write(image.configImageId)
+          NODE
+          )"
+          printf '%s' "$backend_config_image_id" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          printf '%s\n' 'offline checkpoint=edge-image-provenance-verified'
+          printf '%s\n' 'offline checkpoint=edge-image-inspect-start'
+          backend_runtime_id="$(sudo_bounded "edge-image-inspect" docker image inspect "$backend_image" --format '{{.Id}}')"
+          printf '%s' "$backend_runtime_id" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          printf '%s\n' 'offline checkpoint=edge-image-inspect-verified'
           docker_egress_chain=HR_AXIS_OFF_DOCKER_EGRESS
           host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS
           host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS
-          docker_egress_rules="$(sudo iptables -S "$docker_egress_chain")"
+          printf '%s\n' 'offline checkpoint=docker-egress-rules-start'
+          docker_egress_rules="$(sudo_bounded "docker-egress-rules" iptables -S "$docker_egress_chain")"
+          printf '%s\n' 'offline checkpoint=docker-egress-rules-verified'
           reject_rule_line=6
           reject_rule_text="-A $docker_egress_chain -i br+ ! -o br+ -m conntrack --ctstate NEW -j REJECT --reject-with icmp-port-unreachable"
           printf '%s\n' "$docker_egress_rules" | sed -n '7p' | grep -Fqx -- "$reject_rule_text"
           read_reject_packets() {
-            reject_line="$(sudo iptables -L "$docker_egress_chain" -v -x -n --line-numbers | awk -v line="$reject_rule_line" '$1 == line { print; exit }')"
+            reject_line="$(sudo_bounded "docker-egress-counters" iptables -L "$docker_egress_chain" -v -x -n --line-numbers | awk -v line="$reject_rule_line" '$1 == line { print; exit }')"
             test -n "$reject_line"
             packets="$(printf '%s\n' "$reject_line" | awk '$4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
             printf '%s\n' "$packets" | grep -Eq '^[0-9]+$'
             printf '%s\n' "$packets"
           }
           reject_packets_before="$(read_reject_packets)"
-          sudo docker run --pull=never --rm --network "$edge_network" --entrypoint node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
+          printf '%s\n' 'offline checkpoint=docker-egress-probe-start'
+          sudo_bounded "docker-egress-probe" docker run --pull=never --rm --network "$edge_network" --entrypoint /nodejs/bin/node "$backend_image" --input-type=module -e "import net from 'node:net'; const socket = net.createConnection({ host: '198.51.100.1', port: 443 }); const timer = setTimeout(() => { socket.destroy(); process.exit(0) }, 2500); socket.once('connect', () => { clearTimeout(timer); socket.destroy(); process.exit(17) }); socket.once('error', () => { clearTimeout(timer); process.exit(0) })"
+          printf '%s\n' 'offline checkpoint=docker-egress-probe-verified'
           reject_packets_after="$(read_reject_packets)"
           test "$reject_packets_after" -gt "$reject_packets_before"
           docker_reject_counter_delta=$((reject_packets_after - reject_packets_before))
           read_host_reject_packets() {
             local tool="$1" chain="$2"
             local packets
-            packets="$(sudo "$tool" -L "$chain" -v -x -n --line-numbers | awk '$1 == 3 && $4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
+            local host_reject_rule_line=6
+            packets="$(sudo_bounded "host-egress-counters" "$tool" -L "$chain" -v -x -n --line-numbers | awk -v line="$host_reject_rule_line" '$1 == line && $4 == "REJECT" { print $2; found=1 } END { if (!found) exit 1 }')"
             printf '%s\n' "$packets" | grep -Eq '^[0-9]+$'
             printf '%s\n' "$packets"
           }
           host4_before="$(read_host_reject_packets iptables "$host_egress_chain")"
-          node --input-type=module -e "import net from 'node:net'; const socket=net.createConnection({host:'198.51.100.1',port:443}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
+          sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'198.51.100.1',port:443}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           host4_after="$(read_host_reject_packets iptables "$host_egress_chain")"
           test "$host4_after" -gt "$host4_before"
           host6_before="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
-          node --input-type=module -e "import net from 'node:net'; const socket=net.createConnection({host:'2001:db8::1',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
+          sudo -u nobody -- "$PINNED_NODE_SOURCE" --input-type=module -e "if (process.getuid?.() === 0) process.exit(19); import net from 'node:net'; const socket=net.createConnection({host:'$host6_probe_target',port:443,family:6}); const timer=setTimeout(()=>{socket.destroy();process.exit(0)},2500); socket.once('connect',()=>{clearTimeout(timer);socket.destroy();process.exit(17)}); socket.once('error',()=>{clearTimeout(timer);process.exit(0)})"
           host6_after="$(read_host_reject_packets ip6tables "$host6_egress_chain")"
           test "$host6_after" -gt "$host6_before"
-          docker_network_ids="$(sudo docker network ls -q --filter 'label=com.hr-axis.project=hr-axis-onprem-core')"
+          docker_network_ids="$(sudo_bounded "docker-network-list" docker network ls -q --filter 'label=com.hr-axis.project=hr-axis-onprem-core')"
           test -n "$docker_network_ids"
           test "$(sudo docker network inspect bridge --format '{{.EnableIPv6}}')" = false
           for network_id in $docker_network_ids; do
-            test "$(sudo docker network inspect "$network_id" --format '{{.EnableIPv6}}')" = false
+            test "$(sudo_bounded "docker-network-inspect" docker network inspect "$network_id" --format '{{.EnableIPv6}}')" = false
           done
           host4_counter_delta=$((host4_after - host4_before))
           host6_counter_delta=$((host6_after - host6_before))
-          sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/egress.json" "$RELEASE_ID" "$docker_reject_counter_delta" "$host4_counter_delta" "$host6_counter_delta" <<'NODE'
+          sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/egress.json" "$RELEASE_ID" "$docker_reject_counter_delta" "$host4_counter_delta" "$host6_counter_delta" "$host_probe_uid" <<'NODE'
           const fs = require('node:fs')
-          const [path, releaseId, dockerDelta, host4Delta, host6Delta] = process.argv.slice(2)
-          if (![dockerDelta, host4Delta, host6Delta].every((value) => /^\d+$/.test(value) && Number(value) >= 1)) process.exit(41)
-          fs.writeFileSync(path, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', operation: 'egress-probe', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core', dockerIpv4CounterDelta: Number(dockerDelta), hostIpv4CounterDelta: Number(host4Delta), hostIpv6CounterDelta: Number(host6Delta), dockerIpv6Disabled: true, rejectRulesVerified: true, sanitized: true }) + '\n', { mode: 0o600 })
+          const [path, releaseId, dockerDelta, host4Delta, host6Delta, hostProbeUid] = process.argv.slice(2)
+          if (![dockerDelta, host4Delta, host6Delta, hostProbeUid].every((value) => /^\d+$/.test(value) && Number(value) >= 1)) process.exit(41)
+          fs.writeFileSync(path, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', operation: 'egress-probe', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core', dockerIpv4CounterDelta: Number(dockerDelta), hostIpv4CounterDelta: Number(host4Delta), hostIpv6CounterDelta: Number(host6Delta), hostControlPlaneException: true, hostProbeUid: Number(hostProbeUid), dockerIpv6Disabled: true, rejectRulesVerified: true, sanitized: true }) + '\n', { mode: 0o600 })
           fs.chownSync(path, 0, 0)
           fs.chmodSync(path, 0o600)
           NODE
           test "$(sudo stat -c '%u:%g:%a' "$RECEIPT_ROOT/egress.json")" = '0:0:600'
+          printf '%s\n' 'offline phase=smoke'
+          printf '%s\n' 'smoke' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/smoke.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --receipt "$RECEIPT_ROOT/smoke.json"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/smoke.json" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.project !== 'hr-axis-onprem-core' || value.releaseId !== releaseId) process.exit(41); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'smoke', status: 'passed', sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
           NODE
-          sudo -- "$NODE_BIN" "$BUNDLE_ROOT/operations/onprem-offline-target-proof.mjs" --execute --require-complete --compose "$BUNDLE_ROOT/deployment/compose.yaml" --compose "$BUNDLE_ROOT/deployment/compose.photo-proof.yaml" --compose "$BUNDLE_ROOT/deployment/photo-compose.yaml" --compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --env-file "$ENV_FILE" --project hr-axis-onprem-core --release-id "$RELEASE_ID" --host offline.synthetic.invalid --accounts-file "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" --photo-account-file "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account" --ca-file "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" --photo-auth-image "$backend_image" --connect-host caddy --connect-port 8443 --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256" --photo-mode prepare --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$photo_prebackup_receipt"
+          printf '%s\n' 'offline phase=photo-prebackup'
+          printf '%s\n' 'photo-prebackup' > "$RUNNER_TEMP/offline-phase"
+          sudo_bounded "photo-prebackup-target-proof" "$NODE_BIN" "$BUNDLE_ROOT/operations/onprem-offline-target-proof.mjs" --execute --require-complete --compose "$BUNDLE_ROOT/deployment/compose.yaml" --compose "$BUNDLE_ROOT/deployment/compose.photo-proof.yaml" --compose "$BUNDLE_ROOT/deployment/photo-compose.yaml" --compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --env-file "$ENV_FILE" --project hr-axis-onprem-core --release-id "$RELEASE_ID" --host offline.synthetic.invalid --accounts-file "$OPERATOR_ROOT/secrets/core/keycloak/synthetic-accounts" --photo-account-file "$OPERATOR_ROOT/secrets/core/keycloak/photo-proof-account" --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" --ca-file "$OPERATOR_ROOT/secrets/core/caddy/ca.crt" --photo-auth-image "$backend_image" --connect-host caddy --connect-port 8443 --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256" --photo-mode prepare --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$photo_prebackup_receipt"
           sudo -- "$NODE_BIN" - "$photo_prebackup_receipt" "$RELEASE_ID" <<'NODE'
           const fs = require('node:fs'); const [path, releaseId] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); const photo = value.photo; if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.releaseClaimVerified !== true || value.recoveredPreBackupPhoto !== false || !photo || photo.photoAdminAuthenticated !== true || photo.nonSuperAdminDenied !== true || photo.deniedWriteDelta !== 0 || photo.exactWebpRead !== true || photo.repeatReadExact !== true || photo.canonicalIdentityVerified !== true || !/^[a-f0-9]{64}$/.test(photo.contentSha256) || !Number.isSafeInteger(photo.contentLength) || photo.contentLength <= 0) process.exit(43); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'target-proof-prebackup', status: 'passed', releaseId, sourceProject: 'hr-axis-onprem-core', targetProject: 'hr-axis-onprem-core' }) + '\n', { mode: 0o600 })
           NODE
           target_gate_status=0
           release_suffix="$(printf '%s' "$RELEASE_ID" | rev | cut -d- -f1 | rev)"
+          printf '%s\n' 'offline phase=backup'
+          printf '%s\n' 'backup' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/backup.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-core --public-key "$PUBLIC_KEY" --backup-private-key "$owner_key" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle"
           sudo test -s "$BACKUP_ROOT/backup/backup-manifest.json"
           sudo test -s "$BACKUP_ROOT/backup/backup-signature.json"
@@ -1088,10 +1551,14 @@ jobs:
           sudo -- "$NODE_BIN" - "$BACKUP_ROOT/backup/backup-manifest.json" "$BACKUP_ROOT/backup/backup-signature.json" "$RECEIPT_ROOT/backup.json" "$photo_recovery_handle" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [manifestPath, signaturePath, receiptPath, handlePath] = process.argv.slice(2); const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')); const signature = JSON.parse(fs.readFileSync(signaturePath, 'utf8')); const digest = (path) => crypto.createHash('sha256').update(fs.readFileSync(path)).digest('hex'); const handle = JSON.parse(fs.readFileSync(handlePath, 'utf8')); if (manifest.photoRecoveryHandleSha256 !== digest(handlePath) || manifest.photoContentSha256 !== handle.contentSha256 || manifest.photoContentLength !== handle.contentLength) process.exit(43); fs.writeFileSync(receiptPath, JSON.stringify({ schemaVersion: 1, operation: 'backup', status: 'passed', dataClass: 'synthetic', releaseId: manifest.releaseId, sourceProject: manifest.sourceProject, targetProject: manifest.sourceProject, manifestSha256: digest(manifestPath), signatureSha256: digest(signaturePath), inventorySha256: manifest.inventorySha }) + '\n', { mode: 0o600 })
           NODE
+          printf '%s\n' 'offline phase=restore'
+          printf '%s\n' 'restore' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/restore.sh" --bundle-root "$BUNDLE_ROOT" --release-id "$RELEASE_ID" --target-project hr-axis-onprem-restore --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$ENV_FILE" --proof-compose "$BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --source-project hr-axis-onprem-core --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/restore.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           materialize_transition_bundle next "$NEXT_BUNDLE_ROOT" "onprem-next-$release_suffix"
           NEXT_PROOF_COMPOSE="$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo test -f "$NEXT_PROOF_COMPOSE" && sudo test ! -L "$NEXT_PROOF_COMPOSE"
+          printf '%s\n' 'offline phase=upgrade'
+          printf '%s\n' 'upgrade' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/upgrade.sh" --bundle-root "$BUNDLE_ROOT" --next-bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$RELEASE_ID" --next-release-id "onprem-next-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-upgrade --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$NEXT_ENV_FILE" --proof-compose "$NEXT_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/upgrade.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/upgrade.json" "onprem-next-$release_suffix" "$RELEASE_ID" "hr-axis-onprem-upgrade" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [path, releaseId, sourceReleaseId, targetProject] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== 'hr-axis-onprem-core' || value.targetProject !== targetProject) process.exit(42); const sourceReceiptSha256 = crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'upgrade-mechanics', status: 'mechanics-passed', evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false, sourceReleaseId, sourceProject: 'hr-axis-onprem-core', targetProject, sourceReceiptSha256 }) + '\n', { mode: 0o600 })
@@ -1099,6 +1566,8 @@ jobs:
           materialize_transition_bundle previous "$PREVIOUS_BUNDLE_ROOT" "onprem-previous-$release_suffix"
           PREVIOUS_PROOF_COMPOSE="$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml"
           sudo test -f "$PREVIOUS_PROOF_COMPOSE" && sudo test ! -L "$PREVIOUS_PROOF_COMPOSE"
+          printf '%s\n' 'offline phase=rollback'
+          printf '%s\n' 'rollback' > "$RUNNER_TEMP/offline-phase"
           sudo_operator "$BUNDLE_ROOT/operations/rollback.sh" --bundle-root "$BUNDLE_ROOT" --previous-bundle-root "$PREVIOUS_BUNDLE_ROOT" --release-id "$RELEASE_ID" --previous-release-id "onprem-previous-$release_suffix" --source-project hr-axis-onprem-core --target-project hr-axis-onprem-rollback --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$owner_public" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$PREVIOUS_ENV_FILE" --proof-compose "$PREVIOUS_BUNDLE_ROOT/deployment/proof.compose.yaml" --backup-dir "$BACKUP_ROOT/backup" --photo-recovery-handle-file "$photo_recovery_handle" --receipt "$RECEIPT_ROOT/rollback.json" --photo-fixture "$photo_fixture" --photo-sha256 "$photo_fixture_sha256"
           sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/rollback.json" "onprem-previous-$release_suffix" "$RELEASE_ID" "hr-axis-onprem-rollback" <<'NODE'
           const fs = require('node:fs'); const crypto = require('node:crypto'); const [path, releaseId, sourceReleaseId, targetProject] = process.argv.slice(2); const value = JSON.parse(fs.readFileSync(path, 'utf8')); if (value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== 'hr-axis-onprem-core' || value.targetProject !== targetProject) process.exit(42); const sourceReceiptSha256 = crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex'); fs.writeFileSync(path, JSON.stringify({ ...value, operation: 'rollback-mechanics', status: 'mechanics-passed', evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false, sourceReleaseId, sourceProject: 'hr-axis-onprem-core', targetProject, sourceReceiptSha256 }) + '\n', { mode: 0o600 })
@@ -1123,7 +1592,7 @@ jobs:
           const releaseTransitionEvidence = { evidenceScope: 'same-build-lifecycle-mechanics', realVersionTransitionProved: false, incompatibleMigrationHandlingProved: false }
           const egress = JSON.parse(fs.readFileSync(egressReceiptPath, 'utf8'))
           const positiveCounter = (value) => Number.isInteger(value) && value >= 1
-          if (egress.schemaVersion !== 1 || egress.dataClass !== 'synthetic' || egress.operation !== 'egress-probe' || egress.status !== 'passed' || egress.releaseId !== releaseId || egress.sourceProject !== 'hr-axis-onprem-core' || egress.targetProject !== 'hr-axis-onprem-core' || egress.rejectRulesVerified !== true || egress.dockerIpv6Disabled !== true || !positiveCounter(egress.dockerIpv4CounterDelta) || !positiveCounter(egress.hostIpv4CounterDelta) || !positiveCounter(egress.hostIpv6CounterDelta)) throw new Error('egress proof receipt is invalid or not passed')
+          if (egress.schemaVersion !== 1 || egress.dataClass !== 'synthetic' || egress.operation !== 'egress-probe' || egress.status !== 'passed' || egress.releaseId !== releaseId || egress.sourceProject !== 'hr-axis-onprem-core' || egress.targetProject !== 'hr-axis-onprem-core' || egress.rejectRulesVerified !== true || egress.dockerIpv6Disabled !== true || egress.hostControlPlaneException !== true || !Number.isInteger(egress.hostProbeUid) || egress.hostProbeUid <= 0 || !positiveCounter(egress.dockerIpv4CounterDelta) || !positiveCounter(egress.hostIpv4CounterDelta) || !positiveCounter(egress.hostIpv6CounterDelta)) throw new Error('egress proof receipt is invalid or not passed')
           const expected = {
             smoke: ['smoke', 'passed', releaseId, 'hr-axis-onprem-core', 'hr-axis-onprem-core', 'current'],
             backup: ['backup', 'passed', releaseId, 'hr-axis-onprem-core', 'hr-axis-onprem-core', 'current'],
@@ -1141,13 +1610,13 @@ jobs:
             const value = JSON.parse(fs.readFileSync(path, 'utf8'))
             if (value.schemaVersion !== 1 || value.dataClass !== 'synthetic' || value.operation !== operation || value.status !== status || value.releaseId !== expectedRelease || value.sourceProject !== sourceProject || value.targetProject !== targetProject) throw new Error(`invalid ${name} receipt identity`)
             if (name === 'restore' || name === 'upgrade' || name === 'rollback') {
-              if (value.recoveredPreBackupPhoto !== true || value.photoRecoveryHandleSha256 !== recoveryHandleSha256 || value.photoContentSha256 !== recoveryHandle.contentSha256 || value.photoContentLength !== recoveryHandle.contentLength) throw new Error(`invalid recovered photo evidence for ${name}`)
+              if (value.recoveredPreBackupPhoto !== true || value.queueProbeStateReset !== true || value.photoRecoveryHandleSha256 !== recoveryHandleSha256 || value.photoContentSha256 !== recoveryHandle.contentSha256 || value.photoContentLength !== recoveryHandle.contentLength) throw new Error(`invalid recovered photo/queue evidence for ${name}`)
             }
             if ((name === 'upgrade' || name === 'rollback') && (value.evidenceScope !== releaseTransitionEvidence.evidenceScope || value.realVersionTransitionProved !== false || value.incompatibleMigrationHandlingProved !== false)) throw new Error(`invalid ${name} evidence scope`)
             operations[name] = { schemaVersion: 1, operation, status, releaseId: value.releaseId, sourceProject, targetProject, manifestSha256: manifestDigests[manifestName], receiptSha256: digest(path), ...(name === 'upgrade' || name === 'rollback' ? releaseTransitionEvidence : {}) }
           }
           const egressDigest = digest(egressReceiptPath)
-          const egressSummary = { status: egress.status, receiptSha256: egressDigest, dockerIpv4CounterDelta: egress.dockerIpv4CounterDelta, hostIpv4CounterDelta: egress.hostIpv4CounterDelta, hostIpv6CounterDelta: egress.hostIpv6CounterDelta, dockerIpv6Disabled: true, rejectRulesVerified: true }
+          const egressSummary = { status: egress.status, receiptSha256: egressDigest, dockerIpv4CounterDelta: egress.dockerIpv4CounterDelta, hostIpv4CounterDelta: egress.hostIpv4CounterDelta, hostIpv6CounterDelta: egress.hostIpv6CounterDelta, hostControlPlaneException: true, hostProbeUid: egress.hostProbeUid, dockerIpv6Disabled: true, rejectRulesVerified: true }
           const aggregate = { schemaVersion: 1, dataClass: 'synthetic', operation: 'offline-rehearsal', status: 'passed', gate: null, releaseId, bundleManifests: { current: manifestDigests.current, next: manifestDigests.next, previous: manifestDigests.previous }, releaseTransitionEvidence, egress: egressSummary, operations, sanitized: true }
           fs.writeFileSync(`${directory}/operations.json`, JSON.stringify(aggregate) + '\n', { mode: 0o600 })
           fs.writeFileSync(`${directory}/rehearsal.json`, JSON.stringify({ schemaVersion: 1, operation: 'offline-rehearsal', status: 'passed', gate: null, dataClass: 'synthetic', releaseId, egressDisabledDuringOperations: true, egressProofSha256: egressDigest, ...egressSummary, releaseTransitionEvidence, commandsCompleteBeforeEgressRestore: true, sanitized: true }) + '\n', { mode: 0o600 })
@@ -1159,6 +1628,8 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" "$RUNNER_TEMP/offline-receipts"
           chmod 700 "$RUNNER_TEMP/offline-receipts"
           chmod 600 "$RUNNER_TEMP/offline-receipts"/*.json
+          stop_offline_rehearsal_heartbeat
+          printf '%s\n' 'offline rehearsal heartbeat stopped before quiescence'
 
       - name: Quiesce exact rehearsal runtimes before restoring egress
         if: always()
@@ -1184,11 +1655,19 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
+          cleanup_host6_probe_interface() {
+            if sudo ip link show HRAXIS_OFFLINE6 >/dev/null 2>&1; then
+              sudo ip -6 route del fd42:6872:6178:6973::2/128 dev HRAXIS_OFFLINE6 2>/dev/null || true
+              sudo ip -6 addr del fd42:6872:6178:6973::1/128 dev HRAXIS_OFFLINE6 2>/dev/null || true
+              sudo ip link del HRAXIS_OFFLINE6 2>/dev/null || true
+            fi
+          }
+          trap cleanup_host6_probe_interface EXIT
           test -f "$RUNNER_TEMP/offline-runtime-quiesced"
           if test -f "$RUNNER_TEMP/offline-firewall.snapshot"; then
-            sudo sh -c 'iptables-restore < "$1"' sh "$RUNNER_TEMP/offline-firewall.snapshot"
+            sudo sh -c 'iptables-restore --counters < "$1"' sh "$RUNNER_TEMP/offline-firewall.snapshot"
             test -f "$RUNNER_TEMP/offline-firewall6.snapshot"
-            sudo sh -c 'ip6tables-restore < "$1"' sh "$RUNNER_TEMP/offline-firewall6.snapshot"
+            sudo sh -c 'ip6tables-restore --counters < "$1"' sh "$RUNNER_TEMP/offline-firewall6.snapshot"
             if sudo iptables -S HR_AXIS_OFF_DOCKER_EGRESS >/dev/null 2>&1 || sudo iptables -S HR_AXIS_OFFLINE_HOST_EGRESS >/dev/null 2>&1 || sudo ip6tables -S HR_AXIS_OFFLINE_HOST6_EGRESS >/dev/null 2>&1; then
               echo 'offline egress chain remained after complete firewall restore' >&2
               exit 1
@@ -1197,6 +1676,31 @@ jobs:
             echo 'offline firewall snapshot is missing; egress cannot be restored safely' >&2
             exit 1
           fi
+          cleanup_host6_probe_interface
+          if sudo ip link show HRAXIS_OFFLINE6 >/dev/null 2>&1; then
+            echo 'offline IPv6 probe interface remained after cleanup' >&2
+            exit 1
+          fi
+
+      - name: Materialize sanitized failure receipt when rehearsal stops early
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          receipt_dir="$RUNNER_TEMP/offline-receipts"
+          mkdir -p "$receipt_dir"
+          chmod 700 "$receipt_dir"
+          json_receipt="$(find "$receipt_dir" -maxdepth 1 -type f -name '*.json' -print -quit)"
+          if [ -n "$json_receipt" ]; then
+            exit 0
+          fi
+          umask 077
+          phase=unknown
+          if [ -f "$RUNNER_TEMP/offline-phase" ]; then phase="$(cat "$RUNNER_TEMP/offline-phase")"; fi
+          case "$phase" in preflight|install|migrate|activate|smoke|photo-prebackup|backup|restore|upgrade|rollback) ;; *) phase=unknown ;; esac
+          printf '%s\n' "{\"schemaVersion\":1,\"operation\":\"offline-rehearsal\",\"status\":\"failed\",\"dataClass\":\"synthetic\",\"expectedSha\":\"$EXPECTED_SHA\",\"workflowRunId\":\"$GITHUB_RUN_ID\",\"workflowAttempt\":\"$GITHUB_RUN_ATTEMPT\",\"lastPhase\":\"$phase\",\"reason\":\"rehearsal did not reach final aggregate\",\"sanitized\":true}" > "$receipt_dir/rehearsal-failure.json"
+          chmod 600 "$receipt_dir/rehearsal-failure.json"
 
       - name: Upload sanitized offline rehearsal receipt
         if: always()
@@ -1247,7 +1751,7 @@ jobs:
           fi
           sensitive_paths=(
             "$RUNNER_TEMP/offline-incoming" "$RUNNER_TEMP/offline-secrets" "$RUNNER_TEMP/offline-backups"
-            "$RUNNER_TEMP/offline-restore" "$RUNNER_TEMP/offline-ledger" "$RUNNER_TEMP/offline-receipts"
+            "$RUNNER_TEMP/offline-restore" "$RUNNER_TEMP/offline-ledger" "$RUNNER_TEMP/offline-receipts" "$RUNNER_TEMP/offline-phase"
             "$RUNNER_TEMP/offline.env" "$RUNNER_TEMP/offline-previous.env" "$RUNNER_TEMP/offline-current.env"
             "$RUNNER_TEMP/offline-next.env" "$RUNNER_TEMP/offline-owner-signing-key.pem"
             "$RUNNER_TEMP/offline-owner-signing-public.pem" "$RUNNER_TEMP/offline-ca.key"

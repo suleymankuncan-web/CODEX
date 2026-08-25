@@ -187,14 +187,14 @@ inputs:
 - Keycloak bootstrap and identity-binder secrets are `1000:1000 0400`;
 - Redis ACL and health credentials are `999:1000 0400`;
 - API and worker credentials remain `65532:65532 0400`;
-- the four photo-storage access/secret files are `0:65532 0440`, so the
-  UID-0 SeaweedFS process and UID/GID-65532 API/worker processes can read them
-  without granting DAC capabilities;
+- the four photo-storage access/secret files are `65532:0 0440`, so the
+  UID/GID-65532 API/worker owner and UID-0 SeaweedFS root-group process can
+  read them without granting DAC capabilities;
 - public certificate and CA files remain `root:root 0444`.
 
 The containing secret roots and their ancestor chain remain root-owned mode
 `0700`; private leaves are readable only by the listed runtime identity, with
-the photo leaves explicitly limited to root plus GID 65532.
+the photo leaves explicitly limited to UID/GID 65532 plus the root group.
 Secret values, private keys, certificates, and real account data never enter
 the bundle, logs, receipts, or support artifacts. A certificate that is
 missing, expired, or not trusted by the intended clients is a stop condition.
@@ -249,6 +249,7 @@ absent before preparation and must live below the same canonical root-owned
 OPERATOR_ROOT=/var/lib/hr-axis/operator-inputs/$RELEASE_ID
 PHOTO_RECOVERY_HANDLE="$OPERATOR_ROOT/photo-recovery.json"
 PHOTO_PREPARE_RECEIPT=/var/lib/hr-axis/receipts/$RELEASE_ID/photo-prebackup.json
+PHOTO_STORAGE_SECRET_ROOT="$OPERATOR_ROOT/secrets/photo"
 
 require_root_private_ancestors "$OPERATOR_ROOT"
 sudo test ! -e "$PHOTO_RECOVERY_HANDLE" && sudo test ! -L "$PHOTO_RECOVERY_HANDLE" || exit 1
@@ -262,6 +263,7 @@ sudo -- "$TRUSTED_NODE" "$SEALED_ROOT/operations/onprem-offline-target-proof.mjs
   --host "$HR_AXIS_PUBLIC_HOST" \
   --accounts-file "$HR_AXIS_SECRET_ROOT/keycloak/synthetic-accounts" \
   --photo-account-file "$HR_AXIS_SECRET_ROOT/keycloak/photo-proof-account" \
+  --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
   --ca-file "$HR_AXIS_SECRET_ROOT/caddy/ca.crt" \
   --photo-auth-image "$BACKEND_CONFIG_IMAGE_ID" \
   --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_FIXTURE_SHA256" \

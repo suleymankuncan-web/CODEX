@@ -300,6 +300,17 @@ VALUES
     ('80000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 'mehmet.kaya', 'mehmet.kaya@acme.local', 'local', TRUE)
 ON CONFLICT (username) DO NOTHING;
 
+INSERT INTO ops.evidence_retention_policy (
+    retention_policy_id, company_id, version_no, evidence_retention_days,
+    reference_retention_days, derived_retention_days, effective_from, created_by_user_id
+) VALUES (
+    '72000000-0000-4000-8000-000000000001',
+    '00000000-0000-0000-0000-000000000001',
+    1, 365, 365, 30, NOW(),
+    '80000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (company_id, version_no) DO NOTHING;
+
 INSERT INTO ops.user_role_assignment (
     user_role_assignment_id, user_id, role_id, scope_type, company_id, region_id, store_id
 )

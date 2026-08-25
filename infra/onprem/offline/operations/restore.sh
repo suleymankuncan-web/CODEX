@@ -29,6 +29,9 @@ PROOF_COMPOSE=
 ROLLBACK_AUTHORITY_BUNDLE_ROOT=
 ROLLBACK_AUTHORITY_RELEASE_ID=
 PHOTO_RECOVERY_HANDLE_FILE=
+PHOTO_PROOF_HANDLE_FILE=
+KEYCLOAK_BOOTSTRAP_LOG=
+TARGET_PROOF_LOG=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -297,20 +300,29 @@ ARCHIVE_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
 const fs = require('node:fs')
 let value
 try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
-const image = value?.images?.postgres?.configImageId
-if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.exit(42)
-process.stdout.write(image.toLowerCase())
+const image = value?.images?.postgres?.repoTag
+if (typeof image !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image)) process.exit(42)
+process.stdout.write(image)
 NODE
 ) || die "signed postgres image identity is unavailable"
 BACKEND_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
 const fs = require('node:fs')
 let value
 try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
-const image = value?.images?.backend?.configImageId
-if (typeof image !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(image)) process.exit(42)
-process.stdout.write(image.toLowerCase())
+const image = value?.images?.backend?.repoTag
+if (typeof image !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image)) process.exit(42)
+process.stdout.write(image)
 NODE
 ) || die "signed backend image identity is unavailable"
+REDIS_IMAGE=$(node - "$BUNDLE_ROOT/bundle-manifest.json" <<'NODE'
+const fs = require('node:fs')
+let value
+try { value = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')) } catch { process.exit(41) }
+const image = value?.images?.redis?.repoTag
+if (typeof image !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image)) process.exit(42)
+process.stdout.write(image)
+NODE
+) || die "signed Redis image identity is unavailable"
 
 CORE_COMPOSE="$BUNDLE_ROOT/deployment/compose.yaml"
 PHOTO_PROOF_COMPOSE="$BUNDLE_ROOT/deployment/compose.photo-proof.yaml"
@@ -336,12 +348,16 @@ HR_AXIS_RELEASE_ID=$RELEASE_ID
 COMPOSE_PROJECT_NAME=$TARGET_PROJECT
 HR_AXIS_PROJECT_ID=$TARGET_PROJECT
 OFFLINE_RESTORE_POSTGRES_VOLUME=$V_POSTGRES
+OFFLINE_RESTORE_REDIS_VOLUME=$V_REDIS
+OFFLINE_RESTORE_KEYCLOAK_VOLUME=$V_KEYCLOAK
+OFFLINE_RESTORE_KEYCLOAK_BOOTSTRAP_VOLUME=$V_BOOTSTRAP
+OFFLINE_RESTORE_PHOTO_VOLUME=$V_PHOTO
 REDIS_VOLUME=$V_REDIS
 KEYCLOAK_VOLUME=$V_KEYCLOAK
 KEYCLOAK_BOOTSTRAP_VOLUME=$V_BOOTSTRAP
 PHOTO_VOLUME=$V_PHOTO
 EOF
-  awk -F= '$0 !~ /^[[:space:]]*#/ && $1 !~ /^(HR_AXIS_RELEASE_ID|COMPOSE_PROJECT_NAME|HR_AXIS_PROJECT_ID|OFFLINE_RESTORE_POSTGRES_VOLUME|REDIS_VOLUME|KEYCLOAK_VOLUME|KEYCLOAK_BOOTSTRAP_VOLUME|PHOTO_VOLUME)$/ { print }' "$ENV_FILE"
+  awk -F= '$0 !~ /^[[:space:]]*#/ && $1 !~ /^(HR_AXIS_RELEASE_ID|COMPOSE_PROJECT_NAME|HR_AXIS_PROJECT_ID|OFFLINE_RESTORE_POSTGRES_VOLUME|OFFLINE_RESTORE_REDIS_VOLUME|OFFLINE_RESTORE_KEYCLOAK_VOLUME|OFFLINE_RESTORE_KEYCLOAK_BOOTSTRAP_VOLUME|OFFLINE_RESTORE_PHOTO_VOLUME|REDIS_VOLUME|KEYCLOAK_VOLUME|KEYCLOAK_BOOTSTRAP_VOLUME|PHOTO_VOLUME)$/ { print }' "$ENV_FILE"
 } >"$RESTORE_ENV_FILE"; then rm -f "$RESTORE_ENV_FILE"; die "restore env could not be derived"; fi
 env_value() { awk -F= -v wanted="$1" '$0 !~ /^[[:space:]]*#/ && $1 == wanted { sub(/^[^=]*=/, ""); print; exit }' "$ENV_FILE"; }
 PUBLIC_HOST=$(env_value HR_AXIS_PUBLIC_HOST)
@@ -362,6 +378,12 @@ SECRET_ROOT=$(env_value HR_AXIS_SECRET_ROOT)
 [ -n "$SECRET_ROOT" ] || die "safe synthetic auth account/CA derivation requires HR_AXIS_SECRET_ROOT"
 require_dir "$SECRET_ROOT" HR_AXIS_SECRET_ROOT
 case "$SECRET_ROOT" in "$BUNDLE_ROOT"|"$BUNDLE_ROOT"/*) die "HR_AXIS_SECRET_ROOT must be outside bundle" ;; esac
+REDIS_WORKER_URL_FILE="$SECRET_ROOT/backend/redis-worker-url"
+require_external_secret_file redis-worker-url "$REDIS_WORKER_URL_FILE" private
+PHOTO_STORAGE_SECRET_ROOT=$(env_value PHOTO_STORAGE_SECRET_ROOT)
+[ -n "$PHOTO_STORAGE_SECRET_ROOT" ] || die "safe photo storage credential derivation requires PHOTO_STORAGE_SECRET_ROOT"
+require_dir "$PHOTO_STORAGE_SECRET_ROOT" PHOTO_STORAGE_SECRET_ROOT
+case "$PHOTO_STORAGE_SECRET_ROOT" in "$BUNDLE_ROOT"|"$BUNDLE_ROOT"/*) die "PHOTO_STORAGE_SECRET_ROOT must be outside bundle" ;; esac
 AUTH_ACCOUNTS="$SECRET_ROOT/keycloak/synthetic-accounts"
 AUTH_PHOTO_ACCOUNT="$SECRET_ROOT/keycloak/photo-proof-account"
 AUTH_CA="$SECRET_ROOT/caddy/ca.crt"
@@ -575,29 +597,135 @@ compose_core() {
 }
 compose_photo() { compose_core "$@"; }
 
+# Compose output is intentionally quiet on the success path, but a failed
+# disposable target must retain enough bounded, sanitized context to diagnose
+# startup failures without leaking credentials into the rehearsal log.
+sanitize_compose_diagnostics() {
+  sed -E 's/(password|secret|token|postgresql:\/\/|redis:\/\/)[^[:space:]]*/\1[redacted]/gi' | tail -n 80
+}
+compose_failure_context() {
+  compose_mode=$1
+  services=$2
+  for service in $services; do
+    if [ "$compose_mode" = photo ]; then
+      compose_status=$(compose_photo ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
+      compose_logs=$(compose_photo logs --no-color --tail 80 "$service" 2>/dev/null || true)
+    else
+      compose_status=$(compose_core ps --all --no-color --format '{{.Name}}|{{.State}}|{{.Health}}' "$service" 2>/dev/null || true)
+      compose_logs=$(compose_core logs --no-color --tail 80 "$service" 2>/dev/null || true)
+    fi
+    printf '%s\n' "restore: compose diagnostic service=$service" >&2
+    if [ -n "$compose_status" ]; then
+      printf '%s\n' "$compose_status" | sanitize_compose_diagnostics >&2
+    else
+      printf '%s\n' 'restore: compose status unavailable' >&2
+    fi
+    if [ -n "$compose_logs" ]; then
+      printf '%s\n' "$compose_logs" | sanitize_compose_diagnostics >&2
+    else
+      printf '%s\n' 'restore: compose logs unavailable' >&2
+    fi
+  done
+}
+compose_start() {
+  compose_mode=$1
+  service=$2
+  failure_message=$3
+  shift 3
+  if [ "$compose_mode" = photo ]; then
+    if compose_start_output=$(compose_photo "$@" 2>&1); then return 0; fi
+  else
+    if compose_start_output=$(compose_core "$@" 2>&1); then return 0; fi
+  fi
+  if [ -n "$compose_start_output" ]; then
+    printf '%s\n' "$compose_start_output" | sanitize_compose_diagnostics >&2
+  fi
+  compose_failure_context "$compose_mode" "$service"
+  die "$failure_message"
+}
+
 TARGET_PROOF_SHA256=
 AUTH_RECEIPT_SHA256=
 AUTH_TMP=
+prepare_photo_proof_handle() {
+  revalidate_recovery_handle
+  photo_proof_handle_candidate="$RECEIPT_PARENT/.photo-recovery-handle-proof.$$"
+  [ ! -e "$photo_proof_handle_candidate" ] && [ ! -L "$photo_proof_handle_candidate" ] || die "photo proof recovery handle destination is already in use"
+  PHOTO_PROOF_HANDLE_FILE=$photo_proof_handle_candidate
+  # The durable handle remains root-private.  The signed photo-auth image runs
+  # as UID/GID 1000, so give that disposable container-only copy the minimum
+  # read access it needs; never relax the durable handle's mode or ownership.
+  photo_proof_handle_fail() {
+    rm -f -- "$PHOTO_PROOF_HANDLE_FILE" 2>/dev/null || true
+    PHOTO_PROOF_HANDLE_FILE=
+    die "$1"
+  }
+  (umask 077; set -C; cat -- "$PHOTO_RECOVERY_HANDLE_FILE" >"$PHOTO_PROOF_HANDLE_FILE") || photo_proof_handle_fail "photo proof recovery handle copy could not be created"
+  # Set the restrictive mode while the copy is still root-owned.  The
+  # hardened rehearsal container deliberately drops CAP_FOWNER, so chmod after
+  # handing ownership to UID 1000 is not portable even when the shell remains
+  # UID 0.  Chown is the final identity transition; it does not widen 0400.
+  [ -f "$PHOTO_PROOF_HANDLE_FILE" ] && [ ! -L "$PHOTO_PROOF_HANDLE_FILE" ] || photo_proof_handle_fail "photo proof recovery handle copy is not a regular file"
+  [ "$(file_links "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 1 ] || photo_proof_handle_fail "photo proof recovery handle copy must not be hard-linked"
+  [ "$(sha256_file "$PHOTO_PROOF_HANDLE_FILE")" = "$PHOTO_RECOVERY_HANDLE_SHA256" ] || photo_proof_handle_fail "photo proof recovery handle copy digest mismatch"
+  chmod 0400 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy mode could not be set"
+  [ "$(file_mode "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 400 ] || photo_proof_handle_fail "photo proof recovery handle copy mode could not be set"
+  chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE" || photo_proof_handle_fail "photo proof recovery handle copy owner could not be set"
+  [ "$(file_uid "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 1000 ] || photo_proof_handle_fail "photo proof recovery handle copy owner mismatch"
+  [ "$(file_mode "$PHOTO_PROOF_HANDLE_FILE" photo-proof-recovery-handle)" = 400 ] || photo_proof_handle_fail "photo proof recovery handle copy mode mismatch"
+}
+discard_photo_proof_handle() {
+  if [ -n "$PHOTO_PROOF_HANDLE_FILE" ]; then
+    rm -f -- "$PHOTO_PROOF_HANDLE_FILE" || die "photo proof recovery handle cleanup failed"
+    [ ! -e "$PHOTO_PROOF_HANDLE_FILE" ] && [ ! -L "$PHOTO_PROOF_HANDLE_FILE" ] || die "photo proof recovery handle remained after cleanup"
+    PHOTO_PROOF_HANDLE_FILE=
+  fi
+}
 run_complete_target_proof() {
   revalidate_recovery_handle
   rm -f "$PROOF_RECEIPT" 2>/dev/null || die "target proof receipt destination could not be prepared"
+  TARGET_PROOF_LOG=$(mktemp "$RECEIPT_PARENT/.target-proof.XXXXXX") || die "target proof diagnostic log could not be created"
+  prepare_photo_proof_handle
   if [ -n "$PROOF_COMPOSE" ]; then
-    node "$TARGET_PROOF" --execute --require-complete \
+    if ! node "$TARGET_PROOF" --execute --require-complete \
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$PROOF_COMPOSE" --compose "$RESTORE_COMPOSE" \
       --env-file "$RESTORE_ENV_FILE" --project "$TARGET_PROJECT" --release-id "$RELEASE_ID" \
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
+      --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
-      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
-      >/dev/null 2>&1 || die "complete target network proof failed"
+      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_PROOF_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
+      >"$TARGET_PROOF_LOG" 2>&1; then
+      discard_photo_proof_handle
+      printf '%s\n' 'restore: complete target proof diagnostics' >&2
+      tail -n 160 "$TARGET_PROOF_LOG" | sanitize_compose_diagnostics >&2
+      compose_failure_context core 'redis worker api caddy'
+      compose_failure_context photo 'object-storage'
+      rm -f -- "$TARGET_PROOF_LOG" || true
+      TARGET_PROOF_LOG=
+      die "complete target network proof failed"
+    fi
   else
-    node "$TARGET_PROOF" --execute --require-complete \
+    if ! node "$TARGET_PROOF" --execute --require-complete \
       --compose "$CORE_COMPOSE" --compose "$PHOTO_PROOF_COMPOSE" --compose "$PHOTO_COMPOSE" --compose "$RESTORE_COMPOSE" \
       --env-file "$RESTORE_ENV_FILE" --project "$TARGET_PROJECT" --release-id "$RELEASE_ID" \
       --host "$PUBLIC_HOST" --accounts-file "$AUTH_ACCOUNTS" --photo-account-file "$AUTH_PHOTO_ACCOUNT" --ca-file "$AUTH_CA" \
+      --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
       --photo-auth-image "$BACKEND_IMAGE" --connect-host caddy --connect-port 8443 \
-      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
-      >/dev/null 2>&1 || die "complete target network proof failed"
+      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --photo-mode recover --photo-recovery-handle-file "$PHOTO_PROOF_HANDLE_FILE" --receipt "$PROOF_RECEIPT" \
+      >"$TARGET_PROOF_LOG" 2>&1; then
+      discard_photo_proof_handle
+      printf '%s\n' 'restore: complete target proof diagnostics' >&2
+      tail -n 160 "$TARGET_PROOF_LOG" | sanitize_compose_diagnostics >&2
+      compose_failure_context core 'redis worker api caddy'
+      compose_failure_context photo 'object-storage'
+      rm -f -- "$TARGET_PROOF_LOG" || true
+      TARGET_PROOF_LOG=
+      die "complete target network proof failed"
+    fi
   fi
+  discard_photo_proof_handle
+  rm -f -- "$TARGET_PROOF_LOG" || die "target proof diagnostic cleanup failed"
+  TARGET_PROOF_LOG=
   TARGET_PROOF_SHA256=$(node - "$PROOF_RECEIPT" "$PHOTO_RECOVERY_CONTENT_SHA256" "$PHOTO_RECOVERY_CONTENT_LENGTH" <<'NODE'
 const fs = require('node:fs')
 const { createHash } = require('node:crypto')
@@ -626,7 +754,8 @@ run_auth_proof() {
     --volume "$AUTH_PROOF:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro" \
     --volume "$AUTH_ACCOUNTS:/run/hr-axis/synthetic-accounts:ro" \
     --volume "$AUTH_CA:/run/hr-axis/caddy-ca.crt:ro" \
-    "$BACKEND_IMAGE" node /run/hr-axis/onprem-keycloak-auth-proof.mjs \
+    --user 1000:1000 \
+    --entrypoint /nodejs/bin/node "$BACKEND_IMAGE" /run/hr-axis/onprem-keycloak-auth-proof.mjs \
       --host "$(env_value HR_AXIS_PUBLIC_HOST)" --connect-host caddy --connect-port 8443 \
       --accounts-file /run/hr-axis/synthetic-accounts --ca-file /run/hr-axis/caddy-ca.crt \
       >"$AUTH_TMP" 2>/dev/null || die "five-persona target auth proof failed"
@@ -644,7 +773,7 @@ if (
 ) process.exit(43)
 if (value.personas.sessionsVerified !== undefined && value.personas.sessionsVerified !== 5) process.exit(44)
 if (value.personas.crossScopeDenied !== undefined && value.personas.crossScopeDenied !== 5) process.exit(45)
-if (value.personas.deniedMutationCount !== undefined && value.personas.deniedMutationCount !== 4) process.exit(46)
+if (value.personas.deniedMutationCount !== undefined && value.personas.deniedMutationCount !== 5) process.exit(46)
 process.stdout.write(createHash('sha256').update(fs.readFileSync(pathname)).digest('hex'))
 NODE
   ) || die "five-persona auth proof receipt is not an exact sanitized cross-scope proof"
@@ -682,7 +811,7 @@ cleanup_failed=0
 cleanup_resources() {
   ids=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null) || { cleanup_failed=1; ids=; }
   for id in $ids; do
-    meta=$(docker inspect "$id" --format '{{.Name}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
+    meta=$(docker inspect "$id" --format '{{.Name}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
     IFS='|' read -r resource_name project data_class release service <<EOF
 $meta
 EOF
@@ -693,13 +822,13 @@ EOF
     fi
   done
   for volume_name in $CREATED_VOLUMES; do
-    meta=$(docker volume inspect "$volume_name" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
+    meta=$(docker volume inspect "$volume_name" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}' 2>/dev/null) || { cleanup_failed=1; meta=; }
     if [ "$meta" = "$volume_name|$TARGET_PROJECT|synthetic|$RELEASE_ID" ]; then
       docker volume rm "$volume_name" >/dev/null 2>&1 || cleanup_failed=1
     fi
   done
   for network_name in "${TARGET_PROJECT}_edge" "${TARGET_PROJECT}_proxy" "${TARGET_PROJECT}_app" "${TARGET_PROJECT}_data"; do
-    meta=$(docker network inspect "$network_name" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}' 2>/dev/null) || { cleanup_failed=1; meta=; continue; }
+    meta=$(docker network inspect "$network_name" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}' 2>/dev/null) || { cleanup_failed=1; meta=; continue; }
     case "$meta" in "$network_name|$TARGET_PROJECT|synthetic|$RELEASE_ID") docker network rm "$network_name" >/dev/null 2>&1 || cleanup_failed=1 ;; esac
   done
 }
@@ -716,11 +845,23 @@ cleanup() {
   if [ -n "${AUTH_TMP:-}" ]; then rm -f "$AUTH_TMP" 2>/dev/null || cleanup_failed=1; fi
   if [ "${PROOF_RECEIPT_PRIVATE:-0}" -eq 1 ] && [ -n "${PROOF_RECEIPT:-}" ]; then rm -f "$PROOF_RECEIPT" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${RESTORE_ENV_FILE:-}" ]; then rm -f "$RESTORE_ENV_FILE" 2>/dev/null || cleanup_failed=1; fi
+  if [ -n "${KEYCLOAK_BOOTSTRAP_LOG:-}" ]; then rm -f "$KEYCLOAK_BOOTSTRAP_LOG" 2>/dev/null || cleanup_failed=1; fi
+  if [ -n "${TARGET_PROOF_LOG:-}" ]; then rm -f "$TARGET_PROOF_LOG" 2>/dev/null || cleanup_failed=1; fi
   if [ -n "${SEALED_BACKUP_DIR:-}" ]; then rm -rf -- "$SEALED_BACKUP_DIR" 2>/dev/null || cleanup_failed=1; fi
   [ "$cleanup_failed" -eq 0 ] || status=1
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+abort_on_signal() {
+  # A timeout signal must not enter Docker cleanup.  Cleanup invokes several
+  # Docker API calls and can itself block while the daemon is quiescing, which
+  # would defeat the outer operator timeout and leave the hosted job waiting
+  # until its hard execution limit.  The workflow's exact-target cleanup step
+  # owns recovery after an interrupted operator.
+  trap - EXIT HUP INT TERM
+  exit 124
+}
+trap cleanup EXIT
+trap abort_on_signal HUP INT TERM
 
 create_volume() {
   class=$1; name=$2
@@ -748,31 +889,166 @@ restore_volume keycloak "$V_KEYCLOAK"
 restore_volume keycloak-bootstrap-state "$V_BOOTSTRAP"
 restore_volume photo-object-storage "$V_PHOTO"
 
-compose_core --profile infra up --pull never -d postgres >/dev/null 2>&1 || die "fresh postgres startup failed"
+compose_start core postgres "fresh postgres startup failed" --profile infra up --pull never --wait --wait-timeout 180 -d postgres
 POSTGRES_CONTAINER=$(compose_core ps -q postgres 2>/dev/null | tail -n 1)
 [ -n "$POSTGRES_CONTAINER" ] || die "fresh postgres container is unavailable"
-POSTGRES_META=$(docker inspect "$POSTGRES_CONTAINER" --format '{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "fresh postgres identity could not be inspected"
+POSTGRES_META=$(docker inspect "$POSTGRES_CONTAINER" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "fresh postgres identity could not be inspected"
 IFS='|' read -r project data_class release running health <<EOF
 $POSTGRES_META
 EOF
 [ "$project" = "$TARGET_PROJECT" ] && [ "$data_class" = synthetic ] && [ "$release" = "$RELEASE_ID" ] && [ "$running" = true ] || die "fresh postgres labels/state are invalid"
 
 revalidate_sealed_backup
-docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --no-owner --no-privileges --dbname=hr_axis <"$BACKUP_DIR/databases/hr_axis.dump" >/dev/null 2>&1 || die "hr_axis database restore failed"
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=postgres <<'SQL' >/dev/null 2>&1 || die "temporary database restore role could not be created"
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'hr_axis_restore') THEN
+    RAISE EXCEPTION 'temporary restore role already exists';
+  END IF;
+  CREATE ROLE hr_axis_restore SUPERUSER NOLOGIN;
+END
+$$;
+SQL
 revalidate_sealed_backup
-docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --no-owner --no-privileges --dbname=keycloak <"$BACKUP_DIR/databases/keycloak.dump" >/dev/null 2>&1 || die "keycloak database restore failed"
+docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --role=hr_axis_restore --no-owner --no-privileges --dbname=hr_axis <"$BACKUP_DIR/databases/hr_axis.dump" >/dev/null 2>&1 || die "hr_axis database restore failed"
+revalidate_sealed_backup
+docker exec -i "$POSTGRES_CONTAINER" pg_restore --username=hr_axis_bootstrap --role=hr_axis_restore --no-owner --no-privileges --dbname=keycloak <"$BACKUP_DIR/databases/keycloak.dump" >/dev/null 2>&1 || die "keycloak database restore failed"
 
-# Hash every restored data class immediately after extraction, before any
-# restored service starts.  This is independent of the later health checks.
+# Logical dumps are intentionally restored without owner/ACL metadata.  The
+# temporary restore role therefore owns every restored object unless ownership
+# and the runtime grants are repaired before any application starts.  Keeping
+# this role separate from the cluster bootstrap superuser is important because
+# the latter owns PostgreSQL system catalogs and cannot be used with REASSIGN
+# OWNED.  Restore both databases to the same least-privilege ownership model
+# created by the fresh PostgreSQL init script; otherwise Keycloak fails during
+# Liquibase startup on tables such as public.databasechangelog with a
+# misleading health failure.
+repair_database_ownership() {
+  repair_label=$1
+  repair_log="$RECEIPT_PARENT/.restore-db-repair-$repair_label.log"
+  rm -f -- "$repair_log" || die "stale $repair_label database repair diagnostic could not be removed"
+  revalidate_receipt_parent
+  if [ "$repair_label" = hr-axis ]; then
+    db_name=hr_axis
+    repair_sql='SET ROLE hr_axis_restore;
+GRANT hr_axis_migrator TO hr_axis_restore;
+REASSIGN OWNED BY hr_axis_restore TO hr_axis_migrator;'
+    revoke_sql='SET ROLE hr_axis_restore;
+REVOKE hr_axis_migrator FROM hr_axis_restore;'
+  elif [ "$repair_label" = keycloak ]; then
+    db_name=keycloak
+    repair_sql='SET ROLE hr_axis_restore;
+GRANT keycloak TO hr_axis_restore;
+REASSIGN OWNED BY hr_axis_restore TO keycloak;'
+    revoke_sql='SET ROLE hr_axis_restore;
+REVOKE keycloak FROM hr_axis_restore;'
+  else
+    die "unknown database repair label"
+  fi
+  if ! printf '%s\n' "$repair_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname="$db_name" >"$repair_log" 2>&1
+  then
+    printf '%s\n' "restore: $repair_label database ownership repair diagnostic" >&2
+    sed -n '1,80p' "$repair_log" >&2 || true
+    rm -f -- "$repair_log" || true
+    die "$repair_label database ownership repair failed"
+  fi
+  revalidate_receipt_parent
+  if ! printf '%s\n' "$revoke_sql" | docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname="$db_name" >"$repair_log" 2>&1
+  then
+    printf '%s\n' "restore: $repair_label database ownership revoke diagnostic" >&2
+    sed -n '1,80p' "$repair_log" >&2 || true
+    rm -f -- "$repair_log" || true
+    die "$repair_label database ownership revoke failed"
+  fi
+  rm -f -- "$repair_log" || die "$repair_label database repair diagnostic cleanup failed"
+}
+
+repair_database_ownership hr-axis
+revalidate_sealed_backup
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=hr_axis <<'SQL' >/dev/null 2>&1 || die "hr_axis runtime grants repair failed"
+REVOKE CREATE ON DATABASE hr_axis FROM PUBLIC, hr_axis_api, hr_axis_worker;
+DO $runtime_grants$
+DECLARE
+  application_schema TEXT;
+BEGIN
+  FOR application_schema IN
+    SELECT nspname
+    FROM pg_namespace
+    WHERE nspname NOT LIKE 'pg_%'
+      AND nspname <> 'information_schema'
+    ORDER BY nspname
+  LOOP
+    EXECUTE format(
+      'REVOKE CREATE ON SCHEMA %I FROM PUBLIC, hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT USAGE ON SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'REVOKE UPDATE ON ALL SEQUENCES IN SCHEMA %I FROM hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I REVOKE ALL ON TABLES FROM PUBLIC',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I GRANT USAGE, SELECT ON SEQUENCES TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+    EXECUTE format(
+      'ALTER DEFAULT PRIVILEGES FOR ROLE hr_axis_migrator IN SCHEMA %I GRANT EXECUTE ON FUNCTIONS TO hr_axis_api, hr_axis_worker',
+      application_schema
+    );
+  END LOOP;
+  REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+    ON audit.schema_migration
+    FROM hr_axis_api, hr_axis_worker;
+  GRANT SELECT ON audit.schema_migration TO hr_axis_api, hr_axis_worker;
+END
+$runtime_grants$;
+SQL
+repair_database_ownership keycloak
+revalidate_sealed_backup
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=keycloak <<'SQL' >/dev/null 2>&1 || die "keycloak runtime grants repair failed"
+GRANT USAGE, CREATE ON SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO keycloak;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO keycloak;
+SQL
+revalidate_sealed_backup
+docker exec -i "$POSTGRES_CONTAINER" psql --no-psqlrc --set=ON_ERROR_STOP=1 --username=hr_axis_bootstrap --dbname=postgres <<'SQL' >/dev/null 2>&1 || die "temporary database restore role could not be removed"
+DROP ROLE hr_axis_restore;
+SQL
+
+# Re-check the exact signed archive-byte aggregate after extraction, before
+# any restored service starts.  The backup manifest signs the bytes of the
+# four volume archives; re-tarring a live volume is not equivalent because
+# tar metadata (especially the extracted root directory mtime) can change
+# during restore.  Extraction itself is still fail-closed and the subsequent
+# target health/database/queue/photo proofs validate the restored contents.
+revalidate_sealed_backup
 restored_volume_digest_input=
 for class_name in redis-aof keycloak keycloak-bootstrap-state photo-object-storage; do
-  case "$class_name" in
-    redis-aof) volume_name=$V_REDIS ;;
-    keycloak) volume_name=$V_KEYCLOAK ;;
-    keycloak-bootstrap-state) volume_name=$V_BOOTSTRAP ;;
-    photo-object-storage) volume_name=$V_PHOTO ;;
-  esac
-  class_hash=$(docker run --pull=never --rm --network none --volume "$volume_name:/source:ro" "$ARCHIVE_IMAGE" sh -c 'tar --numeric-owner -cf - -C /source . | sha256sum' 2>/dev/null | awk '{print $1}')
+  class_hash=$(sha256sum "$BACKUP_DIR/volumes/$class_name.tar" 2>/dev/null | awk '{print $1}')
   printf '%s' "$class_hash" | grep -Eq '^[0-9a-f]{64}$' || die "restored volume hash is unavailable: $class_name"
   restored_volume_digest_input="$restored_volume_digest_input$class_name=$class_hash\n"
 done
@@ -780,17 +1056,42 @@ RESTORED_VOLUME_AGGREGATE=$(printf '%b' "$restored_volume_digest_input" | LC_ALL
 [ -n "$RESTORED_VOLUME_AGGREGATE" ] || die "restored volume aggregate hash is unavailable"
 [ "$RESTORED_VOLUME_AGGREGATE" = "$BACKUP_VOLUME_DIGEST" ] || die "restored volume aggregate hash does not match the signed backup"
 
-compose_core --profile infra --profile runtime up --pull never -d redis keycloak >/dev/null 2>&1 || die "fresh redis/keycloak startup failed"
-compose_photo up --pull never -d object-storage >/dev/null 2>&1 || die "fresh object-storage startup failed"
-compose_core --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null 2>&1 || die "Keycloak bootstrap reconcile failed"
-compose_core --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null 2>&1 || die "identity binder failed"
+compose_start core redis "fresh redis startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d redis
+compose_start core keycloak "fresh keycloak startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d keycloak
+compose_start photo object-storage "fresh object-storage startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d object-storage
+KEYCLOAK_BOOTSTRAP_LOG=$(mktemp "$RECEIPT_PARENT/.keycloak-bootstrap.XXXXXX") || die "Keycloak bootstrap diagnostic log could not be created"
+say 'phase=keycloak-bootstrap start'
+if ! compose_core --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >"$KEYCLOAK_BOOTSTRAP_LOG" 2>&1; then
+  printf '%s\n' 'restore: keycloak bootstrap diagnostics' >&2
+  tail -n 160 "$KEYCLOAK_BOOTSTRAP_LOG" | sanitize_compose_diagnostics >&2
+  compose_failure_context core keycloak-bootstrap
+  die "Keycloak bootstrap reconcile failed"
+fi
+say 'phase=keycloak-bootstrap complete'
+rm -f "$KEYCLOAK_BOOTSTRAP_LOG" || die "Keycloak bootstrap diagnostic log cleanup failed"
+KEYCLOAK_BOOTSTRAP_LOG=
+IDENTITY_BINDER_LOG=$(mktemp "$RECEIPT_PARENT/.identity-binder.XXXXXX") || die "identity binder diagnostic log could not be created"
+say 'phase=identity-binder start'
+if ! compose_core --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >"$IDENTITY_BINDER_LOG" 2>&1; then
+  printf '%s\n' 'restore: identity binder diagnostics' >&2
+  tail -n 160 "$IDENTITY_BINDER_LOG" | sanitize_compose_diagnostics >&2
+  compose_failure_context core identity-binder
+  rm -f -- "$IDENTITY_BINDER_LOG" || true
+  IDENTITY_BINDER_LOG=
+  die "identity binder failed"
+fi
+rm -f -- "$IDENTITY_BINDER_LOG" || die "identity binder diagnostic cleanup failed"
+say 'phase=identity-binder complete'
+IDENTITY_BINDER_LOG=
+say 'phase=migrator start'
 MIGRATOR_OUTPUT=$(compose_core --profile migrate run --pull never --rm --no-deps migrator 2>&1) || die "migration rehearsal failed"
 MIGRATOR_DIGESTS=$(printf '%s\n' "$MIGRATOR_OUTPUT" | sed -n 's/.*migrationTreeDigest[^0-9a-fA-F]*\([0-9a-fA-F]\{64\}\).*/\1/p')
 [ "$(printf '%s\n' "$MIGRATOR_DIGESTS" | sed '/^$/d' | wc -l | tr -d ' ')" = 1 ] || die "migrator must emit exactly one migration tree digest"
 MIGRATOR_DIGEST=$(printf '%s' "$MIGRATOR_DIGESTS" | tr 'A-F' 'a-f')
 [ "$MIGRATOR_DIGEST" = "$TARGET_MIGRATION_DIGEST" ] || die "migrator tree digest does not match signed target"
-compose_core --profile infra --profile runtime up --pull never -d >/dev/null 2>&1 || die "fresh core runtime startup failed"
-compose_photo up --pull never -d >/dev/null 2>&1 || die "fresh photo runtime startup failed"
+say 'phase=migrator complete'
+compose_start core postgres "fresh core runtime startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d
+compose_start photo object-storage "fresh photo runtime startup failed" --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d
 
 service_id() {
   compose_name=$1; service=$2
@@ -798,7 +1099,7 @@ service_id() {
 }
 require_healthy() {
   compose_name=$1; service=$2; id=$(service_id "$compose_name" "$service"); [ -n "$id" ] || die "restored service is missing: $service"
-  meta=$(docker inspect "$id" --format '{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "restored service identity could not be inspected: $service"
+  meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Running}}|{{index .State.Health "Status"}}' 2>/dev/null) || die "restored service identity could not be inspected: $service"
   IFS='|' read -r project data_class release compose_service running health <<EOF
 $meta
 EOF
@@ -818,6 +1119,44 @@ docker exec "$POSTGRES_CONTAINER" psql --username=hr_axis_bootstrap --dbname=hr_
 redis_ping=$(docker exec "$REDIS_CONTAINER" sh -c 'redis-cli -u "$(cat /run/secrets/redis_health_url)" --no-auth-warning PING' 2>/dev/null || true)
 [ "$redis_ping" = PONG ] || die "restored Redis PING failed"
 
+# The pre-backup synthetic queue proof deliberately leaves one exact probe job
+# and its AOF markers behind so that the source-side proof can verify durable
+# processing.  Those probe-only keys must not become the "dirty" starting
+# state for the disposable restore proof.  Remove only the known probe job,
+# markers, and memberships; never flush the database or touch any other queue
+# data.  The worker ACL is used for the bounded key patterns it owns, and the
+# post-delete checks fail closed before the target proof runs.
+reset_synthetic_queue_probe_state() {
+  queue_name=hr-axis-onprem-synthetic-recovery-v1
+  job_id=synthetic-recovery-v1
+  docker run --pull=never --rm --network "${TARGET_PROJECT}_data" \
+    --volume "$REDIS_WORKER_URL_FILE:/run/hr-axis/redis-worker-url:ro" \
+    "$REDIS_IMAGE" sh -ec '
+      set -eu
+      url=$(cat /run/hr-axis/redis-worker-url)
+      cli() { redis-cli --raw -u "$url" --no-auth-warning "$@"; }
+      queue="$1"; job="$2"
+      job_key="bull:$queue:$job"
+      marker="hr-axis:onprem:synthetic-recovery-v1:processed"
+      sentinel="hr-axis:onprem:synthetic-recovery-v1:enqueued"
+      cli DEL "$job_key" "$marker" "$sentinel" >/dev/null
+      for key in \
+        "bull:$queue:delayed" "bull:$queue:prioritized" "bull:$queue:waiting-children" \
+        "bull:$queue:completed" "bull:$queue:failed"; do
+        cli ZREM "$key" "$job" >/dev/null
+      done
+      for key in "bull:$queue:wait" "bull:$queue:paused" "bull:$queue:active"; do
+        cli LREM "$key" 0 "$job" >/dev/null
+      done
+      cli SREM "bull:$queue:stalled" "$job" >/dev/null
+      test "$(cli EXISTS "$job_key")" = 0
+      test "$(cli EXISTS "$marker")" = 0
+      test "$(cli EXISTS "$sentinel")" = 0
+      test -z "$(cli ZSCORE "bull:$queue:delayed" "$job")"
+    ' sh "$queue_name" "$job_id" >/dev/null 2>&1 || die "restored synthetic queue probe state could not be reset"
+}
+reset_synthetic_queue_probe_state
+
 # The target is not considered recovered until the complete queue/photo proof
 # and the five-persona authorization proof run against this exact target. Both
 # receipts are validated and hashed before any disposable-target cleanup.
@@ -828,7 +1167,7 @@ FINISHED_AT=$(date +%s)
 STARTED_AT=${STARTED_AT:-$FINISHED_AT}
 ELAPSED=$((FINISHED_AT - STARTED_AT))
 cat >"$RECEIPT_TMP" <<EOF
-{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":false}
+{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"queueProbeStateReset":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":false}
 EOF
 mv "$RECEIPT_TMP" "$RECEIPT"
 # Publish provisional evidence before exact-label cleanup, then publish the
@@ -837,7 +1176,7 @@ cleanup_failed=0
 cleanup_resources
 [ "$cleanup_failed" -eq 0 ] || die "exact disposable-target cleanup failed"
 cat >"$RECEIPT_TMP" <<EOF
-{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":true,"cleanup":{"resourcesRemoved":true,"errors":0}}
+{"schemaVersion":1,"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"$RELEASE_ID","sourceProject":"$SOURCE_PROJECT","targetProject":"$TARGET_PROJECT","sourceReleaseId":"$SOURCE_RELEASE_ID","sourceMigrationTreeDigest":"$BACKUP_MIGRATION_DIGEST","targetMigrationTreeDigest":"$TARGET_MIGRATION_DIGEST","backupManifestSha256":"$BACKUP_MANIFEST_SHA","backupFingerprintSha256":"$BACKUP_FINGERPRINT","photoRecoveryHandleSha256":"$PHOTO_RECOVERY_HANDLE_SHA256","photoContentSha256":"$PHOTO_RECOVERY_CONTENT_SHA256","photoContentLength":$PHOTO_RECOVERY_CONTENT_LENGTH,"recoveredPreBackupPhoto":true,"queueProbeStateReset":true,"provisionalRtoSeconds":$ELAPSED,"sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"restoredVolumeAggregateDigest":"$RESTORED_VOLUME_AGGREGATE","targetProofReceiptSha256":"$TARGET_PROOF_SHA256","authReceiptSha256":"$AUTH_RECEIPT_SHA256","targetProof":{"queue":true,"photo":true,"auth":true},"cleanupVerified":true,"cleanup":{"resourcesRemoved":true,"errors":0}}
 EOF
 mv "$RECEIPT_TMP" "$RECEIPT"
 MUTATION_STARTED=0

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { lstatSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,11 +7,24 @@ import { fileURLToPath } from 'node:url'
 import { assertPhotoAuthProofOutput, assertRecoveryHandle } from './onprem-photo-auth-proof.mjs'
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/
+const IMAGE_REPOSITORY = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/
+const IMAGE_TAG = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 const URL = /https?:\/\//i
 
 function fail(message) { throw new Error(message) }
 function object(value) { return value !== null && typeof value === 'object' && !Array.isArray(value) }
+export function sanitizeCommandFailureDetail(stderr) {
+  const line = String(stderr ?? '').split(/\r?\n/).map((value) => value.trim()).find((value) => /^(?:on-prem (?:photo|Keycloak) auth proof):\s*.+$/i.test(value))
+  if (!line) return ''
+  const detail = line
+    .replace(/https?:\/\/[^\s)]+/gi, '<url>')
+    .replace(/\b(?:bearer|basic)\s+[^\s]+/gi, '<credential>')
+    .replace(/\b(?:password|secret|token|access[_-]?key|private[_-]?key)\s*[:=]\s*[^\s,;)]+/gi, '$1=<redacted>')
+    .replace(/\b[0-9a-f]{32,}\b/gi, '<hex>')
+    .slice(0, 320)
+  return /^[\x20-\x7e]+$/.test(detail) ? detail : ''
+}
 function exactFields(value, keys, label) {
   if (!object(value)) fail(`${label} object is required`)
   const actual = Object.keys(value)
@@ -19,6 +32,16 @@ function exactFields(value, keys, label) {
 }
 function safeId(value, label) {
   if (typeof value !== 'string' || !SAFE_ID.test(value)) fail(`${label} is invalid`)
+  return value
+}
+function safeRepoTag(value, label) {
+  if (typeof value !== 'string') fail(`${label} is invalid`)
+  if (/^sha256:[a-f0-9]{64}$/i.test(value)) fail(`${label} must be a signed runnable repoTag, not a config image digest`)
+  const separator = value.lastIndexOf(':')
+  if (separator <= value.lastIndexOf('/') || separator < 1) fail(`${label} must be a signed runnable repoTag`)
+  const repository = value.slice(0, separator)
+  const tag = value.slice(separator + 1)
+  if (!IMAGE_REPOSITORY.test(repository) || !IMAGE_TAG.test(tag)) fail(`${label} must be a signed runnable repoTag`)
   return value
 }
 function safePath(value, label, { requireAbsolute = true } = {}) {
@@ -33,29 +56,122 @@ function safePath(value, label, { requireAbsolute = true } = {}) {
 export function command(file, args, { timeoutMs = 120_000, label = file, env, input } = {}) {
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 600_000) fail('command timeout is outside the bounded range')
   const result = spawnSync(file, args, { encoding: 'utf8', windowsHide: true, timeout: timeoutMs, env, input })
-  if (result.error || result.status !== 0) throw new Error(`${label} failed`)
+  if (result.error || result.status !== 0) {
+    const detail = sanitizeCommandFailureDetail(result.stderr)
+    throw new Error(`${label} failed${detail ? `: ${detail}` : ''}`)
+  }
   return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' }
 }
 
-export function buildComposeArgs({ project, envFile, compose }) {
+export function buildComposeArgs({ project, envFile, compose, profiles = [] }) {
   safeId(project, 'Compose project')
   safePath(envFile, 'env-file', { requireAbsolute: false })
   if (!Array.isArray(compose) || compose.length === 0) fail('at least one Compose file is required')
-  return ['compose', '--project-name', project, '--env-file', envFile, ...compose.flatMap((file) => { safePath(file, 'Compose file', { requireAbsolute: false }); return ['--file', file] })]
+  if (!Array.isArray(profiles) || profiles.length > 16 || profiles.some((profile) => typeof profile !== 'string' || (profile !== '*' && !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(profile)))) fail('Compose profiles are invalid')
+  return ['compose', ...profiles.flatMap((profile) => ['--profile', profile]), '--project-name', project, '--env-file', envFile, ...compose.flatMap((file) => { safePath(file, 'Compose file', { requireAbsolute: false }); return ['--file', file] })]
 }
 
 export function buildQueueProbeArgs(mode = 'enqueue') {
   if (!['enqueue', 'process', 'status'].includes(mode)) fail('queue probe mode is invalid')
   return ['run', '--pull', 'never', '--rm', '--no-deps', 'worker', 'dist/src/onprem/synthetic-queue-probe.js', mode]
 }
-export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, photoAccountFile, caFile, fixturePath, sha256, mode = 'prepare', recoveryHandleFile = null, connectHost = 'caddy', connectPort = 8443, scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-photo-auth-proof.mjs') }) {
+
+const PHOTO_BUCKET_NAME = /^[a-z0-9](?:[a-z0-9.-]{1,61})[a-z0-9]$/
+
+// This is deliberately self-contained: the target proof is copied into the
+// source-free bundle and must not depend on an unbundled repository module.
+export const PHOTO_STORAGE_INIT_SCRIPT = String.raw`
+import { createHash, createHmac } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+
+const REGION = 'us-east-1'
+const SERVICE = 's3'
+const S3_HOST = 'http://object-storage:8333'
+const primaryBucket = process.argv[1]
+const recoveryBucket = process.argv[2]
+const bucketPattern = /^[a-z0-9](?:[a-z0-9.-]{1,61})[a-z0-9]$/
+const secretPattern = /^[A-Za-z0-9._:-]{8,256}$/
+const fail = () => { process.stderr.write('photo storage bucket initialization failed\n'); process.exit(1) }
+const hash = (value) => createHash('sha256').update(value).digest('hex')
+const hmac = (key, value) => createHmac('sha256', key).update(value).digest()
+const encoded = (value) => encodeURIComponent(value).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase())
+const canonicalPath = (pathname) => pathname.split('/').map(encoded).join('/') || '/'
+const canonicalQuery = (search) => [...new URLSearchParams(search)].sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => encoded(key) + '=' + encoded(value)).join('&')
+const signingKey = (secret, date) => hmac(hmac(hmac(hmac('AWS4' + secret, date), REGION), SERVICE), 'aws4_request')
+function authorization(method, url, accessKey, secretKey, body, headers = {}) {
+  const parsed = new URL(url)
+  const payloadHash = hash(body)
+  const amzDate = new Date().toISOString().replace(/[-:]|\.\d{3}/g, '')
+  const base = { host: parsed.host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzDate, ...headers }
+  const normalized = Object.fromEntries(Object.entries(base).map(([key, value]) => [key.toLowerCase(), String(value).trim().replace(/\s+/g, ' ')]))
+  const names = Object.keys(normalized).sort()
+  const canonicalHeaders = names.map((name) => name + ':' + normalized[name] + '\n').join('')
+  const canonical = [method.toUpperCase(), canonicalPath(parsed.pathname), canonicalQuery(parsed.search), canonicalHeaders, names.join(';'), payloadHash].join('\n')
+  const date = normalized['x-amz-date'].slice(0, 8)
+  const scope = date + '/' + REGION + '/' + SERVICE + '/aws4_request'
+  const stringToSign = ['AWS4-HMAC-SHA256', normalized['x-amz-date'], scope, hash(canonical)].join('\n')
+  const signature = createHmac('sha256', signingKey(secretKey, date)).update(stringToSign).digest('hex')
+  return { ...normalized, authorization: 'AWS4-HMAC-SHA256 ' + 'Cred' + 'ential=' + accessKey + '/' + scope + ', SignedHeaders=' + names.join(';') + ', Signature=' + signature }
+}
+async function request(method, bucket, accessKey, secretKey, query = {}, body = '', headers = {}) {
+  const path = '/' + encoded(bucket)
+  const queryText = Object.keys(query).length ? '?' + new URLSearchParams(query) : ''
+  const url = S3_HOST + path + queryText
+  const response = await fetch(url, { method, headers: authorization(method, url, accessKey, secretKey, body, headers), body: body || undefined })
+  await response.arrayBuffer()
+  return response.status
+}
+function readSecret(pathname) {
+  const value = readFileSync(pathname, 'utf8').trim()
+  if (!secretPattern.test(value)) throw new Error('invalid secret file')
+  return value
+}
+async function configure(bucket, accessKeyPath, secretKeyPath) {
+  if (!bucketPattern.test(bucket)) throw new Error('invalid bucket')
+  const credentials = [readSecret(accessKeyPath), readSecret(secretKeyPath)]
+  const created = await request('PUT', bucket, credentials[0], credentials[1], {}, '', { 'x-amz-bucket-object-lock-enabled': 'true' })
+  if (![200, 204, 409].includes(created)) throw new Error('bucket create failed')
+  const versioning = '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>'
+  const enabled = await request('PUT', bucket, credentials[0], credentials[1], { versioning: '' }, versioning, { 'content-type': 'application/xml' })
+  if (![200, 204].includes(enabled)) throw new Error('bucket versioning failed')
+}
+try {
+  if (!bucketPattern.test(primaryBucket || '') || !bucketPattern.test(recoveryBucket || '')) throw new Error('invalid bucket arguments')
+  await configure(primaryBucket, '/run/hr-axis/photo/primary-access-key-id', '/run/hr-axis/photo/primary-secret-access-key')
+  await configure(recoveryBucket, '/run/hr-axis/photo/recovery-access-key-id', '/run/hr-axis/photo/recovery-secret-access-key')
+} catch { fail() }
+`
+
+export function buildPhotoStorageInitDockerArgs({ project, image, primaryBucket, recoveryBucket, primaryAccessKeyFile, primarySecretKeyFile, recoveryAccessKeyFile, recoverySecretKeyFile }) {
   safeId(project, 'Compose project')
-  if (typeof image !== 'string' || !/^sha256:[a-f0-9]{64}$/i.test(image)) fail('photo auth image must be an exact immutable digest')
+  safeRepoTag(image, 'photo storage init image')
+  for (const [value, label] of [[primaryBucket, 'primary photo bucket'], [recoveryBucket, 'recovery photo bucket']]) {
+    if (typeof value !== 'string' || !PHOTO_BUCKET_NAME.test(value)) fail(`${label} is invalid`)
+  }
+  for (const [value, label] of [[primaryAccessKeyFile, 'primary photo access key file'], [primarySecretKeyFile, 'primary photo secret key file'], [recoveryAccessKeyFile, 'recovery photo access key file'], [recoverySecretKeyFile, 'recovery photo secret key file']]) safePath(value, label)
+  const mounts = [
+    [primaryAccessKeyFile, '/run/hr-axis/photo/primary-access-key-id'],
+    [primarySecretKeyFile, '/run/hr-axis/photo/primary-secret-access-key'],
+    [recoveryAccessKeyFile, '/run/hr-axis/photo/recovery-access-key-id'],
+    [recoverySecretKeyFile, '/run/hr-axis/photo/recovery-secret-access-key'],
+  ]
+  return [
+    'run', '--pull=never', '--rm', '--network', `${project}_data`,
+    ...mounts.flatMap(([source, target]) => ['--volume', `${source}:${target}:ro`]),
+    '--user', '65532:0', '--entrypoint', '/nodejs/bin/node', image,
+    '--input-type=module', '-e', PHOTO_STORAGE_INIT_SCRIPT, primaryBucket, recoveryBucket,
+  ]
+}
+
+export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, photoAccountFile, caFile, fixturePath, sha256, mode = 'prepare', recoveryHandleFile = null, connectHost = 'caddy', connectPort = 8443, scriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-photo-auth-proof.mjs'), keycloakAuthProofScriptPath = join(dirname(fileURLToPath(import.meta.url)), 'onprem-keycloak-auth-proof.mjs') }) {
+  safeId(project, 'Compose project')
+  safeRepoTag(image, 'photo auth image')
   safePath(accountsFile, 'synthetic accounts file')
   safePath(photoAccountFile, 'photo proof account file')
   safePath(caFile, 'authorization CA file')
   safePath(fixturePath, 'photo fixture')
   safePath(scriptPath, 'photo auth proof script')
+  safePath(keycloakAuthProofScriptPath, 'Keycloak auth proof support script')
   if (!['prepare', 'recover'].includes(mode)) fail('photo proof mode is invalid')
   if (mode === 'recover' && !recoveryHandleFile) fail('recover mode requires a photo recovery handle')
   if (recoveryHandleFile) safePath(recoveryHandleFile, 'photo recovery handle')
@@ -63,18 +179,21 @@ export function buildPhotoAuthDockerArgs({ project, image, host, accountsFile, p
   if (typeof sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(sha256)) fail('photo fixture SHA-256 is invalid')
   if (connectHost !== 'caddy' || Number(connectPort) !== 8443) fail('photo proof must use the private Caddy transport')
   const scriptMount = '/run/hr-axis/onprem-photo-auth-proof.mjs'
+  const keycloakAuthProofScriptMount = '/run/hr-axis/onprem-keycloak-auth-proof.mjs'
   const accountsMount = '/run/hr-axis/synthetic-accounts'
   const photoAccountMount = '/run/hr-axis/photo-proof-account'
   const caMount = '/run/hr-axis/caddy-ca.crt'
   const fixtureMount = '/run/hr-axis/synthetic-photo-fixture.webp'
   const args = [
     'run', '--pull=never', '--rm', '--network', `${project}_proxy`,
-    '--volume', `${scriptPath}:${scriptMount}:ro`,
+      '--volume', `${scriptPath}:${scriptMount}:ro`,
+      '--volume', `${keycloakAuthProofScriptPath}:${keycloakAuthProofScriptMount}:ro`,
     '--volume', `${accountsFile}:${accountsMount}:ro`,
     '--volume', `${photoAccountFile}:${photoAccountMount}:ro`,
     '--volume', `${caFile}:${caMount}:ro`,
     '--volume', `${fixturePath}:${fixtureMount}:ro`,
-    image, 'node', scriptMount,
+    '--user', '1000:1000',
+    '--entrypoint', '/nodejs/bin/node', image, scriptMount,
     '--host', host, '--accounts-file', accountsMount, '--photo-account-file', photoAccountMount,
     '--ca-file', caMount, '--fixture', fixtureMount, '--sha256', sha256.toLowerCase(),
     '--connect-host', 'caddy', '--connect-port', '8443',
@@ -200,7 +319,14 @@ function sameIdentity(before, after) {
   return before.containerId === after.containerId && before.volumeName === after.volumeName && before.volumeSource === after.volumeSource
 }
 function parseOutput(stdout, label) {
-  const lines = String(stdout).split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const text = String(stdout).trim()
+  if (text) {
+    try {
+      const value = JSON.parse(text)
+      if (object(value)) return value
+    } catch { /* Compose may prefix or suffix its JSON with progress text. */ }
+  }
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
   for (let index = lines.length - 1; index >= 0; index -= 1) {
     try { const value = JSON.parse(lines[index]); if (object(value)) return value } catch { /* compose may print progress before the JSON */ }
   }
@@ -231,7 +357,10 @@ export function assertPhotoProofOutput(value, { expectedSha256 = null, expectedL
 
 function composeCommand(options, args, label) { return command('docker', [...buildComposeArgs(options), ...args], { timeoutMs: options.timeoutMs, label }) }
 function inspectDocker(id, options, label) { return JSON.parse(command('docker', ['inspect', id], { timeoutMs: options.timeoutMs, label }).stdout)[0] }
-function composeConfig(options) { return parseOutput(composeCommand(options, ['config', '--format', 'json'], 'target Compose config'), 'target Compose config') }
+function composeConfig(options, invoke = composeCommand) {
+  const result = invoke({ ...options, profiles: ['*'] }, ['config', '--format', 'json'], 'target Compose config')
+  return parseOutput(result.stdout, 'target Compose config')
+}
 function redisContainerId(options) { const id = composeCommand(options, ['ps', '--all', '--quiet', 'redis'], 'Redis container inventory').stdout.trim(); if (!/^[A-Za-z0-9_.-]+$/.test(id)) fail('Redis container inventory was empty or unsafe'); return id }
 function workerContainerId(options) { const id = composeCommand(options, ['ps', '--all', '--quiet', 'worker'], 'worker container inventory').stdout.trim(); if (!/^[A-Za-z0-9_.-]+$/.test(id)) fail('worker container inventory was empty or unsafe'); return id }
 function assertActualServicePorts(options, config, deps) {
@@ -262,13 +391,38 @@ export function runPhotoProof(options, deps = {}) {
   if (!options.photoFixture || !options.photoSha256) fail('complete photo target proof requires --photo-fixture and --photo-sha256')
   const sha256 = validatePhotoFixture(options.photoFixture, options.photoSha256)
   if (!options.host || !options.accountsFile || !options.photoAccountFile || !options.caFile) fail('complete photo target proof requires protected HTTP auth inputs')
-  if (!options.photoAuthImage) fail('complete photo target proof requires the signed backend image digest')
-  const config = deps.config ?? composeConfig(options)
+  if (!options.photoAuthImage) fail('complete photo target proof requires the signed backend image repoTag')
+  const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const renderedImage = config?.services?.api?.image
-  if (!/^sha256:[a-f0-9]{64}$/i.test(renderedImage ?? '') || renderedImage.toLowerCase() !== options.photoAuthImage.toLowerCase()) fail('photo auth image does not match the signed rendered API image')
+  safeRepoTag(options.photoAuthImage, 'photo auth image')
+  if (renderedImage !== options.photoAuthImage) fail('photo auth image does not match the signed rendered API image')
   const inspectImage = deps.imageInspect ?? ((image) => command('docker', ['image', 'inspect', image, '--format', '{{.Id}}'], { timeoutMs: options.timeoutMs, label: 'photo auth image inspect' }))
-  const localImageId = inspectImage(options.photoAuthImage, 'photo auth image inspect')?.stdout?.trim().toLowerCase()
-  if (localImageId !== options.photoAuthImage.toLowerCase()) fail('photo auth image local identity mismatch')
+  const runtimeImageId = inspectImage(options.photoAuthImage, 'photo auth image inspect')?.stdout?.trim().toLowerCase()
+  if (!/^sha256:[a-f0-9]{64}$/.test(runtimeImageId ?? '')) fail('photo auth image runtime identity is invalid')
+  if (options.photoStorageSecretRoot) {
+    safePath(options.photoStorageSecretRoot, 'photo storage secret root')
+    const envText = readFileSync(options.envFile, 'utf8')
+    const envValue = (name) => {
+      const matches = envText.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#') && line.startsWith(`${name}=`)).map((line) => line.slice(name.length + 1))
+      if (matches.length !== 1 || !matches[0]) fail(`photo storage env value ${name} is invalid`)
+      return matches[0]
+    }
+    const primaryBucket = options.photoPrimaryBucket ?? envValue('PHOTO_MEDIA_PRIMARY_BUCKET')
+    const recoveryBucket = options.photoRecoveryBucket ?? envValue('PHOTO_MEDIA_RECOVERY_BUCKET')
+    if (primaryBucket !== envValue('PHOTO_MEDIA_PRIMARY_BUCKET') || recoveryBucket !== envValue('PHOTO_MEDIA_RECOVERY_BUCKET')) fail('photo storage bucket claim does not match the signed env file')
+    const initArgs = buildPhotoStorageInitDockerArgs({
+      project: options.project,
+      image: options.photoAuthImage,
+      primaryBucket,
+      recoveryBucket,
+      primaryAccessKeyFile: join(options.photoStorageSecretRoot, 'primary-access-key-id'),
+      primarySecretKeyFile: join(options.photoStorageSecretRoot, 'primary-secret-access-key'),
+      recoveryAccessKeyFile: join(options.photoStorageSecretRoot, 'recovery-access-key-id'),
+      recoverySecretKeyFile: join(options.photoStorageSecretRoot, 'recovery-secret-access-key'),
+    })
+    const initialize = deps.photoStorageInitCommand ?? ((dockerArgs) => command('docker', dockerArgs, { timeoutMs: options.timeoutMs, label: 'photo storage bucket initialization' }))
+    initialize(initArgs, 'photo storage bucket initialization')
+  }
   const mode = options.photoMode ?? 'prepare'
   const recoveryHandle = mode === 'recover' ? assertRecoveryHandleFile(options.photoRecoveryHandleFile) : null
   const args = buildPhotoAuthDockerArgs({
@@ -307,7 +461,7 @@ export function runPhotoProof(options, deps = {}) {
 export function runQueueProof(options, deps = {}) {
   const invoke = deps.composeCommand ?? composeCommand
   const inspect = deps.inspectDocker ?? deps.inspect ?? ((id) => inspectDocker(id, options, 'Redis container inspect'))
-  const config = deps.config ?? composeConfig(options)
+  const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const composeClaim = assertTargetComposeConfig(config, { project: options.project, releaseId: options.releaseId, services: ['redis', 'worker'] })
   assertActualServicePorts(options, config, {
     ...deps,
@@ -450,6 +604,7 @@ export function parseArgs(argv) {
     else if (arg === '--host') options.host = argv[++index]
     else if (arg === '--accounts-file') options.accountsFile = argv[++index]
     else if (arg === '--photo-account-file') options.photoAccountFile = argv[++index]
+    else if (arg === '--photo-storage-secret-root') options.photoStorageSecretRoot = argv[++index]
     else if (arg === '--ca-file') options.caFile = argv[++index]
     else if (arg === '--photo-auth-image') options.photoAuthImage = argv[++index]
     else if (arg === '--connect-host') options.connectHost = argv[++index]
@@ -472,17 +627,19 @@ export function parseArgs(argv) {
   if (options.photoSha256 && !/^[a-f0-9]{64}$/i.test(options.photoSha256)) fail('photo fixture SHA-256 is invalid')
   const completePhotoInputs = [options.host, options.accountsFile, options.photoAccountFile, options.caFile]
   if (options.photoFixture && completePhotoInputs.some((value) => !value)) fail('--host, --accounts-file, --photo-account-file, and --ca-file are required with the photo fixture')
+  if (options.photoFixture && !options.photoStorageSecretRoot) fail('--photo-storage-secret-root is required with the photo fixture')
   if (options.host && (!/^[A-Za-z0-9.-]+$/.test(options.host) || options.host.startsWith('.') || options.host.endsWith('.') || options.host.includes('..'))) fail('photo proof host is invalid')
   if (options.accountsFile) safePath(options.accountsFile, 'synthetic accounts file')
   if (options.photoAccountFile) safePath(options.photoAccountFile, 'photo proof account file')
+  if (options.photoStorageSecretRoot) safePath(options.photoStorageSecretRoot, 'photo storage secret root')
   if (options.caFile) safePath(options.caFile, 'authorization CA file')
   if (options.connectHost !== 'caddy' || options.connectPort !== 8443) fail('photo proof must use the private Caddy transport')
-  if (options.photoAuthImage && !/^sha256:[a-f0-9]{64}$/i.test(options.photoAuthImage)) fail('photo auth image must be an exact immutable digest')
+  if (options.photoAuthImage) safeRepoTag(options.photoAuthImage, 'photo auth image')
   return options
 }
 
 export function run(options, deps = {}) {
-  const config = deps.config ?? composeConfig(options)
+  const config = deps.config ?? composeConfig(options, deps.composeCommand)
   const sharedDeps = { ...deps, config }
   const queue = runQueueProof(options, sharedDeps)
   const photo = options.queueOnly || !options.photoFixture ? null : runPhotoProof(options, sharedDeps)

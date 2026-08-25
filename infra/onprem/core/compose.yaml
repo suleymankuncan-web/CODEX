@@ -350,7 +350,10 @@ services:
         target: keycloak_synthetic_accounts
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
-    cpus: 0.5
+    # The one-shot reconciler runs a second Keycloak JVM and many sequential
+    # kcadm calls; keep its bounded memory/pids ceilings but give it enough
+    # CPU to complete the signed offline rehearsal before the job deadline.
+    cpus: 1.5
     mem_limit: 1g
     pids_limit: 128
     stop_grace_period: 30s

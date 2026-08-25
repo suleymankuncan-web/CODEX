@@ -106,6 +106,19 @@ test('stages the exact source-free closure with verifier and auth proof runtime 
   } finally { cleanup(value) }
 })
 
+test('staging normalizes exact bundle modes under a restrictive process umask', { skip: process.platform === 'win32' }, () => {
+  const value = fixture()
+  const priorUmask = process.umask(0o077)
+  try {
+    stageOffline({ repoRoot: value.repo, proofDir: value.proof, outputDir: value.output, metadata: value.metadataPath })
+    assert.equal(statSync(join(value.output, 'deployment/restore.compose.yaml')).mode & 0o777, 0o644)
+    assert.equal(statSync(join(value.output, 'deployment/keycloak/bootstrap.sh')).mode & 0o777, 0o755)
+  } finally {
+    process.umask(priorUmask)
+    cleanup(value)
+  }
+})
+
 test('rejects duplicate or escaped photo bootstrap binds before creating output', () => {
   const cases = [
     ['duplicate', (source) => `${source}\n${PHOTO_BIND_SOURCE}\n`],

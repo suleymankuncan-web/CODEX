@@ -180,6 +180,37 @@ revalidate_receipt_parent() {
   [ "$RECEIPT_PARENT_UID" = "$old_uid" ] || die "receipt parent owner changed"
   [ "$RECEIPT_PARENT_MODE" = "$old_mode" ] || die "receipt parent mode changed"
 }
+
+# A target restore may include the Keycloak reconciliation command, whose
+# internal watchdog is deliberately much longer than the rehearsal's useful
+# phase budget. Keep the outer lifecycle bounded and retain only a sanitized
+# tail for diagnosis instead of silently waiting until the hosted job timeout.
+readonly TARGET_RESTORE_TIMEOUT_SECONDS=900
+readonly TARGET_RESTORE_KILL_AFTER_SECONDS=30
+sanitize_restore_diagnostics() {
+  sed -E 's/(password|secret|token|postgresql:\/\/|redis:\/\/)[^[:space:]]*/\1[redacted]/gi' | tail -n 160
+}
+run_target_restore() {
+  restore_label=$1
+  shift
+  command -v timeout >/dev/null 2>&1 || die "timeout command is required for $restore_label target restore"
+  restore_log=$(mktemp "$RECEIPT_PARENT/.$restore_label-target-restore.XXXXXX") || die "$restore_label target restore diagnostic log could not be created"
+  say "target-restore: start label=$restore_label timeout=${TARGET_RESTORE_TIMEOUT_SECONDS}s"
+  if timeout --foreground --signal=TERM --kill-after="${TARGET_RESTORE_KILL_AFTER_SECONDS}s" "${TARGET_RESTORE_TIMEOUT_SECONDS}s" "$@" >"$restore_log" 2>&1; then
+    rm -f -- "$restore_log" || die "$restore_label target restore diagnostic cleanup failed"
+    say "target-restore: complete label=$restore_label"
+    return 0
+  else
+    restore_status=$?
+  fi
+  printf '%s\n' "upgrade: $restore_label target restore diagnostics" >&2
+  tail -n 160 "$restore_log" | sanitize_restore_diagnostics >&2
+  rm -f -- "$restore_log" || true
+  if [ "$restore_status" -eq 124 ] || [ "$restore_status" -eq 137 ]; then
+    die "$restore_label target restore timed out after ${TARGET_RESTORE_TIMEOUT_SECONDS}s"
+  fi
+  die "$restore_label target restore failed (exit $restore_status)"
+}
 require_dir "$BUNDLE_ROOT" current-bundle
 require_dir "$NEXT_BUNDLE_ROOT" next-bundle
 require_file "$PUBLIC_KEY" public-key
@@ -246,9 +277,9 @@ const [currentPath, nextPath, compatibilityPath, currentRelease, nextRelease, ba
 let current, next, value
 try { current = JSON.parse(fs.readFileSync(currentPath, 'utf8')); next = JSON.parse(fs.readFileSync(nextPath, 'utf8')); value = JSON.parse(fs.readFileSync(compatibilityPath, 'utf8')) } catch { process.exit(41) }
 if (!current || !next || current.releaseId !== currentRelease || next.releaseId !== nextRelease || !value || value.schemaVersion !== 1 || value.releaseId !== nextRelease || value.upgradeCompatible !== true || typeof value.migrationTreeDigest !== 'string' || !/^[0-9a-f]{64}$/.test(value.migrationTreeDigest) || !Array.isArray(value.compatibleFrom)) process.exit(42)
-const entry = value.compatibleFrom.find((item) => item && item.sourceReleaseId === currentRelease)
-if (!entry || entry.sourceMigrationTreeDigest !== backupDigest) process.exit(43)
-process.stdout.write(`${entry.sourceMigrationTreeDigest}|${value.migrationTreeDigest}`)
+const entries = value.compatibleFrom.filter((item) => item && item.sourceReleaseId === currentRelease)
+if (entries.length !== 1 || entries[0].sourceMigrationTreeDigest !== backupDigest) process.exit(43)
+process.stdout.write(`${entries[0].sourceMigrationTreeDigest}|${value.migrationTreeDigest}`)
 NODE
 ) || die "forward_repair_or_database_restore_required"
 IFS='|' read -r CURRENT_DIGEST NEXT_DIGEST <<EOF
@@ -270,7 +301,7 @@ for service_name in caddy frontend api worker keycloak redis postgres object-sto
 done
 TARGET_CONTAINERS=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null) || die "target container inventory could not be inspected"
 for id in $TARGET_CONTAINERS; do
-  meta=$(docker inspect "$id" --format '{{.Config.Labels.com.docker.compose.project}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}' 2>/dev/null) || die "target container identity could not be inspected"
+  meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}' 2>/dev/null) || die "target container identity could not be inspected"
   IFS='|' read -r compose_project project data_class release <<EOF
 $meta
 EOF
@@ -279,7 +310,7 @@ EOF
 done
 TARGET_VOLUMES=$(docker volume ls -q --filter "label=com.hr-axis.project=$TARGET_PROJECT" 2>/dev/null) || die "target volume inventory could not be inspected"
 for id in $TARGET_VOLUMES; do
-  meta=$(docker volume inspect "$id" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}' 2>/dev/null) || die "target volume identity could not be inspected"
+  meta=$(docker volume inspect "$id" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}' 2>/dev/null) || die "target volume identity could not be inspected"
   IFS='|' read -r name project data_class release <<EOF
 $meta
 EOF
@@ -297,18 +328,28 @@ if (!manifest?.images || Object.keys(manifest.images).length !== names.length) p
 const seenIds = new Set(); const seenArchives = new Set()
 for (const name of names) {
   const image = manifest.images[name]
-  if (!image || image.name !== name || typeof image.archive !== 'string' || image.archive.startsWith('/') || image.archive.includes('\\') || image.archive.split('/').some((part) => part === '..' || part === '') || typeof image.repoTag !== 'string' || typeof image.archiveSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || !/^sha256:[0-9a-f]{64}$/.test(image.configImageId)) process.exit(43)
+  if (!image || image.name !== name || typeof image.archive !== 'string' || image.archive.startsWith('/') || image.archive.includes('\\') || image.archive.split('/').some((part) => part === '..' || part === '') || typeof image.repoTag !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image.repoTag) || typeof image.archiveSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || !/^sha256:[0-9a-f]{64}$/.test(image.configImageId)) process.exit(43)
   if (seenIds.has(image.configImageId) || seenArchives.has(image.archive)) process.exit(44)
   seenIds.add(image.configImageId); seenArchives.add(image.archive)
-  process.stdout.write(`${name}|${image.archive}|${image.configImageId}\n`)
+  process.stdout.write(`${name}|${image.archive}|${image.repoTag}|${image.configImageId}\n`)
 }
 NODE
 ) || die "signed target image manifest is invalid"
 revalidate_receipt_parent
 TARGET_ENV_FILE=$(mktemp "$RECEIPT_PARENT/.upgrade-target-env.tmp.XXXXXX") || die "target env could not be created"
 chmod 600 "$TARGET_ENV_FILE"
-cleanup_target_env() { status=$?; rm -f "$TARGET_ENV_FILE" 2>/dev/null || status=1; exit "$status"; }
-trap cleanup_target_env EXIT HUP INT TERM
+cleanup_target_env() {
+  status=$?
+  rm -f "$TARGET_ENV_FILE" 2>/dev/null || status=1
+  if [ -n "${IMAGE_SAVE_TEMP_DIR:-}" ]; then
+    rm -f -- "$IMAGE_SAVE_TEMP_DIR/image.tar" 2>/dev/null || status=1
+    rmdir "$IMAGE_SAVE_TEMP_DIR" 2>/dev/null || status=1
+  fi
+  exit "$status"
+}
+abort_target_operation_on_signal() { trap - HUP INT TERM; exit 124; }
+trap cleanup_target_env EXIT
+trap abort_target_operation_on_signal HUP INT TERM
 TARGET_IMAGE_ENV=$(printf '%s\n' "$TARGET_IMAGE_LINES" | awk -F'|' 'BEGIN { env["backend"]="HR_AXIS_BACKEND_IMAGE"; env["frontend"]="HR_AXIS_FRONTEND_IMAGE"; env["keycloak"]="KEYCLOAK_IMAGE"; env["caddy"]="CADDY_IMAGE"; env["postgres"]="POSTGRES_IMAGE"; env["redis"]="REDIS_IMAGE"; env["seaweedfs"]="SEAWEEDFS_IMAGE" } { if ($1 in env) print env[$1] "=" $3 }')
 {
   printf '%s\n' "HR_AXIS_RELEASE_ID=$NEXT_RELEASE_ID" "COMPOSE_PROJECT_NAME=$TARGET_PROJECT" "HR_AXIS_PROJECT_ID=$TARGET_PROJECT"
@@ -326,15 +367,43 @@ else
 fi
 revalidate_recovery_handle
 revalidate_receipt_parent
+IMAGE_SAVE_TEMP_DIR=
+IMAGE_SAVE_ARCHIVE=
+verify_target_image_provenance() {
+  image_name=$1
+  image_repo_tag=$2
+  expected_image_id=$3
+  actual_runtime_id=$(docker image inspect --format '{{.Id}}' "$image_repo_tag" 2>/dev/null || true)
+  printf '%s' "$actual_runtime_id" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "target image runtime id is invalid: $image_name"
+  if [ "$actual_runtime_id" = "$expected_image_id" ]; then
+    return 0
+  fi
+  ARCHIVE_VERIFIER="$NEXT_BUNDLE_ROOT/operations/onprem-offline-archive.mjs"
+  [ -f "$ARCHIVE_VERIFIER" ] && [ ! -L "$ARCHIVE_VERIFIER" ] || die "bundled target image archive verifier is missing"
+  if [ -z "$IMAGE_SAVE_TEMP_DIR" ]; then
+    IMAGE_SAVE_TEMP_DIR=$(mktemp -d "/tmp/hr-axis-offline-target-image.XXXXXX") || die "temporary target image verification directory could not be created"
+    chmod 700 "$IMAGE_SAVE_TEMP_DIR" || die "temporary target image verification directory permissions could not be restricted"
+  fi
+  IMAGE_SAVE_ARCHIVE="$IMAGE_SAVE_TEMP_DIR/image.tar"
+  rm -f -- "$IMAGE_SAVE_ARCHIVE" || die "temporary target image verification archive could not be reset"
+  docker image save --output "$IMAGE_SAVE_ARCHIVE" "$image_repo_tag" >/dev/null || die "target image re-export failed for $image_name"
+  [ -f "$IMAGE_SAVE_ARCHIVE" ] && [ ! -L "$IMAGE_SAVE_ARCHIVE" ] && [ -s "$IMAGE_SAVE_ARCHIVE" ] || die "target image re-export produced no archive for $image_name"
+  chmod 600 "$IMAGE_SAVE_ARCHIVE" || die "temporary target image verification archive permissions could not be restricted"
+  node --input-type=module - "$ARCHIVE_VERIFIER" "$IMAGE_SAVE_ARCHIVE" "$image_repo_tag" "$expected_image_id" <<'NODE' >/dev/null 2>&1 || die "target image re-export identity verification failed for $image_name"
+const [archiveModule, archivePath, expectedRepoTag, expectedImageId] = process.argv.slice(2)
+const { inspectDockerSaveArchive } = await import(archiveModule)
+const observed = inspectDockerSaveArchive(archivePath, { identity: `${expectedRepoTag}@${expectedImageId}`, imageId: expectedImageId })
+if (observed.repoTag !== expectedRepoTag || observed.imageId !== expectedImageId || observed.archiveConfigImageIdDerived !== true) throw new Error('target image re-export identity mismatch')
+NODE
+}
 target_image_count=0
-while IFS='|' read -r image_name image_archive expected_image_id; do
+while IFS='|' read -r image_name image_archive image_repo_tag expected_image_id; do
   [ -n "$image_name" ] || continue
   target_image_count=$((target_image_count + 1))
   archive_path="$NEXT_BUNDLE_ROOT/$image_archive"
   require_file "$archive_path" "target image archive $image_name"
   docker load -i "$archive_path" >/dev/null || die "target image import failed: $image_name"
-  actual_image_id=$(docker image inspect --format '{{.Id}}' "$expected_image_id" 2>/dev/null || true)
-  [ "$actual_image_id" = "$expected_image_id" ] || die "target image config id mismatch: $image_name"
+  verify_target_image_provenance "$image_name" "$image_repo_tag" "$expected_image_id"
 done <<EOF
 $TARGET_IMAGE_LINES
 EOF
@@ -344,9 +413,9 @@ if [ -n "$PROOF_RECEIPT" ]; then
   revalidate_recovery_handle
   revalidate_receipt_parent
   if [ -n "$PROOF_COMPOSE" ]; then
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT" --proof-compose "$PROOF_COMPOSE" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT" --proof-compose "$PROOF_COMPOSE"
   else
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-receipt "$PROOF_RECEIPT"
   fi
   proof_digest=$(sha256_file "$PROOF_RECEIPT") || die "target proof receipt digest is unavailable"
   node - "$RECEIPT" "$proof_digest" <<'NODE' >/dev/null 2>&1 || die "target proof receipt digest does not match restore receipt"
@@ -360,9 +429,9 @@ else
   revalidate_recovery_handle
   revalidate_receipt_parent
   if [ -n "$PROOF_COMPOSE" ]; then
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-compose "$PROOF_COMPOSE" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" --proof-compose "$PROOF_COMPOSE"
   else
-    "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256" >/dev/null || die "next target restore failed"
+    run_target_restore next "$NEXT_BUNDLE_ROOT/operations/restore.sh" --bundle-root "$NEXT_BUNDLE_ROOT" --release-id "$NEXT_RELEASE_ID" --target-project "$TARGET_PROJECT" --public-key "$PUBLIC_KEY" --trusted-fingerprint "$TRUSTED_FINGERPRINT" --backup-public-key "$BACKUP_PUBLIC_KEY" --backup-trusted-fingerprint "$BACKUP_TRUSTED_FINGERPRINT" --env-file "$TARGET_ENV_FILE" --backup-dir "$BACKUP_DIR" --source-project "$SOURCE_PROJECT" --source-release-id "$RELEASE_ID" --photo-recovery-handle-file "$PHOTO_RECOVERY_HANDLE_FILE" --receipt "$RECEIPT" --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_SHA256"
   fi
 fi
 node - "$RECEIPT" "$NEXT_RELEASE_ID" "$SOURCE_PROJECT" "$TARGET_PROJECT" "$BACKUP_TRUSTED_FINGERPRINT" "$PHOTO_RECOVERY_HANDLE_SHA256" <<'NODE' >/dev/null 2>&1 || die "target-bound complete proof receipt is invalid"
@@ -371,6 +440,6 @@ const [path, releaseId, sourceProject, targetProject, backupFingerprint, handleS
 let value
 try { value = JSON.parse(fs.readFileSync(path, 'utf8')) } catch { process.exit(41) }
 const digest = (item) => typeof item === 'string' && /^[a-f0-9]{64}$/.test(item)
-if (!value || value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== sourceProject || value.targetProject !== targetProject || value.sameHostRehearsal !== true || value.disasterRecovery !== false || value.targetFresh !== true || value.cleanupVerified !== true || value.recoveredPreBackupPhoto !== true || value.photoRecoveryHandleSha256 !== handleSha256 || typeof value.sourceMigrationTreeDigest !== 'string' || typeof value.targetMigrationTreeDigest !== 'string' || typeof value.backupManifestSha256 !== 'string' || value.backupFingerprintSha256 !== backupFingerprint || !digest(value.targetProofReceiptSha256) || !digest(value.authReceiptSha256) || value.targetProof?.queue !== true || value.targetProof?.photo !== true || value.targetProof?.auth !== true) process.exit(42)
+if (!value || value.operation !== 'restore' || value.status !== 'passed' || value.dataClass !== 'synthetic' || value.releaseId !== releaseId || value.sourceProject !== sourceProject || value.targetProject !== targetProject || value.sameHostRehearsal !== true || value.disasterRecovery !== false || value.targetFresh !== true || value.cleanupVerified !== true || value.recoveredPreBackupPhoto !== true || value.queueProbeStateReset !== true || value.photoRecoveryHandleSha256 !== handleSha256 || typeof value.sourceMigrationTreeDigest !== 'string' || typeof value.targetMigrationTreeDigest !== 'string' || typeof value.backupManifestSha256 !== 'string' || value.backupFingerprintSha256 !== backupFingerprint || !digest(value.targetProofReceiptSha256) || !digest(value.authReceiptSha256) || value.targetProof?.queue !== true || value.targetProof?.photo !== true || value.targetProof?.auth !== true) process.exit(42)
 NODE
 say "PASS source=$SOURCE_PROJECT target=$TARGET_PROJECT current=$RELEASE_ID next=$NEXT_RELEASE_ID compatibility=approved"

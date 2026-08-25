@@ -32,6 +32,10 @@ const oversizedBaseline = new Map([
   ['admin-web/src/features/localization/messages/competition.ts', 601],
   ['admin-web/src/prototypes/admin/master-data-command-v1.tsx', 945],
   ['admin-web/src/prototypes/admin/master-data-command-v1.css', 756],
+  ['scripts/onprem-core-runtime-proof.mjs', 938],
+  ['scripts/onprem-image-local-proof.mjs', 1471],
+  ['scripts/onprem-native-docker-host.mjs', 1175],
+  ['scripts/onprem-offline-local-rehearsal.mjs', 1387],
 ])
 
 function git(args) {

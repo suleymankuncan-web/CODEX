@@ -29,8 +29,9 @@ read-only modes: the Caddy private key is `10001:10001 0400`; PostgreSQL
 private keys and passwords are `70:70 0400`; Keycloak bootstrap and
 identity-binder secrets are `1000:1000 0400`; Redis ACL and health credentials
 are `999:1000 0400`; API and worker credentials remain `65532:65532 0400`;
-and the four photo-storage access/secret files are `0:65532 0440`, allowing
-UID-0 SeaweedFS and UID/GID-65532 API/worker reads without DAC capabilities.
+and the four photo-storage access/secret files are `65532:0 0440`, allowing
+UID/GID-65532 API/worker owner reads and UID-0 SeaweedFS root-group reads
+without DAC capabilities.
 The public certificate and CA files remain `root:root 0444`.
 The containing secret roots and their ancestor chain remain root-owned mode
 `0700`; do not replace this exact leaf policy with blanket root-owned `0600`
@@ -205,6 +206,7 @@ the sealed root is `root:root` mode `0700`, all later operation invocations use
    OPERATOR_ROOT=/var/lib/hr-axis/operator-inputs/$RELEASE_ID
    PHOTO_RECOVERY_HANDLE="$OPERATOR_ROOT/photo-recovery.json"
    PHOTO_PREPARE_RECEIPT=/var/lib/hr-axis/receipts/$RELEASE_ID/photo-prebackup.json
+   PHOTO_STORAGE_SECRET_ROOT="$OPERATOR_ROOT/secrets/photo"
 
    require_root_private_ancestors "$OPERATOR_ROOT"
    sudo test ! -e "$PHOTO_RECOVERY_HANDLE" && sudo test ! -L "$PHOTO_RECOVERY_HANDLE" || exit 1
@@ -218,6 +220,7 @@ the sealed root is `root:root` mode `0700`, all later operation invocations use
      --host "$HR_AXIS_PUBLIC_HOST" \
      --accounts-file "$HR_AXIS_SECRET_ROOT/keycloak/synthetic-accounts" \
      --photo-account-file "$HR_AXIS_SECRET_ROOT/keycloak/photo-proof-account" \
+     --photo-storage-secret-root "$PHOTO_STORAGE_SECRET_ROOT" \
      --ca-file "$HR_AXIS_SECRET_ROOT/caddy/ca.crt" \
      --photo-auth-image "$BACKEND_CONFIG_IMAGE_ID" \
      --photo-fixture "$PHOTO_FIXTURE" --photo-sha256 "$PHOTO_FIXTURE_SHA256" \

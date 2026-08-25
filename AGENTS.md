@@ -12,11 +12,12 @@ policy remains in `discipline.md`; decision and stop rules remain in
 - Read the relevant `discipline.md` sections before implementation,
   verification, PR, merge, UI/refactor, or workspace-hygiene work.
 - Fresh repository and runtime evidence outrank stale descriptions.
-- Before push/PR or any manual image/offline proof dispatch, run
+- Before a manual image/offline proof dispatch, run
   `npm.cmd run check:onprem:dispatch -- prove` on the exact clean committed
   HEAD, then publish only after push with `publish`; use the wrapper's
-  dispatch subcommands exclusively. GitHub proofs are independent final
-  evidence, never a diagnostic loop.
+  dispatch subcommands exclusively. Automatic PR/reusable workflows begin
+  with the bounded exact-SHA `github-source-preflight`; GitHub runtime proofs
+  remain independent final evidence, never a diagnostic loop.
 
 ## Adaptive reasoning routing
 

@@ -205,6 +205,11 @@ test('ONP-2 contract rejects broader executable tmpfs mounts or loss of nosuid/n
   assert.ok(validateOnpremCoreContract(broadened).errors.some((error) => /broaden executable tmpfs/i.test(error)))
 })
 
+test('ONP-5 deterministic seed provides an active retention policy for synthetic photo uploads', () => {
+  const seed = read('db/seeds/001_reference_seed.sql')
+  assert.match(seed, /INSERT INTO ops\.evidence_retention_policy\s*\([\s\S]*?\)\s*VALUES\s*\([\s\S]*?'72000000-0000-4000-8000-000000000001'[\s\S]*?'00000000-0000-0000-0000-000000000001'[\s\S]*?\b1,\s*365,\s*365,\s*30,\s*NOW\(\)[\s\S]*?'80000000-0000-0000-0000-000000000001'[\s\S]*?\)\s*ON CONFLICT \(company_id, version_no\) DO NOTHING;/i)
+})
+
 test('ONP-2 workflow binds the Caddy bootstrap proof to an exact immutable image reference', () => {
   const input = contractInput()
   const pinned = /^  CADDY_IMAGE: caddy:2\.11\.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648\r?$/m
@@ -525,7 +530,7 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
   assert.match(input.redis, /appendfsync everysec/)
   assert.match(input.redis, /maxmemory-policy noeviction/)
   assert.match(input.workflow, /onprem-core-runtime-proof\.mjs/)
-  assert.match(input.workflow, /  proof:\r?\n    needs: local-proof-gate\r?\n    runs-on: ubuntu-latest/)
+  assert.match(input.workflow, /  proof:\r?\n    needs: source-preflight\r?\n    runs-on: ubuntu-latest/)
   assert.doesNotMatch(input.workflow, /^\s{2}core-runtime-proof:/m)
   assert.doesNotMatch(input.workflow, /hr-axis-onprem-(?:frontend|backend):core-proof/)
   assert.match(input.runtimeProof, /42501/)
@@ -538,14 +543,14 @@ test('ONP-2 contract pins database least privilege, Redis durability, and exact 
 
 test('ONP-3B fresh-Linux Keycloak bootstrap rehearsal uses the corrected one-shot ceiling', () => {
   const input = contractInput()
-  assert.match(input.compose, /keycloak-bootstrap:[\s\S]*?cpus: 0\.5\n    mem_limit: 1g\n    pids_limit: 128/)
+  assert.match(input.compose, /keycloak-bootstrap:[\s\S]*?cpus: 1\.5\n    mem_limit: 1g\n    pids_limit: 128/)
   assert.equal(validateOnpremCoreContract(input).ok, true)
 
   const underprovisioned = {
     ...input,
     compose: input.compose.replace(
-      '    cpus: 0.5\n    mem_limit: 1g\n    pids_limit: 128',
-      '    cpus: 0.25\n    mem_limit: 512m\n    pids_limit: 128',
+      '    cpus: 1.5\n    mem_limit: 1g\n    pids_limit: 128',
+      '    cpus: 0.5\n    mem_limit: 512m\n    pids_limit: 128',
     ),
   }
   const result = validateOnpremCoreContract(underprovisioned)
@@ -639,7 +644,7 @@ test('ONP-2 contract rejects ambiguous PostgreSQL boolean migration identity ser
 test('ONP-2 contract rejects an optional or unproven runtime CI gate', () => {
   const input = contractInput()
   input.workflow = input.workflow
-    .replace('  proof:\n    needs: local-proof-gate\n    runs-on: ubuntu-latest', '  proof:\n    needs: local-proof-gate\n    if: ${{ false }}\n    runs-on: [self-hosted, linux]')
+    .replace('  proof:\n    needs: source-preflight\n    runs-on: ubuntu-latest', '  proof:\n    needs: source-preflight\n    if: ${{ false }}\n    runs-on: [self-hosted, linux]')
     .replace('          trap cleanup EXIT', '          # cleanup trap removed')
 
   const result = validateOnpremCoreContract(input)
@@ -668,6 +673,16 @@ test('ONP-2 contract requires conntrack provisioning and read-only preflight bef
     'firewall_snapshot="$RUNNER_TEMP/onprem-core-iptables.before"\n          sudo conntrack -L -o extended >/dev/null',
   )
   assert.equal(validateOnpremCoreContract(lateProvisioning).ok, false, 'conntrack preflight after firewall mutation must fail closed')
+})
+
+test('ONP-2 contract keeps root-run temporary TLS material inside the fresh runner temp directory', () => {
+  const input = contractInput()
+  input.workflow = input.workflow.replace('--temporary-directory "$RUNNER_TEMP"', '--temporary-directory /tmp')
+
+  const result = validateOnpremCoreContract(input)
+
+  assert.equal(result.ok, false)
+  assert.ok(result.errors.some((error) => /temporary TLS material inside RUNNER_TEMP/i.test(error)))
 })
 
 test('ONP-2 contract keeps wrong-host verification distinct from the valid TLS SNI', () => {

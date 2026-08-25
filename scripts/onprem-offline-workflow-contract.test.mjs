@@ -73,16 +73,19 @@ test('offline proof is a two-job, source-free handoff workflow with pinned actio
   assert.match(workflow, /workflow_dispatch:/)
   const jobs = workflow.slice(workflow.indexOf('\njobs:'))
   assert.deepEqual([...jobs.matchAll(/^  ([a-z][a-z0-9_-]*)\s*:/gm)].map((match) => match[1]), [
-    'local-proof-gate',
+    'source-preflight',
     'build_bundle',
     'offline_rehearsal',
   ])
-  assert.match(workflow, /statuses:\s*read/)
-  assert.match(workflow, /local-proof-gate:[\s\S]*onprem-proof-dispatch\.mjs verify-status/)
-  const localGate = jobSection('local-proof-gate')
-  assert.match(localGate, /GITHUB_EVENT_NAME:\s*\$\{\{\s*github\.event_name\s*\}\}/)
-  assert.match(localGate, /GITHUB_EXECUTION_SHA:\s*\$\{\{\s*github\.sha\s*\}\}/)
-  assert.match(workflow, /build_bundle:[\s\S]*needs:\s*local-proof-gate/)
+  assert.doesNotMatch(workflow, /onprem-proof-dispatch\.mjs verify-status/)
+  const sourceGate = jobSection('source-preflight')
+  assert.match(sourceGate, /name:\s*github-source-preflight/)
+  assert.match(sourceGate, /Run bounded exact-SHA on-prem source preflight/)
+  assert.match(sourceGate, /node --check scripts\/onprem-offline-target-proof\.mjs/)
+  assert.match(sourceGate, /onprem-offline-target-proof\.test\.mjs/)
+  assert.match(sourceGate, /onprem-offline-workflow-contract\.test\.mjs/)
+  assert.doesNotMatch(sourceGate, /GITHUB_EVENT_NAME|GITHUB_EXECUTION_SHA|GITHUB_TOKEN|statuses:\s*read/)
+  assert.match(workflow, /build_bundle:[\s\S]*needs:\s*source-preflight/)
   for (const input of ['expected_sha', 'proof_artifact_name', 'proof_run_id']) {
     assert.match(workflow, new RegExp(`${input}:[\\s\\S]{0,220}?required:\\s*true`), input)
   }
@@ -129,6 +132,8 @@ test('build job checks out the trusted SHA, consumes proof evidence, and creates
   assert.match(build, /next-transition\.tar/)
   assert.match(build, /previous-transition\.tar/)
   assert.match(build, /transition_members/)
+  assert.match(build, /--mode=go-w/)
+  assert.match(build, /substr\(\$1, 6, 1\) == "w"/)
   assert.match(build, /maximum_bundle_copies=3/)
   assert.match(build, /preflight_reserve_kib/)
   assert.match(build, /\['previous', previous[\s\S]*\['next', next/)
@@ -200,6 +205,87 @@ test('build proof material uses one external runner-temp root from assembly thro
 
 test('offline rehearsal downloads only the bundle, cuts egress before verification, and never checks out source', () => {
   const rehearsal = jobSection('offline_rehearsal')
+  const heartbeatDefinition = rehearsal.indexOf('emit_offline_rehearsal_heartbeat()')
+  const heartbeatStart = rehearsal.indexOf('start_offline_rehearsal_heartbeat')
+  const firstOperator = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/preflight.sh"')
+  assert.ok(heartbeatDefinition >= 0 && heartbeatStart > heartbeatDefinition && heartbeatStart < firstOperator, 'offline rehearsal must enable its parent-supervised heartbeat before operator work')
+  assert.match(rehearsal, /offline rehearsal heartbeat seq=.*phase=.*elapsed_seconds=/)
+  assert.match(rehearsal, /printf 'offline rehearsal heartbeat seq=%s phase=%s elapsed_seconds=%s\\n' "\$offline_heartbeat_seq" "\$offline_heartbeat_phase" "\$offline_heartbeat_elapsed" >&2/)
+  assert.match(rehearsal, /offline_heartbeat_phase=.*unknown/)
+  assert.match(rehearsal, /OPERATOR_TIMEOUT_SECONDS=960/)
+  assert.match(rehearsal, /OPERATOR_KILL_AFTER_SECONDS=30/)
+  assert.match(rehearsal, /DIRECT_TIMEOUT_SECONDS=600/)
+  assert.match(rehearsal, /DIRECT_KILL_AFTER_SECONDS=30/)
+  assert.match(rehearsal, /SETSID_BIN="\$\(command -v setsid \|\| true\)"/)
+  assert.match(rehearsal, /test -n "\$SETSID_BIN"/)
+  assert.match(rehearsal, /run_bounded_group\(\)/)
+  assert.match(rehearsal, /group_pid_file="\$\(mktemp "\$RUNNER_TEMP\/offline-process-group\.XXXXXX"\)"/)
+  assert.match(rehearsal, /"\$SETSID_BIN" sh -c '/)
+  assert.match(rehearsal, /printf "%s\|%s\\n" "\$\$" "\$\(ps -o pgid= -p \$\$ \| tr -d " "\)" > "\$pid_file"/)
+  assert.match(rehearsal, /exec sudo env "PATH=\$operator_path" timeout --foreground --signal=TERM --kill-after="\$\{kill_after_seconds\}s" "\$\{timeout_seconds\}s"/)
+  assert.match(rehearsal, /wait_for_pid_exit\(\)/); assert.match(rehearsal, /reap_naturally_exited_process\(\)/)
+  assert.match(rehearsal, /process_group_id_for_pid\(\)/)
+  assert.match(rehearsal, /process_starttime_for_pid\(\)/)
+  assert.match(rehearsal, /offline_process_identity_is_current\(\)/)
+  assert.match(rehearsal, /wait_for_distinct_process_group\(\)/)
+  assert.match(rehearsal, /offline_process_group_is_safe\(\)/)
+  assert.match(rehearsal, /\[ "\$group_id" -gt 1 \]/)
+  assert.match(rehearsal, /process_group_alive\(\)/)
+  assert.match(rehearsal, /stop_offline_process_group\(\)/)
+  assert.match(rehearsal, /declare -A offline_process_groups=\(\)/)
+  assert.match(rehearsal, /process_starttime="\$\(process_starttime_for_pid "\$pid" 2>\/dev\/null \|\| true\)"/)
+  assert.match(rehearsal, /offline process-group identity changed or unavailable; skipping signal/)
+  const boundedGroup = rehearsal.slice(rehearsal.indexOf('run_bounded_group()'), rehearsal.indexOf('sudo_bounded()'))
+  const naturalExitReap = boundedGroup.indexOf('if reap_naturally_exited_process "$pid"; then')
+  const identityFailure = boundedGroup.indexOf("printf 'offline process-group isolation unavailable label=%s pid=%s group=%s\\n'")
+  assert.ok(naturalExitReap >= 0 && identityFailure > naturalExitReap, 'short-lived natural exits must be reaped before identity failure')
+  assert.match(boundedGroup, /bounded_status="\$offline_natural_exit_status"\n\s+return "\$bounded_status"/)
+  const stopGroupStart = rehearsal.indexOf('stop_offline_process_group()')
+  const stopIdentityCheck = rehearsal.indexOf('offline_process_identity_is_current "$pid" "$group_id" "$expected_starttime"', stopGroupStart)
+  const firstTermSignal = rehearsal.indexOf('kill -TERM -- "-$group_id"', stopGroupStart)
+  assert.ok(stopGroupStart >= 0 && stopIdentityCheck >= 0 && firstTermSignal > stopIdentityCheck, 'TERM cleanup must verify the recorded PID starttime and PGID first')
+  assert.match(rehearsal, /register_offline_process_group\(\)/)
+  assert.match(rehearsal, /stop_registered_offline_process_groups\(\)/)
+  assert.match(rehearsal, /isolation refused self-group/)
+  assert.match(rehearsal, /\[ "\$pid" = "\$\$" \] \|\|/)
+  assert.match(rehearsal, /\[ "\$pid" != "\$\$" \] && \[ "\$group_id" != "\$\{offline_main_group_id:-\}" \]/)
+  assert.match(rehearsal, /start_offline_rehearsal_heartbeat\(\)/)
+  const waitForPidExit = rehearsal.slice(rehearsal.indexOf('wait_for_pid_exit()'), rehearsal.indexOf('process_group_id_for_pid()'))
+  const heartbeatStartFunction = rehearsal.slice(rehearsal.indexOf('start_offline_rehearsal_heartbeat()'), rehearsal.indexOf('abort_offline_rehearsal_on_signal()'))
+  assert.match(waitForPidExit, /emit_offline_rehearsal_heartbeat/)
+  assert.match(heartbeatStartFunction, /offline_heartbeat_enabled=1/)
+  assert.match(heartbeatStartFunction, /emit_offline_rehearsal_heartbeat/)
+  assert.match(rehearsal, /offline_heartbeat_enabled=0/)
+  assert.match(rehearsal, /offline_heartbeat_next_at=\$\(\(offline_heartbeat_now \+ 30\)\)/)
+  assert.doesNotMatch(heartbeatStartFunction, /"\$SETSID_BIN" bash -c/)
+  assert.doesNotMatch(rehearsal, /offline_heartbeat_(?:pid|group_id)/)
+  assert.match(rehearsal, /offline_watchdog_group_id="\$watchdog_group_id"/)
+  assert.match(rehearsal, /' offline-watchdog "\$timeout_seconds" "\$kill_after_seconds" "\$process_group_id" "\$bounded_label" <\/dev\/null >\/dev\/null &/)
+  assert.match(rehearsal, /kill -TERM -- "-\$process_group_id"/)
+  assert.match(rehearsal, /kill -KILL -- "-\$process_group_id"/)
+  assert.match(rehearsal, /process_group_id" =~ \^\[0-9\]\+\$/)
+  assert.match(rehearsal, /run_bounded_group "\$bounded_label" "\$DIRECT_TIMEOUT_SECONDS" "\$DIRECT_KILL_AFTER_SECONDS"/)
+  assert.match(rehearsal, /run_bounded_group "\$operator_name" "\$OPERATOR_TIMEOUT_SECONDS" "\$OPERATOR_KILL_AFTER_SECONDS"/)
+  assert.match(rehearsal, /offline operator failure script=/)
+  assert.match(rehearsal, /stop_offline_rehearsal_heartbeat\(\)/)
+  assert.match(rehearsal, /stop_offline_active_processes\(\)/)
+  assert.match(rehearsal, /offline_rehearsal_exit_cleanup\(\)/)
+  assert.match(rehearsal, /trap offline_rehearsal_exit_cleanup EXIT/)
+  assert.match(rehearsal, /trap abort_offline_rehearsal_on_signal TERM INT/)
+  assert.match(rehearsal, /offline rehearsal heartbeat stopped before quiescence/)
+  assert.doesNotMatch(rehearsal, /trap '\s*if \[ -n "\$\{offline_heartbeat_pid:-\}" \].*wait "\$offline_heartbeat_pid".*' EXIT/)
+  assert.match(rehearsal, /sudo_bounded "verify-bootstrap-\$release_id" "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
+  assert.match(rehearsal, /sudo_bounded "verify-bundle-\$release_id" "\$NODE_BIN" "\$root\/operations\/onprem-offline-bundle\.mjs" verify/)
+  assert.match(rehearsal, /BACKUP_TRUSTED_FINGERPRINT="\$\(sudo -- "\$NODE_BIN" --input-type=module -e/)
+  assert.doesNotMatch(rehearsal, /BACKUP_TRUSTED_FINGERPRINT="\$\((?:node\b|"\$NODE_BIN"\s+--input-type=module)/)
+  assert.doesNotMatch(rehearsal, /sudo -- "\$NODE_BIN" "\$TRUSTED_BOOTSTRAP" verify/)
+  assert.doesNotMatch(rehearsal, /edge-network-inspect[^\n]*2>\/dev\/null/)
+  assert.match(rehearsal, /sudo_bounded "edge-env-image" awk -F=/)
+  assert.match(rehearsal, /offline checkpoint=edge-meta-verified/)
+  assert.match(rehearsal, /offline checkpoint=edge-image-read/)
+  for (const phase of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'photo-prebackup', 'backup', 'restore', 'upgrade', 'rollback']) {
+    assert.equal((rehearsal.match(new RegExp(`offline phase=${phase}`, 'g')) ?? []).length, 1, `${phase} phase marker must be unique`)
+  }
   assert.doesNotMatch(rehearsal, /actions\/checkout@/)
   assert.match(rehearsal, /actions\/download-artifact@[0-9a-f]{40}/)
   assert.match(rehearsal, /onprem-offline-bundle-/)
@@ -216,13 +302,21 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /keycloak\/photo-proof-account/)
   assert.match(rehearsal, /offline-photo-fixture\.webp/)
   assert.match(rehearsal, /base64 --decode/)
+  assert.match(rehearsal, /UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoCAAIAAUAmJaQAA3AA\/vz0AAA=/, 'offline photo fixture must be a known decodable WebP')
+  assert.doesNotMatch(rehearsal, /UklGRiIAAABXRUJQVlA4IBAAAADwAQCdASoBAAEAAUAmJaQAA3AA\/vuUAAA=/, 'offline photo fixture must not use the header-only invalid WebP')
   assert.match(rehearsal, /chmod 400 "\$photo_fixture"/)
   assert.match(rehearsal, /OPERATOR_ROOT="\$SEALED_ROOT\/operator"/)
   assert.match(rehearsal, /sudo install -d -o 0 -g 0 -m 0700 "\$OPERATOR_ROOT"/)
   assert.match(rehearsal, /sudo cp -a -- "\$RUNNER_TEMP\/offline-secrets" "\$OPERATOR_ROOT\/secrets"/)
+  assert.match(rehearsal, /sudo chown 1000:1000 -- "\$OPERATOR_ROOT\/photo-fixture\.webp"/, 'photo fixture must be readable by the UID used by protected photo auth proof')
   assert.match(rehearsal, /sudo chmod 0400 "\$OPERATOR_ROOT\/photo-fixture\.webp"/)
   assert.match(rehearsal, /sudo cp -a -- "\$OPERATOR_ROOT\/receipts\/\." "\$RUNNER_TEMP\/offline-receipts\/"/)
   assert.match(rehearsal, /chmod 700 "\$RUNNER_TEMP\/offline-receipts"/)
+  assert.match(workflow, /Materialize sanitized failure receipt when rehearsal stops early/)
+  assert.match(workflow, /status\\\":\\\"failed\\\"/)
+  assert.match(workflow, /lastPhase.*\$phase/)
+  assert.match(workflow, /reason\\\":\\\"rehearsal did not reach final aggregate\\\"/)
+  assert.ok(workflow.indexOf('Materialize sanitized failure receipt when rehearsal stops early') < workflow.indexOf('Upload sanitized offline rehearsal receipt'), 'failure receipt must be materialized before upload')
   assert.match(rehearsal, /PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST=\$\{photoFixtureSha256\}/)
   assert.match(rehearsal, /postgresql:\/\//)
   assert.match(rehearsal, /redis:\/\//)
@@ -243,7 +337,7 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   assert.match(rehearsal, /operations\/rollback\.sh"[^\n]*--proof-compose "\$PREVIOUS_BUNDLE_ROOT\/deployment\/proof\.compose\.yaml"/)
   assert.match(rehearsal, /--compose "\$BUNDLE_ROOT\/deployment\/compose\.yaml" --compose "\$BUNDLE_ROOT\/deployment\/compose\.photo-proof\.yaml" --compose "\$BUNDLE_ROOT\/deployment\/photo-compose\.yaml" --compose "\$BUNDLE_ROOT\/deployment\/proof\.compose\.yaml"/)
   assert.match(rehearsal, /no repo|no source|GITHUB_WORKSPACE.*\.git|repo.*dirs/i)
-  const bootstrap = rehearsal.indexOf('sudo -- "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify')
+  const bootstrap = rehearsal.indexOf('sudo_bounded "verify-bootstrap-$release_id" "$NODE_BIN" "$TRUSTED_BOOTSTRAP" verify')
   const verify = rehearsal.search(/offline-bundle\.mjs["']?\s+verify/)
   const install = rehearsal.indexOf('operations/install.sh')
   assert.ok(bootstrap >= 0 && verify > bootstrap && install > verify, 'external bootstrap and bundle verification must precede bundled install/docker load')
@@ -252,6 +346,8 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   }
   assert.doesNotMatch(rehearsal, /sudo .*operations\/(?:preflight|install|migrate|activate|smoke|backup|restore|upgrade|rollback)\.sh[^\n]*\$RUNNER_TEMP\/offline/)
   assert.match(rehearsal, /onprem-offline-target-proof\.mjs[\s\S]*--require-complete[\s\S]*--photo-fixture[\s\S]*--photo-sha256/)
+  assert.match(rehearsal, /onprem-offline-target-proof\.mjs[^\n]*--photo-storage-secret-root "\$PHOTO_STORAGE_SECRET_ROOT"/)
+  assert.match(rehearsal, /PHOTO_STORAGE_SECRET_ROOT="\$OPERATOR_ROOT\/secrets\/photo"/)
   assert.match(rehearsal, /photo\.canonicalIdentityVerified !== true/)
   for (const operation of ['preflight', 'install', 'migrate', 'activate', 'smoke', 'backup', 'restore', 'upgrade', 'rollback']) {
     assert.match(rehearsal, new RegExp(`sudo_operator "\\$BUNDLE_ROOT/operations/${operation}\\.sh"`), `${operation} remains under pinned sudo operator`)
@@ -312,6 +408,92 @@ test('offline rehearsal downloads only the bundle, cuts egress before verificati
   }
 })
 
+test('Linux exact workflow supervisor keeps command substitution clean and closes active and watchdog groups after TERM', { skip: process.platform !== 'linux' }, () => {
+  const rehearsal = jobSection('offline_rehearsal')
+  const supervisorStart = rehearsal.indexOf('          emit_offline_rehearsal_heartbeat()')
+  const supervisorEnd = rehearsal.indexOf('          host_probe_uid=', supervisorStart)
+  assert.ok(supervisorStart >= 0 && supervisorEnd > supervisorStart, 'workflow supervisor functions must remain extractable for Linux signal proof')
+  const supervisor = rehearsal.slice(supervisorStart, supervisorEnd).replace(/^ {10}/gmu, '')
+  const root = mkdtempSync(join(tmpdir(), 'onprem-offline-workflow-supervisor-'))
+  const activePidPath = join(root, 'active.pid')
+  const activeGroupPath = join(root, 'active.pgid')
+  const watchdogPidPath = join(root, 'watchdog.pid')
+  const watchdogGroupPath = join(root, 'watchdog.pgid')
+  const psShimPath = join(root, 'ps')
+  const processIds = []
+  const processGroups = []
+  try {
+    // The pinned source-proof image intentionally excludes procps.  Keep the
+    // extracted workflow function intact while giving this isolated Linux
+    // signal proof the one `ps -o pgid= -p <pid>` capability it requires.
+    writeFileSync(psShimPath, '#!/bin/sh\n[ "$1" = -o ] && [ "$2" = pgid= ] && [ "$3" = -p ] || exit 64\nawk \'{print $5}\' "/proc/$4/stat"\n', { mode: 0o755 })
+    const script = [
+      supervisor,
+      'set -euo pipefail',
+      'active_pid_file="$1"',
+      'active_group_file="$2"',
+      'watchdog_pid_file="$3"',
+      'watchdog_group_file="$4"',
+      'export RUNNER_TEMP="$5"',
+      'export PATH="$5:$PATH"',
+      'printf \'%s\\n\' upgrade > "$RUNNER_TEMP/offline-phase"',
+      'SETSID_BIN="$(command -v setsid)"',
+      'offline_main_group_id="$(process_group_id_for_pid "$$")"',
+      'test -n "$offline_main_group_id"',
+      'start_offline_rehearsal_heartbeat',
+      'offline_heartbeat_next_at=0',
+      'captured="$(',
+      '  "$SETSID_BIN" sh -c \'exec sleep 0.2\' &',
+      '  probe_pid=$!',
+      '  wait_for_pid_exit "$probe_pid" 3',
+      ')"',
+      'test -z "$captured"',
+      `"$SETSID_BIN" sh -c 'child=""; trap "wait \\"\\$child\\" 2>/dev/null || true; exit 0" TERM; sleep 120 & child=$!; wait "$child"' &`,
+      'offline_active_pid=$!',
+      'offline_active_group_id="$(wait_for_distinct_process_group "$offline_active_pid")"',
+      'printf \'%s\\n\' "$offline_active_pid" > "$active_pid_file"',
+      'printf \'%s\\n\' "$offline_active_group_id" > "$active_group_file"',
+      'register_offline_process_group "$offline_active_pid" "$offline_active_group_id"',
+      `"$SETSID_BIN" sh -c 'child=""; trap "wait \\"\\$child\\" 2>/dev/null || true; exit 0" TERM; sleep 120 & child=$!; wait "$child"' &`,
+      'offline_watchdog_pid=$!',
+      'offline_watchdog_group_id="$(wait_for_distinct_process_group "$offline_watchdog_pid")"',
+      'printf \'%s\\n\' "$offline_watchdog_pid" > "$watchdog_pid_file"',
+      'printf \'%s\\n\' "$offline_watchdog_group_id" > "$watchdog_group_file"',
+      'register_offline_process_group "$offline_watchdog_pid" "$offline_watchdog_group_id"',
+      'trap offline_rehearsal_exit_cleanup EXIT',
+      'trap abort_offline_rehearsal_on_signal TERM INT',
+      'parent_pid="$$"',
+      '( sleep 0.2; kill -TERM "$parent_pid" ) &',
+      'while :; do sleep 1; done',
+    ].join('\n')
+    const result = spawnSync('bash', ['-c', script, 'offline-parent', activePidPath, activeGroupPath, watchdogPidPath, watchdogGroupPath, root], { encoding: 'utf8', timeout: 7000 })
+    for (const [pidPath, groupPath] of [[activePidPath, activeGroupPath], [watchdogPidPath, watchdogGroupPath]]) {
+      const pid = Number(readFileSync(pidPath, 'utf8').trim())
+      const group = Number(readFileSync(groupPath, 'utf8').trim())
+      assert.ok(Number.isSafeInteger(pid) && pid > 1)
+      assert.ok(Number.isSafeInteger(group) && group > 1)
+      processIds.push(pid)
+      processGroups.push(group)
+    }
+    assert.equal(result.error, undefined, result.error?.message)
+    assert.equal(result.signal, null, result.stderr)
+    assert.equal(result.status, 143, result.stderr)
+    assert.equal(result.stdout, '')
+    assert.match(result.stderr, /offline rehearsal heartbeat seq=1 phase=upgrade elapsed_seconds=/)
+    assert.match(result.stderr, /offline rehearsal heartbeat seq=2 phase=upgrade elapsed_seconds=/)
+    for (const pid of processIds) assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' })
+    for (const group of processGroups) assert.throws(() => process.kill(-group, 0), { code: 'ESRCH' })
+  } finally {
+    for (const group of processGroups) {
+      try { process.kill(-group, 'SIGKILL') } catch {}
+    }
+    for (const pid of processIds) {
+      try { process.kill(pid, 'SIGKILL') } catch {}
+    }
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test('offline rehearsal keeps the ordered operator calls privileged and exactly once', () => {
   const rehearsal = jobSection('offline_rehearsal')
   const operators = ['preflight', 'install', 'migrate', 'activate', 'smoke', 'backup', 'restore', 'upgrade', 'rollback']
@@ -323,8 +505,8 @@ test('offline rehearsal keeps the ordered operator calls privileged and exactly 
     positions.push(calls[0].index)
   }
   assert.deepEqual([...positions].sort((a, b) => a - b), positions, 'operator calls must preserve install/migrate/activate/smoke/backup order')
-  assert.match(rehearsal, /sudo -- "\$NODE_BIN" "\$BUNDLE_ROOT\/operations\/onprem-offline-target-proof\.mjs"/)
-  assert.equal((rehearsal.match(/sudo -- "\$NODE_BIN" "\$BUNDLE_ROOT\/operations\/onprem-offline-target-proof\.mjs"/g) ?? []).length, 1)
+  assert.match(rehearsal, /sudo_bounded "photo-prebackup-target-proof" "\$NODE_BIN" "\$BUNDLE_ROOT\/operations\/onprem-offline-target-proof\.mjs"/)
+  assert.equal((rehearsal.match(/sudo_bounded "photo-prebackup-target-proof" "\$NODE_BIN" "\$BUNDLE_ROOT\/operations\/onprem-offline-target-proof\.mjs"/g) ?? []).length, 1)
   assert.doesNotMatch(rehearsal, /target_gate_status=\$\?/)
   assert.doesNotMatch(rehearsal, /^\s*"\$BUNDLE_ROOT\/operations\/(?:preflight|install|migrate|activate|smoke|backup|restore|upgrade|rollback)\.sh"/m)
 })
@@ -401,6 +583,7 @@ test('offline source and receipt ordering remains fail-closed', () => {
   assert.match(rehearsal, /bundleManifests: \{ current: manifestDigests\.current, next: manifestDigests\.next, previous: manifestDigests\.previous \}/)
   assert.match(rehearsal, /manifestSha256: manifestDigests\[manifestName\]/)
   assert.match(rehearsal, /sensitive_paths=\(/)
+  assert.match(rehearsal, /offline-phase/)
   assert.match(rehearsal, /sudo rm -rf -- "\$sensitive_path"/)
   assert.match(rehearsal, /sudo test -e "\$sensitive_path" \|\| sudo test -L "\$sensitive_path"/)
   assert.match(rehearsal, /label=com\.docker\.compose\.project=\$project[^\n]*label=com\.hr-axis\.project=\$project/)
@@ -594,8 +777,13 @@ test('offline rehearsal seals downloaded bundle and trust material under a fresh
   assert.match(rehearsal, /TRUSTED_BOOTSTRAP="\$TRUST_ROOT\/onprem-offline-bootstrap-verify\.mjs"/)
   assert.match(rehearsal, /sha256sum "\$TRUSTED_BOOTSTRAP"/)
   assert.match(rehearsal, /verify_release_bundle "\$BUNDLE_ROOT" "\$RELEASE_ID"/)
+  assert.match(rehearsal, /assert_archive_members\(\)[\s\S]*?substr\(\$1, 6, 1\) == "w"/)
+  assert.match(rehearsal, /assert_transition_members\(\)[\s\S]*?substr\(\$1, 6, 1\) == "w"/)
   assert.match(rehearsal, /materialize_transition_bundle next "\$NEXT_BUNDLE_ROOT" "onprem-next-\$release_suffix"/)
   assert.match(rehearsal, /materialize_transition_bundle previous "\$PREVIOUS_BUNDLE_ROOT" "onprem-previous-\$release_suffix"/)
+  assert.match(rehearsal, /local release="\$1" target="\$2" release_id="\$3" archive materialization_root/)
+  assert.match(rehearsal, /archive="\$SEALED_ROOT\/archives\/\$\{release\}-transition\.tar"/)
+  assert.match(rehearsal, /materialization_root="\$SEALED_ROOT\/\.\$\{release\}-materialize"/)
   assert.match(rehearsal, /verify_release_bundle "\$materialization_root" "\$release_id"/)
   assert.match(rehearsal, /NODE_BIN="\$TRUST_ROOT\/node"/)
   assert.match(rehearsal, /sudo install -o 0 -g 0 -m 0755 -- "\$PINNED_NODE_SOURCE" "\$SEALED_ROOT\/trust\/node"/)
@@ -648,6 +836,7 @@ test('sealed operator env generation is exact and refuses every overwrite', () =
   const operatorRoot = join(root, 'operator')
   const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
   const images = Object.fromEntries(imageNames.map((name, index) => [name, {
+    repoTag: `registry.example/${name}:synthetic`,
     configImageId: `sha256:${String(index + 1).repeat(64)}`,
   }]))
   const expectedReleases = {
@@ -668,7 +857,10 @@ test('sealed operator env generation is exact and refuses every overwrite', () =
       const content = readFileSync(pathname, 'utf8')
       if (process.platform !== 'win32') assert.equal(statSync(pathname).mode & 0o777, 0o600, `${file} mode`)
       assert.match(content, new RegExp(`^HR_AXIS_RELEASE_ID=${releaseId}$`, 'm'))
-      for (const image of Object.values(images)) assert.ok(content.includes(`=${image.configImageId}`), `${file} image identity`)
+      for (const image of Object.values(images)) {
+        assert.ok(content.includes(`=${image.repoTag}`), `${file} runnable image repoTag`)
+        assert.equal(content.includes(`=${image.configImageId}`), false, `${file} must not use config image provenance as a runnable ref`)
+      }
       original[file] = content
     }
     const second = spawnSync(process.execPath, args, { input: `${body}\n`, encoding: 'utf8' })
@@ -694,7 +886,7 @@ test('offline rehearsal maps every service secret through exact privileged paths
     ['1000:1000:0400', ['core/keycloak/binder-database-url', 'core/keycloak/database-password', 'core/keycloak/database-url', 'core/keycloak/database-username', 'core/keycloak/bootstrap-username', 'core/keycloak/bootstrap-password', 'core/keycloak/smtp-auth-user', 'core/keycloak/smtp-password', 'core/keycloak/synthetic-accounts', 'core/keycloak/photo-proof-account']],
     ['999:1000:0400', ['core/redis/users.acl', 'core/redis/health-url']],
     ['65532:65532:0400', ['core/backend/api-database-url', 'core/backend/worker-database-url', 'core/backend/migrator-database-url', 'core/backend/redis-api-url', 'core/backend/redis-worker-url', 'core/backend/browser-session-secret']],
-    ['0:65532:0440', ['photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
+    ['65532:0:0440', ['photo/primary-access-key-id', 'photo/primary-secret-access-key', 'photo/recovery-access-key-id', 'photo/recovery-secret-access-key']],
     ['0:0:0444', ['core/postgres/ca.crt', 'core/postgres/server.crt', 'core/caddy/ca.crt', 'core/caddy/server.crt']],
   ])
   const actualEntries = []
@@ -780,6 +972,7 @@ test('offline bundle handoff preserves modes and bounds disk use with sequential
 
 test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound negative probes', () => {
   const rehearsal = jobSection('offline_rehearsal')
+  const verifyStep = stepSection(rehearsal, 'Verify bundle before docker load and run bundled operations')
   const dockerChain = rehearsal.match(/docker_egress_chain=([A-Z0-9_]+)/)?.[1]
   assert.equal(dockerChain, 'HR_AXIS_OFF_DOCKER_EGRESS')
   assert.ok(dockerChain.length <= 28, `iptables chain name exceeds the Linux 28-character limit: ${dockerChain}`)
@@ -794,13 +987,13 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.match(rehearsal, /-i br\+ ! -o br\+ -m conntrack --ctstate NEW -j REJECT/)
   assert.doesNotMatch(rehearsal, /-i br\+ ! -o br\+ ! -o docker0/)
   assert.match(rehearsal, /-i docker0 ! -o docker0 -m conntrack --ctstate NEW -j REJECT/)
-  assert.match(rehearsal, /docker_egress_rules=.*iptables -S/)
+  assert.match(rehearsal, /docker_egress_rules=.*sudo_bounded "docker-egress-rules" iptables -S/)
   assert.match(rehearsal, /conntrack_accept_rule=.*sed -n '2p'/)
   assert.match(rehearsal, /--ctstate ESTABLISHED,RELATED -j ACCEPT"\|\\\s*\n\s*"-A \$docker_egress_chain -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT"/)
   assert.match(rehearsal, /offline Docker conntrack accept rule identity mismatch/)
   assert.match(rehearsal, /for hook in DOCKER-USER FORWARD/)
   assert.match(rehearsal, /reject_rule_line=6/)
-  assert.match(rehearsal, /iptables -L "\$docker_egress_chain" -v -x -n --line-numbers/)
+  assert.match(rehearsal, /sudo_bounded "docker-egress-counters" iptables -L "\$docker_egress_chain" -v -x -n --line-numbers/)
   assert.match(rehearsal, /reject_rule_text=.*REJECT/)
   assert.match(rehearsal, /reject_packets_before=.*read_reject_packets/)
   assert.match(rehearsal, /reject_packets_after=.*read_reject_packets/)
@@ -810,40 +1003,79 @@ test('offline rehearsal enforces Docker and host IPv4/IPv6 egress with bound neg
   assert.match(rehearsal, /docker_reject_counter_delta=\$\(\(reject_packets_after - reject_packets_before\)\)/)
   assert.match(rehearsal, /host_egress_chain=HR_AXIS_OFFLINE_HOST_EGRESS/)
   assert.match(rehearsal, /host6_egress_chain=HR_AXIS_OFFLINE_HOST6_EGRESS/)
-  assert.match(rehearsal, /sudo iptables -I OUTPUT 1 -j "\$host_egress_chain"/)
-  assert.match(rehearsal, /sudo ip6tables -I OUTPUT 1 -j "\$host6_egress_chain"/)
+  assert.match(rehearsal, /runner_control_uid="\$\(id -u\)"[\s\S]*host_dns_uid="\$\(id -u systemd-resolved 2>\/dev\/null \|\| id -u systemd-resolve 2>\/dev\/null \|\| true\)"[\s\S]*test -n "\$host_dns_uid" && test "\$host_dns_uid" -gt 0/)
+  assert.match(rehearsal, /host_probe_uid="\$\(id -u nobody\)"/)
+  assert.match(rehearsal, /test "\$runner_control_uid" -gt 0/)
+  assert.match(rehearsal, /test "\$host_probe_uid" -gt 0/)
+  assert.match(rehearsal, /test "\$runner_control_uid" -ne "\$host_probe_uid"/)
+  assert.match(rehearsal, /iptables -A "\$host_egress_chain" -m owner --uid-owner "\$runner_control_uid" -j ACCEPT[\s\S]*iptables -A "\$host_egress_chain" -m owner --uid-owner "\$host_dns_uid" -p udp --dport 53 -j ACCEPT[\s\S]*iptables -A "\$host_egress_chain" -m owner --uid-owner "\$host_dns_uid" -p tcp --dport 53 -j ACCEPT/)
+  assert.match(rehearsal, /ip6tables -A "\$host6_egress_chain" -m owner --uid-owner "\$runner_control_uid" -j ACCEPT[\s\S]*ip6tables -A "\$host6_egress_chain" -m owner --uid-owner "\$host_dns_uid" -p udp --dport 53 -j ACCEPT[\s\S]*ip6tables -A "\$host6_egress_chain" -m owner --uid-owner "\$host_dns_uid" -p tcp --dport 53 -j ACCEPT/)
+  assert.match(rehearsal, /sudo iptables -I OUTPUT 1 -j "\$host_egress_chain"[\s\S]*test "\$\(sudo iptables -S "\$host_egress_chain" \| wc -l\)" -eq 7/)
+  assert.match(rehearsal, /sudo ip6tables -I OUTPUT 1 -j "\$host6_egress_chain"[\s\S]*test "\$\(sudo ip6tables -S "\$host6_egress_chain" \| wc -l\)" -eq 7/)
+  assert.match(rehearsal, /host6_probe_interface=HRAXIS_OFFLINE6/)
+  assert.match(rehearsal, /sudo ip link add "\$host6_probe_interface" type dummy/)
+  assert.match(rehearsal, /sudo ip -6 addr add "\$host6_probe_source\/128" dev "\$host6_probe_interface"/)
+  assert.match(rehearsal, /sudo ip -6 route add "\$host6_probe_target\/128" dev "\$host6_probe_interface"/)
+  assert.match(rehearsal, /test "\$host6_probe_target" = "fd42:6872:6178:6973::2"/)
+  assert.match(verifyStep, /host_probe_uid="\$\(id -u nobody\)"/)
+  assert.match(verifyStep, /host6_probe_target=fd42:6872:6178:6973::2/)
+  assert.ok(verifyStep.indexOf('host_probe_uid="$(id -u nobody)"') < verifyStep.indexOf('host6_probe_target=fd42:6872:6178:6973::2'))
+  assert.ok(verifyStep.indexOf('host6_probe_target=fd42:6872:6178:6973::2') < verifyStep.indexOf("host:'$host6_probe_target'"))
+  assert.match(rehearsal, /host_reject_rule_line=6/)
+  assert.match(rehearsal, /sudo -u nobody -- "\$PINNED_NODE_SOURCE" --input-type=module -e/)
+  assert.doesNotMatch(rehearsal, /(?<!sudo -u nobody -- )node --input-type=module -e "import net from 'node:net'/)
   assert.match(rehearsal, /host:'198\.51\.100\.1'/)
-  assert.match(rehearsal, /host:'2001:db8::1'/)
+  assert.match(rehearsal, /host:'\$host6_probe_target'/)
   assert.match(rehearsal, /host4_after=.*read_host_reject_packets iptables/)
   assert.match(rehearsal, /host6_after=.*read_host_reject_packets ip6tables/)
+  assert.match(rehearsal, /sudo_bounded "host-egress-counters" "\$tool" -L "\$chain"/)
   assert.match(rehearsal, /docker network inspect.*EnableIPv6/)
   assert.match(rehearsal, /docker network inspect bridge --format '\{\{\.EnableIPv6\}\}'/)
-  assert.match(rehearsal, /sudo sh -c 'iptables-restore < "\$1"' sh "\$RUNNER_TEMP\/offline-firewall\.snapshot"/)
-  assert.match(rehearsal, /sudo sh -c 'ip6tables-restore < "\$1"' sh "\$RUNNER_TEMP\/offline-firewall6\.snapshot"/)
+  const ipv4RawProbe = rehearsal.indexOf('sudo /usr/sbin/iptables -t raw -L >/dev/null')
+  const ipv4Save = rehearsal.indexOf('sudo iptables-save --counters | sudo tee "$RUNNER_TEMP/offline-firewall.snapshot" >/dev/null')
+  const ipv6RawProbe = rehearsal.indexOf('sudo /usr/sbin/ip6tables -t raw -L >/dev/null')
+  const ipv6Save = rehearsal.indexOf('sudo ip6tables-save --counters | sudo tee "$RUNNER_TEMP/offline-firewall6.snapshot" >/dev/null')
+  assert.ok(ipv4RawProbe >= 0 && ipv4RawProbe < ipv4Save, 'IPv4 raw-table probe must precede its snapshot save')
+  assert.ok(ipv6RawProbe >= 0 && ipv6RawProbe < ipv6Save, 'IPv6 raw-table probe must precede its snapshot save')
+  assert.match(rehearsal, /sudo iptables-save --counters \| sudo tee "\$RUNNER_TEMP\/offline-firewall\.snapshot" >\/dev\/null/)
+  assert.match(rehearsal, /sudo ip6tables-save --counters \| sudo tee "\$RUNNER_TEMP\/offline-firewall6\.snapshot" >\/dev\/null/)
+  assert.match(rehearsal, /sudo sh -c 'iptables-restore --counters < "\$1"' sh "\$RUNNER_TEMP\/offline-firewall\.snapshot"/)
+  assert.match(rehearsal, /sudo sh -c 'ip6tables-restore --counters < "\$1"' sh "\$RUNNER_TEMP\/offline-firewall6\.snapshot"/)
   assert.doesNotMatch(rehearsal, /sudo ip6?tables-restore < /)
+  assert.match(rehearsal, /cleanup_host6_probe_interface\(\)/)
+  assert.match(rehearsal, /sudo ip -6 route del fd42:6872:6178:6973::2\/128 dev HRAXIS_OFFLINE6/)
+  assert.match(rehearsal, /sudo ip -6 addr del fd42:6872:6178:6973::1\/128 dev HRAXIS_OFFLINE6/)
+  assert.match(rehearsal, /sudo ip link del HRAXIS_OFFLINE6/)
+  assert.match(rehearsal, /offline IPv6 probe interface remained after cleanup/)
   assert.match(rehearsal, /offline egress chain remained after complete firewall restore/)
   assert.match(rehearsal, /edge_network="hr-axis-onprem-core_edge"/)
   assert.match(rehearsal, /--format '\{\{\.Internal\}\}\|\{\{index \.Labels "com\.hr-axis\.project"\}\}\|\{\{index \.Labels "com\.hr-axis\.data-class"\}\}\|\{\{index \.Labels "com\.hr-axis\.release-id"\}\}\|\{\{index \.Labels "com\.hr-axis\.network-class"\}\}'/)
   assert.match(rehearsal, /test "\$edge_meta" = "false\|hr-axis-onprem-core\|synthetic\|\$RELEASE_ID\|edge"/)
   assert.match(rehearsal, /offline edge network is missing after activation/)
   assert.doesNotMatch(rehearsal, /offline edge network is missing after install/)
-  assert.match(rehearsal, /backend_image="\$\(sudo awk -F= '\$1 == "HR_AXIS_BACKEND_IMAGE" \{ print \$2; exit \}' "\$ENV_FILE"\)/)
-  assert.match(rehearsal, /sudo docker image inspect "\$backend_image" --format '\{\{\.Id\}\}' \| grep -Fqx "\$backend_image"/)
+  assert.match(rehearsal, /backend_image="\$\(sudo_bounded "edge-env-image" awk -F= '\$1 == "HR_AXIS_BACKEND_IMAGE" \{ print \$2; exit \}' "\$ENV_FILE"\)/)
+  assert.match(rehearsal, /backend_config_image_id="\$\(sudo -- "\$NODE_BIN" - "\$BUNDLE_ROOT\/bundle-manifest\.json" "\$backend_image"/)
+  assert.match(rehearsal, /image\.repoTag !== repoTag[\s\S]*image\.configImageId/)
+  assert.match(rehearsal, /backend_runtime_id="\$\(sudo_bounded "edge-image-inspect" docker image inspect "\$backend_image" --format '\{\{\.Id\}\}'\)/)
+  assert.match(rehearsal, /printf '%s' "\$backend_runtime_id" \| grep -Eq '\^sha256:\[0-9a-f\]\{64\}\$'/)
+  assert.match(rehearsal, /--entrypoint \/nodejs\/bin\/node "\$backend_image" --input-type=module -e/)
+  assert.doesNotMatch(rehearsal, /--entrypoint node "\$backend_image"/)
   const install = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/install.sh"')
   const migrate = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/migrate.sh"')
   const activate = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/activate.sh"')
-  const edgeCheck = rehearsal.indexOf('edge_meta="$(sudo docker network inspect "$edge_network"')
-  const probe = rehearsal.indexOf('sudo docker run --pull=never --rm --network "$edge_network"')
+  const edgeCheck = rehearsal.indexOf('sudo_bounded "edge-network-inspect" docker network inspect "$edge_network"')
+  const probe = rehearsal.indexOf('sudo_bounded "docker-egress-probe" docker run --pull=never --rm --network "$edge_network"')
   const egressReceipt = rehearsal.indexOf('sudo -- "$NODE_BIN" - "$RECEIPT_ROOT/egress.json"')
   const smoke = rehearsal.indexOf('sudo_operator "$BUNDLE_ROOT/operations/smoke.sh"')
   assert.ok(install >= 0 && install < migrate && migrate < activate && activate < edgeCheck && edgeCheck < probe && probe < egressReceipt && egressReceipt < smoke, 'operator order must be install < migrate < activate < edge check/probe/receipt < smoke')
   assert.equal((rehearsal.match(/edge_network="hr-axis-onprem-core_edge"/g) ?? []).length, 1, 'edge network probe block must be unique')
-  assert.equal((rehearsal.match(/sudo docker run --pull=never --rm --network "\$edge_network"/g) ?? []).length, 1, 'edge network probe invocation must be unique')
+  assert.equal((rehearsal.match(/sudo_bounded "docker-egress-probe" docker run --pull=never --rm --network "\$edge_network"/g) ?? []).length, 1, 'edge network probe invocation must be unique')
   assert.equal((rehearsal.match(/sudo -- "\$NODE_BIN" - "\$RECEIPT_ROOT\/egress\.json"/g) ?? []).length, 1, 'edge egress receipt emission must be unique')
   assert.match(rehearsal, /operation: 'egress-probe'/)
   assert.match(rehearsal, /dockerIpv4CounterDelta: Number\(dockerDelta\)/)
   assert.match(rehearsal, /hostIpv4CounterDelta: Number\(host4Delta\)/)
   assert.match(rehearsal, /hostIpv6CounterDelta: Number\(host6Delta\)/)
+  assert.match(rehearsal, /hostControlPlaneException: true, hostProbeUid: Number\(hostProbeUid\)/)
   assert.match(rehearsal, /dockerIpv6Disabled: true, rejectRulesVerified: true/)
   assert.match(rehearsal, /egressDisabledDuringOperations: true/)
   assert.match(rehearsal, /egressProofSha256: egressDigest/)

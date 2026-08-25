@@ -157,6 +157,9 @@ const KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_MARKERS = Object.freeze({
     'keycloak bootstrap: server log scan failed (log exceeded bounded size)',
     'keycloak bootstrap: server log scan failed (secret value detected)',
   ]),
+  [KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.RESOURCE_OR_EXTERNAL_TERMINATION]: Object.freeze([
+    'bootstrap watchdog timeout',
+  ]),
 })
 
 // Phase markers are emitted only from fixed bootstrap boundaries. They carry

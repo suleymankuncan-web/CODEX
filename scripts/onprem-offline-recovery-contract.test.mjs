@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { createHash, generateKeyPairSync } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -13,6 +13,43 @@ const recoveryScripts = ['backup.sh', 'restore.sh', 'upgrade.sh', 'rollback.sh']
 const shell = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\sh.exe' : 'sh'
 const cygpath = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\cygpath.exe' : null
 const cannotCreateRootPrivateFixture = process.platform !== 'win32' && process.getuid?.() !== 0
+const OPERATION_TIMEOUT_MS = process.platform === 'win32' ? 120_000 : 60_000
+
+const recoveryImageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
+
+function tarEntry(name, body, type = '0') {
+  const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body)
+  const header = Buffer.alloc(512)
+  header.write(name, 0, 100, 'utf8')
+  header.write('0000644\0', 100, 8, 'ascii')
+  header.write('0000000\0', 108, 8, 'ascii')
+  header.write('0000000\0', 116, 8, 'ascii')
+  header.write(bytes.length.toString(8).padStart(11, '0') + '\0', 124, 12, 'ascii')
+  header.write('00000000000\0', 136, 12, 'ascii')
+  header.fill(0x20, 148, 156)
+  header[156] = type.charCodeAt(0)
+  header.write('ustar\0', 257, 6, 'ascii')
+  header.write('00', 263, 2, 'ascii')
+  let checksum = 0
+  for (const byte of header) checksum += byte
+  header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 8, 'ascii')
+  const padding = Buffer.alloc((512 - (bytes.length % 512)) % 512)
+  return Buffer.concat([header, bytes, padding])
+}
+
+function writeDockerSaveArchive(pathname, { repoTags = ['registry.example/backend:c'], configBytes = Buffer.from('{"architecture":"amd64","config":{}}\n'), tampered = false } = {}) {
+  const configId = createHash('sha256').update(configBytes).digest('hex')
+  const manifest = Buffer.from(JSON.stringify([{ Config: `${configId}.json`, RepoTags: repoTags, Layers: ['layer.tar'] }]))
+  const archive = Buffer.concat([
+    tarEntry('manifest.json', manifest),
+    tarEntry(`${configId}.json`, configBytes),
+    tarEntry('layer.tar', Buffer.from('synthetic-layer\n')),
+    Buffer.alloc(1024),
+  ])
+  if (tampered) archive[archive.length - 1] = 1
+  writeFileSync(pathname, archive)
+  return `sha256:${configId}`
+}
 
 function shellPath(pathname) {
   if (!cygpath) return pathname
@@ -66,9 +103,13 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   assert.ok(parentTrust >= 0 && parentTrust < quiesce, 'backup parent trust must precede writer quiesce')
 
   const restore = source['restore.sh']
+  for (const name of ['OFFLINE_RESTORE_POSTGRES_VOLUME', 'OFFLINE_RESTORE_REDIS_VOLUME', 'OFFLINE_RESTORE_KEYCLOAK_VOLUME', 'OFFLINE_RESTORE_KEYCLOAK_BOOTSTRAP_VOLUME', 'OFFLINE_RESTORE_PHOTO_VOLUME']) {
+    assert.match(restore, new RegExp(`${name}=\\$V_`), `restore env must bind ${name} to the target project volume`)
+  }
+  assert.match(restore, /awk -F= '[^']*OFFLINE_RESTORE_REDIS_VOLUME[^']*OFFLINE_RESTORE_PHOTO_VOLUME/)
   assert.match(source['backup.sh'], /docker run --pull=never --rm --network none --volume/)
   assert.match(restore, /docker run --pull=never --rm --network none --volume "\$name:\/target"/)
-  assert.match(restore, /docker run --pull=never --rm --network none --volume "\$volume_name:\/source:ro"/)
+  assert.match(restore, /sha256sum "\$BACKUP_DIR\/volumes\/\$class_name\.tar"/)
   assert.match(restore, /BACKUP_SOURCE_DIR=\$BACKUP_DIR/)
   assert.match(restore, /SEALED_BACKUP_DIR=\$\(node - "\$BACKUP_SOURCE_DIR" "\$RECEIPT_PARENT"/)
   assert.match(restore, /O_NOFOLLOW/)
@@ -99,11 +140,35 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
     assert.match(source[name], /capture_receipt_parent/)
     assert.match(source[name], /revalidate_receipt_parent/)
   }
+  assert.match(restore, /--photo-storage-secret-root "\$PHOTO_STORAGE_SECRET_ROOT"/)
   assert.match(restore, /backup-signature\.json/)
   assert.match(restore, /exact target volume|target volume already exists/)
   assert.match(restore, /keycloak-bootstrap[\s\S]*identity-binder[\s\S]*migrator/)
   assert.match(restore, /pg_restore[\s\S]*hr_axis[\s\S]*pg_restore[\s\S]*keycloak/)
+  assert.match(restore, /CREATE ROLE hr_axis_restore SUPERUSER NOLOGIN/)
+  assert.match(restore, /pg_restore[\s\S]*--role=hr_axis_restore[\s\S]*hr_axis[\s\S]*pg_restore[\s\S]*--role=hr_axis_restore[\s\S]*keycloak/)
+  assert.match(restore, /SET ROLE hr_axis_restore;[\s\S]*REASSIGN OWNED BY hr_axis_restore TO hr_axis_migrator/)
+  assert.match(restore, /SET ROLE hr_axis_restore;[\s\S]*REASSIGN OWNED BY hr_axis_restore TO keycloak/)
+  assert.match(restore, /repair_database_ownership hr-axis/)
+  assert.match(restore, /repair_database_ownership keycloak/)
+  assert.match(restore, /GRANT hr_axis_migrator TO hr_axis_restore/)
+  assert.match(restore, /GRANT keycloak TO hr_axis_restore/)
+  assert.match(restore, /REVOKE hr_axis_migrator FROM hr_axis_restore/)
+  assert.match(restore, /REVOKE keycloak FROM hr_axis_restore/)
+  assert.match(restore, /DROP ROLE hr_axis_restore/)
+  assert.match(restore, /GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO keycloak/)
+  assert.match(restore, /FOR application_schema IN[\s\S]*REVOKE CREATE ON SCHEMA %I FROM PUBLIC, hr_axis_api, hr_axis_worker/)
+  assert.match(restore, /GRANT USAGE ON SCHEMA %I TO hr_axis_api, hr_axis_worker/)
+  assert.match(restore, /GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA %I TO hr_axis_api, hr_axis_worker/)
+  assert.match(restore, /REVOKE UPDATE ON ALL SEQUENCES IN SCHEMA %I FROM hr_axis_api, hr_axis_worker/)
+  assert.match(restore, /REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER[\s\S]*ON audit\.schema_migration[\s\S]*FROM hr_axis_api, hr_axis_worker/)
+  assert.match(restore, /identity binder diagnostics[\s\S]*sanitize_compose_diagnostics[\s\S]*identity binder failed/)
+  assert.match(restore, /--set=ON_ERROR_STOP=1[\s\S]*--dbname=\"\$db_name\"/)
+  assert.match(restore, /repair_sql='SET ROLE hr_axis_restore;[\s\S]*GRANT hr_axis_migrator TO hr_axis_restore;[\s\S]*REASSIGN OWNED BY hr_axis_restore TO hr_axis_migrator;'/)
+  assert.match(restore, /repair_sql='SET ROLE hr_axis_restore;[\s\S]*GRANT keycloak TO hr_axis_restore;[\s\S]*REASSIGN OWNED BY hr_axis_restore TO keycloak;'/)
   assert.match(restore, /restoredVolumeAggregateDigest|volume aggregate/i)
+  assert.match(restore, /sha256sum "\$BACKUP_DIR\/volumes\/\$class_name\.tar"/)
+  assert.doesNotMatch(restore, /docker run --pull=never --rm --network none --volume "\$volume_name:\/source:ro"[\s\S]{0,260}tar --numeric-owner -cf - -C \/source \. \| sha256sum/)
   assert.match(restore, /--pull=never|--pull never/)
   assert.match(restore, /onprem-offline-target-proof\.mjs/)
   assert.match(restore, /--photo-mode recover/)
@@ -112,37 +177,90 @@ test('ONP-5 operators encode the signed synthetic rehearsal boundaries', () => {
   const signedPhotoMatch = restore.indexOf('BACKUP_PHOTO_HANDLE_SHA256')
   assert.ok(signedPhotoMatch >= 0 && restore.indexOf('revalidate_recovery_handle', signedPhotoMatch) > signedPhotoMatch, 'restore must recapture handle identity after signed-manifest matching')
   assert.match(restore, /--require-complete[\s\S]*--photo-fixture[\s\S]*--photo-sha256/)
+  assert.match(restore, /prepare_photo_proof_handle\(\)/)
+  assert.match(restore, /chown 1000:1000 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.match(restore, /chmod 0400 -- "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.ok(
+    restore.indexOf('chmod 0400 -- "$PHOTO_PROOF_HANDLE_FILE"') < restore.indexOf('chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE"'),
+    'photo proof handle mode must be fixed before the final ownership transition',
+  )
+  assert.ok(
+    restore.indexOf('sha256_file "$PHOTO_PROOF_HANDLE_FILE"') < restore.indexOf('chown 1000:1000 -- "$PHOTO_PROOF_HANDLE_FILE"'),
+    'photo proof handle content must be verified before the final ownership transition',
+  )
+  assert.match(restore, /--photo-recovery-handle-file "\$PHOTO_PROOF_HANDLE_FILE"/)
+  assert.match(restore, /discard_photo_proof_handle\(\)/)
+  assert.match(restore, /run_auth_proof\(\)[\s\S]*--user 1000:1000/)
+  assert.match(restore, /run_auth_proof\(\)[\s\S]*\$AUTH_ACCOUNTS/)
+  assert.match(restore, /deniedMutationCount !== undefined && value\.personas\.deniedMutationCount !== 5/)
   assert.match(restore, /docker run --pull=never --rm --network "\$\{TARGET_PROJECT\}_proxy"/)
-  assert.match(restore, /"\$BACKEND_IMAGE" node .*onprem-keycloak-auth-proof\.mjs/)
+  assert.match(restore, /--entrypoint \/nodejs\/bin\/node[\s\S]*"\$BACKEND_IMAGE"[\s\S]*onprem-keycloak-auth-proof\.mjs/)
+  assert.doesNotMatch(restore, /"\$BACKEND_IMAGE" node .*onprem-keycloak-auth-proof\.mjs/)
   assert.match(restore, /--rollback-authority-bundle-root/)
   assert.match(restore, /--rollback-authority-release-id/)
   assert.match(restore, /rollbackCompatible/)
   assert.match(restore, /exactly one compatibleFrom entry|compatibleFrom.*length !== 1/i)
   assert.match(restore, /rollback authority.*migration|authority.*migration.*digest/i)
+  assert.match(restore, /compose_failure_context\(\)/)
+  assert.match(restore, /sanitize_compose_diagnostics\(\)/)
+  assert.match(restore, /compose_start core postgres .*--wait --wait-timeout 180/)
+  assert.match(restore, /compose_start core redis .*--wait --wait-timeout 180/)
+  assert.match(restore, /compose_start core keycloak .*--wait --wait-timeout 180/)
+  assert.match(restore, /compose_start photo object-storage .*--wait --wait-timeout 180/)
+  assert.match(restore, /KEYCLOAK_BOOTSTRAP_LOG=\$\(mktemp[\s\S]*?keycloak-bootstrap[\s\S]*?compose_core --profile infra --profile keycloak-bootstrap run[\s\S]*?tail -n 160[\s\S]*?sanitize_compose_diagnostics/)
+  assert.match(restore, /TARGET_PROOF_LOG=\$\(mktemp[\s\S]*?target-proof[\s\S]*?tail -n 160[\s\S]*?sanitize_compose_diagnostics[\s\S]*?compose_failure_context core 'redis worker api caddy'[\s\S]*?compose_failure_context photo 'object-storage'/)
+  assert.doesNotMatch(restore, /onprem-offline-target-proof\.mjs[^\n]*>\/dev\/null 2>&1/)
+  assert.match(restore, /TARGET_PROOF_LOG.*cleanup|TARGET_PROOF_LOG.*rm -f/)
+  assert.match(restore, /phase=keycloak-bootstrap start[\s\S]*phase=keycloak-bootstrap complete/)
+  assert.match(restore, /phase=identity-binder start[\s\S]*phase=identity-binder complete/)
+  assert.match(restore, /phase=migrator start[\s\S]*phase=migrator complete/)
+  assert.match(restore, /REDIS_IMAGE=\$\(node - "\$BUNDLE_ROOT\/bundle-manifest\.json"/)
+  assert.match(restore, /reset_synthetic_queue_probe_state\(\)/)
+  assert.match(restore, /hr-axis:onprem:synthetic-recovery-v1:(?:processed|enqueued)/)
+  assert.match(restore, /bull:\$queue:(?:delayed|completed|failed)/)
+  assert.doesNotMatch(restore, /flushall|flushdb/)
+  assert.ok(restore.indexOf('reset_synthetic_queue_probe_state') < restore.indexOf('run_complete_target_proof\n'), 'restore must reset only the synthetic queue probe state before target proof')
+  assert.match(restore, /queueProbeStateReset\":true/)
+  assert.doesNotMatch(restore, /compose_core --profile infra --profile keycloak-bootstrap run[^\n]*>\/dev\/null 2>&1/)
+  assert.doesNotMatch(restore, /compose_core --profile infra up --pull never -d postgres\s*>\/dev\/null/)
+  assert.doesNotMatch(restore, /compose_photo up --pull never -d object-storage\s*>\/dev\/null/)
 
   const upgrade = source['upgrade.sh']
   assert.match(upgrade, /evidence\/migration-compatibility\.json/)
   assert.match(upgrade, /upgradeCompatible/)
+  assert.match(upgrade, /compatibleFrom\.filter[\s\S]*entries\.length !== 1/)
   assert.match(upgrade, /forward_repair_or_database_restore_required/)
   assert.match(upgrade, /restore\.sh/)
+  assert.match(upgrade, /TARGET_RESTORE_TIMEOUT_SECONDS=900/)
+  assert.match(upgrade, /timeout --foreground --signal=TERM --kill-after="\$\{TARGET_RESTORE_KILL_AFTER_SECONDS\}s" "\$\{TARGET_RESTORE_TIMEOUT_SECONDS\}s"/)
+  assert.match(upgrade, /target-restore: start label=\$restore_label/)
+  assert.match(upgrade, /target restore timed out after/)
+  assert.doesNotMatch(upgrade, /operations\/restore\.sh[^\n]*>\/dev\/null 2>&1/)
 
   const rollback = source['rollback.sh']
   assert.match(rollback, /evidence\/migration-compatibility\.json/)
   assert.match(rollback, /rollbackCompatible/)
   assert.match(rollback, /forward_repair_or_database_restore_required/)
   assert.match(rollback, /restore\.sh/)
+  assert.match(rollback, /TARGET_RESTORE_TIMEOUT_SECONDS=900/)
+  assert.match(rollback, /timeout --foreground --signal=TERM --kill-after="\$\{TARGET_RESTORE_KILL_AFTER_SECONDS\}s" "\$\{TARGET_RESTORE_TIMEOUT_SECONDS\}s"/)
+  assert.match(rollback, /target-restore: start label=\$restore_label/)
+  assert.match(rollback, /target restore timed out after/)
+  assert.doesNotMatch(rollback, /operations\/restore\.sh[^\n]*>\/dev\/null 2>&1/)
   assert.match(rollback, /--backup-public-key/)
   assert.match(rollback, /--backup-trusted-fingerprint/)
   assert.match(rollback, /--rollback-authority-bundle-root/)
   assert.match(rollback, /--rollback-authority-release-id/)
   assert.match(upgrade, /--backup-public-key/)
   assert.match(upgrade, /--backup-trusted-fingerprint/)
+  assert.match(upgrade, /queueProbeStateReset !== true/)
+  assert.match(rollback, /queueProbeStateReset !== true/)
 })
 
 test('recovery scripts pass POSIX shell syntax', (t) => {
   if (process.platform === 'win32' && !existsSync(shell)) return t.skip('POSIX shell unavailable on Windows')
   for (const name of recoveryScripts) {
-    const result = spawnSync(shell, ['-n', join(operationDir, name)], { encoding: 'utf8' })
+    const result = runShell(['-n', join(operationDir, name)], { label: `${name} syntax check` })
     assert.equal(result.status, 0, `${name}: ${result.stderr}`)
   }
 })
@@ -169,17 +287,26 @@ function fixture(options = {}) {
   const privateKey = join(root, 'signing.pem')
   const backupDir = join(root, 'backup')
   const receipt = join(root, 'restore-receipt.json')
+  const reexportMode = join(root, 'reexport-mode')
+  const reexportRoot = join(root, 'reexports')
+  const configMap = join(root, 'config-ids')
+  const targetImageTemp = join(root, 'target-image-temp')
+  const preflightImageTemp = join(root, 'preflight-image-temp')
   const secretRoot = join(root, 'secrets')
   const photoFixture = join(root, 'photo-fixture.webp')
   const photoRecoveryHandle = join(root, 'photo-recovery.json')
-  for (const directory of [operations, nextOperations, deployment, nextDeployment, evidence, nextEvidence, fakeBin, state, join(secretRoot, 'keycloak'), join(secretRoot, 'caddy')]) mkdirSync(directory, { recursive: true })
+  const photoSecretRoot = join(root, 'photo-secrets')
+  for (const directory of [operations, nextOperations, deployment, nextDeployment, evidence, nextEvidence, fakeBin, state, reexportRoot, join(reexportRoot, 'c'), join(reexportRoot, 'd'), join(secretRoot, 'backend'), join(secretRoot, 'keycloak'), join(secretRoot, 'caddy'), photoSecretRoot]) mkdirSync(directory, { recursive: true })
+  writeFileSync(configMap, '')
   writeFileSync(photoFixture, 'synthetic-photo-fixture\n', { mode: 0o600 })
   writeFileSync(photoRecoveryHandle, JSON.stringify({ schemaVersion: 1, dataClass: 'synthetic', mediaAssetId: '11111111-1111-4111-8111-111111111111', contentSha256: 'b'.repeat(64), contentLength: 22 }) + '\n', { mode: 0o600 })
   const photoFixtureSha256 = createHash('sha256').update(readFileSync(photoFixture)).digest('hex')
   const photoRecoveryHandleSha256 = createHash('sha256').update(readFileSync(photoRecoveryHandle)).digest('hex')
   writeFileSync(join(secretRoot, 'keycloak', 'synthetic-accounts'), 'synthetic-accounts\n', { mode: 0o600 })
   writeFileSync(join(secretRoot, 'keycloak', 'photo-proof-account'), 'photo-proof-account\n', { mode: 0o600 })
+  writeFileSync(join(secretRoot, 'backend', 'redis-worker-url'), 'redis://worker:synthetic-password@redis:6379\n', { mode: 0o600 })
   writeFileSync(join(secretRoot, 'caddy', 'ca.crt'), 'synthetic-ca\n', { mode: 0o644 })
+  for (const name of ['primary-access-key-id', 'primary-secret-access-key', 'recovery-access-key-id', 'recovery-secret-access-key']) writeFileSync(join(photoSecretRoot, name), 'synthetic-photo-secret\n', { mode: 0o600 })
 
   const { publicKey: releasePub } = generateKeyPairSync('ed25519')
   const { publicKey: backupPub, privateKey: backupPriv } = generateKeyPairSync('ed25519')
@@ -193,19 +320,25 @@ function fixture(options = {}) {
   writeFileSync(ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'release-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: migrationDigest }))
   writeFileSync(envFile, [
     'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=release-test',
-    'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(secretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+    'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
   ].join('\n') + '\n')
 
   function makeBundle(rootDir, opsDir, deploymentDir, evidenceDir, releaseId, compatibility, imagePrefix = 'c') {
-    const imageNames = ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']
-    const images = Object.fromEntries(imageNames.map((name, index) => {
-      const bytes = Buffer.from(`${releaseId}-${name}\n`)
+    const images = Object.fromEntries(recoveryImageNames.map((name) => {
+      const archiveBytes = Buffer.from(`${releaseId}-${name}\n`)
+      const configBytes = Buffer.from(`${JSON.stringify({ architecture: 'amd64', config: {}, synthetic: `${releaseId}-${name}` })}\n`)
+      const configImageId = writeDockerSaveArchive(join(reexportRoot, imagePrefix, `${name}.tar`), {
+        repoTags: [`registry.example/${name}:${imagePrefix}`],
+        configBytes,
+      })
+      writeFileSync(configMap, `registry.example/${name}:${imagePrefix}|${configImageId}\n`, { flag: 'a' })
+      const archiveConfigImageId = configImageId
       return [name, {
         name,
         archive: `images/${name}.tar`,
         repoTag: `registry.example/${name}:${imagePrefix}`,
-        configImageId: `sha256:${index.toString(16)}${imagePrefix.repeat(63)}`,
-        archiveSha256: createHash('sha256').update(bytes).digest('hex'),
+        configImageId: archiveConfigImageId,
+        archiveSha256: createHash('sha256').update(archiveBytes).digest('hex'),
         registryDigestAttestedByOwner: true,
         registryManifestDigest: `sha256:${'e'.repeat(64)}`,
       }]
@@ -213,13 +346,14 @@ function fixture(options = {}) {
     writeFileSync(join(rootDir, 'bundle-manifest.json'), JSON.stringify({ releaseId, images }))
     writeFileSync(join(rootDir, 'bundle-signature.json'), '{}\n')
     mkdirSync(join(rootDir, 'images'), { recursive: true })
-    for (const name of imageNames) writeFileSync(join(rootDir, 'images', `${name}.tar`), `${releaseId}-${name}\n`)
+    for (const name of recoveryImageNames) writeFileSync(join(rootDir, 'images', `${name}.tar`), `${releaseId}-${name}\n`)
     writeFileSync(join(deploymentDir, 'compose.yaml'), 'services: {}\n')
     writeFileSync(join(deploymentDir, 'compose.photo-proof.yaml'), 'services: {}\n')
     writeFileSync(join(deploymentDir, 'photo-compose.yaml'), 'services: {}\n')
     writeFileSync(join(deploymentDir, 'restore.compose.yaml'), 'services: {}\n')
     writeFileSync(join(opsDir, 'onprem-offline-bundle.mjs'), `import fs from 'node:fs'; fs.appendFileSync(process.env.GATE_LOG, 'verifier\\n')\n`)
-    executable(join(opsDir, 'restore.sh'), `#!/bin/sh\nprintf '%s\\n' "$*" >> "\$RESTORE_LOG"\nreceipt=; target=; source=; release=\nwhile [ "$#" -gt 0 ]; do case "$1" in --receipt) receipt=$2 ;; --target-project|--project) target=$2 ;; --source-project) source=$2 ;; --release-id) release=$2 ;; esac; shift 2; done\nprintf '%s\\n' '{"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"'"$release"'","sourceProject":"'"$source"'","targetProject":"'"$target"'","sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"cleanupVerified":true,"recoveredPreBackupPhoto":true,"photoRecoveryHandleSha256":"'"${photoRecoveryHandleSha256}"'","photoContentSha256":"${'b'.repeat(64)}","photoContentLength":22,"sourceMigrationTreeDigest":"${'a'.repeat(64)}","targetMigrationTreeDigest":"${'b'.repeat(64)}","backupManifestSha256":"${'c'.repeat(64)}","backupFingerprintSha256":"'"$BACKUP_FINGERPRINT"'","targetProofReceiptSha256":"${'d'.repeat(64)}","authReceiptSha256":"${'e'.repeat(64)}","targetProof":{"queue":true,"photo":true,"auth":true}}' > "$receipt"\n`)
+    copyFileSync(join(repo, 'scripts', 'onprem-offline-archive.mjs'), join(opsDir, 'onprem-offline-archive.mjs'))
+    executable(join(opsDir, 'restore.sh'), `#!/bin/sh\nprintf '%s\\n' "$*" >> "\$RESTORE_LOG"\nreceipt=; target=; source=; release=\nwhile [ "$#" -gt 0 ]; do case "$1" in --receipt) receipt=$2 ;; --target-project|--project) target=$2 ;; --source-project) source=$2 ;; --release-id) release=$2 ;; esac; shift 2; done\nprintf '%s\\n' '{"operation":"restore","status":"passed","dataClass":"synthetic","releaseId":"'"$release"'","sourceProject":"'"$source"'","targetProject":"'"$target"'","sameHostRehearsal":true,"disasterRecovery":false,"targetFresh":true,"cleanupVerified":true,"recoveredPreBackupPhoto":true,"queueProbeStateReset":true,"photoRecoveryHandleSha256":"'"${photoRecoveryHandleSha256}"'","photoContentSha256":"${'b'.repeat(64)}","photoContentLength":22,"sourceMigrationTreeDigest":"${'a'.repeat(64)}","targetMigrationTreeDigest":"${'b'.repeat(64)}","backupManifestSha256":"${'c'.repeat(64)}","backupFingerprintSha256":"'"$BACKUP_FINGERPRINT"'","targetProofReceiptSha256":"${'d'.repeat(64)}","authReceiptSha256":"${'e'.repeat(64)}","targetProof":{"queue":true,"photo":true,"auth":true}}' > "$receipt"\n`)
     writeFileSync(join(opsDir, 'onprem-offline-target-proof.mjs'), '// fake target proof\n')
     writeFileSync(join(opsDir, 'onprem-keycloak-auth-proof.mjs'), '// fake auth proof\n')
     writeFileSync(join(opsDir, 'onprem-photo-auth-proof.mjs'), '// fake photo auth proof\n')
@@ -230,6 +364,18 @@ function fixture(options = {}) {
   const nextCompatibility = { schemaVersion: 1, releaseId: 'next-test', migrationTreeDigest: 'b'.repeat(64), upgradeCompatible: true, rollbackCompatible: true, compatibleFrom: [{ sourceReleaseId: 'release-test', sourceMigrationTreeDigest: migrationDigest }] }
   makeBundle(bundle, operations, deployment, evidence, 'release-test', options.previousCompatibility ?? currentCompatibility, 'c')
   makeBundle(nextBundle, nextOperations, nextDeployment, nextEvidence, 'next-test', options.compatibility ?? nextCompatibility, 'd')
+  const backendConfig = Buffer.from(`${JSON.stringify({ architecture: 'amd64', config: {}, synthetic: 'release-test-backend' })}\n`)
+  writeDockerSaveArchive(join(reexportRoot, 'wrong-id.tar'), {
+    configBytes: Buffer.from('{"architecture":"amd64","config":{"Env":["wrong"]}}\n'),
+    repoTags: ['registry.example/backend:c'],
+  })
+  writeDockerSaveArchive(join(reexportRoot, 'wrong-tag.tar'), {
+    configBytes: backendConfig,
+    repoTags: ['registry.example/wrong:synthetic'],
+  })
+  writeDockerSaveArchive(join(reexportRoot, 'missing-tag.tar'), { configBytes: backendConfig, repoTags: [] })
+  writeFileSync(join(reexportRoot, 'malformed.tar'), 'not a docker archive\n')
+  writeDockerSaveArchive(join(reexportRoot, 'tampered.tar'), { configBytes: backendConfig, repoTags: ['registry.example/backend:c'], tampered: true })
 
   executable(join(fakeBin, 'node'), `#!/bin/sh
 set -eu
@@ -260,6 +406,11 @@ for value in "$@"; do
   previous=$value
 done
 case "$pathname" in
+  "$FIXTURE_ROOT"*/.photo-recovery-handle-proof.*)
+    case "$format" in
+      %u|%g) printf '1000\\n'; exit 0 ;;
+    esac
+    ;;
   /|/tmp|"$FIXTURE_ROOT"|"$FIXTURE_ROOT"/*)
     case "$format" in
       %u|%g) printf '0\\n'; exit 0 ;;
@@ -269,11 +420,38 @@ case "$pathname" in
 esac
 exec /usr/bin/stat "$@"
 `)
+  executable(join(fakeBin, 'mktemp'), `#!/bin/sh
+set -eu
+if [ "$1" = -d ] && [ "$2" = /tmp/hr-axis-offline-target-image.XXXXXX ]; then mkdir -p "$TARGET_IMAGE_TEMP"; chmod 700 "$TARGET_IMAGE_TEMP"; printf '%s\\n' "$TARGET_IMAGE_TEMP"; exit 0; fi
+if [ "$1" = -d ] && [ "$2" = /tmp/hr-axis-offline-preflight-image.XXXXXX ]; then mkdir -p "$PREFLIGHT_IMAGE_TEMP"; chmod 700 "$PREFLIGHT_IMAGE_TEMP"; printf '%s\\n' "$PREFLIGHT_IMAGE_TEMP"; exit 0; fi
+exec /usr/bin/mktemp "$@"
+`)
   executable(join(fakeBin, 'docker'), `#!/bin/sh
 set -eu
 printf '%s\\n' "$*" >> "$DOCKER_LOG"
 state="$STATE_DIR/stopped"
 service_from_args() { last=; for value in "$@"; do last=$value; done; printf '%s' "$last"; }
+service_image_name() {
+  case "$1" in
+    caddy) printf caddy ;; frontend) printf frontend ;; api|worker|keycloak-bootstrap|identity-binder|migrator|synthetic-seed) printf backend ;;
+    keycloak) printf keycloak ;; postgres) printf postgres ;; redis) printf redis ;; object-storage) printf seaweedfs ;; *) return 1 ;;
+  esac
+}
+image_id() {
+  service=$1
+  if [ "$service" = unknown ]; then
+    awk -F'|' 'NR == 1 { print $2; exit }' "$CONFIG_MAP_FILE"
+    return 0
+  fi
+  image_name=$(service_image_name "$service") || return 1; image_tag=\${RUNTIME_IMAGE_PREFIX:-c}; image_ref="registry.example/$image_name:$image_tag"
+  if [ "\${DOCKER29_FALLBACK:-0}" != 1 ]; then
+    config_id=$(awk -F'|' -v ref="$image_ref" '$1 == ref { print $2; exit }' "$CONFIG_MAP_FILE")
+    [ -n "$config_id" ] && { printf '%s' "$config_id"; return 0; }
+  fi
+  runtime_prefix=e; [ "$image_tag" = d ] && runtime_prefix=f
+  case "$image_name" in backend) index=0 ;; frontend) index=1 ;; keycloak) index=2 ;; caddy) index=3 ;; postgres) index=4 ;; redis) index=5 ;; seaweedfs) index=6 ;; *) return 1 ;; esac
+  printf 'sha256:%s' "$index"; i=0; while [ "$i" -lt 63 ]; do printf '%s' "$runtime_prefix"; i=$((i + 1)); done
+}
 if [ "$1" = compose ]; then
   args="$*"
   case "$args" in
@@ -306,7 +484,44 @@ fi
 if [ "$1" = image ] && [ "$2" = inspect ]; then
   expected=$5
   [ "\${IMAGE_LOAD_MISMATCH:-0}" = 1 ] && expected=sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
-  printf '%s\\n' "$expected"
+  case "$expected" in
+    registry.example/*)
+      image_name=\${expected##*/}; image_name=\${image_name%:*}; image_tag=\${expected##*:}
+      if [ "\${DOCKER29_FALLBACK:-0}" != 1 ]; then
+        config_id=$(awk -F'|' -v ref="$expected" '$1 == ref { print $2; exit }' "$CONFIG_MAP_FILE")
+        [ -n "$config_id" ] && { printf '%s\\n' "$config_id"; exit 0; }
+      fi
+      runtime_prefix=e; [ "$image_tag" = d ] && runtime_prefix=f
+      case "$image_name" in backend) index=0 ;; frontend) index=1 ;; keycloak) index=2 ;; caddy) index=3 ;; postgres) index=4 ;; redis) index=5 ;; seaweedfs) index=6 ;; *) exit 1 ;; esac
+      printf 'sha256:%s' "$index"; i=0; while [ "$i" -lt 63 ]; do printf '%s' "$runtime_prefix"; i=$((i + 1)); done; printf '\\n'
+      ;;
+    *) printf '%s\\n' "$expected" ;;
+  esac
+  exit 0
+fi
+if [ "$1" = image ] && [ "$2" = save ]; then
+  output=; image_ref=; previous=
+  for value in "$@"; do
+    [ "$previous" = --output ] && output=$value
+    image_ref=$value
+    previous=$value
+  done
+  [ -n "$output" ] || exit 2
+  reexport_case=valid
+  [ -f "$REEXPORT_MODE_FILE" ] && reexport_case=$(cat "$REEXPORT_MODE_FILE")
+  case "$reexport_case" in
+    valid)
+      image_name=\${image_ref##*/}; image_name=\${image_name%:*}; image_tag=\${image_ref##*:}
+      cp "$REEXPORT_ROOT/$image_tag/$image_name.tar" "$output" ;;
+    wrong-id) cp "$REEXPORT_ROOT/wrong-id.tar" "$output" ;;
+    wrong-tag) cp "$REEXPORT_ROOT/wrong-tag.tar" "$output" ;;
+    missing-tag) cp "$REEXPORT_ROOT/missing-tag.tar" "$output" ;;
+    malformed|verifier-failure) cp "$REEXPORT_ROOT/malformed.tar" "$output" ;;
+    tampered) cp "$REEXPORT_ROOT/tampered.tar" "$output" ;;
+    save-failure) exit 19 ;;
+    signal) image_name=\${image_ref##*/}; image_name=\${image_name%:*}; image_tag=\${image_ref##*:}; cp "$REEXPORT_ROOT/$image_tag/$image_name.tar" "$output"; sleep 30 ;;
+    *) exit 20 ;;
+  esac
   exit 0
 fi
 if [ "$1" = volume ] && [ "$2" = rm ]; then
@@ -371,17 +586,14 @@ if [ "$1" = inspect ]; then
   case "$format" in
     *State.Restarting*State.Dead*RestartCount*)
       health=healthy; [ "\${RESUME_UNHEALTHY:-}" = "$service" ] && health=unhealthy
-      image_id() { index=$1; printf 'sha256:%s' "$index"; i=0; while [ "$i" -lt 63 ]; do printf '%s' "\${RUNTIME_IMAGE_PREFIX:-c}"; i=$((i + 1)); done; }
-      image=$(image_id 0); case "$service" in keycloak) image=$(image_id 2) ;; redis) image=$(image_id 5) ;; object-storage) image=$(image_id 6) ;; esac
+      image=$(image_id "$service")
       printf '%s|%s|synthetic|%s|%s|true|running|false|false||%s|0|%s\n' "$project" "$project" "$release" "$service" "$health" "$image"
       exit 0 ;;
     *com.docker.compose.project*State.Running*Image*)
       running=true
       case "$service" in keycloak-bootstrap|identity-binder|migrator|synthetic-seed) running=false ;; api|worker|keycloak|redis|object-storage) [ -f "$state" ] && running=false ;; esac
       [ "\${ONE_SHOT_RUNNING:-}" = "$service" ] && running=true
-      image_id() { index=$1; printf 'sha256:%s' "$index"; i=0; while [ "$i" -lt 63 ]; do printf '%s' "\${RUNTIME_IMAGE_PREFIX:-c}"; i=$((i + 1)); done; }
-      image=$(image_id 0)
-      case "$service" in frontend) image=$(image_id 1) ;; keycloak) image=$(image_id 2) ;; caddy) image=$(image_id 3) ;; postgres) image=$(image_id 4) ;; redis) image=$(image_id 5) ;; object-storage) image=$(image_id 6) ;; esac
+      image=$(image_id "$service")
       [ "\${WRONG_IMAGE_SERVICE:-}" = "$service" ] && image=sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
       printf '%s|%s|synthetic|%s|%s|%s|%s\n' "$project" "$project" "$release" "$service" "$running" "$image" "$image"
       exit 0
@@ -412,7 +624,7 @@ if [ "$1" = run ]; then
   args="$*"
   case "$args" in
     *'/backup/volumes/'*) host=; class=; for value in "$@"; do case "$value" in *:/backup*) host=\${value%%:/backup*};; esac; done; class=$(printf '%s' "$args" | sed -n 's#.*volumes/\\([^./ ]*\\)\\.tar.*#\\1#p'); [ -n "$host" ] || exit 1; mkdir -p "$host/volumes"; [ -f "$host/volumes/$class.tar" ] || printf 'archive-%s\\n' "$class" > "$host/volumes/$class.tar"; exit 0 ;;
-    *onprem-keycloak-auth-proof.mjs*) printf '%s\\n' '{"schemaVersion":1,"dataClass":"synthetic","personas":{"count":5,"sessionsVerified":5,"crossScopeDenied":5,"deniedMutationCount":4},"scopeAuthorization":{"crossScopeDenied":true,"deniedActionWriteDelta":0},"noRawCredentials":true}'; exit 0 ;;
+    *onprem-keycloak-auth-proof.mjs*) printf '%s\\n' '{"schemaVersion":1,"dataClass":"synthetic","personas":{"count":5,"sessionsVerified":5,"crossScopeDenied":5,"deniedMutationCount":5},"scopeAuthorization":{"crossScopeDenied":true,"deniedActionWriteDelta":0},"noRawCredentials":true}'; exit 0 ;;
     *sha256sum*) volume=; for value in "$@"; do case "$value" in *:/source:ro) volume=\${value%%:/source:ro};; esac; done; case "$volume" in *redis*) printf '%s  -\\n' "$HASH_REDIS";; *keycloak_bootstrap*) printf '%s  -\\n' "$HASH_BOOTSTRAP";; *keycloak*) printf '%s  -\\n' "$HASH_KEYCLOAK";; *object_storage*) printf '%s  -\\n' "$HASH_PHOTO";; esac; exit 0 ;;
     *) exit 0 ;;
   esac
@@ -420,21 +632,33 @@ fi
 if [ "$1" = load ] || [ "$1" = volume ] || [ "$1" = network ]; then exit 0; fi
 exit 0
 `)
-  return { root, bundle, nextBundle, fakeBin, log, gateLog, nodeLog, restoreLog, state, envFile, ledger, publicKey, backupPublicKey, privateKey, fingerprint, backupFingerprint, backupDir, receipt, photoFixture, photoFixtureSha256, photoRecoveryHandle, photoRecoveryHandleSha256, secretRoot, migrationDigest, options }
+  return { root, bundle, nextBundle, fakeBin, log, gateLog, nodeLog, restoreLog, state, envFile, ledger, publicKey, backupPublicKey, privateKey, fingerprint, backupFingerprint, backupDir, receipt, photoFixture, photoFixtureSha256, photoRecoveryHandle, photoRecoveryHandleSha256, secretRoot, photoSecretRoot, migrationDigest, reexportMode, reexportRoot, configMap, targetImageTemp, preflightImageTemp, options }
 }
 
 function envFor(value, extra = {}) {
   const path = `${shellPath(value.fakeBin)}:/usr/bin:/bin`
   const archiveHash = (className) => createHash('sha256').update(`archive-${className}\n`).digest('hex')
   return {
-    ...process.env, PATH: path, REAL_NODE: shellPath(process.execPath), FIXTURE_ROOT: shellPath(value.root), DOCKER_LOG: shellPath(value.log), GATE_LOG: shellPath(value.gateLog), NODE_LOG: shellPath(value.nodeLog), STATE_DIR: shellPath(value.state),
+    ...process.env, PATH: path, REAL_NODE: shellPath(process.execPath), FIXTURE_ROOT: shellPath(value.root), DOCKER_LOG: shellPath(value.log), GATE_LOG: shellPath(value.gateLog), NODE_LOG: shellPath(value.nodeLog), STATE_DIR: shellPath(value.state), REEXPORT_MODE_FILE: shellPath(value.reexportMode), REEXPORT_ROOT: shellPath(value.reexportRoot), CONFIG_MAP_FILE: shellPath(value.configMap), TARGET_IMAGE_TEMP: shellPath(value.targetImageTemp), PREFLIGHT_IMAGE_TEMP: shellPath(value.preflightImageTemp), DOCKER29_FALLBACK: value.options.docker29 ? '1' : '0',
     HASH_REDIS: archiveHash('redis-aof'), HASH_KEYCLOAK: archiveHash('keycloak'), HASH_BOOTSTRAP: archiveHash('keycloak-bootstrap-state'), HASH_PHOTO: archiveHash('photo-object-storage'), MIGRATOR_DIGEST: 'a'.repeat(64), BACKUP_FINGERPRINT: value.backupFingerprint, RESTORE_LOG: shellPath(value.restoreLog), ...extra,
   }
 }
 
+function runShell(args, { timeoutMs = OPERATION_TIMEOUT_MS, label = 'offline operation', ...options } = {}) {
+  const result = spawnSync(shell, args, { ...options, encoding: 'utf8', timeout: timeoutMs })
+  if (result.error?.code === 'ETIMEDOUT') {
+    throw new Error(`offline contract ${label} subprocess timed out after ${timeoutMs} ms`)
+  }
+  return result
+}
+
+function runOperation(name, args, options = {}) {
+  return runShell([shellPath(join(operationDir, name)), ...args], { ...options, label: options.label ?? name })
+}
+
 function run(name, value, args = [], extraEnv = {}) {
   const base = ['--bundle-root', shellPath(value.bundle), '--release-id', 'release-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, '--env-file', shellPath(value.envFile)]
-  return spawnSync(shell, [shellPath(join(operationDir, name)), ...base, ...args], { encoding: 'utf8', env: envFor(value, extraEnv) })
+  return runOperation(name, [...base, ...args], { env: envFor(value, extraEnv) })
 }
 
 function backupTrustArgs(value) {
@@ -711,7 +935,7 @@ test('upgrade compatibility mismatch stops before target restore mutation', (t) 
   try {
     const backup = run('backup.sh', value, backupArgs(value))
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
-    const result = spawnSync(shell, [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)], { encoding: 'utf8', env: envFor(value) })
+    const result = runOperation('upgrade.sh', ['--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)], { env: envFor(value) })
     assert.notEqual(result.status, 0)
     assert.match(`${result.stdout}\n${result.stderr}`, /forward_repair_or_database_restore_required/)
     assert.doesNotMatch(readLog(value), /volume create|restore\.sh/)
@@ -725,14 +949,54 @@ test('upgrade loads every signed target archive and checks its config id before 
     const backup = run('backup.sh', value, backupArgs(value))
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const args = [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
-    const result = spawnSync(shell, args, { encoding: 'utf8', env: envFor(value) })
+    const result = runOperation('upgrade.sh', args.slice(1), { env: envFor(value) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const log = readLog(value)
     for (const name of ['backend', 'frontend', 'keycloak', 'caddy', 'postgres', 'redis', 'seaweedfs']) {
       assert.match(log, new RegExp(`load -i .*next-bundle[\\\\/]images[\\\\/]${name}\\.tar`))
-      assert.match(log, new RegExp(`image inspect --format .*sha256:[0-9a-f]{64}`))
+      assert.match(log, new RegExp(`image inspect --format .*registry\\.example/${name === 'seaweedfs' ? 'seaweedfs' : name}`))
     }
     assert.match(readFileSync(value.receipt, 'utf8'), /"releaseId":"next-test"/)
+  } finally { rmSync(value.root, { recursive: true, force: true }) }
+})
+
+test('Docker 29 upgrade target import re-exports all seven signed RepoTags before restore', (t) => {
+  if (process.platform === 'win32') return t.skip('native POSIX Node archive-import semantics are required')
+  if (!existsSync('/bin/sh')) return t.skip('behavioral POSIX harness requires a POSIX shell')
+  const value = fixture({ docker29: true })
+  try {
+    const backup = run('backup.sh', value, backupArgs(value))
+    assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
+    const args = [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
+    const result = runOperation('upgrade.sh', args.slice(1), { env: envFor(value) })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const log = readLog(value)
+    const saves = log.split(/\r?\n/).filter((line) => line.startsWith('image save --output'))
+    assert.equal(saves.length, 7, 'Docker 29 fallback re-exports each target image exactly once')
+    assert.deepEqual(saves.map((line) => line.slice(line.lastIndexOf(' ') + 1)), recoveryImageNames.map((name) => `registry.example/${name}:d`))
+    assert.equal(log.split(/\r?\n/).filter((line) => line.startsWith('load -i')).length, 7)
+    assert.match(readFileSync(value.restoreLog, 'utf8'), /--target-project hr-axis-onprem-upgrade/)
+    assert.equal(existsSync(value.targetImageTemp), false, 'target re-export temporary state is cleaned after restore')
+  } finally { rmSync(value.root, { recursive: true, force: true }) }
+})
+
+test('Docker 29 upgrade target import fails on the first tampered re-export before restore or Compose mutation', (t) => {
+  if (process.platform === 'win32') return t.skip('native POSIX Node archive-import semantics are required')
+  if (!existsSync('/bin/sh')) return t.skip('behavioral POSIX harness requires a POSIX shell')
+  const value = fixture({ docker29: true })
+  try {
+    const backup = run('backup.sh', value, backupArgs(value))
+    assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
+    const postBackupLogOffset = readLog(value).length
+    writeFileSync(value.reexportMode, 'tampered\n')
+    const args = [shellPath(join(operationDir, 'upgrade.sh')), '--bundle-root', shellPath(value.bundle), '--next-bundle-root', shellPath(value.nextBundle), '--release-id', 'release-test', '--next-release-id', 'next-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(value.envFile), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
+    const result = runOperation('upgrade.sh', args.slice(1), { env: envFor(value) })
+    assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(`${result.stdout}\n${result.stderr}`, /re-export identity verification failed|image archive/i)
+    assert.equal(existsSync(value.restoreLog), false, 'failed first image must not invoke target restore')
+    const operationTail = readLog(value).slice(postBackupLogOffset)
+    assert.doesNotMatch(operationTail, /compose .*\b(?:up|run|start)\b|volume create/i, 'failed first image must not mutate Compose or volumes after backup')
+    assert.equal(existsSync(value.targetImageTemp), false, 'failed target re-export cleans temporary state')
   } finally { rmSync(value.root, { recursive: true, force: true }) }
 })
 
@@ -745,7 +1009,7 @@ test('rollback rejects a noncanonical target label collision before importing im
     writeFileSync(value.ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'next-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: nextDigest }))
     writeFileSync(nextEnv, [
       'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=next-test',
-      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(value.photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
     ].join('\n') + '\n')
     writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
     writeFileSync(join(value.state, 'release'), 'next-test')
@@ -754,7 +1018,7 @@ test('rollback rejects a noncanonical target label collision before importing im
       '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       '--env-file', shellPath(nextEnv), ...backupArgs(value),
     ]
-    const backup = spawnSync(shell, [shellPath(join(operationDir, 'backup.sh')), ...backupArgsForNext], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const before = readLog(value)
     const rollbackArgs = [
@@ -762,11 +1026,71 @@ test('rollback rejects a noncanonical target label collision before importing im
       '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-upgrade', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value),
     ]
-    const rollback = spawnSync(shell, [shellPath(join(operationDir, 'rollback.sh')), ...rollbackArgs], { encoding: 'utf8', env: envFor(value, { TARGET_COLLISION: '1' }) })
+    const rollback = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { TARGET_COLLISION: '1' }) })
     assert.notEqual(rollback.status, 0, `${rollback.stdout}\n${rollback.stderr}`)
     const tail = readLog(value).slice(before.length)
     assert.match(tail, /ps -aq .*label=com\.docker\.compose\.project=hr-axis-onprem-upgrade/)
     assert.doesNotMatch(tail, /load -i|volume create|compose .*\b(?:up|run)\b/)
+  } finally { rmSync(value.root, { recursive: true, force: true }) }
+})
+
+test('Docker 29 rollback target import re-exports all seven historical signed RepoTags before restore', (t) => {
+  if (process.platform === 'win32') return t.skip('native POSIX Node archive-import semantics are required')
+  if (!existsSync('/bin/sh')) return t.skip('behavioral POSIX harness requires a POSIX shell')
+  const value = fixture({ docker29: true })
+  const nextEnv = join(value.root, 'next-docker29.env')
+  try {
+    const nextDigest = 'b'.repeat(64)
+    writeFileSync(value.ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'next-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: nextDigest }))
+    writeFileSync(nextEnv, [
+      'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=next-test',
+      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(value.photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+    ].join('\n') + '\n')
+    writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
+    writeFileSync(join(value.state, 'release'), 'next-test')
+    const backupArgsForNext = ['--bundle-root', shellPath(value.nextBundle), '--release-id', 'next-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, '--env-file', shellPath(nextEnv), ...backupArgs(value)]
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
+    const rollbackArgs = ['--bundle-root', shellPath(value.nextBundle), '--previous-bundle-root', shellPath(value.bundle), '--release-id', 'next-test', '--previous-release-id', 'release-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-restore', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
+    const result = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    const log = readLog(value)
+    const saves = log.split(/\r?\n/).filter((line) => line.startsWith('image save --output'))
+    assert.equal(saves.length, 7, 'Docker 29 fallback re-exports each rollback image exactly once')
+    assert.deepEqual(saves.map((line) => line.slice(line.lastIndexOf(' ') + 1)), recoveryImageNames.map((name) => `registry.example/${name}:c`))
+    assert.equal(log.split(/\r?\n/).filter((line) => line.startsWith('load -i')).length, 7)
+    assert.match(readFileSync(value.restoreLog, 'utf8'), /--target-project hr-axis-onprem-restore/)
+    assert.equal(existsSync(value.targetImageTemp), false, 'rollback re-export temporary state is cleaned after restore')
+  } finally { rmSync(value.root, { recursive: true, force: true }) }
+})
+
+test('Docker 29 rollback target import fails on the first wrong-config re-export before restore or Compose mutation', (t) => {
+  if (process.platform === 'win32') return t.skip('native POSIX Node archive-import semantics are required')
+  if (!existsSync('/bin/sh')) return t.skip('behavioral POSIX harness requires a POSIX shell')
+  const value = fixture({ docker29: true })
+  const nextEnv = join(value.root, 'next-docker29-failure.env')
+  try {
+    const nextDigest = 'b'.repeat(64)
+    writeFileSync(value.ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'next-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: nextDigest }))
+    writeFileSync(nextEnv, [
+      'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=next-test',
+      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(value.photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+    ].join('\n') + '\n')
+    writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
+    writeFileSync(join(value.state, 'release'), 'next-test')
+    const backupArgsForNext = ['--bundle-root', shellPath(value.nextBundle), '--release-id', 'next-test', '--target-project', 'hr-axis-onprem-core', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, '--env-file', shellPath(nextEnv), ...backupArgs(value)]
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
+    const postBackupLogOffset = readLog(value).length
+    writeFileSync(value.reexportMode, 'wrong-id\n')
+    const rollbackArgs = ['--bundle-root', shellPath(value.nextBundle), '--previous-bundle-root', shellPath(value.bundle), '--release-id', 'next-test', '--previous-release-id', 'release-test', '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-restore', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint, ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value)]
+    const result = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`)
+    assert.match(`${result.stdout}\n${result.stderr}`, /re-export identity verification failed|image archive/i)
+    assert.equal(existsSync(value.restoreLog), false, 'failed first rollback image must not invoke target restore')
+    const operationTail = readLog(value).slice(postBackupLogOffset)
+    assert.doesNotMatch(operationTail, /compose .*\b(?:up|run|start)\b|volume create/i, 'failed first rollback image must not mutate Compose or volumes after backup')
+    assert.equal(existsSync(value.targetImageTemp), false, 'failed rollback re-export cleans temporary state')
   } finally { rmSync(value.root, { recursive: true, force: true }) }
 })
 
@@ -779,7 +1103,7 @@ test('rollback authority allows a historical previous bundle with no forward com
     writeFileSync(value.ledger, JSON.stringify({ project: 'hr-axis-onprem-core', releaseId: 'next-test', status: 'clean', dirty: false, orphanCount: 0, checksumValid: true, migrationTreeDigest: nextDigest }))
     writeFileSync(nextEnv, [
       'HR_AXIS_DATA_CLASS=synthetic', 'HR_AXIS_STRICT_LOCAL=true', 'HR_AXIS_RELEASE_ID=next-test',
-      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
+      'COMPOSE_PROJECT_NAME=hr-axis-onprem-core', `MIGRATION_LEDGER_FILE=${shellPath(value.ledger)}`, `HR_AXIS_SECRET_ROOT=${shellPath(value.secretRoot)}`, `PHOTO_STORAGE_SECRET_ROOT=${shellPath(value.photoSecretRoot)}`, 'HR_AXIS_PUBLIC_HOST=offline.synthetic.invalid', 'KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true', 'KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true',
     ].join('\n') + '\n')
     writeFileSync(join(value.state, 'project'), 'hr-axis-onprem-core')
     writeFileSync(join(value.state, 'release'), 'next-test')
@@ -788,14 +1112,14 @@ test('rollback authority allows a historical previous bundle with no forward com
       '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       '--env-file', shellPath(nextEnv), ...backupArgs(value),
     ]
-    const backup = spawnSync(shell, [shellPath(join(operationDir, 'backup.sh')), ...backupArgsForNext], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const backup = runOperation('backup.sh', backupArgsForNext, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(backup.status, 0, `${backup.stdout}\n${backup.stderr}`)
     const rollbackArgs = [
       '--bundle-root', shellPath(value.nextBundle), '--previous-bundle-root', shellPath(value.bundle), '--release-id', 'next-test', '--previous-release-id', 'release-test',
       '--source-project', 'hr-axis-onprem-core', '--target-project', 'hr-axis-onprem-restore', '--public-key', shellPath(value.publicKey), '--trusted-fingerprint', value.fingerprint,
       ...backupTrustArgs(value), '--env-file', shellPath(nextEnv), '--backup-dir', shellPath(value.backupDir), '--receipt', shellPath(value.receipt), ...photoArgs(value),
     ]
-    const result = spawnSync(shell, [shellPath(join(operationDir, 'rollback.sh')), ...rollbackArgs], { encoding: 'utf8', env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
+    const result = runOperation('rollback.sh', rollbackArgs, { env: envFor(value, { RUNTIME_IMAGE_PREFIX: 'd' }) })
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     const restoreArgs = readFileSync(value.restoreLog, 'utf8')
     assert.match(restoreArgs, new RegExp(`--rollback-authority-bundle-root ${shellPath(value.nextBundle).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { checkServerIdentity } from 'node:tls'
 
@@ -23,6 +25,9 @@ import {
   isConfidentialRuntimeSecretName,
   EXPECTED_SECRET_UIDS,
   validateCoreCleanupContainerIdentities,
+  createWrongCaTemporaryDirectory,
+  parseArgs,
+  validateTemporaryDirectory,
 } from './onprem-core-runtime-proof.mjs'
 import {
   assertControlledKeycloakStop,
@@ -67,6 +72,62 @@ const cleanupLabels = (service, overrides = {}) => ({
   'com.hr-axis.data-class': 'synthetic',
   'com.hr-axis.release-id': cleanupOptions.releaseId,
   ...overrides,
+})
+
+test('runtime proof uses an explicit canonical temporary-directory parent and preserves the default', () => {
+  const parent = mkdtempSync(join(tmpdir(), 'hr-axis-runtime-proof-temp-parent-'))
+  let explicitTemporaryDirectory
+  let defaultTemporaryDirectory
+  try {
+    const options = parseArgs([
+      '--env-file', '/tmp/synthetic-runtime-proof.env',
+      '--release-id', cleanupOptions.releaseId,
+      '--cleanup',
+      '--temporary-directory', parent,
+    ])
+    assert.equal(options.temporaryDirectory, parent)
+    assert.equal(validateTemporaryDirectory(parent), parent)
+    explicitTemporaryDirectory = createWrongCaTemporaryDirectory(options.temporaryDirectory)
+    assert.equal(dirname(explicitTemporaryDirectory), parent)
+    assert.match(basename(explicitTemporaryDirectory), /^hr-axis-wrong-ca-/)
+    defaultTemporaryDirectory = createWrongCaTemporaryDirectory()
+    assert.equal(dirname(defaultTemporaryDirectory), tmpdir())
+  } finally {
+    if (explicitTemporaryDirectory) rmSync(explicitTemporaryDirectory, { force: true, recursive: true })
+    if (defaultTemporaryDirectory) rmSync(defaultTemporaryDirectory, { force: true, recursive: true })
+    rmSync(parent, { force: true, recursive: true })
+  }
+})
+
+test('runtime proof rejects missing, relative, traversing, file, and symlink temporary-directory paths', () => {
+  const parent = mkdtempSync(join(tmpdir(), 'hr-axis-runtime-proof-temp-reject-'))
+  const parseWith = (temporaryDirectory) => parseArgs([
+    '--env-file', '/tmp/synthetic-runtime-proof.env',
+    '--release-id', cleanupOptions.releaseId,
+    '--cleanup',
+    '--temporary-directory', temporaryDirectory,
+  ])
+  const filePath = join(parent, 'not-a-directory')
+  const missingPath = join(parent, 'missing')
+  const symlinkPath = join(parent, 'symlink')
+  writeFileSync(filePath, 'synthetic\n')
+  try {
+    assert.throws(() => parseWith(), /temporary-directory/i)
+    assert.throws(() => parseArgs(['--env-file', '/tmp/synthetic-runtime-proof.env', '--release-id', cleanupOptions.releaseId, '--cleanup', '--temporary-directory']), /requires a path/i)
+    assert.throws(() => parseWith('relative-temporary-directory'), /absolute canonical/i)
+    assert.throws(() => parseWith(`${parent}/./`), /traversal/i)
+    assert.throws(() => parseWith(`${parent}/../${basename(parent)}`), /traversal/i)
+    assert.throws(() => parseWith(missingPath), /existing directory/i)
+    assert.throws(() => parseWith(filePath), /non-symlink directory/i)
+    try {
+      symlinkSync(parent, symlinkPath, 'dir')
+    } catch (error) {
+      if (process.platform !== 'win32') throw error
+    }
+    if (process.platform !== 'win32') assert.throws(() => parseWith(symlinkPath), /non-symlink|symlinked/i)
+  } finally {
+    rmSync(parent, { force: true, recursive: true })
+  }
 })
 
 test('core cleanup rejects duplicate service, non-1 index, and one-off identities', () => {

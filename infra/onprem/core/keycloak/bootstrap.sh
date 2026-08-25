@@ -284,8 +284,17 @@ EOF
   esac
 }
 
+readonly KCADM_TIMEOUT_SECONDS=90
+readonly BOOTSTRAP_AUTH_ATTEMPTS=8
+readonly BOOTSTRAP_TIMEOUT_SECONDS=1800
+bootstrap_watchdog_pid=''
+
+kcadm_timeout() {
+  timeout --signal=TERM --kill-after=5s "${KCADM_TIMEOUT_SECONDS}s" /opt/keycloak/bin/kcadm.sh "$@"
+}
+
 kcadm() {
-  /opt/keycloak/bin/kcadm.sh "$@" --config "$config_file"
+  kcadm_timeout "$@" --config "$config_file"
 }
 
 kcadm_quiet() {
@@ -294,6 +303,14 @@ kcadm_quiet() {
 
 kcadm_query() {
   kcadm "$@"
+}
+
+start_bootstrap_watchdog() {
+  (
+    sleep "$BOOTSTRAP_TIMEOUT_SECONDS"
+    kill -TERM "$$" >/dev/null 2>&1 || true
+  ) &
+  bootstrap_watchdog_pid="$!"
 }
 
 server="${KEYCLOAK_SERVER:-http://keycloak:8080}"
@@ -414,6 +431,10 @@ scan_server_log() {
 cleanup() {
   status="$?"
   set +e
+  if [ -n "${bootstrap_watchdog_pid:-}" ]; then
+    kill "$bootstrap_watchdog_pid" >/dev/null 2>&1 || true
+    wait "$bootstrap_watchdog_pid" >/dev/null 2>&1 || true
+  fi
   if [ -n "${server_pid:-}" ]; then
     kill "$server_pid" >/dev/null 2>&1 || true
     wait "$server_pid" >/dev/null 2>&1 || true
@@ -427,13 +448,27 @@ cleanup() {
   trap - EXIT HUP INT TERM
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+handle_termination() {
+  signal_name="$1"
+  if [ "$signal_name" = TERM ]; then
+    printf '%s\n' 'keycloak bootstrap: failed closed (bootstrap watchdog timeout)' >&2
+  else
+    printf '%s\n' 'keycloak bootstrap: failed closed (bootstrap interrupted)' >&2
+  fi
+  exit 124
+}
+trap cleanup EXIT
+trap 'handle_termination TERM' TERM
+trap 'handle_termination INT' INT
+trap 'handle_termination HUP' HUP
+
+start_bootstrap_watchdog
 
 # The server is intentionally started only after the dedicated bootstrap-admin
 # command has created (or exposed an interrupted run's) temporary service
 # client. No permanent admin credentials are passed to the production service.
 export KEYCLOAK_BOOTSTRAP_SERVICE_SECRET="$bootstrap_password"
-/opt/keycloak/bin/kc.sh bootstrap-admin service \
+timeout --signal=TERM --kill-after=5s "${KCADM_TIMEOUT_SECONDS}s" /opt/keycloak/bin/kc.sh bootstrap-admin service \
   --client-id "$bootstrap_user" --client-secret:env=KEYCLOAK_BOOTSTRAP_SERVICE_SECRET --no-prompt --optimized \
   >/dev/null 2>&1 || true
 unset KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
@@ -449,8 +484,8 @@ server_pid="$!"
 credentials_ready=false
 attempt=0
 phase_marker bootstrap-authentication
-while [ "$attempt" -lt 90 ]; do
-  if KC_CLI_CLIENT_SECRET="$(tr -d '\r\n' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials \
+while [ "$attempt" -lt "$BOOTSTRAP_AUTH_ATTEMPTS" ]; do
+  if KC_CLI_CLIENT_SECRET="$(tr -d '\r\n' < "$bootstrap_password_file")" kcadm_timeout config credentials \
       --server "$server" --realm master --client "$bootstrap_user" --config "$config_file" >/dev/null 2>&1; then
     credentials_ready=true
     break

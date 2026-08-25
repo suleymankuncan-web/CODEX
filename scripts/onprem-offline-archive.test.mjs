@@ -37,6 +37,26 @@ test('inspects Docker-save archive and derives config image id', () => {
   } finally { rmSync(file.root, { recursive: true, force: true }) }
 })
 
+test('Docker 29-shaped archive keeps Config-byte identity C distinct from manifest/runtime identity M', () => {
+  const value = archive({ configBytes: Buffer.from('{"synthetic":true,"docker29":true}') })
+  const manifestRuntimeId = `sha256:${'b'.repeat(64)}`
+  assert.notEqual(value.id, manifestRuntimeId)
+  const file = fixture(value)
+  try {
+    const expectedIdentity = 'registry.example/backend:synthetic@' + manifestRuntimeId
+    const derived = inspectDockerSaveArchive(file.path)
+    assert.equal(derived.imageId, value.id)
+    assert.equal(derived.archiveConfigImageIdDerived, true)
+    const result = inspectDockerSaveArchive(file.path, { identity: expectedIdentity, imageId: value.id })
+    assert.equal(result.imageId, value.id)
+    assert.equal(result.archiveConfigImageIdDerived, true)
+    assert.throws(
+      () => inspectDockerSaveArchive(file.path, { identity: expectedIdentity, imageId: manifestRuntimeId }),
+      /config digest does not match image identity/i,
+    )
+  } finally { rmSync(file.root, { recursive: true, force: true }) }
+})
+
 test('rejects swapped identity, traversal, symlink, duplicate, and device entries', () => {
   const valid = archive(); const file = fixture(valid)
   try {

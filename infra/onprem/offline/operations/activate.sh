@@ -72,6 +72,41 @@ process.stdout.write(JSON.stringify(value))
 ' "$SIGNED_DIGEST"
 }
 
+# A failed Compose wait otherwise leaves only a generic "unhealthy" line in the
+# hosted log. Emit a bounded, non-secret state snapshot so the next failure can
+# distinguish an exited/OOM'd process from a healthcheck-only failure without
+# relaxing the fail-closed activation gate.
+diagnose_service_state() {
+  service_name="$1"
+  container_id=$(compose ps -aq "$service_name" 2>/dev/null || true)
+  if [ -z "$container_id" ]; then
+    say "diagnostic service=$service_name state=missing"
+    return 0
+  fi
+  case "$container_id" in
+    *[!0-9a-f]*|'')
+      say "diagnostic service=$service_name state=invalid-container-id"
+      return 0
+      ;;
+  esac
+  state=$(docker inspect "$container_id" --format '{{.State.Status}}|{{.State.ExitCode}}|{{.State.OOMKilled}}|{{.State.Restarting}}' 2>/dev/null || true)
+  health=$(docker inspect "$container_id" --format '{{if .State.Health}}{{.State.Health.Status}}|{{.State.Health.FailingStreak}}{{else}}none|0{{end}}' 2>/dev/null || true)
+  case "$state" in
+    *[!A-Za-z0-9_.:|-]*|'') state=invalid ;;
+  esac
+  case "$health" in
+    *[!A-Za-z0-9_.:|-]*|'') health=invalid ;;
+  esac
+  say "diagnostic service=$service_name container=$container_id state=$state health=$health"
+}
+
+diagnose_application_startup_failure() {
+  say 'diagnostic phase=application-startup-failure'
+  for service_name in postgres redis keycloak object-storage caddy frontend api worker; do
+    diagnose_service_state "$service_name"
+  done
+}
+
 # Activation re-reads the target database. A caller-provided ledger is never a
 # trust input; migrate.sh may have written one as post-run evidence only.
 POST_STATUS=$(read_status) || die "activation requires a clean target migration status"
@@ -79,10 +114,10 @@ POST_STATUS=$(read_status) || die "activation requires a clean target migration 
 compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage >/dev/null || die "private prerequisite startup failed"
 KEYCLOAK_ID=$(compose ps -q keycloak 2>/dev/null || true); [ -n "$KEYCLOAK_ID" ] || die "Keycloak prerequisite is not running"
 [ "$(docker inspect "$KEYCLOAK_ID" --format '{{.State.Health.Status}}' 2>/dev/null || true)" = healthy ] || die "Keycloak prerequisite is not healthy"
-compose --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null || die "Keycloak bootstrap reconcile failed"
-compose --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null || die "identity binder failed"
+compose --profile infra --profile keycloak-bootstrap run --pull never --rm --no-deps keycloak-bootstrap >/dev/null || die "Keycloak bootstrap reconcile failed"
 compose --profile seed run --pull never --rm --no-deps synthetic-seed >/dev/null || die "synthetic seed failed"
-compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || die "application service startup failed"
+compose --profile infra --profile keycloak-bootstrap --profile identity-binder run --pull never --rm --no-deps identity-binder >/dev/null || die "identity binder failed"
+compose --profile infra --profile runtime up --pull never --wait --wait-timeout 180 -d postgres redis keycloak object-storage caddy frontend api worker >/dev/null || { diagnose_application_startup_failure; die "application service startup failed"; }
 check_service() { service=$1; id=$(compose ps -q "$service" 2>/dev/null || true); [ -n "$id" ] || die "activated service is not running: $service"; labels=$(docker inspect "$id" --format '{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{.State.Health.Status}}' 2>/dev/null || true); [ "$labels" = "$TARGET_PROJECT|$RELEASE_ID|synthetic|healthy" ] || die "activated service labels/health mismatch: $service"; }
 for service in postgres redis keycloak object-storage caddy frontend api worker; do check_service "$service"; done
 say "PASS project=$TARGET_PROJECT release=$RELEASE_ID activation=synthetic"

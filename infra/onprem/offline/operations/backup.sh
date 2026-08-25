@@ -258,9 +258,9 @@ const seen = new Set()
 for (const name of names) {
   const image = value.images[name]
   const imageId = image?.configImageId
-  if (!image || image.name !== name || typeof image.archive !== 'string' || typeof image.repoTag !== 'string' || typeof image.archiveSha256 !== 'string' || typeof imageId !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(imageId) || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || seen.has(imageId.toLowerCase())) process.exit(43)
+  if (!image || image.name !== name || typeof image.archive !== 'string' || typeof image.repoTag !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(image.repoTag) || typeof image.archiveSha256 !== 'string' || typeof imageId !== 'string' || !/^sha256:[0-9a-f]{64}$/i.test(imageId) || !/^[0-9a-f]{64}$/.test(image.archiveSha256) || seen.has(imageId.toLowerCase())) process.exit(43)
   seen.add(imageId.toLowerCase())
-  process.stdout.write(`${name}|${imageId.toLowerCase()}\n`)
+  process.stdout.write(`${name}|${image.repoTag}|${imageId.toLowerCase()}\n`)
 }
 NODE
 ) || die "signed image identities are unavailable"
@@ -280,6 +280,12 @@ signed_image_for_service() {
   image=$(printf '%s\n' "$SIGNED_IMAGE_LINES" | awk -F'|' -v wanted="$image_name" '$1 == wanted { print $2; exit }')
   [ -n "$image" ] || die "signed image is missing for Compose service: $1"
   printf '%s' "$image"
+}
+signed_image_runtime_id_for_service() {
+  image_repo_tag=$(signed_image_for_service "$1")
+  image_runtime_id=$(docker image inspect --format '{{.Id}}' "$image_repo_tag" 2>/dev/null || true)
+  printf '%s' "$image_runtime_id" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "signed image runtime id is invalid: $1"
+  printf '%s' "$image_runtime_id"
 }
 
 env_value() { awk -F= -v wanted="$1" '$0 !~ /^[[:space:]]*#/ && $1 == wanted { sub(/^[^=]*=/, ""); print; exit }' "$ENV_FILE"; }
@@ -323,7 +329,7 @@ FOUND_KEYCLOAK_BOOTSTRAP= FOUND_IDENTITY_BINDER= FOUND_MIGRATOR= FOUND_SYNTHETIC
 CONTAINER_IDS=$(docker ps -aq --filter "label=com.docker.compose.project=$TARGET_PROJECT" 2>/dev/null || true)
 [ -n "$CONTAINER_IDS" ] || die "no target Compose containers were found"
 for id in $CONTAINER_IDS; do
-  meta=$(docker inspect "$id" --format '{{.Config.Labels.com.docker.compose.project}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}|{{.State.Running}}|{{.Image}}' 2>/dev/null) || die "service identity could not be inspected"
+  meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Running}}|{{.Image}}' 2>/dev/null) || die "service identity could not be inspected"
   IFS='|' read -r compose_project project data_class release service running image <<EOF
 $meta
 EOF
@@ -333,7 +339,7 @@ EOF
     caddy|frontend|api|worker|keycloak|redis|postgres|object-storage|keycloak-bootstrap|identity-binder|migrator|synthetic-seed) ;;
     *) die "unknown Compose service: $service" ;;
   esac
-  expected_image=$(signed_image_for_service "$service")
+  expected_image=$(signed_image_runtime_id_for_service "$service")
   [ "$image" = "$expected_image" ] || die "runtime image identity mismatch: $service"
   case "$service" in
     caddy) [ -z "$FOUND_CADDY" ] || die "duplicate caddy service"; FOUND_CADDY=$id ;;
@@ -358,7 +364,7 @@ V_POSTGRES= V_REDIS= V_KEYCLOAK= V_BOOTSTRAP= V_PHOTO=
 volume_ids=$(docker volume ls -q --filter "label=com.hr-axis.project=$TARGET_PROJECT" 2>/dev/null || true)
 [ -n "$volume_ids" ] || die "no labelled target volumes were found"
 for volume_id in $volume_ids; do
-  meta=$(docker volume inspect "$volume_id" --format '{{.Name}}|{{.Labels.com.hr-axis.project}}|{{.Labels.com.hr-axis.data-class}}|{{.Labels.com.hr-axis.release-id}}|{{.Labels.com.hr-axis.volume-class}}' 2>/dev/null) || die "target volume identity could not be inspected"
+  meta=$(docker volume inspect "$volume_id" --format '{{.Name}}|{{index .Labels "com.hr-axis.project"}}|{{index .Labels "com.hr-axis.data-class"}}|{{index .Labels "com.hr-axis.release-id"}}|{{index .Labels "com.hr-axis.volume-class"}}' 2>/dev/null) || die "target volume identity could not be inspected"
   IFS='|' read -r volume_name project data_class release volume_class <<EOF
 $meta
 EOF
@@ -397,14 +403,14 @@ resume_services() {
   fi
   validate_resumed_service() {
     id=$1; expected_service=$2
-    meta=$(docker inspect "$id" --format '{{.Config.Labels.com.docker.compose.project}}|{{.Config.Labels.com.hr-axis.project}}|{{.Config.Labels.com.hr-axis.data-class}}|{{.Config.Labels.com.hr-axis.release-id}}|{{.Config.Labels.com.docker.compose.service}}|{{.State.Running}}|{{.State.Status}}|{{.State.Restarting}}|{{.State.Dead}}|{{.State.Error}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.RestartCount}}|{{.Image}}' 2>/dev/null) || return 1
+    meta=$(docker inspect "$id" --format '{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.hr-axis.project"}}|{{index .Config.Labels "com.hr-axis.data-class"}}|{{index .Config.Labels "com.hr-axis.release-id"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Running}}|{{.State.Status}}|{{.State.Restarting}}|{{.State.Dead}}|{{.State.Error}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.RestartCount}}|{{.Image}}' 2>/dev/null) || return 1
     IFS='|' read -r compose_project project data_class release service running state_status restarting dead state_error health restart_count image <<EOF
 $meta
 EOF
     [ "$compose_project" = "$TARGET_PROJECT" ] && [ "$project" = "$TARGET_PROJECT" ] && [ "$data_class" = synthetic ] && [ "$release" = "$RELEASE_ID" ] && [ "$service" = "$expected_service" ] || return 1
     [ "$running" = true ] && [ "$state_status" = running ] && [ "$restarting" = false ] && [ "$dead" = false ] && [ -z "$state_error" ] && [ "$health" = healthy ] || return 1
     case "$restart_count" in ''|*[!0-9]*) return 1 ;; esac
-    [ "$image" = "$(signed_image_for_service "$service")" ] || return 1
+    [ "$image" = "$(signed_image_runtime_id_for_service "$service")" ] || return 1
   }
   for service in api worker keycloak redis; do
     case " $RESTART_CORE_SERVICES " in *" $service "*)
@@ -428,7 +434,16 @@ cleanup() {
   if [ -n "${TEMP_DIR:-}" ] && [ -d "$TEMP_DIR" ]; then rm -r "$TEMP_DIR" 2>/dev/null || true; fi
   exit "$status"
 }
-trap cleanup EXIT HUP INT TERM
+abort_on_signal() {
+  # Do not run resume/Compose cleanup from a timeout signal.  Those Docker
+  # calls may block while the daemon is stopping and can prevent the bounded
+  # operator from returning.  The workflow cleanup step removes only the
+  # exact synthetic targets after the interrupted operation exits.
+  trap - EXIT HUP INT TERM
+  exit 124
+}
+trap cleanup EXIT
+trap abort_on_signal HUP INT TERM
 
 # Quiesce is a mechanical Compose action.  No env flag or made-up writer
 # label can substitute for these exact service names and post-stop checks.

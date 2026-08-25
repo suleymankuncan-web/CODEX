@@ -144,12 +144,12 @@ AUTH_PROOF="$BUNDLE_ROOT/operations/onprem-keycloak-auth-proof.mjs"; [ -f "$AUTH
 PUBLIC_HOST=$(env_value HR_AXIS_PUBLIC_HOST); [ -n "$PUBLIC_HOST" ] || die "approved public host is missing"
 if [ -n "$PROOF_COMPOSE" ]; then
   BACKEND_IMAGE=$(env_value HR_AXIS_BACKEND_IMAGE)
-  printf '%s' "$BACKEND_IMAGE" | grep -Eq '^sha256:[0-9a-f]{64}$' || die "approved backend image identity is invalid"
-  AUTH_OUTPUT=$(docker run --pull=never --rm --network "${TARGET_PROJECT}_proxy" \
+  printf '%s' "$BACKEND_IMAGE" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._/-]*:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$' || die "approved backend image repoTag is invalid"
+  AUTH_OUTPUT=$(docker run --pull=never --rm --user 1000:1000 --network "${TARGET_PROJECT}_proxy" \
     --volume "$AUTH_PROOF:/run/hr-axis/onprem-keycloak-auth-proof.mjs:ro" \
     --volume "$ACCOUNTS_SOURCE:/run/hr-axis/synthetic-accounts:ro" \
     --volume "$CA_SOURCE:/run/hr-axis/caddy-ca.crt:ro" \
-    "$BACKEND_IMAGE" node /run/hr-axis/onprem-keycloak-auth-proof.mjs --host "$PUBLIC_HOST" --connect-host caddy --connect-port 8443 \
+    --entrypoint /nodejs/bin/node "$BACKEND_IMAGE" /run/hr-axis/onprem-keycloak-auth-proof.mjs --host "$PUBLIC_HOST" --connect-host caddy --connect-port 8443 \
     --accounts-file /run/hr-axis/synthetic-accounts --ca-file /run/hr-axis/caddy-ca.crt 2>/dev/null) || die "Keycloak synthetic auth proof failed"
 else
   AUTH_OUTPUT=$(node "$AUTH_PROOF" --host "$PUBLIC_HOST" --connect-host 127.0.0.1 --connect-port 443 --accounts-file "$ACCOUNTS_SOURCE" --ca-file "$CA_SOURCE" 2>/dev/null) || die "Keycloak synthetic auth proof failed"

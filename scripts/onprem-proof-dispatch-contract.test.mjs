@@ -100,6 +100,7 @@ test('clean-tree guard accepts empty porcelain and rejects tracked, index, and n
 test('Linux proof Docker command is source-archive-only, pinned, offline, read-only, and capability bounded', () => {
   const args = buildLinuxProofDockerArgs('/tmp/onprem-proof/archive.tar', DIGEST)
   assert.deepEqual(args.slice(0, 4), ['run', '--pull=never', '--rm', '--interactive'])
+  assert.equal(args.includes('--user'), false)
   assert.ok(args.includes('--read-only'))
   assert.ok(args.includes('--network') && args[args.indexOf('--network') + 1] === 'none')
   assert.ok(args.includes('--cap-drop') && args[args.indexOf('--cap-drop') + 1] === 'ALL')
@@ -108,12 +109,12 @@ test('Linux proof Docker command is source-archive-only, pinned, offline, read-o
     assert.ok(index >= 0, `missing ${capability}`)
   }
   assert.ok(args.includes('--security-opt') && args[args.indexOf('--security-opt') + 1] === 'no-new-privileges')
-  assert.ok(args.some((value) => value.startsWith('/workspace:rw')))
+  assert.ok(args.some((value) => value === '/workspace:rw,nosuid,nodev,size=512m,mode=0755'))
   assert.ok(args.some((value) => value === '/tmp:rw,nosuid,nodev,size=512m,mode=0700'))
   assert.ok(args.every((value) => !value.includes('mode=1777')))
   assert.ok(args.some((value) => value === '/test-tmp:rw,nosuid,nodev,exec,size=512m,mode=0700'))
   assert.deepEqual(args.slice(args.indexOf('--env'), args.indexOf('--env') + 2), ['--env', 'TMPDIR=/test-tmp'])
-  assert.ok(args.some((value) => value.startsWith('/var/lib:rw')))
+  assert.ok(args.some((value) => value === '/var/lib:rw,nosuid,nodev,size=512m,mode=0755'))
   assert.ok(args.some((value) => value.includes('/tmp/onprem-proof/archive.tar:/input/onprem-source.tar:ro')))
   const archiveDigestEnv = args.findIndex((value, index) => value === '--env' && args[index + 1] === `ONPREM_ARCHIVE_SHA256=${DIGEST}`)
   assert.ok(archiveDigestEnv >= 0)

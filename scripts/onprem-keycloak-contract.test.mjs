@@ -291,15 +291,15 @@ test('ONP-3B bootstrap secret-log scan excludes only the fixed database role ide
 
 test('ONP-3B contract requires suffix kcadm config paths and rejects unsupported KCADM_CONFIG reliance', () => {
   const baseline = input()
-  const wrapperInvocation = '/opt/keycloak/bin/kcadm.sh "$@" --config "$config_file"'
-  const credentialInvocation = 'KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials'
+  const wrapperInvocation = 'kcadm_timeout "$@" --config "$config_file"'
+  const credentialInvocation = 'KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" kcadm_timeout config credentials'
   assert.ok(baseline.bootstrapScript.includes(wrapperInvocation))
   assert.ok(baseline.bootstrapScript.includes(credentialInvocation))
   assert.doesNotMatch(baseline.bootstrapScript, /\bKCADM_CONFIG\b/)
 
   const missingWrapperConfig = {
     ...baseline,
-    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, '/opt/keycloak/bin/kcadm.sh "$@"'),
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, 'kcadm_timeout "$@"'),
   }
   const missingWrapperResult = validateOnpremKeycloakContract(missingWrapperConfig)
   assert.equal(missingWrapperResult.ok, false)
@@ -307,7 +307,7 @@ test('ONP-3B contract requires suffix kcadm config paths and rejects unsupported
 
   const wrongWrapperConfig = {
     ...baseline,
-    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, '/opt/keycloak/bin/kcadm.sh "$@" --config "$tmp_dir/other.config"'),
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, 'kcadm_timeout "$@" --config "$tmp_dir/other.config"'),
   }
   const wrongWrapperResult = validateOnpremKeycloakContract(wrongWrapperConfig)
   assert.equal(wrongWrapperResult.ok, false)
@@ -315,7 +315,7 @@ test('ONP-3B contract requires suffix kcadm config paths and rejects unsupported
 
   const prefixWrapperConfig = {
     ...baseline,
-    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, '/opt/keycloak/bin/kcadm.sh --config "$config_file" "$@"'),
+    bootstrapScript: baseline.bootstrapScript.replace(wrapperInvocation, 'kcadm_timeout --config "$config_file" "$@"'),
   }
   const prefixWrapperResult = validateOnpremKeycloakContract(prefixWrapperConfig)
   assert.equal(prefixWrapperResult.ok, false)
@@ -354,8 +354,8 @@ test('ONP-3B contract requires suffix kcadm config paths and rejects unsupported
   const prefixDirectConfig = {
     ...baseline,
     bootstrapScript: baseline.bootstrapScript.replace(
-      ' /opt/keycloak/bin/kcadm.sh config credentials \\\n      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file"',
-      ' /opt/keycloak/bin/kcadm.sh --config "$config_file" config credentials \\\n      --server "$server" --realm master --client "$bootstrap_user"',
+      ' kcadm_timeout config credentials \\\n      --server "$server" --realm master --client "$bootstrap_user" --config "$config_file"',
+      ' kcadm_timeout --config "$config_file" config credentials \\\n      --server "$server" --realm master --client "$bootstrap_user"',
     ),
   }
   const prefixDirectResult = validateOnpremKeycloakContract(prefixDirectConfig)
@@ -382,15 +382,69 @@ test('ONP-3B contract requires suffix kcadm config paths and rejects unsupported
   assert.ok(envRelianceResult.errors.some((error) => /KCADM_CONFIG|unsupported.*config/i.test(error)))
 })
 
+test('ONP-3B Keycloak bootstrap bounds every kcadm request and the whole reconciliation before the offline rehearsal timeout', () => {
+  const baseline = input()
+  assert.match(baseline.bootstrapScript, /readonly KCADM_TIMEOUT_SECONDS=90/)
+  assert.match(baseline.bootstrapScript, /readonly BOOTSTRAP_AUTH_ATTEMPTS=8/)
+  assert.match(baseline.bootstrapScript, /readonly BOOTSTRAP_TIMEOUT_SECONDS=1800/)
+  assert.match(baseline.bootstrapScript, /start_bootstrap_watchdog\(\)[\s\S]*?sleep "\$BOOTSTRAP_TIMEOUT_SECONDS"[\s\S]*?kill -TERM "\$\$"/)
+  assert.match(baseline.bootstrapScript, /handle_termination\(\)[\s\S]*?bootstrap watchdog timeout/)
+  assert.match(baseline.bootstrapScript, /trap cleanup EXIT[\s\S]*?trap 'handle_termination TERM' TERM[\s\S]*?trap 'handle_termination INT' INT[\s\S]*?trap 'handle_termination HUP' HUP/)
+  assert.match(baseline.bootstrapScript, /timeout --signal=TERM --kill-after=5s "[^"]*KCADM_TIMEOUT_SECONDS}s" \/opt\/keycloak\/bin\/kcadm\.sh/)
+  assert.match(baseline.bootstrapScript, /kcadm_timeout\(\) \{[\s\S]*?timeout --signal=TERM --kill-after=5s "[^"]*KCADM_TIMEOUT_SECONDS}s"/)
+  assert.match(baseline.bootstrapScript, /timeout --signal=TERM --kill-after=5s "\$\{KCADM_TIMEOUT_SECONDS\}s" \/opt\/keycloak\/bin\/kc\.sh bootstrap-admin service/)
+  assert.match(baseline.bootstrapScript, /while \[ "\$attempt" -lt "\$BOOTSTRAP_AUTH_ATTEMPTS" \]; do/)
+  const unboundedWrapper = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      'timeout --signal=TERM --kill-after=5s',
+      'timeout-disabled --signal=TERM --kill-after=5s',
+    ),
+  }
+  const wrapperResult = validateOnpremKeycloakContract(unboundedWrapper)
+  assert.equal(wrapperResult.ok, false)
+  assert.ok(wrapperResult.errors.some((error) => /bounded.*kcadm|kcadm.*timeout/i.test(error)))
+
+  const unboundedBootstrap = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      'timeout --signal=TERM --kill-after=5s "${KCADM_TIMEOUT_SECONDS}s" /opt/keycloak/bin/kc.sh bootstrap-admin service',
+      '/opt/keycloak/bin/kc.sh bootstrap-admin service',
+    ),
+  }
+  const bootstrapResult = validateOnpremKeycloakContract(unboundedBootstrap)
+  assert.equal(bootstrapResult.ok, false)
+  assert.ok(bootstrapResult.errors.some((error) => /bootstrap-admin|bounded|timeout/i.test(error)))
+
+  const missingWatchdog = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace('start_bootstrap_watchdog\n', '# watchdog removed\n'),
+  }
+  const watchdogResult = validateOnpremKeycloakContract(missingWatchdog)
+  assert.equal(watchdogResult.ok, false)
+  assert.ok(watchdogResult.errors.some((error) => /watchdog|wall.clock|bootstrap.*timeout/i.test(error)))
+
+  const unboundedDirectAuth = {
+    ...baseline,
+    bootstrapScript: baseline.bootstrapScript.replace(
+      'kcadm_timeout config credentials',
+      '/opt/keycloak/bin/kcadm.sh config credentials',
+    ),
+  }
+  const directResult = validateOnpremKeycloakContract(unboundedDirectAuth)
+  assert.equal(directResult.ok, false)
+  assert.ok(directResult.errors.some((error) => /bounded.*kcadm|kcadm.*timeout|kcadm.*config/i.test(error)))
+})
+
 test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsafe mutations', () => {
   const baseline = input()
-  const credentialInvocation = 'KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials'
+  const credentialInvocation = 'KC_CLI_CLIENT_SECRET="$(tr -d \'\\r\\n\' < "$bootstrap_password_file")" kcadm_timeout config credentials'
   assert.ok(baseline.bootstrapScript.includes(credentialInvocation))
   assert.doesNotMatch(baseline.bootstrapScript, /export\s+KC_CLI_CLIENT_SECRET=/)
 
   const unnormalizedSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")" /opt/keycloak/bin/kcadm.sh config credentials',
+    'KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")" kcadm_timeout config credentials',
   )
   const unnormalizedResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: unnormalizedSecret })
   assert.equal(unnormalizedResult.ok, false)
@@ -398,7 +452,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const stdinSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'cat "$bootstrap_password_file" | /opt/keycloak/bin/kcadm.sh config credentials',
+    'cat "$bootstrap_password_file" | kcadm_timeout config credentials',
   )
   const stdinResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: stdinSecret })
   assert.equal(stdinResult.ok, false)
@@ -406,7 +460,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const secretArg = baseline.bootstrapScript.replace(
     credentialInvocation,
-    '/opt/keycloak/bin/kcadm.sh config credentials --secret "$bootstrap_password"',
+    'kcadm_timeout config credentials --secret "$bootstrap_password"',
   )
   const secretResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: secretArg })
   assert.equal(secretResult.ok, false)
@@ -414,7 +468,7 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const exportedSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'export KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")"\n  /opt/keycloak/bin/kcadm.sh config credentials',
+    'export KC_CLI_CLIENT_SECRET="$(cat "$bootstrap_password_file")"\n  kcadm_timeout config credentials',
   )
   const exportedResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: exportedSecret })
   assert.equal(exportedResult.ok, false)
@@ -422,13 +476,13 @@ test('ONP-3B contract requires command-local kcadm auth secrets and rejects unsa
 
   const rawSecret = baseline.bootstrapScript.replace(
     credentialInvocation,
-    'KC_CLI_CLIENT_SECRET="$bootstrap_password" /opt/keycloak/bin/kcadm.sh config credentials',
+    'KC_CLI_CLIENT_SECRET="$bootstrap_password" kcadm_timeout config credentials',
   )
   const rawResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: rawSecret })
   assert.equal(rawResult.ok, false)
   assert.ok(rawResult.errors.some((error) => /command-local|raw|secret/i.test(error)))
 
-  const missingLoop = baseline.bootstrapScript.replace('while [ "$attempt" -lt 90 ]; do', 'if true; then')
+  const missingLoop = baseline.bootstrapScript.replace('while [ "$attempt" -lt "$BOOTSTRAP_AUTH_ATTEMPTS" ]; do', 'if true; then')
   const loopResult = validateOnpremKeycloakContract({ ...baseline, bootstrapScript: missingLoop })
   assert.equal(loopResult.ok, false)
   assert.ok(loopResult.errors.some((error) => /retry|authentication/i.test(error)))

@@ -313,6 +313,7 @@ export function validateRestoreContainer(inspect, restoreVolume, expectedPort = 
 }
 
 const RETRYABLE_EXACT_VERSION_STATUSES = new Set([404, 429, 500, 502, 503, 504])
+const RETRYABLE_BUCKET_CONFIGURATION_STATUSES = new Set([404, 429, 500, 502, 503, 504])
 
 function isRetryableExactVersionTransportError(error) {
   const name = String(error?.name ?? '')
@@ -322,6 +323,59 @@ function isRetryableExactVersionTransportError(error) {
 
 function exactVersionFailure(attempts, lastStatus, reason) {
   return new Error(`exact-version GET ${reason} (attempts=${attempts}, lastStatus=${lastStatus ?? 'none'})`)
+}
+
+function bucketConfigurationFailure(attempts, lastStatus, reason) {
+  return new Error(`bucket configuration GET ${reason} (attempts=${attempts}, lastStatus=${lastStatus ?? 'none'})`)
+}
+
+export async function waitForBucketConfiguration({
+  endpoint,
+  bucket,
+  query,
+  accessKey,
+  secretKey,
+  expected,
+  timeoutMs = 60_000,
+  requestTimeoutMs = 1_000,
+  request = s3Request,
+  sleep = (milliseconds) => new Promise((resolveSleep) => setTimeout(resolveSleep, milliseconds)),
+  now = () => globalThis.performance?.now?.() ?? Date.now(),
+}) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || !Number.isFinite(requestTimeoutMs) || requestTimeoutMs <= 0 || typeof expected !== 'function') {
+    throw new Error('bucket configuration timeout configuration is invalid')
+  }
+  const startedAt = now()
+  let attempts = 0
+  let lastStatus = null
+  for (;;) {
+    const elapsed = now() - startedAt
+    if (elapsed >= timeoutMs) throw bucketConfigurationFailure(attempts, lastStatus, 'timed out')
+    attempts += 1
+    const remaining = timeoutMs - elapsed
+    const requestBudget = Math.max(1, Math.floor(Math.min(requestTimeoutMs, remaining)))
+    const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+      ? AbortSignal.timeout(requestBudget)
+      : undefined
+    let response
+    try {
+      response = await request({ endpoint, method: 'GET', bucket, query, accessKey, secretKey, signal })
+    } catch (error) {
+      if (!isRetryableExactVersionTransportError(error)) throw bucketConfigurationFailure(attempts, lastStatus, 'failed')
+    }
+    if (response) {
+      lastStatus = Number.isInteger(response.status) ? response.status : null
+      if (lastStatus === 200) {
+        let matches = false
+        try { matches = expected(response.body ?? Buffer.alloc(0)) === true } catch { matches = false }
+        if (matches) return response
+      } else if (!RETRYABLE_BUCKET_CONFIGURATION_STATUSES.has(lastStatus)) {
+        throw bucketConfigurationFailure(attempts, lastStatus, 'failed')
+      }
+    }
+    if (now() - startedAt >= timeoutMs) throw bucketConfigurationFailure(attempts, lastStatus, 'timed out')
+    await sleep(Math.min(500, timeoutMs - (now() - startedAt)))
+  }
 }
 
 export async function waitForExactVersion({
@@ -473,6 +527,22 @@ async function runSyntheticProof(options) {
     const versioning = '<VersioningConfiguration><Status>Enabled</Status></VersioningConfiguration>'
     expectStatus(await s3Request({ endpoint, method: 'PUT', bucket: 'hr-axis-media-primary', query: { versioning: '' }, body: versioning, ...primary, headers: { 'content-type': 'application/xml' } }), [200, 204], 'enable primary versioning')
     expectStatus(await s3Request({ endpoint, method: 'PUT', bucket: 'hr-axis-media-recovery', query: { versioning: '' }, body: versioning, ...recovery, headers: { 'content-type': 'application/xml' } }), [200, 204], 'enable recovery versioning')
+    for (const [bucket, credentials] of [['hr-axis-media-primary', primary], ['hr-axis-media-recovery', recovery]]) {
+      await waitForBucketConfiguration({
+        endpoint,
+        bucket,
+        query: { versioning: '' },
+        ...credentials,
+        expected: (responseBody) => /<VersioningConfiguration\b[^>]*>[\s\S]*?<Status>Enabled<\/Status>[\s\S]*?<\/VersioningConfiguration>/i.test(responseBody.toString('utf8')),
+      })
+      await waitForBucketConfiguration({
+        endpoint,
+        bucket,
+        query: { 'object-lock': '' },
+        ...credentials,
+        expected: (responseBody) => /<ObjectLockConfiguration\b[^>]*>[\s\S]*?<ObjectLockEnabled>Enabled<\/ObjectLockEnabled>[\s\S]*?<\/ObjectLockConfiguration>/i.test(responseBody.toString('utf8')),
+      })
+    }
 
     phase = 'exact object and authorization proof'
     const retainUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()

@@ -9,6 +9,7 @@ import {
   renameSync,
   readFileSync,
   rmSync,
+  statSync,
   symlinkSync,
   utimesSync,
   writeFileSync,
@@ -210,6 +211,22 @@ test('creates deterministic signed source-free bundle and verifies with external
     ], { encoding: 'utf8' })
     assert.equal(selfContained.status, 0, `${selfContained.stdout}\n${selfContained.stderr}`)
   } finally { cleanup(value) }
+})
+
+test('bundle generation normalizes generated metadata modes under a restrictive process umask', (t) => {
+  if (process.platform === 'win32') return t.skip('create is Linux/WSL-only')
+  const value = fixture()
+  const priorUmask = process.umask(0o077)
+  try {
+    writeFileSync(value.upstreamManifestPath, `${JSON.stringify(value.upstreamManifest, null, 2)}\n`)
+    createOfflineBundle(options(value))
+    for (const name of ['bundle-manifest.json', 'bundle-signature.json']) {
+      assert.equal(statSync(join(value.outputDir, name)).mode & 0o777, 0o644, `${name} must retain the bootstrap verifier mode`)
+    }
+  } finally {
+    process.umask(priorUmask)
+    cleanup(value)
+  }
 })
 
 test('wrong trust key, tampered manifest/archive, and extra file fail closed', (t) => {
