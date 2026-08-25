@@ -807,6 +807,14 @@ function digestReceiptFiles(directory) {
   return files
 }
 
+function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value) }
+function sanitizeEgressSummary(raw) {
+  if (!isRecord(raw)) return null
+  const source = isRecord(raw.egress) ? raw.egress : raw; const digest = source.receiptSha256 ?? source.egressProofSha256
+  const integer = (value) => Number.isInteger(value) ? value : null; const counters = ['dockerIpv4CounterDelta', 'dockerIpv6CounterDelta', 'hostIpv4CounterDelta', 'hostIpv4RejectCounterDelta', 'hostIpv6CounterDelta', 'hostIpv6RejectCounterDelta'].map((key) => [key, integer(source[key])])
+  return { receiptSha256: typeof digest === 'string' && SHA256.test(digest) ? digest : null, ...Object.fromEntries(counters), hostControlPlaneException: source.hostControlPlaneException === true, hostProbeUid: integer(source.hostProbeUid), dockerIpv6Disabled: source.dockerIpv6Disabled === true, rejectRulesVerified: source.rejectRulesVerified === true }
+}
+
 function sanitizeInternalReceipt(directory, options, phases) {
   const files = digestReceiptFiles(directory)
   const aggregatePath = path.join(directory, 'rehearsal.json')
@@ -819,22 +827,14 @@ function sanitizeInternalReceipt(directory, options, phases) {
   const egressPhase = phases.find((phase) => phase.name === 'restore-egress')
   const quiescePhase = phases.find((phase) => phase.name === 'quiesce')
   const passed = raw?.status === 'passed' && raw?.sanitized === true && phases.find((phase) => phase.name === 'verify-rehearse')?.status === 'passed'
-  const safeAggregate = raw && typeof raw === 'object' ? {
+  const safeAggregate = isRecord(raw) ? {
     operation: typeof raw.operation === 'string' ? raw.operation : null,
     status: raw.status === 'passed' ? 'passed' : 'failed',
     releaseId: typeof raw.releaseId === 'string' ? raw.releaseId : null,
     sanitized: raw.sanitized === true,
     aggregateSha256: hashBytes(stableJson(raw)),
     receiptFiles: files,
-    egress: raw.egress && typeof raw.egress === 'object' ? {
-      receiptSha256: typeof raw.egress.receiptSha256 === 'string' && SHA256.test(raw.egress.receiptSha256) ? raw.egress.receiptSha256 : null,
-      dockerIpv4CounterDelta: Number.isInteger(raw.egress.dockerIpv4CounterDelta) ? raw.egress.dockerIpv4CounterDelta : null,
-      hostIpv4CounterDelta: Number.isInteger(raw.egress.hostIpv4CounterDelta) ? raw.egress.hostIpv4CounterDelta : null,
-      hostIpv6CounterDelta: Number.isInteger(raw.egress.hostIpv6CounterDelta) ? raw.egress.hostIpv6CounterDelta : null,
-      hostProbeUid: Number.isInteger(raw.egress.hostProbeUid) ? raw.egress.hostProbeUid : null,
-      dockerIpv6Disabled: raw.egress.dockerIpv6Disabled === true,
-      rejectRulesVerified: raw.egress.rejectRulesVerified === true,
-    } : null,
+    egress: sanitizeEgressSummary(raw),
   } : null
   return { passed, lastPhase, files, safeAggregate, quiesced: quiescePhase?.status === 'passed', restored: egressPhase?.status === 'passed' }
 }

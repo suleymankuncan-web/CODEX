@@ -239,7 +239,7 @@ test('workflow process-group supervisor reaps its normal-completion watchdog chi
   const deadlineSeconds = 61
   const context = {
     runnerTemp: directory,
-    workspace: repositoryRoot,
+    workspace: directory,
     dockerHome: directory,
     dockerConfig: directory,
     dockerIdentityCheck: () => undefined,
@@ -252,10 +252,10 @@ test('workflow process-group supervisor reaps its normal-completion watchdog chi
   try {
     const result = executeWorkflowBody('set -euo pipefail\n:\n', context, { timeoutMs: deadlineSeconds * 1000 })
     assert.equal(result.status, 'passed')
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    assert.deepEqual(watchdogSleeps(deadlineSeconds, repositoryRoot), [])
+    for (let attempt = 0; attempt < 20 && watchdogSleeps(deadlineSeconds, directory).length > 0; attempt += 1) await new Promise((resolve) => setTimeout(resolve, 100))
+    assert.deepEqual(watchdogSleeps(deadlineSeconds, directory), [])
   } finally {
-    terminateWatchdogSleeps(deadlineSeconds, repositoryRoot)
+    terminateWatchdogSleeps(deadlineSeconds, directory)
     fs.rmSync(directory, { recursive: true, force: true })
   }
 })
@@ -484,7 +484,24 @@ function supervisedFixture({ phaseFailure = false, resetFailure = false, resetUn
     const marker = WORKFLOW_STEPS.find((value) => blocks[value].body === body)
     order.push(`phase:${marker}`)
     if (marker === WORKFLOW_STEPS[4]) {
-      fs.writeFileSync(path.join(runnerTemp, 'offline-receipts', 'rehearsal.json'), JSON.stringify({ status: 'passed', sanitized: true, operation: 'offline-rehearsal', releaseId: options.releaseId }))
+      fs.writeFileSync(path.join(runnerTemp, 'offline-receipts', 'rehearsal.json'), JSON.stringify({
+        status: 'passed',
+        sanitized: true,
+        operation: 'offline-rehearsal',
+        releaseId: options.releaseId,
+        egressProofSha256: '1'.repeat(64),
+        dockerIpv4CounterDelta: 2,
+        dockerIpv6CounterDelta: 3,
+        hostIpv4CounterDelta: 4,
+        hostIpv4RejectCounterDelta: 5,
+        hostIpv6CounterDelta: 6,
+        hostIpv6RejectCounterDelta: 7,
+        hostControlPlaneException: true,
+        hostProbeUid: 1001,
+        dockerIpv6Disabled: true,
+        rejectRulesVerified: true,
+      }))
+      fs.writeFileSync(path.join(runnerTemp, 'offline-receipts', 'operations.json'), JSON.stringify({ egress: { dockerIpv4CounterDelta: 99, hostControlPlaneException: false, rejectRulesVerified: false } }))
     }
     if (phaseFailure && marker === WORKFLOW_STEPS[1]) return { status: 'failed', exitCode: 17, containmentComplete: true }
     return { status: 'passed', exitCode: 0, containmentComplete: true }
@@ -522,6 +539,19 @@ test('supervised recovery orders reset, both firewall restores, post-inspection,
     assert.equal(result.recovery.firewall.equal, result.recovery.firewall.byteEqual)
     assert.equal(result.recovery.firewall.ipv4.diagnostic, null)
     assert.equal(result.recovery.firewall.ipv6.diagnostic, null)
+    assert.deepEqual(result.receipt.egress.aggregate.egress, {
+      receiptSha256: '1'.repeat(64),
+      dockerIpv4CounterDelta: 2,
+      dockerIpv6CounterDelta: 3,
+      hostIpv4CounterDelta: 4,
+      hostIpv4RejectCounterDelta: 5,
+      hostIpv6CounterDelta: 6,
+      hostIpv6RejectCounterDelta: 7,
+      hostControlPlaneException: true,
+      hostProbeUid: 1001,
+      dockerIpv6Disabled: true,
+      rejectRulesVerified: true,
+    })
   } finally {
     fs.rmSync(fixture.directory, { recursive: true, force: true })
   }
