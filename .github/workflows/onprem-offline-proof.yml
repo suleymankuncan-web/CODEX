@@ -86,7 +86,8 @@ jobs:
             scripts/onprem-offline-stage.test.mjs \
             scripts/onprem-image-proof-contract.test.mjs \
             scripts/onprem-offline-local-rehearsal-contract.test.mjs \
-            scripts/onprem-offline-workflow-contract.test.mjs
+            scripts/onprem-offline-workflow-contract.test.mjs \
+            scripts/onprem-trivy-cache-contract.test.mjs
           git diff --check
 
   build_bundle:
@@ -326,6 +327,21 @@ jobs:
       - name: Pull pinned vendor images and save immutable archives
         run: |
           set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          cache_dir="$RUNNER_TEMP/onprem-offline-trivy-cache"
+          test "${cache_dir%/*}" = "$RUNNER_TEMP"
+          test "$(dirname -- "$cache_dir")" = "$RUNNER_TEMP"
+          test "${cache_dir##*/}" = onprem-offline-trivy-cache
+          if [ -e "$cache_dir" ] || [ -L "$cache_dir" ]; then
+            rm -rf -- "$cache_dir"
+          fi
+          test ! -e "$cache_dir" && test ! -L "$cache_dir"
+          mkdir -- "$cache_dir"
+          chmod 0700 "$cache_dir"
+          test -d "$cache_dir" && test ! -L "$cache_dir"
+          test "$(stat -c '%a' "$cache_dir")" = 700
+          printf 'TRIVY_CACHE_DIR=%s\n' "$cache_dir" >> "$GITHUB_ENV"
+          export TRIVY_CACHE_DIR="$cache_dir"
           test "$CADDY_IMAGE" = 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648'
           test "$CADDY_CONFIG_IMAGE_ID" = 'sha256:af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe'
           test "$POSTGRES_IMAGE" = 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6'
@@ -395,7 +411,8 @@ jobs:
             docker run --rm -v "$vendor_evidence:/out" "$SYFT_IMAGE" \
               "$ref" -o "spdx-json=/out/${image}-sbom.spdx.json"
             if [ "$image" = postgres ]; then
-              docker run --rm -v "$vendor_evidence:/out" -v "$vendor_evidence:/policy:ro" "$TRIVY_IMAGE" image \
+              docker run --rm -v "$vendor_evidence:/out" -v "$vendor_evidence:/policy:ro" --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+                --cache-dir /trivy-cache \
                 --input "/out/${image}-image.tar" --format json --scanners vuln --severity CRITICAL \
                 --ignorefile /policy/postgres-gosu.trivyignore.yaml --show-suppressed \
                 --exit-code 1 --output "/out/${image}-trivy-vuln.json"
@@ -405,11 +422,13 @@ jobs:
                 --policy infra/onprem/offline/postgres-gosu.trivyignore.yaml \
                 --output "$vendor_evidence/postgres-vulnerability-exception-receipt.json"
             else
-              docker run --rm -v "$vendor_evidence:/out" "$TRIVY_IMAGE" image \
+              docker run --rm -v "$vendor_evidence:/out" --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+                --cache-dir /trivy-cache \
                 --input "/out/${image}-image.tar" --format json --scanners vuln --severity CRITICAL \
                 --exit-code 1 --output "/out/${image}-trivy-vuln.json"
             fi
-            docker run --rm -v "$vendor_evidence:/out" "$TRIVY_IMAGE" image \
+            docker run --rm -v "$vendor_evidence:/out" --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --input "/out/${image}-image.tar" --format json --scanners secret \
               --exit-code 1 --output "/out/${image}-trivy-secret.json"
           IMAGE_NAME="$image" VENDOR_EVIDENCE="$vendor_evidence" node --input-type=module <<'NODE'

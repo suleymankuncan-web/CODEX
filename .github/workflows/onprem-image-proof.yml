@@ -114,7 +114,8 @@ jobs:
             scripts/onprem-native-docker-host-contract.test.mjs \
             scripts/onprem-native-docker-host-provision-contract.test.mjs \
             scripts/onprem-image-proof-contract.test.mjs \
-            scripts/onprem-offline-workflow-contract.test.mjs
+            scripts/onprem-offline-workflow-contract.test.mjs \
+            scripts/onprem-trivy-cache-contract.test.mjs
           git diff --check
 
   proof:
@@ -399,21 +400,42 @@ jobs:
         if: inputs.proof_mode == 'full'
         run: |
           set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          cache_dir="$RUNNER_TEMP/onprem-image-proof-trivy-cache"
+          test "${cache_dir%/*}" = "$RUNNER_TEMP"
+          test "$(dirname -- "$cache_dir")" = "$RUNNER_TEMP"
+          test "${cache_dir##*/}" = onprem-image-proof-trivy-cache
+          if [ -e "$cache_dir" ] || [ -L "$cache_dir" ]; then
+            rm -rf -- "$cache_dir"
+          fi
+          test ! -e "$cache_dir" && test ! -L "$cache_dir"
+          mkdir -- "$cache_dir"
+          chmod 0700 "$cache_dir"
+          test -d "$cache_dir" && test ! -L "$cache_dir"
+          test "$(stat -c '%a' "$cache_dir")" = 700
+          printf 'TRIVY_CACHE_DIR=%s\n' "$cache_dir" >> "$GITHUB_ENV"
+          export TRIVY_CACHE_DIR="$cache_dir"
           for image in frontend backend; do
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
               --output "/out/${image}-trivy.json" "hr-axis-onprem-${image}:proof"
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --scanners vuln --severity CRITICAL --exit-code 1 "hr-axis-onprem-${image}:proof"
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --scanners secret --exit-code 1 "hr-axis-onprem-${image}:proof"
           done
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$KEYCLOAK_TRIVY_IMAGE" image \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" -v "$PWD/proof:/out" "$KEYCLOAK_TRIVY_IMAGE" image \
+            --cache-dir /trivy-cache \
             --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
             --output /out/keycloak-trivy.json "$KEYCLOAK_IMAGE"
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$KEYCLOAK_TRIVY_IMAGE" image \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$KEYCLOAK_TRIVY_IMAGE" image \
+            --cache-dir /trivy-cache \
             --scanners vuln --severity CRITICAL --exit-code 1 "$KEYCLOAK_IMAGE"
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$KEYCLOAK_TRIVY_IMAGE" image \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$KEYCLOAK_TRIVY_IMAGE" image \
+            --cache-dir /trivy-cache \
             --scanners secret --exit-code 1 "$KEYCLOAK_IMAGE"
 
       - name: Export final filesystems and layers then run content guards
@@ -945,12 +967,15 @@ jobs:
           docker pull "$SEAWEEDFS_IMAGE"
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
             "$SEAWEEDFS_IMAGE" -o spdx-json=/out/photo-storage-sbom.spdx.json
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+            --cache-dir /trivy-cache \
             --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
             --output /out/photo-storage-trivy.json "$SEAWEEDFS_IMAGE"
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+            --cache-dir /trivy-cache \
             --scanners vuln --severity CRITICAL --exit-code 1 "$SEAWEEDFS_IMAGE"
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+            --cache-dir /trivy-cache \
             --scanners secret --exit-code 1 "$SEAWEEDFS_IMAGE"
           test -s infra/onprem/photo-storage/LICENSE
           test "$(sha256sum infra/onprem/photo-storage/LICENSE | cut -d ' ' -f 1)" = d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613
@@ -1168,17 +1193,35 @@ jobs:
           IMAGE_SCOPE: ${{ inputs.image_scope }}
         run: |
           set -euo pipefail
+          test -n "$RUNNER_TEMP"
+          cache_dir="$RUNNER_TEMP/onprem-image-component-trivy-cache"
+          test "${cache_dir%/*}" = "$RUNNER_TEMP"
+          test "$(dirname -- "$cache_dir")" = "$RUNNER_TEMP"
+          test "${cache_dir##*/}" = onprem-image-component-trivy-cache
+          if [ -e "$cache_dir" ] || [ -L "$cache_dir" ]; then
+            rm -rf -- "$cache_dir"
+          fi
+          test ! -e "$cache_dir" && test ! -L "$cache_dir"
+          mkdir -- "$cache_dir"
+          chmod 0700 "$cache_dir"
+          test -d "$cache_dir" && test ! -L "$cache_dir"
+          test "$(stat -c '%a' "$cache_dir")" = 700
+          printf 'TRIVY_CACHE_DIR=%s\n' "$cache_dir" >> "$GITHUB_ENV"
+          export TRIVY_CACHE_DIR="$cache_dir"
           for image in frontend backend; do
             if [[ "$IMAGE_SCOPE" != both && "$IMAGE_SCOPE" != "$image" ]]; then continue; fi
             tag="hr-axis-onprem-${image}:component-proof"
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$SYFT_IMAGE" \
               "$tag" -o "spdx-json=/out/${image}-component-sbom.spdx.json"
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" -v "$PWD/proof:/out" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --format json --scanners vuln,secret --severity CRITICAL,HIGH,MEDIUM,LOW \
               --output "/out/${image}-component-trivy.json" "$tag"
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --scanners vuln --severity CRITICAL --exit-code 1 "$tag"
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --volume "$TRIVY_CACHE_DIR:/trivy-cache" "$TRIVY_IMAGE" image \
+              --cache-dir /trivy-cache \
               --scanners secret --exit-code 1 "$tag"
           done
 
