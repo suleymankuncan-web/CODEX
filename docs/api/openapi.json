@@ -11504,6 +11504,9 @@
           "regionId": {
             "type": "string"
           },
+          "regionManagerUserId": {
+            "type": "string"
+          },
           "status": {
             "enum": [
               "active",
@@ -30359,6 +30362,9 @@
           "regionId": {
             "type": "string"
           },
+          "regionManagerUserId": {
+            "type": "string"
+          },
           "status": {
             "enum": [
               "active",
@@ -30376,6 +30382,7 @@
           "storeName",
           "storeType",
           "regionId",
+          "regionManagerUserId",
           "status",
           "kpiImportEnabled"
         ]

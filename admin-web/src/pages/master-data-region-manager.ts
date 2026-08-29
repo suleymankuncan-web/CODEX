@@ -14,7 +14,6 @@ function isTechnicalIdentity(value: string) {
 
 export function resolveStoreRegionManager(item: StoreMasterItem, managers: RegionManagerOption[]) {
   const manager = managers.find((candidate) => candidate.userId === item.regionManagerUserId)
-    ?? managers.find((candidate) => candidate.regionId === item.regionId)
   const apiName = item.regionManagerName?.trim() ?? ''
   const displayName = manager?.displayName.trim()
     || (!isTechnicalIdentity(apiName) ? apiName : '')

@@ -124,6 +124,7 @@ export function MasterDataManagementPage() {
           storeName: draft.storeName,
           storeType: draft.storeType,
           regionId: manager.regionId,
+          regionManagerUserId: manager.userId,
           status: draft.status,
           kpiImportEnabled: draft.kpiImportEnabled,
         })
@@ -132,7 +133,8 @@ export function MasterDataManagementPage() {
       return updateStoreMasterData({
         storeId: storeEditor.storeId,
         storeType: draft.storeType,
-        regionId: manager.regionId,
+        regionId: storeEditor.regionId ?? manager.regionId,
+        regionManagerUserId: manager.userId,
         status: draft.status,
         kpiImportEnabled: draft.kpiImportEnabled,
         ...(storeEditor.updatedAt ? { expectedUpdatedAt: storeEditor.updatedAt } : {}),
@@ -601,7 +603,10 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
   onSave: (draft: StoreDraft) => void
   pending: boolean
 }) {
-  const initialManager = item && item !== 'new' ? managers.find((manager) => manager.regionId === item.regionId)?.userId ?? '' : ''
+  const initialManager = item && item !== 'new'
+    ? managers.find((manager) => manager.userId === item.regionManagerUserId)?.userId
+      ?? ''
+    : ''
   const [draft, setDraft] = useState<StoreDraft>({
     storeCode: item && item !== 'new' ? item.storeCode : '',
     storeName: item && item !== 'new' ? item.storeName : '',

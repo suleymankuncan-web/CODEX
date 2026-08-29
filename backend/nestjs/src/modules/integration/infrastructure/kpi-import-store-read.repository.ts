@@ -90,27 +90,33 @@ export class KpiImportStoreReadRepository {
         ON r.region_id = s.region_id
       LEFT JOIN LATERAL (
         SELECT
-          ua.user_id::text AS region_manager_user_id,
+          manager_store.user_id::text AS region_manager_user_id,
           COALESCE(
             NULLIF(BTRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
             NULLIF(BTRIM(ua.username), ''),
             ua.email
           ) AS region_manager_name,
           ua.email AS region_manager_email
-        FROM ops.user_role_assignment ura
-        INNER JOIN ops.role role
-          ON role.role_id = ura.role_id
-          AND role.role_code = 'REGION_MANAGER'
+        FROM ops.user_action_store_assignment manager_store
         INNER JOIN ops.user_account ua
-          ON ua.user_id = ura.user_id
+          ON ua.user_id = manager_store.user_id
           AND ua.is_active = TRUE
         LEFT JOIN ops.employee e
           ON e.employee_id = ua.employee_id
-        WHERE ura.region_id = s.region_id
-          AND ura.scope_type = 'region'
-          AND ura.start_at <= NOW()
-          AND (ura.end_at IS NULL OR ura.end_at > NOW())
-        ORDER BY ura.start_at DESC, ura.created_at DESC, ua.user_id ASC
+        WHERE manager_store.store_id = s.store_id
+          AND manager_store.start_at <= NOW()
+          AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+          AND EXISTS (
+            SELECT 1
+            FROM ops.user_role_assignment manager_role
+            INNER JOIN ops.role role
+              ON role.role_id = manager_role.role_id
+              AND role.role_code = 'REGION_MANAGER'
+            WHERE manager_role.user_id = manager_store.user_id
+              AND manager_role.start_at <= NOW()
+              AND (manager_role.end_at IS NULL OR manager_role.end_at > NOW())
+          )
+        ORDER BY manager_store.start_at DESC, manager_store.created_at DESC, ua.user_id ASC
         LIMIT 1
       ) region_manager ON TRUE
     `;
@@ -200,36 +206,86 @@ export class KpiImportStoreReadRepository {
       region_name: string;
     }>(
       `
-        SELECT
-          ura.user_role_assignment_id::text AS assignment_id,
-          ua.user_id::text AS user_id,
-          COALESCE(
-            NULLIF(BTRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
-            NULLIF(BTRIM(ua.username), ''),
+        WITH manager_accounts AS (
+          SELECT
+            MIN(ura.user_role_assignment_id::text)::uuid AS assignment_id,
+            ua.user_id,
+            COALESCE(
+              NULLIF(BTRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
+              NULLIF(BTRIM(ua.username), ''),
+              ua.email
+            ) AS display_name,
             ua.email
-          ) AS display_name,
-          ua.email,
+          FROM ops.user_role_assignment ura
+          INNER JOIN ops.role role
+            ON role.role_id = ura.role_id
+            AND role.role_code = 'REGION_MANAGER'
+          INNER JOIN ops.user_account ua
+            ON ua.user_id = ura.user_id
+            AND ua.is_active = TRUE
+          LEFT JOIN ops.employee e
+            ON e.employee_id = ua.employee_id
+          LEFT JOIN ops.region role_region
+            ON role_region.region_id = ura.region_id
+          WHERE ura.start_at <= NOW()
+            AND (ura.end_at IS NULL OR ura.end_at > NOW())
+            AND (
+              ura.company_id = ANY($1::uuid[])
+              OR role_region.company_id = ANY($1::uuid[])
+              OR EXISTS (
+                SELECT 1
+                FROM ops.user_action_store_assignment manager_store
+                INNER JOIN ops.store assigned_store
+                  ON assigned_store.store_id = manager_store.store_id
+                  AND assigned_store.company_id = ANY($1::uuid[])
+                WHERE manager_store.user_id = ura.user_id
+                  AND manager_store.start_at <= NOW()
+                  AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+              )
+            )
+          GROUP BY ua.user_id, display_name, ua.email
+        )
+        SELECT
+          manager.assignment_id::text AS assignment_id,
+          manager.user_id::text AS user_id,
+          manager.display_name,
+          manager.email,
           r.region_id::text AS region_id,
           r.region_code,
           r.region_name
-        FROM ops.user_role_assignment ura
-        INNER JOIN ops.role role
-          ON role.role_id = ura.role_id
-          AND role.role_code = 'REGION_MANAGER'
-        INNER JOIN ops.user_account ua
-          ON ua.user_id = ura.user_id
-          AND ua.is_active = TRUE
-        LEFT JOIN ops.employee e
-          ON e.employee_id = ua.employee_id
-        INNER JOIN ops.region r
-          ON r.region_id = ura.region_id
-          AND r.status = 'active'
-        WHERE ura.scope_type = 'region'
-          AND ura.company_id = ANY($1::uuid[])
-          AND r.company_id = ANY($1::uuid[])
-          AND ura.start_at <= NOW()
-          AND (ura.end_at IS NULL OR ura.end_at > NOW())
-        ORDER BY display_name ASC, r.region_name ASC, ua.user_id ASC
+        FROM manager_accounts manager
+        INNER JOIN LATERAL (
+          SELECT candidate_region.region_id, candidate_region.region_code, candidate_region.region_name
+          FROM ops.region candidate_region
+          WHERE candidate_region.status = 'active'
+            AND candidate_region.company_id = ANY($1::uuid[])
+          ORDER BY
+            CASE
+              WHEN EXISTS (
+                SELECT 1
+                FROM ops.user_role_assignment direct_role
+                WHERE direct_role.user_id = manager.user_id
+                  AND direct_role.region_id = candidate_region.region_id
+                  AND direct_role.start_at <= NOW()
+                  AND (direct_role.end_at IS NULL OR direct_role.end_at > NOW())
+              ) THEN 0
+              WHEN EXISTS (
+                SELECT 1
+                FROM ops.user_action_store_assignment manager_store
+                INNER JOIN ops.store assigned_store
+                  ON assigned_store.store_id = manager_store.store_id
+                  AND assigned_store.region_id = candidate_region.region_id
+                WHERE manager_store.user_id = manager.user_id
+                  AND manager_store.start_at <= NOW()
+                  AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+              ) THEN 1
+              ELSE 2
+            END,
+            candidate_region.region_name ASC,
+            candidate_region.region_id ASC
+          LIMIT 1
+        ) r ON TRUE
+        ORDER BY manager.display_name ASC, manager.user_id ASC
       `,
       [input.actorCompanyIds],
     );

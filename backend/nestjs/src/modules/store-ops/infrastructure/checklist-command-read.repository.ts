@@ -510,8 +510,7 @@ export class ChecklistCommandReadRepository {
           INNER JOIN ops.user_account ua
             ON ua.user_id = ura.user_id AND ua.is_active = TRUE
           LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
-          WHERE ura.company_id = ANY($1::uuid[])
-            AND ura.start_at <= NOW()
+          WHERE ura.start_at <= NOW()
             AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           GROUP BY ura.user_id, display_name
         ),

@@ -34,6 +34,7 @@ describe("IntegrationRepository master data writes", () => {
         storeId: "store-1",
         storeType: "company",
         regionId: "region-1",
+        regionManagerUserId: "manager-1",
         status: "active",
         kpiImportEnabled: true,
         actorUserId: "actor-1",
@@ -68,6 +69,9 @@ describe("IntegrationRepository master data writes", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [{ is_valid: true }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
     const { repository } = createRepository(query);
 
@@ -77,6 +81,7 @@ describe("IntegrationRepository master data writes", () => {
         storeId: "store-1",
         storeType: "company",
         regionId: "region-1",
+        regionManagerUserId: "manager-1",
         status: "active",
         kpiImportEnabled: true,
         actorUserId: "actor-1",
@@ -91,6 +96,9 @@ describe("IntegrationRepository master data writes", () => {
 
     const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
     expect(sql).toContain("UPDATE ops.store");
+    expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(sql).toContain("UPDATE ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("INSERT INTO ops.user_action_store_assignment");
     expect(sql).toContain("store_master_data.updated");
   });
 

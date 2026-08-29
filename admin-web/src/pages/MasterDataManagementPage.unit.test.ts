@@ -33,7 +33,13 @@ describe('resolveStoreRegionManager', () => {
   })
 
   it('uses a neutral product fallback when only a technical identity is available', () => {
-    expect(resolveStoreRegionManager(store, [])).toEqual({
+    expect(resolveStoreRegionManager(store, [{
+      userId: 'different-manager',
+      displayName: 'Yanlış Bölge Eşleşmesi',
+      email: 'wrong@example.com',
+      regionId: 'region-1',
+      regionName: 'İstanbul',
+    }])).toEqual({
       assigned: false,
       displayName: 'Bölge müdürü atanmamış',
       email: null,
