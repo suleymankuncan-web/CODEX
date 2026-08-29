@@ -3,29 +3,29 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
 
-const appRoot = join(import.meta.dirname, '..')
+const repoRoot = join(import.meta.dirname, '..')
 const specFiles = [
-  'e2e/store-surfaces-workforce.spec.ts',
-  'e2e/store-surfaces-performance.spec.ts',
-  'e2e/store-surfaces-shell.spec.ts',
-  'e2e/store-surfaces-rankings.spec.ts',
-  'e2e/store-surfaces-personnel-performance.spec.ts',
-  'e2e/store-surfaces-operations.spec.ts',
+  'admin-web/e2e/store-surfaces-workforce.spec.ts',
+  'admin-web/e2e/store-surfaces-performance.spec.ts',
+  'admin-web/e2e/store-surfaces-shell.spec.ts',
+  'admin-web/e2e/store-surfaces-rankings.spec.ts',
+  'admin-web/e2e/store-surfaces-personnel-performance.spec.ts',
+  'admin-web/e2e/store-surfaces-operations.spec.ts',
 ]
 const fixtureFiles = [
-  'e2e/store-surfaces-identities.ts',
-  'e2e/store-surfaces-api-fixtures.ts',
-  'e2e/store-surfaces-profile-fixtures.ts',
-  'e2e/store-surfaces-ranking-fixtures.ts',
-  'e2e/store-surfaces-operations-fixtures.ts',
+  'admin-web/e2e/store-surfaces-identities.ts',
+  'admin-web/e2e/store-surfaces-api-fixtures.ts',
+  'admin-web/e2e/store-surfaces-profile-fixtures.ts',
+  'admin-web/e2e/store-surfaces-ranking-fixtures.ts',
+  'admin-web/e2e/store-surfaces-operations-fixtures.ts',
 ]
 
 function read(path) {
-  return readFileSync(join(appRoot, path), 'utf8')
+  return readFileSync(join(repoRoot, path), 'utf8')
 }
 
 test('store surface regressions stay split into bounded domain specs without losing cases', () => {
-  assert.equal(existsSync(join(appRoot, 'e2e/store-surfaces.spec.ts')), false)
+  assert.equal(existsSync(join(repoRoot, 'admin-web/e2e/store-surfaces.spec.ts')), false)
 
   const titles = []
   for (const path of specFiles) {
