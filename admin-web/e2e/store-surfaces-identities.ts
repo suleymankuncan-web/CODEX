@@ -1,0 +1,7 @@
+export const demoStoreId = '00000000-0000-4000-8000-000000000100'
+export const checklistCommandInstanceId = '44444444-4444-4444-8444-444444444444'
+export const demoRegionId = '00000000-0000-0000-0000-000000000010'
+export const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
+export const demoPositionId = '44444444-4444-4444-8444-444444444444'
+export const regionSecondStoreId = '00000000-0000-4000-8000-000000000101'
+export const outsideStoreId = '00000000-0000-0000-0000-000000000999'
