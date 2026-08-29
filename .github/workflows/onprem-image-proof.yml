@@ -626,7 +626,7 @@ jobs:
           const { readFileSync } = require('node:fs')
           const receipt = JSON.parse(readFileSync('proof/keycloak-license-reconciliation.json', 'utf8'))
           if (receipt.residualExternalReviewRequired !== true) throw new Error('Keycloak license reconciliation must retain the residualExternalReviewRequired activation gate')
-          if (receipt.packageCount !== 552 || receipt.maxUnresolvedCount !== 452) throw new Error('Keycloak license reconciliation pinned count contract changed')
+          if (receipt.packageCount !== 556 || receipt.maxUnresolvedCount !== 455) throw new Error('Keycloak license reconciliation pinned count contract changed')
           if (receipt.resolvedCount + receipt.unresolvedCount !== receipt.packageCount) throw new Error('Keycloak license reconciliation summary count mismatch')
           if (receipt.evidenceResolvedCount + receipt.sbomStandardAssertedCount !== receipt.resolvedCount) throw new Error('Keycloak license reconciliation resolved count mismatch')
           if (receipt.unresolvedCount > receipt.maxUnresolvedCount) throw new Error('Keycloak unresolved license count exceeds the approved boundary')

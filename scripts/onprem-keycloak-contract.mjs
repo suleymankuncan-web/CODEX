@@ -571,7 +571,7 @@ export function validateOnpremKeycloakContract(input) {
   fail(/onprem-keycloak-runtime-proof\.mjs/.test(workflow) && /--require-fresh-volumes/.test(workflow), 'workflow must run a fresh-volume synthetic Keycloak runtime proof')
   fail(/onprem-keycloak-runtime-proof\.mjs\s+--cleanup/.test(workflow) || /onprem-keycloak-runtime-proof\.mjs'[\s\S]*--cleanup/.test(workflow), 'workflow EXIT cleanup must call the guarded Keycloak runtime cleanup contract')
   fail(/residualExternalReviewRequired/.test(workflow), 'workflow must surface residualExternalReviewRequired as an unresolved license activation gate')
-  fail(/receipt\.packageCount !== 552/.test(workflow) && /receipt\.maxUnresolvedCount !== 452/.test(workflow), 'workflow must pin the Keycloak license package and unresolved boundaries')
+  fail(/receipt\.packageCount !== 556/.test(workflow) && /receipt\.maxUnresolvedCount !== 455/.test(workflow), 'workflow must pin the Keycloak license package and unresolved boundaries')
   fail(/receipt\.resolvedCount \+ receipt\.unresolvedCount !== receipt\.packageCount/.test(workflow), 'workflow must fail closed on Keycloak license summary drift')
   fail(/component\.license !== null \|\| component\.evidence !== null/.test(workflow), 'workflow must prevent unresolved Keycloak components from claiming license evidence')
   fail(/onprem\.store-manager\|onprem\.store-manager\|STORE_MANAGER\|synthetic-employee-store-manager\|company-001\|region-001\|store-100\|company-001\|region-001\|store-100,store-999\|store-100/.test(workflow), 'workflow must exercise a provider-signed overbroad read-store claim while keeping the assigned store narrow')
