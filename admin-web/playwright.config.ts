@@ -4,6 +4,7 @@ const useSystemChrome = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME === '1'
 const releaseWorkerCount = 2
 const previewPort = Number(process.env.PLAYWRIGHT_PREVIEW_PORT ?? 4174)
 const previewUrl = `http://127.0.0.1:${previewPort}`
+const structuredReports = process.env.PLAYWRIGHT_STRUCTURED_REPORTS === '1'
 
 export default defineConfig({
   testDir: './e2e',
@@ -13,7 +14,13 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
-  reporter: [['list']],
+  reporter: structuredReports
+    ? [
+        ['list'],
+        ['junit', { outputFile: 'test-results/playwright-junit.xml' }],
+        ['json', { outputFile: 'test-results/playwright-results.json' }],
+      ]
+    : [['list']],
   use: {
     baseURL: previewUrl,
     trace: 'retain-on-failure',
@@ -31,7 +38,7 @@ export default defineConfig({
   webServer: {
     command: `node scripts/playwright-preview.mjs ${previewPort}`,
     url: previewUrl,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === '1',
     timeout: 30_000,
   },
 })

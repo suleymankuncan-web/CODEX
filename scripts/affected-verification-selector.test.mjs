@@ -5,9 +5,19 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 
 import {
+  buildGitDiffCommands,
   parseChangedFiles,
   selectAffectedVerification,
 } from './affected-verification-selector.mjs'
+
+test('local selector compares the working tree and branch base without replaying the latest commit', () => {
+  assert.deepEqual(buildGitDiffCommands('base-sha'), [
+    ['diff', '--name-status'],
+    ['diff', '--name-status', '--cached'],
+    ['diff', '--name-status', 'base-sha', 'HEAD'],
+  ])
+  assert.doesNotMatch(JSON.stringify(buildGitDiffCommands('')), /diff-tree/u)
+})
 
 const workspaceRoot = join(import.meta.dirname, '..')
 
@@ -136,6 +146,26 @@ test('selector CLI prints commands and full release reason from changed files en
   assert.match(result.stdout, /Full release required: yes/)
   assert.match(result.stdout, /npm\.cmd run check:release/)
   assert.match(result.stdout, /targeted auth\/scope positive and negative tests/)
+})
+
+test('selector CLI can emit machine-readable JSON for local tooling', () => {
+  const result = spawnSync(
+    process.execPath,
+    ['scripts/affected-verification-selector.mjs', '--json'],
+    {
+      cwd: workspaceRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HR_AXIS_CHANGED_FILES: 'admin-web/src/app.tsx',
+      },
+    },
+  )
+
+  assert.equal(result.status, 0)
+  const selection = JSON.parse(result.stdout)
+  assert.equal(selection.advisory, true)
+  assert.ok(selection.commands.includes('npm.cmd --prefix admin-web run lint'))
 })
 
 test('offline package and Compose changes select the offline rehearsal contract', () => {

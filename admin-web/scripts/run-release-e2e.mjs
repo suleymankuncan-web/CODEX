@@ -1,8 +1,16 @@
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-const env = { ...process.env }
-delete env.CAPTURE_COMMAND_CANVAS_EVIDENCE
+import {
+  buildReleasePlaywrightEnvironment,
+  findAvailablePreviewPort,
+} from './playwright-runtime.mjs'
+
+const previewPort = await findAvailablePreviewPort({
+  requestedPort: process.env.PLAYWRIGHT_PREVIEW_PORT,
+})
+const env = buildReleasePlaywrightEnvironment(process.env, previewPort)
+console.log(`[playwright-release] isolated preview port=${previewPort}`)
 
 const playwrightCli = fileURLToPath(new URL('../node_modules/@playwright/test/cli.js', import.meta.url))
 const result = spawnSync(process.execPath, [playwrightCli, 'test', ...process.argv.slice(2)], {

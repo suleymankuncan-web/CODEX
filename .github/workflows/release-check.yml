@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -128,8 +130,13 @@ jobs:
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
         run: npm run check:release:e2e
 
-      - name: Upload Playwright failure artifacts
-        if: ${{ failure() }}
+      - name: Publish Playwright test summary
+        if: ${{ always() }}
+        working-directory: admin-web
+        run: npm run test:e2e:summary
+
+      - name: Upload structured Playwright results and failure artifacts
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results-${{ github.run_id }}-${{ github.run_attempt }}

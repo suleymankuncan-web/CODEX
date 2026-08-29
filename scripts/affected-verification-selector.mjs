@@ -271,19 +271,22 @@ export function selectAffectedVerification(files) {
   }
 }
 
-function changedFilesFromGit() {
-  const mainMergeBase = git(['merge-base', 'origin/main', 'HEAD']).trim()
-  const candidates = [
+export function buildGitDiffCommands(mainMergeBase) {
+  return [
     ['diff', '--name-status'],
     ['diff', '--name-status', '--cached'],
     mainMergeBase ? ['diff', '--name-status', mainMergeBase, 'HEAD'] : null,
-    ['diff-tree', '--no-commit-id', '--name-status', '-r', 'HEAD'],
   ].filter(Boolean)
+}
+
+function changedFilesFromGit() {
+  const mainMergeBase = git(['merge-base', 'origin/main', 'HEAD']).trim()
 
   const files = []
-  for (const args of candidates) {
+  for (const args of buildGitDiffCommands(mainMergeBase)) {
     files.push(...parseGitNameStatusFiles(git(args)))
   }
+  files.push(...parseChangedFiles(git(['ls-files', '--others', '--exclude-standard'])))
 
   return unique(files)
 }
@@ -316,11 +319,15 @@ function printSelection(selection) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const jsonOutput = process.argv.includes('--json')
+  const argumentsList = process.argv.slice(2).filter((argument) => argument !== '--json')
   const files = process.env.HR_AXIS_CHANGED_FILES
     ? parseChangedFiles(process.env.HR_AXIS_CHANGED_FILES)
-    : process.argv.slice(2).length > 0
-      ? process.argv.slice(2).map(normalizePath)
+    : argumentsList.length > 0
+      ? argumentsList.map(normalizePath)
       : changedFilesFromGit()
 
-  printSelection(selectAffectedVerification(files))
+  const selection = selectAffectedVerification(files)
+  if (jsonOutput) console.log(JSON.stringify(selection, null, 2))
+  else printSelection(selection)
 }

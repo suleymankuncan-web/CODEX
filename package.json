@@ -28,6 +28,10 @@
     "smoke:deployed-readiness": "node scripts/deployed-readiness-smoke.mjs",
     "smoke:alert-routing": "node scripts/alert-routing-smoke.mjs",
     "check:affected-verification": "node scripts/affected-verification-selector.mjs",
+    "test:doctor": "node scripts/test-doctor.mjs",
+    "test:affected": "node scripts/affected-verification-selector.mjs",
+    "test:status": "node scripts/test-status.mjs",
+    "test:visual-snapshots": "node scripts/visual-snapshot-pair-guard.mjs",
     "test:onprem:offline": "node --test scripts/onprem-offline-bundle.test.mjs scripts/onprem-offline-stage.test.mjs scripts/onprem-offline-archive.test.mjs scripts/onprem-offline-content-guard-index.test.mjs scripts/onprem-offline-operator-contract.test.mjs scripts/onprem-offline-local-rehearsal-contract.test.mjs scripts/onprem-offline-local-package-contract.test.mjs scripts/onprem-native-full-offline-rehearsal-contract.test.mjs scripts/onprem-offline-resume-from-package-contract.test.mjs scripts/onprem-offline-recovery-contract.test.mjs scripts/onprem-offline-restore-compose-contract.test.mjs scripts/onprem-offline-target-proof.test.mjs scripts/onprem-photo-auth-proof.test.mjs scripts/onprem-postgres-vulnerability-exception.test.mjs scripts/onprem-offline-workflow-contract.test.mjs scripts/onprem-offline-bootstrap-verify.test.mjs",
     "test:onprem": "node --test scripts/onprem-image-content-guard.test.mjs scripts/onprem-image-proof-contract.test.mjs scripts/onprem-image-local-proof-contract.test.mjs scripts/onprem-image-local-proof-recovery-contract.test.mjs scripts/onprem-native-docker-host-contract.test.mjs scripts/onprem-native-docker-host-provision-contract.test.mjs scripts/onprem-native-session-proof-contract.test.mjs scripts/onprem-image-license-reconciliation.test.mjs scripts/onprem-third-party-notices.test.mjs scripts/onprem-release-manifest.test.mjs scripts/onprem-core-contract.test.mjs scripts/onprem-keycloak-contract.test.mjs scripts/onprem-keycloak-auth-proof.test.mjs scripts/onprem-keycloak-image-manifest.test.mjs scripts/onprem-keycloak-license-reconciliation.test.mjs scripts/onprem-keycloak-runtime-proof.test.mjs scripts/onprem-core-firewall-verify.test.mjs scripts/onprem-core-runtime-proof.test.mjs scripts/onprem-core-delete-synthetic-volumes.test.mjs scripts/onprem-photo-storage-contract.test.mjs scripts/onprem-photo-storage-runtime-proof.test.mjs scripts/affected-verification-selector.test.mjs",
     "test:onprem:photo-storage": "node --test scripts/onprem-photo-storage-contract.test.mjs scripts/onprem-photo-storage-runtime-proof.test.mjs",
@@ -45,7 +49,7 @@
     "evidence:staging:dbc5:target:constraint": "node scripts/dbc5-target-constraint-evidence-launcher.mjs",
     "smoke:rem8:target:constraint": "node scripts/rem8-target-constraint-disposable-smoke.mjs",
     "smoke:dbc5:target:constraint": "node scripts/dbc5-target-constraint-disposable-smoke.mjs",
-    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:scripts": "node scripts/visual-snapshot-pair-guard.mjs && node --test scripts/*.test.mjs",
     "check:pilot-stabilization": "node --test scripts/pilot-route-role-matrix-contract.test.mjs scripts/pilot-release-smoke-checklist-contract.test.mjs scripts/ranking-demo-live-boundary-contract.test.mjs scripts/pilot-stabilization-release-gate-contract.test.mjs && npm.cmd --prefix admin-web run smoke:pilot"
   }
 }

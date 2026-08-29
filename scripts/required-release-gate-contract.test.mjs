@@ -616,14 +616,19 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.doesNotMatch(frontendWorkflow, /playwright test|npm audit/i)
   assert.doesNotMatch(rehearsalWorkflow, /continue-on-error/)
   assert.doesNotMatch(frontendWorkflow, /continue-on-error/)
-  assert.match(releaseWorkflow, /name:\s*Upload Playwright failure artifacts/)
-  assert.match(releaseWorkflow, /if:\s*\$\{\{ failure\(\) \}\}/)
+  assert.match(releaseWorkflow, /name:\s*Publish Playwright test summary/)
+  assert.match(releaseWorkflow, /name:\s*Upload structured Playwright results and failure artifacts/)
+  assert.match(releaseWorkflow, /if:\s*\$\{\{ always\(\) \}\}/)
   assert.match(releaseWorkflow, /uses:\s*actions\/upload-artifact@v4/)
   assert.match(releaseWorkflow, /path:\s*admin-web\/test-results/)
   assert.doesNotMatch(releaseWorkflow, /^\s*push:/m)
   assert.match(releaseWorkflow, /workflow_call:\s*\n/)
   assert.match(releaseWorkflow, /workflow_dispatch:\s*\n/)
   assert.match(releaseWorkflow, /^  root-contracts:/m)
+  assert.match(
+    releaseWorkflow,
+    /root-contracts:[\s\S]*?uses:\s*actions\/checkout@v6\s*\n\s*with:\s*\n\s*fetch-depth:\s*0/,
+  )
   assert.match(releaseWorkflow, /^  backend-release:/m)
   assert.match(releaseWorkflow, /^  frontend-release:/m)
   assert.match(releaseWorkflow, /^  release-check:/m)

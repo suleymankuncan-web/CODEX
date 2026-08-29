@@ -345,6 +345,8 @@ test('CI release DAG has independent proof jobs and one fail-closed aggregate', 
   assert.match(workflow, /RELEASE_BACKEND_RESULT/)
   assert.match(workflow, /RELEASE_FRONTEND_RESULT/)
   assert.doesNotMatch(workflow, /upload-artifact[\s\S]*if:\s*\$\{\{ success\(\) \}\}/)
+  assert.match(workflow, /Publish Playwright test summary[\s\S]*if:\s*\$\{\{ always\(\) \}\}/)
+  assert.match(workflow, /Upload structured Playwright results and failure artifacts/)
 
   assert.equal(
     evaluateReleaseWorkflowFinal({
