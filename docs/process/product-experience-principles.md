@@ -59,6 +59,9 @@ in `docs/process/ui-surface-standard-v1.md`. Reusable implementation recipes
 live in `docs/process/ui-surface-recipes-v1.md`. Use both whenever a surface is
 created, refactored, or moved from prototype to product.
 
+Exact production reference surfaces and viewport evidence expectations live in
+`docs/ui/golden-surfaces/reference-map.md`.
+
 Taste-skill output is not a product decision by itself. Adapt it to operational
 product UI: no marketing hero defaults, decorative-only premium elements, fake
 business copy, or workflow-changing ideas.

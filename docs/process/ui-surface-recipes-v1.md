@@ -1,4 +1,4 @@
-# UI Surface Recipes V1
+# UI Surface Recipes V2
 
 Reader:
 
@@ -15,7 +15,11 @@ Before creating page-local markup, choose the closest recipe:
 
 | Need | Recipe |
 | --- | --- |
-| Premium Store/Admin operation page | Operational command surface |
+| Stores, personnel, users, templates | List and management surface |
+| Time-sensitive operations | Operational workbench |
+| Repeated questions or fields | Long form or checklist |
+| Completed evidence | Result or report |
+| Record history and audit | Detail or audit |
 | Date filter | Date filter |
 | Month/year period | Period filter |
 | Table controls | Table toolbar |
@@ -28,6 +32,96 @@ Before creating page-local markup, choose the closest recipe:
 | Export or secondary commands | Command group |
 
 If no recipe fits, still start from shadcn primitives and semantic tokens.
+
+## Design Read Recipe
+
+Write this short block before implementation:
+
+```text
+Surface:
+Persona:
+Primary task:
+Density:
+Archetype:
+Visual direction:
+Primary action:
+Data shape:
+Mobile behavior:
+Unchanged contract:
+Golden reference:
+```
+
+Do not continue when the primary task, archetype, and unchanged contract are
+ambiguous. The design read is a decision record, not a decorative brief.
+
+## List And Management Surface
+
+Use for stores, personnel, users, roles, templates, and similar records.
+
+1. Flat compact header: title, one useful sentence, primary create action.
+2. Real `Tabs` only when the same object family has two to four workspaces.
+3. One toolbar containing search, relevant filters, result count, and optional
+   secondary action.
+4. One desktop record surface with `56-64px` rows.
+5. Compact mobile record cards.
+6. One edit/detail dialog or drawer.
+
+Each record shows the object name, stable business code, human-readable owner,
+one or two decision-relevant attributes, semantic status, and one row action or
+overflow menu. Do not add metric cards unless the counts change a management
+decision.
+
+## Operational Workbench
+
+Use for approval queues, incident work, daily visits, and other prioritized
+operations.
+
+1. Compact header with current scope and dominant command.
+2. Optional decision strip with no more than four actionable values.
+3. Filters tied to the current decision.
+4. Prioritized work list or grouped workbench.
+5. Focused drawer for evidence or adjustment.
+6. Confirmation dialog for a blocking or package-level action.
+
+The first viewport must reveal what needs attention and what the user can do.
+It must not be a dashboard of decorative summaries.
+
+## Long Form Or Checklist
+
+Use for 20-100 repeated questions or fields.
+
+- Keep the active section and progress visible without covering content.
+- Use compact repeated rows and a stable answer geometry.
+- Separate questions through spacing and a single divider, not nested cards.
+- Draft save and completion actions live in a sticky boundary.
+- Notes, evidence, and validation expand within the item instead of opening
+  nested overlays.
+- Mobile keeps choices readable, full-width, and at least 44px high.
+- `N/A` is displayed as not scored when the business contract excludes it.
+
+## Result Or Report
+
+Use for completed checklist results, score evidence, and period reports.
+
+1. Compact identity and outcome summary.
+2. Two to four decision-relevant facts, as text or a restrained grid.
+3. Grouped evidence with earned and possible values when scoring exists.
+4. Optional export or follow-up action when permission allows it.
+
+Avoid giant score ornaments, progress-track decoration, duplicate summaries,
+and unrelated action panels. Long evidence must stay scannable at 50 or more
+items.
+
+## Detail Or Audit
+
+Use a `Drawer`, `Sheet`, `Dialog`, or dedicated page based on depth:
+
+- drawer for quick inspection and a bounded edit,
+- dialog for a focused result or confirmation,
+- dedicated page for deep history or multi-section evidence.
+
+Keep identity and close controls fixed. Scroll only the body. Do not nest a
+drawer and dialog for the same detail; replace the current overlay state.
 
 ## Operational Command Surface
 

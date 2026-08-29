@@ -8,6 +8,7 @@ const recipesPath = 'docs/process/ui-surface-recipes-v1.md'
 const disciplinePath = 'discipline.md'
 const productExperiencePath = 'docs/process/product-experience-principles.md'
 const docsReadmePath = 'docs/README.md'
+const goldenReferencePath = 'docs/ui/golden-surfaces/reference-map.md'
 const shadcnTokenPath = 'admin-web/src/styles/shadcn-tailwind.css'
 
 const forbiddenLegacyTokenNames = [
@@ -229,6 +230,7 @@ function requireText(text, expected) {
 test('UI surface standard is discoverable from operating docs', () => {
   const standard = readText(standardPath)
   const recipes = readText(recipesPath)
+  const goldenReference = readText(goldenReferencePath)
 
   for (const text of [readText(disciplinePath), readText(productExperiencePath), readText(docsReadmePath)]) {
     requireText(text, standardPath)
@@ -238,8 +240,16 @@ test('UI surface standard is discoverable from operating docs', () => {
     requireText(text, recipesPath)
   }
 
+  for (const text of [standard, readText(productExperiencePath), readText(docsReadmePath)]) {
+    requireText(text, goldenReferencePath)
+  }
+
   for (const expected of [
-    '# UI Surface Standard V1',
+    '# UI Surface Standard V2',
+    '## Mandatory Design Read',
+    '## Surface Archetypes',
+    '## Quantitative Visual Contract',
+    '## Visual Language Lock',
     '## Component Selection',
     '## Button Standard',
     '## Icon Standard',
@@ -248,6 +258,8 @@ test('UI surface standard is discoverable from operating docs', () => {
     'Token ownership:',
     '## Product Copy Standard',
     '## Prototype To Product',
+    '## Overlay Contract',
+    '## Visual Acceptance Gate',
     '## Guard',
     '## Done Criteria',
     'production-bound prototypes must be built from the same runtime contract as',
@@ -258,7 +270,13 @@ test('UI surface standard is discoverable from operating docs', () => {
   }
 
   for (const expected of [
-    '# UI Surface Recipes V1',
+    '# UI Surface Recipes V2',
+    '## Design Read Recipe',
+    '## List And Management Surface',
+    '## Operational Workbench',
+    '## Long Form Or Checklist',
+    '## Result Or Report',
+    '## Detail Or Audit',
     '## Date Filter',
     '## Period Filter',
     '## Table Toolbar',
@@ -270,6 +288,16 @@ test('UI surface standard is discoverable from operating docs', () => {
     '## Prototype To Product Checklist',
   ]) {
     requireText(recipes, expected)
+  }
+
+  for (const expected of [
+    '# Golden Surface Reference Map',
+    '## How A Surface Becomes Golden',
+    '## Active References',
+    '## Promotion Queue',
+    '## Evidence Naming',
+  ]) {
+    requireText(goldenReference, expected)
   }
 })
 

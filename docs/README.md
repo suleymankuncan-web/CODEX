@@ -88,6 +88,7 @@ Use for daily direction and working discipline.
 - `docs/process/product-experience-principles.md`
 - `docs/process/ui-surface-standard-v1.md`
 - `docs/process/ui-surface-recipes-v1.md`
+- `docs/ui/golden-surfaces/reference-map.md`
 - `docs/process/store-admin-surface-standardization-v1.md`
 - `docs/plans/project-growth-execution-roadmap-v1.md`
 - `docs/plans/active-next-actions.md`
