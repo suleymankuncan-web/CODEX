@@ -20,7 +20,6 @@ const oversizedBaseline = new Map([
   ['backend/nestjs/src/modules/integration/infrastructure/master-data-bootstrap.repository.ts', 1179],
   ['admin-web/src/pages/store-my-performance-model.ts', 1018],
   ['admin-web/src/styles/store-approvals-ledger.css', 976],
-  ['admin-web/src/features/auth/AuthDashboardSections.tsx', 937],
   ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 846],
   ['admin-web/src/features/competitions/StageBuilderForm.tsx', 861],
   ['admin-web/src/pages/store-my-performance-sections.tsx', 865],

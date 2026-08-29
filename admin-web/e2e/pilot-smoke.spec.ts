@@ -59,7 +59,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/master-data',
       urlPattern: /\/admin\/master-data$/,
-      heading: page.getByRole('heading', { name: 'Ana Veri Kontrolü' }),
+      heading: page.getByRole('heading', { name: 'Mağaza ve personel' }),
     },
     {
       path: '/admin/targets',
@@ -69,7 +69,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/auth',
       urlPattern: /\/admin\/auth$/,
-      heading: page.getByRole('heading', { name: 'Erişim Yönetimi' }),
+      heading: page.getByRole('heading', { name: 'Kullanıcılar ve yetkiler' }),
     },
     {
       path: '/admin/audit',
@@ -444,6 +444,16 @@ async function routePilotSmokeApi(context: BrowserContext) {
 
     if (pathname.endsWith('/api/auth/users')) {
       await route.fulfill({ json: authUsersFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/auth/roles')) {
+      await route.fulfill({ json: authRolesFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/auth/permissions')) {
+      await route.fulfill({ json: authPermissionsFixture })
       return
     }
 
@@ -925,6 +935,26 @@ const authUsersFixture = {
       createdAt: '2026-05-01T08:00:00.000Z',
     },
   ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const authRolesFixture = {
+  items: [
+    {
+      ...authLookupsFixture.roles[0],
+      description: null,
+      isSystemRole: true,
+      permissions: authLookupsFixture.permissions,
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const authPermissionsFixture = {
+  items: authLookupsFixture.permissions.map((permission) => ({
+    ...permission,
+    description: 'Read authentication data',
+  })),
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
 }
 

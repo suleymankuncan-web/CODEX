@@ -262,6 +262,7 @@ These values are read by `admin-web/src`.
 | `VITE_BROWSER_SESSION_TRANSPORT` | P0 for launch browser sessions | `bearer` preserves the legacy rollback path; `cookie` is the launch target after backend cookie sessions are proven. | Separate from `VITE_AUTH_MODE`; do not overload auth mode as the transport flag. |
 | `VITE_AUTH_PROVIDER` | P0 | Use `clerk` when Clerk owns browser authentication. | Enables Clerk frontend bridge; authorization remains in HR Axis DB. |
 | `VITE_USER_ID` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
+| `VITE_EMPLOYEE_ID` | P1 local-only | Do not use for production auth. | Optional mock-session employee identity helper only. |
 | `VITE_ROLE_CODES` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_COMPANY_IDS` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_STORE_IDS` | P1 local-only | Do not use for production auth. | Mock-session store-scope helper only. |

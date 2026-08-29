@@ -1,4 +1,7 @@
-import type { MobileChecklistToday } from '../features/checklists/api'
+import type {
+  ChecklistComplianceResponseValue,
+  MobileChecklistToday,
+} from '../features/checklists/api'
 
 export type ChecklistCoverageRow = {
   store: MobileChecklistToday['stores'][number]
@@ -51,10 +54,12 @@ export type ChecklistResponseDraft = {
   checklistInstanceId: string
   templateItemId: string
   scoreValue: number
+  responseValue?: ChecklistComplianceResponseValue
   commentText?: string
 }
 export type ChecklistDraftHydration = {
   comments: Record<string, string>
+  responseValues: Record<string, ChecklistComplianceResponseValue>
   scores: Record<string, number>
 }
 export type ChecklistVisitStartVariables = {
@@ -68,6 +73,7 @@ export type StoreChecklistsState = {
   ackNotes: Record<string, string>
   ackNotice: string | null
   scores: Record<string, number>
+  responseValues: Record<string, ChecklistComplianceResponseValue>
   comments: Record<string, string>
   selectedSessionKey: string | null
   selectedResultId: string | null
@@ -102,11 +108,17 @@ export type StoreChecklistsAction =
       type: 'openSession'
       rowKey: string
       scores: Record<string, number>
+      responseValues: Record<string, ChecklistComplianceResponseValue>
       comments: Record<string, string>
     }
   | { type: 'resetSessionDrafts' }
   | { type: 'closeSession' }
-  | { type: 'setScoreDraft'; templateItemId: string; score: number | null }
+  | {
+      type: 'setScoreDraft'
+      templateItemId: string
+      score: number | null
+      responseValue?: ChecklistComplianceResponseValue | null
+    }
   | { type: 'setCommentDraft'; templateItemId: string; comment: string }
   | { type: 'setAckNote'; checklistInstanceId: string; note: string }
   | { type: 'selectTab'; tab: ChecklistTab }
@@ -125,6 +137,7 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
     ackNotes: {},
     ackNotice: takeChecklistCommandNotice(),
     scores: {},
+    responseValues: {},
     comments: {},
     selectedSessionKey: null,
     selectedResultId: resolveChecklistResultFromSearch(search),
@@ -149,7 +162,7 @@ export function upsertChecklistActiveResponse(
 ): ChecklistActiveInstance {
   const response = {
     templateItemId: draft.templateItemId,
-    responseValue: null,
+    responseValue: draft.responseValue ?? null,
     scoreValue: draft.scoreValue,
     commentText: draft.commentText ?? null,
   }
@@ -208,6 +221,7 @@ export function storeChecklistsReducer(
           [action.rowKey]: action.instance,
         },
         scores: {},
+        responseValues: {},
         comments: {},
         selectedSessionKey: action.rowKey,
         sessionDirty: false,
@@ -253,21 +267,41 @@ export function storeChecklistsReducer(
         ...state,
         selectedSessionKey: action.rowKey,
         scores: action.scores,
+        responseValues: action.responseValues,
         comments: action.comments,
         sessionDirty: false,
       }
     case 'resetSessionDrafts':
-      return { ...state, scores: {}, comments: {}, selectedSessionKey: null, sessionDirty: false }
+      return {
+        ...state,
+        scores: {},
+        responseValues: {},
+        comments: {},
+        selectedSessionKey: null,
+        sessionDirty: false,
+      }
     case 'closeSession':
       return { ...state, selectedSessionKey: null, sessionDirty: false }
     case 'setScoreDraft': {
       const nextScores = { ...state.scores }
+      const nextResponseValues = { ...state.responseValues }
       if (action.score === null) {
         delete nextScores[action.templateItemId]
+        delete nextResponseValues[action.templateItemId]
       } else {
         nextScores[action.templateItemId] = action.score
+        if (action.responseValue) {
+          nextResponseValues[action.templateItemId] = action.responseValue
+        } else {
+          delete nextResponseValues[action.templateItemId]
+        }
       }
-      return { ...state, scores: nextScores, sessionDirty: true }
+      return {
+        ...state,
+        scores: nextScores,
+        responseValues: nextResponseValues,
+        sessionDirty: true,
+      }
     }
     case 'setCommentDraft':
       return {

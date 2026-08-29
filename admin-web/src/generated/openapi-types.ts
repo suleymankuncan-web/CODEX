@@ -742,6 +742,12 @@ export type components = {
     "ChecklistVisitPlanResponse": {
       "data": components['schemas']["ChecklistVisitPlan"]
     }
+    "ChecklistVisitPlanVisitCompletionResponse": {
+      "data": {
+        "planItemId": string
+        "completedAt": string
+      }
+    }
     "ClassifyPilotFeedbackRequest": {
       "classification": "p0_stop" | "p1_pilot_blocker" | "p2_pilot_friction" | "p3_backlog"
       "note"?: string
@@ -927,11 +933,31 @@ export type components = {
         "offset": number
       }
     }
+    "CompleteChecklistVisitPlanItemRequest": {
+      "idempotencyKey": string
+    }
     "CreateActionStoreAssignmentDto": {
       "userId": string
       "storeId": string
       "effectiveFrom"?: string
       "effectiveTo"?: string
+    }
+    "CreateActionStoreAssignmentsBatchDto": {
+      "userId": string
+      "storeIds": string[]
+      "effectiveFrom"?: string
+      "effectiveTo"?: string
+    }
+    "CreatePersonnelMasterDto": {
+      "firstName": string
+      "lastName": string
+      "externalEmployeeRef"?: string
+      "nationalId": string
+      "phoneNumber": string
+      "employmentType": "full_time" | "part_time" | "temporary"
+      "hireDate": string
+      "storeId": string
+      "positionId": string
     }
     "CreatePilotFeedbackRequest": {
       "feedbackType": "bug" | "friction" | "idea" | "data_quality" | "other"
@@ -988,6 +1014,14 @@ export type components = {
       "summary"?: string
       "priority": "high" | "medium" | "low"
       "dueOn": string
+    }
+    "CreateStoreMasterDto": {
+      "storeCode": string
+      "storeName": string
+      "storeType": "company" | "franchise" | "operator"
+      "regionId": string
+      "status": "active" | "inactive" | "closed"
+      "kpiImportEnabled": boolean
     }
     "CreateTargetDistributionRequestDto": {
       "storeId": string
@@ -3439,6 +3473,11 @@ export type components = {
     "TaskCommandWorkspaceResponse": {
       "data": components['schemas']["TaskCommandWorkspace"]
     }
+    "TerminatePersonnelMasterDto": {
+      "terminationDate": string
+      "reason": string
+      "expectedUpdatedAt"?: string
+    }
     "UpdateKpiImportStoreScopeDto": {
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
@@ -3903,6 +3942,20 @@ export type paths = {
       }
     }
   }
+  "/api/auth/action-store-assignments/batch": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateActionStoreAssignmentsBatchDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
   "/api/auth/action-store-assignments/{assignmentId}/audit": {
     get: {
       responses: {
@@ -4357,12 +4410,42 @@ export type paths = {
         }
       }
     }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreatePersonnelMasterDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["PersonnelMasterCommandResponse"]
+          }
+        }
+      }
+    }
   }
   "/api/integrations/personnel-master/{employeeId}": {
     patch: {
       requestBody: {
         content: {
           'application/json': components['schemas']["UpdatePersonnelMasterDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelMasterCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/personnel-master/{employeeId}/terminate": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["TerminatePersonnelMasterDto"]
         }
       }
       responses: {
@@ -4391,6 +4474,20 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["StoreMasterListResponse"]
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateStoreMasterDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["StoreMasterCommandResponse"]
           }
         }
       }
@@ -4889,6 +4986,22 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistVisitPlanResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CompleteChecklistVisitPlanItemRequest"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["ChecklistVisitPlanVisitCompletionResponse"]
           }
         }
       }

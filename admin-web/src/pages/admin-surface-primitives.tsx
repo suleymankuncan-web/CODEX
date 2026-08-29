@@ -20,20 +20,20 @@ type AdminMetricStripItem = {
 
 const toneStyles: Record<AdminSurfaceTone, string> = {
   neutral: 'tw:border-border tw:bg-card tw:text-card-foreground',
-  accent: 'tw:border-violet-200 tw:bg-violet-50/70 tw:text-violet-950',
-  success: 'tw:border-emerald-200 tw:bg-emerald-50/70 tw:text-emerald-950',
-  warning: 'tw:border-amber-200 tw:bg-amber-50/70 tw:text-amber-950',
-  danger: 'tw:border-rose-200 tw:bg-rose-50/70 tw:text-rose-950',
-  cyan: 'tw:border-cyan-200 tw:bg-cyan-50/70 tw:text-cyan-950',
+  accent: 'tw:border-primary/20 tw:bg-primary/5 tw:text-foreground',
+  success: 'tw:border-success/25 tw:bg-success-soft tw:text-success-foreground',
+  warning: 'tw:border-warning/25 tw:bg-warning-soft tw:text-warning-foreground',
+  danger: 'tw:border-destructive/25 tw:bg-destructive/10 tw:text-destructive',
+  cyan: 'tw:border-primary/20 tw:bg-accent tw:text-accent-foreground',
 }
 
 const badgeToneStyles: Record<AdminSurfaceTone, string> = {
   neutral: 'tw:border-border tw:bg-background tw:text-muted-foreground',
-  accent: 'tw:border-violet-200 tw:bg-violet-100 tw:text-violet-800',
-  success: 'tw:border-emerald-200 tw:bg-emerald-100 tw:text-emerald-800',
-  warning: 'tw:border-amber-200 tw:bg-amber-100 tw:text-amber-800',
-  danger: 'tw:border-rose-200 tw:bg-rose-100 tw:text-rose-800',
-  cyan: 'tw:border-cyan-200 tw:bg-cyan-100 tw:text-cyan-800',
+  accent: 'tw:border-primary/20 tw:bg-primary/10 tw:text-primary',
+  success: 'tw:border-success/25 tw:bg-success-soft tw:text-success-foreground',
+  warning: 'tw:border-warning/25 tw:bg-warning-soft tw:text-warning-foreground',
+  danger: 'tw:border-destructive/25 tw:bg-destructive/10 tw:text-destructive',
+  cyan: 'tw:border-primary/20 tw:bg-accent tw:text-accent-foreground',
 }
 
 function AdminSurfacePage({
@@ -63,6 +63,7 @@ function AdminSurfaceHeader({
   icon,
   meta,
   title,
+  variant = 'contained',
 }: {
   actions?: ReactNode
   className?: string
@@ -71,11 +72,15 @@ function AdminSurfaceHeader({
   icon?: ReactNode
   meta?: ReactNode
   title: ReactNode
+  variant?: 'contained' | 'flat'
 }) {
   return (
     <header
       className={cn(
-        'tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:backdrop-blur tw:md:flex-row tw:md:items-start tw:md:justify-between',
+        'tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between',
+        variant === 'contained'
+          ? 'tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:backdrop-blur'
+          : 'tw:px-1 tw:py-2',
         className,
       )}
     >
@@ -91,7 +96,10 @@ function AdminSurfaceHeader({
               {eyebrow}
             </div>
           ) : null}
-          <h1 className="tw:m-0 tw:text-2xl tw:font-semibold tw:tracking-normal tw:text-foreground">
+          <h1 className={cn(
+            'tw:m-0 tw:font-semibold tw:tracking-normal tw:text-foreground',
+            variant === 'flat' ? 'tw:text-[1.75rem] tw:leading-[2.125rem]' : 'tw:text-2xl',
+          )}>
             {title}
           </h1>
           {description ? (

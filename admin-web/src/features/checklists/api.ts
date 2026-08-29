@@ -19,7 +19,12 @@ type CommandResponse<T> = {
   data: T
 }
 
-export type ChecklistTemplateResponseType = 'score' | 'yes_no' | 'partial' | 'text'
+export type ChecklistTemplateResponseType = 'score' | 'yes_no' | 'partial' | 'compliance' | 'text'
+export type ChecklistComplianceResponseValue =
+  | 'compliant'
+  | 'partially_compliant'
+  | 'non_compliant'
+  | 'not_applicable'
 export type ChecklistEvidencePolicy = 'none' | 'optional' | 'required'
 export type ChecklistItemEvidenceProjection = {
   checklistInstanceId: string
@@ -100,6 +105,7 @@ export type ChecklistAcknowledgementItem = {
     responseType: string
     weight: number
     maxScore: number
+    responseValue: string | null
     scoreValue: number | null
     commentText: string | null
   }>
@@ -144,6 +150,11 @@ export type MobileChecklistToday = Omit<GeneratedMobileChecklistToday, 'template
       captureSource: 'camera' | 'gallery' | 'system_generated'
       thumbnailAvailable: boolean
     }>
+    responses: Array<
+      GeneratedMobileChecklistToday['activeInstances'][number]['responses'][number] & {
+        responseValue: string | null
+      }
+    >
   }>
 }
 export type MobileChecklistTodayResponse = Omit<GeneratedMobileChecklistTodayResponse, 'data'> & {
@@ -179,6 +190,7 @@ export async function saveMobileChecklistResponse(input: {
   checklistInstanceId: string
   templateItemId: string
   scoreValue: number
+  responseValue?: ChecklistComplianceResponseValue
   commentText?: string
 }) {
   return sendJson<CommandResponse<{ checklistResponse: { response_id: string; responded_at: string } }>>(
@@ -188,6 +200,7 @@ export async function saveMobileChecklistResponse(input: {
       body: {
         templateItemId: input.templateItemId,
         scoreValue: input.scoreValue,
+        responseValue: input.responseValue,
         commentText: input.commentText,
       },
     },

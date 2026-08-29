@@ -23,17 +23,16 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
-test('master data renders import batches when updatedAt is absent', async ({ page }) => {
+test('master data renders the current management surface without page errors', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
   await routeMasterDataControlApi(page)
 
   await page.goto('/admin/master-data')
-  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
-  await page.getByRole('tab', { name: /İçe Aktarım/ }).click()
-
-  await expect(page.getByRole('heading', { name: 'Accepted personnel baseline' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza ve personel' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Mağazalar' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Personel' })).toBeVisible()
   expect(pageErrors).toEqual([])
 })
 
@@ -206,6 +205,7 @@ const storeMasterLookups = {
     { value: 'closed', label: 'Kapalı' },
   ],
   regions: [],
+  regionManagers: [],
 }
 
 const personnelMasterLookups = {

@@ -27,7 +27,6 @@ const masterDataBootstrapBatchDetailPanel = readText(
 const masterDataControlCenterPage = readText('admin-web/src/pages/master-data-control-center-page.tsx')
 const masterDataControlCenterDetail = readText('admin-web/src/pages/master-data-control-center-detail.tsx')
 const masterDataMessages = readText('admin-web/src/features/localization/messages/admin-master-data.ts')
-const adminRoutingSpec = readText('admin-web/e2e/admin-routing.spec.ts')
 const integrationSurfacesSpec = readText('admin-web/e2e/integration-surfaces.spec.ts')
 
 test('operator evidence consistency keeps the no-new-workflow boundary', () => {
@@ -90,11 +89,11 @@ test('operator evidence copy is visible on existing admin surfaces', () => {
   requireText(masterDataBootstrapBatchDetailPanel, 'adminMasterData.dryRunCopy')
 
   requireText(
-    adminRoutingSpec,
+    integrationSurfacesSpec,
     'Ana Veri Kontrolü',
   )
   requireText(
-    adminRoutingSpec,
+    integrationSurfacesSpec,
     'İçe Aktarım',
   )
 

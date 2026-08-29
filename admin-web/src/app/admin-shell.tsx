@@ -19,7 +19,7 @@ import {
   AuthActionStoreAssignmentAuditPage,
   AuthAssignmentAuditPage,
   AuthCatalogPage,
-  AuthDashboardPage,
+  AuthManagementPage,
   AuthUserAuditPage,
   CompetitionDashboardPage,
   ImportBatchDetailPage,
@@ -184,7 +184,7 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/auth"
-              element={adminRoute(['SUPER_ADMIN'], <AuthDashboardPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <AuthManagementPage />)}
             />
             <Route
               path="/admin/auth/catalog"

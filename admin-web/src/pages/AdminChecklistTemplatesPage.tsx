@@ -320,6 +320,7 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
     score: t('adminChecklists.responseScore'),
     yes_no: t('adminChecklists.responseYesNo'),
     partial: t('adminChecklists.responsePartial'),
+    compliance: 'Uygunluk (4 seçenek)',
     text: t('adminChecklists.responseText'),
   }
   const [templateType, setTemplateType] = useState<ChecklistTemplateType>('BM_STORE_VISIT')
