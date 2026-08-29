@@ -26,6 +26,10 @@ export class ListChecklistCommandQueryDto {
 
   @IsOptional()
   @IsPostgresUuid()
+  managerUserId?: string;
+
+  @IsOptional()
+  @IsPostgresUuid()
   regionId?: string;
 
   @IsOptional()

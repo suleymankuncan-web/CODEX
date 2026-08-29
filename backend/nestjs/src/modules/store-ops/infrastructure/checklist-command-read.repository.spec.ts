@@ -14,6 +14,7 @@ describe("ChecklistCommandReadRepository", () => {
           completedCoverageStores: 33,
         },
         items_json: [{
+          managerUserId: "manager-1",
           regionId: "region-1",
           regionName: "Marmara",
           regionManagers: [],
@@ -44,15 +45,14 @@ describe("ChecklistCommandReadRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(query).toHaveBeenCalledTimes(1);
-    expect(sql).toContain("ura.scope_type = 'region'");
-    expect(sql).toContain("ura.store_id IS NULL");
-    expect(sql).toContain("ORDER BY display_name");
-    expect(sql).toContain("region_name ASC, region_id ASC");
+    expect(sql).toContain("ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(sql).toContain("manager_store.user_id = ma.manager_user_id");
+    expect(sql).toContain("manager_user_id ASC");
     expect(sql).toContain("completed_type_count < 2");
-    expect(sql).toContain("GROUP BY ss.region_id, ss.region_name, rm.managers, rm.manager_sort");
+    expect(sql).toContain("GROUP BY manager.manager_user_id");
     expect(sql).toContain("latest_completed AS");
     expect(sql).toContain("active_checklists AS");
-    expect(sql).not.toContain("ua.username");
     expect(sql).not.toContain("ua.email");
     expect(query.mock.calls[0][1]).toEqual([
       ["company-1"], "2026-07", "missing_visit", 20, 0,
@@ -122,7 +122,6 @@ describe("ChecklistCommandReadRepository", () => {
     expect(sql).not.toContain("planned_at");
     expect(sql).not.toContain("acknowledgement_note");
     expect(sql).not.toContain("resolution_note");
-    expect(sql).not.toContain("ua.username");
     expect(sql).not.toContain("ua.email");
     expect(query.mock.calls[0][1]).toEqual([
       [],
@@ -137,6 +136,7 @@ describe("ChecklistCommandReadRepository", () => {
       0,
       "all",
       ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      null,
     ]);
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.lastCompletedVisitAt).toBe("2026-07-10T09:00:00.000Z");

@@ -35,10 +35,14 @@ export function ReportViewerChecklistCommandPage(input: {
   const regionFilters = { period, signal: 'all' as const, sort: 'manager_asc' as const, limit: REGION_PAGE_SIZE, offset: regionOffset }
   const regionQuery = useQuery({
     queryKey: storeChecklistCommandRegionsQueryKey(input.authSummary, regionFilters),
-    queryFn: () => getChecklistCommandRegions(regionFilters),
+    queryFn: async () => {
+      const response = await getChecklistCommandRegions(regionFilters)
+      return response.data.items.some(regionHasUnresolvedManagerIdentity)
+        ? getChecklistCommandRegions(regionFilters)
+        : response
+    },
     placeholderData: (previous, previousQuery) => retainScopedPlaceholder(previous, previousQuery?.queryKey, scopeSignature),
   })
-
   if (!regionQuery.data && regionQuery.isLoading) return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
   if (!regionQuery.data) {
     const forbidden = regionQuery.error instanceof ApiError && regionQuery.error.status === 403
@@ -58,10 +62,10 @@ export function ReportViewerChecklistCommandPage(input: {
   const searchValue = search.trim().toLocaleLowerCase(locale)
   const visibleManagerRows = searchValue.length === 0 ? managerRows : managerRows.filter((manager) => manager.managerName.toLocaleLowerCase(locale).includes(searchValue))
   const activeManager = managerRows.find((manager) => manager.key === selectedManagerKey) ?? visibleManagerRows[0]
-  const calendarManagers: ReportViewerManagerOption[] = managerRows.map((manager) => ({ key: manager.key, managerName: manager.managerName, scopeId: manager.region.regionId, storeCount: manager.region.metrics.totalStores }))
+  const calendarManagers: ReportViewerManagerOption[] = managerRows.map((manager) => ({ key: manager.key, managerName: manager.managerName, managerUserId: manager.region.managerUserId, storeCount: manager.region.metrics.totalStores }))
 
   const prefetchManager = (manager: (typeof managerRows)[number]) => {
-    const filters = createManagerStoreFilters(period, manager.region.regionId)
+    const filters = createManagerStoreFilters(period, manager.region.managerUserId)
     void queryClient.prefetchQuery({
       queryKey: storeChecklistCommandQueryKey(input.authSummary, filters),
       queryFn: () => getChecklistCommandCanvas(filters),
@@ -72,7 +76,7 @@ export function ReportViewerChecklistCommandPage(input: {
   const selectManager = async (manager: (typeof managerRows)[number]) => {
     if (manager.key === activeManager?.key) return
     const requestId = ++selectionRequestRef.current
-    const filters = createManagerStoreFilters(period, manager.region.regionId)
+    const filters = createManagerStoreFilters(period, manager.region.managerUserId)
     setPendingManagerKey(manager.key)
     try {
       await queryClient.ensureQueryData({
@@ -134,7 +138,7 @@ export function ReportViewerChecklistCommandPage(input: {
             <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{Math.floor(regionOffset / REGION_PAGE_SIZE) + 1}</span><div className="tw:flex tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={copy.previous} disabled={regionOffset === 0} onClick={() => { setRegionOffset(Math.max(0, regionOffset - REGION_PAGE_SIZE)); setSelectedManagerKey(null) }}><ChevronLeft /></Button><Button size="icon-xs" variant="ghost" aria-label={copy.next} disabled={!data.page.hasMore} onClick={() => { setRegionOffset(regionOffset + REGION_PAGE_SIZE); setSelectedManagerKey(null) }}><ChevronRight /></Button></div></footer>
           </aside>
 
-          {activeManager ? <ReportViewerManagerWorkspace authSummary={input.authSummary} locale={locale} managerName={activeManager.managerName} onOpenResult={input.onOpenResult} period={period} scopeId={activeManager.region.regionId} /> : null}
+          {activeManager ? <ReportViewerManagerWorkspace authSummary={input.authSummary} locale={locale} managerName={activeManager.managerName} managerUserId={activeManager.region.managerUserId} onOpenResult={input.onOpenResult} period={period} /> : null}
         </div>
       )}
 
@@ -143,15 +147,25 @@ export function ReportViewerChecklistCommandPage(input: {
   )
 }
 
-function createManagerStoreFilters(period: string, regionId: string) {
-  return { period, regionId, status: 'all' as const, sort: 'store_asc' as const, query: '', limit: 20, offset: 0 }
+function createManagerStoreFilters(period: string, managerUserId: string) {
+  return { period, managerUserId, status: 'all' as const, sort: 'store_asc' as const, query: '', limit: 20, offset: 0 }
 }
 
 function flattenManagers(regions: ChecklistCommandRegion[], noManager: string) {
   return regions.flatMap((region) => {
-    const managers = region.regionManagers.length > 0 ? region.regionManagers : [{ displayName: noManager }]
-    return managers.map((manager, index) => ({ key: `${region.regionId}:${manager.displayName}:${index}`, managerName: manager.displayName, region }))
+    const resolvedManagers = region.regionManagers.filter((manager) => isResolvedManagerDisplayName(manager.displayName))
+    const managers = resolvedManagers.length > 0 ? resolvedManagers : [{ displayName: noManager }]
+    return managers.map((manager, index) => ({ key: `${region.managerUserId}:${manager.displayName}:${index}`, managerName: manager.displayName, region }))
   })
+}
+
+function regionHasUnresolvedManagerIdentity(region: ChecklistCommandRegion) {
+  return region.regionManagers.length === 0 || region.regionManagers.some((manager) => !isResolvedManagerDisplayName(manager.displayName))
+}
+
+function isResolvedManagerDisplayName(value: string) {
+  const normalized = value.trim().toLocaleLowerCase('tr-TR')
+  return normalized.length > 0 && !['bilinmiyor', 'unknown', 'bölge müdürü tanımlı değil', 'no region manager assigned'].includes(normalized)
 }
 
 function EmptyState({ title, copy }: { title: string; copy: string }) {

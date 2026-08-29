@@ -13,6 +13,7 @@ import type { ChecklistCommandReadScope } from "../application/checklist-command
 
 type ChecklistCommandListInput = Omit<ChecklistCommandReadScope, "view"> & {
   period?: string;
+  managerUserId?: string;
   regionId?: string;
   query?: string;
   status: ChecklistCommandStatus;
@@ -61,12 +62,12 @@ const sortSql: Record<ChecklistCommandSort, string> = {
 };
 
 const regionSortSql: Record<ChecklistCommandRegionSort, string> = {
-  manager_asc: "manager_sort ASC, region_name ASC, region_id ASC",
-  manager_desc: "manager_sort DESC, region_name ASC, region_id ASC",
-  stores_desc: "total_stores DESC, region_name ASC, region_id ASC",
-  missing_desc: "missing_visit_stores DESC, region_name ASC, region_id ASC",
-  open_actions_desc: "open_action_count DESC, region_name ASC, region_id ASC",
-  score_desc: "visit_average_score DESC NULLS LAST, region_name ASC, region_id ASC",
+  manager_asc: "manager_sort ASC, manager_user_id ASC",
+  manager_desc: "manager_sort DESC, manager_user_id ASC",
+  stores_desc: "total_stores DESC, manager_sort ASC, manager_user_id ASC",
+  missing_desc: "missing_visit_stores DESC, manager_sort ASC, manager_user_id ASC",
+  open_actions_desc: "open_action_count DESC, manager_sort ASC, manager_user_id ASC",
+  score_desc: "visit_average_score DESC NULLS LAST, manager_sort ASC, manager_user_id ASC",
 };
 
 @Injectable()
@@ -101,6 +102,25 @@ export class ChecklistCommandReadRepository {
               OR (cardinality($3::uuid[]) > 0 AND s.store_id = ANY($3::uuid[]))
             )
             AND ($6::uuid IS NULL OR s.region_id = $6::uuid)
+            AND (
+              $13::uuid IS NULL
+              OR EXISTS (
+                SELECT 1
+                FROM ops.user_action_store_assignment manager_store
+                INNER JOIN ops.user_role_assignment manager_role
+                  ON manager_role.user_id = manager_store.user_id
+                 AND manager_role.start_at <= NOW()
+                 AND (manager_role.end_at IS NULL OR manager_role.end_at > NOW())
+                 AND (manager_role.company_id IS NULL OR manager_role.company_id = s.company_id)
+                INNER JOIN ops.role manager_role_definition
+                  ON manager_role_definition.role_id = manager_role.role_id
+                 AND manager_role_definition.role_code = 'REGION_MANAGER'
+                WHERE manager_store.user_id = $13::uuid
+                  AND manager_store.store_id = s.store_id
+                  AND manager_store.start_at <= NOW()
+                  AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+              )
+            )
             AND (
               $7::text IS NULL
               OR s.store_name ILIKE '%' || $7::text || '%'
@@ -205,27 +225,32 @@ export class ChecklistCommandReadRepository {
         ),
         region_managers AS (
           SELECT
-            ura.region_id,
+            manager_store.store_id,
             jsonb_agg(
               DISTINCT jsonb_build_object(
                 'displayName',
                 COALESCE(
                   NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
+                  NULLIF(TRIM(ua.username), ''),
                   'Bilinmiyor'
                 )
               )
             ) AS managers
-          FROM ops.user_role_assignment ura
+          FROM ops.user_action_store_assignment manager_store
+          INNER JOIN ops.user_role_assignment ura
+            ON ura.user_id = manager_store.user_id
           INNER JOIN ops.role role
             ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
           INNER JOIN ops.user_account ua
             ON ua.user_id = ura.user_id AND ua.is_active = TRUE
           LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
-          INNER JOIN (SELECT DISTINCT region_id FROM scoped_stores) sr
-            ON sr.region_id = ura.region_id
-          WHERE ura.start_at <= NOW()
+          INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
+          WHERE manager_store.start_at <= NOW()
+            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+            AND ura.start_at <= NOW()
             AND (ura.end_at IS NULL OR ura.end_at >= NOW())
-          GROUP BY ura.region_id
+            AND (ura.company_id IS NULL OR ura.company_id = ss.company_id)
+          GROUP BY manager_store.store_id
         ),
         command_base AS (
           SELECT
@@ -270,7 +295,7 @@ export class ChecklistCommandReadRepository {
           LEFT JOIN active_checklists ac ON ac.store_id = ss.store_id
           LEFT JOIN pending_acknowledgements pa ON pa.store_id = ss.store_id
           LEFT JOIN action_stats ast ON ast.store_id = ss.store_id
-          LEFT JOIN region_managers rm ON rm.region_id = ss.region_id
+          LEFT JOIN region_managers rm ON rm.store_id = ss.store_id
         ),
         filtered_command AS (
           SELECT *
@@ -357,6 +382,7 @@ export class ChecklistCommandReadRepository {
         input.offset,
         input.signal ?? "all",
         input.executionTemplateTypes,
+        input.managerUserId ?? null,
       ],
     );
 
@@ -469,57 +495,63 @@ export class ChecklistCommandReadRepository {
           LEFT JOIN active_checklists ac ON ac.store_id = ss.store_id
           LEFT JOIN action_stats ast ON ast.store_id = ss.store_id
         ),
-        region_manager_rows AS (
+        manager_accounts AS (
           SELECT
-            sr.company_id,
-            sr.region_id,
-            COALESCE(NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''), 'Bilinmiyor') AS display_name
-          FROM (SELECT DISTINCT company_id, region_id FROM scoped_stores) sr
-          INNER JOIN ops.user_role_assignment ura
-            ON ura.company_id = sr.company_id
-           AND ura.region_id = sr.region_id
-           AND ura.scope_type = 'region'
-           AND ura.store_id IS NULL
+            ura.user_id AS manager_user_id,
+            (MIN(ura.region_id::text) FILTER (WHERE ura.region_id IS NOT NULL))::uuid AS region_id,
+            COALESCE(
+              NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
+              NULLIF(TRIM(ua.username), ''),
+              'Bilinmiyor'
+            ) AS display_name
+          FROM ops.user_role_assignment ura
           INNER JOIN ops.role role
             ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
           INNER JOIN ops.user_account ua
             ON ua.user_id = ura.user_id AND ua.is_active = TRUE
           LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
-          WHERE ura.start_at <= NOW()
+          WHERE ura.company_id = ANY($1::uuid[])
+            AND ura.start_at <= NOW()
             AND (ura.end_at IS NULL OR ura.end_at >= NOW())
-          GROUP BY sr.company_id, sr.region_id, display_name
+          GROUP BY ura.user_id, display_name
         ),
-        region_managers AS (
+        manager_store_scope AS (
           SELECT
-            company_id,
-            region_id,
-            jsonb_agg(jsonb_build_object('displayName', display_name) ORDER BY display_name) AS managers,
-            MIN(display_name) AS manager_sort
-          FROM region_manager_rows
-          GROUP BY company_id, region_id
+            ma.manager_user_id,
+            ma.display_name,
+            COALESCE(ma.region_id, ss.region_id) AS region_id,
+            ss.region_name,
+            ss.store_id
+          FROM manager_accounts ma
+          INNER JOIN ops.user_action_store_assignment manager_store
+            ON manager_store.user_id = ma.manager_user_id
+          INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
+          WHERE manager_store.start_at <= NOW()
+            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+          GROUP BY ma.manager_user_id, ma.display_name, ma.region_id, ss.region_id, ss.region_name, ss.store_id
         ),
         region_base AS (
           SELECT
-            ss.region_id,
-            ss.region_name,
-            COALESCE(rm.managers, '[]'::jsonb) AS region_managers,
-            COALESCE(rm.manager_sort, ss.region_name) AS manager_sort,
+            manager.manager_user_id,
+            MIN(manager.region_id::text)::uuid AS region_id,
+            MIN(manager.display_name) AS region_name,
+            jsonb_build_array(jsonb_build_object('displayName', MIN(manager.display_name))) AS region_managers,
+            MIN(manager.display_name) AS manager_sort,
             COUNT(*)::int AS total_stores,
-            COUNT(*) FILTER (WHERE ss.completed_type_count < 2)::int AS missing_visit_stores,
-            COUNT(*) FILTER (WHERE ss.open_action_count > 0)::int AS stores_with_open_actions,
-            SUM(ss.open_action_count)::int AS open_action_count,
-            SUM(ss.blocked_action_count)::int AS blocked_action_count,
-            COUNT(*) FILTER (WHERE ss.completed_type_count >= 2)::int AS completed_coverage_stores,
+            COUNT(*) FILTER (WHERE signal.completed_type_count < 2)::int AS missing_visit_stores,
+            COUNT(*) FILTER (WHERE signal.open_action_count > 0)::int AS stores_with_open_actions,
+            SUM(signal.open_action_count)::int AS open_action_count,
+            SUM(signal.blocked_action_count)::int AS blocked_action_count,
+            COUNT(*) FILTER (WHERE signal.completed_type_count >= 2)::int AS completed_coverage_stores,
             CASE
-              WHEN SUM(ss.score_sample_count) = 0 THEN NULL
-              ELSE ROUND(SUM(ss.score_sum) / SUM(ss.score_sample_count), 2)
+              WHEN SUM(signal.score_sample_count) = 0 THEN NULL
+              ELSE ROUND(SUM(signal.score_sum) / SUM(signal.score_sample_count), 2)
             END AS visit_average_score,
-            SUM(ss.score_sample_count)::int AS score_sample_count,
-            MAX(ss.last_operational_at) AS last_operational_at
-          FROM store_signals ss
-          LEFT JOIN region_managers rm
-            ON rm.company_id = ss.company_id AND rm.region_id = ss.region_id
-          GROUP BY ss.region_id, ss.region_name, rm.managers, rm.manager_sort
+            SUM(signal.score_sample_count)::int AS score_sample_count,
+            MAX(signal.last_operational_at) AS last_operational_at
+          FROM manager_store_scope manager
+          INNER JOIN store_signals signal ON signal.store_id = manager.store_id
+          GROUP BY manager.manager_user_id
         ),
         filtered_regions AS (
           SELECT *
@@ -548,6 +580,7 @@ export class ChecklistCommandReadRepository {
           COALESCE((
             SELECT jsonb_agg(
               jsonb_build_object(
+                'managerUserId', pr.manager_user_id,
                 'regionId', pr.region_id,
                 'regionName', pr.region_name,
                 'regionManagers', pr.region_managers,

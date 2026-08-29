@@ -5,6 +5,7 @@ describe("ChecklistVisitPlanService", () => {
   const empty = { companyIds: [], regionIds: [], storeIds: [] };
   const repository = {
     getWeeklyPlan: jest.fn(),
+    getManagerWeeklyPlan: jest.fn(),
     saveWeeklyPlan: jest.fn(),
     listPeriod: jest.fn(),
     listCandidates: jest.fn(),
@@ -14,6 +15,38 @@ describe("ChecklistVisitPlanService", () => {
   const service = new ChecklistVisitPlanService(repository as never);
 
   beforeEach(() => jest.clearAllMocks());
+
+  it("reads Report Viewer weekly plans through the selected manager identity and company scope", async () => {
+    const managerUserId = "77777777-7777-4777-8777-777777777777";
+    repository.getManagerWeeklyPlan.mockResolvedValue({ regionId: "33333333-3333-4333-8333-333333333333", items: [] });
+
+    await service.getWeeklyPlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: empty,
+      roleScopes: { REPORT_VIEWER: { ...empty, companyIds: ["99999999-9999-4999-8999-999999999999"] } },
+      managerUserId,
+      weekStart: "2026-07-13",
+    });
+
+    expect(repository.getManagerWeeklyPlan).toHaveBeenCalledWith({
+      managerUserId,
+      weekStart: "2026-07-13",
+      companyIds: ["99999999-9999-4999-8999-999999999999"],
+    });
+    expect(repository.getWeeklyPlan).not.toHaveBeenCalled();
+  });
+
+  it("does not let Report Viewer fall back to a region identifier", async () => {
+    await expect(service.getWeeklyPlan({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: empty,
+      roleScopes: { REPORT_VIEWER: { ...empty, companyIds: ["99999999-9999-4999-8999-999999999999"] } },
+      regionId: "33333333-3333-4333-8333-333333333333",
+      weekStart: "2026-07-13",
+    })).rejects.toBeInstanceOf(ForbiddenException);
+  });
 
   it("denies a Region Manager cross-region read and write", async () => {
     const actor = {

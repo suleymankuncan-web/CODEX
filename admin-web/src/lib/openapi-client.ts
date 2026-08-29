@@ -50,10 +50,12 @@ export async function fetchOpenApiJson<Path extends keyof paths & `/api/${string
   input?: {
     params?: Record<string, string | number>
     query?: string | URLSearchParams
+    signal?: AbortSignal
   },
 ): Promise<ApiGetResponse<Path>> {
   return fetchJson<ApiGetResponse<Path>>(
     `${toClientApiPath(formatPathParams(path, input?.params))}${formatQuery(input?.query)}`,
+    input?.signal ? { signal: input.signal } : undefined,
   )
 }
 

@@ -11,7 +11,7 @@ import { ReportViewerWeeklyVisitPlan } from './ReportViewerWeeklyVisitPlan'
 export type ReportViewerManagerOption = {
   key: string
   managerName: string
-  scopeId: string
+  managerUserId: string
   storeCount: number
 }
 
@@ -73,7 +73,7 @@ function CalendarDialogContent(input: {
           {selectedManager ? (
             <div>
               <div className="tw:mb-3 tw:flex tw:items-baseline tw:justify-between tw:gap-3"><h3 className="tw:m-0 tw:text-base tw:font-semibold tw:tracking-[-0.015em]">{selectedManager.managerName}</h3><span className="tw:text-[11px] tw:text-muted-foreground">{selectedManager.storeCount} {copy.store}</span></div>
-              <ReportViewerWeeklyVisitPlan key={`${selectedManager.key}:${input.period}`} authSummary={input.authSummary} locale={input.locale} scopeId={selectedManager.scopeId} weekStart={weekStart} onWeekStartChange={setWeekStart} />
+              <ReportViewerWeeklyVisitPlan key={`${selectedManager.key}:${input.period}`} authSummary={input.authSummary} locale={input.locale} managerUserId={selectedManager.managerUserId} weekStart={weekStart} onWeekStartChange={setWeekStart} />
             </div>
           ) : <p className="tw:m-0 tw:py-12 tw:text-center tw:text-sm tw:text-muted-foreground">{copy.empty}</p>}
         </div>

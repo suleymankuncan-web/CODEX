@@ -25,6 +25,12 @@ type ReadInput = {
   storeIds: string[];
 };
 
+type ManagerReadInput = {
+  managerUserId: string;
+  weekStart: string;
+  companyIds: string[];
+};
+
 type SaveInput = {
   regionId: string;
   weekStart: string;
@@ -198,6 +204,15 @@ export class ChecklistVisitPlanRepository {
       null,
     ]);
     return this.mapPlan(result.rows[0], input.regionId, input.weekStart);
+  }
+
+  async getManagerWeeklyPlan(input: ManagerReadInput): Promise<ChecklistVisitPlanResult> {
+    const result = await this.databaseService.query<PlanRow>(readManagerPlanSql(), [
+      input.managerUserId,
+      input.weekStart,
+      input.companyIds,
+    ]);
+    return this.mapPlan(result.rows[0], input.managerUserId, input.weekStart);
   }
 
   async completeVisit(input: CompleteVisitInput): Promise<ChecklistVisitPlanVisitCompletion> {
@@ -445,6 +460,116 @@ function readPlanSql() {
           WHERE scoped_store.region_id = region.region_id AND scoped_store.store_id = ANY($5::uuid[])
         )
       )
+  `;
+}
+
+function readManagerPlanSql() {
+  return `
+    WITH manager_scope AS (
+      SELECT
+        ua.user_id AS manager_user_id,
+        COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), ua.username) AS manager_name,
+        store.store_id,
+        store.store_code,
+        store.store_name,
+        store.region_id
+      FROM ops.user_account ua
+      INNER JOIN ops.user_action_store_assignment manager_store
+        ON manager_store.user_id = ua.user_id
+       AND manager_store.start_at <= CURRENT_TIMESTAMP
+       AND (manager_store.end_at IS NULL OR manager_store.end_at > CURRENT_TIMESTAMP)
+      INNER JOIN ops.store store
+        ON store.store_id = manager_store.store_id
+       AND store.status = 'active'
+      INNER JOIN ops.company company
+        ON company.company_id = store.company_id
+       AND company.status = 'active'
+      LEFT JOIN ops.employee employee ON employee.employee_id = ua.employee_id
+      WHERE ua.user_id = $1::uuid
+        AND ua.is_active = TRUE
+        AND store.company_id = ANY($3::uuid[])
+        AND EXISTS (
+          SELECT 1
+          FROM ops.user_role_assignment ura
+          INNER JOIN ops.role role ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
+          WHERE ura.user_id = ua.user_id
+            AND ura.start_at <= CURRENT_TIMESTAMP
+            AND (ura.end_at IS NULL OR ura.end_at > CURRENT_TIMESTAMP)
+            AND (ura.company_id IS NULL OR ura.company_id = store.company_id)
+        )
+    ), manager_identity AS (
+      SELECT manager_user_id, manager_name,
+             (MIN(region_id::text))::uuid AS representative_region_id
+      FROM manager_scope
+      GROUP BY manager_user_id, manager_name
+    ), current_items AS (
+      SELECT
+        plan.plan_id,
+        revision.revision_no,
+        revision.created_at,
+        item.plan_item_id,
+        scope.store_id,
+        scope.store_code,
+        scope.store_name,
+        item.planned_date,
+        item.display_order,
+        CASE
+          WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
+          WHEN visit.visit_completion_id IS NOT NULL THEN 'completed'
+          WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
+          WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
+          ELSE 'missed'
+        END AS status,
+        completed.checklist_instance_id,
+        visit.completed_at AS visit_completed_at,
+        COALESCE(completed.completed_at, visit.completed_at) AS completed_at
+      FROM manager_scope scope
+      INNER JOIN ops.region_weekly_visit_plan plan
+        ON plan.region_id = scope.region_id
+       AND plan.week_start_date = $2::date
+       AND plan.visit_type = 'BM_STORE_VISIT'
+      INNER JOIN ops.region_weekly_visit_plan_revision revision
+        ON revision.plan_id = plan.plan_id
+       AND revision.is_current = TRUE
+      INNER JOIN ops.region_weekly_visit_plan_item item
+        ON item.revision_id = revision.revision_id
+       AND item.store_id = scope.store_id
+      LEFT JOIN LATERAL (
+        SELECT ci.checklist_instance_id, ci.completed_at
+        FROM ops.checklist_instance ci
+        INNER JOIN ops.checklist_template ct ON ct.checklist_template_id = ci.checklist_template_id
+        WHERE ci.store_id = item.store_id
+          AND ci.status = 'completed'
+          AND ct.template_type = 'BM_STORE_VISIT'
+          AND (ci.completed_at AT TIME ZONE 'Europe/Istanbul')::date = item.planned_date
+        ORDER BY ci.completed_at ASC, ci.checklist_instance_id ASC
+        LIMIT 1
+      ) completed ON TRUE
+      LEFT JOIN ops.region_weekly_visit_plan_completion visit ON visit.plan_item_id = item.plan_item_id
+    )
+    SELECT
+      NULL::uuid AS plan_id,
+      identity.representative_region_id AS region_id,
+      identity.manager_name AS region_name,
+      $2::date::text AS week_start_date,
+      COALESCE((SELECT MAX(revision_no) FROM current_items), 0) AS revision_no,
+      (SELECT MAX(created_at) FROM current_items) AS created_at,
+      COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'planItemId', item.plan_item_id,
+          'storeId', item.store_id,
+          'storeCode', item.store_code,
+          'storeName', item.store_name,
+          'plannedDate', item.planned_date,
+          'displayOrder', item.display_order,
+          'status', item.status,
+          'checklistInstanceId', item.checklist_instance_id,
+          'visitCompletedAt', item.visit_completed_at,
+          'completedAt', item.completed_at
+        ) ORDER BY item.planned_date, item.display_order, item.store_name, item.store_id)
+        FROM current_items item
+      ), '[]'::jsonb) AS items_json
+    FROM manager_identity identity
   `;
 }
 

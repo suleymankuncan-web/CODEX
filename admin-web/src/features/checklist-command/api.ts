@@ -62,15 +62,19 @@ export function getChecklistCommandRegions(input: ChecklistCommandRegionsQueryIn
 export function getChecklistOperationalHistory(input: {
   storeId: string
   query: ChecklistOperationalHistoryQueryInput
+  signal?: AbortSignal
 }) {
   return fetchOpenApiJson('/api/checklists/command-canvas/stores/{storeId}/operational-history', {
     params: { storeId: input.storeId },
     query: buildChecklistOperationalHistoryQuery(input.query),
+    ...(input.signal ? { signal: input.signal } : {}),
   })
 }
 
-export function getChecklistVisitPlan(input: { regionId: string; weekStart: string }) {
-  const query = new URLSearchParams({ regionId: input.regionId, weekStart: input.weekStart })
+export function getChecklistVisitPlan(input: { regionId?: string; managerUserId?: string; weekStart: string }) {
+  const query = new URLSearchParams({ weekStart: input.weekStart })
+  if (input.regionId) query.set('regionId', input.regionId)
+  if (input.managerUserId) query.set('managerUserId', input.managerUserId)
   return fetchOpenApiJson('/api/checklists/command-canvas/visit-plans', { query })
 }
 

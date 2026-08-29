@@ -102,7 +102,8 @@ describe("Checklist Command OpenAPI", () => {
     const write = document.paths["/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}"].put;
 
     expect(read.parameters).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "regionId", in: "query", required: true }),
+      expect.objectContaining({ name: "regionId", in: "query", required: false }),
+      expect.objectContaining({ name: "managerUserId", in: "query", required: false }),
       expect.objectContaining({ name: "weekStart", in: "query", required: true }),
     ]));
     expect(read.responses["200"].content["application/json"].schema).toEqual({

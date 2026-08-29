@@ -5768,6 +5768,15 @@
             }
           },
           {
+            "name": "managerUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "regionId",
             "in": "query",
             "required": false,
@@ -5828,6 +5837,8 @@
                 "vm_score_desc",
                 "last_visit_asc",
                 "last_visit_desc",
+                "elapsed_asc",
+                "elapsed_desc",
                 "open_actions_desc",
                 "status_asc",
                 "status_desc"
@@ -5936,7 +5947,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Company-scoped checklist command region aggregates for Report Viewer.",
+            "description": "Company-scoped checklist command manager aggregates for Report Viewer.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5958,7 +5969,16 @@
           {
             "name": "regionId",
             "in": "query",
-            "required": true,
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "managerUserId",
+            "in": "query",
+            "required": false,
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -25892,6 +25912,7 @@
       "ChecklistCommandRegionRow": {
         "type": "object",
         "required": [
+          "managerUserId",
           "regionId",
           "regionName",
           "regionManagers",
@@ -25901,6 +25922,10 @@
           "lastOperationalAt"
         ],
         "properties": {
+          "managerUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "regionId": {
             "type": "string",
             "format": "uuid"

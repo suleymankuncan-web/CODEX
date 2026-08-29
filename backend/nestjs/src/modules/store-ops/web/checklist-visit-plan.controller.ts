@@ -102,6 +102,7 @@ export class ChecklistVisitPlanController {
         actorReadScope: request.user.readScope,
         roleScopes: request.user.roleScopes,
         regionId: query.regionId,
+        managerUserId: query.managerUserId,
         weekStart: query.weekStart,
       }),
     };

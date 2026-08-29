@@ -17,18 +17,18 @@ export function ReportViewerManagerWorkspace(input: {
   authSummary: AuthSessionSummary | null
   locale: 'tr' | 'en'
   managerName: string
+  managerUserId: string
   onOpenResult: (checklistInstanceId: string) => void
   period: string
-  scopeId: string
 }) {
-  const workspaceKey = `${input.scopeId}:${input.period}`
+  const workspaceKey = `${input.managerUserId}:${input.period}`
   const [filterState, setFilterState] = useState<{ workspaceKey: string; search: string; offset: number; sort: ChecklistCommandSort }>({ workspaceKey, search: '', offset: 0, sort: 'store_asc' })
   const search = filterState.workspaceKey === workspaceKey ? filterState.search : ''
   const offset = filterState.workspaceKey === workspaceKey ? filterState.offset : 0
   const sort = filterState.workspaceKey === workspaceKey ? filterState.sort : 'store_asc'
   const [selectedStore, setSelectedStore] = useState<ChecklistCommandRow | null>(null)
   const historyTriggerRef = useRef<HTMLElement | null>(null)
-  const filters = { period: input.period, regionId: input.scopeId, status: 'all' as const, sort, query: search.trim(), limit: STORE_PAGE_SIZE, offset }
+  const filters = { period: input.period, managerUserId: input.managerUserId, status: 'all' as const, sort, query: search.trim(), limit: STORE_PAGE_SIZE, offset }
   const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
   const storesQuery = useQuery({
     queryKey: storeChecklistCommandQueryKey(input.authSummary, filters),
@@ -39,7 +39,7 @@ export function ReportViewerManagerWorkspace(input: {
         previous,
         previousQuery?.queryKey,
         scopeSignature,
-        previousFilters?.regionId === input.scopeId,
+        previousFilters?.managerUserId === input.managerUserId,
       )
     },
   })

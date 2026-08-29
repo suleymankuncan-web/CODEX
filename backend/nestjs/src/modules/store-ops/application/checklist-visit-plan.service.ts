@@ -23,8 +23,8 @@ type ReadActor = {
 
 type Actor = ReadActor & { actorUserId: string };
 
-type WeeklyPlanInput = Actor & { regionId: string; weekStart: string };
-type SaveWeeklyPlanInput = WeeklyPlanInput & {
+type WeeklyPlanInput = Actor & { regionId?: string; managerUserId?: string; weekStart: string };
+type SaveWeeklyPlanInput = Actor & { regionId: string; weekStart: string } & {
   expectedRevision: number;
   idempotencyKey: string;
   items: SaveChecklistVisitPlanItem[];
@@ -129,6 +129,24 @@ export class ChecklistVisitPlanService {
   async getWeeklyPlan(input: WeeklyPlanInput) {
     assertPlanWeek(input.weekStart);
     const scope = this.resolveScope(input);
+    if (scope.view === "report_viewer") {
+      if (!input.managerUserId) {
+        throw new ForbiddenException("Report Viewer weekly visit plans require a Region Manager identity");
+      }
+      const result = await this.repository.getManagerWeeklyPlan({
+        managerUserId: input.managerUserId,
+        weekStart: input.weekStart,
+        companyIds: scope.companyIds,
+      });
+      return {
+        ...result,
+        view: scope.view,
+        capabilities: { canMaintainWeeklyVisitPlan: false },
+      };
+    }
+    if (!input.regionId) {
+      throw new ForbiddenException("Weekly visit plans require an assigned region scope");
+    }
     this.assertRegionAccess(scope, input.regionId);
     const result = await this.repository.getWeeklyPlan({
       regionId: input.regionId,

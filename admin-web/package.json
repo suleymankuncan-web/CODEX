@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:e2e": "node scripts/playwright-build.mjs",
     "build:cloudflare": "tsc -b && vite build --mode cloudflare",
     "upload:cloudflare:artifact": "node scripts/cloudflare-release.mjs upload",
     "promote:cloudflare:version": "node scripts/cloudflare-release.mjs promote",
@@ -32,7 +33,7 @@
     "smoke:pilot": "npm run build && playwright test pilot-smoke.spec.ts pilot-api-contracts.spec.ts",
     "smoke:pilot:live": "node scripts/pilot-live-smoke.mjs",
     "check:release": "npm run check:release:static && npm run check:release:e2e && npm run check:release:audit",
-    "check:release:static": "npm run api:check && npm run lint && npm run test:scripts && npm run build",
+    "check:release:static": "npm run api:check && npm run lint && npm run test:scripts && npm run build:e2e",
     "check:release:e2e": "npm run test:e2e",
     "check:release:audit": "npm audit --omit=dev",
     "api:generate": "node scripts/generate-openapi-types.mjs",

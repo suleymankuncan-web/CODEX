@@ -19,6 +19,7 @@ type ListChecklistCommandInput = {
   actorReadScope: AuthReadScope;
   roleScopes?: Record<string, AuthReadScope>;
   period?: string;
+  managerUserId?: string;
   regionId?: string;
   query?: string;
   status?: ChecklistCommandStatus;
@@ -53,6 +54,9 @@ export class ChecklistCommandReadService {
     if (!scope) {
       throw new ForbiddenException("Checklist command view is not available for this role");
     }
+    if (scope.view === "report_viewer" && input.regionId && !input.managerUserId) {
+      throw new ForbiddenException("Report Viewer store selection requires a Region Manager identity");
+    }
 
     const limit = input.limit ?? 30;
     const offset = input.offset ?? 0;
@@ -67,6 +71,7 @@ export class ChecklistCommandReadService {
       allowedTemplateTypes: scope.allowedTemplateTypes,
       executionTemplateTypes: scope.executionTemplateTypes,
       period: input.period,
+      managerUserId: input.managerUserId,
       regionId: input.regionId,
       query: input.query,
       status: input.status ?? "all",

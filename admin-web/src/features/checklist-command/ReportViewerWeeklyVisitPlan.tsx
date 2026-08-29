@@ -15,15 +15,15 @@ import { buildChecklistPlanningDays, shiftChecklistWeek } from './model'
 export function ReportViewerWeeklyVisitPlan(input: {
   authSummary: AuthSessionSummary | null
   locale: 'tr' | 'en'
-  scopeId: string
+  managerUserId: string
   weekStart: string
   onWeekStartChange: (value: string) => void
 }) {
   const [mobileDaySelection, setMobileDaySelection] = useState<{ weekStart: string; index: number } | null>(null)
   const copy = input.locale === 'tr' ? trCopy : enCopy
   const planQuery = useQuery({
-    queryKey: storeChecklistVisitPlanQueryKey(input.authSummary, input.scopeId, input.weekStart),
-    queryFn: () => getChecklistVisitPlan({ regionId: input.scopeId, weekStart: input.weekStart }),
+    queryKey: storeChecklistVisitPlanQueryKey(input.authSummary, input.managerUserId, input.weekStart),
+    queryFn: () => getChecklistVisitPlan({ managerUserId: input.managerUserId, weekStart: input.weekStart }),
     ...transientQueryRetryOptions,
   })
 

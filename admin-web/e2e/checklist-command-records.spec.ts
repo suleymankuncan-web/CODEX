@@ -5,29 +5,32 @@ import { createStoreContractSession, installStoreContractSession } from './store
 const regionId = '11111111-1111-4111-8111-111111111111'
 const storeId = '22222222-2222-4222-8222-222222222222'
 const reportViewerManagers = [
-  { managerName: 'Onur Kaytan', regionId, regionName: 'Onur Kaytan Sorumluluğu' },
-  { managerName: 'Derya Aydın', regionId: '33333333-3333-4333-8333-333333333333', regionName: 'Derya Aydın Sorumluluğu' },
-  { managerName: 'Eda Doğanay', regionId: '44444444-4444-4444-8444-444444444444', regionName: 'Eda Doğanay Sorumluluğu' },
-  { managerName: 'Selin Arslan', regionId: '66666666-6666-4666-8666-666666666666', regionName: 'Selin Arslan Sorumluluğu' },
-  { managerName: 'Mert Yalçın', regionId: '77777777-7777-4777-8777-777777777777', regionName: 'Mert Yalçın Sorumluluğu' },
-  { managerName: 'Zeynep Aksoy', regionId: '88888888-8888-4888-8888-888888888888', regionName: 'Zeynep Aksoy Sorumluluğu' },
-  { managerName: 'Burak Demir', regionId: '99999999-9999-4999-8999-999999999999', regionName: 'Burak Demir Sorumluluğu' },
-  { managerName: 'Ceren Kılıç', regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', regionName: 'Ceren Kılıç Sorumluluğu' },
+  { managerName: 'Onur Kaytan', managerUserId: '10000000-0000-4000-8000-000000000001', regionId, regionName: 'Onur Kaytan Sorumluluğu' },
+  { managerName: 'Derya Aydın', managerUserId: '10000000-0000-4000-8000-000000000002', regionId: '33333333-3333-4333-8333-333333333333', regionName: 'Derya Aydın Sorumluluğu' },
+  { managerName: 'Eda Doğanay', managerUserId: '10000000-0000-4000-8000-000000000003', regionId: '44444444-4444-4444-8444-444444444444', regionName: 'Eda Doğanay Sorumluluğu' },
+  { managerName: 'Selin Arslan', managerUserId: '10000000-0000-4000-8000-000000000004', regionId: '66666666-6666-4666-8666-666666666666', regionName: 'Selin Arslan Sorumluluğu' },
+  { managerName: 'Mert Yalçın', managerUserId: '10000000-0000-4000-8000-000000000005', regionId: '77777777-7777-4777-8777-777777777777', regionName: 'Mert Yalçın Sorumluluğu' },
+  { managerName: 'Zeynep Aksoy', managerUserId: '10000000-0000-4000-8000-000000000006', regionId: '88888888-8888-4888-8888-888888888888', regionName: 'Zeynep Aksoy Sorumluluğu' },
+  { managerName: 'Burak Demir', managerUserId: '10000000-0000-4000-8000-000000000007', regionId: '99999999-9999-4999-8999-999999999999', regionName: 'Burak Demir Sorumluluğu' },
+  { managerName: 'Ceren Kılıç', managerUserId: '10000000-0000-4000-8000-000000000008', regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', regionName: 'Ceren Kılıç Sorumluluğu' },
 ] as const
 test('Report Viewer keeps manager selection, visit plan, stores, and history in a dedicated read-only workspace', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'reportViewer')
-  const requests = { histories: 0, mutations: 0, plans: 0, stores: 0 }
+  const requests = { histories: 0, mutations: 0, plans: 0, planManagerUserIds: [] as Array<string | null>, stores: 0 }
   page.on('request', (request) => {
     const url = new URL(request.url())
     const readOnlyPost = request.method() === 'POST' && url.pathname === '/api/checklists/acknowledgements/list'
     if (url.pathname.startsWith('/api/') && request.method() !== 'GET' && !readOnlyPost) requests.mutations += 1
     if (!url.pathname.startsWith('/api/checklists/command-canvas')) return
     if (url.pathname.endsWith('/operational-history')) requests.histories += 1
-    if (url.pathname.endsWith('/visit-plans')) requests.plans += 1
+    if (url.pathname.endsWith('/visit-plans')) {
+      requests.plans += 1
+      requests.planManagerUserIds.push(url.searchParams.get('managerUserId'))
+    }
     if (url.pathname === '/api/checklists/command-canvas') requests.stores += 1
   })
-  await routeReportViewerRecords(page, { delayedStoreRegionId: reportViewerManagers[1].regionId, storeDelayMs: 350 })
+  await routeReportViewerRecords(page, { delayedManagerUserId: reportViewerManagers[1].managerUserId, storeDelayMs: 350 })
 
   await page.goto('/store/checklists')
 
@@ -78,6 +81,7 @@ test('Report Viewer keeps manager selection, visit plan, stores, and history in 
   await expect.poll(() => requests.stores).toBe(2)
   await expect.poll(() => requests.histories).toBe(0)
   await expect.poll(() => requests.plans).toBe(1)
+  expect(requests.planManagerUserIds).toEqual([reportViewerManagers[0].managerUserId])
   await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/report-viewer-calendar-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: 'Ziyaret takvimini kapat' }).click()
 
@@ -122,6 +126,40 @@ test('Report Viewer keeps visible store rows while a new search loads in the bac
   await expect(page.getByText('Mağazalar yükleniyor')).toHaveCount(0)
   await expect(page.getByText('Onur Kaytan Mağaza 20')).toBeVisible()
   await expect(page.getByText('Marmara Park')).toHaveCount(0)
+})
+
+test('Report Viewer replaces unresolved manager identities with the next authoritative response', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page, { initialUnresolvedManagers: true })
+
+  await page.goto('/store/checklists')
+
+  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toBeVisible()
+  await expect(page.getByText('Bölge müdürü tanımlı değil')).toHaveCount(0)
+  await expect(page.getByText('Bilinmiyor', { exact: true })).toHaveCount(0)
+})
+
+test('Report Viewer store history leaves its loading state after an initial failure and retries', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page)
+  let historyFails = true
+  await page.route('**/api/checklists/command-canvas/stores/*/operational-history**', async (route) => {
+    if (historyFails) {
+      await route.fulfill({ status: 503, json: { message: 'temporary history failure' } })
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.goto('/store/checklists')
+  await page.getByRole('button', { name: 'Sonuçlar' }).first().click()
+  const recordDialog = page.getByRole('dialog', { name: 'Marmara Park mağaza kaydı' })
+  await expect(recordDialog.getByText('Mağaza kaydı açılamadı')).toBeVisible()
+  await expect(recordDialog.getByText('Mağaza kaydı yükleniyor')).toHaveCount(0)
+
+  historyFails = false
+  await recordDialog.getByRole('button', { name: 'Tekrar dene' }).click()
+  await expect(recordDialog.getByText('Denetim tamamlandı')).toBeVisible()
 })
 
 test('Report Viewer column headers request the selected store sorting', async ({ page }) => {
@@ -372,8 +410,11 @@ function commandPage(items: ReturnType<typeof commandRow>[], total: number, hasM
   return { data: { period: '2026-07', view: 'report_viewer', capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false }, metrics: { totalStores: total, needsVisit: 0, active: 0, pending: 0, completed: total }, items, page: { total, limit: 30, offset, hasMore } } }
 }
 
-async function routeReportViewerRecords(page: Page, options: { delayedStoreRegionId?: string; searchStoreDelayMs?: number; storeDelayMs?: number } = {}) {
+async function routeReportViewerRecords(page: Page, options: { delayedManagerUserId?: string; initialUnresolvedManagers?: boolean; searchStoreDelayMs?: number; storeDelayMs?: number } = {}) {
+  let regionRequestCount = 0
   await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
+    regionRequestCount += 1
+    const unresolved = options.initialUnresolvedManagers && regionRequestCount === 1
     await route.fulfill({
       json: {
         data: {
@@ -388,9 +429,10 @@ async function routeReportViewerRecords(page: Page, options: { delayedStoreRegio
             completedCoverageStores: 160,
           },
           items: reportViewerManagers.map((manager, managerIndex) => ({
+            managerUserId: manager.managerUserId,
             regionId: manager.regionId,
             regionName: manager.regionName,
-            regionManagers: [{ displayName: manager.managerName }],
+            regionManagers: unresolved ? [{ displayName: managerIndex === 0 ? 'Bilinmiyor' : 'Unknown' }] : [{ displayName: manager.managerName }],
             metrics: { totalStores: 20, missingVisitStores: 0, storesWithOpenActions: 1, openActionCount: 1, completedCoverageStores: 20, blockedActionCount: 0 },
             visitAverageScore: 82 + managerIndex,
             scoreSampleCount: 20,
@@ -403,15 +445,15 @@ async function routeReportViewerRecords(page: Page, options: { delayedStoreRegio
   })
   await page.route('**/api/checklists/command-canvas?**', async (route) => {
     const requestUrl = new URL(route.request().url())
-    const requestedRegionId = requestUrl.searchParams.get('regionId')
+    const requestedManagerUserId = requestUrl.searchParams.get('managerUserId')
     const query = requestUrl.searchParams.get('query')?.toLocaleLowerCase('tr-TR') ?? ''
-    if (requestedRegionId === options.delayedStoreRegionId) {
+    if (requestedManagerUserId === options.delayedManagerUserId) {
       await new Promise((resolve) => setTimeout(resolve, options.storeDelayMs ?? 250))
     }
     if (query && options.searchStoreDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.searchStoreDelayMs))
     }
-    const managerIndex = Math.max(0, reportViewerManagers.findIndex((manager) => manager.regionId === requestedRegionId))
+    const managerIndex = Math.max(0, reportViewerManagers.findIndex((manager) => manager.managerUserId === requestedManagerUserId))
     const manager = reportViewerManagers[managerIndex]
     const items = Array.from({ length: 20 }, (_value, index) => {
       const storeNumber = index + 1
