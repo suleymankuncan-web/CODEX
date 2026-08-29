@@ -227,7 +227,8 @@ Use `Table` or the existing shared table primitive.
 - Header labels are short nouns.
 - Row actions are right aligned.
 - Prefer an action menu when there are more than two row actions.
-- Use `Badge` for status, not page-local pill classes.
+- Use the shared `StatusBadge` for semantic status, not page-local pill classes
+  or raw palette utilities.
 - Use one row height rhythm per page.
 - Do not put long helper paragraphs above the table.
 

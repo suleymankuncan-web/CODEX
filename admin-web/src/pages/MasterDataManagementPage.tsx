@@ -15,7 +15,6 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react'
-import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import {
   Dialog,
@@ -44,6 +43,7 @@ import {
 } from '../components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group'
+import { StatusBadge as SemanticStatusBadge } from '../components/ui/status-badge'
 import {
   createPersonnelMasterData,
   createStoreMasterData,
@@ -820,16 +820,9 @@ function StatusBadge({ status }: { status: string }) {
   const active = status === 'active'
   const terminated = status === 'terminated' || status === 'closed'
   return (
-    <Badge
-      className={active
-        ? 'tw:rounded-md tw:border-success/25 tw:bg-success-soft tw:text-success-foreground'
-        : terminated
-          ? 'tw:rounded-md tw:border-destructive/25 tw:bg-destructive/10 tw:text-destructive'
-          : 'tw:rounded-md tw:border-warning/25 tw:bg-warning-soft tw:text-warning-foreground'}
-      variant="outline"
-    >
+    <SemanticStatusBadge tone={active ? 'success' : terminated ? 'danger' : 'warning'}>
       {active ? 'Aktif' : status === 'terminated' ? 'Çıkış yapıldı' : status === 'closed' ? 'Kapalı' : 'Pasif'}
-    </Badge>
+    </SemanticStatusBadge>
   )
 }
 

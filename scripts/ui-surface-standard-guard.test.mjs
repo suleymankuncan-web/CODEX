@@ -10,6 +10,12 @@ const productExperiencePath = 'docs/process/product-experience-principles.md'
 const docsReadmePath = 'docs/README.md'
 const goldenReferencePath = 'docs/ui/golden-surfaces/reference-map.md'
 const shadcnTokenPath = 'admin-web/src/styles/shadcn-tailwind.css'
+const statusBadgePath = 'admin-web/src/components/ui/status-badge.tsx'
+const statusBadgeModelPath = 'admin-web/src/components/ui/status-badge-model.ts'
+const statusBadgeReferencePaths = [
+  'admin-web/src/features/checklist-command/ReportViewerManagerWorkspace.tsx',
+  'admin-web/src/pages/MasterDataManagementPage.tsx',
+]
 
 const forbiddenLegacyTokenNames = [
   '--bg',
@@ -323,6 +329,21 @@ test('active UI strict surface patterns do not exceed the explicit current basel
 
 test('style token ownership keeps legacy foundation values namespaced', () => {
   assert.deepEqual(legacyTokenOwnershipViolations(), [])
+})
+
+test('golden management surfaces share the semantic status primitive', () => {
+  const statusBadge = readText(statusBadgePath)
+  const statusBadgeModel = readText(statusBadgeModelPath)
+
+  for (const tone of ['danger', 'info', 'neutral', 'success', 'warning']) {
+    requireText(statusBadgeModel, `${tone}:`)
+  }
+  requireText(statusBadge, 'data-tone={tone}')
+  assert.doesNotMatch(statusBadgeModel, /(?:blue|rose|amber|emerald)-\d/)
+
+  for (const path of statusBadgeReferencePaths) {
+    requireText(readText(path), 'status-badge')
+  }
 })
 
 test('UI surface guard rejects synthetic product-copy violations beyond baseline', () => {

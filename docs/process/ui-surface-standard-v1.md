@@ -166,7 +166,7 @@ Common mappings:
 | Dropdown/status filter | `Select` with `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectItem` |
 | 2-7 choices | `ToggleGroup` |
 | View sections | `Tabs` |
-| Status | `Badge` |
+| Status | shared `StatusBadge` built on `Badge` |
 | Page/section message | `Alert` |
 | Toast | `sonner` |
 | Loading | `Skeleton` or `Spinner` |

@@ -1,9 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, ChevronsUpDown, ChevronLeft, ChevronRight, ClipboardCheck, LoaderCircle, Search, Store } from 'lucide-react'
-import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { StatusBadge } from '../../components/ui/status-badge'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import type { AuthSessionSummary } from '../auth/api'
 import { getStoreQueryScopeSignature, retainScopedPlaceholder, storeChecklistCommandQueryKey } from '../auth/store-query-scope'
@@ -104,10 +104,10 @@ function SortableHeader(input: { label: string; onSort: (key: ChecklistCommandSo
 }
 
 function StoreStatus({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
-  if (row.activeBmChecklistCount > 0) return <Badge className="tw:border-blue-200 tw:bg-blue-50 tw:text-blue-700">{locale === 'tr' ? 'Aktif taslak' : 'Active draft'}</Badge>
-  if (row.status === 'needs_visit') return <Badge className="tw:border-rose-200 tw:bg-rose-50 tw:text-rose-700">{locale === 'tr' ? 'Ziyaret eksik' : 'Visit missing'}</Badge>
-  if (row.pendingBmAcknowledgementCount > 0) return <Badge className="tw:border-amber-200 tw:bg-amber-50 tw:text-amber-800">{locale === 'tr' ? 'Onay bekliyor' : 'Awaiting review'}</Badge>
-  return <Badge className="tw:border-emerald-200 tw:bg-emerald-50 tw:text-emerald-700">{locale === 'tr' ? 'Güncel' : 'Current'}</Badge>
+  if (row.activeBmChecklistCount > 0) return <StatusBadge tone="info">{locale === 'tr' ? 'Aktif taslak' : 'Active draft'}</StatusBadge>
+  if (row.status === 'needs_visit') return <StatusBadge tone="danger">{locale === 'tr' ? 'Ziyaret eksik' : 'Visit missing'}</StatusBadge>
+  if (row.pendingBmAcknowledgementCount > 0) return <StatusBadge tone="warning">{locale === 'tr' ? 'Onay bekliyor' : 'Awaiting review'}</StatusBadge>
+  return <StatusBadge tone="success">{locale === 'tr' ? 'Güncel' : 'Current'}</StatusBadge>
 }
 
 function WorkspaceMessage(input: { action?: ReactNode; copy?: string; icon: ReactNode; title: string }) {
