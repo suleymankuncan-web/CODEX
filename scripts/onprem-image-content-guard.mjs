@@ -99,13 +99,13 @@ const KEYCLOAK_APPROVED_CONTENT = Object.freeze({
     sha256: '95d9843470d3d46d179e94e6fd5ab921abd6f760ca2d08cb0572c5408297da43',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-3.33.2.1.jar': Object.freeze({
-    sha256: 'e131f7ea4bce3560ee17c9d307c649c24503df1a33e751afb4e64327d8375cd4',
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-3.33.3.1.jar': Object.freeze({
+    sha256: '16369d03f3de217ead4d5a5713f31b48b5138970e6f7e49aa5e7f99dfdae9227',
     kind: 'jar',
     allowTestPath: true,
   }),
-  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-decorator-3.33.2.1.jar': Object.freeze({
-    sha256: '3efbfc19d06ed9b0867610314e331f3ffbe465add53a927fe3989004b116fa0c',
+  'opt/keycloak/lib/lib/deployment/io.quarkus.quarkus-arc-test-supplement-decorator-3.33.3.1.jar': Object.freeze({
+    sha256: '9d05f4051396c822a4f9210c7b3847c28af8a7c45637b20b12b5ba9fc6136552',
     kind: 'jar',
     allowTestPath: true,
   }),
