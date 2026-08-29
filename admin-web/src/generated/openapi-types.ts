@@ -1021,6 +1021,7 @@ export type components = {
       "storeName": string
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
+      "regionManagerUserId": string
       "status": "active" | "inactive" | "closed"
       "kpiImportEnabled": boolean
     }
@@ -3482,6 +3483,7 @@ export type components = {
     "UpdateKpiImportStoreScopeDto": {
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
+      "regionManagerUserId"?: string
       "status": "active" | "inactive" | "closed"
       "kpiImportEnabled": boolean
       "expectedUpdatedAt"?: string

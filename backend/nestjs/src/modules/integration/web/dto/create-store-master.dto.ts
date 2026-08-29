@@ -16,6 +16,9 @@ export class CreateStoreMasterDto {
   @IsPostgresUuid()
   regionId!: string;
 
+  @IsPostgresUuid()
+  regionManagerUserId!: string;
+
   @IsIn(["active", "inactive", "closed"])
   status!: "active" | "inactive" | "closed";
 

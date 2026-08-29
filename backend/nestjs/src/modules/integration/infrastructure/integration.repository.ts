@@ -45,6 +45,78 @@ export class IntegrationRepository {
     return result.rows[0]?.user_id ?? null;
   }
 
+  private async syncRegionManagerStoreAssignment(
+    client: PoolClient,
+    input: { regionManagerUserId: string; storeId: string; companyId: string },
+  ) {
+    const managerResult = await client.query<{ is_valid: boolean }>(
+      `
+        SELECT EXISTS (
+          SELECT 1
+          FROM ops.user_account manager_account
+          INNER JOIN ops.user_role_assignment manager_role
+            ON manager_role.user_id = manager_account.user_id
+          INNER JOIN ops.role role
+            ON role.role_id = manager_role.role_id
+            AND role.role_code = 'REGION_MANAGER'
+          LEFT JOIN ops.region role_region
+            ON role_region.region_id = manager_role.region_id
+          WHERE manager_account.user_id = $1::uuid
+            AND manager_account.is_active = TRUE
+            AND manager_role.start_at <= NOW()
+            AND (manager_role.end_at IS NULL OR manager_role.end_at > NOW())
+            AND (
+              manager_role.company_id = $2::uuid
+              OR role_region.company_id = $2::uuid
+              OR (manager_role.company_id IS NULL AND manager_role.region_id IS NULL)
+            )
+        ) AS is_valid
+      `,
+      [input.regionManagerUserId, input.companyId],
+    );
+    if (!managerResult.rows[0]?.is_valid) {
+      throw new ConflictException("Selected user is not an active region manager for this company");
+    }
+
+    await client.query(
+      `
+        UPDATE ops.user_action_store_assignment manager_store
+        SET end_at = NOW()
+        WHERE manager_store.store_id = $2::uuid
+          AND manager_store.user_id <> $1::uuid
+          AND manager_store.start_at <= NOW()
+          AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+          AND EXISTS (
+            SELECT 1
+            FROM ops.user_role_assignment existing_manager_role
+            INNER JOIN ops.role existing_role
+              ON existing_role.role_id = existing_manager_role.role_id
+              AND existing_role.role_code = 'REGION_MANAGER'
+            WHERE existing_manager_role.user_id = manager_store.user_id
+              AND existing_manager_role.start_at <= NOW()
+              AND (existing_manager_role.end_at IS NULL OR existing_manager_role.end_at > NOW())
+          )
+      `,
+      [input.regionManagerUserId, input.storeId],
+    );
+
+    await client.query(
+      `
+        INSERT INTO ops.user_action_store_assignment (user_id, store_id, start_at, end_at)
+        SELECT $1::uuid, $2::uuid, NOW(), NULL
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM ops.user_action_store_assignment current_manager_store
+          WHERE current_manager_store.user_id = $1::uuid
+            AND current_manager_store.store_id = $2::uuid
+            AND current_manager_store.start_at <= NOW()
+            AND (current_manager_store.end_at IS NULL OR current_manager_store.end_at > NOW())
+        )
+      `,
+      [input.regionManagerUserId, input.storeId],
+    );
+  }
+
   async updatePersonnelMaster(
     input: Parameters<PersonnelMasterCommandRepository["updatePersonnelMaster"]>[0],
   ) {
@@ -320,6 +392,7 @@ export class IntegrationRepository {
     storeId: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
+    regionManagerUserId?: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
     actorUserId: string;
@@ -329,11 +402,13 @@ export class IntegrationRepository {
       const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
       const currentResult = await client.query<{
         store_id: string;
+        company_id: string;
         is_current: boolean;
       }>(
         `
           SELECT
             s.store_id::text AS store_id,
+            s.company_id::text AS company_id,
             ($4::timestamptz IS NULL OR s.updated_at = $4::timestamptz) AS is_current
           FROM ops.store s
           INNER JOIN ops.region r
@@ -409,6 +484,14 @@ export class IntegrationRepository {
         return null;
       }
 
+      if (input.regionManagerUserId) {
+        await this.syncRegionManagerStoreAssignment(client, {
+          regionManagerUserId: input.regionManagerUserId,
+          storeId: input.storeId,
+          companyId: currentStore.company_id,
+        });
+      }
+
       await client.query(
         `
           INSERT INTO audit.event_log (
@@ -429,6 +512,7 @@ export class IntegrationRepository {
             requestedActorUserId: input.actorUserId,
             storeType: input.storeType,
             regionId: input.regionId,
+            regionManagerUserId: input.regionManagerUserId,
             status: input.status,
             kpiImportEnabled: input.kpiImportEnabled,
           }),
@@ -447,6 +531,7 @@ export class IntegrationRepository {
     storeName: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
+    regionManagerUserId: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
   }) {
@@ -518,8 +603,7 @@ export class IntegrationRepository {
             INNER JOIN ops.role role ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
             INNER JOIN ops.user_account ua ON ua.user_id = ura.user_id AND ua.is_active = TRUE
             LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
-            WHERE ura.region_id = inserted.region_id
-              AND ura.scope_type = 'region'
+            WHERE ura.user_id = $8::uuid
               AND ura.start_at <= NOW()
               AND (ura.end_at IS NULL OR ura.end_at > NOW())
             ORDER BY ura.start_at DESC, ura.created_at DESC
@@ -534,10 +618,17 @@ export class IntegrationRepository {
           input.storeType,
           input.status,
           input.kpiImportEnabled,
+          input.regionManagerUserId,
         ],
       );
       const store = storeResult.rows[0];
       if (!store) return null;
+
+      await this.syncRegionManagerStoreAssignment(client, {
+        regionManagerUserId: input.regionManagerUserId,
+        storeId: store.store_id,
+        companyId,
+      });
 
       await client.query(
         `
@@ -553,6 +644,7 @@ export class IntegrationRepository {
             correlationId: RequestContextStore.getCorrelationId(),
             requestedActorUserId: input.actorUserId,
             regionId: input.regionId,
+            regionManagerUserId: input.regionManagerUserId,
             storeCode: store.store_code,
           }),
         ],

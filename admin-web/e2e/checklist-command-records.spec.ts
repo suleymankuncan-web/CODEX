@@ -58,12 +58,10 @@ test('Report Viewer keeps manager selection, visit plan, stores, and history in 
   await expect.poll(() => requests.plans).toBe(0)
 
   await deryaManager.click()
-    await expect(page.getByTestId('report-viewer-active-manager')).toHaveText('Onur Kaytan')
-    await expect(page.getByLabel('Onur Kaytan ortalama checklist puanı: 82')).toBeVisible()
-  await expect(page.getByText('Mağazalar yükleniyor')).toHaveCount(0)
-  await expect(deryaManager).toHaveAttribute('aria-busy', 'true')
   await expect(deryaManager).toHaveAttribute('aria-current', 'true')
   await expect(page.getByTestId('report-viewer-active-manager')).toHaveText('Derya Aydın')
+  await expect(page.getByText('Mağazalar yükleniyor')).toBeVisible()
+  await expect(page.getByText('Derya Aydın Mağaza 01')).toBeVisible()
   await expect.poll(() => requests.stores).toBe(2)
   await expect.poll(() => requests.plans).toBe(0)
   await onurManager.click()
@@ -128,13 +126,14 @@ test('Report Viewer keeps visible store rows while a new search loads in the bac
   await expect(page.getByText('Marmara Park')).toHaveCount(0)
 })
 
-test('Report Viewer replaces unresolved manager identities with the next authoritative response', async ({ page }) => {
+test('Report Viewer omits unresolved identities without retrying them into fake managers', async ({ page }) => {
   await installStoreContractSession(page, 'reportViewer')
   await routeReportViewerRecords(page, { initialUnresolvedManagers: true })
 
   await page.goto('/store/checklists')
 
-  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Derya Aydın/ })).toBeVisible()
   await expect(page.getByText('Bölge müdürü tanımlı değil')).toHaveCount(0)
   await expect(page.getByText('Bilinmiyor', { exact: true })).toHaveCount(0)
 })
@@ -432,7 +431,7 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
             managerUserId: manager.managerUserId,
             regionId: manager.regionId,
             regionName: manager.regionName,
-            regionManagers: unresolved ? [{ displayName: managerIndex === 0 ? 'Bilinmiyor' : 'Unknown' }] : [{ displayName: manager.managerName }],
+            regionManagers: unresolved && managerIndex === 0 ? [{ displayName: 'Bilinmiyor' }] : [{ displayName: manager.managerName }],
             metrics: { totalStores: 20, missingVisitStores: 0, storesWithOpenActions: 1, openActionCount: 1, completedCoverageStores: 20, blockedActionCount: 0 },
             visitAverageScore: 82 + managerIndex,
             scoreSampleCount: 20,

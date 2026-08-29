@@ -100,6 +100,7 @@ test('master data uses region-manager identities and exposes direct personnel en
     storeCode: 'NEW-101',
     storeName: 'Yeni Mağaza',
     regionId: '00000000-0000-0000-0000-000000000010',
+    regionManagerUserId: '00000000-0000-0000-0000-000000000502',
   }))
 
   await main
@@ -109,11 +110,17 @@ test('master data uses region-manager identities and exposes direct personnel en
     .getByRole('button')
     .click()
   const editDialog = page.getByRole('dialog', { name: 'Mağazayı düzenle' })
+  await expect(editDialog.getByRole('combobox', { name: 'Bölge müdürü' })).toHaveText(/Eda Doğanay/)
+  await editDialog.getByRole('combobox', { name: 'Mağaza durumu' }).click()
+  await page.getByRole('option', { name: 'Pasif' }).click()
+  await expect(editDialog.getByRole('button', { name: 'Kaydet' })).toBeEnabled()
   await editDialog.getByRole('combobox', { name: 'Bölge müdürü' }).click()
   await page.getByRole('option', { name: /Can Yılmaz/ }).click()
   await editDialog.getByRole('button', { name: 'Kaydet' }).click()
   expect(updateStoreBody).toEqual(expect.objectContaining({
-    regionId: '00000000-0000-0000-0000-000000000011',
+    regionId: '00000000-0000-0000-0000-000000000010',
+    regionManagerUserId: '00000000-0000-0000-0000-000000000512',
+    status: 'inactive',
   }))
 
   await main.getByRole('tab', { name: 'Personel' }).click()

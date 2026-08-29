@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, LoaderCircle, Search, UsersRound } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Search, UsersRound } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { ApiError } from '../../lib/api'
@@ -28,19 +28,12 @@ export function ReportViewerChecklistCommandPage(input: {
   const [search, setSearch] = useState('')
   const [regionOffset, setRegionOffset] = useState(0)
   const [selectedManagerKey, setSelectedManagerKey] = useState<string | null>(null)
-  const [pendingManagerKey, setPendingManagerKey] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const selectionRequestRef = useRef(0)
   const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
   const regionFilters = { period, signal: 'all' as const, sort: 'manager_asc' as const, limit: REGION_PAGE_SIZE, offset: regionOffset }
   const regionQuery = useQuery({
     queryKey: storeChecklistCommandRegionsQueryKey(input.authSummary, regionFilters),
-    queryFn: async () => {
-      const response = await getChecklistCommandRegions(regionFilters)
-      return response.data.items.some(regionHasUnresolvedManagerIdentity)
-        ? getChecklistCommandRegions(regionFilters)
-        : response
-    },
+    queryFn: () => getChecklistCommandRegions(regionFilters),
     placeholderData: (previous, previousQuery) => retainScopedPlaceholder(previous, previousQuery?.queryKey, scopeSignature),
   })
   if (!regionQuery.data && regionQuery.isLoading) return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
@@ -58,7 +51,7 @@ export function ReportViewerChecklistCommandPage(input: {
   }
 
   const data = regionQuery.data.data
-  const managerRows = flattenManagers(data.items, copy.noManager)
+  const managerRows = flattenManagers(data.items)
   const searchValue = search.trim().toLocaleLowerCase(locale)
   const visibleManagerRows = searchValue.length === 0 ? managerRows : managerRows.filter((manager) => manager.managerName.toLocaleLowerCase(locale).includes(searchValue))
   const activeManager = managerRows.find((manager) => manager.key === selectedManagerKey) ?? visibleManagerRows[0]
@@ -73,25 +66,9 @@ export function ReportViewerChecklistCommandPage(input: {
     })
   }
 
-  const selectManager = async (manager: (typeof managerRows)[number]) => {
+  const selectManager = (manager: (typeof managerRows)[number]) => {
     if (manager.key === activeManager?.key) return
-    const requestId = ++selectionRequestRef.current
-    const filters = createManagerStoreFilters(period, manager.region.managerUserId)
-    setPendingManagerKey(manager.key)
-    try {
-      await queryClient.ensureQueryData({
-        queryKey: storeChecklistCommandQueryKey(input.authSummary, filters),
-        queryFn: () => getChecklistCommandCanvas(filters),
-        staleTime: 30_000,
-      })
-    } catch {
-      // Select the requested manager so the workspace can render its scoped retry state.
-    } finally {
-      if (selectionRequestRef.current === requestId) {
-        setSelectedManagerKey(manager.key)
-        setPendingManagerKey(null)
-      }
-    }
+    setSelectedManagerKey(manager.key)
   }
 
   return (
@@ -125,13 +102,12 @@ export function ReportViewerChecklistCommandPage(input: {
             </header>
             <div aria-label={copy.listTitle} className="tw:max-h-[520px] tw:overflow-y-auto tw:px-2 tw:py-1.5">
               {visibleManagerRows.map((manager) => (
-                <button type="button" key={manager.key} aria-busy={pendingManagerKey === manager.key || undefined} aria-current={activeManager?.key === manager.key ? 'true' : undefined} className="tw:group tw:relative tw:flex tw:w-full tw:appearance-none tw:items-center tw:gap-2.5 tw:border-0 tw:border-b tw:border-border tw:bg-transparent tw:px-2 tw:py-2 tw:text-left tw:shadow-none tw:transition tw:last:border-b-0 tw:hover:bg-muted/50 tw:aria-current:bg-accent/25 tw:aria-current:before:absolute tw:aria-current:before:top-2 tw:aria-current:before:bottom-2 tw:aria-current:before:left-0 tw:aria-current:before:w-0.5 tw:aria-current:before:rounded-full tw:aria-current:before:bg-primary" onFocus={() => prefetchManager(manager)} onPointerEnter={() => prefetchManager(manager)} onClick={() => void selectManager(manager)}>
+                <button type="button" key={manager.key} aria-current={activeManager?.key === manager.key ? 'true' : undefined} className="tw:group tw:relative tw:flex tw:w-full tw:appearance-none tw:items-center tw:gap-2.5 tw:border-0 tw:border-b tw:border-border tw:bg-transparent tw:px-2 tw:py-2 tw:text-left tw:shadow-none tw:transition tw:last:border-b-0 tw:hover:bg-muted/50 tw:aria-current:bg-accent/25 tw:aria-current:before:absolute tw:aria-current:before:top-2 tw:aria-current:before:bottom-2 tw:aria-current:before:left-0 tw:aria-current:before:w-0.5 tw:aria-current:before:rounded-full tw:aria-current:before:bg-primary" onFocus={() => prefetchManager(manager)} onPointerEnter={() => prefetchManager(manager)} onClick={() => selectManager(manager)}>
                   <span aria-hidden className="tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-[10px] tw:font-bold tw:text-primary tw:group-aria-current:bg-primary tw:group-aria-current:text-primary-foreground">{getInitials(manager.managerName)}</span>
                   <span className="tw:min-w-0 tw:flex-1"><strong className="tw:block tw:truncate tw:text-[13px] tw:font-semibold">{manager.managerName}</strong><small className="tw:block tw:text-[11px] tw:text-muted-foreground">{manager.region.metrics.totalStores} {copy.assignedStores}</small></span>
                   <strong className="tw:min-w-9 tw:shrink-0 tw:text-right tw:text-[17px] tw:leading-none tw:font-semibold tw:tracking-[-0.04em] tw:tabular-nums tw:text-primary" aria-label={copy.averageScoreAria(manager.managerName, formatAverageScore(manager.region.visitAverageScore, locale))}>
                     {formatAverageScore(manager.region.visitAverageScore, locale)}
                   </strong>
-                  <LoaderCircle aria-hidden className={`tw:size-3.5 tw:shrink-0 tw:text-primary ${pendingManagerKey === manager.key ? 'tw:animate-spin tw:opacity-100' : 'tw:opacity-0'}`} />
                 </button>
               ))}
             </div>
@@ -151,21 +127,25 @@ function createManagerStoreFilters(period: string, managerUserId: string) {
   return { period, managerUserId, status: 'all' as const, sort: 'store_asc' as const, query: '', limit: 20, offset: 0 }
 }
 
-function flattenManagers(regions: ChecklistCommandRegion[], noManager: string) {
-  return regions.flatMap((region) => {
-    const resolvedManagers = region.regionManagers.filter((manager) => isResolvedManagerDisplayName(manager.displayName))
-    const managers = resolvedManagers.length > 0 ? resolvedManagers : [{ displayName: noManager }]
-    return managers.map((manager, index) => ({ key: `${region.managerUserId}:${manager.displayName}:${index}`, managerName: manager.displayName, region }))
-  })
-}
-
-function regionHasUnresolvedManagerIdentity(region: ChecklistCommandRegion) {
-  return region.regionManagers.length === 0 || region.regionManagers.some((manager) => !isResolvedManagerDisplayName(manager.displayName))
+function flattenManagers(regions: ChecklistCommandRegion[]) {
+  const managers = new Map<string, { key: string; managerName: string; region: ChecklistCommandRegion }>()
+  for (const region of regions) {
+    const managerName = region.regionManagers.find((manager) => isResolvedManagerDisplayName(manager.displayName))?.displayName
+    if (!managerName || !isResolvedManagerUserId(region.managerUserId) || managers.has(region.managerUserId)) continue
+    managers.set(region.managerUserId, { key: region.managerUserId, managerName, region })
+  }
+  return [...managers.values()]
 }
 
 function isResolvedManagerDisplayName(value: string) {
   const normalized = value.trim().toLocaleLowerCase('tr-TR')
-  return normalized.length > 0 && !['bilinmiyor', 'unknown', 'bölge müdürü tanımlı değil', 'no region manager assigned'].includes(normalized)
+  return normalized.length > 0
+    && !['bilinmiyor', 'unknown', 'bölge müdürü tanımlı değil', 'no region manager assigned'].includes(normalized)
+    && !/^(?:onprem\.|user_|[0-9a-f]{8}-[0-9a-f-]{27,})/i.test(normalized)
+}
+
+function isResolvedManagerUserId(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 }
 
 function EmptyState({ title, copy }: { title: string; copy: string }) {

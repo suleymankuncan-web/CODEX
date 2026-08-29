@@ -72,6 +72,11 @@ export function ChecklistOperationalHistoryDrawer(input: {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.data.page.hasMore ? lastPage.data.page.nextCursor ?? undefined : undefined,
     enabled: input.open && Boolean(input.storeId),
+    retry: (failureCount, error) => {
+      if (error instanceof RequestTimeoutError) return false
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false
+      return failureCount < 1
+    },
   })
   const checklistResultsQuery = useQuery({
     queryKey: [...storeChecklistAcknowledgementsQueryKey(input.authSummary), 'store-record-results', input.storeId ?? 'closed'],

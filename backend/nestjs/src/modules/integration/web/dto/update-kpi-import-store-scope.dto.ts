@@ -8,6 +8,10 @@ export class UpdateKpiImportStoreScopeDto {
   @IsPostgresUuid()
   regionId!: string;
 
+  @IsOptional()
+  @IsPostgresUuid()
+  regionManagerUserId?: string;
+
   @IsIn(["active", "inactive", "closed"])
   status!: "active" | "inactive" | "closed";
 

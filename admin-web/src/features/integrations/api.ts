@@ -411,6 +411,7 @@ export async function updateStoreMasterData(input: {
   storeId: string
   storeType: 'company' | 'franchise' | 'operator'
   regionId: string
+  regionManagerUserId?: string
   status: 'active' | 'inactive' | 'closed'
   kpiImportEnabled: boolean
   expectedUpdatedAt?: string
@@ -421,6 +422,7 @@ export async function updateStoreMasterData(input: {
     body: {
       storeType: input.storeType,
       regionId: input.regionId,
+      ...(input.regionManagerUserId ? { regionManagerUserId: input.regionManagerUserId } : {}),
       status: input.status,
       kpiImportEnabled: input.kpiImportEnabled,
       ...(input.expectedUpdatedAt ? { expectedUpdatedAt: input.expectedUpdatedAt } : {}),

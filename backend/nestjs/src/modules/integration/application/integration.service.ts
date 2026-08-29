@@ -328,6 +328,7 @@ export class IntegrationService {
     storeId: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
+    regionManagerUserId?: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
     actorUserId: string;
@@ -347,6 +348,7 @@ export class IntegrationService {
       storeId: input.storeId,
       storeType: input.storeType,
       regionId: input.regionId,
+      regionManagerUserId: input.regionManagerUserId,
       status: input.status,
       kpiImportEnabled: input.kpiImportEnabled,
     });
@@ -367,6 +369,7 @@ export class IntegrationService {
     storeName: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
+    regionManagerUserId: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
   }) {
@@ -385,6 +388,7 @@ export class IntegrationService {
       actorUserId: input.actorUserId,
       storeId: store.store_id,
       regionId: input.regionId,
+      regionManagerUserId: input.regionManagerUserId,
     });
     return buildCommandResponse({
       status: "created",
