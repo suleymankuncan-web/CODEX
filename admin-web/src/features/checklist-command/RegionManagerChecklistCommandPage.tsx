@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Check,
+  ArrowLeft,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
   Clock3,
-  Filter,
+  Eye,
   Search,
-  SlidersHorizontal,
   Store,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../auth/api'
@@ -22,7 +20,6 @@ import {
 } from '../auth/store-query-scope'
 import { useLocalization } from '../localization/useLocalization'
 import { Input } from '../../components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
@@ -35,11 +32,11 @@ import {
   type ChecklistCommandRow,
   type ChecklistVisitPlanRegionOption,
 } from './api'
-import { ChecklistVisitPlanSurface } from './ChecklistVisitPlanSurface'
+import { ChecklistAnnualVisitHistoryLauncher } from './ChecklistAnnualVisitHistoryLauncher'
+import { ChecklistWeeklyVisitPlanner } from './ChecklistWeeklyVisitPlanner'
 import { ChecklistCommandPeriodPicker } from './ChecklistCommandPeriodPicker'
 import { formatChecklistCommandPeriodLabel } from './checklist-command-period'
 import { ChecklistOperationalHistoryDrawer } from './ChecklistOperationalHistoryDrawer'
-import { RegionManagerRecordsSurface } from './RegionManagerRecordsSurface'
 import { ChecklistPlanningRegionPicker } from './ChecklistPlanningRegionPicker'
 import {
   getChecklistPeriodWeekStart,
@@ -55,26 +52,30 @@ const PAGE_SIZE = 30
 
 export function RegionManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
-  activeView?: 'visits' | 'plan' | 'records'
-  onActiveViewChange?: (view: 'visits' | 'plan' | 'records') => void
   onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
   onOpenResult: (checklistInstanceId: string) => void
+  readOnlyPreview?: {
+    embedded?: boolean
+    initialPeriod: string
+    managerName: string
+    mode?: 'full' | 'stores'
+    onBack?: () => void
+    regionId: string
+    regionName: string
+  }
 }) {
   const { locale, t } = useLocalization()
-  const [period, setPeriod] = useState(() => getBusinessMonthInputValue())
+  const storesOnly = input.readOnlyPreview?.mode === 'stores'
+  const [period, setPeriod] = useState(() => input.readOnlyPreview?.initialPeriod ?? getBusinessMonthInputValue())
   const [status, setStatus] = useState<ChecklistCommandStatus>('all')
   const [sort, setSort] = useState<ChecklistCommandSort>('store_asc')
   const [searchDraft, setSearchDraft] = useState('')
   const [query, setQuery] = useState('')
   const [offset, setOffset] = useState(0)
-  const [columnPreset, setColumnPreset] = useState<'all' | 'scores' | 'visit'>('all')
-  const [localActiveView, setLocalActiveView] = useState<'visits' | 'plan' | 'records'>('visits')
-  const actionStoreIds = useMemo(() => new Set(getActionStoreIds(input.authSummary)), [input.authSummary])
-  const activeView = input.activeView ?? localActiveView
-  const setActiveView = (view: 'visits' | 'plan' | 'records') => {
-    setLocalActiveView(view)
-    input.onActiveViewChange?.(view)
-  }
+  const actionStoreIds = useMemo(
+    () => input.readOnlyPreview ? new Set<string>() : new Set(getActionStoreIds(input.authSummary)),
+    [input.authSummary, input.readOnlyPreview],
+  )
   const [selectedRecordStore, setSelectedRecordStore] = useState<ChecklistCommandRow | null>(null)
   const historyTriggerRef = useRef<HTMLElement | null>(null)
   const [weekStart, setWeekStart] = useState(() => getIstanbulWeekStart())
@@ -93,7 +94,6 @@ export function RegionManagerChecklistCommandPage(input: {
       setOffset(0)
     }
   }
-  const [openMenu, setOpenMenu] = useState<'status' | 'columns' | null>(null)
   const [retainedCommand, setRetainedCommand] = useState<{
     scopeSignature: string
     regionId: string
@@ -104,7 +104,6 @@ export function RegionManagerChecklistCommandPage(input: {
     option: ChecklistVisitPlanRegionOption
     scopeSignature: string
   } | null>(null)
-  const toolbarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -114,37 +113,20 @@ export function RegionManagerChecklistCommandPage(input: {
     return () => window.clearTimeout(timer)
   }, [searchDraft])
 
-  useEffect(() => {
-    if (!openMenu) return
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!toolbarRef.current?.contains(event.target as Node)) setOpenMenu(null)
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        const trigger = toolbarRef.current?.querySelector<HTMLButtonElement>('[aria-expanded="true"]')
-        setOpenMenu(null)
-        window.requestAnimationFrame(() => trigger?.focus())
-      }
-    }
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [openMenu])
-
   const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
   const regionFilters = useMemo(() => ({ query: '', limit: 20, offset: 0 }), [])
   const regionOptionsQuery = useQuery({
     queryKey: storeChecklistVisitPlanRegionsQueryKey(input.authSummary, regionFilters),
     queryFn: () => getChecklistVisitPlanRegionOptions(regionFilters),
+    enabled: !input.readOnlyPreview,
     ...transientQueryRetryOptions,
   })
   const defaultRegion = regionOptionsQuery.data?.data.page.total === 1
     ? regionOptionsQuery.data.data.items[0] ?? null
     : null
-  const activeRegion = selectedRegion?.scopeSignature === scopeSignature ? selectedRegion.option : defaultRegion
+  const activeRegion: ChecklistVisitPlanRegionOption | null = input.readOnlyPreview
+    ? { regionId: input.readOnlyPreview.regionId, regionName: input.readOnlyPreview.regionName }
+    : selectedRegion?.scopeSignature === scopeSignature ? selectedRegion.option : defaultRegion
   const filters = useMemo(
     () => ({ period, regionId: activeRegion?.regionId ?? '', status, sort, query, limit: PAGE_SIZE, offset }),
     [activeRegion?.regionId, offset, period, query, sort, status],
@@ -197,21 +179,15 @@ export function RegionManagerChecklistCommandPage(input: {
     setOffset(0)
   }
 
-  function selectCompactSort(nextSort: ChecklistCommandSort) {
-    retainCurrentCommand()
-    setSort(nextSort)
-    setOffset(0)
-  }
-
-  if (!regionOptionsQuery.data && regionOptionsQuery.isLoading) {
+  if (!input.readOnlyPreview && !regionOptionsQuery.data && regionOptionsQuery.isLoading) {
     return <StoreLoadingState title={t('storeChecklists.loadingTitle')} description={t('storeChecklists.loadingCopy')} />
   }
 
-  if (!regionOptionsQuery.data && regionOptionsQuery.isError) {
+  if (!input.readOnlyPreview && !regionOptionsQuery.data && regionOptionsQuery.isError) {
     return (
       <StoreSurfacePage ariaLabel={t('storeChecklists.errorTitle')}>
         <StoreErrorState
-          title={locale === 'tr' ? 'Bölge kapsamı alınamadı' : 'Region scope unavailable'}
+          title={locale === 'tr' ? 'Mağaza sorumluluğu alınamadı' : 'Store responsibility unavailable'}
           description={getUserFacingErrorMessage(regionOptionsQuery.error, t('storeChecklists.errorCopy'))}
           action={{ label: t('storeChecklists.retryAction'), onClick: () => void regionOptionsQuery.refetch(), variant: 'outline' }}
         />
@@ -219,7 +195,7 @@ export function RegionManagerChecklistCommandPage(input: {
     )
   }
 
-  if (!activeRegion && (regionOptionsQuery.data?.data.page.total ?? 0) > 1) {
+  if (!input.readOnlyPreview && !activeRegion && (regionOptionsQuery.data?.data.page.total ?? 0) > 1) {
     const selectionPeriodLabel = formatChecklistCommandPeriodLabel(period, locale)
     return (
       <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity" data-testid="checklist-command-parity">
@@ -236,7 +212,7 @@ export function RegionManagerChecklistCommandPage(input: {
           </div>
         </header>
         <section className="week-planner week-planner-state" aria-live="polite">
-          <Store size={18} /><strong>{locale === 'tr' ? 'Devam etmek için bölge seçin.' : 'Select a region to continue.'}</strong>
+          <Store size={18} /><strong>{locale === 'tr' ? 'Devam etmek için mağaza sorumluluğunu seçin.' : 'Select a store responsibility to continue.'}</strong>
         </section>
       </StoreSurfacePage>
     )
@@ -264,10 +240,7 @@ export function RegionManagerChecklistCommandPage(input: {
   }
 
   const data = commandResponse.data
-  const hasPartialScoreData = data.items.some((row) =>
-    (row.bmCompletedAt !== null && row.bmScore === null)
-    || (row.vmCompletedAt !== null && row.vmScore === null),
-  )
+  const hasPartialScoreData = data.items.some((row) => row.bmCompletedAt !== null && row.bmScore === null)
   const firstItem = data.page.total === 0 ? 0 : data.page.offset + 1
   const lastItem = Math.min(data.page.total, data.page.offset + data.items.length)
   const periodLabel = formatChecklistCommandPeriodLabel(period, locale)
@@ -313,60 +286,86 @@ export function RegionManagerChecklistCommandPage(input: {
     },
   ]
 
-  const statusOptions: Array<{ key: ChecklistCommandStatus; label: string; count: number }> = [
-    { key: 'all', label: t('storeChecklists.command.all'), count: data.metrics.totalStores },
-    { key: 'needs_visit', label: t('storeChecklists.command.needsVisit'), count: data.metrics.needsVisit },
-    { key: 'active', label: t('storeChecklists.command.active'), count: data.metrics.active },
-    { key: 'pending', label: t('storeChecklists.pendingAcknowledgements'), count: data.metrics.pending },
-    { key: 'completed', label: t('storeChecklists.command.completed'), count: data.metrics.completed },
-  ]
-  const statusLabel = statusOptions.find((option) => option.key === status)?.label ?? t('storeChecklists.command.all')
-  const columnLabel = columnPreset === 'all' ? (locale === 'tr' ? 'Tümü' : 'All') : columnPreset === 'scores' ? (locale === 'tr' ? 'Skorlar' : 'Scores') : (locale === 'tr' ? 'Ziyaret' : 'Visit')
   const pageNumber = Math.floor(offset / PAGE_SIZE) + 1
   const pageCount = Math.max(1, Math.ceil(data.page.total / PAGE_SIZE))
   return (
-    <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity" data-testid="checklist-command-parity">
-      <header className="checklist-command-title">
-        <div>
-          <p className="tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.14em] tw:text-muted-foreground">
-            {periodLabel} · {activeRegion?.regionName ?? t('storeChecklists.command.eyebrow')}
-          </p>
-          <h1 className="tw:mt-1 tw:text-2xl tw:font-semibold tw:tracking-[-0.035em] tw:text-foreground tw:sm:text-3xl">
-            {t('storeChecklists.command.title')}
-          </h1>
-        </div>
-        <div className="checklist-command-title-actions">
-          {(regionOptionsQuery.data?.data.page.total ?? 0) > 1 ? (
-            <ChecklistPlanningRegionPicker
-              authSummary={input.authSummary}
-              locale={locale}
-              selected={activeRegion}
-              onSelect={(option) => {
-                setRetainedCommand(null)
-                setSelectedRegion({ option, scopeSignature })
-                setOffset(0)
-              }}
-            />
-          ) : null}
-          <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={changePeriod} />
-          {activeRegion ? (
-            <div className="canvas-view-switch" data-view={activeView} aria-label={locale === 'tr' ? 'Checklist görünümü' : 'Checklist view'}>
-              <span className="canvas-view-glider" aria-hidden />
-              <button type="button" className={activeView === 'visits' ? 'is-active' : ''} aria-pressed={activeView === 'visits'} onClick={() => setActiveView('visits')}>{locale === 'tr' ? 'Ziyaretler' : 'Visits'}</button>
-              <button type="button" className={activeView === 'plan' ? 'is-active' : ''} aria-pressed={activeView === 'plan'} onClick={() => setActiveView('plan')}>{locale === 'tr' ? 'Ziyaret Planı' : 'Visit Plan'}{data.metrics.needsVisit > 0 ? <span className="canvas-view-count">{data.metrics.needsVisit}</span> : null}</button>
-              <button type="button" className={activeView === 'records' ? 'is-active' : ''} aria-pressed={activeView === 'records'} onClick={() => setActiveView('records')}>{locale === 'tr' ? 'Mağaza Kayıtları' : 'Store Records'}</button>
-            </div>
-          ) : null}
-        </div>
-      </header>
+    <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className={cn('checklist-command-parity', input.readOnlyPreview?.embedded && 'tw:py-0', storesOnly && 'checklist-command-stores-only')} data-testid="checklist-command-parity">
+      {input.readOnlyPreview && !storesOnly && !input.readOnlyPreview.embedded && input.readOnlyPreview.onBack ? (
+        <section className="tw:flex tw:min-w-0 tw:flex-col tw:gap-3 tw:rounded-2xl tw:border tw:border-primary/15 tw:bg-primary/[0.035] tw:p-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between" aria-label={locale === 'tr' ? 'Report Viewer önizlemesi' : 'Report Viewer preview'}>
+          <button type="button" className="tw:inline-flex tw:min-h-9 tw:w-fit tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:px-3 tw:text-xs tw:font-semibold tw:text-foreground tw:transition-colors tw:hover:bg-muted/50 tw:active:translate-y-px" onClick={input.readOnlyPreview.onBack}>
+            <ArrowLeft className="tw:size-4" /> {locale === 'tr' ? 'Bölge müdürlerine dön' : 'Back to region managers'}
+          </button>
+          <div className="tw:min-w-0 tw:sm:text-right">
+            <strong className="tw:block tw:truncate tw:text-sm tw:text-foreground">{input.readOnlyPreview.managerName}</strong>
+            <small className="tw:text-[10px] tw:font-medium tw:text-muted-foreground">{locale === 'tr' ? 'Bölge Müdürü görünümü, salt okunur' : 'Region Manager view, read only'}</small>
+          </div>
+        </section>
+      ) : null}
+      {!storesOnly ? (
+        <header className={input.readOnlyPreview?.embedded
+          ? 'tw:flex tw:flex-col tw:gap-3 tw:pb-3 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between'
+          : 'checklist-command-title'}>
+          <div>
+            <p className="tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.14em] tw:text-muted-foreground">
+              {periodLabel} · {activeRegion?.regionName ?? t('storeChecklists.command.eyebrow')}
+            </p>
+            <h1 className="tw:mt-1 tw:text-2xl tw:font-semibold tw:tracking-[-0.035em] tw:text-foreground tw:sm:text-3xl">
+              {t('storeChecklists.command.title')}
+            </h1>
+          </div>
+          <div className="checklist-command-title-actions">
+            {!input.readOnlyPreview && (regionOptionsQuery.data?.data.page.total ?? 0) > 1 ? (
+              <ChecklistPlanningRegionPicker
+                authSummary={input.authSummary}
+                locale={locale}
+                selected={activeRegion}
+                onSelect={(option) => {
+                  setRetainedCommand(null)
+                  setSelectedRegion({ option, scopeSignature })
+                  setOffset(0)
+                }}
+              />
+            ) : null}
+            {activeRegion ? (
+              <ChecklistAnnualVisitHistoryLauncher
+                authSummary={input.authSummary}
+                locale={locale}
+                period={period}
+                regionId={activeRegion.regionId}
+                regionName={activeRegion.regionName}
+              />
+            ) : null}
+            <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={changePeriod} />
+          </div>
+        </header>
+      ) : null}
 
-      {regionOptionsQuery.isError ? (
+      {!storesOnly && regionOptionsQuery.isError ? (
         <button type="button" className="checklist-region-inline-error" onClick={() => void regionOptionsQuery.refetch()}>
-          {locale === 'tr' ? 'Bölge bilgisi alınamadı · Yeniden dene' : 'Region context unavailable · Retry'}
+          {locale === 'tr' ? 'Mağaza sorumluluğu alınamadı · Yeniden dene' : 'Store responsibility unavailable · Retry'}
         </button>
       ) : null}
 
-      {activeView === 'visits' ? <><section aria-label={t('storeChecklists.summaryAria')} className="checklist-command-metrics tw:relative tw:grid tw:grid-cols-2 tw:overflow-hidden tw:lg:grid-cols-4" data-testid="checklist-command-metrics">
+      {!storesOnly && activeRegion ? (
+        <section className="checklist-command-unified-plan" aria-label={locale === 'tr' ? 'Haftalık ziyaret planı' : 'Weekly visit plan'}>
+          <ChecklistWeeklyVisitPlanner
+            authSummary={input.authSummary}
+            canMaintain={!input.readOnlyPreview && data.capabilities.canMaintainWeeklyVisitPlan}
+            embedded
+            locale={locale}
+            period={period}
+            planningRequest={undefined}
+            regionId={activeRegion.regionId}
+            regionName={activeRegion.regionName}
+            weekStart={weekStart}
+            onOpenWorkflow={(storeId) => input.onOpenWorkflow(storeId, 'visits', 'bm')}
+            onPlanningRequestHandled={() => undefined}
+            onWeekStartChange={changePlanningWeek}
+          />
+        </section>
+      ) : null}
+
+      {!storesOnly ? <section aria-label={t('storeChecklists.summaryAria')} className="checklist-command-metrics tw:relative tw:grid tw:grid-cols-2 tw:overflow-hidden tw:lg:grid-cols-4" data-testid="checklist-command-metrics">
         <span aria-hidden className="tw:absolute tw:inset-x-0 tw:top-0 tw:h-[3px] tw:bg-gradient-to-r tw:from-primary tw:via-blue-500 tw:to-cyan-500" />
         {metrics.map((metric) => {
           const Icon = metric.icon
@@ -392,15 +391,15 @@ export function RegionManagerChecklistCommandPage(input: {
             </button>
           )
         })}
-      </section>
+      </section> : null}
 
       <section className="checklist-command-surface tw:overflow-hidden" data-testid="checklist-command-surface">
-        <div className="checklist-command-toolbar tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:sm:flex-row tw:sm:items-center" ref={toolbarRef}>
+        <div className="checklist-command-toolbar tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:sm:flex-row tw:sm:items-center">
           <label className="tw:flex tw:min-h-9 tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-input tw:bg-muted/20 tw:px-3 tw:text-muted-foreground tw:sm:max-w-sm">
             <Search className="tw:size-4 tw:shrink-0" />
             <Input
               aria-label={t('storeChecklists.command.search')}
-              className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:shadow-none tw:focus-visible:ring-0"
+              className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-center tw:text-xs tw:leading-5 tw:shadow-none tw:focus-visible:ring-0"
               placeholder={t('storeChecklists.command.search')}
               value={searchDraft}
               onChange={(event) => { retainCurrentCommand(); setSearchDraft(event.target.value) }}
@@ -408,43 +407,6 @@ export function RegionManagerChecklistCommandPage(input: {
           </label>
           {commandQuery.isFetching ? <small className="checklist-command-inline-refresh" aria-live="polite">{locale === 'tr' ? 'Güncelleniyor…' : 'Refreshing…'}</small> : null}
           {commandQuery.isError ? <button type="button" className="checklist-command-inline-error" onClick={() => void commandQuery.refetch()}>{locale === 'tr' ? 'Veriler yenilenemedi · Tekrar dene' : 'Refresh failed · Retry'}</button> : null}
-          <div className="checklist-command-menu">
-            <button type="button" aria-haspopup="menu" aria-expanded={openMenu === 'status'} onClick={() => setOpenMenu((current) => current === 'status' ? null : 'status')}>
-              <Filter size={15} /> {locale === 'tr' ? 'Durum' : 'Status'} <span>{statusLabel}</span><ChevronDown size={12} />
-            </button>
-            {openMenu === 'status' ? <div className="checklist-command-popover" role="menu" aria-label={locale === 'tr' ? 'Durum filtresi' : 'Status filter'}>
-              <header><small>{locale === 'tr' ? 'DURUM' : 'STATUS'}</small><strong>{locale === 'tr' ? 'Checklist akışı' : 'Checklist flow'}</strong></header>
-              {statusOptions.map((option) => <button type="button" role="menuitemradio" aria-checked={status === option.key} className={status === option.key ? 'is-selected' : ''} key={option.key} onClick={() => { selectStatus(option.key); setOpenMenu(null) }}><span><strong>{option.label}</strong><small>{option.count} {locale === 'tr' ? 'mağaza' : 'stores'}</small></span><b>{option.count}</b>{status === option.key ? <Check size={14} /> : null}</button>)}
-            </div> : null}
-          </div>
-          <i className="checklist-command-toolbar-spacer" />
-          <div className="checklist-command-menu checklist-command-menu-end">
-            <button type="button" aria-haspopup="menu" aria-expanded={openMenu === 'columns'} onClick={() => setOpenMenu((current) => current === 'columns' ? null : 'columns')}>
-              <SlidersHorizontal size={15} /> {locale === 'tr' ? 'Kolonlar' : 'Columns'} <span>{columnLabel}</span><ChevronDown size={12} />
-            </button>
-            {openMenu === 'columns' ? <div className="checklist-command-popover" role="menu" aria-label={locale === 'tr' ? 'Kolon görünümü' : 'Column view'}>
-              <header><small>{locale === 'tr' ? 'KOLONLAR' : 'COLUMNS'}</small><strong>{locale === 'tr' ? 'Görünüm yoğunluğu' : 'View density'}</strong></header>
-              {([['all', locale === 'tr' ? 'Tümü' : 'All', locale === 'tr' ? 'Skor, ziyaret süresi ve durum' : 'Scores, visit age and status'], ['scores', locale === 'tr' ? 'Skorlar' : 'Scores', locale === 'tr' ? 'BM, VM ve durum' : 'BM, VM and status'], ['visit', locale === 'tr' ? 'Ziyaret' : 'Visit', locale === 'tr' ? 'Tarih, geçen süre ve durum' : 'Date, elapsed and status']] as const).map(([key, label, note]) => <button type="button" role="menuitemradio" aria-checked={columnPreset === key} className={columnPreset === key ? 'is-selected' : ''} key={key} onClick={() => { setColumnPreset(key); setOpenMenu(null) }}><span><strong>{label}</strong><small>{note}</small></span>{columnPreset === key ? <Check size={14} /> : null}</button>)}
-            </div> : null}
-          </div>
-          <div className="checklist-command-compact-sort">
-            <Select value={sort} onValueChange={(value) => selectCompactSort(value as ChecklistCommandSort)}>
-              <SelectTrigger aria-label={locale === 'tr' ? 'Mağazaları sırala' : 'Sort stores'}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="store_asc">{locale === 'tr' ? 'Mağaza A-Z' : 'Store A-Z'}</SelectItem>
-                <SelectItem value="store_desc">{locale === 'tr' ? 'Mağaza Z-A' : 'Store Z-A'}</SelectItem>
-                <SelectItem value="bm_score_desc">{locale === 'tr' ? 'BM puanı yüksek' : 'Highest BM score'}</SelectItem>
-                <SelectItem value="vm_score_desc">{locale === 'tr' ? 'VM puanı yüksek' : 'Highest VM score'}</SelectItem>
-                <SelectItem value="last_visit_desc">{locale === 'tr' ? 'Son ziyaret yeni' : 'Newest visit'}</SelectItem>
-                <SelectItem value="last_visit_asc">{locale === 'tr' ? 'Son ziyaret eski' : 'Oldest visit'}</SelectItem>
-                <SelectItem value="open_actions_desc">{locale === 'tr' ? 'Açık aksiyon çok' : 'Most open actions'}</SelectItem>
-                <SelectItem value="status_asc">{locale === 'tr' ? 'Durum A-Z' : 'Status A-Z'}</SelectItem>
-                <SelectItem value="status_desc">{locale === 'tr' ? 'Durum Z-A' : 'Status Z-A'}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         {hasPartialScoreData ? <div className="checklist-command-partial-notice" role="status"><CircleAlert size={13} /><span>{t('storeChecklists.command.partialScoreNotice')}</span></div> : null}
 
@@ -462,12 +424,19 @@ export function RegionManagerChecklistCommandPage(input: {
               locale={locale}
               rows={data.items}
               sort={sort}
-              columnPreset={columnPreset}
               t={t}
+              onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedRecordStore(store) }}
               onOpenWorkflow={input.onOpenWorkflow}
               onSort={changeSort}
             />
-            <ChecklistCommandMobileCards actionStoreIds={actionStoreIds} locale={locale} rows={data.items} t={t} onOpenWorkflow={input.onOpenWorkflow} />
+            <ChecklistCommandMobileCards
+              actionStoreIds={actionStoreIds}
+              locale={locale}
+              rows={data.items}
+              t={t}
+              onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedRecordStore(store) }}
+              onOpenWorkflow={input.onOpenWorkflow}
+            />
           </>
         )}
 
@@ -481,37 +450,7 @@ export function RegionManagerChecklistCommandPage(input: {
             <button type="button" aria-label={t('storeChecklists.command.next')} disabled={!data.page.hasMore || commandQuery.isFetching} onClick={() => { retainCurrentCommand(); setOffset(offset + PAGE_SIZE) }}><ChevronRight size={14} /></button>
           </div>
         </footer>
-      </section></> : activeView === 'records' ? (
-        <RegionManagerRecordsSurface
-          data={data}
-          isError={commandQuery.isError}
-          isFetching={commandQuery.isFetching}
-          locale={locale}
-          offset={offset}
-          query={searchDraft}
-          sort={sort}
-          status={status}
-          onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedRecordStore(store) }}
-          onOffset={(nextOffset) => { retainCurrentCommand(); setOffset(nextOffset) }}
-          onQuery={(value) => { retainCurrentCommand(); setSearchDraft(value) }}
-          onRetry={() => void commandQuery.refetch()}
-          onSort={changeSort}
-          onStatus={selectStatus}
-        />
-      ) : activeRegion ? (
-        <ChecklistVisitPlanSurface
-          authSummary={input.authSummary}
-          locale={locale}
-          period={period}
-          regionId={activeRegion.regionId}
-          regionName={activeRegion.regionName}
-          weekStart={weekStart}
-          onOpenResult={input.onOpenResult}
-          onWeekStartChange={changePlanningWeek}
-        />
-      ) : (
-        <section className="week-planner week-planner-state"><strong>{locale === 'tr' ? 'Planlanabilir mağaza bulunamadı.' : 'No stores available for planning.'}</strong></section>
-      )}
+      </section>
       <ChecklistOperationalHistoryDrawer
         authSummary={input.authSummary}
         open={Boolean(selectedRecordStore)}
@@ -519,6 +458,10 @@ export function RegionManagerChecklistCommandPage(input: {
         storeName={selectedRecordStore?.storeName ?? null}
         returnFocusRef={historyTriggerRef}
         onClose={() => setSelectedRecordStore(null)}
+        onOpenResult={(checklistInstanceId) => {
+          setSelectedRecordStore(null)
+          input.onOpenResult(checklistInstanceId)
+        }}
       />
     </StoreSurfacePage>
   )
@@ -533,11 +476,11 @@ const metricToneClasses = {
 
 function ChecklistCommandDesktopTable(input: {
   actionStoreIds: ReadonlySet<string>
-  columnPreset: 'all' | 'scores' | 'visit'
   locale: 'tr' | 'en'
   rows: ChecklistCommandRow[]
   sort: ChecklistCommandSort
   t: ReturnType<typeof useLocalization>['t']
+  onOpenHistory: (store: ChecklistCommandRow, trigger: HTMLElement) => void
   onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
   onSort: (key: ChecklistCommandSortKey) => void
 }) {
@@ -548,28 +491,26 @@ function ChecklistCommandDesktopTable(input: {
   )
   return (
     <div className="checklist-command-desktop-list">
-      <div className={cn('checklist-command-table-head', `columns-${input.columnPreset}`)}>
+      <div className="checklist-command-table-head columns-all">
         {heading(input.t('storeChecklists.command.store'), 'store')}
-        {input.columnPreset !== 'visit' ? heading('BM', 'bm') : null}
-        {input.columnPreset !== 'visit' ? heading('VM', 'vm') : null}
-        {input.columnPreset !== 'scores' ? heading(input.t('storeChecklists.command.visit'), 'last_visit') : null}
-        {input.columnPreset !== 'scores' ? <span>{input.t('storeChecklists.command.elapsed')}</span> : null}
+        {heading(input.locale === 'tr' ? 'PUAN' : 'SCORE', 'bm')}
+        {heading(input.t('storeChecklists.command.visit'), 'last_visit')}
+        {heading(input.t('storeChecklists.command.elapsed'), 'elapsed')}
         {heading(input.t('storeChecklists.status'), 'status')}
         <span />
       </div>
       {input.rows.map((row) => (
-        <div key={row.storeId} data-testid="checklist-command-row" className={cn('checklist-command-row', `columns-${input.columnPreset}`, row.status === 'needs_visit' && 'tone-late')}>
+        <div key={row.storeId} data-testid="checklist-command-row" className={cn('checklist-command-row columns-all', row.status === 'needs_visit' && 'tone-late')}>
           <StoreIdentity row={row} />
-          {input.columnPreset !== 'visit' ? <ChecklistScore className="score-bm" value={row.bmScore} completedAt={row.bmCompletedAt} t={input.t} /> : null}
-          {input.columnPreset !== 'visit' ? <ChecklistScore className="score-vm" value={row.vmScore} completedAt={row.vmCompletedAt} t={input.t} /> : null}
-          {input.columnPreset !== 'scores' ? <VisitDate className="visit-date" value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} /> : null}
-          {input.columnPreset !== 'scores' ? <ElapsedDays className="elapsed-days" value={row.elapsedDaysSinceLastVisit} t={input.t} /> : null}
+          <ChecklistScore className="score-bm" value={row.bmScore} completedAt={row.bmCompletedAt} t={input.t} />
+          <VisitDate className="visit-date" value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} />
+          <ElapsedDays className="elapsed-days" value={row.elapsedDaysSinceLastVisit} t={input.t} />
           <StatusPill locale={input.locale} row={row} />
-          <div className="tw:flex tw:items-center tw:justify-end tw:gap-1">
-            {row.bmCompletedAt ? <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, row.pendingBmAcknowledgementCount > 0 ? 'inbox' : 'history')}>{input.locale === 'tr' ? 'Sonuçlar' : 'Results'}</button> : null}
-            <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getPrimaryWorkflowTab(row, input.actionStoreIds.has(row.storeId)), getDirectChecklist(input.actionStoreIds.has(row.storeId)))}>
-              {getRowActionLabel(row, input.locale, input.actionStoreIds.has(row.storeId))} <ChevronRight size={14} />
-            </button>
+          <div className="checklist-command-row-actions">
+            <button type="button" className="checklist-command-action is-secondary" onClick={(event) => input.onOpenHistory(row, event.currentTarget)}><Eye size={13} />{input.locale === 'tr' ? 'Sonuçlar' : 'Results'}</button>
+            {input.actionStoreIds.has(row.storeId) ? <button type="button" className="checklist-command-action is-primary" onClick={() => input.onOpenWorkflow(row.storeId, getPrimaryWorkflowTab(row, true), getDirectChecklist(true))}>
+              {getRowActionLabel(row, input.locale)} <ChevronRight size={14} />
+            </button> : null}
           </div>
         </div>
       ))}
@@ -582,6 +523,7 @@ function ChecklistCommandMobileCards(input: {
   locale: 'tr' | 'en'
   rows: ChecklistCommandRow[]
   t: ReturnType<typeof useLocalization>['t']
+  onOpenHistory: (store: ChecklistCommandRow, trigger: HTMLElement) => void
   onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
 }) {
   return (
@@ -591,16 +533,15 @@ function ChecklistCommandMobileCards(input: {
           <StoreIdentity row={row} />
           <div className="checklist-command-mobile-scores">
             <ChecklistScore className="score-bm" value={row.bmScore} completedAt={row.bmCompletedAt} t={input.t} />
-            <ChecklistScore className="score-vm" value={row.vmScore} completedAt={row.vmCompletedAt} t={input.t} />
           </div>
           <div className="checklist-command-mobile-visit">
             <VisitDate value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} />
             <ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} />
           </div>
           <StatusPill locale={input.locale} row={row} />
-          <div className="tw:flex tw:flex-wrap tw:justify-end tw:gap-1">
-            {row.bmCompletedAt ? <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, row.pendingBmAcknowledgementCount > 0 ? 'inbox' : 'history')}>{input.locale === 'tr' ? 'Sonuçlar' : 'Results'}</button> : null}
-            <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getPrimaryWorkflowTab(row, input.actionStoreIds.has(row.storeId)), getDirectChecklist(input.actionStoreIds.has(row.storeId)))}>{getRowActionLabel(row, input.locale, input.actionStoreIds.has(row.storeId))} <ChevronRight size={14} /></button>
+          <div className="checklist-command-row-actions">
+            <button type="button" className="checklist-command-action is-secondary" onClick={(event) => input.onOpenHistory(row, event.currentTarget)}><Eye size={13} />{input.locale === 'tr' ? 'Sonuçlar' : 'Results'}</button>
+            {input.actionStoreIds.has(row.storeId) ? <button type="button" className="checklist-command-action is-primary" onClick={() => input.onOpenWorkflow(row.storeId, getPrimaryWorkflowTab(row, true), getDirectChecklist(true))}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button> : null}
           </div>
         </article>
       ))}
@@ -641,10 +582,9 @@ function getRowStatusPresentation(row: ChecklistCommandRow, locale: 'tr' | 'en')
   return { label: locale === 'tr' ? 'Aksiyon Yok' : 'No action', tone: 'done' }
 }
 
-function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en', authorized: boolean) {
-  if (!authorized) return locale === 'tr' ? 'Sonuçları gör' : 'View results'
+function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
   if (row.activeBmChecklistCount > 0) return locale === 'tr' ? 'Devam et' : 'Continue'
-  return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
+  return locale === 'tr' ? 'Checklist Başlat' : 'Start checklist'
 }
 
 function getPrimaryWorkflowTab(row: ChecklistCommandRow, authorized: boolean): 'visits' | 'inbox' | 'history' {

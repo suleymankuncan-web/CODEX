@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  ClipboardCheck,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -20,11 +21,13 @@ import {
 } from '../auth/store-query-scope'
 import { ApiError } from '../../lib/api'
 import { actionToast } from '../../lib/action-toast'
+import { getBusinessDateInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
 import {
   getChecklistVisitPlanCandidates,
   getChecklistVisitPlan,
+  completeChecklistVisitPlanItem,
   saveChecklistVisitPlan,
   type ChecklistVisitPlanCandidate,
   type ChecklistVisitPlan,
@@ -40,29 +43,33 @@ import {
   type VisitPlanDraftItem,
 } from './model'
 
-type Copy = ReturnType<typeof getCopy>
+type Copy = ReturnType<typeof getCopy> & ReturnType<typeof getVisitActionCopy>
 
 export function ChecklistWeeklyVisitPlanner(input: {
   authSummary: AuthSessionSummary | null
   canMaintain: boolean
+  embedded?: boolean
+  idPrefix?: string
   locale: 'tr' | 'en'
   period: string
   regionId: string
   regionName: string
   weekStart: string
   onOpenWorkflow: (storeId: string) => void
-  onOpenResult: (checklistInstanceId: string) => void
   planningRequest: { requestId: number; storeId: string; storeName: string; plannedDate: string | null } | undefined
   onPlanningRequestHandled: () => void
   onWeekStartChange: (weekStart: string) => void
 }) {
   const queryClient = useQueryClient()
   const [manualPlanningOpen, setManualPlanningOpen] = useState(false)
+  const [mobileDaySelection, setMobileDaySelection] = useState<{ weekStart: string; index: number } | null>(null)
+  const [selectedVisit, setSelectedVisit] = useState<ChecklistVisitPlan['items'][number] | null>(null)
   const [conflict, setConflict] = useState(false)
   const submissionRef = useRef<StableVisitPlanSubmission | null>(null)
   const planningTriggerRef = useRef<HTMLButtonElement>(null)
   const planningOpen = manualPlanningOpen || input.planningRequest !== undefined
-  const copy = getCopy(input.locale)
+  const copy = { ...getCopy(input.locale), ...getVisitActionCopy(input.locale) }
+  const titleId = input.idPrefix ? `${input.idPrefix}-week-planner-title` : 'week-planner-title'
   const planKey = storeChecklistVisitPlanQueryKey(input.authSummary, input.regionId, input.weekStart)
   const planQuery = useQuery({
     queryKey: planKey,
@@ -100,12 +107,30 @@ export function ChecklistWeeklyVisitPlanner(input: {
       actionToast.success(copy.saved)
     },
     onError: (error) => {
-      if (error instanceof ApiError && error.status === 409) {
+      // Only an optimistic revision mismatch should open the reconciliation
+      // flow. Other 409 responses (for example an invalid store/date entry or
+      // a missing local mock actor account) are save errors, not evidence that
+      // another editor changed the plan.
+      if (isVisitPlanRevisionConflict(error)) {
         setConflict(true)
         return
       }
       actionToast.error(error, copy.saveFailed)
     },
+  })
+  const completeVisitMutation = useMutation({
+    mutationFn: (item: ChecklistVisitPlan['items'][number]) => completeChecklistVisitPlanItem({
+      planItemId: item.planItemId,
+      body: { idempotencyKey: crypto.randomUUID() },
+    }),
+    onSuccess: async () => {
+      setSelectedVisit(null)
+      await queryClient.invalidateQueries({ queryKey: planKey })
+      await queryClient.invalidateQueries({ queryKey: ['checklist-visit-plan-period'] })
+      await queryClient.invalidateQueries({ queryKey: ['checklist-command'] })
+      actionToast.success(copy.visitCompleted)
+    },
+    onError: (error) => actionToast.error(error, copy.visitCompleteFailed),
   })
   const closePlanning = () => {
     saveMutation.reset()
@@ -123,6 +148,10 @@ export function ChecklistWeeklyVisitPlanner(input: {
 
   const plan = planQuery.data.data
   const days = buildChecklistPlanningDays(plan.weekStart, input.locale)
+  const defaultMobileDayIndex = Math.max(0, days.findIndex((day) => day.isoDate === getBusinessDateInputValue()))
+  const mobileDayIndex = mobileDaySelection?.weekStart === input.weekStart
+    ? mobileDaySelection.index
+    : defaultMobileDayIndex
   const firstDay = days[0]
   const lastDay = days.at(-1)
   const weekLabel = firstDay && lastDay
@@ -131,11 +160,11 @@ export function ChecklistWeeklyVisitPlanner(input: {
 
   return (
     <>
-      <section className="week-planner" aria-labelledby="week-planner-title">
+      <section className={`week-planner${input.embedded ? ' week-planner--embedded' : ''}`} aria-labelledby={titleId}>
         <header className="week-planner-header">
           <div>
             <span className="week-planner-icon"><CalendarDays size={16} /></span>
-            <span><small>{copy.weeklyPlan}</small><strong id="week-planner-title">{copy.placeVisits}</strong></span>
+            <span><small>{copy.weeklyPlan}</small><strong id={titleId}>{copy.placeVisits}</strong></span>
           </div>
           <div className="week-planner-actions">
             <div className="week-planner-range">
@@ -143,31 +172,35 @@ export function ChecklistWeeklyVisitPlanner(input: {
               <span><strong>{weekLabel}</strong><small>{copy.visitCount(plan.items.length)}</small></span>
               <button type="button" aria-label={copy.nextWeek} onClick={() => input.onWeekStartChange(shiftChecklistWeek(input.weekStart, 1))}><ChevronRight size={14} /></button>
             </div>
-            {plan.capabilities.canMaintainWeeklyVisitPlan ? (
+            {input.canMaintain && plan.capabilities.canMaintainWeeklyVisitPlan ? (
               <button ref={planningTriggerRef} type="button" className="week-planner-primary" onClick={() => setManualPlanningOpen(true)}><CalendarDays size={14} /> {copy.planWeek}</button>
             ) : null}
           </div>
         </header>
+        <div className="week-planner-mobile-days" aria-label={copy.planWeek}>
+          {days.map((day, dayIndex) => {
+            const itemCount = plan.items.filter((item) => item.plannedDate === day.isoDate).length
+            return <button type="button" className={mobileDayIndex === dayIndex ? 'is-active' : ''} aria-pressed={mobileDayIndex === dayIndex} key={day.isoDate} onClick={() => setMobileDaySelection({ weekStart: input.weekStart, index: dayIndex })}><strong>{day.dayLabel}</strong><small>{day.dateLabel}</small><b>{itemCount}</b></button>
+          })}
+        </div>
         <div className="week-planner-grid">
-          {days.map((day) => {
+          {days.map((day, dayIndex) => {
             const items = plan.items.filter((item) => item.plannedDate === day.isoDate)
             return (
-              <article className="week-day" key={day.isoDate}>
+              <article className="week-day" data-mobile-active={mobileDayIndex === dayIndex} key={day.isoDate}>
                 <header><span><strong>{day.dayLabel}</strong><small>{day.dateLabel}</small></span><b>{items.length}</b></header>
                 <div className="week-day-visits">
                   {items.length === 0 ? <span className="week-day-empty">{copy.noVisit}</span> : items.map((item) => {
-                    const presentation = getStatusPresentation(item.status, copy)
+                    const presentation = getStatusPresentation(item, copy)
                     const Icon = presentation.icon
                     return (
                       <button
                         type="button"
+                        aria-disabled={!input.canMaintain}
                         className={`week-visit week-visit--${item.status}`}
                         key={item.planItemId}
-                        disabled={item.status === 'completed' && !item.checklistInstanceId}
-                        onClick={() => {
-                          if (item.status === 'completed' && item.checklistInstanceId) input.onOpenResult(item.checklistInstanceId)
-                          else if (item.status !== 'completed') setManualPlanningOpen(true)
-                        }}
+                        tabIndex={input.canMaintain ? 0 : -1}
+                        onClick={() => { if (input.canMaintain) setSelectedVisit(item) }}
                       >
                         <span className="week-visit-main"><strong>{item.storeName}</strong></span>
                         <span className={`week-visit-outcome week-visit-outcome--${item.status}`}><Icon size={11} />{presentation.label}</span>
@@ -209,6 +242,82 @@ export function ChecklistWeeklyVisitPlanner(input: {
           }}
         />
       ) : null}
+      {selectedVisit && input.canMaintain ? (
+        <VisitActionDialog
+          copy={copy}
+          completing={completeVisitMutation.isPending}
+          item={selectedVisit}
+          locale={input.locale}
+          onClose={() => { completeVisitMutation.reset(); setSelectedVisit(null) }}
+          onComplete={() => void completeVisitMutation.mutateAsync(selectedVisit)}
+          onOpenWorkflow={() => { setSelectedVisit(null); input.onOpenWorkflow(selectedVisit.storeId) }}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function VisitActionDialog(input: {
+  copy: Copy
+  completing: boolean
+  item: ChecklistVisitPlan['items'][number]
+  locale: 'tr' | 'en'
+  onClose: () => void
+  onComplete: () => void
+  onOpenWorkflow: () => void
+}) {
+  const presentation = getStatusPresentation(input.item, input.copy)
+  const checklistDone = Boolean(input.item.checklistInstanceId)
+  const visitDone = checklistDone || Boolean(input.item.visitCompletedAt) || input.item.status === 'completed'
+  const visitMissed = input.item.status === 'missed'
+  const visitNotDue = input.item.status === 'planned'
+  const [pendingAction, setPendingAction] = useState<'checklist' | 'visit' | null>(null)
+  const Icon = presentation.icon
+  const pendingLabel = pendingAction === 'checklist' ? input.copy.startChecklist : input.copy.completeVisit
+  const requestAction = (action: 'checklist' | 'visit') => setPendingAction(action)
+  const confirmAction = () => {
+    if (pendingAction === 'checklist') input.onOpenWorkflow()
+    if (pendingAction === 'visit') input.onComplete()
+    setPendingAction(null)
+  }
+  return (
+    <>
+      <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) input.onClose() }}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="week-visit-action-backdrop" />
+          <DialogPrimitive.Content className="week-visit-action-dialog" aria-describedby="week-visit-action-copy">
+            <header className="week-visit-action-header">
+              <div className="week-visit-action-heading"><span className="week-visit-action-icon"><ClipboardCheck size={17} /></span><span><small>{input.copy.visitActionEyebrow}</small><DialogPrimitive.Title>{input.item.storeName}</DialogPrimitive.Title></span></div>
+              <DialogPrimitive.Close aria-label={input.copy.close}><X size={17} /></DialogPrimitive.Close>
+            </header>
+            <main className="week-visit-action-main">
+              <div className="week-visit-action-summary">
+                <div className={`week-visit-action-status week-visit-action-status--${input.item.status}`}><Icon size={15} /><span><small>{input.copy.currentStatus}</small><strong>{presentation.label}</strong></span></div>
+                <span className="week-visit-action-date"><small>{input.copy.plannedDate}</small><strong>{formatActionDate(input.item.plannedDate, input.locale)}</strong></span>
+              </div>
+              <p id="week-visit-action-copy">{visitMissed ? input.copy.visitMissedCopy : input.copy.visitActionCopy}</p>
+              <div className="week-visit-action-actions">
+                <button type="button" className="week-visit-action-primary" disabled={checklistDone || visitMissed || visitNotDue} onClick={() => requestAction('checklist')}><span className="week-visit-action-button-icon"><ClipboardCheck size={16} /></span><span>{input.copy.startChecklist}</span><ChevronRight className="week-visit-action-button-arrow" size={16} /></button>
+                <button type="button" className="week-visit-action-secondary" disabled={visitDone || visitMissed || visitNotDue || input.completing} onClick={() => requestAction('visit')}><span className="week-visit-action-button-icon"><Check size={16} /></span><span>{input.completing ? input.copy.completing : input.copy.completeVisit}</span><ChevronRight className="week-visit-action-button-arrow" size={16} /></button>
+              </div>
+            </main>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
+      <AlertDialogPrimitive.Root open={pendingAction !== null} onOpenChange={(open) => { if (!open) setPendingAction(null) }}>
+        <AlertDialogPrimitive.Portal>
+          <AlertDialogPrimitive.Overlay className="week-visit-confirm-backdrop" />
+          <AlertDialogPrimitive.Content className="week-visit-confirm-dialog" aria-describedby="week-visit-confirm-copy">
+            <span className="week-visit-confirm-icon"><CircleAlert size={18} /></span>
+            <AlertDialogPrimitive.Title>{input.copy.confirmTitle}</AlertDialogPrimitive.Title>
+            <AlertDialogPrimitive.Description id="week-visit-confirm-copy">{input.copy.confirmCopy(pendingLabel)}</AlertDialogPrimitive.Description>
+            <div className="week-visit-confirm-actions">
+              <AlertDialogPrimitive.Cancel type="button">{input.copy.confirmCancel}</AlertDialogPrimitive.Cancel>
+              <AlertDialogPrimitive.Action type="button" className="confirm" onClick={confirmAction}>{input.copy.confirm}</AlertDialogPrimitive.Action>
+            </div>
+          </AlertDialogPrimitive.Content>
+        </AlertDialogPrimitive.Portal>
+      </AlertDialogPrimitive.Root>
     </>
   )
 }
@@ -398,19 +507,66 @@ function PlannerState(input: { label: string; action?: string; onAction?: () => 
   return <div className="week-plan-no-results"><Search size={18} /><strong>{input.label}</strong>{input.action ? <button type="button" onClick={input.onAction}>{input.action}</button> : null}</div>
 }
 
-function getStatusPresentation(status: ChecklistVisitPlan['items'][number]['status'], copy: Copy) {
-  if (status === 'completed') return { label: copy.completedVisit, icon: CheckCircle2 }
-  if (status === 'missed') return { label: copy.checklistMissed, icon: CircleAlert }
-  if (status === 'planned') return { label: copy.plannedVisit, icon: CalendarDays }
+function getStatusPresentation(item: ChecklistVisitPlan['items'][number], copy: Copy) {
+  if (item.checklistInstanceId) return { label: copy.completedChecklist, icon: CheckCircle2 }
+  if (item.visitCompletedAt || item.status === 'completed') return { label: copy.completedVisit, icon: CheckCircle2 }
+  if (item.status === 'missed') return { label: copy.visitMissed, icon: CircleAlert }
+  if (item.status === 'planned') return { label: copy.waitingVisit, icon: Clock3 }
   return { label: copy.waitingVisit, icon: Clock3 }
 }
 
+function formatActionDate(value: string, locale: 'tr' | 'en') {
+  return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Istanbul' }).format(new Date(`${value}T12:00:00`))
+}
+
 function normalizeDraft(items: VisitPlanDraftItem[]) { return [...items].sort((a, b) => a.plannedDate.localeCompare(b.plannedDate) || a.displayOrder - b.displayOrder).map((item, index) => ({ ...item, displayOrder: index })) }
+
+function isVisitPlanRevisionConflict(error: unknown) {
+  return error instanceof ApiError && error.status === 409 && /revision/i.test(error.message)
+}
 
 function getCopy(locale: 'tr' | 'en') {
   return locale === 'tr' ? {
     add: 'Takvime ekle', added: 'Bu güne eklendi', addDay: 'Takvime eklenecek gün', addStoreLabel: (name: string, day: string) => `${name} mağazasını ${day} gününe ekle`, cancel: 'Vazgeç', checklistMissed: 'Checklist yapılmadı', chooseDay: 'Gün seçin', chooseStore: 'Eklemek için mağazayı seçin', close: 'Kapat', collisionCopy: (count: number) => `${count} mağaza hem siz hem başka bir kullanıcı tarafından değiştirildi. Kaydetmeden önce hangi sürümün korunacağını seçin.`, collisionTitle: 'Aynı mağazada çakışan değişiklik var', compareReapply: 'Güncel planı al ve taslağı yeniden uygula', completed: 'Tamamlanan', completedVisit: 'Ziyaret Tamamlandı', conflictCopy: 'Plan siz düzenlerken değişti. Taslağınız korunuyor; güncel sürümü alın ve yeniden uygulayın.', conflictTitle: 'Planın daha yeni bir sürümü var', createPlan: 'Ziyaret planını oluşturun', current: 'Plan güncel', day: 'Gün', discard: 'Taslağı sil', discardCopy: 'Haftalık taslak henüz kaydedilmedi.', discardTitle: 'Değişiklikler kaybolsun mu?', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', loadingStores: 'Mağazalar yükleniyor', missed: 'Checklist yapılmadı', next: 'Sonraki', nextWeek: 'Sonraki hafta', noDraft: 'Henüz ziyaret yok', noStores: 'Mağaza bulunamadı', noVisit: 'Planlanan ziyaret yok', notApplied: 'Kaydetmeden plana yansımaz', placeVisits: 'Saha ziyaretlerini günlere yerleştirin', planOwner: 'Plan kapsamı', planWeek: 'Haftayı Planla', plannedVisit: 'Ziyaret Planlandı', previous: 'Önceki', previousWeek: 'Önceki hafta', refreshing: 'Mağazalar güncelleniyor…', refreshFailed: 'Yeni mağaza sayfası alınamadı · tekrar dene', remove: 'Plandan çıkar', removeStore: (name: string) => `${name} ziyaretini taslaktan kaldır`, retry: 'Tekrar dene', returnToPlan: 'Planlamaya dön', save: 'Ziyaret Planını Kaydet', saveFailed: 'Ziyaret planı kaydedilemedi.', saved: 'Ziyaret planı kaydedildi', saving: 'Kaydediliyor', searchStore: 'Mağaza ara', storeAddedLabel: (name: string, day: string) => `${name} mağazası ${day} planında`, storeLoadFailed: 'Mağazalar yüklenemedi', stores: 'Mağazalar', suitableStores: (count: number) => `${count} uygun mağaza`, summary: 'Haftalık ziyaret planı özeti', unsaved: 'Kaydedilmemiş değişiklik var', useLatest: 'Güncel planı koru', useLocal: 'Benim taslağımı koru', visitCount: (count: number) => `${count} ziyaret · Pazar plan dışı`, visitDay: 'Ziyaret günü', visitTotal: (count: number) => `${count} ziyaret`, waiting: 'Bekleyen', waitingVisit: 'Ziyaret Bekleniyor', weeklyDraft: 'Haftalık taslak', weeklyPlan: 'HAFTALIK PLAN', weeklyPlanning: 'HAFTALIK PLANLAMA',
   } : {
     add: 'Add to calendar', added: 'Added to this day', addDay: 'Day to add', addStoreLabel: (name: string, day: string) => `Add ${name} to ${day}`, cancel: 'Cancel', checklistMissed: 'Checklist not completed', chooseDay: 'Choose a day', chooseStore: 'Choose a store to add', close: 'Close', collisionCopy: (count: number) => `${count} store was changed by both you and another user. Choose which version to preserve before saving.`, collisionTitle: 'Conflicting changes for the same store', compareReapply: 'Load latest plan and reapply draft', completed: 'Completed', completedVisit: 'Visit Completed', conflictCopy: 'The plan changed while you were editing. Your draft is preserved; load the latest revision and reapply it.', conflictTitle: 'A newer plan revision exists', createPlan: 'Create the visit plan', current: 'Plan is current', day: 'Day', discard: 'Discard draft', discardCopy: 'The weekly draft has not been saved.', discardTitle: 'Discard changes?', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', loadingStores: 'Loading stores', missed: 'Checklist not completed', next: 'Next', nextWeek: 'Next week', noDraft: 'No visits yet', noStores: 'No stores found', noVisit: 'No planned visit', notApplied: 'Changes apply only after saving', placeVisits: 'Place field visits on days', planOwner: 'Plan scope', planWeek: 'Plan the Week', plannedVisit: 'Visit Planned', previous: 'Previous', previousWeek: 'Previous week', refreshing: 'Refreshing stores…', refreshFailed: 'Could not refresh stores · try again', remove: 'Remove', removeStore: (name: string) => `Remove ${name} from draft`, retry: 'Try again', returnToPlan: 'Return to planning', save: 'Save Visit Plan', saveFailed: 'Visit plan could not be saved.', saved: 'Visit plan saved', saving: 'Saving', searchStore: 'Search stores', storeAddedLabel: (name: string, day: string) => `${name} is planned for ${day}`, storeLoadFailed: 'Stores could not be loaded', stores: 'Stores', suitableStores: (count: number) => `${count} eligible stores`, summary: 'Weekly visit plan summary', unsaved: 'There are unsaved changes', useLatest: 'Keep latest plan', useLocal: 'Keep my draft', visitCount: (count: number) => `${count} visits · Sunday excluded`, visitDay: 'Visit day', visitTotal: (count: number) => `${count} visits`, waiting: 'Waiting', waitingVisit: 'Visit Waiting', weeklyDraft: 'Weekly draft', weeklyPlan: 'WEEKLY PLAN', weeklyPlanning: 'WEEKLY PLANNING',
+  }
+}
+
+function getVisitActionCopy(locale: 'tr' | 'en') {
+  return locale === 'tr' ? {
+    completedChecklist: 'Checklist Yapıldı · Ziyaret Tamamlandı',
+    completeVisit: 'Ziyareti Tamamla',
+    completing: 'Kaydediliyor…',
+    confirm: 'Onayla',
+    confirmCancel: 'Vazgeç',
+    confirmCopy: (action: string) => `${action} işlemini başlatmak üzeresiniz. Devam etmek istiyor musunuz?`,
+    confirmTitle: 'İşlemi onaylıyor musunuz?',
+    currentStatus: 'ZİYARET DURUMU',
+    plannedDate: 'PLANLANAN TARİH',
+    startChecklist: 'Checklisti Başlat',
+    visitActionCopy: 'Bu mağaza için yapmak istediğiniz işlemi seçin.',
+    visitActionEyebrow: 'MAĞAZA ZİYARETİ',
+    visitCompleteFailed: 'Ziyaret tamamlanamadı.',
+    visitCompleted: 'Ziyaret tamamlandı',
+    visitMissed: 'Ziyaret Yapılmadı',
+    visitMissedCopy: 'Bu ziyaretin tarihi geçti; geriye dönük checklist veya ziyaret tamamlama yapılamaz.',
+  } : {
+    completedChecklist: 'Checklist Done · Visit Completed',
+    completeVisit: 'Complete visit',
+    completing: 'Saving…',
+    confirm: 'Confirm',
+    confirmCancel: 'Cancel',
+    confirmCopy: (action: string) => `You are about to ${action.toLowerCase()}. Do you want to continue?`,
+    confirmTitle: 'Confirm this action?',
+    currentStatus: 'VISIT STATUS',
+    plannedDate: 'PLANNED DATE',
+    startChecklist: 'Start checklist',
+    visitActionCopy: 'Choose what to do for this store.',
+    visitActionEyebrow: 'STORE VISIT',
+    visitCompleteFailed: 'Visit could not be completed.',
+    visitCompleted: 'Visit completed',
+    visitMissed: 'Visit Not Completed',
+    visitMissedCopy: 'This visit date has passed; retrospective checklist or visit completion is unavailable.',
   }
 }

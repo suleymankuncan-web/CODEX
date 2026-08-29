@@ -118,6 +118,340 @@
   padding: 22px;
 }
 
+/* Chromatic result archive: isolated from visit and execution drawers. */
+.checklist-workflow-command-drawer--results[data-slot='dialog-content'] {
+  border-left-color: rgb(75 49 126 / 28%);
+  background:
+    radial-gradient(circle at 86% 15%, rgb(72 208 205 / 18%), transparent 27rem),
+    radial-gradient(circle at 8% 76%, rgb(125 91 210 / 13%), transparent 24rem),
+    linear-gradient(145deg, #f5f2fb 0%, #eef8f7 52%, #f7f8fb 100%);
+  box-shadow: -32px 0 90px rgb(24 19 45 / 28%);
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-header {
+  overflow: hidden;
+  border-bottom: 1px solid rgb(255 255 255 / 18%);
+  background:
+    radial-gradient(circle at 82% -80%, rgb(91 224 218 / 50%), transparent 58%),
+    linear-gradient(116deg, #302052 0%, #49347c 46%, #177b82 100%);
+  padding: 22px 24px;
+  box-shadow: 0 16px 36px rgb(35 26 68 / 16%);
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-header::after {
+  position: absolute;
+  right: -3rem;
+  bottom: -6.5rem;
+  width: 13rem;
+  height: 13rem;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2.2rem rgb(255 255 255 / 3%);
+  content: '';
+  pointer-events: none;
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-role {
+  border-color: rgb(255 255 255 / 26%);
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
+  backdrop-filter: blur(10px);
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-identity p {
+  color: rgb(229 242 244 / 72%);
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-identity h2 {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-header > button {
+  z-index: 1;
+  border: 1px solid rgb(255 255 255 / 22%);
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  backdrop-filter: blur(10px);
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-header > button:hover,
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-header > button:focus-visible {
+  border-color: rgb(255 255 255 / 42%);
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+}
+
+.checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-body {
+  padding: 24px;
+}
+
+.checklist-result-archive {
+  display: grid;
+  gap: 16px;
+}
+
+.checklist-result-archive-hero {
+  position: relative;
+  display: flex;
+  min-height: 132px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 54%);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 12% 135%, rgb(190 156 255 / 55%), transparent 42%),
+    radial-gradient(circle at 94% -20%, rgb(93 225 216 / 72%), transparent 40%),
+    linear-gradient(120deg, #4a2e7a 0%, #49659a 52%, #178990 100%);
+  box-shadow: 0 20px 42px rgb(52 39 91 / 18%), inset 0 0 0 1px rgb(255 255 255 / 8%);
+  color: #fff;
+  padding: 24px;
+}
+
+.checklist-result-archive-hero::after {
+  position: absolute;
+  right: -2.5rem;
+  bottom: -4.8rem;
+  width: 11rem;
+  height: 11rem;
+  border: 1px solid rgb(255 255 255 / 17%);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+.checklist-result-archive-store {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.checklist-result-archive-store > span {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 15px;
+  background: rgb(255 255 255 / 13%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 5%);
+  backdrop-filter: blur(12px);
+}
+
+.checklist-result-archive-store svg {
+  width: 21px;
+  height: 21px;
+}
+
+.checklist-result-archive-store > div {
+  min-width: 0;
+}
+
+.checklist-result-archive-store p {
+  margin: 0 0 6px;
+  color: rgb(229 245 245 / 72%);
+  font-size: 9px;
+  font-weight: 820;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.checklist-result-archive-store h3 {
+  overflow: hidden;
+  margin: 0;
+  color: #fff;
+  font: 740 clamp(18px, 3vw, 24px)/1.08 'Manrope', sans-serif;
+  letter-spacing: -0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-result-archive-count {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-width: 72px;
+  min-height: 72px;
+  flex: 0 0 auto;
+  place-content: center;
+  justify-items: center;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 20px;
+  background: rgb(12 25 55 / 20%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 5%);
+  backdrop-filter: blur(12px);
+}
+
+.checklist-result-archive-count strong {
+  color: #fff;
+  font: 760 25px/1 'Manrope', sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+.checklist-result-archive-count span {
+  margin-top: 5px;
+  color: rgb(229 245 245 / 68%);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.checklist-result-archive-list {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-result-archive-row {
+  --result-accent: #7b5bc9;
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 76px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(87 72 119 / 13%);
+  border-radius: 17px;
+  background: rgb(255 255 255 / 84%);
+  box-shadow: 0 9px 24px rgb(44 39 73 / 7%);
+  padding: 12px 14px 12px 16px;
+  backdrop-filter: blur(12px);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.checklist-result-archive-row::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: var(--result-accent);
+  content: '';
+}
+
+.checklist-result-archive-row[data-score-tone='strong'] {
+  --result-accent: #17a99b;
+}
+
+.checklist-result-archive-row[data-score-tone='watch'] {
+  --result-accent: #e49b39;
+}
+
+.checklist-result-archive-row[data-score-tone='critical'] {
+  --result-accent: #e25e75;
+}
+
+.checklist-result-archive-row:hover {
+  border-color: color-mix(in srgb, var(--result-accent) 34%, transparent);
+  box-shadow: 0 15px 34px rgb(44 39 73 / 12%);
+  transform: translateY(-1px);
+}
+
+.checklist-result-archive-index {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--result-accent) 24%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--result-accent) 10%, white);
+  color: color-mix(in srgb, var(--result-accent) 78%, #172638);
+  font: 800 10px/1 'Manrope', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.checklist-result-archive-main {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.checklist-result-archive-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.checklist-result-archive-title-row > strong {
+  overflow: hidden;
+  color: #211a30;
+  font: 730 14px/1.15 'Manrope', sans-serif;
+  letter-spacing: -0.018em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-result-archive-score {
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--result-accent) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--result-accent) 9%, white);
+  color: color-mix(in srgb, var(--result-accent) 80%, #21313d);
+  padding: 4px 8px;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.checklist-result-archive-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: #756e82;
+  font-size: 10px;
+  font-weight: 620;
+}
+
+.checklist-result-archive-meta time,
+.checklist-result-archive-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-result-archive-meta i {
+  width: 3px;
+  height: 3px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--result-accent);
+}
+
+.checklist-result-archive-action[data-slot='button'] {
+  min-width: 88px;
+  justify-content: center;
+  border: 1px solid rgb(78 57 124 / 13%);
+  border-radius: 11px;
+  background: #f4f0fb;
+  color: #52338f;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.checklist-result-archive-action[data-slot='button']:hover,
+.checklist-result-archive-action[data-slot='button']:focus-visible {
+  border-color: rgb(78 57 124 / 24%);
+  background: #e9e1f8;
+  color: #3f2475;
+}
+
 .store-checklists-empty-block,
 .store-checklists-inline-notice {
   margin: 0 22px 18px;
@@ -142,5 +476,62 @@
   .store-checklists-empty-block,
   .store-checklists-inline-notice {
     margin: 0 10px 12px;
+  }
+
+  .checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-header,
+  .checklist-workflow-command-drawer--results .checklist-workflow-command-drawer-body {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .checklist-result-archive-hero {
+    min-height: 112px;
+    border-radius: 18px;
+    padding: 18px;
+  }
+
+  .checklist-result-archive-store > span {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
+  .checklist-result-archive-count {
+    min-width: 60px;
+    min-height: 60px;
+    border-radius: 17px;
+  }
+
+  .checklist-result-archive-row {
+    min-height: 70px;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 9px;
+    border-radius: 14px;
+    padding: 10px 9px 10px 12px;
+  }
+
+  .checklist-result-archive-index {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .checklist-result-archive-title-row {
+    gap: 6px;
+  }
+
+  .checklist-result-archive-title-row > strong {
+    font-size: 12px;
+  }
+
+  .checklist-result-archive-score {
+    padding: 3px 6px;
+    font-size: 8px;
+  }
+
+  .checklist-result-archive-action[data-slot='button'] {
+    min-width: 34px;
+    width: 34px;
+    padding: 0;
   }
 }

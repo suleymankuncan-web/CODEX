@@ -32,7 +32,6 @@ import {
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
-  upsertChecklistActiveResponse,
 } from '../../pages/store-checklists-model'
 import {
   buildChecklistStoreVisitRows,
@@ -61,32 +60,7 @@ import {
   getVisitPlanCurrentMonthKey,
   resolveVisitPlanEvaluationMonth,
 } from '../../pages/store-visit-plan-model'
-import { mergeCompletedInstanceIntoMobileToday } from '../../pages/store-checklists-cache-model'
-
-function mergeSavedResponseIntoMobileToday(
-  current: MobileChecklistTodayResponse | undefined,
-  draft: ChecklistResponseDraft,
-  updatedAt: string | null,
-) {
-  if (!current) return current
-
-  let didUpdate = false
-  const activeInstances = current.data.activeInstances.map((instance) => {
-    if (instance.checklistInstanceId !== draft.checklistInstanceId) return instance
-    didUpdate = true
-    return upsertChecklistActiveResponse(instance, draft, updatedAt)
-  })
-
-  if (!didUpdate) return current
-
-  return {
-    ...current,
-    data: {
-      ...current.data,
-      activeInstances,
-    },
-  }
-}
+import { mergeCompletedInstanceIntoMobileToday, mergeSavedResponseIntoMobileToday } from '../../pages/store-checklists-cache-model'
 
 export function useChecklistWorkflowController(input: {
   authSummary: AuthSessionSummary | null
@@ -123,6 +97,7 @@ export function useChecklistWorkflowController(input: {
   const {
     ackNotes,
     scores,
+    responseValues,
     comments,
     selectedSessionKey,
     selectedResultId,
@@ -333,19 +308,44 @@ export function useChecklistWorkflowController(input: {
       saveResponseMutation.mutate(draft)
     }, 500)
   }
+  const saveResponseNow = async (draft: ChecklistResponseDraft) => {
+    const key = getChecklistResponseDraftKey(draft)
+    const existingTimer = autoSaveTimersRef.current[key]
+    if (existingTimer) {
+      window.clearTimeout(existingTimer)
+      delete autoSaveTimersRef.current[key]
+    }
+
+    if (savedResponseDraftsRef.current[key] === serializeChecklistResponseDraft(draft)) return
+    await saveResponseMutation.mutateAsync(draft)
+  }
   const hydrateActiveResponseDrafts = (
     active: MobileChecklistToday['activeInstances'][number] | undefined,
   ) => {
     const nextScores: Record<string, number> = {}
+    const nextResponseValues: Record<
+      string,
+      import('../checklists/api').ChecklistComplianceResponseValue
+    > = {}
     const nextComments: Record<string, string> = {}
 
     if (active?.responses.length) {
       for (const response of active.responses) {
         nextScores[response.templateItemId] = response.scoreValue
+        if (response.responseValue) {
+          nextResponseValues[response.templateItemId] =
+            response.responseValue as import('../checklists/api').ChecklistComplianceResponseValue
+        }
         const draft = {
           checklistInstanceId: active.checklistInstanceId,
           templateItemId: response.templateItemId,
           scoreValue: response.scoreValue,
+          ...(response.responseValue
+            ? {
+                responseValue:
+                  response.responseValue as import('../checklists/api').ChecklistComplianceResponseValue,
+              }
+            : {}),
           ...(response.commentText === null || response.commentText === undefined
             ? {}
             : { commentText: response.commentText }),
@@ -356,7 +356,11 @@ export function useChecklistWorkflowController(input: {
       }
     }
 
-    return { comments: nextComments, scores: nextScores }
+    return {
+      comments: nextComments,
+      responseValues: nextResponseValues,
+      scores: nextScores,
+    }
   }
 
   const isLoading =
@@ -666,9 +670,11 @@ export function useChecklistWorkflowController(input: {
     pendingItems,
     periodLabel,
     queueResponseAutoSave,
+    responseValues,
     requiresCombinedVisitTemplates,
     resultSort,
     retryChecklistQueries,
+    saveResponseNow,
     saveResponseMutation,
     scores,
     searchQuery,

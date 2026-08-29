@@ -103,7 +103,7 @@ test('region manager feed composer defaults to own region and hides company scop
     has: page.getByRole('heading', { name: 'Feed postu oluştur' }),
   })
   const scopeSelect = composer.locator('label').filter({ hasText: 'Kapsam' }).locator('select').first()
-  const regionSelect = composer.locator('label').filter({ hasText: 'Bölge id' }).locator('select').first()
+  const regionSelect = composer.locator('label').filter({ hasText: 'Bölge müdürü id' }).locator('select').first()
   await expect(scopeSelect).toHaveValue('region')
   await expect(scopeSelect).not.toContainText('Şirket')
   await expect(regionSelect).toHaveValue(regionId)
@@ -146,11 +146,11 @@ test('store feed renders prototype-parity read-only surface for store personnel'
   await page.goto('/store/feed')
 
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
-  await expect(page.getByText('Bölge akışı')).toBeVisible()
+  await expect(page.getByText('Müdür akışı')).toBeVisible()
   await expect(page.getByText('Görünür duyuru')).toBeVisible()
   await expect(page.getByText('Sabitlenen')).toBeVisible()
   await expect(page.getByText('Bugün paylaşılan')).toBeVisible()
-  await expect(page.getByText('Bölge mağazası')).toBeVisible()
+  await expect(page.getByText('Sorumlu mağaza', { exact: true })).toBeVisible()
   await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toHaveCount(0)
   await expect(page.getByLabel('Gönderi seçenekleri')).toHaveCount(0)
 
@@ -219,7 +219,7 @@ test('region manager store feed supports composer, edit, pin menu, archive undo,
   await page.getByRole('button', { name: 'Sabitle' }).click()
   await page.getByRole('button', { name: 'Paylaş' }).click()
 
-  await expect(page.getByText('Bölge duyurusu sabitlenerek paylaşıldı.')).toBeVisible()
+  await expect(page.getByText('Müdür duyurusu sabitlenerek paylaşıldı.')).toBeVisible()
   expect(createdPayload).toMatchObject({
     postType: 'announcement',
     title: 'Bölge toplantısı bugün 15:00',

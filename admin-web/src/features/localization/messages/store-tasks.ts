@@ -11,7 +11,7 @@ export const storeTasksTr = {
   'storeTasks.heroCopyStore':
     'Checklist, KPI ve hedeflerden doğan mağaza aksiyonlarını tek listede toplar.',
   'storeTasks.heroCopyRegion':
-    'Bölge mağazalarının tamamlanan ve devam eden aksiyonlarını tek listede toplar.',
+    'Sorumlu mağazaların tamamlanan ve devam eden aksiyonlarını tek listede toplar.',
   'storeTasks.storeScopePill': 'Mağaza müdürü görünümü',
   'storeTasks.regionScopePill': 'Bölge müdürü görünümü',
   'storeTasks.checklistCount': 'Checklist aksiyonu',
@@ -20,12 +20,12 @@ export const storeTasksTr = {
   'storeTasks.projectionMetricNote': 'Kritik veya aday projeksiyon',
   'storeTasks.reportedResolvedMetric': 'Çözüldü bildirildi',
   'storeTasks.reportedResolvedMetricNote': 'Çözüm notu veya karar bekliyor',
-  'storeTasks.regionPendingMetric': 'Bölge takipleri',
+  'storeTasks.regionPendingMetric': 'Müdür takipleri',
   'storeTasks.summaryRegion': 'Aksiyon özeti',
   'storeTasks.workbenchStoreDescription':
     'Açık aksiyonlar mağaza görev listesinde izlenir ve çözüm notuyla kapanır.',
   'storeTasks.workbenchRegionDescription':
-    'Bölge görünümü mağaza aksiyon durumunu izler; mağaza adına kapatma yapmaz.',
+    'Müdür görünümü mağaza aksiyon durumunu izler; mağaza adına kapatma yapmaz.',
   'storeTasks.filteredEmptyTitle': 'Filtreye uygun aksiyon yok',
   'storeTasks.filteredEmptyCopy': 'Arama veya sekme seçimi mevcut işlerle eşleşmedi.',
   'storeTasks.evidenceLabel': 'Durum bağlamı',
@@ -34,7 +34,7 @@ export const storeTasksTr = {
   'storeTasks.evidenceOpen': 'Aksiyon açık',
   'storeTasks.evidenceHasContext': 'Bağlam var',
   'storeTasks.evidenceSource': 'Neden oluştu',
-  'storeTasks.regionReadOnlyHint': 'Bölge görünümü izleme modunda',
+  'storeTasks.regionReadOnlyHint': 'Müdür görünümü izleme modunda',
   'storeTasks.workflowDetailAction': 'Detay aç',
   'storeTasks.rowDetailAction': 'Detay aç',
   'storeTasks.rowRecordAction': 'Kaydı gör',
@@ -42,13 +42,13 @@ export const storeTasksTr = {
   'storeTasks.regionInspectAction': 'İncele',
   'storeTasks.workflowDetailRegion': 'Görev detayı',
   'storeTasks.storeView': 'Mağaza',
-  'storeTasks.regionView': 'Bölge',
+  'storeTasks.regionView': 'Bölge müdürü',
   'storeTasks.workflowRuleTitle': 'Görev kuralı',
   'storeTasks.workflowRuleCopy':
     'Checklist kabul edildiğinde düşük maddeler otomatik görev üretir. KPI tarafında yüzde 80 altı kritik, 80-90 arası görev adayıdır; hedef hesabı değiştirilmez.',
   'storeTasks.workflowRuleBadge': 'Operasyon kuralı',
   'storeTasks.queuePanelTitleStore': 'Mağaza aksiyon listesi',
-  'storeTasks.queuePanelTitleRegion': 'Bölge aksiyon görünümü',
+  'storeTasks.queuePanelTitleRegion': 'Müdür aksiyon görünümü',
   'storeTasks.queuePanelCopyStore': 'Her satır mağazada alınacak aksiyondur. Kapatma için çözüm notu kullanılır.',
   'storeTasks.queuePanelCopyRegion': 'Bölge müdürü mağazaların aksiyon durumunu okur; mağaza adına kapatma yapmaz.',
   'storeTasks.periodLabel': 'Dönem',
@@ -86,7 +86,7 @@ export const storeTasksTr = {
   'storeTasks.pendingActions': 'Aksiyon bekleyenler',
   'storeTasks.pendingActionsNote': 'Mevcut rol setinden aksiyon bekleyen işler.',
   'storeTasks.pendingActionsNoteStore': 'Kendi mağazamda açık iş',
-  'storeTasks.pendingActionsNoteRegion': 'Bölgede açık iş',
+  'storeTasks.pendingActionsNoteRegion': 'Sorumlu mağazalarda açık iş',
   'storeTasks.openBadge': 'Açık',
   'storeTasks.highPriority': 'Yüksek öncelik',
   'storeTasks.highPriorityNote': 'Önce bakılması gereken işler.',
@@ -170,7 +170,7 @@ export const storeTasksTr = {
   'storeTasks.actionPlansEvidenceSnapshot': 'Durum özeti',
   'storeTasks.actionPlansWhyTitle': 'Neden oluştu?',
   'storeTasks.actionPlansStoreActionTitle': 'Mağaza aksiyonu',
-  'storeTasks.actionPlansRegionViewTitle': 'Bölge görünümü',
+  'storeTasks.actionPlansRegionViewTitle': 'Müdür görünümü',
   'storeTasks.actionPlansRegionViewCopy':
     'Bölge müdürü bu aksiyonun kaynağını, mağaza notunu ve kapanış durumunu okur. Mağaza adına kapatma yapmaz.',
   'storeTasks.actionPlansTimelineTitle': 'Hareket geçmişi',
@@ -261,7 +261,7 @@ export const storeTasksTr = {
   'storeTasks.urgency.low': 'Düşük',
   'storeTasks.workflowStatus.at_risk': 'riskte',
   'storeTasks.workflowStatus.off_track': 'takip dışı',
-  'storeTasks.workflowStatus.pending_region_approval': 'bölge onayı bekliyor',
+  'storeTasks.workflowStatus.pending_region_approval': 'bölge müdürü onayı bekliyor',
   'storeTasks.workflowStatus.completed': 'tamamlandı',
 
   'storeTasks.due.closed': 'Kapandı',
@@ -292,7 +292,7 @@ export const storeTasksTr = {
   'storeTasks.role.STORE_PERSONNEL': 'Mağaza personeli',
   'storeTasks.role.SUPER_ADMIN': 'Süper admin',
   'storeTasks.role.REPORT_VIEWER': 'Rapor okuyucu',
-  'storeTasks.role.REGION_APPROVER': 'Bölge onaycısı',
+  'storeTasks.role.REGION_APPROVER': 'Bölge müdürü onaycısı',
   'storeTasks.role.REGION_MANAGER': 'Bolge muduru',
 } as const
 

@@ -9,8 +9,8 @@ export const storeKpisTr = {
   'storeKpis.storeScopeCount': '{count} mağaza',
   'storeKpis.noStoreScope': 'Yetkili mağaza yok',
   'storeKpis.status': 'Durum',
-  'storeKpis.regionOverviewEyebrow': 'Bölge KPI',
-  'storeKpis.regionOverviewTitle': 'Bölge mağazaları',
+  'storeKpis.regionOverviewEyebrow': 'Müdür KPI',
+  'storeKpis.regionOverviewTitle': 'Sorumlu mağazalar',
   'storeKpis.regionOverviewCopy':
     'Tanımlı mağazalar gerçek sıralama verisinden okunur. Mağaza seçildiğinde KPI detayı açılır.',
   'storeKpis.regionOverviewStoreCount': '{count} mağaza',
@@ -18,11 +18,11 @@ export const storeKpisTr = {
   'storeKpis.regionOverviewStoresCopy':
     'Her satır bölge müdürünün yetkili mağaza listesinden gelir.',
   'storeKpis.regionOverviewFoundationBadge': 'Yetki görünümü',
-  'storeKpis.regionOverviewScopedStore': 'Bölge mağazası',
+  'storeKpis.regionOverviewScopedStore': 'Sorumlu mağaza',
   'storeKpis.regionOverviewEmptyTitle': 'Yetkili mağaza görünmüyor',
   'storeKpis.regionOverviewEmptyCopy':
     'Bu oturum için sıralama veya yetkili mağaza listesi henüz görünür değil.',
-  'storeKpis.regionOverviewErrorTitle': 'Bölge KPI listesi açılamadı',
+  'storeKpis.regionOverviewErrorTitle': 'Sorumlu mağaza KPI listesi açılamadı',
   'storeKpis.openStoreKpi': "KPI'a git",
   'storeKpis.authWaiting': 'Yetki bekliyor',
   'storeKpis.storeScope': 'Mağaza görünümü',

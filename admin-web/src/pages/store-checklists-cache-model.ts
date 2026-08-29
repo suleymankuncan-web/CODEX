@@ -1,5 +1,5 @@
 import type { MobileChecklistTodayResponse } from '../features/checklists/api'
-import type { ChecklistCompletedInstance } from './store-checklists-model'
+import { upsertChecklistActiveResponse, type ChecklistCompletedInstance, type ChecklistResponseDraft } from './store-checklists-model'
 import { getMonthKey } from './store-checklists-logic'
 
 export function mergeCompletedInstanceIntoMobileToday(
@@ -83,6 +83,31 @@ export function mergeCompletedInstanceIntoMobileToday(
             item.checklistInstanceId === input.checklistInstanceId ? pendingRow : item,
           )
         : [pendingRow, ...current.data.pendingAcknowledgements],
+    },
+  }
+}
+
+export function mergeSavedResponseIntoMobileToday(
+  current: MobileChecklistTodayResponse | undefined,
+  draft: ChecklistResponseDraft,
+  updatedAt: string | null,
+) {
+  if (!current) return current
+
+  let didUpdate = false
+  const activeInstances = current.data.activeInstances.map((instance) => {
+    if (instance.checklistInstanceId !== draft.checklistInstanceId) return instance
+    didUpdate = true
+    return upsertChecklistActiveResponse(instance, draft, updatedAt)
+  })
+
+  if (!didUpdate) return current
+
+  return {
+    ...current,
+    data: {
+      ...current.data,
+      activeInstances,
     },
   }
 }

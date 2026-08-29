@@ -4,16 +4,19 @@ export type ChecklistCommandStatus = (typeof checklistCommandStatuses)[number]
 export const checklistCommandSorts = [
   'store_asc',
   'store_desc',
+  'bm_score_asc',
   'bm_score_desc',
   'vm_score_desc',
   'last_visit_asc',
   'last_visit_desc',
+  'elapsed_asc',
+  'elapsed_desc',
   'open_actions_desc',
   'status_asc',
   'status_desc',
 ] as const
 export type ChecklistCommandSort = (typeof checklistCommandSorts)[number]
-export type ChecklistCommandSortKey = 'store' | 'bm' | 'vm' | 'last_visit' | 'open_actions' | 'status'
+export type ChecklistCommandSortKey = 'store' | 'bm' | 'vm' | 'last_visit' | 'elapsed' | 'open_actions' | 'status'
 
 export type ChecklistCommandQueryInput = {
   period: string
@@ -65,6 +68,7 @@ export type ChecklistOperationalHistoryRange = (typeof checklistOperationalHisto
 
 export const checklistOperationalHistoryKinds = [
   'checklist_completed',
+  'visit_completed',
   'acknowledgement',
   'task_assigned',
   'task_resolved',
@@ -339,6 +343,7 @@ export function createChecklistCommandPeriod(year: number, month: number) {
 
 const sortByKey: Record<ChecklistCommandSortKey, ChecklistCommandSort> = {
   bm: 'bm_score_desc',
+  elapsed: 'elapsed_desc',
   last_visit: 'last_visit_desc',
   open_actions: 'open_actions_desc',
   status: 'status_asc',
@@ -351,7 +356,9 @@ export function toggleChecklistCommandSort(
   key: ChecklistCommandSortKey,
 ): ChecklistCommandSort {
   if (key === 'store') return current === 'store_asc' ? 'store_desc' : 'store_asc'
+  if (key === 'bm') return current === 'bm_score_desc' ? 'bm_score_asc' : 'bm_score_desc'
   if (key === 'last_visit') return current === 'last_visit_desc' ? 'last_visit_asc' : 'last_visit_desc'
+  if (key === 'elapsed') return current === 'elapsed_desc' ? 'elapsed_asc' : 'elapsed_desc'
   if (key === 'status') return current === 'status_asc' ? 'status_desc' : 'status_asc'
   return sortByKey[key]
 }
@@ -363,9 +370,10 @@ export function getChecklistCommandSortLabel(
 ) {
   const selected =
     (key === 'store' && current.startsWith('store_')) ||
-    (key === 'bm' && current === 'bm_score_desc') ||
+    (key === 'bm' && current.startsWith('bm_score_')) ||
     (key === 'vm' && current === 'vm_score_desc') ||
     (key === 'last_visit' && current.startsWith('last_visit_')) ||
+    (key === 'elapsed' && current.startsWith('elapsed_')) ||
     (key === 'open_actions' && current === 'open_actions_desc') ||
     (key === 'status' && current.startsWith('status_'))
   if (!selected) return label

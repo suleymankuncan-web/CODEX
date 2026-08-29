@@ -1,0 +1,590 @@
+.annual-visit-history-backdrop {
+  position: fixed;
+  z-index: 165;
+  inset: 0;
+  background: color-mix(in oklab, var(--foreground) 48%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.annual-visit-history-dialog {
+  position: fixed;
+  z-index: 166;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: min(1180px, calc(100vw - 32px));
+  height: min(840px, calc(100dvh - 32px));
+  grid-template-rows: auto minmax(0, 1fr);
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  outline: 0;
+  color: var(--foreground);
+  background: var(--background);
+  box-shadow: 0 30px 90px color-mix(in oklab, var(--foreground) 28%, transparent);
+}
+
+.annual-visit-history-description {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.annual-visit-history-header {
+  position: relative;
+  display: flex;
+  min-height: 88px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.annual-visit-history-header::before {
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 0;
+  width: 4px;
+  background: var(--primary);
+  content: '';
+}
+
+.annual-visit-history-header > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.annual-visit-history-header small {
+  color: var(--primary);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.annual-visit-history-header h2 {
+  margin: 0;
+  font: 780 23px/1.12 'Manrope', sans-serif;
+  letter-spacing: -.035em;
+}
+
+.annual-visit-history-header > div:first-child > span {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annual-visit-history-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.annual-visit-history-header-actions > strong {
+  min-width: 52px;
+  color: var(--foreground);
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-header-actions > button:last-child {
+  margin-left: 8px;
+}
+
+.annual-visit-history-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  background: color-mix(in oklab, var(--muted) 26%, var(--background));
+}
+
+.annual-visit-history-summary {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.annual-visit-history-total {
+  display: flex;
+  min-height: 102px;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-right: 1px solid var(--border);
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+}
+
+.annual-visit-history-total > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, var(--border));
+  border-radius: calc(var(--radius) * .8);
+  color: var(--primary);
+  background: var(--card);
+}
+
+.annual-visit-history-total > div {
+  display: grid;
+  gap: 2px;
+}
+
+.annual-visit-history-total strong {
+  font: 800 34px/1 'Manrope', sans-serif;
+  letter-spacing: -.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-total small {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.annual-visit-history-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.annual-visit-history-summary dl > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 20px;
+  border-right: 1px solid var(--border);
+}
+
+.annual-visit-history-summary dl > div:last-child {
+  border-right: 0;
+}
+
+.annual-visit-history-summary dt {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.annual-visit-history-summary dt svg {
+  width: 15px;
+  color: var(--primary);
+}
+
+.annual-visit-history-summary dd {
+  margin: 0;
+  color: var(--foreground);
+  font: 780 23px/1 'Manrope', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-months {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px 16px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.annual-visit-history-months > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.annual-visit-history-months h3,
+.annual-visit-history-log h3,
+.annual-visit-history-stores h3 {
+  margin: 0;
+  color: var(--foreground);
+  font: 760 13px/1.2 'Manrope', sans-serif;
+  letter-spacing: -.015em;
+}
+
+.annual-visit-history-months p,
+.annual-visit-history-log header p {
+  margin: 3px 0 0;
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.annual-visit-history-months > div {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.annual-visit-history-months > div > button {
+  display: grid;
+  min-width: 0;
+  min-height: 80px;
+  grid-template-rows: 42px auto auto;
+  gap: 3px;
+  padding: 5px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) * .7);
+  color: var(--muted-foreground);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.annual-visit-history-months > div > button:hover {
+  border-color: var(--border);
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--primary) 5%, var(--card));
+  transform: translateY(-1px);
+}
+
+.annual-visit-history-months > div > button:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--ring) 35%, transparent);
+  outline-offset: 1px;
+}
+
+.annual-visit-history-months > div > button.is-active {
+  border-color: color-mix(in oklab, var(--primary) 28%, var(--border));
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+}
+
+.annual-visit-history-month-bar {
+  display: flex;
+  height: 42px;
+  align-items: flex-end;
+  justify-content: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.annual-visit-history-month-bar > i {
+  width: 7px;
+  height: var(--visit-month-level);
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  background: var(--primary);
+}
+
+.annual-visit-history-months button strong {
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annual-visit-history-months button small {
+  font-size: 8px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-workspace {
+  display: grid;
+  min-height: 360px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.annual-visit-history-log,
+.annual-visit-history-stores {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.annual-visit-history-log {
+  overflow: hidden;
+}
+
+.annual-visit-history-log > header {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.annual-visit-history-log > header > label {
+  position: relative;
+  width: min(270px, 48%);
+}
+
+.annual-visit-history-log > header > label > svg {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 10px;
+  width: 14px;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.annual-visit-history-log > header input {
+  height: 38px;
+  padding-left: 32px;
+  background: var(--background);
+}
+
+.annual-visit-history-groups {
+  display: grid;
+  align-content: start;
+}
+
+.annual-visit-history-groups > section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 34px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  background: color-mix(in oklab, var(--muted) 36%, var(--card));
+}
+
+.annual-visit-history-groups h4 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.annual-visit-history-groups > section > header span {
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.annual-visit-history-groups ol,
+.annual-visit-history-stores ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.annual-visit-history-groups li {
+  display: grid;
+  min-height: 64px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.annual-visit-history-groups li:last-child {
+  border-bottom: 0;
+}
+
+.annual-visit-history-groups time {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * .7);
+  color: var(--foreground);
+  background: var(--background);
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-groups time strong {
+  font: 780 16px/1 'Manrope', sans-serif;
+}
+
+.annual-visit-history-groups time span {
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 7px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+
+.annual-visit-history-row-store {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.annual-visit-history-row-store strong,
+.annual-visit-history-row-store small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annual-visit-history-row-store strong {
+  color: var(--foreground);
+  font-size: 10px;
+}
+
+.annual-visit-history-row-store small {
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.annual-visit-history-kind {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border-radius: calc(var(--radius) * .65);
+  color: color-mix(in oklab, var(--chart-2) 78%, var(--foreground));
+  background: color-mix(in oklab, var(--chart-2) 12%, var(--card));
+  font-size: 8px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.annual-visit-history-kind.is-checklist {
+  color: color-mix(in oklab, var(--chart-3) 78%, var(--foreground));
+  background: color-mix(in oklab, var(--chart-3) 13%, var(--card));
+}
+
+.annual-visit-history-kind svg {
+  width: 13px;
+}
+
+.annual-visit-history-stores {
+  align-self: start;
+  overflow: hidden;
+}
+
+.annual-visit-history-stores > header {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.annual-visit-history-stores > header span {
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.annual-visit-history-stores li {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.annual-visit-history-stores li:last-child {
+  border-bottom: 0;
+}
+
+.annual-visit-history-store-rank {
+  color: var(--primary);
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-stores li > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.annual-visit-history-stores li > span:nth-child(2) strong,
+.annual-visit-history-stores li > span:nth-child(2) small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.annual-visit-history-stores li > span:nth-child(2) strong {
+  font-size: 9px;
+}
+
+.annual-visit-history-stores li > span:nth-child(2) small {
+  color: var(--muted-foreground);
+  font-size: 7px;
+}
+
+.annual-visit-history-stores li > b {
+  display: grid;
+  justify-items: end;
+  color: var(--foreground);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.annual-visit-history-stores li > b small {
+  color: var(--muted-foreground);
+  font-size: 7px;
+  font-weight: 650;
+}
+
+.annual-visit-history-stores > p,
+.annual-visit-history-empty {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 18px;
+  color: var(--muted-foreground);
+  font-size: 9px;
+  text-align: center;
+}
+
+.annual-visit-history-empty svg {
+  color: var(--primary);
+}
+
+.annual-visit-history-state {
+  display: grid;
+  min-height: 280px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: var(--muted-foreground);
+  background: var(--background);
+  text-align: center;
+}
+
+.annual-visit-history-state > svg {
+  color: var(--primary);
+}
+
+.annual-visit-history-state.is-error > svg {
+  color: var(--destructive);
+}

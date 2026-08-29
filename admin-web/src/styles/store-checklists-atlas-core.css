@@ -1,0 +1,647 @@
+/* Annual visit calendar: twelve distinct months, one inspection flow. */
+.visit-calendar-backdrop {
+  background: color-mix(in oklab, var(--foreground) 48%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.visit-calendar-dialog {
+  position: fixed;
+  width: min(1120px, calc(100vw - 32px));
+  height: min(860px, calc(100dvh - 32px));
+  max-height: none;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.6);
+  color: var(--foreground);
+  background: var(--background);
+  box-shadow: 0 30px 90px color-mix(in oklab, var(--foreground) 26%, transparent);
+}
+
+.visit-calendar-header {
+  min-height: 74px;
+  padding: 0 24px;
+  overflow: visible;
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.visit-calendar-header::after {
+  display: none;
+}
+
+.visit-calendar-header > div {
+  gap: 4px;
+}
+
+.visit-calendar-header h2 {
+  color: var(--foreground);
+  font: 760 20px/1.15 'Manrope', sans-serif;
+  letter-spacing: -.035em;
+}
+
+.visit-calendar-header > div > span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.visit-calendar-header > button {
+  width: 38px;
+  height: 38px;
+  border-color: var(--border);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  background: var(--card);
+  transition: background-color .18s ease, border-color .18s ease;
+}
+
+.visit-calendar-header > button:hover {
+  border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+  background: color-mix(in oklab, var(--primary) 7%, var(--card));
+}
+
+.visit-calendar-header > button:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--ring) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.visit-calendar-filters {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklab, var(--color-accent) 4%, var(--background));
+}
+
+.visit-calendar-store-picker {
+  width: 100%;
+  min-width: 0;
+}
+
+.visit-calendar-store-search {
+  display: grid !important;
+  min-height: 44px !important;
+  grid-template-columns: auto minmax(110px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--input) !important;
+  border-radius: var(--radius) !important;
+  color: var(--muted-foreground) !important;
+  background: var(--card) !important;
+  box-shadow: none !important;
+}
+
+.visit-calendar-store-search:focus-within {
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 22%, transparent) !important;
+}
+
+.visit-calendar-store-search-icon {
+  color: var(--primary);
+}
+
+.visit-calendar-store-search input,
+.visit-calendar-store-search input::placeholder {
+  height: 42px;
+  color: var(--foreground);
+  font: 650 12px 'Manrope', sans-serif;
+}
+
+.visit-calendar-store-search input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.visit-calendar-store-current {
+  max-width: 230px;
+  overflow: hidden;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  color: var(--foreground);
+  font-size: 10px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visit-calendar-filter-trigger {
+  width: 220px;
+  min-height: 44px;
+  border-color: var(--input);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.visit-calendar-filter-trigger > svg:first-child {
+  color: var(--primary);
+}
+
+.visit-calendar-filter-trigger small {
+  color: var(--muted-foreground);
+}
+
+.visit-calendar-filter-trigger strong {
+  color: var(--foreground);
+}
+
+.visit-calendar-store-popover[data-slot='popover-content'] {
+  border-color: var(--border);
+  border-radius: var(--radius);
+  background: var(--popover);
+  box-shadow: 0 18px 44px color-mix(in oklab, var(--foreground) 18%, transparent);
+}
+
+.visit-calendar-store-options > button {
+  min-height: 52px;
+  border-color: var(--border);
+  color: var(--popover-foreground);
+  background: var(--popover);
+}
+
+.visit-calendar-store-options > button:hover,
+.visit-calendar-store-options > button.is-selected {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--primary) 8%, var(--popover));
+}
+
+.visit-calendar-store-options > button:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--ring) 28%, transparent);
+  outline-offset: -3px;
+}
+
+.visit-calendar-store-options > button small,
+.visit-calendar-store-options > p,
+.visit-calendar-store-popover > footer strong {
+  color: var(--muted-foreground);
+}
+
+.visit-calendar-store-options > button > span:last-child {
+  color: var(--primary);
+}
+
+.visit-calendar-body {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+
+.visit-calendar-overview {
+  display: block;
+  min-height: 100%;
+  overflow: visible;
+}
+
+.visit-atlas-card {
+  display: grid;
+  min-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.35);
+  color: var(--card-foreground);
+  background: var(--card);
+  box-shadow: 0 14px 36px color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.visit-atlas-heading {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.visit-atlas-heading > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.visit-atlas-heading > span > strong {
+  color: var(--foreground);
+  font: 760 22px/1.1 'Manrope', sans-serif;
+  letter-spacing: -.04em;
+}
+
+.visit-atlas-heading p {
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visit-atlas-totals {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0;
+}
+
+.visit-atlas-totals > span {
+  display: grid;
+  min-width: 92px;
+  gap: 2px;
+  padding: 2px 16px;
+  border-left: 1px solid var(--border);
+}
+
+.visit-atlas-totals strong {
+  color: var(--foreground);
+  font: 760 19px/1 'Manrope', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.visit-atlas-totals small {
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.visit-atlas-workspace {
+  display: grid;
+  min-height: 330px;
+  grid-template-columns: minmax(0, 1fr) 250px;
+}
+
+.visit-atlas-map-panel {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: start;
+  padding: 18px 20px 16px;
+}
+
+.visit-atlas-map-panel > .visit-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--muted-foreground);
+  background: transparent;
+  font-size: 9px;
+}
+
+.visit-calendar-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.visit-calendar-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.visit-calendar-legend-swatch--checklist,
+.visit-atlas-event-mark--checklist {
+  background: var(--chart-3);
+}
+
+.visit-calendar-legend-swatch--visited,
+.visit-atlas-event-mark--visited {
+  background: var(--chart-2);
+}
+
+.visit-calendar-legend-swatch--planned,
+.visit-atlas-event-mark--planned {
+  border-color: transparent;
+  background: var(--chart-4);
+}
+
+.visit-calendar-legend-swatch--missed,
+.visit-atlas-event-mark--missed {
+  background: var(--chart-5);
+}
+
+.visit-calendar-grid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 0 4px;
+}
+
+.visit-calendar-month {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * .9);
+  background: color-mix(in oklab, var(--color-accent) 3%, var(--card));
+}
+
+.visit-calendar-month > header {
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.visit-calendar-month h4 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  text-transform: capitalize;
+}
+
+.visit-calendar-month > header > span {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  padding-inline: 5px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+  font-size: 8px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.visit-calendar-weekdays,
+.visit-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.visit-calendar-weekdays > span {
+  display: grid;
+  min-width: 0;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+  font-size: 7px;
+  font-weight: 750;
+}
+
+.visit-calendar-day {
+  display: grid;
+  min-width: 0;
+  min-height: 22px;
+  aspect-ratio: auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) * .55);
+  color: var(--muted-foreground);
+  background: transparent;
+  font-size: 8px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.visit-calendar-day--empty {
+  visibility: hidden;
+}
+
+.visit-calendar-day.visit-calendar-day--checklist {
+  border-color: color-mix(in oklab, var(--chart-3) 72%, var(--border));
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--chart-3) 34%, var(--card));
+  font-weight: 850;
+}
+
+.visit-calendar-day.visit-calendar-day--visited {
+  border-color: color-mix(in oklab, var(--chart-2) 72%, var(--border));
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--chart-2) 34%, var(--card));
+  font-weight: 850;
+}
+
+.visit-calendar-day.visit-calendar-day--planned {
+  border-color: color-mix(in oklab, var(--chart-4) 72%, var(--border));
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--chart-4) 34%, var(--card));
+  font-weight: 850;
+}
+
+.visit-calendar-day.visit-calendar-day--missed {
+  border-color: color-mix(in oklab, var(--chart-5) 72%, var(--border));
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--chart-5) 30%, var(--card));
+  font-weight: 850;
+}
+
+@media (hover: hover) {
+  .visit-calendar-day:hover {
+    border-color: color-mix(in oklab, var(--primary) 35%, var(--border));
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--primary) 8%, var(--card));
+    transform: translateY(-1px);
+  }
+}
+
+.visit-calendar-day:focus-visible,
+.visit-calendar-day.is-selected {
+  outline: 3px solid color-mix(in oklab, var(--ring) 48%, transparent);
+  outline-offset: 1px;
+}
+
+.visit-atlas-hint {
+  margin: 8px 0 0;
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.visit-atlas-inspector {
+  position: sticky;
+  top: 0;
+  display: grid;
+  min-width: 0;
+  max-height: calc(100dvh - 190px);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-self: start;
+  align-content: start;
+  gap: 10px;
+  padding: 18px;
+  border-left: 1px solid var(--border);
+  background: color-mix(in oklab, var(--color-accent) 6%, var(--card));
+}
+
+.visit-atlas-feed-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.visit-atlas-feed-header > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.visit-atlas-feed-header small {
+  color: var(--primary);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.visit-atlas-feed-header h3 {
+  margin: 0;
+  color: var(--foreground);
+  font: 750 15px/1.2 'Manrope', sans-serif;
+  letter-spacing: -.025em;
+}
+
+.visit-atlas-feed-header p {
+  overflow: hidden;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visit-atlas-feed-header > b {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, var(--border));
+  border-radius: 50%;
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+  font: 760 12px 'Manrope', sans-serif;
+}
+
+.visit-atlas-clear-day {
+  width: max-content;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * .8);
+  color: var(--foreground);
+  background: var(--card);
+  font-size: 8px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.visit-atlas-inspector ul {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 8px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.visit-atlas-inspector li {
+  display: grid;
+  min-height: 54px;
+  grid-template-columns: 5px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.visit-atlas-inspector li:last-child {
+  border-bottom: 0;
+}
+
+.visit-atlas-inspector li > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.visit-atlas-inspector time {
+  color: var(--muted-foreground);
+  font-size: 8px;
+}
+
+.visit-atlas-inspector li strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visit-atlas-inspector li small {
+  color: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.visit-atlas-event-mark {
+  width: 5px;
+  height: 100%;
+  min-height: 32px;
+  border-radius: 999px;
+}
+
+.visit-calendar-list-empty {
+  display: grid !important;
+  min-height: 120px !important;
+  grid-template-columns: 1fr !important;
+  place-items: center;
+  padding: 18px !important;
+  border: 1px dashed var(--border) !important;
+  border-radius: var(--radius);
+  color: var(--muted-foreground) !important;
+  text-align: center;
+}
+
+.visit-atlas-ranking {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px 20px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--card);
+  box-shadow: none;
+}
+
+.visit-atlas-ranking > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+}
+
+.visit-atlas-ranking > header > span {
+  display: grid;
+  gap: 4px;
+}
+
+.visit-atlas-ranking h3 {
+  margin: 0;
+  color: var(--foreground);
+  font: 750 13px/1.2 'Manrope', sans-serif;
+  letter-spacing: -.02em;
+}

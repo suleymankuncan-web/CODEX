@@ -1396,7 +1396,7 @@ test('region manager store KPI overview waits for selected store before loading 
 
   await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'KPI Özetleri' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sorumlu mağazalar' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Toplam mağaza' })).toBeVisible()
   await expect(page.getByTestId('store-kpis-region-overview').getByText(/^BM \d/).first()).toBeVisible()
   await expect(page.getByTestId('store-kpis-region-overview').getByText(/^VM (?:\d|Pasif)/).first()).toBeVisible()
@@ -1415,10 +1415,10 @@ test('region manager store KPI overview waits for selected store before loading 
   await expect(page.getByRole('button', { name: /Ortalama skor.*Veri yok/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Bu sayfada takip/ })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Bu sayfada mağaza ara' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sorumlu mağazalar' })).toBeVisible()
   storeLeaderboardTotal = regionStoreRows.length
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sorumlu mağazalar' })).toBeVisible()
   expect(rankingRequests.length).toBeGreaterThan(0)
   expect(rankingRequests.at(-1)?.searchParams.get('regionManagerUserId')).toBe('region-kpi-user')
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-05-01')
@@ -1426,7 +1426,7 @@ test('region manager store KPI overview waits for selected store before loading 
   expect(rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('desc')
   expect(highlightRequests).toHaveLength(0)
 
-  await page.getByRole('button', { name: 'Bölge KPI dönemi' }).click()
+  await page.getByRole('button', { name: 'Müdür KPI dönemi' }).click()
   await page.getByRole('button', { name: 'Nis', exact: true }).click()
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-04-01')
 

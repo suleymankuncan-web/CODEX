@@ -51,7 +51,9 @@ export function ChecklistWorkflowCommandOverlay(input: {
     monthOptions,
     openChecklistResult,
     queueResponseAutoSave,
+    responseValues,
     retryChecklistQueries,
+    saveResponseNow,
     saveResponseMutation,
     scores,
     selectedResult,
@@ -69,7 +71,27 @@ export function ChecklistWorkflowCommandOverlay(input: {
   const workflowStore = workflowStoreId
     ? visitStoreRows.find((row) => row.store.storeId === workflowStoreId)
     : undefined
+  const directChecklist = input.routeState.kind === 'workflow' && input.routeState.tab === 'visits'
+    ? input.routeState.directChecklist
+    : undefined
+  const directChecklistRow = directChecklist && workflowStore
+    ? (directChecklist === 'vm' ? workflowStore.vm : workflowStore.bm)
+    : undefined
+  const directChecklistAssigned = Boolean(
+    workflowStore && assignedStoreIds.includes(workflowStore.store.storeId),
+  )
+  const directChecklistCanMutate = Boolean(
+    directChecklistRow
+    && canMutateChecklistTemplateType(input.authSummary, directChecklistRow.template.templateType),
+  )
   const nestedModalOpen = Boolean(selectedSession || selectedResult)
+  const closeSelectedResult = () => {
+    if (input.routeState.kind === 'result' && !input.routeState.returnStoreId) {
+      input.onClose()
+      return
+    }
+    closeChecklistResult()
+  }
   const resultMissing = input.routeState.kind === 'result' && !isLoading && !selectedResult
   const resultSurface = input.routeState.kind === 'result' || (
     input.routeState.kind === 'workflow' && (input.routeState.tab === 'inbox' || input.routeState.tab === 'history')
@@ -87,12 +109,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
   const openChecklistRow = useCallback((row: ChecklistCoverageRow, storeId: string) => {
     const rowKey = getCoverageRowKeyFromRow(row)
     if (row.active) {
-      dispatchPageState({
-        type: 'openSession',
-        rowKey,
-        responseValues: {},
-        ...hydrateActiveResponseDrafts(row.active),
-      })
+      dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
       return
     }
     hydrateActiveResponseDrafts(undefined)
@@ -118,7 +135,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
       {!nestedModalOpen ? (
         <Dialog open onOpenChange={(open) => { if (!open) input.onClose() }}>
           <DialogContent
-            className="checklist-workflow-command-drawer tw:min-w-0 tw:p-0"
+            className={`checklist-workflow-command-drawer tw:min-w-0 tw:p-0${resultSurface ? ' checklist-workflow-command-drawer--results' : ''}`}
             closeLabel={locale === 'tr' ? 'Checklist panelini kapat' : 'Close checklist panel'}
             onCloseAutoFocus={(event) => {
               if (!input.returnFocusRef.current) return
@@ -194,6 +211,32 @@ export function ChecklistWorkflowCommandOverlay(input: {
                   title={locale === 'tr' ? 'Ziyaret planı Command Canvas üzerinden yönetilir' : 'Visit plans are managed from Command Canvas'}
                   copy={locale === 'tr' ? 'Plan görünümüne dönerek mağazanın güncel ziyaret planını açın.' : 'Return to the Plan view to open the current store visit plan.'}
                 />
+              ) : workflowStore && directChecklist ? (
+                startVisitMutation.isError ? (
+                  <OverlayState
+                    icon={RefreshCw}
+                    title={locale === 'tr' ? 'Checklist başlatılamadı' : 'Checklist could not start'}
+                    copy={getUserFacingErrorMessage(startVisitMutation.error, locale === 'tr' ? 'Tekrar deneyin.' : 'Try again.')}
+                  />
+                ) : directChecklistRow && directChecklistCanMutate && directChecklistAssigned ? (
+                  <OverlayState
+                    icon={RefreshCw}
+                    title={locale === 'tr' ? 'Checklist açılıyor' : 'Opening checklist'}
+                    copy={locale === 'tr' ? 'Checklist oturumu hazırlanıyor.' : 'Preparing the checklist session.'}
+                  />
+                ) : (
+                  <OverlayState
+                    icon={ClipboardCheck}
+                    title={!directChecklistRow
+                      ? (directChecklist === 'vm'
+                          ? (locale === 'tr' ? 'VM şablonu yayında değil' : 'No published VM template')
+                          : (locale === 'tr' ? 'BM şablonu yayında değil' : 'No published BM template'))
+                      : (locale === 'tr' ? 'Checklist başlatılamıyor' : 'Checklist cannot start')}
+                    copy={!directChecklistRow
+                      ? (locale === 'tr' ? 'Mağaza atamanız korunuyor; yayınlanmış şablon olmadan checklist başlatılamaz.' : 'Your store assignment remains visible; a checklist cannot start without a published template.')
+                      : (locale === 'tr' ? 'Bu checklist için mağaza ataması veya rol yetkisi bulunmuyor.' : 'This checklist is not assigned to the role or is not editable.')}
+                  />
+                )
               ) : workflowStore ? (
                 <section className="tw:min-w-0" aria-label={locale === 'tr' ? 'Mağaza checklistleri' : 'Store checklists'}>
                   <div className="tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)] tw:gap-3 tw:sm:grid-cols-2">
@@ -259,6 +302,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
           acknowledging: Boolean(selectedResult) && acknowledgeMutation.isPending,
           canAcknowledge: selectedResult ? canAcknowledgeChecklist(input.authSummary, selectedResult.storeId) : false,
         }}
+        responseValues={responseValues}
         scores={scores}
         selectedResult={selectedResult}
         selectedSession={selectedSession}
@@ -277,7 +321,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
             ...(acknowledgementNote.trim() ? { acknowledgementNote: acknowledgementNote.trim() } : {}),
           })
         }}
-        onCloseResult={closeChecklistResult}
+        onCloseResult={closeSelectedResult}
         onCloseSession={() => {
           closeSession()
           if (input.routeState.kind === 'workflow' && input.routeState.directChecklist) input.onClose()
@@ -290,31 +334,64 @@ export function ChecklistWorkflowCommandOverlay(input: {
               checklistInstanceId: selectedSession.active.checklistInstanceId,
               templateItemId,
               scoreValue: score,
+              ...(responseValues[templateItemId]
+                ? { responseValue: responseValues[templateItemId] }
+                : {}),
               ...(comment ? { commentText: comment } : {}),
             })
           }
         }}
+        onSaveComment={async (templateItemId, comment) => {
+          const score = scores[templateItemId]
+          if (!selectedSession?.active || typeof score !== 'number' || !Number.isFinite(score)) {
+            return
+          }
+          await saveResponseNow({
+            checklistInstanceId: selectedSession.active.checklistInstanceId,
+            templateItemId,
+            scoreValue: score,
+            ...(responseValues[templateItemId]
+              ? { responseValue: responseValues[templateItemId] }
+              : {}),
+            ...(comment ? { commentText: comment } : {}),
+          })
+        }}
         onCompleteVisit={(checklistInstanceId) => {
           if (!selectedSession) return
-          completeVisitMutation.mutate({
-            checklistInstanceId,
-            checklistTemplateId: selectedSession.template.checklistTemplateId,
-            responses: buildChecklistResponseDrafts({ checklistInstanceId, comments, scores, session: selectedSession }),
-            rowKey: getCoverageRowKeyFromRow(selectedSession),
-            storeId: selectedSession.store.storeId,
-          })
+          completeVisitMutation.mutate(
+            {
+              checklistInstanceId,
+              checklistTemplateId: selectedSession.template.checklistTemplateId,
+              responses: buildChecklistResponseDrafts({
+                checklistInstanceId,
+                comments,
+                responseValues,
+                scores,
+                session: selectedSession,
+              }),
+              rowKey: getCoverageRowKeyFromRow(selectedSession),
+              storeId: selectedSession.store.storeId,
+            },
+            { onSuccess: input.onClose },
+          )
         }}
         onNoteChange={(note) => {
           if (!selectedResult) return
           dispatchPageState({ type: 'setAckNote', checklistInstanceId: selectedResult.checklistInstanceId, note })
         }}
-        onScoreChange={(templateItemId, score) => {
-          dispatchPageState({ type: 'setScoreDraft', templateItemId, score })
+        onScoreChange={(templateItemId, score, responseValue) => {
+          dispatchPageState({
+            type: 'setScoreDraft',
+            templateItemId,
+            score,
+            ...(responseValue === undefined ? {} : { responseValue }),
+          })
           if (selectedSession?.active && score !== null) {
             queueResponseAutoSave({
               checklistInstanceId: selectedSession.active.checklistInstanceId,
               templateItemId,
               scoreValue: score,
+              ...(responseValue ? { responseValue } : {}),
               ...(comments[templateItemId] ? { commentText: comments[templateItemId] } : {}),
             })
           }
@@ -383,30 +460,68 @@ function ChecklistResultList(input: {
   }
 
   return (
-    <section aria-label={title}>
-      <div className="tw:flex tw:items-center tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-muted/25 tw:p-4">
-        <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:bg-primary/10 tw:text-primary"><Store className="tw:size-5" /></span>
-        <div className="tw:min-w-0">
-          <p className="tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.12em] tw:text-muted-foreground">{title}</p>
-          <h3 className="tw:truncate tw:text-base tw:font-semibold tw:text-foreground">{input.storeName ?? input.items[0]?.storeName}</h3>
+    <section className="checklist-result-archive" aria-label={title}>
+      <div className="checklist-result-archive-hero">
+        <div className="checklist-result-archive-store">
+          <span aria-hidden="true"><Store /></span>
+          <div>
+            <p>{title}</p>
+            <h3>{input.storeName ?? input.items[0]?.storeName}</h3>
+          </div>
+        </div>
+        <div className="checklist-result-archive-count" aria-label={`${input.items.length} ${input.locale === 'tr' ? 'sonuç' : 'results'}`}>
+          <strong>{input.items.length}</strong>
+          <span>{input.locale === 'tr' ? 'sonuç' : 'results'}</span>
         </div>
       </div>
-      <div className="tw:mt-4 tw:grid tw:gap-2">
-        {input.items.map((item) => (
-          <article className="tw:flex tw:items-center tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4" data-testid="checklist-workflow-result-row" key={item.checklistInstanceId}>
-            <span className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary"><ClipboardCheck className="tw:size-4" /></span>
-            <div className="tw:min-w-0 tw:flex-1">
-              <strong className="tw:block tw:truncate tw:text-sm tw:text-foreground">{item.templateName}</strong>
-              <span className="tw:mt-1 tw:block tw:text-xs tw:text-muted-foreground">
-                {formatChecklistResultDate(item.completedAt, input.locale)} · {item.totalScore === null ? (input.locale === 'tr' ? 'Puan yok' : 'No score') : `${Math.round(item.totalScore)} ${input.locale === 'tr' ? 'puan' : 'points'}`}
+      <div className="checklist-result-archive-list">
+        {input.items.map((item, index) => {
+          const score = item.totalScore === null ? null : Math.round(item.totalScore)
+          const scoreTone = score === null ? 'neutral' : score >= 80 ? 'strong' : score >= 60 ? 'watch' : 'critical'
+
+          return (
+            <article
+              className="checklist-result-archive-row"
+              data-score-tone={scoreTone}
+              data-testid="checklist-workflow-result-row"
+              key={item.checklistInstanceId}
+            >
+              <span className="checklist-result-archive-index" aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
               </span>
-            </div>
-            <Button aria-label={input.locale === 'tr' ? 'Detayı gör' : 'View details'} size="sm" type="button" variant="ghost" onClick={() => input.onOpen(item)}>
-              <span className="tw:hidden tw:sm:inline">{input.locale === 'tr' ? 'Detayı gör' : 'View details'}</span>
-              <ChevronRight />
-            </Button>
-          </article>
-        ))}
+              <div className="checklist-result-archive-main">
+                <div className="checklist-result-archive-title-row">
+                  <strong>{item.templateName}</strong>
+                  <span className="checklist-result-archive-score">
+                    {score === null
+                      ? (input.locale === 'tr' ? 'Puan yok' : 'No score')
+                      : `${score} ${input.locale === 'tr' ? 'puan' : 'points'}`}
+                  </span>
+                </div>
+                <div className="checklist-result-archive-meta">
+                  <time dateTime={item.completedAt ?? undefined}>{formatChecklistResultDate(item.completedAt, input.locale)}</time>
+                  <i aria-hidden="true" />
+                  <span>
+                    {input.tab === 'inbox'
+                      ? (input.locale === 'tr' ? 'Kabul bekliyor' : 'Awaiting acknowledgement')
+                      : (input.locale === 'tr' ? 'Kabul edildi' : 'Acknowledged')}
+                  </span>
+                </div>
+              </div>
+              <Button
+                aria-label={input.locale === 'tr' ? 'Detayı gör' : 'View details'}
+                className="checklist-result-archive-action"
+                size="sm"
+                type="button"
+                variant="ghost"
+                onClick={() => input.onOpen(item)}
+              >
+                <span className="tw:hidden tw:sm:inline">{input.locale === 'tr' ? 'İncele' : 'Review'}</span>
+                <ChevronRight />
+              </Button>
+            </article>
+          )
+        })}
       </div>
     </section>
   )

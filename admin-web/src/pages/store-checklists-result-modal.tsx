@@ -3,8 +3,6 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardCheck,
-  Store as StoreIcon,
-  UserRound,
   XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,24 +11,22 @@ import { Textarea } from '@/components/ui/textarea'
 import type { ChecklistAcknowledgementItem } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { normalizeDisplayLabel } from '../lib/display-labels'
-import { formatDateTime } from '../lib/format'
+import { formatDateTime, formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
-  formatChecklistTemplateType,
   formatCompletedSentence,
-  formatComplianceValue,
   formatScoreValue,
-  getLowScoreResponses,
   getResponseRatio,
   getStaticCopy,
+  getWeightedResponsePoints,
   groupChecklistResultResponses,
 } from './store-checklists-logic'
 import type { ChecklistTone } from './store-checklists-model'
-import { ChecklistFact, ChecklistScoreBar } from './store-checklists-atoms'
 
 type ChecklistResultItemTone = 'danger' | 'warning' | 'success' | 'neutral'
+type ChecklistResultResponse = ChecklistAcknowledgementItem['responses'][number]
 
-function getChecklistResultItemTone(item: ChecklistAcknowledgementItem['responses'][number]): ChecklistResultItemTone {
+function getChecklistResultItemTone(item: ChecklistResultResponse): ChecklistResultItemTone {
   const ratio = getResponseRatio(item)
   if (ratio === null) return 'neutral'
   if (ratio < 70) return 'danger'
@@ -38,17 +34,66 @@ function getChecklistResultItemTone(item: ChecklistAcknowledgementItem['response
   return 'success'
 }
 
-function getChecklistResultItemToneLabel(t: TranslateFunction, tone: ChecklistResultItemTone) {
-  switch (tone) {
-    case 'danger':
-      return t('storeChecklists.resultTone.low')
-    case 'warning':
-      return t('storeChecklists.resultTone.follow')
-    case 'success':
-      return t('storeChecklists.resultTone.good')
-    case 'neutral':
-      return t('storeChecklists.resultTone.noScore')
+function getChecklistResultAnswerLabel(locale: AppLocale, response: ChecklistResultResponse) {
+  if (response.scoreValue === null) return getStaticCopy(locale, 'Yanıt yok', 'No answer')
+
+  switch (response.responseType.trim().toLowerCase()) {
+    case 'compliance':
+      switch (response.responseValue) {
+        case 'compliant':
+          return getStaticCopy(locale, 'Uygun', 'Compliant')
+        case 'partially_compliant':
+          return getStaticCopy(locale, 'Kısmen Uygun', 'Partially compliant')
+        case 'non_compliant':
+          return getStaticCopy(locale, 'Uygun Değil', 'Non-compliant')
+        case 'not_applicable':
+          return 'N/A'
+        default:
+          return getStaticCopy(locale, 'Yanıt yok', 'No answer')
+      }
+    case 'yes_no':
+    case 'boolean':
+      return response.scoreValue > 0
+        ? getStaticCopy(locale, 'Evet', 'Yes')
+        : getStaticCopy(locale, 'Hayır', 'No')
+    case 'partial': {
+      const ratio = getResponseRatio(response)
+      if (ratio === null) return getStaticCopy(locale, 'Yanıt yok', 'No answer')
+      if (ratio >= 80) return getStaticCopy(locale, 'Uygun', 'Good')
+      if (ratio >= 40) return getStaticCopy(locale, 'Takip', 'Watch')
+      return getStaticCopy(locale, 'Kritik', 'Critical')
+    }
+    case 'text':
+      return normalizeDisplayLabel(
+        response.commentText,
+        getStaticCopy(locale, 'Yanıt yok', 'No answer'),
+      )
+    default:
+      return String(response.scoreValue)
   }
+}
+
+function ChecklistResultSectionScore(input: {
+  earnedPoints: number
+  label: string
+  locale: AppLocale
+  maxPoints: number
+  percent: number
+}) {
+  const percent = Math.min(Math.max(Math.round(input.percent), 0), 100)
+  const earnedPoints = formatNumber(input.earnedPoints, input.locale, { maximumFractionDigits: 2 })
+  const maxPoints = formatNumber(input.maxPoints, input.locale, { maximumFractionDigits: 2 })
+
+  return (
+    <div
+      aria-label={`${earnedPoints} / ${maxPoints} ${input.label}, ${percent}%`}
+      className="store-checklist-result-section-score"
+      title={`${earnedPoints} / ${maxPoints} ${input.label} · ${percent}%`}
+    >
+      <strong><span>{earnedPoints}</span><i>/</i><span>{maxPoints}</span></strong>
+      <small>{input.label}</small>
+    </div>
+  )
 }
 
 export function ChecklistResultModal(input: {
@@ -68,9 +113,21 @@ export function ChecklistResultModal(input: {
     acknowledgementNoteRef.current = input.acknowledgementNote
   }, [input.acknowledgementNote])
 
-  const lowScoreResponses = getLowScoreResponses(input.item.responses)
   const sections = groupChecklistResultResponses(input.item.responses)
+  const sectionCount = sections.length
+  const questionCount = input.item.responses.length
+  const sectionUnit = getStaticCopy(
+    input.locale,
+    'bölüm',
+    sectionCount === 1 ? 'section' : 'sections',
+  )
+  const questionUnit = getStaticCopy(
+    input.locale,
+    'soru',
+    questionCount === 1 ? 'question' : 'questions',
+  )
   const hasAcknowledgement = input.item.acknowledgement !== null
+  const showAcknowledgementPanel = input.canAcknowledge || hasAcknowledgement
   const scorePercent =
     input.item.totalScore ??
     (typeof input.item.complianceRate === 'number'
@@ -78,12 +135,10 @@ export function ChecklistResultModal(input: {
       : null)
   const scoreTone: ChecklistTone = scorePercent === null ? 'neutral' : scorePercent >= 70 ? 'calm' : 'warning'
   const scoreLabel = formatScoreValue(input.t, scorePercent)
+  const compactScore = scoreLabel.length > 4
   const scoreRingStyle = {
     '--store-checklist-result-score-percent': `${Math.min(Math.max(scorePercent ?? 0, 0), 100)}%`,
   } as CSSProperties
-  const completedAt = input.item.completedAt
-    ? formatDateTime(input.item.completedAt, input.locale)
-    : input.t('storeChecklists.unknown')
   const storeLabel = normalizeDisplayLabel(input.item.storeName, input.t('storeChecklists.unknown'))
   const completedByLabel = normalizeDisplayLabel(
     input.item.completedByUserId,
@@ -95,97 +150,70 @@ export function ChecklistResultModal(input: {
       if (!open) input.onClose()
     }}>
       <DialogContent
-        className="store-checklist-modal store-checklist-result-modal tw:max-w-[min(1120px,calc(100vw-2rem))] tw:sm:max-w-[min(1120px,calc(100vw-2rem))]"
+        className="store-checklist-modal store-checklist-result-modal tw:max-w-[min(960px,calc(100vw-1rem))] tw:sm:max-w-[min(960px,calc(100vw-1rem))]"
         showCloseButton={false}
       >
-        <DialogHeader className="store-checklist-result-head">
-          <div className="store-checklist-result-title-row">
-            <span className={`store-checklist-result-icon store-checklists-tone-${scoreTone}`} aria-hidden="true">
-              <ClipboardCheck />
-            </span>
-            <div>
-              <div className="store-checklists-eyebrow">{input.t('storeChecklists.resultEyebrow')}</div>
-              <DialogTitle id="store-checklist-result-title">{input.item.templateName}</DialogTitle>
-              <DialogDescription>{formatCompletedSentence(input.t, input.locale, input.item)}</DialogDescription>
+        <section className="store-checklist-result-hero" aria-label={input.t('storeChecklists.summaryAria')}>
+          <DialogHeader className="store-checklist-result-head">
+            <div className="store-checklist-result-title-row">
+              <span className={`store-checklist-result-icon store-checklists-tone-${scoreTone}`} aria-hidden="true">
+                <ClipboardCheck />
+              </span>
+              <div>
+                <div className="store-checklists-eyebrow">{input.t('storeChecklists.resultEyebrow')}</div>
+                <DialogTitle>{input.item.templateName}</DialogTitle>
+                <DialogDescription>{formatCompletedSentence(input.t, input.locale, input.item)}</DialogDescription>
+              </div>
             </div>
-          </div>
-          <Button
-            aria-label={input.t('storeChecklists.closeSession')}
-            size="icon-sm"
-            type="button"
-            variant="ghost"
-            onClick={input.onClose}
-          >
-            <XIcon aria-hidden="true" />
-          </Button>
-        </DialogHeader>
-
-        <section className="store-checklist-result-overview" aria-label={input.t('storeChecklists.summaryAria')}>
-          <div className={`store-checklist-result-score-card store-checklist-result-score-card-${scoreTone}`}>
-            <div
-              aria-label={`${input.t('storeChecklists.score')} ${scoreLabel}`}
-              className="store-checklist-result-score-ring"
-              style={scoreRingStyle}
+            <Button
+              aria-label={input.t('storeChecklists.closeSession')}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+              onClick={input.onClose}
             >
-              <strong>{scoreLabel}</strong>
-              <span>{input.t('storeChecklists.score')}</span>
+              <XIcon aria-hidden="true" />
+            </Button>
+          </DialogHeader>
+
+          <div className="store-checklist-result-overview">
+            <div className={`store-checklist-result-score-card store-checklist-result-score-card-${scoreTone}`}>
+              <div
+                aria-label={`${input.t('storeChecklists.score')} ${scoreLabel}`}
+                className={`store-checklist-result-score-ring${compactScore ? ' is-compact' : ''}`}
+                style={scoreRingStyle}
+              >
+                <strong>{scoreLabel}</strong>
+                <span>{input.t('storeChecklists.score')}</span>
+              </div>
             </div>
-          </div>
-          <div className="store-checklist-modal-summary">
-            <ChecklistFact label={input.t('storeChecklists.store')} value={storeLabel} />
-            <ChecklistFact label={input.t('storeChecklists.templateType')} value={formatChecklistTemplateType(input.t, input.item.templateType)} />
-            <ChecklistFact
-              label={input.t('storeChecklists.resultCompletedBy')}
-              value={completedByLabel}
-            />
-            <ChecklistFact
-              label={input.t('storeChecklists.resultStatus')}
-              value={
-                hasAcknowledgement
-                  ? input.t('storeChecklists.acknowledged')
-                  : input.t('storeChecklists.needsAcknowledgement')
-              }
-            />
-            <ChecklistFact
-              label={input.t('storeChecklists.resultLowScore')}
-              value={input.t('storeChecklists.lowScoreCount', { count: lowScoreResponses.length })}
-            />
-            <ChecklistFact
-              label={input.t('storeChecklists.compliance')}
-              value={formatComplianceValue(input.t, input.item.complianceRate)}
-            />
-            <ChecklistFact
-              label={input.t('storeChecklists.section')}
-              value={input.t('storeChecklists.resultSectionCount', { count: sections.length })}
-            />
-            <ChecklistFact label={getStaticCopy(input.locale, 'Tamamlanma', 'Completed')} value={completedAt} />
+            <dl className="store-checklist-result-hero-facts">
+              <div className="store-checklist-result-hero-fact">
+                <dt>{input.t('storeChecklists.store')}</dt>
+                <dd>{storeLabel}</dd>
+              </div>
+              <div className="store-checklist-result-hero-fact">
+                <dt>{input.t('storeChecklists.resultCompletedBy')}</dt>
+                <dd>{completedByLabel}</dd>
+              </div>
+            </dl>
           </div>
         </section>
 
-        <div className="store-checklist-result-body">
+        <div className={`store-checklist-result-body${showAcknowledgementPanel ? '' : ' store-checklist-result-body--solo'}`}>
           <section className="store-checklist-result-findings" aria-label={input.t('storeChecklists.resultBreakdownTitle')}>
             <div className="store-checklist-result-block-head">
               <div>
                 <span>{input.t('storeChecklists.resultItemsEyebrow')}</span>
                 <strong>{input.t('storeChecklists.resultBreakdownTitle')}</strong>
               </div>
-              <span className="store-checklist-result-section-count">
-                {input.t('storeChecklists.resultSectionCount', { count: sections.length })}
-              </span>
-            </div>
-            <div className="store-checklist-result-status-legend" aria-label={input.t('storeChecklists.resultColorMeaning')}>
-              <strong>{input.t('storeChecklists.resultColorMeaning')}</strong>
-              <span>
-                <i className="store-checklist-result-legend-dot store-checklist-result-legend-dot-danger" aria-hidden="true" />
-                {input.t('storeChecklists.resultTone.low')}
-              </span>
-              <span>
-                <i className="store-checklist-result-legend-dot store-checklist-result-legend-dot-warning" aria-hidden="true" />
-                {input.t('storeChecklists.resultTone.follow')}
-              </span>
-              <span>
-                <i className="store-checklist-result-legend-dot store-checklist-result-legend-dot-success" aria-hidden="true" />
-                {input.t('storeChecklists.resultTone.good')}
+              <span
+                aria-label={`${sectionCount} ${sectionUnit}, ${questionCount} ${questionUnit}`}
+                className="store-checklist-result-section-count"
+              >
+                <span><b>{sectionCount}</b> {sectionUnit}</span>
+                <i aria-hidden="true" />
+                <span><b>{questionCount}</b> {questionUnit}</span>
               </span>
             </div>
             <div className="store-checklist-result-sections">
@@ -201,40 +229,49 @@ export function ChecklistResultModal(input: {
                         })}
                       </p>
                     </div>
-                    <ChecklistScoreBar
-                      label={input.t('storeChecklists.score')}
+                    <ChecklistResultSectionScore
+                      earnedPoints={section.earnedPoints}
+                      label={getStaticCopy(input.locale, 'Puan', 'Points')}
+                      locale={input.locale}
+                      maxPoints={section.maxPoints}
                       percent={section.averageScore}
-                      tone={section.averageScore >= 70 ? 'calm' : 'warning'}
-                      value={`${section.averageScore}%`}
                     />
                   </div>
                   <div className="store-checklist-result-items">
-                    {section.items.map((response) => {
+                    {section.items.map((response, responseIndex) => {
                       const itemTone = getChecklistResultItemTone(response)
-                      const itemToneLabel = getChecklistResultItemToneLabel(input.t, itemTone)
+                      const itemNumber = response.itemNo || responseIndex + 1
+                      const answerLabel = getChecklistResultAnswerLabel(input.locale, response)
+                      const weightedPoints = getWeightedResponsePoints(response)
+                      const scoreValue = response.responseValue === 'not_applicable'
+                        ? getStaticCopy(input.locale, 'Puan dışı', 'Excluded')
+                        : weightedPoints === null
+                          ? input.t('storeChecklists.noScore')
+                          : `${formatNumber(weightedPoints.earnedPoints, input.locale, { maximumFractionDigits: 2 })}/${formatNumber(weightedPoints.maxPoints, input.locale, { maximumFractionDigits: 2 })}`
 
                       return (
                         <div
                           className={`store-checklist-result-item store-checklist-result-item-${itemTone}`}
                           key={response.templateItemId}
                         >
-                          <div>
+                          <span className="store-checklist-result-item-index" aria-hidden="true">
+                            {String(itemNumber).padStart(2, '0')}
+                          </span>
+                          <div className="store-checklist-result-item-main">
                             <div className="store-checklist-result-item-title-line">
-                              <strong>{response.itemText}</strong>
-                              <span className={`store-checklist-result-item-status store-checklist-result-item-status-${itemTone}`}>
-                                {itemToneLabel}
-                              </span>
+                              <strong title={response.itemText}>{response.itemText}</strong>
                             </div>
-                            {response.commentText ? <p>{response.commentText}</p> : null}
                           </div>
-                          <ChecklistFact
-                            label={input.t('storeChecklists.score')}
-                            value={
-                              response.scoreValue === null
-                                ? input.t('storeChecklists.noScore')
-                                : `${response.scoreValue}/${response.maxScore}`
-                            }
-                          />
+                          <dl className="store-checklist-result-item-outcome">
+                            <div>
+                              <dt>{getStaticCopy(input.locale, 'Cevap', 'Answer')}</dt>
+                              <dd title={answerLabel}>{answerLabel}</dd>
+                            </div>
+                            <div>
+                              <dt>{getStaticCopy(input.locale, 'Puan', 'Score')}</dt>
+                              <dd>{scoreValue}</dd>
+                            </div>
+                          </dl>
                         </div>
                       )
                     })}
@@ -244,7 +281,7 @@ export function ChecklistResultModal(input: {
             </div>
           </section>
 
-          <aside className="store-checklist-result-action-card">
+          {showAcknowledgementPanel ? <aside className="store-checklist-result-action-card">
             <div className="store-checklist-result-block-head">
               <div>
                 <span>{getStaticCopy(input.locale, 'Aksiyon', 'Action')}</span>
@@ -257,18 +294,6 @@ export function ChecklistResultModal(input: {
                 </strong>
               </div>
               {hasAcknowledgement ? <CheckCircle2 aria-hidden="true" /> : <CalendarClock aria-hidden="true" />}
-            </div>
-            <div className="store-checklist-result-action-context">
-              <span className="store-checklist-result-quick-fact-icon" aria-hidden="true"><StoreIcon /></span>
-              <div>
-                <span>{input.t('storeChecklists.store')}</span>
-                <strong>{storeLabel}</strong>
-              </div>
-              <span className="store-checklist-result-quick-fact-icon" aria-hidden="true"><UserRound /></span>
-              <div>
-                <span>{input.t('storeChecklists.resultCompletedBy')}</span>
-                <strong>{completedByLabel}</strong>
-              </div>
             </div>
             <div className="store-checklist-result-ack">
               {hasAcknowledgement ? (
@@ -317,7 +342,7 @@ export function ChecklistResultModal(input: {
                 <p className="store-checklists-inline-notice">{input.t('storeChecklists.reviewOnlyCopy')}</p>
               )}
             </div>
-          </aside>
+          </aside> : null}
         </div>
       </DialogContent>
     </Dialog>
