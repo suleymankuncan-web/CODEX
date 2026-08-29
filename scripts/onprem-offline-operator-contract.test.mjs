@@ -620,6 +620,7 @@ test('smoke derives exact rendered secret sources and ignores legacy env aliases
   const aliasAccounts = join(fixture.root, 'legacy-accounts')
   const aliasCa = join(fixture.root, 'legacy-ca.crt')
   try {
+    stubPreflight(fixture)
     chmodSync(fixture.authAccounts, 0o600)
     for (const [pathname, value] of [
       [join(fixture.secretRoot, 'caddy.crt'), 'fixture-cert-value\n'],
@@ -645,7 +646,6 @@ test('smoke derives exact rendered secret sources and ignores legacy env aliases
     assert.doesNotMatch(nodeLog(fixture), new RegExp(`${regexLiteral(aliasAccounts)}|${regexLiteral(aliasCa)}`), 'auth proof must not receive legacy alias paths')
     assert.match(readFileSync(receipt, 'utf8'), /"project":"hr-axis-onprem-core"/)
 
-    stubPreflight(fixture)
     writeFileSync(join(fixture.secretRoot, 'caddy.key'), 'hr-axis-onprem-core\n')
     const rejectedReceipt = join(fixture.receiptDir, 'credential-collision.json')
     const rejected = runSmoke(fixture, rejectedReceipt)
