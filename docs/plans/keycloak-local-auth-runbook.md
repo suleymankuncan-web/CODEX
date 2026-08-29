@@ -25,7 +25,7 @@ contain development assumptions that do not satisfy this runbook.
 
 ## Production-shaped topology
 
-- Keycloak 26.7.0 is pinned by immutable image digest.
+- Keycloak 26.7.2 is pinned by immutable image digest.
 - Keycloak runs in production mode; `start-dev` is forbidden.
 - Keycloak uses a dedicated PostgreSQL database and role.
 - Keycloak is attached only to the private `proxy` and `data` Compose

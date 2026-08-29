@@ -67,7 +67,7 @@ env:
   BACKEND_RUNTIME_IMAGE: gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a
   FRONTEND_RUNTIME_IMAGE: nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65
   CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067
   KEYCLOAK_IMAGE: hr-axis-onprem-keycloak:proof
   KEYCLOAK_TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
@@ -159,7 +159,7 @@ jobs:
         run: |
           set -euo pipefail
           docker pull "$KEYCLOAK_BASE_IMAGE"
-          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13"]'
+          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067"]'
           docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE" \
             --build-arg KEYCLOAK_BASE_IMAGE="$KEYCLOAK_BASE_IMAGE" .
           test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Config.Entrypoint}}')" = '[/opt/keycloak/bin/kc.sh]'
@@ -626,7 +626,7 @@ jobs:
           const { readFileSync } = require('node:fs')
           const receipt = JSON.parse(readFileSync('proof/keycloak-license-reconciliation.json', 'utf8'))
           if (receipt.residualExternalReviewRequired !== true) throw new Error('Keycloak license reconciliation must retain the residualExternalReviewRequired activation gate')
-          if (receipt.packageCount !== 552 || receipt.maxUnresolvedCount !== 452) throw new Error('Keycloak license reconciliation pinned count contract changed')
+          if (receipt.packageCount !== 556 || receipt.maxUnresolvedCount !== 455) throw new Error('Keycloak license reconciliation pinned count contract changed')
           if (receipt.resolvedCount + receipt.unresolvedCount !== receipt.packageCount) throw new Error('Keycloak license reconciliation summary count mismatch')
           if (receipt.evidenceResolvedCount + receipt.sbomStandardAssertedCount !== receipt.resolvedCount) throw new Error('Keycloak license reconciliation resolved count mismatch')
           if (receipt.unresolvedCount > receipt.maxUnresolvedCount) throw new Error('Keycloak unresolved license count exceeds the approved boundary')

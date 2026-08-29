@@ -690,7 +690,7 @@ test('ONP-3B image proof binds the exact embedded Angus JAR license evidence', (
   assert.match(workflow, /keycloak_image_id="\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)"/)
   assert.match(workflow, /test "\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)" = "\$KEYCLOAK_IMAGE_ID"/)
   assert.match(workflow, /keycloak_image_id="\$\(docker image inspect "\$KEYCLOAK_IMAGE" --format '\{\{\.Id\}\}'\)"[\s\S]*?test "\$keycloak_image_id" = "\$KEYCLOAK_IMAGE_ID"/)
-  assert.match(workflow, /receipt\.packageCount !== 552 \|\| receipt\.maxUnresolvedCount !== 452/)
+  assert.match(workflow, /receipt\.packageCount !== 556 \|\| receipt\.maxUnresolvedCount !== 455/)
   assert.match(workflow, /receipt\.resolvedCount \+ receipt\.unresolvedCount !== receipt\.packageCount/)
   assert.match(workflow, /component\.license !== null \|\| component\.evidence !== null/)
 })

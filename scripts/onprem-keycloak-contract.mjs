@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-export const KEYCLOAK_IMAGE = 'quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13'
+export const KEYCLOAK_IMAGE = 'quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067'
 export const KEYCLOAK_REALM = 'store-ops'
 export const KEYCLOAK_PUBLIC_PATHS = [
   '/realms/store-ops',
@@ -137,9 +137,9 @@ export function validateOnpremKeycloakContract(input) {
   fail(serviceNames.includes('keycloak'), 'compose must define the production Keycloak service')
   fail(serviceNames.includes('keycloak-bootstrap'), 'compose must define the one-shot Keycloak bootstrap service')
   fail(serviceNames.includes('identity-binder'), 'compose must define the one-shot identity binder service')
-  fail(hasImmutableImage(envValue(input.envTemplate, 'KEYCLOAK_BASE_IMAGE')), 'env.template must pin the exact upstream Keycloak 26.7.0 base digest')
+  fail(hasImmutableImage(envValue(input.envTemplate, 'KEYCLOAK_BASE_IMAGE')), 'env.template must pin the exact upstream Keycloak 26.7.2 base digest')
   fail(/image:\s*\$\{KEYCLOAK_IMAGE:\?set an immutable built Keycloak image reference\}/.test(keycloak), 'Keycloak service must use the immutable built image supplied by the release env')
-  fail(/ARG KEYCLOAK_BASE_IMAGE=.*0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13/.test(input.keycloakDockerfile) && /kc\.sh build --db=postgres --health-enabled=true --metrics-enabled=true/.test(input.keycloakDockerfile) && /var\/lib\/keycloak-bootstrap/.test(input.keycloakDockerfile) && /chown 1000:1000/.test(input.keycloakDockerfile), 'Keycloak image must be built and optimized from the pinned upstream base with a writable private state mountpoint')
+  fail(/ARG KEYCLOAK_BASE_IMAGE=.*9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067/.test(input.keycloakDockerfile) && /kc\.sh build --db=postgres --health-enabled=true --metrics-enabled=true/.test(input.keycloakDockerfile) && /var\/lib\/keycloak-bootstrap/.test(input.keycloakDockerfile) && /chown 1000:1000/.test(input.keycloakDockerfile), 'Keycloak image must be built and optimized from the pinned upstream base with a writable private state mountpoint')
   fail(!/start-dev/i.test(input.compose) && !/start-dev/i.test(input.bootstrap), 'production Compose and bootstrap must never use start-dev')
   fail(!/KEYCLOAK_ADMIN(?:_PASSWORD)?\s*:/i.test(input.compose) && !/admin\s*[:=]\s*admin/i.test(input.compose), 'default Keycloak admin credentials must be absent')
   fail(/start\s+--optimized/.test(keycloak), 'Keycloak must use optimized production startup')
@@ -571,7 +571,7 @@ export function validateOnpremKeycloakContract(input) {
   fail(/onprem-keycloak-runtime-proof\.mjs/.test(workflow) && /--require-fresh-volumes/.test(workflow), 'workflow must run a fresh-volume synthetic Keycloak runtime proof')
   fail(/onprem-keycloak-runtime-proof\.mjs\s+--cleanup/.test(workflow) || /onprem-keycloak-runtime-proof\.mjs'[\s\S]*--cleanup/.test(workflow), 'workflow EXIT cleanup must call the guarded Keycloak runtime cleanup contract')
   fail(/residualExternalReviewRequired/.test(workflow), 'workflow must surface residualExternalReviewRequired as an unresolved license activation gate')
-  fail(/receipt\.packageCount !== 552/.test(workflow) && /receipt\.maxUnresolvedCount !== 452/.test(workflow), 'workflow must pin the Keycloak license package and unresolved boundaries')
+  fail(/receipt\.packageCount !== 556/.test(workflow) && /receipt\.maxUnresolvedCount !== 455/.test(workflow), 'workflow must pin the Keycloak license package and unresolved boundaries')
   fail(/receipt\.resolvedCount \+ receipt\.unresolvedCount !== receipt\.packageCount/.test(workflow), 'workflow must fail closed on Keycloak license summary drift')
   fail(/component\.license !== null \|\| component\.evidence !== null/.test(workflow), 'workflow must prevent unresolved Keycloak components from claiming license evidence')
   fail(/onprem\.store-manager\|onprem\.store-manager\|STORE_MANAGER\|synthetic-employee-store-manager\|company-001\|region-001\|store-100\|company-001\|region-001\|store-100,store-999\|store-100/.test(workflow), 'workflow must exercise a provider-signed overbroad read-store claim while keeping the assigned store narrow')
