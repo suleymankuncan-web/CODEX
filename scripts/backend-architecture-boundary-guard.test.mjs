@@ -175,10 +175,6 @@ const largeTrackedSourceAllowlist = new Map([
     'Existing generated OpenAPI writer entrypoint; parked until a concrete generation bug or reviewability blocker appears.',
   ],
   [
-    'admin-web/e2e/store-surfaces.spec.ts',
-    'Existing broad Store surface regression spec; parked until a concrete flake, runtime issue, or reviewability blocker appears.',
-  ],
-  [
     'admin-web/e2e/checklist-today-surfaces.spec.ts',
     'Existing checklist route regression spec now also owns visit-plan persona/no-mutation coverage; split when the next checklist route slice adds more cases.',
   ],
