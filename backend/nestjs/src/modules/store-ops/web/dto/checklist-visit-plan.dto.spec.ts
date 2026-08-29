@@ -26,4 +26,11 @@ describe("checklist visit plan DTOs", () => {
       items: [{ storeId: "x", plannedDate: "Sunday", displayOrder: -1 }],
     }))).not.toHaveLength(0);
   });
+
+  it("accepts manager identity as the weekly Report Viewer selector", () => {
+    expect(validateSync(plainToInstance(GetChecklistVisitPlanQueryDto, {
+      managerUserId: "11111111-1111-4111-8111-111111111111",
+      weekStart: "2026-07-13",
+    }))).toHaveLength(0);
+  });
 });

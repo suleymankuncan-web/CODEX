@@ -56,6 +56,19 @@ describe("ChecklistCommandReadService", () => {
     expect(repository.listRegions).not.toHaveBeenCalled();
   });
 
+  it("does not let Report Viewer select stores through a legacy region identifier", async () => {
+    const repository = { list: jest.fn(), listRegions: jest.fn() };
+    const service = new ChecklistCommandReadService(repository as never);
+
+    await expect(service.list({
+      actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: { companyIds: [], regionIds: [], storeIds: [] },
+      roleScopes: { REPORT_VIEWER: { companyIds: ["viewer-company"], regionIds: [], storeIds: [] } },
+      regionId: "33333333-3333-4333-8333-333333333333",
+    })).rejects.toThrow("Region Manager identity");
+    expect(repository.list).not.toHaveBeenCalled();
+  });
+
   it("fails closed without querying when Report Viewer company scope is empty", async () => {
     const repository = { list: jest.fn(), listRegions: jest.fn() };
     const service = new ChecklistCommandReadService(repository as never);

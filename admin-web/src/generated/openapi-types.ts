@@ -524,6 +524,7 @@ export type components = {
       }
     }
     "ChecklistCommandRegionRow": {
+      "managerUserId": string
       "regionId": string
       "regionName": string
       "regionManagers": Array<{

@@ -93,9 +93,10 @@ test('frontend scope runs the canonical root release workflow once', () => {
   assert.ok(scope.affectedVerification.commands.includes('npm.cmd --prefix admin-web run build'))
 })
 
-test('selector keeps unshipped e2e, playwright, readme, and ignored env changes out of image proof', () => {
+test('selector keeps unshipped e2e, test tooling, readme, and ignored env changes out of image proof', () => {
   for (const file of [
     'admin-web/e2e/pilot-smoke.spec.ts',
+    'admin-web/scripts/playwright-build-receipt.test.mjs',
     'admin-web/playwright.config.ts',
     'backend/nestjs/README.md',
     'admin-web/.env.example',
@@ -105,6 +106,17 @@ test('selector keeps unshipped e2e, playwright, readme, and ignored env changes 
     assert.equal(scope.proofMode, 'none', file)
     assert.equal(scope.imageScope, 'none', file)
     assert.equal(scope.runOnpremImageProof, false, file)
+  }
+})
+
+test('root package contracts still require release verification without rebuilding production images', () => {
+  for (const file of ['package.json', 'package-lock.json']) {
+    const scope = selectRequiredReleaseGateScope([file])
+    assert.equal(scope.runRootRelease, true, file)
+    assert.equal(scope.proofMode, 'none', file)
+    assert.equal(scope.imageScope, 'none', file)
+    assert.equal(scope.runOnpremImageProof, false, file)
+    assert.equal(scope.affectedVerification.fullReleaseRequired, true, file)
   }
 })
 

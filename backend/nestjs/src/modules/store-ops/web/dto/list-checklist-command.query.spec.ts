@@ -24,6 +24,7 @@ describe("ListChecklistCommandQueryDto", () => {
   it("accepts the bounded production query contract", async () => {
     const dto = plainToInstance(ListChecklistCommandQueryDto, {
       period: "2026-07",
+      managerUserId: "00000000-0000-4000-8000-000000000020",
       regionId: "00000000-0000-4000-8000-000000000010",
       query: "Marmara",
       status: "needs_visit",

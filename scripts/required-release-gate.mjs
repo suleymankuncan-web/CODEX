@@ -64,8 +64,6 @@ const fullProofPaths = [
 
 const fullProofFiles = new Set([
   '.dockerignore',
-  'package.json',
-  'package-lock.json',
   'scripts/required-release-gate.mjs',
   'scripts/required-release-gate-contract.test.mjs',
   'scripts/check-release.mjs',
@@ -119,6 +117,7 @@ function isBackendFullProofSource(file) {
 function isExplicitNonePath(file) {
   return (
     file.startsWith('admin-web/e2e/') ||
+    /^admin-web\/scripts\/.*\.test\.mjs$/i.test(file) ||
     /(^|\/)playwright(?:\.|\/)/i.test(file) ||
     /(^|\/)README(?:\.[^/]*)?$/i.test(file) ||
     /(^|\/)\.env(?:\.|$)/i.test(file)

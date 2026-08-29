@@ -3,6 +3,34 @@ import { checklistVisitPlanScoreBands } from "../application/checklist-visit-pla
 import { ChecklistVisitPlanRepository } from "./checklist-visit-plan.repository";
 
 describe("ChecklistVisitPlanRepository", () => {
+  it("reads a Report Viewer plan from active manager store assignments instead of region selection", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [{
+      plan_id: null,
+      region_id: "11111111-1111-4111-8111-111111111111",
+      region_name: "Eda Doğanay",
+      week_start_date: "2026-07-13",
+      revision_no: 3,
+      created_at: "2026-07-13T10:00:00.000Z",
+      items_json: [],
+    }] });
+    const repository = new ChecklistVisitPlanRepository({ query } as never);
+
+    await repository.getManagerWeeklyPlan({
+      managerUserId: "22222222-2222-4222-8222-222222222222",
+      weekStart: "2026-07-13",
+      companyIds: ["33333333-3333-4333-8333-333333333333"],
+    });
+
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(sql).toContain("item.store_id = scope.store_id");
+    expect(params).toEqual([
+      "22222222-2222-4222-8222-222222222222",
+      "2026-07-13",
+      ["33333333-3333-4333-8333-333333333333"],
+    ]);
+  });
   it("records attendance against the current scoped plan item and writes sanitized audit metadata", async () => {
     const client = { query: jest.fn()
       .mockResolvedValueOnce({ rows: [{

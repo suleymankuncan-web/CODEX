@@ -64,6 +64,15 @@ test('docs-only changes select diff check and script tests only when guarded scr
   assert.ok(scriptChange.commands.includes('npm.cmd run test:scripts'))
 })
 
+test('root package contracts require the root release without selecting an offline rehearsal', () => {
+  for (const file of ['package.json', 'package-lock.json']) {
+    const selection = selectAffectedVerification([file])
+    assert.equal(selection.fullReleaseRequired, true, file)
+    assert.ok(selection.commands.includes('npm.cmd run check:release'), file)
+    assert.equal(selection.targeted.includes('on-prem offline bundle and clean Linux rehearsal contract'), false, file)
+  }
+})
+
 test('Store UI changes select frontend gates and targeted Store Playwright guidance', () => {
   const selection = selectAffectedVerification([
     'admin-web/src/features/store-kpis/store-kpis-page.tsx',

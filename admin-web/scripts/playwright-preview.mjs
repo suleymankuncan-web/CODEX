@@ -1,4 +1,7 @@
 import { spawn, spawnSync } from 'node:child_process'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { PLAYWRIGHT_BUILD_ENVIRONMENT, verifyPlaywrightBuildReceipt } from './playwright-build-receipt.mjs'
 
 const rawPort = process.argv[2] ?? '4174'
 if (!/^\d{4,5}$/.test(rawPort)) {
@@ -7,27 +10,29 @@ if (!/^\d{4,5}$/.test(rawPort)) {
 
 const testBuildEnvironment = {
   ...process.env,
-  VITE_API_BASE_URL: '/api',
-  VITE_SENTRY_DSN: '',
-  VITE_SENTRY_ENABLED: 'false',
+  ...PLAYWRIGHT_BUILD_ENVIRONMENT,
 }
+const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 const isWindows = process.platform === 'win32'
 const shell = isWindows ? process.env.ComSpec || 'cmd.exe' : 'npm'
 const buildArguments = isWindows
-  ? ['/d', '/s', '/c', 'npm.cmd run build']
-  : ['run', 'build']
-const build = spawnSync(shell, buildArguments, {
-  env: testBuildEnvironment,
-  stdio: 'inherit',
-})
-
-if (build.status !== 0) process.exit(build.status ?? 1)
+  ? ['/d', '/s', '/c', 'npm.cmd run build:e2e']
+  : ['run', 'build:e2e']
+const receipt = verifyPlaywrightBuildReceipt(projectRoot)
+if (receipt.valid) {
+  console.log('Playwright preview: reusing exact static-stage build receipt')
+} else {
+  console.log(`Playwright preview: rebuilding because ${receipt.reason}`)
+  const build = spawnSync(shell, buildArguments, { cwd: projectRoot, env: testBuildEnvironment, stdio: 'inherit' })
+  if (build.status !== 0) process.exit(build.status ?? 1)
+}
 
 const previewArguments = isWindows
   ? ['/d', '/s', '/c', `npm.cmd run preview -- --host 127.0.0.1 --port ${rawPort}`]
   : ['run', 'preview', '--', '--host', '127.0.0.1', '--port', rawPort]
 const preview = spawn(shell, previewArguments, {
+  cwd: projectRoot,
   env: testBuildEnvironment,
   stdio: 'inherit',
 })

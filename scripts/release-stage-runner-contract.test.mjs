@@ -325,7 +325,7 @@ test('package proof scripts preserve static e2e and volatile audit coverage', ()
   assert.equal(backend.scripts['check:release:audit'], 'npm audit --omit=dev')
   assert.equal(
     frontend.scripts['check:release:static'],
-    'npm run api:check && npm run lint && npm run test:scripts && npm run build',
+    'npm run api:check && npm run lint && npm run test:scripts && npm run build:e2e',
   )
   assert.equal(frontend.scripts['check:release:e2e'], 'npm run test:e2e')
   assert.equal(frontend.scripts['check:release:audit'], 'npm audit --omit=dev')

@@ -26,9 +26,16 @@ const rules = [
   },
   {
     name: 'script guard',
-    test: (file) => file.startsWith('scripts/') || file === 'package.json',
+    test: (file) => file.startsWith('scripts/'),
     commands: ['diffCheck', 'scriptTests'],
     reason: 'repo script or root command surface changed',
+  },
+  {
+    name: 'root package contract',
+    test: (file) => file === 'package.json' || file === 'package-lock.json',
+    commands: ['diffCheck', 'scriptTests', 'rootRelease'],
+    reason: 'root package commands or pinned dependencies changed',
+    fullRelease: true,
   },
   {
     name: 'on-prem image proof',
@@ -55,8 +62,7 @@ const rules = [
       file === 'infra/onprem/photo-storage/compose.yaml' ||
       file.startsWith('infra/onprem/offline/') ||
       file.startsWith('scripts/onprem-offline-') ||
-      file.startsWith('docs/runbooks/onprem-offline-') ||
-      file === 'package.json',
+      file.startsWith('docs/runbooks/onprem-offline-'),
     commands: ['diffCheck', 'scriptTests', 'rootRelease'],
     targeted: ['on-prem offline bundle and clean Linux rehearsal contract'],
     routes: ['/onprem-offline'],

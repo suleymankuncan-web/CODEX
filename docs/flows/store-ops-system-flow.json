@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T11:54:47.185Z",
+  "generatedAt": "2026-08-29T19:20:50.224Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -1556,7 +1556,7 @@
       "exportedFunction": "getChecklistOperationalHistory",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 66
+        "line": 67
       }
     },
     {
@@ -1571,7 +1571,7 @@
       "exportedFunction": "getChecklistVisitPlan",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 74
+        "line": 78
       }
     },
     {
@@ -1586,7 +1586,7 @@
       "exportedFunction": "getChecklistVisitPlanPeriod",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 78
+        "line": 82
       }
     },
     {
@@ -1601,7 +1601,7 @@
       "exportedFunction": "getChecklistVisitPlanCandidates",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 89
+        "line": 93
       }
     },
     {
@@ -1616,7 +1616,7 @@
       "exportedFunction": "getChecklistVisitPlanRegionOptions",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 99
+        "line": 103
       }
     },
     {
@@ -1631,7 +1631,7 @@
       "exportedFunction": "saveChecklistVisitPlan",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 109
+        "line": 113
       }
     },
     {
@@ -1646,7 +1646,7 @@
       "exportedFunction": "completeChecklistVisitPlanItem",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 120
+        "line": 124
       }
     },
     {
@@ -4927,7 +4927,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 110
+        "line": 111
       }
     },
     {
@@ -4955,7 +4955,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 134
+        "line": 135
       }
     },
     {

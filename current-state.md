@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-08-14
+Last verified: 2026-08-29
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -81,6 +81,7 @@ release proof, and DG1/DG2/REM history live in the linked historical records.
 Current consequences are the active release, pilot, database, and on-prem
 gates below; no successful read authorizes an unrelated runtime change.
 
+Report Viewer checklist ownership is the active Region Manager identity plus active direct store assignments; legacy region identifiers remain only in the Region Manager's own weekly-plan mutation contract. Report Viewer history reads are bounded/retryable, Playwright build reuse requires an exact source/environment/dist receipt, and test-only frontend scripts avoid image proof while root package changes retain the full root release gate.
 ## Active Evidence Gates
 
 ### A3 Release Measurement
@@ -193,7 +194,6 @@ Now:
 - The seven-PR operational-surfaces cutover is merged through PR #1013. Closeout PR #1014 remains open while its repaired head is recertified. Owner-observed KPI, Talep Merkezi and Görevler geometry differences invalidated the first visual PASS assumption. The local repair now gives KPI Özetleri, Talep Merkezi, Norm Kadro and Görevler one shared compact four-cell decision rail, fixed desktop geometry, content-sized page rows, and before/after rectangle assertions at 1440x900, 1024x768, 390x844 and 320x844. Local parity, role and accessibility suites pass; final CI, deployment and protected staging read evidence remain required before merge. See `docs/evidence/store-operational-surfaces-command-canvas/parity-gap-audit-2026-07-17.md`.
 Next:
 1. Keep ONP-4A/4B and ONP-5 behind their external gates: clean Ubuntu-host rehearsal, owner trust distribution, separate backup failure domain, accepted RPO/RTO and recurring restore drill, secret provisioning/rotation, host firewall/DNS/TLS ownership, and owner/IT activation. The local migration/storage, SeaweedFS synthetic, and source-free offline contract gates are green; they do not authorize real users, SMTP, photos, company-server access, or production cutover.
-
 2. Logical PR-8B merged as PR #1036 at `01fdd8292e9963c1a8d4c91388f27dfe93459faf`. Logical PR-9 merged as PR #1037 at `a1e7708948e8fb0da0a550dcfbe5a732f8441fb5`: the exact-cohort BullMQ path writes only isolated `shadow` ledger rows, reads private canonical media, retries within fixed bounds and has no controller, UI, auth or official product sink. Logical PR-10 is active on `codex/qwen-pr10-advisory-pilot`: it adds default-off exact-cohort real VM photo intake, mutually exclusive `advisory` enqueue, a Region Manager-only advisory review surface scoped by the intersection of current region-role and action-store assignments, immutable first-review semantics, aggregate-only 30-50-pair receipt tooling, and a provider-neutral Qwen/Luna same-corpus evaluation protocol. AI output remains advisory and cannot update checklist outcomes, Store Actions, KPIs, rankings, targets or incentives. Staging execution, provider calls and gate activation remain separately controlled by the runbook.
 3. Keep retention cleanup disabled and do not execute a purge until a separately approved staging run window and exact sanitized manifest exist.
 4. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open unrelated runtime work.

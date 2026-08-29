@@ -20,6 +20,7 @@ export type ChecklistCommandSortKey = 'store' | 'bm' | 'vm' | 'last_visit' | 'el
 
 export type ChecklistCommandQueryInput = {
   period: string
+  managerUserId?: string
   regionId?: string
   status: ChecklistCommandStatus
   sort: ChecklistCommandSort
@@ -93,6 +94,7 @@ export function buildChecklistOperationalHistoryQuery(input: ChecklistOperationa
 export function buildChecklistCommandQuery(input: ChecklistCommandQueryInput) {
   const query = new URLSearchParams()
   query.set('period', input.period)
+  if (input.managerUserId) query.set('managerUserId', input.managerUserId)
   if (input.regionId) query.set('regionId', input.regionId)
   if (input.status !== 'all') query.set('status', input.status)
   query.set('sort', input.sort)

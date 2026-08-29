@@ -198,7 +198,7 @@ const checklistCommandRegionMetricsSchema = {
 const checklistCommandRegionRowSchema = {
   type: "object",
   required: [
-    "regionId",
+    "managerUserId", "regionId",
     "regionName",
     "regionManagers",
     "metrics",
@@ -207,7 +207,7 @@ const checklistCommandRegionRowSchema = {
     "lastOperationalAt",
   ],
   properties: {
-    regionId: { type: "string", format: "uuid" },
+    managerUserId: { type: "string", format: "uuid" }, regionId: { type: "string", format: "uuid" },
     regionName: { type: "string" },
     regionManagers: { type: "array", items: regionManagerSchema },
     metrics: {
@@ -467,7 +467,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
   );
   setQueryParameters(document.paths, path, "get", [
     queryParameter("period", { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }),
-    queryParameter("regionId", { type: "string", format: "uuid" }),
+    queryParameter("managerUserId", { type: "string", format: "uuid" }), queryParameter("regionId", { type: "string", format: "uuid" }),
     queryParameter("query", { type: "string", maxLength: 120 }),
     queryParameter("status", { type: "string", enum: statusQueryEnum }),
     queryParameter("signal", { type: "string", enum: signalEnum }),
@@ -481,7 +481,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     document.paths,
     regionsPath,
     "get",
-    "Company-scoped checklist command region aggregates for Report Viewer.",
+    "Company-scoped checklist command manager aggregates for Report Viewer.",
     "ChecklistCommandRegionResponse",
   );
   setQueryParameters(document.paths, regionsPath, "get", [
@@ -501,7 +501,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     "ChecklistVisitPlanResponse",
   );
   setQueryParameters(document.paths, visitPlansPath, "get", [
-    requiredQueryParameter("regionId", { type: "string", format: "uuid" }),
+    queryParameter("regionId", { type: "string", format: "uuid" }), queryParameter("managerUserId", { type: "string", format: "uuid" }),
     requiredQueryParameter("weekStart", { type: "string", format: "date" }),
   ]);
 

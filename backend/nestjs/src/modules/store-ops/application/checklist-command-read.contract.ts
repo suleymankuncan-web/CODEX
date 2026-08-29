@@ -103,6 +103,7 @@ export type ChecklistCommandRegionMetrics = {
 };
 
 export type ChecklistCommandRegionRow = {
+  managerUserId: string;
   regionId: string;
   regionName: string;
   regionManagers: Array<{ displayName: string }>;

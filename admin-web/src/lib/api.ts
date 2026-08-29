@@ -59,14 +59,14 @@ export type SessionExpiredDetail = {
 export const SESSION_EXPIRED_EVENT = 'store-ops-session-expired'
 export { registerBearerTokenRefreshHandler } from './api-session-recovery'
 
-async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?: unknown }): Promise<T> {
+async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?: unknown; signal?: AbortSignal }): Promise<T> {
   const body = input?.body !== undefined ? JSON.stringify(input.body) : undefined
   const method = input?.method ?? 'GET'
   const prepared = await prepareHeaders(path, input?.body !== undefined, method)
 
   let attempt = await performFetchAttempt(
     path,
-    buildJsonRequest(method, prepared.session, prepared.headers, body),
+    buildJsonRequest(method, prepared.session, prepared.headers, body, input?.signal),
   )
   let response = attempt.response
 
@@ -75,7 +75,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     if (retryHeaders) {
       attempt = await performFetchAttempt(
         path,
-        buildJsonRequest(method, readClientSession(), retryHeaders, body),
+        buildJsonRequest(method, readClientSession(), retryHeaders, body, input?.signal),
         2,
       )
       response = attempt.response
@@ -95,7 +95,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
       if (isCookieBrowserSession(retrySession)) {
         attempt = await performFetchAttempt(
           path,
-          buildJsonRequest(method, retrySession, retryHeaders, body),
+          buildJsonRequest(method, retrySession, retryHeaders, body, input?.signal),
           2,
         )
         response = attempt.response
@@ -232,8 +232,8 @@ async function requestBlob(path: string): Promise<Blob> {
   return response.blob()
 }
 
-export async function fetchJson<T>(path: string): Promise<T> {
-  return requestJson<T>(path)
+export async function fetchJson<T>(path: string, input?: { signal?: AbortSignal }): Promise<T> {
+  return requestJson<T>(path, input)
 }
 
 export async function fetchBlob(path: string): Promise<Blob> {
@@ -265,11 +265,13 @@ function buildJsonRequest(
   session: SessionState,
   headers: Record<string, string>,
   body: string | undefined,
+  signal?: AbortSignal,
 ): RequestInit & { method: JsonMethod } {
   const request: RequestInit & { method: JsonMethod } = {
     method,
     headers,
     ...(isCookieBrowserSession(session) ? { credentials: 'include' as const } : {}),
+    ...(signal ? { signal } : {}),
   }
 
   if (body !== undefined) {
