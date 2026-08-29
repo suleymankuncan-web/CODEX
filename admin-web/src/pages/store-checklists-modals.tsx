@@ -2,11 +2,9 @@ import { useMemo, useRef, useState } from 'react'
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
 import {
   CheckCircle2,
-  CircleAlert,
   Cloud,
-  MinusCircle,
+  MessageSquareText,
   Save,
-  Store,
   XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,12 +13,17 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import type { ChecklistAcknowledgementItem, MobileChecklistToday } from '../features/checklists/api'
+import type {
+  ChecklistAcknowledgementItem,
+  ChecklistComplianceResponseValue,
+  MobileChecklistToday,
+} from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { getUserFacingErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import type { ChecklistSession } from './store-checklists-model'
 import {
+  calculateChecklistLiveScore,
   formatChecklistStatus,
   getScoreQuickOptions,
   getStaticCopy,
@@ -35,16 +38,15 @@ import {
 } from './store-checklists-score-policy'
 import { ChecklistBadge, ChecklistEmptyBlock } from './store-checklists-atoms'
 import { ChecklistResultModal } from './store-checklists-result-modal'
-import { ChecklistItemEvidenceControl } from '../features/checklist-workflow/ChecklistItemEvidenceControl'
-import {
-  applyChecklistEvidenceProjection,
-  countMissingRequiredChecklistEvidence,
-} from '../features/checklist-workflow/checklist-item-evidence-model'
+import { countMissingRequiredChecklistEvidence } from '../features/checklist-workflow/checklist-item-evidence-model'
 
 type ChecklistTemplateItem = ChecklistSession['template']['items'][number]
-type ChecklistVisitItemEntry = {
-  item: ChecklistTemplateItem
-  sectionName: string
+type ChecklistChoiceOption = {
+  label: string
+  responseValue?: ChecklistComplianceResponseValue
+  scoreValue: number
+  tone: string
+  value: string
 }
 
 export function StoreChecklistsModals(input: {
@@ -56,6 +58,7 @@ export function StoreChecklistsModals(input: {
     acknowledging: boolean
     canAcknowledge: boolean
   }
+  responseValues: Record<string, ChecklistComplianceResponseValue>
   scores: Record<string, number>
   selectedResult: ChecklistAcknowledgementItem | null
   selectedSession: ChecklistSession | null
@@ -71,9 +74,14 @@ export function StoreChecklistsModals(input: {
   onCloseResult: () => void
   onCloseSession: () => void
   onCommentChange: (templateItemId: string, comment: string) => void
+  onSaveComment: (templateItemId: string, comment: string) => Promise<void>
   onCompleteVisit: (checklistInstanceId: string) => void
   onNoteChange: (note: string) => void
-  onScoreChange: (templateItemId: string, score: number | null) => void
+  onScoreChange: (
+    templateItemId: string,
+    score: number | null,
+    responseValue?: ChecklistComplianceResponseValue | null,
+  ) => void
 }) {
   return (
     <>
@@ -81,7 +89,6 @@ export function StoreChecklistsModals(input: {
         <ChecklistVisitModal
           active={input.selectedSession.active}
           comments={input.comments}
-          captureAvailable={input.evidenceCapabilities?.captureAvailable ?? false}
           completeError={input.visitState.completeError}
           isCompleting={input.visitState.completing}
           isSaving={input.visitState.saving}
@@ -91,6 +98,8 @@ export function StoreChecklistsModals(input: {
           onComplete={input.onCompleteVisit}
           onScoreChange={input.onScoreChange}
           onCommentChange={input.onCommentChange}
+          onSaveComment={input.onSaveComment}
+          responseValues={input.responseValues}
           scores={input.scores}
           sessionDirty={input.sessionDirty}
           session={input.selectedSession}
@@ -117,7 +126,6 @@ export function StoreChecklistsModals(input: {
 function ChecklistVisitModal(input: {
   active: MobileChecklistToday['activeInstances'][number] | undefined
   comments: Record<string, string>
-  captureAvailable: boolean
   completeError: unknown | null
   isCompleting: boolean
   isSaving: boolean
@@ -125,8 +133,14 @@ function ChecklistVisitModal(input: {
   locale: AppLocale
   onClose: () => void
   onCommentChange: (templateItemId: string, comment: string) => void
+  onSaveComment: (templateItemId: string, comment: string) => Promise<void>
   onComplete: (checklistInstanceId: string) => void
-  onScoreChange: (templateItemId: string, score: number | null) => void
+  onScoreChange: (
+    templateItemId: string,
+    score: number | null,
+    responseValue?: ChecklistComplianceResponseValue | null,
+  ) => void
+  responseValues: Record<string, ChecklistComplianceResponseValue>
   scores: Record<string, number>
   sessionDirty: boolean
   session: ChecklistSession
@@ -134,21 +148,17 @@ function ChecklistVisitModal(input: {
 }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [confirmClose, setConfirmClose] = useState(false)
-  const [sessionEvidence, setSessionEvidence] = useState(() => input.active?.evidence ?? [])
-  const [evidenceVersion, setEvidenceVersion] = useState(input.active?.evidenceVersion ?? 0)
+  const [noteSaveStates, setNoteSaveStates] = useState<
+    Record<string, 'idle' | 'saving' | 'saved' | 'error'>
+  >({})
+  const sessionEvidence = input.active?.evidence ?? []
   const sections = useMemo(
     () => groupChecklistTemplateItems(input.session.template.items),
     [input.session.template.items],
   )
-  const itemEntries = useMemo<ChecklistVisitItemEntry[]>(
-    () =>
-      sections.flatMap((section) =>
-        section.items.map((item) => ({
-          item,
-          sectionName: normalizeChecklistDisplayText(section.name),
-        })),
-      ),
-    [sections],
+  const itemIndexById = useMemo(
+    () => new Map(input.session.template.items.map((item, index) => [item.templateItemId, index])),
+    [input.session.template.items],
   )
   const hasItems = input.session.template.items.length > 0
   const answeredCount = input.session.template.items.filter(
@@ -157,25 +167,20 @@ function ChecklistVisitModal(input: {
   const progressPercent = hasItems
     ? Math.round((answeredCount / input.session.template.items.length) * 100)
     : 0
-  let scoredRatioTotal = 0
-  let scoredRatioCount = 0
-
-  for (const item of input.session.template.items) {
-    const score = input.scores[item.templateItemId]
-    if (typeof score !== 'number' || !Number.isFinite(score) || item.maxScore <= 0) continue
-    scoredRatioTotal += Math.round((score / item.maxScore) * 100)
-    scoredRatioCount += 1
-  }
-
-  const currentScore =
-    scoredRatioCount > 0 ? Math.round(scoredRatioTotal / scoredRatioCount) : 0
+  const currentScore = calculateChecklistLiveScore({
+    items: input.session.template.items,
+    responseValues: input.responseValues,
+    scores: input.scores,
+  })
   const missingResponseCount = Math.max(input.session.template.items.length - answeredCount, 0)
-  const missingRequiredLowScoreNoteCount = input.session.template.items.filter((item) =>
-    isChecklistLowScoreNoteMissing({
-      commentText: input.comments[item.templateItemId],
-      item,
-      score: input.scores[item.templateItemId],
-    }),
+  const missingRequiredLowScoreNoteCount = input.session.template.items.filter(
+    (item) =>
+      input.responseValues[item.templateItemId] !== 'not_applicable' &&
+      isChecklistLowScoreNoteMissing({
+        commentText: input.comments[item.templateItemId],
+        item,
+        score: input.scores[item.templateItemId],
+      }),
   ).length
   const missingRequiredEvidenceCount = countMissingRequiredChecklistEvidence(
     input.session.template.items,
@@ -251,21 +256,22 @@ function ChecklistVisitModal(input: {
           </DialogHeader>
 
           <section className="store-checklist-session-summary" aria-label={input.t('storeChecklists.summaryAria')}>
-            <span className="store-checklist-session-store-icon" aria-hidden="true">
-              <Store />
-            </span>
             <div className="store-checklist-session-summary-copy">
               <div className="store-checklist-session-summary-title-row">
                 <h3>{input.session.store.storeName}</h3>
                 <ChecklistBadge tone={input.active ? 'warning' : 'accent'}>{sessionStatus}</ChecklistBadge>
               </div>
               <p>
-                {input.session.template.templateCode} - v{input.session.template.versionNo}
+                {sections.length} {getStaticCopy(input.locale, 'bölüm', 'sections')} ·{' '}
+                {input.session.template.items.length} {getStaticCopy(input.locale, 'madde', 'items')}
               </p>
             </div>
-            <div className="store-checklist-session-score" data-tone={currentScore >= 70 ? 'calm' : 'warning'}>
+            <div
+              className="store-checklist-session-score"
+              data-tone={currentScore !== null && currentScore < 70 ? 'warning' : 'calm'}
+            >
               <span>{input.t('storeChecklists.liveScore')}</span>
-              <strong>{currentScore}</strong>
+              <strong>{currentScore ?? '—'}</strong>
             </div>
             <div className="store-checklist-session-progress">
               <div>
@@ -286,79 +292,153 @@ function ChecklistVisitModal(input: {
           ) : (
             <main className="store-checklist-session-work" aria-label={input.t('storeChecklists.scoreInput')}>
               <div className="store-checklist-session-item-list">
-                {itemEntries.map((entry, index) => {
-                  const score = input.scores[entry.item.templateItemId]
-                  const isAnswered = Number.isFinite(score)
-                  const isLowScore = isChecklistLowScoreSelection(entry.item, score)
+                {sections.map((section, sectionIndex) => {
+                  const sectionAnsweredCount = section.items.filter((item) =>
+                    Number.isFinite(input.scores[item.templateItemId]),
+                  ).length
+
                   return (
-                    <article
-                      className="store-checklist-session-question-card"
-                      data-answered={isAnswered ? 'true' : undefined}
-                      key={entry.item.templateItemId}
-                    >
-                      <div className="store-checklist-session-question-copy">
-                        <span className="store-checklist-session-question-badge">
-                          Madde {index + 1}/{itemEntries.length} - {entry.sectionName}
-                        </span>
-                        <h3>{normalizeChecklistDisplayText(entry.item.itemText)}</h3>
+                    <section className="store-checklist-session-section" key={section.name}>
+                      <header className="store-checklist-session-section-header">
+                        <div>
+                          <span>
+                            {getStaticCopy(input.locale, 'Bölüm', 'Section')} {String(sectionIndex + 1).padStart(2, '0')}
+                          </span>
+                          <h2>{normalizeChecklistDisplayText(section.name)}</h2>
+                        </div>
+                        <strong>{sectionAnsweredCount}/{section.items.length}</strong>
+                      </header>
+
+                      <div className="store-checklist-session-section-items">
+                        {section.items.map((item) => {
+                          const itemIndex = itemIndexById.get(item.templateItemId) ?? 0
+                          const score = input.scores[item.templateItemId]
+                          const responseValue = input.responseValues[item.templateItemId]
+                          const comment = input.comments[item.templateItemId] ?? ''
+                          const isAnswered = Number.isFinite(score)
+                          const isLowScore = responseValue !== 'not_applicable'
+                            && isChecklistLowScoreSelection(item, score)
+                          const noteSaveState = noteSaveStates[item.templateItemId] ?? 'idle'
+
+                          return (
+                            <article
+                              className="store-checklist-session-question-card"
+                              data-answered={isAnswered ? 'true' : undefined}
+                              key={item.templateItemId}
+                            >
+                              <div className="store-checklist-session-question-copy">
+                                <span className="tw:sr-only">
+                                  Madde {itemIndex + 1}/{input.session.template.items.length} -{' '}
+                                  {normalizeChecklistDisplayText(section.name)}
+                                </span>
+                                <span className="store-checklist-session-question-index">
+                                  {String(itemIndex + 1).padStart(2, '0')}
+                                </span>
+                                <h3>{normalizeChecklistDisplayText(item.itemText)}</h3>
+                              </div>
+
+                              <ChecklistSessionAnswerControl
+                                disabled={!input.active}
+                                item={item}
+                                locale={input.locale}
+                                responseValue={responseValue}
+                                score={score}
+                                t={input.t}
+                                onScoreChange={input.onScoreChange}
+                              />
+
+                              {isLowScore ? (
+                                <p className="store-checklist-session-low-score-warning">
+                                  {input.t('storeChecklists.lowScoreTaskWarning')}
+                                </p>
+                              ) : null}
+
+                              <div className="store-checklist-session-item-tools">
+                                <details
+                                  className="store-checklist-session-disclosure store-checklist-session-note-field"
+                                  open={isLowScore || comment.trim().length > 0 || undefined}
+                                >
+                                  <summary>
+                                    <MessageSquareText aria-hidden="true" />
+                                    <span>
+                                      {comment
+                                        ? getStaticCopy(input.locale, 'Notu düzenle', 'Edit note')
+                                        : getStaticCopy(input.locale, 'Not ekle', 'Add note')}
+                                    </span>
+                                    <small>
+                                      {isLowScore
+                                        ? getStaticCopy(input.locale, 'Zorunlu', 'Required')
+                                        : getStaticCopy(input.locale, 'Opsiyonel', 'Optional')}
+                                    </small>
+                                  </summary>
+                                  <label
+                                    className="tw:sr-only"
+                                    htmlFor={`checklist-session-note-${item.templateItemId}`}
+                                  >
+                                    {input.t('storeChecklists.noteInput')}
+                                  </label>
+                                  <Textarea
+                                    disabled={!input.active}
+                                    id={`checklist-session-note-${item.templateItemId}`}
+                                    maxLength={500}
+                                    placeholder={getStaticCopy(input.locale, 'Kısa bir açıklama yazın', 'Write a short note')}
+                                    rows={2}
+                                    value={comment}
+                                    onChange={(event) => {
+                                      setNoteSaveStates((current) => ({
+                                        ...current,
+                                        [item.templateItemId]: 'idle',
+                                      }))
+                                      input.onCommentChange(item.templateItemId, event.target.value)
+                                    }}
+                                  />
+                                  <div className="store-checklist-session-note-actions">
+                                    <span role="status">
+                                      {noteSaveState === 'error'
+                                        ? getStaticCopy(input.locale, 'Not kaydedilemedi', 'Note could not be saved')
+                                        : !isAnswered
+                                          ? getStaticCopy(input.locale, 'Önce yanıt seçin', 'Choose an answer first')
+                                          : noteSaveState === 'saved'
+                                            ? getStaticCopy(input.locale, 'Taslağa kaydedildi', 'Saved to draft')
+                                            : ''}
+                                    </span>
+                                    <Button
+                                      disabled={!input.active || !isAnswered || noteSaveState === 'saving'}
+                                      size="sm"
+                                      type="button"
+                                      onClick={() => {
+                                        setNoteSaveStates((current) => ({
+                                          ...current,
+                                          [item.templateItemId]: 'saving',
+                                        }))
+                                        void input.onSaveComment(item.templateItemId, comment)
+                                          .then(() => {
+                                            setNoteSaveStates((current) => ({
+                                              ...current,
+                                              [item.templateItemId]: 'saved',
+                                            }))
+                                          })
+                                          .catch(() => {
+                                            setNoteSaveStates((current) => ({
+                                              ...current,
+                                              [item.templateItemId]: 'error',
+                                            }))
+                                          })
+                                      }}
+                                    >
+                                      <Save data-icon="inline-start" />
+                                      {noteSaveState === 'saving'
+                                        ? getStaticCopy(input.locale, 'Kaydediliyor...', 'Saving...')
+                                        : getStaticCopy(input.locale, 'Notu kaydet', 'Save note')}
+                                    </Button>
+                                  </div>
+                                </details>
+                              </div>
+                            </article>
+                          )
+                        })}
                       </div>
-
-                      <ChecklistSessionAnswerControl
-                        disabled={!input.active}
-                        item={entry.item}
-                        locale={input.locale}
-                        score={score}
-                        t={input.t}
-                        onScoreChange={input.onScoreChange}
-                      />
-
-                      {isLowScore ? (
-                        <p className="store-checklist-session-low-score-warning">
-                          {input.t('storeChecklists.lowScoreTaskWarning')}
-                        </p>
-                      ) : null}
-
-                      <div className="store-checklist-session-note-field">
-                        <label htmlFor={`checklist-session-note-${entry.item.templateItemId}`}>
-                          {input.t('storeChecklists.noteInput')}{' '}
-                          <small>{getStaticCopy(input.locale, '(opsiyonel)', '(optional)')}</small>
-                        </label>
-                        <Textarea
-                          disabled={!input.active}
-                          id={`checklist-session-note-${entry.item.templateItemId}`}
-                          maxLength={500}
-                          rows={3}
-                          value={input.comments[entry.item.templateItemId] ?? ''}
-                          onChange={(event) =>
-                            input.onCommentChange(entry.item.templateItemId, event.target.value)
-                          }
-                        />
-                      </div>
-
-                      {input.active && entry.item.evidencePolicy !== 'none' ? (
-                        <ChecklistItemEvidenceControl
-                          active={input.active}
-                          captureAvailable={input.captureAvailable}
-                          {...(input.comments[entry.item.templateItemId]
-                            ? { comment: input.comments[entry.item.templateItemId] }
-                            : {})}
-                          disabled={input.isCompleting || input.isSaving}
-                          maxEvidenceCount={entry.item.maxEvidenceCount}
-                          policy={entry.item.evidencePolicy}
-                          score={score}
-                          templateItemId={entry.item.templateItemId}
-                          evidence={sessionEvidence.filter((item) => item.templateItemId === entry.item.templateItemId)}
-                          evidenceVersion={evidenceVersion}
-                          onProjectionChange={(projection) => {
-                            setSessionEvidence((current) => {
-                              const next = applyChecklistEvidenceProjection(current, projection)
-                              setEvidenceVersion(next.evidenceVersion)
-                              return next.evidence
-                            })
-                          }}
-                        />
-                      ) : null}
-                    </article>
+                    </section>
                   )
                 })}
               </div>
@@ -404,20 +484,21 @@ function ChecklistVisitModal(input: {
         </DialogContent>
       </Dialog>
       <AlertDialogPrimitive.Portal>
-        <AlertDialogPrimitive.Overlay className="tw:fixed tw:inset-0 tw:z-[60] tw:bg-foreground/20 tw:backdrop-blur-xs" />
-        <AlertDialogPrimitive.Content className="tw:fixed tw:top-1/2 tw:left-1/2 tw:z-[61] tw:grid tw:w-[min(360px,calc(100vw-2rem))] tw:-translate-x-1/2 tw:-translate-y-1/2 tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-popover tw:p-5 tw:text-popover-foreground tw:shadow-xl tw:outline-none">
-          <AlertDialogPrimitive.Title className="tw:text-base tw:font-semibold">
+        <AlertDialogPrimitive.Overlay className="tw:fixed tw:inset-0 tw:z-[60] tw:bg-foreground/25 tw:backdrop-blur-[2px]" />
+        <AlertDialogPrimitive.Content className="tw:fixed tw:top-1/2 tw:left-1/2 tw:z-[61] tw:grid tw:w-[min(330px,calc(100vw-1.5rem))] tw:-translate-x-1/2 tw:-translate-y-1/2 tw:gap-0 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-background tw:p-0 tw:text-foreground tw:shadow-[0_24px_70px_rgba(20,44,53,0.24)] tw:outline-none">
+          <span aria-hidden="true" className="tw:h-1 tw:bg-gradient-to-r tw:from-[#6d28d9] tw:to-[#06b6d4]" />
+          <AlertDialogPrimitive.Title className="tw:px-5 tw:pt-4 tw:text-[0.95rem] tw:font-semibold tw:tracking-[-0.01em]">
             {getStaticCopy(input.locale, input.sessionDirty ? 'Değişiklikler kaybolsun mu?' : 'Checklist kapatılsın mı?', input.sessionDirty ? 'Discard changes?' : 'Close checklist?')}
           </AlertDialogPrimitive.Title>
-          <AlertDialogPrimitive.Description className="tw:text-sm tw:text-muted-foreground">
+          <AlertDialogPrimitive.Description className="tw:mt-2 tw:px-5 tw:text-[0.78rem] tw:leading-5 tw:text-muted-foreground">
             {input.sessionDirty ? input.t('storeChecklists.sessionCloseConfirm') : input.t('storeChecklists.cancelSessionConfirm')}
           </AlertDialogPrimitive.Description>
-          <div className="tw:mt-2 tw:flex tw:justify-end tw:gap-2">
+          <div className="tw:mt-4 tw:grid tw:grid-cols-2 tw:gap-2 tw:border-t tw:border-border tw:bg-muted/35 tw:px-4 tw:py-3">
             <AlertDialogPrimitive.Cancel asChild>
-              <Button type="button" variant="outline">{getStaticCopy(input.locale, "Checklist'e dön", 'Return to checklist')}</Button>
+              <Button className="tw:h-9 tw:w-full tw:rounded-full tw:border-border tw:bg-background tw:px-3 tw:text-xs tw:font-semibold tw:text-foreground tw:shadow-none tw:focus-visible:border-ring tw:focus-visible:ring-2 tw:focus-visible:ring-ring/20 hover:tw:bg-muted" type="button" variant="outline">{getStaticCopy(input.locale, "Checklist'e dön", 'Return to checklist')}</Button>
             </AlertDialogPrimitive.Cancel>
             <AlertDialogPrimitive.Action asChild>
-              <Button type="button" variant="destructive" onClick={input.onClose}>{getStaticCopy(input.locale, 'Checklisti kapat', 'Close checklist')}</Button>
+              <Button className="tw:h-9 tw:w-full tw:rounded-full tw:border-0 tw:bg-destructive tw:px-3 tw:text-xs tw:font-semibold tw:text-destructive-foreground tw:shadow-none tw:focus-visible:ring-2 tw:focus-visible:ring-destructive/25 hover:tw:bg-destructive/90" type="button" variant="destructive" onClick={input.onClose}>{getStaticCopy(input.locale, 'Checklisti kapat', 'Close checklist')}</Button>
             </AlertDialogPrimitive.Action>
           </div>
         </AlertDialogPrimitive.Content>
@@ -430,28 +511,39 @@ function ChecklistSessionAnswerControl(input: {
   disabled: boolean
   item: ChecklistTemplateItem
   locale: AppLocale
-  onScoreChange: (templateItemId: string, score: number | null) => void
+  onScoreChange: (
+    templateItemId: string,
+    score: number | null,
+    responseValue?: ChecklistComplianceResponseValue | null,
+  ) => void
+  responseValue: ChecklistComplianceResponseValue | undefined
   score: number | undefined
   t: TranslateFunction
 }) {
   const scoreValue = Number.isFinite(input.score) ? String(input.score) : undefined
+  const selectedChoiceValue = input.item.responseType === 'compliance'
+    ? input.responseValue
+    : scoreValue
   const scoreOptions = getChecklistScoreOptions(input.item)
   const choiceOptions = getChecklistChoiceOptions(input.locale, input.item)
 
   if (choiceOptions.length > 0) {
     return (
       <div className="store-checklist-session-answer-block">
-        <div className="store-checklist-session-answer-heading">
-          <span>{input.t('storeChecklists.scoreInput')}</span>
-        </div>
         <ToggleGroup
           className="store-checklist-session-choice-grid"
           disabled={input.disabled}
           type="single"
-          value={scoreValue ?? ''}
+          value={selectedChoiceValue ?? ''}
           onValueChange={(value) => {
             if (!value) return
-            input.onScoreChange(input.item.templateItemId, Number(value))
+            const option = choiceOptions.find((candidate) => candidate.value === value)
+            if (!option) return
+            input.onScoreChange(
+              input.item.templateItemId,
+              option.scoreValue,
+              option.responseValue,
+            )
           }}
         >
           {choiceOptions.map((option) => (
@@ -459,11 +551,9 @@ function ChecklistSessionAnswerControl(input: {
               className="store-checklist-session-choice"
               data-tone={option.tone}
               key={`${option.label}-${option.value}`}
-              value={String(option.value)}
+              value={option.value}
             >
-              <span>{option.icon}</span>
               <strong>{option.label}</strong>
-              <small>{option.caption}</small>
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -539,24 +629,25 @@ function ChecklistSessionScoreInput(input: {
   )
 }
 
-function getChecklistChoiceOptions(locale: AppLocale, item: ChecklistTemplateItem) {
+function getChecklistChoiceOptions(
+  locale: AppLocale,
+  item: ChecklistTemplateItem,
+): ChecklistChoiceOption[] {
   const maxScore = Math.max(0, item.maxScore)
 
   if (item.responseType === 'yes_no') {
     return [
       {
-        caption: formatChecklistPointLabel(locale, maxScore),
-        icon: <CheckCircle2 aria-hidden="true" />,
         label: getStaticCopy(locale, 'Evet', 'Yes'),
         tone: 'good',
-        value: maxScore,
+        scoreValue: maxScore,
+        value: String(maxScore),
       },
       {
-        caption: formatChecklistPointLabel(locale, 0),
-        icon: <MinusCircle aria-hidden="true" />,
         label: getStaticCopy(locale, 'Hayır', 'No'),
         tone: 'critical',
-        value: 0,
+        scoreValue: 0,
+        value: '0',
       },
     ]
   }
@@ -565,34 +656,60 @@ function getChecklistChoiceOptions(locale: AppLocale, item: ChecklistTemplateIte
     const [good, watch, critical] = getScoreQuickOptions(locale, maxScore)
     return [
       {
-        caption: formatChecklistPointLabel(locale, good?.value ?? maxScore),
-        icon: <CheckCircle2 aria-hidden="true" />,
         label: getStaticCopy(locale, 'Uygun', 'Good'),
         tone: 'good',
-        value: good?.value ?? maxScore,
+        scoreValue: good?.value ?? maxScore,
+        value: String(good?.value ?? maxScore),
       },
       {
-        caption: formatChecklistPointLabel(locale, watch?.value ?? Math.round(maxScore * 0.6)),
-        icon: <CircleAlert aria-hidden="true" />,
         label: getStaticCopy(locale, 'Takip', 'Watch'),
         tone: 'watch',
-        value: watch?.value ?? Math.round(maxScore * 0.6),
+        scoreValue: watch?.value ?? Math.round(maxScore * 0.6),
+        value: String(watch?.value ?? Math.round(maxScore * 0.6)),
       },
       {
-        caption: formatChecklistPointLabel(locale, critical?.value ?? Math.round(maxScore * 0.2)),
-        icon: <MinusCircle aria-hidden="true" />,
         label: getStaticCopy(locale, 'Kritik', 'Critical'),
         tone: 'critical',
-        value: critical?.value ?? Math.round(maxScore * 0.2),
+        scoreValue: critical?.value ?? Math.round(maxScore * 0.2),
+        value: String(critical?.value ?? Math.round(maxScore * 0.2)),
+      },
+    ]
+  }
+
+  if (item.responseType === 'compliance') {
+    return [
+      {
+        label: getStaticCopy(locale, 'Uygun', 'Compliant'),
+        responseValue: 'compliant' as const,
+        scoreValue: maxScore,
+        tone: 'good',
+        value: 'compliant',
+      },
+      {
+        label: getStaticCopy(locale, 'Kısmen Uygun', 'Partially compliant'),
+        responseValue: 'partially_compliant' as const,
+        scoreValue: maxScore / 2,
+        tone: 'watch',
+        value: 'partially_compliant',
+      },
+      {
+        label: getStaticCopy(locale, 'Uygun Değil', 'Non-compliant'),
+        responseValue: 'non_compliant' as const,
+        scoreValue: 0,
+        tone: 'critical',
+        value: 'non_compliant',
+      },
+      {
+        label: 'N/A',
+        responseValue: 'not_applicable' as const,
+        scoreValue: 0,
+        tone: 'neutral',
+        value: 'not_applicable',
       },
     ]
   }
 
   return []
-}
-
-function formatChecklistPointLabel(locale: AppLocale, value: number) {
-  return `${value} ${getStaticCopy(locale, 'puan', 'pts')}`
 }
 
 function normalizeChecklistDisplayText(value: string) {

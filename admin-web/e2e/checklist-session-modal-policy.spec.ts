@@ -1,6 +1,5 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
-import { resolve } from 'node:path'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
@@ -40,6 +39,11 @@ test('checklist session modal uses 1-5 score policy and low-score note guard', a
   await expect(dialog.getByRole('button', { name: 'Tamamla', exact: true })).toBeDisabled()
 
   await dialog.getByRole('textbox', { name: /Not/ }).fill('Eksik raf düzeni mağaza aksiyonuna düşmeli')
+  await dialog.getByRole('button', { name: 'Notu kaydet' }).click()
+  await expect.poll(() => requests.saves.some((request) =>
+    request.body.commentText === 'Eksik raf düzeni mağaza aksiyonuna düşmeli',
+  )).toBe(true)
+  await expect(dialog.getByText('Taslağa kaydedildi')).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Tamamla', exact: true })).toBeEnabled()
 
   page.once('dialog', (confirm) => confirm.accept())
@@ -93,7 +97,22 @@ test('checklist session modal keeps footer usable on mobile width', async ({ pag
   await expectLocatorNoHorizontalOverflow(dialog)
 })
 
-test('synthetic evidence controls stay usable, scoped and accessible at 320px', async ({ page }) => {
+test('checklist session stays contained and question numbers align at compact desktop width', async ({ page }) => {
+  await page.setViewportSize({ width: 720, height: 900 })
+  const requests = createRequestLog()
+  await setupChecklistSessionPolicyPage(page, requests)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  const dialog = page.getByRole('dialog')
+
+  await expect(dialog).toBeVisible()
+  await expectPageNoHorizontalOverflow(page)
+  await expectLocatorNoHorizontalOverflow(dialog)
+  await expectQuestionNumberAligned(dialog)
+})
+
+test('photo evidence entry stays hidden and the session remains accessible at 320px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 })
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
@@ -101,19 +120,8 @@ test('synthetic evidence controls stay usable, scoped and accessible at 320px', 
   await page.getByRole('button', { name: 'Devam et' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('radio', { name: '4', exact: true }).click()
-
-  const evidence = dialog.locator('section[aria-label]:has(input[type="file"])')
-  await expect(evidence).toBeVisible()
-  await expect(evidence.getByRole('button', { name: 'Kamera' })).toBeDisabled()
-  await expect(evidence.locator('button', { hasText: 'Onaylı HR Axis test logosunu seç' })).toBeVisible()
-  await evidence.locator('input[type="file"]').setInputFiles(
-    resolve(process.cwd(), 'src/assets/hr-axis-06-mark-transparent.png'),
-  )
-  await expect(evidence.getByText(/1\/2/)).toBeVisible()
-  await evidence.getByRole('button', { name: /nizle/i }).click()
-  await expect(evidence.locator('img')).toBeVisible()
-  await evidence.getByRole('button', { name: /kald/i }).click()
-  await expect(evidence.getByText(/0\/2/)).toBeVisible()
+  await expect(dialog.getByText('Fotoğraf ekle', { exact: true })).toHaveCount(0)
+  await expect(dialog.locator('section[aria-label="Fotoğraf kanıtı"]')).toHaveCount(0)
   await expectPageNoHorizontalOverflow(page)
   await expectLocatorNoHorizontalOverflow(dialog)
   await expectNoCriticalAxeViolations(page)
@@ -346,6 +354,30 @@ async function expectPageNoHorizontalOverflow(page: Page) {
 async function expectLocatorNoHorizontalOverflow(locator: Locator) {
   await expect
     .poll(async () => locator.evaluate((element) => element.scrollWidth <= element.clientWidth + 1))
+    .toBe(true)
+}
+
+async function expectQuestionNumberAligned(dialog: Locator) {
+  const questionCopy = dialog.locator('.store-checklist-session-question-copy').first()
+  await expect
+    .poll(async () =>
+      questionCopy.evaluate((element) => {
+        const index = element.querySelector('.store-checklist-session-question-index')
+        const heading = element.querySelector('h3')
+        if (!(index instanceof HTMLElement) || !(heading instanceof HTMLElement)) return false
+
+        const containerRect = element.getBoundingClientRect()
+        const indexRect = index.getBoundingClientRect()
+        const headingRect = heading.getBoundingClientRect()
+
+        return (
+          getComputedStyle(element).alignItems === 'baseline' &&
+          indexRect.right < headingRect.left &&
+          headingRect.right <= containerRect.right + 1 &&
+          element.scrollWidth <= element.clientWidth + 1
+        )
+      }),
+    )
     .toBe(true)
 }
 

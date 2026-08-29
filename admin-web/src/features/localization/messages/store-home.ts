@@ -63,10 +63,10 @@ export const storeHomeTr = {
   'storeHome.command.managerCopy':
     'KPI, sıralama, talep ve checklist aksiyonları mağaza müdürü için tek girişte toplandı.',
   'storeHome.command.managerTimelineTitle': 'Mağaza akışı',
-  'storeHome.command.regionTitle': 'Bölge ana ekranı hazır.',
+  'storeHome.command.regionTitle': 'Bölge müdürü ana ekranı hazır.',
   'storeHome.command.regionCopy':
     'Bölge müdürü rankings, KPI özetleri, checklist, hedef ve talep akışlarına tek girişten ulaşır.',
-  'storeHome.command.regionTimelineTitle': 'Bölge akışı',
+  'storeHome.command.regionTimelineTitle': 'Müdür akışı',
   'storeHome.command.adminTitle': 'Admin mağaza görünümü hazır.',
   'storeHome.command.adminCopy':
     'Admin oturumu mağaza alanını şirket geneli kontrol ve destek amacıyla ön izler.',
@@ -89,7 +89,7 @@ export const storeHomeTr = {
   'storeHome.dashboard.managerTitle': 'Mağaza özet dashboard',
   'storeHome.dashboard.managerCopy':
     'Mağaza müdürü için yetkili mağaza sayısı, açık iş, checklist ve KPI durumu tek ekranda okunur.',
-  'storeHome.dashboard.regionTitle': 'Bölge özet dashboard',
+  'storeHome.dashboard.regionTitle': 'Bölge müdürü özeti',
   'storeHome.dashboard.regionCopy':
     'Bölge müdürü için yetkili mağaza sayısı, checklist, KPI, hedef ve rapor girişleri aynı ritimde toplanır.',
   'storeHome.dashboard.adminTitle': 'Admin mağaza özeti',
@@ -100,13 +100,13 @@ export const storeHomeTr = {
     'Mağaza KPI özeti ilgili sayfada açılır.',
   'storeHome.dashboard.approvalsCopy':
     'Mağaza talep ve onayları mevcut onay kutusundan açılır.',
-  'storeHome.dashboard.regionKpiTitle': 'Bölge KPI görünümü',
+  'storeHome.dashboard.regionKpiTitle': 'Sorumlu mağaza KPI görünümü',
   'storeHome.dashboard.regionKpiCopy':
-    'Bölge KPI özeti KPI sayfasından açılır.',
+    'Sorumlu mağaza KPI özeti KPI sayfasından açılır.',
   'storeHome.dashboard.regionTargetsCopy':
     'Hedef akışı mevcut hedef sayfasından takip edilir.',
   'storeHome.dashboard.regionReportsCopy':
-    'Bölge raporları rapor sayfasından açılır.',
+    'Müdür raporları rapor sayfasından açılır.',
   'storeHome.visitPriority.title': 'Bu hafta ziyaret önceliği',
   'storeHome.visitPriority.copy':
     '{count} yüksek riskli mağaza var; ilk mağazalar ziyaret planında görünüyor.',
@@ -134,9 +134,9 @@ export const storeHomeTr = {
   'storeHome.valuePending': 'Bekliyor',
   'storeHome.metric.personalScore': 'Kişisel skor',
   'storeHome.metric.storeScore': 'Mağaza skoru',
-  'storeHome.metric.regionScore': 'Bölge skoru',
+  'storeHome.metric.regionScore': 'Sorumlu mağaza skoru',
   'storeHome.metric.storeRank': 'Mağaza sırası',
-  'storeHome.metric.regionRank': 'Bölge sırası',
+  'storeHome.metric.regionRank': 'Müdür sırası',
   'storeHome.metric.turkeyRank': 'Türkiye sırası',
   'storeHome.metric.storeScope': 'Yetkili mağaza',
   'storeHome.metric.pendingRequests': 'Bekleyen talep',

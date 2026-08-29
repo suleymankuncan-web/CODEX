@@ -1,0 +1,138 @@
+@media (max-width: 860px) {
+  .annual-visit-history-summary {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .annual-visit-history-summary dl > div {
+    display: grid;
+    align-content: center;
+    padding: 14px;
+  }
+
+  .annual-visit-history-months > div {
+    overflow-x: auto;
+    grid-template-columns: repeat(12, 68px);
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .annual-visit-history-workspace {
+    grid-template-columns: minmax(0, 1fr) 240px;
+  }
+}
+
+@media (max-width: 720px) {
+  .annual-visit-history-dialog {
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    transform: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .annual-visit-history-header {
+    min-height: 76px;
+    gap: 8px;
+    padding: 12px 10px 12px 16px;
+  }
+
+  .annual-visit-history-header h2 {
+    font-size: 17px;
+  }
+
+  .annual-visit-history-header small,
+  .annual-visit-history-header > div:first-child > span {
+    font-size: 7px;
+  }
+
+  .annual-visit-history-header-actions {
+    gap: 2px;
+  }
+
+  .annual-visit-history-header-actions > strong {
+    min-width: 40px;
+    font-size: 11px;
+  }
+
+  .annual-visit-history-header-actions > button:last-child {
+    margin-left: 2px;
+  }
+
+  .annual-visit-history-content {
+    padding: 10px;
+  }
+
+  .annual-visit-history-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .annual-visit-history-total {
+    min-height: 82px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .annual-visit-history-summary dl > div {
+    min-height: 72px;
+    padding: 10px;
+  }
+
+  .annual-visit-history-summary dt {
+    display: grid;
+    gap: 5px;
+    font-size: 7px;
+  }
+
+  .annual-visit-history-summary dd {
+    font-size: 18px;
+  }
+
+  .annual-visit-history-months {
+    padding: 12px;
+  }
+
+  .annual-visit-history-months p {
+    display: none;
+  }
+
+  .annual-visit-history-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .annual-visit-history-log > header {
+    display: grid;
+    gap: 10px;
+  }
+
+  .annual-visit-history-log > header > label {
+    width: 100%;
+  }
+
+  .annual-visit-history-log > header input {
+    font-size: 16px;
+  }
+
+  .annual-visit-history-groups li {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+    padding-inline: 10px;
+  }
+
+  .annual-visit-history-kind {
+    grid-column: 2;
+    width: max-content;
+    min-height: 24px;
+    margin-top: -3px;
+  }
+
+  .annual-visit-history-stores {
+    order: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .annual-visit-history-months > div > button {
+    transition: none;
+  }
+}

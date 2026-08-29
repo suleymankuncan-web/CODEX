@@ -23,6 +23,31 @@
 @media(min-width:1101px){.week-day{min-height:168px}}
 @media(max-width:1100px) and (min-width:721px){.week-day{min-height:163.5px}}
 @media(max-width:720px){.week-day{min-height:159.333px}}
-.week-visit--planned{border-color:rgba(55,101,234,.18);background:#f4f7ff}.week-visit-outcome--planned{color:#315bc4}
+.week-visit--planned{border-color:rgba(210,145,24,.22);background:#fffaf0}.week-visit-outcome--planned{color:#a66b00}
 .week-plan-mobile-remove{display:none!important}
 @media(max-width:720px){.week-plan-workspace{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);overflow:hidden}.week-plan-picker{min-height:0;padding-bottom:0;border-bottom:0}.week-plan-results{max-height:none}.week-plan-draft,.week-plan-added-action{display:none!important}.week-plan-mobile-remove{display:flex!important;border-color:rgba(220,63,103,.18)!important;color:var(--cc-danger)!important;background:#fff7f9!important}}
+
+.week-planner-mobile-days{display:none}
+.week-planner--embedded{margin:0;border-color:rgba(22,107,116,.18);background:#f3fbfa;box-shadow:0 16px 42px rgba(21,83,91,.07),inset 0 1px 0 rgba(255,255,255,.84)}
+.week-planner--embedded .week-planner-header{border-bottom-color:rgba(22,107,116,.13);background:linear-gradient(110deg,#e7faf7 0%,#edf7ff 58%,#f8f4ff 100%)}
+.week-planner--embedded .week-planner-icon{border-color:rgba(12,111,121,.17);color:#087780;background:rgba(255,255,255,.78)}
+.week-planner--embedded .week-planner-header small{color:#47727a}
+.week-planner--embedded .week-planner-header strong{color:#073f4b}
+.week-planner--embedded .week-planner-primary{background:#087780;box-shadow:0 7px 18px rgba(8,119,128,.2)}
+.week-planner--embedded .week-planner-grid{background:rgba(28,111,119,.12)}
+.week-planner--embedded .week-day{min-height:132px;background:rgba(255,255,255,.92)}
+.week-planner--embedded .week-day>header strong{color:#073f4b}
+.week-planner--embedded .week-day>header>b{color:#087780;background:#e4f8f5}
+.week-planner--embedded .week-day-visits{max-height:102px;overflow-y:auto;scrollbar-width:thin}
+
+@media(max-width:720px){
+  .week-planner-mobile-days{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:8px;border-bottom:1px solid rgba(22,107,116,.12);background:#f7fcfb}
+  .week-planner-mobile-days>button{position:relative;display:grid;min-width:0;min-height:52px;place-items:center;align-content:center;gap:2px;padding:4px 2px;border:1px solid transparent;border-radius:9px;color:#52727a;background:transparent}
+  .week-planner-mobile-days>button strong{font-size:8px}
+  .week-planner-mobile-days>button small{font-size:7px}
+  .week-planner-mobile-days>button b{position:absolute;top:3px;right:3px;display:grid;min-width:14px;height:14px;place-items:center;border-radius:5px;color:#087780;background:#e1f6f3;font-size:7px}
+  .week-planner-mobile-days>button.is-active{border-color:rgba(8,119,128,.26);color:#073f4b;background:#fff;box-shadow:0 4px 12px rgba(8,92,101,.08)}
+  .week-planner--embedded .week-planner-grid{grid-template-columns:1fr}
+  .week-planner--embedded .week-day{display:none;min-height:150px;border-bottom:0}
+  .week-planner--embedded .week-day[data-mobile-active='true']{display:grid}
+}

@@ -32,6 +32,17 @@ describe('checklist workflow command-overlay route state', () => {
     })
   })
 
+  it('accepts PostgreSQL UUID values used by local seed stores', () => {
+    expect(resolveChecklistWorkflowRouteState(
+      '?overlay=workflow&storeId=00000000-0000-0000-0000-000000000101&workflowTab=visits&workflowChecklist=bm',
+    ).state).toEqual({
+      kind: 'workflow',
+      storeId: '00000000-0000-0000-0000-000000000101',
+      tab: 'visits',
+      directChecklist: 'bm',
+    })
+  })
+
   it.each(['plan', 'inbox', 'history'] as const)(
     'drops a crafted direct checklist intent outside the visits tab (%s)',
     (tab) => {

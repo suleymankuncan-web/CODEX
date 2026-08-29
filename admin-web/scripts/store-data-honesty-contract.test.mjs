@@ -8,6 +8,16 @@ async function importTranspiled(path, options = {}) {
   let source = await readFile(new URL(path, import.meta.url), 'utf8')
   if (options.stripImports) {
     source = source.replace(/^\s*import[\s\S]*?from\s+['"][^'"]+['"]\s*$/gm, '')
+    source = source.replace(/^\s*export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"]\s*$/gm, '')
+  }
+  if (options.inlinePaths) {
+    const inlineSources = await Promise.all(options.inlinePaths.map(async (inlinePath) => {
+      const inlineSource = await readFile(new URL(inlinePath, import.meta.url), 'utf8')
+      return inlineSource
+        .replace(/^\s*import[\s\S]*?from\s+['"][^'"]+['"]\s*$/gm, '')
+        .replace(/^\s*export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"]\s*$/gm, '')
+    }))
+    source = `${inlineSources.join('\n')}\n${source}`
   }
   if (options.prepend) {
     source = `${options.prepend}\n${source}`
@@ -29,6 +39,7 @@ const storeReportsT = (key, params = {}) => reportsMessages.storeReportsTr[key].
   (match, paramKey) => params[paramKey] ?? match,
 )
 const checklistLogic = await importTranspiled('../src/pages/store-checklists-logic.ts', {
+  inlinePaths: ['../src/pages/store-checklists-response-model.ts'],
   stripImports: true,
   prepend: `
 const hasAnyRole = () => false

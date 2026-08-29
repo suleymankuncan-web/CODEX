@@ -166,7 +166,6 @@ function isWebOrControllerFile(path) {
 }
 
 const directDatabaseServiceAllowlist = new Map()
-
 const storeOpsRepositoryCastAllowlist = new Map()
 
 const largeTrackedSourceLineLimit = 1200
@@ -183,6 +182,7 @@ const largeTrackedSourceAllowlist = new Map([
     'admin-web/e2e/checklist-today-surfaces.spec.ts',
     'Existing checklist route regression spec now also owns visit-plan persona/no-mutation coverage; split when the next checklist route slice adds more cases.',
   ],
+  ['admin-web/e2e/checklist-command-canvas.spec.ts', 'Existing command-canvas regression spec owns the coupled weekly planner, annual visit, and responsive route contract; freeze its current breadth and split before adding another behavior family.'],
   [
     'admin-web/src/generated/openapi-types.ts',
     'Generated OpenAPI client types; size is controlled by backend API contract breadth.',

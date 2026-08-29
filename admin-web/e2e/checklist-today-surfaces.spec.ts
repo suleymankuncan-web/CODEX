@@ -2,7 +2,7 @@ import type { TestInfo } from '@playwright/test'
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { setStoredLocale } from './locale-test-utils'
-import { expectChecklistResultModalNoScoreContract, expectChecklistResultModalVisualContract } from './checklist-result-modal-assertions'
+import { expectChecklistResultModalAlignedContract, expectChecklistResultModalNoScoreContract, expectChecklistResultModalVisualContract } from './checklist-result-modal-assertions'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
@@ -12,15 +12,11 @@ const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  const directUrl = `/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`
+  await page.goto(directUrl)
 
   await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
-  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
-  await expect(page.getByText('Devam et')).toBeVisible()
-
-  await page.getByRole('button', { name: 'Devam et' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await answerChecklistScoreQuestion(page, '8', 'Raf ve vitrin uygun')
   await expect.poll(() => requests.saves).toContainEqual(
@@ -35,8 +31,8 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   )
   await page.getByRole('dialog').getByRole('button', { name: 'Kapat', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Checklisti kapat' }).click()
-  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
-  await page.getByRole('dialog', { name: /Checklist akışı/ }).getByRole('button', { name: 'Devam et' }).click()
+  await expect(page).not.toHaveURL(/overlay=workflow/)
+  await page.goto(directUrl)
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
   await expect(page.getByRole('dialog').getByRole('textbox', { name: /Not/ })).toHaveValue('Raf ve vitrin uygun')
   await expect(page.getByRole('button', { name: 'Tamamla', exact: true })).toBeEnabled()
@@ -45,15 +41,16 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
-  await expect(page.getByText('Başarıyla Tamamlandı')).toBeVisible()
+  await expect(page).not.toHaveURL(/overlay=workflow/)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
 })
 
-test('continued checklist closes after successful completion', async ({ page }) => {
+test('direct checklist closes the workflow drawer after successful completion', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
 
-  await page.getByRole('button', { name: 'Devam et' }).click()
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
   await answerChecklistScoreQuestion(page, '8', 'Continued checklist should close')
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
@@ -61,7 +58,8 @@ test('continued checklist closes after successful completion', async ({ page }) 
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
-  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
+  await expect(page).not.toHaveURL(/overlay=workflow/)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
 })
 
 test('continued checklist with saved draft responses completes without another edit', async ({ page }) => {
@@ -88,9 +86,9 @@ test('continued checklist with saved draft responses completes without another e
     monthlySummaries: [],
     requests,
   })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
 
-  await page.getByRole('button', { name: 'Devam et' }).click()
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
@@ -99,8 +97,8 @@ test('continued checklist with saved draft responses completes without another e
   await expect.poll(() => requests.completes).toEqual([
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
-  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
-  await expect(page.getByRole('article').filter({ hasText: 'BM Checklist' }).getByText('80 puan')).toBeVisible()
+  await expect(page).not.toHaveURL(/overlay=workflow/)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
 })
 
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
@@ -113,7 +111,7 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   await expect(dialog).toBeVisible()
   await expectChecklistResultModalVisualContract(dialog)
   await expectNoElementHorizontalOverflow(dialog)
-  await expect(page.getByText('Eksik manken')).toBeVisible()
+  await expect(page.getByText('Eksik manken')).toHaveCount(0)
   await page.getByLabel('Kabul notu').fill('Mağaza sonucu gördü')
   await expect(page.getByText('Kabul ettim')).toBeVisible()
   await page.getByRole('button', { name: 'Kabul ettim' }).click()
@@ -196,14 +194,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     roleState,
     showStartedInstanceOnRefetch: true,
   })
-  await page.goto('/store/checklists')
+  const directUrl = `/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`
+  await page.goto(directUrl)
 
-  const visitRow = page.getByTestId('checklist-command-row').filter({ hasText: 'Marmara Park' })
-  const visitDateCell = visitRow.locator('.visit-date')
-  const visitElapsedCell = visitRow.locator('.elapsed-days')
-  await expect(visitDateCell).toContainText('No completed visit')
-  await expect(visitElapsedCell).toContainText('—')
-  await visitRow.getByRole('button').click()
   const checklistSession = page.getByRole('dialog', { name: 'Checklist Session' })
   await expect(checklistSession).toBeVisible()
   await expect(page.getByRole('dialog', { name: /Checklist workflow/ })).toHaveCount(0)
@@ -225,10 +218,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await page.getByRole('button', { name: 'Cancel' }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Close checklist' }).click()
   await expect(checklistSession).toHaveCount(0)
-  await expect(visitDateCell).toContainText('No completed visit')
-  await expect(visitElapsedCell).toContainText('—')
-  await expect(visitDateCell).not.toContainText('May 20, 2026')
-  await visitRow.getByRole('button').click()
+  await page.goto(directUrl)
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
   await expect(page.getByRole('dialog').getByRole('textbox', { name: /Note/ })).toHaveValue('Handoff-ready visit')
 
@@ -239,11 +229,8 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   ])
   await expect.poll(() => handoffState.completed).toBe(true)
   await expect.poll(() => commandCanvasRequests).toBeGreaterThan(1)
-  const workflowDialog = page.getByRole('dialog', { name: /Checklist workflow/ })
-  await expect(workflowDialog).toBeVisible()
-  await page.getByRole('button', { name: 'Close checklist panel' }).click()
-  await expect(visitDateCell).toContainText('May 20')
-  await expect(visitElapsedCell).toContainText('day')
+  await expect(page).not.toHaveURL(/overlay=workflow/)
+  await expect(page.getByRole('dialog', { name: /Checklist workflow/ })).toHaveCount(0)
   await page.goto('/store/checklists?tab=incomplete')
   await expect(page).toHaveURL(/\/store\/checklists\?tab=incomplete$/)
   await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
@@ -361,13 +348,8 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await expect(page.getByTestId('store-action-plan-row').filter({ hasText: 'VM Result' })).toHaveCount(0)
   expect(taskWorkspaceRequests).toBe(1)
 
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
-  await page
-    .getByRole('dialog', { name: /Checklist workflow/ })
-    .getByRole('article')
-    .filter({ hasText: 'VM Checklist' })
-    .getByRole('button', { name: 'Start checklist' })
-    .click()
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=vm`)
+  await expect(page.getByRole('dialog', { name: 'Checklist Session' })).toBeVisible()
   await answerChecklistScoreQuestion(page, '8', 'Task-refresh visit')
   await expect.poll(() => requests.saves).toContainEqual(
     {
@@ -390,21 +372,22 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await expect(page.getByTestId('store-action-plan-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
-test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {
+test('region manager reads its BM results without exposing the VM result lane', async ({ page }) => {
   await setupChecklistPage(page, ['REGION_MANAGER'])
   await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
   await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
   await expect(page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' })).toBeVisible()
-  const vmResult = page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'VM Result' })
-  await expect(vmResult).toBeVisible()
-  await vmResult.getByRole('button', { name: 'Detayı gör' }).click()
-  await expect(page.getByText('VM Result')).toBeVisible()
-  await expect(page.getByText('Bu checklist incelenebilir')).toBeVisible()
+  await expect(page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'VM Result' })).toHaveCount(0)
+  await page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' }).getByRole('button', { name: 'Detayı gör' }).click()
+  const resultDialog = page.locator('.store-checklist-result-modal')
+  await expect(resultDialog.getByText('BM Result')).toBeVisible()
+  await expectChecklistResultModalAlignedContract(resultDialog)
+  await expect(resultDialog.locator('.store-checklist-result-action-card')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Kabul ettim' })).toHaveCount(0)
 })
 
-test('region manager visit flow reads VM score but starts BM checklist only', async ({ page }) => {
+test('region manager direct visit starts BM checklist without a VM choice', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['REGION_MANAGER'], {
     activeInstances: [],
@@ -427,18 +410,14 @@ test('region manager visit flow reads VM score but starts BM checklist only', as
     ],
     requests,
   })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
 
-  const bmCard = page.getByRole('article').filter({ hasText: 'BM Checklist' })
-  const vmCard = page.getByRole('article').filter({ hasText: 'VM Checklist' })
-  await expect(bmCard.getByText('82 puan')).toBeVisible()
-  await expect(vmCard.getByText('92 puan')).toBeVisible()
-
-  await bmCard.getByRole('button', { name: 'Checklist başlat' }).click()
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
+  await expect(page.getByText('VM Checklist')).toHaveCount(0)
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 })
 
-test('region manager keeps BM checklist action available while reading the VM filter', async ({ page }) => {
+test('region manager English direct visit still starts only BM checklist', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
@@ -457,15 +436,10 @@ test('region manager keeps BM checklist action available while reading the VM fi
     ],
     requests,
   })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
 
-  const bmCard = page.getByRole('article').filter({ hasText: 'BM Checklist' })
-  const vmCard = page.getByRole('article').filter({ hasText: 'VM Checklist' })
-  await expect(vmCard.getByText('92 points')).toBeVisible()
-  await expect(vmCard.getByRole('button', { name: 'Start checklist' })).toBeDisabled()
-
-  await bmCard.getByRole('button', { name: 'Start checklist' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Checklist Session' })).toBeVisible()
+  await expect(page.getByText('VM Checklist')).toHaveCount(0)
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 })
 
@@ -521,6 +495,7 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page).toHaveURL(/workflowChecklist=vm/)
   await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
   await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
+  await expect(page.getByText('BM Checklist', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
   await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
@@ -587,10 +562,9 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
     templateName: 'VM Visit',
     templateType: 'VM_STORE_VISIT',
   })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=vm`)
 
-  await page.getByRole('dialog', { name: /Checklist workflow/ }).getByRole('article').filter({ hasText: 'VM Checklist' }).getByRole('button', { name: 'Start checklist' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Checklist Session' })).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 
   await answerChecklistScoreQuestion(page, '8', 'VM handoff-ready visit')
@@ -612,7 +586,7 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
   const resultDialog = page.getByRole('dialog')
   await expect(resultDialog).toBeVisible()
   await expect(resultDialog.getByText('Checklist result', { exact: true })).toBeVisible()
-  await expect(resultDialog.getByText('Color meaning', { exact: true })).toBeVisible()
+  await expect(resultDialog.locator('.store-checklist-result-status-legend')).toHaveCount(0)
   await page.getByLabel('Acknowledgement note').fill('Store acknowledged VM visit')
   await page.getByRole('button', { name: 'I acknowledge' }).click()
 
@@ -683,14 +657,9 @@ test('checklist completion waits for API success before showing completed notice
     completeFailureMessage: 'Checklist complete failed',
     requests,
   })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
 
-  const workflowDialog = page.getByRole('dialog', { name: /Checklist workflow/ })
-  await workflowDialog
-    .getByRole('article')
-    .filter({ hasText: 'BM Checklist' })
-    .getByRole('button', { name: 'Continue' })
-    .click()
+  await expect(page.getByRole('dialog', { name: 'Checklist Session' })).toBeVisible()
   await answerChecklistScoreQuestion(page, '8', 'Completion should wait')
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Complete', exact: true }).click()
@@ -733,30 +702,24 @@ test('store manager checklist result modal stays usable on mobile width', async 
 test('checklist visit surface stays usable on mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 844 })
   await setupChecklistPage(page, ['REGION_MANAGER'], { longCopy: true })
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
 
-  const workflowDialog = page.getByRole('dialog', { name: /Checklist akışı/ })
-  await expect(workflowDialog).toBeVisible()
-  await expectNoElementHorizontalOverflow(workflowDialog)
+  const checklistDialog = page.getByRole('dialog', { name: 'Checklist Oturumu' })
+  await expect(checklistDialog).toBeVisible()
+  await expectNoElementHorizontalOverflow(checklistDialog)
   await expectNoHorizontalOverflow(page)
 
-  await workflowDialog
-    .getByRole('article')
-    .filter({ hasText: 'BM Checklist' })
-    .getByRole('button', { name: 'Devam et' })
-    .click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeVisible()
-  const noteBox = page.getByRole('dialog').getByRole('textbox', { name: /Not/ })
+  await expect(checklistDialog.getByRole('radio', { name: '8', exact: true })).toBeVisible()
+  await checklistDialog.getByText('Not ekle', { exact: true }).click()
+  const noteBox = checklistDialog.getByRole('textbox', { name: /Not/ })
   await expect(noteBox).toBeVisible()
   await noteBox.click()
   await noteBox.fill('Mobil not akisi kilitlenmeden yazildi')
   await expect(noteBox).toHaveValue('Mobil not akisi kilitlenmeden yazildi')
-  await page.getByRole('dialog').getByRole('button', { name: 'Kapat', exact: true }).click()
+  await checklistDialog.getByRole('button', { name: 'Kapat', exact: true }).click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Checklisti kapat' }).click()
-  await expect(workflowDialog).toBeVisible()
-  await page.getByRole('button', { name: 'Checklist panelini kapat' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page).not.toHaveURL(/overlay=workflow/)
   await expectNoHorizontalOverflow(page)
 })
 
@@ -938,7 +901,9 @@ async function answerChecklistScoreQuestion(page: Page, score: string, note: str
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('radio', { name: score, exact: true }).click()
   await expect(dialog.getByRole('radio', { name: score, exact: true })).toBeChecked()
+  await dialog.getByText(/^(Not ekle|Add note)$/).click()
   await dialog.getByRole('textbox', { name: /Not|Note/ }).fill(note)
+  await dialog.getByRole('button', { name: /Notu kaydet|Save note/ }).click()
 }
 
 async function setupChecklistPage(page: Page, roleCodes: string[], options: ChecklistFixtureOptions = {}) {
@@ -1039,29 +1004,79 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
     })
   })
 
+  await page.route('**/api/checklists/command-canvas/visit-plans/regions**', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          items: [{ regionId: '12121212-1212-4121-8121-121212121212', regionName: 'Marmara' }],
+          page: { total: 1, limit: 20, offset: 0, hasMore: false },
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/checklists/command-canvas/visit-plans?**', async (route) => {
+    const url = new URL(route.request().url())
+    await route.fulfill({
+      json: {
+        data: {
+          planId: null,
+          regionId: url.searchParams.get('regionId') ?? '12121212-1212-4121-8121-121212121212',
+          regionName: 'Marmara',
+          weekStart: url.searchParams.get('weekStart') ?? '2026-05-18',
+          revision: 0,
+          revisedAt: null,
+          view: 'region_manager',
+          capabilities: { canMaintainWeeklyVisitPlan: false },
+          items: [],
+        },
+      },
+    })
+  })
+
   await page.route('**/api/mobile/checklists/today', async (route) => {
     const shouldShowStartedInstance =
       options.showStartedInstanceOnRefetch && startedInstanceVisible && !options.handoffState?.completed
+    const baseActiveInstances = shouldShowStartedInstance
+      ? [
+          {
+            checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+            checklistTemplateId: templateId,
+            storeId,
+            status: 'in_progress',
+            startedAt: '2026-05-20T10:00:00.000Z',
+            updatedAt: '2026-05-20T10:00:00.000Z',
+            responses: [],
+          },
+        ]
+      : options.activeInstances ?? [
+          {
+            checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+            checklistTemplateId: templateId,
+            storeId,
+            status: 'in_progress',
+            startedAt: '2026-05-20T10:00:00.000Z',
+            updatedAt: '2026-05-20T10:00:00.000Z',
+            responses: [],
+          },
+        ]
+    const activeInstances = baseActiveInstances?.map((instance) => {
+      const responses = new Map(
+        (instance.responses ?? []).map((response) => [response.templateItemId, response]),
+      )
+      for (const saved of options.requests?.saves ?? []) {
+        if (saved.checklistInstanceId !== instance.checklistInstanceId) continue
+        responses.set(saved.body.templateItemId, {
+          templateItemId: saved.body.templateItemId,
+          scoreValue: saved.body.scoreValue,
+          commentText: saved.body.commentText ?? null,
+        })
+      }
+      return { ...instance, responses: [...responses.values()] }
+    })
     await route.fulfill({
       json: createMobileChecklistTodayFixture(
-        shouldShowStartedInstance
-          ? {
-              ...options,
-              activeInstances: [
-                {
-                  checklistInstanceId: '33333333-3333-4333-8333-333333333333',
-                  checklistTemplateId: templateId,
-                  storeId,
-                  status: 'in_progress',
-                  startedAt: '2026-05-20T10:00:00.000Z',
-                  updatedAt: '2026-05-20T10:00:00.000Z',
-                  responses: (options.requests?.saves ?? [])
-                    .filter((entry) => entry.checklistInstanceId === '33333333-3333-4333-8333-333333333333')
-                    .map((entry) => entry.body),
-                },
-              ],
-            }
-          : options,
+        activeInstances ? { ...options, activeInstances } : options,
       ),
     })
   })
@@ -1372,7 +1387,7 @@ function createChecklistAcknowledgementsFixture(
           sectionName: 'Vitrin',
           itemNo: 1,
           itemText: 'Vitrin standartlara uygun',
-          responseType: 'score',
+          responseType: 'boolean',
           weight: 60,
           maxScore: 10,
           scoreValue: options.resultWithoutScore ? null : 5,
@@ -1447,7 +1462,9 @@ function createChecklistAcknowledgementsFixture(
     : items
   const visibleItems = roleCodes.includes('VISUAL_MERCHANDISER')
     ? completedItems.filter((item) => item.templateType === 'VM_STORE_VISIT')
-    : completedItems
+    : roleCodes.includes('REGION_MANAGER') && !roleCodes.includes('SUPER_ADMIN')
+      ? completedItems.filter((item) => item.templateType === 'BM_STORE_VISIT')
+      : completedItems
 
   return {
     items: visibleItems,

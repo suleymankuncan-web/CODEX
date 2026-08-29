@@ -1,6 +1,18 @@
-import { useMemo, useRef, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { ChevronRight, Clock3, History, RefreshCw, X } from 'lucide-react'
+import { useMemo } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import {
+  BadgeCheck,
+  CalendarCheck2,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  ListTodo,
+  RefreshCw,
+  Store,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { ApiError } from '../../lib/api'
 import {
@@ -12,20 +24,25 @@ import {
 } from '../../components/ui/dialog'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import type { AuthSessionSummary } from '../auth/api'
-import { storeChecklistOperationalHistoryQueryKey } from '../auth/store-query-scope'
+import { storeChecklistAcknowledgementsQueryKey, storeChecklistOperationalHistoryQueryKey } from '../auth/store-query-scope'
 import { useLocalization } from '../localization/useLocalization'
 import {
   getChecklistOperationalHistory,
   type ChecklistOperationalHistoryResponse,
 } from './api'
+import { getChecklistAcknowledgements, type ChecklistAcknowledgementItem } from '../checklists/api'
 import {
-  checklistOperationalHistoryKinds,
-  checklistOperationalHistoryRanges,
   type ChecklistOperationalHistoryKind,
-  type ChecklistOperationalHistoryRange,
 } from './model'
 
 type HistoryEvent = ChecklistOperationalHistoryResponse['data']['items'][number]
+const recordHistoryKinds = [
+  'checklist_completed',
+  'visit_completed',
+  'task_assigned',
+  'task_resolved',
+] as const satisfies readonly ChecklistOperationalHistoryKind[]
+
 export function ChecklistOperationalHistoryDrawer(input: {
   authSummary: AuthSessionSummary | null
   open: boolean
@@ -33,32 +50,30 @@ export function ChecklistOperationalHistoryDrawer(input: {
   storeName: string | null
   returnFocusRef: React.RefObject<HTMLElement | null>
   onClose: () => void
+  onOpenResult?: (checklistInstanceId: string) => void
 }) {
   const { locale } = useLocalization()
   const copy = locale === 'tr' ? trCopy : enCopy
-  const [range, setRange] = useState<ChecklistOperationalHistoryRange>('6m')
-  const [kinds, setKinds] = useState<ChecklistOperationalHistoryKind[]>([])
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-  const detailReturnFocusRef = useRef<HTMLElement | null>(null)
-  const effectiveKinds = useMemo(
-    () => kinds.length === 0 ? [...checklistOperationalHistoryKinds] : kinds,
-    [kinds],
-  )
   const baseKey = storeChecklistOperationalHistoryQueryKey(
     input.authSummary,
     input.storeId ?? 'closed',
-    range,
-    effectiveKinds,
+    'all',
+    recordHistoryKinds,
   )
   const historyQuery = useInfiniteQuery({
     queryKey: baseKey,
     queryFn: ({ pageParam }) => getChecklistOperationalHistory({
       storeId: input.storeId!,
-      query: { range, kinds: effectiveKinds, ...(pageParam ? { cursor: pageParam } : {}) },
+      query: { range: 'all', kinds: recordHistoryKinds, ...(pageParam ? { cursor: pageParam } : {}) },
     }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.data.page.hasMore ? lastPage.data.page.nextCursor ?? undefined : undefined,
     enabled: input.open && Boolean(input.storeId),
+  })
+  const checklistResultsQuery = useQuery({
+    queryKey: [...storeChecklistAcknowledgementsQueryKey(input.authSummary), 'store-record-results', input.storeId ?? 'closed'],
+    queryFn: () => getChecklistAcknowledgements({ storeId: input.storeId!, limit: 50, offset: 0 }),
+    enabled: input.open && Boolean(input.storeId) && Boolean(input.onOpenResult),
   })
   const forbidden = historyQuery.error instanceof ApiError && historyQuery.error.status === 403
   const summary = historyQuery.data?.pages[0]?.data.summary ?? null
@@ -81,7 +96,7 @@ export function ChecklistOperationalHistoryDrawer(input: {
   return (
     <Dialog open={input.open} onOpenChange={(open) => { if (!open) input.onClose() }}>
       <DialogContent
-        className="tw:h-dvh tw:max-h-dvh tw:max-w-none tw:min-w-0 tw:overflow-y-auto tw:rounded-none tw:p-0 tw:sm:h-auto tw:sm:max-h-[min(820px,calc(100dvh-2rem))] tw:sm:max-w-[min(650px,calc(100vw-2rem))] tw:sm:rounded-xl"
+        className="checklist-record-history-drawer tw:h-dvh tw:max-h-dvh tw:max-w-none tw:min-w-0 tw:overflow-y-auto tw:rounded-none tw:p-0"
         closeLabel={copy.close}
         showCloseButton={false}
         onCloseAutoFocus={(event) => {
@@ -89,50 +104,31 @@ export function ChecklistOperationalHistoryDrawer(input: {
           input.returnFocusRef.current?.focus()
         }}
       >
-        <DialogHeader className="tw:sticky tw:top-0 tw:z-20 tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-3 tw:border-b tw:border-border tw:bg-background/95 tw:px-5 tw:py-4 tw:text-left tw:backdrop-blur">
-          <div className="tw:min-w-0">
-            <DialogTitle className="tw:truncate tw:text-lg tw:font-semibold tw:tracking-[-0.02em]">
-              {input.storeName ?? copy.store} {copy.recordSuffix}
-            </DialogTitle>
-            <DialogDescription className="tw:mt-1 tw:text-xs">{copy.description}</DialogDescription>
+        <DialogHeader className="checklist-record-history-header">
+          <div className="checklist-record-history-heading">
+            <span className="checklist-record-history-store-icon" aria-hidden><Store /></span>
+            <div className="tw:min-w-0">
+              <span className="checklist-record-history-eyebrow">{copy.recordEyebrow}</span>
+              <DialogTitle className="tw:truncate tw:text-xl tw:font-semibold tw:tracking-[-0.03em]">
+                <span className="tw:sr-only">{input.storeName ?? copy.store} {copy.recordSuffix}</span>
+                <span aria-hidden>{input.storeName ?? copy.store}</span>
+              </DialogTitle>
+              <DialogDescription>{copy.description}</DialogDescription>
+            </div>
           </div>
-          <Button aria-label={copy.close} size="icon-sm" type="button" variant="ghost" onClick={input.onClose}>
+          <Button className="checklist-record-history-close" aria-label={copy.close} size="icon-sm" type="button" variant="ghost" onClick={input.onClose}>
             <X />
           </Button>
         </DialogHeader>
 
-        <div className="tw:grid tw:min-w-0 tw:gap-4 tw:p-5">
-          <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-            {checklistOperationalHistoryRanges.map((value) => (
-              <Button key={value} size="sm" type="button" variant={range === value ? 'secondary' : 'outline'} onClick={() => { setSelectedEventId(null); setRange(value) }}>
-                {value === 'all' ? copy.all : value}
-              </Button>
-            ))}
-          </div>
-
-          <div className="tw:flex tw:flex-wrap tw:gap-1.5" aria-label={copy.eventFilters}>
-            {checklistOperationalHistoryKinds.map((kind) => {
-              const selected = kinds.includes(kind)
-              return (
-                <button
-                  key={kind}
-                  type="button"
-                  aria-pressed={selected}
-                  className="tw:rounded-full tw:border tw:border-border tw:bg-background tw:px-2.5 tw:py-1.5 tw:text-[10px] tw:font-semibold tw:text-muted-foreground tw:aria-pressed:bg-primary/10 tw:aria-pressed:text-primary"
-                  onClick={() => { setSelectedEventId(null); setKinds((current) => selected ? current.filter((value) => value !== kind) : [...current, kind]) }}
-                >
-                  {copy.kindLabels[kind]}
-                </button>
-              )
-            })}
-          </div>
-
+        <div className="checklist-record-history-body">
           {summary ? (
-            <section className="tw:grid tw:grid-cols-2 tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-card tw:sm:grid-cols-4" aria-label={copy.summary}>
-              <SummaryMetric label={copy.events} value={summary.eventCount} />
-              <SummaryMetric label={copy.visits} value={summary.completedVisitCount} />
-              <SummaryMetric label={copy.assignedTasks} value={summary.assignedTaskCount} />
-              <SummaryMetric label={copy.openTasks} value={summary.openTaskCount} />
+            <section className="checklist-record-history-totals" aria-label={copy.summary}>
+              <HistoryTotal icon={CalendarCheck2} label={copy.totalVisits} value={summary.completedVisitCount} tone="cyan" />
+              <HistoryTotal icon={ClipboardCheck} label={copy.totalAudits} value={summary.completedAuditCount} tone="plum" />
+              <HistoryTotal icon={ListTodo} label={copy.totalTasks} value={summary.assignedTaskCount} tone="blue" />
+              <HistoryTotal icon={CheckCircle2} label={copy.resolvedTasks} value={summary.resolvedTaskCount} tone="success" />
+              <HistoryTotal icon={Clock3} label={copy.openTasks} value={summary.openTaskCount} tone={summary.openTaskCount > 0 ? 'danger' : 'success'} />
             </section>
           ) : null}
 
@@ -147,20 +143,46 @@ export function ChecklistOperationalHistoryDrawer(input: {
           {!historyQuery.isLoading && !historyQuery.isError && events.length === 0 ? <HistoryState title={copy.empty} copy={copy.emptyCopy} /> : null}
 
           {events.length > 0 ? (
-            <section className="tw:grid tw:gap-2" aria-label={copy.timeline}>
-              {monthGroups.map(([month, monthEvents]) => <div key={month} className="tw:grid tw:gap-2">
-                <h3 className="tw:sticky tw:top-[73px] tw:z-10 tw:bg-background/95 tw:py-1 tw:text-[10px] tw:font-bold tw:capitalize tw:tracking-[.08em] tw:text-muted-foreground tw:backdrop-blur">{month}</h3>
-                {monthEvents.map((event) => <div key={event.id} className="tw:grid tw:gap-2">
-                  <button type="button" aria-expanded={selectedEventId === event.id} className="tw:grid tw:min-w-0 tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-3 tw:text-left tw:hover:bg-muted/25" onClick={(clickEvent) => setSelectedEventId((current) => { const next = current === event.id ? null : event.id; if (next) detailReturnFocusRef.current = clickEvent.currentTarget; return next })}>
-                    <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary"><History className="tw:size-4" /></span>
-                    <span className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-xs">{event.title}</strong><small className="tw:mt-1 tw:block tw:text-[10px] tw:text-muted-foreground">{formatDate(event.occurredAt, locale)} · {event.actorSnapshot.displayName ?? copy.unknownActor}</small></span>
-                    <ChevronRight className={selectedEventId === event.id ? 'tw:size-4 tw:rotate-90 tw:text-primary' : 'tw:size-4 tw:text-muted-foreground'} />
-                  </button>
-                  {selectedEventId === event.id ? <EventDetail event={event} copy={copy} locale={locale} onClose={() => { setSelectedEventId(null); queueMicrotask(() => detailReturnFocusRef.current?.focus()) }} /> : null}
-                </div>)}
+            <section className="checklist-record-history-timeline" aria-label={copy.timeline}>
+              <header><div><h2>{copy.timeline}</h2><p>{copy.timelineCopy}</p></div><span>{copy.recordCount(events.length)}</span></header>
+              {monthGroups.map(([month, monthEvents]) => <div key={month} className="checklist-record-history-month">
+                <h3>{month}</h3>
+                <div className="checklist-record-history-events">
+                  {monthEvents.map((event) => {
+                    const presentation = historyEventPresentation[event.kind]
+                    const EventIcon = presentation.icon
+                    const result = findChecklistResultForEvent(event, checklistResultsQuery.data?.items ?? [])
+                    const exposesResult = event.kind === 'checklist_completed' && Boolean(input.onOpenResult)
+                    return <article key={event.id} className="checklist-record-history-event-wrap" data-tone={presentation.tone}>
+                      <div className="checklist-record-history-event">
+                        <span className="checklist-record-history-event-icon" aria-hidden><EventIcon /></span>
+                        <span className="tw:min-w-0"><strong>{event.title}</strong><small><time>{formatDate(event.occurredAt, locale)}</time><span>{event.actorSnapshot.displayName ?? copy.unknownActor}</span></small></span>
+                        {exposesResult ? (
+                          <span className="checklist-record-history-result-access">
+                            {checklistResultsQuery.isLoading ? <span className="checklist-record-history-score-loading">{copy.scoreLoading}</span> : null}
+                            {result ? (
+                              <>
+                                {result.totalScore === null ? (
+                                  <span className="checklist-record-history-score-empty">{copy.noScore}</span>
+                                ) : (
+                                  <span className="checklist-record-history-score" aria-label={copy.scoreAria(formatScore(result.totalScore, locale))}>
+                                    <strong>{formatScore(result.totalScore, locale)}</strong><small>{copy.points}</small>
+                                  </span>
+                                )}
+                                <Button className="checklist-record-history-result-action" size="sm" type="button" onClick={() => input.onOpenResult?.(result.checklistInstanceId)}>
+                                  <ClipboardCheck />{copy.viewResult}
+                                </Button>
+                              </>
+                            ) : null}
+                          </span>
+                        ) : null}
+                      </div>
+                    </article>
+                  })}
+                </div>
               </div>)}
               {historyQuery.hasNextPage ? (
-                <Button disabled={historyQuery.isFetchingNextPage} type="button" variant="outline" onClick={() => void historyQuery.fetchNextPage()}>
+                <Button className="tw:w-full" disabled={historyQuery.isFetchingNextPage} type="button" variant="outline" onClick={() => void historyQuery.fetchNextPage()}>
                   {historyQuery.isFetchingNextPage ? copy.loadingMore : copy.loadMore}
                 </Button>
               ) : null}
@@ -178,29 +200,51 @@ export function ChecklistOperationalHistoryDrawer(input: {
   )
 }
 
-function EventDetail(input: { event: HistoryEvent; copy: typeof trCopy | typeof enCopy; locale: 'tr' | 'en'; onClose: () => void }) {
-  return <section className="tw:rounded-xl tw:border tw:border-primary/15 tw:bg-primary/[.025] tw:p-4" aria-label={input.copy.eventDetail}>
-    <div className="tw:flex tw:items-start tw:justify-between tw:gap-3"><div className="tw:min-w-0"><strong className="tw:block tw:text-sm">{input.event.title}</strong><small className="tw:text-[10px] tw:text-muted-foreground">{formatDate(input.event.occurredAt, input.locale)}</small></div><Button size="icon-sm" variant="ghost" aria-label={input.copy.closeDetail} onClick={input.onClose}><X /></Button></div>
-    {input.event.detail ? <p className="tw:mt-3 tw:text-xs tw:text-muted-foreground">{input.event.detail}</p> : null}
-    <dl className="tw:mt-3 tw:grid tw:gap-2">{input.event.details.map((detail) => <div key={`${detail.label}:${detail.value}`} className="tw:grid tw:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] tw:gap-3 tw:text-xs"><dt className="tw:text-muted-foreground">{detail.label}</dt><dd className="tw:break-words tw:text-right tw:font-medium">{detail.value}</dd></div>)}</dl>
-  </section>
+function findChecklistResultForEvent(event: HistoryEvent, results: ChecklistAcknowledgementItem[]) {
+  if (event.kind !== 'checklist_completed') return null
+  const typeLabel = event.details.find((detail) => detail.label === 'Denetim türü')?.value ?? ''
+  const expectedTemplateType = typeLabel.includes('Görsel')
+    ? 'VM_STORE_VISIT'
+    : typeLabel.includes('Bölge')
+      ? 'BM_STORE_VISIT'
+      : null
+  const eventTime = Date.parse(event.occurredAt)
+  if (!Number.isFinite(eventTime)) return null
+  return results
+    .filter((item) => item.status === 'completed' && item.completedAt && (!expectedTemplateType || item.templateType === expectedTemplateType))
+    .map((item) => ({ item, distance: Math.abs(Date.parse(item.completedAt!) - eventTime) }))
+    .filter(({ distance }) => Number.isFinite(distance) && distance <= 15 * 60 * 1000)
+    .sort((left, right) => left.distance - right.distance)[0]?.item ?? null
 }
 
-function SummaryMetric({ label, value }: { label: string; value: number }) {
-  return <span className="tw:grid tw:min-h-20 tw:content-center tw:border-b tw:border-r tw:border-border tw:p-3"><small className="tw:text-[9px] tw:text-muted-foreground">{label}</small><strong className="tw:mt-1 tw:text-xl tw:tabular-nums">{value}</strong></span>
+function HistoryTotal({ icon: Icon, label, tone, value }: { icon: LucideIcon; label: string; tone: 'plum' | 'cyan' | 'blue' | 'success' | 'danger'; value: number }) {
+  return <span className="checklist-record-history-total" data-tone={tone}><span aria-hidden><Icon /></span><span><small>{label}</small><strong>{value}</strong></span></span>
 }
 
 function HistoryState(input: { title: string; copy?: string; action?: React.ReactNode }) {
-  return <div className="tw:grid tw:min-h-44 tw:place-items-center tw:rounded-xl tw:border tw:border-border tw:bg-muted/15 tw:p-6 tw:text-center"><div><Clock3 className="tw:mx-auto tw:size-5 tw:text-muted-foreground"/><strong className="tw:mt-2 tw:block tw:text-sm">{input.title}</strong>{input.copy ? <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{input.copy}</p> : null}{input.action ? <div className="tw:mt-3">{input.action}</div> : null}</div></div>
+  return <div className="checklist-record-history-state"><div><Clock3 /><strong>{input.title}</strong>{input.copy ? <p>{input.copy}</p> : null}{input.action ? <div>{input.action}</div> : null}</div></div>
 }
 
 function formatDate(value: string, locale: 'tr' | 'en') {
   return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 }
 
+function formatScore(value: number, locale: 'tr' | 'en') {
+  return new Intl.NumberFormat(locale === 'tr' ? 'tr-TR' : 'en-GB', { maximumFractionDigits: 1 }).format(value)
+}
+
 const trCopy = {
-  store: 'Mağaza', recordSuffix: 'mağaza kaydı', description: 'Denetim, görev ve ziyaret planı geçmişi.', close: 'Mağaza kaydını kapat', all: 'Tümü', eventFilters: 'Kayıt türleri', summary: 'Mağaza kayıt özeti', events: 'Kayıt', visits: 'Ziyaret', assignedTasks: 'Atanan görev', openTasks: 'Açık görev', loading: 'Mağaza kaydı yükleniyor', error: 'Mağaza kaydı açılamadı', errorCopy: 'Kayıtlar okunamadı.', forbidden: 'Bu mağaza kaydına erişilemiyor', forbiddenCopy: 'Mağaza yetkili okuma kapsamınızda değil.', retry: 'Tekrar dene', empty: 'Bu aralıkta kayıt yok', emptyCopy: 'Seçili dönem ve türler için olay bulunamadı.', timeline: 'Mağaza denetim geçmişi', loadMore: '20 kayıt daha yükle', loadingMore: 'Yükleniyor', partialError: 'Yeni kayıtlar yüklenemedi; mevcut kayıtlar korunuyor.', unknownActor: 'Bilinmeyen kullanıcı', eventDetail: 'Kayıt detayı', closeDetail: 'Kayıt detayını kapat', kindLabels: { checklist_completed: 'Checklist', acknowledgement: 'Kabul', task_assigned: 'Görev atandı', task_resolved: 'Görev çözüldü', visit_plan_revised: 'Plan revize edildi' },
+  store: 'Mağaza', recordEyebrow: 'Mağaza kayıtları', recordSuffix: 'mağaza kaydı', description: 'Denetim, ziyaret ve görev hareketleri.', close: 'Mağaza kaydını kapat', summary: 'Mağaza faaliyet özeti', totalVisits: 'Toplam Ziyaret Sayısı', totalAudits: 'Toplam Denetim Sayısı', totalTasks: 'Toplam Görev Sayısı', resolvedTasks: 'Toplam Çözülen Görev Sayısı', openTasks: 'Açık Görev Sayısı', loading: 'Mağaza kaydı yükleniyor', error: 'Mağaza kaydı açılamadı', errorCopy: 'Kayıtlar okunamadı.', forbidden: 'Bu mağaza kaydına erişilemiyor', forbiddenCopy: 'Mağaza yetkili okuma kapsamınızda değil.', retry: 'Tekrar dene', empty: 'Henüz kayıt yok', emptyCopy: 'Bu mağaza için tamamlanmış bir hareket bulunamadı.', timeline: 'Kayıt akışı', timelineCopy: 'En yeni hareketten geçmişe doğru sıralanır.', recordCount: (count: number) => `${count} kayıt`, loadMore: '20 kayıt daha yükle', loadingMore: 'Yükleniyor', partialError: 'Yeni kayıtlar yüklenemedi; mevcut kayıtlar korunuyor.', unknownActor: 'Bilinmeyen kullanıcı', scoreLoading: 'Puan yükleniyor', noScore: 'Puan yok', points: 'puan', scoreAria: (score: string) => `Checklist puanı: ${score} puan`, viewResult: 'Sonucu Gör',
 } as const
 const enCopy = {
-  store: 'Store', recordSuffix: 'store record', description: 'Audit, task and visit-plan history.', close: 'Close store record', all: 'All', eventFilters: 'Record types', summary: 'Store record summary', events: 'Events', visits: 'Visits', assignedTasks: 'Assigned tasks', openTasks: 'Open tasks', loading: 'Loading store record', error: 'Store record unavailable', errorCopy: 'Records could not be read.', forbidden: 'This store record is unavailable', forbiddenCopy: 'The store is outside your authorized read scope.', retry: 'Retry', empty: 'No records in this range', emptyCopy: 'No events matched the selected period and types.', timeline: 'Store audit history', loadMore: 'Load 20 more', loadingMore: 'Loading', partialError: 'New records could not load; existing records are retained.', unknownActor: 'Unknown user', eventDetail: 'Record detail', closeDetail: 'Close record detail', kindLabels: { checklist_completed: 'Checklist', acknowledgement: 'Acknowledgement', task_assigned: 'Task assigned', task_resolved: 'Task resolved', visit_plan_revised: 'Plan revised' },
+  store: 'Store', recordEyebrow: 'Store records', recordSuffix: 'store record', description: 'Audit, visit and task activity.', close: 'Close store record', summary: 'Store activity summary', totalVisits: 'Total Visits', totalAudits: 'Total Audits', totalTasks: 'Total Tasks', resolvedTasks: 'Total Resolved Tasks', openTasks: 'Open Tasks', loading: 'Loading store record', error: 'Store record unavailable', errorCopy: 'Records could not be read.', forbidden: 'This store record is unavailable', forbiddenCopy: 'The store is outside your authorized read scope.', retry: 'Retry', empty: 'No records yet', emptyCopy: 'No completed activity was found for this store.', timeline: 'Record activity', timelineCopy: 'Ordered from the newest activity to the oldest.', recordCount: (count: number) => `${count} records`, loadMore: 'Load 20 more', loadingMore: 'Loading', partialError: 'New records could not load; existing records are retained.', unknownActor: 'Unknown user', scoreLoading: 'Loading score', noScore: 'No score', points: 'points', scoreAria: (score: string) => `Checklist score: ${score} points`, viewResult: 'View result',
 } as const
+
+const historyEventPresentation: Record<ChecklistOperationalHistoryKind, { icon: LucideIcon; tone: 'plum' | 'cyan' | 'blue' | 'success' }> = {
+  checklist_completed: { icon: ClipboardCheck, tone: 'plum' },
+  visit_completed: { icon: CalendarCheck2, tone: 'cyan' },
+  acknowledgement: { icon: BadgeCheck, tone: 'cyan' },
+  task_assigned: { icon: ListTodo, tone: 'blue' },
+  task_resolved: { icon: CheckCircle2, tone: 'success' },
+  visit_plan_revised: { icon: CalendarClock, tone: 'plum' },
+}

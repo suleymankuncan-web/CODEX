@@ -2,7 +2,7 @@ export const storeWorkforceTr = {
   'storeWorkforce.title': 'Norm Kadro',
   'storeWorkforce.eyebrow': 'Personel görünümü',
   'storeWorkforce.storeBadge': 'Mağaza görünümü',
-  'storeWorkforce.regionBadge': 'Bölge görünümü',
+  'storeWorkforce.regionBadge': 'Müdür görünümü',
   'storeWorkforce.foundationBadge': 'Hazırlık',
   'storeWorkforce.storeDescription':
     'Mağaza personeli, pozisyon dağılımı, kıdem ve personel talepleri burada tek yüzeyde toplanır.',
@@ -24,9 +24,9 @@ export const storeWorkforceTr = {
   'storeWorkforce.storePersonnelTitle': 'Mağaza personel listesi',
   'storeWorkforce.storePersonnelCopy':
     'Aktif personel, pozisyon ve kıdem bilgileri yetkili mağazaya göre bağlanacak.',
-  'storeWorkforce.regionPersonnelTitle': 'Bölge mağaza listesi',
+  'storeWorkforce.regionPersonnelTitle': 'Sorumlu mağaza listesi',
   'storeWorkforce.regionPersonnelCopy':
-    'Bölge görünümü yalnızca yetkili mağazaları gösterecek; mağaza detayı sayfa içinde açılacak.',
+    'Müdür görünümü yalnızca yetkili mağazaları gösterir; mağaza detayı sayfa içinde açılır.',
   'storeWorkforce.tenureTitle': 'Kıdem ve pozisyon dağılımı',
   'storeWorkforce.tenureCopy':
     'Kıdem ve pozisyon kırılımı gerçek personel kayıtlarından hesaplanacak; eksik tarih varsa dürüst eksik durum gösterilecek.',
@@ -113,9 +113,9 @@ export const storeWorkforceTr = {
   'storeWorkforce.missingDate': 'Tarih yok',
   'storeWorkforce.regionManagerDescription':
     'Bölge müdürü kendi mağazalarının norm durumunu ve personel görünümünü izler.',
-  'storeWorkforce.regionSummaryAria': 'Bölge norm kadro özetleri',
+  'storeWorkforce.regionSummaryAria': 'Sorumlu mağaza norm kadro özetleri',
   'storeWorkforce.regionTotalScope': 'Toplam mağaza',
-  'storeWorkforce.regionAverageTenure': 'Bölge ort. kıdem',
+  'storeWorkforce.regionAverageTenure': 'Sorumlu mağaza ort. kıdem',
   'storeWorkforce.regionStoreScope': 'Mağaza listesi',
   'storeWorkforce.regionStoreScopeNote': 'Sorumlu mağazalarınız.',
   'storeWorkforce.regionStoreScopeUnavailableNote':
@@ -126,7 +126,7 @@ export const storeWorkforceTr = {
     'Kıdem verisi bulunamadı.',
   'storeWorkforce.regionMovementContractNote':
     'Talep hareketi bulunamadı.',
-  'storeWorkforce.regionStoreListTitle': 'Bölge mağazaları',
+  'storeWorkforce.regionStoreListTitle': 'Sorumlu mağazalar',
   'storeWorkforce.regionStoreListDescription':
     'Sorumlu mağazalarınız.',
   'storeWorkforce.regionStoreListBadge': '{count} mağaza',
@@ -141,19 +141,19 @@ export const storeWorkforceTr = {
   'storeWorkforce.regionStoreListContractTitle': 'Mağaza listesi yok',
   'storeWorkforce.regionStoreListContractCopy':
     'Bu dönem için mağaza bulunamadı.',
-  'storeWorkforce.regionStoreListEmptyTitle': 'Bölge mağazası bulunamadı',
+  'storeWorkforce.regionStoreListEmptyTitle': 'Sorumlu mağaza bulunamadı',
   'storeWorkforce.regionStoreListEmptyCopy':
     'Bu dönem için sorumlu mağaza görünmüyor.',
   'storeWorkforce.regionEvidenceTitle': 'Yetki özeti',
   'storeWorkforce.regionEvidenceCopy':
-    'Bölge görünümünüz.',
+    'Müdür görünümünüz.',
   'storeWorkforce.regionReadScope': 'Yetki',
-  'storeWorkforce.regionReadScopeValue': '{stores} mağaza / {regions} bölge',
+  'storeWorkforce.regionReadScopeValue': '{stores} mağaza / {regions} sorumluluk',
   'storeWorkforce.regionDataSource': 'Durum',
   'storeWorkforce.regionDataSourceValue': 'Aktif',
   'storeWorkforce.regionForbiddenAction': 'Aksiyon',
   'storeWorkforce.regionForbiddenActionValue': 'Yok',
-  'storeWorkforce.regionPositionTotalsTitle': 'Bölge pozisyon toplamı',
+  'storeWorkforce.regionPositionTotalsTitle': 'Sorumlu mağaza pozisyon toplamı',
   'storeWorkforce.regionPositionTotalsDescription':
     'Mağazaların pozisyon dağılımı.',
   'storeWorkforce.regionTenureSignalTitle': 'Kıdem sinyali',

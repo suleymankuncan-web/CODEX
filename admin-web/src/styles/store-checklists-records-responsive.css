@@ -1,0 +1,240 @@
+.checklist-record-history-result-access {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.checklist-record-history-score,
+.checklist-record-history-score-empty,
+.checklist-record-history-score-loading {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in oklab, var(--primary) 25%, var(--border));
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--foreground);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 11%, var(--card)), color-mix(in oklab, var(--color-accent) 12%, var(--card)));
+  white-space: nowrap;
+}
+
+.checklist-record-history-score strong {
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+
+.checklist-record-history-score small,
+.checklist-record-history-score-empty,
+.checklist-record-history-score-loading {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  font-weight: 680;
+}
+
+.checklist-record-history-result-action[data-slot='button'] {
+  border-color: transparent !important;
+  color: var(--primary-foreground) !important;
+  background: var(--primary) !important;
+  box-shadow: 0 8px 18px color-mix(in oklab, var(--primary) 20%, transparent);
+  opacity: 1 !important;
+  white-space: nowrap;
+}
+
+.checklist-record-history-result-action[data-slot='button']:hover {
+  color: var(--primary-foreground) !important;
+  background: color-mix(in oklab, var(--primary) 88%, var(--foreground)) !important;
+  box-shadow: 0 10px 22px color-mix(in oklab, var(--primary) 26%, transparent);
+}
+
+.checklist-record-history-state {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed color-mix(in oklab, var(--border) 76%, var(--primary));
+  border-radius: calc(var(--radius) + 2px);
+  text-align: center;
+  background: color-mix(in oklab, var(--muted) 36%, transparent);
+}
+
+.checklist-record-history-state svg {
+  width: 21px;
+  height: 21px;
+  margin: 0 auto;
+  color: var(--muted-foreground);
+}
+
+.checklist-record-history-state strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--foreground);
+  font-size: 13px;
+}
+
+.checklist-record-history-state p {
+  max-width: 42ch;
+  margin: 4px auto 0;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.checklist-record-history-state > div > div {
+  margin-top: 10px;
+}
+
+@media (max-width: 900px) {
+  .checklist-records-row {
+    grid-template-columns: minmax(180px, 1.15fr) minmax(140px, .72fr) minmax(160px, .8fr) auto;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .checklist-command-metrics.checklist-records-metrics {
+    margin-top: 22px;
+  }
+
+  .checklist-records-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .checklist-records-search {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .checklist-records-sort {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .checklist-records-sort [data-slot='button'] {
+    min-width: 0;
+    min-height: 38px;
+    padding-inline: 5px;
+  }
+
+  .checklist-records-list {
+    padding: 8px;
+  }
+
+  .checklist-records-row {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 13px 12px;
+  }
+
+  .checklist-records-store {
+    grid-column: 1 / -1;
+  }
+
+  .checklist-records-row .checklist-records-data:nth-of-type(2) {
+    display: grid;
+  }
+
+  .checklist-records-row .checklist-records-data:nth-of-type(3) {
+    display: grid;
+  }
+
+  .checklist-records-data strong {
+    white-space: normal;
+  }
+
+  .checklist-records-open[data-slot='button'] {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1 / -1;
+  }
+
+  .checklist-record-history-drawer {
+    width: 100vw !important;
+    border-left: 0;
+    border-radius: 0 !important;
+  }
+
+  .checklist-record-history-header {
+    padding: 18px 16px;
+  }
+
+  .checklist-record-history-heading {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .checklist-record-history-store-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .checklist-record-history-header [data-slot='dialog-title'] {
+    font-size: 17px;
+  }
+
+  .checklist-record-history-body {
+    padding: 14px 12px 22px;
+  }
+
+  .checklist-record-history-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .checklist-record-history-total {
+    min-height: 74px;
+    padding: 12px 10px 10px;
+    border-top: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+  }
+
+  .checklist-record-history-total:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .checklist-record-history-total:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .checklist-record-history-total:last-child {
+    grid-column: 1 / -1;
+    border-left: 0;
+  }
+
+  .checklist-record-history-timeline > header p {
+    display: none;
+  }
+
+  .checklist-record-history-event {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .checklist-record-history-event-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .checklist-record-history-events::before {
+    left: 20px;
+  }
+
+  .checklist-record-history-result-access {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    padding-left: 41px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checklist-records-metrics .checklist-command-metric,
+  .checklist-records-search,
+  .checklist-records-row,
+  .checklist-record-history-event {
+    transition: none;
+  }
+}

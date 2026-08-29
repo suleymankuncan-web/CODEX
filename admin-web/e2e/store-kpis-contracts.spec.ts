@@ -330,7 +330,7 @@ test('SH-FR-005/006 Report Viewer risk rail filters the complete company hierarc
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
   await expect(page.getByText('Onur Kaytan')).toBeVisible()
-  const managerMetric = page.getByRole('button', { name: /Bölge yöneticisi/ })
+  const managerMetric = page.getByRole('button', { name: /^Bölge müdürü 7$/ })
   await expect(managerMetric).toContainText('7')
   const readsBeforeFilter = rankingReads
   await page.getByRole('button', { name: /75 puanın altında/ }).click()
@@ -417,7 +417,7 @@ test('KPI-FR-001 unassigned company stores remain drillable for Report Viewer', 
   })
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
-  await page.getByRole('button', { name: /Bölge yöneticisi bilgisi yok/ }).click()
+  await page.getByRole('button', { name: /Bölge müdürü bilgisi yok/ }).click()
   await expect.poll(() => unassignedValues).toContain('true')
   await expect(page.getByRole('link', { name: /İstanbul MOI AVM/ })).toBeVisible()
 })
@@ -472,7 +472,7 @@ for (const viewport of [
 
     await page.goto('/store/kpis?periodStart=2026-07-01')
     await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
-    await expect(page.locator('.kpi-command-list-title h2')).toHaveText('Bölge mağazaları')
+    await expect(page.locator('.kpi-command-list-title h2')).toHaveText('Sorumlu mağazalar')
     await expectStableKpiMetricGeometry(page)
 
     const overflow = await page.evaluate(() => ({
@@ -485,7 +485,7 @@ for (const viewport of [
 
     if (viewport.width === 1440) {
       await expectNoCriticalAxeViolations(page)
-      await page.getByRole('button', { name: 'Bölge KPI dönemi' }).click()
+      await page.getByRole('button', { name: 'Müdür KPI dönemi' }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
       await expectNoCriticalAxeViolations(page)
       await page.keyboard.press('Escape')

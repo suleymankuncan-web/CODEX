@@ -75,7 +75,7 @@ test('Store Manager opens its scoped Living Store Record and returns focus on cl
   const opener = page.getByRole('button', { name: 'Mağaza kaydı' }).first()
   await opener.click()
   await expect(page.getByRole('dialog', { name: 'Marmara Park mağaza kaydı' })).toBeVisible()
-  await expect(page.getByText('Checklist tamamlandı')).toBeVisible()
+  await expect(page.getByText('Denetim tamamlandı')).toBeVisible()
   await page.getByRole('button', { name: 'Mağaza kaydını kapat' }).click()
   await expect(opener).toBeFocused()
 })
@@ -111,7 +111,7 @@ async function routeStoreManagerAcknowledgements(page: Page) {
     await route.fulfill({ json: { items: items.slice(offset, offset + limit), meta: { count: Math.min(limit, total), limit, offset, total } } })
   })
   await page.route('**/api/checklists/command-canvas/stores/*/operational-history**', async (route) => {
-    await route.fulfill({ json: { data: { store: { id: storeA, name: 'Marmara Park', city: null, district: null }, summary: { eventCount: 1, completedVisitCount: 1, assignedTaskCount: 0, openTaskCount: 0 }, items: [{ id: 'opaque-event', kind: 'checklist_completed', occurredAt: '2026-07-14T10:00:00.000Z', title: 'Checklist tamamlandı', detail: null, actorSnapshot: { displayName: 'Onur Kaytan', roleLabel: 'Bölge Müdürü', assignmentLabel: 'Marmara', identityStatus: 'captured' }, details: [] }], page: { nextCursor: null, hasMore: false } } } })
+    await route.fulfill({ json: { data: { store: { id: storeA, name: 'Marmara Park', city: null, district: null }, summary: { eventCount: 1, completedAuditCount: 1, completedVisitCount: 1, assignedTaskCount: 0, resolvedTaskCount: 0, openTaskCount: 0 }, items: [{ id: 'opaque-event', kind: 'checklist_completed', occurredAt: '2026-07-14T10:00:00.000Z', title: 'Denetim tamamlandı', detail: null, actorSnapshot: { displayName: 'Onur Kaytan', roleLabel: 'Bölge Müdürü', assignmentLabel: 'Marmara', identityStatus: 'captured' }, details: [] }], page: { nextCursor: null, hasMore: false } } } })
   })
 }
 

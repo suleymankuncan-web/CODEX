@@ -2,6 +2,7 @@ import {
   fetchOpenApiJson,
   sendOpenApiJson,
   type ApiGetResponse,
+  type ApiMutationResponse,
   type ApiMutationBody,
 } from '../../lib/openapi-client'
 import {
@@ -36,6 +37,14 @@ export type ChecklistVisitPlanRegionOption = ChecklistVisitPlanRegionOptionsResp
 export type SaveChecklistVisitPlanBody = ApiMutationBody<
   '/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}',
   'PUT'
+>
+export type CompleteChecklistVisitPlanItemBody = ApiMutationBody<
+  '/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete',
+  'POST'
+>
+export type CompleteChecklistVisitPlanItemResponse = ApiMutationResponse<
+  '/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete',
+  'POST'
 >
 
 export function getChecklistCommandCanvas(input: ChecklistCommandQueryInput) {
@@ -100,6 +109,17 @@ export function saveChecklistVisitPlan(input: {
   return sendOpenApiJson('/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}', {
     method: 'PUT',
     params: { regionId: input.regionId, weekStart: input.weekStart },
+    body: input.body,
+  })
+}
+
+export function completeChecklistVisitPlanItem(input: {
+  planItemId: string
+  body: CompleteChecklistVisitPlanItemBody
+}) {
+  return sendOpenApiJson('/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete', {
+    method: 'POST',
+    params: { planItemId: input.planItemId },
     body: input.body,
   })
 }

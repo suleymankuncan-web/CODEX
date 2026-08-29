@@ -27,11 +27,6 @@ export function StoreChecklistsPage(input: {
   const routeParams = new URLSearchParams(location.search)
   const requestedCanvasView = routeParams.get('canvasView')
   const legacyStandalonePlan = routeParams.get('tab') === 'plan' && !routeParams.has('storeId')
-  const canvasView = requestedCanvasView === 'plan' || requestedCanvasView === 'records'
-    ? requestedCanvasView
-    : legacyStandalonePlan
-      ? 'plan'
-      : 'visits'
   const overlayTriggerRef = useRef<HTMLElement | null>(null)
   const isReportViewer = hasAnyRole(input.authSummary, ['REPORT_VIEWER'])
 
@@ -44,15 +39,47 @@ export function StoreChecklistsPage(input: {
   }, [isReportViewer, location.pathname, navigate, persona, workflowRoute.normalizedSearch, workflowRoute.shouldReplace])
 
   useEffect(() => {
-    if (persona !== 'regionManager' || !legacyStandalonePlan) return
+    if (persona !== 'regionManager' || (!legacyStandalonePlan && requestedCanvasView !== 'records' && requestedCanvasView !== 'plan')) return
     const params = new URLSearchParams(location.search)
     params.delete('tab')
-    params.set('canvasView', 'plan')
-    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true })
-  }, [legacyStandalonePlan, location.pathname, location.search, navigate, persona])
+    params.delete('canvasView')
+    navigate(
+      { pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' },
+      { replace: true },
+    )
+  }, [legacyStandalonePlan, location.pathname, location.search, navigate, persona, requestedCanvasView])
 
   if (isReportViewer) {
-    return <ReportViewerChecklistCommandPage authSummary={input.authSummary} />
+    return (
+      <>
+        <ReportViewerChecklistCommandPage
+          authSummary={input.authSummary}
+          onOpenResult={(checklistInstanceId) => {
+            overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            navigate({
+              pathname: location.pathname,
+              search: buildChecklistWorkflowOverlaySearch(location.search, {
+                kind: 'result',
+                checklistInstanceId,
+              }),
+            })
+          }}
+        />
+        {workflowRoute.state?.kind === 'result' ? (
+          <ChecklistWorkflowCommandOverlay
+            authSummary={input.authSummary}
+            routeState={workflowRoute.state}
+            returnFocusRef={overlayTriggerRef}
+            onClose={() => {
+              navigate({
+                pathname: location.pathname,
+                search: buildChecklistWorkflowOverlaySearch(location.search, null),
+              }, { replace: true })
+            }}
+          />
+        ) : null}
+      </>
+    )
   }
 
   if (persona === 'regionManager') {
@@ -60,14 +87,6 @@ export function StoreChecklistsPage(input: {
       <>
         <RegionManagerChecklistCommandPage
           authSummary={input.authSummary}
-          activeView={canvasView}
-          onActiveViewChange={(view) => {
-            const params = new URLSearchParams(location.search)
-            params.delete('tab')
-            if (view === 'visits') params.delete('canvasView')
-            else params.set('canvasView', view)
-            navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' })
-          }}
           onOpenWorkflow={(storeId, tab = 'visits', directChecklist) => {
             overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
             navigate({

@@ -1,14 +1,16 @@
 import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'
-import type { ChecklistAcknowledgementItem, MobileChecklistToday } from '../features/checklists/api'
+import type {
+  ChecklistAcknowledgementItem,
+  ChecklistComplianceResponseValue,
+  MobileChecklistToday,
+} from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime, formatNumber, formatState } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import type {
   ChecklistCoverageRow,
-  ChecklistResponseDraft,
-  ChecklistSession,
   ChecklistSort,
   ChecklistSortKey,
   ChecklistStatusFilter,
@@ -16,6 +18,8 @@ import type {
   ChecklistTone,
   ChecklistTypeFilter,
 } from './store-checklists-model'
+import { getStaticCopy, normalizeSearch } from './store-checklists-response-model'
+export { buildChecklistResponseDrafts, clamp, formatOptionalDate, getChecklistResponseDraftKey, getScoreQuickOptions, getStaticCopy, normalizeSearch, serializeChecklistResponseDraft } from './store-checklists-response-model'
 
 const checklistMonthFormatters: Record<AppLocale, Intl.DateTimeFormat> = {
   tr: new Intl.DateTimeFormat(getIntlLocale('tr'), {
@@ -46,7 +50,13 @@ export function groupChecklistTemplateItems(items: MobileChecklistToday['templat
 export function groupChecklistResultResponses(items: ChecklistAcknowledgementItem['responses']) {
   const sections = new Map<
     string,
-    { name: string; items: ChecklistAcknowledgementItem['responses']; averageScore: number }
+    {
+      name: string
+      items: ChecklistAcknowledgementItem['responses']
+      averageScore: number
+      earnedPoints: number
+      maxPoints: number
+    }
   >()
 
   for (const item of items) {
@@ -54,6 +64,8 @@ export function groupChecklistResultResponses(items: ChecklistAcknowledgementIte
       name: item.sectionName,
       items: [],
       averageScore: 0,
+      earnedPoints: 0,
+      maxPoints: 0,
     }
     section.items.push(item)
     sections.set(item.sectionName, section)
@@ -63,22 +75,26 @@ export function groupChecklistResultResponses(items: ChecklistAcknowledgementIte
     name: string
     items: ChecklistAcknowledgementItem['responses']
     averageScore: number
+    earnedPoints: number
+    maxPoints: number
   }> = []
 
   for (const section of sections.values()) {
-    let ratioTotal = 0
-    let ratioCount = 0
+    let earnedPoints = 0
+    let maxPoints = 0
 
     for (const item of section.items) {
-      const ratio = getResponseRatio(item)
-      if (ratio === null) continue
-      ratioTotal += ratio
-      ratioCount += 1
+      const weightedPoints = getWeightedResponsePoints(item)
+      if (weightedPoints === null) continue
+      earnedPoints += weightedPoints.earnedPoints
+      maxPoints += weightedPoints.maxPoints
     }
 
     groupedSections.push({
       ...section,
-      averageScore: ratioCount > 0 ? Math.round(ratioTotal / ratioCount) : 0,
+      averageScore: maxPoints > 0 ? Math.round((earnedPoints / maxPoints) * 100) : 0,
+      earnedPoints,
+      maxPoints,
     })
   }
 
@@ -93,8 +109,45 @@ export function getLowScoreResponses(items: ChecklistAcknowledgementItem['respon
 }
 
 export function getResponseRatio(item: ChecklistAcknowledgementItem['responses'][number]) {
+  if (item.responseValue === 'not_applicable') return null
   if (item.scoreValue === null || item.maxScore <= 0) return null
   return Math.round((item.scoreValue / item.maxScore) * 100)
+}
+
+export function getWeightedResponsePoints(item: ChecklistAcknowledgementItem['responses'][number]) {
+  if (item.responseValue === 'not_applicable') return null
+  if (item.scoreValue === null || item.maxScore <= 0) return null
+
+  const maxPoints = getChecklistItemWeight(item.weight)
+  return {
+    earnedPoints: (item.scoreValue / item.maxScore) * maxPoints,
+    maxPoints,
+  }
+}
+
+export function calculateChecklistLiveScore(input: {
+  items: MobileChecklistToday['templates'][number]['items']
+  responseValues: Record<string, ChecklistComplianceResponseValue>
+  scores: Record<string, number>
+}) {
+  let weightedRatioTotal = 0
+  let eligibleWeight = 0
+
+  for (const item of input.items) {
+    if (input.responseValues[item.templateItemId] === 'not_applicable') continue
+
+    const score = input.scores[item.templateItemId]
+    if (typeof score !== 'number' || !Number.isFinite(score) || item.maxScore <= 0) continue
+    const weight = getChecklistItemWeight(item.weight)
+    weightedRatioTotal += (score / item.maxScore) * 100 * weight
+    eligibleWeight += weight
+  }
+
+  return eligibleWeight > 0 ? Math.round(weightedRatioTotal / eligibleWeight) : null
+}
+
+function getChecklistItemWeight(weight: number) {
+  return Number.isFinite(weight) && weight > 0 ? weight : 1
 }
 
 export function getCoverageRowKey(storeId: string, checklistTemplateId: string) {
@@ -637,61 +690,4 @@ export function compareDate(left?: string | null, right?: string | null) {
   const leftTime = left ? new Date(left).getTime() : 0
   const rightTime = right ? new Date(right).getTime() : 0
   return compareNumber(Number.isNaN(leftTime) ? 0 : leftTime, Number.isNaN(rightTime) ? 0 : rightTime)
-}
-
-export function normalizeSearch(input: string) {
-  return input.trim().toLocaleLowerCase('tr-TR')
-}
-
-export function formatOptionalDate(value: string | null | undefined, locale: AppLocale) {
-  return value ? formatDateTime(value, locale) : '-'
-}
-
-export function buildChecklistResponseDrafts(input: {
-  checklistInstanceId: string
-  comments: Record<string, string>
-  scores: Record<string, number>
-  session: ChecklistSession
-}): ChecklistResponseDraft[] {
-  const drafts: ChecklistResponseDraft[] = []
-
-  for (const item of input.session.template.items) {
-    const score = input.scores[item.templateItemId]
-    if (typeof score !== 'number' || !Number.isFinite(score)) continue
-
-    const commentText = input.comments[item.templateItemId]
-    drafts.push({
-      checklistInstanceId: input.checklistInstanceId,
-      templateItemId: item.templateItemId,
-      scoreValue: score,
-      ...(commentText ? { commentText } : {}),
-    })
-  }
-
-  return drafts
-}
-
-export function getChecklistResponseDraftKey(input: { checklistInstanceId: string; templateItemId: string }) {
-  return `${input.checklistInstanceId}:${input.templateItemId}`
-}
-
-export function serializeChecklistResponseDraft(input: { scoreValue: number; commentText?: string }) {
-  return JSON.stringify({ commentText: input.commentText ?? '', scoreValue: input.scoreValue })
-}
-
-export function getScoreQuickOptions(locale: AppLocale, maxScore: number) {
-  const safeMax = Math.max(0, maxScore)
-  const watch = Math.round(safeMax * 0.6)
-  const critical = Math.round(safeMax * 0.2)
-  const option = (tr: string, en: string, value: number) => ({ label: `${getStaticCopy(locale, tr, en)} ${value}`, value })
-
-  return [option('Uygun', 'Good', safeMax), option('Takip', 'Watch', watch), option('Kritik', 'Critical', critical)]
-}
-
-export function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
-}
-
-export function getStaticCopy(locale: AppLocale, tr: string, en: string) {
-  return locale === 'en' ? en : tr
 }
