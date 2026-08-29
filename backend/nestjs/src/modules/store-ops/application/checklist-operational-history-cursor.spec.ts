@@ -44,4 +44,11 @@ describe("operational history cursor", () => {
     expect(() => decodeOperationalHistoryCursor({ value: "not-json", storeId, range: "all", kinds: normalizeHistoryKinds() })).toThrow(BadRequestException);
     expect(() => normalizeHistoryKinds("checklist_completed,private_note")).toThrow(BadRequestException);
   });
+
+  it("accepts completed visits as a public operational-history kind", () => {
+    expect(normalizeHistoryKinds("visit_completed,checklist_completed")).toEqual([
+      "checklist_completed",
+      "visit_completed",
+    ]);
+  });
 });

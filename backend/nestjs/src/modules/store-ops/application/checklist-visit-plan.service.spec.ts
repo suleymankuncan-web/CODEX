@@ -9,6 +9,7 @@ describe("ChecklistVisitPlanService", () => {
     listPeriod: jest.fn(),
     listCandidates: jest.fn(),
     listRegionOptions: jest.fn(),
+    completeVisit: jest.fn(),
   };
   const service = new ChecklistVisitPlanService(repository as never);
 
@@ -48,6 +49,41 @@ describe("ChecklistVisitPlanService", () => {
         items: [],
       })).rejects.toBeInstanceOf(ForbiddenException);
     }
+  });
+
+  it("records a visit only for the assigned Region Manager scope", async () => {
+    const actor = {
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorReadScope: empty,
+      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["33333333-3333-4333-8333-333333333333"] } },
+      planItemId: "55555555-5555-4555-8555-555555555555",
+      idempotencyKey: "66666666-6666-4666-8666-666666666666",
+    };
+    const completion = { planItemId: actor.planItemId, completedAt: "2026-07-15T10:00:00.000Z" };
+    repository.completeVisit.mockResolvedValue(completion);
+
+    await expect(service.completeVisit(actor)).resolves.toEqual(completion);
+    expect(repository.completeVisit).toHaveBeenCalledWith({
+      planItemId: actor.planItemId,
+      actorUserId: actor.actorUserId,
+      regionIds: ["33333333-3333-4333-8333-333333333333"],
+      idempotencyKey: actor.idempotencyKey,
+    });
+  });
+
+  it("denies visit completion for non-Region Managers", async () => {
+    const planItemId = "55555555-5555-4555-8555-555555555555";
+    const idempotencyKey = "66666666-6666-4666-8666-666666666666";
+    await expect(service.completeVisit({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: empty,
+      roleScopes: { REPORT_VIEWER: empty },
+      planItemId,
+      idempotencyKey,
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.completeVisit).not.toHaveBeenCalled();
   });
 
   it("rejects duplicate store/date entries before persistence", async () => {

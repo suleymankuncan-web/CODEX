@@ -120,6 +120,7 @@ export class MobileChecklistController {
       checklistInstanceId: params.checklistInstanceId,
       templateItemId: body.templateItemId,
       scoreValue: body.scoreValue,
+      responseValue: body.responseValue,
       commentText: body.commentText,
       actorUserId: request.user.userId,
       actorRoleCodes: request.user.roleCodes,

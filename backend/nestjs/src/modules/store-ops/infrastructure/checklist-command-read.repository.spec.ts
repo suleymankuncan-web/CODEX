@@ -164,6 +164,50 @@ describe("ChecklistCommandReadRepository", () => {
     );
   });
 
+  it("orders command pages by elapsed visit time with nulls last for longest first", async () => {
+    const query = jest.fn().mockResolvedValueOnce({ rows: [] });
+    const repository = new ChecklistCommandReadRepository({ query } as never);
+
+    await repository.list({
+      companyIds: [],
+      regionIds: ["region-1"],
+      storeIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT"],
+      period: "2026-07",
+      status: "all",
+      sort: "elapsed_desc",
+      limit: 30,
+      offset: 0,
+    });
+
+    expect(String(query.mock.calls[0][0])).toContain(
+      "elapsed_days_since_last_visit DESC NULLS LAST, store_name ASC, store_id ASC",
+    );
+  });
+
+  it("orders BM scores from low to high while keeping missing scores last", async () => {
+    const query = jest.fn().mockResolvedValueOnce({ rows: [] });
+    const repository = new ChecklistCommandReadRepository({ query } as never);
+
+    await repository.list({
+      companyIds: [],
+      regionIds: ["region-1"],
+      storeIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT"],
+      period: "2026-07",
+      status: "all",
+      sort: "bm_score_asc",
+      limit: 30,
+      offset: 0,
+    });
+
+    expect(String(query.mock.calls[0][0])).toContain(
+      "bm_score ASC NULLS LAST, store_name ASC, store_id ASC",
+    );
+  });
+
   it("filters independent coverage signals without changing mutually exclusive status", async () => {
     const query = jest.fn().mockResolvedValueOnce({ rows: [] });
     const repository = new ChecklistCommandReadRepository({ query } as never);

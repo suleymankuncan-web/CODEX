@@ -131,6 +131,8 @@ export function mapStoreMaster(item: {
   kpi_import_enabled: boolean;
   region_id: string | null;
   region_name: string | null;
+  region_manager_user_id?: string | null;
+  region_manager_name?: string | null;
   updated_at?: string;
 }) {
   return {
@@ -142,6 +144,8 @@ export function mapStoreMaster(item: {
     kpiImportEnabled: item.kpi_import_enabled,
     regionId: item.region_id,
     regionName: item.region_name,
+    regionManagerUserId: item.region_manager_user_id ?? null,
+    regionManagerName: item.region_manager_name ?? null,
     updatedAt: item.updated_at ?? null,
   };
 }
@@ -151,6 +155,8 @@ export function mapPersonnelMaster(item: {
   external_employee_ref: string | null;
   first_name: string;
   last_name: string;
+  national_id_last4: string | null;
+  phone_number: string | null;
   hire_date: string;
   termination_date: string | null;
   employment_status: string;
@@ -176,6 +182,8 @@ export function mapPersonnelMaster(item: {
     firstName,
     lastName,
     displayName: [firstName, lastName].filter(Boolean).join(" "),
+    nationalIdLast4: item.national_id_last4,
+    phoneNumber: item.phone_number,
     hireDate: item.hire_date,
     terminationDate: item.termination_date,
     employmentStatus: item.employment_status,

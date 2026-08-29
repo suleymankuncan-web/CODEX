@@ -8,7 +8,6 @@ import { IntegrationRepository } from "../infrastructure/integration.repository"
 import { ImportBatchReadRepository } from "../infrastructure/import-batch-read.repository";
 import { ExternalIdMappingReadRepository } from "../infrastructure/external-id-mapping-read.repository";
 import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
-import { PersonnelMasterReadRepository } from "../infrastructure/personnel-master-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
 import {
@@ -29,7 +28,6 @@ import {
 import {
   buildIntegrationLookups,
   mapIntegrationSource,
-  mapPersonnelMaster,
   mapStoreMaster,
 } from "./integration-read-model.helpers";
 import {
@@ -47,6 +45,7 @@ import {
   type SupportedEntityType,
   type SupportedSourceSystem,
 } from "./integration-payload-template.helpers";
+import { PersonnelMasterService } from "./personnel-master.service";
 import {
   type ApproveExternalIdMappingInput,
   type CreateIntegrationImportBatchInput,
@@ -63,10 +62,10 @@ export class IntegrationService {
     private readonly importBatchReadRepository: ImportBatchReadRepository,
     private readonly externalIdMappingReadRepository: ExternalIdMappingReadRepository,
     private readonly kpiImportStoreReadRepository: KpiImportStoreReadRepository,
-    private readonly personnelMasterReadRepository: PersonnelMasterReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly integrationSchedulerService: IntegrationSchedulerService,
     private readonly importCommandService: IntegrationImportCommandService,
+    private readonly personnelMasterService: PersonnelMasterService,
   ) {}
 
   async createImportBatch(input: CreateIntegrationImportBatchInput) {
@@ -287,10 +286,14 @@ export class IntegrationService {
   }
 
   async getStoreMasterLookups(input: { actorCompanyIds: string[] }) {
-    const regions =
-      await this.kpiImportStoreReadRepository.listStoreMasterRegions({
+    const [regions, regionManagers] = await Promise.all([
+      this.kpiImportStoreReadRepository.listStoreMasterRegions({
         actorCompanyIds: input.actorCompanyIds,
-      });
+      }),
+      this.kpiImportStoreReadRepository.listStoreMasterRegionManagers({
+        actorCompanyIds: input.actorCompanyIds,
+      }),
+    ]);
 
     return {
       storeTypes: [
@@ -304,6 +307,15 @@ export class IntegrationService {
         { value: "closed", label: "Closed" },
       ],
       regions: regions.map((item) => ({
+        regionId: item.region_id,
+        regionCode: item.region_code,
+        regionName: item.region_name,
+      })),
+      regionManagers: regionManagers.map((item) => ({
+        assignmentId: item.assignment_id,
+        userId: item.user_id,
+        displayName: item.display_name,
+        email: item.email,
         regionId: item.region_id,
         regionCode: item.region_code,
         regionName: item.region_name,
@@ -348,6 +360,39 @@ export class IntegrationService {
     });
   }
 
+  async createStoreMaster(input: {
+    actorCompanyIds: string[];
+    actorUserId: string;
+    storeCode: string;
+    storeName: string;
+    storeType: "company" | "franchise" | "operator";
+    regionId: string;
+    status: "active" | "inactive" | "closed";
+    kpiImportEnabled: boolean;
+  }) {
+    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
+    this.assertCompanyScope(actorCompanyIds);
+    const store = await this.integrationRepository.createStoreMaster({
+      ...input,
+      actorCompanyIds,
+      storeCode: input.storeCode.trim(),
+      storeName: input.storeName.trim(),
+    });
+    if (!store) {
+      throw new NotFoundException(`Region not found: ${input.regionId}`);
+    }
+    logStructuredMessage(this.logger, "store_master_data.created", {
+      actorUserId: input.actorUserId,
+      storeId: store.store_id,
+      regionId: input.regionId,
+    });
+    return buildCommandResponse({
+      status: "created",
+      message: "Store master data created",
+      data: { storeMaster: mapStoreMaster(store) },
+    });
+  }
+
   async listPersonnelMaster(input: {
     actorCompanyIds: string[];
     q?: string;
@@ -356,54 +401,15 @@ export class IntegrationService {
     limit?: number;
     offset?: number;
   }) {
-    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
-    this.assertCompanyScope(actorCompanyIds);
-    const result = await this.personnelMasterReadRepository.listPersonnelMaster(
-      {
-        ...input,
-        actorCompanyIds,
-      },
-    );
+    return this.personnelMasterService.list(input);
+  }
 
-    return buildListResponse(
-      result.rows.map((item) => mapPersonnelMaster(item)),
-      { total: result.total, limit: input.limit, offset: input.offset },
-    );
+  async exportPersonnelMaster(input: { actorCompanyIds: string[] }) {
+    return this.personnelMasterService.export(input);
   }
 
   async getPersonnelMasterLookups(input: { actorCompanyIds: string[] }) {
-    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
-    this.assertCompanyScope(actorCompanyIds);
-    const lookups =
-      await this.personnelMasterReadRepository.listPersonnelMasterLookups({
-        actorCompanyIds,
-      });
-
-    return {
-      stores: lookups.stores.map((item) => ({
-        storeId: item.store_id,
-        storeCode: item.store_code,
-        storeName: item.store_name,
-        regionId: item.region_id,
-        regionName: item.region_name,
-      })),
-      positions: lookups.positions.map((item) => ({
-        positionId: item.position_id,
-        positionCode: item.position_code,
-        positionName: item.position_name,
-        isManagerial: item.is_managerial,
-      })),
-      employmentStatuses: [
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
-        { value: "terminated", label: "Terminated" },
-      ],
-      employmentTypes: [
-        { value: "full_time", label: "Full time" },
-        { value: "part_time", label: "Part time" },
-        { value: "temporary", label: "Temporary" },
-      ],
-    };
+    return this.personnelMasterService.getLookups(input);
   }
 
   async updatePersonnelMaster(input: {
@@ -413,7 +419,8 @@ export class IntegrationService {
     firstName: string;
     lastName: string;
     externalEmployeeRef?: string;
-    employmentStatus: "active" | "inactive" | "terminated";
+    phoneNumber?: string;
+    employmentStatus: "active" | "inactive";
     employmentType: "full_time" | "part_time" | "temporary";
     hireDate: string;
     storeId: string;
@@ -421,40 +428,34 @@ export class IntegrationService {
     assignmentStartDate?: string;
     expectedUpdatedAt?: string;
   }) {
-    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
-    this.assertCompanyScope(actorCompanyIds);
-    const personnel = await this.integrationRepository.updatePersonnelMaster({
-      ...input,
-      actorCompanyIds,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      externalEmployeeRef: input.externalEmployeeRef?.trim(),
-      hireDate: input.hireDate.slice(0, 10),
-      assignmentStartDate: input.assignmentStartDate?.slice(0, 10),
-      expectedUpdatedAt: input.expectedUpdatedAt,
-    });
+    return this.personnelMasterService.update(input);
+  }
 
-    if (!personnel) {
-      throw new NotFoundException(
-        `Personnel master record not found: ${input.employeeId}`,
-      );
-    }
+  async createPersonnelMaster(input: {
+    actorCompanyIds: string[];
+    actorUserId: string;
+    firstName: string;
+    lastName: string;
+    externalEmployeeRef?: string;
+    nationalId: string;
+    phoneNumber: string;
+    employmentType: "full_time" | "part_time" | "temporary";
+    hireDate: string;
+    storeId: string;
+    positionId: string;
+  }) {
+    return this.personnelMasterService.create(input);
+  }
 
-    logStructuredMessage(this.logger, "personnel_master_data.updated", {
-      actorUserId: input.actorUserId,
-      employeeId: input.employeeId,
-      storeId: input.storeId,
-      positionId: input.positionId,
-      employmentStatus: input.employmentStatus,
-    });
-
-    return buildCommandResponse({
-      status: "updated",
-      message: "Personnel master data updated",
-      data: {
-        personnelMaster: mapPersonnelMaster(personnel),
-      },
-    });
+  async terminatePersonnelMaster(input: {
+    actorCompanyIds: string[];
+    actorUserId: string;
+    employeeId: string;
+    terminationDate: string;
+    reason: string;
+    expectedUpdatedAt?: string;
+  }) {
+    return this.personnelMasterService.terminate(input);
   }
 
   async getIntegrationSourceAudit(sourceId: string) {

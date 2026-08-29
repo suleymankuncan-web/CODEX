@@ -153,6 +153,7 @@ export class ChecklistService {
     checklistInstanceId: string;
     templateItemId: string;
     scoreValue: number;
+    responseValue?: string;
     commentText?: string;
     actorUserId: string;
     actorRoleCodes?: string[];

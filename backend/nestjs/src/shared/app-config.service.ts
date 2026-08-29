@@ -14,10 +14,10 @@ import {
 export type QueueBackend = "in-memory" | "bullmq";
 export type BrowserSessionSameSite = "lax" | "strict" | "none";
 export type DatabaseSslMode = "disable" | "require" | "verify-full";
-export type DatabaseTransportStatus =
-  | "disabled"
-  | "encrypted-unverified"
-  | "encrypted-verified";
+export type DatabaseTransportStatus = "disabled" | "encrypted-unverified" | "encrypted-verified";
+
+const LOCAL_DEVELOPMENT_CORS_ORIGINS = ["localhost", "127.0.0.1"].flatMap((host) =>
+  Array.from({ length: 6 }, (_, index) => `http://${host}:${5173 + index}`));
 
 const FILE_BACKED_SETTINGS = new Set([
   "DATABASE_URL",
@@ -230,7 +230,7 @@ export class AppConfigService {
       throw new Error("CORS_ALLOWED_ORIGINS must be configured in production");
     }
 
-    const origins = (value ?? "http://localhost:5173")
+    const origins = (value ?? LOCAL_DEVELOPMENT_CORS_ORIGINS.join(","))
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean);

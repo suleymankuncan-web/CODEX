@@ -58,16 +58,34 @@ export const AUDIT_EVENT_CATALOG = [
     "External source identity mapping was approved.",
   ),
   auditEvent(
+    "store_master_data.created",
+    "ops.store",
+    "integration",
+    "Store master data was created.",
+  ),
+  auditEvent(
     "store_master_data.updated",
     "ops.store",
     "integration",
     "Store master data was updated.",
   ),
   auditEvent(
+    "personnel_master_data.created",
+    "ops.employee",
+    "integration",
+    "Personnel master data and initial assignment were created.",
+  ),
+  auditEvent(
     "personnel_master_data.updated",
     "ops.employee",
     "integration",
     "Personnel master data and active assignment were updated.",
+  ),
+  auditEvent(
+    "personnel_master_data.terminated",
+    "ops.employee",
+    "integration",
+    "Personnel employment and active assignment were terminated.",
   ),
   auditEvent("integration_source.created", "stg.integration_source", "integration", "Integration source was created."),
   auditEvent(
@@ -251,6 +269,13 @@ export const AUDIT_EVENT_CATALOG = [
     "ops.region_weekly_visit_plan",
     "store_ops",
     "Region weekly BM visit plan revision was saved.",
+    "feature_audit",
+  ),
+  auditEvent(
+    "region_weekly_visit_plan.visit_completed",
+    "ops.region_weekly_visit_plan_item",
+    "store_ops",
+    "A planned region visit was completed without a checklist.",
     "feature_audit",
   ),
 

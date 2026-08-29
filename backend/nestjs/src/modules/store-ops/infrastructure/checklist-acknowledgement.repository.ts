@@ -32,6 +32,7 @@ type ChecklistAcknowledgementResponseRow = {
   responseType?: string | null;
   weight?: string | number | null;
   maxScore?: string | number | null;
+  responseValue?: string | null;
   scoreValue?: string | number | null;
   commentText?: string | null;
 };
@@ -171,6 +172,7 @@ export class ChecklistAcknowledgementRepository {
                 'responseType', cti.response_type,
                 'weight', cti.weight,
                 'maxScore', cti.max_score,
+                'responseValue', cr.response_value,
                 'scoreValue', cr.score_value,
                 'commentText', cr.comment_text
               )
@@ -311,6 +313,7 @@ export class ChecklistAcknowledgementRepository {
                 'weight', cti.weight,
                 'maxScore', cti.max_score,
                 'expectedValue', cti.expected_value,
+                'responseValue', cr.response_value,
                 'scoreValue', cr.score_value,
                 'commentText', cr.comment_text,
                 'isNonCompliant', COALESCE(cr.is_non_compliant, FALSE)
@@ -373,6 +376,7 @@ export class ChecklistAcknowledgementRepository {
       responseType: String(row.responseType ?? ""),
       weight: Number(row.weight ?? 0),
       maxScore: Number(row.maxScore ?? 0),
+      responseValue: row.responseValue ?? null,
       scoreValue:
         row.scoreValue === null || row.scoreValue === undefined
           ? null
@@ -392,21 +396,24 @@ export class ChecklistAcknowledgementRepository {
       responseType: String(row.responseType ?? ""),
       weight: Number(row.weight ?? 0),
       maxScore: Number(row.maxScore ?? 0),
+      responseValue: row.responseValue ?? null,
       scoreValue:
         row.scoreValue === null || row.scoreValue === undefined
           ? null
           : Number(row.scoreValue),
       commentText: row.commentText ?? null,
       isNonCompliant:
-        row.isNonCompliant === true ||
-        String(row.isNonCompliant ?? "").toLowerCase() === "true" ||
-        isChecklistScoreNonCompliant({
-          expectedValue: row.expectedValue,
-          scoreValue:
-            row.scoreValue === null || row.scoreValue === undefined
-              ? null
-              : Number(row.scoreValue),
-        }),
+        row.responseValue === "not_applicable"
+          ? false
+          : row.isNonCompliant === true ||
+            String(row.isNonCompliant ?? "").toLowerCase() === "true" ||
+            isChecklistScoreNonCompliant({
+              expectedValue: row.expectedValue,
+              scoreValue:
+                row.scoreValue === null || row.scoreValue === undefined
+                  ? null
+                  : Number(row.scoreValue),
+            }),
     }));
   }
 

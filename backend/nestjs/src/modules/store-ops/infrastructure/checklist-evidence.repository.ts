@@ -686,8 +686,35 @@ export class ChecklistEvidenceRepository {
     }>(
       `
         SELECT
-          COALESCE(SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight), 0)::numeric(12,2)::text AS total_score,
-          COALESCE(AVG(CASE WHEN COALESCE(cr.score_value, 0) > 0 THEN 1 ELSE 0 END), 0)::numeric(7,4)::text AS compliance_rate,
+          CASE
+            WHEN COUNT(*) FILTER (WHERE cti.response_type = 'compliance') > 0 THEN
+              COALESCE(
+                (
+                  SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight)
+                    FILTER (WHERE cr.response_value IS DISTINCT FROM 'not_applicable')
+                  / NULLIF(
+                      SUM(cti.weight)
+                        FILTER (WHERE cr.response_value IS DISTINCT FROM 'not_applicable'),
+                      0
+                    )
+                ) * 100,
+                0
+              )
+            ELSE COALESCE(
+              SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight),
+              0
+            )
+          END::numeric(12,2)::text AS total_score,
+          COALESCE(
+            AVG(
+              CASE
+                WHEN cr.response_value = 'not_applicable' THEN NULL
+                WHEN COALESCE(cr.score_value, 0) > 0 THEN 1
+                ELSE 0
+              END
+            ),
+            0
+          )::numeric(7,4)::text AS compliance_rate,
           COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
           ,COUNT(*) FILTER (
             WHERE policy.evidence_policy = 'required'

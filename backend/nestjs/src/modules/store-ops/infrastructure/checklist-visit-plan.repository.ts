@@ -13,6 +13,7 @@ import type {
   ChecklistVisitPlanReason,
   ChecklistVisitPlanRisk,
   ChecklistVisitPlanResult,
+  ChecklistVisitPlanVisitCompletion,
   SaveChecklistVisitPlanItem,
 } from "../application/checklist-visit-plan.contract";
 
@@ -51,6 +52,13 @@ type ListCandidatesInput = {
   query: string | null;
   limit: number;
   offset: number;
+};
+
+type CompleteVisitInput = {
+  planItemId: string;
+  actorUserId: string;
+  regionIds: string[];
+  idempotencyKey: string;
 };
 
 type PlanRow = {
@@ -190,6 +198,67 @@ export class ChecklistVisitPlanRepository {
       null,
     ]);
     return this.mapPlan(result.rows[0], input.regionId, input.weekStart);
+  }
+
+  async completeVisit(input: CompleteVisitInput): Promise<ChecklistVisitPlanVisitCompletion> {
+    return this.databaseService.withTransaction(async (client) => {
+      const item = await client.query<{
+        plan_item_id: string;
+        region_id: string;
+        planned_date: string;
+        week_start_date: string;
+      }>(
+        `SELECT item.plan_item_id, item.region_id, item.planned_date, item.week_start_date
+         FROM ops.region_weekly_visit_plan_item item
+         INNER JOIN ops.region_weekly_visit_plan_revision revision
+           ON revision.revision_id = item.revision_id
+          AND revision.is_current = TRUE
+         WHERE item.plan_item_id = $1::uuid
+           AND item.region_id = ANY($2::uuid[])
+           AND item.visit_type = 'BM_STORE_VISIT'
+         FOR UPDATE`,
+        [input.planItemId, input.regionIds],
+      );
+      const planItem = item.rows[0];
+      if (!planItem) throw new NotFoundException("Weekly visit plan item is outside the authenticated scope");
+
+      const existing = await client.query<{ completed_at: string }>(
+        `SELECT completed_at
+         FROM ops.region_weekly_visit_plan_completion
+         WHERE plan_item_id = $1::uuid
+         FOR UPDATE`,
+        [input.planItemId],
+      );
+      if (existing.rows[0]) {
+        return { planItemId: input.planItemId, completedAt: existing.rows[0].completed_at };
+      }
+
+      const inserted = await client.query<{ completed_at: string }>(
+        `INSERT INTO ops.region_weekly_visit_plan_completion (
+           plan_item_id, completed_by_user_id, idempotency_key
+         )
+         SELECT $1::uuid, $2::uuid, $3::uuid
+         WHERE $4::date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+         RETURNING completed_at`,
+        [input.planItemId, input.actorUserId, input.idempotencyKey, planItem.planned_date],
+      );
+      const completedAt = inserted.rows[0]?.completed_at;
+      if (!completedAt) throw new ConflictException("Visits can only be completed on the planned date");
+      await client.query(
+        `INSERT INTO audit.event_log (
+           actor_user_id, event_type, entity_name, entity_id, scope_type, region_id, request_id, metadata_json
+         ) VALUES ($1::uuid, 'region_weekly_visit_plan.visit_completed', 'ops.region_weekly_visit_plan_item',
+           $2::uuid, 'region', $3::uuid, $4, $5::jsonb)`,
+        [
+          input.actorUserId,
+          input.planItemId,
+          planItem.region_id,
+          RequestContextStore.getCorrelationId(),
+          JSON.stringify({ plannedDate: planItem.planned_date, weekStart: planItem.week_start_date }),
+        ],
+      );
+      return { planItemId: input.planItemId, completedAt };
+    });
   }
 
   async saveWeeklyPlan(input: SaveInput): Promise<ChecklistVisitPlanResult> {
@@ -338,14 +407,16 @@ function readPlanSql() {
         'storeName', store.store_name,
         'plannedDate', item.planned_date,
         'displayOrder', item.display_order,
-        'status', CASE
-          WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
-          WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
-          WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
-          ELSE 'missed'
-        END,
-        'checklistInstanceId', completed.checklist_instance_id,
-        'completedAt', completed.completed_at
+         'status', CASE
+           WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
+           WHEN visit.visit_completion_id IS NOT NULL THEN 'completed'
+           WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
+           WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
+           ELSE 'missed'
+         END,
+         'checklistInstanceId', completed.checklist_instance_id,
+         'visitCompletedAt', visit.completed_at,
+         'completedAt', COALESCE(completed.completed_at, visit.completed_at)
       ) ORDER BY item.planned_date, item.display_order, store.store_name) AS items_json
       FROM ops.region_weekly_visit_plan_item item
       JOIN ops.store store ON store.store_id = item.store_id
@@ -359,8 +430,10 @@ function readPlanSql() {
           AND (ci.completed_at AT TIME ZONE 'Europe/Istanbul')::date = item.planned_date
         ORDER BY ci.completed_at ASC, ci.checklist_instance_id ASC
         LIMIT 1
-      ) completed ON TRUE
-      WHERE item.revision_id = revision.revision_id
+       ) completed ON TRUE
+       LEFT JOIN ops.region_weekly_visit_plan_completion visit
+         ON visit.plan_item_id = item.plan_item_id
+       WHERE item.revision_id = revision.revision_id
         AND (cardinality($5::uuid[]) = 0 OR item.store_id = ANY($5::uuid[]))
     ) items ON TRUE
     WHERE region.region_id = $1::uuid
@@ -413,15 +486,37 @@ function periodPlanSql(orderBy: string) {
         AND ci.completed_at < (bounds.period_end::timestamp AT TIME ZONE 'Europe/Istanbul')
       GROUP BY ci.store_id
     ),
+    manual_visits AS (
+      SELECT
+        item.store_id,
+        MAX(completion.completed_at) AS last_completed_visit_at,
+        COUNT(*) FILTER (
+          WHERE completion.completed_at >= (bounds.period_start::timestamp AT TIME ZONE 'Europe/Istanbul')
+            AND completion.completed_at < (bounds.period_end::timestamp AT TIME ZONE 'Europe/Istanbul')
+        )::int AS period_visit_count
+      FROM ops.region_weekly_visit_plan_completion completion
+      INNER JOIN ops.region_weekly_visit_plan_item item
+        ON item.plan_item_id = completion.plan_item_id
+      INNER JOIN scoped_stores store ON store.store_id = item.store_id
+      CROSS JOIN period_bounds bounds
+      GROUP BY item.store_id
+    ),
     latest_completed AS (
-      SELECT ci.store_id, MAX(ci.completed_at) AS last_completed_visit_at
-      FROM ops.checklist_instance ci
-      INNER JOIN scoped_stores store ON store.store_id = ci.store_id
-      INNER JOIN ops.checklist_template ct ON ct.checklist_template_id = ci.checklist_template_id
-      WHERE ci.status = 'completed'
-        AND ci.completed_at IS NOT NULL
-        AND ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')
-      GROUP BY ci.store_id
+      SELECT visits.store_id, MAX(visits.last_completed_visit_at) AS last_completed_visit_at
+      FROM (
+        SELECT ci.store_id, MAX(ci.completed_at) AS last_completed_visit_at
+        FROM ops.checklist_instance ci
+        INNER JOIN scoped_stores store ON store.store_id = ci.store_id
+        INNER JOIN ops.checklist_template ct ON ct.checklist_template_id = ci.checklist_template_id
+        WHERE ci.status = 'completed'
+          AND ci.completed_at IS NOT NULL
+          AND ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')
+        GROUP BY ci.store_id
+        UNION ALL
+        SELECT manual.store_id, manual.last_completed_visit_at
+        FROM manual_visits manual
+      ) visits
+      GROUP BY visits.store_id
     ),
     active_drafts AS (
       SELECT ci.store_id, COUNT(*)::int AS active_draft_count
@@ -467,15 +562,17 @@ function periodPlanSql(orderBy: string) {
         revision.revision_no,
         plan.week_start_date,
         item.planned_date,
-        item.display_order,
-        CASE
-          WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
-          WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
-          WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
-          ELSE 'missed'
-        END AS plan_item_status,
-        completed.checklist_instance_id,
-        completed.completed_at
+         item.display_order,
+         CASE
+           WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
+           WHEN visit.visit_completion_id IS NOT NULL THEN 'completed'
+           WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
+           WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
+           ELSE 'missed'
+         END AS plan_item_status,
+         completed.checklist_instance_id,
+         visit.completed_at AS visit_completed_at,
+         COALESCE(completed.completed_at, visit.completed_at) AS completed_at
       FROM ops.region_weekly_visit_plan plan
       INNER JOIN ops.region_weekly_visit_plan_revision revision
         ON revision.plan_id = plan.plan_id AND revision.is_current = TRUE
@@ -494,8 +591,10 @@ function periodPlanSql(orderBy: string) {
           AND (ci.completed_at AT TIME ZONE 'Europe/Istanbul')::date = item.planned_date
         ORDER BY ci.completed_at ASC, ci.checklist_instance_id ASC
         LIMIT 1
-      ) completed ON TRUE
-      WHERE plan.region_id = $1::uuid
+       ) completed ON TRUE
+       LEFT JOIN ops.region_weekly_visit_plan_completion visit
+         ON visit.plan_item_id = item.plan_item_id
+       WHERE plan.region_id = $1::uuid
         AND plan.visit_type = 'BM_STORE_VISIT'
         AND item.planned_date >= bounds.period_start
         AND item.planned_date < bounds.period_end
@@ -520,9 +619,10 @@ function periodPlanSql(orderBy: string) {
           'storeName', store.store_name,
           'plannedDate', occurrence.planned_date,
           'displayOrder', occurrence.display_order,
-          'status', occurrence.plan_item_status,
-          'checklistInstanceId', occurrence.checklist_instance_id,
-          'completedAt', occurrence.completed_at
+           'status', occurrence.plan_item_status,
+           'checklistInstanceId', occurrence.checklist_instance_id,
+           'visitCompletedAt', occurrence.visit_completed_at,
+           'completedAt', occurrence.completed_at
         ) ORDER BY occurrence.planned_date, occurrence.display_order, occurrence.plan_item_id) AS plan_items
       FROM plan_occurrences occurrence
       INNER JOIN scoped_stores store ON store.store_id = occurrence.store_id
@@ -553,16 +653,17 @@ function periodPlanSql(orderBy: string) {
           WHEN plan.distinct_status_count = 1 THEN plan.only_status
           ELSE 'mixed'
         END AS plan_status,
-        (COALESCE(score.bm_completed_count, 0) = 0) AS reason_missing,
+         (COALESCE(score.bm_completed_count, 0) = 0 AND COALESCE(manual.period_visit_count, 0) = 0) AS reason_missing,
         ((score.bm_score < ${highBelow} OR score.vm_score < ${highBelow}) OR COALESCE(pending.has_low_response, FALSE)) AS reason_low,
         (NOT COALESCE(score.bm_score < ${highBelow} OR score.vm_score < ${highBelow}, FALSE)
           AND COALESCE(score.bm_score BETWEEN ${mediumFrom} AND ${mediumThrough} OR score.vm_score BETWEEN ${mediumFrom} AND ${mediumThrough}, FALSE)) AS reason_watch,
         (COALESCE(draft.active_draft_count, 0) > 0) AS reason_active,
         (COALESCE(pending.pending_count, 0) > 0) AS reason_pending,
         (COALESCE(score.bm_completed_count, 0) > 0 AND score.bm_score IS NULL) AS reason_insufficient,
-        (COALESCE(score.bm_completed_count, 0) > 0) AS reason_completed
+         (COALESCE(score.bm_completed_count, 0) > 0 OR COALESCE(manual.period_visit_count, 0) > 0) AS reason_completed
       FROM scoped_stores store
       LEFT JOIN monthly_checklist score ON score.store_id = store.store_id
+      LEFT JOIN manual_visits manual ON manual.store_id = store.store_id
       LEFT JOIN latest_completed latest ON latest.store_id = store.store_id
       LEFT JOIN active_drafts draft ON draft.store_id = store.store_id
       LEFT JOIN pending_acknowledgements pending ON pending.store_id = store.store_id

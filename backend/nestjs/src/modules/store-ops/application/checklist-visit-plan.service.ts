@@ -10,6 +10,7 @@ import type {
   ChecklistVisitPlanRegionOptionResult,
   ChecklistVisitPlanReason,
   ChecklistVisitPlanRisk,
+  ChecklistVisitPlanVisitCompletion,
   SaveChecklistVisitPlanItem,
 } from "./checklist-visit-plan.contract";
 import { resolveChecklistVisitPlanScope } from "./checklist-visit-plan-scope";
@@ -46,6 +47,7 @@ type ListCandidatesInput = ReadActor & {
   offset?: number;
 };
 type ListRegionOptionsInput = ReadActor & { query?: string; limit?: number; offset?: number };
+type CompleteVisitInput = Actor & { planItemId: string; idempotencyKey: string };
 
 @Injectable()
 export class ChecklistVisitPlanService {
@@ -180,6 +182,19 @@ export class ChecklistVisitPlanService {
       view: scope.view,
       capabilities: { canMaintainWeeklyVisitPlan: true },
     };
+  }
+
+  async completeVisit(input: CompleteVisitInput): Promise<ChecklistVisitPlanVisitCompletion> {
+    const scope = this.resolveScope(input);
+    if (!scope.canMaintain || scope.view !== "region_manager") {
+      throw new ForbiddenException("Visit completion is available only to the assigned Region Manager");
+    }
+    return this.repository.completeVisit({
+      planItemId: input.planItemId,
+      actorUserId: input.actorUserId,
+      regionIds: scope.regionIds,
+      idempotencyKey: input.idempotencyKey,
+    });
   }
 
   private resolveScope(input: Actor) {

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { DatabaseService } from "../../../shared/database/database.service";
 import { ChecklistEvidenceRepository } from "./checklist-evidence.repository";
 import {
+  ChecklistComplianceResponseValue,
   ChecklistTemplateDraftForPublish,
   ChecklistTemplateResponseType,
   ChecklistTemplateSummary,
@@ -12,6 +13,56 @@ import {
 import { isChecklistScoreNonCompliant } from "../application/checklist-low-score-policy";
 import { parseChecklistScorePolicy } from "../application/checklist-score-policy";
 import { startOrResumeChecklistInstance } from "./checklist-instance-start";
+import {
+  mapMobileChecklistDraftResponses,
+  mapMobileChecklistEvidence,
+  queryMobileChecklistStores,
+} from "./checklist-mobile-read.helpers";
+
+const CHECKLIST_COMPLIANCE_RESPONSE_VALUES = new Set<ChecklistComplianceResponseValue>([
+  "compliant",
+  "partially_compliant",
+  "non_compliant",
+  "not_applicable",
+]);
+
+function resolveMobileChecklistResponse(input: {
+  maxScore: number;
+  responseType: ChecklistTemplateResponseType;
+  responseValue?: string;
+  scoreValue: number;
+}) {
+  if (input.responseType !== "compliance") {
+    return {
+      responseValue: null,
+      scoreValue: input.scoreValue,
+      isNotApplicable: false,
+    };
+  }
+
+  if (
+    !input.responseValue ||
+    !CHECKLIST_COMPLIANCE_RESPONSE_VALUES.has(
+      input.responseValue as ChecklistComplianceResponseValue,
+    )
+  ) {
+    throw new BadRequestException("Checklist compliance response value is required");
+  }
+
+  const responseValue = input.responseValue as ChecklistComplianceResponseValue;
+  const scoreValue =
+    responseValue === "compliant"
+      ? input.maxScore
+      : responseValue === "partially_compliant"
+        ? input.maxScore / 2
+        : 0;
+
+  return {
+    responseValue,
+    scoreValue,
+    isNotApplicable: responseValue === "not_applicable",
+  };
+}
 
 @Injectable()
 export class ChecklistRepository {
@@ -346,6 +397,7 @@ export class ChecklistRepository {
     checklistInstanceId: string;
     templateItemId: string;
     scoreValue: number;
+    responseValue?: string;
     commentText?: string;
     actorUserId: string;
   }) {
@@ -389,11 +441,18 @@ export class ChecklistRepository {
 
       const scorePolicy = parseChecklistScorePolicy(guard.expected_value);
       const minScore = scorePolicy.minScore ?? 0;
-      if (guard.response_type === "score" && input.scoreValue < minScore) {
+      const resolvedResponse = resolveMobileChecklistResponse({
+        maxScore: Number(guard.max_score),
+        responseType: guard.response_type,
+        responseValue: input.responseValue,
+        scoreValue: input.scoreValue,
+      });
+
+      if (guard.response_type === "score" && resolvedResponse.scoreValue < minScore) {
         throw new BadRequestException("Checklist score is below item min score");
       }
 
-      if (input.scoreValue > Number(guard.max_score)) {
+      if (resolvedResponse.scoreValue > Number(guard.max_score)) {
         throw new BadRequestException("Checklist score exceeds item max score");
       }
 
@@ -405,13 +464,15 @@ export class ChecklistRepository {
           INSERT INTO ops.checklist_response (
             checklist_instance_id,
             template_item_id,
+            response_value,
             score_value,
             comment_text,
             is_non_compliant
           )
-          VALUES ($1::uuid, $2::uuid, $3::numeric, $4, $5::boolean)
+          VALUES ($1::uuid, $2::uuid, $3, $4::numeric, $5, $6::boolean)
           ON CONFLICT (checklist_instance_id, template_item_id) DO UPDATE
           SET
+            response_value = EXCLUDED.response_value,
             score_value = EXCLUDED.score_value,
             comment_text = EXCLUDED.comment_text,
             is_non_compliant = EXCLUDED.is_non_compliant,
@@ -421,12 +482,17 @@ export class ChecklistRepository {
         [
           input.checklistInstanceId,
           input.templateItemId,
-          input.scoreValue,
+          resolvedResponse.responseValue,
+          resolvedResponse.scoreValue,
           input.commentText ?? null,
-          isChecklistScoreNonCompliant({
-            expectedValue: guard.expected_value,
-            scoreValue: input.scoreValue,
-          }),
+          resolvedResponse.isNotApplicable
+            ? false
+            : guard.response_type === "compliance"
+              ? resolvedResponse.responseValue !== "compliant"
+              : isChecklistScoreNonCompliant({
+                  expectedValue: guard.expected_value,
+                  scoreValue: resolvedResponse.scoreValue,
+                }),
         ],
       );
 
@@ -456,8 +522,35 @@ export class ChecklistRepository {
     }>(
       `
         SELECT
-          COALESCE(SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight), 0)::numeric(12,2)::text AS total_score,
-          COALESCE(AVG(CASE WHEN COALESCE(cr.score_value, 0) > 0 THEN 1 ELSE 0 END), 0)::numeric(7,4)::text AS compliance_rate,
+          CASE
+            WHEN COUNT(*) FILTER (WHERE cti.response_type = 'compliance') > 0 THEN
+              COALESCE(
+                (
+                  SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight)
+                    FILTER (WHERE cr.response_value IS DISTINCT FROM 'not_applicable')
+                  / NULLIF(
+                      SUM(cti.weight)
+                        FILTER (WHERE cr.response_value IS DISTINCT FROM 'not_applicable'),
+                      0
+                    )
+                ) * 100,
+                0
+              )
+            ELSE COALESCE(
+              SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight),
+              0
+            )
+          END::numeric(12,2)::text AS total_score,
+          COALESCE(
+            AVG(
+              CASE
+                WHEN cr.response_value = 'not_applicable' THEN NULL
+                WHEN COALESCE(cr.score_value, 0) > 0 THEN 1
+                ELSE 0
+              END
+            ),
+            0
+          )::numeric(7,4)::text AS compliance_rate,
           COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
           ,COUNT(*) FILTER (
             WHERE policy.evidence_policy = 'required'
@@ -578,7 +671,7 @@ export class ChecklistRepository {
       };
     }
 
-    const stores = await this.queryMobileChecklistStores({
+    const stores = await queryMobileChecklistStores(this.databaseService, {
       explicitStoreIds,
       readRegionIds,
       readCompanyIds,
@@ -739,6 +832,7 @@ export class ChecklistRepository {
             jsonb_agg(
               jsonb_build_object(
                 'templateItemId', cr.template_item_id,
+                'responseValue', cr.response_value,
                 'scoreValue', cr.score_value,
                 'commentText', cr.comment_text
               )
@@ -845,8 +939,8 @@ export class ChecklistRepository {
         startedAt: row.started_at,
         updatedAt: row.updated_at,
         evidenceVersion: Number(row.evidence_version_no ?? 0),
-        evidence: this.mapMobileChecklistEvidence(row.evidence_json),
-        responses: this.mapMobileChecklistDraftResponses(row.responses_json),
+        evidence: mapMobileChecklistEvidence(row.evidence_json),
+        responses: mapMobileChecklistDraftResponses(row.responses_json),
       })),
       completedThisMonth: completedThisMonth.rows.map((row) => ({
         checklistInstanceId: row.checklist_instance_id,
@@ -875,89 +969,6 @@ export class ChecklistRepository {
     };
   }
 
-  private mapMobileChecklistDraftResponses(
-    value: unknown,
-  ): MobileChecklistToday["activeInstances"][number]["responses"] {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
 
-    return parsed.map((item) => {
-      const row = item as {
-        templateItemId?: unknown;
-        scoreValue?: unknown;
-        commentText?: unknown;
-      };
 
-      return {
-        templateItemId: String(row.templateItemId ?? ""),
-        scoreValue: Number(row.scoreValue ?? 0),
-        commentText: row.commentText === null || row.commentText === undefined
-          ? null
-          : String(row.commentText),
-      };
-    }).filter((item) => item.templateItemId.length > 0);
-  }
-
-  private mapMobileChecklistEvidence(
-    value: unknown,
-  ): MobileChecklistToday["activeInstances"][number]["evidence"] {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.map((item) => {
-      const row = item as Record<string, unknown>;
-      return {
-        templateItemId: String(row.templateItemId ?? ""),
-        mediaAssetId: String(row.mediaAssetId ?? ""),
-        displayOrder: Number(row.displayOrder ?? 0),
-        captureSource: String(row.captureSource ?? "system_generated") as
-          | "camera"
-          | "gallery"
-          | "system_generated",
-        thumbnailAvailable: row.thumbnailAvailable === true,
-      };
-    }).filter((item) => item.templateItemId.length > 0 && item.mediaAssetId.length > 0);
-  }
-
-  private async queryMobileChecklistStores(input: {
-    explicitStoreIds: string[];
-    readRegionIds: string[];
-    readCompanyIds: string[];
-  }) {
-    if (input.explicitStoreIds.length > 0) {
-      return this.databaseService.query<{ store_id: string; store_name: string }>(
-        `
-          SELECT s.store_id, s.store_name
-          FROM ops.store s
-          WHERE s.store_id = ANY($1::uuid[])
-          ORDER BY s.store_name ASC
-        `,
-        [input.explicitStoreIds],
-      );
-    }
-
-    if (input.readRegionIds.length > 0) {
-      return this.databaseService.query<{ store_id: string; store_name: string }>(
-        `
-          SELECT s.store_id, s.store_name
-          FROM ops.store s
-          WHERE s.region_id = ANY($1::uuid[])
-          ORDER BY s.store_name ASC
-        `,
-        [input.readRegionIds],
-      );
-    }
-
-    return this.databaseService.query<{ store_id: string; store_name: string }>(
-      `
-        SELECT s.store_id, s.store_name
-        FROM ops.store s
-        WHERE s.company_id = ANY($1::uuid[])
-        ORDER BY s.store_name ASC
-      `,
-      [input.readCompanyIds],
-    );
-  }
 }

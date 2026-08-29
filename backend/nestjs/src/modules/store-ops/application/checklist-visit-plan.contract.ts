@@ -49,7 +49,13 @@ export type ChecklistVisitPlanItem = {
   displayOrder: number;
   status: ChecklistVisitPlanItemStatus;
   checklistInstanceId: string | null;
+  visitCompletedAt: string | null;
   completedAt: string | null;
+};
+
+export type ChecklistVisitPlanVisitCompletion = {
+  planItemId: string;
+  completedAt: string;
 };
 
 export type ChecklistVisitPlanResult = {

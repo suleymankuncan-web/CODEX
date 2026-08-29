@@ -30,8 +30,8 @@ export class UpdateChecklistTemplateItemDto {
   @Matches(/\S/)
   itemText!: string;
 
-  @IsIn(["score", "yes_no", "partial", "text"])
-  responseType!: "score" | "yes_no" | "partial" | "text";
+  @IsIn(["score", "yes_no", "partial", "compliance", "text"])
+  responseType!: "score" | "yes_no" | "partial" | "compliance" | "text";
 
   @IsNumber()
   @Min(0)

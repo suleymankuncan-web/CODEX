@@ -8,6 +8,7 @@ import { AppConfigService } from "../../src/shared/app-config.service";
 import { BullMqJobDispatcherService } from "../../src/shared/jobs/bullmq-job-dispatcher.service";
 import { JOB_DISPATCHER } from "../../src/shared/jobs/jobs.constants";
 import { StandardErrorFilter } from "../../src/shared/http/standard-error.filter";
+import { IntegrationService } from "../../src/modules/integration/application/integration.service";
 
 function configureDefaultAuthMode() {
   const explicitJwtTest =
@@ -57,6 +58,7 @@ export async function createIntegrationApp(overrides?: {
   jobDispatcher?: object;
   authContextService?: object;
   appConfigService?: object;
+  integrationService?: object;
   standardErrorFilter?: boolean;
 }) {
   configureDefaultAuthMode();
@@ -84,6 +86,12 @@ export async function createIntegrationApp(overrides?: {
         ...DEFAULT_TEST_DATABASE_CONFIG,
         ...overrides.appConfigService,
       });
+  }
+
+  if (overrides?.integrationService) {
+    testingModuleBuilder
+      .overrideProvider(IntegrationService)
+      .useValue(overrides.integrationService);
   }
 
   testingModuleBuilder.overrideProvider(BullMqJobDispatcherService).useValue({

@@ -13,6 +13,11 @@ import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthAdminUserAccountReadRepository } from "./auth-admin-user-account-read.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
+import {
+  mapAuthActionStoreAssignment,
+  mapAuthAssignment,
+  mapAuthUser,
+} from "./auth-admin-response.mapper";
 
 @Injectable()
 export class AuthAdminService {
@@ -80,7 +85,7 @@ export class AuthAdminService {
       status: "created",
       message: "Role assignment created",
       data: {
-        assignment: this.mapAssignment(assignment),
+        assignment: mapAuthAssignment(assignment),
       },
     });
   }
@@ -95,7 +100,7 @@ export class AuthAdminService {
   }) {
     const result = await this.authAdminRepository.listRoleAssignments(input);
 
-    return buildListResponse(result.rows.map((item) => this.mapAssignment(item)), {
+    return buildListResponse(result.rows.map(mapAuthAssignment), {
       total: result.total,
       limit: input.limit,
       offset: input.offset,
@@ -122,7 +127,7 @@ export class AuthAdminService {
       status: "updated",
       message: "Role assignment deactivated",
       data: {
-        assignment: this.mapAssignment(assignment),
+        assignment: mapAuthAssignment(assignment),
       },
     });
   }
@@ -175,8 +180,35 @@ export class AuthAdminService {
       status: "created",
       message: "Action store assignment created",
       data: {
-        assignment: this.mapActionStoreAssignment(assignment),
+        assignment: mapAuthActionStoreAssignment(assignment),
       },
+    });
+  }
+
+  async createActionStoreAssignmentsBatch(input: {
+    userId: string;
+    storeIds: string[];
+    effectiveFrom?: string;
+    effectiveTo?: string;
+    actorUserId: string;
+  }) {
+    const storeIds = [...new Set(input.storeIds)];
+    const stores = await this.authAdminRepository.listActiveStoresByIds(storeIds);
+    if (stores.length !== storeIds.length) {
+      throw new NotFoundException("One or more stores were not found or are inactive");
+    }
+
+    const assignments = await this.authAdminRepository.createActionStoreAssignmentsBatch({
+      ...input,
+      storeIds,
+      effectiveFrom: input.effectiveFrom ?? null,
+      effectiveTo: input.effectiveTo ?? null,
+    });
+
+    return buildCommandResponse({
+      status: "created",
+      message: "Action store assignments created",
+      data: { assignments: assignments.map(mapAuthActionStoreAssignment) },
     });
   }
 
@@ -189,7 +221,7 @@ export class AuthAdminService {
   }) {
     const result = await this.authAdminRepository.listActionStoreAssignments(input);
 
-    return buildListResponse(result.rows.map((item) => this.mapActionStoreAssignment(item)), {
+    return buildListResponse(result.rows.map(mapAuthActionStoreAssignment), {
       total: result.total,
       limit: input.limit,
       offset: input.offset,
@@ -217,7 +249,7 @@ export class AuthAdminService {
       status: "updated",
       message: "Action store assignment deactivated",
       data: {
-        assignment: this.mapActionStoreAssignment(assignment),
+        assignment: mapAuthActionStoreAssignment(assignment),
       },
     });
   }
@@ -260,7 +292,7 @@ export class AuthAdminService {
       status: "created",
       message: "User account created",
       data: {
-        user: this.mapUser(user),
+        user: mapAuthUser(user),
       },
     });
   }
@@ -357,12 +389,12 @@ export class AuthAdminService {
       message: "Pilot user binding created",
       data: {
         binding: {
-          user: this.mapUser(binding.user),
+          user: mapAuthUser(binding.user),
           roleAssignments: binding.roleAssignments.map((assignment) =>
-            this.mapAssignment(assignment),
+            mapAuthAssignment(assignment),
           ),
           actionStoreAssignments: binding.actionStoreAssignments.map((assignment) =>
-            this.mapActionStoreAssignment(assignment),
+            mapAuthActionStoreAssignment(assignment),
           ),
           employee: {
             employeeId: binding.employee.employee_id,
@@ -384,7 +416,7 @@ export class AuthAdminService {
   }) {
     const result = await this.authAdminUserAccountReadRepository.listUserAccounts(input);
 
-    return buildListResponse(result.rows.map((item) => this.mapUser(item)), {
+    return buildListResponse(result.rows.map(mapAuthUser), {
       total: result.total,
       limit: input.limit,
       offset: input.offset,
@@ -409,7 +441,7 @@ export class AuthAdminService {
       status: "updated",
       message: "User account deactivated",
       data: {
-        user: this.mapUser(accessClosure.user),
+        user: mapAuthUser(accessClosure.user),
         accessClosure: {
           closedRoleAssignments: accessClosure.closedRoleAssignments,
           closedActionStoreAssignments: accessClosure.closedActionStoreAssignments,
@@ -439,7 +471,7 @@ export class AuthAdminService {
       status: "updated",
       message: "User account reactivated",
       data: {
-        user: this.mapUser(user),
+        user: mapAuthUser(user),
       },
     });
   }
@@ -827,109 +859,4 @@ export class AuthAdminService {
     }
   }
 
-  private mapAssignment(item: {
-    user_role_assignment_id: string;
-    user_id: string;
-    username?: string;
-    email?: string;
-    role_code: string;
-    role_name?: string;
-    scope_type: string;
-    company_id: string | null;
-    region_id: string | null;
-    store_id: string | null;
-    start_at: string;
-    end_at: string | null;
-    created_at: string;
-  }) {
-    return {
-      assignmentId: item.user_role_assignment_id,
-      userId: item.user_id,
-      ...(item.username ? { username: item.username } : {}),
-      ...(item.email ? { email: item.email } : {}),
-      roleCode: item.role_code,
-      ...(item.role_name ? { roleName: item.role_name } : {}),
-      scopeType: item.scope_type,
-      companyId: item.company_id,
-      regionId: item.region_id,
-      storeId: item.store_id,
-      effectiveFrom: item.start_at,
-      effectiveTo: item.end_at,
-      createdAt: item.created_at,
-      active: item.end_at === null,
-    };
-  }
-
-  private mapActionStoreAssignment(item: {
-    user_action_store_assignment_id: string;
-    user_id: string;
-    username?: string;
-    email?: string;
-    store_id: string;
-    store_code: string;
-    store_name: string;
-    company_id: string;
-    region_id: string;
-    region_name: string;
-    start_at: string;
-    end_at: string | null;
-    created_at: string;
-  }) {
-    return {
-      assignmentId: item.user_action_store_assignment_id,
-      userId: item.user_id,
-      ...(item.username ? { username: item.username } : {}),
-      ...(item.email ? { email: item.email } : {}),
-      storeId: item.store_id,
-      storeCode: item.store_code,
-      storeName: item.store_name,
-      companyId: item.company_id,
-      regionId: item.region_id,
-      regionName: item.region_name,
-      effectiveFrom: item.start_at,
-      effectiveTo: item.end_at,
-      createdAt: item.created_at,
-      active: item.end_at === null,
-    };
-  }
-
-  private mapUser(item: {
-    user_id: string;
-    employee_id: string | null;
-    username: string;
-    email: string;
-    auth_provider: string;
-    provider_subject?: string | null;
-    is_active: boolean;
-    last_login_at: string | null;
-    created_at: string;
-    deactivated_at?: string | null;
-    deactivation_reason?: string | null;
-    deactivated_by_user_id?: string | null;
-    employee_status?: string | null;
-  }) {
-    const mapped = {
-      userId: item.user_id,
-      employeeId: item.employee_id,
-      username: item.username,
-      email: item.email,
-      authProvider: item.auth_provider,
-      providerSubject: item.provider_subject ?? null,
-      isActive: item.is_active,
-      lastLoginAt: item.last_login_at,
-      createdAt: item.created_at,
-    };
-
-    return {
-      ...mapped,
-      ...("deactivated_at" in item ? { deactivatedAt: item.deactivated_at ?? null } : {}),
-      ...("deactivation_reason" in item
-        ? { deactivationReason: item.deactivation_reason ?? null }
-        : {}),
-      ...("deactivated_by_user_id" in item
-        ? { deactivatedByUserId: item.deactivated_by_user_id ?? null }
-        : {}),
-      ...("employee_status" in item ? { employeeStatus: item.employee_status ?? null } : {}),
-    };
-  }
 }

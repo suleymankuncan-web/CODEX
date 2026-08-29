@@ -26,6 +26,12 @@ import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import {
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi"; import { applyVmReferenceManagementOpenApi } from "./vm-reference-management-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
+import {
+  personnelMasterItemSchema,
+  personnelMasterLookupsSchema,
+  storeMasterItemSchema,
+  storeMasterLookupsSchema,
+} from "./integration-master-data-openapi.schemas";
 const publicOperations = [
   { path: "/api/auth/bootstrap", method: "get" },
   { path: "/api/health", method: "get" },
@@ -69,7 +75,10 @@ const mobileChecklistTodayTemplateItemSchema = {
     sectionName: { type: "string" },
     itemNo: { type: "integer" },
     itemText: { type: "string" },
-    responseType: { type: "string", enum: ["score", "yes_no", "partial", "text"] },
+    responseType: {
+      type: "string",
+      enum: ["score", "yes_no", "partial", "compliance", "text"],
+    },
     weight: { type: "number" },
     maxScore: { type: "number" }, minScore: { type: "number" }, lowScoreThreshold: { type: "number", nullable: true }, requiresLowScoreNote: { type: "boolean" },
     ...mobileChecklistEvidenceTemplateItemProperties,
@@ -99,9 +108,10 @@ const mobileChecklistTodayTemplateSchema = {
 
 const mobileChecklistTodayDraftResponseSchema = {
   type: "object",
-  required: ["templateItemId", "scoreValue", "commentText"],
+  required: ["templateItemId", "responseValue", "scoreValue", "commentText"],
   properties: {
     templateItemId: { type: "string" },
+    responseValue: { type: "string", nullable: true },
     scoreValue: { type: "number" },
     commentText: { type: "string", nullable: true },
   },
@@ -1729,177 +1739,6 @@ const integrationLookupsSchema = {
         totalActiveSources: { type: "integer", minimum: 0 },
       },
     },
-  },
-};
-
-const storeMasterLookupsSchema = {
-  type: "object",
-  required: ["storeTypes", "statuses", "regions"],
-  properties: {
-    storeTypes: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["value", "label"],
-        properties: {
-          value: { type: "string", enum: ["company", "franchise", "operator"] },
-          label: { type: "string" },
-        },
-      },
-    },
-    statuses: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["value", "label"],
-        properties: {
-          value: { type: "string", enum: ["active", "inactive", "closed"] },
-          label: { type: "string" },
-        },
-      },
-    },
-    regions: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["regionId", "regionCode", "regionName"],
-        properties: {
-          regionId: { type: "string" },
-          regionCode: { type: "string" },
-          regionName: { type: "string" },
-        },
-      },
-    },
-  },
-};
-
-const storeMasterItemSchema = {
-  type: "object",
-  required: [
-    "storeId",
-    "storeCode",
-    "storeName",
-    "storeType",
-    "status",
-    "kpiImportEnabled",
-    "regionId",
-    "regionName",
-    "updatedAt",
-  ],
-  properties: {
-    storeId: { type: "string" },
-    storeCode: { type: "string" },
-    storeName: { type: "string" },
-    storeType: { type: "string" },
-    status: { type: "string" },
-    kpiImportEnabled: { type: "boolean" },
-    regionId: { type: "string", nullable: true },
-    regionName: { type: "string", nullable: true },
-    updatedAt: { type: "string", nullable: true },
-  },
-};
-
-const personnelMasterLookupsSchema = {
-  type: "object",
-  required: ["stores", "positions", "employmentStatuses", "employmentTypes"],
-  properties: {
-    stores: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["storeId", "storeCode", "storeName", "regionId", "regionName"],
-        properties: {
-          storeId: { type: "string" },
-          storeCode: { type: "string" },
-          storeName: { type: "string" },
-          regionId: { type: "string" },
-          regionName: { type: "string" },
-        },
-      },
-    },
-    positions: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["positionId", "positionCode", "positionName", "isManagerial"],
-        properties: {
-          positionId: { type: "string" },
-          positionCode: { type: "string" },
-          positionName: { type: "string" },
-          isManagerial: { type: "boolean" },
-        },
-      },
-    },
-    employmentStatuses: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["value", "label"],
-        properties: {
-          value: { type: "string", enum: ["active", "inactive", "terminated"] },
-          label: { type: "string" },
-        },
-      },
-    },
-    employmentTypes: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["value", "label"],
-        properties: {
-          value: { type: "string", enum: ["full_time", "part_time", "temporary"] },
-          label: { type: "string" },
-        },
-      },
-    },
-  },
-};
-
-const personnelMasterItemSchema = {
-  type: "object",
-  required: [
-    "employeeId",
-    "externalEmployeeRef",
-    "firstName",
-    "lastName",
-    "displayName",
-    "hireDate",
-    "terminationDate",
-    "employmentStatus",
-    "employmentType",
-    "assignmentId",
-    "assignmentStartDate",
-    "storeId",
-    "storeCode",
-    "storeName",
-    "regionId",
-    "regionName",
-    "positionId",
-    "positionCode",
-    "positionName",
-    "updatedAt",
-  ],
-  properties: {
-    employeeId: { type: "string" },
-    externalEmployeeRef: { type: "string", nullable: true },
-    firstName: { type: "string" },
-    lastName: { type: "string" },
-    displayName: { type: "string" },
-    hireDate: { type: "string" },
-    terminationDate: { type: "string", nullable: true },
-    employmentStatus: { type: "string" },
-    employmentType: { type: "string" },
-    assignmentId: { type: "string", nullable: true },
-    assignmentStartDate: { type: "string", nullable: true },
-    storeId: { type: "string", nullable: true },
-    storeCode: { type: "string", nullable: true },
-    storeName: { type: "string", nullable: true },
-    regionId: { type: "string", nullable: true },
-    regionName: { type: "string", nullable: true },
-    positionId: { type: "string", nullable: true },
-    positionCode: { type: "string", nullable: true },
-    positionName: { type: "string", nullable: true },
-    updatedAt: { type: "string", nullable: true },
   },
 };
 

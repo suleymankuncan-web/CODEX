@@ -593,7 +593,7 @@ describe("ChecklistRepository", () => {
     expect(client.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("ON CONFLICT (checklist_instance_id, template_item_id)"),
-      ["instance-1", "item-1", 8, "Good", false],
+      ["instance-1", "item-1", null, 8, "Good", false],
     );
     expect(client.query).toHaveBeenNthCalledWith(
       3,
@@ -637,7 +637,7 @@ describe("ChecklistRepository", () => {
     expect(client.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("is_non_compliant"),
-      ["instance-1", "item-1", 6, null, true],
+      ["instance-1", "item-1", null, 6, null, true],
     );
   });
 
@@ -751,7 +751,7 @@ describe("ChecklistRepository", () => {
     expect(client.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("is_non_compliant"),
-      ["instance-1", "item-1", 0, null, true],
+      ["instance-1", "item-1", null, 0, null, true],
     );
   });
 
@@ -777,6 +777,9 @@ describe("ChecklistRepository", () => {
       expect.stringContaining("missing_mandatory_count"),
       ["instance-1"],
     );
+    const completionSql = String(query.mock.calls[0]?.[0] ?? "");
+    expect(completionSql).toContain("cr.response_value IS DISTINCT FROM 'not_applicable'");
+    expect(completionSql).toContain("SUM(cti.weight)");
   });
 
   it("completes and locks a mobile checklist instance", async () => {
@@ -839,6 +842,9 @@ describe("ChecklistRepository", () => {
       expect.stringContaining("locked_at = NOW()"),
       ["instance-1", "user-1", "86.00", "1.0000"],
     );
+    const completionSql = String(client.query.mock.calls[1]?.[0] ?? "");
+    expect(completionSql).toContain("cr.response_value IS DISTINCT FROM 'not_applicable'");
+    expect(completionSql).toContain("SUM(cti.weight)");
   });
 
   it("returns the existing deterministic state for an authorized repeated completion", async () => {
@@ -1112,6 +1118,7 @@ describe("ChecklistRepository", () => {
         responses: [
           {
             templateItemId: "item-1",
+            responseValue: null,
             scoreValue: 8,
             commentText: "Raf ve vitrin uygun",
           },

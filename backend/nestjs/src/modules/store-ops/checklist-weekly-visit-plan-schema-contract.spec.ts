@@ -9,8 +9,17 @@ const migrationPath = join(
   "migrations",
   "061_region_weekly_visit_plan_v1.sql",
 );
+const completionMigrationPath = join(
+  projectRoot,
+  "db",
+  "migrations",
+  "071_region_weekly_visit_plan_completion_v1.sql",
+);
 const migrationSql = existsSync(migrationPath)
   ? readFileSync(migrationPath, "utf8")
+  : "";
+const completionMigrationSql = existsSync(completionMigrationPath)
+  ? readFileSync(completionMigrationPath, "utf8")
   : "";
 const smokeSql = readFileSync(
   join(projectRoot, "db", "preflight", "region-weekly-visit-plan-v1-smoke.sql"),
@@ -94,5 +103,17 @@ describe("region weekly visit plan schema contract", () => {
     expect(smokeSql).toContain("plan item delete was accepted");
     expect(smokeSql).toContain("GET STACKED DIAGNOSTICS violated_constraint = CONSTRAINT_NAME");
     expect(smokeSql).not.toMatch(/\b(COMMIT|TRUNCATE|DROP)\b/i);
+  });
+
+  it("stores attendance separately from immutable plans and checklist outcomes", () => {
+    for (const sql of [schemaSql, completionMigrationSql]) {
+      const completionTable = tableDefinition(sql, "ops.region_weekly_visit_plan_completion");
+      expect(completionTable).toContain("CREATE TABLE IF NOT EXISTS ops.region_weekly_visit_plan_completion (");
+      expect(completionTable).toContain("plan_item_id UUID NOT NULL REFERENCES ops.region_weekly_visit_plan_item(plan_item_id)");
+      expect(completionTable).toContain("completed_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id)");
+      expect(completionTable).toContain("UNIQUE (plan_item_id)");
+      expect(sql).toContain("idx_region_weekly_visit_plan_completion_completed_at");
+      expect(completionTable).not.toMatch(/\b(display_status|outcome_status|waiting|missed)\b/i);
+    }
   });
 });

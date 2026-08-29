@@ -22,8 +22,10 @@ type QueryRow = {
   store_id: string;
   store_name: string;
   event_count: string | number;
+  completed_audit_count: string | number;
   completed_visit_count: string | number;
   assigned_task_count: string | number;
+  resolved_task_count: string | number;
   open_task_count: string | number;
   event_id: string | null;
   event_kind: ChecklistOperationalHistoryKind | null;
@@ -41,7 +43,14 @@ type QueryRow = {
 
 export type ChecklistOperationalHistoryRepositoryResult = {
   store: { id: string; name: string; city: null; district: null };
-  summary: { eventCount: number; completedVisitCount: number; assignedTaskCount: number; openTaskCount: number };
+  summary: {
+    eventCount: number;
+    completedAuditCount: number;
+    completedVisitCount: number;
+    assignedTaskCount: number;
+    resolvedTaskCount: number;
+    openTaskCount: number;
+  };
   items: Array<{ event: ChecklistOperationalHistoryEvent; cursor: ChecklistOperationalHistoryCursor }>;
 };
 
@@ -69,8 +78,10 @@ export class ChecklistOperationalHistoryRepository {
       store: { id: first.store_id, name: first.store_name, city: null, district: null },
       summary: {
         eventCount: Number(first.event_count),
+        completedAuditCount: Number(first.completed_audit_count),
         completedVisitCount: Number(first.completed_visit_count),
         assignedTaskCount: Number(first.assigned_task_count),
+        resolvedTaskCount: Number(first.resolved_task_count),
         openTaskCount: Number(first.open_task_count),
       },
       items: result.rows.flatMap((row) => {
@@ -176,6 +187,17 @@ all_events AS (
   UNION ALL
 
   SELECT
+    visit.visit_completion_id,
+    'visit_completed', 6, visit.completed_at, visit.completed_by_user_id,
+    'Ziyaret tamamlandı', 'Planlanan mağaza ziyareti tamamlandı.',
+    item.planned_date::text, NULL
+  FROM ops.region_weekly_visit_plan_completion AS visit
+  JOIN ops.region_weekly_visit_plan_item AS item ON item.plan_item_id = visit.plan_item_id
+  JOIN scoped_store ON scoped_store.store_id = item.store_id
+
+  UNION ALL
+
+  SELECT
     acknowledgement.event_log_id,
     'acknowledgement', 4, acknowledgement.occurred_at, acknowledgement.actor_user_id,
     'Denetim sonucu incelendi', 'Mağaza denetim sonucu görüntülendi ve onaylandı.',
@@ -222,8 +244,10 @@ keyed_events AS (
 summary AS (
   SELECT
     COUNT(*)::bigint AS event_count,
-    COUNT(*) FILTER (WHERE kind = 'checklist_completed')::bigint AS completed_visit_count,
+    COUNT(*) FILTER (WHERE kind = 'checklist_completed')::bigint AS completed_audit_count,
+    COUNT(*) FILTER (WHERE kind IN ('checklist_completed', 'visit_completed'))::bigint AS completed_visit_count,
     COUNT(*) FILTER (WHERE kind = 'task_assigned')::bigint AS assigned_task_count,
+    COUNT(*) FILTER (WHERE kind = 'task_resolved')::bigint AS resolved_task_count,
     (SELECT COUNT(*)::bigint FROM ops.store_action_plan AS task JOIN scoped_store ON scoped_store.store_id = task.store_id WHERE task.status IN ('open', 'in_progress', 'blocked')) AS open_task_count
   FROM keyed_events
 ),
@@ -292,8 +316,10 @@ SELECT
   scoped_store.store_id,
   scoped_store.store_name,
   summary.event_count,
+  summary.completed_audit_count,
   summary.completed_visit_count,
   summary.assigned_task_count,
+  summary.resolved_task_count,
   summary.open_task_count,
   CASE WHEN event.event_key IS NULL THEN NULL ELSE 'evt_' || event.event_key END AS event_id,
   event.kind AS event_kind,
@@ -306,6 +332,7 @@ SELECT
   event.actor_identity_status,
   CASE event.kind
     WHEN 'checklist_completed' THEN jsonb_build_array(jsonb_build_object('label', 'Denetim türü', 'value', event.source_label))
+    WHEN 'visit_completed' THEN jsonb_build_array(jsonb_build_object('label', 'Planlanan tarih', 'value', event.source_label))
     WHEN 'task_assigned' THEN jsonb_build_array(
       jsonb_build_object('label', 'Öncelik', 'value', event.source_label),
       jsonb_build_object('label', 'Bitiş tarihi', 'value', event.source_aux)

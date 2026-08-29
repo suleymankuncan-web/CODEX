@@ -24,6 +24,8 @@ export class PersonnelMasterReadRepository {
         OR e.first_name ILIKE $${params.length}
         OR e.last_name ILIKE $${params.length}
         OR CONCAT(e.first_name, ' ', e.last_name) ILIKE $${params.length}
+        OR e.national_id_last4 ILIKE $${params.length}
+        OR e.phone_number ILIKE $${params.length}
         OR s.store_name ILIKE $${params.length}
         OR s.store_code ILIKE $${params.length}
         OR p.position_name ILIKE $${params.length}
@@ -84,6 +86,8 @@ export class PersonnelMasterReadRepository {
       external_employee_ref: string | null;
       first_name: string;
       last_name: string;
+      national_id_last4: string | null;
+      phone_number: string | null;
       hire_date: string;
       termination_date: string | null;
       employment_status: string;
@@ -106,6 +110,8 @@ export class PersonnelMasterReadRepository {
           e.external_employee_ref,
           e.first_name,
           e.last_name,
+          e.national_id_last4,
+          e.phone_number,
           e.hire_date::text AS hire_date,
           e.termination_date::text AS termination_date,
           e.employment_status,
@@ -178,6 +184,13 @@ export class PersonnelMasterReadRepository {
             p.is_managerial
           FROM ops.position p
           WHERE p.company_id = ANY($1::uuid[])
+            AND p.position_code IN (
+              'STORE_MANAGER',
+              'ASSISTANT_MANAGER',
+              'SENIOR_SALES_CONSULTANT',
+              'SALES_ASSOCIATE',
+              'CASHIER'
+            )
           ORDER BY p.is_managerial DESC, p.position_name ASC, p.position_code ASC
         `,
         [input.actorCompanyIds],
