@@ -1,8 +1,9 @@
-import { sendFormData, sendJson } from '../../lib/api'
+import { fetchBlob, sendJson } from '../../lib/api'
 import {
   fetchOpenApiJson,
   sendOpenApiJson,
   type ApiGetResponse,
+  type ApiMutationBody,
   type ApiMutationResponse,
 } from '../../lib/openapi-client'
 
@@ -12,6 +13,10 @@ export type ImportPayloadTemplate =
   ApiGetResponse<'/api/integrations/import-payload-templates'>
 
 export type IntegrationLookups = ApiGetResponse<'/api/integrations/lookups'>
+
+export async function downloadPersonnelMasterData() {
+  return fetchBlob('/integrations/personnel-master.xlsx')
+}
 
 export type PowerBiExportUploadResponse = {
   command: {
@@ -95,6 +100,8 @@ export type StoreMasterItem = StoreMasterList['items'][number]
 
 export type StoreMasterLookups = ApiGetResponse<'/api/integrations/store-master-lookups'>
 export type StoreMasterUpdateResponse = ApiMutationResponse<'/api/integrations/store-master/{storeId}', 'PATCH'>
+export type StoreMasterCreateInput = ApiMutationBody<'/api/integrations/store-master', 'POST'>
+export type StoreMasterCreateResponse = ApiMutationResponse<'/api/integrations/store-master', 'POST'>
 
 export type PersonnelMasterList = ApiGetResponse<'/api/integrations/personnel-master'>
 export type PersonnelMasterItem = PersonnelMasterList['items'][number]
@@ -102,6 +109,12 @@ export type PersonnelMasterItem = PersonnelMasterList['items'][number]
 export type PersonnelMasterLookups =
   ApiGetResponse<'/api/integrations/personnel-master-lookups'>
 export type PersonnelMasterUpdateResponse = ApiMutationResponse<'/api/integrations/personnel-master/{employeeId}', 'PATCH'>
+export type PersonnelMasterCreateInput = ApiMutationBody<'/api/integrations/personnel-master', 'POST'>
+export type PersonnelMasterCreateResponse = ApiMutationResponse<'/api/integrations/personnel-master', 'POST'>
+export type PersonnelMasterTerminateInput = ApiMutationBody<
+  '/api/integrations/personnel-master/{employeeId}/terminate',
+  'PATCH'
+>
 
 export type MasterDataQualityIssues =
   ApiGetResponse<'/api/integrations/master-data-quality/issues'>
@@ -167,7 +180,7 @@ export type ImportBatchAudit =
   ApiGetResponse<'/api/integrations/import-batches/{batchId}/audit'>
 export type AuditEvent = ImportBatchAudit['items'][number]
 
-type CommandResponse<T> = {
+export type CommandResponse<T> = {
   command: {
     status: string
     message: string
@@ -175,7 +188,7 @@ type CommandResponse<T> = {
   data: T
 }
 
-type CreateImportBatchBody = {
+export type CreateImportBatchBody = {
   sourceCode: string
   entityType: string
   fileReference: string
@@ -336,6 +349,15 @@ export async function getStoreMasterLookups() {
   return fetchOpenApiJson('/api/integrations/store-master-lookups')
 }
 
+export async function createStoreMasterData(
+  input: StoreMasterCreateInput,
+): Promise<StoreMasterCreateResponse> {
+  return sendOpenApiJson('/api/integrations/store-master', {
+    method: 'POST',
+    body: input,
+  })
+}
+
 export async function getMasterDataQualityIssues(input?: {
   q?: string
   entityType?: 'store' | 'personnel' | 'assignment' | 'import'
@@ -435,12 +457,33 @@ export async function getPersonnelMasterLookups() {
   return fetchOpenApiJson('/api/integrations/personnel-master-lookups')
 }
 
+export async function createPersonnelMasterData(
+  input: PersonnelMasterCreateInput,
+): Promise<PersonnelMasterCreateResponse> {
+  return sendOpenApiJson('/api/integrations/personnel-master', {
+    method: 'POST',
+    body: input,
+  })
+}
+
+export async function terminatePersonnelMasterData(
+  employeeId: string,
+  input: PersonnelMasterTerminateInput,
+) {
+  return sendOpenApiJson('/api/integrations/personnel-master/{employeeId}/terminate', {
+    method: 'PATCH',
+    params: { employeeId },
+    body: input,
+  })
+}
+
 export async function updatePersonnelMasterData(input: {
   employeeId: string
   firstName: string
   lastName: string
   externalEmployeeRef?: string
-  employmentStatus: 'active' | 'inactive' | 'terminated'
+  phoneNumber?: string
+  employmentStatus: 'active' | 'inactive'
   employmentType: 'full_time' | 'part_time' | 'temporary'
   hireDate: string
   storeId: string
@@ -448,9 +491,6 @@ export async function updatePersonnelMasterData(input: {
   assignmentStartDate?: string
   expectedUpdatedAt?: string
 }): Promise<PersonnelMasterUpdateResponse> {
-  if (input.employmentStatus === 'terminated') {
-    throw new Error('Terminated personnel records require the dedicated termination command.')
-  }
   return sendOpenApiJson('/api/integrations/personnel-master/{employeeId}', {
     method: 'PATCH',
     params: { employeeId: input.employeeId },
@@ -458,6 +498,7 @@ export async function updatePersonnelMasterData(input: {
       firstName: input.firstName,
       lastName: input.lastName,
       ...(input.externalEmployeeRef !== undefined ? { externalEmployeeRef: input.externalEmployeeRef } : {}),
+      ...(input.phoneNumber !== undefined ? { phoneNumber: input.phoneNumber } : {}),
       employmentStatus: input.employmentStatus,
       employmentType: input.employmentType,
       hireDate: input.hireDate,
@@ -532,66 +573,4 @@ export async function promoteMasterDataBootstrapPersonnel(batchId: string) {
   )
 }
 
-export async function getImportPayloadTemplate(input?: {
-  entityType?: string
-  sourceSystem?: string
-}) {
-  const params = new URLSearchParams()
-  if (input?.entityType) {
-    params.set('entityType', input.entityType)
-  }
-  if (input?.sourceSystem) {
-    params.set('sourceSystem', input.sourceSystem)
-  }
-
-  return fetchOpenApiJson('/api/integrations/import-payload-templates', {
-    query: params,
-  })
-}
-
-export async function createImportBatch(input: CreateImportBatchBody) {
-  return sendJson<CommandResponse<{ batch: { batchId: string; status: string } }>>(
-    '/integrations/import-batches',
-    {
-      method: 'POST',
-      body: input,
-    },
-  )
-}
-
-export async function uploadPowerBiExport(input: {
-  sourceCode: string
-  periodMonth?: string
-  periodType?: 'daily' | 'weekly' | 'monthly' | 'custom'
-  periodStart?: string
-  periodEnd?: string
-  personnelFile?: File | null
-  storeFile?: File | null
-}) {
-  const formData = new FormData()
-  formData.set('sourceCode', input.sourceCode)
-  if (input.periodMonth) {
-    formData.set('periodMonth', input.periodMonth)
-  }
-  if (input.periodType) {
-    formData.set('periodType', input.periodType)
-  }
-  if (input.periodStart) {
-    formData.set('periodStart', input.periodStart)
-  }
-  if (input.periodEnd) {
-    formData.set('periodEnd', input.periodEnd)
-  }
-
-  if (input.personnelFile) {
-    formData.set('personnelFile', input.personnelFile)
-  }
-  if (input.storeFile) {
-    formData.set('storeFile', input.storeFile)
-  }
-
-  return sendFormData<PowerBiExportUploadResponse>('/integrations/power-bi-export-upload', {
-    method: 'POST',
-    body: formData,
-  })
-}
+export { createImportBatch, getImportPayloadTemplate, uploadPowerBiExport } from './import-api'

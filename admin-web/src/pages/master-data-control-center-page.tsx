@@ -425,12 +425,18 @@ export function MasterDataControlCenterPage() {
         personnelEntries.map(([employeeId, patch]) => {
           const record = personnelById.get(employeeId)!
           const effective = mergePersonnelPatch(record, patch)
+          const employmentStatus = normalizePersonnelStatus(effective.employmentStatus)
+          if (employmentStatus === 'terminated') {
+            return Promise.reject(
+              new Error('Personel çıkışı, erişimleri de kapatan Personel ekranından yapılmalıdır.'),
+            )
+          }
           return updatePersonnelMasterData({
             employeeId,
             firstName: effective.firstName,
             lastName: effective.lastName,
             externalEmployeeRef: effective.externalEmployeeRef,
-            employmentStatus: normalizePersonnelStatus(effective.employmentStatus),
+            employmentStatus,
             employmentType: normalizeEmploymentType(effective.employmentType),
             hireDate: dateInputValue(effective.hireDate),
             storeId: effective.storeId,

@@ -87,7 +87,12 @@ export function ChecklistWorkflowCommandOverlay(input: {
   const openChecklistRow = useCallback((row: ChecklistCoverageRow, storeId: string) => {
     const rowKey = getCoverageRowKeyFromRow(row)
     if (row.active) {
-      dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
+      dispatchPageState({
+        type: 'openSession',
+        rowKey,
+        responseValues: {},
+        ...hydrateActiveResponseDrafts(row.active),
+      })
       return
     }
     hydrateActiveResponseDrafts(undefined)

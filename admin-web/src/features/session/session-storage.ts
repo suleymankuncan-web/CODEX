@@ -5,6 +5,7 @@ export type SessionState = {
   mode: SessionMode
   browserSessionTransport: BrowserSessionTransport
   mockUserId: string
+  mockEmployeeId: string
   mockRoleCodes: string
   mockCompanyIds: string
   mockStoreIds: string
@@ -34,6 +35,7 @@ export const defaultSession: SessionState = {
   mode: resolveSessionMode(import.meta.env.VITE_AUTH_MODE),
   browserSessionTransport: DEFAULT_BROWSER_SESSION_TRANSPORT,
   mockUserId: import.meta.env.VITE_USER_ID ?? '80000000-0000-0000-0000-000000000001',
+  mockEmployeeId: import.meta.env.VITE_EMPLOYEE_ID ?? '',
   mockRoleCodes:
     import.meta.env.VITE_ROLE_CODES ??
     'SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR',
@@ -60,14 +62,14 @@ export function readClientSession(): SessionState {
 
     if (isJwtExpired(bearerToken)) {
       clearClientBearerSession()
-      return normalizeSession({
+      return normalizePersistedSession({
         ...defaultSession,
         ...persisted,
         bearerToken: '',
       })
     }
 
-    return normalizeSession({
+    return normalizePersistedSession({
       ...defaultSession,
       ...persisted,
       bearerToken,
@@ -75,6 +77,32 @@ export function readClientSession(): SessionState {
   } catch {
     return defaultSession
   }
+}
+
+function normalizePersistedSession(session: Partial<SessionState>): SessionState {
+  const normalized = normalizeSession(session)
+
+  // A local mock build must remain usable after a previous bearer session was
+  // persisted without a token (for example after sign-out or token expiry).
+  // Keep a valid bearer session intact, but recover the configured mock role
+  // instead of leaving the app in a token-missing state.
+  if (
+    import.meta.env.DEV &&
+    defaultSession.mode === 'mock' &&
+    normalized.mode === 'bearer' &&
+    normalized.browserSessionTransport === 'bearer' &&
+    !normalized.bearerToken
+  ) {
+    return normalizeSession({
+      ...defaultSession,
+      mode: 'mock',
+      browserSessionTransport: defaultSession.browserSessionTransport,
+      bearerToken: '',
+      browserSessionKey: '',
+    })
+  }
+
+  return normalized
 }
 
 export function clearClientBearerSession() {
@@ -138,6 +166,7 @@ export function buildSessionHeaders(session: SessionState): Record<string, strin
     'x-company-ids': session.mockCompanyIds,
   }
 
+  appendHeader(headers, 'x-employee-id', session.mockEmployeeId)
   appendHeader(headers, 'x-store-ids', session.mockStoreIds)
   appendHeader(headers, 'x-read-store-ids', session.mockReadStoreIds)
   appendHeader(headers, 'x-assigned-store-ids', session.mockAssignedStoreIds)
@@ -223,6 +252,7 @@ export function normalizeSession(session: Partial<SessionState>): SessionState {
     mode: resolveSessionMode(session.mode),
     browserSessionTransport: resolveSessionBrowserTransport(session.browserSessionTransport),
     mockUserId: session.mockUserId?.trim() || defaultSession.mockUserId,
+    mockEmployeeId: session.mockEmployeeId?.trim() ?? defaultSession.mockEmployeeId,
     mockRoleCodes: session.mockRoleCodes?.trim() || defaultSession.mockRoleCodes,
     mockCompanyIds: session.mockCompanyIds?.trim() || defaultSession.mockCompanyIds,
     mockStoreIds: session.mockStoreIds?.trim() ?? defaultSession.mockStoreIds,

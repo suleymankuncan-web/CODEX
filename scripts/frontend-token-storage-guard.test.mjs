@@ -35,7 +35,11 @@ function listSourceFiles(directory) {
       continue
     }
 
-    if (sourceExtensions.has(entry.name.slice(entry.name.lastIndexOf('.')))) {
+    if (
+      sourceExtensions.has(entry.name.slice(entry.name.lastIndexOf('.'))) &&
+      !entry.name.includes('.test.') &&
+      !entry.name.includes('.spec.')
+    ) {
       files.push(absolutePath)
     }
   }

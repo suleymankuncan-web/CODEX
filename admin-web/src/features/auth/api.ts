@@ -50,6 +50,10 @@ export type CreateActionStoreAssignmentInput = ApiMutationBody<
   '/api/auth/action-store-assignments',
   'POST'
 >
+export type CreateActionStoreAssignmentsBatchInput = ApiMutationBody<
+  '/api/auth/action-store-assignments/batch',
+  'POST'
+>
 type AuthAuditResponse = ApiGetResponse<'/api/auth/users/{userId}/audit'>
 export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
@@ -271,6 +275,13 @@ export async function createRoleAssignment(
 
 export async function createActionStoreAssignment(input: CreateActionStoreAssignmentInput) {
   return sendOpenApiJson('/api/auth/action-store-assignments', {
+    method: 'POST',
+    body: input,
+  })
+}
+
+export async function createActionStoreAssignmentsBatch(input: CreateActionStoreAssignmentsBatchInput) {
+  return sendOpenApiJson('/api/auth/action-store-assignments/batch', {
     method: 'POST',
     body: input,
   })

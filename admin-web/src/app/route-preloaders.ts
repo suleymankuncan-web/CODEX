@@ -32,7 +32,7 @@ const routePreloaders: Array<{
   { match: (pathname) => pathname.startsWith('/admin/auth/users/'), preload: () => import('../pages/AuthUserAuditPage') },
   { match: (pathname) => pathname.startsWith('/admin/auth/role-assignments/'), preload: () => import('../pages/AuthAssignmentAuditPage') },
   { match: (pathname) => pathname.startsWith('/admin/auth/action-store-assignments/'), preload: () => import('../pages/AuthActionStoreAssignmentAuditPage') },
-  { match: (pathname) => pathname === '/admin/auth', preload: () => import('../pages/AuthDashboardPage') },
+  { match: (pathname) => pathname === '/admin/auth', preload: () => import('../pages/AuthManagementPage') },
   { match: (pathname) => pathname.startsWith('/admin/audit/users/'), preload: () => import('../pages/AuthUserAuditPage') },
   { match: (pathname) => pathname.startsWith('/admin/audit/role-assignments/'), preload: () => import('../pages/AuthAssignmentAuditPage') },
   { match: (pathname) => pathname.startsWith('/admin/audit/action-store-assignments/'), preload: () => import('../pages/AuthActionStoreAssignmentAuditPage') },

@@ -11,6 +11,7 @@ const exactValues = {
 export const blockedLocalBuildVariables = [
   'VITE_BEARER_TOKEN',
   'VITE_USER_ID',
+  'VITE_EMPLOYEE_ID',
   'VITE_ROLE_CODES',
   'VITE_COMPANY_IDS',
   'VITE_ASSIGNED_STORE_IDS',

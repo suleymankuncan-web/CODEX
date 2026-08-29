@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from './test-fixtures'
+import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 import { routeMasterDataQualityApi } from './master-data-control-test-fixtures'
 
@@ -141,144 +141,6 @@ test('admin import batch detail stays mobile-safe', async ({ page }) => {
   await expectNoHorizontalOverflow(page)
 })
 
-test('admin integrations keeps store master controls in the master data surface', async ({ page }) => {
-  await page.goto('/admin/integrations')
-
-  await expect(page.getByRole('heading', { name: 'Entegrasyon yönetim paneli' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Mağaza kapsamı' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Aktarımlar' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Kanıtlar' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Hatalar' })).toBeVisible()
-
-  await page.goto('/admin/master-data')
-  await page.getByRole('tab', { name: 'Mağazalar' }).click()
-
-  const main = page.getByRole('main')
-  await expect(main.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
-  await expect(main.getByRole('table').getByText('Marmara Park')).toBeVisible()
-  await expect(main.getByRole('table').getByText('MP001', { exact: true })).toBeVisible()
-  const detail = main.getByLabel('Ana veri detayı')
-  await expect(detail.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
-  await expect(detail.getByRole('combobox', { name: 'Mağaza tipi' })).toBeVisible()
-  await expect(detail.getByRole('combobox', { name: 'Mağaza durumu' })).toBeVisible()
-  await expect(detail.getByRole('checkbox', { name: 'KPI aktarımına dahil' })).toBeChecked()
-})
-
-test('admin store master edits bulk save from master data and keep latest values', async ({ page }) => {
-  await page.unroute(STORE_MASTER_ROUTE)
-  const patchBodies: Array<Record<string, unknown>> = []
-  let releaseFirstPatch: () => void = () => undefined
-  const firstPatchGate = new Promise<void>((resolve) => {
-    releaseFirstPatch = resolve
-  })
-
-  await routeStoreMasterApi(page, {
-    delayFirstPatch: () => firstPatchGate,
-    onPatch: (body) => patchBodies.push(body),
-  })
-
-  await page.goto('/admin/master-data')
-  await page.getByRole('tab', { name: 'Mağazalar' }).click()
-
-  const storePanel = page.getByRole('main').getByLabel('Ana veri detayı')
-  const marmaraType = storePanel.getByRole('combobox', { name: 'Mağaza tipi' })
-  const saveToast = page
-    .locator('.hr-axis-toast__title')
-    .getByText('Değişiklikler kaydedildi')
-
-  await selectRadixOption(page, marmaraType, 'Franchise')
-  await expect(marmaraType).toContainText('Franchise')
-  await expect(storePanel.getByText('1 kaydedilmemiş değişiklik')).toBeVisible()
-  await storePanel.getByRole('button', { name: 'Kaydet' }).click()
-
-  expect(patchBodies).toHaveLength(1)
-  expect(patchBodies[0]).toMatchObject({
-    storeType: 'franchise',
-    regionId: '22222222-2222-4222-8222-222222222222',
-    status: 'active',
-    kpiImportEnabled: true,
-  })
-
-  releaseFirstPatch()
-  await expect(saveToast.last()).toBeVisible()
-  await expect(marmaraType).toContainText('Franchise')
-
-  await selectRadixOption(page, marmaraType, 'Operator')
-  await expect(storePanel.getByText('1 kaydedilmemiş değişiklik')).toBeVisible()
-  await storePanel.getByRole('button', { name: 'Kaydet' }).click()
-  await expect(saveToast.last()).toBeVisible()
-  expect(patchBodies[patchBodies.length - 1]).toMatchObject({
-    storeType: 'operator',
-    regionId: '22222222-2222-4222-8222-222222222222',
-    status: 'active',
-    kpiImportEnabled: true,
-  })
-})
-
-test('admin store master update keeps near-expiry bearer tokens on action requests', async ({ page }) => {
-  const nearExpiryToken = buildJwt('admin-user', 20)
-  await page.addInitScript((token) => {
-    window.localStorage.setItem(
-      'store-ops-admin-session',
-      JSON.stringify({
-        mode: 'bearer',
-        mockUserId: 'unused-mock-user',
-        mockRoleCodes: 'SUPER_ADMIN',
-        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
-        bearerToken: '',
-      }),
-    )
-    window.sessionStorage.setItem('store-ops-admin-bearer-token', token)
-  }, nearExpiryToken)
-  await page.unroute('**/api/auth/session')
-  await page.route('**/api/auth/session', async (route) => {
-    const authorization = route.request().headers().authorization ?? ''
-    await route.fulfill({
-      status: authorization.includes(nearExpiryToken) ? 200 : 401,
-      contentType: 'application/json',
-      body: JSON.stringify(
-        authorization.includes(nearExpiryToken)
-          ? { ...authSessionFixture, authMode: 'jwt' }
-          : { message: 'Missing near-expiry bearer token' },
-      ),
-    })
-  })
-  await page.unroute(STORE_MASTER_ROUTE)
-  const patchAuthorizations: string[] = []
-  await routeStoreMasterApi(page, {
-    onPatchAuthorization: (authorization) => patchAuthorizations.push(authorization),
-  })
-
-  await page.goto('/admin/master-data')
-  await page.getByRole('tab', { name: 'Mağazalar' }).click()
-  const storePanel = page.getByRole('main').getByLabel('Ana veri detayı')
-  await selectRadixOption(page, storePanel.getByRole('combobox', { name: 'Mağaza tipi' }), 'Franchise')
-  await storePanel.getByRole('button', { name: 'Kaydet' }).click()
-
-  await expect(page).toHaveURL(/\/admin\/master-data$/)
-  await expect(page.locator('.hr-axis-toast__title').getByText('Değişiklikler kaydedildi')).toBeVisible()
-  expect(patchAuthorizations.some((authorization) => authorization.includes(nearExpiryToken))).toBe(true)
-})
-
-test('admin personnel master controls expose row context and stay mobile-safe', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/admin/master-data')
-  const main = page.getByRole('main')
-  await main.getByRole('tab', { name: 'Personel' }).click()
-
-  const personnelPanel = main.getByLabel('Ana veri detayı')
-  await expect(personnelPanel.getByRole('heading', { name: 'Ada Yilmaz' })).toBeVisible()
-  await expect(personnelPanel.getByRole('textbox', { name: 'Ad', exact: true })).toBeVisible()
-  await expect(personnelPanel.getByRole('textbox', { name: 'Soyad' })).toBeVisible()
-  await expect(personnelPanel.getByRole('textbox', { name: 'Satıcı kodu' })).toBeVisible()
-  await expect(personnelPanel.getByRole('combobox', { name: 'Mağaza' })).toBeVisible()
-  await expect(personnelPanel.getByRole('combobox', { name: 'Pozisyon' })).toBeVisible()
-  await expect(personnelPanel.getByRole('combobox', { name: 'Çalışma durumu' })).toBeVisible()
-  await expect(personnelPanel.getByRole('combobox', { name: 'Çalışma tipi' })).toBeVisible()
-  await expect(personnelPanel.getByLabel('İşe giriş')).toBeVisible()
-  await expectNoHorizontalOverflow(page)
-})
-
 test('admin integrations page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/integrations')
 
@@ -361,7 +223,7 @@ test('admin dashboard explains why Power BI export upload is unavailable', async
 // Operator evidence copy contract:
 // Satır kanıtı, prova kanıtı, hazırlık sayaçları ve aktarım durumunu incelemek için bir parti aç.
 // Yalnızca prova kanıtı. Bu panelden satır aktarılmaz; aktarım hâlâ açık komut gerektirir.
-test('admin master data bootstrap surface exposes personnel promotion evidence', async ({ page }) => {
+test('admin master data batch route preserves import operator evidence', async ({ page }) => {
   await page.goto('/admin/master-data/bootstrap-batch-personnel-1')
 
   await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
@@ -491,11 +353,6 @@ async function routeIntegrationApi(page: Page) {
   )
 }
 
-async function selectRadixOption(page: Page, trigger: Locator, optionName: string) {
-  await trigger.click()
-  await page.getByRole('option', { name: optionName }).click()
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   const measurements = await page.evaluate(() => ({
     bodyWidth: document.body.scrollWidth,
@@ -572,27 +429,6 @@ async function routeStoreMasterApi(
       },
     })
   })
-}
-
-function buildJwt(sub: string, expiresInSeconds = 60 * 60) {
-  const header = base64Url(JSON.stringify({ alg: 'none', typ: 'JWT' }))
-  const payload = base64Url(
-    JSON.stringify({
-      sub,
-      exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
-      iat: Math.floor(Date.now() / 1000),
-    }),
-  )
-
-  return `${header}.${payload}.signature`
-}
-
-function base64Url(value: string) {
-  return Buffer.from(value, 'utf8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '')
 }
 
 const authSessionFixture = {

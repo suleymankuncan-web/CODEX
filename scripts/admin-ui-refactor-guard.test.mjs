@@ -17,7 +17,7 @@ const pageFileByComponent = new Map([
   ['AuthActionStoreAssignmentAuditPage', 'admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx'],
   ['AuthAssignmentAuditPage', 'admin-web/src/pages/AuthAssignmentAuditPage.tsx'],
   ['AuthCatalogPage', 'admin-web/src/pages/AuthCatalogPage.tsx'],
-  ['AuthDashboardPage', 'admin-web/src/pages/AuthDashboardPage.tsx'],
+  ['AuthManagementPage', 'admin-web/src/pages/AuthManagementPage.tsx'],
   ['AuthUserAuditPage', 'admin-web/src/pages/AuthUserAuditPage.tsx'],
   ['CompetitionDashboardPage', 'admin-web/src/pages/CompetitionDashboardPage.tsx'],
   ['ImportBatchDetailPage', 'admin-web/src/pages/ImportBatchDetailPage.tsx'],
@@ -84,12 +84,9 @@ const migratedAdminSurfaces = [
   },
   {
     id: 'auth-audit',
-    pageFile: 'admin-web/src/pages/AuthDashboardPage.tsx',
+    pageFile: 'admin-web/src/pages/AuthManagementPage.tsx',
     checkedFiles: [
-      'admin-web/src/pages/AuthDashboardPage.tsx',
-      'admin-web/src/features/auth/AuthDashboardSections.tsx',
-      'admin-web/src/features/auth/PilotUserBindingPanel.tsx',
-      'admin-web/src/features/auth/RolePermissionPreviewPanel.tsx',
+      'admin-web/src/pages/AuthManagementPage.tsx',
       'admin-web/src/pages/AuthCatalogPage.tsx',
       'admin-web/src/pages/AuthUserAuditPage.tsx',
       'admin-web/src/pages/AuthAssignmentAuditPage.tsx',

@@ -452,31 +452,17 @@ test('audit center switches chrome to English copy and persists locale', async (
   await expect(page.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
 })
 
-test('master data control center renders import batches when updatedAt is absent', async ({ page }) => {
-  const pageErrors: string[] = []
-  page.on('pageerror', (error) => {
-    pageErrors.push(error.message)
-  })
-
+test('master data route exposes the current store and personnel workspace', async ({ page }) => {
   await page.goto('/admin/master-data')
 
-  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
-  await page.getByRole('tab', { name: /İçe Aktarım/ }).click()
-  await expect(page.getByRole('heading', { name: 'Accepted personnel baseline' })).toBeVisible()
-  expect(pageErrors).toEqual([])
-})
-
-test('master data page keeps control center copy stable without legacy bootstrap copy', async ({ page }) => {
-  await page.goto('/admin/master-data')
-
-  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Düzeltilecekler/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /İçe Aktarım/ })).toBeVisible()
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Mağaza ve personel' })).toBeVisible()
+  await expect(main.getByRole('tab', { name: 'Mağazalar' })).toBeVisible()
+  await expect(main.getByRole('tab', { name: 'Personel' })).toBeVisible()
   await expect(page.getByText('Master data bootstrap')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
-
 })
 
 test('admin checklist templates page switches chrome to English copy and persists locale', async ({ page }) => {
