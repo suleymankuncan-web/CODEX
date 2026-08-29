@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
+import { readFileSync } from "node:fs"; import { resolve } from "node:path";
+import { expectPersonnelIdentityOpenApi } from "./openapi-personnel-identity.expectation";
 type OpenApiDocument = {
   openapi: string;
   security?: Array<Record<string, string[]>>;
@@ -1265,6 +1264,7 @@ describe("OpenAPI baseline", () => {
         meta: expect.any(Object),
       }),
     );
+    expectPersonnelIdentityOpenApi(document, expect);
 
     const masterDataBatchesResponse =
       document.paths["/api/integrations/master-data-bootstrap/batches"].get

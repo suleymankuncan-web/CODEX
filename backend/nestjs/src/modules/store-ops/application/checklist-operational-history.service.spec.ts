@@ -35,7 +35,14 @@ describe("ChecklistOperationalHistoryService", () => {
     const repository = {
       read: jest.fn().mockResolvedValue({
         store: { id: storeId, name: "Pilot Store", city: null, district: null },
-        summary: { eventCount: 21, completedVisitCount: 0, assignedTaskCount: 21, openTaskCount: 2 },
+        summary: {
+          eventCount: 21,
+          completedAuditCount: 0,
+          completedVisitCount: 0,
+          assignedTaskCount: 21,
+          resolvedTaskCount: 19,
+          openTaskCount: 2,
+        },
         items,
       }),
     };

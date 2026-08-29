@@ -59,6 +59,14 @@ describe("Checklist Command OpenAPI", () => {
     ]));
     const response = document.components?.schemas?.ChecklistOperationalHistoryResponse as any;
     const event = document.components?.schemas?.ChecklistOperationalHistoryEvent as any;
+    expect(event.properties.kind.enum).toContain("visit_completed");
+    expect(response.properties.data.properties.summary.required).toEqual(expect.arrayContaining([
+      "completedAuditCount",
+      "completedVisitCount",
+      "assignedTaskCount",
+      "resolvedTaskCount",
+      "openTaskCount",
+    ]));
     expect(response.properties.data.properties.page.properties).toEqual(expect.objectContaining({ nextCursor: expect.anything(), hasMore: expect.anything() }));
     expect(event.properties.actorSnapshot.properties.identityStatus.enum).toEqual(["captured", "historical_projection", "unknown"]);
     expect(event.properties).not.toHaveProperty("sourceId");

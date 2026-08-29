@@ -1,4 +1,4 @@
-import { IsIn, IsISO8601, IsOptional, IsString, Length } from "class-validator";
+import { IsIn, IsISO8601, IsOptional, IsString, Length, Matches } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class UpdatePersonnelMasterDto {
@@ -15,8 +15,13 @@ export class UpdatePersonnelMasterDto {
   @Length(1, 80)
   externalEmployeeRef?: string;
 
-  @IsIn(["active", "inactive", "terminated"])
-  employmentStatus!: "active" | "inactive" | "terminated";
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9+() -]{10,20}$/)
+  phoneNumber?: string;
+
+  @IsIn(["active", "inactive"])
+  employmentStatus!: "active" | "inactive";
 
   @IsIn(["full_time", "part_time", "temporary"])
   employmentType!: "full_time" | "part_time" | "temporary";

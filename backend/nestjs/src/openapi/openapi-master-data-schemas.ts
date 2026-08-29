@@ -132,6 +132,15 @@ export function applyMasterDataResponseSchemas(paths: Record<string, unknown>) {
 
   setJsonResponseSchema(
     paths,
+    "/api/integrations/store-master",
+    "post",
+    "Created store master data for the admin master-data surface.",
+    "StoreMasterCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    paths,
     "/api/integrations/store-master/{storeId}",
     "patch",
     "Updated store master data for the admin master-data surface.",
@@ -156,9 +165,26 @@ export function applyMasterDataResponseSchemas(paths: Record<string, unknown>) {
 
   setJsonResponseSchema(
     paths,
+    "/api/integrations/personnel-master",
+    "post",
+    "Created personnel master data for the admin master-data surface.",
+    "PersonnelMasterCommandResponse",
+    "201",
+  );
+
+  setJsonResponseSchema(
+    paths,
     "/api/integrations/personnel-master/{employeeId}",
     "patch",
     "Updated personnel master data for the admin master-data surface.",
+    "PersonnelMasterCommandResponse",
+  );
+
+  setJsonResponseSchema(
+    paths,
+    "/api/integrations/personnel-master/{employeeId}/terminate",
+    "patch",
+    "Personnel exit result with linked access closed.",
     "PersonnelMasterCommandResponse",
   );
 }

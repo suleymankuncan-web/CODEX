@@ -1,30 +1,41 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
-import { RequireRoles } from "../decorators/roles.decorator";
-import { RequireScope } from "../decorators/scope.decorator";
-import { AuthAdminService } from "../auth-admin.service";
-import { AuthAdminUserAccountService } from "../auth-admin-user-account.service";
-import { CreateActionStoreAssignmentDto } from "./dto/create-action-store-assignment.dto";
-import { CreatePilotUserBindingDto } from "./dto/create-pilot-user-binding.dto";
-import { CreateRoleAssignmentDto } from "./dto/create-role-assignment.dto";
-import { CreateUserAccountDto } from "./dto/create-user-account.dto";
-import { DeactivateUserAccountDto } from "./dto/deactivate-user-account.dto";
-import { GrantRolePermissionDto } from "./dto/grant-role-permission.dto";
-import { ListActionStoreAssignmentsQueryDto } from "./dto/list-action-store-assignments.query";
-import { ListRoleAssignmentAuditQueryDto } from "./dto/list-role-assignment-audit.query";
-import { ListRoleAssignmentsQueryDto } from "./dto/list-role-assignments.query";
-import { ListUserAccountsQueryDto } from "./dto/list-user-accounts.query";
-import { SearchAuthLookupQueryDto } from "./dto/search-auth-lookup.query";
-import { UpdateUserAccountDto } from "./dto/update-user-account.dto";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
+import { RequireRoles } from '../decorators/roles.decorator';
+import { RequireScope } from '../decorators/scope.decorator';
+import { AuthAdminService } from '../auth-admin.service';
+import { AuthAdminUserAccountService } from '../auth-admin-user-account.service';
+import { CreateActionStoreAssignmentDto } from './dto/create-action-store-assignment.dto';
+import { CreateActionStoreAssignmentsBatchDto } from './dto/create-action-store-assignments-batch.dto';
+import { CreatePilotUserBindingDto } from './dto/create-pilot-user-binding.dto';
+import { CreateRoleAssignmentDto } from './dto/create-role-assignment.dto';
+import { CreateUserAccountDto } from './dto/create-user-account.dto';
+import { DeactivateUserAccountDto } from './dto/deactivate-user-account.dto';
+import { GrantRolePermissionDto } from './dto/grant-role-permission.dto';
+import { ListActionStoreAssignmentsQueryDto } from './dto/list-action-store-assignments.query';
+import { ListRoleAssignmentAuditQueryDto } from './dto/list-role-assignment-audit.query';
+import { ListRoleAssignmentsQueryDto } from './dto/list-role-assignments.query';
+import { ListUserAccountsQueryDto } from './dto/list-user-accounts.query';
+import { SearchAuthLookupQueryDto } from './dto/search-auth-lookup.query';
+import { UpdateUserAccountDto } from './dto/update-user-account.dto';
 
-@Controller("auth")
-@RequireRoles("SUPER_ADMIN")
+@Controller('auth')
+@RequireRoles('SUPER_ADMIN')
 export class AuthAdminController {
   constructor(
     private readonly authAdminService: AuthAdminService,
     private readonly authAdminUserAccountService: AuthAdminUserAccountService,
   ) {}
 
-  @Post("role-assignments")
+  @Post('role-assignments')
   async createRoleAssignment(
     @Req()
     request: {
@@ -40,7 +51,7 @@ export class AuthAdminController {
     });
   }
 
-  @Get("role-assignments")
+  @Get('role-assignments')
   async listRoleAssignments(@Query() query: ListRoleAssignmentsQueryDto) {
     return this.authAdminService.listRoleAssignments({
       limit: query.limit,
@@ -52,9 +63,9 @@ export class AuthAdminController {
     });
   }
 
-  @Get("role-assignments/:assignmentId/audit")
+  @Get('role-assignments/:assignmentId/audit')
   async getRoleAssignmentAudit(
-    @Param("assignmentId") assignmentId: string,
+    @Param('assignmentId') assignmentId: string,
     @Query() query: ListRoleAssignmentAuditQueryDto,
   ) {
     return this.authAdminService.getRoleAssignmentAudit({
@@ -64,9 +75,9 @@ export class AuthAdminController {
     });
   }
 
-  @Patch("role-assignments/:assignmentId/deactivate")
+  @Patch('role-assignments/:assignmentId/deactivate')
   async deactivateRoleAssignment(
-    @Param("assignmentId") assignmentId: string,
+    @Param('assignmentId') assignmentId: string,
     @Req()
     request: {
       user: {
@@ -74,10 +85,13 @@ export class AuthAdminController {
       };
     },
   ) {
-    return this.authAdminService.deactivateRoleAssignment(assignmentId, request.user.userId);
+    return this.authAdminService.deactivateRoleAssignment(
+      assignmentId,
+      request.user.userId,
+    );
   }
 
-  @Post("action-store-assignments")
+  @Post('action-store-assignments')
   async createActionStoreAssignment(
     @Req()
     request: {
@@ -93,8 +107,21 @@ export class AuthAdminController {
     });
   }
 
-  @Get("action-store-assignments")
-  async listActionStoreAssignments(@Query() query: ListActionStoreAssignmentsQueryDto) {
+  @Post('action-store-assignments/batch')
+  async createActionStoreAssignmentsBatch(
+    @Req() request: { user: { userId: string } },
+    @Body() body: CreateActionStoreAssignmentsBatchDto,
+  ) {
+    return this.authAdminService.createActionStoreAssignmentsBatch({
+      ...body,
+      actorUserId: request.user.userId,
+    });
+  }
+
+  @Get('action-store-assignments')
+  async listActionStoreAssignments(
+    @Query() query: ListActionStoreAssignmentsQueryDto,
+  ) {
     return this.authAdminService.listActionStoreAssignments({
       limit: query.limit,
       offset: query.offset,
@@ -104,9 +131,9 @@ export class AuthAdminController {
     });
   }
 
-  @Get("action-store-assignments/:assignmentId/audit")
+  @Get('action-store-assignments/:assignmentId/audit')
   async getActionStoreAssignmentAudit(
-    @Param("assignmentId") assignmentId: string,
+    @Param('assignmentId') assignmentId: string,
     @Query() query: ListRoleAssignmentAuditQueryDto,
   ) {
     return this.authAdminService.getActionStoreAssignmentAudit({
@@ -116,9 +143,9 @@ export class AuthAdminController {
     });
   }
 
-  @Patch("action-store-assignments/:assignmentId/deactivate")
+  @Patch('action-store-assignments/:assignmentId/deactivate')
   async deactivateActionStoreAssignment(
-    @Param("assignmentId") assignmentId: string,
+    @Param('assignmentId') assignmentId: string,
     @Req()
     request: {
       user: {
@@ -132,7 +159,7 @@ export class AuthAdminController {
     );
   }
 
-  @Post("users")
+  @Post('users')
   async createUserAccount(
     @Req()
     request: {
@@ -148,9 +175,9 @@ export class AuthAdminController {
     });
   }
 
-  @Post("pilot-user-bindings")
-  @RequireScope("company")
-  @RequireRoles("SUPER_ADMIN", "HR_ADMIN")
+  @Post('pilot-user-bindings')
+  @RequireScope('company')
+  @RequireRoles('SUPER_ADMIN', 'HR_ADMIN')
   async createPilotUserBinding(
     @Req()
     request: {
@@ -174,7 +201,7 @@ export class AuthAdminController {
     });
   }
 
-  @Get("users")
+  @Get('users')
   async listUserAccounts(@Query() query: ListUserAccountsQueryDto) {
     return this.authAdminService.listUserAccounts({
       limit: query.limit,
@@ -185,9 +212,9 @@ export class AuthAdminController {
     });
   }
 
-  @Get("users/:userId/audit")
+  @Get('users/:userId/audit')
   async getUserAccountAudit(
-    @Param("userId") userId: string,
+    @Param('userId') userId: string,
     @Query() query: ListRoleAssignmentAuditQueryDto,
   ) {
     return this.authAdminService.getUserAccountAudit({
@@ -197,9 +224,9 @@ export class AuthAdminController {
     });
   }
 
-  @Patch("users/:userId")
+  @Patch('users/:userId')
   async updateUserAccount(
-    @Param("userId") userId: string,
+    @Param('userId') userId: string,
     @Req()
     request: {
       user: {
@@ -217,9 +244,9 @@ export class AuthAdminController {
     });
   }
 
-  @Patch("users/:userId/deactivate")
+  @Patch('users/:userId/deactivate')
   async deactivateUserAccount(
-    @Param("userId") userId: string,
+    @Param('userId') userId: string,
     @Req()
     request: {
       user: {
@@ -228,12 +255,16 @@ export class AuthAdminController {
     },
     @Body() body?: DeactivateUserAccountDto,
   ) {
-    return this.authAdminService.deactivateUserAccount(userId, request.user.userId, body?.reason);
+    return this.authAdminService.deactivateUserAccount(
+      userId,
+      request.user.userId,
+      body?.reason,
+    );
   }
 
-  @Patch("users/:userId/reactivate")
+  @Patch('users/:userId/reactivate')
   async reactivateUserAccount(
-    @Param("userId") userId: string,
+    @Param('userId') userId: string,
     @Req()
     request: {
       user: {
@@ -241,25 +272,28 @@ export class AuthAdminController {
       };
     },
   ) {
-    return this.authAdminService.reactivateUserAccount(userId, request.user.userId);
+    return this.authAdminService.reactivateUserAccount(
+      userId,
+      request.user.userId,
+    );
   }
 
-  @Get("roles")
+  @Get('roles')
   async listRoles() {
     return this.authAdminService.listRoles();
   }
 
-  @Get("permissions")
+  @Get('permissions')
   async listPermissions() {
     return this.authAdminService.listPermissions();
   }
 
-  @Get("lookups")
+  @Get('lookups')
   async getAuthLookups() {
     return this.authAdminService.getAuthLookups();
   }
 
-  @Get("lookups/users/search")
+  @Get('lookups/users/search')
   async searchAuthUsers(@Query() query: SearchAuthLookupQueryDto) {
     return this.authAdminService.searchAuthUsers({
       query: query.q,
@@ -267,7 +301,7 @@ export class AuthAdminController {
     });
   }
 
-  @Get("lookups/stores/search")
+  @Get('lookups/stores/search')
   async searchAuthStores(@Query() query: SearchAuthLookupQueryDto) {
     return this.authAdminService.searchAuthStores({
       query: query.q,
@@ -275,9 +309,9 @@ export class AuthAdminController {
     });
   }
 
-  @Post("roles/:roleId/permissions")
+  @Post('roles/:roleId/permissions')
   async grantRolePermission(
-    @Param("roleId") roleId: string,
+    @Param('roleId') roleId: string,
     @Req()
     request: {
       user: {
@@ -293,10 +327,10 @@ export class AuthAdminController {
     });
   }
 
-  @Delete("roles/:roleId/permissions/:permissionCode")
+  @Delete('roles/:roleId/permissions/:permissionCode')
   async revokeRolePermission(
-    @Param("roleId") roleId: string,
-    @Param("permissionCode") permissionCode: string,
+    @Param('roleId') roleId: string,
+    @Param('permissionCode') permissionCode: string,
     @Req()
     request: {
       user: {

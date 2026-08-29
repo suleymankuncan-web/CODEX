@@ -68,6 +68,8 @@ export class KpiImportStoreReadRepository {
         s.store_name ILIKE $${params.length}
         OR s.store_code ILIKE $${params.length}
         OR r.region_name ILIKE $${params.length}
+        OR region_manager.region_manager_name ILIKE $${params.length}
+        OR region_manager.region_manager_email ILIKE $${params.length}
       )`);
     }
 
@@ -82,12 +84,40 @@ export class KpiImportStoreReadRepository {
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const fromClause = `
+      FROM ops.store s
+      LEFT JOIN ops.region r
+        ON r.region_id = s.region_id
+      LEFT JOIN LATERAL (
+        SELECT
+          ua.user_id::text AS region_manager_user_id,
+          COALESCE(
+            NULLIF(BTRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
+            NULLIF(BTRIM(ua.username), ''),
+            ua.email
+          ) AS region_manager_name,
+          ua.email AS region_manager_email
+        FROM ops.user_role_assignment ura
+        INNER JOIN ops.role role
+          ON role.role_id = ura.role_id
+          AND role.role_code = 'REGION_MANAGER'
+        INNER JOIN ops.user_account ua
+          ON ua.user_id = ura.user_id
+          AND ua.is_active = TRUE
+        LEFT JOIN ops.employee e
+          ON e.employee_id = ua.employee_id
+        WHERE ura.region_id = s.region_id
+          AND ura.scope_type = 'region'
+          AND ura.start_at <= NOW()
+          AND (ura.end_at IS NULL OR ura.end_at > NOW())
+        ORDER BY ura.start_at DESC, ura.created_at DESC, ua.user_id ASC
+        LIMIT 1
+      ) region_manager ON TRUE
+    `;
     const totalResult = await this.databaseService.query<{ total_count: string }>(
       `
         SELECT COUNT(*)::text AS total_count
-        FROM ops.store s
-        LEFT JOIN ops.region r
-          ON r.region_id = s.region_id
+        ${fromClause}
         ${whereClause}
       `,
       params,
@@ -105,6 +135,8 @@ export class KpiImportStoreReadRepository {
       kpi_import_enabled: boolean;
       region_id: string | null;
       region_name: string | null;
+      region_manager_user_id: string | null;
+      region_manager_name: string | null;
       updated_at: string;
     }>(
       `
@@ -117,10 +149,10 @@ export class KpiImportStoreReadRepository {
           s.kpi_import_enabled,
           r.region_id::text AS region_id,
           r.region_name,
+          region_manager.region_manager_user_id,
+          region_manager.region_manager_name,
           s.updated_at::text AS updated_at
-        FROM ops.store s
-        LEFT JOIN ops.region r
-          ON r.region_id = s.region_id
+        ${fromClause}
         ${whereClause}
         ORDER BY s.store_name ASC, s.store_code ASC
         LIMIT $${params.length + 1}
@@ -150,6 +182,54 @@ export class KpiImportStoreReadRepository {
         WHERE r.status = 'active'
           AND r.company_id = ANY($1::uuid[])
         ORDER BY r.region_name ASC, r.region_code ASC
+      `,
+      [input.actorCompanyIds],
+    );
+
+    return result.rows;
+  }
+
+  async listStoreMasterRegionManagers(input: { actorCompanyIds: string[] }) {
+    const result = await this.databaseService.query<{
+      assignment_id: string;
+      user_id: string;
+      display_name: string;
+      email: string;
+      region_id: string;
+      region_code: string;
+      region_name: string;
+    }>(
+      `
+        SELECT
+          ura.user_role_assignment_id::text AS assignment_id,
+          ua.user_id::text AS user_id,
+          COALESCE(
+            NULLIF(BTRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
+            NULLIF(BTRIM(ua.username), ''),
+            ua.email
+          ) AS display_name,
+          ua.email,
+          r.region_id::text AS region_id,
+          r.region_code,
+          r.region_name
+        FROM ops.user_role_assignment ura
+        INNER JOIN ops.role role
+          ON role.role_id = ura.role_id
+          AND role.role_code = 'REGION_MANAGER'
+        INNER JOIN ops.user_account ua
+          ON ua.user_id = ura.user_id
+          AND ua.is_active = TRUE
+        LEFT JOIN ops.employee e
+          ON e.employee_id = ua.employee_id
+        INNER JOIN ops.region r
+          ON r.region_id = ura.region_id
+          AND r.status = 'active'
+        WHERE ura.scope_type = 'region'
+          AND ura.company_id = ANY($1::uuid[])
+          AND r.company_id = ANY($1::uuid[])
+          AND ura.start_at <= NOW()
+          AND (ura.end_at IS NULL OR ura.end_at > NOW())
+        ORDER BY display_name ASC, r.region_name ASC, ua.user_id ASC
       `,
       [input.actorCompanyIds],
     );

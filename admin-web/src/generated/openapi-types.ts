@@ -589,7 +589,7 @@ export type components = {
     }
     "ChecklistOperationalHistoryEvent": {
       "id": string
-      "kind": "checklist_completed" | "acknowledgement" | "task_assigned" | "task_resolved" | "visit_plan_revised"
+      "kind": "checklist_completed" | "visit_completed" | "acknowledgement" | "task_assigned" | "task_resolved" | "visit_plan_revised"
       "occurredAt": string
       "title": string
       "detail": string | null
@@ -614,8 +614,10 @@ export type components = {
         }
         "summary": {
           "eventCount": number
+          "completedAuditCount": number
           "completedVisitCount": number
           "assignedTaskCount": number
+          "resolvedTaskCount": number
           "openTaskCount": number
         }
         "items": components['schemas']["ChecklistOperationalHistoryEvent"][]
@@ -666,6 +668,7 @@ export type components = {
       "displayOrder": number
       "status": "planned" | "waiting" | "missed" | "completed"
       "checklistInstanceId": string | null
+      "visitCompletedAt": string | null
       "completedAt": string | null
     }
     "ChecklistVisitPlanPeriodItem": components['schemas']["ChecklistVisitPlanItem"] & ({
@@ -1531,7 +1534,7 @@ export type components = {
                 "sectionName": string
                 "itemNo": number
                 "itemText": string
-                "responseType": "score" | "yes_no" | "partial" | "text"
+                "responseType": "score" | "yes_no" | "partial" | "compliance" | "text"
                 "weight": number
                 "maxScore": number
                 "minScore"?: number
@@ -1558,6 +1561,7 @@ export type components = {
               }>
             "responses": Array<{
                 "templateItemId": string
+                "responseValue": string | null
                 "scoreValue": number
                 "commentText": string | null
               }>
@@ -1594,14 +1598,16 @@ export type components = {
       "data": {
         "personnelMaster": {
           "employeeId": string
-          "externalEmployeeRef": string | null
           "firstName": string
           "lastName": string
           "displayName": string
           "hireDate": string
-          "terminationDate": string | null
           "employmentStatus": string
           "employmentType": string
+          "externalEmployeeRef": string | null
+          "nationalIdLast4": string | null
+          "phoneNumber": string | null
+          "terminationDate": string | null
           "assignmentId": string | null
           "assignmentStartDate": string | null
           "storeId": string | null
@@ -1619,14 +1625,16 @@ export type components = {
     "PersonnelMasterListResponse": {
       "items": Array<{
           "employeeId": string
-          "externalEmployeeRef": string | null
           "firstName": string
           "lastName": string
           "displayName": string
           "hireDate": string
-          "terminationDate": string | null
           "employmentStatus": string
           "employmentType": string
+          "externalEmployeeRef": string | null
+          "nationalIdLast4": string | null
+          "phoneNumber": string | null
+          "terminationDate": string | null
           "assignmentId": string | null
           "assignmentStartDate": string | null
           "storeId": string | null
@@ -3063,6 +3071,8 @@ export type components = {
           "kpiImportEnabled": boolean
           "regionId": string | null
           "regionName": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
           "updatedAt": string | null
         }
       }
@@ -3077,6 +3087,8 @@ export type components = {
           "kpiImportEnabled": boolean
           "regionId": string | null
           "regionName": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
           "updatedAt": string | null
         }>
       "meta": {
@@ -3096,6 +3108,15 @@ export type components = {
           "label": string
         }>
       "regions": Array<{
+          "regionId": string
+          "regionCode": string
+          "regionName": string
+        }>
+      "regionManagers": Array<{
+          "assignmentId": string
+          "userId": string
+          "displayName": string
+          "email": string
           "regionId": string
           "regionCode": string
           "regionName": string
@@ -3429,7 +3450,8 @@ export type components = {
       "firstName": string
       "lastName": string
       "externalEmployeeRef"?: string
-      "employmentStatus": "active" | "inactive" | "terminated"
+      "phoneNumber"?: string
+      "employmentStatus": "active" | "inactive"
       "employmentType": "full_time" | "part_time" | "temporary"
       "hireDate": string
       "storeId": string

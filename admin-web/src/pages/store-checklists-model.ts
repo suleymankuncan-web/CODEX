@@ -149,6 +149,7 @@ export function upsertChecklistActiveResponse(
 ): ChecklistActiveInstance {
   const response = {
     templateItemId: draft.templateItemId,
+    responseValue: null,
     scoreValue: draft.scoreValue,
     commentText: draft.commentText ?? null,
   }

@@ -7,7 +7,7 @@ describe("operational history HTTP DTOs", () => {
   it("accepts bounded filters and a PostgreSQL UUID", async () => {
     const query = plainToInstance(GetChecklistOperationalHistoryQueryDto, {
       range: "6m",
-      kinds: "checklist_completed,task_assigned",
+      kinds: "checklist_completed,visit_completed,task_assigned",
       cursor: "eyJ2IjoxfQ",
     });
     const params = plainToInstance(GetChecklistOperationalHistoryParamsDto, {

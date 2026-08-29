@@ -8,7 +8,7 @@ const trackedExtensions = new Set(['.css', '.js', '.jsx', '.mjs', '.ts', '.tsx']
 const generatedPrefixes = ['admin-web/src/generated/']
 
 const oversizedBaseline = new Map([
-  ['backend/nestjs/src/openapi/generate-openapi.ts', 5082],
+  ['backend/nestjs/src/openapi/generate-openapi.ts', 4921],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1122],
   ['scripts/generate-system-flow.mjs', 1427],
   ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1244],
@@ -21,8 +21,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/pages/store-my-performance-model.ts', 1018],
   ['admin-web/src/styles/store-approvals-ledger.css', 976],
   ['admin-web/src/features/auth/AuthDashboardSections.tsx', 937],
-  ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 935],
-  ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 899],
+  ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 846],
   ['admin-web/src/features/competitions/StageBuilderForm.tsx', 861],
   ['admin-web/src/pages/store-my-performance-sections.tsx', 865],
   ['backend/nestjs/src/modules/integration/infrastructure/import-batch-read.repository.ts', 858],

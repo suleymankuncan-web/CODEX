@@ -10,7 +10,7 @@ const eventSchema = {
   required: ["id", "kind", "occurredAt", "title", "detail", "actorSnapshot", "details"],
   properties: {
     id: { type: "string", pattern: "^evt_[0-9a-f]{32}$" },
-    kind: { type: "string", enum: ["checklist_completed", "acknowledgement", "task_assigned", "task_resolved", "visit_plan_revised"] },
+    kind: { type: "string", enum: ["checklist_completed", "visit_completed", "acknowledgement", "task_assigned", "task_resolved", "visit_plan_revised"] },
     occurredAt: { type: "string", format: "date-time" },
     title: { type: "string" },
     detail: { type: "string", nullable: true },
@@ -49,10 +49,11 @@ const responseSchema = {
         },
         summary: {
           type: "object",
-          required: ["eventCount", "completedVisitCount", "assignedTaskCount", "openTaskCount"],
+          required: ["eventCount", "completedAuditCount", "completedVisitCount", "assignedTaskCount", "resolvedTaskCount", "openTaskCount"],
           properties: {
-            eventCount: { type: "integer", minimum: 0 }, completedVisitCount: { type: "integer", minimum: 0 },
-            assignedTaskCount: { type: "integer", minimum: 0 }, openTaskCount: { type: "integer", minimum: 0 },
+            eventCount: { type: "integer", minimum: 0 }, completedAuditCount: { type: "integer", minimum: 0 },
+            completedVisitCount: { type: "integer", minimum: 0 }, assignedTaskCount: { type: "integer", minimum: 0 },
+            resolvedTaskCount: { type: "integer", minimum: 0 }, openTaskCount: { type: "integer", minimum: 0 },
           },
         },
         items: { type: "array", items: { $ref: "#/components/schemas/ChecklistOperationalHistoryEvent" } },

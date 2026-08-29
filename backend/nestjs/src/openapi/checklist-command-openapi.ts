@@ -1,7 +1,11 @@
+import { setJsonRequestSchema, setJsonResponseSchema, type MutablePathItem } from "./openapi-schema-helpers";
 import {
-  setJsonResponseSchema,
-  type MutablePathItem,
-} from "./openapi-schema-helpers";
+  checklistVisitPlanVisitCompletionResponseSchema,
+  completeChecklistVisitPlanItemRequestSchema,
+  queryParameter,
+  requiredQueryParameter,
+  setQueryParameters,
+} from "./checklist-command-openapi-visit-completion";
 import {
   checklistVisitPlanPeriodSorts,
   checklistVisitPlanPeriodStatuses,
@@ -33,10 +37,13 @@ const regionSortEnum = [
 const sortEnum = [
   "store_asc",
   "store_desc",
+  "bm_score_asc",
   "bm_score_desc",
   "vm_score_desc",
   "last_visit_asc",
   "last_visit_desc",
+  "elapsed_asc",
+  "elapsed_desc",
   "open_actions_desc",
   "status_asc",
   "status_desc",
@@ -249,7 +256,7 @@ const checklistVisitPlanItemSchema = {
   type: "object",
   required: [
     "planItemId", "storeId", "storeCode", "storeName", "plannedDate", "displayOrder",
-    "status", "checklistInstanceId", "completedAt",
+    "status", "checklistInstanceId", "visitCompletedAt", "completedAt",
   ],
   properties: {
     planItemId: { type: "string", format: "uuid" },
@@ -260,6 +267,7 @@ const checklistVisitPlanItemSchema = {
     displayOrder: { type: "integer", minimum: 0 },
     status: { type: "string", enum: ["planned", "waiting", "missed", "completed"] },
     checklistInstanceId: { type: "string", format: "uuid", nullable: true },
+    visitCompletedAt: { type: "string", format: "date-time", nullable: true },
     completedAt: { type: "string", format: "date-time", nullable: true },
   },
 };
@@ -438,6 +446,8 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     ChecklistVisitPlan: checklistVisitPlanSchema,
     ChecklistVisitPlanResponse: checklistVisitPlanResponseSchema,
     SaveChecklistVisitPlanRequest: saveChecklistVisitPlanRequestSchema,
+    CompleteChecklistVisitPlanItemRequest: completeChecklistVisitPlanItemRequestSchema,
+    ChecklistVisitPlanVisitCompletionResponse: checklistVisitPlanVisitCompletionResponseSchema,
     ChecklistVisitPlanPeriodItem: checklistVisitPlanPeriodItemSchema,
     ChecklistVisitPlanPeriodRow: checklistVisitPlanPeriodRowSchema,
     ChecklistVisitPlanPeriodResponse: checklistVisitPlanPeriodResponseSchema,
@@ -534,6 +544,25 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     };
   }
 
+  const completeVisitPath = "/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete";
+  setJsonRequestSchema(document.paths, completeVisitPath, "post", "CompleteChecklistVisitPlanItemRequest");
+  setJsonResponseSchema(
+    document.paths,
+    completeVisitPath,
+    "post",
+    "Record Region Manager attendance for a planned BM visit without changing checklist outcomes.",
+    "ChecklistVisitPlanVisitCompletionResponse",
+    "201",
+  );
+  const completeVisitOperation = (document.paths[completeVisitPath] as MutablePathItem | undefined)?.post;
+  if (completeVisitOperation) {
+    completeVisitOperation.parameters = (completeVisitOperation.parameters ?? []).map((parameter) =>
+      parameter.name === "planItemId"
+        ? { ...parameter, schema: { type: "string", format: "uuid" } }
+        : parameter,
+    );
+  }
+
   const periodPlanPath = "/api/checklists/command-canvas/visit-plans/period";
   setJsonResponseSchema(
     document.paths,
@@ -568,26 +597,4 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     queryParameter("limit", { type: "integer", minimum: 1, maximum: 50 }),
     queryParameter("offset", { type: "integer", minimum: 0 }),
   ]);
-}
-
-function queryParameter(name: string, schema: Record<string, unknown>) {
-  return { name, in: "query", required: false, schema };
-}
-
-function requiredQueryParameter(name: string, schema: Record<string, unknown>) {
-  return { name, in: "query", required: true, schema };
-}
-
-function setQueryParameters(
-  paths: Record<string, unknown>,
-  path: string,
-  method: string,
-  parameters: Array<Record<string, unknown>>,
-) {
-  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
-  if (!operation) return;
-  operation.parameters = [
-    ...(operation.parameters ?? []).filter((parameter) => parameter.in !== "query"),
-    ...parameters,
-  ];
 }

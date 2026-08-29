@@ -10,8 +10,10 @@ describe("ChecklistOperationalHistoryRepository", () => {
       store_id: storeId,
       store_name: "Pilot Store",
       event_count: "5",
-      completed_visit_count: "1",
+      completed_audit_count: "1",
+      completed_visit_count: "2",
       assigned_task_count: "1",
+      resolved_task_count: "1",
       open_task_count: "1",
       event_id: "evt_safe",
       event_kind: "checklist_completed",
@@ -41,8 +43,13 @@ describe("ChecklistOperationalHistoryRepository", () => {
     expect(query.mock.calls[0][0]).toContain("DISTINCT ON (event.entity_id)");
     expect(query.mock.calls[0][0]).toContain("instance.completed_by_user_id ~*");
     expect(query.mock.calls[0][0]).toContain("task.status = 'closed' AND task.closed_at IS NOT NULL");
+    expect(query.mock.calls[0][0]).toContain("FROM ops.region_weekly_visit_plan_completion AS visit");
+    expect(query.mock.calls[0][0]).toContain("'visit_completed'");
     expect(query.mock.calls[0][0]).toContain("JOIN ops.region_weekly_visit_plan_item AS item ON item.revision_id = revision.previous_revision_id");
+    expect(query.mock.calls[0][0]).toContain("COUNT(*) FILTER (WHERE kind = 'checklist_completed')::bigint AS completed_audit_count");
+    expect(query.mock.calls[0][0]).toContain("COUNT(*) FILTER (WHERE kind IN ('checklist_completed', 'visit_completed'))::bigint AS completed_visit_count");
     expect(query.mock.calls[0][0]).toContain("COUNT(*) FILTER (WHERE kind = 'task_assigned')");
+    expect(query.mock.calls[0][0]).toContain("COUNT(*) FILTER (WHERE kind = 'task_resolved')::bigint AS resolved_task_count");
     expect(query.mock.calls[0][0]).toContain("CASE assignment.scope_type WHEN 'store' THEN 1 WHEN 'region' THEN 2 WHEN 'company' THEN 3 ELSE 4 END");
     expect(query.mock.calls[0][0]).toContain("ROW_NUMBER() OVER");
     expect(query.mock.calls[0][0]).not.toContain("LEFT JOIN LATERAL");
@@ -50,7 +57,14 @@ describe("ChecklistOperationalHistoryRepository", () => {
     expect(query.mock.calls[0][0]).not.toContain("resolution_note");
     expect(query.mock.calls[0][0]).not.toContain("metadata_json");
     expect(query.mock.calls[0][1]).toHaveLength(10);
-    expect(result?.summary).toEqual({ eventCount: 5, completedVisitCount: 1, assignedTaskCount: 1, openTaskCount: 1 });
+    expect(result?.summary).toEqual({
+      eventCount: 5,
+      completedAuditCount: 1,
+      completedVisitCount: 2,
+      assignedTaskCount: 1,
+      resolvedTaskCount: 1,
+      openTaskCount: 1,
+    });
     expect(JSON.stringify(result)).not.toMatch(/email|username|acknowledgementNote|resolutionNote|metadata|sourceDeepLink|auditorId|personnelId/i);
     expect(result?.items[0]?.cursor).toEqual({ occurredAt: "2026-07-14T10:00:00.000Z", kindRank: 5, eventKey });
     expect(JSON.stringify(result)).not.toContain(sourceId);

@@ -933,6 +933,7 @@ describe("Import batch evidence", () => {
 
     expect(lookupsResponse.status).toBe(200);
     expect(lookupsResponse.body).toEqual({
+      regionManagers: [],
       storeTypes: [
         { value: "company", label: "Company" },
         { value: "franchise", label: "Franchise" },
@@ -975,6 +976,8 @@ describe("Import batch evidence", () => {
           kpiImportEnabled: true,
           regionId,
           regionName: "Marmara",
+          regionManagerUserId: null,
+          regionManagerName: null,
           updatedAt: listedUpdatedAt,
         },
       ],
@@ -1011,9 +1014,11 @@ describe("Import batch evidence", () => {
           storeName: "Marmara Park",
           storeType: "franchise",
           status: "inactive",
-          kpiImportEnabled: false,
-          regionId: nextRegionId,
-          regionName: "Karadeniz",
+            kpiImportEnabled: false,
+            regionId: nextRegionId,
+            regionManagerUserId: null,
+            regionManagerName: null,
+            regionName: "Karadeniz",
           updatedAt,
         },
       },

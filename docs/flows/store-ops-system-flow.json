@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-08-12T18:40:47.191Z",
+  "generatedAt": "2026-08-29T09:01:22.347Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 254,
-    "backendEndpointsWithoutFrontendCallCount": 55,
-    "controllerCount": 35,
+    "backendEndpointCount": 260,
+    "backendEndpointsWithoutFrontendCallCount": 61,
+    "controllerCount": 36,
     "frontendApiCallCount": 200,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 200,
-    "openApiEndpointCount": 254,
+    "openApiEndpointCount": 260,
     "routeApiEdgeCount": 255,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
@@ -2681,7 +2681,7 @@
       "exportedFunction": "updatePersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 451
+        "line": 454
       }
     },
     {
@@ -2696,7 +2696,7 @@
       "exportedFunction": "getMasterDataBootstrapBatches",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 495
+        "line": 498
       }
     },
     {
@@ -2711,7 +2711,7 @@
       "exportedFunction": "getMasterDataBootstrapBatchDetail",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 499
+        "line": 502
       }
     },
     {
@@ -2726,7 +2726,7 @@
       "exportedFunction": "getMasterDataBootstrapPromotionReadiness",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 505
+        "line": 508
       }
     },
     {
@@ -2741,7 +2741,7 @@
       "exportedFunction": "validateMasterDataBootstrapBatch",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 512
+        "line": 515
       }
     },
     {
@@ -2756,7 +2756,7 @@
       "exportedFunction": "promoteMasterDataBootstrapStores",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 519
+        "line": 522
       }
     },
     {
@@ -2771,7 +2771,7 @@
       "exportedFunction": "promoteMasterDataBootstrapPersonnel",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 526
+        "line": 529
       }
     },
     {
@@ -2786,7 +2786,7 @@
       "exportedFunction": "getImportPayloadTemplate",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 544
+        "line": 547
       }
     },
     {
@@ -2801,7 +2801,7 @@
       "exportedFunction": "createImportBatch",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 550
+        "line": 553
       }
     },
     {
@@ -2816,7 +2816,7 @@
       "exportedFunction": "uploadPowerBiExport",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 590
+        "line": 593
       }
     },
     {
@@ -4390,7 +4390,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 96
+        "line": 121
       }
     },
     {
@@ -4404,7 +4404,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 80
+        "line": 94
       }
     },
     {
@@ -4418,7 +4418,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 107
+        "line": 134
       }
     },
     {
@@ -4432,7 +4432,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 119
+        "line": 146
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/auth/action-store-assignments/batch",
+      "method": "POST",
+      "path": "/api/auth/action-store-assignments/batch",
+      "rawControllerPath": "auth",
+      "rawMethodPath": "action-store-assignments/batch",
+      "controller": "auth-admin",
+      "domain": "auth",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
+        "line": 110
       }
     },
     {
@@ -4502,7 +4516,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 257
+        "line": 291
       }
     },
     {
@@ -4516,7 +4530,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 270
+        "line": 304
       }
     },
     {
@@ -4530,7 +4544,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 262
+        "line": 296
       }
     },
     {
@@ -4544,7 +4558,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 252
+        "line": 286
       }
     },
     {
@@ -4558,7 +4572,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 151
+        "line": 178
       }
     },
     {
@@ -4572,7 +4586,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 43
+        "line": 54
       }
     },
     {
@@ -4586,7 +4600,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 27
+        "line": 38
       }
     },
     {
@@ -4600,7 +4614,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 55
+        "line": 66
       }
     },
     {
@@ -4614,7 +4628,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 67
+        "line": 78
       }
     },
     {
@@ -4628,7 +4642,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 247
+        "line": 281
       }
     },
     {
@@ -4642,7 +4656,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 278
+        "line": 312
       }
     },
     {
@@ -4656,7 +4670,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 296
+        "line": 330
       }
     },
     {
@@ -4684,7 +4698,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 177
+        "line": 204
       }
     },
     {
@@ -4698,7 +4712,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 135
+        "line": 162
       }
     },
     {
@@ -4712,7 +4726,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 200
+        "line": 227
       }
     },
     {
@@ -4726,7 +4740,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 188
+        "line": 215
       }
     },
     {
@@ -4740,7 +4754,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 220
+        "line": 247
       }
     },
     {
@@ -4754,7 +4768,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 234
+        "line": 265
       }
     },
     {
@@ -4824,7 +4838,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 80
+        "line": 91
       }
     },
     {
@@ -4838,7 +4852,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 99
+        "line": 110
       }
     },
     {
@@ -4852,7 +4866,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 60
+        "line": 71
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete",
+      "method": "POST",
+      "path": "/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete",
+      "rawControllerPath": "checklists/command-canvas/visit-plans",
+      "rawMethodPath": "items/:planItemId/complete",
+      "controller": "checklist-visit-plan",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
+        "line": 134
       }
     },
     {
@@ -4866,7 +4894,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 35
+        "line": 46
       }
     },
     {
@@ -4880,7 +4908,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 16
+        "line": 27
       }
     },
     {
@@ -5300,7 +5328,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 139
+        "line": 138
       }
     },
     {
@@ -5314,7 +5342,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 161
+        "line": 160
       }
     },
     {
@@ -5328,7 +5356,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 818
+        "line": 765
       }
     },
     {
@@ -5342,7 +5370,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 675
+        "line": 622
       }
     },
     {
@@ -5356,7 +5384,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 653
+        "line": 600
       }
     },
     {
@@ -5370,7 +5398,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 880
+        "line": 827
       }
     },
     {
@@ -5384,7 +5412,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 838
+        "line": 785
       }
     },
     {
@@ -5398,7 +5426,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 775
+        "line": 722
       }
     },
     {
@@ -5412,7 +5440,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 798
+        "line": 745
       }
     },
     {
@@ -5426,7 +5454,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 858
+        "line": 805
       }
     },
     {
@@ -5440,7 +5468,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 749
+        "line": 696
       }
     },
     {
@@ -5454,7 +5482,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 725
+        "line": 672
       }
     },
     {
@@ -5468,7 +5496,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 701
+        "line": 648
       }
     },
     {
@@ -5482,7 +5510,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 579
+        "line": 526
       }
     },
     {
@@ -5496,7 +5524,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 186
+        "line": 185
       }
     },
     {
@@ -5510,7 +5538,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 321
+        "line": 300
       }
     },
     {
@@ -5524,7 +5552,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 132
+        "line": 131
       }
     },
     {
@@ -5538,7 +5566,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 294
+        "line": 273
       }
     },
     {
@@ -5552,7 +5580,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 407
+        "line": 354
       }
     },
     {
@@ -5566,7 +5594,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 550
+        "line": 497
       }
     },
     {
@@ -5580,7 +5608,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 527
+        "line": 474
       }
     },
     {
@@ -5594,7 +5622,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 504
+        "line": 451
       }
     },
     {
@@ -5608,7 +5636,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 483
+        "line": 430
       }
     },
     {
@@ -5622,7 +5650,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 456
+        "line": 403
       }
     },
     {
@@ -5636,7 +5664,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 433
+        "line": 380
       }
     },
     {
@@ -5673,12 +5701,12 @@
       "path": "/api/integrations/personnel-master-lookups",
       "rawControllerPath": "integrations",
       "rawMethodPath": "personnel-master-lookups",
-      "controller": "integration",
+      "controller": "integration-personnel-master",
       "domain": "integrations",
       "openApiCovered": true,
       "source": {
-        "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 276
+        "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
+        "line": 95
       }
     },
     {
@@ -5687,12 +5715,40 @@
       "path": "/api/integrations/personnel-master",
       "rawControllerPath": "integrations",
       "rawMethodPath": "personnel-master",
-      "controller": "integration",
+      "controller": "integration-personnel-master",
       "domain": "integrations",
       "openApiCovered": true,
       "source": {
-        "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 252
+        "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
+        "line": 31
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/integrations/personnel-master",
+      "method": "POST",
+      "path": "/api/integrations/personnel-master",
+      "rawControllerPath": "integrations",
+      "rawMethodPath": "personnel-master",
+      "controller": "integration-personnel-master",
+      "domain": "integrations",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
+        "line": 73
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/integrations/personnel-master.xlsx",
+      "method": "GET",
+      "path": "/api/integrations/personnel-master.xlsx",
+      "rawControllerPath": "integrations",
+      "rawMethodPath": "personnel-master.xlsx",
+      "controller": "integration-personnel-master",
+      "domain": "integrations",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
+        "line": 48
       }
     },
     {
@@ -5701,12 +5757,26 @@
       "path": "/api/integrations/personnel-master/{employeeId}",
       "rawControllerPath": "integrations",
       "rawMethodPath": "personnel-master/:employeeId",
-      "controller": "integration",
+      "controller": "integration-personnel-master",
       "domain": "integrations",
       "openApiCovered": true,
       "source": {
-        "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 375
+        "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
+        "line": 104
+      }
+    },
+    {
+      "id": "endpoint:PATCH:/api/integrations/personnel-master/{employeeId}/terminate",
+      "method": "PATCH",
+      "path": "/api/integrations/personnel-master/{employeeId}/terminate",
+      "rawControllerPath": "integrations",
+      "rawMethodPath": "personnel-master/:employeeId/terminate",
+      "controller": "integration-personnel-master",
+      "domain": "integrations",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
+        "line": 130
       }
     },
     {
@@ -5720,7 +5790,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 589
+        "line": 536
       }
     },
     {
@@ -5734,7 +5804,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 51
+        "line": 50
       }
     },
     {
@@ -5748,7 +5818,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 64
+        "line": 63
       }
     },
     {
@@ -5762,7 +5832,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 646
+        "line": 593
       }
     },
     {
@@ -5776,7 +5846,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 102
+        "line": 101
       }
     },
     {
@@ -5790,7 +5860,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 117
+        "line": 116
       }
     },
     {
@@ -5804,7 +5874,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 82
+        "line": 81
       }
     },
     {
@@ -5818,7 +5888,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 572
+        "line": 519
       }
     },
     {
@@ -5832,7 +5902,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 234
+        "line": 255
       }
     },
     {
@@ -5846,7 +5916,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 210
+        "line": 209
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/integrations/store-master",
+      "method": "POST",
+      "path": "/api/integrations/store-master",
+      "rawControllerPath": "integrations",
+      "rawMethodPath": "store-master",
+      "controller": "integration",
+      "domain": "integrations",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
+        "line": 233
       }
     },
     {
@@ -5860,7 +5944,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 348
+        "line": 327
       }
     },
     {
@@ -6140,7 +6224,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 332
+        "line": 333
       }
     },
     {
@@ -6154,7 +6238,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 130
+        "line": 131
       }
     },
     {
@@ -6168,7 +6252,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 148
+        "line": 149
       }
     },
     {
@@ -6182,7 +6266,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 248
+        "line": 249
       }
     },
     {
@@ -6196,7 +6280,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 304
+        "line": 305
       }
     },
     {
@@ -6210,7 +6294,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 272
+        "line": 273
       }
     },
     {
@@ -6224,7 +6308,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 170
+        "line": 171
       }
     },
     {
@@ -6238,7 +6322,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 217
+        "line": 218
       }
     },
     {
@@ -7818,6 +7902,12 @@
       "domain": "auth"
     },
     {
+      "id": "openapi:POST:/api/auth/action-store-assignments/batch",
+      "method": "POST",
+      "path": "/api/auth/action-store-assignments/batch",
+      "domain": "auth"
+    },
+    {
       "id": "openapi:GET:/api/auth/bootstrap",
       "method": "GET",
       "path": "/api/auth/bootstrap",
@@ -7995,6 +8085,12 @@
       "id": "openapi:GET:/api/checklists/command-canvas/visit-plans/candidates",
       "method": "GET",
       "path": "/api/checklists/command-canvas/visit-plans/candidates",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:POST:/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete",
+      "method": "POST",
+      "path": "/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete",
       "domain": "checklists"
     },
     {
@@ -8358,9 +8454,27 @@
       "domain": "integrations"
     },
     {
+      "id": "openapi:POST:/api/integrations/personnel-master",
+      "method": "POST",
+      "path": "/api/integrations/personnel-master",
+      "domain": "integrations"
+    },
+    {
+      "id": "openapi:GET:/api/integrations/personnel-master.xlsx",
+      "method": "GET",
+      "path": "/api/integrations/personnel-master.xlsx",
+      "domain": "integrations"
+    },
+    {
       "id": "openapi:PATCH:/api/integrations/personnel-master/{employeeId}",
       "method": "PATCH",
       "path": "/api/integrations/personnel-master/{employeeId}",
+      "domain": "integrations"
+    },
+    {
+      "id": "openapi:PATCH:/api/integrations/personnel-master/{employeeId}/terminate",
+      "method": "PATCH",
+      "path": "/api/integrations/personnel-master/{employeeId}/terminate",
       "domain": "integrations"
     },
     {
@@ -8420,6 +8534,12 @@
     {
       "id": "openapi:GET:/api/integrations/store-master",
       "method": "GET",
+      "path": "/api/integrations/store-master",
+      "domain": "integrations"
+    },
+    {
+      "id": "openapi:POST:/api/integrations/store-master",
+      "method": "POST",
       "path": "/api/integrations/store-master",
       "domain": "integrations"
     },
@@ -11497,7 +11617,7 @@
         "endpointId": "endpoint:GET:/api/integrations/personnel-master",
         "method": "GET",
         "path": "/api/integrations/personnel-master",
-        "controller": "integration",
+        "controller": "integration-personnel-master",
         "domain": "integrations",
         "frontendCallCount": 2
       },
@@ -11659,14 +11779,14 @@
         "id": "controller:integration",
         "controller": "integration",
         "domain": "integrations",
-        "endpointCount": 39,
-        "frontendCallCount": 26
+        "endpointCount": 37,
+        "frontendCallCount": 22
       },
       {
         "id": "controller:auth-admin",
         "controller": "auth-admin",
         "domain": "auth",
-        "endpointCount": 22,
+        "endpointCount": 23,
         "frontendCallCount": 22
       },
       {
@@ -11743,8 +11863,15 @@
         "id": "controller:checklist-visit-plan",
         "controller": "checklist-visit-plan",
         "domain": "checklists",
-        "endpointCount": 5,
+        "endpointCount": 6,
         "frontendCallCount": 5
+      },
+      {
+        "id": "controller:integration-personnel-master",
+        "controller": "integration-personnel-master",
+        "domain": "integrations",
+        "endpointCount": 6,
+        "frontendCallCount": 4
       },
       {
         "id": "controller:vm-campaign",
@@ -11908,9 +12035,11 @@
       "endpoint:GET:/api/admin/incentives/close-status",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
+      "endpoint:POST:/api/auth/action-store-assignments/batch",
       "endpoint:DELETE:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session/csrf",
+      "endpoint:POST:/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",
@@ -11922,6 +12051,9 @@
       "endpoint:PATCH:/api/integrations/kpi-import-store-scope/{storeId}",
       "endpoint:POST:/api/integrations/master-data-bootstrap/batches",
       "endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}/rows",
+      "endpoint:POST:/api/integrations/personnel-master",
+      "endpoint:GET:/api/integrations/personnel-master.xlsx",
+      "endpoint:PATCH:/api/integrations/personnel-master/{employeeId}/terminate",
       "endpoint:GET:/api/integrations/sources",
       "endpoint:POST:/api/integrations/sources",
       "endpoint:GET:/api/integrations/sources/{sourceId}/audit",
@@ -11929,6 +12061,7 @@
       "endpoint:PATCH:/api/integrations/sources/{sourceId}/reactivate",
       "endpoint:PATCH:/api/integrations/sources/{sourceId}/schedule",
       "endpoint:GET:/api/integrations/sources/due-schedule",
+      "endpoint:POST:/api/integrations/store-master",
       "endpoint:GET:/api/internal/photo-media/assets/{mediaAssetId}/content/{variant}",
       "endpoint:POST:/api/internal/photo-media/assets/{mediaAssetId}/read-url",
       "endpoint:POST:/api/internal/photo-media/maintenance/assets/{mediaAssetId}/restore",

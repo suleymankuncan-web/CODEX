@@ -68,14 +68,28 @@ CREATE TABLE ops.employee (
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     national_id_hash TEXT,
+    national_id_last4 TEXT,
+    phone_number TEXT,
     hire_date DATE NOT NULL,
     termination_date DATE,
     employment_status TEXT NOT NULL DEFAULT 'active',
     employment_type TEXT NOT NULL,
     birth_date DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT employee_national_id_last4_format_check
+        CHECK (national_id_last4 IS NULL OR national_id_last4 ~ '^[0-9]{4}$'),
+    CONSTRAINT employee_phone_number_format_check
+        CHECK (phone_number IS NULL OR phone_number ~ '^[0-9+() -]{10,20}$')
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_company_national_id_hash
+    ON ops.employee (company_id, national_id_hash)
+    WHERE national_id_hash IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_employee_company_external_ref
+    ON ops.employee (company_id, UPPER(BTRIM(external_employee_ref)))
+    WHERE NULLIF(BTRIM(external_employee_ref), '') IS NOT NULL;
 
 CREATE TABLE ops.employee_assignment_history (
     assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -585,6 +599,20 @@ CREATE TABLE IF NOT EXISTS ops.region_weekly_visit_plan_item (
     CONSTRAINT ck_region_weekly_visit_plan_item_bm_only CHECK (visit_type = 'BM_STORE_VISIT'),
     CONSTRAINT ck_region_weekly_visit_plan_item_display_order CHECK (display_order >= 0)
 );
+
+CREATE TABLE IF NOT EXISTS ops.region_weekly_visit_plan_completion (
+    visit_completion_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_item_id UUID NOT NULL REFERENCES ops.region_weekly_visit_plan_item(plan_item_id),
+    completed_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    idempotency_key UUID NOT NULL,
+    completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_region_weekly_visit_plan_completion_item UNIQUE (plan_item_id),
+    CONSTRAINT uq_region_weekly_visit_plan_completion_idempotency UNIQUE (plan_item_id, idempotency_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_region_weekly_visit_plan_completion_completed_at
+    ON ops.region_weekly_visit_plan_completion (completed_at DESC, plan_item_id);
 
 CREATE OR REPLACE FUNCTION ops.guard_region_weekly_visit_plan_revision_mutation()
 RETURNS trigger
@@ -1976,6 +2004,7 @@ COMMENT ON TABLE ops.checklist_acknowledgement IS 'Store acknowledgement evidenc
 COMMENT ON TABLE ops.region_weekly_visit_plan IS 'Region-owned Monday-to-Saturday BM visit planning aggregate; ownership survives manager rotation.';
 COMMENT ON TABLE ops.region_weekly_visit_plan_revision IS 'Complete versioned weekly plan snapshots with actor, idempotency, and canonical request digest evidence.';
 COMMENT ON TABLE ops.region_weekly_visit_plan_item IS 'Store and local-date entries for one weekly plan revision. Operational state is derived from real checklist execution.';
+COMMENT ON TABLE ops.region_weekly_visit_plan_completion IS 'Immutable attendance evidence for a planned BM visit when no checklist is completed; it never changes checklist scores.';
 COMMENT ON TABLE ops.kpi_score_profile_config IS 'Data-driven KPI scoring configuration for store/personnel score profiles, ownership matrix and grading bands.';
 COMMENT ON TABLE ops.kpi_config_version IS 'Immutable published KPI score configuration versions used to anchor reporting snapshots.';
 COMMENT ON TABLE ops.workforce_norm_plan IS 'Approved planned headcount and FTE targets used for norm vs actual workforce comparison.';

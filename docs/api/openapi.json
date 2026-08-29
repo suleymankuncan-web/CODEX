@@ -4012,6 +4012,35 @@
         "tags": [
           "Integration"
         ]
+      },
+      "post": {
+        "operationId": "IntegrationController_createStoreMaster",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStoreMasterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created store master data for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreMasterCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Integration"
+        ]
       }
     },
     "/api/integrations/store-master-lookups": {
@@ -4037,7 +4066,7 @@
     },
     "/api/integrations/personnel-master": {
       "get": {
-        "operationId": "IntegrationController_listPersonnelMaster",
+        "operationId": "IntegrationPersonnelMasterController_listPersonnelMaster",
         "parameters": [],
         "responses": {
           "200": {
@@ -4052,13 +4081,42 @@
           }
         },
         "tags": [
-          "Integration"
+          "IntegrationPersonnelMaster"
+        ]
+      },
+      "post": {
+        "operationId": "IntegrationPersonnelMasterController_createPersonnelMaster",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePersonnelMasterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created personnel master data for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelMasterCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IntegrationPersonnelMaster"
         ]
       }
     },
     "/api/integrations/personnel-master-lookups": {
       "get": {
-        "operationId": "IntegrationController_getPersonnelMasterLookups",
+        "operationId": "IntegrationPersonnelMasterController_getPersonnelMasterLookups",
         "parameters": [],
         "responses": {
           "200": {
@@ -4073,7 +4131,7 @@
           }
         },
         "tags": [
-          "Integration"
+          "IntegrationPersonnelMaster"
         ]
       }
     },
@@ -4195,7 +4253,7 @@
     },
     "/api/integrations/personnel-master/{employeeId}": {
       "patch": {
-        "operationId": "IntegrationController_updatePersonnelMaster",
+        "operationId": "IntegrationPersonnelMasterController_updatePersonnelMaster",
         "parameters": [
           {
             "name": "employeeId",
@@ -4229,7 +4287,7 @@
           }
         },
         "tags": [
-          "Integration"
+          "IntegrationPersonnelMaster"
         ]
       }
     },
@@ -5765,6 +5823,7 @@
               "enum": [
                 "store_asc",
                 "store_desc",
+                "bm_score_asc",
                 "bm_score_desc",
                 "vm_score_desc",
                 "last_visit_asc",
@@ -9630,6 +9689,133 @@
           "PhotoMediaStorage"
         ]
       }
+    },
+    "/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete": {
+      "post": {
+        "operationId": "ChecklistVisitPlanController_completeVisit",
+        "parameters": [
+          {
+            "name": "planItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteChecklistVisitPlanItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Record Region Manager attendance for a planned BM visit without changing checklist outcomes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanVisitCompletionResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
+        ]
+      }
+    },
+    "/api/integrations/personnel-master/{employeeId}/terminate": {
+      "patch": {
+        "operationId": "IntegrationPersonnelMasterController_terminatePersonnelMaster",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminatePersonnelMasterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Personnel exit result with linked access closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelMasterCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IntegrationPersonnelMaster"
+        ]
+      }
+    },
+    "/api/integrations/personnel-master.xlsx": {
+      "get": {
+        "operationId": "IntegrationPersonnelMasterController_downloadPersonnelMaster",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IntegrationPersonnelMaster"
+        ]
+      }
+    },
+    "/api/auth/action-store-assignments/batch": {
+      "post": {
+        "operationId": "AuthAdminController_createActionStoreAssignmentsBatch",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateActionStoreAssignmentsBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
     }
   },
   "info": {
@@ -10150,6 +10336,7 @@
               "score",
               "yes_no",
               "partial",
+              "compliance",
               "text"
             ]
           },
@@ -10269,6 +10456,15 @@
           "scoreValue": {
             "type": "number",
             "minimum": 0
+          },
+          "responseValue": {
+            "enum": [
+              "compliant",
+              "partially_compliant",
+              "non_compliant",
+              "not_applicable"
+            ],
+            "type": "string"
           },
           "commentText": {
             "type": "string"
@@ -11328,11 +11524,14 @@
             "minLength": 1,
             "maxLength": 80
           },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^[0-9+() -]{10,20}$"
+          },
           "employmentStatus": {
             "enum": [
               "active",
-              "inactive",
-              "terminated"
+              "inactive"
             ],
             "type": "string"
           },
@@ -21825,6 +22024,8 @@
                 "firstName",
                 "lastName",
                 "displayName",
+                "nationalIdLast4",
+                "phoneNumber",
                 "hireDate",
                 "terminationDate",
                 "employmentStatus",
@@ -21845,10 +22046,6 @@
                 "employeeId": {
                   "type": "string"
                 },
-                "externalEmployeeRef": {
-                  "type": "string",
-                  "nullable": true
-                },
                 "firstName": {
                   "type": "string"
                 },
@@ -21861,15 +22058,27 @@
                 "hireDate": {
                   "type": "string"
                 },
-                "terminationDate": {
-                  "type": "string",
-                  "nullable": true
-                },
                 "employmentStatus": {
                   "type": "string"
                 },
                 "employmentType": {
                   "type": "string"
+                },
+                "externalEmployeeRef": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "nationalIdLast4": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "phoneNumber": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "terminationDate": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "assignmentId": {
                   "type": "string",
@@ -22080,6 +22289,8 @@
                 "kpiImportEnabled",
                 "regionId",
                 "regionName",
+                "regionManagerUserId",
+                "regionManagerName",
                 "updatedAt"
               ],
               "properties": {
@@ -22106,6 +22317,14 @@
                   "nullable": true
                 },
                 "regionName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionManagerUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionManagerName": {
                   "type": "string",
                   "nullable": true
                 },
@@ -22150,7 +22369,8 @@
         "required": [
           "storeTypes",
           "statuses",
-          "regions"
+          "regions",
+          "regionManagers"
         ],
         "properties": {
           "storeTypes": {
@@ -22209,6 +22429,44 @@
                 "regionName"
               ],
               "properties": {
+                "regionId": {
+                  "type": "string"
+                },
+                "regionCode": {
+                  "type": "string"
+                },
+                "regionName": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "regionManagers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "assignmentId",
+                "userId",
+                "displayName",
+                "email",
+                "regionId",
+                "regionCode",
+                "regionName"
+              ],
+              "properties": {
+                "assignmentId": {
+                  "type": "string"
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
                 "regionId": {
                   "type": "string"
                 },
@@ -22923,6 +23181,7 @@
                               "score",
                               "yes_no",
                               "partial",
+                              "compliance",
                               "text"
                             ]
                           },
@@ -23049,12 +23308,17 @@
                         "type": "object",
                         "required": [
                           "templateItemId",
+                          "responseValue",
                           "scoreValue",
                           "commentText"
                         ],
                         "properties": {
                           "templateItemId": {
                             "type": "string"
+                          },
+                          "responseValue": {
+                            "type": "string",
+                            "nullable": true
                           },
                           "scoreValue": {
                             "type": "number"
@@ -24564,6 +24828,8 @@
                   "firstName",
                   "lastName",
                   "displayName",
+                  "nationalIdLast4",
+                  "phoneNumber",
                   "hireDate",
                   "terminationDate",
                   "employmentStatus",
@@ -24584,10 +24850,6 @@
                   "employeeId": {
                     "type": "string"
                   },
-                  "externalEmployeeRef": {
-                    "type": "string",
-                    "nullable": true
-                  },
                   "firstName": {
                     "type": "string"
                   },
@@ -24600,15 +24862,27 @@
                   "hireDate": {
                     "type": "string"
                   },
-                  "terminationDate": {
-                    "type": "string",
-                    "nullable": true
-                  },
                   "employmentStatus": {
                     "type": "string"
                   },
                   "employmentType": {
                     "type": "string"
+                  },
+                  "externalEmployeeRef": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "nationalIdLast4": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "phoneNumber": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "terminationDate": {
+                    "type": "string",
+                    "nullable": true
                   },
                   "assignmentId": {
                     "type": "string",
@@ -24699,6 +24973,8 @@
                   "kpiImportEnabled",
                   "regionId",
                   "regionName",
+                  "regionManagerUserId",
+                  "regionManagerName",
                   "updatedAt"
                 ],
                 "properties": {
@@ -24725,6 +25001,14 @@
                     "nullable": true
                   },
                   "regionName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionManagerUserId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionManagerName": {
                     "type": "string",
                     "nullable": true
                   },
@@ -25793,6 +26077,7 @@
           "displayOrder",
           "status",
           "checklistInstanceId",
+          "visitCompletedAt",
           "completedAt"
         ],
         "properties": {
@@ -25830,6 +26115,11 @@
           "checklistInstanceId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "visitCompletedAt": {
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           },
           "completedAt": {
@@ -26418,6 +26708,7 @@
             "type": "string",
             "enum": [
               "checklist_completed",
+              "visit_completed",
               "acknowledgement",
               "task_assigned",
               "task_resolved",
@@ -26531,12 +26822,18 @@
                 "type": "object",
                 "required": [
                   "eventCount",
+                  "completedAuditCount",
                   "completedVisitCount",
                   "assignedTaskCount",
+                  "resolvedTaskCount",
                   "openTaskCount"
                 ],
                 "properties": {
                   "eventCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "completedAuditCount": {
                     "type": "integer",
                     "minimum": 0
                   },
@@ -26545,6 +26842,10 @@
                     "minimum": 0
                   },
                   "assignedTaskCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "resolvedTaskCount": {
                     "type": "integer",
                     "minimum": 0
                   },
@@ -29971,6 +30272,189 @@
             "nullable": true
           }
         }
+      },
+      "CompleteChecklistVisitPlanItemRequest": {
+        "type": "object",
+        "required": [
+          "idempotencyKey"
+        ],
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ChecklistVisitPlanVisitCompletionResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "planItemId",
+              "completedAt"
+            ],
+            "properties": {
+              "planItemId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "completedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "CreateStoreMasterDto": {
+        "type": "object",
+        "properties": {
+          "storeCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "storeName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "storeType": {
+            "enum": [
+              "company",
+              "franchise",
+              "operator"
+            ],
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive",
+              "closed"
+            ],
+            "type": "string"
+          },
+          "kpiImportEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "storeCode",
+          "storeName",
+          "storeType",
+          "regionId",
+          "status",
+          "kpiImportEnabled"
+        ]
+      },
+      "CreatePersonnelMasterDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "externalEmployeeRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nationalId": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^[0-9+() -]{10,20}$"
+          },
+          "employmentType": {
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ],
+            "type": "string"
+          },
+          "hireDate": {
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "positionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "nationalId",
+          "phoneNumber",
+          "employmentType",
+          "hireDate",
+          "storeId",
+          "positionId"
+        ]
+      },
+      "TerminatePersonnelMasterDto": {
+        "type": "object",
+        "properties": {
+          "terminationDate": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 500
+          },
+          "expectedUpdatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "terminationDate",
+          "reason"
+        ]
+      },
+      "CreateActionStoreAssignmentsBatchDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "storeIds": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effectiveFrom": {
+            "type": "string"
+          },
+          "effectiveTo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "storeIds"
+        ]
       }
     }
   },

@@ -81,6 +81,8 @@ describe("integration read model helpers", () => {
       kpiImportEnabled: true,
       regionId: "region-1",
       regionName: "Marmara",
+      regionManagerUserId: null,
+      regionManagerName: null,
       updatedAt: "2026-06-30T10:00:00.000Z",
     });
   });
@@ -92,6 +94,8 @@ describe("integration read model helpers", () => {
         external_employee_ref: "FM8375",
         first_name: " Ada ",
         last_name: " Lovelace ",
+        national_id_last4: "8901",
+        phone_number: "+90 555 111 22 33",
         hire_date: "2026-01-01",
         termination_date: null,
         employment_status: "active",
@@ -114,6 +118,8 @@ describe("integration read model helpers", () => {
       firstName: "Ada",
       lastName: "Lovelace",
       displayName: "Ada Lovelace",
+      nationalIdLast4: "8901",
+      phoneNumber: "+90 555 111 22 33",
       hireDate: "2026-01-01",
       terminationDate: null,
       employmentStatus: "active",

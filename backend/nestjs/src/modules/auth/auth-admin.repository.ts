@@ -349,6 +349,16 @@ export class AuthAdminRepository {
     return this.actionStoreAssignmentCommandRepository.createActionStoreAssignment(input);
   }
 
+  async createActionStoreAssignmentsBatch(input: {
+    userId: string;
+    storeIds: string[];
+    effectiveFrom?: string | null;
+    effectiveTo?: string | null;
+    actorUserId: string;
+  }) {
+    return this.actionStoreAssignmentCommandRepository.createActionStoreAssignmentsBatch(input);
+  }
+
   async listActionStoreAssignments(input: {
     limit?: number;
     offset?: number;

@@ -3,6 +3,94 @@ import { checklistVisitPlanScoreBands } from "../application/checklist-visit-pla
 import { ChecklistVisitPlanRepository } from "./checklist-visit-plan.repository";
 
 describe("ChecklistVisitPlanRepository", () => {
+  it("records attendance against the current scoped plan item and writes sanitized audit metadata", async () => {
+    const client = { query: jest.fn()
+      .mockResolvedValueOnce({ rows: [{
+        plan_item_id: "55555555-5555-4555-8555-555555555555",
+        region_id: "11111111-1111-4111-8111-111111111111",
+        planned_date: "2026-07-15",
+        week_start_date: "2026-07-13",
+      }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ completed_at: "2026-07-15T10:00:00.000Z" }] })
+      .mockResolvedValueOnce({ rows: [] }),
+    };
+    const database = { withTransaction: jest.fn(async (work) => work(client)) };
+    const repository = new ChecklistVisitPlanRepository(database as never);
+
+    await expect(repository.completeVisit({
+      planItemId: "55555555-5555-4555-8555-555555555555",
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      regionIds: ["11111111-1111-4111-8111-111111111111"],
+      idempotencyKey: "33333333-3333-4333-8333-333333333333",
+    })).resolves.toEqual({
+      planItemId: "55555555-5555-4555-8555-555555555555",
+      completedAt: "2026-07-15T10:00:00.000Z",
+    });
+
+    const sql = client.query.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(sql).toContain("revision.is_current = TRUE");
+    expect(sql).toContain("item.region_id = ANY($2::uuid[])");
+    expect(sql).toContain("item.visit_type = 'BM_STORE_VISIT'");
+    expect(sql).toContain("INSERT INTO ops.region_weekly_visit_plan_completion");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    const auditCall = client.query.mock.calls.find((call) => String(call[0]).includes("audit.event_log"));
+    expect(auditCall?.[1]?.[4]).toEqual(JSON.stringify({ plannedDate: "2026-07-15", weekStart: "2026-07-13" }));
+    expect(auditCall?.[1]?.[4]).not.toContain("storeId");
+  });
+
+  it("returns the existing attendance row without a duplicate audit event", async () => {
+    const client = { query: jest.fn()
+      .mockResolvedValueOnce({ rows: [{
+        plan_item_id: "55555555-5555-4555-8555-555555555555",
+        region_id: "11111111-1111-4111-8111-111111111111",
+        planned_date: "2026-07-15",
+        week_start_date: "2026-07-13",
+      }] })
+      .mockResolvedValueOnce({ rows: [{ completed_at: "2026-07-15T10:00:00.000Z" }] }),
+    };
+    const database = { withTransaction: jest.fn(async (work) => work(client)) };
+    const repository = new ChecklistVisitPlanRepository(database as never);
+
+    await expect(repository.completeVisit({
+      planItemId: "55555555-5555-4555-8555-555555555555",
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      regionIds: ["11111111-1111-4111-8111-111111111111"],
+      idempotencyKey: "33333333-3333-4333-8333-333333333333",
+    })).resolves.toEqual({
+      planItemId: "55555555-5555-4555-8555-555555555555",
+      completedAt: "2026-07-15T10:00:00.000Z",
+    });
+    expect(client.query).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a new attendance record after the planned Istanbul date", async () => {
+    const client = { query: jest.fn()
+      .mockResolvedValueOnce({ rows: [{
+        plan_item_id: "55555555-5555-4555-8555-555555555555",
+        region_id: "11111111-1111-4111-8111-111111111111",
+        planned_date: "2026-08-25",
+        week_start_date: "2026-08-24",
+      }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] }),
+    };
+    const database = { withTransaction: jest.fn(async (work) => work(client)) };
+    const repository = new ChecklistVisitPlanRepository(database as never);
+
+    await expect(repository.completeVisit({
+      planItemId: "55555555-5555-4555-8555-555555555555",
+      actorUserId: "22222222-2222-4222-8222-222222222222",
+      regionIds: ["11111111-1111-4111-8111-111111111111"],
+      idempotencyKey: "33333333-3333-4333-8333-333333333333",
+    })).rejects.toThrow("Visits can only be completed on the planned date");
+
+    const insertCall = client.query.mock.calls[2];
+    expect(String(insertCall?.[0])).toContain("CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul'");
+    expect(String(insertCall?.[0])).toContain("WHERE $4::date =");
+    expect(client.query).toHaveBeenCalledTimes(3);
+  });
+
   it("derives completion only from a completed BM visit on the Istanbul local planned date", async () => {
     const query = jest.fn().mockResolvedValueOnce({ rows: [{
       plan_id: "plan", region_id: "region", region_name: "North", week_start_date: "2026-07-13",

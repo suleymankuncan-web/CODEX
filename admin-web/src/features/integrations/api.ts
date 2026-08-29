@@ -448,6 +448,9 @@ export async function updatePersonnelMasterData(input: {
   assignmentStartDate?: string
   expectedUpdatedAt?: string
 }): Promise<PersonnelMasterUpdateResponse> {
+  if (input.employmentStatus === 'terminated') {
+    throw new Error('Terminated personnel records require the dedicated termination command.')
+  }
   return sendOpenApiJson('/api/integrations/personnel-master/{employeeId}', {
     method: 'PATCH',
     params: { employeeId: input.employeeId },

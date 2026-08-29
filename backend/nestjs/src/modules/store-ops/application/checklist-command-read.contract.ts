@@ -12,10 +12,13 @@ export type ChecklistCommandStatus = (typeof checklistCommandStatuses)[number];
 export const checklistCommandSorts = [
   "store_asc",
   "store_desc",
+  "bm_score_asc",
   "bm_score_desc",
   "vm_score_desc",
   "last_visit_asc",
   "last_visit_desc",
+  "elapsed_asc",
+  "elapsed_desc",
   "open_actions_desc",
   "status_asc",
   "status_desc",

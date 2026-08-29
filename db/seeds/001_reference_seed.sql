@@ -38,11 +38,18 @@ SET
 
 INSERT INTO ops.position (position_id, company_id, position_code, position_name, job_family, is_managerial)
 VALUES
-    ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'STORE_MANAGER', 'Store Manager', 'operations', TRUE),
+    ('30000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'STORE_MANAGER', 'Mağaza Müdürü', 'operations', TRUE),
     ('30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'SHIFT_LEAD', 'Shift Lead', 'operations', TRUE),
-    ('30000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'SALES_ASSOCIATE', 'Sales Associate', 'operations', FALSE),
-    ('30000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'AUDITOR', 'Field Auditor', 'audit', FALSE)
-ON CONFLICT (company_id, position_code) DO NOTHING;
+    ('30000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000001', 'SALES_ASSOCIATE', 'Satış Danışmanı', 'operations', FALSE),
+    ('30000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'AUDITOR', 'Field Auditor', 'audit', FALSE),
+    ('30000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000001', 'ASSISTANT_MANAGER', 'Mağaza Müdür Yardımcısı', 'operations', TRUE),
+    ('30000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000001', 'SENIOR_SALES_CONSULTANT', 'Uzman Satış Danışmanı', 'operations', FALSE),
+    ('30000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000001', 'CASHIER', 'Kasa Sorumlusu', 'operations', FALSE)
+ON CONFLICT (company_id, position_code) DO UPDATE
+SET
+    position_name = EXCLUDED.position_name,
+    job_family = EXCLUDED.job_family,
+    is_managerial = EXCLUDED.is_managerial;
 
 INSERT INTO ops.position (position_id, company_id, position_code, position_name, job_family, is_managerial)
 VALUES
@@ -320,10 +327,11 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.checklist_template (
-    checklist_template_id, company_id, template_code, template_name, category, version_no, status, effective_from, created_by
+    checklist_template_id, company_id, template_code, template_type, template_name, category, version_no, status, effective_from, created_by
 )
 VALUES
-    ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'OPENING_AUDIT_V1', 'Opening Audit', 'operations', 1, 'active', DATE '2024-01-01', '80000000-0000-0000-0000-000000000001')
+    ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'OPENING_AUDIT_V1', 'BM_STORE_VISIT', 'Opening Audit', 'operations', 1, 'published', DATE '2024-01-01', '80000000-0000-0000-0000-000000000001'),
+    ('a0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'VM_STORE_VISIT_2026', 'VM_STORE_VISIT', 'Visual Merchandising Visit', 'visual', 1, 'published', DATE '2024-01-01', '80000000-0000-0000-0000-000000000001')
 ON CONFLICT (template_code, version_no) DO NOTHING;
 
 INSERT INTO ops.checklist_template_item (
@@ -332,7 +340,10 @@ INSERT INTO ops.checklist_template_item (
 VALUES
     ('a1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'Store Readiness', 1, 'Store opened on time', 'boolean', TRUE, 2, 2),
     ('a1000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'Store Readiness', 2, 'Cash desk is operational', 'boolean', TRUE, 3, 3),
-    ('a1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'Visual Merchandising', 3, 'Promo area matches planogram', 'score', TRUE, 5, 5)
+    ('a1000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'Visual Merchandising', 3, 'Promo area matches planogram', 'score', TRUE, 5, 5),
+    ('a1000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000002', 'Visual Standards', 1, 'Planogram matches the approved campaign', 'score', TRUE, 4, 4),
+    ('a1000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000002', 'Visual Standards', 2, 'Campaign signage is visible and current', 'boolean', TRUE, 3, 3),
+    ('a1000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000002', 'Visual Standards', 3, 'Display is clean and complete', 'score', TRUE, 3, 3)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO ops.kpi_definition (

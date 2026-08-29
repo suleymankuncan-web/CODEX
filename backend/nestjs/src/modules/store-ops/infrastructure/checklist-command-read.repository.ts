@@ -48,10 +48,13 @@ type ChecklistCommandRegionQueryRow = {
 const sortSql: Record<ChecklistCommandSort, string> = {
   store_asc: "store_name ASC, store_id ASC",
   store_desc: "store_name DESC, store_id ASC",
+  bm_score_asc: "bm_score ASC NULLS LAST, store_name ASC, store_id ASC",
   bm_score_desc: "bm_score DESC NULLS LAST, store_name ASC, store_id ASC",
   vm_score_desc: "vm_score DESC NULLS LAST, store_name ASC, store_id ASC",
   last_visit_asc: "last_completed_visit_at ASC NULLS FIRST, store_name ASC, store_id ASC",
   last_visit_desc: "last_completed_visit_at DESC NULLS LAST, store_name ASC, store_id ASC",
+  elapsed_asc: "elapsed_days_since_last_visit ASC NULLS FIRST, store_name ASC, store_id ASC",
+  elapsed_desc: "elapsed_days_since_last_visit DESC NULLS LAST, store_name ASC, store_id ASC",
   open_actions_desc: "open_action_count DESC, store_name ASC, store_id ASC",
   status_asc: "CASE command_status WHEN 'needs_visit' THEN 1 WHEN 'active' THEN 2 WHEN 'pending' THEN 3 WHEN 'completed' THEN 4 END ASC, store_name ASC, store_id ASC",
   status_desc: "CASE command_status WHEN 'needs_visit' THEN 1 WHEN 'active' THEN 2 WHEN 'pending' THEN 3 WHEN 'completed' THEN 4 END DESC, store_name ASC, store_id ASC",

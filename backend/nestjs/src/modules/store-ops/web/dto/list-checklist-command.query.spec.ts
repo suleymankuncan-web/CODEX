@@ -28,7 +28,7 @@ describe("ListChecklistCommandQueryDto", () => {
       query: "Marmara",
       status: "needs_visit",
       signal: "missing_visit",
-      sort: "last_visit_desc",
+      sort: "bm_score_asc",
       limit: "30",
       offset: "0",
     });

@@ -33,6 +33,21 @@ export class MockAuthProvider implements AuthProvider {
       readCompanyIdHeader === undefined ? parseHeader(companyIdHeader) : parseHeader(readCompanyIdHeader);
     const assignedStoreIds =
       assignedStoreIdHeader === undefined ? legacyStoreIds : parseHeader(assignedStoreIdHeader);
+    const scopedCompanyIds = readCompanyIds.length
+      ? readCompanyIds
+      : ["00000000-0000-0000-0000-000000000001"];
+
+    // Mock sessions intentionally carry their scope in explicit headers. Mirror
+    // that scope into each declared role's roleScopes entry so role-scoped read
+    // services (for example Region Manager visit-plan options) exercise the same
+    // authorization shape as a mapped JWT session in local development.
+    const roleScopes = Object.fromEntries(
+      roleCodes.map((roleCode) => [roleCode, {
+        companyIds: scopedCompanyIds,
+        regionIds: readRegionIds,
+        storeIds: readStoreIds,
+      }]),
+    );
 
     return buildAuthenticatedUser({
       userId: (request.headers["x-user-id"] as string | undefined) ??
@@ -43,15 +58,14 @@ export class MockAuthProvider implements AuthProvider {
       email: request.headers["x-email"] as string | undefined,
       roleCodes: roleCodes.length ? roleCodes : ["SUPER_ADMIN"],
       readScope: {
-        companyIds: readCompanyIds.length
-          ? readCompanyIds
-          : ["00000000-0000-0000-0000-000000000001"],
+        companyIds: scopedCompanyIds,
         regionIds: readRegionIds,
         storeIds: readStoreIds,
       },
       actionScope: {
         assignedStoreIds,
       },
+      roleScopes,
     });
   }
 }

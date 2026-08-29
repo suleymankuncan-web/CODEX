@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { IntegrationController } from "./web/integration.controller";
 import { IntegrationMasterDataQualityController } from "./web/integration-master-data-quality.controller";
+import { IntegrationPersonnelMasterController } from "./web/integration-personnel-master.controller";
 import { IntegrationService } from "./application/integration.service";
 import { IntegrationRepository } from "./infrastructure/integration.repository";
 import { ImportBatchReadRepository } from "./infrastructure/import-batch-read.repository";
@@ -38,11 +39,17 @@ import { MasterDataBootstrapService } from "./application/master-data-bootstrap.
 import { MasterDataBootstrapRepository } from "./infrastructure/master-data-bootstrap.repository";
 import { MasterDataQualityService } from "./application/master-data-quality.service";
 import { MasterDataQualityRepository } from "./infrastructure/master-data-quality.repository";
+import { PersonnelMasterService } from "./application/personnel-master.service";
 
 @Module({
-  controllers: [IntegrationController, IntegrationMasterDataQualityController],
+  controllers: [
+    IntegrationController,
+    IntegrationMasterDataQualityController,
+    IntegrationPersonnelMasterController,
+  ],
   providers: [
     IntegrationService,
+    PersonnelMasterService,
     IntegrationRepository,
     ImportBatchReadRepository,
     ImportBatchRawWriterRepository,

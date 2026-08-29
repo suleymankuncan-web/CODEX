@@ -19,10 +19,10 @@ describe("IntegrationController upload hardening", () => {
     );
 
     expect(source).toMatch(
-      /@Get\("issues"\)[\s\S]*?@RequireScope\("company"\)[\s\S]*?@RequireRoles\("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN"\)/,
+      /@Get\(["']issues["']\)[\s\S]*?@RequireScope\(["']company["']\)[\s\S]*?@RequireRoles\(["']HR_ADMIN["'], ["']SUPER_ADMIN["'], ["']INTEGRATION_ADMIN["']\)/,
     );
     expect(source).toMatch(
-      /@Get\("audit"\)[\s\S]*?@RequireScope\("company"\)[\s\S]*?@RequireRoles\("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN"\)/,
+      /@Get\(["']audit["']\)[\s\S]*?@RequireScope\(["']company["']\)[\s\S]*?@RequireRoles\(["']HR_ADMIN["'], ["']SUPER_ADMIN["'], ["']INTEGRATION_ADMIN["']\)/,
     );
   });
 
@@ -33,10 +33,24 @@ describe("IntegrationController upload hardening", () => {
     );
 
     expect(source).toMatch(
-      /@Post\("master-data-bootstrap\/batches\/:batchId\/promote-stores"\)[\s\S]*?@RequireScope\("company"\)[\s\S]*?@RequireRoles\("INTEGRATION_ADMIN"\)/,
+      /@Post\(["']master-data-bootstrap\/batches\/:batchId\/promote-stores["']\)[\s\S]*?@RequireScope\(["']company["']\)[\s\S]*?@RequireRoles\(["']INTEGRATION_ADMIN["']\)/,
     );
     expect(source).toMatch(
       /promoteMasterDataBootstrapStores[\s\S]*?actorUserId: request\.user\.userId/,
+    );
+  });
+
+  it("keeps the personnel workbook inside the admin company boundary", () => {
+    const source = readFileSync(
+      join(__dirname, "integration-personnel-master.controller.ts"),
+      "utf8",
+    );
+
+    expect(source).toMatch(
+      /@Get\(["']personnel-master\.xlsx["']\)[\s\S]*?@RequireScope\(["']company["']\)[\s\S]*?@RequireRoles\(["']HR_ADMIN["'], ["']SUPER_ADMIN["'], ["']INTEGRATION_ADMIN["']\)/,
+    );
+    expect(source).toContain(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
   });
 });

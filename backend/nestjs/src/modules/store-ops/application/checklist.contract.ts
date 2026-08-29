@@ -1,7 +1,17 @@
 export type ChecklistInstanceStatus = "planned" | "in_progress" | "completed" | "cancelled";
 export type ChecklistTemplateStatus = "draft" | "published" | "archived";
 export type ChecklistTemplateType = "BM_STORE_VISIT" | "VM_STORE_VISIT" | string;
-export type ChecklistTemplateResponseType = "score" | "yes_no" | "partial" | "text";
+export type ChecklistTemplateResponseType =
+  | "score"
+  | "yes_no"
+  | "partial"
+  | "compliance"
+  | "text";
+export type ChecklistComplianceResponseValue =
+  | "compliant"
+  | "partially_compliant"
+  | "non_compliant"
+  | "not_applicable";
 export type ChecklistEvidencePolicy = "none" | "optional" | "required";
 
 export type ChecklistTemplateItemInput = {
@@ -122,6 +132,7 @@ export type MobileChecklistToday = {
     }>;
     responses: Array<{
       templateItemId: string;
+      responseValue: string | null;
       scoreValue: number;
       commentText: string | null;
     }>;

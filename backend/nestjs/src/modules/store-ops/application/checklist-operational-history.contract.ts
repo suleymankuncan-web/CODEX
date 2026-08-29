@@ -1,5 +1,6 @@
 export const checklistOperationalHistoryKinds = [
   "checklist_completed",
+  "visit_completed",
   "acknowledgement",
   "task_assigned",
   "task_resolved",
@@ -36,8 +37,10 @@ export type ChecklistOperationalHistoryResult = {
   };
   summary: {
     eventCount: number;
+    completedAuditCount: number;
     completedVisitCount: number;
     assignedTaskCount: number;
+    resolvedTaskCount: number;
     openTaskCount: number;
   };
   items: ChecklistOperationalHistoryEvent[];

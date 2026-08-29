@@ -2,17 +2,27 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
 import {
   ImportBatchRawWriterRepository,
   type ImportBatchEntityType,
 } from "./import-batch-raw-writer.repository";
+import { PersonnelMasterCommandRepository } from "./personnel-master-command.repository";
 
 @Injectable()
 export class IntegrationRepository {
+  private readonly personnelMasterCommands: PersonnelMasterCommandRepository;
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly importBatchRawWriterRepository: ImportBatchRawWriterRepository,
-  ) {}
+    private readonly accessLifecycleRepository: AccessLifecycleRepository,
+  ) {
+    this.personnelMasterCommands = new PersonnelMasterCommandRepository(
+      databaseService,
+      accessLifecycleRepository,
+    );
+  }
 
   private async resolveAuditActorUserId(
     actorUserId: string | null | undefined,
@@ -33,6 +43,24 @@ export class IntegrationRepository {
       : await this.databaseService.query<{ user_id: string }>(sql, [actorUserId]);
 
     return result.rows[0]?.user_id ?? null;
+  }
+
+  async updatePersonnelMaster(
+    input: Parameters<PersonnelMasterCommandRepository["updatePersonnelMaster"]>[0],
+  ) {
+    return this.personnelMasterCommands.updatePersonnelMaster(input);
+  }
+
+  async createPersonnelMaster(
+    input: Parameters<PersonnelMasterCommandRepository["createPersonnelMaster"]>[0],
+  ) {
+    return this.personnelMasterCommands.createPersonnelMaster(input);
+  }
+
+  async terminatePersonnelMaster(
+    input: Parameters<PersonnelMasterCommandRepository["terminatePersonnelMaster"]>[0],
+  ) {
+    return this.personnelMasterCommands.terminatePersonnelMaster(input);
   }
 
   async createImportBatch(input: {
@@ -411,294 +439,129 @@ export class IntegrationRepository {
     });
   }
 
-  async updatePersonnelMaster(input: {
+
+  async createStoreMaster(input: {
     actorCompanyIds: string[];
-    employeeId: string;
-    firstName: string;
-    lastName: string;
-    externalEmployeeRef?: string;
-    employmentStatus: "active" | "inactive" | "terminated";
-    employmentType: "full_time" | "part_time" | "temporary";
-    hireDate: string;
-    storeId: string;
-    positionId: string;
-    assignmentStartDate?: string;
     actorUserId: string;
-    expectedUpdatedAt?: string;
+    storeCode: string;
+    storeName: string;
+    storeType: "company" | "franchise" | "operator";
+    regionId: string;
+    status: "active" | "inactive" | "closed";
+    kpiImportEnabled: boolean;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
-      const employeeResult = await client.query<{
-        employee_id: string;
-        company_id: string;
-        updated_at: string;
-      }>(
+      const regionResult = await client.query<{ company_id: string }>(
         `
-          SELECT
-            employee_id::text AS employee_id,
-            company_id::text AS company_id,
-            updated_at::text AS updated_at
-          FROM ops.employee
-          WHERE employee_id = $1::uuid
+          SELECT company_id::text AS company_id
+          FROM ops.region
+          WHERE region_id = $1::uuid
             AND company_id = ANY($2::uuid[])
+            AND status = 'active'
           LIMIT 1
-          FOR UPDATE
         `,
-        [input.employeeId, input.actorCompanyIds],
+        [input.regionId, input.actorCompanyIds],
       );
-      const employee = employeeResult.rows[0] ?? null;
-      if (!employee) {
-        return null;
+      const companyId = regionResult.rows[0]?.company_id;
+      if (!companyId) return null;
+
+      const duplicateResult = await client.query<{ store_id: string }>(
+        `SELECT store_id::text AS store_id FROM ops.store WHERE UPPER(store_code) = UPPER($1) LIMIT 1`,
+        [input.storeCode],
+      );
+      if (duplicateResult.rows[0]) {
+        throw new ConflictException("Store code is already in use");
       }
 
       const storeResult = await client.query<{
         store_id: string;
+        store_code: string;
+        store_name: string;
+        store_type: string;
+        status: string;
+        kpi_import_enabled: boolean;
         region_id: string;
-        company_id: string;
+        region_name: string;
+        region_manager_user_id: string | null;
+        region_manager_name: string | null;
+        updated_at: string;
       }>(
         `
+          WITH inserted AS (
+            INSERT INTO ops.store (
+              company_id, region_id, store_code, store_name, store_type,
+              status, kpi_import_enabled, timezone
+            )
+            VALUES ($1::uuid, $2::uuid, BTRIM($3), BTRIM($4), $5, $6, $7, 'Europe/Istanbul')
+            RETURNING *
+          )
           SELECT
-            s.store_id::text AS store_id,
-            s.region_id::text AS region_id,
-            s.company_id::text AS company_id
-          FROM ops.store s
-          WHERE s.store_id = $1::uuid
-            AND s.company_id = $2::uuid
-          LIMIT 1
-        `,
-        [input.storeId, employee.company_id],
-      );
-      const store = storeResult.rows[0] ?? null;
-      if (!store) {
-        return null;
-      }
-
-      const positionResult = await client.query<{ position_id: string }>(
-        `
-          SELECT p.position_id::text AS position_id
-          FROM ops.position p
-          WHERE p.position_id = $1::uuid
-            AND p.company_id = $2::uuid
-          LIMIT 1
-        `,
-        [input.positionId, employee.company_id],
-      );
-      if (!positionResult.rows[0]) {
-        return null;
-      }
-
-      const assignmentStartDate = input.assignmentStartDate ?? input.hireDate;
-      const assignmentResult = await client.query<{ assignment_id: string }>(
-        `
-          SELECT assignment_id::text AS assignment_id
-          FROM ops.employee_assignment_history
-          WHERE employee_id = $1::uuid
-            AND is_primary_assignment = TRUE
-            AND assignment_status = 'active'
-            AND end_date IS NULL
-          ORDER BY start_date DESC, created_at DESC
-          LIMIT 1
-          FOR UPDATE
-        `,
-        [input.employeeId],
-      );
-      const assignmentId = assignmentResult.rows[0]?.assignment_id ?? null;
-
-      const freshnessResult = await client.query<{ is_current: boolean }>(
-        `
-          SELECT ($2::timestamptz IS NULL OR GREATEST(
-            e.updated_at,
-            COALESCE(assignment.updated_at, e.updated_at)
-          ) = $2::timestamptz) AS is_current
-          FROM ops.employee e
+            inserted.store_id::text AS store_id,
+            inserted.store_code,
+            inserted.store_name,
+            inserted.store_type,
+            inserted.status,
+            inserted.kpi_import_enabled,
+            r.region_id::text AS region_id,
+            r.region_name,
+            manager.user_id AS region_manager_user_id,
+            manager.display_name AS region_manager_name,
+            inserted.updated_at::text AS updated_at
+          FROM inserted
+          INNER JOIN ops.region r ON r.region_id = inserted.region_id
           LEFT JOIN LATERAL (
-            SELECT eah.updated_at
-            FROM ops.employee_assignment_history eah
-            WHERE eah.employee_id = e.employee_id
-              AND eah.is_primary_assignment = TRUE
-              AND eah.assignment_status = 'active'
-              AND eah.end_date IS NULL
-            ORDER BY eah.start_date DESC, eah.created_at DESC
+            SELECT
+              ua.user_id::text AS user_id,
+              COALESCE(NULLIF(BTRIM(CONCAT(e.first_name, ' ', e.last_name)), ''), ua.username, ua.email) AS display_name
+            FROM ops.user_role_assignment ura
+            INNER JOIN ops.role role ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
+            INNER JOIN ops.user_account ua ON ua.user_id = ura.user_id AND ua.is_active = TRUE
+            LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
+            WHERE ura.region_id = inserted.region_id
+              AND ura.scope_type = 'region'
+              AND ura.start_at <= NOW()
+              AND (ura.end_at IS NULL OR ura.end_at > NOW())
+            ORDER BY ura.start_at DESC, ura.created_at DESC
             LIMIT 1
-          ) assignment ON TRUE
-          WHERE e.employee_id = $1::uuid
-          LIMIT 1
-        `,
-        [input.employeeId, input.expectedUpdatedAt ?? null],
-      );
-      if (!freshnessResult.rows[0]?.is_current) {
-        throw new ConflictException("Personnel master data changed after it was loaded");
-      }
-
-      await client.query(
-        `
-          UPDATE ops.employee
-          SET
-            external_employee_ref = NULLIF(BTRIM($2), ''),
-            first_name = BTRIM($3),
-            last_name = BTRIM($4),
-            employment_status = $5,
-            employment_type = $6,
-            hire_date = $7::date
-          WHERE employee_id = $1::uuid
+          ) manager ON TRUE
         `,
         [
-          input.employeeId,
-          input.externalEmployeeRef ?? "",
-          input.firstName,
-          input.lastName,
-          input.employmentStatus,
-          input.employmentType,
-          input.hireDate,
+          companyId,
+          input.regionId,
+          input.storeCode,
+          input.storeName,
+          input.storeType,
+          input.status,
+          input.kpiImportEnabled,
         ],
       );
-
-      if (assignmentId) {
-        await client.query(
-          `
-            UPDATE ops.employee_assignment_history
-            SET
-              store_id = $2::uuid,
-              region_id = $3::uuid,
-              position_id = $4::uuid,
-              start_date = $5::date
-            WHERE assignment_id = $1::uuid
-          `,
-          [
-            assignmentId,
-            store.store_id,
-            store.region_id,
-            input.positionId,
-            assignmentStartDate,
-          ],
-        );
-      } else {
-        await client.query(
-          `
-            INSERT INTO ops.employee_assignment_history (
-              employee_id,
-              store_id,
-              region_id,
-              position_id,
-              start_date,
-              is_primary_assignment,
-              assignment_status
-            )
-            VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::date, TRUE, 'active')
-          `,
-          [
-            input.employeeId,
-            store.store_id,
-            store.region_id,
-            input.positionId,
-            assignmentStartDate,
-          ],
-        );
-      }
+      const store = storeResult.rows[0];
+      if (!store) return null;
 
       await client.query(
         `
           INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            metadata_json
+            actor_user_id, event_type, entity_name, entity_id, scope_type, metadata_json
           )
-          VALUES ($1::uuid, 'personnel_master_data.updated', 'ops.employee', $2::uuid, 'company', $3::jsonb)
+          VALUES ($1::uuid, 'store_master_data.created', 'ops.store', $2::uuid, 'company', $3::jsonb)
         `,
         [
           auditActorUserId,
-          input.employeeId,
+          store.store_id,
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
             requestedActorUserId: input.actorUserId,
-            storeId: store.store_id,
-            regionId: store.region_id,
-            positionId: input.positionId,
-            employmentStatus: input.employmentStatus,
-            employmentType: input.employmentType,
+            regionId: input.regionId,
+            storeCode: store.store_code,
           }),
         ],
       );
-
-      const updated = await client.query<{
-        employee_id: string;
-        external_employee_ref: string | null;
-        first_name: string;
-        last_name: string;
-        hire_date: string;
-        termination_date: string | null;
-        employment_status: string;
-        employment_type: string;
-        assignment_id: string | null;
-        assignment_start_date: string | null;
-        store_id: string | null;
-        store_code: string | null;
-        store_name: string | null;
-        region_id: string | null;
-        region_name: string | null;
-        position_id: string | null;
-        position_code: string | null;
-        position_name: string | null;
-        updated_at: string;
-      }>(
-        `
-          SELECT
-            e.employee_id::text AS employee_id,
-            e.external_employee_ref,
-            e.first_name,
-            e.last_name,
-            e.hire_date::text AS hire_date,
-            e.termination_date::text AS termination_date,
-            e.employment_status,
-            e.employment_type,
-            assignment.assignment_id::text AS assignment_id,
-            assignment.start_date::text AS assignment_start_date,
-            s.store_id::text AS store_id,
-            s.store_code,
-            s.store_name,
-            r.region_id::text AS region_id,
-            r.region_name,
-            p.position_id::text AS position_id,
-            p.position_code,
-            p.position_name,
-            GREATEST(
-              e.updated_at,
-              COALESCE(assignment.updated_at, e.updated_at)
-            )::text AS updated_at
-          FROM ops.employee e
-          LEFT JOIN LATERAL (
-            SELECT
-              eah.assignment_id,
-              eah.store_id,
-              eah.region_id,
-              eah.position_id,
-              eah.start_date,
-              eah.updated_at
-            FROM ops.employee_assignment_history eah
-            WHERE eah.employee_id = e.employee_id
-              AND eah.is_primary_assignment = TRUE
-              AND eah.assignment_status = 'active'
-              AND eah.end_date IS NULL
-            ORDER BY eah.start_date DESC, eah.created_at DESC
-            LIMIT 1
-          ) assignment ON TRUE
-          LEFT JOIN ops.store s
-            ON s.store_id = assignment.store_id
-          LEFT JOIN ops.region r
-            ON r.region_id = assignment.region_id
-          LEFT JOIN ops.position p
-            ON p.position_id = assignment.position_id
-          WHERE e.employee_id = $1::uuid
-        `,
-        [input.employeeId],
-      );
-
-      return updated.rows[0] ?? null;
+      return store;
     });
   }
+
+
 
   async markImportBatchPending(input: { actorCompanyIds: string[]; batchId: string }) {
     await this.databaseService.query(
