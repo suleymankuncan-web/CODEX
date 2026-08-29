@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T07:00:59.413Z",
+  "generatedAt": "2026-08-29T09:01:22.347Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2681,7 +2681,7 @@
       "exportedFunction": "updatePersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 451
+        "line": 454
       }
     },
     {
@@ -2696,7 +2696,7 @@
       "exportedFunction": "getMasterDataBootstrapBatches",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 495
+        "line": 498
       }
     },
     {
@@ -2711,7 +2711,7 @@
       "exportedFunction": "getMasterDataBootstrapBatchDetail",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 499
+        "line": 502
       }
     },
     {
@@ -2726,7 +2726,7 @@
       "exportedFunction": "getMasterDataBootstrapPromotionReadiness",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 505
+        "line": 508
       }
     },
     {
@@ -2741,7 +2741,7 @@
       "exportedFunction": "validateMasterDataBootstrapBatch",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 512
+        "line": 515
       }
     },
     {
@@ -2756,7 +2756,7 @@
       "exportedFunction": "promoteMasterDataBootstrapStores",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 519
+        "line": 522
       }
     },
     {
@@ -2771,7 +2771,7 @@
       "exportedFunction": "promoteMasterDataBootstrapPersonnel",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 526
+        "line": 529
       }
     },
     {
@@ -2786,7 +2786,7 @@
       "exportedFunction": "getImportPayloadTemplate",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 544
+        "line": 547
       }
     },
     {
@@ -2801,7 +2801,7 @@
       "exportedFunction": "createImportBatch",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 550
+        "line": 553
       }
     },
     {
@@ -2816,7 +2816,7 @@
       "exportedFunction": "uploadPowerBiExport",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 590
+        "line": 593
       }
     },
     {
