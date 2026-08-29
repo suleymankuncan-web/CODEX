@@ -22,7 +22,10 @@ test('root package exposes the official release gate', () => {
     packageJson.scripts['check:release'],
     'node scripts/check-release.mjs',
   )
-  assert.equal(packageJson.scripts['test:scripts'], 'node --test scripts/*.test.mjs')
+  assert.equal(
+    packageJson.scripts['test:scripts'],
+    'node scripts/visual-snapshot-pair-guard.mjs && node --test scripts/*.test.mjs',
+  )
 })
 
 test('official release gate delegates to the exact-input stage runner', () => {

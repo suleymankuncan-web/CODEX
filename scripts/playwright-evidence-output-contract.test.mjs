@@ -16,7 +16,9 @@ test('canonical Playwright never writes checklist evidence into tracked docs', (
   assert.equal(packageJson.scripts['test:e2e:capture'], 'playwright test')
 
   const releaseRunner = readFileSync('admin-web/scripts/run-release-e2e.mjs', 'utf8')
-  assert.match(releaseRunner, /delete env\.CAPTURE_COMMAND_CANVAS_EVIDENCE/)
+  assert.match(releaseRunner, /buildReleasePlaywrightEnvironment/)
+  const runtime = readFileSync('admin-web/scripts/playwright-runtime.mjs', 'utf8')
+  assert.match(runtime, /delete result\.CAPTURE_COMMAND_CANVAS_EVIDENCE/)
 
   for (const specPath of guardedSpecs) {
     const source = readFileSync(specPath, 'utf8')
