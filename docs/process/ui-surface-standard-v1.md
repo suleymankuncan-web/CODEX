@@ -1,4 +1,4 @@
-# UI Surface Standard V1
+# UI Surface Standard V2
 
 Reader:
 
@@ -16,7 +16,8 @@ After reading, they should be able to:
 Companion implementation recipes live in
 `docs/process/ui-surface-recipes-v1.md`. The Store/Admin operational surface
 standardization process lives in
-`docs/process/store-admin-surface-standardization-v1.md`.
+`docs/process/store-admin-surface-standardization-v1.md`. Exact approved source
+references live in `docs/ui/golden-surfaces/reference-map.md`.
 
 ## Scope
 
@@ -31,6 +32,88 @@ This standard applies to:
 It does not change business workflow, API shape, DB schema, auth/permission,
 scoring, queue/import lifecycle, provider configuration, or production rollout
 posture by itself.
+
+## Mandatory Design Read
+
+No production UI implementation starts from component selection alone. Before
+code, record these decisions in the PR description or implementation note:
+
+| Decision | Required answer |
+| --- | --- |
+| Surface | Exact route, shell, and surface being changed |
+| Persona | Role using the surface and permissions already in force |
+| Primary task | The one outcome the page must make fastest |
+| Density | Compact, standard, or spacious, with a reason |
+| Archetype | One of the five surface archetypes below |
+| Visual direction | Neutral family, one accent, hierarchy, and interaction emphasis |
+| Primary action | The single dominant action, or `none` for readonly surfaces |
+| Data shape | List, grouped list, form, timeline, report, or workbench |
+| Mobile behavior | What becomes stacked, sticky, collapsed, or full-width |
+| Unchanged contract | Routes, labels, events, API/auth/DB/workflow behavior that remain unchanged |
+
+Generic requests such as "make it premium" or "use shadcn" are not a design
+read.
+
+## Surface Archetypes
+
+Every Store/Admin page selects one primary archetype. A page can contain a
+secondary pattern, but it must not blend several archetypes into a card collage.
+
+1. **List and management** - search, compact records, status, and one clear
+   record action.
+2. **Operational workbench** - time-sensitive state, filters, prioritized work,
+   and bounded commands.
+3. **Long form or checklist** - persistent progress, compact repeated fields,
+   section navigation, draft safety, and a sticky action boundary.
+4. **Result or report** - summary first, evidence second, dense readable detail,
+   and export or follow-up actions only when allowed.
+5. **Detail or audit** - identity, history, status transitions, and evidence in a
+   focused drawer, sheet, or page.
+
+The companion recipes define the required anatomy for each archetype.
+
+## Quantitative Visual Contract
+
+These values are the default production envelope. A deviation requires a
+documented density, accessibility, or approved-reference reason.
+
+| Element | Contract |
+| --- | --- |
+| Page content width | maximum `1280px` |
+| Desktop horizontal padding | `24-32px` |
+| Mobile horizontal padding | `16px` |
+| Compact page header | maximum `88px` before wrapping |
+| Standard controls | `40px` height |
+| Mobile touch targets | minimum `44px` in both dimensions |
+| Desktop list rows | `56-64px` unless content genuinely needs more |
+| Control / surface / overlay radius | `10px` / `14px` / `18px` |
+| Page / section title | `28/34px` / `18/24px`, semibold |
+| Body / metadata | `14/20px` / `12/16px` |
+| Standard drawer | `480-560px` on desktop |
+| Large result dialog | maximum `960px` |
+
+Spacing uses a `4/8/12/16/24/32px` rhythm. One screen uses one radius family and
+one shadow family. New page-local values are not introduced to solve isolated
+alignment problems.
+
+## Visual Language Lock
+
+A surface uses one neutral family, one accent, and semantic status colors.
+Primary color is reserved for selection, focus, and the dominant action.
+Success, warning, and danger colors describe actual state only.
+
+The product accent family is **Azure Radiance**, already mapped through semantic
+tokens in `admin-web/src/styles/shadcn-tailwind.css`. Pages consume `primary`,
+`secondary`, `accent`, `ring`, `background`, `border`, and related semantic
+names. They do not use Azure hex values or numbered palette steps directly.
+
+Gradients are off by default. A gradient is allowed only through a named shared
+token and only for a deliberately approved emphasis surface. Route CSS and TSX
+must not invent gradients, shadows, colors, or radii.
+
+Use at most one containment level around the main work area. Cards communicate
+real grouping, not spacing. Do not wrap a page header, tabs, toolbar, table, and
+each row in separate card shells.
 
 ## Authority
 
@@ -95,10 +178,20 @@ Common mappings:
 `className` on shadcn components is for layout and small composition. Do not
 override component color, typography, radius, or shadow page by page.
 
+shadcn supplies behavior, accessibility, and component ownership. Its default
+demo composition is not a finished HR Axis design. A stack of default `Card`,
+`Badge`, `Button`, and `Table` components can be technically compliant while
+still failing visual review. Pages must establish deliberate hierarchy, density,
+responsive behavior, and interaction priority through shared surface primitives
+and semantic tokens.
+
 Native `<select>` should not appear in Store/Admin production surfaces unless a
 browser-native exception is documented in the PR. Toolbar filters such as
 `Durum`, `Mağaza türü`, `Rol`, and similar single-choice controls use shadcn
 `Select`.
+
+Two or more mutually exclusive workspace views use `Tabs`. Two adjacent
+`Button` components styled to imitate tabs are not acceptable.
 
 ## Action Feedback Standard
 
@@ -225,27 +318,45 @@ Store/Admin pages should feel like one product family. Prefer this anatomy:
 Avoid operational hero pages, nested cards, oversized headings, decorative
 gradients, repeated summary cards, and filler explanation blocks.
 
+The page header is flat by default. It contains the title, one useful sentence
+at most, and the primary action when one exists. An eyebrow, icon tile, bordered
+header card, and shadow are exceptions, not defaults.
+
+## Modern List And Management Contract
+
+List and management surfaces use a compact, object-first hierarchy:
+
+- the record name is the strongest element and is clickable when the row has one
+  primary destination,
+- a single record action belongs to the row or record name; multiple actions use
+  an overflow menu,
+- search, count, filters, and create action share one coherent toolbar,
+- status uses one consistent semantic treatment across desktop and mobile,
+- desktop uses rows with controlled whitespace, not one card per record,
+- mobile uses compact record cards with a minimum 44px action target,
+- empty, loading, error, and access states occupy the same work area without
+  shifting the whole page anatomy.
+
+User identity is always displayed as a human-readable name. Provider usernames,
+internal principals, UUIDs, subject IDs, tenant keys, and values such as
+`onprem.region-manager` or `user_...` never appear as the primary display label.
+Resolve the display name from an existing lookup or present a neutral user-facing
+fallback such as `Bölge müdürü atanmamış`.
+
 ## Canonical Surface Reference
 
-The Region Manager incentives command-center prototype is the current canonical
-reference for Store/Admin operational surface rhythm.
+The authoritative reference catalog is
+`docs/ui/golden-surfaces/reference-map.md`. A reference is valid only when the
+catalog names its exact source route or component, archetype, approved
+viewports, and the behaviors that may be copied. A prose reference to an
+unnamed "premium" page is not sufficient.
 
-Use it as the default benchmark for:
+Golden references are not templates to copy wholesale. Reuse their spacing,
+hierarchy, interaction, state, and responsive decisions only when the target
+surface has the same archetype.
 
-- compact premium layout,
-- calm font weights,
-- small meaningful metric-card icons,
-- controlled metric-card size,
-- shadcn-like filters and commands,
-- accordion/table main work area,
-- right-side drawer for detail or adjustment,
-- confirmation dialog for package submit,
-- product copy that can be promoted into production unchanged,
-- mobile card rhythm without horizontal scroll.
-
-This reference does not change every page into an incentives page. It defines
-the expected quality bar and surface discipline for future Store/Admin
-prototypes and refactors.
+If no promoted reference matches the archetype, use the recipe and record
+`Golden reference: none`. Do not promote or copy a candidate implicitly.
 
 Prototype copy and production copy must not diverge silently. If production
 requires different labels, statuses, helper text, or confirmation copy because
@@ -393,6 +504,42 @@ hard-coded styling instead of the same component/token logic expected in
 production. In that case the PR must report `Prototype parity: BLOCKED` or
 first produce a production-runtime prototype slice and get that slice accepted.
 
+## Overlay Contract
+
+- One user action opens at most one overlay layer by default.
+- Closing a route-controlled overlay clears its route state completely. A
+  parent drawer must not flash after a result dialog closes.
+- Drawer and dialog headers and action footers stay fixed when the body scrolls.
+- A standard desktop drawer is `480-560px`; a large evidence view is a dialog
+  no wider than `960px` unless a documented data layout requires more.
+- Mobile drawers are full-width or bottom drawers with at least 44px close and
+  action targets.
+- Destructive or irreversible actions use one focused confirmation dialog.
+
+## Visual Acceptance Gate
+
+Before presenting a full page as complete:
+
+1. implement a representative slice containing the header, one real record or
+   item, one primary interaction, and loading/empty/error behavior,
+2. capture the production route at `1440x900`, `1024x768`, `390x844`, and
+   `360x800`,
+3. verify keyboard focus, visible labels, text wrapping, overlay close behavior,
+   and mobile reachability,
+4. compare the surface against the matching golden reference,
+5. revise before expanding if the slice shows a stop-ship signature.
+
+Stop-ship signatures:
+
+- default shadcn demo composition with no product hierarchy,
+- nested cards or a bordered card around every structural block,
+- large unused whitespace separating related controls from data,
+- provider usernames, UUIDs, tenant keys, or implementation language,
+- inconsistent radii, shadows, control heights, or status treatments,
+- desktop overflow or mobile horizontal scroll,
+- a custom stylesheet created only to patch one route's colors and geometry,
+- a large visual rewrite with no before/after screenshot evidence.
+
 ## Guard
 
 `scripts/ui-surface-standard-guard.test.mjs` protects this standard in
@@ -430,6 +577,10 @@ A UI surface refactor is done only when:
   confirmation copy match unless a deviation is documented,
 - raw hex and route-local styling are absent from changed production UI unless
   explicitly justified,
-- desktop/mobile states are checked when layout-sensitive,
+- the mandatory design read names the archetype, density, primary task, mobile
+  behavior, and unchanged contract,
+- `1440x900`, `1024x768`, `390x844`, and `360x800` evidence is checked,
+- no technical identity or implementation copy reaches the user,
+- overlay close behavior and scroll boundaries are verified,
 - old UI remnants are removed or explicitly parked,
 - the PR states what did not change.

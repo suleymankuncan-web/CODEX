@@ -22,11 +22,12 @@ After reading, they should be able to:
 
 ## Decision
 
-The Region Manager incentives command-center prototype is now the canonical
-Store/Admin operational surface reference.
+Store/Admin UI uses the archetype and exact-reference model in
+`docs/process/ui-surface-standard-v1.md` and
+`docs/ui/golden-surfaces/reference-map.md`. There is no single page whose visual
+structure is copied into every route.
 
-This does not mean every page becomes an incentives page. It means future
-Store/Admin prototypes should use the same surface discipline:
+Every prototype and production slice uses the same surface discipline:
 
 - compact, premium, operational layout,
 - calm typography with controlled font weights,
@@ -39,8 +40,8 @@ Store/Admin prototypes should use the same surface discipline:
 
 ## Surface Shape
 
-Use this default structure for new Store/Admin prototypes unless the product
-workflow clearly needs another shape:
+Choose one of the five archetypes before selecting structure. The sequence below
+is for an operational workbench, not a universal page template:
 
 1. Product shell and role-aware navigation.
 2. Compact top context row when useful.
@@ -82,9 +83,8 @@ Metric cards:
 
 Color:
 
-- Use semantic intent: primary/plum, accent/cyan, success, warning, danger,
-  neutral.
-- Store Command / Plum Glacier energy is allowed, but it must be controlled.
+- Use semantic intent backed by the Azure Radiance product scale: primary,
+  accent, ring, surface, text, success, warning, danger, and neutral.
 - Do not create route-local palettes, raw hex recipes, or one-off badge colors.
 
 Density:
@@ -192,15 +192,15 @@ production-complete.
 Use this process whenever a Store/Admin prototype is requested.
 
 1. Read the target route, current component, model/API shape, and role behavior.
-2. Choose the page recipe from the UI surface recipes.
-3. Use the canonical Store/Admin surface reference for density, typography,
-   metrics, icons, toolbar, drawer, status, and mobile rhythm.
+2. Write the mandatory design read and choose one surface archetype.
+3. Choose the exact matching golden reference and record which decisions apply.
 4. Write a component map before building the prototype.
 5. Keep prototype copy production-ready.
 6. Mark any missing backend/model field as contract-discovery, not as fake UI.
 7. Build the prototype with shadcn-equivalent controls or a real React/shadcn
    slice.
-8. Verify desktop and mobile overflow.
+8. Verify `1440x900`, `1024x768`, `390x844`, and `360x800` before expanding the
+   representative slice.
 9. When approved, promote the prototype as an implementation contract.
 10. During production, map every visible value and action to real data.
 11. Preserve role/scope/permission behavior.
@@ -208,6 +208,10 @@ Use this process whenever a Store/Admin prototype is requested.
 13. Keep the production route orchestration-first; move API, query keys, model
     mapping, formatting, drawer internals, and table/list components into the
     owning feature folder.
+
+The taste-skill is an anti-slop audit only. It does not define dashboards, data
+tables, or multi-step product UI and cannot replace the selected archetype
+recipe.
 
 ## Store Page QA Contract Gate
 
