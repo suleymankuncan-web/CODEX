@@ -6,7 +6,7 @@ import { test } from 'node:test'
 
 import { createKeycloakImageManifest } from './onprem-keycloak-image-manifest.mjs'
 
-const baseImage = 'quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13'
+const baseImage = 'quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067'
 
 test('Keycloak image manifest binds immutable image, SBOM, vulnerability, content, and license evidence', () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-keycloak-manifest-'))

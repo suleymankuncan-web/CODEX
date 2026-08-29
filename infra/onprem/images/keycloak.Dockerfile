@@ -3,7 +3,7 @@
 # The base digest is intentionally repeated here so an image proof cannot drift
 # to a mutable tag. The release workflow supplies the same value as an arg and
 # records the final image ID in the sanitized proof manifest.
-ARG KEYCLOAK_BASE_IMAGE=quay.io/keycloak/keycloak:26.7.0@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+ARG KEYCLOAK_BASE_IMAGE=quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067
 
 FROM ${KEYCLOAK_BASE_IMAGE} AS builder
 ENV KC_DB=postgres \
