@@ -184,7 +184,7 @@ function MobileStoreList(input: Parameters<typeof RegionManagerChecklistWorkspac
           </div>
           <dl className="tw:grid tw:grid-cols-3 tw:divide-x tw:divide-border tw:rounded-lg tw:bg-muted/30 tw:py-2">
             <MobileFact label={locale === 'tr' ? 'Puan' : 'Score'} value={row.bmScore === null ? '—' : `${Math.round(row.bmScore)}`} />
-            <MobileFact label={locale === 'tr' ? 'Son ziyaret' : 'Last visit'} value={formatVisitDate(row.lastCompletedVisitAt, locale)} />
+            <MobileFact emphasis={Boolean(row.lastCompletedVisitAt)} label={locale === 'tr' ? 'Son ziyaret' : 'Last visit'} value={formatVisitDate(row.lastCompletedVisitAt, locale)} />
             <MobileFact label={locale === 'tr' ? 'Geçen süre' : 'Elapsed'} value={formatElapsed(row.elapsedDaysSinceLastVisit, locale)} />
           </dl>
           <RowActions {...input} row={row} mobile />
@@ -205,7 +205,7 @@ function Score({ row }: { row: ChecklistCommandRow }) {
 }
 
 function VisitDate({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
-  return <span className="checklist-command-date tw:block tw:text-center tw:text-[11px] tw:font-medium tw:text-foreground">{formatVisitDate(row.lastCompletedVisitAt, locale)}</span>
+  return <span className={cn('checklist-command-date tw:mx-auto tw:flex tw:min-h-7 tw:w-fit tw:items-center tw:justify-center tw:rounded-md tw:px-2 tw:text-center tw:text-[12px] tw:font-semibold tw:tabular-nums', row.lastCompletedVisitAt ? 'tw:bg-primary/8 tw:text-primary' : 'tw:text-muted-foreground')}>{formatVisitDate(row.lastCompletedVisitAt, locale)}</span>
 }
 
 function Elapsed({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
@@ -230,8 +230,8 @@ function RowActions(input: Parameters<typeof RegionManagerChecklistWorkspace>[0]
   )
 }
 
-function MobileFact({ label, value }: { label: string; value: string }) {
-  return <div className="tw:min-w-0 tw:px-2 tw:text-center"><dt className="tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.08em] tw:text-muted-foreground">{label}</dt><dd className="tw:mt-1 tw:truncate tw:text-[11px] tw:font-semibold tw:text-foreground">{value}</dd></div>
+function MobileFact({ emphasis = false, label, value }: { emphasis?: boolean; label: string; value: string }) {
+  return <div className="tw:min-w-0 tw:px-2 tw:text-center"><dt className="tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.08em] tw:text-muted-foreground">{label}</dt><dd className={cn('tw:mt-1 tw:truncate tw:text-[11px] tw:font-semibold', emphasis ? 'tw:text-primary' : 'tw:text-foreground')}>{value}</dd></div>
 }
 
 function formatVisitDate(value: string | null, locale: 'tr' | 'en') {
