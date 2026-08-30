@@ -147,6 +147,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
   }
 
   const plan = planQuery.data.data
+  const canMaintainPlan = input.canMaintain && plan.capabilities.canMaintainWeeklyVisitPlan
   const days = buildChecklistPlanningDays(plan.weekStart, input.locale)
   const defaultMobileDayIndex = Math.max(0, days.findIndex((day) => day.isoDate === getBusinessDateInputValue()))
   const mobileDayIndex = mobileDaySelection?.weekStart === input.weekStart
@@ -172,7 +173,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
               <span><strong>{weekLabel}</strong><small>{copy.visitCount(plan.items.length)}</small></span>
               <button type="button" aria-label={copy.nextWeek} onClick={() => input.onWeekStartChange(shiftChecklistWeek(input.weekStart, 1))}><ChevronRight size={14} /></button>
             </div>
-            {input.canMaintain && plan.capabilities.canMaintainWeeklyVisitPlan ? (
+            {canMaintainPlan ? (
               <button ref={planningTriggerRef} type="button" className="week-planner-primary" onClick={() => setManualPlanningOpen(true)}><CalendarDays size={14} /> {copy.planWeek}</button>
             ) : null}
           </div>
@@ -196,11 +197,11 @@ export function ChecklistWeeklyVisitPlanner(input: {
                     return (
                       <button
                         type="button"
-                        aria-disabled={!input.canMaintain}
+                        aria-disabled={!canMaintainPlan}
                         className={`week-visit week-visit--${item.status}`}
                         key={item.planItemId}
-                        tabIndex={input.canMaintain ? 0 : -1}
-                        onClick={() => { if (input.canMaintain) setSelectedVisit(item) }}
+                        tabIndex={canMaintainPlan ? 0 : -1}
+                        onClick={() => { if (canMaintainPlan) setSelectedVisit(item) }}
                       >
                         <span className="week-visit-main"><strong>{item.storeName}</strong></span>
                         <span className={`week-visit-outcome week-visit-outcome--${item.status}`}><Icon size={11} />{presentation.label}</span>
@@ -213,8 +214,9 @@ export function ChecklistWeeklyVisitPlanner(input: {
           })}
         </div>
       </section>
-      {planningOpen ? (
+      {planningOpen && canMaintainPlan ? (
         <WeeklyPlanDialog
+          key={plan.weekStart}
           copy={copy}
           authSummary={input.authSummary}
           conflict={conflict}
@@ -226,6 +228,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
           saving={saveMutation.isPending}
           regionId={input.regionId}
           onClose={closePlanning}
+          onWeekStartChange={input.onWeekStartChange}
           onResolveConflict={async () => {
             const result = await planQuery.refetch()
             if (result.isSuccess && result.data) {
@@ -242,7 +245,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
           }}
         />
       ) : null}
-      {selectedVisit && input.canMaintain ? (
+      {selectedVisit && canMaintainPlan ? (
         <VisitActionDialog
           copy={copy}
           completing={completeVisitMutation.isPending}
@@ -336,6 +339,7 @@ function WeeklyPlanDialog(input: {
   onClose: () => void
   onResolveConflict: () => Promise<ChecklistVisitPlan | null>
   onSave: (items: VisitPlanDraftItem[]) => Promise<void>
+  onWeekStartChange: (weekStart: string) => void
 }) {
   const initialDraft = useMemo(() => input.initialPlan.items.map((item) => ({
     storeId: item.storeId,
@@ -372,9 +376,15 @@ function WeeklyPlanDialog(input: {
   )
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [pendingWeekStart, setPendingWeekStart] = useState<string | null>(null)
   const discardReturnFocusRef = useRef<HTMLElement | null>(null)
   const selectedDay = input.days[dayIndex]
   const dirty = buildVisitPlanDraftFingerprint(baselineDrafts) !== buildVisitPlanDraftFingerprint(drafts)
+  const firstDay = input.days[0]
+  const lastDay = input.days.at(-1)
+  const weekLabel = firstDay && lastDay
+    ? `${firstDay.dateLabel} – ${lastDay.dateLabel} ${input.initialPlan.weekStart.slice(0, 4)}`
+    : input.initialPlan.weekStart
   useEffect(() => {
     const normalizedSearch = searchDraft.trim()
     if (normalizedSearch === query) return
@@ -397,7 +407,20 @@ function WeeklyPlanDialog(input: {
     discardReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setConfirmDiscard(true)
   }
-  const requestClose = () => dirty ? openDiscardConfirmation() : input.onClose()
+  const requestClose = () => {
+    setPendingWeekStart(null)
+    if (dirty) openDiscardConfirmation()
+    else input.onClose()
+  }
+  const requestWeekChange = (direction: -1 | 1) => {
+    const nextWeekStart = shiftChecklistWeek(input.initialPlan.weekStart, direction)
+    if (dirty) {
+      setPendingWeekStart(nextWeekStart)
+      openDiscardConfirmation()
+      return
+    }
+    input.onWeekStartChange(nextWeekStart)
+  }
   const addStore = (storeId: string) => {
     if (!selectedDay || drafts.some((item) => item.storeId === storeId && item.plannedDate === selectedDay.isoDate)) return
     const candidate = candidates.find((item) => item.storeId === storeId)
@@ -451,7 +474,14 @@ function WeeklyPlanDialog(input: {
           onEscapeKeyDown={(event) => { if (dirty && !confirmDiscard) { event.preventDefault(); openDiscardConfirmation() } }}
         >
           <header><div><span className="week-planner-icon"><CalendarDays size={16} /></span><span><small>{input.copy.weeklyPlanning}</small><DialogPrimitive.Title>{input.copy.createPlan}</DialogPrimitive.Title></span></div><button type="button" aria-label={input.copy.close} onClick={requestClose}><X size={17} /></button></header>
-          <div className="week-plan-dialog-days" aria-label={input.copy.visitDay}>{input.days.map((day, index) => <button type="button" className={dayIndex === index ? 'is-active' : ''} aria-label={`${day.dayLabel}, ${day.dateLabel}`} aria-pressed={dayIndex === index} key={day.isoDate} onClick={() => setDayIndex(index)}><strong>{day.shortLabel}</strong><small>{day.dateLabel}</small></button>)}</div>
+          <div className="week-plan-dialog-calendar">
+            <div className="week-plan-dialog-week-switcher">
+              <button type="button" aria-label={input.copy.previousWeek} onClick={() => requestWeekChange(-1)}><ChevronLeft size={15} /></button>
+              <span><small>{input.copy.weeklyPlan}</small><strong>{weekLabel}</strong></span>
+              <button type="button" aria-label={input.copy.nextWeek} onClick={() => requestWeekChange(1)}><ChevronRight size={15} /></button>
+            </div>
+            <div className="week-plan-dialog-days" aria-label={input.copy.visitDay}>{input.days.map((day, index) => <button type="button" className={dayIndex === index ? 'is-active' : ''} aria-label={`${day.dayLabel}, ${day.dateLabel}`} aria-pressed={dayIndex === index} key={day.isoDate} onClick={() => setDayIndex(index)}><strong>{day.shortLabel}</strong><small>{day.dateLabel}</small></button>)}</div>
+          </div>
           <main className="week-plan-workspace">
             <section className="week-plan-picker">
               <label className="week-plan-search"><Search size={16} /><input autoFocus value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={input.copy.searchStore} /><kbd>/</kbd></label>
@@ -478,7 +508,7 @@ function WeeklyPlanDialog(input: {
           {input.conflict ? <div className="week-plan-conflict" role="alert"><CircleAlert size={16} /><span><strong>{input.copy.conflictTitle}</strong><small>{input.copy.conflictCopy}</small></span><button type="button" onClick={() => void resolveConflict()}>{input.copy.compareReapply}</button></div> : null}
           {pendingReconciliation ? <div className="week-plan-conflict" role="alert"><CircleAlert size={16} /><span><strong>{input.copy.collisionTitle}</strong><small>{input.copy.collisionCopy(pendingReconciliation.conflictingStoreIds.length)}</small></span><div><button type="button" onClick={() => chooseConflictVersion('latest')}>{input.copy.useLatest}</button><button type="button" onClick={() => chooseConflictVersion('local')}>{input.copy.useLocal}</button></div></div> : null}
         </DialogPrimitive.Content>
-        <AlertDialogPrimitive.Root open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogPrimitive.Root open={confirmDiscard} onOpenChange={(open) => { setConfirmDiscard(open); if (!open) setPendingWeekStart(null) }}>
           <AlertDialogPrimitive.Portal>
             <AlertDialogPrimitive.Overlay className="week-plan-discard-backdrop" />
             <AlertDialogPrimitive.Content
@@ -492,8 +522,12 @@ function WeeklyPlanDialog(input: {
               <AlertDialogPrimitive.Title>{input.copy.discardTitle}</AlertDialogPrimitive.Title>
               <AlertDialogPrimitive.Description>{input.copy.discardCopy}</AlertDialogPrimitive.Description>
               <div>
-                <AlertDialogPrimitive.Cancel type="button" onClick={() => setConfirmDiscard(false)}>{input.copy.returnToPlan}</AlertDialogPrimitive.Cancel>
-                <AlertDialogPrimitive.Action className="danger" onClick={() => { discardReturnFocusRef.current = null; input.onClose() }}>{input.copy.discard}</AlertDialogPrimitive.Action>
+                <AlertDialogPrimitive.Cancel type="button" onClick={() => { setPendingWeekStart(null); setConfirmDiscard(false) }}>{input.copy.returnToPlan}</AlertDialogPrimitive.Cancel>
+                <AlertDialogPrimitive.Action className="danger" onClick={() => {
+                  discardReturnFocusRef.current = null
+                  if (pendingWeekStart) input.onWeekStartChange(pendingWeekStart)
+                  else input.onClose()
+                }}>{input.copy.discard}</AlertDialogPrimitive.Action>
               </div>
             </AlertDialogPrimitive.Content>
           </AlertDialogPrimitive.Portal>

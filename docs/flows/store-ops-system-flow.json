@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T22:16:55.009Z",
+  "generatedAt": "2026-08-30T13:21:52.663Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -30,7 +30,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 221
+        "line": 237
       }
     },
     {
@@ -60,7 +60,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 95
+        "line": 96
       }
     },
     {
@@ -78,7 +78,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 217
+        "line": 233
       }
     },
     {
@@ -96,7 +96,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 213
+        "line": 229
       }
     },
     {
@@ -114,7 +114,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 209
+        "line": 225
       }
     },
     {
@@ -132,7 +132,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 205
+        "line": 221
       }
     },
     {
@@ -149,7 +149,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 185
+        "line": 201
       }
     },
     {
@@ -166,7 +166,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 201
+        "line": 217
       }
     },
     {
@@ -183,7 +183,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 189
+        "line": 205
       }
     },
     {
@@ -200,7 +200,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 197
+        "line": 213
       }
     },
     {
@@ -217,7 +217,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 193
+        "line": 209
       }
     },
     {
@@ -235,7 +235,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 137
+        "line": 153
       }
     },
     {
@@ -250,12 +250,11 @@
       "roles": [
         "HR_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 141
+        "line": 157
       }
     },
     {
@@ -272,7 +271,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 101
+        "line": 117
       }
     },
     {
@@ -291,7 +290,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 133
+        "line": 149
       }
     },
     {
@@ -305,12 +304,11 @@
       "guard": "AdminRouteGuard",
       "roles": [
         "HR_ADMIN",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 129
+        "line": 145
       }
     },
     {
@@ -327,7 +325,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 173
+        "line": 189
       }
     },
     {
@@ -345,7 +343,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 105
+        "line": 121
       }
     },
     {
@@ -363,7 +361,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 109
+        "line": 125
       }
     },
     {
@@ -380,7 +378,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 177
+        "line": 193
       }
     },
     {
@@ -399,7 +397,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 113
+        "line": 129
       }
     },
     {
@@ -418,7 +416,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 117
+        "line": 133
       }
     },
     {
@@ -435,7 +433,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 97
+        "line": 113
       }
     },
     {
@@ -452,7 +450,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 181
+        "line": 197
       }
     },
     {
@@ -465,12 +463,11 @@
       "componentFile": "admin-web/src/pages/ReportsSummaryPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 145
+        "line": 161
       }
     },
     {
@@ -483,12 +480,11 @@
       "componentFile": "admin-web/src/pages/ReportsChecklistsPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 161
+        "line": 177
       }
     },
     {
@@ -501,12 +497,11 @@
       "componentFile": "admin-web/src/pages/ReportsKpisPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 157
+        "line": 173
       }
     },
     {
@@ -519,12 +514,11 @@
       "componentFile": "admin-web/src/pages/ReportsSnapshotRunsPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 149
+        "line": 165
       }
     },
     {
@@ -537,12 +531,11 @@
       "componentFile": "admin-web/src/pages/ReportsTurnoverPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 165
+        "line": 181
       }
     },
     {
@@ -555,12 +548,11 @@
       "componentFile": "admin-web/src/pages/ReportsWorkforcePage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 153
+        "line": 169
       }
     },
     {
@@ -569,13 +561,23 @@
       "surface": "admin",
       "domain": "session",
       "kind": "page",
-      "component": "SessionGate",
+      "component": "SessionReadinessPage",
       "componentFile": "admin-web/src/pages/SessionReadinessPage.tsx",
-      "guard": "none",
-      "roles": [],
+      "guard": "AdminRouteGuard",
+      "roles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 96
+        "line": 97
       }
     },
     {
@@ -593,7 +595,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 121
+        "line": 137
       }
     },
     {
@@ -611,7 +613,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 125
+        "line": 141
       }
     },
     {
@@ -625,12 +627,11 @@
       "guard": "AdminRouteGuard",
       "roles": [
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 169
+        "line": 185
       }
     },
     {
@@ -1661,7 +1662,7 @@
       "exportedFunction": "getMobileChecklistToday",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 173
+        "line": 174
       }
     },
     {
@@ -1676,7 +1677,7 @@
       "exportedFunction": "startMobileChecklistInstance",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 180
+        "line": 181
       }
     },
     {
@@ -1691,7 +1692,7 @@
       "exportedFunction": "saveMobileChecklistResponse",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 196
+        "line": 197
       }
     },
     {
@@ -1706,7 +1707,7 @@
       "exportedFunction": "completeMobileChecklistInstance",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 213
+        "line": 214
       }
     },
     {
@@ -1721,7 +1722,7 @@
       "exportedFunction": "linkMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 237
+        "line": 238
       }
     },
     {
@@ -1736,7 +1737,7 @@
       "exportedFunction": "uploadApprovedSyntheticMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 254
+        "line": 255
       }
     },
     {
@@ -1751,7 +1752,7 @@
       "exportedFunction": "finalizeApprovedSyntheticMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 265
+        "line": 266
       }
     },
     {
@@ -1766,7 +1767,7 @@
       "exportedFunction": "unlinkMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 279
+        "line": 280
       }
     },
     {
@@ -1781,7 +1782,7 @@
       "exportedFunction": "getMobileChecklistItemEvidenceReadUrl",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 295
+        "line": 296
       }
     },
     {
@@ -1796,7 +1797,7 @@
       "exportedFunction": "getChecklistAcknowledgements",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 313
+        "line": 314
       }
     },
     {
@@ -1811,7 +1812,7 @@
       "exportedFunction": "createAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 339
+        "line": 340
       }
     },
     {
@@ -1826,7 +1827,7 @@
       "exportedFunction": "publishAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 349
+        "line": 350
       }
     },
     {
@@ -1841,7 +1842,7 @@
       "exportedFunction": "acknowledgeChecklist",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 365
+        "line": 366
       }
     },
     {

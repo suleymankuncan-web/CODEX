@@ -52,6 +52,60 @@ describe("StoreOpsRepository", () => {
     })).resolves.toMatchObject({ status: "completed", total_score: "91.00" });
     expect(client.query).toHaveBeenCalledTimes(1);
   });
+
+  it("persists the completing user identity with a successful legacy checklist completion", async () => {
+    const actorUserId = "00000000-0000-4000-8000-000000000003";
+    const client = {
+      query: jest.fn(async (sqlValue: string, _params?: unknown[]) => {
+        const sql = String(sqlValue);
+        if (sql.includes("FOR UPDATE")) {
+          return { rows: [{ checklist_instance_id: "instance-1", status: "in_progress" }] };
+        }
+        if (sql.includes("missing_required_evidence_count")) {
+          return { rows: [{ missing_required_evidence_count: "0" }] };
+        }
+        if (sql.includes("COALESCE(SUM")) {
+          return { rows: [{ total_score: "92.00", compliance_rate: "0.9200" }] };
+        }
+        if (sql.includes("UPDATE ops.checklist_instance")) {
+          return {
+            rows: [{
+              checklist_instance_id: "instance-1",
+              status: "completed",
+              total_score: "92.00",
+              compliance_rate: "0.9200",
+            }],
+          };
+        }
+        return { rows: [] };
+      }),
+    };
+    const databaseService = {
+      withTransaction: jest.fn(async (work: (transactionClient: typeof client) => Promise<unknown>) => work(client)),
+    };
+    const repository = new StoreOpsRepository(databaseService as never);
+
+    await repository.completeChecklistInstance({
+      checklistInstanceId: "00000000-0000-4000-8000-000000000001",
+      auditorEmployeeId: "00000000-0000-4000-8000-000000000002",
+      actorUserId,
+      actorRoleCodes: ["AUDITOR"],
+      actorActionScope: { assignedStoreIds: ["00000000-0000-4000-8000-000000000004"] },
+    });
+
+    const completionWrite = client.query.mock.calls.find(([sql]) =>
+      String(sql).includes("UPDATE ops.checklist_instance"),
+    );
+    expect(completionWrite).toBeDefined();
+    expect(String(completionWrite?.[0])).toContain("completed_by_user_id = $5");
+    expect(completionWrite?.[1]).toEqual([
+      "00000000-0000-4000-8000-000000000001",
+      "00000000-0000-4000-8000-000000000002",
+      "92.00",
+      "0.9200",
+      actorUserId,
+    ]);
+  });
   it("does not let a requested store filter bypass an empty actor scope", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new StoreOpsRepository({ query } as never);

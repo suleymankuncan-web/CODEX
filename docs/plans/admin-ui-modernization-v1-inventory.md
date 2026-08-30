@@ -43,6 +43,10 @@ Prototype Parity train PR7. The behavior-preserving feed workflow contract was
 verified with `feed-surfaces.spec.ts`. `/admin/session` remains the active
 parked admin route.
 
+2026-08-30 authorization update: `REPORT_VIEWER` is a Store-shell-only persona.
+It is intentionally excluded from every `/admin/*` route and Admin navigation
+item; report viewers use the Store reporting surfaces instead.
+
 ## Route Role Baseline
 
 The following block is intentionally stable and parseable enough for the PR-2
@@ -164,7 +168,6 @@ route/navigation parity guard.
       "roles": [
         "HR_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -198,7 +201,6 @@ route/navigation parity guard.
       "path": "/admin/inbox",
       "roles": [
         "HR_ADMIN",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -295,7 +297,6 @@ route/navigation parity guard.
       "page": "ReportsSummaryPage",
       "path": "/admin/reports",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -306,7 +307,6 @@ route/navigation parity guard.
       "page": "ReportsChecklistsPage",
       "path": "/admin/reports/checklists/:snapshotRunId",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -317,7 +317,6 @@ route/navigation parity guard.
       "page": "ReportsKpisPage",
       "path": "/admin/reports/kpis/:snapshotRunId",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -328,7 +327,6 @@ route/navigation parity guard.
       "page": "ReportsSnapshotRunsPage",
       "path": "/admin/reports/snapshot-runs",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -339,7 +337,6 @@ route/navigation parity guard.
       "page": "ReportsTurnoverPage",
       "path": "/admin/reports/turnover/:snapshotRunId",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -350,7 +347,6 @@ route/navigation parity guard.
       "page": "ReportsWorkforcePage",
       "path": "/admin/reports/workforce/:snapshotRunId",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -360,8 +356,18 @@ route/navigation parity guard.
       "navVisible": true,
       "page": "SessionReadinessPage",
       "path": "/admin/session",
-      "roles": [],
-      "rolesMode": "unguarded"
+      "roles": [
+        "SUPER_ADMIN",
+        "INTEGRATION_ADMIN",
+        "HR_ADMIN",
+        "SNAPSHOT_OPERATOR",
+        "REGION_MANAGER",
+        "AUDITOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "VISUAL_MERCHANDISER"
+      ],
+      "rolesMode": "guarded"
     },
     {
       "navId": "snapshots",
@@ -392,7 +398,6 @@ route/navigation parity guard.
       "path": "/admin/targets",
       "roles": [
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "guarded"
@@ -430,7 +435,6 @@ route/navigation parity guard.
       "roles": [
         "HR_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "declared",
@@ -458,7 +462,6 @@ route/navigation parity guard.
       "id": "inbox",
       "roles": [
         "HR_ADMIN",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "declared",
@@ -518,7 +521,6 @@ route/navigation parity guard.
     {
       "id": "reports",
       "roles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "declared",
@@ -526,8 +528,18 @@ route/navigation parity guard.
     },
     {
       "id": "session",
-      "roles": [],
-      "rolesMode": "omitted",
+      "roles": [
+        "SUPER_ADMIN",
+        "INTEGRATION_ADMIN",
+        "HR_ADMIN",
+        "SNAPSHOT_OPERATOR",
+        "REGION_MANAGER",
+        "AUDITOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "VISUAL_MERCHANDISER"
+      ],
+      "rolesMode": "declared",
       "to": "/admin/session"
     },
     {
@@ -543,7 +555,6 @@ route/navigation parity guard.
       "id": "targets",
       "roles": [
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "rolesMode": "declared",
@@ -1138,7 +1149,7 @@ route/navigation parity guard.
         },
         {
           "id": "/admin/competitions",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/data-quality",
@@ -1150,7 +1161,7 @@ route/navigation parity guard.
         },
         {
           "id": "/admin/inbox",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/incentives",
@@ -1186,31 +1197,31 @@ route/navigation parity guard.
         },
         {
           "id": "/admin/reports",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/reports/checklists/:snapshotRunId",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/reports/kpis/:snapshotRunId",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/reports/snapshot-runs",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/reports/turnover/:snapshotRunId",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/reports/workforce/:snapshotRunId",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/session",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/snapshots",
@@ -1222,7 +1233,7 @@ route/navigation parity guard.
         },
         {
           "id": "/admin/targets",
-          "visible": true
+          "visible": false
         }
       ]
     },
@@ -1609,7 +1620,7 @@ route/navigation parity guard.
         },
         {
           "id": "/admin/session",
-          "visible": true
+          "visible": false
         },
         {
           "id": "/admin/snapshots",
@@ -1936,7 +1947,7 @@ route/navigation parity guard.
         },
         {
           "id": "competitions",
-          "visible": true
+          "visible": false
         },
         {
           "id": "dataQuality",
@@ -1948,7 +1959,7 @@ route/navigation parity guard.
         },
         {
           "id": "inbox",
-          "visible": true
+          "visible": false
         },
         {
           "id": "incentives",
@@ -1976,11 +1987,11 @@ route/navigation parity guard.
         },
         {
           "id": "reports",
-          "visible": true
+          "visible": false
         },
         {
           "id": "session",
-          "visible": true
+          "visible": false
         },
         {
           "id": "snapshots",
@@ -1988,7 +1999,7 @@ route/navigation parity guard.
         },
         {
           "id": "targets",
-          "visible": true
+          "visible": false
         }
       ]
     },
@@ -2199,7 +2210,7 @@ route/navigation parity guard.
         },
         {
           "id": "session",
-          "visible": true
+          "visible": false
         },
         {
           "id": "snapshots",
@@ -2225,12 +2236,12 @@ route/navigation parity guard.
 | Integrations | `/admin/integrations`; `/admin/integrations/:batchId` | `IntegrationDashboardPage.tsx`; `ImportBatchDetailPage.tsx` | Manage import overview, payload template creation/upload, queue review, retry/detail investigation. | `SUPER_ADMIN`, `INTEGRATION_ADMIN`. | `getImportOverview`, `getNeedsAction`, `getIntegrationLookups`, `getImportPayloadTemplate`, batch detail APIs; prefetch `getAdminIntegrationsPrefetchTasks`. | Upload/create import evidence, inspect batch, retry or navigate to detail where existing UI allows. | loading, upload pending, error, empty queue, detail not found, source governance states. | R4 import workflow | `dashboard-primitives`, `hero-panel`, `hero-panel-detail`, `ScreenState`. | `integration-surfaces.spec.ts`. | Do not change upload payloads, source selection, retry behavior, polling, JSON/Power BI/Excel governance wording, or lineage evidence meaning. |
 | Master data | `/admin/master-data`; `/admin/master-data/:batchId` | `MasterDataBootstrapPage.tsx`; `master-data-bootstrap-model.ts` | Validate and promote master-data bootstrap batches. | `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN`. | `getMasterDataBootstrapBatches` plus bootstrap validation/promotion APIs; prefetch `getAdminMasterDataPrefetchTasks`. | Inspect batch, validate, promote, or review affected entities. | loading, empty batch list, validation error, promotion pending, batch detail missing. | R4/R5 workflow/import lifecycle | `dashboard-primitives`, old panels, large workflow shell. | Master-data targeted tests/e2e before migration. | Do not change validation/promotion semantics, batch status mapping, source evidence, transaction expectations, or route params. |
 | Snapshots | `/admin/snapshots`; `/admin/snapshots/:snapshotRunId` | `SnapshotsDashboardPage.tsx`; `SnapshotRunDetailPage.tsx` | Monitor snapshot health, daily closure, reruns, and run detail. | `SUPER_ADMIN`, `SNAPSHOT_OPERATOR`. | `getSnapshotOverview`, `getDailyClosureStatus`, `getSnapshotNeedsAction`, `runDailyClosure`, `rerunSnapshotRun`, snapshot detail APIs. | Queue daily closure or rerun only through existing enabled actions. | loading, queue error, daily closure unavailable, empty needs-action queue, run detail missing. | R5 snapshot workflow | `dashboard-primitives`, `hero-panel`, `hero-panel-detail`, metric cards. | PR-8 snapshot semantic golden fixture plus snapshot e2e. | Do not change status labels, badge tones, action enabled/disabled logic, detail visibility, rerun payloads, or daily closure behavior. |
-| Inbox | `/admin/inbox` | `AdminInboxPage.tsx`; `WorkflowInboxDetail` | Review workflow inbox plus workforce seller-code/offboarding approvals. | `SUPER_ADMIN`, `REPORT_VIEWER`, `HR_ADMIN`; workforce actions depend on existing auth helper behavior. | `getWorkflowInbox`, seller-code reference, seller-code/offboarding request APIs; prefetch `getAdminInboxPrefetchTasks`. | Approve/reject workforce requests where existing permission allows; inspect workflow detail. | loading, API error, empty inbox, permission-disabled actions. | R2/R4 action queue | `dashboard-primitives`, `hero-panel`, `hero-metrics`. | `admin-inbox.spec.ts`; auth/workforce targeted checks if actions move. | Do not change approval/rejection payloads, invalidation keys, status transition copy, or action permission checks. |
+| Inbox | `/admin/inbox` | `AdminInboxPage.tsx`; `WorkflowInboxDetail` | Review workflow inbox plus workforce seller-code/offboarding approvals. | `SUPER_ADMIN`, `HR_ADMIN`; workforce actions depend on existing auth helper behavior. | `getWorkflowInbox`, seller-code reference, seller-code/offboarding request APIs; prefetch `getAdminInboxPrefetchTasks`. | Approve/reject workforce requests where existing permission allows; inspect workflow detail. | loading, API error, empty inbox, permission-disabled actions. | R2/R4 action queue | `dashboard-primitives`, `hero-panel`, `hero-metrics`. | `admin-inbox.spec.ts`; auth/workforce targeted checks if actions move. | Do not change approval/rejection payloads, invalidation keys, status transition copy, or action permission checks. |
 | Feed | `/admin/feed` | `AdminFeedPage.tsx` | Create, publish, pin, unpin, archive and filter admin feed posts. | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`. | `getAdminFeedPosts`, `getAuthLookups`, feed mutations; prefetch `getAdminFeedPrefetchTasks`. | Create or manage post state with existing controls. | loading, lookup error, feed error, empty posts, mutation pending. | R2/R4 if composer changes | `dashboard-primitives`, `hero-panel`, `hero-metrics`. | `feed-surfaces.spec.ts`. | Do not change target audience payload, publish/pin/archive mutations, route placeholders, or visible feed invalidation. |
 | Checklist templates | `/admin/checklists` | `AdminChecklistTemplatesPage.tsx` | Author BM/VM checklist templates and publish them. | `SUPER_ADMIN`, `HR_ADMIN`. | `createAdminChecklistTemplate`, `publishAdminChecklistTemplate`; company scope from auth summary. | Edit template draft, save, publish. | missing company scope, invalid score/weight, mutation pending, publish error. | R4 workflow authoring | Local draft seed data exists as current authoring starter state; no `dashboard-primitives` import, but old custom form/table classes remain. | Checklist template e2e/characterization before PR-9. | Do not change answer types, score weights, low score thresholds, expectedValue payload, company scope, save/publish/archive semantics, or backend payload shape. |
-| Competitions | `/admin/competitions` | `CompetitionDashboardPage.tsx`; `features/competitions/*` | Manage competition creation, teams, stages, stage package plans, and rankings display. | `SUPER_ADMIN`, `HR_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER`. | `listCompetitions`, competition detail/mutation APIs; prefetch `getAdminCompetitionsPrefetchTasks`. | Create/update competition entities and inspect results through existing controls. | loading, empty competition list, mutation error, read-only role constraints. | R4/R5 workflow/scoring adjacency | `dashboard-primitives`, `hero-panel`, `metric-card`. | `competition-surfaces.spec.ts` plus backend competition tests if behavior-adjacent. | Do not change lifecycle transitions, scoring, finalization, stage execution, review, cancel, clone, access semantics, or payloads. |
-| Reports | `/admin/reports`; `/admin/reports/snapshot-runs`; `/admin/reports/workforce/:snapshotRunId`; `/admin/reports/kpis/:snapshotRunId`; `/admin/reports/checklists/:snapshotRunId`; `/admin/reports/turnover/:snapshotRunId` | `ReportsSummaryPage.tsx`; `ReportsSnapshotRunsPage.tsx`; `ReportsWorkforcePage.tsx`; `ReportsKpisPage.tsx`; `ReportsChecklistsPage.tsx`; `ReportsTurnoverPage.tsx` | Browse snapshot runs and read workforce, KPI, checklist, and turnover reports. | `SUPER_ADMIN`, `REPORT_VIEWER`. | `getReportingSummary`, `getReportingSnapshotRuns`, `getWorkforceReport`, `getKpiReport`, `getChecklistReport`, `getTurnoverReport`. | Select/read report detail; export/download where existing tools allow. | loading, API error, no snapshot run, empty report rows, invalid route param. | R2 read/reporting | `dashboard-primitives`, `hero-panel`, `hero-metrics`, `ReportingToolbar`. | Reporting e2e or page-specific targeted specs. | Do not change report calculations, labels, snapshot route params, CSV/export meaning, or API response interpretation. |
-| Targets | `/admin/targets` | `TargetApprovalQueuePage.tsx` | Review target distribution coverage and approve pending target requests. | `SUPER_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER`; action enabled by existing auth helpers. | `getAllTargetDistributionRequests`, `getTargetCoverage`, `approveTargetDistributionRequest`; prefetch `getAdminTargetsPrefetchTasks`. | Approve pending target request when allowed. | loading, error, empty pending queue, coverage loading/error, disabled unauthorized action. | R4 approval workflow | `dashboard-primitives`, `hero-panel`, `MetricCard`. | `admin-targets.spec.ts`; future `admin-targets-surfaces.spec.ts`. | Do not change approve payloads, note handling, status labels, request month handling, coverage summary, or permission checks. |
+| Competitions | `/admin/competitions` | `CompetitionDashboardPage.tsx`; `features/competitions/*` | Manage competition creation, teams, stages, stage package plans, and rankings display. | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`. | `listCompetitions`, competition detail/mutation APIs; prefetch `getAdminCompetitionsPrefetchTasks`. | Create/update competition entities and inspect results through existing controls. | loading, empty competition list, mutation error, read-only role constraints. | R4/R5 workflow/scoring adjacency | `dashboard-primitives`, `hero-panel`, `metric-card`. | `competition-surfaces.spec.ts` plus backend competition tests if behavior-adjacent. | Do not change lifecycle transitions, scoring, finalization, stage execution, review, cancel, clone, access semantics, or payloads. |
+| Reports | `/admin/reports`; `/admin/reports/snapshot-runs`; `/admin/reports/workforce/:snapshotRunId`; `/admin/reports/kpis/:snapshotRunId`; `/admin/reports/checklists/:snapshotRunId`; `/admin/reports/turnover/:snapshotRunId` | `ReportsSummaryPage.tsx`; `ReportsSnapshotRunsPage.tsx`; `ReportsWorkforcePage.tsx`; `ReportsKpisPage.tsx`; `ReportsChecklistsPage.tsx`; `ReportsTurnoverPage.tsx` | Browse snapshot runs and read workforce, KPI, checklist, and turnover reports. | `SUPER_ADMIN`. | `getReportingSummary`, `getReportingSnapshotRuns`, `getWorkforceReport`, `getKpiReport`, `getChecklistReport`, `getTurnoverReport`. | Select/read report detail; export/download where existing tools allow. | loading, API error, no snapshot run, empty report rows, invalid route param. | R2 read/reporting | `dashboard-primitives`, `hero-panel`, `hero-metrics`, `ReportingToolbar`. | Reporting e2e or page-specific targeted specs. | Do not change report calculations, labels, snapshot route params, CSV/export meaning, or API response interpretation. |
+| Targets | `/admin/targets` | `TargetApprovalQueuePage.tsx` | Review target distribution coverage and approve pending target requests. | `SUPER_ADMIN`, `REGION_MANAGER`; action enabled by existing auth helpers. | `getAllTargetDistributionRequests`, `getTargetCoverage`, `approveTargetDistributionRequest`; prefetch `getAdminTargetsPrefetchTasks`. | Approve pending target request when allowed. | loading, error, empty pending queue, coverage loading/error, disabled unauthorized action. | R4 approval workflow | `dashboard-primitives`, `hero-panel`, `MetricCard`. | `admin-targets.spec.ts`; future `admin-targets-surfaces.spec.ts`. | Do not change approve payloads, note handling, status labels, request month handling, coverage summary, or permission checks. |
 | KPI config | `/admin/kpi-config` | `AdminKpiConfigPage.tsx` | Govern KPI config version, weights, audit, save, and publish. | `SUPER_ADMIN`. | `getKpiConfigEditor`, `getKpiConfigAudit`, save/publish KPI config APIs. | Save draft config and publish active version. | loading, config/audit error, validation error, mutation pending. | R5 scoring/config | `dashboard-primitives`, `hero-panel`, `hero-metrics`. | `admin-kpi-config.spec.ts`; `kpi-config-versioning.spec.ts`; backend scoring specs. | Do not change scoring math, contribution weights, active version semantics, validation, default config, backend DTOs, or publish payloads. |
 | Pilot feedback | `/admin/pilot-feedback` | `AdminPilotFeedbackPage.tsx` | Review and classify pilot feedback. | `SUPER_ADMIN`. | `listPilotFeedback`, classify/respond pilot feedback APIs. | Classify or respond using existing mutation. | loading, error, empty list, mutation pending. | R2 read/admin response | `dashboard-primitives`, `hero-panel`, `hero-metrics`. | `pilot-feedback.spec.ts`. | Do not change feedback status/classification values, response payloads, pagination, or filters. |
 | Auth admin | `/admin/auth`; `/admin/auth/catalog`; `/admin/auth/users/:userId/audit`; `/admin/auth/role-assignments/:assignmentId/audit`; `/admin/auth/action-store-assignments/:assignmentId/audit` | `AuthManagementPage.tsx`; `AuthCatalogPage.tsx`; auth audit detail pages | Manage auth users, role/action-store assignments, catalog permissions, and audit detail. | `SUPER_ADMIN`. | `getAuthLookups`, user/account/role/permission/action-store APIs, audit APIs. | Create/update auth assignments and inspect audit trail. | loading, lookup error, mutation error, empty users/assignments, audit detail missing. | R5 auth/security | `dashboard-primitives`, `hero-panel`, `ScreenState`, old auth panels. | `admin-management-surfaces.spec.ts`; `pilot-smoke.spec.ts`; auth evidence guard if touched. | Do not change role/action-store assignment command shape, audit links, correlation ids, permission semantics, or search behavior. |

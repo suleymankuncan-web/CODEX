@@ -53,7 +53,7 @@ test('pilot route matrix locks the first stabilization classifications', () => {
   for (const row of [
     '| `/admin/integrations` | admin | core | `SUPER_ADMIN`, `INTEGRATION_ADMIN` | first landing for super admin and integration admin | must return to same route after auth verification | company-scoped import state | yes |',
     '| `/admin/master-data` | admin | core | `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped bootstrap batches | yes |',
-    '| `/admin/session` | admin | ops | any authenticated admin shell session | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |',
+    '| `/admin/session` | admin | ops | every catalog role except `REPORT_VIEWER` | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |',
     '| `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |',
     '| `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles; company-scoped read for Report Viewer; no action | yes |',
   ]) {
@@ -70,7 +70,7 @@ test('pilot route matrix locks the visual merchandiser-only route boundary', () 
     '| `/store/feed` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
     '| `/store/settings` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
     'Catalog inclusion for `VISUAL_MERCHANDISER` does not imply a Store route',
-    '7. `VISUAL_MERCHANDISER`-only session: `/store/checklists`',
+    '6. `VISUAL_MERCHANDISER`-only session: `/store/checklists`',
   ]) {
     requireText(matrix, expected, 'route matrix')
   }

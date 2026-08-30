@@ -105,7 +105,7 @@ test('system flow resolves shell-local and conditional route components', () => 
   const flow = readJson('docs/flows/store-ops-system-flow.json')
 
   for (const [routePath, component] of [
-    ['/admin/session', 'SessionGate'],
+    ['/admin/session', 'SessionReadinessPage'],
     ['/store', 'StoreHomePage'],
     ['/store/home', 'StoreHomePage'],
     ['/auth/login', 'AuthLoginPage'],

@@ -4,7 +4,6 @@ import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { StoreRouteState, StoreSurfacePage } from '../pages/store-surface-primitives'
-import { SessionReadinessPage } from './route-loaders'
 import { hasAnyRole, isVisualMerchandiserOnly, type ShellState } from './shell-state'
 
 export function RouteLoadingState() {
@@ -51,10 +50,6 @@ export function StoreRouteGuard(input: {
   }
 
   return <>{input.children}</>
-}
-
-export function SessionGate() {
-  return <SessionReadinessPage />
 }
 
 export function AdminRouteGuard(input: {

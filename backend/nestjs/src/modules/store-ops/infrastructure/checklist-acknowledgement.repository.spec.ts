@@ -32,6 +32,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
           store_id: "store-1",
           store_name: "Marmara Park",
           completed_by_user_id: "vm-user-1",
+          completed_by_display_name: "Eda Doğanay",
           completed_at: "2026-05-14T08:00:00.000Z",
           status: "completed",
           total_score: "0.00",
@@ -88,6 +89,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
           store_id: "store-1",
           store_name: "Marmara Park",
           completed_by_user_id: "vm-user-1",
+          completed_by_display_name: "Eda Doğanay",
           completed_at: "2026-05-14T08:00:00.000Z",
           status: "completed",
           total_score: "74.50",
@@ -128,10 +130,13 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
     expect(sql).toContain("jsonb_agg");
     expect(sql).toContain("ops.checklist_template_item");
     expect(sql).toContain("ops.checklist_response");
+    expect(sql).toContain("ops.user_account completed_user");
+    expect(sql).toContain("ops.employee auditor_employee");
     expect(params).toEqual([["store-1"], ["VM_STORE_VISIT"], 50, 0]);
     expect(result.items[0]).toMatchObject({
       templateType: "VM_STORE_VISIT",
       completedByUserId: "vm-user-1",
+      completedByDisplayName: "Eda Doğanay",
       responses: [
         {
           templateItemId: "item-1",

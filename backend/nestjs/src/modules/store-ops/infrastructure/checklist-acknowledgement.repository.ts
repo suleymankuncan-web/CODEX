@@ -12,6 +12,7 @@ type ChecklistAcknowledgementRow = {
   store_id: string;
   store_name: string;
   completed_by_user_id: string | null;
+  completed_by_display_name: string | null;
   completed_at: string | null;
   status: string;
   total_score: string | null;
@@ -202,6 +203,7 @@ export class ChecklistAcknowledgementRepository {
           ci.store_id,
           s.store_name,
           ci.completed_by_user_id,
+          completed_identity.completed_by_display_name,
           ci.completed_at,
           ci.status,
           ci.total_score,
@@ -230,6 +232,7 @@ export class ChecklistAcknowledgementRepository {
           ci.store_id,
           s.store_name,
           ci.completed_by_user_id,
+          completed_identity.completed_by_display_name,
           ci.completed_at,
           ci.status,
           ci.total_score,
@@ -247,6 +250,24 @@ export class ChecklistAcknowledgementRepository {
           ON s.store_id = ci.store_id
         LEFT JOIN ops.checklist_acknowledgement ca
           ON ca.checklist_instance_id = ci.checklist_instance_id
+        LEFT JOIN ops.user_account completed_user
+          ON completed_user.user_id = CASE
+            WHEN ci.completed_by_user_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+              THEN ci.completed_by_user_id::uuid
+            ELSE NULL
+          END
+        LEFT JOIN ops.employee completed_employee
+          ON completed_employee.employee_id = completed_user.employee_id
+        LEFT JOIN ops.employee auditor_employee
+          ON auditor_employee.employee_id = ci.auditor_employee_id
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(
+            NULLIF(BTRIM(CONCAT_WS(' ', completed_employee.first_name, completed_employee.last_name)), ''),
+            NULLIF(BTRIM(CONCAT_WS(' ', auditor_employee.first_name, auditor_employee.last_name)), ''),
+            NULLIF(BTRIM(completed_user.username), ''),
+            NULLIF(BTRIM(completed_user.email), '')
+          ) AS completed_by_display_name
+        ) completed_identity ON TRUE
         ${responseJoins}
         ${whereClause}
         ${groupByClause}
@@ -272,6 +293,7 @@ export class ChecklistAcknowledgementRepository {
         storeId: row.store_id,
         storeName: row.store_name,
         completedByUserId: row.completed_by_user_id,
+        completedByDisplayName: row.completed_by_display_name,
         completedAt: row.completed_at,
         status: row.status,
         totalScore: row.total_score === null ? null : Number(row.total_score),

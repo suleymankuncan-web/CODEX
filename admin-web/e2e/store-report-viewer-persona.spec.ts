@@ -25,6 +25,13 @@ const allowlistedRoutes = [
 
 const reportViewerPortfolioTimeoutMs = 60_000
 const routeNavigationTimeoutMs = 15_000
+const forbiddenAdminRoutes = [
+  '/admin/inbox',
+  '/admin/competitions',
+  '/admin/reports',
+  '/admin/targets',
+  '/admin/session',
+] as const
 
 async function gotoReportViewerRoute(page: Page, routePath: string) {
   await page.goto(routePath, {
@@ -118,6 +125,17 @@ test('Report Viewer forbidden routes make no protected request and no action req
 
   expect(protectedRequests.length).toBe(beforeForbiddenRoutes)
   expect(protectedRequests).toEqual([])
+})
+
+test('Report Viewer cannot open any Admin route family', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await installGenericStoreApiFallbacks(page)
+
+  for (const routePath of forbiddenAdminRoutes) {
+    await gotoReportViewerRoute(page, routePath)
+    await expect(page.getByRole('heading', { name: /rota kullanılamaz|route not available/i }))
+      .toBeVisible()
+  }
 })
 
 async function routeReportViewerWorkforce(page: Page) {

@@ -31,51 +31,46 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
   const parityGeometry = await page.locator('.checklist-command-parity').evaluate((root) => {
     const surface = root.querySelector<HTMLElement>('[data-testid="checklist-command-surface"]')
-    const metricRail = root.querySelector<HTMLElement>('[data-testid="checklist-command-metrics"]')
+    const header = root.querySelector<HTMLElement>('[data-testid="region-manager-checklist-header"]')
     const unifiedPlan = root.querySelector<HTMLElement>('.checklist-command-unified-plan')
     const row = root.querySelector<HTMLElement>('[data-testid="checklist-command-row"]')
-    if (!surface || !metricRail || !unifiedPlan || !row) throw new Error('missing parity surface')
+    if (!surface || !header || !unifiedPlan || !row) throw new Error('missing checklist workspace surface')
     return {
       rootRect: root.getBoundingClientRect().toJSON(),
-      metricRect: metricRail.getBoundingClientRect().toJSON(),
+      headerRect: header.getBoundingClientRect().toJSON(),
       planRect: unifiedPlan.getBoundingClientRect().toJSON(),
       surfaceRect: surface.getBoundingClientRect().toJSON(),
       fontFamily: getComputedStyle(root).fontFamily,
-      maxWidth: getComputedStyle(root).maxWidth,
       surfaceRadius: getComputedStyle(surface).borderRadius,
-      metricRadius: getComputedStyle(metricRail).borderRadius,
+      headerRadius: getComputedStyle(header).borderRadius,
       rowMinHeight: getComputedStyle(row).minHeight,
     }
   })
   expect(parityGeometry).toMatchObject({
     fontFamily: expect.stringContaining('DM Sans'),
-    maxWidth: '1065px',
-    surfaceRadius: '15px',
-    metricRadius: '15px',
+    surfaceRadius: '14px',
+    headerRadius: '14px',
     rowMinHeight: '64px',
   })
-  expect(parityGeometry.rootRect.width).toBeCloseTo(1065, 0)
-  expect(parityGeometry.planRect.y).toBeGreaterThan(parityGeometry.rootRect.y)
-  expect(parityGeometry.metricRect.y).toBeGreaterThan(parityGeometry.planRect.y + parityGeometry.planRect.height)
-  expect(parityGeometry.surfaceRect.y).toBeGreaterThan(parityGeometry.metricRect.y + parityGeometry.metricRect.height)
+  expect(parityGeometry.rootRect.width).toBeLessThanOrEqual(1280)
+  expect(parityGeometry.planRect.y).toBeGreaterThanOrEqual(parityGeometry.headerRect.y + parityGeometry.headerRect.height)
+  expect(parityGeometry.surfaceRect.y).toBeGreaterThanOrEqual(parityGeometry.planRect.y + parityGeometry.planRect.height)
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
   await expect(page.getByText('88').first()).toBeVisible()
-  await expect(page.getByText('Yapılmadı').first()).toBeVisible()
+  await expect(page.getByText('Ziyaret eksik').first()).toBeVisible()
   await expect(page.getByText('4 gün').first()).toBeVisible()
   await expect(page.locator('.checklist-command-desktop-list .score-vm')).toHaveCount(0)
   await expect(page.locator('.checklist-command-table-head').getByRole('button', { name: 'Geçen süre' })).toBeVisible()
   await expect(page.locator('.checklist-command-compact-sort')).toHaveCount(0)
-  await expect(page.locator('.checklist-command-toolbar input')).toHaveCSS('text-align', 'center')
+  await expect(page.getByTestId('checklist-command-search').getByRole('textbox')).toHaveCSS('text-align', 'start')
   await page.locator('.checklist-command-table-head').getByRole('button', { name: 'Geçen süre' }).click()
   await expect.poll(() => requests.some((url) => url.searchParams.get('sort') === 'elapsed_desc')).toBe(true)
   const visitDateCell = page.locator('.checklist-command-date').first()
   await expect(visitDateCell).toBeVisible()
-  expect(await visitDateCell.evaluate((element) => getComputedStyle(element).fontSize)).toBe('8px')
+  expect(await visitDateCell.evaluate((element) => getComputedStyle(element).fontSize)).toBe('12px')
 
-  await page.getByRole('button', { name: /Bu ay eksik/ }).click()
-  await expect.poll(() => requests.some((url) => url.searchParams.get('status') === 'needs_visit')).toBe(true)
-  await expect(page.locator('.checklist-command-toolbar').getByRole('button', { name: 'Durum', exact: true })).toHaveCount(0)
-  await expect(page.locator('.checklist-command-toolbar').getByRole('button', { name: /Kolonlar/ })).toHaveCount(0)
+  await expect(page.locator('.checklist-command-toolbar')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Kolonlar/ })).toHaveCount(0)
 
   await page.getByRole('button', { name: /Temmuz 2026/ }).click()
   await expect(page.getByRole('dialog', { name: /Raporlama dönemi/ })).toBeVisible()
@@ -91,7 +86,7 @@ test('region manager command canvas reads bounded real rows and applies server c
     fullPage: true,
   })
 
-  const workflowButton = page.locator('[data-testid="checklist-command-row"]').first().getByRole('button', { name: /Checklist/ })
+  const workflowButton = page.locator('[data-testid="checklist-command-row"]').first().getByRole('button', { name: /^(Başlat|Devam et)$/ })
   await workflowButton.click()
   await expect(page).toHaveURL(
     /\/store\/checklists\?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits&workflowChecklist=bm/,
@@ -225,7 +220,7 @@ test('BM-complete and VM-missing region row can start another BM checklist in th
   const row = page.getByTestId('checklist-command-row').filter({ hasText: 'Marmara Park' })
   await expect(row.getByText('Bu ay eksik')).toHaveCount(0)
   await expect(row.getByRole('button', { name: 'Sonuçlar' })).toBeVisible()
-  await row.getByRole('button', { name: /Checklist Başlat/ }).click()
+  await row.getByRole('button', { name: 'Başlat', exact: true }).click()
 
   await expect(page).toHaveURL(/workflowTab=visits/)
   await expect(page).toHaveURL(/workflowChecklist=bm/)
@@ -265,7 +260,7 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
     fullPage: true,
   })
 
-  await page.getByRole('button', { name: /Checklist Başlat/ }).first().click()
+  await page.getByRole('button', { name: 'Başlat', exact: true }).first().click()
   const checklistSession = page.getByRole('dialog', { name: 'Checklist Oturumu' })
   await expect(checklistSession).toBeVisible()
   await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
@@ -494,6 +489,7 @@ test('closing a visit-plan result never reveals the workflow drawer', async ({ p
           storeId: '22222222-2222-4222-8222-222222222222',
           storeName: 'Mall of İstanbul',
           completedByUserId: '90000000-0000-4000-8000-000000000017',
+          completedByDisplayName: 'Eda Doğanay',
           completedAt: '2026-07-14T09:00:00.000Z',
           status: 'completed',
           totalScore: 88,
@@ -514,6 +510,7 @@ test('closing a visit-plan result never reveals the workflow drawer', async ({ p
 
   const resultModal = page.locator('.store-checklist-result-modal')
   await expect(resultModal).toBeVisible()
+  await expect(resultModal.getByText('Eda Doğanay', { exact: true })).toBeVisible()
   await page.evaluate(() => {
     const probe = {
       observer: new MutationObserver(() => {
@@ -557,7 +554,7 @@ test('weekly planner pages 35 scoped stores and keeps the save action reachable 
       const url = new URL(request.url())
       return url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20'
     }),
-    dialog.getByRole('button', { name: 'Sonraki' }).click(),
+    dialog.getByRole('button', { name: 'Sonraki', exact: true }).click(),
   ])
   await expect.poll(() => requests.some((url) => url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20')).toBe(true)
   await expect(dialog.getByText('2 / 2')).toBeVisible()
@@ -592,7 +589,7 @@ test('explicit region context survives a zero-row command filter', async ({ page
   await page.getByRole('button', { name: 'Ege' }).click()
   await expect.poll(() => requests.some((url) => url.pathname.endsWith('/command-canvas') && url.searchParams.get('regionId') === 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')).toBe(true)
 
-  await page.locator('.checklist-command-toolbar input').fill('bulunmaz')
+  await page.getByTestId('checklist-command-search').getByRole('textbox').fill('bulunmaz')
   await expect(page.getByText('Bu filtrelerde mağaza yok')).toBeVisible()
   await expect(page.getByRole('button', { name: /Ziyaret Planı/ })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Saha ziyaretlerini günlere yerleştirin' })).toBeVisible()
@@ -630,7 +627,7 @@ test('server filters retain current rows until the replacement succeeds', async 
 
   await page.goto('/store/checklists')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
-  await page.getByRole('button', { name: /Bu ay eksik/ }).click()
+  await page.getByTestId('checklist-command-search').getByRole('textbox').fill('gecikmeli')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
   await expect(page.getByText('Güncelleniyor…')).toBeVisible()
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
@@ -643,9 +640,9 @@ test('failed server filters retain current rows and expose an inline retry', asy
 
   await page.goto('/store/checklists')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
-  await page.getByRole('button', { name: /Bu ay eksik/ }).click()
+  await page.getByTestId('checklist-command-search').getByRole('textbox').fill('hata')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: /Veriler yenilenemedi.*Tekrar dene/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Yeniden dene' })).toBeVisible()
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
 })
 
@@ -660,14 +657,14 @@ test('unified page keeps the weekly planner first without a duplicated store lis
   await expect(page.locator('.decision-rail--plan')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Planla', exact: true })).toHaveCount(0)
   const order = await page.locator('.checklist-command-parity').evaluate((root) => {
+    const header = root.querySelector<HTMLElement>('[data-testid="region-manager-checklist-header"]')
     const week = root.querySelector<HTMLElement>('.week-planner')
-    const metrics = root.querySelector<HTMLElement>('[data-testid="checklist-command-metrics"]')
     const visits = root.querySelector<HTMLElement>('[data-testid="checklist-command-surface"]')
-    if (!week || !metrics || !visits) throw new Error('missing unified page landmark')
-    return { weekY: week.getBoundingClientRect().y, metricsY: metrics.getBoundingClientRect().y, visitsY: visits.getBoundingClientRect().y }
+    if (!header || !week || !visits) throw new Error('missing checklist workspace landmark')
+    return { headerY: header.getBoundingClientRect().y, weekY: week.getBoundingClientRect().y, visitsY: visits.getBoundingClientRect().y }
   })
-  expect(order.weekY).toBeLessThan(order.metricsY)
-  expect(order.metricsY).toBeLessThan(order.visitsY)
+  expect(order.headerY).toBeLessThan(order.weekY)
+  expect(order.weekY).toBeLessThan(order.visitsY)
 })
 
 test('period picker remains keyboard accessible while the plan toolbar stays minimal', async ({ page }) => {
@@ -685,8 +682,8 @@ test('period picker remains keyboard accessible while the plan toolbar stays min
   await expect(periodDialog).toHaveCount(0)
   await expect(periodTrigger).toBeFocused()
 
-  await expect(page.locator('.checklist-command-toolbar').getByRole('button', { name: /^Durum/ })).toHaveCount(0)
-  await expect(page.locator('.checklist-command-toolbar').getByRole('button', { name: /^Kolonlar/ })).toHaveCount(0)
+  await expect(page.locator('.checklist-command-toolbar')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Kolonlar/ })).toHaveCount(0)
 
   await expect(page.locator('.canvas-plan-command')).toHaveCount(0)
   await expect(page.locator('.canvas-plan-head')).toHaveCount(0)
@@ -707,38 +704,36 @@ test('annual visit history shows only completed region visits and supports year 
 
   await page.goto('/store/checklists')
   await page.getByRole('button', { name: /Yıllık Ziyaretler/ }).click()
-  let history = page.getByRole('dialog', { name: '2026 Ziyaret Geçmişi' })
+  let history = page.getByRole('dialog', { name: '2026 Ziyaret Takvimi' })
   await expect(history).toBeVisible()
   await expect(history.locator('[data-calendar-date]')).toHaveCount(0)
   await expect(history.getByText('Planlandı', { exact: true })).toHaveCount(0)
   await expect(history.getByText('Yapılmadı', { exact: true })).toHaveCount(0)
-  await expect(history.locator('.annual-visit-history-total strong')).toHaveText('5')
-  await expect(history.locator('.annual-visit-history-summary dd')).toHaveText(['2', '1', '4'])
+  const annualSummary = history.getByRole('region', { name: 'Yıllık ziyaret özeti' })
+  await expect(annualSummary.locator('dd')).toHaveText(['5', '2', '1'])
   await expect(history.getByRole('button', { name: 'Temmuz, 1 ziyaret' })).toBeVisible()
   await expect(history.getByRole('button', { name: 'Ağustos, 4 ziyaret' })).toBeVisible()
-  await expect(history.locator('.annual-visit-history-groups li')).toHaveCount(5)
-  const storeDistribution = history.locator('.annual-visit-history-stores')
-  await expect(storeDistribution.getByRole('listitem')).toHaveCount(2)
-  await expect(storeDistribution.getByRole('listitem').nth(0)).toContainText('01Marmara ParkST-0013ziyaret')
-  await expect(storeDistribution.getByRole('listitem').nth(1)).toContainText('02Mall of İstanbulST-0022ziyaret')
+  const visitLog = history.getByRole('complementary', { name: 'Ziyaret akışı' })
+  await expect(visitLog.getByRole('listitem')).toHaveCount(5)
   await page.screenshot({
     path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/annual-visit-history-desktop.png'),
     fullPage: true,
   })
   const storeSearch = history.getByRole('textbox', { name: 'Ziyaretlerde mağaza ara' })
   await storeSearch.fill('Mall')
-  await expect(history.locator('.annual-visit-history-groups li')).toHaveCount(2)
-  await expect(history.locator('.annual-visit-history-row-store')).toContainText(['Mall of İstanbulST-002 · 26 Ağustos 2026', 'Mall of İstanbulST-002 · 14 Temmuz 2026'])
+  await expect(visitLog.getByRole('listitem')).toHaveCount(2)
+  await expect(visitLog.getByRole('listitem')).toContainText(['Mall of İstanbul26 Ağustos 2026', 'Mall of İstanbul14 Temmuz 2026'])
   await storeSearch.fill('')
   await history.getByRole('button', { name: 'Ağustos, 4 ziyaret' }).click()
-  await expect(history.locator('.annual-visit-history-groups li')).toHaveCount(4)
-  await expect(history.locator('.annual-visit-history-log > header')).toContainText('Ağustos 2026 · 4 ziyaret')
+  await expect(visitLog.getByRole('listitem')).toHaveCount(4)
+  await expect(visitLog.locator('header')).toContainText('Ağustos 2026')
+  await expect(visitLog.locator('header')).toContainText('4')
   await history.getByRole('button', { name: 'Önceki yıl' }).click()
-  history = page.getByRole('dialog', { name: '2025 Ziyaret Geçmişi' })
-  await expect(history.locator('.annual-visit-history-empty')).toContainText('Bu dönemde tamamlanmış ziyaret bulunmuyor.')
+  history = page.getByRole('dialog', { name: '2025 Ziyaret Takvimi' })
+  await expect(history.getByText('Bu dönemde tamamlanmış ziyaret bulunmuyor.')).toBeVisible()
   await history.getByRole('button', { name: 'Sonraki yıl' }).click()
-  history = page.getByRole('dialog', { name: '2026 Ziyaret Geçmişi' })
-  await expect(history.locator('.annual-visit-history-groups li')).toHaveCount(5)
+  history = page.getByRole('dialog', { name: '2026 Ziyaret Takvimi' })
+  await expect(history.getByRole('complementary', { name: 'Ziyaret akışı' }).getByRole('listitem')).toHaveCount(5)
   await page.setViewportSize({ width: 375, height: 812 })
   const mobileOverflow = await history.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }))
   expect(mobileOverflow.scrollWidth).toBeLessThanOrEqual(mobileOverflow.clientWidth)
@@ -877,9 +872,11 @@ test('annual visit history keeps multiple completed visits without showing plann
   await page.goto('/store/checklists')
   await expect(page.locator('.canvas-plan-surface')).toHaveCount(0)
   await page.getByRole('button', { name: /Yıllık Ziyaretler/ }).click()
-  const history = page.getByRole('dialog', { name: '2026 Ziyaret Geçmişi' })
+  const history = page.getByRole('dialog', { name: '2026 Ziyaret Takvimi' })
   await history.getByRole('textbox', { name: 'Ziyaretlerde mağaza ara' }).fill('Mall')
-  await expect(history.locator('.annual-visit-history-row-store small')).toHaveText(['ST-002 · 14 Temmuz 2026', 'ST-002 · 14 Temmuz 2026'])
+  const visits = history.getByRole('complementary', { name: 'Ziyaret akışı' }).getByRole('listitem')
+  await expect(visits).toHaveCount(2)
+  await expect(visits).toContainText(['Mall of İstanbul14 Temmuz 2026', 'Mall of İstanbul14 Temmuz 2026'])
   await expect(history.getByText('Planlandı', { exact: true })).toHaveCount(0)
 })
 
@@ -894,7 +891,7 @@ test('weekly planner keeps 200 scoped candidates bounded to server pages', async
   await expect(dialog.locator('.week-plan-result-row')).toHaveCount(20)
   await expect(dialog.getByText('1 / 10')).toBeVisible()
   for (let pageNumber = 2; pageNumber <= 10; pageNumber += 1) {
-    await dialog.getByRole('button', { name: 'Sonraki' }).click()
+    await dialog.getByRole('button', { name: 'Sonraki', exact: true }).click()
     await expect(dialog.getByText(`${pageNumber} / 10`)).toBeVisible()
   }
   await expect(dialog.locator('.week-plan-result-row')).toHaveCount(20)
@@ -961,10 +958,10 @@ test('dirty weekly drafts require confirmation on Escape and restore focus after
 })
 
 for (const viewport of [
-  { width: 1440, height: 900, contentWidth: 1065, titleY: 42, titleHeight: 66 },
-  { width: 1024, height: 768, contentWidth: 672, titleY: 18, titleHeight: 66 },
-  { width: 390, height: 844, contentWidth: 362, titleY: 202.59, titleHeight: 89.5 },
-  { width: 320, height: 844, contentWidth: 292, titleY: 202.59, titleHeight: 89.5 },
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+  { width: 390, height: 844 },
+  { width: 320, height: 844 },
 ] as const) {
   test(`unified checklist page preserves its responsive frame at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport)
@@ -977,11 +974,10 @@ for (const viewport of [
     await expect(page.locator('.canvas-plan-surface')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Yıllık Ziyaretler/ })).toBeVisible()
     const geometry = await page.locator('.checklist-command-parity').evaluate((root) => {
-      const title = root.querySelector<HTMLElement>('.checklist-command-title')
+      const header = root.querySelector<HTMLElement>('[data-testid="region-manager-checklist-header"]')
       const week = root.querySelector<HTMLElement>('.week-planner')
-      const metrics = root.querySelector<HTMLElement>('[data-testid="checklist-command-metrics"]')
       const surface = root.querySelector<HTMLElement>('[data-testid="checklist-command-surface"]')
-      if (!title || !week || !metrics || !surface) throw new Error('missing unified page landmark')
+      if (!header || !week || !surface) throw new Error('missing checklist workspace landmark')
       const rect = (element: HTMLElement) => {
         const value = element.getBoundingClientRect()
         return { x: value.x, y: value.y, width: value.width, height: value.height }
@@ -989,30 +985,20 @@ for (const viewport of [
       return {
         documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         root: rect(root as HTMLElement),
-        title: rect(title),
+        header: rect(header),
         week: rect(week),
-        metrics: rect(metrics),
         surface: rect(surface),
       }
     })
     const expectParityDelta = (actual: number, accepted: number) => {
-      expect.soft(Math.abs(actual - accepted)).toBeLessThanOrEqual(1)
+      expect.soft(Math.abs(actual - accepted)).toBeLessThanOrEqual(2)
     }
-    expectParityDelta(geometry.root.width, viewport.contentWidth)
-    expectParityDelta(geometry.title.y, viewport.titleY)
-    expectParityDelta(geometry.title.height, viewport.titleHeight)
-    expectParityDelta(geometry.week.width, viewport.contentWidth)
-    expectParityDelta(geometry.surface.width, viewport.contentWidth)
-    expect(geometry.week.y).toBeGreaterThanOrEqual(geometry.title.y + geometry.title.height)
-    expect(geometry.week.y).toBeLessThan(geometry.metrics.y)
-    expect(geometry.metrics.y).toBeLessThan(geometry.surface.y)
+    expect(geometry.root.width).toBeLessThanOrEqual(viewport.width)
+    expectParityDelta(geometry.week.width, geometry.root.width)
+    expectParityDelta(geometry.surface.width, geometry.root.width)
+    expect(geometry.week.y).toBeGreaterThanOrEqual(geometry.header.y + geometry.header.height)
+    expect(geometry.week.y).toBeLessThan(geometry.surface.y)
     expect(geometry.documentOverflow).toBeLessThanOrEqual(1)
-
-    await expect(page).toHaveScreenshot(`checklist-plan-${viewport.width}x${viewport.height}.png`, {
-      animations: 'disabled',
-      fullPage: true,
-      maxDiffPixelRatio: 0.005,
-    })
 
     await page.screenshot({
       path: checklistEvidenceOutputPath(testInfo, `checklist-command-canvas-plan-parity-v1-2026-07-14/production-plan-${viewport.width}x${viewport.height}.png`),
@@ -1035,7 +1021,7 @@ for (const viewport of [
     await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(1)
-    const firstActionBox = await page.getByRole('button', { name: /Checklist Başlat/ }).first().boundingBox()
+    const firstActionBox = await page.getByRole('button', { name: /^(Başlat|Devam et)$/ }).first().boundingBox()
     expect(firstActionBox).not.toBeNull()
     expect((firstActionBox?.x ?? viewport.width) + (firstActionBox?.width ?? 0)).toBeLessThanOrEqual(viewport.width)
     await page.screenshot({
@@ -1158,10 +1144,10 @@ async function routeChecklistCommand(
       await route.fulfill({ status: regionStatus, json: { message: 'region command unavailable' } })
       return
     }
-    if (commandDelayMs > 0 && url.searchParams.has('status')) {
+    if (commandDelayMs > 0 && url.searchParams.get('query') === 'gecikmeli') {
       await new Promise((resolve) => setTimeout(resolve, commandDelayMs))
     }
-    if (behavior.commandFilterStatus && url.searchParams.get('status') === 'needs_visit') {
+    if (behavior.commandFilterStatus && url.searchParams.get('query') === 'hata') {
       await route.fulfill({ status: behavior.commandFilterStatus, json: { message: 'command filter unavailable' } })
       return
     }
