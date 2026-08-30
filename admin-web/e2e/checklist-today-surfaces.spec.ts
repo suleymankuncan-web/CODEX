@@ -159,7 +159,7 @@ test('store checklist area lets managers retry after acknowledgement load fails'
   await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
   await expect(page.getByText('Checklist akışı yüklenemedi')).toBeVisible()
-  const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
+  const retryButton = page.getByLabel('Checklist akışı').getByRole('button', { name: 'Tekrar dene' })
   await expect(retryButton).toBeVisible()
 
   allowAcknowledgements = true
@@ -467,7 +467,7 @@ test('visit plan is not exposed to store manager and plan URL falls back', async
 
   await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toHaveCount(0)
   await expect(page.locator('#store-checklist-panel-plan')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Mağaza Kontrol Merkezi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Checklist İnceleme' })).toBeVisible()
 })
 
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }, testInfo) => {
