@@ -58,13 +58,18 @@
   display: flex;
   width: var(--store-command-sidebar);
   flex-direction: column;
-  gap: 14px;
-  border-right: 1px solid var(--store-command-line);
+  gap: 12px;
+  border-right: 0;
   border-radius: 0;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: none;
-  padding: 18px;
-  backdrop-filter: blur(18px);
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--store-command-blue) 72%, var(--store-command-ink)),
+      var(--store-command-blue) 58%,
+      color-mix(in srgb, var(--store-command-cyan) 54%, var(--store-command-blue))
+    );
+  box-shadow: 14px 0 44px color-mix(in srgb, var(--store-command-blue) 16%, transparent);
+  padding: 18px 16px;
   transition: width 240ms ease, padding 240ms ease;
 }
 .store-command-brand {
@@ -73,20 +78,20 @@
   grid-template-columns: 36px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(124, 58, 237, 0.10);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.62);
-  box-shadow: 0 12px 26px rgba(46, 33, 74, 0.06);
-  padding: 5px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 3px 4px;
 }
 .store-command-brand-mark {
   display: grid;
   width: 34px;
   height: 34px;
   place-items: center;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: none;
+  border-radius: 10px;
+  background: var(--store-command-surface-strong);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--store-command-ink) 18%, transparent);
   color: #fff;
   font-weight: 900;
 }
@@ -105,7 +110,7 @@
 }
 .store-command-brand-text strong {
   display: block;
-  color: #156cc3;
+  color: var(--store-command-surface-strong);
   font-size: 16px;
   line-height: 1.1;
   letter-spacing: 0;
@@ -113,11 +118,33 @@
 .store-command-brand-text small {
   display: block;
   margin-top: 2px;
-  color: var(--store-command-quiet);
+  color: color-mix(in srgb, var(--store-command-surface-strong) 66%, transparent);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+.store-command-rail-context {
+  display: grid;
+  gap: 2px;
+  margin: 5px 4px 3px;
+  border-top: 1px solid color-mix(in srgb, var(--store-command-surface-strong) 18%, transparent);
+  padding: 14px 6px 2px;
+}
+.store-command-rail-context span {
+  color: color-mix(in srgb, var(--store-command-surface-strong) 56%, transparent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.store-command-rail-context strong {
+  overflow: hidden;
+  color: var(--store-command-surface-strong);
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .store-command-persona-chip {
   display: inline-flex;
@@ -144,9 +171,9 @@
 .store-command-nav {
   display: grid;
   min-height: 0;
-  gap: 6px;
+  gap: 4px;
   overflow-y: auto;
-  padding: 4px 0 6px;
+  padding: 2px 0 8px;
   scrollbar-width: none;
 }
 .store-command-nav::-webkit-scrollbar {
@@ -155,30 +182,30 @@
 .store-command-nav-link {
   display: grid;
   align-items: center;
-  color: var(--store-command-muted);
+  color: color-mix(in srgb, var(--store-command-surface-strong) 76%, transparent);
   text-decoration: none;
   transition: border-color 160ms ease, color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 .store-command-nav-link {
   position: relative;
-  min-height: 40px;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 10px;
+  min-height: 42px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
   border: 1px solid transparent;
-  border-radius: 8px;
-  padding: 0 10px;
+  border-radius: 11px;
+  padding: 0 9px;
   font-size: 13px;
   font-weight: 500;
 }
 .store-command-nav-link:hover,
 .store-command-nav-link:focus-visible {
-  border-color: rgba(124, 58, 237, 0.10);
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--store-command-ink);
+  border-color: color-mix(in srgb, var(--store-command-surface-strong) 16%, transparent);
+  background: color-mix(in srgb, var(--store-command-surface-strong) 11%, transparent);
+  color: var(--store-command-surface-strong);
   outline: none;
 }
 .store-command-nav-link:focus-visible {
-  outline: 3px solid rgba(124, 58, 237, 0.18);
+  outline: 3px solid color-mix(in srgb, var(--store-command-surface-strong) 28%, transparent);
   outline-offset: 2px;
 }
 
@@ -395,21 +422,21 @@
   outline-offset: 2px;
 }
 .store-command-nav-link-active {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--store-command-plum-soft), var(--store-command-cyan-soft));
-  box-shadow: none;
-  color: var(--store-command-plum-deep);
-  font-weight: 600;
+  border-color: color-mix(in srgb, var(--store-command-surface-strong) 70%, transparent);
+  background: var(--store-command-surface-strong);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--store-command-ink) 20%, transparent);
+  color: color-mix(in srgb, var(--store-command-blue) 78%, var(--store-command-ink));
+  font-weight: 700;
 }
 .store-command-nav-link-active:hover,
 .store-command-nav-link-active:focus-visible,
 .store-command-nav-link-active:active {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--store-command-plum-soft), var(--store-command-cyan-soft));
-  color: var(--store-command-plum-deep);
+  border-color: var(--store-command-surface-strong);
+  background: var(--store-command-surface-strong);
+  color: color-mix(in srgb, var(--store-command-blue) 78%, var(--store-command-ink));
 }
 .store-command-nav-link-active:focus-visible {
-  outline: 3px solid rgba(124, 58, 237, 0.18);
+  outline: 3px solid color-mix(in srgb, var(--store-command-surface-strong) 40%, transparent);
   outline-offset: 2px;
 }
 .store-command-nav-link-active::before {
@@ -417,15 +444,15 @@
 }
 .store-command-nav-icon {
   display: grid;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   place-items: center;
-  border-radius: 0;
-  background: transparent;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--store-command-surface-strong) 10%, transparent);
   color: currentColor;
 }
 .store-command-nav-link-active .store-command-nav-icon {
-  background: transparent;
+  background: var(--store-command-blue-soft);
 }
 .store-command-nav-label,
 .store-command-brand-text,
@@ -436,7 +463,30 @@
   display: grid;
   gap: 10px;
   margin-top: auto;
-  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--store-command-surface-strong) 18%, transparent);
+  padding-top: 12px;
+}
+.store-command-sidebar .store-account-trigger {
+  border-color: color-mix(in srgb, var(--store-command-surface-strong) 18%, transparent);
+  background: color-mix(in srgb, var(--store-command-surface-strong) 10%, transparent);
+  box-shadow: none;
+  color: var(--store-command-surface-strong);
+}
+.store-command-sidebar .store-account-trigger:hover,
+.store-command-sidebar .store-account-trigger:focus-visible,
+.store-command-sidebar .store-account-trigger-active {
+  border-color: color-mix(in srgb, var(--store-command-surface-strong) 34%, transparent);
+  background: color-mix(in srgb, var(--store-command-surface-strong) 16%, transparent);
+  box-shadow: none;
+}
+.store-command-sidebar .store-account-avatar {
+  border-color: color-mix(in srgb, var(--store-command-surface-strong) 34%, transparent);
+  background: var(--store-command-surface-strong);
+  color: color-mix(in srgb, var(--store-command-blue) 78%, var(--store-command-ink));
+}
+.store-command-sidebar .store-command-identity-text small,
+.store-command-sidebar .store-account-trigger-chevron {
+  color: color-mix(in srgb, var(--store-command-surface-strong) 68%, transparent);
 }
 .store-command-identity {
   display: grid;
@@ -539,10 +589,16 @@
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
-    border: 1px solid var(--store-command-line);
+    border: 0;
     border-radius: 18px;
-    background: rgba(255, 255, 255, 0.78);
-    box-shadow: none;
+    background:
+      linear-gradient(
+        120deg,
+        color-mix(in srgb, var(--store-command-blue) 72%, var(--store-command-ink)),
+        var(--store-command-blue) 64%,
+        color-mix(in srgb, var(--store-command-cyan) 50%, var(--store-command-blue))
+      );
+    box-shadow: 0 14px 34px color-mix(in srgb, var(--store-command-blue) 18%, transparent);
     padding: 12px;
   }
 
@@ -551,6 +607,10 @@
   }
 
   .store-command-persona-chip {
+    display: none;
+  }
+
+  .store-command-rail-context {
     display: none;
   }
 
@@ -583,11 +643,11 @@
     grid-template-columns: 20px minmax(0, auto);
     min-width: max-content;
     min-height: 42px;
-    border: 1px solid var(--store-command-line);
+    border: 1px solid color-mix(in srgb, var(--store-command-surface-strong) 14%, transparent);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.72);
+    background: color-mix(in srgb, var(--store-command-surface-strong) 9%, transparent);
     box-shadow: none;
-    color: var(--store-command-muted);
+    color: color-mix(in srgb, var(--store-command-surface-strong) 78%, transparent);
     padding: 0 12px;
   }
 
@@ -595,20 +655,20 @@
   .store-command-nav-link-active:hover,
   .store-command-nav-link-active:focus-visible,
   .store-command-nav-link-active:active {
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--store-command-plum-soft), var(--store-command-cyan-soft));
-    box-shadow: none;
-    color: var(--store-command-plum-deep);
+    border-color: var(--store-command-surface-strong);
+    background: var(--store-command-surface-strong);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--store-command-ink) 18%, transparent);
+    color: color-mix(in srgb, var(--store-command-blue) 78%, var(--store-command-ink));
   }
 
   .store-command-nav-link:focus-visible,
   .store-command-nav-link-active:focus-visible {
-    outline: 3px solid rgba(124, 58, 237, 0.18);
+    outline: 3px solid color-mix(in srgb, var(--store-command-surface-strong) 40%, transparent);
     outline-offset: -4px;
   }
 
   .store-command-nav-link-active .store-command-nav-icon {
-    background: transparent;
+    background: var(--store-command-blue-soft);
     color: currentColor;
   }
 

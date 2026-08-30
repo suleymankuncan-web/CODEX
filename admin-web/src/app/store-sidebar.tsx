@@ -92,6 +92,11 @@ export function StoreSidebar(input: {
         />
       </div>
 
+      <div className="store-command-rail-context" aria-label={personaLabel}>
+        <span>{t('storeHome.sidebar.workspace')}</span>
+        <strong>{personaLabel}</strong>
+      </div>
+
       <nav className="store-command-nav" aria-label={t('storeHome.sidebar.navAria')}>
         {navItems.map((item) => {
           const Icon = iconById[item.icon]
