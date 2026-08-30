@@ -32,11 +32,12 @@ import {
   ReportsSummaryPage,
   ReportsTurnoverPage,
   ReportsWorkforcePage,
+  SessionReadinessPage,
   SnapshotRunDetailPage,
   SnapshotsDashboardPage,
   TargetApprovalQueuePage,
 } from './route-loaders'
-import { AdminRouteGuard, RouteLoadingState, SessionGate } from './route-states'
+import { AdminRouteGuard, RouteLoadingState } from './route-states'
 import { RouteRecoveryBoundary } from './route-recovery-boundary'
 import { RouteTransitionFrame } from './route-transition-frame'
 import type { ShellState } from './shell-state'
@@ -95,19 +96,18 @@ export function AdminShell(input: {
             <Route path="/" element={<Navigate to={input.firstAllowedPath} replace />} />
             <Route
               path="/admin/session"
-              element={adminRoute(
-                [
-                  'SUPER_ADMIN',
-                  'INTEGRATION_ADMIN',
-                  'HR_ADMIN',
-                  'SNAPSHOT_OPERATOR',
-                  'REGION_MANAGER',
-                  'AUDITOR',
-                  'STORE_MANAGER',
-                  'STORE_PERSONNEL',
-                  'VISUAL_MERCHANDISER',
-                ],
-                <SessionGate />,
+              element={adminRoute([
+                'SUPER_ADMIN',
+                'INTEGRATION_ADMIN',
+                'HR_ADMIN',
+                'SNAPSHOT_OPERATOR',
+                'REGION_MANAGER',
+                'AUDITOR',
+                'STORE_MANAGER',
+                'STORE_PERSONNEL',
+                'VISUAL_MERCHANDISER',
+              ],
+                <SessionReadinessPage />,
               )}
             />
             <Route

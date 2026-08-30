@@ -83,7 +83,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 95
+        "line": 96
       }
     },
     {
@@ -735,7 +735,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 96
+        "line": 97
       }
     },
     {

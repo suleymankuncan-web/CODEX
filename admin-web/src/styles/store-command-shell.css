@@ -95,19 +95,14 @@
   color: #fff;
   font-weight: 900;
 }
-.store-command-brand-logo {
-  overflow: hidden;
-  background: transparent;
-}
+.store-command-brand-logo { overflow: hidden; background: transparent; }
 .store-command-brand-logo img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   padding: 0;
 }
-.store-command-brand-text {
-  min-width: 0;
-}
+.store-command-brand-text { min-width: 0; }
 .store-command-brand-text strong {
   display: block;
   color: var(--store-command-surface-strong);
