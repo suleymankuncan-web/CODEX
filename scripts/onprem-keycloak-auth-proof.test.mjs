@@ -21,7 +21,7 @@ test('Keycloak auth proof requires the exact five synthetic personas and CA file
     writeFileSync(path, `${rows.join('\n')}\n`)
     const accounts = readAccounts(path)
     assert.equal(accounts.length, 5)
-    assert.deepEqual(accounts.map((account) => account.scope), ['store', 'region', 'company', 'store', 'store'])
+    assert.deepEqual(accounts.map((account) => account.scope), ['store', 'store', 'company', 'store', 'store'])
     assert.throws(() => parseArgs(['--host', 'onprem-proof.example.invalid', '--accounts-file', path]), /ca-file/)
     assert.deepEqual(parseArgs(['--host', 'onprem-proof.example.invalid', '--accounts-file', path, '--ca-file', 'ca.crt']), {
       host: 'onprem-proof.example.invalid',

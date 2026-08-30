@@ -253,8 +253,8 @@ describe("AuthContextService", () => {
       },
       roleScopes: {
         REGION_MANAGER: {
-          companyIds: ["company-1"],
-          regionIds: ["region-1"],
+          companyIds: [],
+          regionIds: [],
           storeIds: [],
         },
         STORE_MANAGER: {
@@ -270,7 +270,7 @@ describe("AuthContextService", () => {
     });
   });
 
-  it("adds persistent action store assignments without narrowing region read scope", async () => {
+  it("uses direct action store assignments as the Region Manager read scope", async () => {
     const service = new AuthContextService(
       { authMode: "mock", allowMockAuth: true } as never,
       buildAuthorizationRepository({
@@ -312,20 +312,20 @@ describe("AuthContextService", () => {
       userId: "user-1",
       roleCodes: ["REGION_MANAGER"],
       scope: {
-        companyIds: ["company-1"],
-        regionIds: ["region-1"],
-        storeIds: [],
+        companyIds: [],
+        regionIds: [],
+        storeIds: ["store-1", "store-2"],
       },
       readScope: {
-        companyIds: ["company-1"],
-        regionIds: ["region-1"],
-        storeIds: [],
+        companyIds: [],
+        regionIds: [],
+        storeIds: ["store-1", "store-2"],
       },
       roleScopes: {
         REGION_MANAGER: {
-          companyIds: ["company-1"],
-          regionIds: ["region-1"],
-          storeIds: [],
+          companyIds: [],
+          regionIds: [],
+          storeIds: ["store-1", "store-2"],
         },
       },
       actionScope: {
@@ -333,6 +333,32 @@ describe("AuthContextService", () => {
       },
       assignedStoreIds: ["store-1", "store-2"],
     });
+  });
+
+  it("does not turn a company-scoped Region Manager identity into company-wide access", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({
+        roleAssignments: [{
+          role_code: "REGION_MANAGER",
+          role_scope_type: "region",
+          scope_type: "company",
+          company_id: "company-1",
+          region_id: null,
+          store_id: null,
+          permission_codes: ["checklist.manage"],
+        }],
+      }),
+      { resolveUser: jest.fn(async () => ({ userId: "user-1", roleCodes: [], scope: {} })) } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+
+    const user = await service.resolveUser({ headers: { "x-user-id": "user-1" } });
+
+    expect(user?.roleCodes).toEqual(["REGION_MANAGER"]);
+    expect(user?.readScope).toEqual({ companyIds: [], regionIds: [], storeIds: [] });
+    expect(user?.roleScopes?.REGION_MANAGER).toEqual({ companyIds: [], regionIds: [], storeIds: [] });
+    expect(user?.permissionScopes?.["checklist.manage"]).toEqual({ companyIds: [], regionIds: [], storeIds: [] });
   });
 
   it("exposes assigned store types for shell-level company store eligibility", async () => {

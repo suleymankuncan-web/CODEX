@@ -81,7 +81,7 @@ release proof, and DG1/DG2/REM history live in the linked historical records.
 Current consequences are the active release, pilot, database, and on-prem
 gates below; no successful read authorizes an unrelated runtime change.
 
-Report Viewer checklist ownership is the active Region Manager identity plus active direct store assignments; legacy region identifiers remain only in the Region Manager's own weekly-plan mutation contract. Report Viewer history reads are bounded/retryable, Playwright build reuse requires an exact source/environment/dist receipt, and test-only frontend scripts avoid image proof while root package changes retain the full root release gate.
+Report Viewer checklist ownership is the active `REGION_MANAGER` role plus active direct store assignments. Assigning the role identifies the Bölge Müdürü; it does not grant company- or region-wide store access, and the account's visible portfolio comes only from Admin Auth “Mağaza erişimi” assignments. Legacy region identifiers remain persistence details for the existing weekly-plan mutation contract and are not an authorization source. Report Viewer history reads are bounded/retryable, Playwright build reuse requires an exact source/environment/dist receipt, and test-only frontend scripts avoid image proof while root package changes retain the full root release gate.
 ## Active Evidence Gates
 
 ### A3 Release Measurement

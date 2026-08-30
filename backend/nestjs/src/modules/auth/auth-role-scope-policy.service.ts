@@ -62,7 +62,7 @@ export class AuthRoleScopePolicyService {
     if (
       input.roleCode === "REGION_MANAGER" &&
       input.roleScopeType === "region" &&
-      input.assignmentScopeType === "store"
+      ["company", "store"].includes(input.assignmentScopeType)
     ) {
       return;
     }

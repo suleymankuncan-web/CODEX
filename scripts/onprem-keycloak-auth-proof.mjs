@@ -13,7 +13,7 @@ let requestLimits = Object.freeze({
 
 const PERSONAS = new Map([
   ['onprem.store-manager', { role: 'STORE_MANAGER', scope: 'store' }],
-  ['onprem.region-manager', { role: 'REGION_MANAGER', scope: 'region' }],
+  ['onprem.region-manager', { role: 'REGION_MANAGER', scope: 'store' }],
   ['onprem.report-viewer', { role: 'REPORT_VIEWER', scope: 'company' }],
   ['onprem.store-personnel', { role: 'STORE_PERSONNEL', scope: 'store' }],
   ['onprem.visual-merchandiser', { role: 'VISUAL_MERCHANDISER', scope: 'store' }],
