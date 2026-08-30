@@ -20,12 +20,19 @@ describe("Auth action store assignments", () => {
   const secondStoreId = "10000000-0000-4000-8000-000000000022";
 
   it("creates an action store assignment for a user", async () => {
-    const query = jest.fn(async (sql: string) => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_role_assignment")) {
         return { rowCount: 0, rows: [] };
       }
 
       if (sql.includes("active_action_store_assignment_count")) {
+        expect(sql).toContain("tstzrange");
+        expect(params).toEqual([
+          reportUserId,
+          storeId,
+          "2026-04-24T00:00:00.000Z",
+          null,
+        ]);
         return {
           rowCount: 1,
           rows: [{ active_action_store_assignment_count: "0" }],
@@ -153,7 +160,13 @@ describe("Auth action store assignments", () => {
       }
 
       if (sql.includes("FROM ops.user_action_store_assignment") && sql.includes("FOR UPDATE")) {
-        expect(params).toEqual([reportUserId, [storeId, secondStoreId]]);
+        expect(sql).toContain("tstzrange");
+        expect(params).toEqual([
+          reportUserId,
+          [storeId, secondStoreId],
+          "2026-04-24T00:00:00.000Z",
+          null,
+        ]);
         return { rowCount: 0, rows: [] };
       }
 
@@ -236,6 +249,238 @@ describe("Auth action store assignments", () => {
       storeId,
       secondStoreId,
     ]);
+
+    await app.close();
+  });
+
+  it.each([
+    ["exclusion", "23P01", "ex_user_action_store_assignment_no_overlap_v1"],
+    ["legacy unique", "23505", "uq_user_action_store_assignment_active"],
+  ])(
+    "returns 409 for a named %s race without writing audit",
+    async (_label, code, constraint) => {
+      const conflict = Object.assign(new Error("assignment conflict"), {
+        code,
+        constraint,
+      });
+      const query = jest.fn(async (sql: string) => {
+        if (
+          sql.includes("FROM ops.user_account ua") &&
+          sql.includes("INNER JOIN ops.user_role_assignment")
+        ) {
+          return { rowCount: 0, rows: [] };
+        }
+
+        if (
+          sql.includes("FROM ops.store s") &&
+          sql.includes("WHERE s.store_id = $1::uuid")
+        ) {
+          return {
+            rowCount: 1,
+            rows: [
+              {
+                store_id: storeId,
+                store_code: "IST-021",
+                store_name: "Istanbul Field Store",
+                company_id: companyId,
+                region_id: regionId,
+                region_name: "Marmara",
+              },
+            ],
+          };
+        }
+
+        if (sql.includes("active_action_store_assignment_count")) {
+          return {
+            rowCount: 1,
+            rows: [{ active_action_store_assignment_count: "0" }],
+          };
+        }
+
+        if (sql.includes("INSERT INTO ops.user_action_store_assignment")) {
+          throw conflict;
+        }
+
+        return { rowCount: 0, rows: [] };
+      });
+      const withTransaction = jest.fn(
+        async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      );
+      const app = await createIntegrationApp({
+        databaseService: { query, withTransaction },
+      });
+
+      const response = await request(app.getHttpServer())
+        .post("/api/auth/action-store-assignments")
+        .set("x-user-id", adminUserId)
+        .set("x-role-codes", "SUPER_ADMIN")
+        .send({ userId: reportUserId, storeId });
+
+      expect(response.status).toBe(409);
+      expect(response.body.message).toBe(
+        "Active action store assignment already exists",
+      );
+      expect(
+        query.mock.calls
+          .map(([statement]) => String(statement))
+          .some((statement) =>
+            statement.includes("INSERT INTO audit.event_log"),
+          ),
+      ).toBe(false);
+
+      await app.close();
+    },
+  );
+
+  it("propagates an unrelated PostgreSQL assignment error", async () => {
+    const databaseError = Object.assign(
+      new Error("unexpected database failure"),
+      {
+        code: "23505",
+        constraint: "some_other_constraint",
+      },
+    );
+    const query = jest.fn(async (sql: string) => {
+      if (
+        sql.includes("FROM ops.user_account ua") &&
+        sql.includes("INNER JOIN ops.user_role_assignment")
+      ) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (
+        sql.includes("FROM ops.store s") &&
+        sql.includes("WHERE s.store_id = $1::uuid")
+      ) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              store_id: storeId,
+              store_code: "IST-021",
+              store_name: "Istanbul Field Store",
+              company_id: companyId,
+              region_id: regionId,
+              region_name: "Marmara",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("active_action_store_assignment_count")) {
+        return {
+          rowCount: 1,
+          rows: [{ active_action_store_assignment_count: "0" }],
+        };
+      }
+
+      if (sql.includes("INSERT INTO ops.user_action_store_assignment")) {
+        throw databaseError;
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+    const withTransaction = jest.fn(
+      async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+        work({ query }),
+    );
+    const app = await createIntegrationApp({
+      databaseService: { query, withTransaction },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/auth/action-store-assignments")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({ userId: reportUserId, storeId });
+
+    expect(response.status).toBe(500);
+    expect(
+      query.mock.calls
+        .map(([statement]) => String(statement))
+        .some((statement) => statement.includes("INSERT INTO audit.event_log")),
+    ).toBe(false);
+
+    await app.close();
+  });
+
+  it("keeps batch assignment creation atomic when the insert races with a named constraint", async () => {
+    const conflict = Object.assign(new Error("assignment conflict"), {
+      code: "23P01",
+      constraint: "ex_user_action_store_assignment_no_overlap_v1",
+    });
+    const query = jest.fn(async (sql: string) => {
+      if (
+        sql.includes("FROM ops.user_account ua") &&
+        sql.includes("INNER JOIN ops.user_role_assignment")
+      ) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (
+        sql.includes("FROM ops.store s") &&
+        sql.includes("s.store_id = ANY($1::uuid[])")
+      ) {
+        return {
+          rowCount: 2,
+          rows: [
+            {
+              store_id: storeId,
+              store_code: "IST-021",
+              store_name: "Istanbul Field Store",
+              company_id: companyId,
+              region_id: regionId,
+              region_name: "Marmara",
+            },
+            {
+              store_id: secondStoreId,
+              store_code: "IST-022",
+              store_name: "Istanbul Second Store",
+              company_id: companyId,
+              region_id: regionId,
+              region_name: "Marmara",
+            },
+          ],
+        };
+      }
+
+      if (
+        sql.includes("FROM ops.user_action_store_assignment") &&
+        sql.includes("FOR UPDATE")
+      ) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM UNNEST($2::uuid[])")) {
+        throw conflict;
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+    const withTransaction = jest.fn(
+      async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+        work({ query }),
+    );
+    const app = await createIntegrationApp({
+      databaseService: { query, withTransaction },
+    });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/auth/action-store-assignments/batch")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({ userId: reportUserId, storeIds: [storeId, secondStoreId] });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe(
+      "One or more active action store assignments already exist",
+    );
+    expect(
+      query.mock.calls
+        .map(([statement]) => String(statement))
+        .some((statement) => statement.includes("INSERT INTO audit.event_log")),
+    ).toBe(false);
 
     await app.close();
   });

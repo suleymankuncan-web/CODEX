@@ -18,6 +18,26 @@ type ActionStoreAssignmentCommandRow = {
   created_at: string;
 };
 
+const ACTION_STORE_ASSIGNMENT_CONFLICT_MESSAGE = "Active action store assignment already exists";
+const ACTION_STORE_ASSIGNMENT_OVERLAP_CONSTRAINT =
+  "ex_user_action_store_assignment_no_overlap_v1";
+const ACTION_STORE_ASSIGNMENT_LEGACY_UNIQUE_INDEX = "uq_user_action_store_assignment_active";
+
+function isActionStoreAssignmentConflict(error: unknown) {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const candidate = error as { code?: unknown; constraint?: unknown };
+
+  return (
+    (candidate.code === "23P01" &&
+      candidate.constraint === ACTION_STORE_ASSIGNMENT_OVERLAP_CONSTRAINT) ||
+    (candidate.code === "23505" &&
+      candidate.constraint === ACTION_STORE_ASSIGNMENT_LEGACY_UNIQUE_INDEX)
+  );
+}
+
 export type CreateActionStoreAssignmentCommandInput = {
   userId: string;
   storeId: string;
@@ -43,7 +63,12 @@ export type CreateActionStoreAssignmentsBatchCommandInput = {
 export class AuthActionStoreAssignmentCommandRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async countActiveActionStoreAssignments(input: { userId: string; storeId: string }) {
+  async countActiveActionStoreAssignments(input: {
+    userId: string;
+    storeId: string;
+    effectiveFrom?: string | null;
+    effectiveTo?: string | null;
+  }) {
     const result = await this.databaseService.query<{
       active_action_store_assignment_count: string;
     }>(
@@ -52,17 +77,21 @@ export class AuthActionStoreAssignmentCommandRepository {
         FROM ops.user_action_store_assignment uasa
         WHERE uasa.user_id = $1::uuid
           AND uasa.store_id = $2::uuid
-          AND uasa.start_at <= NOW()
-          AND (uasa.end_at IS NULL OR uasa.end_at > NOW())
+          AND tstzrange(uasa.start_at, uasa.end_at, '[)') && tstzrange(
+            COALESCE($3::timestamptz, NOW()),
+            $4::timestamptz,
+            '[)'
+          )
       `,
-      [input.userId, input.storeId],
+      [input.userId, input.storeId, input.effectiveFrom ?? null, input.effectiveTo ?? null],
     );
 
     return Number(result.rows[0]?.active_action_store_assignment_count ?? "0");
   }
 
   async createActionStoreAssignment(input: CreateActionStoreAssignmentCommandInput) {
-    return this.databaseService.withTransaction(async (client) => {
+    try {
+      return await this.databaseService.withTransaction(async (client) => {
       const result = await client.query<ActionStoreAssignmentCommandRow>(
         `
           WITH inserted AS (
@@ -165,22 +194,33 @@ export class AuthActionStoreAssignmentCommandRepository {
       );
 
       return assignment;
-    });
+      });
+    } catch (error) {
+      if (isActionStoreAssignmentConflict(error)) {
+        throw new ConflictException(ACTION_STORE_ASSIGNMENT_CONFLICT_MESSAGE);
+      }
+
+      throw error;
+    }
   }
 
   async createActionStoreAssignmentsBatch(input: CreateActionStoreAssignmentsBatchCommandInput) {
-    return this.databaseService.withTransaction(async (client) => {
+    try {
+      return await this.databaseService.withTransaction(async (client) => {
       const duplicateResult = await client.query<{ store_id: string }>(
         `
           SELECT store_id::text
           FROM ops.user_action_store_assignment
           WHERE user_id = $1::uuid
             AND store_id = ANY($2::uuid[])
-            AND start_at <= NOW()
-            AND (end_at IS NULL OR end_at > NOW())
+            AND tstzrange(start_at, end_at, '[)') && tstzrange(
+              COALESCE($3::timestamptz, NOW()),
+              $4::timestamptz,
+              '[)'
+            )
           FOR UPDATE
         `,
-        [input.userId, input.storeIds],
+        [input.userId, input.storeIds, input.effectiveFrom ?? null, input.effectiveTo ?? null],
       );
       if (duplicateResult.rows.length > 0) {
         throw new ConflictException("One or more active action store assignments already exist");
@@ -249,7 +289,14 @@ export class AuthActionStoreAssignmentCommandRepository {
       }
 
       return result.rows;
-    });
+      });
+    } catch (error) {
+      if (isActionStoreAssignmentConflict(error)) {
+        throw new ConflictException("One or more active action store assignments already exist");
+      }
+
+      throw error;
+    }
   }
 
   async deactivateActionStoreAssignment(input: DeactivateActionStoreAssignmentCommandInput) {

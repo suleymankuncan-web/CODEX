@@ -108,6 +108,137 @@ test('HR admin deactivates and reactivates accounts through confirmations', asyn
   expect(reactivated).toBe(true)
 })
 
+test('role assignment dialog resets across users and close cycles', async ({ page }) => {
+  const roleAssignmentBodies: Array<Record<string, unknown>> = []
+  await page.route('**/api/auth/role-assignments', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    roleAssignmentBodies.push(route.request().postDataJSON())
+    await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'Assigned' }, data: { assignment: {} } } })
+  })
+
+  await page.goto('/admin/auth')
+  const main = page.getByRole('main')
+  await expect(main.getByRole('button', { name: 'Rol ekle' })).toBeEnabled()
+  await main.getByRole('button', { name: 'Rol ekle' }).click()
+  const roleDialog = page.getByRole('dialog', { name: 'Rol ekle' })
+
+  await roleDialog.getByLabel('Rol').click()
+  await expect(page.getByRole('option', { name: 'Sistem yöneticisi' })).toBeVisible()
+  await page.getByRole('option', { name: 'Mağaza müdürü' }).click()
+  await roleDialog.getByLabel('Rol mağazası').click()
+  await page.getByRole('option', { name: 'Demo Store' }).click()
+  await expect(roleDialog.getByRole('button', { name: 'Rolü ata' })).toBeEnabled()
+  await roleDialog.getByRole('button', { name: 'Vazgeç' }).click()
+  await expect(roleDialog).toBeHidden()
+
+  await main.getByLabel('Kullanıcı listesi').getByRole('button', { name: /inactive\.user/ }).click()
+  await main.getByRole('button', { name: 'Rol ekle' }).click()
+  const reopenedDialog = page.getByRole('dialog', { name: 'Rol ekle' })
+  await expect(reopenedDialog.getByLabel('Rol')).toContainText('Rol seçin')
+  await expect(reopenedDialog.getByLabel('Rol mağazası')).toHaveCount(0)
+  await expect(reopenedDialog.getByRole('button', { name: 'Rolü ata' })).toBeDisabled()
+  expect(roleAssignmentBodies).toHaveLength(0)
+})
+
+test('role assignment dialog blocks a write after background assignment refetch failure', async ({ page }) => {
+  const roleAssignmentBodies: Array<Record<string, unknown>> = []
+  let roleAssignmentGets = 0
+  await page.route('**/api/auth/role-assignments?**', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    roleAssignmentGets += 1
+    if (roleAssignmentGets === 1) return route.fulfill({ json: emptyList })
+    await route.fulfill({ status: 500, json: { message: 'Role assignments unavailable' } })
+  })
+  await page.route('**/api/auth/role-assignments', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    roleAssignmentBodies.push(route.request().postDataJSON())
+    await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'Assigned' }, data: { assignment: {} } } })
+  })
+
+  await page.goto('/admin/auth')
+  const main = page.getByRole('main')
+  await expect(main.getByRole('button', { name: 'Rol ekle' })).toBeEnabled()
+  await main.getByRole('button', { name: 'Rol ekle' }).click()
+  const roleDialog = page.getByRole('dialog', { name: 'Rol ekle' })
+  await roleDialog.getByLabel('Rol').click()
+  await page.getByRole('option', { name: 'Mağaza müdürü' }).click()
+  await roleDialog.getByLabel('Rol mağazası').click()
+  await page.getByRole('option', { name: 'Demo Store' }).click()
+  await expect(roleDialog.getByRole('button', { name: 'Rolü ata' })).toBeEnabled()
+
+  await triggerAuthBackgroundRefetch(page)
+  await expect.poll(() => roleAssignmentGets).toBeGreaterThan(1)
+  await expect(roleDialog.getByRole('alert')).toContainText('Güncel rol ve kapsam alınamadı')
+  await expect(roleDialog.getByRole('button', { name: 'Rolü ata' })).toBeDisabled()
+  await roleDialog.getByRole('button', { name: 'Rolü ata' }).dispatchEvent('click')
+  expect(roleAssignmentBodies).toHaveLength(0)
+})
+
+test('store assignment dialog blocks a write after background assignment refetch failure', async ({ page }) => {
+  const storeAssignmentBodies: Array<Record<string, unknown>> = []
+  let storeAssignmentGets = 0
+  await page.route('**/api/auth/action-store-assignments?**', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback()
+    storeAssignmentGets += 1
+    if (storeAssignmentGets === 1) return route.fulfill({ json: emptyList })
+    await route.fulfill({ status: 500, json: { message: 'Store assignments unavailable' } })
+  })
+  await page.route('**/api/auth/action-store-assignments/batch', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    storeAssignmentBodies.push(route.request().postDataJSON())
+    await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'Assigned' }, data: { assignments: [] } } })
+  })
+
+  await page.goto('/admin/auth')
+  const main = page.getByRole('main')
+  await expect(main.getByRole('button', { name: 'Mağaza ekle' })).toBeEnabled()
+  await main.getByRole('button', { name: 'Mağaza ekle' }).click()
+  const storeDialog = page.getByRole('dialog', { name: 'Mağaza erişimi ekle' })
+  await storeDialog.getByRole('button', { name: /Demo Store/ }).click()
+  await expect(storeDialog.getByRole('button', { name: 'Seçilenlere erişim ver' })).toBeEnabled()
+
+  await triggerAuthBackgroundRefetch(page)
+  await expect.poll(() => storeAssignmentGets).toBeGreaterThan(1)
+  await expect(storeDialog.getByRole('alert')).toContainText('Güncel mağaza erişimi ve mağaza listesi alınamadı')
+  await expect(storeDialog.getByRole('button', { name: 'Seçilenlere erişim ver' })).toBeDisabled()
+  await storeDialog.getByRole('button', { name: 'Seçilenlere erişim ver' }).dispatchEvent('click')
+  expect(storeAssignmentBodies).toHaveLength(0)
+})
+
+test('role assignment failure stays fail-closed without blocking store access', async ({ page }) => {
+  await page.route('**/api/auth/role-assignments?**', async (route) => {
+    await route.fulfill({ status: 500, json: { message: 'Role assignments unavailable' } })
+  })
+
+  await page.goto('/admin/auth')
+  const main = page.getByRole('main')
+  const roleBlock = main.getByText('Roller', { exact: true }).locator('..').locator('..')
+  const storeBlock = main.getByText('Mağaza erişimi', { exact: true }).locator('..').locator('..')
+
+  await expect(roleBlock.getByRole('alert')).toContainText('Roller alınamadı')
+  await expect(roleBlock.getByText('Rol ataması yok', { exact: true })).toHaveCount(0)
+  await expect(roleBlock.getByRole('button', { name: 'Rol ekle' })).toBeDisabled()
+  await expect(storeBlock.getByText('Doğrudan mağaza erişimi yok', { exact: true })).toBeVisible()
+  await expect(storeBlock.getByRole('button', { name: 'Mağaza ekle' })).toBeEnabled()
+})
+
+test('store assignment failure stays fail-closed without blocking role access', async ({ page }) => {
+  await page.route('**/api/auth/action-store-assignments?**', async (route) => {
+    await route.fulfill({ status: 500, json: { message: 'Store assignments unavailable' } })
+  })
+
+  await page.goto('/admin/auth')
+  const main = page.getByRole('main')
+  const roleBlock = main.getByText('Roller', { exact: true }).locator('..').locator('..')
+  const storeBlock = main.getByText('Mağaza erişimi', { exact: true }).locator('..').locator('..')
+
+  await expect(storeBlock.getByRole('alert')).toContainText('Mağaza erişimi alınamadı')
+  await expect(storeBlock.getByText('Doğrudan mağaza erişimi yok', { exact: true })).toHaveCount(0)
+  await expect(storeBlock.getByRole('button', { name: 'Mağaza ekle' })).toBeDisabled()
+  await expect(roleBlock.getByText('Rol ataması yok', { exact: true })).toBeVisible()
+  await expect(roleBlock.getByRole('button', { name: 'Rol ekle' })).toBeEnabled()
+})
+
 test('auth catalog remains independently inspectable', async ({ page }) => {
   await page.goto('/admin/auth/catalog')
   const main = page.getByRole('main')
@@ -129,6 +260,24 @@ test('auth management remains bounded on mobile', async ({ page }) => {
   }))
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth)
 })
+
+async function triggerAuthBackgroundRefetch(page: Page) {
+  let deactivationRequests = 0
+  await page.route('**/api/auth/users/user-active/deactivate', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback()
+    deactivationRequests += 1
+    await route.fulfill({
+      json: {
+        command: { status: 'deactivated', message: 'Deactivated' },
+        data: { accessClosure: { closedRoleAssignments: 0, closedActionStoreAssignments: 0 } },
+      },
+    })
+  })
+  await page.locator('button').filter({ hasText: 'Devre dışı bırak' }).first().dispatchEvent('click')
+  const deactivateDialog = page.getByRole('dialog', { name: 'Hesap devre dışı bırakılsın mı?' })
+  await deactivateDialog.getByRole('button', { name: 'Devre dışı bırak' }).click()
+  await expect.poll(() => deactivationRequests).toBe(1)
+}
 
 async function routeAuthManagementApi(page: Page) {
   await page.route('**/api/auth/session', (route) => route.fulfill({ json: sessionFixture }))
@@ -169,7 +318,10 @@ const usersFixture = {
 
 const lookupsFixture = {
   scopeTypes: ['company', 'region', 'store'], authProviders: ['clerk'], users: [], permissions: [],
-  roles: [{ roleId: 'role-store-manager', roleCode: 'STORE_MANAGER', roleName: 'Store Manager', scopeType: 'store' }],
+  roles: [
+    { roleId: 'role-super-admin', roleCode: 'SUPER_ADMIN', roleName: 'Super Admin', scopeType: 'company' },
+    { roleId: 'role-store-manager', roleCode: 'STORE_MANAGER', roleName: 'Store Manager', scopeType: 'store' },
+  ],
   stores: [{ storeId: 'store-1', storeCode: 'S1', storeName: 'Demo Store', companyId: 'company-1', regionId: 'region-1', regionName: 'Marmara' }],
 }
 

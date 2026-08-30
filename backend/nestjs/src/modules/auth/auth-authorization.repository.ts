@@ -158,7 +158,7 @@ export class AuthAuthorizationRepository {
           AND r.status = 'active'
           AND c.status = 'active'
           AND uasa.start_at <= NOW()
-          AND (uasa.end_at IS NULL OR uasa.end_at >= NOW())
+          AND (uasa.end_at IS NULL OR uasa.end_at > NOW())
         ORDER BY s.store_code ASC, uasa.store_id ASC
       `,
       [userId],

@@ -102,6 +102,134 @@ describe("IntegrationRepository master data writes", () => {
     expect(sql).toContain("store_master_data.updated");
   });
 
+  it.each([
+    ["exclusion", "23P01", "ex_user_action_store_assignment_no_overlap_v1"],
+    ["legacy unique", "23505", "uq_user_action_store_assignment_active"],
+  ])(
+    "maps a named %s assignment race without completing the master-data save",
+    async (_label, code, constraint) => {
+      const conflict = Object.assign(new Error("assignment conflict"), {
+        code,
+        constraint,
+      });
+      const query = jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+        .mockResolvedValueOnce({
+          rows: [
+            { store_id: "store-1", company_id: "company-1", is_current: true },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              store_id: "store-1",
+              store_code: "SM140",
+              store_name: "Marmara Park",
+              store_type: "company",
+              status: "active",
+              kpi_import_enabled: true,
+              region_id: "region-1",
+              region_name: "Marmara",
+              updated_at: "2026-06-30T10:01:00.000Z",
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [{ is_valid: true }] })
+        .mockResolvedValueOnce({ rows: [] })
+        .mockRejectedValueOnce(conflict);
+      const { repository } = createRepository(query);
+
+      await expect(
+        repository.updateKpiImportStoreScope({
+          actorCompanyIds: ["company-1"],
+          storeId: "store-1",
+          storeType: "company",
+          regionId: "region-1",
+          regionManagerUserId: "manager-1",
+          status: "active",
+          kpiImportEnabled: true,
+          actorUserId: "actor-1",
+          expectedUpdatedAt: "2026-06-30T10:00:00.000Z",
+        }),
+      ).rejects.toThrow("Active action store assignment already exists");
+
+      const managerUpdate = query.mock.calls.find(([statement]) =>
+        String(statement).includes(
+          "UPDATE ops.user_action_store_assignment manager_store",
+        ),
+      );
+      expect(String(managerUpdate?.[0])).toContain(
+        "manager_store.start_at <= NOW()",
+      );
+      expect(String(managerUpdate?.[0])).toContain(
+        "manager_store.end_at IS NULL OR manager_store.end_at > NOW()",
+      );
+      expect(
+        query.mock.calls
+          .map(([statement]) => String(statement))
+          .some((statement) => statement.includes("store_master_data.updated")),
+      ).toBe(false);
+    },
+  );
+
+  it("propagates unrelated assignment database errors and does not write audit", async () => {
+    const databaseError = Object.assign(
+      new Error("unexpected database failure"),
+      {
+        code: "23505",
+        constraint: "some_other_constraint",
+      },
+    );
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { store_id: "store-1", company_id: "company-1", is_current: true },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            store_id: "store-1",
+            store_code: "SM140",
+            store_name: "Marmara Park",
+            store_type: "company",
+            status: "active",
+            kpi_import_enabled: true,
+            region_id: "region-1",
+            region_name: "Marmara",
+            updated_at: "2026-06-30T10:01:00.000Z",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ is_valid: true }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockRejectedValueOnce(databaseError);
+    const { repository } = createRepository(query);
+
+    await expect(
+      repository.updateKpiImportStoreScope({
+        actorCompanyIds: ["company-1"],
+        storeId: "store-1",
+        storeType: "company",
+        regionId: "region-1",
+        regionManagerUserId: "manager-1",
+        status: "active",
+        kpiImportEnabled: true,
+        actorUserId: "actor-1",
+        expectedUpdatedAt: "2026-06-30T10:00:00.000Z",
+      }),
+    ).rejects.toBe(databaseError);
+
+    expect(
+      query.mock.calls
+        .map(([statement]) => String(statement))
+        .some((statement) => statement.includes("store_master_data.updated")),
+    ).toBe(false);
+  });
+
   it("rejects stale personnel master saves before mutating employee rows", async () => {
     const query = jest
       .fn()

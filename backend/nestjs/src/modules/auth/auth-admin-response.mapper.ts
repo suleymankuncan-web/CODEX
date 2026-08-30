@@ -46,6 +46,11 @@ export function mapAuthActionStoreAssignment(item: {
   end_at: string | null;
   created_at: string;
 }) {
+  const now = Date.now();
+  const startsAt = new Date(item.start_at).getTime();
+  const endsAt =
+    item.end_at === null ? Number.POSITIVE_INFINITY : new Date(item.end_at).getTime();
+
   return {
     assignmentId: item.user_action_store_assignment_id,
     userId: item.user_id,
@@ -60,7 +65,7 @@ export function mapAuthActionStoreAssignment(item: {
     effectiveFrom: item.start_at,
     effectiveTo: item.end_at,
     createdAt: item.created_at,
-    active: item.end_at === null,
+    active: startsAt <= now && endsAt > now,
   };
 }
 

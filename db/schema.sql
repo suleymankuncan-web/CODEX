@@ -4,6 +4,7 @@ CREATE SCHEMA IF NOT EXISTS stg;
 CREATE SCHEMA IF NOT EXISTS audit;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 CREATE OR REPLACE FUNCTION rpt.prevent_snapshot_mutation()
 RETURNS trigger
@@ -252,7 +253,13 @@ CREATE TABLE ops.user_action_store_assignment (
     start_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     end_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CHECK (end_at IS NULL OR end_at >= start_at)
+    CHECK (end_at IS NULL OR end_at >= start_at),
+    CONSTRAINT ex_user_action_store_assignment_no_overlap_v1
+        EXCLUDE USING gist (
+            user_id WITH =,
+            store_id WITH =,
+            tstzrange(start_at, end_at, '[)') WITH &&
+        )
 );
 
 CREATE TABLE IF NOT EXISTS ops.mobile_device_session (
