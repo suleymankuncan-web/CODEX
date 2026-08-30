@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  ClipboardCheck,
   Clock3,
   Eye,
   Search,
@@ -38,6 +39,7 @@ import { ChecklistCommandPeriodPicker } from './ChecklistCommandPeriodPicker'
 import { formatChecklistCommandPeriodLabel } from './checklist-command-period'
 import { ChecklistOperationalHistoryDrawer } from './ChecklistOperationalHistoryDrawer'
 import { ChecklistPlanningRegionPicker } from './ChecklistPlanningRegionPicker'
+import { RegionManagerChecklistWorkspace } from './RegionManagerChecklistWorkspace'
 import {
   getChecklistPeriodWeekStart,
   getIstanbulWeekStart,
@@ -198,21 +200,28 @@ export function RegionManagerChecklistCommandPage(input: {
   if (!input.readOnlyPreview && !activeRegion && (regionOptionsQuery.data?.data.page.total ?? 0) > 1) {
     const selectionPeriodLabel = formatChecklistCommandPeriodLabel(period, locale)
     return (
-      <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity" data-testid="checklist-command-parity">
-        <header className="checklist-command-title">
-          <div><p>{selectionPeriodLabel} · {t('storeChecklists.command.eyebrow')}</p><h1>{t('storeChecklists.command.title')}</h1></div>
-          <div className="checklist-command-title-actions">
-            <ChecklistPlanningRegionPicker
-              authSummary={input.authSummary}
-              locale={locale}
+      <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity tw:!max-w-[1280px] tw:!gap-4" data-testid="checklist-command-parity">
+        <header className="tw:relative tw:overflow-hidden tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
+          <div aria-hidden className="tw:absolute tw:-right-16 tw:-top-28 tw:size-64 tw:rounded-full tw:border tw:border-white/15" />
+          <div className="tw:relative tw:flex tw:flex-col tw:gap-4 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+            <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+              <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:border tw:border-white/20 tw:bg-white/10"><ClipboardCheck className="tw:size-5" /></span>
+              <div><p className="tw:text-[10px] tw:font-semibold tw:uppercase tw:tracking-[0.16em] tw:text-primary-foreground/70">{selectionPeriodLabel} · {t('storeChecklists.command.eyebrow')}</p><h1 className="tw:mt-0.5 tw:text-xl tw:font-semibold tw:tracking-[-0.025em] tw:sm:text-2xl">{t('storeChecklists.command.title')}</h1></div>
+            </div>
+            <div className="checklist-command-title-actions tw:[&>*>button]:!border-white/20 tw:[&>*>button]:!bg-white/10 tw:[&>*>button]:!text-white">
+              <ChecklistPlanningRegionPicker
+                authSummary={input.authSummary}
+                locale={locale}
               selected={null}
               onSelect={(option) => { setRetainedCommand(null); setSelectedRegion({ option, scopeSignature }) }}
             />
             <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={changePeriod} />
+            </div>
           </div>
         </header>
-        <section className="week-planner week-planner-state" aria-live="polite">
-          <Store size={18} /><strong>{locale === 'tr' ? 'Devam etmek için mağaza sorumluluğunu seçin.' : 'Select a store responsibility to continue.'}</strong>
+        <section className="tw:flex tw:min-h-36 tw:flex-col tw:items-center tw:justify-center tw:gap-3 tw:rounded-[14px] tw:border tw:border-dashed tw:border-primary/25 tw:bg-primary/[0.025] tw:p-6 tw:text-center" aria-live="polite">
+          <span className="tw:grid tw:size-10 tw:place-items-center tw:rounded-xl tw:bg-primary/10 tw:text-primary"><Store className="tw:size-5" /></span>
+          <div><strong className="tw:block tw:text-sm tw:text-foreground">{locale === 'tr' ? 'Mağaza sorumluluğunu seçin' : 'Select store responsibility'}</strong><p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{locale === 'tr' ? 'Haftalık plan ve checklist mağazaları seçiminize göre açılacak.' : 'The weekly plan and checklist stores will open for your selection.'}</p></div>
         </section>
       </StoreSurfacePage>
     )
@@ -288,6 +297,92 @@ export function RegionManagerChecklistCommandPage(input: {
 
   const pageNumber = Math.floor(offset / PAGE_SIZE) + 1
   const pageCount = Math.max(1, Math.ceil(data.page.total / PAGE_SIZE))
+
+  if (!input.readOnlyPreview && activeRegion) {
+    return (
+      <StoreSurfacePage
+        ariaLabel={t('storeChecklists.command.title')}
+        className="checklist-command-parity tw:!max-w-[1280px] tw:!gap-4 tw:!py-1"
+        data-testid="checklist-command-parity"
+      >
+        <RegionManagerChecklistWorkspace
+          actionStoreIds={actionStoreIds}
+          annualHistory={(
+            <ChecklistAnnualVisitHistoryLauncher
+              authSummary={input.authSummary}
+              locale={locale}
+              period={period}
+              regionId={activeRegion.regionId}
+              regionName={activeRegion.regionName}
+            />
+          )}
+          data={data}
+          hasPartialScoreData={hasPartialScoreData}
+          isError={commandQuery.isError}
+          isFetching={commandQuery.isFetching}
+          metrics={metrics}
+          offset={offset}
+          pageCount={pageCount}
+          pageNumber={pageNumber}
+          periodLabel={periodLabel}
+          periodPicker={<ChecklistCommandPeriodPicker locale={locale} period={period} onChange={changePeriod} />}
+          planner={(
+            <ChecklistWeeklyVisitPlanner
+              authSummary={input.authSummary}
+              canMaintain={data.capabilities.canMaintainWeeklyVisitPlan}
+              embedded
+              locale={locale}
+              period={period}
+              planningRequest={undefined}
+              regionId={activeRegion.regionId}
+              regionName={activeRegion.regionName}
+              weekStart={weekStart}
+              onOpenWorkflow={(storeId) => input.onOpenWorkflow(storeId, 'visits', 'bm')}
+              onPlanningRequestHandled={() => undefined}
+              onWeekStartChange={changePlanningWeek}
+            />
+          )}
+          regionName={activeRegion.regionName}
+          regionPicker={(regionOptionsQuery.data?.data.page.total ?? 0) > 1 ? (
+            <ChecklistPlanningRegionPicker
+              authSummary={input.authSummary}
+              locale={locale}
+              selected={activeRegion}
+              onSelect={(option) => {
+                setRetainedCommand(null)
+                setSelectedRegion({ option, scopeSignature })
+                setOffset(0)
+              }}
+            />
+          ) : null}
+          searchDraft={searchDraft}
+          sort={sort}
+          status={status}
+          onNextPage={() => { retainCurrentCommand(); setOffset(offset + PAGE_SIZE) }}
+          onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedRecordStore(store) }}
+          onOpenWorkflow={input.onOpenWorkflow}
+          onPreviousPage={() => { retainCurrentCommand(); setOffset(Math.max(0, offset - PAGE_SIZE)) }}
+          onRetry={() => void commandQuery.refetch()}
+          onSearchChange={(value) => { retainCurrentCommand(); setSearchDraft(value) }}
+          onSelectStatus={selectStatus}
+          onSort={changeSort}
+        />
+        <ChecklistOperationalHistoryDrawer
+          authSummary={input.authSummary}
+          open={Boolean(selectedRecordStore)}
+          storeId={selectedRecordStore?.storeId ?? null}
+          storeName={selectedRecordStore?.storeName ?? null}
+          returnFocusRef={historyTriggerRef}
+          onClose={() => setSelectedRecordStore(null)}
+          onOpenResult={(checklistInstanceId) => {
+            setSelectedRecordStore(null)
+            input.onOpenResult(checklistInstanceId)
+          }}
+        />
+      </StoreSurfacePage>
+    )
+  }
+
   return (
     <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className={cn('checklist-command-parity', input.readOnlyPreview?.embedded && 'tw:py-0', storesOnly && 'checklist-command-stores-only')} data-testid="checklist-command-parity">
       {input.readOnlyPreview && !storesOnly && !input.readOnlyPreview.embedded && input.readOnlyPreview.onBack ? (

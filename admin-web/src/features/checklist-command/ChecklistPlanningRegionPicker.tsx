@@ -67,6 +67,7 @@ export function ChecklistPlanningRegionPicker(input: {
         type="button"
         ref={triggerRef}
         className="checklist-region-trigger"
+        aria-label={input.locale === 'tr' ? `Mağaza sorumluluğu: ${input.selected?.regionName ?? 'seçilmedi'}` : `Store responsibility: ${input.selected?.regionName ?? 'not selected'}`}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
