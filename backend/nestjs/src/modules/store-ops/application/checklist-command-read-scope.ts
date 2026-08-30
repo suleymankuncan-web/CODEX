@@ -41,7 +41,7 @@ export function resolveChecklistCommandReadScope(
     return {
       view: "region_manager",
       companyIds: [],
-      regionIds: unique(roleScope?.regionIds ?? []),
+      regionIds: [],
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
       executionTemplateTypes: ["BM_STORE_VISIT"],

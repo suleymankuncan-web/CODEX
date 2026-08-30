@@ -53,7 +53,7 @@ describe("resolveChecklistCommandReadScope", () => {
     ).toEqual({
       view: "region_manager",
       companyIds: [],
-      regionIds: ["manager-region"],
+      regionIds: [],
       storeIds: ["manager-store"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
       executionTemplateTypes: ["BM_STORE_VISIT"],

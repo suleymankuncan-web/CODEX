@@ -13,6 +13,16 @@ describe("AuthRoleScopePolicyService", () => {
     ).not.toThrow();
   });
 
+  it("allows the Region Manager identity to be assigned at company scope", () => {
+    expect(() =>
+      service.validateRoleScope({
+        roleCode: "REGION_MANAGER",
+        roleScopeType: "region",
+        assignmentScopeType: "company",
+      }),
+    ).not.toThrow();
+  });
+
   it("rejects report viewer assignments narrowed to store scope", () => {
     expect(() =>
       service.validateRoleScope({

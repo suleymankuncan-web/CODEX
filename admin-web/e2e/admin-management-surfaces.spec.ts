@@ -237,10 +237,16 @@ for (const viewport of [
 test('auth management keeps users and global role permissions explicit', async ({ page }, testInfo) => {
   await routeAuthManagementApi(page)
   const storeAssignmentBodies: Array<Record<string, unknown>> = []
+  const roleAssignmentBodies: Array<Record<string, unknown>> = []
   await page.route('**/api/auth/action-store-assignments/batch', async (route) => {
     if (route.request().method() !== 'POST') return route.fallback()
     storeAssignmentBodies.push(route.request().postDataJSON())
     await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'Assigned' }, data: { assignments: [] } } })
+  })
+  await page.route('**/api/auth/role-assignments', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    roleAssignmentBodies.push(route.request().postDataJSON())
+    await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'Assigned' }, data: { assignment: {} } } })
   })
   const usersRequestPromise = page.waitForRequest('**/api/auth/users?**')
   await page.goto('/admin/auth')
@@ -263,6 +269,17 @@ test('auth management keeps users and global role permissions explicit', async (
   expect(storeAssignmentBodies).toEqual([
     { userId: 'user-1', storeIds: ['store-1', 'store-2'] },
   ])
+  await main.getByRole('button', { name: 'Rol ekle' }).click()
+  const roleDialog = page.getByRole('dialog', { name: 'Rol ekle' })
+  await roleDialog.getByLabel('Rol').click()
+  await page.getByRole('option', { name: 'Bölge müdürü' }).click()
+  await expect(roleDialog.getByLabel('Rol bölgesi')).toHaveCount(0)
+  await expect(roleDialog).toContainText('Sorumlu mağazaları Mağaza erişimi bölümünden seçin.')
+  await roleDialog.getByRole('button', { name: 'Rolü ata' }).click()
+  await expect.poll(() => roleAssignmentBodies.length).toBe(1)
+  expect(roleAssignmentBodies).toEqual([{
+    userId: 'user-1', roleCode: 'REGION_MANAGER', scopeType: 'company', companyId: 'company-1',
+  }])
   await page.screenshot({ path: testInfo.outputPath('auth-users-desktop.png'), fullPage: true })
   await main.getByRole('button', { name: 'Rol yetkileri' }).click()
   await expect(main.getByRole('heading', { name: 'Rol yetkileri' })).toBeVisible()
@@ -341,7 +358,10 @@ const authUsersFixture = {
 
 const authLookupsFixture = {
   scopeTypes: ['company', 'region', 'store'], authProviders: ['clerk'], users: [], permissions: [],
-  roles: [{ roleId: 'role-1', roleCode: 'STORE_MANAGER', roleName: 'Mağaza Müdürü', scopeType: 'store' }],
+  roles: [
+    { roleId: 'role-1', roleCode: 'STORE_MANAGER', roleName: 'Mağaza Müdürü', scopeType: 'store' },
+    { roleId: 'role-2', roleCode: 'REGION_MANAGER', roleName: 'Bölge Müdürü', scopeType: 'region' },
+  ],
   stores: [
     { storeId: 'store-1', storeCode: 'S1', storeName: 'Demo Store', companyId: 'company-1', regionId: 'region-1', regionName: 'Marmara' },
     { storeId: 'store-2', storeCode: 'S2', storeName: 'Kadıköy Store', companyId: 'company-1', regionId: 'region-1', regionName: 'Marmara' },

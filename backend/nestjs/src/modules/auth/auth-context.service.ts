@@ -333,31 +333,15 @@ export class AuthContextService {
       return appUser;
     }
 
-    const readScope = {
-      companyIds: [
-        ...new Set(
-          assignments
-            .map((assignment) => assignment.company_id)
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ],
-      regionIds: [
-        ...new Set(
-          assignments
-            .map((assignment) => assignment.region_id)
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ],
-      storeIds: [
-        ...new Set(
-          assignments
-            .map((assignment) => assignment.store_id)
-            .filter((value): value is string => Boolean(value)),
-        ),
-      ],
-    };
-    const roleScopes = this.buildRoleScopes(assignments);
-    const permissionScopes = this.buildPermissionScopes(assignments);
+    const directActionStoreIds = uniqueStrings(
+      actionStoreAssignments.map((assignment) => assignment.store_id),
+    );
+    const roleScopes = this.buildRoleScopes(assignments, directActionStoreIds);
+    const readScope = mergeReadScopes(Object.values(roleScopes));
+    const permissionScopes = this.buildPermissionScopes(
+      assignments,
+      directActionStoreIds,
+    );
 
     return buildAuthenticatedUser({
       ...appUser,
@@ -381,6 +365,7 @@ export class AuthContextService {
     assignments: Awaited<
       ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
     >,
+    directActionStoreIds: string[],
   ) {
     const roleScopes: Record<string, AuthReadScope> = {};
 
@@ -390,6 +375,12 @@ export class AuthContextService {
         regionIds: [],
         storeIds: [],
       };
+
+      if (assignment.role_code === "REGION_MANAGER") {
+        scope.storeIds.push(...directActionStoreIds);
+        roleScopes[assignment.role_code] = scope;
+        continue;
+      }
 
       if (assignment.company_id) {
         scope.companyIds.push(assignment.company_id);
@@ -413,10 +404,24 @@ export class AuthContextService {
     assignments: Awaited<
       ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
     >,
+    directActionStoreIds: string[],
   ) {
     const permissionScopes: Record<string, AuthReadScope> = {};
 
     for (const assignment of assignments) {
+      if (assignment.role_code === "REGION_MANAGER") {
+        for (const permissionCode of assignment.permission_codes ?? []) {
+          const scope = permissionScopes[permissionCode] ?? {
+            companyIds: [],
+            regionIds: [],
+            storeIds: [],
+          };
+          scope.storeIds.push(...directActionStoreIds);
+          permissionScopes[permissionCode] = scope;
+        }
+        continue;
+      }
+
       if (assignment.role_scope_type !== assignment.scope_type) continue;
       for (const permissionCode of assignment.permission_codes ?? []) {
         const scope = permissionScopes[permissionCode] ?? {
@@ -439,4 +444,12 @@ export class AuthContextService {
 
     return permissionScopes;
   }
+}
+
+function mergeReadScopes(scopes: AuthReadScope[]): AuthReadScope {
+  return {
+    companyIds: uniqueStrings(scopes.flatMap((scope) => scope.companyIds)),
+    regionIds: uniqueStrings(scopes.flatMap((scope) => scope.regionIds)),
+    storeIds: uniqueStrings(scopes.flatMap((scope) => scope.storeIds)),
+  };
 }

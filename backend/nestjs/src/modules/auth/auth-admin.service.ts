@@ -514,7 +514,7 @@ export class AuthAdminService {
           roleId: row.role_id,
           roleCode: row.role_code,
           roleName: row.role_name,
-          scopeType: row.role_scope_type,
+          scopeType: row.role_code === "REGION_MANAGER" ? "company" : row.role_scope_type,
           description: row.description,
           isSystemRole: row.is_system_role,
           permissions: [],
@@ -576,7 +576,7 @@ export class AuthAdminService {
           roleId: row.role_id,
           roleCode: row.role_code,
           roleName: row.role_name,
-          scopeType: row.role_scope_type,
+          scopeType: row.role_code === "REGION_MANAGER" ? "company" : row.role_scope_type,
         });
       }
     }

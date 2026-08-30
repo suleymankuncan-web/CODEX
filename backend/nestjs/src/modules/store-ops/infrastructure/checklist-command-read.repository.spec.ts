@@ -45,10 +45,12 @@ describe("ChecklistCommandReadRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(query).toHaveBeenCalledTimes(1);
-    expect(sql).toContain("ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("LEFT JOIN ops.user_action_store_assignment manager_store");
     expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
     expect(sql).toContain("manager_store.user_id = ma.manager_user_id");
-    expect(sql).not.toContain("WHERE ura.company_id = ANY($1::uuid[])");
+    expect(sql).toContain("ura.company_id = ANY($1::uuid[])");
+    expect(sql).toContain("LEFT JOIN store_signals signal");
+    expect(sql).toContain("COUNT(signal.store_id)::int AS total_stores");
     expect(sql).toContain("manager_user_id ASC");
     expect(sql).toContain("completed_type_count < 2");
     expect(sql).toContain("GROUP BY manager.manager_user_id");

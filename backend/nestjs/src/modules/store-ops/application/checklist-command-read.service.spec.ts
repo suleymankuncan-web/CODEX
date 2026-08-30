@@ -121,9 +121,9 @@ describe("ChecklistCommandReadService", () => {
         },
         roleScopes: {
           REGION_MANAGER: {
-            companyIds: ["manager-company"],
-            regionIds: ["manager-region"],
-            storeIds: [],
+            companyIds: [],
+            regionIds: [],
+            storeIds: ["manager-store"],
           },
         },
         period: "2026-07",
@@ -146,8 +146,8 @@ describe("ChecklistCommandReadService", () => {
     expect(repository.list).toHaveBeenCalledWith(
       expect.objectContaining({
         companyIds: [],
-        regionIds: ["manager-region"],
-        storeIds: [],
+        regionIds: [],
+        storeIds: ["manager-store"],
       }),
     );
   });

@@ -115,6 +115,9 @@ export class ChecklistCommandReadRepository {
                 INNER JOIN ops.role manager_role_definition
                   ON manager_role_definition.role_id = manager_role.role_id
                  AND manager_role_definition.role_code = 'REGION_MANAGER'
+                INNER JOIN ops.user_account manager_account
+                  ON manager_account.user_id = manager_store.user_id
+                 AND manager_account.is_active = TRUE
                 WHERE manager_store.user_id = $13::uuid
                   AND manager_store.store_id = s.store_id
                   AND manager_store.start_at <= NOW()
@@ -512,6 +515,7 @@ export class ChecklistCommandReadRepository {
           LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
           WHERE ura.start_at <= NOW()
             AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+            AND ura.company_id = ANY($1::uuid[])
           GROUP BY ura.user_id, display_name
         ),
         manager_store_scope AS (
@@ -522,34 +526,34 @@ export class ChecklistCommandReadRepository {
             ss.region_name,
             ss.store_id
           FROM manager_accounts ma
-          INNER JOIN ops.user_action_store_assignment manager_store
+          LEFT JOIN ops.user_action_store_assignment manager_store
             ON manager_store.user_id = ma.manager_user_id
-          INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
-          WHERE manager_store.start_at <= NOW()
-            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+           AND manager_store.start_at <= NOW()
+           AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+          LEFT JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
           GROUP BY ma.manager_user_id, ma.display_name, ma.region_id, ss.region_id, ss.region_name, ss.store_id
         ),
         region_base AS (
           SELECT
             manager.manager_user_id,
-            MIN(manager.region_id::text)::uuid AS region_id,
+            COALESCE(MIN(manager.region_id::text)::uuid, manager.manager_user_id) AS region_id,
             MIN(manager.display_name) AS region_name,
             jsonb_build_array(jsonb_build_object('displayName', MIN(manager.display_name))) AS region_managers,
             MIN(manager.display_name) AS manager_sort,
-            COUNT(*)::int AS total_stores,
-            COUNT(*) FILTER (WHERE signal.completed_type_count < 2)::int AS missing_visit_stores,
-            COUNT(*) FILTER (WHERE signal.open_action_count > 0)::int AS stores_with_open_actions,
-            SUM(signal.open_action_count)::int AS open_action_count,
-            SUM(signal.blocked_action_count)::int AS blocked_action_count,
-            COUNT(*) FILTER (WHERE signal.completed_type_count >= 2)::int AS completed_coverage_stores,
+            COUNT(signal.store_id)::int AS total_stores,
+            COUNT(signal.store_id) FILTER (WHERE signal.completed_type_count < 2)::int AS missing_visit_stores,
+            COUNT(signal.store_id) FILTER (WHERE signal.open_action_count > 0)::int AS stores_with_open_actions,
+            COALESCE(SUM(signal.open_action_count), 0)::int AS open_action_count,
+            COALESCE(SUM(signal.blocked_action_count), 0)::int AS blocked_action_count,
+            COUNT(signal.store_id) FILTER (WHERE signal.completed_type_count >= 2)::int AS completed_coverage_stores,
             CASE
               WHEN SUM(signal.score_sample_count) = 0 THEN NULL
               ELSE ROUND(SUM(signal.score_sum) / SUM(signal.score_sample_count), 2)
             END AS visit_average_score,
-            SUM(signal.score_sample_count)::int AS score_sample_count,
+            COALESCE(SUM(signal.score_sample_count), 0)::int AS score_sample_count,
             MAX(signal.last_operational_at) AS last_operational_at
           FROM manager_store_scope manager
-          INNER JOIN store_signals signal ON signal.store_id = manager.store_id
+          LEFT JOIN store_signals signal ON signal.store_id = manager.store_id
           GROUP BY manager.manager_user_id
         ),
         filtered_regions AS (
