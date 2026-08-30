@@ -32,7 +32,7 @@ export function RegionManagerChecklistWorkspace(input: {
   pageNumber: number
   periodLabel: string
   periodPicker: ReactNode
-  planner: ReactNode
+  planner?: ReactNode
   regionName: string
   regionPicker: ReactNode
   searchDraft: string
@@ -78,9 +78,11 @@ export function RegionManagerChecklistWorkspace(input: {
         </div>
       </header>
 
-      <section className="checklist-command-unified-plan tw:!m-0 tw:!overflow-hidden tw:!rounded-[14px] tw:!border tw:!border-border tw:!bg-card tw:!shadow-sm" aria-label={locale === 'tr' ? 'Haftalık ziyaret planı' : 'Weekly visit plan'}>
-        {input.planner}
-      </section>
+      {input.planner ? (
+        <section className="checklist-command-unified-plan tw:!m-0 tw:!overflow-hidden tw:!rounded-[14px] tw:!border tw:!border-border tw:!bg-card tw:!shadow-sm" aria-label={locale === 'tr' ? 'Haftalık ziyaret planı' : 'Weekly visit plan'}>
+          {input.planner}
+        </section>
+      ) : null}
 
       <section className="checklist-command-surface tw:!overflow-hidden tw:!rounded-[14px] tw:!border tw:!border-border tw:!bg-card tw:!shadow-sm" data-testid="checklist-command-surface">
         <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:px-3 tw:py-3 tw:sm:px-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
