@@ -320,7 +320,6 @@ export function RegionManagerChecklistCommandPage(input: {
           hasPartialScoreData={hasPartialScoreData}
           isError={commandQuery.isError}
           isFetching={commandQuery.isFetching}
-          metrics={metrics}
           offset={offset}
           pageCount={pageCount}
           pageNumber={pageNumber}
@@ -329,7 +328,7 @@ export function RegionManagerChecklistCommandPage(input: {
           planner={(
             <ChecklistWeeklyVisitPlanner
               authSummary={input.authSummary}
-              canMaintain={data.capabilities.canMaintainWeeklyVisitPlan}
+              canMaintain={actionStoreIds.size > 0}
               embedded
               locale={locale}
               period={period}
@@ -357,14 +356,12 @@ export function RegionManagerChecklistCommandPage(input: {
           ) : null}
           searchDraft={searchDraft}
           sort={sort}
-          status={status}
           onNextPage={() => { retainCurrentCommand(); setOffset(offset + PAGE_SIZE) }}
           onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedRecordStore(store) }}
           onOpenWorkflow={input.onOpenWorkflow}
           onPreviousPage={() => { retainCurrentCommand(); setOffset(Math.max(0, offset - PAGE_SIZE)) }}
           onRetry={() => void commandQuery.refetch()}
           onSearchChange={(value) => { retainCurrentCommand(); setSearchDraft(value) }}
-          onSelectStatus={selectStatus}
           onSort={changeSort}
         />
         <ChecklistOperationalHistoryDrawer

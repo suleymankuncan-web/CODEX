@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {
@@ -10,7 +10,6 @@ import {
   Clock3,
   MapPinCheck,
   Search,
-  Store,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -96,101 +95,128 @@ function AnnualVisitHistoryDialog(input: {
     if (!normalizedSearch) return true
     return `${visit.storeName} ${visit.storeCode}`.toLocaleLowerCase(input.locale === 'tr' ? 'tr-TR' : 'en-US').includes(normalizedSearch)
   })
-  const groupedVisits = groupVisitsByMonth(visibleVisits, monthNames)
   const monthCounts = monthNames.map((_month, monthIndex) => visits.filter((visit) => Number(visit.visitDate.slice(5, 7)) - 1 === monthIndex).length)
-  const maxMonthCount = Math.max(1, ...monthCounts)
   const checklistCount = periodVisits.filter((visit) => visit.checklistInstanceId).length
-  const storeCounts = countStores(periodVisits, input.locale)
+  const storeCount = new Set(periodVisits.map((visit) => visit.storeId)).size
   const scopeLabel = selectedMonth === 'all' ? `${selectedYear}` : `${monthNames[selectedMonth]} ${selectedYear}`
   const descriptionId = 'annual-visit-history-description'
 
   return <DialogPrimitive.Root open onOpenChange={(nextOpen) => { if (!nextOpen) input.onClose() }}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="annual-visit-history-backdrop" />
-      <DialogPrimitive.Content className="annual-visit-history-dialog" aria-describedby={descriptionId}>
-        <header className="annual-visit-history-header">
-          <div>
-            <small>{copy.eyebrow}</small>
-            <DialogPrimitive.Title>{selectedYear} {copy.title}</DialogPrimitive.Title>
-            <span>{input.regionName}</span>
+      <DialogPrimitive.Content className="annual-visit-history-dialog tw:!rounded-[18px] tw:!border-primary/20 tw:!bg-card" aria-describedby={descriptionId}>
+        <header className="tw:relative tw:flex tw:min-h-[88px] tw:items-center tw:justify-between tw:gap-4 tw:overflow-hidden tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:sm:px-5">
+          <div className="tw:pointer-events-none tw:absolute tw:-right-10 tw:-top-16 tw:size-44 tw:rounded-full tw:border tw:border-primary-foreground/15" />
+          <div className="tw:relative tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+            <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:border tw:border-primary-foreground/20 tw:bg-primary-foreground/10"><CalendarCheck2 className="tw:size-5" /></span>
+            <div className="tw:min-w-0">
+              <small className="tw:block tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.16em] tw:text-primary-foreground">{copy.eyebrow}</small>
+              <DialogPrimitive.Title className="tw:mt-0.5 tw:text-xl tw:font-semibold tw:tracking-[-0.025em] tw:sm:text-2xl">{selectedYear} {copy.title}</DialogPrimitive.Title>
+              <span className="tw:block tw:truncate tw:text-[11px] tw:font-medium tw:text-primary-foreground">{input.regionName}</span>
+            </div>
           </div>
-          <div className="annual-visit-history-header-actions">
-            <Button variant="outline" size="icon" aria-label={copy.previousYear} onClick={() => { setSelectedYear((year) => year - 1); setSelectedMonth('all') }}><ChevronLeft /></Button>
-            <strong>{selectedYear}</strong>
-            <Button variant="outline" size="icon" aria-label={copy.nextYear} onClick={() => { setSelectedYear((year) => year + 1); setSelectedMonth('all') }}><ChevronRight /></Button>
-            <DialogPrimitive.Close asChild><Button variant="ghost" size="icon" aria-label={copy.close}><X /></Button></DialogPrimitive.Close>
+          <div className="tw:relative tw:flex tw:shrink-0 tw:items-center tw:gap-1">
+            <Button className="tw:border-primary-foreground/20 tw:bg-primary-foreground/10 tw:text-primary-foreground tw:hover:bg-primary-foreground/20 tw:hover:text-primary-foreground" variant="outline" size="icon" aria-label={copy.previousYear} onClick={() => { setSelectedYear((year) => year - 1); setSelectedMonth('all') }}><ChevronLeft /></Button>
+            <strong className="tw:min-w-11 tw:text-center tw:text-sm tw:font-semibold tw:tabular-nums">{selectedYear}</strong>
+            <Button className="tw:border-primary-foreground/20 tw:bg-primary-foreground/10 tw:text-primary-foreground tw:hover:bg-primary-foreground/20 tw:hover:text-primary-foreground" variant="outline" size="icon" aria-label={copy.nextYear} onClick={() => { setSelectedYear((year) => year + 1); setSelectedMonth('all') }}><ChevronRight /></Button>
+            <DialogPrimitive.Close asChild><Button className="tw:ml-0.5 tw:text-primary-foreground tw:hover:bg-primary-foreground/15 tw:hover:text-primary-foreground" variant="ghost" size="icon" aria-label={copy.close}><X /></Button></DialogPrimitive.Close>
           </div>
         </header>
         <DialogPrimitive.Description id={descriptionId} className="annual-visit-history-description">{copy.description}</DialogPrimitive.Description>
 
         {annualQuery.isLoading ? <HistoryState icon={<Clock3 />} label={copy.loading} /> : null}
         {annualQuery.isError ? <HistoryState error icon={<CircleAlert />} label={copy.error} action={<Button variant="outline" onClick={() => void annualQuery.refetch()}>{copy.retry}</Button>} /> : null}
-        {annualQuery.data ? <div className="annual-visit-history-content">
-          <section className="annual-visit-history-summary" aria-label={copy.summaryLabel}>
-            <div className="annual-visit-history-total">
-              <span><CalendarCheck2 /></span>
-              <div><strong>{periodVisits.length}</strong><small>{copy.totalVisits}</small></div>
-            </div>
-            <dl>
-              <div><dt><Store />{copy.visitedStores}</dt><dd>{storeCounts.length}</dd></div>
-              <div><dt><ClipboardCheck />{copy.withChecklist}</dt><dd>{checklistCount}</dd></div>
-              <div><dt><MapPinCheck />{copy.visitOnly}</dt><dd>{periodVisits.length - checklistCount}</dd></div>
+        {annualQuery.data ? <div className="tw:min-h-0 tw:overflow-y-auto tw:bg-muted/25 tw:p-3 tw:sm:p-4">
+          <section className="tw:mb-3 tw:flex tw:flex-col tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between" aria-label={copy.summaryLabel}>
+            <dl className="tw:grid tw:grid-cols-3 tw:divide-x tw:divide-border">
+              <SummaryValue label={copy.totalVisits} value={periodVisits.length} first />
+              <SummaryValue label={copy.visitedStores} value={storeCount} />
+              <SummaryValue label={copy.withChecklist} value={checklistCount} />
             </dl>
+            <Button className="tw:self-start tw:sm:self-center" size="sm" variant={selectedMonth === 'all' ? 'secondary' : 'outline'} onClick={() => setSelectedMonth('all')}>{copy.allYear}</Button>
           </section>
 
-          <section className="annual-visit-history-months" aria-label={copy.monthDistribution}>
-            <header><div><h3>{copy.yearRhythm}</h3><p>{copy.yearRhythmCopy}</p></div><Button size="sm" variant={selectedMonth === 'all' ? 'secondary' : 'ghost'} onClick={() => setSelectedMonth('all')}>{copy.allYear}</Button></header>
-            <div role="group" aria-label={copy.monthDistribution}>
-              {monthNames.map((month, monthIndex) => {
-                const count = monthCounts[monthIndex] ?? 0
-                const level = count === 0 ? 0 : Math.max(18, Math.round((count / maxMonthCount) * 100))
-                return <button
-                  type="button"
-                  aria-label={copy.monthLabel(month, count)}
-                  aria-pressed={selectedMonth === monthIndex}
-                  className={selectedMonth === monthIndex ? 'is-active' : ''}
-                  key={month}
-                  onClick={() => setSelectedMonth((current) => current === monthIndex ? 'all' : monthIndex)}
-                >
-                  <span className="annual-visit-history-month-bar" style={{ '--visit-month-level': `${level}%` } as CSSProperties}><i /></span>
-                  <strong>{shortMonth(month, input.locale)}</strong>
-                  <small>{count}</small>
-                </button>
-              })}
-            </div>
-          </section>
-
-          <div className="annual-visit-history-workspace">
-            <section className="annual-visit-history-log" aria-label={copy.visitLog}>
-              <header>
-                <div><h3>{copy.visitLog}</h3><p>{scopeLabel} · {periodVisits.length} {copy.visitSuffix}</p></div>
-                <label><Search /><Input aria-label={copy.searchLabel} placeholder={copy.searchPlaceholder} value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} /></label>
+          <div className="tw:grid tw:min-h-0 tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_300px]">
+            <section className="tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-3 tw:sm:p-4" aria-label={copy.monthDistribution}>
+              <header className="tw:mb-3 tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-end tw:sm:justify-between">
+                <div><h3 className="tw:text-base tw:font-semibold tw:tracking-[-0.02em]">{copy.yearRhythm}</h3><p className="tw:mt-0.5 tw:text-[11px] tw:text-muted-foreground">{copy.yearRhythmCopy}</p></div>
+                <div className="tw:flex tw:items-center tw:gap-3 tw:text-[9px] tw:font-semibold tw:text-muted-foreground"><span className="tw:flex tw:items-center tw:gap-1"><i className="tw:size-2 tw:rounded-full tw:bg-primary" />{copy.checklistVisit}</span><span className="tw:flex tw:items-center tw:gap-1"><i className="tw:size-2 tw:rounded-full tw:bg-sky-200" />{copy.completedVisit}</span></div>
               </header>
-              {groupedVisits.length === 0 ? <div className="annual-visit-history-empty"><CalendarCheck2 /><strong>{normalizedSearch ? copy.searchEmpty : copy.empty}</strong></div> : <div className="annual-visit-history-groups">
-                {groupedVisits.map((group) => <section key={group.monthIndex}>
-                  <header><h4>{group.label}</h4><span>{group.visits.length} {copy.visitSuffix}</span></header>
-                  <ol>{group.visits.map((visit) => <li key={`${visit.storeId}:${visit.planItemId}:${visit.visitDate}`}>
-                    <time dateTime={visit.visitDate}><strong>{Number(visit.visitDate.slice(8, 10))}</strong><span>{shortMonth(monthNames[Number(visit.visitDate.slice(5, 7)) - 1]!, input.locale)}</span></time>
-                    <span className="annual-visit-history-row-store"><strong>{visit.storeName}</strong><small>{visit.storeCode} · {formatLongDate(visit.visitDate, input.locale)}</small></span>
-                    <span className={`annual-visit-history-kind${visit.checklistInstanceId ? ' is-checklist' : ''}`}>{visit.checklistInstanceId ? <ClipboardCheck /> : <MapPinCheck />}<span>{visit.checklistInstanceId ? copy.checklistVisit : copy.completedVisit}</span></span>
-                  </li>)}</ol>
-                </section>)}
-              </div>}
+              <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-3 tw:xl:grid-cols-4" role="group" aria-label={copy.monthDistribution}>
+                {monthNames.map((month, monthIndex) => <MonthCalendar
+                  count={monthCounts[monthIndex] ?? 0}
+                  key={month}
+                  label={month}
+                  locale={input.locale}
+                  monthIndex={monthIndex}
+                  selected={selectedMonth === monthIndex}
+                  visits={visits}
+                  weekdays={copy.weekdays}
+                  year={selectedYear}
+                  onSelect={() => setSelectedMonth((current) => current === monthIndex ? 'all' : monthIndex)}
+                />)}
+              </div>
             </section>
 
-            <aside className="annual-visit-history-stores" aria-label={copy.storeDistribution}>
-              <header><h3>{copy.storeDistribution}</h3><span>{scopeLabel}</span></header>
-              {storeCounts.length === 0 ? <p>{copy.empty}</p> : <ol>{storeCounts.map((store, index) => <li key={store.storeId}>
-                <span className="annual-visit-history-store-rank">{String(index + 1).padStart(2, '0')}</span>
-                <span><strong>{store.storeName}</strong><small>{store.storeCode}</small></span>
-                <b>{store.count}<small>{copy.visitSuffix}</small></b>
-              </li>)}</ol>}
+            <aside className="tw:flex tw:min-h-[360px] tw:flex-col tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card" aria-label={copy.visitLog}>
+              <header className="tw:border-b tw:border-border tw:p-3">
+                <div className="tw:mb-2 tw:flex tw:items-end tw:justify-between tw:gap-2"><div><h3 className="tw:text-sm tw:font-semibold">{copy.visitLog}</h3><p className="tw:text-[10px] tw:text-muted-foreground">{scopeLabel}</p></div><span className="tw:text-xs tw:font-semibold tw:text-primary tw:tabular-nums">{visibleVisits.length}</span></div>
+                <label className="tw:relative tw:block"><Search className="tw:absolute tw:left-2.5 tw:top-1/2 tw:size-3.5 tw:-translate-y-1/2 tw:text-muted-foreground" /><Input className="tw:h-8 tw:rounded-lg tw:pl-8 tw:text-xs" aria-label={copy.searchLabel} placeholder={copy.searchPlaceholder} value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} /></label>
+              </header>
+              {visibleVisits.length === 0 ? <div className="tw:grid tw:flex-1 tw:place-items-center tw:p-6 tw:text-center"><span><CalendarCheck2 className="tw:mx-auto tw:mb-2 tw:size-5 tw:text-muted-foreground" /><strong className="tw:block tw:text-xs">{normalizedSearch ? copy.searchEmpty : copy.empty}</strong></span></div> : <ol className="tw:min-h-0 tw:flex-1 tw:divide-y tw:divide-border tw:overflow-y-auto">
+                {visibleVisits.map((visit) => <li className="tw:grid tw:grid-cols-[36px_minmax(0,1fr)] tw:gap-2 tw:p-3" key={`${visit.storeId}:${visit.planItemId}:${visit.visitDate}`}>
+                  <time className="tw:grid tw:size-9 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-center" dateTime={visit.visitDate}><span><strong className="tw:block tw:text-xs tw:leading-none tw:tabular-nums">{Number(visit.visitDate.slice(8, 10))}</strong><small className="tw:text-[7px] tw:font-bold tw:uppercase tw:text-muted-foreground">{shortMonth(monthNames[Number(visit.visitDate.slice(5, 7)) - 1]!)}</small></span></time>
+                  <span className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-[11px] tw:font-semibold">{visit.storeName}</strong><small className="tw:block tw:truncate tw:text-[9px] tw:text-muted-foreground">{formatLongDate(visit.visitDate, input.locale)}</small><span className={`tw:mt-1 tw:inline-flex tw:items-center tw:gap-1 tw:text-[8px] tw:font-semibold ${visit.checklistInstanceId ? 'tw:text-primary' : 'tw:text-sky-700'}`}>{visit.checklistInstanceId ? <ClipboardCheck className="tw:size-3" /> : <MapPinCheck className="tw:size-3" />}{visit.checklistInstanceId ? copy.checklistVisit : copy.completedVisit}</span></span>
+                </li>)}
+              </ol>}
             </aside>
           </div>
         </div> : null}
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   </DialogPrimitive.Root>
+}
+
+function SummaryValue(input: { first?: boolean; label: string; value: number }) {
+  return <div className={`tw:px-3 ${input.first ? 'tw:pl-0' : ''}`}><dt className="tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.1em] tw:text-muted-foreground">{input.label}</dt><dd className="tw:mt-1 tw:text-xl tw:font-semibold tw:tracking-tight tw:text-foreground tw:tabular-nums">{input.value}</dd></div>
+}
+
+function MonthCalendar(input: {
+  count: number
+  label: string
+  locale: 'tr' | 'en'
+  monthIndex: number
+  selected: boolean
+  visits: AnnualVisit[]
+  weekdays: string[]
+  year: number
+  onSelect: () => void
+}) {
+  const monthVisits = input.visits.filter((visit) => Number(visit.visitDate.slice(5, 7)) - 1 === input.monthIndex)
+  const visitsByDay = new Map<number, AnnualVisit[]>()
+  for (const visit of monthVisits) {
+    const day = Number(visit.visitDate.slice(8, 10))
+    visitsByDay.set(day, [...(visitsByDay.get(day) ?? []), visit])
+  }
+  const ariaLabel = input.locale === 'tr' ? `${input.label}, ${input.count} ziyaret` : `${input.label}, ${input.count} visits`
+  return <button
+    type="button"
+    aria-label={ariaLabel}
+    aria-pressed={input.selected}
+    className={`tw:rounded-xl tw:border tw:p-2.5 tw:text-left tw:transition-colors tw:focus-visible:outline-none tw:focus-visible:ring-2 tw:focus-visible:ring-ring ${input.selected ? 'tw:border-primary tw:bg-primary/[0.045]' : 'tw:border-border tw:bg-background tw:hover:border-primary/35 tw:hover:bg-muted/20'}`}
+    onClick={input.onSelect}
+  >
+    <span className="tw:mb-2 tw:flex tw:items-center tw:justify-between"><strong className="tw:text-[12px] tw:font-semibold tw:text-foreground">{input.label}</strong><small className="tw:rounded-full tw:bg-muted tw:px-1.5 tw:py-0.5 tw:text-[9px] tw:font-bold tw:text-muted-foreground tw:tabular-nums">{input.count}</small></span>
+    <span className="tw:grid tw:grid-cols-7 tw:gap-0.5" aria-hidden="true">
+      {input.weekdays.map((day) => <small className="tw:text-center tw:text-[7px] tw:font-bold tw:text-muted-foreground" key={day}>{day}</small>)}
+      {buildMonthCalendarDays(input.year, input.monthIndex).map((day, index) => {
+        if (day === null) return <i className="tw:aspect-square" key={`blank-${index}`} />
+        const dayVisits = visitsByDay.get(day) ?? []
+        const hasChecklist = dayVisits.some((visit) => visit.checklistInstanceId)
+        return <i className={`tw:grid tw:aspect-square tw:place-items-center tw:rounded-[5px] tw:text-[8px] tw:font-semibold tw:not-italic tw:tabular-nums ${dayVisits.length === 0 ? 'tw:text-muted-foreground' : hasChecklist ? 'tw:bg-primary tw:text-primary-foreground' : 'tw:bg-sky-200 tw:text-sky-950'}`} key={day}>{day}</i>
+      })}
+    </span>
+  </button>
 }
 
 function HistoryState(input: { action?: ReactNode; error?: boolean; icon: ReactNode; label: string }) {
@@ -235,25 +261,6 @@ function isCompletedVisit(item: VisitPlanItem) {
   return Boolean(item.checklistInstanceId || item.visitCompletedAt || item.completedAt || item.status === 'completed')
 }
 
-function countStores(visits: AnnualVisit[], locale: 'tr' | 'en') {
-  const stores = new Map<string, { count: number; storeCode: string; storeId: string; storeName: string }>()
-  for (const visit of visits) {
-    const current = stores.get(visit.storeId) ?? { count: 0, storeCode: visit.storeCode, storeId: visit.storeId, storeName: visit.storeName }
-    current.count += 1
-    stores.set(visit.storeId, current)
-  }
-  return [...stores.values()].sort((left, right) => right.count - left.count || left.storeName.localeCompare(right.storeName, locale === 'tr' ? 'tr-TR' : 'en-US'))
-}
-
-function groupVisitsByMonth(visits: AnnualVisit[], monthNames: string[]) {
-  const groups = new Map<number, AnnualVisit[]>()
-  for (const visit of visits) {
-    const monthIndex = Number(visit.visitDate.slice(5, 7)) - 1
-    groups.set(monthIndex, [...(groups.get(monthIndex) ?? []), visit])
-  }
-  return [...groups.entries()].sort(([left], [right]) => right - left).map(([monthIndex, monthVisits]) => ({ label: monthNames[monthIndex]!, monthIndex, visits: monthVisits }))
-}
-
 function buildYearPeriods(year: number) {
   return Array.from({ length: 12 }, (_value, monthIndex) => `${year}-${String(monthIndex + 1).padStart(2, '0')}`)
 }
@@ -263,8 +270,18 @@ function buildMonthNames(year: number, locale: 'tr' | 'en') {
   return Array.from({ length: 12 }, (_value, monthIndex) => formatter.format(new Date(Date.UTC(year, monthIndex, 1))))
 }
 
-function shortMonth(month: string, locale: 'tr' | 'en') {
-  return locale === 'tr' ? month.slice(0, 3) : month.slice(0, 3)
+function buildMonthCalendarDays(year: number, monthIndex: number) {
+  const firstWeekday = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay()
+  const mondayOffset = (firstWeekday + 6) % 7
+  const dayCount = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
+  return [
+    ...Array.from({ length: mondayOffset }, () => null),
+    ...Array.from({ length: dayCount }, (_value, dayIndex) => dayIndex + 1),
+  ]
+}
+
+function shortMonth(month: string) {
+  return month.slice(0, 3)
 }
 
 function formatLongDate(isoDate: string, locale: 'tr' | 'en') {
@@ -273,8 +290,8 @@ function formatLongDate(isoDate: string, locale: 'tr' | 'en') {
 
 function historyCopy(locale: 'tr' | 'en') {
   return locale === 'tr' ? {
-    allYear: 'Tüm yıl', checklistVisit: 'Checklist ile tamamlandı', close: 'Kapat', completedVisit: 'Ziyaret tamamlandı', description: 'Sorumlu mağazalarda yıl içinde tamamlanan ziyaretler.', empty: 'Bu dönemde tamamlanmış ziyaret bulunmuyor.', error: 'Yıllık ziyaret geçmişi yüklenemedi.', eyebrow: 'YILLIK ZİYARET GEÇMİŞİ', loading: 'Ziyaret geçmişi yükleniyor…', monthDistribution: 'Aylara göre ziyaret dağılımı', monthLabel: (month: string, count: number) => `${month}, ${count} ziyaret`, nextYear: 'Sonraki yıl', previousYear: 'Önceki yıl', retry: 'Tekrar dene', searchEmpty: 'Aramanızla eşleşen ziyaret bulunamadı.', searchLabel: 'Ziyaretlerde mağaza ara', searchPlaceholder: 'Mağaza adı veya kodu ara', storeDistribution: 'Ziyaret edilen mağazalar', summaryLabel: 'Yıllık ziyaret özeti', title: 'Ziyaret Geçmişi', totalVisits: 'Toplam ziyaret', visitLog: 'Ziyaretler', visitedStores: 'Ziyaret edilen mağaza', visitOnly: 'Sadece ziyaret', visitSuffix: 'ziyaret', withChecklist: 'Checklist ile', yearRhythm: 'Yılın ziyaret ritmi', yearRhythmCopy: 'Bir ayı seçerek ziyaret listesini daraltın.',
+    allYear: 'Tüm yıl', checklistVisit: 'Checklist yapıldı', close: 'Kapat', completedVisit: 'Ziyaret yapıldı', description: 'Sorumlu mağazalarda yıl içinde tamamlanan ziyaretler.', empty: 'Bu dönemde tamamlanmış ziyaret bulunmuyor.', error: 'Yıllık ziyaret geçmişi yüklenemedi.', eyebrow: 'YILLIK ZİYARET TAKVİMİ', loading: 'Ziyaret geçmişi yükleniyor…', monthDistribution: '12 aylık ziyaret takvimi', nextYear: 'Sonraki yıl', previousYear: 'Önceki yıl', retry: 'Tekrar dene', searchEmpty: 'Aramanızla eşleşen ziyaret bulunamadı.', searchLabel: 'Ziyaretlerde mağaza ara', searchPlaceholder: 'Mağaza ara', summaryLabel: 'Yıllık ziyaret özeti', title: 'Ziyaret Takvimi', totalVisits: 'Toplam ziyaret', visitLog: 'Ziyaret akışı', visitedStores: 'Ziyaret edilen mağaza', weekdays: ['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'], withChecklist: 'Checklist ile', yearRhythm: 'Yıllık görünüm', yearRhythmCopy: 'Bir ayı seçerek sağdaki ziyaret akışını daraltın.',
   } : {
-    allYear: 'Full year', checklistVisit: 'Completed with checklist', close: 'Close', completedVisit: 'Visit completed', description: 'Completed store visits in the selected region during the year.', empty: 'No completed visits in this period.', error: 'Annual visit history could not be loaded.', eyebrow: 'ANNUAL VISIT HISTORY', loading: 'Loading visit history…', monthDistribution: 'Visits by month', monthLabel: (month: string, count: number) => `${month}, ${count} visits`, nextYear: 'Next year', previousYear: 'Previous year', retry: 'Try again', searchEmpty: 'No visits match your search.', searchLabel: 'Search stores in visits', searchPlaceholder: 'Search store name or code', storeDistribution: 'Visited stores', summaryLabel: 'Annual visit summary', title: 'Visit History', totalVisits: 'Total visits', visitLog: 'Visits', visitedStores: 'Visited stores', visitOnly: 'Visit only', visitSuffix: 'visits', withChecklist: 'With checklist', yearRhythm: 'Visit rhythm', yearRhythmCopy: 'Select a month to narrow the visit list.',
+    allYear: 'Full year', checklistVisit: 'Checklist completed', close: 'Close', completedVisit: 'Visit completed', description: 'Completed store visits during the year.', empty: 'No completed visits in this period.', error: 'Annual visit history could not be loaded.', eyebrow: 'ANNUAL VISIT CALENDAR', loading: 'Loading visit history…', monthDistribution: '12-month visit calendar', nextYear: 'Next year', previousYear: 'Previous year', retry: 'Try again', searchEmpty: 'No visits match your search.', searchLabel: 'Search stores in visits', searchPlaceholder: 'Search stores', summaryLabel: 'Annual visit summary', title: 'Visit Calendar', totalVisits: 'Total visits', visitLog: 'Visit activity', visitedStores: 'Visited stores', weekdays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'], withChecklist: 'With checklist', yearRhythm: 'Year overview', yearRhythmCopy: 'Select a month to filter the activity on the right.',
   }
 }

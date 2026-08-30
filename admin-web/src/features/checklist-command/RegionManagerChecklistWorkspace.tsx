@@ -4,7 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
-  Eye,
+  Play,
   Search,
   Store,
 } from 'lucide-react'
@@ -18,14 +18,7 @@ import {
   getChecklistCommandSortLabel,
   type ChecklistCommandSort,
   type ChecklistCommandSortKey,
-  type ChecklistCommandStatus,
 } from './model'
-
-type Metric = {
-  key: ChecklistCommandStatus
-  label: string
-  value: number
-}
 
 export function RegionManagerChecklistWorkspace(input: {
   actionStoreIds: ReadonlySet<string>
@@ -34,7 +27,6 @@ export function RegionManagerChecklistWorkspace(input: {
   hasPartialScoreData: boolean
   isError: boolean
   isFetching: boolean
-  metrics: Metric[]
   offset: number
   pageCount: number
   pageNumber: number
@@ -45,14 +37,12 @@ export function RegionManagerChecklistWorkspace(input: {
   regionPicker: ReactNode
   searchDraft: string
   sort: ChecklistCommandSort
-  status: ChecklistCommandStatus
   onNextPage: () => void
   onOpenHistory: (store: ChecklistCommandRow, trigger: HTMLElement) => void
   onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
   onPreviousPage: () => void
   onRetry: () => void
   onSearchChange: (value: string) => void
-  onSelectStatus: (status: ChecklistCommandStatus) => void
   onSort: (key: ChecklistCommandSortKey) => void
 }) {
   const { locale, t } = useLocalization()
@@ -93,27 +83,12 @@ export function RegionManagerChecklistWorkspace(input: {
       </section>
 
       <section className="checklist-command-surface tw:!overflow-hidden tw:!rounded-[14px] tw:!border tw:!border-border tw:!bg-card tw:!shadow-sm" data-testid="checklist-command-surface">
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:p-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
-          <div role="group" aria-label={t('storeChecklists.summaryAria')} className="checklist-command-metrics tw:!flex tw:!min-w-0 tw:!flex-wrap tw:!gap-1 tw:!overflow-visible tw:!rounded-lg tw:!border-0 tw:!bg-muted/30 tw:!p-1 tw:!shadow-none tw:before:!hidden" data-testid="checklist-command-metrics">
-            {input.metrics.map((metric) => (
-              <Button
-                key={metric.key}
-                type="button"
-                size="sm"
-                variant={input.status === metric.key ? 'default' : 'ghost'}
-                aria-pressed={input.status === metric.key}
-                className={cn(
-                  'tw:!min-h-7 tw:!w-auto tw:!gap-1.5 tw:!border-0 tw:!px-2.5 tw:!py-1 tw:!text-xs tw:!shadow-none',
-                  input.status !== metric.key && 'tw:text-muted-foreground',
-                )}
-                onClick={() => input.onSelectStatus(metric.key)}
-              >
-                <span>{metric.label}</span>
-                <span className={cn('tw:tabular-nums', input.status === metric.key ? 'tw:text-primary-foreground/80' : 'tw:text-foreground')}>{metric.value}</span>
-              </Button>
-            ))}
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:px-3 tw:py-3 tw:sm:px-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+          <div className="tw:min-w-0">
+            <h2 className="tw:m-0 tw:text-sm tw:font-semibold tw:tracking-[-0.01em] tw:text-foreground">{locale === 'tr' ? 'Mağazalar' : 'Stores'}</h2>
+            <p className="tw:mt-0.5 tw:text-[11px] tw:text-muted-foreground">{input.data.page.total} {locale === 'tr' ? 'sorumlu mağaza' : 'assigned stores'}</p>
           </div>
-          <label className="tw:flex tw:h-9 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-3 tw:text-muted-foreground tw:lg:w-[280px]">
+          <label className="tw:flex tw:h-9 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-primary/20 tw:bg-primary/[0.025] tw:px-3 tw:text-muted-foreground tw:shadow-[0_1px_0_rgb(15_23_42/0.03)] tw:transition-colors tw:focus-within:border-primary/45 tw:focus-within:bg-background tw:lg:w-[340px]">
             <Search className="tw:size-4 tw:shrink-0" />
             <Input
               aria-label={t('storeChecklists.command.search')}
@@ -125,10 +100,8 @@ export function RegionManagerChecklistWorkspace(input: {
           </label>
         </div>
 
-        <div className="tw:flex tw:min-h-7 tw:items-center tw:justify-between tw:border-b tw:border-border tw:bg-muted/25 tw:px-3 tw:py-1.5">
-          <span className="tw:text-[10px] tw:font-medium tw:text-muted-foreground">
-            {input.isFetching ? (locale === 'tr' ? 'Güncelleniyor…' : 'Refreshing…') : `${input.data.page.total} ${locale === 'tr' ? 'mağaza' : 'stores'}`}
-          </span>
+        <div className={cn('tw:flex tw:min-h-7 tw:items-center tw:justify-end tw:border-b tw:border-border tw:bg-muted/20 tw:px-3 tw:py-1.5', !input.isFetching && !input.isError && 'tw:hidden')}>
+          {input.isFetching ? <span className="tw:text-[10px] tw:font-medium tw:text-muted-foreground">{locale === 'tr' ? 'Güncelleniyor…' : 'Refreshing…'}</span> : null}
           {input.isError ? <Button type="button" variant="ghost" size="xs" onClick={input.onRetry}>{locale === 'tr' ? 'Yeniden dene' : 'Retry'}</Button> : null}
         </div>
 
@@ -171,13 +144,13 @@ export function RegionManagerChecklistWorkspace(input: {
 function DesktopStoreList(input: Parameters<typeof RegionManagerChecklistWorkspace>[0]) {
   const { locale, t } = useLocalization()
   const heading = (label: string, key: ChecklistCommandSortKey) => (
-    <Button type="button" size="xs" variant="ghost" className="tw:-ml-2 tw:h-6 tw:px-2 tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.12em] tw:text-muted-foreground" onClick={() => input.onSort(key)}>
+    <Button type="button" size="xs" variant="ghost" className={cn('tw:h-6 tw:w-full tw:px-0 tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.12em] tw:text-muted-foreground', key === 'store' ? 'tw:justify-start' : 'tw:justify-center')} onClick={() => input.onSort(key)}>
       {getChecklistCommandSortLabel(label, key, input.sort)}<ArrowDownUp className="tw:size-3" />
     </Button>
   )
   return (
     <div className="checklist-command-desktop-list tw:!hidden tw:lg:!block">
-      <div className="checklist-command-table-head tw:!grid tw:!grid-cols-[minmax(190px,1.7fr)_80px_130px_105px_minmax(145px,1fr)_220px] tw:!items-center tw:!gap-3 tw:!border-b tw:!border-border tw:!bg-background tw:!px-4 tw:!py-2">
+      <div className="checklist-command-table-head tw:!grid tw:!grid-cols-[minmax(220px,1.7fr)_72px_120px_100px_140px_196px] tw:!items-center tw:!gap-2 tw:!border-b tw:!border-border tw:!bg-background tw:!px-4 tw:!py-2">
         {heading(t('storeChecklists.command.store'), 'store')}
         {heading(locale === 'tr' ? 'Puan' : 'Score', 'bm')}
         {heading(t('storeChecklists.command.visit'), 'last_visit')}
@@ -186,7 +159,7 @@ function DesktopStoreList(input: Parameters<typeof RegionManagerChecklistWorkspa
         <span />
       </div>
       {input.data.items.map((row) => (
-        <div key={row.storeId} data-testid="checklist-command-row" className="checklist-command-row tw:!grid tw:!min-h-16 tw:!grid-cols-[minmax(190px,1.7fr)_80px_130px_105px_minmax(145px,1fr)_220px] tw:!items-center tw:!gap-3 tw:!border-b tw:!border-border tw:!px-4 tw:!py-2 tw:last:!border-b-0 tw:hover:!bg-muted/20">
+        <div key={row.storeId} data-testid="checklist-command-row" className="checklist-command-row tw:!grid tw:!min-h-16 tw:!grid-cols-[minmax(220px,1.7fr)_72px_120px_100px_140px_196px] tw:!items-center tw:!gap-2 tw:!border-b tw:!border-border tw:!px-4 tw:!py-2 tw:last:!border-b-0 tw:hover:!bg-muted/20">
           <StoreIdentity row={row} />
           <Score row={row} />
           <VisitDate locale={locale} row={row} />
@@ -226,34 +199,33 @@ function StoreIdentity({ row }: { row: ChecklistCommandRow }) {
 }
 
 function Score({ row }: { row: ChecklistCommandRow }) {
-  if (row.bmScore === null && row.bmCompletedAt) return <span className="score-bm tw:text-[10px] tw:font-medium tw:text-muted-foreground">—</span>
-  if (row.bmScore === null) return <span className="score-bm tw:text-xs tw:text-muted-foreground">—</span>
-  return <span className="score-bm tw:text-sm tw:font-semibold tw:tabular-nums tw:text-foreground">{Math.round(row.bmScore)}</span>
+  if (row.bmScore === null && row.bmCompletedAt) return <span className="score-bm tw:block tw:text-center tw:text-[10px] tw:font-medium tw:text-muted-foreground">—</span>
+  if (row.bmScore === null) return <span className="score-bm tw:block tw:text-center tw:text-xs tw:text-muted-foreground">—</span>
+  return <span className="score-bm tw:block tw:text-center tw:text-sm tw:font-semibold tw:tabular-nums tw:text-foreground">{Math.round(row.bmScore)}</span>
 }
 
 function VisitDate({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
-  return <span className="checklist-command-date tw:text-[11px] tw:font-medium tw:text-foreground">{formatVisitDate(row.lastCompletedVisitAt, locale)}</span>
+  return <span className="checklist-command-date tw:block tw:text-center tw:text-[11px] tw:font-medium tw:text-foreground">{formatVisitDate(row.lastCompletedVisitAt, locale)}</span>
 }
 
 function Elapsed({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
-  return <span className="tw:text-[11px] tw:font-medium tw:text-foreground">{formatElapsed(row.elapsedDaysSinceLastVisit, locale)}</span>
+  return <span className="tw:block tw:text-center tw:text-[11px] tw:font-medium tw:text-foreground">{formatElapsed(row.elapsedDaysSinceLastVisit, locale)}</span>
 }
 
 function Status({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
   const status = statusPresentation(row, locale)
-  return <Badge variant="outline" className={cn('tw:h-6 tw:max-w-full tw:truncate tw:border', status.className)}>{status.label}</Badge>
+  return <span className="tw:flex tw:justify-center"><Badge variant="outline" className={cn('tw:h-6 tw:max-w-full tw:truncate tw:border', status.className)}>{status.label}</Badge></span>
 }
 
 function RowActions(input: Parameters<typeof RegionManagerChecklistWorkspace>[0] & { mobile?: boolean; row: ChecklistCommandRow }) {
   const { locale } = useLocalization()
   const canAct = input.actionStoreIds.has(input.row.storeId)
   return (
-    <div className={cn('tw:flex tw:items-center tw:justify-end tw:gap-2', input.mobile && 'tw:grid tw:grid-cols-2')}>
-      <Button type="button" variant="outline" size={input.mobile ? 'lg' : 'sm'} className={cn('tw:min-w-0', input.mobile && !canAct && 'tw:col-span-2')} onClick={(event) => input.onOpenHistory(input.row, event.currentTarget)}><Eye />{locale === 'tr' ? 'Sonuçlar' : 'Results'}</Button>
-      {canAct ? <Button type="button" size={input.mobile ? 'lg' : 'sm'} className="tw:min-w-0" onClick={() => input.onOpenWorkflow(input.row.storeId, 'visits', 'bm')}>
-        {input.row.activeBmChecklistCount > 0 ? (locale === 'tr' ? 'Devam et' : 'Continue') : (locale === 'tr' ? 'Checklist Başlat' : 'Start checklist')}
-        <ChevronRight />
-      </Button> : null}
+    <div className="tw:grid tw:grid-cols-2 tw:items-center tw:gap-2">
+      {canAct ? <Button type="button" size={input.mobile ? 'lg' : 'xs'} className="checklist-record-history-result-action tw:min-w-0" onClick={() => input.onOpenWorkflow(input.row.storeId, 'visits', 'bm')}>
+        <Play />{input.row.activeBmChecklistCount > 0 ? (locale === 'tr' ? 'Devam et' : 'Continue') : (locale === 'tr' ? 'Başlat' : 'Start')}
+      </Button> : <span />}
+      <Button type="button" size={input.mobile ? 'lg' : 'xs'} className="checklist-record-history-result-action tw:min-w-0" onClick={(event) => input.onOpenHistory(input.row, event.currentTarget)}><ClipboardCheck />{locale === 'tr' ? 'Sonuçlar' : 'Results'}</Button>
     </div>
   )
 }

@@ -51,3 +51,5 @@
   .week-planner--embedded .week-day{display:none;min-height:150px;border-bottom:0}
   .week-planner--embedded .week-day[data-mobile-active='true']{display:grid}
 }
+
+.week-visit-outcome--missed{color:#b42348}

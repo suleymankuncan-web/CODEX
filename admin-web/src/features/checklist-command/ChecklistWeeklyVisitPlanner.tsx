@@ -147,6 +147,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
   }
 
   const plan = planQuery.data.data
+  const canMaintainPlan = input.canMaintain && plan.capabilities.canMaintainWeeklyVisitPlan
   const days = buildChecklistPlanningDays(plan.weekStart, input.locale)
   const defaultMobileDayIndex = Math.max(0, days.findIndex((day) => day.isoDate === getBusinessDateInputValue()))
   const mobileDayIndex = mobileDaySelection?.weekStart === input.weekStart
@@ -172,7 +173,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
               <span><strong>{weekLabel}</strong><small>{copy.visitCount(plan.items.length)}</small></span>
               <button type="button" aria-label={copy.nextWeek} onClick={() => input.onWeekStartChange(shiftChecklistWeek(input.weekStart, 1))}><ChevronRight size={14} /></button>
             </div>
-            {input.canMaintain && plan.capabilities.canMaintainWeeklyVisitPlan ? (
+            {canMaintainPlan ? (
               <button ref={planningTriggerRef} type="button" className="week-planner-primary" onClick={() => setManualPlanningOpen(true)}><CalendarDays size={14} /> {copy.planWeek}</button>
             ) : null}
           </div>
@@ -196,11 +197,11 @@ export function ChecklistWeeklyVisitPlanner(input: {
                     return (
                       <button
                         type="button"
-                        aria-disabled={!input.canMaintain}
+                        aria-disabled={!canMaintainPlan}
                         className={`week-visit week-visit--${item.status}`}
                         key={item.planItemId}
-                        tabIndex={input.canMaintain ? 0 : -1}
-                        onClick={() => { if (input.canMaintain) setSelectedVisit(item) }}
+                        tabIndex={canMaintainPlan ? 0 : -1}
+                        onClick={() => { if (canMaintainPlan) setSelectedVisit(item) }}
                       >
                         <span className="week-visit-main"><strong>{item.storeName}</strong></span>
                         <span className={`week-visit-outcome week-visit-outcome--${item.status}`}><Icon size={11} />{presentation.label}</span>
@@ -213,7 +214,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
           })}
         </div>
       </section>
-      {planningOpen ? (
+      {planningOpen && canMaintainPlan ? (
         <WeeklyPlanDialog
           copy={copy}
           authSummary={input.authSummary}
@@ -242,7 +243,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
           }}
         />
       ) : null}
-      {selectedVisit && input.canMaintain ? (
+      {selectedVisit && canMaintainPlan ? (
         <VisitActionDialog
           copy={copy}
           completing={completeVisitMutation.isPending}
