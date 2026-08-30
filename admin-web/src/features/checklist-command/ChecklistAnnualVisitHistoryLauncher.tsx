@@ -48,7 +48,7 @@ export function ChecklistAnnualVisitHistoryLauncher(input: {
   const label = input.locale === 'tr' ? 'Yıllık Ziyaretler' : 'Annual Visits'
 
   return <>
-    <button type="button" className="annual-visit-trigger tw:!border-primary-foreground/20 tw:!bg-primary-foreground/10 tw:!text-primary-foreground tw:!shadow-none tw:[&_*]:!text-primary-foreground" aria-label={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+    <button type="button" className="annual-visit-trigger tw:!border-white/20 tw:!bg-[#20407c] tw:!bg-none tw:!text-white tw:!shadow-none tw:[&_*]:!text-white" aria-label={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
       <CalendarCheck2 size={15} />
       <span><small>{input.locale === 'tr' ? 'ZİYARET GEÇMİŞİ' : 'VISIT HISTORY'}</small><strong>{label}</strong></span>
     </button>

@@ -70,7 +70,7 @@ export function RegionManagerChecklistWorkspace(input: {
               </p>
             </div>
           </div>
-          <div className="region-manager-checklist-v2-controls tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:[&_.checklist-command-period-trigger_*]:!text-white tw:[&>*>button]:!border-white/20 tw:[&>*>button]:!bg-white/10 tw:[&>*>button]:!text-white tw:[&>button]:!border-white/20 tw:[&>button]:!bg-white/10 tw:[&>button]:!text-white">
+          <div className="region-manager-checklist-v2-controls tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:[&_.checklist-command-period-trigger_*]:!text-white tw:[&>*>button]:!border-white/20 tw:[&>*>button]:!bg-[#20407c] tw:[&>*>button]:!text-white tw:[&>button]:!border-white/20 tw:[&>button]:!bg-[#20407c] tw:[&>button]:!text-white">
             {input.regionPicker}
             {input.annualHistory}
             {input.periodPicker}
