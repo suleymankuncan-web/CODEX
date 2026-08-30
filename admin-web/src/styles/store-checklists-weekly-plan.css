@@ -4,7 +4,7 @@
 .week-planner-header>div:first-child{display:flex;align-items:center;gap:10px}.week-planner-header>div:first-child>span:last-child{display:grid;gap:3px}.week-planner-header small{color:var(--cc-muted);font-size:8px;font-weight:700;letter-spacing:.08em}.week-planner-header strong{font-size:11px}.week-planner-icon{display:grid;width:32px;height:32px;place-items:center;border:1px solid rgba(112,73,232,.16);border-radius:9px;color:var(--cc-plum);background:var(--cc-soft)}
 .week-planner-actions,.week-planner-range{display:flex;align-items:center;gap:9px}.week-planner-range{gap:8px}.week-planner-range>button{display:grid;width:31px;height:31px;place-items:center;border:1px solid var(--cc-line);border-radius:8px;color:var(--cc-ink);background:#fff}.week-planner-range>span{display:grid;min-width:154px;gap:2px;text-align:center}.week-planner-range>span strong{font-size:9px;font-variant-numeric:tabular-nums}.week-planner-range>span small{font-size:7px;letter-spacing:0}.week-planner-primary{display:flex;min-height:34px;align-items:center;gap:6px;padding:0 11px;border:0;border-radius:9px;color:#fff;background:var(--cc-plum);font-size:9px;font-weight:700;white-space:nowrap}
 .week-planner-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;background:rgba(66,49,78,.12)}.week-day{display:grid;min-width:0;min-height:158px;grid-template-rows:auto 1fr;padding:11px 9px 9px;background:rgba(255,255,255,.88)}.week-day>header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:0 2px 9px}.week-day>header>span{display:grid;gap:2px}.week-day>header strong{font-size:9px}.week-day>header small{color:var(--cc-muted);font-size:8px}.week-day>header>b{display:grid;min-width:20px;height:20px;place-items:center;border-radius:7px;color:var(--cc-deep);background:var(--cc-soft);font-size:8px;font-variant-numeric:tabular-nums}.week-day-visits{display:grid;align-content:start;gap:5px}.week-day-empty{padding:10px 4px;color:#aaa3b1;font-size:8px}
-.week-visit{display:grid;width:100%;gap:6px;padding:7px 8px;border:1px solid #ebe7ef;border-radius:8px;text-align:left;background:#fcfbfd}.week-visit--completed{border-color:rgba(21,149,111,.18);background:#f4fbf8}.week-visit--missed{border-color:rgba(220,63,103,.18);background:#fff7f9}.week-visit--waiting{border-color:rgba(210,145,24,.22);background:#fffaf0}.week-visit-main{display:grid;min-width:0;gap:3px}.week-visit-main strong,.week-visit-main small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.week-visit-main strong{font-size:8px}.week-visit-main small{color:var(--cc-muted);font-size:7px}.week-visit-outcome{display:flex;align-items:center;gap:3px;font-size:7px;font-weight:750;white-space:nowrap}.week-visit-outcome--completed{color:var(--cc-success)}.week-visit-outcome--missed{color:var(--cc-danger)}.week-visit-outcome--waiting{color:#a66b00}
+.week-visit{display:grid;width:100%;gap:6px;padding:7px 8px;border:1px solid #ebe7ef;border-radius:8px;text-align:left;background:#fcfbfd}.week-visit--completed{border-color:rgba(21,149,111,.18);background:#f4fbf8}.week-visit--missed{border-color:rgba(220,63,103,.18);background:#fff7f9}.week-visit--waiting{border-color:rgba(210,145,24,.22);background:#fffaf0}.week-visit-main{display:grid;min-width:0;gap:3px}.week-visit-main strong,.week-visit-main small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.week-visit-main strong{font-size:8px}.week-visit-main small{color:var(--cc-muted);font-size:7px}.week-visit-outcome{display:flex;align-items:center;gap:3px;font-size:7px;font-weight:750;white-space:nowrap}.week-visit-outcome--completed{color:var(--cc-success)}.week-visit-outcome--missed{color:var(--cc-danger)}.week-visit-outcome--waiting{color:#704600}
 .week-plan-dialog-backdrop{position:fixed;z-index:130;inset:0;border:0;background:rgba(25,18,34,.32);backdrop-filter:blur(4px)}.week-plan-dialog,.week-plan-discard{--cc-plum:#7049e8;--cc-deep:#4c2aa5;--cc-cyan:#13a7b3;--cc-ink:#20192b;--cc-muted:#736d7d;--cc-line:rgba(39,29,52,.11);--cc-soft:#f7f3ff;--cc-danger:#dc3f67;--cc-success:#15956f;font-family:'DM Sans',sans-serif}.week-plan-dialog{position:fixed;z-index:131;top:50%;left:50%;display:grid;width:min(880px,calc(100vw - 32px));height:min(760px,calc(100dvh - 32px));grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.6);border-radius:16px;outline:0;background:#fff;box-shadow:0 32px 100px rgba(28,20,38,.28);animation:week-dialog-rise .2s ease-out}
 @keyframes week-dialog-rise{from{transform:translate(-50%,calc(-50% + 12px)) scale(.985);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
 .week-plan-dialog>header{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid var(--cc-line)}.week-plan-dialog>header>div{display:flex;align-items:center;gap:10px}.week-plan-dialog>header>div>span:last-child{display:grid;gap:3px}.week-plan-dialog>header small{color:var(--cc-muted);font-size:8px;font-weight:700;letter-spacing:.08em}.week-plan-dialog>header h2{margin:0;font:650 12px 'Manrope',sans-serif}.week-plan-dialog>header>button{display:grid;width:32px;height:32px;place-items:center;border:1px solid var(--cc-line);border-radius:8px;background:#fff}
@@ -23,7 +23,7 @@
 @media(min-width:1101px){.week-day{min-height:168px}}
 @media(max-width:1100px) and (min-width:721px){.week-day{min-height:163.5px}}
 @media(max-width:720px){.week-day{min-height:159.333px}}
-.week-visit--planned{border-color:rgba(210,145,24,.22);background:#fffaf0}.week-visit-outcome--planned{color:#a66b00}
+.week-visit--planned{border-color:rgba(210,145,24,.22);background:#fffaf0}.week-visit-outcome--planned{color:#704600}
 .week-plan-mobile-remove{display:none!important}
 @media(max-width:720px){.week-plan-workspace{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);overflow:hidden}.week-plan-picker{min-height:0;padding-bottom:0;border-bottom:0}.week-plan-results{max-height:none}.week-plan-draft,.week-plan-added-action{display:none!important}.week-plan-mobile-remove{display:flex!important;border-color:rgba(220,63,103,.18)!important;color:var(--cc-danger)!important;background:#fff7f9!important}}
 
@@ -53,3 +53,25 @@
 }
 
 .week-visit-outcome--missed{color:#b42348}
+
+.region-manager-checklist-v2 .week-planner-primary,
+.region-manager-checklist-v2 .week-planner--embedded .week-planner-primary{
+  background:var(--primary);
+  box-shadow:0 7px 18px color-mix(in oklab,var(--primary) 24%,transparent);
+}
+
+.week-plan-dialog-calendar{display:grid;gap:7px;padding:9px 14px 10px;border-bottom:1px solid var(--cc-line);background:#f8faff}
+.week-plan-dialog-week-switcher{display:flex;align-items:center;justify-content:center;gap:9px}
+.week-plan-dialog-week-switcher>button{display:grid;width:30px;height:30px;place-items:center;border:1px solid color-mix(in oklab,var(--primary) 22%,transparent);border-radius:8px;color:var(--primary);background:#fff}
+.week-plan-dialog-week-switcher>button:hover{background:color-mix(in oklab,var(--primary) 7%,#fff)}
+.week-plan-dialog-week-switcher>span{display:grid;min-width:174px;gap:1px;text-align:center}
+.week-plan-dialog-week-switcher small{color:var(--primary);font-size:7px;font-weight:800;letter-spacing:.08em}
+.week-plan-dialog-week-switcher strong{color:#18233b;font-size:9px;font-weight:700;font-variant-numeric:tabular-nums}
+.week-plan-dialog-calendar .week-plan-dialog-days{padding:0}
+
+@media(max-width:720px){
+  .week-plan-dialog-calendar{padding:8px 10px}
+  .week-plan-dialog-week-switcher{justify-content:space-between}
+  .week-plan-dialog-week-switcher>button{width:40px;height:40px}
+  .week-plan-dialog-week-switcher>span{min-width:0;flex:1}
+}

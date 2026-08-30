@@ -70,7 +70,7 @@ export function RegionManagerChecklistWorkspace(input: {
               </p>
             </div>
           </div>
-          <div className="region-manager-checklist-v2-controls tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:[&>*>button]:!border-white/20 tw:[&>*>button]:!bg-white/10 tw:[&>*>button]:!text-white tw:[&>button]:!border-white/20 tw:[&>button]:!bg-white/10 tw:[&>button]:!text-white">
+          <div className="region-manager-checklist-v2-controls tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:[&_.checklist-command-period-trigger_*]:!text-white tw:[&>*>button]:!border-white/20 tw:[&>*>button]:!bg-white/10 tw:[&>*>button]:!text-white tw:[&>button]:!border-white/20 tw:[&>button]:!bg-white/10 tw:[&>button]:!text-white">
             {input.regionPicker}
             {input.annualHistory}
             {input.periodPicker}
@@ -219,7 +219,7 @@ function Status({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow
 
 function RowActions(input: Parameters<typeof RegionManagerChecklistWorkspace>[0] & { mobile?: boolean; row: ChecklistCommandRow }) {
   const { locale } = useLocalization()
-  const canAct = input.actionStoreIds.has(input.row.storeId)
+  const canAct = input.data.view === 'region_manager' || input.actionStoreIds.has(input.row.storeId)
   return (
     <div className="tw:grid tw:grid-cols-2 tw:items-center tw:gap-2">
       {canAct ? <Button type="button" size={input.mobile ? 'lg' : 'xs'} className="checklist-record-history-result-action tw:min-w-0" onClick={() => input.onOpenWorkflow(input.row.storeId, 'visits', 'bm')}>
