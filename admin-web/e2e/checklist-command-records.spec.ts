@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './test-fixtures'
 import { checklistEvidenceOutputPath } from './checklist-evidence-output'
-import { createStoreContractSession, installStoreContractSession } from './store-page-contract-fixtures'
+import { createStoreContractSession, installStoreContractSession, storeIds } from './store-page-contract-fixtures'
 
 const regionId = '11111111-1111-4111-8111-111111111111'
 const storeId = '22222222-2222-4222-8222-222222222222'
@@ -223,6 +223,45 @@ test('Region Manager opens store history from the persistent Results action', as
 
   await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/region-manager-record-drawer-desktop.png') })
   await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/region-manager-records-desktop.png'), fullPage: true })
+})
+
+test('Region Manager opens the current workspace immediately when planning regions are empty', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager', { actionStoreIds: [storeIds[0]] })
+  let commandRequests = 0
+
+  await page.route('**/api/checklists/command-canvas/visit-plans/regions**', async (route) => {
+    await route.fulfill({
+      json: { data: { items: [], page: { total: 0, limit: 20, offset: 0, hasMore: false } } },
+    })
+  })
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
+    commandRequests += 1
+    const row = { ...commandRow(1), storeId: storeIds[0], storeName: 'İstanbul MOI AVM' }
+    await route.fulfill({
+      json: {
+        data: {
+          ...commandPage([row], 1, false, 0).data,
+          view: 'region_manager',
+          capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/checklists')
+
+  await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
+  await expect(page.getByText(/· Sorumlu mağazalar$/)).toBeVisible()
+  await expect(page.getByTestId('checklist-command-row').getByText('İstanbul MOI AVM')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tekrar dene' })).toHaveCount(0)
+  await expect(page.getByTestId('checklist-command-metrics')).toHaveCount(0)
+  await expect(page.getByLabel('Haftalık ziyaret planı')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Başlat' })).toBeVisible()
+  await expect.poll(() => commandRequests).toBe(1)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.getByRole('button', { name: 'Başlat' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
 test('Store record owns mobile scrolling and appends the next bounded history page', async ({ page }, testInfo) => {
