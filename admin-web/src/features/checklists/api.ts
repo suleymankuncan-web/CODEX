@@ -93,6 +93,7 @@ export type ChecklistAcknowledgementItem = {
   storeId: string
   storeName: string
   completedByUserId: string | null
+  completedByDisplayName: string | null
   completedAt: string | null
   status: string
   totalScore: number | null

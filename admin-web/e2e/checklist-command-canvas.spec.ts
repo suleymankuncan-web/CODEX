@@ -494,6 +494,7 @@ test('closing a visit-plan result never reveals the workflow drawer', async ({ p
           storeId: '22222222-2222-4222-8222-222222222222',
           storeName: 'Mall of İstanbul',
           completedByUserId: '90000000-0000-4000-8000-000000000017',
+          completedByDisplayName: 'Eda Doğanay',
           completedAt: '2026-07-14T09:00:00.000Z',
           status: 'completed',
           totalScore: 88,
@@ -514,6 +515,7 @@ test('closing a visit-plan result never reveals the workflow drawer', async ({ p
 
   const resultModal = page.locator('.store-checklist-result-modal')
   await expect(resultModal).toBeVisible()
+  await expect(resultModal.getByText('Eda Doğanay', { exact: true })).toBeVisible()
   await page.evaluate(() => {
     const probe = {
       observer: new MutationObserver(() => {

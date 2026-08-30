@@ -462,6 +462,7 @@ export class StoreOpsRepository {
           UPDATE ops.checklist_instance
           SET
             auditor_employee_id = $2::uuid,
+            completed_by_user_id = $5,
             completed_at = NOW(),
             status = 'completed',
             total_score = $3::numeric,
@@ -477,6 +478,7 @@ export class StoreOpsRepository {
           input.auditorEmployeeId,
           aggregates.total_score,
           aggregates.compliance_rate,
+          input.actorUserId,
         ],
       );
 

@@ -141,7 +141,7 @@ export function ChecklistResultModal(input: {
   } as CSSProperties
   const storeLabel = normalizeDisplayLabel(input.item.storeName, input.t('storeChecklists.unknown'))
   const completedByLabel = normalizeDisplayLabel(
-    input.item.completedByUserId,
+    input.item.completedByDisplayName ?? input.item.completedByUserId,
     input.t('storeChecklists.unknown'),
   )
 
