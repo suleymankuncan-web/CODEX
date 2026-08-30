@@ -85,6 +85,7 @@ describe("Checklist Command OpenAPI", () => {
     });
     expect(operation.parameters).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "period", in: "query" }),
+      expect.objectContaining({ name: "query", in: "query", schema: expect.objectContaining({ maxLength: 120 }) }),
       expect.objectContaining({ name: "signal", in: "query" }),
       expect.objectContaining({ name: "sort", in: "query" }),
       expect.objectContaining({ name: "limit", in: "query" }),

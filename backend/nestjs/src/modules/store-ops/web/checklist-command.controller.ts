@@ -23,6 +23,7 @@ export class ChecklistCommandController {
         actorReadScope: request.user.readScope,
         roleScopes: request.user.roleScopes,
         period: query.period,
+        query: query.query,
         signal: query.signal,
         sort: query.sort,
         limit: query.limit,

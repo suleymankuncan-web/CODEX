@@ -51,8 +51,8 @@ export function RegionManagerChecklistWorkspace(input: {
 
   return (
     <div className="region-manager-checklist-v2 tw:flex tw:flex-col tw:gap-4">
-      <header data-testid="region-manager-checklist-header" className="tw:relative tw:overflow-hidden tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
-        <div aria-hidden className="tw:pointer-events-none tw:absolute tw:right-3 tw:top-3 tw:size-32 tw:rounded-full tw:border tw:border-white/15" />
+      <header data-testid="region-manager-checklist-header" className="tw:relative tw:z-[1] tw:isolate tw:overflow-visible tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
+        <div aria-hidden className="tw:pointer-events-none tw:absolute tw:inset-0 tw:overflow-hidden tw:rounded-[14px]"><span className="tw:absolute tw:right-3 tw:top-3 tw:size-32 tw:rounded-full tw:border tw:border-white/15" /></div>
         <div className="tw:relative tw:flex tw:flex-col tw:gap-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
           <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
             <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:border tw:border-white/20 tw:bg-white/10">

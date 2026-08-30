@@ -5896,6 +5896,15 @@
             }
           },
           {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
             "name": "signal",
             "in": "query",
             "required": false,

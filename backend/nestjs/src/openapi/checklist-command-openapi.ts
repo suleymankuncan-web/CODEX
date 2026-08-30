@@ -17,7 +17,6 @@ import {
   checklistVisitPlanRegionOptionSchema,
 } from "./checklist-visit-plan-region-option-openapi";
 import { applyChecklistOperationalHistoryOpenApi } from "./checklist-operational-history-openapi";
-
 type MutableOpenApiDocument = {
   components?: { schemas?: Record<string, unknown> };
   paths: Record<string, unknown>;
@@ -486,6 +485,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
   );
   setQueryParameters(document.paths, regionsPath, "get", [
     queryParameter("period", { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }),
+    queryParameter("query", { type: "string", maxLength: 120 }),
     queryParameter("signal", { type: "string", enum: signalEnum }),
     queryParameter("sort", { type: "string", enum: regionSortEnum }),
     queryParameter("limit", { type: "integer", minimum: 1, maximum: 100 }),

@@ -690,6 +690,75 @@ test('period picker remains keyboard accessible while the plan toolbar stays min
   await expect(page.getByRole('button', { name: /Yıllık Ziyaretler/ })).toBeVisible()
 })
 
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+  { width: 390, height: 844 },
+  { width: 320, height: 720 },
+] as const) {
+  test(`region manager period picker stays within the viewport and hit-testable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await installStoreContractSession(page, 'regionManager')
+    await routeChecklistCommand(page, [])
+    await page.goto('/store/checklists')
+
+    await assertPeriodPickerGeometry(page, viewport)
+  })
+}
+
+for (const viewport of [
+  { width: 1440, height: 900 },
+  { width: 1024, height: 768 },
+  { width: 390, height: 844 },
+  { width: 320, height: 720 },
+] as const) {
+  test(`region manager no-selection period picker stays within the viewport at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await installStoreContractSession(page, 'regionManager')
+    await routeChecklistCommand(page, [], [], [
+      { regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', regionName: 'Marmara' },
+      { regionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', regionName: 'Ege' },
+    ])
+    await page.goto('/store/checklists')
+    await expect(page.getByText('Mağaza sorumluluğunu seçin')).toBeVisible()
+
+    await assertPeriodPickerGeometry(page, viewport)
+  })
+}
+
+async function assertPeriodPickerGeometry(page: Page, viewport: { width: number; height: number }) {
+  const periodTrigger = page.locator('.checklist-command-period-trigger')
+  await expect(periodTrigger).toBeVisible()
+  await periodTrigger.click()
+  const periodDialog = page.getByRole('dialog', { name: 'Raporlama dönemi' })
+  await expect(periodDialog).toBeVisible()
+
+  const bounds = await periodDialog.boundingBox()
+  expect(bounds).not.toBeNull()
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.y).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width)
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height)
+
+  for (const control of [
+    periodDialog.getByRole('button', { name: 'Tarih filtresini kapat' }),
+    periodDialog.getByRole('button', { name: 'Temmuz' }),
+    periodDialog.getByRole('button', { name: 'Uygula' }),
+  ]) {
+    await control.scrollIntoViewIfNeeded()
+    await expect(control).toBeVisible()
+    const hit = await control.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+      return Boolean(target && (target === element || element.contains(target)))
+    })
+    expect(hit).toBe(true)
+  }
+
+  await periodDialog.getByRole('button', { name: 'Tarih filtresini kapat' }).click()
+  await expect(periodDialog).toHaveCount(0)
+}
+
 test('annual visit history shows only completed region visits and supports year month and store filters', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')

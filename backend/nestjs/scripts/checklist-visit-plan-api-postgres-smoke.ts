@@ -3,6 +3,7 @@ import { ConflictException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { ChecklistVisitPlanService } from "../src/modules/store-ops/application/checklist-visit-plan.service";
+import { ChecklistCommandReadRepository } from "../src/modules/store-ops/infrastructure/checklist-command-read.repository";
 import { ChecklistVisitPlanRepository } from "../src/modules/store-ops/infrastructure/checklist-visit-plan.repository";
 import { DatabaseService } from "../src/shared/database/database.service";
 
@@ -18,6 +19,7 @@ if (!/^store_ops_fresh_migration_smoke(_[a-z0-9_]+)?$/.test(databaseName)) {
 
 const pool = new Pool({ connectionString: databaseUrl });
 const database = new DatabaseService(pool);
+const commandRepository = new ChecklistCommandReadRepository(database);
 const repository = new ChecklistVisitPlanRepository(database);
 const service = new ChecklistVisitPlanService(repository);
 
@@ -31,6 +33,12 @@ const roundingWatchStoreId = randomUUID();
 const roundingStrongStoreId = randomUUID();
 const roundedResponseStoreId = randomUUID();
 const actorUserId = randomUUID();
+const aggregateManagerUserId = randomUUID();
+const orphanManagerUserId = randomUUID();
+const inactiveAggregateRegionId = randomUUID();
+const inactiveAggregateStoreId = randomUUID();
+const mismatchedAggregateCompanyId = randomUUID();
+const mismatchedAggregateStoreId = randomUUID();
 const bmTemplateId = randomUUID();
 const vmTemplateId = randomUUID();
 const today = istanbulDate();
@@ -40,19 +48,29 @@ const previousMonday = shiftDate(currentMonday, -7);
 const nextMonday = shiftDate(today, ((8 - todayIsoDay) % 7) || 7);
 const previousTuesday = shiftDate(previousMonday, 1);
 const previousWednesday = shiftDate(previousMonday, 2);
+const directStoreIds: string[] = [
+  storeOneId,
+  storeTwoId,
+  otherStoreId,
+  roundingWatchStoreId,
+  roundingStrongStoreId,
+  roundedResponseStoreId,
+];
 
 const actor = {
   actorUserId,
   actorRoleCodes: ["REGION_MANAGER"],
   actorReadScope: { companyIds: [], regionIds: [], storeIds: [] },
   roleScopes: {
-    REGION_MANAGER: { companyIds: [], regionIds: [regionId], storeIds: [] },
+    REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: directStoreIds },
   },
 };
 
 async function main() {
 try {
   await seedFixtures();
+  await seedCommandRegionAggregateFixtures();
+  await verifyCommandRegionAggregateScope();
 
   const items = [
     { storeId: storeOneId, plannedDate: previousMonday, displayOrder: 0 },
@@ -96,6 +114,14 @@ try {
     idempotencyKey: randomUUID(),
     items: [...items, { storeId: otherStoreId, plannedDate: shiftDate(previousMonday, 3), displayOrder: 3 }],
   }), "cross-region snapshot");
+  await expectConflict(() => service.saveWeeklyPlan({
+    ...actor,
+    regionId,
+    weekStart: previousMonday,
+    expectedRevision: 1,
+    idempotencyKey: randomUUID(),
+    items: [...items, { storeId: randomUUID(), plannedDate: shiftDate(previousMonday, 3), displayOrder: 3 }],
+  }), "unassigned snapshot");
   const afterRollback = await counts(previousMonday);
   assert(afterRollback.revisions === 1 && afterRollback.currentRevisions === 1, "failed snapshot must preserve one current revision");
 
@@ -114,7 +140,7 @@ try {
     idempotencyKey: randomUUID(),
     items: [{ storeId: storeTwoId, plannedDate: nextMonday, displayOrder: 0 }],
   });
-  assert(future.items[0]?.status === "waiting", "future/local-current plan item must remain waiting");
+  assert(future.items[0]?.status === "planned", "future-only plan item must remain planned");
 
   let waitingThroughCurrentDay: true | "not_applicable_sunday" = "not_applicable_sunday";
   if (todayIsoDay !== 0) {
@@ -139,7 +165,7 @@ try {
     currentRevisionCount: afterRollback.currentRevisions,
     idempotentReplay: "verified",
     rollbackPreservedCurrent: true,
-    statusDerivation: ["completed", "missed", "waiting"],
+    statusDerivation: ["completed", "missed", "planned", "waiting"],
     waitingThroughCurrentDay,
     periodReadEvidence,
   }));
@@ -184,6 +210,11 @@ async function seedFixtures() {
     [actorUserId, `visit-api-${actorUserId}`, `visit-api-${actorUserId}@example.invalid`],
   );
   await pool.query(
+    `INSERT INTO ops.user_action_store_assignment (user_id, store_id)
+     SELECT $1::uuid, value::uuid FROM unnest($2::uuid[]) AS assigned(value)`,
+    [actorUserId, directStoreIds],
+  );
+  await pool.query(
     `INSERT INTO ops.checklist_template (
       checklist_template_id, company_id, template_code, template_type, template_name,
       category, version_no, status, effective_from, created_by
@@ -194,12 +225,90 @@ async function seedFixtures() {
   );
 }
 
-async function seedPeriodReadFixtures() {
+async function seedCommandRegionAggregateFixtures() {
   await pool.query(
+    `INSERT INTO ops.company (company_id, company_code, company_name)
+     VALUES ($1, $2, 'Mismatched Aggregate Company')`,
+    [mismatchedAggregateCompanyId, `VISIT_API_MISMATCH_${mismatchedAggregateCompanyId.slice(0, 8)}`],
+  );
+  await pool.query(
+    `INSERT INTO ops.region (region_id, company_id, region_code, region_name, status)
+     VALUES ($1, $2, 'VISIT_API_INACTIVE', 'Inactive Aggregate Region', 'inactive')`,
+    [inactiveAggregateRegionId, companyId],
+  );
+  await pool.query(
+    `INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type)
+     VALUES ($1, $2, $3, $4, 'Inactive Aggregate Store', 'company')`,
+    [inactiveAggregateStoreId, companyId, inactiveAggregateRegionId, `VAPI_INACTIVE_${inactiveAggregateStoreId.slice(0, 8)}`],
+  );
+  await pool.query(
+    `INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type)
+     VALUES ($1, $2, $3, $4, 'Mismatched Aggregate Store', 'company')`,
+    [mismatchedAggregateStoreId, mismatchedAggregateCompanyId, regionId, `VAPI_MISMATCH_${mismatchedAggregateStoreId.slice(0, 8)}`],
+  );
+  await pool.query(
+    `INSERT INTO ops.user_account (user_id, username, email) VALUES
+      ($1, $3, $4), ($2, $5, $6)`,
+    [
+      aggregateManagerUserId,
+      orphanManagerUserId,
+      `aggregate-manager-${aggregateManagerUserId}`,
+      `aggregate-manager-${aggregateManagerUserId}@example.invalid`,
+      `orphan-manager-${orphanManagerUserId}`,
+      `orphan-manager-${orphanManagerUserId}@example.invalid`,
+    ],
+  );
+  const roleAssignments = await pool.query<{ user_role_assignment_id: string }>(
+    `INSERT INTO ops.user_role_assignment (user_id, role_id, scope_type, company_id, region_id, start_at)
+     SELECT manager.manager_user_id, role.role_id, 'region', $2::uuid, $3::uuid,
+            CURRENT_TIMESTAMP - INTERVAL '1 minute'
+     FROM unnest($1::uuid[]) AS manager(manager_user_id)
+     INNER JOIN ops.role role ON role.role_code = 'REGION_MANAGER'
+     RETURNING user_role_assignment_id`,
+    [[aggregateManagerUserId, orphanManagerUserId], companyId, otherRegionId],
+  );
+  assert(roleAssignments.rows.length === 2, "command region aggregate smoke requires the REGION_MANAGER role");
+  await pool.query(
+    `INSERT INTO ops.user_action_store_assignment (user_id, store_id)
+     SELECT $1::uuid, value::uuid FROM unnest($2::uuid[]) AS assigned(value)`,
+    [aggregateManagerUserId, [storeOneId, inactiveAggregateStoreId, mismatchedAggregateStoreId]],
+  );
+  await pool.query(
+    `INSERT INTO ops.user_action_store_assignment (user_id, store_id)
+     SELECT $1::uuid, value::uuid FROM unnest($2::uuid[]) AS assigned(value)`,
+    [orphanManagerUserId, [inactiveAggregateStoreId, mismatchedAggregateStoreId]],
+  );
+}
+
+async function verifyCommandRegionAggregateScope() {
+  const result = await commandRepository.listRegions({
+    companyIds: [companyId],
+    period: today.slice(0, 7),
+    signal: "all",
+    sort: "manager_asc",
+    limit: 20,
+    offset: 0,
+  });
+  assert(result.total === 1, "command region aggregate must exclude managers without active scoped stores");
+  const aggregate = result.items[0];
+  assert(aggregate?.managerUserId === aggregateManagerUserId, "command region aggregate must retain the live direct-store manager");
+  assert(aggregate?.regionId === regionId, "forged legacy role region must not override active assigned store hierarchy");
+  assert(aggregate?.metrics.totalStores === 1, "inactive or mismatched hierarchy must be excluded from command region aggregate");
+}
+
+async function seedPeriodReadFixtures() {
+  const budgetStores = await pool.query<{ store_id: string }>(
     `INSERT INTO ops.store (company_id, region_id, store_code, store_name, store_type)
      SELECT $1::uuid, $2::uuid, 'VAPIB_' || value::text, 'Budget Store ' || value::text, 'company'
-     FROM generate_series(1, 200) value`,
+     FROM generate_series(1, 200) value
+     RETURNING store_id`,
     [companyId, regionId],
+  );
+  directStoreIds.push(...budgetStores.rows.map((row) => row.store_id));
+  await pool.query(
+    `INSERT INTO ops.user_action_store_assignment (user_id, store_id)
+     SELECT $1::uuid, value::uuid FROM unnest($2::uuid[]) AS assigned(value)`,
+    [actorUserId, budgetStores.rows.map((row) => row.store_id)],
   );
   const item = await pool.query<{ template_item_id: string }>(
     `INSERT INTO ops.checklist_template_item (

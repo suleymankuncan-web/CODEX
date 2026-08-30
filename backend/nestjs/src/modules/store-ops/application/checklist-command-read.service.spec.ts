@@ -27,6 +27,7 @@ describe("ChecklistCommandReadService", () => {
           REPORT_VIEWER: { companyIds: ["viewer-company"], regionIds: [], storeIds: [] },
         },
         period: "2026-07",
+        query: "  Marmara ",
         signal: "missing_visit",
         sort: "missing_desc",
         limit: 20,
@@ -38,6 +39,7 @@ describe("ChecklistCommandReadService", () => {
     }));
     expect(repository.listRegions).toHaveBeenCalledWith(expect.objectContaining({
       companyIds: ["viewer-company"],
+      query: "  Marmara ",
       signal: "missing_visit",
     }));
   });

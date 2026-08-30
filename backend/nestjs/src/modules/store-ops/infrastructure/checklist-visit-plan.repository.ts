@@ -20,8 +20,6 @@ import type {
 type ReadInput = {
   regionId: string;
   weekStart: string;
-  companyIds: string[];
-  regionIds: string[];
   storeIds: string[];
 };
 
@@ -38,11 +36,13 @@ type SaveInput = {
   expectedRevision: number;
   idempotencyKey: string;
   requestSha256: string;
+  authorizedStoreIds: string[];
   items: SaveChecklistVisitPlanItem[];
 };
 
 type ListPeriodInput = {
   regionId: string;
+  storeIds: string[];
   period: string;
   query: string | null;
   risk: ChecklistVisitPlanRisk | "all";
@@ -55,6 +55,7 @@ type ListPeriodInput = {
 
 type ListCandidatesInput = {
   regionId: string;
+  storeIds: string[];
   query: string | null;
   limit: number;
   offset: number;
@@ -63,7 +64,7 @@ type ListCandidatesInput = {
 type CompleteVisitInput = {
   planItemId: string;
   actorUserId: string;
-  regionIds: string[];
+  storeIds: string[];
   idempotencyKey: string;
 };
 
@@ -105,13 +106,17 @@ const periodSortSql: Record<ChecklistVisitPlanPeriodSort, string> = {
 export class ChecklistVisitPlanRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async listRegionOptions(input: { regionIds: string[]; query: string | null; limit: number; offset: number }) {
+  async listRegionOptions(input: { storeIds: string[]; query: string | null; limit: number; offset: number }) {
     const result = await this.databaseService.query<RegionOptionPageRow>(
       `WITH scoped AS (
-         SELECT region.region_id, region.region_name
-         FROM ops.region region
-         INNER JOIN ops.company company ON company.company_id = region.company_id
-         WHERE region.region_id = ANY($1::uuid[])
+         SELECT DISTINCT region.region_id, region.region_name
+         FROM ops.store store
+         INNER JOIN ops.region region
+           ON region.region_id = store.region_id
+          AND region.company_id = store.company_id
+         INNER JOIN ops.company company ON company.company_id = store.company_id
+         WHERE store.store_id = ANY($1::uuid[])
+           AND store.status = 'active'
            AND region.status = 'active'
            AND company.status = 'active'
            AND ($2::text IS NULL OR region.region_name ILIKE '%' || $2::text || '%' ESCAPE '\\')
@@ -124,7 +129,7 @@ export class ChecklistVisitPlanRepository {
               COALESCE((SELECT jsonb_agg(jsonb_build_object(
                 'regionId', region_id, 'regionName', region_name
               ) ORDER BY region_name, region_id) FROM paged), '[]'::jsonb) AS items_json`,
-      [input.regionIds, input.query ? escapeLike(input.query) : null, input.limit, input.offset],
+      [input.storeIds, input.query ? escapeLike(input.query) : null, input.limit, input.offset],
     );
     return { items: result.rows[0]?.items_json ?? [], total: Number(result.rows[0]?.total_count ?? 0) };
   }
@@ -139,6 +144,7 @@ export class ChecklistVisitPlanRepository {
       input.planStatus,
       input.limit,
       input.offset,
+      input.storeIds,
     ]);
     const row = result.rows[0];
     return {
@@ -162,6 +168,7 @@ export class ChecklistVisitPlanRepository {
            AND region.company_id = store.company_id
           INNER JOIN ops.company company ON company.company_id = store.company_id
           WHERE store.region_id = $1::uuid
+            AND store.store_id = ANY($5::uuid[])
             AND store.status = 'active'
             AND region.status = 'active'
             AND company.status = 'active'
@@ -186,7 +193,7 @@ export class ChecklistVisitPlanRepository {
             'regionName', region_name
           ) ORDER BY store_code, store_id) FROM paged), '[]'::jsonb) AS items_json
       `,
-      [input.regionId, search, input.limit, input.offset],
+      [input.regionId, search, input.limit, input.offset, input.storeIds],
     );
     return {
       items: result.rows[0]?.items_json ?? [],
@@ -198,8 +205,6 @@ export class ChecklistVisitPlanRepository {
     const result = await this.databaseService.query<PlanRow>(readPlanSql(), [
       input.regionId,
       input.weekStart,
-      input.companyIds,
-      input.regionIds,
       input.storeIds,
       null,
     ]);
@@ -228,11 +233,27 @@ export class ChecklistVisitPlanRepository {
          INNER JOIN ops.region_weekly_visit_plan_revision revision
            ON revision.revision_id = item.revision_id
           AND revision.is_current = TRUE
+         INNER JOIN ops.store store
+           ON store.store_id = item.store_id
+          AND store.status = 'active'
+         INNER JOIN ops.region region
+           ON region.region_id = item.region_id
+          AND region.region_id = store.region_id
+          AND region.company_id = store.company_id
+          AND region.status = 'active'
+         INNER JOIN ops.company company
+           ON company.company_id = store.company_id
+          AND company.status = 'active'
+         INNER JOIN ops.user_action_store_assignment assignment
+           ON assignment.user_id = $2::uuid
+          AND assignment.store_id = item.store_id
+          AND assignment.start_at <= CURRENT_TIMESTAMP
+          AND (assignment.end_at IS NULL OR assignment.end_at > CURRENT_TIMESTAMP)
          WHERE item.plan_item_id = $1::uuid
-           AND item.region_id = ANY($2::uuid[])
+           AND item.store_id = ANY($3::uuid[])
            AND item.visit_type = 'BM_STORE_VISIT'
          FOR UPDATE`,
-        [input.planItemId, input.regionIds],
+        [input.planItemId, input.actorUserId, input.storeIds],
       );
       const planItem = item.rows[0];
       if (!planItem) throw new NotFoundException("Weekly visit plan item is outside the authenticated scope");
@@ -279,6 +300,37 @@ export class ChecklistVisitPlanRepository {
   async saveWeeklyPlan(input: SaveInput): Promise<ChecklistVisitPlanResult> {
     try {
       return await this.databaseService.withTransaction(async (client) => {
+        const authorizedStoreIds = [...new Set(input.authorizedStoreIds.filter(Boolean))];
+        const submittedStoreIds = [...new Set(input.items.map((item) => item.storeId).filter(Boolean))];
+        const portfolio = await client.query<{ store_id: string; region_id: string }>(
+          `SELECT store.store_id, store.region_id
+           FROM ops.user_action_store_assignment assignment
+           INNER JOIN ops.store store
+             ON store.store_id = assignment.store_id
+            AND store.status = 'active'
+           INNER JOIN ops.region region
+             ON region.region_id = store.region_id
+            AND region.company_id = store.company_id
+            AND region.status = 'active'
+           INNER JOIN ops.company company
+             ON company.company_id = store.company_id
+            AND company.status = 'active'
+           WHERE assignment.user_id = $1::uuid
+             AND assignment.store_id = ANY($2::uuid[])
+             AND assignment.start_at <= CURRENT_TIMESTAMP
+             AND (assignment.end_at IS NULL OR assignment.end_at > CURRENT_TIMESTAMP)
+           FOR SHARE`,
+          [input.actorUserId, authorizedStoreIds],
+        );
+        const portfolioByStoreId = new Map(portfolio.rows.map((row) => [row.store_id, row.region_id]));
+        const selectedRegionHasPortfolioStore = portfolio.rows.some((row) => row.region_id === input.regionId);
+        const invalidSnapshot =
+          !selectedRegionHasPortfolioStore ||
+          submittedStoreIds.some((storeId) => portfolioByStoreId.get(storeId) !== input.regionId);
+        if (invalidSnapshot) {
+          throw new ConflictException("Weekly visit plan contains a store outside the direct active portfolio");
+        }
+
         await client.query(
           `INSERT INTO ops.region_weekly_visit_plan (region_id, week_start_date)
            VALUES ($1::uuid, $2::date)
@@ -304,12 +356,22 @@ export class ChecklistVisitPlanRepository {
           if (replay.rows[0].request_sha256 !== input.requestSha256) {
             throw new ConflictException("Idempotency key was already used with different plan content");
           }
-          return this.readPlanInTransaction(client, input.regionId, input.weekStart, replay.rows[0].revision_id);
+          return this.readPlanInTransaction(
+            client,
+            input.regionId,
+            input.weekStart,
+            replay.rows[0].revision_id,
+            authorizedStoreIds,
+          );
         }
 
-        const current = await client.query<{ revision_no: number }>(
-          `SELECT revision_no FROM ops.region_weekly_visit_plan_revision
-           WHERE plan_id = $1::uuid AND is_current = TRUE`,
+        const current = await client.query<{ revision_no: number; store_ids: string[] }>(
+          `SELECT revision.revision_no,
+                  COALESCE(ARRAY_AGG(item.store_id) FILTER (WHERE item.store_id IS NOT NULL), '{}'::uuid[]) AS store_ids
+           FROM ops.region_weekly_visit_plan_revision revision
+           LEFT JOIN ops.region_weekly_visit_plan_item item ON item.revision_id = revision.revision_id
+           WHERE revision.plan_id = $1::uuid AND revision.is_current = TRUE
+           GROUP BY revision.revision_id, revision.revision_no`,
           [planId],
         );
         const currentRevision = current.rows[0]?.revision_no ?? 0;
@@ -317,6 +379,10 @@ export class ChecklistVisitPlanRepository {
           throw new ConflictException("Weekly visit plan revision is stale");
         }
         if (currentRevision > 0) {
+          const currentStoreIds = current.rows[0]?.store_ids ?? [];
+          if (currentStoreIds.some((storeId) => !portfolioByStoreId.has(storeId))) {
+            throw new ConflictException("Weekly visit plan current revision is outside the direct active portfolio");
+          }
           await client.query(
             `UPDATE ops.region_weekly_visit_plan_revision SET is_current = FALSE
              WHERE plan_id = $1::uuid AND is_current = TRUE`,
@@ -365,7 +431,7 @@ export class ChecklistVisitPlanRepository {
             JSON.stringify({ revision: currentRevision + 1, itemCount: input.items.length, requestSha256: input.requestSha256 }),
           ],
         );
-        return this.readPlanInTransaction(client, input.regionId, input.weekStart, revisionId);
+        return this.readPlanInTransaction(client, input.regionId, input.weekStart, revisionId, authorizedStoreIds);
       });
     } catch (error) {
       if (error instanceof ConflictException || error instanceof NotFoundException) throw error;
@@ -377,8 +443,14 @@ export class ChecklistVisitPlanRepository {
     }
   }
 
-  private async readPlanInTransaction(client: PoolClient, regionId: string, weekStart: string, revisionId: string) {
-    const result = await client.query<PlanRow>(readPlanSql(), [regionId, weekStart, [], [regionId], [], revisionId]);
+  private async readPlanInTransaction(
+    client: PoolClient,
+    regionId: string,
+    weekStart: string,
+    revisionId: string,
+    storeIds: string[],
+  ) {
+    const result = await client.query<PlanRow>(readPlanSql(), [regionId, weekStart, storeIds, revisionId]);
     return this.mapPlan(result.rows[0], regionId, weekStart);
   }
 
@@ -413,7 +485,7 @@ function readPlanSql() {
      AND plan.visit_type = 'BM_STORE_VISIT'
     LEFT JOIN ops.region_weekly_visit_plan_revision revision
       ON revision.plan_id = plan.plan_id
-     AND (($6::uuid IS NULL AND revision.is_current = TRUE) OR revision.revision_id = $6::uuid)
+     AND (($4::uuid IS NULL AND revision.is_current = TRUE) OR revision.revision_id = $4::uuid)
     LEFT JOIN LATERAL (
       SELECT jsonb_agg(jsonb_build_object(
         'planItemId', item.plan_item_id,
@@ -434,7 +506,16 @@ function readPlanSql() {
          'completedAt', COALESCE(completed.completed_at, visit.completed_at)
       ) ORDER BY item.planned_date, item.display_order, store.store_name) AS items_json
       FROM ops.region_weekly_visit_plan_item item
-      JOIN ops.store store ON store.store_id = item.store_id
+      JOIN ops.store store
+        ON store.store_id = item.store_id
+       AND store.status = 'active'
+      JOIN ops.region item_region
+        ON item_region.region_id = store.region_id
+       AND item_region.company_id = store.company_id
+       AND item_region.status = 'active'
+      JOIN ops.company item_company
+        ON item_company.company_id = store.company_id
+       AND item_company.status = 'active'
       LEFT JOIN LATERAL (
         SELECT ci.checklist_instance_id, ci.completed_at
         FROM ops.checklist_instance ci
@@ -449,16 +530,26 @@ function readPlanSql() {
        LEFT JOIN ops.region_weekly_visit_plan_completion visit
          ON visit.plan_item_id = item.plan_item_id
        WHERE item.revision_id = revision.revision_id
-        AND (cardinality($5::uuid[]) = 0 OR item.store_id = ANY($5::uuid[]))
+        AND item.store_id = ANY($3::uuid[])
     ) items ON TRUE
+    INNER JOIN ops.company company
+      ON company.company_id = region.company_id
+     AND company.status = 'active'
     WHERE region.region_id = $1::uuid
-      AND (
-        region.company_id = ANY($3::uuid[])
-        OR region.region_id = ANY($4::uuid[])
-        OR EXISTS (
-          SELECT 1 FROM ops.store scoped_store
-          WHERE scoped_store.region_id = region.region_id AND scoped_store.store_id = ANY($5::uuid[])
-        )
+      AND region.status = 'active'
+      AND EXISTS (
+        SELECT 1
+        FROM ops.store scoped_store
+        INNER JOIN ops.region scoped_region
+          ON scoped_region.region_id = scoped_store.region_id
+         AND scoped_region.company_id = scoped_store.company_id
+         AND scoped_region.status = 'active'
+        INNER JOIN ops.company scoped_company
+          ON scoped_company.company_id = scoped_store.company_id
+         AND scoped_company.status = 'active'
+        WHERE scoped_store.region_id = region.region_id
+          AND scoped_store.store_id = ANY($3::uuid[])
+          AND scoped_store.status = 'active'
       )
   `;
 }
@@ -478,10 +569,14 @@ function readManagerPlanSql() {
         ON manager_store.user_id = ua.user_id
        AND manager_store.start_at <= CURRENT_TIMESTAMP
        AND (manager_store.end_at IS NULL OR manager_store.end_at > CURRENT_TIMESTAMP)
-      INNER JOIN ops.store store
-        ON store.store_id = manager_store.store_id
-       AND store.status = 'active'
-      INNER JOIN ops.company company
+       INNER JOIN ops.store store
+         ON store.store_id = manager_store.store_id
+        AND store.status = 'active'
+       INNER JOIN ops.region region
+         ON region.region_id = store.region_id
+        AND region.company_id = store.company_id
+        AND region.status = 'active'
+       INNER JOIN ops.company company
         ON company.company_id = store.company_id
        AND company.status = 'active'
       LEFT JOIN ops.employee employee ON employee.employee_id = ua.employee_id
@@ -590,6 +685,7 @@ function periodPlanSql(orderBy: string) {
        AND region.company_id = store.company_id
       INNER JOIN ops.company company ON company.company_id = store.company_id
       WHERE store.region_id = $1::uuid
+        AND store.store_id = ANY($9::uuid[])
         AND store.status = 'active'
         AND region.status = 'active'
         AND company.status = 'active'

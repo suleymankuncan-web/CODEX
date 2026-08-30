@@ -51,6 +51,7 @@ export type ChecklistCommandRegionsQueryInput = {
   period: string
   signal: ChecklistCommandSignal
   sort: ChecklistCommandRegionSort
+  query?: string
   limit: number
   offset: number
 }
@@ -59,6 +60,7 @@ export function buildChecklistCommandRegionsQuery(input: ChecklistCommandRegions
   const query = new URLSearchParams({ period: input.period })
   if (input.signal !== 'all') query.set('signal', input.signal)
   query.set('sort', input.sort)
+  if (input.query?.trim()) query.set('query', input.query.trim())
   query.set('limit', String(input.limit))
   query.set('offset', String(input.offset))
   return query
@@ -400,4 +402,41 @@ export function getChecklistCommandStatusLabel(
         completed: 'Completed',
       }
   return labels[status]
+}
+
+export type ChecklistCommandTruthFacts = {
+  bmScore: number | null
+  vmScore: number | null
+  openTaskCount: number
+  blockedTaskCount: number
+}
+
+export type ChecklistCommandTruthInput = {
+  bmScore: number | null
+  vmScore: number | null
+  openActionCount: number
+  blockedActionCount: number
+}
+
+/**
+ * Keeps the report row's visible facts bound to the command-canvas response.
+ * Scores stay nullable and task counts are never inferred from status labels.
+ */
+export function getChecklistCommandTruthFacts(input: ChecklistCommandTruthInput): ChecklistCommandTruthFacts {
+  return {
+    bmScore: input.bmScore,
+    vmScore: input.vmScore,
+    openTaskCount: input.openActionCount,
+    blockedTaskCount: input.blockedActionCount,
+  }
+}
+
+export function resolveChecklistCommandStatus(input: {
+  status: Exclude<ChecklistCommandStatus, 'all'>
+  pendingAcknowledgementCount: number
+  activeBmChecklistCount: number
+}) {
+  if (input.pendingAcknowledgementCount > 0) return 'pending' as const
+  if (input.activeBmChecklistCount > 0) return 'active' as const
+  return input.status
 }

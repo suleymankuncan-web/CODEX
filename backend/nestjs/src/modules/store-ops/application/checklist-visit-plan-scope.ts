@@ -17,7 +17,10 @@ export function resolveChecklistVisitPlanScope(input: Input): ChecklistVisitPlan
     return scope("report_viewer", input.roleScopes?.REPORT_VIEWER, false, "company");
   }
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
-    return scope("region_manager", input.roleScopes?.REGION_MANAGER, true, "region");
+    // Region Manager planning is authorized by the direct action-store
+    // portfolio. Legacy/route region ids are only selectors and must never
+    // become a grant through this scope resolver.
+    return scope("region_manager", input.roleScopes?.REGION_MANAGER, true, "store");
   }
   if (input.actorRoleCodes.includes("STORE_MANAGER")) {
     return scope("store_manager", input.roleScopes?.STORE_MANAGER, false, "store");
@@ -29,12 +32,12 @@ function scope(
   view: ChecklistVisitPlanView,
   source: AuthReadScope | undefined,
   canMaintain: boolean,
-  boundary: "company" | "region" | "store",
+  boundary: "company" | "store",
 ): ChecklistVisitPlanScope {
   return {
     view,
     companyIds: boundary === "company" ? unique(source?.companyIds ?? []) : [],
-    regionIds: boundary === "region" ? unique(source?.regionIds ?? []) : [],
+    regionIds: [],
     storeIds: boundary === "store" ? unique(source?.storeIds ?? []) : [],
     canMaintain,
   };
