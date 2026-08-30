@@ -93,10 +93,6 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
     return '/admin/competitions'
   }
 
-  if (hasAnyRole(roles, ['SUPER_ADMIN', 'REPORT_VIEWER'])) {
-    return '/admin/reports'
-  }
-
   if (hasAnyRole(roles, ['SUPER_ADMIN', 'AUDITOR'])) {
     return '/admin/audit'
   }

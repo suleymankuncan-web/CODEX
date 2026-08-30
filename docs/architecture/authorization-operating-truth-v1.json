@@ -47,7 +47,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 221
+        "line": 237
       }
     },
     {
@@ -107,7 +107,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 217
+        "line": 233
       }
     },
     {
@@ -128,7 +128,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 213
+        "line": 229
       }
     },
     {
@@ -149,7 +149,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 209
+        "line": 225
       }
     },
     {
@@ -170,7 +170,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 205
+        "line": 221
       }
     },
     {
@@ -192,7 +192,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 185
+        "line": 201
       }
     },
     {
@@ -212,7 +212,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 201
+        "line": 217
       }
     },
     {
@@ -232,7 +232,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 189
+        "line": 205
       }
     },
     {
@@ -252,7 +252,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 197
+        "line": 213
       }
     },
     {
@@ -272,7 +272,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 193
+        "line": 209
       }
     },
     {
@@ -296,7 +296,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 137
+        "line": 153
       }
     },
     {
@@ -312,19 +312,17 @@
       "runtimeRoles": [
         "HR_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
         "HR_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 141
+        "line": 157
       }
     },
     {
@@ -346,7 +344,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 101
+        "line": 117
       }
     },
     {
@@ -372,7 +370,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 133
+        "line": 149
       }
     },
     {
@@ -387,18 +385,16 @@
       "previewOwnership": "direct",
       "runtimeRoles": [
         "HR_ADMIN",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
         "HR_ADMIN",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 129
+        "line": 145
       }
     },
     {
@@ -420,7 +416,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 173
+        "line": 189
       }
     },
     {
@@ -444,7 +440,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 105
+        "line": 121
       }
     },
     {
@@ -465,7 +461,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 109
+        "line": 125
       }
     },
     {
@@ -487,7 +483,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 177
+        "line": 193
       }
     },
     {
@@ -513,7 +509,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 113
+        "line": 129
       }
     },
     {
@@ -535,7 +531,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 117
+        "line": 133
       }
     },
     {
@@ -557,7 +553,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 97
+        "line": 113
       }
     },
     {
@@ -579,7 +575,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 181
+        "line": 197
       }
     },
     {
@@ -593,17 +589,15 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 145
+        "line": 161
       }
     },
     {
@@ -617,14 +611,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/reports",
       "runtimeRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 161
+        "line": 177
       }
     },
     {
@@ -638,14 +631,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/reports",
       "runtimeRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 157
+        "line": 173
       }
     },
     {
@@ -659,14 +651,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/reports",
       "runtimeRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 149
+        "line": 165
       }
     },
     {
@@ -680,14 +671,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/reports",
       "runtimeRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 165
+        "line": 181
       }
     },
     {
@@ -701,14 +691,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/reports",
       "runtimeRoles": [
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 153
+        "line": 169
       }
     },
     {
@@ -726,7 +715,6 @@
         "HR_ADMIN",
         "INTEGRATION_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
@@ -738,7 +726,6 @@
         "HR_ADMIN",
         "INTEGRATION_ADMIN",
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
@@ -772,7 +759,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 121
+        "line": 137
       }
     },
     {
@@ -793,7 +780,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 125
+        "line": 141
       }
     },
     {
@@ -808,18 +795,16 @@
       "previewOwnership": "direct",
       "runtimeRoles": [
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
         "REGION_MANAGER",
-        "REPORT_VIEWER",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 169
+        "line": 185
       }
     },
     {

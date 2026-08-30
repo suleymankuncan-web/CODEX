@@ -88,7 +88,7 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/inbox',
     icon: Bell,
     labelKey: 'adminShell.nav.inbox',
-    roles: ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN'],
+    roles: ['SUPER_ADMIN', 'HR_ADMIN'],
   },
   {
     id: 'feed',
@@ -109,21 +109,21 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/competitions',
     icon: Trophy,
     labelKey: 'adminShell.nav.competitions',
-    roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'],
+    roles: ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'],
   },
   {
     id: 'reports',
     to: '/admin/reports',
     icon: BarChart3,
     labelKey: 'adminShell.nav.reports',
-    roles: ['SUPER_ADMIN', 'REPORT_VIEWER'],
+    roles: ['SUPER_ADMIN'],
   },
   {
     id: 'targets',
     to: '/admin/targets',
     icon: Target,
     labelKey: 'adminShell.nav.targets',
-    roles: ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'],
+    roles: ['SUPER_ADMIN', 'REGION_MANAGER'],
   },
   {
     id: 'incentives',
@@ -165,6 +165,17 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/session',
     icon: KeyRound,
     labelKey: 'adminShell.nav.session',
+    roles: [
+      'SUPER_ADMIN',
+      'INTEGRATION_ADMIN',
+      'HR_ADMIN',
+      'SNAPSHOT_OPERATOR',
+      'REGION_MANAGER',
+      'AUDITOR',
+      'STORE_MANAGER',
+      'STORE_PERSONNEL',
+      'VISUAL_MERCHANDISER',
+    ],
   },
 ]
 

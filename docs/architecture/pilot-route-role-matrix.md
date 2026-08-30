@@ -25,6 +25,10 @@ A Visual Merchandiser-only session lands on `/store/checklists` and may use
 only `/store/checklists`, `/store/visual-campaigns`, `/store/feed`, and `/store/settings`. It is denied
 every other Store route unless a broader role changes its Store persona.
 
+A Report Viewer-only session is Store-only. It lands on `/store/home`, may use
+only the Store routes granted to `REPORT_VIEWER`, and is denied every `/admin/*`
+route. A separate Admin role may still grant its own Admin routes.
+
 ## Route Matrix
 
 | Route | Shell | Classification | Roles | Landing Behavior | Refresh/Return Expectation | Data Boundary | Primary Nav |
@@ -34,18 +38,18 @@ every other Store route unless a broader role changes its Store persona.
 | `/admin/data-quality` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped import, snapshot, workforce, and KPI quality signals | yes |
 | `/admin/master-data` | admin | core | `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped bootstrap batches | yes |
 | `/admin/snapshots` | admin | ops | `SUPER_ADMIN`, `SNAPSHOT_OPERATOR` | first landing for snapshot operator | must return to same route after auth verification | company-scoped snapshot state | yes |
-| `/admin/inbox` | admin | needs decision | `SUPER_ADMIN`, `REPORT_VIEWER`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | current admin queue scope | yes |
+| `/admin/inbox` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | current admin queue scope | yes |
 | `/admin/feed` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER` | direct navigation only | must return to same route after auth verification | announcement management scope | yes |
 | `/admin/checklists` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | checklist template governance | yes |
-| `/admin/competitions` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | first landing for HR admin | must return to same route after auth verification | competition setup and read scope | yes |
-| `/admin/reports` | admin | ops | `SUPER_ADMIN`, `REPORT_VIEWER` | first landing for report viewer | must return to same route after auth verification | reporting read models | yes |
-| `/admin/targets` | admin | core | `SUPER_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | direct navigation for region manager target follow-up | must return to same route after auth verification when opened directly | target approval queue by scope | yes |
+| `/admin/competitions` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER` | first landing for HR admin | must return to same route after auth verification | competition setup and read scope | yes |
+| `/admin/reports` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | reporting read models | yes |
+| `/admin/targets` | admin | core | `SUPER_ADMIN`, `REGION_MANAGER` | direct navigation for region manager target follow-up | must return to same route after auth verification when opened directly | target approval queue by scope | yes |
 | `/admin/incentives` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped incentive package review | yes |
 | `/admin/kpi-config` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | global KPI governance | yes |
 | `/admin/pilot-feedback` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | controlled-pilot feedback register | yes |
 | `/admin/auth` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | auth admin catalog and assignment scope | yes |
 | `/admin/audit` | admin | core | `SUPER_ADMIN`, `AUDITOR` | first landing for auditor | must return to same route after auth verification | audit event read scope | yes |
-| `/admin/session` | admin | ops | any authenticated admin shell session | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |
+| `/admin/session` | admin | ops | every catalog role except `REPORT_VIEWER` | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |
 | `/store` | store | core | authenticated store shell session | first landing family varies by role: visual merchandiser-only resolves to `/store/checklists`; `STORE_PERSONNEL` resolves to `/store/me`; `STORE_MANAGER`, `REGION_MANAGER`, and broad store sessions resolve to `/store/home` | must return to same route after auth verification | current store shell overview | yes |
 | `/store/home` | store | core | authenticated store shell session except visual-merchandiser-only sessions | landing route for store manager, region manager, and broad Store sessions | must return to same route after auth verification | role-aware Store command overview | yes |
 | `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |
@@ -72,11 +76,10 @@ Current landing resolution:
 2. `SUPER_ADMIN` or `INTEGRATION_ADMIN`: `/admin/integrations`
 3. `SNAPSHOT_OPERATOR`: `/admin/snapshots`
 4. `HR_ADMIN`: `/admin/competitions`
-5. `REPORT_VIEWER`: `/admin/reports`
-6. `AUDITOR`: `/admin/audit`
-7. `VISUAL_MERCHANDISER`-only session: `/store/checklists`
-8. `STORE_PERSONNEL` without manager/region role: `/store/me`
-9. `REGION_MANAGER`, `STORE_MANAGER`, or broad store sessions: `/store/home`
+5. `AUDITOR`: `/admin/audit`
+6. `VISUAL_MERCHANDISER`-only session: `/store/checklists`
+7. `STORE_PERSONNEL` without manager/region role: `/store/me`
+8. `REPORT_VIEWER`, `REGION_MANAGER`, `STORE_MANAGER`, or broad Store sessions: `/store/home`
 
 ## Review Notes
 

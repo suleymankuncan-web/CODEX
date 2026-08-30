@@ -135,3 +135,11 @@ test('every direct product route is owned by the human route matrix', () => {
     )
   }
 })
+
+test('Report Viewer is excluded from every Admin route', () => {
+  const reportViewerAdminRoutes = currentTruth.routes.filter(
+    (route) => route.surface === 'admin' && route.runtimeRoles.includes('REPORT_VIEWER'),
+  )
+
+  assert.deepEqual(reportViewerAdminRoutes, [])
+})

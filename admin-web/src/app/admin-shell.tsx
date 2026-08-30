@@ -93,7 +93,23 @@ export function AdminShell(input: {
             <Suspense fallback={<RouteLoadingState />}>
               <Routes>
             <Route path="/" element={<Navigate to={input.firstAllowedPath} replace />} />
-            <Route path="/admin/session" element={<SessionGate />} />
+            <Route
+              path="/admin/session"
+              element={adminRoute(
+                [
+                  'SUPER_ADMIN',
+                  'INTEGRATION_ADMIN',
+                  'HR_ADMIN',
+                  'SNAPSHOT_OPERATOR',
+                  'REGION_MANAGER',
+                  'AUDITOR',
+                  'STORE_MANAGER',
+                  'STORE_PERSONNEL',
+                  'VISUAL_MERCHANDISER',
+                ],
+                <SessionGate />,
+              )}
+            />
             <Route
               path="/admin/operations"
               element={adminRoute(['SUPER_ADMIN'], <OperationsControlTowerPage />)}
@@ -128,7 +144,7 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/inbox"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN'], <AdminInboxPage authSummary={input.authSummary} />)}
+              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN'], <AdminInboxPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/admin/feed"
@@ -140,35 +156,35 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/competitions"
-              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <CompetitionDashboardPage authSummary={input.authSummary} />)}
+              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER'], <CompetitionDashboardPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/admin/reports"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER'], <ReportsSummaryPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ReportsSummaryPage />)}
             />
             <Route
               path="/admin/reports/snapshot-runs"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER'], <ReportsSnapshotRunsPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ReportsSnapshotRunsPage />)}
             />
             <Route
               path="/admin/reports/workforce/:snapshotRunId"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER'], <ReportsWorkforcePage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ReportsWorkforcePage />)}
             />
             <Route
               path="/admin/reports/kpis/:snapshotRunId"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER'], <ReportsKpisPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ReportsKpisPage />)}
             />
             <Route
               path="/admin/reports/checklists/:snapshotRunId"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER'], <ReportsChecklistsPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ReportsChecklistsPage />)}
             />
             <Route
               path="/admin/reports/turnover/:snapshotRunId"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER'], <ReportsTurnoverPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ReportsTurnoverPage />)}
             />
             <Route
               path="/admin/targets"
-              element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <TargetApprovalQueuePage authSummary={input.authSummary} />)}
+              element={adminRoute(['SUPER_ADMIN', 'REGION_MANAGER'], <TargetApprovalQueuePage authSummary={input.authSummary} />)}
             />
             <Route
               path="/admin/incentives"
