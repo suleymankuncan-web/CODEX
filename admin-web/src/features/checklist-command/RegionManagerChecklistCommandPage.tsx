@@ -202,7 +202,7 @@ export function RegionManagerChecklistCommandPage(input: {
     return (
       <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity tw:!max-w-[1280px] tw:!gap-4" data-testid="checklist-command-parity">
         <header className="tw:relative tw:overflow-hidden tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
-          <div aria-hidden className="tw:absolute tw:-right-16 tw:-top-28 tw:size-64 tw:rounded-full tw:border tw:border-white/15" />
+          <div aria-hidden className="tw:pointer-events-none tw:absolute tw:right-3 tw:top-3 tw:size-32 tw:rounded-full tw:border tw:border-white/15" />
           <div className="tw:relative tw:flex tw:flex-col tw:gap-4 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
             <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
               <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:border tw:border-white/20 tw:bg-white/10"><ClipboardCheck className="tw:size-5" /></span>

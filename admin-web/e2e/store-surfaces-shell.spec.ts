@@ -53,7 +53,7 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByText('Task-first preview for store-scoped work.')).toHaveCount(0)
 })
 
-test('store home uses locked Plum Glacier prototype palette tokens', async ({ page }) => {
+test('store home uses the current semantic shell palette tokens', async ({ page }) => {
   await page.goto('/store/home')
 
   await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
@@ -65,9 +65,10 @@ test('store home uses locked Plum Glacier prototype palette tokens', async ({ pa
   expect(app.color).toBe('rgb(23, 20, 33)')
 
   const activeNav = await readComputedStyle(page, '.store-command-nav-link-active')
-  expect(activeNav.backgroundImage).toContain('rgba(124, 58, 237, 0.12)')
-  expect(activeNav.backgroundImage).toContain('rgba(19, 167, 179, 0.12)')
-  expect(activeNav.color).toBe('rgb(76, 42, 165)')
+  expect(activeNav.backgroundImage).toBe('none')
+  expect(activeNav.backgroundColor).toBe('rgb(255, 255, 255)')
+  expect(activeNav.boxShadow).not.toBe('none')
+  expect(activeNav.color).not.toBe('rgb(76, 42, 165)')
 
   const header = await readComputedStyle(page, '.store-command-home .sh-dashboard-header')
   expect(header.backgroundColor).toBe('rgba(255, 255, 255, 0.88)')

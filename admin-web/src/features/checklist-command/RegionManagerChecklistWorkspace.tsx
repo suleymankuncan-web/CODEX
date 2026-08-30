@@ -51,8 +51,8 @@ export function RegionManagerChecklistWorkspace(input: {
 
   return (
     <div className="region-manager-checklist-v2 tw:flex tw:flex-col tw:gap-4">
-      <header className="tw:relative tw:overflow-hidden tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
-        <div aria-hidden className="tw:absolute tw:-right-16 tw:-top-28 tw:size-64 tw:rounded-full tw:border tw:border-white/15" />
+      <header data-testid="region-manager-checklist-header" className="tw:relative tw:overflow-hidden tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
+        <div aria-hidden className="tw:pointer-events-none tw:absolute tw:right-3 tw:top-3 tw:size-32 tw:rounded-full tw:border tw:border-white/15" />
         <div className="tw:relative tw:flex tw:flex-col tw:gap-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
           <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
             <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:border tw:border-white/20 tw:bg-white/10">
@@ -88,7 +88,7 @@ export function RegionManagerChecklistWorkspace(input: {
             <h2 className="tw:m-0 tw:text-sm tw:font-semibold tw:tracking-[-0.01em] tw:text-foreground">{locale === 'tr' ? 'Mağazalar' : 'Stores'}</h2>
             <p className="tw:mt-0.5 tw:text-[11px] tw:text-muted-foreground">{input.data.page.total} {locale === 'tr' ? 'sorumlu mağaza' : 'assigned stores'}</p>
           </div>
-          <label className="tw:flex tw:h-9 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-primary/20 tw:bg-primary/[0.025] tw:px-3 tw:text-muted-foreground tw:shadow-[0_1px_0_rgb(15_23_42/0.03)] tw:transition-colors tw:focus-within:border-primary/45 tw:focus-within:bg-background tw:lg:w-[340px]">
+          <label data-testid="checklist-command-search" className="tw:flex tw:h-9 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-primary/20 tw:bg-primary/[0.025] tw:px-3 tw:text-muted-foreground tw:shadow-[0_1px_0_rgb(15_23_42/0.03)] tw:transition-colors tw:focus-within:border-primary/45 tw:focus-within:bg-background tw:lg:w-[340px]">
             <Search className="tw:size-4 tw:shrink-0" />
             <Input
               aria-label={t('storeChecklists.command.search')}
@@ -149,7 +149,7 @@ function DesktopStoreList(input: Parameters<typeof RegionManagerChecklistWorkspa
     </Button>
   )
   return (
-    <div className="checklist-command-desktop-list tw:!hidden tw:lg:!block">
+    <div className="checklist-command-desktop-list tw:!hidden tw:xl:!block">
       <div className="checklist-command-table-head tw:!grid tw:!grid-cols-[minmax(220px,1.7fr)_72px_120px_100px_140px_196px] tw:!items-center tw:!gap-2 tw:!border-b tw:!border-border tw:!bg-background tw:!px-4 tw:!py-2">
         {heading(t('storeChecklists.command.store'), 'store')}
         {heading(locale === 'tr' ? 'Puan' : 'Score', 'bm')}
@@ -175,7 +175,7 @@ function DesktopStoreList(input: Parameters<typeof RegionManagerChecklistWorkspa
 function MobileStoreList(input: Parameters<typeof RegionManagerChecklistWorkspace>[0]) {
   const { locale } = useLocalization()
   return (
-    <div className="checklist-command-mobile-list tw:!grid tw:!gap-2 tw:!p-2.5 tw:lg:!hidden">
+    <div className="checklist-command-mobile-list tw:!grid tw:!gap-2 tw:!p-2.5 tw:xl:!hidden">
       {input.data.items.map((row) => (
         <article key={row.storeId} className="checklist-command-mobile-card tw:!grid tw:!min-h-0 tw:!grid-cols-1 tw:!gap-3 tw:!rounded-xl tw:!border tw:!border-border tw:!bg-background tw:!p-3 tw:!shadow-none">
           <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
@@ -205,7 +205,7 @@ function Score({ row }: { row: ChecklistCommandRow }) {
 }
 
 function VisitDate({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
-  return <span className={cn('checklist-command-date tw:mx-auto tw:flex tw:min-h-7 tw:w-fit tw:items-center tw:justify-center tw:rounded-md tw:px-2 tw:text-center tw:text-[12px] tw:font-semibold tw:tabular-nums', row.lastCompletedVisitAt ? 'tw:bg-primary/8 tw:text-primary' : 'tw:text-muted-foreground')}>{formatVisitDate(row.lastCompletedVisitAt, locale)}</span>
+  return <span className={cn('checklist-command-date tw:mx-auto tw:flex tw:min-h-7 tw:w-fit tw:items-center tw:justify-center tw:rounded-md tw:px-2 tw:text-center tw:!text-[12px] tw:font-semibold tw:tabular-nums', row.lastCompletedVisitAt ? 'tw:bg-primary/8 tw:text-primary' : 'tw:text-muted-foreground')}>{formatVisitDate(row.lastCompletedVisitAt, locale)}</span>
 }
 
 function Elapsed({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {

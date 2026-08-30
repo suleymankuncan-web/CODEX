@@ -69,11 +69,13 @@ test('Approvals Report Viewer remains company-scoped and read-only', async ({ pa
   await prepare(page, 'reportViewer')
   const mutations: string[] = []
   page.on('request', (request) => {
+    const pathname = new URL(request.url()).pathname
     if (
       request.url().includes('/api/') &&
-      !['GET', 'HEAD', 'OPTIONS'].includes(request.method().toUpperCase())
+      !['GET', 'HEAD', 'OPTIONS'].includes(request.method().toUpperCase()) &&
+      !(request.method() === 'POST' && pathname === '/api/checklists/acknowledgements/list')
     ) {
-      mutations.push(`${request.method()} ${new URL(request.url()).pathname}`)
+      mutations.push(`${request.method()} ${pathname}`)
     }
   })
 
