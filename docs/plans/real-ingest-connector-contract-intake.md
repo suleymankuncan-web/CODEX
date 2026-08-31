@@ -2,7 +2,7 @@
 
 Date: 31 August 2026
 
-Status: `contract_approved`
+Status: `sample_payload_observed`
 
 ## Purpose
 
@@ -24,22 +24,42 @@ are locked in
 `docs/contracts/company-daily-kpi-pull-contract-v1.md`. Product-owner approval
 was recorded on 31 August 2026.
 
+On 31 August 2026 the product owner supplied visual sample evidence from the
+four private operations and then confirmed the sanitized semantics without
+placing that evidence in Git. The observed shapes are sales lines, store-day
+footfall totals, store-level GSM yes/no observations, and an undated store
+directory. Returns use separate ephemeral invoice identifiers and already-
+negative quantity/TRY amount values. Personnel codes are stable and unique per
+person. The source is reachable only inside the company network; HR Axis will
+run on-prem in Docker. Previous-day data is ready after midnight and the first
+pull is owner-selected for 02:00 Europe/Istanbul. There is no known rate limit,
+so bounded component-only backoff remains required rather than an unlimited
+retry loop.
+
+The public storage/normalization decision is drafted in
+`docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md`. It
+records only neutral aliases and does not retain screenshots, real values,
+provider-native fields, endpoints, or private operation identifiers.
+
 Unknown today:
 
-- authentication model
-- official provider field names, types, nullability, and response envelope
-- stable store and personnel code fields
-- timeout, retry, rate-limit, and maximum-volume constraints
-- sanitized error/status shapes
-- production scheduling and operational alert ownership
+- nullability and value variants outside the observed sample rows
+- timeout, maximum-volume, payload-size, and response-latency constraints
+- sanitized HTTP/error response envelopes and status behavior
+- stable store-code mapping ownership and the authoritative KPI-import allowlist
+- internal HTTP/TLS acceptance and compensating network controls
+- operational alert ownership and delivery channel
 
 ## Decision
 
 Do not build or connect the source-specific runtime connector yet.
 
-The approved local scope is documentation and synthetic contract testing only.
-Runtime work remains blocked until an official sanitized field list and the
-remaining implementation-gate inputs are available and separately approved.
+The owner-authorized next local sequence is a storage/normalization boundary
+draft and, after its approval, a network-free pure adapter driven only by
+synthetic neutral rows. This does not authorize live API access, migration,
+scheduling, Docker runtime changes, deployment, or Excel replacement. Runtime
+work remains blocked until the remaining implementation-gate inputs are
+available and separately approved.
 
 ## Current Local Foundation
 
@@ -179,7 +199,8 @@ Use these states when discussing the source:
 
 - `unknown_source`: no real external contract
 - `contract_draft`: proposed product semantics are documented but product-owner approval is pending
-- `contract_approved`: current state; product semantics are approved, while provider fields and runtime details are not proven
+- `contract_approved`: product semantics are approved, while provider sample evidence is not yet observed
+- `sample_payload_observed`: current state; neutral sample shapes and owner-confirmed semantics are recorded, while nullability, error, volume, and runtime details are not proven
 - `sample_payload_validated`: sample payload maps into canonical rows
 - `sandbox_connected`: non-production source access works
 - `production_candidate`: production-like source is reachable and validated
@@ -193,13 +214,15 @@ Allowed now:
 - document and expose the source-agnostic contract
 - document the approved company daily pull semantics using public aliases
 - add synthetic, network-free contract guards
+- draft the storage/normalization boundary against observed neutral shapes
+- after that boundary is approved, implement a pure synthetic adapter with no network or database access
 - keep existing `stg` import model as the ingest boundary
 - prepare future mapping questions
 - avoid false certainty in old Nebim-specific planning docs
 
 Not allowed yet:
 
-- hard-code a source field map before the JSON sample arrives
+- commit provider-native field names or private runtime mappings to the public repository
 - write a fake source API client
 - call the live provider or read/write credentials
 - place private operation or execution identifiers in the public repository
@@ -214,12 +237,20 @@ This is the right place to slow down.
 
 Writing connector code without a real sample payload would create exactly the kind of technical debt this project is trying to avoid: hidden assumptions under KPI, ranking, score, and reporting behavior.
 
-The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, materialization concepts, and canonical KPI row lineage metadata. The next safe move is not a live connector. The approved next move is the local contract and synthetic guard; a field mapping follows only after official sanitized provider evidence exists.
+The platform has useful `stg` import boundaries, batch metadata, normalization,
+materialization concepts, and canonical KPI row lineage metadata. Repository
+inspection also proves that the current employee KPI conflict key omits store,
+generic normalization uses binary `Number`, and row-by-row materialization does
+not provide component-set replacement. The next safe move is therefore the
+storage/normalization boundary draft, not a live connector or direct reuse of
+the current persistence path.
 
 Recommendation: keep the current source-agnostic contract and Power BI/Excel rollback path, and move actual connector implementation only after the implementation gates in the company daily pull contract are satisfied.
 
 ## Next Logical Step
 
-If an official sanitized field list becomes available, convert it into a source mapping spec and then implement only a synthetic pure-adapter slice first.
-
-Until then, do not call the provider, inspect secrets, create a scheduler, or use real company data. Keep the existing Excel path active.
+Review and approve
+`docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md`. Only
+then implement the neutral pure-adapter slice with synthetic test rows. Do not
+call the provider, inspect secrets, create a migration/scheduler, or use real
+company data. Keep the existing Excel path active.
