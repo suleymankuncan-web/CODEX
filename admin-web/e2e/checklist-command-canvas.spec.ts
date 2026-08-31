@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './test-fixtures'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { installStoreContractSession as installBaseStoreContractSession } from './store-page-contract-fixtures'
 
@@ -537,43 +537,105 @@ test('closing a visit-plan result never reveals the workflow drawer', async ({ p
   expect(workflowDrawerWasVisible).toBe(false)
 })
 
-test('weekly planner pages 35 scoped stores and keeps the save action reachable on mobile', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await installStoreContractSession(page, 'regionManager')
-  const requests: URL[] = []
-  await routeChecklistCommand(page, requests)
+for (const viewport of [
+  { width: 390, height: 844, evidence: 'weekly-plan-dialog-mobile-390.png' },
+  { width: 320, height: 720 },
+  { width: 320, height: 844 },
+] as const) {
+  test(`weekly planner pages 35 scoped stores and keeps the save action reachable at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport)
+    await installStoreContractSession(page, 'regionManager')
+    const requests: URL[] = []
+    await routeChecklistCommand(page, requests)
 
-  await page.goto('/store/checklists')
-  await page.getByRole('button', { name: 'Haftayı Planla' }).click()
+    await page.goto('/store/checklists')
+    await page.getByRole('button', { name: 'Haftayı Planla' }).click()
 
-  const dialog = page.getByRole('dialog', { name: 'Ziyaret planını oluşturun' })
-  await expect(dialog.locator('.week-plan-result-row')).toHaveCount(20)
-  await expect(dialog.getByText('1 / 2')).toBeVisible()
-  await Promise.all([
-    page.waitForRequest((request) => {
-      const url = new URL(request.url())
-      return url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20'
-    }),
-    dialog.getByRole('button', { name: 'Sonraki', exact: true }).click(),
-  ])
-  await expect.poll(() => requests.some((url) => url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20')).toBe(true)
-  await expect(dialog.getByText('2 / 2')).toBeVisible()
-  await expect(dialog.locator('.week-plan-result-row')).toHaveCount(15)
-  await expect(dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' })).toBeVisible()
-  const geometry = await dialog.evaluate((element) => ({
-    bottom: element.getBoundingClientRect().bottom,
-    width: element.getBoundingClientRect().width,
-    viewportWidth: document.documentElement.clientWidth,
-    pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  }))
-  expect(geometry.width).toBeCloseTo(390, 0)
-  expect(geometry.bottom).toBeCloseTo(844, 0)
-  expect(geometry.pageOverflow).toBeLessThanOrEqual(1)
-  await page.screenshot({
-    path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p7/weekly-plan-dialog-mobile-390.png'),
-    fullPage: true,
+    const dialog = page.getByRole('dialog', { name: 'Ziyaret planını oluşturun' })
+    await expect(dialog.locator('.week-plan-result-row')).toHaveCount(20)
+    await expect(dialog.getByText('1 / 2')).toBeVisible()
+    await assertMobileWeeklyPlannerReachability(dialog, viewport)
+    await Promise.all([
+      page.waitForRequest((request) => {
+        const url = new URL(request.url())
+        return url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20'
+      }),
+      dialog.getByRole('button', { name: 'Sonraki', exact: true }).click(),
+    ])
+    await expect.poll(() => requests.some((url) => url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20')).toBe(true)
+    await expect(dialog.getByText('2 / 2')).toBeVisible()
+    await expect(dialog.locator('.week-plan-result-row')).toHaveCount(15)
+    await assertMobileWeeklyPlannerReachability(dialog, viewport)
+    if (viewport.evidence) {
+      await page.screenshot({
+        path: checklistEvidenceOutputPath(testInfo, `checklist-command-cutover-v2/p7/${viewport.evidence}`),
+        fullPage: true,
+      })
+    }
   })
-})
+}
+
+async function assertMobileWeeklyPlannerReachability(
+  dialog: Locator,
+  viewport: { width: number; height: number },
+) {
+  const results = dialog.locator('.week-plan-results')
+  await results.evaluate((element) => { element.scrollTop = 0 })
+  const candidateViewport = await results.evaluate((element) => {
+    const firstRow = element.querySelector<HTMLElement>('.week-plan-result-row')
+    const lastRow = element.querySelector<HTMLElement>('.week-plan-result-row:last-child')
+    const firstAction = firstRow?.querySelector<HTMLElement>('button')
+    if (!firstRow || !lastRow) throw new Error('missing candidate rows')
+    const container = element.getBoundingClientRect()
+    const first = firstRow.getBoundingClientRect()
+    const rowHeight = first.height
+    const isWithin = (row: DOMRect) => row.top >= container.top && row.bottom <= container.bottom
+    const actionVisible = firstAction ? isWithin(firstAction.getBoundingClientRect()) : false
+    return {
+      clientHeight: element.clientHeight,
+      firstActionVisible: actionVisible,
+      firstVisible: isWithin(first),
+      rowHeight,
+      scrollHeight: element.scrollHeight,
+    }
+  })
+  expect(candidateViewport.clientHeight).toBeGreaterThanOrEqual(candidateViewport.rowHeight * 2)
+  expect(candidateViewport.scrollHeight).toBeGreaterThan(candidateViewport.clientHeight)
+  expect(candidateViewport.firstVisible).toBe(true)
+  expect(candidateViewport.firstActionVisible).toBe(true)
+  await results.evaluate((element) => { element.scrollTop = element.scrollHeight })
+  await expect.poll(() => results.evaluate((element) => {
+    const row = element.querySelector<HTMLElement>('.week-plan-result-row:last-child')
+    const action = row?.querySelector<HTMLElement>('button')
+    if (!row || !action) return false
+    const container = element.getBoundingClientRect()
+    const candidate = row.getBoundingClientRect()
+    const actionRect = action.getBoundingClientRect()
+    return candidate.top >= container.top
+      && candidate.bottom <= container.bottom
+      && actionRect.top >= container.top
+      && actionRect.bottom <= container.bottom
+      && Boolean(row.textContent?.trim())
+  })).toBe(true)
+
+  const saveButton = dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' })
+  await expect(saveButton).toBeVisible()
+  const saveGeometry = await saveButton.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return { bottom: rect.bottom, left: rect.left, right: rect.right }
+  })
+  expect(saveGeometry.left).toBeGreaterThanOrEqual(0)
+  expect(saveGeometry.right).toBeLessThanOrEqual(viewport.width)
+  expect(saveGeometry.bottom).toBeLessThanOrEqual(viewport.height)
+  const dialogGeometry = await dialog.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return { bottom: rect.bottom, width: rect.width }
+  })
+  expect(dialogGeometry.width).toBeCloseTo(viewport.width, 0)
+  expect(dialogGeometry.bottom).toBeCloseTo(viewport.height, 0)
+  const pageOverflow = await dialog.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  expect(pageOverflow).toBeLessThanOrEqual(1)
+}
 
 test('explicit region context survives a zero-row command filter', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
