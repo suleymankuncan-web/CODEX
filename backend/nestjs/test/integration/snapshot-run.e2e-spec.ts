@@ -5,6 +5,12 @@ const hasSnapshotRunIdPredicate = (sql: string) =>
   sql.includes("WHERE snapshot_run_id = $1::uuid") ||
   sql.includes("WHERE rpt.snapshot_run.snapshot_run_id = $1::uuid");
 
+const snapshotRunId1 = "00000000-0000-4000-8000-000000000001";
+const snapshotRunId2 = "00000000-0000-4000-8000-000000000002";
+const snapshotRunId3 = "00000000-0000-4000-8000-000000000003";
+const guardedSnapshotRunId = "00000000-0000-4000-8000-000000000010";
+const activeRerunSnapshotRunId = "00000000-0000-4000-8000-000000000011";
+
 describe("Snapshot run operations", () => {
   it("creates a snapshot run and dispatches snapshot generation", async () => {
     const companyId = "00000000-0000-0000-0000-000000000001";
@@ -18,7 +24,7 @@ describe("Snapshot run operations", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-1",
+              snapshot_run_id: snapshotRunId1,
               snapshot_date: "2026-04-17",
               generated_at: "2026-04-17T00:00:00.000Z",
               run_status: "queued",
@@ -70,7 +76,7 @@ describe("Snapshot run operations", () => {
       status: "queued",
       message: "Immutable snapshot generation has been queued",
     });
-    expect(response.body.data.snapshotRun.snapshot_run_id).toBe("snapshot-1");
+    expect(response.body.data.snapshotRun.snapshot_run_id).toBe(snapshotRunId1);
     expect(response.body.job).toEqual({
       jobType: "snapshot-run",
       backend: "test",
@@ -80,12 +86,12 @@ describe("Snapshot run operations", () => {
     expect(dispatch).toHaveBeenCalledWith(
       "snapshot-run",
       {
-        snapshotRunId: "snapshot-1",
+        snapshotRunId: snapshotRunId1,
         periodStart: "2026-04-01",
         periodEnd: "2026-04-30",
       },
       expect.any(Function),
-      { strictLocalJobId: "snapshot-run-snapshot-1" },
+      { strictLocalJobId: `snapshot-run-${snapshotRunId1}` },
     );
     const insertCall = query.mock.calls.find(([sql]) =>
       sql.includes("INSERT INTO rpt.snapshot_run"),
@@ -103,7 +109,7 @@ describe("Snapshot run operations", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-2",
+              snapshot_run_id: snapshotRunId2,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -125,14 +131,14 @@ describe("Snapshot run operations", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-3",
+              snapshot_run_id: snapshotRunId3,
               snapshot_date: "2026-04-17",
               generated_at: "2026-04-17T02:00:00.000Z",
               run_status: "queued",
               started_at: null,
               finished_at: null,
               failure_reason: null,
-              rerun_of_snapshot_run_id: "snapshot-2",
+              rerun_of_snapshot_run_id: snapshotRunId2,
             },
           ],
         };
@@ -174,7 +180,7 @@ describe("Snapshot run operations", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .post("/api/snapshots/runs/snapshot-2/rerun")
+      .post(`/api/snapshots/runs/${snapshotRunId2}/rerun`)
       .set("x-user-id", "user-2");
 
     expect(response.status).toBe(201);
@@ -182,8 +188,8 @@ describe("Snapshot run operations", () => {
       status: "queued",
       message: "Snapshot run rerun has been queued",
     });
-    expect(response.body.data.snapshotRun.snapshot_run_id).toBe("snapshot-3");
-    expect(response.body.data.snapshotRun.rerun_of_snapshot_run_id).toBe("snapshot-2");
+    expect(response.body.data.snapshotRun.snapshot_run_id).toBe(snapshotRunId3);
+    expect(response.body.data.snapshotRun.rerun_of_snapshot_run_id).toBe(snapshotRunId2);
     expect(response.body.job).toEqual({
       jobType: "snapshot-run",
       backend: "test",
@@ -193,12 +199,12 @@ describe("Snapshot run operations", () => {
     expect(dispatch).toHaveBeenCalledWith(
       "snapshot-run",
       {
-        snapshotRunId: "snapshot-3",
+        snapshotRunId: snapshotRunId3,
         periodStart: "2026-04-01",
         periodEnd: "2026-04-30",
       },
       expect.any(Function),
-      { strictLocalJobId: "snapshot-run-snapshot-3" },
+      { strictLocalJobId: `snapshot-run-${snapshotRunId3}` },
     );
 
     await app.close();
@@ -211,7 +217,7 @@ describe("Snapshot run operations", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-guarded-1",
+              snapshot_run_id: guardedSnapshotRunId,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -253,7 +259,7 @@ describe("Snapshot run operations", () => {
       }
 
       if (sql.includes("rerun_of_snapshot_run_id = $1::uuid")) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-rerun-active-1" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: activeRerunSnapshotRunId }] };
       }
 
       return { rowCount: 0, rows: [] };
@@ -262,7 +268,7 @@ describe("Snapshot run operations", () => {
     const app = await createIntegrationApp({ databaseService: { query } });
 
     const detailResponse = await request(app.getHttpServer())
-      .get("/api/snapshots/runs/snapshot-guarded-1")
+      .get(`/api/snapshots/runs/${guardedSnapshotRunId}`)
       .set("x-user-id", "user-1")
       .set("x-role-codes", "SNAPSHOT_OPERATOR");
 
@@ -282,7 +288,7 @@ describe("Snapshot run operations", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-guarded-1",
+              snapshot_run_id: guardedSnapshotRunId,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -315,12 +321,38 @@ describe("Snapshot run operations", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .post("/api/snapshots/runs/snapshot-guarded-1/rerun")
+      .post(`/api/snapshots/runs/${guardedSnapshotRunId}/rerun`)
       .set("x-user-id", "user-2")
       .set("x-role-codes", "SNAPSHOT_OPERATOR");
 
     expect(response.status).toBe(409);
-    expect(response.body.message).toBe("An active rerun already exists for snapshot run snapshot-guarded-1");
+    expect(response.body.message).toBe(`An active rerun already exists for snapshot run ${guardedSnapshotRunId}`);
+
+    await app.close();
+  });
+
+  it.each([
+    ["audit", "get"],
+    ["dependencies", "get"],
+    ["lineage", "get"],
+    ["", "get"],
+    ["rerun", "post"],
+  ])("rejects a malformed snapshot run UUID for %s before any database query", async (suffix, method) => {
+    const query = jest.fn(async () => {
+      throw new Error("malformed UUID must not reach the database");
+    });
+    const app = await createIntegrationApp({ databaseService: { query } });
+    const path = `/api/snapshots/runs/not-a-uuid${suffix ? `/${suffix}` : ""}`;
+    const requestBuilder = method === "post"
+      ? request(app.getHttpServer()).post(path)
+      : request(app.getHttpServer()).get(path);
+    const response = await requestBuilder
+      .set("x-user-id", "user-1")
+      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-company-ids", "00000000-0000-4000-8000-000000000099");
+
+    expect(response.status).toBe(400);
+    expect(query).not.toHaveBeenCalled();
 
     await app.close();
   });

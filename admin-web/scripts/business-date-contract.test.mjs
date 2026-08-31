@@ -4,7 +4,7 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 const auditedCallers = [
-  '../src/pages/IntegrationDashboardPage.tsx',
+  '../src/features/integrations/integration-dashboard-list-model.ts',
   '../src/pages/CompetitionDashboardPage.tsx',
   '../src/pages/AdminChecklistTemplatesPage.tsx',
   '../src/pages/store-approvals-model.ts',
@@ -24,7 +24,10 @@ test('audited business-date callers do not derive calendar values from UTC ISO s
 
 test('audited callers retain the shared Istanbul business-date adapters', async () => {
   const expectations = new Map([
-    ['../src/pages/IntegrationDashboardPage.tsx', 'createIntegrationPeriodDefaults(now)'],
+    [
+      '../src/features/integrations/integration-dashboard-list-model.ts',
+      'createIntegrationPeriodDefaults(now)',
+    ],
     ['../src/pages/CompetitionDashboardPage.tsx', 'createCompetitionDraftDateDefaults(now)'],
     ['../src/pages/AdminChecklistTemplatesPage.tsx', 'getChecklistTemplateEffectiveDate(now)'],
     ['../src/pages/store-approvals-model.ts', 'createStoreApprovalsDateDefaults(now)'],

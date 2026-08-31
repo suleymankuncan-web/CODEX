@@ -24,6 +24,12 @@ export type ImportBatchNeedsActionRow = ImportBatchReadModelRow & {
   action_reason: string;
   recommended_action: string;
   is_stuck: boolean;
+  employee_dependency_count?: string | number | null;
+  store_dependency_count?: string | number | null;
+  position_dependency_count?: string | number | null;
+  region_dependency_count?: string | number | null;
+  company_dependency_count?: string | number | null;
+  manager_dependency_count?: string | number | null;
 };
 
 export function mapImportBatchReadModel(batch: ImportBatchReadModelRow) {

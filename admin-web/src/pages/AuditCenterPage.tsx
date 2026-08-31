@@ -72,15 +72,15 @@ export function AuditCenterPage() {
 
   const userAuditQueries = useQueries({
     queries: users.slice(0, 2).map((user) => ({
-      queryKey: ['audit-center-user-audit', user.userId],
-      queryFn: () => getUserAudit(user.userId),
+      queryKey: ['audit-center-user-audit', user.userId, 1, 0],
+      queryFn: () => getUserAudit(user.userId, { limit: 1, offset: 0 }),
       enabled: usersQuery.isSuccess,
     })),
   })
   const assignmentAuditQueries = useQueries({
     queries: assignments.slice(0, 2).map((assignment) => ({
-      queryKey: ['audit-center-assignment-audit', assignment.assignmentId],
-      queryFn: () => getRoleAssignmentAudit(assignment.assignmentId),
+      queryKey: ['audit-center-assignment-audit', assignment.assignmentId, 1, 0],
+      queryFn: () => getRoleAssignmentAudit(assignment.assignmentId, { limit: 1, offset: 0 }),
       enabled: assignmentsQuery.isSuccess,
     })),
   })

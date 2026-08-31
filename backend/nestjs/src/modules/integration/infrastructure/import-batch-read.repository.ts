@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { listImportBatchesNeedingAction } from "./import-batch-needs-action.read-query";
 import { type ImportBatchEntityType } from "./import-batch-raw-writer.repository";
 
 type ImportBatchReadFilters = {
@@ -10,6 +11,7 @@ type ImportBatchReadFilters = {
   startedFrom?: string;
   startedTo?: string;
 };
+
 
 @Injectable()
 export class ImportBatchReadRepository {
@@ -57,19 +59,19 @@ export class ImportBatchReadRepository {
 
   private getImportRawUnionSql() {
     return `
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.employee_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'employee'::text AS raw_entity_type FROM stg.employee_raw
       UNION ALL
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.store_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'store'::text AS raw_entity_type FROM stg.store_raw
       UNION ALL
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.kpi_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'kpi'::text AS raw_entity_type FROM stg.kpi_raw
       UNION ALL
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.assignment_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'assignment'::text AS raw_entity_type FROM stg.assignment_raw
       UNION ALL
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.position_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'position'::text AS raw_entity_type FROM stg.position_raw
       UNION ALL
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.company_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'company'::text AS raw_entity_type FROM stg.company_raw
       UNION ALL
-      SELECT import_batch_id, normalized_status, validation_error FROM stg.region_raw
+      SELECT import_batch_id, normalized_status, validation_error, 'region'::text AS raw_entity_type FROM stg.region_raw
     `;
   }
 
@@ -338,194 +340,17 @@ export class ImportBatchReadRepository {
     limit?: number;
     offset?: number;
     stuckBefore: string;
+    q?: string;
   }) {
     const { params, whereClause } = this.buildImportBatchFilters(input, "b", "src");
-    params.push(input.stuckBefore);
-    const stuckBeforeParam = `$${params.length}::timestamptz`;
-
-    const baseCte = `
-      WITH filtered_batches AS (
-        SELECT
-          b.import_batch_id,
-          b.integration_source_id,
-          src.source_code,
-          src.source_name,
-          b.entity_type,
-          b.source_batch_id,
-          b.source_payload_hash,
-          b.source_captured_at,
-          b.source_window_started_at,
-          b.source_window_ended_at,
-          b.started_at,
-          b.finished_at,
-          b.status,
-          b.raw_file_name,
-          b.record_count,
-          b.error_count,
-          b.retry_count,
-          b.last_retried_at
-        FROM stg.import_batch b
-        INNER JOIN stg.integration_source src
-          ON src.integration_source_id = b.integration_source_id
-        ${whereClause}
-      ),
-      raw_all AS (
-        ${this.getImportRawUnionSql()}
-      ),
-      per_batch AS (
-        SELECT
-          fb.import_batch_id,
-          fb.integration_source_id,
-          fb.source_code,
-          fb.source_name,
-          fb.entity_type,
-          fb.source_batch_id,
-          fb.source_payload_hash,
-          fb.source_captured_at,
-          fb.source_window_started_at,
-          fb.source_window_ended_at,
-          fb.started_at,
-          fb.finished_at,
-          fb.status,
-          fb.raw_file_name,
-          fb.record_count,
-          fb.error_count,
-          fb.retry_count,
-          fb.last_retried_at,
-          COALESCE(
-            BOOL_OR(
-              raw.normalized_status = 'retryable_error'
-              AND (${this.getMissingDependencyPredicate("raw")})
-            ),
-            FALSE
-          ) AS has_dependency_blockers,
-          COALESCE(BOOL_OR(raw.normalized_status = 'retryable_error'), FALSE) AS has_retryable_error
-        FROM filtered_batches fb
-        LEFT JOIN raw_all raw
-          ON raw.import_batch_id = fb.import_batch_id
-        GROUP BY
-          fb.import_batch_id,
-          fb.integration_source_id,
-          fb.source_code,
-          fb.source_name,
-          fb.entity_type,
-          fb.source_batch_id,
-          fb.source_payload_hash,
-          fb.source_captured_at,
-          fb.source_window_started_at,
-          fb.source_window_ended_at,
-          fb.started_at,
-          fb.finished_at,
-          fb.status,
-          fb.raw_file_name,
-          fb.record_count,
-          fb.error_count,
-          fb.retry_count,
-          fb.last_retried_at
-      ),
-      action_queue AS (
-        SELECT
-          import_batch_id,
-          integration_source_id,
-          source_code,
-          source_name,
-          entity_type,
-          source_batch_id,
-          source_payload_hash,
-          source_captured_at,
-          source_window_started_at,
-          source_window_ended_at,
-          started_at,
-          finished_at,
-          status,
-          raw_file_name,
-          record_count,
-          error_count,
-          retry_count,
-          last_retried_at,
-          CASE
-            WHEN status IN ('pending', 'queued', 'processing') AND started_at < ${stuckBeforeParam} THEN 'stuck'
-            WHEN status IN ('failed', 'completed_with_errors') AND has_dependency_blockers THEN 'blocked'
-            WHEN status IN ('failed', 'completed_with_errors') AND has_retryable_error AND NOT has_dependency_blockers THEN 'retry_ready'
-            WHEN status IN ('failed', 'completed_with_errors') AND NOT has_retryable_error THEN 'needs_action'
-            ELSE NULL
-          END AS health_state,
-          CASE
-            WHEN status IN ('pending', 'queued', 'processing') AND started_at < ${stuckBeforeParam} THEN 'Batch has exceeded the in-progress time threshold'
-            WHEN status IN ('failed', 'completed_with_errors') AND has_dependency_blockers THEN 'Missing dependency mappings detected'
-            WHEN status IN ('failed', 'completed_with_errors') AND has_retryable_error AND NOT has_dependency_blockers THEN 'Retryable write errors remain'
-            WHEN status IN ('failed', 'completed_with_errors') AND NOT has_retryable_error THEN 'Batch requires manual review before retry'
-            ELSE NULL
-          END AS action_reason,
-          CASE
-            WHEN status IN ('pending', 'queued', 'processing') AND started_at < ${stuckBeforeParam} THEN 'Inspect worker execution and consider retrying after the root cause is fixed'
-            WHEN status IN ('failed', 'completed_with_errors') AND has_dependency_blockers THEN 'Import the missing dependency entity types before retrying'
-            WHEN status IN ('failed', 'completed_with_errors') AND has_retryable_error AND NOT has_dependency_blockers THEN 'Retry the batch now'
-            WHEN status IN ('failed', 'completed_with_errors') AND NOT has_retryable_error THEN 'Inspect batch errors and correct the source data before retrying'
-            ELSE NULL
-          END AS recommended_action,
-          CASE
-            WHEN status IN ('pending', 'queued', 'processing') AND started_at < ${stuckBeforeParam} THEN TRUE
-            ELSE FALSE
-          END AS is_stuck
-        FROM per_batch
-        WHERE
-          (status IN ('pending', 'queued', 'processing') AND started_at < ${stuckBeforeParam})
-          OR status IN ('failed', 'completed_with_errors')
-      )
-    `;
-
-    const totalResult = await this.databaseService.query<{ total_count: string }>(
-      `
-        ${baseCte}
-        SELECT COUNT(*)::text AS total_count
-        FROM action_queue
-        WHERE health_state IS NOT NULL
-      `,
+    return listImportBatchesNeedingAction(
+      this.databaseService,
+      input,
       params,
+      whereClause,
+      this.getImportRawUnionSql(),
+      this.getMissingDependencyPredicate("raw"),
     );
-
-    const listParams = [...params, input.limit ?? 50, input.offset ?? 0];
-    const result = await this.databaseService.query<{
-      import_batch_id: string;
-      integration_source_id: string;
-      source_code: string;
-      source_name: string;
-      entity_type: string;
-      source_batch_id: string | null;
-      source_payload_hash: string | null;
-      source_captured_at: string | null;
-      source_window_started_at: string | null;
-      source_window_ended_at: string | null;
-      started_at: string;
-      finished_at: string | null;
-      status: string;
-      raw_file_name: string | null;
-      record_count: number;
-      error_count: number;
-      retry_count: number;
-      last_retried_at: string | null;
-      health_state: string;
-      action_reason: string;
-      recommended_action: string;
-      is_stuck: boolean;
-    }>(
-      `
-        ${baseCte}
-        SELECT *
-        FROM action_queue
-        WHERE health_state IS NOT NULL
-        ORDER BY started_at DESC, import_batch_id DESC
-        LIMIT $${params.length + 1}
-        OFFSET $${params.length + 2}
-      `,
-      listParams,
-    );
-
-    return {
-      rows: result.rows,
-      total: Number(totalResult.rows[0]?.total_count ?? 0),
-    };
   }
 
   private getRawTableMetadata(
@@ -741,19 +566,18 @@ export class ImportBatchReadRepository {
         AND normalized_status IN ('validation_failed', 'retryable_error')
     `;
 
-    const totalResult = await this.databaseService.query<{ total_count: string }>(
-      `
-        SELECT COUNT(*)::text AS total_count
-        FROM ${metadata.tableName}
-        ${filterClause}
-      `,
-      [input.batchId],
-    );
-
-    const params: unknown[] = [input.batchId, input.limit ?? 50, input.offset ?? 0];
+    const params: unknown[] = [
+      input.batchId,
+      input.limit ?? 50,
+      input.offset ?? 0,
+      input.entityType,
+    ];
     const result = await this.databaseService.query<{
+      row_kind?: "item" | "meta";
+      total_count: string;
+      revision: string | null;
       row_id: string;
-      source_ref: string;
+      source_ref: string | null;
       store_external_ref: string | null;
       employee_external_ref: string | null;
       payload_json: Record<string, unknown> | null;
@@ -764,29 +588,135 @@ export class ImportBatchReadRepository {
       processed_at: string | null;
     }>(
       `
-        SELECT
-          ${metadata.rowIdColumn} AS row_id,
-          ${metadata.sourceRefColumn} AS source_ref,
-          ${input.entityType === "kpi" ? "store_external_ref" : "NULL::text"} AS store_external_ref,
-          ${input.entityType === "kpi" ? "employee_external_ref" : "NULL::text"} AS employee_external_ref,
-          payload_json,
-          ${input.entityType === "kpi" ? "row_hash" : "NULL::text"} AS row_hash,
-          ${input.entityType === "kpi" ? "raw_row_reference" : "NULL::text"} AS raw_row_reference,
-          normalized_status,
-          validation_error,
-          processed_at
-        FROM ${metadata.tableName}
-        ${filterClause}
-        ORDER BY processed_at DESC NULLS LAST, ${metadata.rowIdColumn} ASC
-        LIMIT $2
-        OFFSET $3
+        WITH filtered_errors AS MATERIALIZED (
+          SELECT
+            ${metadata.rowIdColumn} AS row_id,
+            ${metadata.sourceRefColumn} AS source_ref,
+            ${input.entityType === "kpi" ? "store_external_ref" : "NULL::text"} AS store_external_ref,
+            ${input.entityType === "kpi" ? "employee_external_ref" : "NULL::text"} AS employee_external_ref,
+            payload_json,
+            ${input.entityType === "kpi" ? "row_hash" : "NULL::text"} AS row_hash,
+            ${input.entityType === "kpi" ? "raw_row_reference" : "NULL::text"} AS raw_row_reference,
+            normalized_status,
+            validation_error,
+            processed_at
+          FROM ${metadata.tableName}
+          ${filterClause}
+        ),
+        totals AS MATERIALIZED (
+          SELECT COUNT(*)::text AS total_count
+          FROM filtered_errors
+        ),
+        revision_rows AS MATERIALIZED (
+          SELECT filtered_errors.*
+          FROM filtered_errors
+          CROSS JOIN totals
+          WHERE totals.total_count::bigint <= 10000
+        ),
+        revision_digest AS MATERIALIZED (
+          SELECT
+            CASE
+              WHEN totals.total_count::bigint <= 10000 THEN encode(
+                digest(
+                  convert_to(
+                    jsonb_build_array(
+                      'import-batch-errors:v1',
+                      $1::uuid,
+                      $4::text,
+                      COALESCE(
+                        (
+                          SELECT jsonb_agg(
+                            jsonb_build_array(
+                              revision_row.row_id,
+                              revision_row.source_ref,
+                              revision_row.store_external_ref,
+                              revision_row.employee_external_ref,
+                              revision_row.payload_json,
+                              revision_row.row_hash,
+                              revision_row.raw_row_reference,
+                              revision_row.normalized_status,
+                              revision_row.validation_error,
+                              to_char(revision_row.processed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+                            )
+                            ORDER BY revision_row.processed_at DESC NULLS LAST, revision_row.row_id ASC
+                          )
+                          FROM revision_rows revision_row
+                        ),
+                        '[]'::jsonb
+                      )
+                    )::text,
+                    'UTF8'
+                  ),
+                  'sha256'
+                ),
+                'hex'
+              )
+              ELSE NULL
+            END AS revision
+          FROM totals
+        ),
+        paged AS (
+          SELECT *
+          FROM filtered_errors
+          ORDER BY processed_at DESC NULLS LAST, row_id ASC
+          LIMIT $2
+          OFFSET $3
+        )
+        SELECT *
+        FROM (
+          SELECT
+            'item'::text AS row_kind,
+            paged.*,
+            totals.total_count,
+            revision_digest.revision
+          FROM paged
+          CROSS JOIN totals
+          CROSS JOIN revision_digest
+
+          UNION ALL
+
+          SELECT
+            'meta'::text AS row_kind,
+            NULL AS row_id,
+            NULL AS source_ref,
+            NULL AS store_external_ref,
+            NULL AS employee_external_ref,
+            NULL AS payload_json,
+            NULL AS row_hash,
+            NULL AS raw_row_reference,
+            NULL AS normalized_status,
+            NULL AS validation_error,
+            NULL AS processed_at,
+            totals.total_count,
+            revision_digest.revision
+          FROM totals
+          CROSS JOIN revision_digest
+          WHERE NOT EXISTS (SELECT 1 FROM paged)
+        ) error_result
+        ORDER BY
+          CASE WHEN row_kind = 'item' THEN 0 ELSE 1 END,
+          processed_at DESC NULLS LAST,
+          row_id ASC NULLS LAST
       `,
       params,
     );
 
     return {
-      rows: result.rows,
-      total: Number(totalResult.rows[0]?.total_count ?? 0),
+      rows: result.rows
+        .filter(
+          (row) =>
+            (row.row_kind === undefined || row.row_kind === "item") &&
+            row.row_id !== null,
+        )
+        .map(
+          ({ row_kind: _rowKind, total_count: _totalCount, revision: _revision, ...row }) =>
+            row,
+        ),
+      total: Number(
+        result.rows[0]?.total_count ??
+          result.rows.filter((row) => row.row_id !== null).length,
+      ),
+      revision: result.rows.find((row) => row.revision !== undefined)?.revision ?? null,
     };
   }
 
@@ -829,8 +759,13 @@ export class ImportBatchReadRepository {
   }
 
 
-  async getImportBatchAudit(batchId: string) {
+  async getImportBatchAudit(
+    batchId: string,
+    input: { limit?: number; offset?: number } = {},
+  ) {
     const result = await this.databaseService.query<{
+      row_kind?: "item" | "meta";
+      total_count: string;
       event_log_id: string;
       occurred_at: string;
       actor_user_id: string | null;
@@ -838,21 +773,71 @@ export class ImportBatchReadRepository {
       metadata_json: Record<string, unknown>;
     }>(
       `
-        SELECT
-          event_log_id,
-          occurred_at,
-          actor_user_id,
-          event_type,
-          metadata_json
-        FROM audit.event_log
-        WHERE entity_name = 'stg.import_batch'
-          AND entity_id = $1::uuid
-        ORDER BY occurred_at ASC, event_log_id ASC
+        WITH filtered_events AS (
+          SELECT
+            event_log_id,
+            occurred_at,
+            actor_user_id,
+            event_type,
+            metadata_json
+          FROM audit.event_log
+          WHERE entity_name = 'stg.import_batch'
+            AND entity_id = $1::uuid
+        ),
+        totals AS (
+          SELECT COUNT(*)::text AS total_count
+          FROM filtered_events
+        ),
+        paged AS (
+          SELECT *
+          FROM filtered_events
+          ORDER BY occurred_at ASC, event_log_id ASC
+          LIMIT $2
+          OFFSET $3
+        )
+        SELECT *
+        FROM (
+          SELECT
+            'item'::text AS row_kind,
+            paged.*,
+            totals.total_count
+          FROM paged
+          CROSS JOIN totals
+
+          UNION ALL
+
+          SELECT
+            'meta'::text AS row_kind,
+            NULL AS event_log_id,
+            NULL AS occurred_at,
+            NULL AS actor_user_id,
+            NULL AS event_type,
+            NULL AS metadata_json,
+            totals.total_count
+          FROM totals
+          WHERE NOT EXISTS (SELECT 1 FROM paged)
+        ) audit_result
+        ORDER BY
+          CASE WHEN row_kind = 'item' THEN 0 ELSE 1 END,
+          occurred_at ASC NULLS LAST,
+          event_log_id ASC NULLS LAST
       `,
-      [batchId],
+      [batchId, input.limit ?? 50, input.offset ?? 0],
     );
 
-    return result.rows;
+    return {
+      rows: result.rows
+        .filter(
+          (row) =>
+            (row.row_kind === undefined || row.row_kind === "item") &&
+            row.event_log_id !== null,
+        )
+        .map(({ row_kind: _rowKind, total_count: _totalCount, ...row }) => row),
+      total: Number(
+        result.rows[0]?.total_count ??
+          result.rows.filter((row) => row.event_log_id !== null).length,
+      ),
+    };
   }
 
 }

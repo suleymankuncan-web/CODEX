@@ -133,12 +133,12 @@ export class AuthAdminService {
   }
 
   async getRoleAssignmentAudit(input: { assignmentId: string; limit?: number; offset?: number }) {
-    const rows = await this.authAdminAuditRepository.getRoleAssignmentAudit(input);
+    const result = await this.authAdminAuditRepository.getRoleAssignmentAudit(input);
 
     return buildListResponse(
-      rows.map((item) => mapAuditEvent(item)),
+      result.rows.map((item) => mapAuditEvent(item)),
       {
-        total: rows.length,
+        total: result.total,
         limit: input.limit,
         offset: input.offset,
       },
@@ -261,12 +261,12 @@ export class AuthAdminService {
     limit?: number;
     offset?: number;
   }) {
-    const rows = await this.authAdminAuditRepository.getActionStoreAssignmentAudit(input);
+    const result = await this.authAdminAuditRepository.getActionStoreAssignmentAudit(input);
 
     return buildListResponse(
-      rows.map((item) => mapAuditEvent(item)),
+      result.rows.map((item) => mapAuditEvent(item)),
       {
-        total: rows.length,
+        total: result.total,
         limit: input.limit,
         offset: input.offset,
       },
@@ -479,12 +479,12 @@ export class AuthAdminService {
   }
 
   async getUserAccountAudit(input: { userId: string; limit?: number; offset?: number }) {
-    const rows = await this.authAdminAuditRepository.getUserAccountAudit(input);
+    const result = await this.authAdminAuditRepository.getUserAccountAudit(input);
 
     return buildListResponse(
-      rows.map((item) => mapAuditEvent(item)),
+      result.rows.map((item) => mapAuditEvent(item)),
       {
-        total: rows.length,
+        total: result.total,
         limit: input.limit,
         offset: input.offset,
       },

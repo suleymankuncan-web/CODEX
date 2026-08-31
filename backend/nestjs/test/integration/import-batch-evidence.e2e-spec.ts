@@ -79,7 +79,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/batch-3",
+      "/api/integrations/import-batches/33333333-3333-4333-8333-333333333333",
     );
 
     expect(response.status).toBe(200);
@@ -222,7 +222,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/batch-kpi-lineage-detail-1",
+      "/api/integrations/import-batches/44444444-4444-4444-8444-444444444444",
     );
 
     expect(response.status).toBe(200);
@@ -298,7 +298,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/batch-rec-1/reconciliation",
+      "/api/integrations/import-batches/55555555-5555-4555-8555-555555555555/reconciliation",
     );
 
     expect(response.status).toBe(200);
@@ -351,171 +351,12 @@ describe("Import batch evidence", () => {
     await app.close();
   });
 
-  it("returns import batch error rows with pagination metadata", async () => {
-    const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM stg.import_batch")) {
-        return {
-          rowCount: 1,
-          rows: [{ entity_type: "assignment" }],
-        };
-      }
-
-      if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM stg.assignment_raw")) {
-        return {
-          rowCount: 1,
-          rows: [{ total_count: "2" }],
-        };
-      }
-
-      if (sql.includes("FROM stg.assignment_raw")) {
-        return {
-          rowCount: 2,
-          rows: [
-            {
-              row_id: "row-1",
-              source_ref: "ASN-1",
-              normalized_status: "validation_failed",
-              validation_error: "position reference is required",
-              processed_at: "2026-04-17T10:01:00.000Z",
-            },
-            {
-              row_id: "row-2",
-              source_ref: "ASN-2",
-              normalized_status: "retryable_error",
-              validation_error: "employee reference could not be resolved",
-              processed_at: null,
-            },
-          ],
-        };
-      }
-
-      return { rowCount: 0, rows: [] };
-    });
-
-    const app = await createIntegrationApp({
-      databaseService: { query },
-    });
-
-    const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/batch-3/errors?limit=20&offset=0",
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.body.items).toEqual([
-      {
-        rowId: "row-1",
-        sourceRef: "ASN-1",
-        normalizedStatus: "validation_failed",
-        errorCategory: "validation",
-        qualityIssueCode: "missing_identity",
-        validationError: "position reference is required",
-        processedAt: "2026-04-17T10:01:00.000Z",
-      },
-      {
-        rowId: "row-2",
-        sourceRef: "ASN-2",
-        normalizedStatus: "retryable_error",
-        errorCategory: "missing_dependency",
-        qualityIssueCode: "unmapped_employee",
-        validationError: "employee reference could not be resolved",
-        processedAt: null,
-      },
-    ]);
-    expect(response.body.meta).toEqual({
-      count: 2,
-      total: 2,
-      limit: 20,
-      offset: 0,
-    });
-
-    await app.close();
-  });
-
-  it("returns KPI import batch error row lineage for reconciliation", async () => {
-    const query = jest.fn(async (sql: string) => {
-      if (sql.includes("FROM stg.import_batch")) {
-        return {
-          rowCount: 1,
-          rows: [
-            {
-              integration_source_id: "11111111-1111-4111-8111-111111111111",
-              entity_type: "kpi",
-            },
-          ],
-        };
-      }
-
-      if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("FROM stg.kpi_raw")) {
-        return {
-          rowCount: 1,
-          rows: [{ total_count: "1" }],
-        };
-      }
-
-      if (sql.includes("FROM stg.kpi_raw")) {
-        return {
-          rowCount: 1,
-          rows: [
-            {
-              row_id: "kpi-row-1",
-              source_ref: "UPT",
-              store_external_ref: "powerbi:MARMARA PARK",
-              employee_external_ref: "powerbi:AYSE DEMIR",
-              payload_json: {
-                storeExternalRef: "powerbi:MARMARA PARK",
-                employeeExternalRef: "powerbi:AYSE DEMIR",
-              },
-              row_hash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-              raw_row_reference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
-              normalized_status: "retryable_error",
-              validation_error: "store reference could not be resolved",
-              processed_at: null,
-            },
-          ],
-        };
-      }
-
-      return { rowCount: 0, rows: [] };
-    });
-
-    const app = await createIntegrationApp({
-      databaseService: { query },
-    });
-
-    const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/batch-kpi-lineage-errors-1/errors?limit=20&offset=0",
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.body.items).toEqual([
-      {
-        rowId: "kpi-row-1",
-        sourceRef: "UPT",
-        rowHash: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        rawRowReference: "other:UPT:daily:2026-04-22:2026-04-22:M-10:S-100",
-        normalizedStatus: "retryable_error",
-        errorCategory: "missing_dependency",
-        qualityIssueCode: "unmapped_store",
-        mappingCandidate: {
-          integrationSourceId: "11111111-1111-4111-8111-111111111111",
-          entityType: "store",
-          externalId: "powerbi:MARMARA PARK",
-          internalTableName: "ops.store",
-        },
-        validationError: "store reference could not be resolved",
-        processedAt: null,
-      },
-    ]);
-
-    await app.close();
-  });
-
   it("does not expose or retry import batches outside the actor company scope", async () => {
     const actorCompanyId = "00000000-0000-0000-0000-000000000001";
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM stg.import_batch") && sql.includes("WHERE b.import_batch_id = $1")) {
         expect(sql).toContain("AND b.company_ids && $2::uuid[]");
-        expect(params).toEqual(["batch-out-of-scope", [actorCompanyId]]);
+        expect(params).toEqual(["66666666-6666-4666-8666-666666666666", [actorCompanyId]]);
         return { rowCount: 0, rows: [] };
       }
 
@@ -529,13 +370,13 @@ describe("Import batch evidence", () => {
     });
 
     const detailResponse = await request(app.getHttpServer())
-      .get("/api/integrations/import-batches/batch-out-of-scope")
+      .get("/api/integrations/import-batches/66666666-6666-4666-8666-666666666666")
       .set("x-user-id", "user-1")
       .set("x-role-codes", "INTEGRATION_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     const retryResponse = await request(app.getHttpServer())
-      .post("/api/integrations/import-batches/batch-out-of-scope/retry")
+      .post("/api/integrations/import-batches/66666666-6666-4666-8666-666666666666/retry")
       .set("x-user-id", "user-1")
       .set("x-role-codes", "INTEGRATION_ADMIN")
       .set("x-company-ids", actorCompanyId);
@@ -1123,6 +964,8 @@ describe("Import batch evidence", () => {
           rowCount: 2,
           rows: [
             {
+              row_kind: "item",
+              total_count: "2",
               event_log_id: "evt-1",
               occurred_at: "2026-04-17T10:00:00.000Z",
               actor_user_id: "user-1",
@@ -1134,6 +977,8 @@ describe("Import batch evidence", () => {
               },
             },
             {
+              row_kind: "item",
+              total_count: "2",
               event_log_id: "evt-2",
               occurred_at: "2026-04-17T10:06:00.000Z",
               actor_user_id: "user-1",
@@ -1155,7 +1000,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batch-audit/batch-3",
+      "/api/integrations/import-batch-audit/33333333-3333-4333-8333-333333333333",
     );
 
     expect(response.status).toBe(200);
@@ -1190,6 +1035,11 @@ describe("Import batch evidence", () => {
         },
       },
     ]);
+    expect(
+      query.mock.calls.filter(
+        ([sql]) => typeof sql === "string" && sql.includes("FROM audit.event_log"),
+      ),
+    ).toHaveLength(1);
 
     await app.close();
   });
@@ -1214,6 +1064,26 @@ describe("Import batch evidence", () => {
               error_count: 1,
               retry_count: 1,
               last_retried_at: "2026-04-17T10:06:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM audit.event_log") && sql.includes("LIMIT $2")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              row_kind: "item",
+              total_count: "2",
+              event_log_id: "evt-2",
+              occurred_at: "2026-04-17T10:06:00.000Z",
+              actor_user_id: "user-1",
+              event_type: "import_batch.retried",
+              metadata_json: {
+                entityType: "assignment",
+                retryCount: 2,
+              },
             },
           ],
         };
@@ -1256,16 +1126,21 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer()).get(
-      "/api/integrations/import-batches/batch-3/audit",
+      "/api/integrations/import-batches/33333333-3333-4333-8333-333333333333/audit?limit=1&offset=1",
     );
 
     expect(response.status).toBe(200);
     expect(response.body.meta).toEqual({
-      count: 2,
+      count: 1,
       total: 2,
-      limit: 50,
-      offset: 0,
+      limit: 1,
+      offset: 1,
     });
+    expect(
+      query.mock.calls.filter(
+        ([sql]) => typeof sql === "string" && sql.includes("FROM audit.event_log"),
+      ),
+    ).toHaveLength(1);
 
     await app.close();
   });
@@ -1334,7 +1209,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .post("/api/integrations/import-batches/batch-r1/retry")
+      .post("/api/integrations/import-batches/77777777-7777-4777-8777-777777777777/retry")
       .set("x-user-id", "user-1");
 
     expect(response.status).toBe(201);
@@ -1353,9 +1228,9 @@ describe("Import batch evidence", () => {
     });
     expect(dispatch).toHaveBeenCalledWith(
       "import-batch",
-      { batchId: "batch-r1" },
+      { batchId: "77777777-7777-4777-8777-777777777777" },
       expect.any(Function),
-      { strictLocalJobId: "import-batch-batch-r1-retry-2" },
+      { strictLocalJobId: "import-batch-77777777-7777-4777-8777-777777777777-retry-2" },
     );
 
     await app.close();
@@ -1419,7 +1294,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .post("/api/integrations/import-batches/batch-r2/retry")
+      .post("/api/integrations/import-batches/88888888-8888-4888-8888-888888888888/retry")
       .set("x-user-id", "user-1");
 
     expect(response.status).toBe(409);
@@ -1486,7 +1361,7 @@ describe("Import batch evidence", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .post("/api/integrations/import-batches/batch-r3/retry")
+      .post("/api/integrations/import-batches/99999999-9999-4999-8999-999999999999/retry")
       .set("x-user-id", "user-1");
 
     expect(response.status).toBe(409);

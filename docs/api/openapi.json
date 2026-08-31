@@ -102,7 +102,29 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           }
         ],
@@ -212,7 +234,29 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           }
         ],
@@ -353,7 +397,29 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           }
         ],
@@ -1875,7 +1941,29 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           }
         ],
@@ -1905,7 +1993,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -1935,7 +2024,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -1965,7 +2055,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -1988,7 +2079,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -3539,6 +3631,8 @@
                 "open",
                 "in_progress",
                 "blocked",
+                "solution_review_pending",
+                "correction_required",
                 "closed",
                 "cancelled"
               ]
@@ -3558,6 +3652,8 @@
                   "open",
                   "in_progress",
                   "blocked",
+                  "solution_review_pending",
+                  "correction_required",
                   "closed",
                   "cancelled"
                 ]
@@ -3843,7 +3939,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -3876,7 +3973,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -3899,7 +3997,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4187,7 +4286,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4220,7 +4320,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4260,7 +4361,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4300,7 +4402,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4323,7 +4426,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4346,7 +4450,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4376,7 +4481,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4399,7 +4505,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4422,7 +4529,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4511,7 +4619,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4599,7 +4708,97 @@
     "/api/integrations/import-batches/needs-action": {
       "get": {
         "operationId": "IntegrationController_getImportBatchNeedsAction",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "startedTo",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "startedFrom",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "sourceCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "employee",
+                "store",
+                "kpi",
+                "assignment",
+                "position",
+                "company",
+                "region"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "queued",
+                "processing",
+                "completed",
+                "completed_with_errors",
+                "failed"
+              ]
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Paginated import batches requiring admin action.",
@@ -4626,7 +4825,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4656,7 +4856,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4686,7 +4887,29 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           }
         ],
@@ -4709,7 +4932,29 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
             }
           }
         ],
@@ -4739,7 +4984,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -4762,7 +5008,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -6143,6 +6390,7 @@
               "enum": [
                 "all",
                 "unplanned",
+                "planned",
                 "waiting",
                 "missed",
                 "completed",
@@ -7521,6 +7769,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -7747,6 +7999,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -8560,6 +8816,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -9608,6 +9868,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "evidence",
+                "reference"
+              ],
               "type": "string"
             }
           }
@@ -9702,8 +9966,8 @@
             "in": "path",
             "schema": {
               "enum": [
-                "thumbnail",
-                "canonical"
+                "canonical",
+                "thumbnail"
               ],
               "type": "string"
             }
@@ -9769,7 +10033,8 @@
             "required": true,
             "in": "path",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -13499,7 +13764,8 @@
               "count",
               "total",
               "limit",
-              "offset"
+              "offset",
+              "revision"
             ],
             "properties": {
               "count": {
@@ -13517,6 +13783,13 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "revision": {
+                "type": "string",
+                "nullable": true,
+                "minLength": 64,
+                "maxLength": 64,
+                "pattern": "^[0-9a-f]{64}$"
               }
             }
           }
@@ -21118,7 +21391,8 @@
               "count",
               "total",
               "limit",
-              "offset"
+              "offset",
+              "revision"
             ],
             "properties": {
               "count": {
@@ -21136,6 +21410,13 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "revision": {
+                "type": "string",
+                "nullable": true,
+                "minLength": 64,
+                "maxLength": 64,
+                "pattern": "^[0-9a-f]{64}$"
               }
             }
           }
@@ -21514,7 +21795,8 @@
               "count",
               "total",
               "limit",
-              "offset"
+              "offset",
+              "revision"
             ],
             "properties": {
               "count": {
@@ -21532,6 +21814,13 @@
               "offset": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "revision": {
+                "type": "string",
+                "nullable": true,
+                "minLength": 64,
+                "maxLength": 64,
+                "pattern": "^[0-9a-f]{64}$"
               }
             }
           }

@@ -19,6 +19,9 @@ const currentState = readText('docs/history/current-state-through-pr-913-2026-07
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 const importBatchDetailPage = readText('admin-web/src/pages/ImportBatchDetailPage.tsx')
+const importBatchDetailEvidence = readText(
+  'admin-web/src/features/integrations/import-batch-detail-evidence.ts',
+)
 const importBatchDetailMessages = readText('admin-web/src/features/localization/messages/import-batch-detail.ts')
 const masterDataBootstrapPage = readText('admin-web/src/pages/MasterDataBootstrapPage.tsx')
 const masterDataBootstrapBatchDetailPanel = readText(
@@ -62,12 +65,8 @@ test('operator evidence copy is visible on existing admin surfaces', () => {
     requireText(importBatchDetailMessages, phrase)
   }
 
-  for (const phrase of [
-    'importBatchDetail.conditionalReviewSummary',
-    'importBatchDetail.operatorDecisionCopy',
-  ]) {
-    requireText(importBatchDetailPage, phrase)
-  }
+  requireText(importBatchDetailEvidence, 'importBatchDetail.conditionalReviewSummary')
+  requireText(importBatchDetailPage, 'importBatchDetail.operatorDecisionCopy')
 
   for (const phrase of [
     'Conditional Go: bu partiyi temiz saymadan önce satır kanıtını, kalite kontrolünü, tekrar deneme kanıtını ve bağımlılık eşlemesini incele.',

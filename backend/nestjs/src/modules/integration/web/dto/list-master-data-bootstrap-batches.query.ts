@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export class ListMasterDataBootstrapBatchesQueryDto {
   @IsOptional()
@@ -28,6 +28,12 @@ export class ListMasterDataBootstrapBatchesQueryDto {
   readiness?: "needs_validation" | "needs_review" | "ready_to_promote" | "closed";
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  })
   @IsString()
+  @MaxLength(128)
   q?: string;
 }

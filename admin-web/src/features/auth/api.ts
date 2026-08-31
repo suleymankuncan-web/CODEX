@@ -59,6 +59,18 @@ export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
 export type AuthSessionSummary = ApiGetResponse<'/api/auth/session'>
 
+export type AuditListInput = {
+  limit?: number
+  offset?: number
+}
+
+export function buildAuditListQuery(input: AuditListInput = {}, fallbackLimit = 50) {
+  return new URLSearchParams({
+    limit: String(input.limit ?? fallbackLimit),
+    offset: String(input.offset ?? 0),
+  })
+}
+
 export type UserAccessClosure = DeactivateUserAccountResponse['data']['accessClosure']
 
 export type PilotUserBinding = CreatePilotUserBindingResponse['data']['binding']
@@ -313,20 +325,23 @@ export async function revokeRolePermission(input: {
   })
 }
 
-export async function getUserAudit(userId: string) {
+export async function getUserAudit(userId: string, input?: AuditListInput) {
   return fetchOpenApiJson('/api/auth/users/{userId}/audit', {
     params: { userId },
+    ...(input === undefined ? {} : { query: buildAuditListQuery(input) }),
   })
 }
 
-export async function getRoleAssignmentAudit(assignmentId: string) {
+export async function getRoleAssignmentAudit(assignmentId: string, input?: AuditListInput) {
   return fetchOpenApiJson('/api/auth/role-assignments/{assignmentId}/audit', {
     params: { assignmentId },
+    ...(input === undefined ? {} : { query: buildAuditListQuery(input) }),
   })
 }
 
-export async function getActionStoreAssignmentAudit(assignmentId: string) {
+export async function getActionStoreAssignmentAudit(assignmentId: string, input?: AuditListInput) {
   return fetchOpenApiJson('/api/auth/action-store-assignments/{assignmentId}/audit', {
     params: { assignmentId },
+    ...(input === undefined ? {} : { query: buildAuditListQuery(input) }),
   })
 }

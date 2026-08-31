@@ -4,11 +4,13 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
   Req,
 } from '@nestjs/common';
+import { ApiParam, ApiQuery } from '@nestjs/swagger';
 import { RequireRoles } from '../decorators/roles.decorator';
 import { RequireScope } from '../decorators/scope.decorator';
 import { AuthAdminService } from '../auth-admin.service';
@@ -64,8 +66,19 @@ export class AuthAdminController {
   }
 
   @Get('role-assignments/:assignmentId/audit')
+  @ApiParam({ name: 'assignmentId', schema: { type: 'string', format: 'uuid' } })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    schema: { type: 'integer', minimum: 0, default: 0 },
+  })
   async getRoleAssignmentAudit(
-    @Param('assignmentId') assignmentId: string,
+    @Param('assignmentId', new ParseUUIDPipe({ version: '4' })) assignmentId: string,
     @Query() query: ListRoleAssignmentAuditQueryDto,
   ) {
     return this.authAdminService.getRoleAssignmentAudit({
@@ -132,8 +145,19 @@ export class AuthAdminController {
   }
 
   @Get('action-store-assignments/:assignmentId/audit')
+  @ApiParam({ name: 'assignmentId', schema: { type: 'string', format: 'uuid' } })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    schema: { type: 'integer', minimum: 0, default: 0 },
+  })
   async getActionStoreAssignmentAudit(
-    @Param('assignmentId') assignmentId: string,
+    @Param('assignmentId', new ParseUUIDPipe({ version: '4' })) assignmentId: string,
     @Query() query: ListRoleAssignmentAuditQueryDto,
   ) {
     return this.authAdminService.getActionStoreAssignmentAudit({
@@ -213,8 +237,19 @@ export class AuthAdminController {
   }
 
   @Get('users/:userId/audit')
+  @ApiParam({ name: 'userId', schema: { type: 'string', format: 'uuid' } })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    schema: { type: 'integer', minimum: 0, default: 0 },
+  })
   async getUserAccountAudit(
-    @Param('userId') userId: string,
+    @Param('userId', new ParseUUIDPipe({ version: '4' })) userId: string,
     @Query() query: ListRoleAssignmentAuditQueryDto,
   ) {
     return this.authAdminService.getUserAccountAudit({

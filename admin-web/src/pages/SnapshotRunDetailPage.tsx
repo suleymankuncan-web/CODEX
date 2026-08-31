@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Clock3, Download, GitBranch, RefreshCcw, Sparkles } from 'lucide-react'
 import { Link, useParams } from 'react-router'
@@ -19,6 +19,7 @@ import {
   getSnapshotRunDetail,
   getSnapshotRunLineage,
   rerunSnapshotRun,
+  type SnapshotRunAudit,
   type SnapshotRunDependencies,
   type SnapshotRunDetail,
 } from '../features/snapshots/api'
@@ -30,6 +31,12 @@ import {
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
+import { actionToast } from '../lib/action-toast'
+import {
+  fetchAllPaginated,
+  isPaginatedExportError,
+  PAGINATED_EXPORT_PAGE_SIZE,
+} from '../lib/paginated-export'
 import {
   AdminKeyValue as KeyValue,
   AdminKeyValueGrid,
@@ -49,11 +56,24 @@ function formatCheckStatus(input: 'pass' | 'fail', t: TranslateFunction) {
   return input === 'pass' ? t('adminSnapshots.check.pass') : t('adminSnapshots.check.fail')
 }
 
+const AUDIT_PAGE_SIZE = 20
+
+function useScopedOffset(scopeKey: string) {
+  const [page, setPage] = useState({ scopeKey, offset: 0 })
+  const offset = page.scopeKey === scopeKey ? page.offset : 0
+  const setOffset = (nextOffset: number) => setPage({ scopeKey, offset: nextOffset })
+
+  return [offset, setOffset] as const
+}
+
 export function SnapshotRunDetailPage() {
   const { locale, t } = useLocalization()
   const params = useParams()
   const snapshotRunId = params.snapshotRunId ?? ''
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [auditOffset, setAuditOffset] = useScopedOffset(snapshotRunId)
+  const [isExporting, setIsExporting] = useState(false)
+  const exportInFlightRef = useRef(false)
   const queryClient = useQueryClient()
 
   const detailQuery = useQuery({
@@ -72,8 +92,12 @@ export function SnapshotRunDetailPage() {
     enabled: Boolean(snapshotRunId),
   })
   const auditQuery = useQuery({
-    queryKey: ['snapshot-run-audit', snapshotRunId],
-    queryFn: () => getSnapshotRunAudit(snapshotRunId),
+    queryKey: ['snapshot-run-audit', snapshotRunId, AUDIT_PAGE_SIZE, auditOffset],
+    queryFn: () =>
+      getSnapshotRunAudit(snapshotRunId, {
+        limit: AUDIT_PAGE_SIZE,
+        offset: auditOffset,
+      }),
     enabled: Boolean(snapshotRunId),
   })
   const rerunMutation = useMutation({
@@ -130,6 +154,47 @@ export function SnapshotRunDetailPage() {
   const dependencies = dependenciesQuery.data
   const lineage = lineageQuery.data
   const auditItems = auditQuery.data?.items ?? []
+  const auditMeta = auditQuery.data?.meta
+  const canExportAudit = (auditMeta?.total ?? auditItems.length) > 0
+  const handleAuditExport = async () => {
+    if (exportInFlightRef.current || !canExportAudit) {
+      return
+    }
+
+    exportInFlightRef.current = true
+    setIsExporting(true)
+    try {
+      const allAuditItems = await fetchAllPaginated(
+        ({ limit, offset }) => getSnapshotRunAudit(snapshotRunId, { limit, offset }),
+        {
+          pageSize: PAGINATED_EXPORT_PAGE_SIZE,
+          getStableKey: (item) => item.eventLogId,
+        },
+      )
+
+      downloadCsv({
+        filename: `snapshot-audit-${snapshotRunId}.csv`,
+        columns: ['eventLogId', 'occurredAt', 'actorUserId', 'correlationId', 'eventType'],
+        rows: allAuditItems.map((event) => [
+          event.eventLogId,
+          event.occurredAt,
+          event.actorUserId,
+          event.correlationId,
+          event.eventType,
+        ]),
+      })
+    } catch (error) {
+      actionToast.error(
+        error,
+        isPaginatedExportError(error) && error.reason === 'too_many_rows'
+          ? t('adminSnapshots.exportTooLarge')
+          : t('adminSnapshots.exportFailed'),
+      )
+    } finally {
+      exportInFlightRef.current = false
+      setIsExporting(false)
+    }
+  }
   const totalRows =
     detail.cards.workforceRows +
     detail.cards.kpiRows +
@@ -287,23 +352,12 @@ export function SnapshotRunDetailPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() =>
-                downloadCsv({
-                  filename: `snapshot-audit-${snapshotRunId}.csv`,
-                  columns: ['eventLogId', 'occurredAt', 'actorUserId', 'correlationId', 'eventType'],
-                  rows: auditItems.map((event) => [
-                    event.eventLogId,
-                    event.occurredAt,
-                    event.actorUserId,
-                    event.correlationId,
-                    event.eventType,
-                  ]),
-                })
-              }
-              disabled={auditItems.length === 0}
+              onClick={handleAuditExport}
+              disabled={isExporting || !canExportAudit}
+              aria-busy={isExporting}
             >
               <Download aria-hidden="true" />
-              {t('adminSnapshots.exportAudit')}
+              {isExporting ? t('adminSnapshots.exportPreparing') : t('adminSnapshots.exportAudit')}
             </Button>
           }
         >
@@ -325,6 +379,13 @@ export function SnapshotRunDetailPage() {
               ))}
             </div>
           )}
+          <SnapshotAuditPagination
+            isFetching={auditQuery.isFetching}
+            meta={auditMeta}
+            offset={auditOffset}
+            onOffsetChange={setAuditOffset}
+            t={t}
+          />
         </AdminOperationalSection>
       </div>
     </AdminOperationalPage>
@@ -454,6 +515,53 @@ function SnapshotOutputVolumePanel(input: { detail: SnapshotRunDetail; totalRows
         </TableBody>
       </Table>
     </AdminOperationalSection>
+  )
+}
+
+function SnapshotAuditPagination(input: {
+  isFetching: boolean
+  meta: SnapshotRunAudit['meta'] | undefined
+  offset: number
+  onOffsetChange: (offset: number) => void
+  t: TranslateFunction
+}) {
+  if (!input.meta) {
+    return null
+  }
+
+  const pageOffset = input.meta.offset ?? input.offset
+  const pageLimit = Math.max(input.meta.limit, 1)
+  const firstItem = input.meta.total === 0 ? 0 : pageOffset + 1
+  const lastItem = Math.min(input.meta.total, pageOffset + input.meta.count)
+  const canGoPrevious = pageOffset > 0
+  const canGoNext = pageOffset + input.meta.count < input.meta.total
+
+  return (
+    <div className="tw:mt-4 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-label={input.t('adminSnapshots.previous')}
+        disabled={input.isFetching || !canGoPrevious}
+        onClick={() => input.onOffsetChange(Math.max(0, pageOffset - pageLimit))}
+      >
+        {input.t('adminSnapshots.previous')}
+      </Button>
+      <span className="tw:text-sm tw:text-muted-foreground">
+        {firstItem}-{lastItem} / {input.meta.total}
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-label={input.t('adminSnapshots.next')}
+        disabled={input.isFetching || !canGoNext}
+        onClick={() => input.onOffsetChange(pageOffset + pageLimit)}
+      >
+        {input.t('adminSnapshots.next')}
+      </Button>
+    </div>
   )
 }
 

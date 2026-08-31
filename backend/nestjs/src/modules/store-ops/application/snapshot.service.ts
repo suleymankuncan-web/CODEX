@@ -328,30 +328,32 @@ export class SnapshotService {
       stuckBefore: this.getSnapshotStuckBeforeIso(),
     });
 
-    const items = await Promise.all(
-      result.rows.map(async (item) => ({
-        ...this.mapSnapshotRun(item),
-        actionReason: item.action_reason,
-        recommendedAction: item.recommended_action,
-        canRerun: item.run_status === "failed",
-        rerunCount: await this.snapshotOperationsRepository.countReruns({
-          snapshotRunId: item.snapshot_run_id,
-          actorCompanyIds,
-        }),
-        latestRerunSnapshotRunId:
-          await this.snapshotOperationsRepository.getLatestRerunSnapshotRunId({
-            snapshotRunId: item.snapshot_run_id,
-            actorCompanyIds,
-          }),
-        isStuck: item.is_stuck,
-      })),
-    );
+    const items = result.rows.map((item) => ({
+      ...this.mapSnapshotRun(item),
+      // Keep the health/action projection from the same database snapshot used
+      // to produce the revision, rather than recalculating it per item.
+      healthState: item.health_state,
+      actionReason: item.action_reason,
+      recommendedAction: item.recommended_action,
+      canRerun: item.can_rerun ?? item.run_status === "failed",
+      rerunCount: Number(item.rerun_count ?? 0),
+      latestRerunSnapshotRunId: item.latest_rerun_snapshot_run_id ?? null,
+      isStuck: item.is_stuck,
+    }));
 
-    return buildListResponse(items, {
+    const response = buildListResponse(items, {
       total: result.total,
       limit: input.limit,
       offset: input.offset,
     });
+
+    return {
+      ...response,
+      meta: {
+        ...response.meta,
+        revision: result.revision,
+      },
+    };
   }
 
   async getSnapshotRun(snapshotRunId: string, actorCompanyIdsInput?: string[]) {
@@ -400,7 +402,11 @@ export class SnapshotService {
     };
   }
 
-  async getSnapshotRunAudit(snapshotRunId: string, actorCompanyIdsInput?: string[]) {
+  async getSnapshotRunAudit(
+    snapshotRunId: string,
+    actorCompanyIdsInput?: string[],
+    pagination?: { limit?: number; offset?: number },
+  ) {
     const actorCompanyIds = this.normalizeActorCompanyIds(actorCompanyIdsInput);
     const snapshotRun = await this.snapshotOperationsRepository.findSnapshotRunById({
       snapshotRunId,
@@ -411,11 +417,19 @@ export class SnapshotService {
       throw new NotFoundException(`Snapshot run not found: ${snapshotRunId}`);
     }
 
-    const events = await this.snapshotOperationsRepository.getSnapshotRunAudit(snapshotRunId);
+    const result = await this.snapshotOperationsRepository.getSnapshotRunAudit({
+      snapshotRunId,
+      limit: pagination?.limit,
+      offset: pagination?.offset,
+    });
 
     return buildListResponse(
-      events.map((event) => mapAuditEvent(event)),
-      { total: events.length },
+      result.rows.map((event) => mapAuditEvent(event)),
+      {
+        total: result.total,
+        limit: pagination?.limit,
+        offset: pagination?.offset,
+      },
     );
   }
 

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -10,7 +11,7 @@ import {
   Res,
   StreamableFile,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiProduces } from '@nestjs/swagger';
+import { ApiOkResponse, ApiParam, ApiProduces } from '@nestjs/swagger';
 import { RequireRoles } from '../../auth/decorators/roles.decorator';
 import { RequireScope } from '../../auth/decorators/scope.decorator';
 import { IntegrationService } from '../application/integration.service';
@@ -102,10 +103,11 @@ export class IntegrationPersonnelMasterController {
   }
 
   @Patch('personnel-master/:employeeId')
+  @ApiParam({ name: 'employeeId', schema: { type: 'string', format: 'uuid' } })
   @RequireScope('company')
   @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
   async updatePersonnelMaster(
-    @Param('employeeId') employeeId: string,
+    @Param('employeeId', new ParseUUIDPipe({ version: '4' })) employeeId: string,
     @Body() body: UpdatePersonnelMasterDto,
     @Req() request: RequestUser,
   ) {
@@ -128,10 +130,11 @@ export class IntegrationPersonnelMasterController {
   }
 
   @Patch('personnel-master/:employeeId/terminate')
+  @ApiParam({ name: 'employeeId', schema: { type: 'string', format: 'uuid' } })
   @RequireScope('company')
   @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
   async terminatePersonnelMaster(
-    @Param('employeeId') employeeId: string,
+    @Param('employeeId', new ParseUUIDPipe({ version: '4' })) employeeId: string,
     @Body() body: TerminatePersonnelMasterDto,
     @Req() request: RequestUser,
   ) {

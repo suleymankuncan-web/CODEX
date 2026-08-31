@@ -1,27 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { listSnapshotRunsNeedingAction } from "./snapshot-needs-action.read-query";
+import type { SnapshotNeedsActionRow, SnapshotRunRow } from "./snapshot-needs-action.read-query";
 
 type Queryable = {
   query: <T>(sql: string, params?: unknown[]) => Promise<{ rowCount: number; rows: T[] }>;
-};
-
-type SnapshotRunRow = {
-  snapshot_run_id: string;
-  company_ids: string[];
-  snapshot_date: string;
-  snapshot_type: string;
-  period_start: string;
-  period_end: string;
-  run_status: string;
-  generated_at: string;
-  generated_by: string;
-  started_at: string | null;
-  finished_at: string | null;
-  failure_reason: string | null;
-  rerun_of_snapshot_run_id: string | null;
-  kpi_config_version_id: string | null;
-  kpi_config_version_no: number | null;
 };
 
 @Injectable()
@@ -321,120 +305,96 @@ export class SnapshotOperationsRepository {
     limit?: number;
     offset?: number;
     stuckBefore: string;
-  }) {
-    const { params, whereClause } = this.buildSnapshotRunFilters(input);
-    params.push(input.stuckBefore);
-
-    const baseCte = `
-      WITH action_queue AS (
-        SELECT
-          rpt.snapshot_run.snapshot_run_id,
-          rpt.snapshot_run.company_ids,
-          rpt.snapshot_run.snapshot_date,
-          rpt.snapshot_run.snapshot_type,
-          rpt.snapshot_run.period_start,
-          rpt.snapshot_run.period_end,
-          rpt.snapshot_run.run_status,
-          rpt.snapshot_run.generated_at,
-          rpt.snapshot_run.generated_by,
-          rpt.snapshot_run.started_at,
-          rpt.snapshot_run.finished_at,
-          rpt.snapshot_run.failure_reason,
-          rpt.snapshot_run.rerun_of_snapshot_run_id,
-          rpt.snapshot_run.kpi_config_version_id,
-          version.version_no AS kpi_config_version_no,
-          CASE
-            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN 'stuck'
-            WHEN rpt.snapshot_run.run_status = 'failed' THEN 'retry_ready'
-            ELSE NULL
-          END AS health_state,
-          CASE
-            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN 'Snapshot run has exceeded the in-progress time threshold'
-            WHEN rpt.snapshot_run.run_status = 'failed' THEN 'Snapshot run failed and can be rerun'
-            ELSE NULL
-          END AS action_reason,
-          CASE
-            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN 'Inspect worker execution before requesting another rerun'
-            WHEN rpt.snapshot_run.run_status = 'failed' THEN 'Trigger a rerun after verifying the failure cause'
-            ELSE NULL
-          END AS recommended_action,
-          CASE
-            WHEN rpt.snapshot_run.run_status IN ('queued', 'running') AND rpt.snapshot_run.generated_at < $${params.length}::timestamptz THEN TRUE
-          ELSE FALSE
-          END AS is_stuck
-        FROM rpt.snapshot_run
-        LEFT JOIN ops.kpi_config_version version
-          ON version.kpi_config_version_id = rpt.snapshot_run.kpi_config_version_id
-        ${whereClause}
-      )
-    `;
-
-    const totalResult = await this.databaseService.query<{ total_count: string }>(
-      `
-        ${baseCte}
-        SELECT COUNT(*)::text AS total_count
-        FROM action_queue
-        WHERE health_state IS NOT NULL
-      `,
-      params,
+  }): Promise<{
+    rows: SnapshotNeedsActionRow[];
+    total: number;
+    revision: string | null;
+  }> {
+    return listSnapshotRunsNeedingAction(
+      this.databaseService,
+      input,
+      this.buildSnapshotRunFilters(input),
     );
-
-    const listParams = [...params, input.limit ?? 50, input.offset ?? 0];
-    const result = await this.databaseService.query<{
-      snapshot_run_id: string;
-      snapshot_date: string;
-      snapshot_type: string;
-      period_start: string;
-      period_end: string;
-      run_status: string;
-      generated_at: string;
-      generated_by: string;
-      started_at: string | null;
-      finished_at: string | null;
-      failure_reason: string | null;
-      rerun_of_snapshot_run_id: string | null;
-      health_state: string;
-      action_reason: string;
-      recommended_action: string;
-      is_stuck: boolean;
-    }>(
-      `
-        ${baseCte}
-        SELECT *
-        FROM action_queue
-        WHERE health_state IS NOT NULL
-        ORDER BY generated_at DESC, snapshot_run_id DESC
-        LIMIT $${params.length + 1}
-        OFFSET $${params.length + 2}
-      `,
-      listParams,
-    );
-
-    return {
-      rows: result.rows,
-      total: Number(totalResult.rows[0]?.total_count ?? 0),
-    };
   }
 
-  async getSnapshotRunAudit(snapshotRunId: string) {
+  async getSnapshotRunAudit(
+    input:
+      | string
+      | {
+          snapshotRunId: string;
+          limit?: number;
+          offset?: number;
+        },
+  ) {
+    const snapshotRunId = typeof input === "string" ? input : input.snapshotRunId;
+    const limit = typeof input === "string" ? 50 : (input.limit ?? 50);
+    const offset = typeof input === "string" ? 0 : (input.offset ?? 0);
+
     const result = await this.databaseService.query<{
       event_log_id: string;
       occurred_at: string;
       actor_user_id: string | null;
       event_type: string;
       metadata_json: Record<string, unknown>;
+      total_count: string | number;
+      row_kind?: "item" | "meta";
     }>(
       `
-        SELECT event_log_id, occurred_at, actor_user_id, event_type, metadata_json
-        FROM audit.event_log
-        WHERE entity_name = 'rpt.snapshot_run'
-          AND entity_id = $1::uuid
-        ORDER BY occurred_at ASC
+        WITH filtered AS (
+          SELECT
+            event_log_id,
+            occurred_at,
+            actor_user_id,
+            event_type,
+            metadata_json
+          FROM audit.event_log
+          WHERE entity_name = 'rpt.snapshot_run'
+            AND entity_id = $1::uuid
+        ),
+        paged AS (
+          SELECT *
+          FROM filtered
+          ORDER BY occurred_at ASC, event_log_id ASC
+          LIMIT $2 OFFSET $3
+        ),
+        totals AS (
+          SELECT COUNT(*)::text AS total_count
+          FROM filtered
+        )
+        SELECT
+          'item'::text AS row_kind,
+          paged.event_log_id,
+          paged.occurred_at,
+          paged.actor_user_id,
+          paged.event_type,
+          paged.metadata_json,
+          totals.total_count
+        FROM paged
+        CROSS JOIN totals
+        UNION ALL
+        SELECT
+          'meta'::text AS row_kind,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          NULL,
+          totals.total_count
+        FROM totals
+        WHERE NOT EXISTS (SELECT 1 FROM paged)
+        ORDER BY occurred_at ASC NULLS LAST, event_log_id ASC NULLS LAST
       `,
-      [snapshotRunId],
+      [snapshotRunId, limit, offset],
     );
 
-    return result.rows;
+    const pageRows = result.rows.filter(
+      (row) => row.row_kind !== "meta" && Boolean(row.event_log_id),
+    );
+
+    return {
+      rows: pageRows.map(({ total_count: _totalCount, row_kind: _rowKind, ...row }) => row),
+      total: Number(result.rows.find((row) => row.total_count !== undefined)?.total_count ?? pageRows.length),
+    };
   }
 
   async getSnapshotRowCounts(snapshotRunId: string, actorCompanyIds?: string[]) {

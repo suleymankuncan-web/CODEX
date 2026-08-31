@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router'
@@ -18,9 +19,12 @@ import {
   AuthTimelineItem,
 } from '../features/auth/AuthSurfacePrimitives'
 import { getUserAudit } from '../features/auth/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 import { resolveAuditBackLink } from './audit-navigation'
+
+const AUDIT_PAGE_SIZE = 20
 
 function describeDetails(details: Record<string, unknown> | undefined, nullValue: string) {
   if (!details) {
@@ -33,15 +37,24 @@ function describeDetails(details: Record<string, unknown> | undefined, nullValue
   }))
 }
 
+function useScopedOffset(scopeKey: string) {
+  const [page, setPage] = useState({ scopeKey, offset: 0 })
+  const offset = page.scopeKey === scopeKey ? page.offset : 0
+  const setOffset = (nextOffset: number) => setPage({ scopeKey, offset: nextOffset })
+
+  return [offset, setOffset] as const
+}
+
 export function AuthUserAuditPage() {
   const { userId } = useParams<{ userId: string }>()
   const location = useLocation()
   const { locale, t } = useLocalization()
   const backLink = resolveAuditBackLink(location.pathname, t)
+  const [offset, setOffset] = useScopedOffset(userId ?? '')
 
   const auditQuery = useQuery({
-    queryKey: ['auth-user-audit', userId],
-    queryFn: () => getUserAudit(userId ?? ''),
+    queryKey: ['auth-user-audit', userId, AUDIT_PAGE_SIZE, offset],
+    queryFn: () => getUserAudit(userId ?? '', { limit: AUDIT_PAGE_SIZE, offset }),
     enabled: Boolean(userId),
   })
 
@@ -81,6 +94,7 @@ export function AuthUserAuditPage() {
   }
 
   const items = auditQuery.data?.items ?? []
+  const meta = auditQuery.data?.meta
 
   return (
     <AdminSurfacePage ariaLabel={t('authAuditDetails.heroEyebrow')}>
@@ -100,6 +114,7 @@ export function AuthUserAuditPage() {
       {items.length === 0 ? (
         <AdminSurfaceSection title={t('authAuditDetails.userTimelineTitle')}>
           <AdminSurfaceEmpty copy={t('authAuditDetails.userEmptyCopy')} />
+          <AuditPagination isFetching={auditQuery.isFetching} meta={meta} offset={offset} onOffsetChange={setOffset} t={t} />
         </AdminSurfaceSection>
       ) : (
         <AdminSurfaceSection
@@ -131,8 +146,63 @@ export function AuthUserAuditPage() {
               </AuthTimelineItem>
             ))}
           </AuthTimeline>
+          <AuditPagination isFetching={auditQuery.isFetching} meta={meta} offset={offset} onOffsetChange={setOffset} t={t} />
         </AdminSurfaceSection>
       )}
     </AdminSurfacePage>
+  )
+}
+
+type AuditPaginationMeta = {
+  count: number
+  total: number
+  limit: number
+  offset: number
+}
+
+function AuditPagination(input: {
+  isFetching: boolean
+  meta: AuditPaginationMeta | undefined
+  offset: number
+  onOffsetChange: (offset: number) => void
+  t: TranslateFunction
+}) {
+  if (!input.meta) {
+    return null
+  }
+
+  const pageOffset = input.meta.offset ?? input.offset
+  const pageLimit = Math.max(input.meta.limit, 1)
+  const firstItem = input.meta.total === 0 ? 0 : pageOffset + 1
+  const lastItem = Math.min(input.meta.total, pageOffset + input.meta.count)
+  const canGoPrevious = pageOffset > 0
+  const canGoNext = pageOffset + input.meta.count < input.meta.total
+
+  return (
+    <div className="tw:mt-4 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+      <AuthButton
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-label={input.t('adminSnapshots.previous')}
+        disabled={input.isFetching || !canGoPrevious}
+        onClick={() => input.onOffsetChange(Math.max(0, pageOffset - pageLimit))}
+      >
+        {input.t('adminSnapshots.previous')}
+      </AuthButton>
+      <span className="tw:text-sm tw:text-muted-foreground">
+        {firstItem}-{lastItem} / {input.meta.total}
+      </span>
+      <AuthButton
+        type="button"
+        size="sm"
+        variant="outline"
+        aria-label={input.t('adminSnapshots.next')}
+        disabled={input.isFetching || !canGoNext}
+        onClick={() => input.onOffsetChange(pageOffset + pageLimit)}
+      >
+        {input.t('adminSnapshots.next')}
+      </AuthButton>
+    </div>
   )
 }

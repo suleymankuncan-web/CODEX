@@ -6,6 +6,19 @@ import {
   type ApiMutationBody,
   type ApiMutationResponse,
 } from '../../lib/openapi-client'
+import {
+  buildListPageQuery,
+  buildNeedsActionQuery,
+  type ListPageInput,
+  type NeedsActionListInput,
+} from './import-list-query'
+
+export {
+  buildListPageQuery,
+  buildNeedsActionQuery,
+  buildNeedsActionQueryKey,
+} from './import-list-query'
+export type { ListPageInput, NeedsActionListInput } from './import-list-query'
 
 export type ImportOverview = ApiGetResponse<'/api/integrations/import-batches/overview'>
 
@@ -209,30 +222,9 @@ export async function getIntegrationLookups() {
   return fetchOpenApiJson('/api/integrations/lookups')
 }
 
-export async function getNeedsAction(input?: {
-  limit?: number
-  offset?: number
-  entityType?: string
-  status?: string
-  sourceCode?: string
-}) {
-  const params = new URLSearchParams({
-    limit: String(input?.limit ?? 12),
-    offset: String(input?.offset ?? 0),
-  })
-
-  if (input?.entityType) {
-    params.set('entityType', input.entityType)
-  }
-  if (input?.status) {
-    params.set('status', input.status)
-  }
-  if (input?.sourceCode) {
-    params.set('sourceCode', input.sourceCode)
-  }
-
+export async function getNeedsAction(input?: NeedsActionListInput) {
   return fetchOpenApiJson('/api/integrations/import-batches/needs-action', {
-    query: params,
+    query: buildNeedsActionQuery(input),
   })
 }
 
@@ -251,23 +243,18 @@ export async function getImportBatchReconciliation(batchId: string) {
 
 export async function getImportBatchErrors(
   batchId: string,
-  input?: { limit?: number; offset?: number },
+  input?: ListPageInput,
 ) {
-  const params = new URLSearchParams({
-    limit: String(input?.limit ?? 20),
-    offset: String(input?.offset ?? 0),
-  })
-
   return fetchOpenApiJson('/api/integrations/import-batches/{batchId}/errors', {
     params: { batchId },
-    query: params,
+    query: buildListPageQuery(input, 20),
   })
 }
 
-export async function getImportBatchAudit(batchId: string) {
+export async function getImportBatchAudit(batchId: string, input?: ListPageInput) {
   return fetchOpenApiJson('/api/integrations/import-batches/{batchId}/audit', {
     params: { batchId },
-    query: new URLSearchParams({ limit: '20', offset: '0' }),
+    query: buildListPageQuery(input, 20),
   })
 }
 

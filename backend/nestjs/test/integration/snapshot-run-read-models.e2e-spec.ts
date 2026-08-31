@@ -13,6 +13,21 @@ const hasFailedRunStatusPredicate = (sql: string) =>
   sql.includes("WHERE run_status = 'failed'") ||
   sql.includes("WHERE rpt.snapshot_run.run_status = 'failed'");
 
+const snapshotRunId1 = "00000000-0000-4000-8000-000000000101";
+const snapshotRunId2 = "00000000-0000-4000-8000-000000000102";
+const snapshotRunId3 = "00000000-0000-4000-8000-000000000103";
+const latestCompletedSnapshotRunId = "00000000-0000-4000-8000-000000000110";
+const latestFailedSnapshotRunId = "00000000-0000-4000-8000-000000000111";
+const latestRunningSnapshotRunId = "00000000-0000-4000-8000-000000000112";
+const stuckSnapshotRunId = "00000000-0000-4000-8000-000000000113";
+const failedSnapshotRunId = "00000000-0000-4000-8000-000000000120";
+const rerunSnapshotRunId = "00000000-0000-4000-8000-000000000121";
+const failedLookupSnapshotRunId = "00000000-0000-4000-8000-000000000130";
+const dependenciesSnapshotRunId = "00000000-0000-4000-8000-000000000140";
+const lineageSnapshotRunId1 = "00000000-0000-4000-8000-000000000150";
+const lineageSnapshotRunId2 = "00000000-0000-4000-8000-000000000151";
+const lineageSnapshotRunId3 = "00000000-0000-4000-8000-000000000152";
+
 describe("Snapshot run read models", () => {
   it("lists snapshot runs with health state and pagination metadata", async () => {
     const companyId = "00000000-0000-0000-0000-000000000001";
@@ -29,7 +44,7 @@ describe("Snapshot run read models", () => {
           rowCount: 2,
           rows: [
             {
-              snapshot_run_id: "snapshot-1",
+              snapshot_run_id: snapshotRunId1,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -43,7 +58,7 @@ describe("Snapshot run read models", () => {
               rerun_of_snapshot_run_id: null,
             },
             {
-              snapshot_run_id: "snapshot-2",
+              snapshot_run_id: snapshotRunId2,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -76,12 +91,12 @@ describe("Snapshot run read models", () => {
     expect(response.status).toBe(200);
     expect(response.body.items).toEqual([
       expect.objectContaining({
-        snapshotRunId: "snapshot-1",
+        snapshotRunId: snapshotRunId1,
         runStatus: "completed",
         healthState: "healthy",
       }),
       expect.objectContaining({
-        snapshotRunId: "snapshot-2",
+        snapshotRunId: snapshotRunId2,
         runStatus: "failed",
         healthState: "retry_ready",
       }),
@@ -112,7 +127,7 @@ describe("Snapshot run read models", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-2",
+              snapshot_run_id: snapshotRunId2,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -152,7 +167,7 @@ describe("Snapshot run read models", () => {
       if (sql.includes("FROM rpt.snapshot_run") && sql.includes("rerun_of_snapshot_run_id = $1::uuid")) {
         return {
           rowCount: 1,
-          rows: [{ snapshot_run_id: "snapshot-3" }],
+          rows: [{ snapshot_run_id: snapshotRunId3 }],
         };
       }
 
@@ -164,12 +179,12 @@ describe("Snapshot run read models", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .get("/api/snapshots/runs/snapshot-2")
+      .get(`/api/snapshots/runs/${snapshotRunId2}`)
       .set("x-role-codes", "SNAPSHOT_OPERATOR")
       .set("x-company-ids", companyId);
 
     expect(response.status).toBe(200);
-    expect(response.body.snapshotRun.snapshotRunId).toBe("snapshot-2");
+    expect(response.body.snapshotRun.snapshotRunId).toBe(snapshotRunId2);
     expect(response.body.snapshotRun.healthState).toBe("retry_ready");
     expect(response.body.cards).toEqual({
       workforceRows: 4,
@@ -179,7 +194,7 @@ describe("Snapshot run read models", () => {
     });
     expect(response.body.canRerun).toBe(true);
     expect(response.body.rerunCount).toBe(1);
-    expect(response.body.latestRerunSnapshotRunId).toBe("snapshot-3");
+    expect(response.body.latestRerunSnapshotRunId).toBe(snapshotRunId3);
     expect(response.body.failureReason).toBe("db timeout");
     const detailLookup = query.mock.calls.find(
       ([sql]) =>
@@ -187,7 +202,7 @@ describe("Snapshot run read models", () => {
         hasSnapshotRunIdPredicate(sql) &&
         sql.includes("rpt.snapshot_run.company_ids &&"),
     );
-    expect(detailLookup?.[1]).toEqual(["snapshot-2", [companyId]]);
+    expect(detailLookup?.[1]).toEqual([snapshotRunId2, [companyId]]);
 
     await app.close();
   });
@@ -199,7 +214,7 @@ describe("Snapshot run read models", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-2",
+              snapshot_run_id: snapshotRunId2,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -252,7 +267,7 @@ describe("Snapshot run read models", () => {
       databaseService: { query },
     });
 
-    const response = await request(app.getHttpServer()).get("/api/snapshots/runs/snapshot-2/audit");
+    const response = await request(app.getHttpServer()).get(`/api/snapshots/runs/${snapshotRunId2}/audit`);
 
     expect(response.status).toBe(200);
     expect(response.body.meta).toEqual({
@@ -316,7 +331,7 @@ describe("Snapshot run read models", () => {
         Array.isArray(params) &&
         params[1] === "completed"
       ) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-latest-completed" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: latestCompletedSnapshotRunId }] };
       }
 
       if (
@@ -324,7 +339,7 @@ describe("Snapshot run read models", () => {
         Array.isArray(params) &&
         params[1] === "failed"
       ) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-latest-failed" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: latestFailedSnapshotRunId }] };
       }
 
       if (
@@ -332,7 +347,7 @@ describe("Snapshot run read models", () => {
         Array.isArray(params) &&
         params[1] === "running"
       ) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-latest-running" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: latestRunningSnapshotRunId }] };
       }
 
       return { rowCount: 0, rows: [] };
@@ -362,9 +377,9 @@ describe("Snapshot run read models", () => {
         needsAction: 0,
       },
       latest: {
-        completedSnapshotRunId: "snapshot-latest-completed",
-        failedSnapshotRunId: "snapshot-latest-failed",
-        inProgressSnapshotRunId: "snapshot-latest-running",
+        completedSnapshotRunId: latestCompletedSnapshotRunId,
+        failedSnapshotRunId: latestFailedSnapshotRunId,
+        inProgressSnapshotRunId: latestRunningSnapshotRunId,
       },
     });
 
@@ -412,7 +427,7 @@ describe("Snapshot run read models", () => {
         Array.isArray(params) &&
         params[1] === "completed"
       ) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-latest-completed" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: latestCompletedSnapshotRunId }] };
       }
 
       if (
@@ -420,7 +435,7 @@ describe("Snapshot run read models", () => {
         Array.isArray(params) &&
         params[1] === "failed"
       ) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-latest-failed" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: latestFailedSnapshotRunId }] };
       }
 
       if (
@@ -428,11 +443,11 @@ describe("Snapshot run read models", () => {
         Array.isArray(params) &&
         params[1] === "running"
       ) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-latest-running" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: latestRunningSnapshotRunId }] };
       }
 
       if (sql.includes("latest_stuck_snapshot_run")) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-stuck-1" }] };
+        return { rowCount: 1, rows: [{ snapshot_run_id: stuckSnapshotRunId }] };
       }
 
       return { rowCount: 0, rows: [] };
@@ -467,10 +482,10 @@ describe("Snapshot run read models", () => {
         stuck: 1,
       },
       latest: {
-        completedSnapshotRunId: "snapshot-latest-completed",
-        failedSnapshotRunId: "snapshot-latest-failed",
-        inProgressSnapshotRunId: "snapshot-latest-running",
-        stuckSnapshotRunId: "snapshot-stuck-1",
+        completedSnapshotRunId: latestCompletedSnapshotRunId,
+        failedSnapshotRunId: latestFailedSnapshotRunId,
+        inProgressSnapshotRunId: latestRunningSnapshotRunId,
+        stuckSnapshotRunId,
       },
     });
 
@@ -479,19 +494,33 @@ describe("Snapshot run read models", () => {
 
   it("returns snapshot needs-action queue with retry-ready and stuck runs", async () => {
     const query = jest.fn(async (sql: string) => {
-      if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("action_queue")) {
-        return {
-          rowCount: 1,
-          rows: [{ total_count: "2" }],
-        };
-      }
-
-      if (sql.includes("FROM action_queue") && sql.includes("ORDER BY generated_at DESC")) {
+      if (sql.includes("WITH scoped_base_parents AS MATERIALIZED")) {
+        expect(sql).toContain("action_parents AS MATERIALIZED");
+        expect(sql).toContain("rerun_aggregates AS MATERIALIZED");
+        expect(sql).not.toContain("LEFT JOIN LATERAL");
+        expect(sql).toContain("child.rerun_of_snapshot_run_id IN (");
+        expect(sql).toContain("FROM action_parents action_parent");
+        expect(sql).toContain("GROUP BY child.rerun_of_snapshot_run_id");
+        expect(sql.indexOf("WHERE run_status = 'failed'")).toBeLessThan(
+          sql.indexOf("rerun_aggregates AS MATERIALIZED"),
+        );
+        expect(sql).toContain("snapshot-needs-action:v1");
+        expect(sql).toContain("revision_rows AS MATERIALIZED");
+        expect(sql).toContain("jsonb_build_array");
+        expect(sql).toContain("jsonb_agg");
+        expect(sql).toContain("digest");
+        expect(sql).toContain("convert_to");
+        expect(sql).toContain("to_char(");
+        expect(sql).toContain("revision_row.generated_at AT TIME ZONE 'UTC'");
+        expect(sql).toContain("revision_row.snapshot_run_id DESC");
+        expect(sql).toContain("revision_row.rerun_count");
         return {
           rowCount: 2,
           rows: [
             {
-              snapshot_run_id: "snapshot-failed-1",
+              row_kind: "item",
+              snapshot_run_id: failedSnapshotRunId,
+              company_ids: [],
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -506,10 +535,19 @@ describe("Snapshot run read models", () => {
               health_state: "retry_ready",
               action_reason: "Snapshot run failed and can be rerun",
               recommended_action: "Trigger a rerun after verifying the failure cause",
+              can_rerun: true,
+              rerun_count: "1",
+              latest_rerun_snapshot_run_id: rerunSnapshotRunId,
               is_stuck: false,
+              kpi_config_version_id: null,
+              kpi_config_version_no: null,
+              total_count: "2",
+              revision: "a".repeat(64),
             },
             {
-              snapshot_run_id: "snapshot-stuck-1",
+              row_kind: "item",
+              snapshot_run_id: stuckSnapshotRunId,
+              company_ids: [],
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -524,18 +562,17 @@ describe("Snapshot run read models", () => {
               health_state: "stuck",
               action_reason: "Snapshot run has exceeded the in-progress time threshold",
               recommended_action: "Inspect worker execution before requesting another rerun",
+              can_rerun: false,
+              rerun_count: "1",
+              latest_rerun_snapshot_run_id: rerunSnapshotRunId,
               is_stuck: true,
+              kpi_config_version_id: null,
+              kpi_config_version_no: null,
+              total_count: "2",
+              revision: "a".repeat(64),
             },
           ],
         };
-      }
-
-      if (sql.includes("COUNT(*)::text AS rerun_count")) {
-        return { rowCount: 1, rows: [{ rerun_count: "1" }] };
-      }
-
-      if (sql.includes("rerun_of_snapshot_run_id = $1::uuid")) {
-        return { rowCount: 1, rows: [{ snapshot_run_id: "snapshot-rerun-1" }] };
       }
 
       return { rowCount: 0, rows: [] };
@@ -555,10 +592,16 @@ describe("Snapshot run read models", () => {
       total: 2,
       limit: 20,
       offset: 0,
+      revision: "a".repeat(64),
     });
+    expect(
+      query.mock.calls.filter(([sql]) =>
+        String(sql).includes("WITH scoped_base_parents AS MATERIALIZED"),
+      ),
+    ).toHaveLength(1);
     expect(response.body.items).toEqual([
       {
-        snapshotRunId: "snapshot-failed-1",
+        snapshotRunId: failedSnapshotRunId,
         snapshotDate: "2026-04-17",
         snapshotType: "monthly",
         periodStart: "2026-04-01",
@@ -580,11 +623,11 @@ describe("Snapshot run read models", () => {
         recommendedAction: "Trigger a rerun after verifying the failure cause",
         canRerun: true,
         rerunCount: 1,
-        latestRerunSnapshotRunId: "snapshot-rerun-1",
+        latestRerunSnapshotRunId: rerunSnapshotRunId,
         isStuck: false,
       },
       {
-        snapshotRunId: "snapshot-stuck-1",
+        snapshotRunId: stuckSnapshotRunId,
         snapshotDate: "2026-04-17",
         snapshotType: "monthly",
         periodStart: "2026-04-01",
@@ -606,7 +649,7 @@ describe("Snapshot run read models", () => {
         recommendedAction: "Inspect worker execution before requesting another rerun",
         canRerun: false,
         rerunCount: 1,
-        latestRerunSnapshotRunId: "snapshot-rerun-1",
+        latestRerunSnapshotRunId: rerunSnapshotRunId,
         isStuck: true,
       },
     ]);
@@ -625,7 +668,7 @@ describe("Snapshot run read models", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-failed-lookup-1",
+              snapshot_run_id: failedLookupSnapshotRunId,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -665,7 +708,7 @@ describe("Snapshot run read models", () => {
       },
       rerunnableRuns: [
         {
-          snapshotRunId: "snapshot-failed-lookup-1",
+          snapshotRunId: failedLookupSnapshotRunId,
           snapshotType: "monthly",
           periodStart: "2026-04-01",
           periodEnd: "2026-04-30",
@@ -682,7 +725,7 @@ describe("Snapshot run read models", () => {
         ],
         rerunnableRuns: [
           {
-            value: "snapshot-failed-lookup-1",
+            value: failedLookupSnapshotRunId,
             label: "monthly 2026-04-01..2026-04-30",
             rerunAllowed: true,
           },
@@ -704,7 +747,7 @@ describe("Snapshot run read models", () => {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-deps-1",
+              snapshot_run_id: dependenciesSnapshotRunId,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -731,13 +774,13 @@ describe("Snapshot run read models", () => {
     const app = await createIntegrationApp({ databaseService: { query } });
 
     const response = await request(app.getHttpServer())
-      .get("/api/snapshots/runs/snapshot-deps-1/dependencies")
+      .get(`/api/snapshots/runs/${dependenciesSnapshotRunId}/dependencies`)
       .set("x-user-id", "user-1")
       .set("x-role-codes", "SNAPSHOT_OPERATOR");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      snapshotRunId: "snapshot-deps-1",
+      snapshotRunId: dependenciesSnapshotRunId,
       runStatus: "failed",
       rerunAllowed: false,
       rerunBlockedReason: "An active rerun already exists for this snapshot run",
@@ -764,13 +807,13 @@ describe("Snapshot run read models", () => {
         sql.includes("FROM rpt.snapshot_run") &&
         hasSnapshotRunIdPredicate(sql) &&
         !sql.includes("rerun_of_snapshot_run_id = $1::uuid") &&
-        (!Array.isArray(params) || params[0] !== "snapshot-lineage-1")
+        (!Array.isArray(params) || params[0] !== lineageSnapshotRunId1)
       ) {
         return {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-lineage-2",
+              snapshot_run_id: lineageSnapshotRunId2,
               snapshot_date: "2026-04-18",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -781,7 +824,7 @@ describe("Snapshot run read models", () => {
               started_at: "2026-04-18T01:00:01.000Z",
               finished_at: "2026-04-18T01:00:10.000Z",
               failure_reason: "db timeout",
-              rerun_of_snapshot_run_id: "snapshot-lineage-1",
+              rerun_of_snapshot_run_id: lineageSnapshotRunId1,
             },
           ],
         };
@@ -791,13 +834,13 @@ describe("Snapshot run read models", () => {
         sql.includes("FROM rpt.snapshot_run") &&
         sql.includes("rerun_of_snapshot_run_id = $1::uuid") &&
         Array.isArray(params) &&
-        params[0] === "snapshot-lineage-2"
+        params[0] === lineageSnapshotRunId2
       ) {
         return {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-lineage-3",
+              snapshot_run_id: lineageSnapshotRunId3,
               snapshot_date: "2026-04-18",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -808,7 +851,7 @@ describe("Snapshot run read models", () => {
               started_at: null,
               finished_at: null,
               failure_reason: null,
-              rerun_of_snapshot_run_id: "snapshot-lineage-2",
+              rerun_of_snapshot_run_id: lineageSnapshotRunId2,
             },
           ],
         };
@@ -818,13 +861,13 @@ describe("Snapshot run read models", () => {
         sql.includes("FROM rpt.snapshot_run") &&
         hasSnapshotRunIdPredicate(sql) &&
         Array.isArray(params) &&
-        params[0] === "snapshot-lineage-1"
+        params[0] === lineageSnapshotRunId1
       ) {
         return {
           rowCount: 1,
           rows: [
             {
-              snapshot_run_id: "snapshot-lineage-1",
+              snapshot_run_id: lineageSnapshotRunId1,
               snapshot_date: "2026-04-17",
               snapshot_type: "monthly",
               period_start: "2026-04-01",
@@ -847,21 +890,21 @@ describe("Snapshot run read models", () => {
     const app = await createIntegrationApp({ databaseService: { query } });
 
     const response = await request(app.getHttpServer())
-      .get("/api/snapshots/runs/snapshot-lineage-2/lineage")
+      .get(`/api/snapshots/runs/${lineageSnapshotRunId2}/lineage`)
       .set("x-user-id", "user-1")
       .set("x-role-codes", "SNAPSHOT_OPERATOR");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      snapshotRunId: "snapshot-lineage-2",
+      snapshotRunId: lineageSnapshotRunId2,
       parent: {
-        snapshotRunId: "snapshot-lineage-1",
+        snapshotRunId: lineageSnapshotRunId1,
         runStatus: "completed",
         snapshotType: "monthly",
       },
       children: [
         {
-          snapshotRunId: "snapshot-lineage-3",
+          snapshotRunId: lineageSnapshotRunId3,
           runStatus: "queued",
           snapshotType: "monthly",
         },

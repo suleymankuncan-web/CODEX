@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useReducer, type Dispatch } from 'react'
+import { useDeferredValue, useMemo, useReducer, useRef, useState, type Dispatch } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, ArrowRight, Clock3, RefreshCcw, Rocket } from 'lucide-react'
 import { Link } from 'react-router'
@@ -41,6 +41,12 @@ import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { actionToast } from '../lib/action-toast'
+import {
+  fetchAllPaginated,
+  isPaginatedExportError,
+  PAGINATED_EXPORT_PAGE_SIZE,
+} from '../lib/paginated-export'
 import { SnapshotOperationsBrief } from './snapshot-operations-brief'
 import {
   AdminActionRow,
@@ -57,74 +63,19 @@ import {
   AdminOperationalPage,
   AdminOperationalSection,
 } from './admin-operational-primitives'
+import {
+  initialSnapshotsDashboardPageState,
+  snapshotsDashboardPageReducer,
+  type SnapshotsDashboardPageAction,
+  type SnapshotRunStatusFilter,
+  type SnapshotSortValue,
+  type SnapshotTypeFilter,
+} from './snapshots-dashboard-page-model'
 
 const PAGE_SIZE = 12
 
 const snapshotTypes = ['daily', 'weekly', 'monthly', 'payroll', 'compliance'] as const
 const runStatuses = ['queued', 'running', 'completed', 'failed'] as const
-
-type SnapshotSortValue = 'priority' | 'generated-desc' | 'reruns' | 'type'
-type SnapshotTypeFilter = '' | (typeof snapshotTypes)[number]
-type SnapshotRunStatusFilter = '' | (typeof runStatuses)[number]
-
-type SnapshotsDashboardPageState = {
-  search: string
-  sortBy: SnapshotSortValue
-  offset: number
-  snapshotTypeFilter: SnapshotTypeFilter
-  runStatusFilter: SnapshotRunStatusFilter
-  feedback: string | null
-}
-type SnapshotsDashboardPageAction =
-  | { type: 'setSearch'; value: string }
-  | { type: 'setSortBy'; value: SnapshotSortValue }
-  | { type: 'setSnapshotTypeFilter'; value: SnapshotTypeFilter }
-  | { type: 'setRunStatusFilter'; value: SnapshotRunStatusFilter }
-  | { type: 'setFeedback'; value: string | null }
-  | { type: 'previousPage' }
-  | { type: 'nextPage' }
-  | { type: 'clearFilters' }
-
-const initialSnapshotsDashboardPageState: SnapshotsDashboardPageState = {
-  search: '',
-  sortBy: 'priority',
-  offset: 0,
-  snapshotTypeFilter: '',
-  runStatusFilter: '',
-  feedback: null,
-}
-
-function snapshotsDashboardPageReducer(
-  state: SnapshotsDashboardPageState,
-  action: SnapshotsDashboardPageAction,
-): SnapshotsDashboardPageState {
-  switch (action.type) {
-    case 'setSearch':
-      return { ...state, search: action.value }
-    case 'setSortBy':
-      return { ...state, sortBy: action.value }
-    case 'setSnapshotTypeFilter':
-      return { ...state, offset: 0, snapshotTypeFilter: action.value }
-    case 'setRunStatusFilter':
-      return { ...state, offset: 0, runStatusFilter: action.value }
-    case 'setFeedback':
-      return { ...state, feedback: action.value }
-    case 'previousPage':
-      return { ...state, offset: Math.max(0, state.offset - PAGE_SIZE) }
-    case 'nextPage':
-      return { ...state, offset: state.offset + PAGE_SIZE }
-    case 'clearFilters':
-      return {
-        ...state,
-        search: '',
-        offset: 0,
-        snapshotTypeFilter: '',
-        runStatusFilter: '',
-      }
-    default:
-      return state
-  }
-}
 
 function sortSnapshotNeedsActionItems(
   items: SnapshotNeedsActionItem[],
@@ -152,6 +103,34 @@ function getSnapshotHealthPriority(state: string) {
   if (state === 'retry_ready') return 2
   if (state === 'in_progress') return 1
   return 0
+}
+
+function filterSnapshotNeedsActionItems(
+  items: SnapshotNeedsActionItem[],
+  search: string,
+  t: TranslateFunction,
+) {
+  const input = search.trim().toLowerCase()
+  if (!input) {
+    return items
+  }
+
+  return items.filter((item) =>
+    [
+      item.snapshotRunId,
+      item.snapshotType,
+      formatSnapshotType(item.snapshotType, t),
+      item.runStatus,
+      formatSnapshotState(item.runStatus, t),
+      item.healthState,
+      formatSnapshotState(item.healthState, t),
+      item.actionReason,
+      item.recommendedAction,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(input),
+  )
 }
 
 export function SnapshotsDashboardPage() {
@@ -205,29 +184,7 @@ export function SnapshotsDashboardPage() {
   })
 
   const filteredItems = useMemo(() => {
-    const input = deferredSearch.trim().toLowerCase()
-    const items = needsActionQuery.data?.items ?? []
-
-    if (!input) {
-      return items
-    }
-
-    return items.filter((item) =>
-      [
-        item.snapshotRunId,
-        item.snapshotType,
-        formatSnapshotType(item.snapshotType, t),
-        item.runStatus,
-        formatSnapshotState(item.runStatus, t),
-        item.healthState,
-        formatSnapshotState(item.healthState, t),
-        item.actionReason,
-        item.recommendedAction,
-      ]
-        .join(' ')
-        .toLowerCase()
-        .includes(input),
-    )
+    return filterSnapshotNeedsActionItems(needsActionQuery.data?.items ?? [], deferredSearch, t)
   }, [deferredSearch, needsActionQuery.data?.items, t])
 
   const sortedItems = useMemo(() => {
@@ -335,6 +292,7 @@ export function SnapshotsDashboardPage() {
         meta={meta}
         offset={offset}
         pagination={{ canGoBack, canGoForward }}
+        searchFilter={deferredSearch}
         sortedItems={sortedItems}
         sortBy={sortBy}
         onRerun={(snapshotRunId) => rerunMutation.mutate(snapshotRunId)}
@@ -553,10 +511,83 @@ function SnapshotActionQueuePanel(input: {
     canGoBack: boolean
     canGoForward: boolean
   }
+  searchFilter: string
   sortedItems: SnapshotNeedsActionItem[]
   sortBy: SnapshotSortValue
   t: TranslateFunction
 }) {
+  const [isExporting, setIsExporting] = useState(false)
+  const exportInFlightRef = useRef(false)
+  const canExport = (input.meta?.total ?? input.sortedItems.length) > 0
+  const handleExport = async () => {
+    if (exportInFlightRef.current || !canExport) {
+      return
+    }
+
+    exportInFlightRef.current = true
+    setIsExporting(true)
+    try {
+      const allItems = await fetchAllPaginated(
+        ({ limit, offset }) =>
+          getSnapshotNeedsAction({
+            limit,
+            offset,
+            ...(input.filters.snapshotTypeFilter
+              ? { snapshotType: input.filters.snapshotTypeFilter }
+              : {}),
+            ...(input.filters.runStatusFilter ? { runStatus: input.filters.runStatusFilter } : {}),
+          }),
+        {
+          pageSize: PAGINATED_EXPORT_PAGE_SIZE,
+          requireRevision: true,
+          getStableKey: (item) => item.snapshotRunId,
+        },
+      )
+      const exportItems = sortSnapshotNeedsActionItems(
+        filterSnapshotNeedsActionItems(allItems, input.searchFilter, input.t),
+        input.sortBy,
+      )
+
+      downloadCsv({
+        filename: 'snapshot-needs-action.csv',
+        columns: [
+          'snapshotRunId',
+          'snapshotType',
+          'runStatus',
+          'healthState',
+          'generatedAt',
+          'periodStart',
+          'periodEnd',
+          'rerunCount',
+          'actionReason',
+          'recommendedAction',
+        ],
+        rows: exportItems.map((item) => [
+          item.snapshotRunId,
+          item.snapshotType,
+          item.runStatus,
+          item.healthState,
+          item.generatedAt,
+          item.periodStart,
+          item.periodEnd,
+          item.rerunCount,
+          item.actionReason,
+          item.recommendedAction,
+        ]),
+      })
+    } catch (error) {
+      actionToast.error(
+        error,
+        isPaginatedExportError(error) && error.reason === 'too_many_rows'
+          ? input.t('adminSnapshots.exportTooLarge')
+          : input.t('adminSnapshots.exportFailed'),
+      )
+    } finally {
+      exportInFlightRef.current = false
+      setIsExporting(false)
+    }
+  }
+
   return (
     <AdminOperationalSection
       eyebrow={input.t('adminSnapshots.actionQueueEyebrow')}
@@ -575,36 +606,10 @@ function SnapshotActionQueuePanel(input: {
             { value: 'type', label: input.t('adminSnapshots.sort.type') },
           ]}
           sortAriaLabel={input.t('adminSnapshots.sortRows')}
-          exportLabel={input.t('adminSnapshots.exportCsv')}
-          onExport={() =>
-            downloadCsv({
-              filename: 'snapshot-needs-action.csv',
-              columns: [
-                'snapshotRunId',
-                'snapshotType',
-                'runStatus',
-                'healthState',
-                'generatedAt',
-                'periodStart',
-                'periodEnd',
-                'rerunCount',
-                'actionReason',
-                'recommendedAction',
-              ],
-              rows: input.sortedItems.map((item) => [
-                item.snapshotRunId,
-                item.snapshotType,
-                item.runStatus,
-                item.healthState,
-                item.generatedAt,
-                item.periodStart,
-                item.periodEnd,
-                item.rerunCount,
-                item.actionReason,
-                item.recommendedAction,
-              ]),
-            })
-          }
+          exportLabel={isExporting ? input.t('adminSnapshots.exportPreparing') : input.t('adminSnapshots.exportCsv')}
+          exportDisabled={isExporting || !canExport}
+          exportBusy={isExporting}
+          onExport={handleExport}
         >
           <Input
             className="tw:w-full tw:bg-background/70 tw:sm:w-64"

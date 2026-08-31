@@ -14,6 +14,21 @@ export type SnapshotRunLineage = ApiGetResponse<'/api/snapshots/runs/{snapshotRu
 export type SnapshotRunAudit = ApiGetResponse<'/api/snapshots/runs/{snapshotRunId}/audit'>
 export type SnapshotAuditEvent = SnapshotRunAudit['items'][number]
 
+export type SnapshotAuditListInput = {
+  limit?: number
+  offset?: number
+}
+
+export function buildSnapshotAuditQuery(
+  input: SnapshotAuditListInput = {},
+  fallbackLimit = 50,
+) {
+  return new URLSearchParams({
+    limit: String(input.limit ?? fallbackLimit),
+    offset: String(input.offset ?? 0),
+  })
+}
+
 export type DailyClosureStatus = ApiGetResponse<'/api/snapshots/daily-closure'>
 
 type CommandResponse<T> = {
@@ -71,9 +86,13 @@ export async function getSnapshotRunLineage(snapshotRunId: string) {
   })
 }
 
-export async function getSnapshotRunAudit(snapshotRunId: string) {
+export async function getSnapshotRunAudit(
+  snapshotRunId: string,
+  input?: SnapshotAuditListInput,
+) {
   return fetchOpenApiJson('/api/snapshots/runs/{snapshotRunId}/audit', {
     params: { snapshotRunId },
+    query: buildSnapshotAuditQuery(input),
   })
 }
 

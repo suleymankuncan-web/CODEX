@@ -112,13 +112,12 @@ function preserveBaselineOperationMetadata(
         continue;
       }
 
-      if (
-        shouldPreserveBaselineParameters(
-          baselineOperation.parameters,
-          generatedOperation.parameters,
-        )
-      ) {
-        generatedOperation.parameters = baselineOperation.parameters;
+      const mergedParameters = mergeBaselineParameters(
+        baselineOperation.parameters,
+        generatedOperation.parameters,
+      );
+      if (mergedParameters) {
+        generatedOperation.parameters = mergedParameters;
       }
 
       if (
@@ -157,31 +156,154 @@ function preserveBaselineResponses(
   }
 }
 
-function shouldPreserveBaselineParameters(
+function mergeBaselineParameters(
   baselineParameters: unknown,
   generatedParameters: unknown,
 ) {
-  if (!Array.isArray(baselineParameters) || !Array.isArray(generatedParameters)) {
+  if (
+    !Array.isArray(baselineParameters) ||
+    !Array.isArray(generatedParameters)
+  ) {
+    return null;
+  }
+
+  const generated = generatedParameters;
+  const generatedByKey = new Map<string, unknown>();
+  for (const parameter of generated) {
+    const key = getParameterKey(parameter);
+    if (key && !generatedByKey.has(key)) {
+      generatedByKey.set(key, parameter);
+    }
+  }
+
+  const merged: unknown[] = [];
+  const emittedKeys = new Set<string>();
+  for (const parameter of baselineParameters) {
+    const key = getParameterKey(parameter);
+    if (!key) {
+      merged.push(parameter);
+      continue;
+    }
+
+    if (emittedKeys.has(key)) {
+      continue;
+    }
+    const generatedParameter = generatedByKey.get(key);
+    merged.push(
+      generatedParameter === undefined
+        ? parameter
+        : preserveBaselineEnumOrder(parameter, generatedParameter),
+    );
+    emittedKeys.add(key);
+  }
+
+  for (const parameter of generated) {
+    const key = getParameterKey(parameter);
+    if (key) {
+      if (emittedKeys.has(key)) {
+        continue;
+      }
+      emittedKeys.add(key);
+    }
+    merged.push(parameter);
+  }
+
+  return merged;
+}
+
+function preserveBaselineEnumOrder(
+  baselineParameter: unknown,
+  generatedParameter: unknown,
+) {
+  if (!isRecord(baselineParameter) || !isRecord(generatedParameter)) {
+    return generatedParameter;
+  }
+
+  const baselineSchema = baselineParameter.schema;
+  const generatedSchema = generatedParameter.schema;
+  if (!isRecord(baselineSchema) || !isRecord(generatedSchema)) {
+    return generatedParameter;
+  }
+
+  const baselineEnum = baselineSchema.enum;
+  const generatedEnum = generatedSchema.enum;
+  if (
+    !Array.isArray(baselineEnum) ||
+    !Array.isArray(generatedEnum) ||
+    !haveSameEnumMembers(baselineEnum, generatedEnum)
+  ) {
+    return generatedParameter;
+  }
+
+  return {
+    ...generatedParameter,
+    schema: {
+      ...generatedSchema,
+      enum: [...baselineEnum],
+    },
+  };
+}
+
+function haveSameEnumMembers(
+  baselineEnum: unknown[],
+  generatedEnum: unknown[],
+) {
+  if (baselineEnum.length !== generatedEnum.length) {
     return false;
   }
 
-  if (baselineParameters.length < generatedParameters.length) {
+  const unmatchedGeneratedValues = [...generatedEnum];
+  for (const baselineValue of baselineEnum) {
+    const matchingIndex = unmatchedGeneratedValues.findIndex((generatedValue) =>
+      areEquivalentEnumValues(baselineValue, generatedValue),
+    );
+    if (matchingIndex < 0) {
+      return false;
+    }
+    unmatchedGeneratedValues.splice(matchingIndex, 1);
+  }
+
+  return true;
+}
+
+function areEquivalentEnumValues(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) {
+    return true;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => areEquivalentEnumValues(value, right[index]))
+    );
+  }
+
+  if (!isRecord(left) || !isRecord(right)) {
     return false;
   }
 
-  const baselineNames = new Set(
-    baselineParameters
-      .filter(isRecord)
-      .map((parameter) => `${String(parameter.in)}:${String(parameter.name)}`),
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(right, key) &&
+        areEquivalentEnumValues(left[key], right[key]),
+    )
   );
+}
 
-  const generatedNames = generatedParameters
-    .filter(isRecord)
-    .map((parameter) => `${String(parameter.in)}:${String(parameter.name)}`);
+function getParameterKey(parameter: unknown): string | null {
+  if (!isRecord(parameter)) {
+    return null;
+  }
 
-  return generatedNames.every((parameterName) =>
-    baselineNames.has(parameterName),
-  );
+  return typeof parameter.in === "string" && typeof parameter.name === "string"
+    ? `${parameter.in}:${parameter.name}`
+    : null;
 }
 
 function isGeneratedObjectDegraded(
