@@ -81,31 +81,44 @@ test('daily pull specification has all mandatory sections and requirement tracea
   }
 })
 
-test('daily pull public documents remain draft pending product-owner approval', () => {
-  requireText(contract, 'Status: Draft — pending product-owner approval')
-  requireText(contract, 'Reviewers: Product owner (pending)')
-  requireText(contract, 'proposed source-semantics boundary')
+test('daily pull public documents record product-owner approval without authorizing runtime', () => {
+  requireText(
+    contract,
+    'Status: Approved — product-owner approval recorded 31 August 2026',
+  )
+  requireText(contract, 'Reviewers: Product owner (approved 31 August 2026)')
+  requireText(contract, 'approved source-semantics boundary')
   requireText(
     currentState,
-    '`docs/contracts/company-daily-kpi-pull-contract-v1.md` is proposed and pending product-owner approval.',
+    'the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026.',
   )
   requireText(
     intake,
-    'The proposed source semantics, grains, partial-success behavior, signed sale/return rules, active-store allowlist, missed-day risk, and privacy boundary are documented in `docs/contracts/company-daily-kpi-pull-contract-v1.md` and remain pending product-owner approval.',
+    'The approved source semantics, grains, partial-success behavior, signed sale/return rules, active-store allowlist, missed-day risk, and privacy boundary are locked in `docs/contracts/company-daily-kpi-pull-contract-v1.md`. Product-owner approval was recorded on 31 August 2026.',
   )
   requireText(
     intake,
-    '`contract_draft`: current state; proposed product semantics are documented and pending product-owner approval',
+    'Status: `contract_approved`',
   )
-  assert.doesNotMatch(contract, /Status:\s*Approved/i)
-  assert.doesNotMatch(contract, /approved source-semantics boundary/i)
+  requireText(
+    intake,
+    '`contract_approved`: current state; product semantics are approved, while provider fields and runtime details are not proven',
+  )
+  requireText(
+    currentState,
+    'Connector runtime, scheduling, and replacement of Excel remain suspended',
+  )
+  assert.doesNotMatch(
+    contract,
+    /Status:\s*Draft|pending product-owner approval|proposed source-semantics boundary/i,
+  )
   assert.doesNotMatch(
     currentState,
-    /company-daily-kpi-pull-contract-v1\.md` is approved/i,
+    /company-daily-kpi-pull-contract-v1\.md` is proposed|pending product-owner approval/i,
   )
   assert.doesNotMatch(
     intake,
-    /approved source semantics|product semantics are approved|approved company daily pull semantics/i,
+    /Status:\s*`contract_draft`|remain pending product-owner approval/i,
   )
 })
 

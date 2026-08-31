@@ -2,8 +2,8 @@
 
 Author: Codex with product-owner decisions
 Date: 31 August 2026
-Status: Draft — pending product-owner approval
-Reviewers: Product owner (pending)
+Status: Approved — product-owner approval recorded 31 August 2026
+Reviewers: Product owner (approved 31 August 2026)
 
 ## Context
 
@@ -13,7 +13,7 @@ only the previous Europe/Istanbul calendar day's data. It does not offer an API
 date range and cannot be used for historical backfill after the provider moves
 to the next day.
 
-This contract is the proposed source-semantics boundary for local, synthetic
+This contract is the approved source-semantics boundary for local, synthetic
 development. It does not authorize a live connection, credentials, real company
 data, a database migration, a scheduler, a deployment, or replacement of the
 current Power BI/Excel operating path.
