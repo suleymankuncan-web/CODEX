@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-08-29
+Last verified: 2026-08-31
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -32,9 +32,9 @@ when the decision needs them.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
-- New modules, broad redesign, generic architecture/refactor, and provider/JSON integration remain parked. The owner-approved on-prem synthetic preparation is the bounded exception, without live-provider, production, or company-data authority.
-- Power BI/Excel remains the current operating data path; JSON integration is
-  suspended pending a real provider contract and reconciliation plan.
+- New modules, broad redesign, generic architecture/refactor, and provider/JSON runtime integration remain parked. The owner-approved on-prem synthetic preparation and the contract-only company daily KPI pull specification are bounded local exceptions, without live-provider, production, secret, or company-data authority.
+- Power BI/Excel remains the current operating data path; the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026. The authorized local scope remains documentation and synthetic guards only.
+  Connector runtime, scheduling, and replacement of Excel remain suspended pending official sanitized fields, authentication, reconciliation, and separate approval.
 - Runtime work remains parked except for the owner-opened DG1-DG2 remediation
   train; any other runtime line still requires a factual P0/P1 finding or a
   newer explicit owner decision.
@@ -200,7 +200,7 @@ Next:
 5. Keep ORG/ASSIGN correction, DG1-C contraction, Qwen product runtime activation, automated AI scoring, and broad production behind their recorded gates. Controlled store-photo staging use follows the lean pilot decision and remains feature-gated/advisory.
 Park:
 - Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
-- Provider/Nebim/JSON implementation without a real source contract and owner decision.
+- Provider/Nebim/JSON runtime implementation without the approved source contract's remaining field, identity, authentication, privacy, retry, and synthetic-adapter gates.
 - Further frontend unit-test migration or bundle work without its named conditional trigger.
 
 Stop:
