@@ -48,4 +48,22 @@ describe("AuthAuthorizationRepository", () => {
     expect(sql).toContain("r.status = 'active'");
     expect(sql).toContain("c.status = 'active'");
   });
+
+  it("uses a half-open active interval for direct action store authorization", async () => {
+    const databaseService = {
+      query: jest.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] })),
+    };
+    const repository = new AuthAuthorizationRepository(databaseService as never);
+
+    await repository.getActiveActionStoreAssignments("80000000-0000-0000-0000-000000000900");
+
+    const sql = String(databaseService.query.mock.calls[0][0]);
+    const intervalPredicate = sql.match(
+      /uasa\.start_at\s+<=\s+NOW\(\)\s+AND\s+\(uasa\.end_at\s+IS\s+NULL\s+OR\s+uasa\.end_at\s+([><=]+)\s+NOW\(\)\)/,
+    );
+
+    expect(intervalPredicate?.[1]).toBe(">");
+    expect(sql).toContain("uasa.start_at <= NOW()");
+    expect(sql).not.toContain("uasa.end_at >= NOW()");
+  });
 });

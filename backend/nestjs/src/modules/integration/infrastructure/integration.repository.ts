@@ -9,6 +9,26 @@ import {
 } from "./import-batch-raw-writer.repository";
 import { PersonnelMasterCommandRepository } from "./personnel-master-command.repository";
 
+const ACTION_STORE_ASSIGNMENT_CONFLICT_MESSAGE = "Active action store assignment already exists";
+const ACTION_STORE_ASSIGNMENT_OVERLAP_CONSTRAINT =
+  "ex_user_action_store_assignment_no_overlap_v1";
+const ACTION_STORE_ASSIGNMENT_LEGACY_UNIQUE_INDEX = "uq_user_action_store_assignment_active";
+
+function isActionStoreAssignmentConflict(error: unknown) {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const candidate = error as { code?: unknown; constraint?: unknown };
+
+  return (
+    (candidate.code === "23P01" &&
+      candidate.constraint === ACTION_STORE_ASSIGNMENT_OVERLAP_CONSTRAINT) ||
+    (candidate.code === "23505" &&
+      candidate.constraint === ACTION_STORE_ASSIGNMENT_LEGACY_UNIQUE_INDEX)
+  );
+}
+
 @Injectable()
 export class IntegrationRepository {
   private readonly personnelMasterCommands: PersonnelMasterCommandRepository;
@@ -100,21 +120,29 @@ export class IntegrationRepository {
       [input.regionManagerUserId, input.storeId],
     );
 
-    await client.query(
-      `
-        INSERT INTO ops.user_action_store_assignment (user_id, store_id, start_at, end_at)
-        SELECT $1::uuid, $2::uuid, NOW(), NULL
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM ops.user_action_store_assignment current_manager_store
-          WHERE current_manager_store.user_id = $1::uuid
-            AND current_manager_store.store_id = $2::uuid
-            AND current_manager_store.start_at <= NOW()
-            AND (current_manager_store.end_at IS NULL OR current_manager_store.end_at > NOW())
-        )
-      `,
-      [input.regionManagerUserId, input.storeId],
-    );
+    try {
+      await client.query(
+        `
+          INSERT INTO ops.user_action_store_assignment (user_id, store_id, start_at, end_at)
+          SELECT $1::uuid, $2::uuid, NOW(), NULL
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM ops.user_action_store_assignment current_manager_store
+            WHERE current_manager_store.user_id = $1::uuid
+              AND current_manager_store.store_id = $2::uuid
+              AND current_manager_store.start_at <= NOW()
+              AND (current_manager_store.end_at IS NULL OR current_manager_store.end_at > NOW())
+          )
+        `,
+        [input.regionManagerUserId, input.storeId],
+      );
+    } catch (error) {
+      if (isActionStoreAssignmentConflict(error)) {
+        throw new ConflictException(ACTION_STORE_ASSIGNMENT_CONFLICT_MESSAGE);
+      }
+
+      throw error;
+    }
   }
 
   async updatePersonnelMaster(

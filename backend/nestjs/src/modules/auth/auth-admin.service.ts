@@ -162,6 +162,8 @@ export class AuthAdminService {
       await this.authAdminRepository.countActiveActionStoreAssignments({
         userId: input.userId,
         storeId: input.storeId,
+        effectiveFrom: input.effectiveFrom ?? null,
+        effectiveTo: input.effectiveTo ?? null,
       });
 
     if (activeAssignmentCount > 0) {

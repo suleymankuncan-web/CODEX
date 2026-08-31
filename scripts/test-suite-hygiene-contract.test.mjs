@@ -39,6 +39,8 @@ const authExpectedTestNames = [
   'lists action store assignments with store context',
   'deactivates an action store assignment',
   'returns action store assignment audit events',
+  'propagates an unrelated PostgreSQL assignment error',
+  'keeps batch assignment creation atomic when the insert races with a named constraint',
   'rejects region-scoped role assignments without company context',
   'rejects company-scoped role assignments with narrower scope identifiers',
   'lists active role assignments with pagination metadata',
@@ -308,7 +310,7 @@ test('auth admin integration tests are split without dropping test cases', () =>
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 44)
+  assert.equal(totalTests, 46)
   for (const testName of authExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)

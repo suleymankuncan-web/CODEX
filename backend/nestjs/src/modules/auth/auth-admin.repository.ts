@@ -335,7 +335,12 @@ export class AuthAdminRepository {
     return this.roleAssignmentCommandRepository.deactivateRoleAssignment(input);
   }
 
-  async countActiveActionStoreAssignments(input: { userId: string; storeId: string }) {
+  async countActiveActionStoreAssignments(input: {
+    userId: string;
+    storeId: string;
+    effectiveFrom?: string | null;
+    effectiveTo?: string | null;
+  }) {
     return this.actionStoreAssignmentCommandRepository.countActiveActionStoreAssignments(input);
   }
 
