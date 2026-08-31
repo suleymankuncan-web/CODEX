@@ -81,12 +81,32 @@ test('daily pull specification has all mandatory sections and requirement tracea
   }
 })
 
-test('daily pull contract remains a draft pending product-owner approval', () => {
+test('daily pull public documents remain draft pending product-owner approval', () => {
   requireText(contract, 'Status: Draft — pending product-owner approval')
   requireText(contract, 'Reviewers: Product owner (pending)')
   requireText(contract, 'proposed source-semantics boundary')
+  requireText(
+    currentState,
+    '`docs/contracts/company-daily-kpi-pull-contract-v1.md` is proposed and pending product-owner approval.',
+  )
+  requireText(
+    intake,
+    'The proposed source semantics, grains, partial-success behavior, signed sale/return rules, active-store allowlist, missed-day risk, and privacy boundary are documented in `docs/contracts/company-daily-kpi-pull-contract-v1.md` and remain pending product-owner approval.',
+  )
+  requireText(
+    intake,
+    '`contract_draft`: current state; proposed product semantics are documented and pending product-owner approval',
+  )
   assert.doesNotMatch(contract, /Status:\s*Approved/i)
   assert.doesNotMatch(contract, /approved source-semantics boundary/i)
+  assert.doesNotMatch(
+    currentState,
+    /company-daily-kpi-pull-contract-v1\.md` is approved/i,
+  )
+  assert.doesNotMatch(
+    intake,
+    /approved source semantics|product semantics are approved|approved company daily pull semantics/i,
+  )
 })
 
 test('daily pull contract separates previous-day provider reads from local date filters', () => {

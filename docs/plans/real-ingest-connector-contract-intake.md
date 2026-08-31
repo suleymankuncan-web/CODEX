@@ -18,10 +18,11 @@ it accepts no date range and offers no historical backfill. The public contract
 uses `sales`, `footfall`, `gsm`, and `store-directory` aliases so private
 operation and execution identifiers remain outside Git.
 
-The approved source semantics, grains, partial-success behavior, signed
+The proposed source semantics, grains, partial-success behavior, signed
 sale/return rules, active-store allowlist, missed-day risk, and privacy boundary
-are locked in
-`docs/contracts/company-daily-kpi-pull-contract-v1.md`.
+are documented in
+`docs/contracts/company-daily-kpi-pull-contract-v1.md` and remain pending
+product-owner approval.
 
 Unknown today:
 
@@ -177,7 +178,7 @@ Before coding a real connector, collect:
 Use these states when discussing the source:
 
 - `unknown_source`: no real external contract
-- `contract_draft`: current state; product semantics are approved but provider fields and runtime details are not proven
+- `contract_draft`: current state; proposed product semantics are documented and pending product-owner approval, while provider fields and runtime details are not proven
 - `sample_payload_validated`: sample payload maps into canonical rows
 - `sandbox_connected`: non-production source access works
 - `production_candidate`: production-like source is reachable and validated
@@ -189,7 +190,7 @@ Use these states when discussing the source:
 Allowed now:
 
 - document and expose the source-agnostic contract
-- document the approved company daily pull semantics using public aliases
+- document the proposed company daily pull semantics using public aliases
 - add synthetic, network-free contract guards
 - keep existing `stg` import model as the ingest boundary
 - prepare future mapping questions

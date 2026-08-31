@@ -33,7 +33,7 @@ when the decision needs them.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
 - New modules, broad redesign, generic architecture/refactor, and provider/JSON runtime integration remain parked. The owner-approved on-prem synthetic preparation and the contract-only company daily KPI pull specification are bounded local exceptions, without live-provider, production, secret, or company-data authority.
-- Power BI/Excel remains the current operating data path; `docs/contracts/company-daily-kpi-pull-contract-v1.md` is approved only for local documentation and synthetic guards.
+- Power BI/Excel remains the current operating data path; `docs/contracts/company-daily-kpi-pull-contract-v1.md` is proposed and pending product-owner approval. The authorized local scope remains documentation and synthetic guards only.
   Connector runtime, scheduling, and replacement of Excel remain suspended pending official sanitized fields, authentication, reconciliation, and separate approval.
 - Runtime work remains parked except for the owner-opened DG1-DG2 remediation
   train; any other runtime line still requires a factual P0/P1 finding or a
@@ -200,7 +200,7 @@ Next:
 5. Keep ORG/ASSIGN correction, DG1-C contraction, Qwen product runtime activation, automated AI scoring, and broad production behind their recorded gates. Controlled store-photo staging use follows the lean pilot decision and remains feature-gated/advisory.
 Park:
 - Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
-- Provider/Nebim/JSON runtime implementation without the approved source contract's remaining field, identity, authentication, privacy, retry, and synthetic-adapter gates.
+- Provider/Nebim/JSON runtime implementation without the proposed source contract's remaining field, identity, authentication, privacy, retry, and synthetic-adapter gates.
 - Further frontend unit-test migration or bundle work without its named conditional trigger.
 
 Stop:
