@@ -26,6 +26,7 @@ type ChecklistCommandListInput = Omit<ChecklistCommandReadScope, "view"> & {
 type ChecklistCommandRegionListInput = {
   companyIds: string[];
   period?: string;
+  query?: string;
   signal: ChecklistCommandSignal;
   sort: ChecklistCommandRegionSort;
   limit: number;
@@ -94,8 +95,13 @@ export class ChecklistCommandReadRepository {
             s.region_id,
             r.region_name
           FROM ops.store s
-          INNER JOIN ops.region r ON r.region_id = s.region_id
-          WHERE s.status = 'active'
+          INNER JOIN ops.company company ON company.company_id = s.company_id
+          INNER JOIN ops.region r
+            ON r.region_id = s.region_id
+           AND r.company_id = s.company_id
+          WHERE company.status = 'active'
+            AND r.status = 'active'
+            AND s.status = 'active'
             AND (
               (cardinality($1::uuid[]) > 0 AND s.company_id = ANY($1::uuid[]))
               OR (cardinality($2::uuid[]) > 0 AND s.region_id = ANY($2::uuid[]))
@@ -411,8 +417,13 @@ export class ChecklistCommandReadRepository {
         scoped_stores AS (
           SELECT s.store_id, s.company_id, s.region_id, r.region_name
           FROM ops.store s
-          INNER JOIN ops.region r ON r.region_id = s.region_id
-          WHERE s.status = 'active'
+          INNER JOIN ops.company company ON company.company_id = s.company_id
+          INNER JOIN ops.region r
+            ON r.region_id = s.region_id
+           AND r.company_id = s.company_id
+          WHERE company.status = 'active'
+            AND r.status = 'active'
+            AND s.status = 'active'
             AND cardinality($1::uuid[]) > 0
             AND s.company_id = ANY($1::uuid[])
         ),
@@ -433,7 +444,6 @@ export class ChecklistCommandReadRepository {
           CROSS JOIN period_bounds pb
           WHERE ci.status = 'completed'
             AND ci.completed_at IS NOT NULL
-            AND ci.total_score IS NOT NULL
             AND ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')
             AND ci.completed_at >= (pb.period_start::timestamp AT TIME ZONE 'Europe/Istanbul')
             AND ci.completed_at < ((pb.period_start + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')
@@ -501,7 +511,6 @@ export class ChecklistCommandReadRepository {
         manager_accounts AS (
           SELECT
             ura.user_id AS manager_user_id,
-            (MIN(ura.region_id::text) FILTER (WHERE ura.region_id IS NOT NULL))::uuid AS region_id,
             COALESCE(
               NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
               NULLIF(TRIM(ua.username), ''),
@@ -522,21 +531,21 @@ export class ChecklistCommandReadRepository {
           SELECT
             ma.manager_user_id,
             ma.display_name,
-            COALESCE(ma.region_id, ss.region_id) AS region_id,
+            ss.region_id,
             ss.region_name,
             ss.store_id
           FROM manager_accounts ma
-          LEFT JOIN ops.user_action_store_assignment manager_store
+          INNER JOIN ops.user_action_store_assignment manager_store
             ON manager_store.user_id = ma.manager_user_id
            AND manager_store.start_at <= NOW()
            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
-          LEFT JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
-          GROUP BY ma.manager_user_id, ma.display_name, ma.region_id, ss.region_id, ss.region_name, ss.store_id
+          INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
+          GROUP BY ma.manager_user_id, ma.display_name, ss.region_id, ss.region_name, ss.store_id
         ),
         region_base AS (
           SELECT
             manager.manager_user_id,
-            COALESCE(MIN(manager.region_id::text)::uuid, manager.manager_user_id) AS region_id,
+            MIN(manager.region_id::text)::uuid AS region_id,
             MIN(manager.display_name) AS region_name,
             jsonb_build_array(jsonb_build_object('displayName', MIN(manager.display_name))) AS region_managers,
             MIN(manager.display_name) AS manager_sort,
@@ -559,10 +568,17 @@ export class ChecklistCommandReadRepository {
         filtered_regions AS (
           SELECT *
           FROM region_base
-          WHERE $3::text = 'all'
+          WHERE (
+            $3::text = 'all'
             OR ($3::text = 'missing_visit' AND missing_visit_stores > 0)
             OR ($3::text = 'open_actions' AND open_action_count > 0)
             OR ($3::text = 'completed_coverage' AND completed_coverage_stores > 0)
+          )
+            AND (
+              $6::text IS NULL
+              OR manager_user_id::text ILIKE '%' || $6::text || '%' ESCAPE '\\'
+              OR region_name ILIKE '%' || $6::text || '%' ESCAPE '\\'
+            )
         ),
         paged_regions AS (
           SELECT *, ROW_NUMBER() OVER (ORDER BY ${orderBy}) AS sort_rank
@@ -603,7 +619,14 @@ export class ChecklistCommandReadRepository {
           ), '[]'::jsonb) AS items_json
         FROM period_bounds pb
       `,
-      [input.companyIds, input.period ?? null, input.signal, input.limit, input.offset],
+      [
+        input.companyIds,
+        input.period ?? null,
+        input.signal,
+        input.limit,
+        input.offset,
+        input.query?.trim() ? escapeLike(input.query.trim()) : null,
+      ],
     );
 
     const row = result.rows[0];
@@ -634,4 +657,8 @@ function emptyRegionMetrics(): ChecklistCommandRegionMetrics {
     openActionCount: 0,
     completedCoverageStores: 0,
   };
+}
+
+function escapeLike(value: string) {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
 }

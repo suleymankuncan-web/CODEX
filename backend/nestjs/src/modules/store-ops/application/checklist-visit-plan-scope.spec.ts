@@ -22,20 +22,20 @@ describe("resolveChecklistVisitPlanScope", () => {
     });
   });
 
-  it("allows a Region Manager to maintain only assigned regions", () => {
+  it("allows a Region Manager to maintain only direct assigned stores", () => {
     expect(
       resolveChecklistVisitPlanScope({
         actorRoleCodes: ["REGION_MANAGER"],
         actorReadScope: empty,
         roleScopes: {
-          REGION_MANAGER: { ...empty, regionIds: ["region-1", "region-1"] },
+          REGION_MANAGER: { ...empty, regionIds: ["forged-region"], storeIds: ["store-1", "store-1"] },
         },
       }),
     ).toEqual({
       view: "region_manager",
       companyIds: [],
-      regionIds: ["region-1"],
-      storeIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
       canMaintain: true,
     });
   });

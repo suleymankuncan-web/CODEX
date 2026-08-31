@@ -26,7 +26,7 @@ describe("ChecklistCommandController", () => {
           },
         },
       },
-      { period: "2026-07", signal: "all", sort: "manager_asc", limit: 20, offset: 0 },
+      { period: "2026-07", query: "Marmara", signal: "all", sort: "manager_asc", limit: 20, offset: 0 },
     );
 
     expect(service.listRegions).toHaveBeenCalledWith(expect.objectContaining({
@@ -34,6 +34,7 @@ describe("ChecklistCommandController", () => {
       roleScopes: {
         REPORT_VIEWER: { companyIds: ["viewer-company"], regionIds: [], storeIds: [] },
       },
+      query: "Marmara",
     }));
   });
 

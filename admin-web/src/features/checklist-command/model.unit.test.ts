@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChecklistPlanningDays,
   buildChecklistCommandQuery,
+  buildChecklistCommandRegionsQuery,
   buildChecklistVisitPlanCandidateQuery,
   buildChecklistVisitPlanPeriodQuery,
   buildChecklistVisitPlanRegionOptionsQuery,
@@ -12,8 +13,10 @@ import {
   getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   getChecklistCommandStatusLabel,
+  getChecklistCommandTruthFacts,
   reconcileVisitPlanDrafts,
   resolveVisitPlanDraftConflicts,
+  resolveChecklistCommandStatus,
   toggleChecklistCommandSort,
 } from './model'
 
@@ -29,6 +32,19 @@ describe('checklist command canvas model', () => {
         offset: 0,
       }).toString(),
     ).toBe('period=2026-07&sort=store_asc&query=Novada&limit=30&offset=0')
+  })
+
+  it('serializes a trimmed server-backed manager search and keeps pagination explicit', () => {
+    expect(
+      buildChecklistCommandRegionsQuery({
+        period: '2026-07',
+        signal: 'all',
+        sort: 'manager_asc',
+        query: '  Onur  ',
+        limit: 20,
+        offset: 0,
+      }).toString(),
+    ).toBe('period=2026-07&sort=manager_asc&query=Onur&limit=20&offset=0')
   })
 
   it('resolves the Istanbul business week to Monday and exposes Monday through Saturday', () => {
@@ -155,5 +171,24 @@ describe('checklist command canvas model', () => {
     expect(getChecklistCommandStatusLabel('active', 'tr')).toBe('Aksiyon Takipte')
     expect(getChecklistCommandStatusLabel('pending', 'tr')).toBe('Kabul bekliyor')
     expect(getChecklistCommandStatusLabel('completed', 'tr')).toBe('Tamamlandı')
+  })
+
+  it('keeps pending acknowledgement truth ahead of an active draft and preserves row facts', () => {
+    expect(resolveChecklistCommandStatus({
+      status: 'active',
+      pendingAcknowledgementCount: 1,
+      activeBmChecklistCount: 1,
+    })).toBe('pending')
+    expect(resolveChecklistCommandStatus({
+      status: 'completed',
+      pendingAcknowledgementCount: 0,
+      activeBmChecklistCount: 1,
+    })).toBe('active')
+    expect(getChecklistCommandTruthFacts({
+      bmScore: null,
+      vmScore: 91,
+      openActionCount: 3,
+      blockedActionCount: 1,
+    })).toEqual({ bmScore: null, vmScore: 91, openTaskCount: 3, blockedTaskCount: 1 })
   })
 })

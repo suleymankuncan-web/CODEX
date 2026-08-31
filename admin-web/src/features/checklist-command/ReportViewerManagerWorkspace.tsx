@@ -5,11 +5,13 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { StatusBadge } from '../../components/ui/status-badge'
 import { getUserFacingErrorMessage } from '../../lib/format'
+import { ApiError } from '../../lib/api'
+import { transientQueryRetryOptions } from '../../lib/query-retry'
 import type { AuthSessionSummary } from '../auth/api'
 import { getStoreQueryScopeSignature, retainScopedPlaceholder, storeChecklistCommandQueryKey } from '../auth/store-query-scope'
 import { getChecklistCommandCanvas, type ChecklistCommandRow } from './api'
 import { ChecklistOperationalHistoryDrawer } from './ChecklistOperationalHistoryDrawer'
-import { toggleChecklistCommandSort, type ChecklistCommandSort, type ChecklistCommandSortKey } from './model'
+import { getChecklistCommandTruthFacts, resolveChecklistCommandStatus, toggleChecklistCommandSort, type ChecklistCommandSort, type ChecklistCommandSortKey } from './model'
 
 const STORE_PAGE_SIZE = 20
 
@@ -39,12 +41,15 @@ export function ReportViewerManagerWorkspace(input: {
         previous,
         previousQuery?.queryKey,
         scopeSignature,
-        previousFilters?.managerUserId === input.managerUserId,
+        previousFilters?.managerUserId === input.managerUserId
+          && previousFilters?.period === input.period,
       )
     },
+    ...transientQueryRetryOptions,
   })
   const copy = input.locale === 'tr' ? trCopy : enCopy
-  const data = storesQuery.data?.data
+  const protectedFailure = storesQuery.error instanceof ApiError && (storesQuery.error.status === 401 || storesQuery.error.status === 403)
+  const data = protectedFailure ? undefined : storesQuery.data?.data
   const pageNumber = Math.floor(offset / STORE_PAGE_SIZE) + 1
   const pageCount = Math.max(1, Math.ceil((data?.page.total ?? 0) / STORE_PAGE_SIZE))
 
@@ -56,27 +61,39 @@ export function ReportViewerManagerWorkspace(input: {
       </header>
 
       {storesQuery.isLoading && !data ? <WorkspaceMessage icon={<Store />} title={copy.loading} /> : null}
-      {storesQuery.isError && !data ? <WorkspaceMessage icon={<Store />} title={copy.error} copy={getUserFacingErrorMessage(storesQuery.error, copy.errorCopy)} action={<Button size="sm" variant="outline" onClick={() => void storesQuery.refetch()}>{copy.retry}</Button>} /> : null}
+      {storesQuery.isError && !data ? <WorkspaceMessage icon={<Store />} title={protectedFailure ? copy.forbidden : copy.error} copy={protectedFailure ? copy.forbiddenCopy : getUserFacingErrorMessage(storesQuery.error, copy.errorCopy)} action={protectedFailure ? undefined : <Button size="sm" variant="outline" onClick={() => void storesQuery.refetch()}>{copy.retry}</Button>} /> : null}
       {data && data.items.length === 0 ? <WorkspaceMessage icon={<Search />} title={copy.empty} copy={copy.emptyCopy} /> : null}
 
       {data && data.items.length > 0 ? (
         <div role="table" aria-label={copy.storesTitle}>
-          <div role="row" className="tw:hidden tw:min-h-8 tw:grid-cols-[minmax(138px,1fr)_48px_104px_84px_96px_minmax(12px,0.4fr)_88px] tw:items-center tw:gap-3 tw:border-b tw:border-border tw:px-4 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.11em] tw:text-muted-foreground tw:lg:grid">
+          <div role="row" className="tw:hidden tw:min-h-8 tw:grid-cols-[minmax(138px,1fr)_44px_44px_68px_68px_104px_84px_96px_minmax(12px,0.4fr)_88px] tw:items-center tw:gap-3 tw:border-b tw:border-border tw:px-4 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.11em] tw:text-muted-foreground tw:lg:grid">
             <SortableHeader label={copy.store} sort={sort} sortKey="store" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
-            <SortableHeader label={copy.score} sort={sort} sortKey="bm" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
+            <SortableHeader label={copy.bmScore} sort={sort} sortKey="bm" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
+            <SortableHeader label={copy.vmScore} sort={sort} sortKey="vm" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
+            <SortableHeader label={copy.openTasks} sort={sort} sortKey="open_actions" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
+            <span role="columnheader" className="tw:text-center">{copy.blockedTasks}</span>
             <SortableHeader label={copy.lastVisit} sort={sort} sortKey="last_visit" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.elapsed} sort={sort} sortKey="elapsed" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.status} sort={sort} sortKey="status" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
-            <span role="columnheader" className="tw:col-start-7 tw:sr-only">{copy.actions}</span>
+            <span role="columnheader" className="tw:col-start-10 tw:sr-only">{copy.actions}</span>
           </div>
           {data.items.map((row) => (
-            <div role="row" key={row.storeId} className="tw:grid tw:min-h-12 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-x-3 tw:gap-y-1.5 tw:border-b tw:border-border/80 tw:px-3 tw:py-2 tw:last:border-b-0 tw:hover:bg-muted/30 tw:lg:grid-cols-[minmax(138px,1fr)_48px_104px_84px_96px_minmax(12px,0.4fr)_88px] tw:lg:gap-3 tw:lg:px-4">
+            <div role="row" key={row.storeId} className="tw:grid tw:min-h-12 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-x-3 tw:gap-y-1.5 tw:border-b tw:border-border/80 tw:px-3 tw:py-2 tw:last:border-b-0 tw:hover:bg-muted/30 tw:lg:grid-cols-[minmax(138px,1fr)_44px_44px_68px_68px_104px_84px_96px_minmax(12px,0.4fr)_88px] tw:lg:gap-3 tw:lg:px-4">
+              {(() => {
+                const facts = getChecklistCommandTruthFacts(row)
+                return <>
               <span role="cell" className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-[13px] tw:font-semibold tw:text-foreground">{row.storeName}</strong></span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-2 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.score}:</small>{row.bmScore === null ? '-' : Math.round(row.bmScore)}</span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-3 tw:text-[11px] tw:text-muted-foreground tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:lg:hidden">{copy.lastVisit}:</small>{formatVisit(row.lastCompletedVisitAt, input.locale, copy.noVisit)}</span>
-              <span role="cell" className="tw:col-start-2 tw:row-start-3 tw:justify-self-end tw:text-[11px] tw:text-muted-foreground tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:justify-self-stretch tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:lg:hidden">{copy.elapsed}:</small>{formatElapsed(row.elapsedDaysSinceLastVisit, copy.days)}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-2 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.bmScore}:</small>{formatScore(facts.bmScore)}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-3 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.vmScore}:</small>{formatScore(facts.vmScore)}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-4 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.openTasks}:</small>{facts.openTaskCount}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-5 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.blockedTasks}:</small>{facts.blockedTaskCount}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-6 tw:text-[11px] tw:text-muted-foreground tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:lg:hidden">{copy.lastVisit}:</small>{formatVisit(row.lastCompletedVisitAt, input.locale, copy.noVisit)}</span>
+              <span role="cell" className="tw:col-start-2 tw:row-start-6 tw:justify-self-end tw:text-[11px] tw:text-muted-foreground tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:justify-self-stretch tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:lg:hidden">{copy.elapsed}:</small>{formatElapsed(row.elapsedDaysSinceLastVisit, copy.days)}</span>
               <span role="cell" className="tw:col-start-2 tw:row-start-2 tw:justify-self-end tw:lg:col-auto tw:lg:row-auto tw:lg:justify-self-center"><StoreStatus locale={input.locale} row={row} /></span>
-              <span role="cell" className="tw:col-start-2 tw:row-start-1 tw:justify-self-end tw:lg:col-start-7 tw:lg:row-auto"><Button className="checklist-record-history-result-action tw:w-full" size="xs" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStore(row) }}><ClipboardCheck aria-hidden /> {copy.results}</Button></span>
+              <span role="cell" className="tw:hidden tw:lg:block" aria-hidden="true" />
+              <span role="cell" className="tw:col-start-2 tw:row-start-1 tw:justify-self-end tw:lg:col-start-10 tw:lg:row-auto"><Button className="checklist-record-history-result-action tw:w-full" size="xs" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStore(row) }}><ClipboardCheck aria-hidden /> {copy.results}</Button></span>
+                </>
+              })()}
             </div>
           ))}
         </div>
@@ -92,6 +109,8 @@ export function ReportViewerManagerWorkspace(input: {
 function SortableHeader(input: { label: string; onSort: (key: ChecklistCommandSortKey) => void; sort: ChecklistCommandSort; sortKey: ChecklistCommandSortKey }) {
   const active = input.sortKey === 'bm'
     ? input.sort.startsWith('bm_score_')
+    : input.sortKey === 'vm'
+      ? input.sort.startsWith('vm_score_')
     : input.sort.startsWith(`${input.sortKey}_`)
   const direction = active ? (input.sort.endsWith('_asc') ? 'ascending' : 'descending') : 'none'
   const SortIcon = direction === 'ascending' ? ArrowUp : direction === 'descending' ? ArrowDown : ChevronsUpDown
@@ -104,10 +123,15 @@ function SortableHeader(input: { label: string; onSort: (key: ChecklistCommandSo
 }
 
 function StoreStatus({ locale, row }: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
-  if (row.activeBmChecklistCount > 0) return <StatusBadge tone="info">{locale === 'tr' ? 'Aktif taslak' : 'Active draft'}</StatusBadge>
-  if (row.status === 'needs_visit') return <StatusBadge tone="danger">{locale === 'tr' ? 'Ziyaret eksik' : 'Visit missing'}</StatusBadge>
-  if (row.pendingBmAcknowledgementCount > 0) return <StatusBadge tone="warning">{locale === 'tr' ? 'Onay bekliyor' : 'Awaiting review'}</StatusBadge>
+  const status = resolveChecklistCommandStatus(row)
+  if (status === 'active') return <StatusBadge tone="info">{locale === 'tr' ? 'Aktif taslak' : 'Active draft'}</StatusBadge>
+  if (status === 'needs_visit') return <StatusBadge tone="danger">{locale === 'tr' ? 'Ziyaret eksik' : 'Visit missing'}</StatusBadge>
+  if (status === 'pending') return <StatusBadge tone="warning">{locale === 'tr' ? 'Onay bekliyor' : 'Awaiting review'}</StatusBadge>
   return <StatusBadge tone="success">{locale === 'tr' ? 'Güncel' : 'Current'}</StatusBadge>
+}
+
+function formatScore(value: number | null) {
+  return value === null ? '—' : Math.round(value)
 }
 
 function WorkspaceMessage(input: { action?: ReactNode; copy?: string; icon: ReactNode; title: string }) {
@@ -123,5 +147,5 @@ function formatElapsed(value: number | null, days: string) {
   return value === null ? '-' : `${value} ${days}`
 }
 
-const trCopy = { actions: 'İşlemler', assignedStores: 'sorumlu mağaza', days: 'gün', elapsed: 'Geçen süre', empty: 'Mağaza bulunamadı', emptyCopy: 'Aramayı değiştirerek yeniden deneyin.', error: 'Mağazalar açılamadı', errorCopy: 'Mağaza verileri şu anda okunamıyor.', lastVisit: 'Son ziyaret', loading: 'Mağazalar yükleniyor', next: 'Sonraki sayfa', noVisit: 'Henüz ziyaret yok', previous: 'Önceki sayfa', results: 'Sonuçlar', retry: 'Tekrar dene', score: 'Puan', search: 'Mağaza ara', status: 'Durum', store: 'Mağaza', storeCount: 'mağaza', storesTitle: 'Sorumlu mağazalar' } as const
-const enCopy = { actions: 'Actions', assignedStores: 'assigned stores', days: 'days', elapsed: 'Elapsed', empty: 'No stores found', emptyCopy: 'Change the search and try again.', error: 'Stores unavailable', errorCopy: 'Store data cannot be read right now.', lastVisit: 'Last visit', loading: 'Loading stores', next: 'Next page', noVisit: 'No visit yet', previous: 'Previous page', results: 'Results', retry: 'Retry', score: 'Score', search: 'Search stores', status: 'Status', store: 'Store', storeCount: 'stores', storesTitle: 'Assigned stores' } as const
+const trCopy = { actions: 'İşlemler', assignedStores: 'sorumlu mağaza', bmScore: 'Puan (BM)', blockedTasks: 'Bloke görev', days: 'gün', elapsed: 'Geçen süre', empty: 'Mağaza bulunamadı', emptyCopy: 'Aramayı değiştirerek yeniden deneyin.', error: 'Mağazalar açılamadı', errorCopy: 'Mağaza verileri şu anda okunamıyor.', forbidden: 'Mağazalara erişilemiyor', forbiddenCopy: 'Bu mağazalar yetkili okuma kapsamınızda değil.', lastVisit: 'Son ziyaret', loading: 'Mağazalar yükleniyor', next: 'Sonraki sayfa', noVisit: 'Henüz ziyaret yok', openTasks: 'Açık görev', previous: 'Önceki sayfa', results: 'Sonuçlar', retry: 'Tekrar dene', search: 'Mağaza ara', status: 'Durum', store: 'Mağaza', storeCount: 'mağaza', storesTitle: 'Sorumlu mağazalar', vmScore: 'VM' } as const
+const enCopy = { actions: 'Actions', assignedStores: 'assigned stores', bmScore: 'BM score', blockedTasks: 'Blocked tasks', days: 'days', elapsed: 'Elapsed', empty: 'No stores found', emptyCopy: 'Change your search and try again.', error: 'Stores unavailable', errorCopy: 'Store data cannot be read right now.', forbidden: 'Stores unavailable', forbiddenCopy: 'These stores are outside your authorized read scope.', lastVisit: 'Last visit', loading: 'Loading stores', next: 'Next page', noVisit: 'No visit yet', openTasks: 'Open tasks', previous: 'Previous page', results: 'Results', retry: 'Retry', search: 'Search stores', status: 'Status', store: 'Store', storeCount: 'stores', storesTitle: 'Assigned stores', vmScore: 'VM score' } as const

@@ -54,11 +54,12 @@ export class ChecklistVisitPlanService {
   constructor(private readonly repository: ChecklistVisitPlanRepository) {}
 
   async listPeriod(input: ListPeriodInput): Promise<ChecklistVisitPlanPeriodResult> {
-    assertRegionManagerRegion(input, input.regionId);
+    const scope = assertRegionManagerStoreScope(input);
     const limit = input.limit ?? 30;
     const offset = input.offset ?? 0;
     const result = await this.repository.listPeriod({
       regionId: input.regionId,
+      storeIds: scope.storeIds,
       period: input.period,
       query: input.query?.trim() || null,
       risk: input.risk ?? "all",
@@ -86,11 +87,12 @@ export class ChecklistVisitPlanService {
   }
 
   async listCandidates(input: ListCandidatesInput): Promise<ChecklistVisitPlanCandidateResult> {
-    assertRegionManagerRegion(input, input.regionId);
+    const scope = assertRegionManagerStoreScope(input);
     const limit = input.limit ?? 20;
     const offset = input.offset ?? 0;
     const result = await this.repository.listCandidates({
       regionId: input.regionId,
+      storeIds: scope.storeIds,
       query: input.query?.trim() || null,
       limit,
       offset,
@@ -109,14 +111,11 @@ export class ChecklistVisitPlanService {
   }
 
   async listRegionOptions(input: ListRegionOptionsInput): Promise<ChecklistVisitPlanRegionOptionResult> {
-    if (!input.actorRoleCodes.includes("REGION_MANAGER")) {
-      throw new ForbiddenException("Visit plan regions are available only to Region Managers");
-    }
-    const regionIds = [...new Set(input.roleScopes?.REGION_MANAGER?.regionIds ?? [])];
+    const scope = assertRegionManagerStoreScope(input, false);
     const limit = input.limit ?? 20;
     const offset = input.offset ?? 0;
-    const result = regionIds.length > 0
-      ? await this.repository.listRegionOptions({ regionIds, query: input.query?.trim() || null, limit, offset })
+    const result = scope.storeIds.length > 0
+      ? await this.repository.listRegionOptions({ storeIds: scope.storeIds, query: input.query?.trim() || null, limit, offset })
       : { items: [], total: 0 };
     return {
       view: "region_manager",
@@ -147,12 +146,12 @@ export class ChecklistVisitPlanService {
     if (!input.regionId) {
       throw new ForbiddenException("Weekly visit plans require an assigned region scope");
     }
-    this.assertRegionAccess(scope, input.regionId);
+    if (scope.view === "region_manager" && scope.storeIds.length === 0) {
+      throw new ForbiddenException("Weekly visit plan requires a direct assigned store scope");
+    }
     const result = await this.repository.getWeeklyPlan({
       regionId: input.regionId,
       weekStart: input.weekStart,
-      companyIds: scope.companyIds,
-      regionIds: scope.regionIds,
       storeIds: scope.storeIds,
     });
     return {
@@ -168,7 +167,9 @@ export class ChecklistVisitPlanService {
     if (!scope.canMaintain || scope.view !== "region_manager") {
       throw new ForbiddenException("Weekly visit planning is available only to the assigned Region Manager");
     }
-    this.assertRegionAccess(scope, input.regionId);
+    if (scope.storeIds.length === 0) {
+      throw new ForbiddenException("Weekly visit planning requires a direct assigned store scope");
+    }
     const duplicateKeys = new Set<string>();
     for (const item of input.items) {
       assertPlannedDate(input.weekStart, item.plannedDate);
@@ -193,6 +194,7 @@ export class ChecklistVisitPlanService {
       expectedRevision: input.expectedRevision,
       idempotencyKey: input.idempotencyKey,
       requestSha256,
+      authorizedStoreIds: scope.storeIds,
       items: canonicalItems,
     });
     return {
@@ -210,7 +212,7 @@ export class ChecklistVisitPlanService {
     return this.repository.completeVisit({
       planItemId: input.planItemId,
       actorUserId: input.actorUserId,
-      regionIds: scope.regionIds,
+      storeIds: scope.storeIds,
       idempotencyKey: input.idempotencyKey,
     });
   }
@@ -221,18 +223,25 @@ export class ChecklistVisitPlanService {
     return scope;
   }
 
-  private assertRegionAccess(scope: ReturnType<typeof resolveChecklistVisitPlanScope> & {}, regionId: string) {
-    if (scope.view === "region_manager" && !scope.regionIds.includes(regionId)) {
-      throw new ForbiddenException("Weekly visit plan is outside the assigned region scope");
-    }
-  }
 }
 
-function assertRegionManagerRegion(input: ReadActor, regionId: string) {
-  const regionIds = [...new Set(input.roleScopes?.REGION_MANAGER?.regionIds ?? [])];
-  if (!input.actorRoleCodes.includes("REGION_MANAGER") || !regionIds.includes(regionId)) {
-    throw new ForbiddenException("Visit plan read is outside the assigned Region Manager scope");
+function assertRegionManagerStoreScope(input: ReadActor, requireStores = true) {
+  if (!input.actorRoleCodes.includes("REGION_MANAGER")) {
+    throw new ForbiddenException("Visit plan regions are available only to Region Managers");
   }
+  // Region Manager command endpoints are explicitly role-gated by the
+  // controller. Resolve that role's canonical direct-store scope even when a
+  // dual-role user also carries Report Viewer company scope.
+  const scope = resolveChecklistVisitPlanScope({ ...input, actorRoleCodes: ["REGION_MANAGER"] });
+  if (
+    !scope ||
+    scope.view !== "region_manager" ||
+    !scope.canMaintain ||
+    (requireStores && scope.storeIds.length === 0)
+  ) {
+    throw new ForbiddenException("Visit plan read is outside the assigned Region Manager store scope");
+  }
+  return scope;
 }
 
 function assertPlanWeek(weekStart: string) {

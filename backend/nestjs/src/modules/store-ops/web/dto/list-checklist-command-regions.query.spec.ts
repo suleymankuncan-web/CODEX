@@ -7,6 +7,7 @@ describe("ListChecklistCommandRegionsQueryDto", () => {
   it("accepts the bounded region aggregate contract", async () => {
     const dto = plainToInstance(ListChecklistCommandRegionsQueryDto, {
       period: "2026-07",
+      query: "  Marmara  ",
       signal: "missing_visit",
       sort: "missing_desc",
       limit: "20",
@@ -15,6 +16,7 @@ describe("ListChecklistCommandRegionsQueryDto", () => {
 
     await expect(validate(dto)).resolves.toHaveLength(0);
     expect(dto.limit).toBe(20);
+    expect(dto.query).toBe("Marmara");
   });
 
   it("rejects invalid region aggregate query values", async () => {
@@ -34,5 +36,11 @@ describe("ListChecklistCommandRegionsQueryDto", () => {
       "signal",
       "sort",
     ]);
+  });
+
+  it("rejects manager searches longer than the bounded contract", async () => {
+    const dto = plainToInstance(ListChecklistCommandRegionsQueryDto, { query: "x".repeat(121) });
+    const errors = await validate(dto);
+    expect(errors.map((error) => error.property)).toEqual(["query"]);
   });
 });

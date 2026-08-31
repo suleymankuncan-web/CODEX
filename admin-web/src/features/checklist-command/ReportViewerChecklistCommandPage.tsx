@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Search, UsersRound } from 'lucide-react'
 import { Button } from '../../components/ui/button'
@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
+import { transientQueryRetryOptions } from '../../lib/query-retry'
 import { StoreErrorState, StoreLoadingState, StoreSurfacePage } from '../../pages/store-surface-primitives'
 import type { AuthSessionSummary } from '../auth/api'
 import { getStoreQueryScopeSignature, retainScopedPlaceholder, storeChecklistCommandQueryKey, storeChecklistCommandRegionsQueryKey } from '../auth/store-query-scope'
@@ -25,20 +26,54 @@ export function ReportViewerChecklistCommandPage(input: {
   const copy = locale === 'tr' ? trCopy : enCopy
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState(() => getBusinessMonthInputValue())
-  const [search, setSearch] = useState('')
+  const [searchDraft, setSearchDraft] = useState('')
+  const [query, setQuery] = useState('')
   const [regionOffset, setRegionOffset] = useState(0)
   const [selectedManagerKey, setSelectedManagerKey] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [retainedRegion, setRetainedRegion] = useState<{
+    scopeSignature: string
+    period: string
+    response: Awaited<ReturnType<typeof getChecklistCommandRegions>>
+  } | null>(null)
   const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
-  const regionFilters = { period, signal: 'all' as const, sort: 'manager_asc' as const, limit: REGION_PAGE_SIZE, offset: regionOffset }
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setQuery(searchDraft.trim())
+      setRegionOffset(0)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchDraft])
+
+  const regionFilters = { period, signal: 'all' as const, sort: 'manager_asc' as const, query, limit: REGION_PAGE_SIZE, offset: regionOffset }
   const regionQuery = useQuery({
     queryKey: storeChecklistCommandRegionsQueryKey(input.authSummary, regionFilters),
     queryFn: () => getChecklistCommandRegions(regionFilters),
-    placeholderData: (previous, previousQuery) => retainScopedPlaceholder(previous, previousQuery?.queryKey, scopeSignature),
+    placeholderData: (previous, previousQuery) => {
+      const previousFilters = previousQuery?.queryKey[2] as Record<string, unknown> | undefined
+      return retainScopedPlaceholder(
+        previous,
+        previousQuery?.queryKey,
+        scopeSignature,
+        previousFilters?.period === period,
+      )
+    },
+    ...transientQueryRetryOptions,
   })
-  if (!regionQuery.data && regionQuery.isLoading) return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
-  if (!regionQuery.data) {
-    const forbidden = regionQuery.error instanceof ApiError && regionQuery.error.status === 403
+  const retainCurrentRegion = () => {
+    if (regionQuery.data) {
+      setRetainedRegion({ scopeSignature, period, response: regionQuery.data })
+    }
+  }
+  const retainedResponse = retainedRegion?.scopeSignature === scopeSignature && retainedRegion.period === period
+    ? retainedRegion.response
+    : undefined
+  const protectedFailure = regionQuery.error instanceof ApiError && (regionQuery.error.status === 401 || regionQuery.error.status === 403)
+  const regionResponse = protectedFailure ? undefined : regionQuery.data ?? retainedResponse
+
+  if (!regionResponse && regionQuery.isLoading) return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
+  if (!regionResponse) {
+    const forbidden = protectedFailure
     return (
       <StoreSurfacePage ariaLabel={copy.aria}>
         <StoreErrorState
@@ -50,11 +85,10 @@ export function ReportViewerChecklistCommandPage(input: {
     )
   }
 
-  const data = regionQuery.data.data
+  const data = regionResponse.data
   const managerRows = flattenManagers(data.items)
-  const searchValue = search.trim().toLocaleLowerCase(locale)
-  const visibleManagerRows = searchValue.length === 0 ? managerRows : managerRows.filter((manager) => manager.managerName.toLocaleLowerCase(locale).includes(searchValue))
-  const activeManager = managerRows.find((manager) => manager.key === selectedManagerKey) ?? visibleManagerRows[0]
+  const searchValue = query.trim()
+  const activeManager = managerRows.find((manager) => manager.key === selectedManagerKey) ?? managerRows[0]
   const calendarManagers: ReportViewerManagerOption[] = managerRows.map((manager) => ({ key: manager.key, managerName: manager.managerName, managerUserId: manager.region.managerUserId, storeCount: manager.region.metrics.totalStores }))
 
   const prefetchManager = (manager: (typeof managerRows)[number]) => {
@@ -86,22 +120,22 @@ export function ReportViewerChecklistCommandPage(input: {
           </div>
         </div>
         <div className="tw:relative tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-          <ReportViewerPeriodPicker locale={locale} period={period} onChange={(value) => { setPeriod(value); setRegionOffset(0); setSelectedManagerKey(null) }} />
+          <ReportViewerPeriodPicker locale={locale} period={period} onChange={(value) => { setRetainedRegion(null); setPeriod(value); setRegionOffset(0); setSelectedManagerKey(null) }} />
           <Button className="tw:border-primary-foreground tw:bg-primary-foreground tw:text-primary tw:shadow-sm tw:hover:bg-primary-foreground/90 tw:hover:text-primary" type="button" onClick={() => setCalendarOpen(true)} disabled={managerRows.length === 0}><CalendarDays aria-hidden /> {copy.calendar}</Button>
         </div>
       </header>
 
       {regionQuery.isError ? <div role="alert" className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/25 tw:bg-destructive/5 tw:p-3 tw:text-xs tw:text-destructive"><span>{copy.partialError}</span><Button size="sm" variant="outline" onClick={() => void regionQuery.refetch()}>{copy.retry}</Button></div> : null}
 
-      {visibleManagerRows.length === 0 ? <EmptyState title={searchValue ? copy.searchEmptyTitle : copy.emptyTitle} copy={searchValue ? copy.searchEmptyCopy : copy.emptyCopy} /> : (
+      {managerRows.length === 0 ? <EmptyState title={searchValue ? copy.searchEmptyTitle : copy.emptyTitle} copy={searchValue ? copy.searchEmptyCopy : copy.emptyCopy} /> : (
         <div className="tw:grid tw:min-w-0 tw:gap-3 tw:xl:grid-cols-[264px_minmax(0,1fr)]">
           <aside className="tw:min-w-0 tw:self-start tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:shadow-sm" aria-labelledby="report-viewer-manager-list-title">
             <header className="tw:border-b tw:border-border tw:p-3">
-              <div className="tw:mb-2.5 tw:flex tw:items-end tw:justify-between tw:gap-3"><div><p className="tw:m-0 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.14em] tw:text-muted-foreground">{copy.directoryEyebrow}</p><h2 id="report-viewer-manager-list-title" className="tw:mt-0.5 tw:mb-0 tw:text-base tw:font-semibold tw:tracking-[-0.015em]">{copy.listTitle}</h2></div><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{visibleManagerRows.length}</span></div>
-              <label className="tw:relative tw:block"><Search aria-hidden className="tw:absolute tw:top-1/2 tw:left-2.5 tw:size-3.5 tw:-translate-y-1/2 tw:text-muted-foreground" /><span className="tw:sr-only">{copy.search}</span><Input className="tw:bg-muted/30 tw:pl-8 tw:text-xs tw:shadow-none" value={search} placeholder={copy.searchPlaceholder} onChange={(event) => { setSelectedManagerKey(activeManager?.key ?? null); setSearch(event.target.value) }} /></label>
+              <div className="tw:mb-2.5 tw:flex tw:items-end tw:justify-between tw:gap-3"><div><p className="tw:m-0 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.14em] tw:text-muted-foreground">{copy.directoryEyebrow}</p><h2 id="report-viewer-manager-list-title" className="tw:mt-0.5 tw:mb-0 tw:text-base tw:font-semibold tw:tracking-[-0.015em]">{copy.listTitle}</h2></div><span className="tw:flex tw:items-center tw:gap-2 tw:text-[11px] tw:font-medium tw:text-muted-foreground"><span aria-live="polite">{regionQuery.isFetching ? copy.refreshing : null}</span>{data.page.total}</span></div>
+              <label className="tw:relative tw:block"><Search aria-hidden className="tw:absolute tw:top-1/2 tw:left-2.5 tw:size-3.5 tw:-translate-y-1/2 tw:text-muted-foreground" /><span className="tw:sr-only">{copy.search}</span><Input className="tw:bg-muted/30 tw:pl-8 tw:text-xs tw:shadow-none" maxLength={120} value={searchDraft} placeholder={copy.searchPlaceholder} onChange={(event) => { retainCurrentRegion(); setSelectedManagerKey(null); setRegionOffset(0); setSearchDraft(event.target.value) }} /></label>
             </header>
             <div aria-label={copy.listTitle} className="tw:max-h-[520px] tw:overflow-y-auto tw:px-2 tw:py-1.5">
-              {visibleManagerRows.map((manager) => (
+              {managerRows.map((manager) => (
                 <button type="button" key={manager.key} aria-current={activeManager?.key === manager.key ? 'true' : undefined} className="tw:group tw:relative tw:flex tw:w-full tw:appearance-none tw:items-center tw:gap-2.5 tw:border-0 tw:border-b tw:border-border tw:bg-transparent tw:px-2 tw:py-2 tw:text-left tw:shadow-none tw:transition tw:last:border-b-0 tw:hover:bg-muted/50 tw:aria-current:bg-accent/25 tw:aria-current:before:absolute tw:aria-current:before:top-2 tw:aria-current:before:bottom-2 tw:aria-current:before:left-0 tw:aria-current:before:w-0.5 tw:aria-current:before:rounded-full tw:aria-current:before:bg-primary" onFocus={() => prefetchManager(manager)} onPointerEnter={() => prefetchManager(manager)} onClick={() => selectManager(manager)}>
                   <span aria-hidden className="tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-[10px] tw:font-bold tw:text-primary tw:group-aria-current:bg-primary tw:group-aria-current:text-primary-foreground">{getInitials(manager.managerName)}</span>
                   <span className="tw:min-w-0 tw:flex-1"><strong className="tw:block tw:truncate tw:text-[13px] tw:font-semibold">{manager.managerName}</strong><small className="tw:block tw:text-[11px] tw:text-muted-foreground">{manager.region.metrics.totalStores} {copy.assignedStores}</small></span>
@@ -111,7 +145,7 @@ export function ReportViewerChecklistCommandPage(input: {
                 </button>
               ))}
             </div>
-            <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{Math.floor(regionOffset / REGION_PAGE_SIZE) + 1}</span><div className="tw:flex tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={copy.previous} disabled={regionOffset === 0} onClick={() => { setRegionOffset(Math.max(0, regionOffset - REGION_PAGE_SIZE)); setSelectedManagerKey(null) }}><ChevronLeft /></Button><Button size="icon-xs" variant="ghost" aria-label={copy.next} disabled={!data.page.hasMore} onClick={() => { setRegionOffset(regionOffset + REGION_PAGE_SIZE); setSelectedManagerKey(null) }}><ChevronRight /></Button></div></footer>
+            <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{Math.floor(regionOffset / REGION_PAGE_SIZE) + 1}</span><div className="tw:flex tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={copy.previous} disabled={regionOffset === 0} onClick={() => { retainCurrentRegion(); setRegionOffset(Math.max(0, regionOffset - REGION_PAGE_SIZE)); setSelectedManagerKey(null) }}><ChevronLeft /></Button><Button size="icon-xs" variant="ghost" aria-label={copy.next} disabled={!data.page.hasMore} onClick={() => { retainCurrentRegion(); setRegionOffset(regionOffset + REGION_PAGE_SIZE); setSelectedManagerKey(null) }}><ChevronRight /></Button></div></footer>
           </aside>
 
           {activeManager ? <ReportViewerManagerWorkspace authSummary={input.authSummary} locale={locale} managerName={activeManager.managerName} managerUserId={activeManager.region.managerUserId} onOpenResult={input.onOpenResult} period={period} /> : null}
@@ -162,5 +196,5 @@ function formatAverageScore(value: number | null, locale: 'tr' | 'en') {
   return new Intl.NumberFormat(locale === 'tr' ? 'tr-TR' : 'en-US', { maximumFractionDigits: 1 }).format(value)
 }
 
-const trCopy = { aria: 'Bölge müdürleri görünümü', assignedStores: 'sorumlu mağaza', averageScoreAria: (manager: string, score: string) => `${manager} ortalama checklist puanı: ${score}`, calendar: 'Ziyaret Takvimi', directoryEyebrow: 'Dizin', emptyCopy: 'Aktif Bölge Müdürü rolüyle eşleşen hesap bulunamadı.', emptyTitle: 'Bölge Müdürü bulunamadı', eyebrow: 'Rapor görüntüleyici', errorCopy: 'Bölge müdürü verileri okunamadı.', errorTitle: 'Bölge müdürleri açılamadı', forbiddenCopy: 'Report Viewer hesabına yetkili şirket kapsamı tanımlanmamış.', forbiddenTitle: 'Şirket kapsamına erişilemiyor', listTitle: 'Bölge müdürleri', loadingCopy: 'Bölge müdürleri ve sorumlu mağazaları hazırlanıyor.', loadingTitle: 'Bölge müdürleri yükleniyor', next: 'Sonraki bölge müdürü sayfası', noManager: 'Bölge müdürü tanımlı değil', partialError: 'Yeni bölge müdürü verileri alınamadı; mevcut görünüm korunuyor.', previous: 'Önceki bölge müdürü sayfası', retry: 'Tekrar dene', search: 'Bölge müdürü ara', searchEmptyCopy: 'Arama ifadenizi değiştirerek yeniden deneyin.', searchEmptyTitle: 'Eşleşen bölge müdürü yok', searchPlaceholder: 'Ad ile ara', scope: 'Bölge müdürünü seçin ve sorumlu mağazalarının sonuçlarını inceleyin.', title: 'Checklist Raporları' } as const
-const enCopy = { aria: 'Region managers view', assignedStores: 'assigned stores', averageScoreAria: (manager: string, score: string) => `${manager} average checklist score: ${score}`, calendar: 'Visit Calendar', directoryEyebrow: 'Directory', emptyCopy: 'The company scope or selected filter returned no results.', emptyTitle: 'No region managers for this filter', eyebrow: 'Report viewer', errorCopy: 'Region manager data could not be read.', errorTitle: 'Region managers unavailable', forbiddenCopy: 'No authorized company scope is assigned to this Report Viewer account.', forbiddenTitle: 'Company scope unavailable', listTitle: 'Region managers', loadingCopy: 'Preparing region managers and their assigned stores.', loadingTitle: 'Loading region managers', next: 'Next region manager page', noManager: 'No region manager assigned', partialError: 'New region manager data could not load; the current view is retained.', previous: 'Previous region manager page', retry: 'Retry', search: 'Search region managers', searchEmptyCopy: 'Change your search and try again.', searchEmptyTitle: 'No matching region manager', searchPlaceholder: 'Search by name', scope: 'Select a region manager and review assigned store results.', title: 'Checklist Reports' } as const
+const trCopy = { aria: 'Bölge müdürleri görünümü', assignedStores: 'sorumlu mağaza', averageScoreAria: (manager: string, score: string) => `${manager} ortalama checklist puanı: ${score}`, calendar: 'Ziyaret Takvimi', directoryEyebrow: 'Dizin', emptyCopy: 'Aktif Bölge Müdürü rolüyle eşleşen hesap bulunamadı.', emptyTitle: 'Bölge Müdürü bulunamadı', eyebrow: 'Rapor görüntüleyici', errorCopy: 'Bölge müdürü verileri okunamadı.', errorTitle: 'Bölge müdürleri açılamadı', forbiddenCopy: 'Report Viewer hesabına yetkili şirket kapsamı tanımlanmamış.', forbiddenTitle: 'Şirket kapsamına erişilemiyor', listTitle: 'Bölge müdürleri', loadingCopy: 'Bölge müdürleri ve sorumlu mağazaları hazırlanıyor.', loadingTitle: 'Bölge müdürleri yükleniyor', next: 'Sonraki bölge müdürü sayfası', noManager: 'Bölge müdürü tanımlı değil', partialError: 'Yeni bölge müdürü verileri alınamadı; mevcut görünüm korunuyor.', previous: 'Önceki bölge müdürü sayfası', refreshing: 'Güncelleniyor…', retry: 'Tekrar dene', search: 'Bölge müdürü ara', searchEmptyCopy: 'Arama ifadenizi değiştirerek yeniden deneyin.', searchEmptyTitle: 'Eşleşen bölge müdürü yok', searchPlaceholder: 'Ad ile ara', scope: 'Bölge müdürünü seçin ve sorumlu mağazalarının sonuçlarını inceleyin.', title: 'Checklist Raporları' } as const
+const enCopy = { aria: 'Region managers view', assignedStores: 'assigned stores', averageScoreAria: (manager: string, score: string) => `${manager} average checklist score: ${score}`, calendar: 'Visit Calendar', directoryEyebrow: 'Directory', emptyCopy: 'The company scope or selected filter returned no results.', emptyTitle: 'No region managers for this filter', eyebrow: 'Report viewer', errorCopy: 'Region manager data could not be read.', errorTitle: 'Region managers unavailable', forbiddenCopy: 'No authorized company scope is assigned to this Report Viewer account.', forbiddenTitle: 'Company scope unavailable', listTitle: 'Region managers', loadingCopy: 'Preparing region managers and their assigned stores.', loadingTitle: 'Loading region managers', next: 'Next region manager page', noManager: 'No region manager assigned', partialError: 'New region manager data could not load; the current view is retained.', previous: 'Previous region manager page', refreshing: 'Refreshing…', retry: 'Retry', search: 'Search region managers', searchEmptyCopy: 'Change your search and try again.', searchEmptyTitle: 'No matching region manager', searchPlaceholder: 'Search by name', scope: 'Select a region manager and review assigned store results.', title: 'Checklist Reports' } as const

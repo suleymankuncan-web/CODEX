@@ -48,12 +48,12 @@ describe("ChecklistVisitPlanService", () => {
     })).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it("denies a Region Manager cross-region read and write", async () => {
+  it("denies a Region Manager with no direct assigned stores", async () => {
     const actor = {
       actorUserId: "11111111-1111-4111-8111-111111111111",
       actorRoleCodes: ["REGION_MANAGER"],
       actorReadScope: empty,
-      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["22222222-2222-4222-8222-222222222222"] } },
+      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["22222222-2222-4222-8222-222222222222"], storeIds: [] } },
     };
     const regionId = "33333333-3333-4333-8333-333333333333";
 
@@ -89,7 +89,7 @@ describe("ChecklistVisitPlanService", () => {
       actorUserId: "11111111-1111-4111-8111-111111111111",
       actorRoleCodes: ["REGION_MANAGER"],
       actorReadScope: empty,
-      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["33333333-3333-4333-8333-333333333333"] } },
+      roleScopes: { REGION_MANAGER: { ...empty, storeIds: ["55555555-5555-4555-8555-555555555555"] } },
       planItemId: "55555555-5555-4555-8555-555555555555",
       idempotencyKey: "66666666-6666-4666-8666-666666666666",
     };
@@ -100,7 +100,7 @@ describe("ChecklistVisitPlanService", () => {
     expect(repository.completeVisit).toHaveBeenCalledWith({
       planItemId: actor.planItemId,
       actorUserId: actor.actorUserId,
-      regionIds: ["33333333-3333-4333-8333-333333333333"],
+      storeIds: ["55555555-5555-4555-8555-555555555555"],
       idempotencyKey: actor.idempotencyKey,
     });
   });
@@ -124,7 +124,7 @@ describe("ChecklistVisitPlanService", () => {
       actorUserId: "11111111-1111-4111-8111-111111111111",
       actorRoleCodes: ["REGION_MANAGER"],
       actorReadScope: empty,
-      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["33333333-3333-4333-8333-333333333333"] } },
+      roleScopes: { REGION_MANAGER: { ...empty, storeIds: ["55555555-5555-4555-8555-555555555555"] } },
       regionId: "33333333-3333-4333-8333-333333333333",
       weekStart: "2026-07-13",
       expectedRevision: 0,
@@ -143,14 +143,17 @@ describe("ChecklistVisitPlanService", () => {
       actorUserId: "11111111-1111-4111-8111-111111111111",
       actorRoleCodes: ["REGION_MANAGER"],
       actorReadScope: empty,
-      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["33333333-3333-4333-8333-333333333333"] } },
+      roleScopes: { REGION_MANAGER: { ...empty, storeIds: ["55555555-5555-4555-8555-555555555555"] } },
       regionId: "33333333-3333-4333-8333-333333333333",
       weekStart: "2026-07-13",
       expectedRevision: 0,
       idempotencyKey: "44444444-4444-4444-8444-444444444444",
       items: [{ storeId: "55555555-5555-4555-8555-555555555555", plannedDate: "2026-07-14", displayOrder: 0 }],
     });
-    expect(repository.saveWeeklyPlan).toHaveBeenCalledWith(expect.objectContaining({ requestSha256: expect.stringMatching(/^[0-9a-f]{64}$/) }));
+    expect(repository.saveWeeklyPlan).toHaveBeenCalledWith(expect.objectContaining({
+      requestSha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+      authorizedStoreIds: ["55555555-5555-4555-8555-555555555555"],
+    }));
   });
 
   it("uses only the Region Manager role scope for full-period reads even for dual-role users", async () => {
@@ -165,12 +168,19 @@ describe("ChecklistVisitPlanService", () => {
       actorReadScope: empty,
       roleScopes: {
         REPORT_VIEWER: { companyIds: ["99999999-9999-4999-8999-999999999999"], regionIds: [], storeIds: [] },
-        REGION_MANAGER: { ...empty, regionIds: [regionId] },
+        REGION_MANAGER: {
+          ...empty,
+          regionIds: ["forged-region-must-not-authorize"],
+          storeIds: ["55555555-5555-4555-8555-555555555555"],
+        },
       },
       regionId,
       period: "2026-07",
     });
-    expect(repository.listPeriod).toHaveBeenCalledWith(expect.objectContaining({ regionId }));
+    expect(repository.listPeriod).toHaveBeenCalledWith(expect.objectContaining({
+      regionId,
+      storeIds: ["55555555-5555-4555-8555-555555555555"],
+    }));
   });
 
   it("denies non-Region Managers and cross-region period/candidate reads", async () => {
@@ -187,7 +197,7 @@ describe("ChecklistVisitPlanService", () => {
     await expect(service.listCandidates({
       ...base,
       actorRoleCodes: ["REGION_MANAGER"],
-      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["22222222-2222-4222-8222-222222222222"] } },
+      roleScopes: { REGION_MANAGER: empty },
     })).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -196,6 +206,7 @@ describe("ChecklistVisitPlanService", () => {
       "33333333-3333-4333-8333-333333333333",
       "22222222-2222-4222-8222-222222222222",
     ];
+    const storeIds = ["55555555-5555-4555-8555-555555555555", "66666666-6666-4666-8666-666666666666"];
     repository.listRegionOptions.mockResolvedValue({ total: 200, items: [
       { regionId: regionIds[1], regionName: "Ege" },
       { regionId: regionIds[0], regionName: "Marmara" },
@@ -206,7 +217,7 @@ describe("ChecklistVisitPlanService", () => {
       actorReadScope: empty,
       roleScopes: {
         REPORT_VIEWER: { ...empty, regionIds: ["99999999-9999-4999-8999-999999999999"] },
-        REGION_MANAGER: { ...empty, regionIds },
+        REGION_MANAGER: { ...empty, regionIds, storeIds },
       },
       query: "  Bölge ", limit: 2, offset: 2,
     })).resolves.toEqual({
@@ -218,7 +229,7 @@ describe("ChecklistVisitPlanService", () => {
       ],
       page: { total: 200, limit: 2, offset: 2, hasMore: true },
     });
-    expect(repository.listRegionOptions).toHaveBeenCalledWith({ regionIds, query: "Bölge", limit: 2, offset: 2 });
+    expect(repository.listRegionOptions).toHaveBeenCalledWith({ storeIds, query: "Bölge", limit: 2, offset: 2 });
   });
 
   it("rejects region options for a non-Region Manager and returns an honest empty scope", async () => {

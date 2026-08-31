@@ -126,6 +126,123 @@ test('Report Viewer keeps visible store rows while a new search loads in the bac
   await expect(page.getByText('Marmara Park')).toHaveCount(0)
 })
 
+test('Report Viewer manager search is server-backed and resets the selected manager', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  const regionRequests: URL[] = []
+  let mutations = 0
+  await routeReportViewerRecords(page)
+  page.on('request', (request) => {
+    const url = new URL(request.url())
+    if (url.pathname.endsWith('/command-canvas/regions')) regionRequests.push(url)
+    const readOnlyPost = request.method() === 'POST' && url.pathname === '/api/checklists/acknowledgements/list'
+    if (url.pathname.startsWith('/api/') && request.method() !== 'GET' && !readOnlyPost) mutations += 1
+  })
+
+  await page.goto('/store/checklists')
+  await page.getByRole('button', { name: /Derya Aydın/ }).click()
+  await expect(page.getByTestId('report-viewer-active-manager')).toHaveText('Derya Aydın')
+
+  const search = page.getByRole('textbox', { name: 'Bölge müdürü ara' })
+  await expect(search).toHaveAttribute('maxlength', '120')
+  await search.fill('Eda')
+  await expect.poll(() => regionRequests.some((url) => url.searchParams.get('query') === 'Eda' && url.searchParams.get('offset') === '0')).toBe(true)
+  const edaManager = page.getByRole('button', { name: /Eda Doğanay/ })
+  await expect(edaManager).toHaveAttribute('aria-current', 'true')
+  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toHaveCount(0)
+  expect(mutations).toBe(0)
+})
+
+test('Report Viewer manager search keeps retained rows and exposes a retryable error', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page)
+  let searchFails = true
+  await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
+    const query = new URL(route.request().url()).searchParams.get('query')?.trim()
+    if (query === 'Eda' && searchFails) {
+      await route.fulfill({ status: 503, json: { message: 'temporary manager search failure' } })
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.goto('/store/checklists')
+  await page.getByRole('textbox', { name: 'Bölge müdürü ara' }).fill('Eda')
+  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('Yeni bölge müdürü verileri alınamadı')
+
+  searchFails = false
+  await page.getByRole('alert').getByRole('button', { name: 'Tekrar dene' }).click()
+  await expect(page.getByRole('button', { name: /Eda Doğanay/ })).toHaveAttribute('aria-current', 'true')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('Report Viewer suppresses retained manager rows after post-load authorization revocation', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page)
+  let revoked = false
+  await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
+    if (revoked) {
+      await route.fulfill({ status: 403, json: { message: 'manager scope revoked' } })
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.goto('/store/checklists')
+  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toBeVisible()
+
+  revoked = true
+  await page.getByRole('textbox', { name: 'Bölge müdürü ara' }).fill('Derya')
+  await expect(page.getByText('Şirket kapsamına erişilemiyor')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Onur Kaytan/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Derya Aydın/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Tekrar dene' })).toHaveCount(0)
+})
+
+test('Report Viewer suppresses retained store facts after post-load authorization revocation', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page)
+  let revoked = false
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
+    if (revoked) {
+      await route.fulfill({ status: 401, json: { message: 'store scope revoked' } })
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.goto('/store/checklists')
+  await expect(page.getByText('Marmara Park')).toBeVisible()
+
+  revoked = true
+  await page.getByRole('textbox', { name: 'Mağaza ara' }).fill('Mağaza 02')
+  await expect(page.getByText('Mağazalara erişilemiyor')).toBeVisible()
+  await expect(page.getByText('Marmara Park')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Tekrar dene' })).toHaveCount(0)
+})
+
+test('Report Viewer does not reuse same-manager rows across reporting periods', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page, { periodAwareStoreRows: true, periodSwitchDelayMs: 800 })
+  await page.goto('/store/checklists')
+
+  await expect(page.getByText('Ağustos 2026 Marmara Park')).toBeVisible()
+  const periodTrigger = page.getByRole('button', { name: 'DÖNEM Ağustos 2026' })
+  await periodTrigger.click()
+  const periodDialog = page.getByRole('dialog', { name: 'Raporlama dönemi' })
+  await periodDialog.getByRole('button', { name: 'Temmuz', exact: true }).click()
+  const periodRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url())
+    return url.pathname === '/api/checklists/command-canvas' && url.searchParams.get('period') === '2026-07'
+  })
+  await periodDialog.getByRole('button', { name: 'Uygula' }).click()
+  await periodRequest
+  await expect(page.getByRole('button', { name: 'DÖNEM Temmuz 2026' })).toHaveAttribute('aria-label', 'DÖNEM Temmuz 2026')
+  await expect(page.getByText('Mağazalar yükleniyor')).toBeVisible()
+  await expect(page.getByText('Ağustos 2026 Marmara Park')).toHaveCount(0, { timeout: 250 })
+  await expect(page.getByText('Temmuz 2026 Marmara Park')).toBeVisible()
+})
+
 test('Report Viewer omits unresolved identities without retrying them into fake managers', async ({ page }) => {
   await installStoreContractSession(page, 'reportViewer')
   await routeReportViewerRecords(page, { initialUnresolvedManagers: true })
@@ -448,11 +565,22 @@ function commandPage(items: ReturnType<typeof commandRow>[], total: number, hasM
   return { data: { period: '2026-07', view: 'report_viewer', capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false }, metrics: { totalStores: total, needsVisit: 0, active: 0, pending: 0, completed: total }, items, page: { total, limit: 30, offset, hasMore } } }
 }
 
-async function routeReportViewerRecords(page: Page, options: { delayedManagerUserId?: string; initialUnresolvedManagers?: boolean; searchStoreDelayMs?: number; storeDelayMs?: number } = {}) {
+function formatPeriodLabel(period: string) {
+  const [year, month] = period.split('-')
+  const monthLabel = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'][Number(month) - 1]
+  return monthLabel ? `${monthLabel} ${year}` : period
+}
+
+async function routeReportViewerRecords(page: Page, options: { delayedManagerUserId?: string; initialUnresolvedManagers?: boolean; periodAwareStoreRows?: boolean; periodSwitchDelayMs?: number; searchStoreDelayMs?: number; storeDelayMs?: number } = {}) {
   let regionRequestCount = 0
   await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
     regionRequestCount += 1
+    const requestUrl = new URL(route.request().url())
+    const managerQuery = requestUrl.searchParams.get('query')?.trim().toLocaleLowerCase('tr-TR') ?? ''
     const unresolved = options.initialUnresolvedManagers && regionRequestCount === 1
+    const filteredManagers = reportViewerManagers
+      .map((manager, managerIndex) => ({ manager, managerIndex }))
+      .filter(({ manager }) => !managerQuery || manager.managerName.toLocaleLowerCase('tr-TR').includes(managerQuery))
     await route.fulfill({
       json: {
         data: {
@@ -466,7 +594,7 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
             openActionCount: 8,
             completedCoverageStores: 160,
           },
-          items: reportViewerManagers.map((manager, managerIndex) => ({
+          items: filteredManagers.map(({ manager, managerIndex }) => ({
             managerUserId: manager.managerUserId,
             regionId: manager.regionId,
             regionName: manager.regionName,
@@ -476,7 +604,7 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
             scoreSampleCount: 20,
             lastOperationalAt: `2026-07-${String(14 - managerIndex).padStart(2, '0')}T10:00:00.000Z`,
           })),
-          page: { total: 8, limit: 20, offset: 0, hasMore: false },
+          page: { total: filteredManagers.length, limit: 20, offset: 0, hasMore: false },
         },
       },
     })
@@ -484,6 +612,7 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
   await page.route('**/api/checklists/command-canvas?**', async (route) => {
     const requestUrl = new URL(route.request().url())
     const requestedManagerUserId = requestUrl.searchParams.get('managerUserId')
+    const requestedPeriod = requestUrl.searchParams.get('period') ?? '2026-07'
     const query = requestUrl.searchParams.get('query')?.toLocaleLowerCase('tr-TR') ?? ''
     if (requestedManagerUserId === options.delayedManagerUserId) {
       await new Promise((resolve) => setTimeout(resolve, options.storeDelayMs ?? 250))
@@ -491,8 +620,12 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
     if (query && options.searchStoreDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.searchStoreDelayMs))
     }
+    if (options.periodSwitchDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, options.periodSwitchDelayMs))
+    }
     const managerIndex = Math.max(0, reportViewerManagers.findIndex((manager) => manager.managerUserId === requestedManagerUserId))
     const manager = reportViewerManagers[managerIndex]
+    const periodLabel = options.periodAwareStoreRows ? formatPeriodLabel(requestedPeriod) : ''
     const items = Array.from({ length: 20 }, (_value, index) => {
       const storeNumber = index + 1
       const score = [94, 86, 78, 69, 57, null][index % 6]
@@ -501,7 +634,9 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
         ...commandRow(storeNumber),
         storeId: managerIndex === 0 && index === 0 ? storeId : `22222222-${String(managerIndex + 1).padStart(4, '0')}-4222-8222-${String(storeNumber).padStart(12, '0')}`,
         storeCode: `SYN-${String(managerIndex + 1).padStart(2, '0')}-${String(storeNumber).padStart(2, '0')}`,
-        storeName: managerIndex === 0 && index === 0 ? 'Marmara Park' : `${manager.managerName} Mağaza ${String(storeNumber).padStart(2, '0')}`,
+        storeName: managerIndex === 0 && index === 0
+          ? (periodLabel ? `${periodLabel} Marmara Park` : 'Marmara Park')
+          : `${periodLabel ? `${periodLabel} ` : ''}${manager.managerName} Mağaza ${String(storeNumber).padStart(2, '0')}`,
         regionId: manager.regionId,
         regionName: manager.regionName,
         regionManagers: [{ displayName: manager.managerName }],
@@ -515,7 +650,7 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
     await route.fulfill({
       json: {
         data: {
-          period: '2026-07',
+          period: options.periodAwareStoreRows ? requestedPeriod : '2026-07',
           view: 'report_viewer',
           capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
           metrics: { totalStores: items.length, needsVisit: 0, active: 0, pending: 0, completed: items.length },

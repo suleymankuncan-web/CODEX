@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T13:21:52.663Z",
+  "generatedAt": "2026-08-31T02:25:13.376Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -4872,7 +4872,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-command.controller.ts",
-        "line": 34
+        "line": 35
       }
     },
     {

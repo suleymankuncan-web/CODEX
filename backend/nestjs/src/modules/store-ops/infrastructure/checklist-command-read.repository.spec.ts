@@ -37,6 +37,7 @@ describe("ChecklistCommandReadRepository", () => {
     const result = await repository.listRegions({
       companyIds: ["company-1"],
       period: "2026-07",
+      query: "  Süleyman_% ",
       signal: "missing_visit",
       sort: "missing_desc",
       limit: 20,
@@ -45,10 +46,14 @@ describe("ChecklistCommandReadRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(query).toHaveBeenCalledTimes(1);
-    expect(sql).toContain("LEFT JOIN ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("INNER JOIN ops.user_action_store_assignment manager_store");
     expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
     expect(sql).toContain("manager_store.user_id = ma.manager_user_id");
+    expect(sql).toContain("INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id");
     expect(sql).toContain("ura.company_id = ANY($1::uuid[])");
+    expect(sql).toContain("company.status = 'active'");
+    expect(sql).toContain("r.status = 'active'");
+    expect(sql).toContain("r.company_id = s.company_id");
     expect(sql).toContain("LEFT JOIN store_signals signal");
     expect(sql).toContain("COUNT(signal.store_id)::int AS total_stores");
     expect(sql).toContain("manager_user_id ASC");
@@ -56,12 +61,67 @@ describe("ChecklistCommandReadRepository", () => {
     expect(sql).toContain("GROUP BY manager.manager_user_id");
     expect(sql).toContain("latest_completed AS");
     expect(sql).toContain("active_checklists AS");
+    expect(sql).toContain("manager_user_id::text ILIKE '%' || $6::text || '%' ESCAPE '\\'");
+    expect(sql).toContain("region_name ILIKE '%' || $6::text || '%' ESCAPE '\\'");
+    expect(sql).not.toContain("ci.total_score IS NOT NULL");
     expect(sql).not.toContain("ua.email");
     expect(query.mock.calls[0][1]).toEqual([
-      ["company-1"], "2026-07", "missing_visit", 20, 0,
+      ["company-1"], "2026-07", "missing_visit", 20, 0, "Süleyman\\_\\%",
     ]);
     expect(result.metrics.totalStores).toBe(40);
     expect(result.items[0]?.metrics.totalStores).toBe(40);
+  });
+
+  it("derives manager region identity only from active direct scoped stores", async () => {
+    const query = jest.fn().mockResolvedValueOnce({
+      rows: [{
+        period_key: "2026-07",
+        total_count: 1,
+        metrics_json: {
+          totalStores: 1,
+          missingVisitStores: 1,
+          storesWithOpenActions: 0,
+          openActionCount: 0,
+          completedCoverageStores: 0,
+        },
+        items_json: [{
+          managerUserId: "manager-live",
+          regionId: "region-from-store",
+          regionName: "Live manager",
+          regionManagers: [{ displayName: "Live manager" }],
+          metrics: {
+            totalStores: 1,
+            missingVisitStores: 1,
+            storesWithOpenActions: 0,
+            openActionCount: 0,
+            blockedActionCount: 0,
+            completedCoverageStores: 0,
+          },
+          visitAverageScore: null,
+          scoreSampleCount: 0,
+          lastOperationalAt: null,
+        }],
+      }],
+    });
+    const repository = new ChecklistCommandReadRepository({ query } as never);
+
+    const result = await repository.listRegions({
+      companyIds: ["company-1"],
+      period: "2026-07",
+      signal: "all",
+      sort: "manager_asc",
+      limit: 20,
+      offset: 0,
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(result.total).toBe(1);
+    expect(result.items[0]?.regionId).toBe("region-from-store");
+    expect(sql).toContain("INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id");
+    expect(sql).toContain("MIN(manager.region_id::text)::uuid AS region_id");
+    expect(sql).not.toContain("LEFT JOIN ops.user_action_store_assignment manager_store");
+    expect(sql).not.toContain("COALESCE(MIN(manager.region_id::text)::uuid, manager.manager_user_id)");
+    expect(sql).not.toContain("ura.region_id");
   });
 
   it("returns one scoped aggregate page and derives last visit only from completed checklists", async () => {
@@ -120,6 +180,9 @@ describe("ChecklistCommandReadRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("scoped_stores");
+    expect(sql).toContain("company.status = 'active'");
+    expect(sql).toContain("r.status = 'active'");
+    expect(sql).toContain("r.company_id = s.company_id");
     expect(sql).toContain("ci.status = 'completed'");
     expect(sql).toContain("ci.completed_at IS NOT NULL");
     expect(sql).not.toContain("planned_at");
@@ -143,6 +206,26 @@ describe("ChecklistCommandReadRepository", () => {
     ]);
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.lastCompletedVisitAt).toBe("2026-07-10T09:00:00.000Z");
+  });
+
+  it("keeps null-score completions in coverage while excluding them from score samples", async () => {
+    const query = jest.fn().mockResolvedValueOnce({ rows: [] });
+    const repository = new ChecklistCommandReadRepository({ query } as never);
+
+    await repository.listRegions({
+      companyIds: ["company-1"],
+      period: "2026-07",
+      signal: "completed_coverage",
+      sort: "score_desc",
+      limit: 20,
+      offset: 0,
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("COUNT(*)::int AS completed_type_count");
+    expect(sql).toContain("COUNT(total_score)::int AS score_sample_count");
+    expect(sql).toContain("SUM(total_score)::numeric AS score_sum");
+    expect(sql).not.toContain("ci.total_score IS NOT NULL");
   });
 
   it("orders status pages deterministically without changing the read scope", async () => {

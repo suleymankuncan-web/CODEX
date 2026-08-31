@@ -34,6 +34,7 @@ type ListChecklistCommandRegionsInput = {
   actorReadScope: AuthReadScope;
   roleScopes?: Record<string, AuthReadScope>;
   period?: string;
+  query?: string;
   signal?: ChecklistCommandSignal;
   sort?: ChecklistCommandRegionSort;
   limit?: number;
@@ -118,6 +119,7 @@ export class ChecklistCommandReadService {
     const result = await this.repository.listRegions({
       companyIds: scope.companyIds,
       period: input.period,
+      query: input.query,
       signal: input.signal ?? "all",
       sort: input.sort ?? "manager_asc",
       limit,
