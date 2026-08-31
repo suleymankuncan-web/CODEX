@@ -1,8 +1,8 @@
 # Real Ingest Connector And Payload Contract Intake
 
-Date: 26 April 2026
+Date: 31 August 2026
 
-Status: `external_source_unknown`
+Status: `contract_draft`
 
 ## Purpose
 
@@ -12,24 +12,33 @@ The safe goal is to keep the platform ready for real operational data while maki
 
 ## Current User Answer
 
-The product owner confirmed that the external data should be treated as JSON, but the real sample payload and delivery method are not available yet.
+The product owner approved a contract-only local slice for a company-internal
+daily pull source. The provider exposes only the previous Europe/Istanbul day;
+it accepts no date range and offers no historical backfill. The public contract
+uses `sales`, `footfall`, `gsm`, and `store-directory` aliases so private
+operation and execution identifiers remain outside Git.
+
+The approved source semantics, grains, partial-success behavior, signed
+sale/return rules, active-store allowlist, missed-day risk, and privacy boundary
+are locked in
+`docs/contracts/company-daily-kpi-pull-contract-v1.md`.
 
 Unknown today:
 
-- whether JSON arrives by pull API, push endpoint, file upload, SFTP, scheduled export, manual import, or an intermediary service
 - authentication model
-- payload fields
-- cadence
-- date and timezone semantics
-- identity keys
-- return/refund behavior
-- whether values arrive as latest state or additive events
+- official provider field names, types, nullability, and response envelope
+- stable store and personnel code fields
+- timeout, retry, rate-limit, and maximum-volume constraints
+- sanitized error/status shapes
+- production scheduling and operational alert ownership
 
 ## Decision
 
-Do not build a source-specific JSON connector yet.
+Do not build or connect the source-specific runtime connector yet.
 
-Build or document only the source-agnostic contract boundary until at least one real sample payload or official field list is available.
+The approved local scope is documentation and synthetic contract testing only.
+Runtime work remains blocked until an official sanitized field list and the
+remaining implementation-gate inputs are available and separately approved.
 
 ## Current Local Foundation
 
@@ -49,6 +58,11 @@ The project already has the right local bones for real ingest:
 - deterministic KPI row `rowHash` and readable `rawRowReference`
 
 This means the local project is not starting from zero. The missing part is the real external contract.
+
+For this daily source, the generic raw-row lineage capability is not permission
+to persist provider payloads. Raw names and invoice GUIDs must be removed before
+the canonical persistence boundary and must not contribute to row hashes or raw
+row references.
 
 ## Source-Agnostic Ingest Shape
 
@@ -162,8 +176,8 @@ Before coding a real connector, collect:
 
 Use these states when discussing the source:
 
-- `unknown_source`: current state, no real external contract
-- `contract_draft`: expected fields are documented but not proven
+- `unknown_source`: no real external contract
+- `contract_draft`: current state; product semantics are approved but provider fields and runtime details are not proven
 - `sample_payload_validated`: sample payload maps into canonical rows
 - `sandbox_connected`: non-production source access works
 - `production_candidate`: production-like source is reachable and validated
@@ -175,6 +189,8 @@ Use these states when discussing the source:
 Allowed now:
 
 - document and expose the source-agnostic contract
+- document the approved company daily pull semantics using public aliases
+- add synthetic, network-free contract guards
 - keep existing `stg` import model as the ingest boundary
 - prepare future mapping questions
 - avoid false certainty in old Nebim-specific planning docs
@@ -183,8 +199,10 @@ Not allowed yet:
 
 - hard-code a source field map before the JSON sample arrives
 - write a fake source API client
-- assume cadence is vendor-confirmed
-- assume return/refund semantics
+- call the live provider or read/write credentials
+- place private operation or execution identifiers in the public repository
+- send a provider start/end date or promise historical provider backfill
+- persist raw names, invoice GUIDs, raw response bodies, or real company fixtures
 - treat blank personnel rows as employee performance
 - calculate new score behavior from unverified source fields
 
@@ -194,12 +212,12 @@ This is the right place to slow down.
 
 Writing connector code without a real sample payload would create exactly the kind of technical debt this project is trying to avoid: hidden assumptions under KPI, ranking, score, and reporting behavior.
 
-The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, materialization concepts, and canonical KPI row lineage metadata. The next safe move is not a fake source connector. The next safe move is a real JSON source mapping spec only after external evidence exists.
+The platform is in a healthy place because it already has `stg` import boundaries, batch metadata, normalization, materialization concepts, and canonical KPI row lineage metadata. The next safe move is not a live connector. The approved next move is the local contract and synthetic guard; a field mapping follows only after official sanitized provider evidence exists.
 
-Recommendation: keep the current source-agnostic contract, and move actual connector implementation only after real source evidence exists.
+Recommendation: keep the current source-agnostic contract and Power BI/Excel rollback path, and move actual connector implementation only after the implementation gates in the company daily pull contract are satisfied.
 
 ## Next Logical Step
 
-If a real JSON sample payload or official field list becomes available, convert it into a source mapping spec and then implement only the adapter layer.
+If an official sanitized field list becomes available, convert it into a source mapping spec and then implement only a synthetic pure-adapter slice first.
 
-If no external source detail is available yet, do not repeat ingest hardening as busywork. Pick the next local backend/data step only if it strengthens an existing behavior without guessing source details.
+Until then, do not call the provider, inspect secrets, create a scheduler, or use real company data. Keep the existing Excel path active.

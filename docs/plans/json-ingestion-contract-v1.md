@@ -4,6 +4,12 @@ Date: 6 Mayis 2026
 
 Status: `documented`
 
+Applicability: this generic inbound `POST` draft is not the selected contract
+for the company daily pull source. That source is governed by
+`docs/contracts/company-daily-kpi-pull-contract-v1.md`. Its stricter no-raw-name,
+no-invoice-GUID, previous-day-only, and store-allowlist rules take precedence;
+the raw payload and name-review rules below MUST NOT be reused for that source.
+
 ## Purpose
 
 Define the future JSON/API ingestion boundary for KPI rows before any endpoint, adapter, scheduler, or external-source client is built.
