@@ -4,6 +4,7 @@
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -11,6 +12,7 @@
   UploadedFiles,
   UseInterceptors,
 } from "@nestjs/common";
+import { ApiParam, ApiQuery } from "@nestjs/swagger";
 import { FileFieldsInterceptor } from "@nestjs/platform-express";
 import { IntegrationService } from "../application/integration.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
@@ -30,7 +32,9 @@ import { GetImportPayloadTemplateQueryDto } from "./dto/get-import-payload-templ
 import { ListDueIntegrationSourcesQueryDto } from "./dto/list-due-integration-sources.query";
 import { ListExternalIdMapCandidatesQueryDto } from "./dto/list-external-id-map-candidates.query";
 import { ListImportBatchErrorsQueryDto } from "./dto/list-import-batch-errors.query";
+import { ListImportBatchAuditQueryDto } from "./dto/list-import-batch-audit.query";
 import { ListImportBatchesQueryDto } from "./dto/list-import-batches.query";
+import { ListImportBatchNeedsActionQueryDto } from "./dto/list-import-batch-needs-action.query";
 import { ListIntegrationSourcesQueryDto } from "./dto/list-integration-sources.query";
 import { ListKpiImportStoreScopeQueryDto } from "./dto/list-kpi-import-store-scope.query";
 import { ListMasterDataBootstrapBatchesQueryDto } from "./dto/list-master-data-bootstrap-batches.query";
@@ -38,6 +42,11 @@ import { ListMasterDataBootstrapRowsQueryDto } from "./dto/list-master-data-boot
 import { UpdateIntegrationSourceScheduleDto } from "./dto/update-integration-source-schedule.dto";
 import { UpdateKpiImportStoreScopeDto } from "./dto/update-kpi-import-store-scope.dto";
 import { UploadPowerBiExportDto } from "./dto/upload-power-bi-export.dto";
+import type {
+  IntegrationCompanyScopedRequest,
+  IntegrationUserCompanyScopedRequest,
+  IntegrationUserRequest,
+} from "./integration-controller-request.types";
 
 @Controller("integrations")
 export class IntegrationController {
@@ -66,11 +75,7 @@ export class IntegrationController {
   async createIntegrationSource(
     @Body() body: CreateIntegrationSourceDto,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: IntegrationUserRequest,
   ) {
     return this.integrationService.createIntegrationSource({
       ...body,
@@ -79,17 +84,14 @@ export class IntegrationController {
   }
 
   @Patch("sources/:sourceId/schedule")
+  @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async updateIntegrationSourceSchedule(
-    @Param("sourceId") sourceId: string,
+    @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
     @Body() body: UpdateIntegrationSourceScheduleDto,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: IntegrationUserRequest,
   ) {
     return this.integrationService.updateIntegrationSourceSchedule(
       sourceId,
@@ -99,31 +101,25 @@ export class IntegrationController {
   }
 
   @Patch("sources/:sourceId/deactivate")
+  @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async deactivateIntegrationSource(
-    @Param("sourceId") sourceId: string,
+    @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: IntegrationUserRequest,
   ) {
     return this.integrationService.deactivateIntegrationSource(sourceId, request.user.userId);
   }
 
   @Patch("sources/:sourceId/reactivate")
+  @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async reactivateIntegrationSource(
-    @Param("sourceId") sourceId: string,
+    @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-      };
-    },
+    request: IntegrationUserRequest,
   ) {
     return this.integrationService.reactivateIntegrationSource(sourceId, request.user.userId);
   }
@@ -141,13 +137,7 @@ export class IntegrationController {
   async listExternalIdMapCandidates(
     @Query() query: ListExternalIdMapCandidatesQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.listExternalIdMapCandidates({
       actorCompanyIds: request.user.scope.companyIds,
@@ -163,14 +153,7 @@ export class IntegrationController {
   async approveExternalIdMap(
     @Body() body: ApproveExternalIdMapDto,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.integrationService.approveExternalIdMapping({
       actorCompanyIds: request.user.scope.companyIds,
@@ -188,13 +171,7 @@ export class IntegrationController {
   async listKpiImportStoreScope(
     @Query() query: ListKpiImportStoreScopeQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.listStoreMaster({
       actorCompanyIds: request.user.scope.companyIds,
@@ -212,13 +189,7 @@ export class IntegrationController {
   async listStoreMaster(
     @Query() query: ListKpiImportStoreScopeQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.listStoreMaster({
       actorCompanyIds: request.user.scope.companyIds,
@@ -236,9 +207,7 @@ export class IntegrationController {
   async createStoreMaster(
     @Body() body: CreateStoreMasterDto,
     @Req()
-    request: {
-      user: { userId: string; scope: { companyIds: string[] } };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.integrationService.createStoreMaster({
       actorCompanyIds: request.user.scope.companyIds,
@@ -257,13 +226,7 @@ export class IntegrationController {
   @RequireRoles("INTEGRATION_ADMIN")
   async getStoreMasterLookups(
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getStoreMasterLookups({
       actorCompanyIds: request.user.scope.companyIds,
@@ -276,13 +239,7 @@ export class IntegrationController {
   async listMasterDataBootstrapBatches(
     @Query() query: ListMasterDataBootstrapBatchesQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.listBootstrapBatches({
       actorScope: {
@@ -298,20 +255,14 @@ export class IntegrationController {
   }
 
   @Patch("kpi-import-store-scope/:storeId")
+  @ApiParam({ name: "storeId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async updateKpiImportStoreScope(
-    @Param("storeId") storeId: string,
+    @Param("storeId", new ParseUUIDPipe({ version: "4" })) storeId: string,
     @Body() body: UpdateKpiImportStoreScopeDto,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.integrationService.updateStoreMaster({
       actorCompanyIds: request.user.scope.companyIds,
@@ -325,20 +276,14 @@ export class IntegrationController {
   }
 
   @Patch("store-master/:storeId")
+  @ApiParam({ name: "storeId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async updateStoreMaster(
-    @Param("storeId") storeId: string,
+    @Param("storeId", new ParseUUIDPipe({ version: "4" })) storeId: string,
     @Body() body: UpdateKpiImportStoreScopeDto,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.integrationService.updateStoreMaster({
       actorCompanyIds: request.user.scope.companyIds,
@@ -356,14 +301,7 @@ export class IntegrationController {
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async createMasterDataBootstrapBatch(
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
     @Body() body: CreateMasterDataBootstrapBatchDto,
   ) {
     return this.masterDataBootstrapService.createBootstrapBatch({
@@ -378,19 +316,13 @@ export class IntegrationController {
     });
   }
   @Post("master-data-bootstrap/batches/:batchId/validate")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async validateMasterDataBootstrapBatch(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.validateBootstrapBatch({
       actorUserId: request.user.userId,
@@ -401,19 +333,14 @@ export class IntegrationController {
     });
   }
   @Get("master-data-bootstrap/batches/:batchId/rows")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async listMasterDataBootstrapRows(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Query() query: ListMasterDataBootstrapRowsQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.listBootstrapRowsForReview({
       actorScope: {
@@ -428,18 +355,13 @@ export class IntegrationController {
     });
   }
   @Get("master-data-bootstrap/batches/:batchId/promotion-readiness")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async getMasterDataBootstrapPromotionReadiness(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.getBootstrapPromotionReadiness({
       actorScope: {
@@ -449,19 +371,13 @@ export class IntegrationController {
     });
   }
   @Post("master-data-bootstrap/batches/:batchId/promote-stores")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async promoteMasterDataBootstrapStores(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.promoteStoreBootstrapBatch({
       actorUserId: request.user.userId,
@@ -472,19 +388,13 @@ export class IntegrationController {
     });
   }
   @Post("master-data-bootstrap/batches/:batchId/promote-personnel")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async promoteMasterDataBootstrapPersonnel(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.promotePersonnelBootstrapBatch({
       actorUserId: request.user.userId,
@@ -495,18 +405,13 @@ export class IntegrationController {
     });
   }
   @Get("master-data-bootstrap/batches/:batchId")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async getMasterDataBootstrapBatch(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.masterDataBootstrapService.getBootstrapBatchDetail({
       actorScope: {
@@ -568,14 +473,7 @@ export class IntegrationController {
       storeFile?: Array<{ originalname: string; buffer: Buffer }>;
     },
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.powerBiExportUploadService.upload({
       actorCompanyIds: request.user.scope.companyIds,
@@ -591,9 +489,12 @@ export class IntegrationController {
   }
 
   @Get("sources/:sourceId/audit")
+  @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
-  async getIntegrationSourceAudit(@Param("sourceId") sourceId: string) {
+  async getIntegrationSourceAudit(
+    @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
+  ) {
     return this.integrationService.getIntegrationSourceAudit(sourceId);
   }
 
@@ -602,14 +503,7 @@ export class IntegrationController {
   @RequireRoles("INTEGRATION_ADMIN")
   async createImportBatch(
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
     @Body() body: CreateImportBatchDto,
   ) {
     return this.integrationService.createImportBatch({
@@ -625,13 +519,7 @@ export class IntegrationController {
   async listImportBatches(
     @Query() query: ListImportBatchesQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.listImportBatches({
       actorCompanyIds: request.user.scope.companyIds,
@@ -651,13 +539,7 @@ export class IntegrationController {
   async getImportBatchSummary(
     @Query() query: ListImportBatchesQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchSummary({
       actorCompanyIds: request.user.scope.companyIds,
@@ -675,13 +557,7 @@ export class IntegrationController {
   async getImportBatchOverview(
     @Query() query: ListImportBatchesQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchOverview({
       actorCompanyIds: request.user.scope.companyIds,
@@ -694,18 +570,73 @@ export class IntegrationController {
   }
 
   @Get("import-batches/needs-action")
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    schema: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    schema: { type: "integer", minimum: 0, default: 0 },
+  })
+  @ApiQuery({
+    name: "status",
+    required: false,
+    schema: {
+      type: "string",
+      enum: [
+        "pending",
+        "queued",
+        "processing",
+        "completed",
+        "completed_with_errors",
+        "failed",
+      ],
+    },
+  })
+  @ApiQuery({
+    name: "entityType",
+    required: false,
+    schema: {
+      type: "string",
+      enum: [
+        "employee",
+        "store",
+        "kpi",
+        "assignment",
+        "position",
+        "company",
+        "region",
+      ],
+    },
+  })
+  @ApiQuery({
+    name: "sourceCode",
+    required: false,
+    schema: { type: "string" },
+  })
+  @ApiQuery({
+    name: "q",
+    required: false,
+    schema: { type: "string", maxLength: 128 },
+  })
+  @ApiQuery({
+    name: "startedFrom",
+    required: false,
+    schema: { type: "string", format: "date-time" },
+  })
+  @ApiQuery({
+    name: "startedTo",
+    required: false,
+    schema: { type: "string", format: "date-time" },
+  })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async getImportBatchNeedsAction(
-    @Query() query: ListImportBatchesQueryDto,
+    @Query() query: ListImportBatchNeedsActionQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchNeedsAction({
       actorCompanyIds: request.user.scope.companyIds,
@@ -714,25 +645,21 @@ export class IntegrationController {
       status: query.status,
       entityType: query.entityType,
       sourceCode: query.sourceCode,
+      q: query.q,
       startedFrom: query.startedFrom,
       startedTo: query.startedTo,
     });
   }
 
   @Get("import-batches/:batchId/errors")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async getImportBatchErrors(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Query() query: ListImportBatchErrorsQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchErrors({
       actorCompanyIds: request.user.scope.companyIds,
@@ -743,18 +670,13 @@ export class IntegrationController {
   }
 
   @Get("import-batches/:batchId/reconciliation")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async getImportBatchReconciliation(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchReconciliation({
       actorCompanyIds: request.user.scope.companyIds,
@@ -763,59 +685,69 @@ export class IntegrationController {
   }
 
   @Get("import-batch-audit/:batchId")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    schema: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    schema: { type: "integer", minimum: 0, default: 0 },
+  })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async getImportBatchAudit(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
+    @Query() query: ListImportBatchAuditQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchAudit({
       actorCompanyIds: request.user.scope.companyIds,
       batchId,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 
   @Get("import-batches/:batchId/audit")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    schema: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    schema: { type: "integer", minimum: 0, default: 0 },
+  })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async getImportBatchAuditNested(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
+    @Query() query: ListImportBatchAuditQueryDto,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatchAudit({
       actorCompanyIds: request.user.scope.companyIds,
       batchId,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 
   @Post("import-batches/:batchId/retry")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async retryImportBatch(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        userId: string;
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.integrationService.retryImportBatch({
       actorCompanyIds: request.user.scope.companyIds,
@@ -825,18 +757,13 @@ export class IntegrationController {
   }
 
   @Get("import-batches/:batchId")
+  @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("INTEGRATION_ADMIN")
   async getImportBatch(
-    @Param("batchId") batchId: string,
+    @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
-    request: {
-      user: {
-        scope: {
-          companyIds: string[];
-        };
-      };
-    },
+    request: IntegrationCompanyScopedRequest,
   ) {
     return this.integrationService.getImportBatch({
       actorCompanyIds: request.user.scope.companyIds,

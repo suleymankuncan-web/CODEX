@@ -4,6 +4,10 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../app.module";
 import { preserveOpenApiBaselineFromFile } from "./openapi-baseline-preservation";
+import {
+  listResponseMetaSchema,
+  revisionedListResponseMetaSchema,
+} from "./list-response-meta.openapi.schemas";
 import { mobileChecklistEvidenceActiveInstanceProperties, mobileChecklistEvidenceTemplateItemProperties, mobileChecklistEvidenceTodayProperties } from "./checklist-evidence-openapi.schemas";
 import {
   commandResponseSchema,
@@ -1739,17 +1743,6 @@ const integrationLookupsSchema = {
         totalActiveSources: { type: "integer", minimum: 0 },
       },
     },
-  },
-};
-
-const listResponseMetaSchema = {
-  type: "object",
-  required: ["count", "total", "limit", "offset"],
-  properties: {
-    count: { type: "integer", minimum: 0 },
-    total: { type: "integer", minimum: 0 },
-    limit: { type: "integer", minimum: 0 },
-    offset: { type: "integer", minimum: 0 },
   },
 };
 
@@ -3749,7 +3742,7 @@ const snapshotNeedsActionResponseSchema = {
       type: "array",
       items: snapshotNeedsActionItemSchema,
     },
-    meta: listResponseMetaSchema,
+    meta: revisionedListResponseMetaSchema,
   },
 };
 
@@ -3761,7 +3754,7 @@ const importBatchNeedsActionResponseSchema = {
       type: "array",
       items: importBatchNeedsActionItemSchema,
     },
-    meta: listResponseMetaSchema,
+    meta: revisionedListResponseMetaSchema,
   },
 };
 
@@ -3785,7 +3778,7 @@ const importBatchErrorsResponseSchema = {
       type: "array",
       items: importBatchErrorItemSchema,
     },
-    meta: listResponseMetaSchema,
+    meta: revisionedListResponseMetaSchema,
   },
 };
 

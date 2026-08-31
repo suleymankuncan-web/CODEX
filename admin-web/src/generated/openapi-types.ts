@@ -1187,6 +1187,7 @@ export type components = {
         "total": number
         "limit": number
         "offset": number
+        "revision": string | null
       }
     }
     "ImportBatchNeedsActionResponse": {
@@ -1217,6 +1218,7 @@ export type components = {
         "total": number
         "limit": number
         "offset": number
+        "revision": string | null
       }
     }
     "ImportBatchReconciliationResponse": {
@@ -2865,6 +2867,7 @@ export type components = {
         "total": number
         "limit": number
         "offset": number
+        "revision": string | null
       }
     }
     "SnapshotOverviewResponse": {

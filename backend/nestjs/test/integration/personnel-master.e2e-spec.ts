@@ -181,4 +181,41 @@ describe("Personnel master administration", () => {
 
     await app.close();
   });
+
+  it("rejects malformed employee UUIDs before invoking the personnel service or database", async () => {
+    const updatePersonnelMaster = jest.fn();
+    const query = jest.fn(async () => ({ rowCount: 0, rows: [] }));
+    const app = await createIntegrationApp({
+      databaseService: { query },
+      integrationService: { updatePersonnelMaster },
+      authContextService: {
+        resolveUser: jest.fn(async () => ({
+          userId: actorUserId,
+          roleCodes: ["HR_ADMIN"],
+          scope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+        })),
+      },
+    });
+
+    const response = await headers(
+      request(app.getHttpServer()).patch(
+        "/api/integrations/personnel-master/not-a-uuid",
+      ),
+    ).send({
+      firstName: "Ayşe",
+      lastName: "Yılmaz",
+      phoneNumber: "+90 532 111 22 33",
+      employmentStatus: "active",
+      employmentType: "full_time",
+      hireDate: "2026-08-28",
+      storeId,
+      positionId,
+    });
+
+    expect(response.status).toBe(400);
+    expect(updatePersonnelMaster).not.toHaveBeenCalled();
+    expect(query).not.toHaveBeenCalled();
+
+    await app.close();
+  });
 });

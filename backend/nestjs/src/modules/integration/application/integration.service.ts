@@ -665,6 +665,7 @@ export class IntegrationService {
     status?: string;
     entityType?: string;
     sourceCode?: string;
+    q?: string;
     startedFrom?: string;
     startedTo?: string;
   }) {
@@ -678,43 +679,35 @@ export class IntegrationService {
         stuckBefore: getImportStuckBeforeIso(),
       });
 
-    const items = await Promise.all(
-      result.rows.map(async (batch) => {
-        let blockedByEntityTypes: string[] = [];
-
-        if (batch.health_state === "blocked") {
-          const dependencySummaryRow =
-            await this.importBatchReadRepository.getImportBatchDependencySummary(
-              batch.import_batch_id,
-              batch.entity_type as
-                | "employee"
-                | "store"
-                | "kpi"
-                | "assignment"
-                | "position"
-                | "company"
-                | "region",
-            );
-
-          blockedByEntityTypes = getBlockedByEntityTypes({
-            employee: Number(dependencySummaryRow?.employee_count ?? 0),
-            store: Number(dependencySummaryRow?.store_count ?? 0),
-            position: Number(dependencySummaryRow?.position_count ?? 0),
-            region: Number(dependencySummaryRow?.region_count ?? 0),
-            company: Number(dependencySummaryRow?.company_count ?? 0),
-            manager: Number(dependencySummaryRow?.manager_count ?? 0),
-          });
-        }
-
-        return mapImportBatchNeedsActionItem(batch, blockedByEntityTypes);
-      }),
+    const items = result.rows.map((batch) =>
+      mapImportBatchNeedsActionItem(
+        batch,
+        batch.health_state === "blocked"
+          ? getBlockedByEntityTypes({
+              employee: Number(batch.employee_dependency_count ?? 0),
+              store: Number(batch.store_dependency_count ?? 0),
+              position: Number(batch.position_dependency_count ?? 0),
+              region: Number(batch.region_dependency_count ?? 0),
+              company: Number(batch.company_dependency_count ?? 0),
+              manager: Number(batch.manager_dependency_count ?? 0),
+            })
+          : [],
+      ),
     );
 
-    return buildListResponse(items, {
+    const response = buildListResponse(items, {
       total: result.total,
       limit: input.limit,
       offset: input.offset,
     });
+
+    return {
+      ...response,
+      meta: {
+        ...response.meta,
+        revision: result.revision,
+      },
+    };
   }
 
   async getImportBatch(input: { actorCompanyIds: string[]; batchId: string }) {
@@ -792,7 +785,7 @@ export class IntegrationService {
       offset: input.offset,
     });
 
-    return buildListResponse(
+    const response = buildListResponse(
       result.rows.map((row) =>
         buildImportBatchErrorItem({
           integrationSourceId: batch.integration_source_id,
@@ -801,6 +794,14 @@ export class IntegrationService {
       ),
       { total: result.total, limit: input.limit, offset: input.offset },
     );
+
+    return {
+      ...response,
+      meta: {
+        ...response.meta,
+        revision: result.revision,
+      },
+    };
   }
 
   async approveExternalIdMapping(input: ApproveExternalIdMappingInput) {
@@ -810,6 +811,8 @@ export class IntegrationService {
   async getImportBatchAudit(input: {
     actorCompanyIds: string[];
     batchId: string;
+    limit?: number;
+    offset?: number;
   }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
@@ -822,13 +825,21 @@ export class IntegrationService {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const events = await this.importBatchReadRepository.getImportBatchAudit(
+    const result = await this.importBatchReadRepository.getImportBatchAudit(
       input.batchId,
+      {
+        limit: input.limit,
+        offset: input.offset,
+      },
     );
 
     return buildListResponse(
-      events.map((event) => mapAuditEvent(event)),
-      { total: events.length },
+      result.rows.map((event) => mapAuditEvent(event)),
+      {
+        total: result.total,
+        limit: input.limit ?? 50,
+        offset: input.offset ?? 0,
+      },
     );
   }
 

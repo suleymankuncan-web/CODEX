@@ -420,19 +420,56 @@ describe("POST /api/integrations/import-batches", () => {
   });
 
   it("returns import needs-action queue with blocked, retry-ready, needs-action, and stuck items", async () => {
+    const revision = "a".repeat(64);
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("COUNT(*)::text AS total_count") && sql.includes("action_queue")) {
-        return {
-          rowCount: 1,
-          rows: [{ total_count: "3" }],
-        };
-      }
-
-      if (sql.includes("FROM action_queue") && sql.includes("ORDER BY started_at DESC")) {
+        expect(sql).toContain("integration-needs-action:v1");
+        expect(sql).toContain("revision_rows AS MATERIALIZED");
+        expect(sql).toContain("jsonb_build_array");
+        expect(sql).toContain("jsonb_agg");
+        expect(sql).toContain("digest");
+        expect(sql).toContain("convert_to");
+        expect(sql).toContain("to_char(revision_row.started_at AT TIME ZONE 'UTC'");
+        expect(sql).toContain("revision_row.import_batch_id DESC");
+        for (const field of [
+          "revision_row.import_batch_id",
+          "revision_row.integration_source_id",
+          "revision_row.source_code",
+          "revision_row.source_name",
+          "revision_row.entity_type",
+          "revision_row.source_batch_id",
+          "revision_row.source_payload_hash",
+          "revision_row.source_captured_at",
+          "revision_row.source_window_started_at",
+          "revision_row.source_window_ended_at",
+          "revision_row.started_at",
+          "revision_row.finished_at",
+          "revision_row.status",
+          "revision_row.raw_file_name",
+          "revision_row.record_count",
+          "revision_row.error_count",
+          "revision_row.retry_count",
+          "revision_row.last_retried_at",
+          "revision_row.health_state",
+          "revision_row.action_reason",
+          "revision_row.recommended_action",
+          "revision_row.is_stuck",
+          "revision_row.employee_dependency_count::integer",
+          "revision_row.store_dependency_count::integer",
+          "revision_row.position_dependency_count::integer",
+          "revision_row.region_dependency_count::integer",
+          "revision_row.company_dependency_count::integer",
+          "revision_row.manager_dependency_count::integer",
+        ]) {
+          expect(sql).toContain(field);
+        }
         return {
           rowCount: 3,
           rows: [
             {
+              row_kind: "item",
+              total_count: "3",
+              revision,
               import_batch_id: "batch-blocked-1",
               integration_source_id: "source-1",
               source_code: "HRIS",
@@ -450,8 +487,17 @@ describe("POST /api/integrations/import-batches", () => {
               action_reason: "Missing dependency mappings detected",
               recommended_action: "Import the missing dependency entity types before retrying",
               is_stuck: false,
+              employee_dependency_count: "1",
+              store_dependency_count: "0",
+              position_dependency_count: "2",
+              region_dependency_count: "0",
+              company_dependency_count: "0",
+              manager_dependency_count: "1",
             },
             {
+              row_kind: "item",
+              total_count: "3",
+              revision,
               import_batch_id: "batch-retry-1",
               integration_source_id: "source-1",
               source_code: "HRIS",
@@ -469,8 +515,17 @@ describe("POST /api/integrations/import-batches", () => {
               action_reason: "Retryable write errors remain",
               recommended_action: "Retry the batch now",
               is_stuck: false,
+              employee_dependency_count: "0",
+              store_dependency_count: "0",
+              position_dependency_count: "0",
+              region_dependency_count: "0",
+              company_dependency_count: "0",
+              manager_dependency_count: "0",
             },
             {
+              row_kind: "item",
+              total_count: "3",
+              revision,
               import_batch_id: "batch-stuck-1",
               integration_source_id: "source-2",
               source_code: "ERP",
@@ -488,24 +543,12 @@ describe("POST /api/integrations/import-batches", () => {
               action_reason: "Batch has exceeded the in-progress time threshold",
               recommended_action: "Inspect worker execution and consider retrying after the root cause is fixed",
               is_stuck: true,
-            },
-          ],
-        };
-      }
-
-      if (
-        sql.includes("SUM(CASE WHEN validation_error ILIKE '%employee reference could not be resolved%'")
-      ) {
-        return {
-          rowCount: 1,
-          rows: [
-            {
-              employee_count: "0",
-              store_count: "0",
-              position_count: "2",
-              region_count: "0",
-              company_count: "0",
-              manager_count: "1",
+              employee_dependency_count: "0",
+              store_dependency_count: "0",
+              position_dependency_count: "0",
+              region_dependency_count: "0",
+              company_dependency_count: "0",
+              manager_dependency_count: "0",
             },
           ],
         };
@@ -528,6 +571,7 @@ describe("POST /api/integrations/import-batches", () => {
       total: 3,
       limit: 20,
       offset: 0,
+      revision,
     });
     expect(response.body.items).toEqual([
       {
@@ -598,6 +642,14 @@ describe("POST /api/integrations/import-batches", () => {
         isStuck: true,
       },
     ]);
+    expect(
+      query.mock.calls.filter(
+        ([sql]) =>
+          typeof sql === "string" &&
+          sql.includes("COUNT(*)::text AS total_count") &&
+          sql.includes("action_queue"),
+      ),
+    ).toHaveLength(1);
 
     await app.close();
   });

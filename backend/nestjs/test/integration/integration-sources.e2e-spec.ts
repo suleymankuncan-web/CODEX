@@ -218,7 +218,7 @@ describe("Integration sources", () => {
     });
 
     const deactivateResponse = await request(app.getHttpServer())
-      .patch("/api/integrations/sources/source-managed-3/deactivate")
+      .patch("/api/integrations/sources/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/deactivate")
       .set("x-user-id", "admin-1")
       .set("x-role-codes", "INTEGRATION_ADMIN");
 
@@ -226,7 +226,7 @@ describe("Integration sources", () => {
     expect(deactivateResponse.body.data.source.isActive).toBe(false);
 
     const reactivateResponse = await request(app.getHttpServer())
-      .patch("/api/integrations/sources/source-managed-3/reactivate")
+      .patch("/api/integrations/sources/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/reactivate")
       .set("x-user-id", "admin-1")
       .set("x-role-codes", "INTEGRATION_ADMIN");
 
@@ -415,7 +415,7 @@ describe("Integration sources", () => {
     const app = await createIntegrationApp({ databaseService: { query } });
 
     const response = await request(app.getHttpServer())
-      .get("/api/integrations/sources/source-managed-3/audit")
+      .get("/api/integrations/sources/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/audit")
       .set("x-user-id", "admin-1")
       .set("x-role-codes", "INTEGRATION_ADMIN");
 
@@ -622,7 +622,7 @@ describe("Integration sources", () => {
       if (
         sql.includes("COUNT(*)::text AS active_batch_count") &&
         Array.isArray(params) &&
-        params[0] === "source-busy-1"
+        params[0] === "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
       ) {
         return {
           rowCount: 1,
@@ -642,14 +642,45 @@ describe("Integration sources", () => {
     });
 
     const response = await request(app.getHttpServer())
-      .patch("/api/integrations/sources/source-busy-1/deactivate")
+      .patch("/api/integrations/sources/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/deactivate")
       .set("x-user-id", "admin-1")
       .set("x-role-codes", "INTEGRATION_ADMIN");
 
     expect(response.status).toBe(409);
     expect(response.body.message).toBe(
-      "Integration source source-busy-1 cannot be deactivated while active import batches exist",
+      "Integration source bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb cannot be deactivated while active import batches exist",
     );
+
+    await app.close();
+  });
+
+  it("rejects malformed source UUIDs before invoking the source service or database", async () => {
+    const deactivateIntegrationSource = jest.fn();
+    const query = jest.fn(async () => ({ rowCount: 0, rows: [] }));
+    const app = await createIntegrationApp({
+      databaseService: { query },
+      integrationService: { deactivateIntegrationSource },
+      authContextService: {
+        resolveUser: jest.fn(async () => ({
+          userId: "admin-1",
+          roleCodes: ["INTEGRATION_ADMIN"],
+          scope: {
+            companyIds: ["00000000-0000-0000-0000-000000000001"],
+            regionIds: [],
+            storeIds: [],
+          },
+        })),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch("/api/integrations/sources/not-a-uuid/deactivate")
+      .set("x-user-id", "admin-1")
+      .set("x-role-codes", "INTEGRATION_ADMIN");
+
+    expect(response.status).toBe(400);
+    expect(deactivateIntegrationSource).not.toHaveBeenCalled();
+    expect(query).not.toHaveBeenCalled();
 
     await app.close();
   });

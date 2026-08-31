@@ -89,6 +89,127 @@ test('snapshot detail preserves rerun and visibility semantics', async ({ page }
   await expectNoHorizontalOverflow(page)
 })
 
+test('snapshot needs-action export fetches every filtered server page before downloading', async ({ page }) => {
+  const exportOffsets: number[] = []
+  await page.unroute('**/api/snapshots/runs/needs-action?**')
+  await page.route('**/api/snapshots/runs/needs-action?**', async (route) => {
+    const url = new URL(route.request().url())
+    const limit = Number(url.searchParams.get('limit') ?? '12')
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    if (limit === 200) {
+      expect(url.searchParams.get('snapshotType')).toBe('daily')
+      expect(url.searchParams.get('runStatus')).toBe('failed')
+      exportOffsets.push(offset)
+      const count = offset === 0 ? 200 : 1
+      await route.fulfill({
+        json: {
+          items: Array.from({ length: count }, (_, index) => snapshotNeedsActionExportItem(offset + index)),
+          meta: { count, total: 201, limit, offset, revision: '3'.repeat(64) },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [snapshotNeedsActionExportItem(0)],
+        meta: { count: 1, total: 1, limit, offset },
+      },
+    })
+  })
+
+  await page.goto('/admin/snapshots')
+  await page.getByLabel('Filter snapshot type').click()
+  await page.getByRole('option', { name: 'daily' }).click()
+  await page.getByLabel('Filter run status').click()
+  await page.getByRole('option', { name: 'failed' }).click()
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export CSV' }).click()
+  expect((await downloadPromise).suggestedFilename()).toBe('snapshot-needs-action.csv')
+  await expect.poll(() => exportOffsets).toEqual([0, 200])
+})
+
+test('snapshot needs-action export refuses revision drift without downloading', async ({ page }) => {
+  const exportOffsets: number[] = []
+  await page.unroute('**/api/snapshots/runs/needs-action?**')
+  await page.route('**/api/snapshots/runs/needs-action?**', async (route) => {
+    const url = new URL(route.request().url())
+    const limit = Number(url.searchParams.get('limit') ?? '12')
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    if (limit === 200) {
+      exportOffsets.push(offset)
+      const count = offset === 0 ? 200 : 1
+      await route.fulfill({
+        json: {
+          items: Array.from({ length: count }, (_, index) => snapshotNeedsActionExportItem(offset + index)),
+          meta: {
+            count,
+            total: 201,
+            limit,
+            offset,
+            revision: offset === 0 ? '3'.repeat(64) : '4'.repeat(64),
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [snapshotNeedsActionExportItem(0)],
+        meta: { count: 1, total: 1, limit, offset },
+      },
+    })
+  })
+
+  await page.goto('/admin/snapshots')
+
+  let downloadCount = 0
+  page.on('download', () => {
+    downloadCount += 1
+  })
+  await page.getByRole('button', { name: 'Export CSV' }).click()
+  await expect(page.getByText('CSV export failed; complete data could not be fetched.')).toBeVisible()
+  await expect.poll(() => exportOffsets).toEqual([0, 200])
+  expect(downloadCount).toBe(0)
+})
+
+test('snapshot audit export fetches every server page before downloading', async ({ page }) => {
+  const exportOffsets: number[] = []
+  await page.unroute('**/api/snapshots/runs/*/audit**')
+  await page.route('**/api/snapshots/runs/*/audit**', async (route) => {
+    const url = new URL(route.request().url())
+    const limit = Number(url.searchParams.get('limit') ?? '20')
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    if (limit === 200) {
+      exportOffsets.push(offset)
+      const count = offset === 0 ? 200 : 1
+      await route.fulfill({
+        json: {
+          items: Array.from({ length: count }, (_, index) => snapshotAuditItem(offset + index)),
+          meta: { count, total: 201, limit, offset },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [snapshotAuditItem(0)],
+        meta: { count: 1, total: 1, limit, offset },
+      },
+    })
+  })
+
+  await page.goto('/admin/snapshots/snapshot-stuck-no-rerun')
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export audit' }).click()
+  expect((await downloadPromise).suggestedFilename()).toBe('snapshot-audit-snapshot-stuck-no-rerun.csv')
+  await expect.poll(() => exportOffsets).toEqual([0, 200])
+})
+
 async function routeSnapshotApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
@@ -139,7 +260,7 @@ async function routeSnapshotApi(page: Page) {
     })
   })
 
-  await page.route('**/api/snapshots/runs/*/audit', async (route) => {
+  await page.route('**/api/snapshots/runs/*/audit**', async (route) => {
     await route.fulfill({
       json: {
         items: [
@@ -233,6 +354,46 @@ function toDependencies(snapshotRunId: string) {
         message: canRerun ? 'Source dependency recovered.' : 'Manual dependency review required.',
       },
     ],
+  }
+}
+
+function snapshotAuditItem(index: number) {
+  return {
+    eventLogId: `snapshot-export-event-${index}`,
+    occurredAt: '2026-05-06T02:00:00.000Z',
+    actorUserId: 'snapshot-operator',
+    correlationId: `snapshot-export-correlation-${index}`,
+    eventType: 'snapshot.failed',
+    metadata: {},
+  }
+}
+
+function snapshotNeedsActionExportItem(index: number) {
+  return {
+    snapshotRunId: `snapshot-export-${index}`,
+    snapshotDate: '2026-05-06',
+    snapshotType: 'daily',
+    periodStart: '2026-05-06',
+    periodEnd: '2026-05-06',
+    runStatus: 'failed',
+    healthState: 'needs_action',
+    generatedAt: '2026-05-06T02:00:00.000Z',
+    generatedBy: 'snapshot-operator',
+    startedAt: '2026-05-06T02:01:00.000Z',
+    finishedAt: '2026-05-06T02:03:00.000Z',
+    failureReason: 'Fixture dependency failed',
+    rerunOfSnapshotRunId: null,
+    kpiConfigVersion: {
+      kpiConfigVersionId: '11111111-1111-4111-8111-111111111111',
+      versionNo: 7,
+      state: 'versioned',
+    },
+    actionReason: 'Review required',
+    recommendedAction: 'Open the run detail before taking action.',
+    canRerun: true,
+    rerunCount: 0,
+    latestRerunSnapshotRunId: null,
+    isStuck: false,
   }
 }
 

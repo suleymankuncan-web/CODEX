@@ -72,7 +72,9 @@ const authExpectedTestNames = [
 const importSplitFiles = [
   'backend/nestjs/test/integration/import-batch.e2e-spec.ts',
   'backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts',
+  'backend/nestjs/test/integration/import-batch-pagination.e2e-spec.ts',
   'backend/nestjs/test/integration/integration-sources.e2e-spec.ts',
+  'backend/nestjs/test/integration/import-batch-needs-action.e2e-spec.ts',
 ]
 const importEvidenceExpectedTestNames = [
   'returns import batch detail with row status summary',
@@ -80,6 +82,8 @@ const importEvidenceExpectedTestNames = [
   'returns import batch reconciliation totals and rates',
   'returns import batch error rows with pagination metadata',
   'returns KPI import batch error row lineage for reconciliation',
+  'keeps import error totals and revision on an out-of-range page',
+  'skips the import error digest over the bounded snapshot cap',
   'does not expose or retry import batches outside the actor company scope',
   'approves an external employee mapping without accepting a client-supplied table name',
   'rejects external ID mapping approval outside the actor company scope',
@@ -88,9 +92,15 @@ const importEvidenceExpectedTestNames = [
   'does not update store master data outside the actor company scope',
   'returns import batch audit events',
   'returns import batch audit events from the nested audit route',
+  'keeps import-batch audit totals when pagination is beyond the last event',
   'requeues import batches that no longer have blocking dependencies',
   'does not requeue import batches with unresolved blocking dependencies',
   'does not requeue completed import batches without retryable rows',
+  'keeps needs-action totals when pagination is beyond the last matching row',
+  'returns a revision for an empty needs-action snapshot',
+  'skips the needs-action digest over the bounded snapshot cap',
+  'passes a trimmed needs-action query to the single repository round trip',
+  'rejects an overlong needs-action query before hitting the repository',
 ]
 const integrationSourceExpectedTestNames = [
   'lists integration sources with filters and pagination metadata',
@@ -101,6 +111,7 @@ const integrationSourceExpectedTestNames = [
   'allows reusing source code across different entity types but rejects duplicate source code within the same entity type',
   'fails import creation with a clear error when the integration source is inactive',
   'rejects deactivating an integration source when active import batches exist',
+  'rejects malformed source UUIDs before invoking the source service or database',
 ]
 const competitionRepositorySplitFiles = [
   'backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.spec.ts',
@@ -332,10 +343,12 @@ test('import batch e2e is split without dropping evidence coverage', () => {
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 35)
+  assert.equal(totalTests, 44)
   assert.equal([...readText(importSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 11)
-  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 16)
-  assert.equal([...readText(importSplitFiles[2]).matchAll(/\bit\s*\(/g)].length, 8)
+  assert.equal([...readText(importSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 14)
+  assert.equal([...readText(importSplitFiles[2]).matchAll(/\bit\s*\(/g)].length, 5)
+  assert.equal([...readText(importSplitFiles[3]).matchAll(/\bit\s*\(/g)].length, 9)
+  assert.equal([...readText(importSplitFiles[4]).matchAll(/\bit\s*\(/g)].length, 5)
   for (const testName of importEvidenceExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)

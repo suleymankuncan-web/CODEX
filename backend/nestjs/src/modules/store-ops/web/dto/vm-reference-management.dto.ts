@@ -3,6 +3,7 @@ import {
   ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsInt, IsNotEmpty,
   IsIn, IsString, Max, MaxLength, Min, ValidateNested,
 } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateVmReferenceDraftDto {
@@ -47,6 +48,7 @@ export class SubmitVmCampaignDto {
 }
 
 export class VmReferenceListQueryDto {
+  @ApiProperty({ format: "uuid", type: String })
   @IsPostgresUuid() companyId!: string;
   @Type(() => Number) @IsInt() @Min(1) @Max(100) limit = 50;
   @Type(() => Number) @IsInt() @Min(0) offset = 0;

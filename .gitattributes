@@ -6,6 +6,7 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
+admin-web/src/generated/openapi-types.ts text eol=lf
 *.sql text eol=lf
 *.Dockerfile text eol=lf
 Dockerfile text eol=lf

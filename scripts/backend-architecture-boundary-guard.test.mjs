@@ -192,20 +192,12 @@ const largeTrackedSourceAllowlist = new Map([
     'Existing pilot smoke regression spec; parked until concrete flake, runtime issue, or reviewability blocker.',
   ],
   [
-    'admin-web/src/pages/IntegrationDashboardPage.tsx',
-    'Existing integration dashboard hotspot; parked until concrete product or reviewability trigger.',
-  ],
-  [
     'backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts',
     'Existing import-batch evidence E2E spec; parked until concrete flake, runtime issue, or reviewability blocker.',
   ],
   [
     'admin-web/src/pages/AdminKpiConfigPage.tsx',
     'Existing KPI config admin page hotspot; parked until concrete product or reviewability trigger.',
-  ],
-  [
-    'admin-web/src/pages/ImportBatchDetailPage.tsx',
-    'Existing import batch detail page hotspot; parked until concrete product or reviewability trigger.',
   ],
   [
     'backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts',

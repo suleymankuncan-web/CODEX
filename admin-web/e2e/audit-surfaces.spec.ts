@@ -62,6 +62,89 @@ test('audit detail route preserves correlation and back navigation', async ({ pa
   ).toHaveCount(0)
 })
 
+test('user audit pager follows server offsets and resets on user route changes', async ({ page }) => {
+  const requestOffsets: Array<{ userId: string; offset: number }> = []
+  await page.unroute('**/api/auth/users/*/audit**')
+  await page.route('**/api/auth/users/*/audit**', async (route) => {
+    const url = new URL(route.request().url())
+    const userId = url.pathname.split('/').at(-2) ?? ''
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    requestOffsets.push({ userId, offset })
+
+    const total = userId === 'user-1' ? 21 : 1
+    const count = offset === 0 ? Math.min(20, total) : Math.max(0, total - offset)
+    const items = Array.from({ length: count }, (_, index) =>
+      createAuditEvent(`${userId}-event-${offset + index}`, offset === 0 ? 'USER_CREATED' : 'USER_UPDATED'),
+    )
+
+    await route.fulfill({
+      json: {
+        items,
+        meta: { count, total, limit: 20, offset },
+      },
+    })
+  })
+
+  await page.goto('/admin/audit/users/user-1/audit')
+  const main = page.getByRole('main')
+  await expect(main.getByText('1-20 / 21')).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Next' })).toBeEnabled()
+
+  await main.getByRole('button', { name: 'Next' }).click()
+  await expect(main.getByText('21-21 / 21')).toBeVisible()
+  await expect(main.getByText('USER_UPDATED')).toBeVisible()
+
+  await page.goto('/admin/audit/users/user-2/audit')
+  await expect(main.getByText('1-1 / 1')).toBeVisible()
+  await expect(main.getByText('USER_CREATED')).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Previous' })).toBeDisabled()
+  expect(requestOffsets).toEqual([
+    { userId: 'user-1', offset: 0 },
+    { userId: 'user-1', offset: 20 },
+    { userId: 'user-2', offset: 0 },
+  ])
+})
+
+test('action-store audit pager keeps assignment pages independent', async ({ page }) => {
+  const requestOffsets: Array<{ assignmentId: string; offset: number }> = []
+  await page.unroute('**/api/auth/action-store-assignments/*/audit**')
+  await page.route('**/api/auth/action-store-assignments/*/audit**', async (route) => {
+    const url = new URL(route.request().url())
+    const assignmentId = url.pathname.split('/').at(-2) ?? ''
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    requestOffsets.push({ assignmentId, offset })
+
+    const total = assignmentId === 'assignment-1' ? 21 : 1
+    const count = offset === 0 ? Math.min(20, total) : Math.max(0, total - offset)
+    const items = Array.from({ length: count }, (_, index) =>
+      createAuditEvent(`${assignmentId}-event-${offset + index}`, offset === 0 ? 'STORE_ASSIGNED' : 'STORE_UNASSIGNED'),
+    )
+
+    await route.fulfill({
+      json: {
+        items,
+        meta: { count, total, limit: 20, offset },
+      },
+    })
+  })
+
+  await page.goto('/admin/audit/action-store-assignments/assignment-1/audit')
+  const main = page.getByRole('main')
+  await expect(main.getByText('1-20 / 21')).toBeVisible()
+  await main.getByRole('button', { name: 'Next' }).click()
+  await expect(main.getByText('21-21 / 21')).toBeVisible()
+  await expect(main.getByText('STORE_UNASSIGNED')).toBeVisible()
+
+  await page.goto('/admin/audit/action-store-assignments/assignment-2/audit')
+  await expect(main.getByText('1-1 / 1')).toBeVisible()
+  await expect(main.getByText('STORE_ASSIGNED')).toBeVisible()
+  expect(requestOffsets).toEqual([
+    { assignmentId: 'assignment-1', offset: 0 },
+    { assignmentId: 'assignment-1', offset: 20 },
+    { assignmentId: 'assignment-2', offset: 0 },
+  ])
+})
+
 test('audit center keeps trace evidence readable on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/admin/audit')
@@ -116,15 +199,15 @@ async function routeAuditApi(page: Page) {
     })
   })
 
-  await page.route('**/api/auth/users/*/audit', async (route) => {
+  await page.route('**/api/auth/users/*/audit**', async (route) => {
     await route.fulfill({ json: auditResponseFixture })
   })
 
-  await page.route('**/api/auth/role-assignments/*/audit', async (route) => {
+  await page.route('**/api/auth/role-assignments/*/audit**', async (route) => {
     await route.fulfill({ json: auditResponseFixture })
   })
 
-  await page.route('**/api/auth/action-store-assignments/*/audit', async (route) => {
+  await page.route('**/api/auth/action-store-assignments/*/audit**', async (route) => {
     await route.fulfill({ json: auditResponseFixture })
   })
 }
@@ -229,4 +312,24 @@ const auditResponseFixture = {
     },
   ],
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+function createAuditEvent(eventLogId: string, eventType: string) {
+  return {
+    eventLogId,
+    eventType,
+    occurredAt: '2026-05-20T10:00:00.000Z',
+    actorUserId: 'audit-admin-user',
+    correlationId: `${eventLogId}-correlation`,
+    metadata: {
+      changedFields: ['storeId'],
+      sourceContext: {
+        module: 'auth',
+        operation: 'assignment-update',
+      },
+      details: {
+        eventLogId,
+      },
+    },
+  }
 }

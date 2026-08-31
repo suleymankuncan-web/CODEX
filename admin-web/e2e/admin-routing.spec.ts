@@ -694,15 +694,15 @@ async function routeAdminShellApi(page: Page) {
     await route.fulfill({ json: emptyListFixture })
   })
 
-  await page.route('**/api/auth/users/user-1/audit', async (route) => {
+  await page.route('**/api/auth/users/user-1/audit**', async (route) => {
     await route.fulfill({ json: authAuditFixture })
   })
 
-  await page.route('**/api/auth/role-assignments/assignment-1/audit', async (route) => {
+  await page.route('**/api/auth/role-assignments/assignment-1/audit**', async (route) => {
     await route.fulfill({ json: authAuditFixture })
   })
 
-  await page.route('**/api/auth/action-store-assignments/action-store-assignment-1/audit', async (route) => {
+  await page.route('**/api/auth/action-store-assignments/action-store-assignment-1/audit**', async (route) => {
     await route.fulfill({ json: authAuditFixture })
   })
 
@@ -730,7 +730,7 @@ async function routeAdminShellApi(page: Page) {
     await route.fulfill({ json: snapshotLineageFixture })
   })
 
-  await page.route('**/api/snapshots/runs/snapshot-run-1/audit', async (route) => {
+  await page.route('**/api/snapshots/runs/snapshot-run-1/audit**', async (route) => {
     await route.fulfill({ json: snapshotAuditFixture })
   })
 

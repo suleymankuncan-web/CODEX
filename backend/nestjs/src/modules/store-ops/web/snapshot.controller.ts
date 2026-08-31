@@ -1,8 +1,19 @@
-import { Body, Controller, Get, Param, Post, Query, Req } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+} from "@nestjs/common";
+import { ApiParam, ApiQuery } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { SnapshotService } from "../application/snapshot.service";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { CreateSnapshotRunDto } from "./dto/create-snapshot-run.dto";
+import { ListSnapshotRunAuditQueryDto } from "./dto/list-snapshot-run-audit.query";
 import { ListSnapshotRunOperationsQueryDto } from "./dto/list-snapshot-run-operations.query";
 
 type SnapshotActorUser = {
@@ -124,26 +135,43 @@ export class SnapshotController {
   }
 
   @Get("runs/:snapshotRunId/audit")
+  @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    schema: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+  })
+  @ApiQuery({
+    name: "offset",
+    required: false,
+    schema: { type: "integer", minimum: 0, default: 0 },
+  })
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
   async getSnapshotRunAudit(
-    @Param("snapshotRunId") snapshotRunId: string,
+    @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
     request: {
       user: SnapshotActorUser;
     },
+    @Query() query: ListSnapshotRunAuditQueryDto,
   ) {
     return this.snapshotService.getSnapshotRunAudit(
       snapshotRunId,
       this.getActorCompanyIds(request.user),
+      {
+        limit: query.limit,
+        offset: query.offset,
+      },
     );
   }
 
   @Get("runs/:snapshotRunId/dependencies")
+  @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
   async getSnapshotRunDependencies(
-    @Param("snapshotRunId") snapshotRunId: string,
+    @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
     request: {
       user: SnapshotActorUser;
@@ -156,10 +184,11 @@ export class SnapshotController {
   }
 
   @Get("runs/:snapshotRunId/lineage")
+  @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
   async getSnapshotRunLineage(
-    @Param("snapshotRunId") snapshotRunId: string,
+    @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
     request: {
       user: SnapshotActorUser;
@@ -172,10 +201,11 @@ export class SnapshotController {
   }
 
   @Post("runs/:snapshotRunId/rerun")
+  @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
   async rerunSnapshotRun(
-    @Param("snapshotRunId") snapshotRunId: string,
+    @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
     request: {
       user: SnapshotActorUser;
@@ -189,10 +219,11 @@ export class SnapshotController {
   }
 
   @Get("runs/:snapshotRunId")
+  @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
   @RequireRoles("SNAPSHOT_OPERATOR")
   async getSnapshotRun(
-    @Param("snapshotRunId") snapshotRunId: string,
+    @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
     request: {
       user: SnapshotActorUser;

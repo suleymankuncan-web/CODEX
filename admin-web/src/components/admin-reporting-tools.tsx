@@ -17,6 +17,8 @@ type AdminReportingToolbarInput = {
   onExport: () => void
   sortAriaLabel?: string
   exportLabel?: string
+  exportDisabled?: boolean
+  exportBusy?: boolean
   children?: ReactNode
   className?: string
 }
@@ -40,7 +42,13 @@ export function AdminReportingToolbar(input: AdminReportingToolbarInput) {
           ))}
         </SelectContent>
       </Select>
-      <Button type="button" variant="outline" onClick={input.onExport}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={input.onExport}
+        disabled={input.exportDisabled}
+        aria-busy={input.exportBusy}
+      >
         <Download aria-hidden="true" />
         {input.exportLabel ?? 'Export CSV'}
       </Button>
