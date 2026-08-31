@@ -33,8 +33,8 @@ when the decision needs them.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
 - New modules, broad redesign, generic architecture/refactor, and provider/JSON runtime integration remain parked. The owner-approved on-prem synthetic preparation and the contract-only company daily KPI pull specification are bounded local exceptions, without live-provider, production, secret, or company-data authority.
-- Power BI/Excel remains the current operating data path; the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026. The authorized local scope remains documentation and synthetic guards only.
-  Connector runtime, scheduling, and replacement of Excel remain suspended pending official sanitized fields, authentication, reconciliation, and separate approval.
+- Power BI/Excel remains the current operating data path; the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026. Owner-confirmed sample observations now support a Draft storage/normalization decision in `docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md`; a network-free pure adapter may follow only after that draft is approved.
+  Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended. The observed private evidence and provider-native configuration remain outside Git.
 - Runtime work remains parked except for the owner-opened DG1-DG2 remediation
   train; any other runtime line still requires a factual P0/P1 finding or a
   newer explicit owner decision.

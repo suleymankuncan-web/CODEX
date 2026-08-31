@@ -98,15 +98,15 @@ test('daily pull public documents record product-owner approval without authoriz
   )
   requireText(
     intake,
-    'Status: `contract_approved`',
+    'Status: `sample_payload_observed`',
   )
   requireText(
     intake,
-    '`contract_approved`: current state; product semantics are approved, while provider fields and runtime details are not proven',
+    '`sample_payload_observed`: current state; neutral sample shapes and owner-confirmed semantics are recorded, while nullability, error, volume, and runtime details are not proven',
   )
   requireText(
     currentState,
-    'Connector runtime, scheduling, and replacement of Excel remain suspended',
+    'Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended.',
   )
   assert.doesNotMatch(
     contract,
@@ -268,13 +268,14 @@ test('daily pull contract gates incompatible employee KPI uniqueness', () => {
 test('public documents use neutral aliases and keep runtime work parked', () => {
   for (const phrase of [
     'private operation and execution identifiers remain outside Git',
-    'documentation and synthetic contract testing only',
+    'provider-native fields, endpoints, or private operation identifiers.',
+    'a network-free pure adapter driven only by',
   ]) {
     requireText(intake, phrase)
   }
 
   requireText(genericJsonDraft, 'is not the selected contract for the company daily pull source')
-  requireText(currentState, 'Connector runtime, scheduling, and replacement of Excel remain suspended')
+  requireText(currentState, 'Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended.')
   for (const alias of ['sales', 'footfall', 'gsm', 'store-directory']) {
     requireText(contract, `\`${alias}\``)
   }
