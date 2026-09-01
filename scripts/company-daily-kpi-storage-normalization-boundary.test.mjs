@@ -76,10 +76,10 @@ test('storage boundary has mandatory sections and requirement traceability', () 
   }
 })
 
-test('storage boundary remains a draft with no premature approval claim', () => {
-  requireText(contract, 'Status: Draft — pending product-owner approval')
-  requireText(contract, 'Reviewers: Product owner (pending)')
-  assert.doesNotMatch(contract, /Status: Approved|Reviewers: Product owner \(approved/i)
+test('storage boundary records product-owner approval before pure adapter code', () => {
+  requireText(contract, 'Status: Approved')
+  requireText(contract, 'Reviewers: Product owner (approved 1 September 2026)')
+  assert.doesNotMatch(contract, /Status: Draft|Product owner \(pending/i)
 })
 
 test('storage boundary records only neutral observed source shapes', () => {
@@ -211,7 +211,7 @@ test('handoff and intake describe observed evidence without enabling runtime', (
     'does not authorize live API access, migration, scheduling, Docker runtime changes, deployment, or Excel replacement',
   )
   requireText(currentState, contractPath)
-  requireText(currentState, 'a network-free pure adapter may follow only after that draft is approved')
+  requireText(currentState, 'A network-free pure adapter is now the active bounded implementation slice.')
   requireText(currentState, 'Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended.')
 })
 

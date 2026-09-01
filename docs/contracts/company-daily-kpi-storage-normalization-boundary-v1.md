@@ -2,8 +2,8 @@
 
 Author: Codex with product-owner input
 Date: 31 August 2026
-Status: Draft — pending product-owner approval
-Reviewers: Product owner (pending)
+Status: Approved
+Reviewers: Product owner (approved 1 September 2026)
 
 ## Context
 

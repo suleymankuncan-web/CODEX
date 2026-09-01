@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-08-31
+Last verified: 2026-09-01
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -33,7 +33,7 @@ when the decision needs them.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
 - New modules, broad redesign, generic architecture/refactor, and provider/JSON runtime integration remain parked. The owner-approved on-prem synthetic preparation and the contract-only company daily KPI pull specification are bounded local exceptions, without live-provider, production, secret, or company-data authority.
-- Power BI/Excel remains the current operating data path; the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026. Owner-confirmed sample observations now support a Draft storage/normalization decision in `docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md`; a network-free pure adapter may follow only after that draft is approved.
+- Power BI/Excel remains the current operating data path; the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026. The product owner approved the storage/normalization boundary in `docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md` on 1 September 2026. A network-free pure adapter is now the active bounded implementation slice.
   Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended. The observed private evidence and provider-native configuration remain outside Git.
 - Runtime work remains parked except for the owner-opened DG1-DG2 remediation
   train; any other runtime line still requires a factual P0/P1 finding or a
