@@ -1,7 +1,5 @@
 import type {
   ISODate,
-  SalesDailyAggregate,
-  SanitizedComponentSet,
   StoreFootfallDailyAggregate,
   StoreGsmDailyAggregate,
   StoreSalesDailyAggregate,
@@ -40,58 +38,64 @@ export type StoreRangeResult = {
 
 type CompanyDailyKpiOperation = "sales" | "footfall" | "gsm";
 
-export type CompanyDailyKpiComponentSet<
+/**
+ * A component set after infrastructure has projected only requested store
+ * facts. `projectionAggregateCount` is intentionally scoped to those rows;
+ * it is not the persisted component's full physical aggregate count.
+ */
+export type CompanyDailyKpiStoreRangeComponentSet<
   TAggregate,
   TOperation extends CompanyDailyKpiOperation,
-> = Readonly<
-  Omit<SanitizedComponentSet<TAggregate>, "operation" | "aggregates">
-> & {
-  operation: TOperation;
-  aggregates: readonly TAggregate[];
+> = {
+  readonly operation: TOperation;
+  readonly businessDate: ISODate;
+  readonly status: "succeeded" | "failed" | "missed";
+  readonly aggregates: readonly TAggregate[];
+  readonly projectionAggregateCount: number;
 };
 
-export type CompanyDailyKpiComponentSets = {
-  sales: readonly CompanyDailyKpiComponentSet<
-    SalesDailyAggregate,
+export type CompanyDailyKpiStoreRangeComponentSets = {
+  sales: readonly CompanyDailyKpiStoreRangeComponentSet<
+    StoreSalesDailyAggregate,
     "sales"
   >[];
-  footfall: readonly CompanyDailyKpiComponentSet<
+  footfall: readonly CompanyDailyKpiStoreRangeComponentSet<
     StoreFootfallDailyAggregate,
     "footfall"
   >[];
-  gsm: readonly CompanyDailyKpiComponentSet<
+  gsm: readonly CompanyDailyKpiStoreRangeComponentSet<
     StoreGsmDailyAggregate,
     "gsm"
   >[];
 };
 
-export type CompanyDailyKpiStoreRangeInput = {
+export type CompanyDailyKpiStoreRangeProjection = {
   sourceCode: string;
   startDate: ISODate;
   endDate: ISODate;
   storeCodes: readonly string[];
-  componentSets: CompanyDailyKpiComponentSets;
+  componentSets: CompanyDailyKpiStoreRangeComponentSets;
 };
 
 type ValidatedInput = {
   startDate: ISODate;
   endDate: ISODate;
   storeCodes: readonly string[];
-  componentSets: CompanyDailyKpiComponentSets;
+  componentSets: CompanyDailyKpiStoreRangeComponentSets;
 };
 
 type ValidatedComponentSets = {
   sales: Map<
     ISODate,
-    CompanyDailyKpiComponentSet<SalesDailyAggregate, "sales">
+    CompanyDailyKpiStoreRangeComponentSet<StoreSalesDailyAggregate, "sales">
   >;
   footfall: Map<
     ISODate,
-    CompanyDailyKpiComponentSet<StoreFootfallDailyAggregate, "footfall">
+    CompanyDailyKpiStoreRangeComponentSet<StoreFootfallDailyAggregate, "footfall">
   >;
   gsm: Map<
     ISODate,
-    CompanyDailyKpiComponentSet<StoreGsmDailyAggregate, "gsm">
+    CompanyDailyKpiStoreRangeComponentSet<StoreGsmDailyAggregate, "gsm">
   >;
 };
 
@@ -103,7 +107,7 @@ const INVALID_INPUT_MESSAGE = "Invalid company daily KPI range input";
  * it performs no I/O and does not expose component or personnel metadata.
  */
 export function aggregateCompanyDailyKpiStoreRange(
-  input: CompanyDailyKpiStoreRangeInput,
+  input: CompanyDailyKpiStoreRangeProjection,
 ): StoreRangeResult[] {
   const validated = validateInput(input);
   const expectedDays = enumerateDays(validated.startDate, validated.endDate);
@@ -129,7 +133,7 @@ export function aggregateCompanyDailyKpiStoreRange(
 }
 
 function validateInput(
-  input: CompanyDailyKpiStoreRangeInput,
+  input: CompanyDailyKpiStoreRangeProjection,
 ): ValidatedInput {
   if (!isRecord(input)) throw invalidInput();
   if (!isRequiredCode(input.sourceCode)) throw invalidInput();
@@ -167,21 +171,18 @@ function validateInput(
   validateComponentSets(
     componentSets.sales,
     "sales",
-    input.sourceCode,
     expectedStart,
     expectedEnd,
   );
   validateComponentSets(
     componentSets.footfall,
     "footfall",
-    input.sourceCode,
     expectedStart,
     expectedEnd,
   );
   validateComponentSets(
     componentSets.gsm,
     "gsm",
-    input.sourceCode,
     expectedStart,
     expectedEnd,
   );
@@ -198,9 +199,11 @@ function validateComponentSets<
   TAggregate,
   TOperation extends CompanyDailyKpiOperation,
 >(
-  sets: readonly CompanyDailyKpiComponentSet<TAggregate, TOperation>[],
+  sets: readonly CompanyDailyKpiStoreRangeComponentSet<
+    TAggregate,
+    TOperation
+  >[],
   expectedOperation: TOperation,
-  sourceCode: string,
   startDate: ISODate,
   endDate: ISODate,
 ): void {
@@ -209,7 +212,20 @@ function validateComponentSets<
   for (const componentSet of sets) {
     if (!isRecord(componentSet)) throw invalidInput();
     if (componentSet.operation !== expectedOperation) throw invalidInput();
-    if (componentSet.sourceCode !== sourceCode) throw invalidInput();
+    if (
+      Object.keys(componentSet).some(
+        (key) =>
+          ![
+            "operation",
+            "businessDate",
+            "status",
+            "aggregates",
+            "projectionAggregateCount",
+          ].includes(key),
+      )
+    ) {
+      throw invalidInput();
+    }
     if (!isIsoDate(componentSet.businessDate)) throw invalidInput();
     if (
       compareText(componentSet.businessDate, startDate) < 0 ||
@@ -220,18 +236,24 @@ function validateComponentSets<
     if (seenDates.has(componentSet.businessDate)) throw invalidInput();
     seenDates.add(componentSet.businessDate);
     if (!Array.isArray(componentSet.aggregates)) throw invalidInput();
-    if (!isSafeCount(componentSet.aggregateCount)) throw invalidInput();
-    if (!isSafeCount(componentSet.retryCount)) throw invalidInput();
+    if (!isSafeCount(componentSet.projectionAggregateCount)) {
+      throw invalidInput();
+    }
 
     if (componentSet.status === "succeeded") {
-      if (componentSet.aggregateCount !== componentSet.aggregates.length) {
+      if (
+        componentSet.projectionAggregateCount !== componentSet.aggregates.length
+      ) {
         throw invalidInput();
       }
     } else if (
       componentSet.status === "failed" ||
       componentSet.status === "missed"
     ) {
-      if (componentSet.aggregateCount !== 0 || componentSet.aggregates.length) {
+      if (
+        componentSet.projectionAggregateCount !== 0 ||
+        componentSet.aggregates.length
+      ) {
         throw invalidInput();
       }
     } else {
@@ -259,12 +281,9 @@ function validateAggregates(
     if (!isRequiredCode(aggregate.storeCode)) throw invalidInput();
 
     if (operation === "sales") {
-      if (hasOwn(aggregate, "personnelCode")) {
-        validateEmployeeSalesAggregate(aggregate);
-      } else {
-        validateStoreSalesAggregate(aggregate);
-        assertUniqueStoreFact(seenStoreFacts, aggregate.storeCode);
-      }
+      if (hasOwn(aggregate, "personnelCode")) throw invalidInput();
+      validateStoreSalesAggregate(aggregate);
+      assertUniqueStoreFact(seenStoreFacts, aggregate.storeCode);
     } else if (operation === "footfall") {
       if (hasOwn(aggregate, "personnelCode")) throw invalidInput();
       validateFootfallAggregate(aggregate);
@@ -274,25 +293,6 @@ function validateAggregates(
       validateGsmAggregate(aggregate);
       assertUniqueStoreFact(seenStoreFacts, aggregate.storeCode);
     }
-  }
-}
-
-function validateEmployeeSalesAggregate(
-  aggregate: Record<string, unknown>,
-): void {
-  if (!isRequiredCode(aggregate.personnelCode)) throw invalidInput();
-  for (const field of ["saleInvoiceCount", "returnInvoiceCount"] as const) {
-    if (!isSafeCount(aggregate[field])) throw invalidInput();
-  }
-  for (const field of [
-    "saleQuantity",
-    "signedReturnQuantity",
-    "netQuantity",
-    "saleAmountTry",
-    "signedReturnAmountTry",
-    "netAmountTry",
-  ] as const) {
-    if (typeof aggregate[field] !== "string") throw invalidInput();
   }
 }
 
@@ -353,11 +353,11 @@ function aggregateConversion(
   expectedDays: readonly ISODate[],
   salesSets: ReadonlyMap<
     ISODate,
-    CompanyDailyKpiComponentSet<SalesDailyAggregate, "sales">
+    CompanyDailyKpiStoreRangeComponentSet<StoreSalesDailyAggregate, "sales">
   >,
   footfallSets: ReadonlyMap<
     ISODate,
-    CompanyDailyKpiComponentSet<StoreFootfallDailyAggregate, "footfall">
+    CompanyDailyKpiStoreRangeComponentSet<StoreFootfallDailyAggregate, "footfall">
   >,
 ): RatioWithCoverage {
   let numerator = 0n;
@@ -396,7 +396,7 @@ function aggregateGsm(
   expectedDays: readonly ISODate[],
   gsmSets: ReadonlyMap<
     ISODate,
-    CompanyDailyKpiComponentSet<StoreGsmDailyAggregate, "gsm">
+    CompanyDailyKpiStoreRangeComponentSet<StoreGsmDailyAggregate, "gsm">
   >,
 ): RatioWithCoverage {
   let numerator = 0n;
@@ -423,13 +423,10 @@ function aggregateGsm(
 }
 
 function findStoreSalesFact(
-  aggregates: readonly SalesDailyAggregate[],
+  aggregates: readonly StoreSalesDailyAggregate[],
   storeCode: string,
 ): StoreSalesDailyAggregate | undefined {
-  return aggregates.find(
-    (aggregate): aggregate is StoreSalesDailyAggregate =>
-      aggregate.storeCode === storeCode && !hasOwn(aggregate, "personnelCode"),
-  );
+  return aggregates.find((aggregate) => aggregate.storeCode === storeCode);
 }
 
 function findFootfallFact(
