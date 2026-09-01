@@ -46,8 +46,8 @@ env:
   POSTGRES_INSPECT_IMAGE: golang:1.26.3-alpine@sha256:91eda9776261207ea25fd06b5b7fed8d397dd2c0a283e77f2ab6e91bfa71079d
   REDIS_IMAGE: redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
   REDIS_CONFIG_IMAGE_ID: sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33
-  SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d
-  SEAWEEDFS_CONFIG_IMAGE_ID: sha256:8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0
+  SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da
+  SEAWEEDFS_CONFIG_IMAGE_ID: sha256:e2b2a188801852f56370ba1537d0e1c8ceafafc0d52a396dd85c30868ab83c03
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   SYFT_IMAGE: anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026
   KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED: 'true'
@@ -348,8 +348,8 @@ jobs:
           test "$POSTGRES_CONFIG_IMAGE_ID" = 'sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b'
           test "$REDIS_IMAGE" = 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2'
           test "$REDIS_CONFIG_IMAGE_ID" = 'sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33'
-          test "$SEAWEEDFS_IMAGE" = 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d'
-          test "$SEAWEEDFS_CONFIG_IMAGE_ID" = 'sha256:8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0'
+          test "$SEAWEEDFS_IMAGE" = 'chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da'
+          test "$SEAWEEDFS_CONFIG_IMAGE_ID" = 'sha256:e2b2a188801852f56370ba1537d0e1c8ceafafc0d52a396dd85c30868ab83c03'
           readonly CADDY_IMAGE CADDY_CONFIG_IMAGE_ID POSTGRES_IMAGE POSTGRES_CONFIG_IMAGE_ID REDIS_IMAGE REDIS_CONFIG_IMAGE_ID SEAWEEDFS_IMAGE SEAWEEDFS_CONFIG_IMAGE_ID
           vendor_evidence="$PROOF_ROOT/vendor-evidence"
           rm -rf "$vendor_evidence"
@@ -479,8 +479,8 @@ jobs:
            for (const name of ['caddy', 'postgres', 'redis', 'seaweedfs']) imageIds[name] = readFileSync(join(proofRoot, `${name}-image-id.txt`), 'utf8').trim()
            const images = {}
            const archivePaths = { backend: 'images/backend.tar', frontend: 'images/frontend.tar', keycloak: 'images/keycloak.tar', caddy: 'images/caddy.tar', postgres: 'images/postgres.tar', redis: 'images/redis.tar', seaweedfs: 'images/seaweedfs.tar' }
-           const vendorRefs = Object.freeze({ caddy: 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648', postgres: 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6', redis: 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2', seaweedfs: 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d' })
-           const expectedVendorConfigImageIds = Object.freeze({ caddy: 'sha256:af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe', postgres: 'sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b', redis: 'sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33', seaweedfs: 'sha256:8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0' })
+           const vendorRefs = Object.freeze({ caddy: 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648', postgres: 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6', redis: 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2', seaweedfs: 'chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da' })
+           const expectedVendorConfigImageIds = Object.freeze({ caddy: 'sha256:af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe', postgres: 'sha256:75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b', redis: 'sha256:2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33', seaweedfs: 'sha256:e2b2a188801852f56370ba1537d0e1c8ceafafc0d52a396dd85c30868ab83c03' })
            for (const name of imageNames) {
              const archivePath = join(proofRoot, `${name}-image.tar`)
              const vendor = vendorRefs[name]

@@ -71,17 +71,17 @@ slice. They are planning inputs, not permanent assumptions.
 | ONP-D11 | Use synthetic fixtures only during local package development and rehearsal. | Avoids accidental company-data movement before approval. |
 | ONP-D12 | No automatic database migration on API startup. A one-shot migrator runs explicitly before API/worker activation. | Makes schema change and rollback decisions observable. |
 
-### SeaweedFS 4.41 synthetic evidence status (ONP-4B, 2026-08-12)
+### SeaweedFS 4.43 synthetic evidence status (ONP-4B, 2026-09-01)
 
 The conditional SeaweedFS candidate now has a repository-backed synthetic
 engine proof. This is evidence for the reversible ONP-4B slice; it is not a
 production engine-acceptance or photo-activation decision.
 
 - The pinned image is
-  `chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d`
-  (OCI version `4.41`, revision `de34a1a87c02893507f961cda9574172ee5064e9`,
+  `chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da`
+  (OCI version `4.43`, revision `6c7f184381e3c4f7908934f4c1d8cb7dcca41894`,
   Linux `amd64`). The vendored Apache-2.0 source is the upstream tag
-  `seaweedfs/seaweedfs@4.41:LICENSE`, SHA-256
+  `seaweedfs/seaweedfs@4.43:LICENSE`, SHA-256
   `d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613`.
 - The versioned overlay joins the unchanged core Compose project. Production
   object storage has no host-published port and is reachable only on the

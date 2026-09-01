@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 
-export const SEAWEEDFS_IMAGE = 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d'
+export const SEAWEEDFS_IMAGE = 'chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da'
 
 const REQUIRED_FLAGS = [
   '-volume.max=32',
@@ -91,7 +91,7 @@ export function validateOnpremPhotoStorageContract(input) {
   ].join('\n')
 
   failIf(errors, Boolean(objectStorage), 'photo overlay must define object-storage')
-  failIf(errors, envValue(envTemplate, 'SEAWEEDFS_IMAGE') === SEAWEEDFS_IMAGE, 'SeaweedFS image must be the exact 4.41 digest')
+  failIf(errors, envValue(envTemplate, 'SEAWEEDFS_IMAGE') === SEAWEEDFS_IMAGE, 'SeaweedFS image must be the exact 4.43 digest')
   failIf(errors, !/^    ports:/m.test(objectStorage), 'production object-storage must not publish a host port')
   failIf(errors, /networks: \[data\]/.test(objectStorage), 'object-storage must be private on the internal data network')
   failIf(errors, /read_only: true/.test(objectStorage), 'object-storage must be read-only')
@@ -160,7 +160,7 @@ export function validateOnpremPhotoStorageContract(input) {
   failIf(errors, /onprem-photo-storage-runtime-proof\.mjs/.test(String(input.workflow)), 'CI must invoke the storage runtime proof')
   failIf(errors, /photo-storage.*sbom|storage.*sbom/i.test(String(input.workflow)), 'CI must upload storage SBOM evidence')
   failIf(errors, /photo-storage\/LICENSE/.test(String(input.workflow)) && /d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613/.test(String(input.workflow)), 'CI must reconcile the pinned SeaweedFS Apache-2.0 license source')
-  failIf(errors, license.includes('Apache License') && createHash('sha256').update(license).digest('hex') === 'd789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613', 'vendored SeaweedFS 4.41 LICENSE must match the authoritative source hash')
+  failIf(errors, license.includes('Apache License') && createHash('sha256').update(license).digest('hex') === 'd789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613', 'vendored SeaweedFS 4.43 LICENSE must match the authoritative source hash')
 
   return { ok: errors.length === 0, errors, image: envValue(envTemplate, 'SEAWEEDFS_IMAGE') }
 }

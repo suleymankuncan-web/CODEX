@@ -518,7 +518,7 @@ test('runtime proof pins exact image/project and composes base, storage, and pro
     '--file', resolve('infra/onprem/photo-storage/compose.proof.yaml'),
   ])
   assert.equal(args.at(-1), 'object-storage')
-  assert.match(STORAGE_IMAGE, /^chrislusf\/seaweedfs:4\.41@sha256:[0-9a-f]{64}$/)
+  assert.match(STORAGE_IMAGE, /^chrislusf\/seaweedfs:4\.43@sha256:[0-9a-f]{64}$/)
 })
 
 test('runtime proof CLI executes on Windows paths and rejects missing execution mode', () => {
