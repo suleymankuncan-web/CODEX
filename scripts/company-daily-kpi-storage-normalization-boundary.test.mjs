@@ -211,8 +211,8 @@ test('handoff and intake describe observed evidence without enabling runtime', (
     'does not authorize live API access, migration, scheduling, Docker runtime changes, deployment, or Excel replacement',
   )
   requireText(currentState, contractPath)
-  requireText(currentState, 'A network-free pure adapter is now the active bounded implementation slice.')
-  requireText(currentState, 'Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended.')
+  requireText(currentState, 'The network-free pure adapter is present, and the active bounded implementation slice adds typed daily component storage plus an atomic replacement repository without projecting into canonical KPI scoring.')
+  requireText(currentState, 'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.')
 })
 
 test('public boundary contains no realistic private connection or fixture values', () => {
