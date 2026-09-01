@@ -41,6 +41,12 @@ const storageContract = readText(
 )
 const intake = readText('docs/plans/real-ingest-connector-contract-intake.md')
 const currentState = readText('current-state.md')
+const validatorPath =
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness.ts'
+const validatorSpecPath =
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness.spec.ts'
+const validator = readText(validatorPath)
+const validatorSpec = readText(validatorSpecPath)
 
 test('readiness evidence contract is traceable and product-owner approved', () => {
   for (const section of [
@@ -246,6 +252,31 @@ test('future validator is strict and public guards stay tracked-text-only', () =
   ]) {
     requireText(contract, phrase)
   }
+})
+
+test('pure readiness validator remains tracked, fail closed, and free of runtime I/O', () => {
+  for (const phrase of [
+    'validateConnectorReadinessEvidence',
+    'evaluateConnectorReadiness',
+    'nextRetryBoundaryMs',
+    'approvedOwnerRoleAliases',
+    'ready_for_connector_implementation',
+  ]) {
+    requireText(validator, phrase)
+  }
+
+  assert.doesNotMatch(validator, /^\s*import\s/m)
+  assert.doesNotMatch(
+    validator,
+    /\b(?:fetch|process\.env|DatabaseService|HttpService)\b/,
+  )
+
+  const implementationText = [validator, validatorSpec].join('\n')
+  assert.doesNotMatch(
+    implementationText,
+    /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
+  )
+  assert.doesNotMatch(implementationText, /https?:\/\/[^\s)`]+/i)
 })
 
 test('summary exposes deterministic freshness and safe reason codes', () => {
