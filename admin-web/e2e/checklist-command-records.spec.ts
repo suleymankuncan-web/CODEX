@@ -14,6 +14,11 @@ const reportViewerManagers = [
   { managerName: 'Burak Demir', managerUserId: '10000000-0000-4000-8000-000000000007', regionId: '99999999-9999-4999-8999-999999999999', regionName: 'Burak Demir Sorumluluğu' },
   { managerName: 'Ceren Kılıç', managerUserId: '10000000-0000-4000-8000-000000000008', regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', regionName: 'Ceren Kılıç Sorumluluğu' },
 ] as const
+
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-08-31T12:00:00.000Z'))
+})
+
 test('Report Viewer keeps manager selection, visit plan, stores, and history in a dedicated read-only workspace', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'reportViewer')
