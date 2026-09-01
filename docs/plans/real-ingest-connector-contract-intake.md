@@ -36,10 +36,16 @@ pull is owner-selected for 02:00 Europe/Istanbul. There is no known rate limit,
 so bounded component-only backoff remains required rather than an unlimited
 retry loop.
 
-The public storage/normalization decision is drafted in
+The approved public storage/normalization decision is recorded in
 `docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md`. It
 records only neutral aliases and does not retain screenshots, real values,
 provider-native fields, endpoints, or private operation identifiers.
+
+The next implementation gate is drafted in
+`docs/contracts/company-daily-kpi-connector-readiness-evidence-v1.md`. It
+defines the sanitized, fail-closed evidence required before connector code may
+be proposed. It contains no evidence instance and remains pending product-owner
+approval.
 
 Unknown today:
 
@@ -54,12 +60,13 @@ Unknown today:
 
 Do not build or connect the source-specific runtime connector yet.
 
-The owner-authorized next local sequence is a storage/normalization boundary
-draft and, after its approval, a network-free pure adapter driven only by
-synthetic neutral rows. This does not authorize live API access, migration,
-scheduling, Docker runtime changes, deployment, or Excel replacement. Runtime
-work remains blocked until the remaining implementation-gate inputs are
-available and separately approved.
+The approved storage/normalization boundary, network-free pure adapter, and
+typed component storage are present. The next safe local step is the Draft
+readiness-evidence contract and its tracked-text-only guard. This does not
+authorize live API access, migration, scheduling, Docker runtime changes,
+deployment, or Excel replacement. Live connector implementation remains
+blocked until the Draft readiness evidence contract and a complete sanitized
+readiness decision are separately approved.
 
 ## Current Local Foundation
 
@@ -216,6 +223,7 @@ Allowed now:
 - add synthetic, network-free contract guards
 - draft the storage/normalization boundary against observed neutral shapes
 - after that boundary is approved, implement a pure synthetic adapter with no network or database access
+- draft the sanitized connector-readiness evidence contract and a tracked-text-only guard
 - keep existing `stg` import model as the ingest boundary
 - prepare future mapping questions
 - avoid false certainty in old Nebim-specific planning docs
@@ -239,18 +247,22 @@ Writing connector code without a real sample payload would create exactly the ki
 
 The platform has useful `stg` import boundaries, batch metadata, normalization,
 materialization concepts, and canonical KPI row lineage metadata. Repository
-inspection also proves that the current employee KPI conflict key omits store,
-generic normalization uses binary `Number`, and row-by-row materialization does
-not provide component-set replacement. The next safe move is therefore the
-storage/normalization boundary draft, not a live connector or direct reuse of
-the current persistence path.
+inspection proved that the prior employee KPI conflict key omitted store,
+generic normalization used binary `Number`, and row-by-row materialization did
+not provide component-set replacement. The approved boundary and merged typed
+component storage address the isolated daily-fact boundary without activating a
+connector. The next safe move is therefore reviewed sanitized readiness
+evidence, not live provider code.
 
 Recommendation: keep the current source-agnostic contract and Power BI/Excel rollback path, and move actual connector implementation only after the implementation gates in the company daily pull contract are satisfied.
 
 ## Next Logical Step
 
 Review and approve
-`docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md`. Only
-then implement the neutral pure-adapter slice with synthetic test rows. Do not
-call the provider, inspect secrets, create a migration/scheduler, or use real
-company data. Keep the existing Excel path active.
+`docs/contracts/company-daily-kpi-connector-readiness-evidence-v1.md`. After
+approval, collect the required evidence only in an authorized company-network
+session and keep provider-native material outside Git. Do not implement the
+connector until a complete sanitized readiness decision is separately approved.
+Do not call the provider, inspect secrets, create a scheduler, or use real
+company data in this public repository slice. Keep the existing Excel path
+active.

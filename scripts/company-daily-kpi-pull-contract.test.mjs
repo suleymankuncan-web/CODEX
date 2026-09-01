@@ -114,7 +114,7 @@ test('daily pull public documents record product-owner approval without authoriz
   )
   assert.doesNotMatch(
     currentState,
-    /company-daily-kpi-pull-contract-v1\.md` is proposed|pending product-owner approval/i,
+    /company-daily-kpi-pull-contract-v1\.md` (?:is proposed|[^.\r\n]*pending product-owner approval)/i,
   )
   assert.doesNotMatch(
     intake,
@@ -269,7 +269,7 @@ test('public documents use neutral aliases and keep runtime work parked', () => 
   for (const phrase of [
     'private operation and execution identifiers remain outside Git',
     'provider-native fields, endpoints, or private operation identifiers.',
-    'a network-free pure adapter driven only by',
+    'network-free pure adapter',
   ]) {
     requireText(intake, phrase)
   }
