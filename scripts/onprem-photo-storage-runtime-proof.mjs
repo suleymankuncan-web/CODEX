@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const STORAGE_PROJECT = 'hr-axis-onprem-photo-storage'
-export const STORAGE_IMAGE = 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d'
+export const STORAGE_IMAGE = 'chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da'
 const REGION = 'us-east-1'
 const SERVICE = 's3'
 const PROOF_PORT = 18333
@@ -305,7 +305,7 @@ export async function waitForProofPortReady({
 }
 
 export function validateRestoreContainer(inspect, restoreVolume, expectedPort = PROOF_PORT + 1) {
-  if (inspect?.Config?.Image !== STORAGE_IMAGE && !String(inspect?.Config?.Image).includes('@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d')) throw new Error('restore image identity mismatch')
+  if (inspect?.Config?.Image !== STORAGE_IMAGE && !String(inspect?.Config?.Image).includes('@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da')) throw new Error('restore image identity mismatch')
   validateRequestedProofPortBinding(inspect?.HostConfig?.PortBindings, expectedPort)
   if (!inspect?.Mounts?.some((mount) => mount?.Destination === '/data' && mount?.Name === restoreVolume)) throw new Error('restore storage volume identity mismatch')
   if (inspect?.State?.Running !== true) throw new Error('restore storage container is not running')
@@ -511,7 +511,7 @@ async function runSyntheticProof(options) {
     const inspect = inspectContainer(containerId)
     objectVolume = command('docker', ['inspect', '-f', '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}', containerId], { label: 'inspect storage volume' }).stdout.trim()
     if (!objectVolume) throw new Error('object-storage data volume identity missing')
-    if (inspect.Config?.Image !== STORAGE_IMAGE && !String(inspect.Config?.Image).includes('@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d')) throw new Error('object-storage image identity mismatch')
+    if (inspect.Config?.Image !== STORAGE_IMAGE && !String(inspect.Config?.Image).includes('@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da')) throw new Error('object-storage image identity mismatch')
     validateRequestedProofPortBinding(inspect.HostConfig?.PortBindings)
     try {
       await waitForProofPortReady({ endpoint, inspect: ({ timeoutMs }) => inspectContainer(containerId, 'inspect object-storage', timeoutMs) })

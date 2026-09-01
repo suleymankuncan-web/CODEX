@@ -90,7 +90,7 @@ test('daily pull public documents record product-owner approval without authoriz
   requireText(contract, 'approved source-semantics boundary')
   requireText(
     currentState,
-    'the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026.',
+    'the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026',
   )
   requireText(
     intake,
@@ -106,7 +106,7 @@ test('daily pull public documents record product-owner approval without authoriz
   )
   requireText(
     currentState,
-    'Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended.',
+    'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.',
   )
   assert.doesNotMatch(
     contract,
@@ -275,7 +275,7 @@ test('public documents use neutral aliases and keep runtime work parked', () => 
   }
 
   requireText(genericJsonDraft, 'is not the selected contract for the company daily pull source')
-  requireText(currentState, 'Live connector, migration, scheduler, Docker runtime change, and Excel replacement remain suspended.')
+  requireText(currentState, 'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.')
   for (const alias of ['sales', 'footfall', 'gsm', 'store-directory']) {
     requireText(contract, `\`${alias}\``)
   }

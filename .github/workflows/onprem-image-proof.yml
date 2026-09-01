@@ -72,7 +72,7 @@ env:
   KEYCLOAK_TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   SYFT_IMAGE: anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026
-  SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d
+  SEAWEEDFS_IMAGE: chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da
 
 jobs:
   source-preflight:
@@ -979,7 +979,7 @@ jobs:
             --scanners secret --exit-code 1 "$SEAWEEDFS_IMAGE"
           test -s infra/onprem/photo-storage/LICENSE
           test "$(sha256sum infra/onprem/photo-storage/LICENSE | cut -d ' ' -f 1)" = d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613
-          printf '%s\n' '{"image":"'"$SEAWEEDFS_IMAGE"'","license":"Apache-2.0","licenseSource":"seaweedfs/seaweedfs@4.41:LICENSE","licenseSha256":"d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613","dataClass":"synthetic"}' > proof/photo-storage-license-receipt.json
+          printf '%s\n' '{"image":"'"$SEAWEEDFS_IMAGE"'","license":"Apache-2.0","licenseSource":"seaweedfs/seaweedfs@4.43:LICENSE","licenseSha256":"d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613","dataClass":"synthetic"}' > proof/photo-storage-license-receipt.json
 
       - name: Emit fresh full proof identity and receipt
         if: inputs.proof_mode == 'full'

@@ -1152,7 +1152,7 @@ test('every vendored runtime image receives separate fail-closed Trivy vulnerabi
     caddy: { ref: 'caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648', configImageId: 'af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe' },
     postgres: { ref: 'postgres:16.15-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6', configImageId: '75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b' },
     redis: { ref: 'redis:7.4.10-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2', configImageId: '2a51817f79255c8b69f86a974459c2e0359aff81417d80158f2b9e541e6f4b33' },
-    seaweedfs: { ref: 'chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d', configImageId: '8da20bce07d3a7978d8c2de72351df4b3600cce8f133f6417458aeca796defd0' },
+    seaweedfs: { ref: 'chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da', configImageId: 'e2b2a188801852f56370ba1537d0e1c8ceafafc0d52a396dd85c30868ab83c03' },
   }
   for (const [image, { ref, configImageId }] of Object.entries(vendors)) {
     const variable = image.toUpperCase()

@@ -136,8 +136,8 @@ not consume production photo credentials.
 
 ## Optional ONP-4B photo-storage overlay
 
-The overlay pins SeaweedFS 4.41 at
-`chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d`.
+The overlay pins SeaweedFS 4.43 at
+`chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da`.
 Its vendored upstream Apache-2.0 text has SHA-256
 `d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613`.
 Production object storage is attached only to the internal `data` network and

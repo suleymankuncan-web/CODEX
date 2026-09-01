@@ -24,10 +24,10 @@ rollback path.
 
 ## Pinned engine and hardening
 
-- Image: `chrislusf/seaweedfs:4.41@sha256:43b768cd62b00d132439cda881b93fd1adebf1b315e996e794087743821d771d`
-  (OCI version `4.41`, revision `de34a1a87c02893507f961cda9574172ee5064e9`,
+- Image: `chrislusf/seaweedfs:4.43@sha256:7bea581f48155c069d3c725e60c386c88210c67cde8bce412344ff6ebea264da`
+  (OCI version `4.43`, revision `6c7f184381e3c4f7908934f4c1d8cb7dcca41894`,
   Linux `amd64`).
-- License: upstream `seaweedfs/seaweedfs@4.41:LICENSE`, Apache-2.0,
+- License: upstream `seaweedfs/seaweedfs@4.43:LICENSE`, Apache-2.0,
   SHA-256 `d789d433cc11da163273d1e39be2e8fa67642f9a58ef220d3f258fa9c14ef613`.
 - Runtime: read-only root filesystem, all capabilities dropped except
   `CHOWN`, `SETGID`, and `SETUID`, `no-new-privileges`, bounded CPU/memory/PID

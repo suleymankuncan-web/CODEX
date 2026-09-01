@@ -31,8 +31,8 @@ test('photo storage contract accepts the private, file-backed SeaweedFS overlay'
 
 test('photo storage contract rejects a mutable or wrong SeaweedFS image', () => {
   for (const replacement of [
-    ['SEAWEEDFS_IMAGE=chrislusf/seaweedfs:4.41@sha256:', 'SEAWEEDFS_IMAGE=chrislusf/seaweedfs:latest'],
-    ['SEAWEEDFS_IMAGE=chrislusf/seaweedfs:4.41@sha256:', 'SEAWEEDFS_IMAGE=chrislusf/seaweedfs:4.41@sha256:' + '0'.repeat(64)],
+    ['SEAWEEDFS_IMAGE=chrislusf/seaweedfs:4.43@sha256:', 'SEAWEEDFS_IMAGE=chrislusf/seaweedfs:latest'],
+    ['SEAWEEDFS_IMAGE=chrislusf/seaweedfs:4.43@sha256:', 'SEAWEEDFS_IMAGE=chrislusf/seaweedfs:4.43@sha256:' + '0'.repeat(64)],
   ]) {
     const mutated = input()
     mutated.envTemplate = mutated.envTemplate.replace(replacement[0], replacement[1])

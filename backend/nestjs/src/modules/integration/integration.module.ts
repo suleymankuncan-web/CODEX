@@ -40,6 +40,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
 import { MasterDataQualityService } from "./application/master-data-quality.service";
 import { MasterDataQualityRepository } from "./infrastructure/master-data-quality.repository";
 import { PersonnelMasterService } from "./application/personnel-master.service";
+import { CompanyDailyKpiComponentRepository } from "./infrastructure/company-daily-kpi-component.repository";
 
 @Module({
   controllers: [
@@ -59,6 +60,7 @@ import { PersonnelMasterService } from "./application/personnel-master.service";
     KpiImportStoreReadRepository,
     PersonnelMasterReadRepository,
     IntegrationSourceRepository,
+    CompanyDailyKpiComponentRepository,
     MaterializationService,
     KpiMaterializationService,
     MaterializationBatchRepository,
@@ -97,6 +99,7 @@ import { PersonnelMasterService } from "./application/personnel-master.service";
     KpiImportStoreReadRepository,
     PersonnelMasterReadRepository,
     IntegrationSourceRepository,
+    CompanyDailyKpiComponentRepository,
     MaterializationService,
     KpiMaterializationService,
     ExternalIdMappingService,
