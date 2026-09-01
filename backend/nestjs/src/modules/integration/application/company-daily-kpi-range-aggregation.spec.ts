@@ -1,12 +1,12 @@
 import {
   aggregateCompanyDailyKpiStoreRange,
-  type CompanyDailyKpiComponentSet,
-  type CompanyDailyKpiStoreRangeInput,
+  type CompanyDailyKpiStoreRangeComponentSet,
+  type CompanyDailyKpiStoreRangeProjection,
 } from "./company-daily-kpi-range-aggregation";
 import {
-  type SalesDailyAggregate,
   type StoreFootfallDailyAggregate,
   type StoreGsmDailyAggregate,
+  type StoreSalesDailyAggregate,
 } from "./company-daily-kpi-pure-adapter";
 
 const set = <
@@ -16,14 +16,12 @@ const set = <
   operation: TOperation,
   businessDate: string,
   aggregates: readonly TAggregate[],
-): CompanyDailyKpiComponentSet<TAggregate, TOperation> => ({
-  sourceCode: "source-A",
+): CompanyDailyKpiStoreRangeComponentSet<TAggregate, TOperation> => ({
   operation,
   businessDate,
   status: "succeeded",
   aggregates: [...aggregates],
-  aggregateCount: aggregates.length,
-  retryCount: 0,
+  projectionAggregateCount: aggregates.length,
 });
 
 const sales = (
@@ -31,7 +29,7 @@ const sales = (
   storeCode: string,
   saleInvoiceCount: number,
   returnInvoiceCount = 0,
-): SalesDailyAggregate => ({
+): StoreSalesDailyAggregate => ({
   businessDate,
   storeCode,
   saleInvoiceCount,
@@ -60,28 +58,10 @@ const gsm = (
   totalCustomerCount,
 });
 
-const employeeSales = (
-  businessDate: string,
-  storeCode: string,
-  personnelCode: string,
-): SalesDailyAggregate => ({
-  businessDate,
-  storeCode,
-  personnelCode,
-  saleInvoiceCount: 1,
-  returnInvoiceCount: 0,
-  saleQuantity: "1",
-  signedReturnQuantity: "0",
-  netQuantity: "1",
-  saleAmountTry: "10",
-  signedReturnAmountTry: "0",
-  netAmountTry: "10",
-});
-
 type ComponentOperation = "sales" | "footfall" | "gsm";
 type AggregateForOperation<TOperation extends ComponentOperation> =
   TOperation extends "sales"
-    ? SalesDailyAggregate
+    ? StoreSalesDailyAggregate
     : TOperation extends "footfall"
       ? StoreFootfallDailyAggregate
       : StoreGsmDailyAggregate;
@@ -90,22 +70,20 @@ const failed = <TOperation extends ComponentOperation>(
   operation: TOperation,
   businessDate: string,
   status: "failed" | "missed" = "failed",
-): CompanyDailyKpiComponentSet<
+): CompanyDailyKpiStoreRangeComponentSet<
   AggregateForOperation<TOperation>,
   TOperation
 > => ({
-  sourceCode: "source-A",
   operation,
   businessDate,
   status,
   aggregates: [],
-  aggregateCount: 0,
-  retryCount: 0,
+  projectionAggregateCount: 0,
 });
 
 const input = (
-  overrides: Partial<CompanyDailyKpiStoreRangeInput> = {},
-): CompanyDailyKpiStoreRangeInput => ({
+  overrides: Partial<CompanyDailyKpiStoreRangeProjection> = {},
+): CompanyDailyKpiStoreRangeProjection => ({
   sourceCode: "source-A",
   startDate: "2026-08-30",
   endDate: "2026-08-30",
@@ -122,7 +100,9 @@ const input = (
 
 const expectInvalid = (candidate: unknown): void => {
   expect(() =>
-    aggregateCompanyDailyKpiStoreRange(candidate as CompanyDailyKpiStoreRangeInput),
+    aggregateCompanyDailyKpiStoreRange(
+      candidate as CompanyDailyKpiStoreRangeProjection,
+    ),
   ).toThrow(TypeError);
 };
 
@@ -243,13 +223,11 @@ describe("company daily KPI store range aggregation", () => {
       componentSets: {
         sales: [
           set("sales", days[0], [
-            employeeSales(days[0], "store-A", "person-A"),
             sales(days[0], "store-B", 4),
             sales(days[0], "store-A", 2),
           ]),
           set("sales", days[1], [
             sales(days[1], "store-B", 5),
-            employeeSales(days[1], "store-A", "person-B"),
             sales(days[1], "store-A", 3),
           ]),
         ],
@@ -284,13 +262,11 @@ describe("company daily KPI store range aggregation", () => {
         sales: [
           set("sales", days[1], [
             sales(days[1], "store-A", 3),
-            employeeSales(days[1], "store-A", "person-B"),
             sales(days[1], "store-B", 5),
           ]),
           set("sales", days[0], [
             sales(days[0], "store-A", 2),
             sales(days[0], "store-B", 4),
-            employeeSales(days[0], "store-A", "person-A"),
           ]),
         ],
         footfall: [
@@ -420,7 +396,6 @@ describe("company daily KPI store range aggregation", () => {
       componentSets: {
         sales: [
           set("sales", "2026-08-30", [
-            employeeSales("2026-08-30", "store-A", "person-A"),
             sales("2026-08-30", "store-A", 2, 99),
           ]),
         ],
@@ -437,6 +412,24 @@ describe("company daily KPI store range aggregation", () => {
       denominator: "10",
     });
     expect(JSON.stringify(result)).not.toMatch(/person-A|personnelCode|returnInvoiceCount/i);
+  });
+
+  it("rejects employee-shaped sales rows because the range input is store-projected", () => {
+    const candidate = input();
+    candidate.componentSets.sales = [
+      {
+        ...candidate.componentSets.sales[0],
+        aggregates: [
+          {
+            ...sales("2026-08-30", "store-A", 2),
+            personnelCode: "employee-A",
+          } as never,
+        ],
+        projectionAggregateCount: 1,
+      },
+    ];
+
+    expectInvalid(candidate);
   });
 
   it("keeps zero numerators available but treats zero denominators as missing", () => {
@@ -485,7 +478,7 @@ describe("company daily KPI store range aggregation", () => {
       ...base,
       componentSets: {
         ...base.componentSets,
-        sales: [{ ...salesSet, sourceCode: "source-B" }],
+        sales: [{ ...salesSet, retryCount: 0 } as never],
       },
     });
     expectInvalid({
@@ -586,7 +579,9 @@ describe("company daily KPI store range aggregation", () => {
       ...base,
       componentSets: {
         ...base.componentSets,
-        sales: [{ ...base.componentSets.sales[0], aggregateCount: 0 }],
+        sales: [
+          { ...base.componentSets.sales[0], projectionAggregateCount: 0 },
+        ],
       },
     });
     expectInvalid({
@@ -598,7 +593,7 @@ describe("company daily KPI store range aggregation", () => {
             ...base.componentSets.footfall[0],
             status: "failed",
             aggregates: [footfall("2026-08-30", "store-A", 10)],
-            aggregateCount: 1,
+            projectionAggregateCount: 1,
           },
         ],
       },

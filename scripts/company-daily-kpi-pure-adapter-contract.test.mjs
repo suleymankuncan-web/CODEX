@@ -20,6 +20,22 @@ const rangeTestPath = join(
   root,
   'backend/nestjs/src/modules/integration/application/company-daily-kpi-range-aggregation.spec.ts',
 )
+const rangeServicePath = join(
+  root,
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-store-range.service.ts',
+)
+const rangeServiceTestPath = join(
+  root,
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-store-range.service.spec.ts',
+)
+const rangeRepositoryPath = join(
+  root,
+  'backend/nestjs/src/modules/integration/infrastructure/company-daily-kpi-component-range-read.repository.ts',
+)
+const rangeRepositoryTestPath = join(
+  root,
+  'backend/nestjs/src/modules/integration/infrastructure/company-daily-kpi-component-range-read.repository.spec.ts',
+)
 const contractPath = join(
   root,
   'docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md',
@@ -28,6 +44,10 @@ const source = readFileSync(sourcePath, 'utf8')
 const unitTest = readFileSync(testPath, 'utf8')
 const rangeSource = readFileSync(rangeSourcePath, 'utf8')
 const rangeUnitTest = readFileSync(rangeTestPath, 'utf8')
+const rangeService = readFileSync(rangeServicePath, 'utf8')
+const rangeServiceUnitTest = readFileSync(rangeServiceTestPath, 'utf8')
+const rangeRepository = readFileSync(rangeRepositoryPath, 'utf8')
+const rangeRepositoryUnitTest = readFileSync(rangeRepositoryTestPath, 'utf8')
 const contract = readFileSync(contractPath, 'utf8')
 const privateExecutionMarkerPattern = new RegExp(
   `\\b(?:${['Run', 'Proc'].join('')}|${['Proc', 'Name'].join('')})\\b`,
@@ -187,7 +207,16 @@ test('decimal aggregation stays BigInt-based and public fixtures stay synthetic'
   assert.match(source, /BigInt\(/)
   assert.doesNotMatch(decimalSection, /\b(?:Number|parseFloat|parseInt)\s*\(/)
 
-  const publicCandidate = `${source}\n${unitTest}\n${rangeSource}\n${rangeUnitTest}`
+  const publicCandidate = [
+    source,
+    unitTest,
+    rangeSource,
+    rangeUnitTest,
+    rangeService,
+    rangeServiceUnitTest,
+    rangeRepository,
+    rangeRepositoryUnitTest,
+  ].join('\n')
   assert.doesNotMatch(publicCandidate, /https?:\/\//i)
   assert.doesNotMatch(
     publicCandidate,

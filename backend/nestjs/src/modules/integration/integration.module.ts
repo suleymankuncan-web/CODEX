@@ -41,6 +41,8 @@ import { MasterDataQualityService } from "./application/master-data-quality.serv
 import { MasterDataQualityRepository } from "./infrastructure/master-data-quality.repository";
 import { PersonnelMasterService } from "./application/personnel-master.service";
 import { CompanyDailyKpiComponentRepository } from "./infrastructure/company-daily-kpi-component.repository";
+import { CompanyDailyKpiComponentRangeReadRepository } from "./infrastructure/company-daily-kpi-component-range-read.repository";
+import { CompanyDailyKpiStoreRangeService } from "./application/company-daily-kpi-store-range.service";
 
 @Module({
   controllers: [
@@ -61,6 +63,8 @@ import { CompanyDailyKpiComponentRepository } from "./infrastructure/company-dai
     PersonnelMasterReadRepository,
     IntegrationSourceRepository,
     CompanyDailyKpiComponentRepository,
+    CompanyDailyKpiComponentRangeReadRepository,
+    CompanyDailyKpiStoreRangeService,
     MaterializationService,
     KpiMaterializationService,
     MaterializationBatchRepository,
@@ -100,6 +104,7 @@ import { CompanyDailyKpiComponentRepository } from "./infrastructure/company-dai
     PersonnelMasterReadRepository,
     IntegrationSourceRepository,
     CompanyDailyKpiComponentRepository,
+    CompanyDailyKpiStoreRangeService,
     MaterializationService,
     KpiMaterializationService,
     ExternalIdMappingService,
