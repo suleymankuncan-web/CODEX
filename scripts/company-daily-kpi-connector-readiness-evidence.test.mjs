@@ -9,6 +9,18 @@ function readText(path) {
   return readFileSync(join(workspaceRoot, path), 'utf8')
 }
 
+const privateEndpointPatterns = [
+  /\b(?:10|127|169\.254|172\.(?:1[6-9]|2\d|3[01])|192\.168)(?:\.\d{1,3}){2,3}\b/,
+  /(?:^|[^0-9a-f])(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f]):[0-9a-f:]+(?:$|[^0-9a-f])/i,
+  /(?:^|[^0-9a-f])::1(?:$|[^0-9a-f])/i,
+  /\blocalhost(?::\d+)?\b/i,
+  /\b(?:[a-z0-9-]+\.)+(?:internal|local|lan|corp|private)(?::\d+)?\b/i,
+]
+
+function containsPrivateEndpoint(value) {
+  return privateEndpointPatterns.some((pattern) => pattern.test(value))
+}
+
 function requireText(text, expected) {
   const normalizedText = text.replace(/\s+/g, ' ').trim()
   const normalizedExpected = expected.replace(/\s+/g, ' ').trim()
@@ -30,7 +42,7 @@ const storageContract = readText(
 const intake = readText('docs/plans/real-ingest-connector-contract-intake.md')
 const currentState = readText('current-state.md')
 
-test('readiness evidence contract is a traceable Draft', () => {
+test('readiness evidence contract is traceable and product-owner approved', () => {
   for (const section of [
     '## Context',
     '## Functional Requirements',
@@ -77,8 +89,12 @@ test('readiness evidence contract is a traceable Draft', () => {
     requireText(contract, `**OS-${exclusion}:**`)
   }
 
-  requireText(contract, 'Status: Draft — pending product-owner approval')
-  requireText(contract, 'Reviewers: Product owner (pending)')
+  requireText(
+    contract,
+    'Status: Approved — product-owner approval recorded 1 September 2026',
+  )
+  requireText(contract, 'Reviewers: Product owner (approved 1 September 2026)')
+  assert.doesNotMatch(contract, /Status: Draft|Product owner \(pending\)/i)
 })
 
 test('readiness defaults closed and approval authorizes no runtime activation', () => {
@@ -123,8 +139,21 @@ test('auth and transport remain fail closed without secret-bearing fields', () =
   for (const phrase of [
     'transport as `http`, `https`, or `unknown`',
     'network scope as `company-private`',
-    'require a separate recorded security decision and compensating-control review',
+    'MUST require a separate security acceptance and compensating-control record',
     'It MUST NOT contain a credential value, header value, username, certificate, key, token, cookie, or secret-derived digest.',
+  ]) {
+    requireText(contract, phrase)
+  }
+})
+
+test('auth and transport compatibility cannot bypass security acceptance', () => {
+  for (const phrase of [
+    '`unknown` auth, transport, or TLS verification MUST remain `not_ready` and MUST NOT be overridden by a security acceptance',
+    '`none` or `custom` authentication MUST require a separate security acceptance and compensating-control record',
+    '`http` MUST pair only with `not-applicable` TLS verification and MUST require a separate security acceptance',
+    '`https` MUST pair with `verified` or `unverified` TLS verification',
+    '`https` plus `unverified` MUST require a separate security acceptance',
+    'Any other transport and TLS pairing MUST be rejected as contradictory evidence.',
   ]) {
     requireText(contract, phrase)
   }
@@ -140,8 +169,40 @@ test('envelope, nullability, observation, and budget gates are explicit', () => 
     '`observationDate` is only the evidence-capture date and MUST NOT become a KPI business date',
     'request milliseconds, parse milliseconds, total component milliseconds',
     'response byte, row-count, request-timeout, parse-time, and total-component-time budgets',
-    'interface NeutralFieldClassification',
+    'type NeutralFieldClassification =',
     'interface OperationRuntimeBudget',
+  ]) {
+    requireText(contract, phrase)
+  }
+})
+
+test('only successful observations establish budgets and freshness', () => {
+  for (const phrase of [
+    'Only `2xx` observations with `parseOutcome` equal to `accepted` or `empty` are eligible for the three-date minimum, runtime-budget derivation, or freshness.',
+    'Failure or rejected observations MAY support failure-envelope review but MUST NOT satisfy the minimum, set a budget, or refresh evidence age.',
+    '`evidenceCollectedThrough` MUST equal the earliest of each required operation\'s latest eligible observation date',
+    'A newer `store-directory` capture MUST NOT make stale `sales`, `footfall`, or `gsm` evidence appear fresh.',
+  ]) {
+    requireText(contract, phrase)
+  }
+})
+
+test('neutral field classifications are closed over the pure adapter input', () => {
+  for (const phrase of [
+    "type SalesNeutralFieldAlias =",
+    "| 'sourceDateToken'",
+    "| 'ephemeralInvoiceId'",
+    "| 'personnelCode'",
+    "| 'displayName'",
+    "| 'storeCode'",
+    "| 'isReturn'",
+    "| 'quantity'",
+    "| 'amountTry'",
+    "type FootfallNeutralFieldAlias = 'sourceDateToken' | 'storeCode' | 'total'",
+    "type GsmNeutralFieldAlias = 'storeCode' | 'consent'",
+    "type StoreDirectoryNeutralFieldAlias = 'storeCode' | 'displayDescription'",
+    'type NeutralFieldClassification =',
+    'an operation/field pair outside the closed neutral-field union',
   ]) {
     requireText(contract, phrase)
   }
@@ -179,7 +240,7 @@ test('future validator is strict and public guards stay tracked-text-only', () =
     'incomplete operation budgets',
     'value-like authentication or ownership fields',
     'inconsistent request/parse/total component timings',
-    '`evidenceCollectedThrough` value that differs from the latest observation date',
+    '`evidenceCollectedThrough` value that differs from the earliest of each required operation\'s latest eligible observation date',
     'Repository tests for this contract MUST read only tracked public files and synthetic strings.',
     'zero network, secret, database, Docker, provider, or real-data access',
   ]) {
@@ -232,17 +293,17 @@ test('approved source and storage contracts remain authoritative', () => {
   )
 })
 
-test('intake and current state point to the Draft without enabling runtime', () => {
+test('intake and current state record approval without enabling runtime', () => {
   requireText(intake, contractPath)
   requireText(intake, 'Status: `sample_payload_observed`')
   requireText(
     intake,
-    'Live connector implementation remains blocked until the Draft readiness evidence contract and a complete sanitized readiness decision are separately approved.',
+    'Live connector implementation remains blocked until a complete sanitized readiness decision is separately approved.',
   )
   requireText(currentState, contractPath)
   requireText(
     currentState,
-    'The connector readiness evidence contract is Draft and pending product-owner approval.',
+    'The connector readiness evidence contract is approved; it defines evidence collection requirements but contains no evidence instance.',
   )
   requireText(
     currentState,
@@ -253,10 +314,10 @@ test('intake and current state point to the Draft without enabling runtime', () 
 test('public readiness files contain no private endpoint or realistic fixture', () => {
   const publicReadinessText = [contract, intake, currentState].join('\n')
 
-  assert.doesNotMatch(
-    publicReadinessText,
-    /\b(?:10|127|169\.254|172\.(?:1[6-9]|2\d|3[01])|192\.168)(?:\.\d{1,3}){2,3}\b/,
-    'public readiness files must not contain a private endpoint address',
+  assert.equal(
+    containsPrivateEndpoint(publicReadinessText),
+    false,
+    'public readiness files must not contain a private endpoint address or hostname',
   )
   assert.doesNotMatch(
     publicReadinessText,
@@ -273,4 +334,22 @@ test('public readiness files contain no private endpoint or realistic fixture', 
     /(?:api[-_ ]?key|authorization|password|secret|token)\s*[:=]\s*["'][^"']+["']/i,
     'public readiness files must not contain a credential assignment',
   )
+})
+
+test('endpoint privacy guard recognizes private address families and hostnames', () => {
+  for (const candidate of [
+    ['192', '168', '10', '4'].join('.'),
+    ['fd12', '3456', '789a', '', '1'].join(':'),
+    ['fe80', '', '1'].join(':'),
+    ['', '', '1'].join(':'),
+    `${['local', 'host'].join('')}:${['19', '95'].join('')}`,
+    ['connector', 'company', 'internal'].join('.'),
+    ['kpi-source', 'local'].join('.'),
+  ]) {
+    assert.equal(
+      containsPrivateEndpoint(candidate),
+      true,
+      `expected private endpoint pattern to match: ${candidate}`,
+    )
+  }
 })

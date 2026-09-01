@@ -2,8 +2,8 @@
 
 Author: Codex with recorded product-owner context
 Date: 1 September 2026
-Status: Draft — pending product-owner approval
-Reviewers: Product owner (pending)
+Status: Approved — product-owner approval recorded 1 September 2026
+Reviewers: Product owner (approved 1 September 2026)
 
 ## Context
 
@@ -44,12 +44,19 @@ company data remain outside Git.
   authentication mechanism as `none`, `basic`, `bearer`, `api-key`, `cookie`,
   `mutual-tls`, `custom`, or `unknown`. It MUST NOT contain a credential value,
   header value, username, certificate, key, token, cookie, or secret-derived
-  digest. `unknown` MUST keep readiness closed.
+  digest. `unknown` MUST keep readiness closed. `none` or `custom`
+  authentication MUST require a separate security acceptance and
+  compensating-control record.
 - **FR-5 Transport decision:** Evidence MUST classify transport as `http`,
   `https`, or `unknown`, network scope as `company-private`, and TLS verification
-  as `verified`, `not-applicable`, `unverified`, or `unknown`. `http`,
-  `unverified`, or `unknown` MUST require a separate recorded security decision
-  and compensating-control review before runtime implementation approval.
+  as `verified`, `not-applicable`, `unverified`, or `unknown`. `unknown` auth,
+  transport, or TLS verification MUST remain `not_ready` and MUST NOT be
+  overridden by a security acceptance. `http` MUST pair only with
+  `not-applicable` TLS verification and MUST require a separate security
+  acceptance. `https` MUST pair with `verified` or `unverified` TLS
+  verification. `https` plus `unverified` MUST require a separate security
+  acceptance. Any other transport and TLS pairing MUST be rejected as
+  contradictory evidence.
 - **FR-6 Success envelope:** Each operation alias MUST record the observed HTTP
   success status class, content-type category, top-level response shape, empty
   result shape, and whether the response can be parsed without source-native
@@ -62,7 +69,8 @@ company data remain outside Git.
   pure adapter MUST have an approved `required`, `nullable`, or `absent`
   classification plus its accepted neutral type category. An unclassified field
   or an observed type outside the approved set MUST keep connector readiness
-  closed.
+  closed. Operation/field pairs MUST come from the closed neutral-field unions
+  in this contract; the evidence MUST classify every pair exactly once.
 - **FR-9 Volume and latency observations:** Each operation alias MUST have
   sanitized observations from at least three distinct observation dates. For
   `sales`, `footfall`, and `gsm`, `observationDate` MUST equal the validated
@@ -71,11 +79,16 @@ company data remain outside Git.
   become a KPI business date. An observation MAY contain only observation date,
   row count, response byte count, request milliseconds, parse milliseconds,
   total component milliseconds, status class, and parse outcome. Business
-  values and source identifiers MUST NOT be retained.
+  values and source identifiers MUST NOT be retained. Only `2xx` observations
+  with `parseOutcome` equal to `accepted` or `empty` are eligible for the
+  three-date minimum, runtime-budget derivation, or freshness. Failure or
+  rejected observations MAY support failure-envelope review but MUST NOT satisfy
+  the minimum, set a budget, or refresh evidence age.
 - **FR-10 Runtime budgets:** The proposed connector MUST have explicit response
   byte, row-count, request-timeout, parse-time, and total-component-time budgets
-  derived from reviewed sanitized observations. A budget MUST remain below the
-  next scheduled retry boundary and MUST fail closed when exceeded.
+  derived only from reviewed eligible sanitized observations. A budget MUST
+  remain below the next scheduled retry boundary and MUST fail closed when
+  exceeded.
 - **FR-11 Rate-limit posture:** Rate-limit knowledge MUST be classified as
   `documented`, `observed`, or `unknown`. `unknown` MUST NOT be treated as
   unlimited access. The existing bounded component-only retry schedule remains
@@ -123,16 +136,21 @@ company data remain outside Git.
   the allowlisted metadata fields and non-negative bounded integers. Additional
   fields MUST be rejected rather than ignored.
 - **NFR-4 Evidence freshness:** The owner-reviewed public readiness decision MUST
-  record both the review date and the latest sanitized observation date as
-  `evidenceCollectedThrough`. A future implementation review MUST revalidate
-  transport, auth category, envelope behavior, and budgets when the explicit
-  evaluation date is more than 30 calendar days after
+  record the review date and the conservative complete-evidence date.
+  `evidenceCollectedThrough` MUST equal the earliest of each required
+  operation's latest eligible observation date, so every required operation is
+  fresh through that date. A newer `store-directory` capture MUST NOT make stale
+  `sales`, `footfall`, or `gsm` evidence appear fresh. A future implementation
+  review MUST revalidate transport, auth category, envelope behavior, and
+  budgets when the explicit evaluation date is more than 30 calendar days after
   `evidenceCollectedThrough` or the provider behavior changes. Review date MUST
   NOT reset evidence age.
-- **NFR-5 Fail-closed security:** Plain HTTP, unverified TLS, custom auth, or
-  unknown auth/transport MUST remain `not_ready` until an explicit security
-  acceptance and compensating-control record exists outside this contract.
-- **NFR-6 No performance claim:** This draft MUST NOT claim a production timeout,
+- **NFR-5 Fail-closed security:** Unknown auth, transport, or TLS verification
+  MUST remain `not_ready`. Plain HTTP, unverified TLS, `none` auth, or `custom`
+  auth MUST remain `not_ready` until an explicit security acceptance and
+  compensating-control record exists outside this contract. Security acceptance
+  MUST NOT make an unknown or contradictory classification ready.
+- **NFR-6 No performance claim:** This contract MUST NOT claim a production timeout,
   throughput, payload ceiling, or latency SLO before sanitized observations are
   reviewed.
 - **NFR-7 Auditability:** A readiness summary MUST expose the readiness state,
@@ -153,21 +171,25 @@ company data remain outside Git.
   real value, or realistic GUID exists.
 - **AC-3 (FR-4, NFR-5):** Given auth is `unknown` or its evidence includes a
   value-like field, when readiness is evaluated, then it remains `not_ready` and
-  the value-like field is rejected.
-- **AC-4 (FR-5, NFR-5):** Given transport is plain HTTP, TLS is unverified, or
-  transport is unknown, when no separate security acceptance exists, then
-  readiness remains `not_ready` even when all data-shape gates pass.
+  the value-like field is rejected. Given auth is `none` or `custom`, readiness
+  MUST remain closed until the separate security acceptance exists.
+- **AC-4 (FR-5, NFR-5):** Given transport/TLS is unknown or contradictory, when
+  readiness is evaluated, then it remains `not_ready` regardless of security
+  acceptance. Given `http` plus `not-applicable` or `https` plus `unverified`,
+  readiness MUST remain closed until the separate security acceptance exists.
 - **AC-5 (FR-6, FR-7, FR-14):** Given every operation has reviewed success and
   failure status/envelope categories, when a future connector maps an error,
   then only a `SafeReasonCode` may cross the diagnostic boundary and no raw body
   or provider message may cross it.
-- **AC-6 (FR-8):** Given one neutral adapter field has no explicit approved
-  `NeutralFieldClassification` entry, when readiness is derived, then connector
-  implementation remains blocked and no default value is invented.
-- **AC-7 (FR-9, FR-10, NFR-3, NFR-6):** Given fewer than three distinct sanitized
-  observation dates for an alias or a missing explicit byte/row/request/parse/
-  component budget, when readiness is derived, then it remains `not_ready` and
-  no performance claim is made.
+- **AC-6 (FR-8):** Given one closed-union neutral adapter field has no explicit
+  approved `NeutralFieldClassification` entry, appears more than once, or an
+  unknown operation/field pair is supplied, when readiness is derived, then
+  connector implementation remains blocked and no default value is invented.
+- **AC-7 (FR-9, FR-10, NFR-3, NFR-4, NFR-6):** Given fewer than three distinct
+  eligible observation dates for an alias, a minimum derived from a failure or
+  rejected observation, stale evidence for any required operation, or a missing
+  explicit byte/row/request/parse/component budget, when readiness is derived,
+  then it remains `not_ready` and no performance claim is made.
 - **AC-8 (FR-11):** Given rate-limit knowledge is `unknown`, when retry behavior
   is reviewed, then access is not described as unlimited and retries remain on
   the approved bounded component schedule.
@@ -234,6 +256,18 @@ type TlsVerification = 'verified' | 'not-applicable' | 'unverified' | 'unknown'
 type RateLimitKnowledge = 'documented' | 'observed' | 'unknown'
 type NeutralFieldPresence = 'required' | 'nullable' | 'absent'
 type NeutralFieldType = 'string' | 'boolean' | 'integer' | 'decimal-text' | 'date'
+type SalesNeutralFieldAlias =
+  | 'sourceDateToken'
+  | 'ephemeralInvoiceId'
+  | 'personnelCode'
+  | 'displayName'
+  | 'storeCode'
+  | 'isReturn'
+  | 'quantity'
+  | 'amountTry'
+type FootfallNeutralFieldAlias = 'sourceDateToken' | 'storeCode' | 'total'
+type GsmNeutralFieldAlias = 'storeCode' | 'consent'
+type StoreDirectoryNeutralFieldAlias = 'storeCode' | 'displayDescription'
 type AlertChannelCategory = 'email' | 'chat' | 'incident-system' | 'other' | 'unknown'
 type FailureStatusClass =
   | '3xx'
@@ -282,12 +316,28 @@ interface SanitizedOperationEvidence {
   observations: SanitizedOperationObservation[]
 }
 
-interface NeutralFieldClassification {
-  operation: SourceOperationAlias
-  fieldAlias: string // approved neutral adapter field name only
+interface NeutralFieldRule {
   presence: NeutralFieldPresence
   acceptedTypes: NeutralFieldType[]
 }
+
+type NeutralFieldClassification =
+  | (NeutralFieldRule & {
+      operation: 'sales'
+      fieldAlias: SalesNeutralFieldAlias
+    })
+  | (NeutralFieldRule & {
+      operation: 'footfall'
+      fieldAlias: FootfallNeutralFieldAlias
+    })
+  | (NeutralFieldRule & {
+      operation: 'gsm'
+      fieldAlias: GsmNeutralFieldAlias
+    })
+  | (NeutralFieldRule & {
+      operation: 'store-directory'
+      fieldAlias: StoreDirectoryNeutralFieldAlias
+    })
 
 interface OperationRuntimeBudget {
   operation: SourceOperationAlias
@@ -319,7 +369,8 @@ interface ConnectorReadinessEvidence {
   runtimeBudgets: OperationRuntimeBudget[]
   ownership: SanitizedOwnershipEvidence
   privacyReviewPassed: boolean
-  evidenceCollectedThrough: string // YYYY-MM-DD; latest observationDate
+  // Earliest of each required operation's latest eligible observationDate.
+  evidenceCollectedThrough: string
   reviewedAt: string // YYYY-MM-DD
 }
 
@@ -338,10 +389,13 @@ The future validator MUST reject unknown object keys, non-integer observation or
 budget counts, negative observation values, non-positive budgets, budgets that
 reach the next retry boundary, duplicate operation entries, duplicate
 observation dates within an operation, duplicate neutral field entries,
-incomplete operation budgets, non-neutral aliases, value-like authentication or
+  incomplete operation budgets, a minimum or budget derived from an ineligible
+  observation, non-neutral aliases, an operation/field pair outside the closed
+  neutral-field union, value-like authentication or
 ownership fields, personal/contact-like ownership values, unknown alert channel
 categories, inconsistent request/parse/total component timings, an
-`evidenceCollectedThrough` value that differs from the latest observation date,
+  `evidenceCollectedThrough` value that differs from the earliest of each
+  required operation's latest eligible observation date,
 or any evidence/review/evaluation date ordering that would produce a negative
 age. Any field that could carry a private endpoint or raw response MUST also be
 rejected.
@@ -377,7 +431,8 @@ tables.
 
 ## Implementation Gates And Sequence
 
-1. **Readiness contract PR:** review this Draft and its tracked-text-only guard.
+1. **Readiness contract PR:** review this approved contract and its
+   tracked-text-only guard.
    No evidence instance, network code, secret, database, scheduler, or Docker
    change is included.
 2. **Private evidence capture:** only from the company network in a separately
