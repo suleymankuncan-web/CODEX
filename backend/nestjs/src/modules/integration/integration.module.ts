@@ -42,6 +42,7 @@ import { MasterDataQualityRepository } from "./infrastructure/master-data-qualit
 import { PersonnelMasterService } from "./application/personnel-master.service";
 import { CompanyDailyKpiComponentRepository } from "./infrastructure/company-daily-kpi-component.repository";
 import { CompanyDailyKpiComponentRangeReadRepository } from "./infrastructure/company-daily-kpi-component-range-read.repository";
+import { CompanyDailyKpiDailyClosureReadRepository } from "./infrastructure/company-daily-kpi-daily-closure-read.repository";
 import { CompanyDailyKpiStoreRangeService } from "./application/company-daily-kpi-store-range.service";
 import { CompanyDailyKpiDailyClosureService } from "./application/company-daily-kpi-daily-closure.service";
 
@@ -65,6 +66,7 @@ import { CompanyDailyKpiDailyClosureService } from "./application/company-daily-
     IntegrationSourceRepository,
     CompanyDailyKpiComponentRepository,
     CompanyDailyKpiComponentRangeReadRepository,
+    CompanyDailyKpiDailyClosureReadRepository,
     CompanyDailyKpiStoreRangeService,
     CompanyDailyKpiDailyClosureService,
     MaterializationService,

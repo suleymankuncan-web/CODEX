@@ -4,9 +4,9 @@ import {
   type CompanyDailyKpiDailyClosureResult,
 } from "./company-daily-kpi-daily-closure";
 import {
-  CompanyDailyKpiComponentRangeReadRepository,
+  CompanyDailyKpiDailyClosureReadRepository,
   type CompanyDailyKpiDailyClosureReadInput,
-} from "../infrastructure/company-daily-kpi-component-range-read.repository";
+} from "../infrastructure/company-daily-kpi-daily-closure-read.repository";
 
 export type CompanyDailyKpiDailyClosureServiceInput =
   CompanyDailyKpiDailyClosureReadInput;
@@ -17,14 +17,14 @@ const UUID_PATTERN =
 @Injectable()
 export class CompanyDailyKpiDailyClosureService {
   constructor(
-    private readonly rangeReadRepository: CompanyDailyKpiComponentRangeReadRepository,
+    private readonly dailyClosureReadRepository: CompanyDailyKpiDailyClosureReadRepository,
   ) {}
 
   async readDailyClosure(
     input: CompanyDailyKpiDailyClosureServiceInput,
   ): Promise<CompanyDailyKpiDailyClosureResult> {
     assertReadInput(input);
-    const read = await this.rangeReadRepository.readDailyClosure(input);
+    const read = await this.dailyClosureReadRepository.readDailyClosure(input);
     return evaluateCompanyDailyKpiDailyClosure({
       sourceCode: read.sourceCode,
       businessDate: read.businessDate,
