@@ -36,6 +36,14 @@ const rangeRepositoryTestPath = join(
   root,
   'backend/nestjs/src/modules/integration/infrastructure/company-daily-kpi-component-range-read.repository.spec.ts',
 )
+const dailyClosureRepositoryPath = join(
+  root,
+  'backend/nestjs/src/modules/integration/infrastructure/company-daily-kpi-daily-closure-read.repository.ts',
+)
+const dailyClosureRepositoryTestPath = join(
+  root,
+  'backend/nestjs/src/modules/integration/infrastructure/company-daily-kpi-daily-closure-read.repository.spec.ts',
+)
 const contractPath = join(
   root,
   'docs/contracts/company-daily-kpi-storage-normalization-boundary-v1.md',
@@ -48,6 +56,8 @@ const rangeService = readFileSync(rangeServicePath, 'utf8')
 const rangeServiceUnitTest = readFileSync(rangeServiceTestPath, 'utf8')
 const rangeRepository = readFileSync(rangeRepositoryPath, 'utf8')
 const rangeRepositoryUnitTest = readFileSync(rangeRepositoryTestPath, 'utf8')
+const dailyClosureRepository = readFileSync(dailyClosureRepositoryPath, 'utf8')
+const dailyClosureRepositoryUnitTest = readFileSync(dailyClosureRepositoryTestPath, 'utf8')
 const contract = readFileSync(contractPath, 'utf8')
 const privateExecutionMarkerPattern = new RegExp(
   `\\b(?:${['Run', 'Proc'].join('')}|${['Proc', 'Name'].join('')})\\b`,
@@ -216,6 +226,8 @@ test('decimal aggregation stays BigInt-based and public fixtures stay synthetic'
     rangeServiceUnitTest,
     rangeRepository,
     rangeRepositoryUnitTest,
+    dailyClosureRepository,
+    dailyClosureRepositoryUnitTest,
   ].join('\n')
   assert.doesNotMatch(publicCandidate, /https?:\/\//i)
   assert.doesNotMatch(
