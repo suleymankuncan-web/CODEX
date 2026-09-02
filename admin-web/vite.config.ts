@@ -5,12 +5,15 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
 import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { createPlaywrightManualChunks, resolveModulePreload } from './scripts/playwright-build-profile.mjs'
 
 const projectRoot = fileURLToPath(new URL('.', import.meta.url))
 const apiProxyTarget = process.env.HR_AXIS_VITE_API_PROXY_TARGET?.trim() || 'http://localhost:3000'
 const apiProxyOrigin = process.env.HR_AXIS_VITE_PROXY_ORIGIN?.trim()
 const apiProxyReadOnly = process.env.HR_AXIS_VITE_PROXY_READ_ONLY === 'true'
 const dependencyRoot = realpathSync(path.resolve(projectRoot, './node_modules'))
+const modulePreload = resolveModulePreload(process.env)
+const manualChunks = createPlaywrightManualChunks(process.env)
 
 const safeWorkshopMethods = new Set(['GET', 'HEAD', 'OPTIONS'])
 const workshopSessionPaths = new Set(['/api/auth/browser-session'])
@@ -53,6 +56,8 @@ export default defineConfig({
     include: ['src/**/*.unit.test.ts'],
   },
   build: {
+    ...(modulePreload === false ? { modulePreload } : {}),
+    ...(manualChunks ? { rolldownOptions: { output: { manualChunks } } } : {}),
     sourcemap: false,
   },
   server: {
