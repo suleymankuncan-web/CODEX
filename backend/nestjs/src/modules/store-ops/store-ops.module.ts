@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { StoreOpsChecklistModule } from "./store-ops-checklist.module";
+import { StoreOpsChecklistResultPdfModule } from "./store-ops-checklist-result-pdf.module";
 import { StoreOpsCompetitionModule } from "./store-ops-competition.module";
 import { StoreOpsIncentiveModule } from "./store-ops-incentive.module";
 import { StoreOpsReportingModule } from "./store-ops-reporting.module";
@@ -23,6 +24,7 @@ const storeOpsInternalModules = [
   imports: [
     AuthModule,
     ...storeOpsInternalModules,
+    StoreOpsChecklistResultPdfModule,
     StoreOpsStoreActionModule,
     StoreOpsTargetWorkspaceModule,
     StoreOpsTaskCommandReadModule,

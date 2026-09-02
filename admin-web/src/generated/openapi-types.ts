@@ -4880,6 +4880,33 @@ export type paths = {
       }
     }
   }
+  "/api/checklists/instances/{checklistInstanceId}/result.pdf": {
+    get: {
+      responses: {
+        "200": {
+          content: Record<string, never>
+        }
+        "400": {
+          content: Record<string, never>
+        }
+        "401": {
+          content: Record<string, never>
+        }
+        "403": {
+          content: Record<string, never>
+        }
+        "404": {
+          content: Record<string, never>
+        }
+        "422": {
+          content: Record<string, never>
+        }
+        "500": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
   "/api/checklists/instances/{checklistInstanceId}/acknowledge": {
     post: {
       requestBody: {

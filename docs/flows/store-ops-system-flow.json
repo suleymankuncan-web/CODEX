@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-08-31T04:35:41.867Z",
+  "generatedAt": "2026-09-02T11:58:41.186Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 260,
-    "backendEndpointsWithoutFrontendCallCount": 56,
-    "controllerCount": 36,
+    "backendEndpointCount": 261,
+    "backendEndpointsWithoutFrontendCallCount": 57,
+    "controllerCount": 37,
     "frontendApiCallCount": 205,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 205,
-    "openApiEndpointCount": 260,
+    "openApiEndpointCount": 261,
     "routeApiEdgeCount": 254,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
@@ -4858,7 +4858,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 123
+        "line": 131
       }
     },
     {
@@ -4998,7 +4998,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 18
+        "line": 26
       }
     },
     {
@@ -5012,7 +5012,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 96
+        "line": 104
       }
     },
     {
@@ -5026,7 +5026,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 68
+        "line": 76
       }
     },
     {
@@ -5040,7 +5040,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 41
+        "line": 49
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/checklists/instances/{checklistInstanceId}/result.pdf",
+      "method": "GET",
+      "path": "/api/checklists/instances/{checklistInstanceId}/result.pdf",
+      "rawControllerPath": "checklists",
+      "rawMethodPath": "instances/:checklistInstanceId/result.pdf",
+      "controller": "checklist-result-pdf",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-result-pdf.controller.ts",
+        "line": 38
       }
     },
     {
@@ -8203,6 +8217,12 @@
       "id": "openapi:POST:/api/checklists/instances/{checklistInstanceId}/responses",
       "method": "POST",
       "path": "/api/checklists/instances/{checklistInstanceId}/responses",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:GET:/api/checklists/instances/{checklistInstanceId}/result.pdf",
+      "method": "GET",
+      "path": "/api/checklists/instances/{checklistInstanceId}/result.pdf",
       "domain": "checklists"
     },
     {
@@ -12122,6 +12142,13 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:checklist-result-pdf",
+        "controller": "checklist-result-pdf",
+        "domain": "checklists",
+        "endpointCount": 1,
+        "frontendCallCount": 0
       }
     ]
   },
@@ -12137,6 +12164,7 @@
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",
+      "endpoint:GET:/api/checklists/instances/{checklistInstanceId}/result.pdf",
       "endpoint:GET:/api/health/live",
       "endpoint:GET:/api/integrations/import-batch-audit/{batchId}",
       "endpoint:GET:/api/integrations/import-batches",

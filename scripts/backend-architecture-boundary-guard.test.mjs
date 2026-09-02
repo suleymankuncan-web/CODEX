@@ -215,6 +215,8 @@ const storeOpsModuleGraphLimits = new Map([
     'backend/nestjs/src/modules/store-ops/store-ops-checklist.module.ts',
     { controllers: 3, providers: 4, exports: 1 },
   ],
+  // Checklist result PDF is a read-only boundary over the exported ChecklistService.
+  ['backend/nestjs/src/modules/store-ops/store-ops-checklist-result-pdf.module.ts', { imports: 1, controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-command.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-history.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-checklist-visit-plan.module.ts', { controllers: 1, providers: 2, exports: 0 }],

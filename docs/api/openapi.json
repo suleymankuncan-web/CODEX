@@ -10110,6 +10110,57 @@
           "AuthAdmin"
         ]
       }
+    },
+    "/api/checklists/instances/{checklistInstanceId}/result.pdf": {
+      "get": {
+        "operationId": "ChecklistController_downloadChecklistResultPdf",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The checklist instance identifier is malformed."
+          },
+          "401": {
+            "description": "Authentication is required."
+          },
+          "403": {
+            "description": "The authenticated role cannot export result PDFs."
+          },
+          "404": {
+            "description": "The completed checklist result is unavailable or outside the caller scope."
+          },
+          "422": {
+            "description": "The checklist result exceeds the bounded PDF export limits."
+          },
+          "500": {
+            "description": "The PDF could not be rendered."
+          }
+        },
+        "summary": "Download completed checklist result as PDF",
+        "tags": [
+          "Checklist"
+        ]
+      }
     }
   },
   "info": {

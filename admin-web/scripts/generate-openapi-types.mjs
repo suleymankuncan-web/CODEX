@@ -96,6 +96,7 @@ const selectedOperations = [
   { path: '/api/visual-merchandising/references/{referenceSetId}/assignments/{assignmentId}/commands', method: 'post' },
   { path: '/api/visual-merchandising/references/{referenceSetId}/retire', method: 'post' },
   { path: '/api/checklists/command-canvas', method: 'get' },
+  { path: '/api/checklists/instances/{checklistInstanceId}/result.pdf', method: 'get' },
   { path: '/api/checklists/instances/{checklistInstanceId}/acknowledge', method: 'post' },
   { path: '/api/checklists/command-canvas/regions', method: 'get' },
   { path: '/api/checklists/command-canvas/stores/{storeId}/operational-history', method: 'get' },

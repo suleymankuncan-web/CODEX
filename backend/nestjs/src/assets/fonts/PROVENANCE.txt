@@ -1,0 +1,9 @@
+Noto Sans Regular and Bold unhinted CFF OTF assets sourced from notofonts/noto-fonts.
+Pinned source commit: ffebf8c1ee449e544955a7e813c54f9b73848eac
+Source paths:
+- unhinted/otf/NotoSans/NotoSans-Regular.otf
+- unhinted/otf/NotoSans/NotoSans-Bold.otf
+SHA-256:
+- NotoSans-Regular.otf: 7b8a545d63de82a3325dc3c545b597898c03219bd432b0a18086e7605859c6c4
+- NotoSans-Bold.otf: e5665c547d853bcf999dcafe05cac95403dee71dbf716553c0d1cb6594492db5
+License: SIL Open Font License 1.1 (see OFL-1.1-LICENSE.txt).
