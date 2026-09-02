@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { stripTypeScriptTypes } from 'node:module'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
@@ -7,6 +8,59 @@ const workspaceRoot = join(import.meta.dirname, '..')
 
 function readText(path) {
   return readFileSync(join(workspaceRoot, path), 'utf8')
+}
+
+const allowedReadinessImports = new Set([
+  './company-daily-kpi-connector-readiness-contract',
+  './company-daily-kpi-connector-readiness-validation',
+])
+const importTokenGap = String.raw`(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*(?:\r?\n|$))*`
+
+function normalizeIdentifierEscapes(source) {
+  return source.replace(
+    /\\u(?:\{([0-9a-f]{1,6})\}|([0-9a-f]{4}))/gi,
+    (match, braced, fixed) => {
+      const codePoint = Number.parseInt(braced ?? fixed, 16)
+      return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : match
+    },
+  )
+}
+
+function assertReadinessImportsSafe(implementationText, implementationPath) {
+  let transformed
+  try {
+    transformed = stripTypeScriptTypes(implementationText, { mode: 'transform' })
+  } catch {
+    assert.fail(`${implementationPath} must remain valid TypeScript`)
+  }
+  const importSource = normalizeIdentifierEscapes(
+    `${implementationText}\n${transformed}`,
+  )
+  assert.doesNotMatch(
+    importSource,
+    new RegExp(String.raw`\bimport${importTokenGap}\(`),
+    `${implementationPath} must not use dynamic imports`,
+  )
+  assert.doesNotMatch(
+    importSource,
+    /\brequire\b/,
+    `${implementationPath} must not reference CommonJS require`,
+  )
+  assert.doesNotMatch(
+    importSource,
+    new RegExp(String.raw`(?:^|[\r\n])\s*import${importTokenGap}["']`),
+    `${implementationPath} must not use side-effect imports`,
+  )
+  const importFromPattern = new RegExp(
+    String.raw`\bfrom${importTokenGap}["']([^"']+)["']`,
+    'g',
+  )
+  for (const match of importSource.matchAll(importFromPattern)) {
+    assert.ok(
+      allowedReadinessImports.has(match[1]),
+      `${implementationPath} has an unapproved import: ${match[1]}`,
+    )
+  }
 }
 
 const privateEndpointPatterns = [
@@ -41,11 +95,14 @@ const storageContract = readText(
 )
 const intake = readText('docs/plans/real-ingest-connector-contract-intake.md')
 const currentState = readText('current-state.md')
-const validatorPath =
-  'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness.ts'
+const validatorPaths = [
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness.ts',
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness-contract.ts',
+  'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness-validation.ts',
+]
 const validatorSpecPath =
   'backend/nestjs/src/modules/integration/application/company-daily-kpi-connector-readiness.spec.ts'
-const validator = readText(validatorPath)
+const validatorTexts = validatorPaths.map((path) => readText(path))
 const validatorSpec = readText(validatorSpecPath)
 
 test('readiness evidence contract is traceable and product-owner approved', () => {
@@ -262,21 +319,45 @@ test('pure readiness validator remains tracked, fail closed, and free of runtime
     'approvedOwnerRoleAliases',
     'ready_for_connector_implementation',
   ]) {
-    requireText(validator, phrase)
+    requireText(validatorTexts.join('\n'), phrase)
   }
 
-  assert.doesNotMatch(validator, /^\s*import\s/m)
-  assert.doesNotMatch(
-    validator,
-    /\b(?:fetch|process\.env|DatabaseService|HttpService)\b/,
-  )
+  for (const [index, implementationText] of validatorTexts.entries()) {
+    const implementationPath = validatorPaths[index]
+    assertReadinessImportsSafe(implementationText, implementationPath)
+    assert.doesNotMatch(
+      implementationText,
+      /\b(?:fetch|process\.env|DatabaseService|HttpService)\b/,
+      `${implementationPath} must remain free of runtime I/O`,
+    )
+  }
 
-  const implementationText = [validator, validatorSpec].join('\n')
+  const implementationText = [...validatorTexts, validatorSpec].join('\n')
   assert.doesNotMatch(
     implementationText,
     /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
   )
   assert.doesNotMatch(implementationText, /https?:\/\/[^\s)`]+/i)
+})
+
+test('readiness import guard rejects comment-interleaved runtime imports', () => {
+  for (const [label, fixture] of [
+    ['side-effect', 'import/*guard-gap*/"./runtime-side-effect"'],
+    ['dynamic', 'const provider = import/*guard-gap*/("./provider")'],
+    ['commonjs', 'const fs = require/*guard-gap*/("node:fs")'],
+    ['external-static', 'import { readFile }/*guard-gap*/from "node:fs"'],
+    ['template-dynamic', 'const provider = `${import/*guard-gap*/("./provider")}`'],
+    ['template-commonjs', 'const fs = `${require/*guard-gap*/("node:fs").readFileSync}`'],
+    ['regex-before-commonjs', 'const marker = /[/*]/;\nconst fs = require("node:fs")'],
+    ['optional-commonjs', 'const fs = require?.("node:fs")'],
+    ['aliased-commonjs', 'const loader = require; const fs = loader("node:fs")'],
+    ['escaped-commonjs', String.raw`const fs = requ\u0069re("node:fs")`],
+  ]) {
+    assert.throws(
+      () => assertReadinessImportsSafe(fixture, `synthetic-${label}`),
+      `comment-interleaved ${label} import must fail closed`,
+    )
+  }
 })
 
 test('summary exposes deterministic freshness and safe reason codes', () => {
