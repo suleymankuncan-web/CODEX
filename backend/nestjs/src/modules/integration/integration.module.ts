@@ -43,6 +43,7 @@ import { PersonnelMasterService } from "./application/personnel-master.service";
 import { CompanyDailyKpiComponentRepository } from "./infrastructure/company-daily-kpi-component.repository";
 import { CompanyDailyKpiComponentRangeReadRepository } from "./infrastructure/company-daily-kpi-component-range-read.repository";
 import { CompanyDailyKpiStoreRangeService } from "./application/company-daily-kpi-store-range.service";
+import { CompanyDailyKpiDailyClosureService } from "./application/company-daily-kpi-daily-closure.service";
 
 @Module({
   controllers: [
@@ -65,6 +66,7 @@ import { CompanyDailyKpiStoreRangeService } from "./application/company-daily-kp
     CompanyDailyKpiComponentRepository,
     CompanyDailyKpiComponentRangeReadRepository,
     CompanyDailyKpiStoreRangeService,
+    CompanyDailyKpiDailyClosureService,
     MaterializationService,
     KpiMaterializationService,
     MaterializationBatchRepository,
@@ -105,6 +107,7 @@ import { CompanyDailyKpiStoreRangeService } from "./application/company-daily-kp
     IntegrationSourceRepository,
     CompanyDailyKpiComponentRepository,
     CompanyDailyKpiStoreRangeService,
+    CompanyDailyKpiDailyClosureService,
     MaterializationService,
     KpiMaterializationService,
     ExternalIdMappingService,
