@@ -1,16 +1,25 @@
 import { createHash } from 'node:crypto'
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, join, relative, resolve } from 'node:path'
+import { PLAYWRIGHT_BUILD_PROFILE } from './playwright-build-profile.mjs'
 
 export const PLAYWRIGHT_BUILD_RECEIPT = '.playwright-build-receipt.json'
 export const PLAYWRIGHT_BUILD_ENVIRONMENT = Object.freeze({
   VITE_API_BASE_URL: '/api',
   VITE_SENTRY_DSN: '',
   VITE_SENTRY_ENABLED: 'false',
+  VITE_PLAYWRIGHT_BUILD_PROFILE: PLAYWRIGHT_BUILD_PROFILE,
 })
 
 const sourceRoots = ['src', 'public']
-const sourceFiles = ['index.html', 'package.json', 'package-lock.json', 'vite.config.ts']
+const sourceFiles = [
+  'index.html',
+  'package.json',
+  'package-lock.json',
+  'scripts/playwright-build-profile.d.mts',
+  'scripts/playwright-build-profile.mjs',
+  'vite.config.ts',
+]
 const sourceFilePattern = /^tsconfig(?:\.[^.]+)?\.json$/
 
 export function verifyPlaywrightBuildReceipt(projectRoot, environment = PLAYWRIGHT_BUILD_ENVIRONMENT) {

@@ -7,18 +7,16 @@ import { ClerkSessionProvider } from './features/auth/clerk-session'
 import { LocalizationProvider } from './features/localization/LocalizationProvider'
 import { SessionProvider } from './features/session/session-context'
 import { captureFrontendException, initializeFrontendSentry } from './lib/sentry'
+import { createQueryClientDefaultOptions } from './lib/query-client-defaults'
 import './index.css'
 import App from './App.tsx'
 
 initializeFrontendSentry()
 
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 60_000,
-    },
-  },
+  defaultOptions: createQueryClientDefaultOptions(
+    import.meta.env.VITE_PLAYWRIGHT_BUILD_PROFILE,
+  ),
 })
 
 createRoot(document.getElementById('root')!, {

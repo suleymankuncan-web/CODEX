@@ -258,6 +258,7 @@ These values are read by `admin-web/src`.
 | `VITE_SENTRY_ENABLED` | P1 | Exact `true`/`false`; enable only after frontend staging receipt and redaction review. | Default `false`; rollback is flag-only. |
 | `VITE_SENTRY_ENVIRONMENT` | P1 | Stable Sentry environment label, `staging` for the current staging project. | Used in issue metadata. |
 | `VITE_SENTRY_RELEASE` | P1 | Optional deployed commit/release id. | Used for grouping when supplied; do not store secrets. |
+| `VITE_PLAYWRIGHT_BUILD_PROFILE` | P1 test-only | Must remain unset in production and staging builds. | The isolated `build:e2e` path pins the exact `playwright-e2e` profile so Playwright preserves retry attempts without production backoff delays, coalesces the initial/static E2E asset graph, and leaves lazy route chunks split to avoid exhausting local browser socket buffers during the full suite. |
 | `VITE_AUTH_MODE` | P0 | Must be `bearer` for real environments. | Local can use `mock`. |
 | `VITE_BROWSER_SESSION_TRANSPORT` | P0 for launch browser sessions | `bearer` preserves the legacy rollback path; `cookie` is the launch target after backend cookie sessions are proven. | Separate from `VITE_AUTH_MODE`; do not overload auth mode as the transport flag. |
 | `VITE_AUTH_PROVIDER` | P0 | Use `clerk` when Clerk owns browser authentication. | Enables Clerk frontend bridge; authorization remains in HR Axis DB. |
