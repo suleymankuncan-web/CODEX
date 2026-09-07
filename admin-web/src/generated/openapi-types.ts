@@ -3923,6 +3923,32 @@ export type components = {
 }
 
 export type paths = {
+  "/api/integrations/personnel-observations": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': {
+              "items": Array<{
+                  "sourceId": string
+                  "businessDate": string
+                  "storeId": string
+                  "storeCode": string
+                  "storeName": string
+                  "personnelCode": string
+                }>
+              "meta": {
+                "count": number
+                "total": number
+                "limit": number
+                "offset": number
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   "/api/auth/action-store-assignments": {
     get: {
       responses: {
