@@ -444,3 +444,51 @@ test('cookie callback re-login rotates the browser-session cache key', async ({ 
   expect(renewedProof.browserSessionKey).not.toBe(firstProof.browserSessionKey)
   expect(renewedProof.csrfToken).toBe(refreshedCsrfToken)
 })
+
+for (const serverAcceptsCookie of [true, false]) {
+  test(`cookie reload rechecks server authorization: ${serverAcceptsCookie ? 'valid' : 'rejected'} persisted hint`, async ({ page }) => {
+    let serverReads = 0
+    let recoveryReads = 0
+    await page.addInitScript((session) => {
+      if (!window.localStorage.getItem('store-ops-admin-session')) {
+        window.localStorage.setItem('store-ops-admin-session', JSON.stringify(session))
+      }
+    }, { ...cookieTransportSession, browserSessionKey: 'non-secret-persisted-hint' })
+    await page.route('**/api/auth/browser-session/csrf', async (route) => {
+      recoveryReads += 1
+      await route.fulfill(serverAcceptsCookie
+        ? { json: { csrfToken, sessionId: 'recovered-cookie-session', expiresAt: '2099-01-01T00:00:00Z' } }
+        : { status: 401, json: { message: 'Unauthorized' } })
+    })
+    await page.route('**/api/auth/session', async (route) => {
+      serverReads += 1
+      expect(route.request().headers().authorization).toBeUndefined()
+      await route.fulfill(serverAcceptsCookie
+        ? { json: authSession }
+        : { status: 401, json: { message: 'Unauthorized' } })
+    })
+    await page.goto('/admin/session')
+    await expect.poll(() => recoveryReads).toBeGreaterThan(0)
+    const masterDataLink = page.locator('a[href="/admin/master-data"]')
+    if (serverAcceptsCookie) {
+      await expect(masterDataLink).toBeVisible()
+      expect(serverReads).toBeGreaterThan(0)
+      const beforeRecovery = recoveryReads
+      const beforeReload = serverReads
+      await page.reload()
+      await expect.poll(() => recoveryReads).toBeGreaterThan(beforeRecovery)
+      await expect.poll(() => serverReads).toBeGreaterThan(beforeReload)
+      await expect(masterDataLink).toBeVisible()
+      await expect(page).toHaveURL(/\/admin\/session/)
+    } else {
+      await expect(page).toHaveURL(/\/auth\/login/)
+      await expect(masterDataLink).toHaveCount(0)
+      expect(serverReads).toBe(0)
+    }
+    const tokens = await page.evaluate(() => [
+      window.sessionStorage.getItem('store-ops-admin-bearer-token'),
+      window.sessionStorage.getItem('store-ops-admin-provider-id-token'),
+    ])
+    expect(tokens).toEqual([null, null])
+  })
+}

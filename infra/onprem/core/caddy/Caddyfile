@@ -30,6 +30,13 @@ https://{$HR_AXIS_PUBLIC_HOST}:8443 {
       reverse_proxy frontend:8080
     }
 
+    # Only known HR Axis admin SPA routes go to the frontend. Keycloak's
+    # /admin/realms and /admin/master/console paths remain denied below.
+    @appAdmin path /admin/session /admin/operations /admin/data-quality /admin/integrations /admin/integrations/* /admin/master-data /admin/master-data/* /admin/snapshots /admin/snapshots/* /admin/inbox /admin/feed /admin/checklists /admin/competitions /admin/reports /admin/reports/* /admin/targets /admin/incentives /admin/kpi-config /admin/pilot-feedback /admin/auth /admin/auth/* /admin/audit /admin/audit/*
+    handle @appAdmin {
+      reverse_proxy frontend:8080
+    }
+
     # The administration console/API and every unlisted /auth path are denied
     # before the narrow OIDC allowlist is evaluated.
     @authAdmin path /auth/admin /auth/admin/*

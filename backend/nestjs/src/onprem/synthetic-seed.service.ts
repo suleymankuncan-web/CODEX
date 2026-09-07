@@ -26,6 +26,14 @@ export class SyntheticSeedService {
       sql: readFileSync(path, "utf8"),
     }));
     const results = await this.database.withTransaction(async (client) => {
+      // Guard the target as well as the process flags: an old synthetic Compose
+      // must not repopulate a company database after connection-file cutover.
+      await client.query("LOCK TABLE ops.company IN SHARE ROW EXCLUSIVE MODE");
+      const target = await client.query(`SELECT company_id FROM ops.company
+        WHERE company_id <> '00000000-0000-0000-0000-000000000001'::uuid LIMIT 1`);
+      if (target.rows.length !== 0) {
+        throw new Error("synthetic seed refuses a non-synthetic company database");
+      }
       const collected = [];
       for (const seed of seeds) {
         const queryResult = await client.query(seed.sql);

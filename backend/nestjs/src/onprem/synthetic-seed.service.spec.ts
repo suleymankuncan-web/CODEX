@@ -44,11 +44,11 @@ describe("SyntheticSeedService", () => {
     const result = await service.run(createSeedTree());
 
     expect(query).toHaveBeenNthCalledWith(
-      1,
+      3,
       "INSERT INTO example (label) VALUES ('synthetic');",
     );
     expect(query).toHaveBeenNthCalledWith(
-      2,
+      4,
       "INSERT INTO example (label) VALUES ('identity');",
     );
     expect(result).toMatchObject({
@@ -59,6 +59,18 @@ describe("SyntheticSeedService", () => {
     });
     expect(result.byteCount).toBeGreaterThan(90);
     expect(JSON.stringify(result)).not.toContain("synthetic');");
+  });
+
+  it("refuses company data even if stale process flags claim synthetic mode", async () => {
+    const query = jest.fn().mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ company_id: "another-company" }] });
+    const service = new SyntheticSeedService(
+      { dataClass: "synthetic", isStrictLocal: true } as never,
+      { withTransaction: jest.fn(async (work) => work({ query })) } as never,
+    );
+    await expect(service.run(createSeedTree())).rejects.toThrow("synthetic seed refuses a non-synthetic company database");
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query.mock.calls[0][0]).toContain("LOCK TABLE ops.company");
   });
 
   it("fails before database access when the Keycloak persona seed is missing", async () => {

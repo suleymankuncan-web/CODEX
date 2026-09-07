@@ -86,3 +86,18 @@ describe('readClientSession', () => {
     })
   })
 })
+
+describe('cookie session reload readiness', () => {
+  it('requires a recovered in-memory nonce even when a persisted cache key exists', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'bearer')
+    vi.stubEnv('VITE_BROWSER_SESSION_TRANSPORT', 'cookie')
+    const { defaultSession, isSessionReady, writeBrowserSessionCsrfToken } = await import('./session-storage')
+    vi.stubGlobal('window', { localStorage: new MemoryStorage(), sessionStorage: new MemoryStorage() })
+    const session = { ...defaultSession, browserSessionKey: 'non-secret-cache-key' }
+    expect(isSessionReady(session)).toBe(false)
+    writeBrowserSessionCsrfToken('server-recovered-nonce')
+    expect(isSessionReady(session)).toBe(true)
+    writeBrowserSessionCsrfToken('')
+    expect(isSessionReady(session)).toBe(false)
+  })
+})

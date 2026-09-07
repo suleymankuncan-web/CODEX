@@ -1,4 +1,5 @@
 import { lstatSync, readFileSync } from "node:fs";
+import { assertStrictLocalDataClass } from "./strict-local-data-class";
 
 export type ConfigReader = {
   get(key: string): string | undefined;
@@ -375,13 +376,9 @@ export function assertStrictLocalConfiguration(
     processRole?: "runtime" | "migrator" | "synthetic-seed" | "identity-binder";
   },
 ): void {
+  assertStrictLocalDataClass(config, input);
   if (!input.isStrictLocal) {
     return;
-  }
-  if (input.dataClass !== "synthetic") {
-    throw new Error(
-      "HR_AXIS_DATA_CLASS=synthetic is required when HR_AXIS_STRICT_LOCAL=true",
-    );
   }
   assertStrictLocalPhotoMediaConfiguration(config);
   if (
