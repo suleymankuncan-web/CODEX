@@ -150,3 +150,30 @@ function workspaceFixture(historyStoreId: string | null, historyOffset = 0) {
     capabilities: { canCreateSellerCodeRequest: false, canCreateOffboardingRequest: false },
   }
 }
+
+
+test('store manager stages personnel corrections and sees pending status without a roster mutation', async ({ page }) => {
+  await installStoreContractSession(page, 'storeManager')
+  await installGenericStoreApiFallbacks(page)
+  const store = createStore(storeIds[0], 'Test Mağaza', 0)
+  const workspace = { ...createWorkspace([store]), view: 'store_manager' }
+  await page.route('**/api/store/workforce/workspace**', (route) => route.fulfill({ json: { data: workspace } }))
+  const values = { firstName: 'Ayşe', lastName: 'Çetin', phoneNumber: '', hireDate: '2026-09-07', employmentType: 'full_time', positionId: store.personnel[0].positionId }
+  let submitted: Record<string, unknown> | null = null
+  let pending = false
+  await page.route('**/api/workforce/personnel-corrections**', async (route) => {
+    const request = route.request()
+    if (request.method() === 'POST') { submitted = request.postDataJSON(); pending = true; await route.fulfill({ status: 201, json: { request_id: 'request-1' } }); return }
+    if (request.url().includes('/personnel/')) { await route.fulfill({ json: { revision: 'revision-1', values, positions: [{ positionId: values.positionId, positionName: 'Satış Danışmanı' }] } }); return }
+    await route.fulfill({ json: { items: pending ? [{ request_id: 'request-1', employee_id: store.personnel[0].employeeId, store_name: store.storeName, request_status: 'pending_hr_approval', request_reason: 'İsim düzeltmesi', previous_values: values, proposed_values: { ...values, firstName: 'Ayşen' }, review_note: null }] : [] } })
+  })
+  await page.goto('/store/workforce')
+  await page.getByRole('button', { name: 'Bilgileri düzenle' }).click()
+  await page.getByRole('textbox', { name: 'Ad', exact: true }).fill('Ayşen')
+  await page.getByRole('textbox', { name: 'Düzeltme gerekçesi' }).fill('İsim düzeltmesi')
+  await page.getByRole('button', { name: 'İK onayına gönder' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByText('İK onayı bekliyor')).toBeVisible()
+  expect(submitted).toMatchObject({ employeeId: store.personnel[0].employeeId, storeId: store.storeId, expectedRevision: 'revision-1', proposed: { firstName: 'Ayşen' } })
+  await expect(page.getByText('Ayşe Çetin', { exact: true }).first()).toBeVisible()
+})

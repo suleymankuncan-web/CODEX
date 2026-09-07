@@ -1,3 +1,4 @@
+import { PersonnelCorrectionButton, PersonnelCorrectionQueue } from '../features/workforce/personnel-corrections'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -272,7 +273,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
         <WorkforceInlineEmpty title="Kapsamda mağaza yok" description="Bu rol için görüntülenebilir aktif mağaza bulunamadı." />
       ) : isStoreManager && directStore ? (
         <div data-testid="store-workforce-personnel-list">
-          <PersonnelList store={directStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(directStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={directStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />
+          <PersonnelList correctionScope={scopeSignature} store={directStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(directStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={directStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />
         </div>
       ) : (
         <StoreList stores={visibleStores} view={workspace.view} sort={storeSort} direction={storeDirection} onSort={chooseStoreSort} onSelect={(store) => { setSelectedStoreId(store.storeId); setPersonPage(0); setPersonnelOffset(0); setQuery('') }} pagination={workspace.stores} onOffset={setOffset} />
@@ -299,6 +300,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
         </CommandCanvasOperationalDrawerContent>
       </Sheet>
 
+      {isStoreManager && directStore ? <PersonnelCorrectionQueue key={scopeSignature} scopeKey={scopeSignature} storeId={directStore.storeId} /> : null}
       {isStoreManager && canManageRequests ? <WorkforceRequestDialogs dialog={requestDialog} onDialogChange={setRequestDialog} storeId={requestStoreId} handoffRequestId={requestId} handoffRequestType={requestType} /> : null}
     </CommandCanvasPage>
   )
@@ -318,10 +320,10 @@ function StoreList(input: { stores: WorkforceCommandStore[]; view: 'report_viewe
   )
 }
 
-function PersonnelList(input: { store: WorkforceCommandStore; rows: WorkforceCommandStore['personnel']; sort: WorkforcePersonSort; direction: SortDirection; onSort: (sort: WorkforcePersonSort) => void; onHistory: () => void; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void; compact?: boolean }) {
+function PersonnelList(input: { correctionScope?: string; store: WorkforceCommandStore; rows: WorkforceCommandStore['personnel']; sort: WorkforcePersonSort; direction: SortDirection; onSort: (sort: WorkforcePersonSort) => void; onHistory: () => void; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void; compact?: boolean }) {
   return <CommandCanvasDataList className={input.compact ? 'workforce-personnel-list compact' : 'workforce-personnel-list'} ariaLabel={`${input.store.storeName} personel listesi`} header={<div className="workforce-list-title"><strong>{input.store.storeName} personel listesi</strong><span>{input.total} personel</span><Button variant="outline" onClick={input.onHistory}><History /> Mağaza personel geçmişi</Button></div>} footer={input.pageCount > 1 || input.store.personnelHasMore ? <PersonnelPager {...input} /> : undefined}>
     <div className="workforce-person-grid workforce-list-head"><CommandCanvasSortableHeading semantic={false} label="Personel" direction={input.sort === 'person' ? input.direction : 'none'} onClick={() => input.onSort('person')} /><CommandCanvasSortableHeading semantic={false} label="Pozisyon" direction={input.sort === 'position' ? input.direction : 'none'} onClick={() => input.onSort('position')} /><CommandCanvasSortableHeading semantic={false} label="İşe giriş" direction={input.sort === 'start' ? input.direction : 'none'} onClick={() => input.onSort('start')} /><CommandCanvasSortableHeading semantic={false} label="Çalışma süresi" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /></div>
-    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong data-label="Personel">{person.displayName}</strong><span data-label="Pozisyon">{person.positionName}</span><span data-label="İşe giriş">{formatDate(person.assignmentStartDate)}</span><span data-label="Çalışma süresi">{formatTenureFromDate(person.assignmentStartDate)}</span><span className="workforce-active-pill">Aktif</span></div>)}
+    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong data-label="Personel">{person.displayName}</strong><span data-label="Pozisyon">{person.positionName}</span><span data-label="İşe giriş">{formatDate(person.assignmentStartDate)}</span><span data-label="Çalışma süresi">{formatTenureFromDate(person.assignmentStartDate)}</span><span><span className="workforce-active-pill">Aktif</span>{input.correctionScope ? <PersonnelCorrectionButton scopeKey={input.correctionScope} storeId={input.store.storeId} employeeId={person.employeeId} /> : null}</span></div>)}
   </CommandCanvasDataList>
 }
 

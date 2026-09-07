@@ -949,6 +949,13 @@ export type components = {
       "effectiveFrom"?: string
       "effectiveTo"?: string
     }
+    "CreatePersonnelCorrectionDto": {
+      "storeId": string
+      "employeeId": string
+      "expectedRevision": string
+      "proposed": components['schemas']["PersonnelCorrectionValues"]
+      "reason": string
+    }
     "CreatePersonnelMasterDto": {
       "firstName": string
       "lastName": string
@@ -1627,6 +1634,69 @@ export type components = {
             "averageScore": number | null
           }>
       }
+    }
+    "PersonnelCorrection": {
+      "request_id": string
+      "company_id": string
+      "region_id": string
+      "store_id": string
+      "employee_id": string
+      "assignment_id": string
+      "employee_revision": string
+      "assignment_revision": string
+      "previous_values": components['schemas']["PersonnelCorrectionValues"]
+      "proposed_values": components['schemas']["PersonnelCorrectionValues"]
+      "request_reason": string
+      "request_status": "pending_hr_approval" | "approved" | "rejected"
+      "submitted_by_user_id": string
+      "reviewed_by_user_id": string | null
+      "review_note": string | null
+      "reviewed_at": string | null
+      "created_at": string
+      "updated_at": string
+    }
+    "PersonnelCorrectionList": {
+      "items": Array<{
+          "request_id": string
+          "company_id": string
+          "region_id": string
+          "store_id": string
+          "employee_id": string
+          "assignment_id": string
+          "employee_revision": string
+          "assignment_revision": string
+          "previous_values": components['schemas']["PersonnelCorrectionValues"]
+          "proposed_values": components['schemas']["PersonnelCorrectionValues"]
+          "request_reason": string
+          "request_status": "pending_hr_approval" | "approved" | "rejected"
+          "submitted_by_user_id": string
+          "reviewed_by_user_id": string | null
+          "review_note": string | null
+          "reviewed_at": string | null
+          "created_at": string
+          "updated_at": string
+          "store_name": string
+          "previous_position_name": string | null
+          "proposed_position_name": string | null
+        }>
+    }
+    "PersonnelCorrectionPersonnel": {
+      "employeeId": string
+      "storeId": string
+      "revision": string
+      "values": components['schemas']["PersonnelCorrectionValues"]
+      "positions": Array<{
+          "positionId": string
+          "positionName": string
+        }>
+    }
+    "PersonnelCorrectionValues": {
+      "firstName": string
+      "lastName": string
+      "phoneNumber": string
+      "hireDate": string
+      "employmentType": "full_time" | "part_time" | "temporary"
+      "positionId": string
     }
     "PersonnelMasterCommandResponse": {
       "command": {
@@ -2683,6 +2753,10 @@ export type components = {
       "expectedRevision": number
       "idempotencyKey": string
       "reason": string
+    }
+    "ReviewPersonnelCorrectionDto": {
+      "decision": "approve" | "reject"
+      "note": string
     }
     "ReviewSalesTargetIncentiveRegionPackageDto": {
       "period": string
@@ -3923,6 +3997,58 @@ export type components = {
 }
 
 export type paths = {
+  "/api/workforce/personnel-corrections": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelCorrectionList"]
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreatePersonnelCorrectionDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["PersonnelCorrection"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelCorrectionPersonnel"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workforce/personnel-corrections/{requestId}/review": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ReviewPersonnelCorrectionDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelCorrection"]
+          }
+        }
+      }
+    }
+  }
   "/api/integrations/personnel-observations": {
     get: {
       responses: {
