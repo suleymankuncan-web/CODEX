@@ -2,234 +2,99 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-12
+Last verified: 2026-09-07
 
-This repository is operated through small, reversible PRs. The project is not
-debt-free, and broad rewrites are not allowed as a substitute for scoped
+This repository is operated through small, reversible PRs. Keep one review story
+and one rollback story per PR; broad rewrites are not a substitute for scoped
 architecture hardening.
 
 ## Required Reading
 
-Before code or docs changes, always read these files from the current branch:
-
-- `CONTRIBUTING.md`
-- `current-state.md`
-
-Then use layered reading:
-
-- Read `sokrates.md` for medium/high-risk decisions, ambiguity,
-  prioritization, architecture, auth/API/DB/provider work, or `what next`.
-- Read the relevant `discipline.md` sections before implementation, PR,
-  verification, merge, UI/refactor, or workspace-hygiene work.
-- Read all four completely for a new multi-PR line, high-risk work, or real
-  context recovery when the narrower path is insufficient.
-
-A narrow read-only question may use only the files needed to answer it. Do not
-turn the four-file operating set into mandatory ceremony for every small task.
-
-Codex sessions also load root `AGENTS.md`. It is the concise execution entry
-point for the adaptive Medium/Luna/High routing defined in `discipline.md`;
-it does not replace the four operating documents or their ownership rules.
-The same entry contract applies the owner-locked Luna-first execution policy:
-bounded work is delegated to normal-speed `luna_max` when delegation is cheaper and
-ownership is explicit, while the root retains decisions, integration, PR and
-merge accountability. Repository reasoning never exceeds High and Luna is not
-opted into a fast service tier.
+Follow the [AGENTS reading map](AGENTS.md#reading-map) before code or docs work.
+It routes `current-state.md` (fresh facts and caveats), `sokrates.md` (decisions,
+risk, ambiguity, and stop/ask judgment), and the relevant `discipline.md` execution,
+delegation, PR, merge, verification, UI/refactor, and hygiene rules.
+The canonical delegation policy is [discipline.md#adaptive-reasoning-effort-routing](discipline.md#adaptive-reasoning-effort-routing).
+Read all four completely for a new multi-PR line, high-risk work, or context
+recovery; preserve unrelated user or agent changes.
 
 ## Operating Document Roles
 
-These files work together; none of them replaces the others.
-
-- `CONTRIBUTING.md` is the short entry contract for repo work.
-- `current-state.md` is the live handoff and freshest project-state record.
-- `sokrates.md` is the decision-quality and risk-reasoning system.
-- `discipline.md` is the day-to-day execution, PR, merge, verification, UI, and
-  refactor operating system.
-
-If they overlap, use this order:
-
-- Fresh facts, latest merged state, parked work, and active caveats:
-  `current-state.md`.
-- Decision method, risk reasoning, prioritization, and stop/ask judgment:
-  `sokrates.md`.
-- Execution mechanics, PR rhythm, merge gates, verification ladder, UI/refactor
-  rules, and done definition: `discipline.md`.
-- Contributor-facing summary and minimum repo contract: this file.
-
-Use the current worktree and external state as authoritative. If local docs,
-git history, and runtime evidence disagree, use the freshest verifiable source
-and record the conflict in the PR.
+The reading map owns entry; `current-state.md` owns facts, `sokrates.md` owns
+decisions/risk, `discipline.md` owns execution/gates, and this file owns the
+contributor minimum. Prefer the newest user instruction and fresh evidence when
+sources disagree.
 
 ## Branch And PR Rhythm
 
-- Start from fresh `origin/main`.
-- Use a `codex/` branch prefix for agent-authored work.
-- Keep each PR to one review story and one rollback story.
-- Do not batch unrelated domains because the changes are small.
-- Before opening a PR, run the local pre-PR review pass described below.
-- Merge only after local verification, required GitHub checks, applicable
-  Cloudflare frontend-provider checks, and mergeability are clean.
-- Use squash merge for controlled PRs so exact-tree post-merge proof can be
-  reused; a documented merge-commit/rebase exception accepts the fallback full
-  release cost.
-- GitHub Codex review is disabled by explicit owner direction. Do not trigger
-  `@codex review`, request Codex review, or wait for a Codex reaction/comment.
-  It becomes a merge gate again only if the owner explicitly re-enables it.
-  Required checks, mergeability, local diff review, and verification remain
-  mandatory.
-- After a PR opens, keep its checks, deployment state, mergeability, and
-  actionable feedback monitored in the background while independent next-PR
-  work proceeds in a separate branch/worktree. Do not mix review stories,
-  hide dependencies, or run two full release suites concurrently on one
-  machine. A failure or conflict on the open PR takes priority.
-- Refresh the next branch from merged `origin/main` before opening its PR, and
-  refresh the predecessor's complete status immediately before merge. See
-  `PR Check Beklerken Paralel Ilerleme` in `discipline.md` for the full rule.
-- After merge, verify `origin/main`, update `current-state.md` when the handoff
-  state changed, then refresh and finalize the already prepared next PR.
+- Start from current `origin/main` and use a `codex/` branch prefix.
+- Keep the diff limited to the approved files, one coherent review story, and a
+  clear rollback; state what intentionally did not change.
+- Before a PR and before each push, run the canonical local adversarial review and targeted verification in [discipline.md](discipline.md#pr-oncesi-adversarial-review).
+- Required checks, applicable frontend-provider evidence, and clean mergeability remain mandatory. While a PR is checked, independent work uses another branch/worktree and no two full release suites run concurrently.
+- GitHub Codex review is owner-disabled: do not request `@codex review`, another
+  Codex review integration, or bot reactions/comments. Human or other automated
+  actionable findings still require resolution.
+- Native GitHub `Re-run failed jobs` may preserve successful siblings after a late
+  failure. After merge, verify `origin/main` and refresh the next branch from it.
 
 ## Risk Separation
 
-Never mix UI polish or docs cleanup with these high-risk changes:
-
-- business workflow semantics,
-- API response shape,
-- auth or permission semantics,
-- DB schema or migration,
-- provider configuration,
-- queue, Redis, or BullMQ behavior,
-- KPI scoring, ranking sort, or checklist weights,
-- import lifecycle, retry, mapping, or approval behavior.
-
-If a feature requires one of these changes, make it the only PR objective and
-define the verification ladder before editing code.
+Never mix UI polish or docs cleanup with business workflow semantics, API response
+shape, auth or permission semantics, DB schema/migration, provider configuration,
+queue/Redis/BullMQ behavior, KPI scoring/ranking/checklist weights, or
+import/retry/approval behavior. Use [discipline slice rules](discipline.md#slice-disiplini)
+for risk class, acceptance, rollback, and required gates.
 
 ## Pre-PR Local Review Pass
 
-Local adversarial review is the active review backstop. Before opening a PR and
-before every new push, run this pass without triggering GitHub Codex review:
-
-- Inspect `git diff --stat` and confirm the diff still has one review story.
-- Run `git diff --check`.
-- Read the changed files for scope creep, behavior drift, fake data, layer
-  leaks, broad casts, oversized additions, and stale copy.
-- For backend changes, search for new direct `DatabaseService` imports,
-  application-to-web imports, web-to-infrastructure imports, broad
-  `as unknown as` repository casts, and allowlist growth.
-- For frontend changes, search for fake metrics, role-out-of-scope UI, legacy
-  Store UI classes, debug/handoff copy, and mobile/desktop break risk.
-- Run the targeted verification commands for the PR slice before writing the
-  PR description.
-- List the likely P1/P2 comments GitHub Codex would make and fix actionable
-  issues before opening the PR.
+Read the final diff for scope creep, behavior drift, fake data, layer leaks, stale
+copy, and missing negative cases. Tie tests to acceptance criteria, record
+non-goals/protected areas, and never weaken a guard to hide a failure. Use
+`sokrates.md` when the cause, scope, or rollback is unclear.
 
 ## Backend Boundaries
 
-- Web/controller files do not import infrastructure repositories directly.
-- Application services should orchestrate use cases; direct PostgreSQL,
-  Supabase, or `DatabaseService` access belongs in infrastructure repositories
-  unless an existing allowlisted transition exception is being removed.
-- New application code must not add broad `as unknown as` repository casts.
-- New source adapters, including future Nebim work, must enter through the
-  canonical import boundary before mapping, validation, materialization,
-  snapshotting, scoring, or reporting.
-- Store action, norm kadro, prim, and incentive work must start with an explicit
-  boundary decision before adding write workflows.
+Canonical backend boundaries, including web/application/infrastructure separation,
+import entry, and write decisions, live in [discipline.md#hard-boundaries](discipline.md#hard-boundaries).
 
 ## Frontend Store UI Rules
 
-- Store redesign work uses `shadcn/ui`, Tailwind v4, and lucide icons.
-- Store/Admin UI prototype, redesign, refactor, or workflow-surface work must
-  also read `docs/process/product-experience-principles.md`. That document is
-  the product-quality standard for clean but premium, operationally honest
-  screens; it is not part of the default four-file read-first set for unrelated
-  backend or docs-only work.
-- Store/Admin UI prototype, redesign, or refactor work must run a
-  `design-taste-frontend` / taste-skill quality pass before it is considered
-  ready for implementation. Use it as an anti-slop design review on top of the
-  existing shadcn/Tailwind/lucide/AdminSurface/Store primitive rules, not as a
-  replacement for real data, role scope, or workflow correctness.
-- Refactored Store surfaces must not keep old hero-card shells, legacy panel
-  classes, debug/handoff copy, fake readiness language, or role-out-of-scope
-  navigation links.
-- Toolbar/sidebar items must be role-aware and match backend route permissions.
-- Loading, empty, error, access, mobile, and repeated-use states are part of the
-  feature, not optional polish.
-- A redesigned page is not done until visible modules serve a real user decision
-  or action.
-- Taste-skill output must be adapted to operational product UI: no marketing
-  hero defaults, decorative-only premium elements, fake business copy, or
-  workflow-changing visual ideas.
+- Store redesign uses `shadcn/ui`, Tailwind v4, and lucide icons; applicable
+  product/surface standards and the taste-skill quality pass also apply.
+- Role-aware navigation, real data, loading/empty/error/access states, responsive
+  behavior, accessibility, and workflow correctness are acceptance criteria.
 
 ## Data Honesty
 
-No fake metrics/data are allowed. Do not add fake metric, fake coaching, fake ranking,
-fake trend, fake checklist result, fake payout, fake target, or placeholder product
-copy.
-
-If a real API, model, config, or state source is missing, show an empty, loading,
-error, access, or parked state. Do not invent data to make a page look complete.
+No fake metrics/data: never add fake metric, fake coaching, fake ranking, fake
+trend, fake checklist result, fake payout, fake target, or placeholder product
+copy. If a real source is missing, show an honest loading, empty, error, access,
+or parked state. Never record raw credentials/private user data; local checks do
+not close provider, token, restore, queue, alert, or broad-production evidence.
 
 ## Verification Ladder
 
-Use the narrowest command set that proves the PR scope, then run the broader
-gate when the blast radius requires it.
+The [canonical verification ladder](discipline.md#verification-ladder) owns
+commands and escalation. Docs/process work normally runs `git diff --check` and,
+when active docs or guards change, `npm.cmd run test:scripts`; tie broader checks
+to acceptance. Exact-input `npm.cmd run check:release -- --resume` may reuse only
+matching proof: coverage, test selection, audits, builds, API checks, and
+Playwright selection remain unchanged. Do not run two local canonical gates concurrently.
+Idle check polling uses 55-60 second intervals; details remain in discipline.
 
-- Docs/script guard only: `npm.cmd run test:scripts` and `git diff --check`.
-- Frontend Store UI: `npm.cmd --prefix admin-web run lint`,
-  `npm.cmd --prefix admin-web run build`, and the targeted Playwright spec.
-- Backend service/repository: targeted Jest test, backend build, and
-  `npm.cmd --prefix backend/nestjs run check:release`.
-- Cross-domain or release-impacting changes: root `npm.cmd run check:release`.
-
-The root command is fresh by default. If a concrete late-stage failure was
-fixed without changing HEAD, manifest, commands, runtime, lockfiles, or any
-tracked/non-ignored workspace input, use:
-
-```powershell
-npm.cmd run check:release -- --resume
-```
-
-The runner reuses only exact, atomic successful stage receipts. Dependency
-audits are volatile and rerun. Any identity uncertainty runs fresh. In GitHub
-Actions, use native `Re-run failed jobs` after a late failure; successful
-root/backend/frontend/audit sibling jobs stay valid while
-`required-release-gate` remains fail-closed.
-Never shorten release time by reducing coverage, test selection, audits,
-builds, API checks, Playwright tests, or the two-worker isolation policy.
-Do not run two local canonical gates concurrently. Idle PR polling remains
-55-60 seconds and does not require a model agent.
+Before manual image/offline proof, run
+`npm.cmd run check:onprem:dispatch -- prove` on the exact clean committed HEAD;
+use the wrapper's `publish` only after push. GitHub runtime proof is independent
+final evidence, not a diagnostic shortcut.
 
 ## Migration Change Decision
 
-The root release gate prints a migration-change warning when the changed files
-touch `db/schema.sql`, `db/migrations/*.sql`, migration runner code, backend
-database module/migration tracking code, or `scripts/migration-fresh-db-smoke.mjs`.
-
-That warning is not a CI failure and does not make Docker-dependent fresh DB
-smoke mandatory in the root gate. It does make the PR decision explicit:
-
-- Preferred: run `npm.cmd run smoke:migration:fresh-db` and record sanitized
-  evidence.
-- If Docker/local PostgreSQL is unavailable: record a Conditional Go with owner,
-  date, reason, and follow-up point.
-
-Do not claim release readiness for a migration-sensitive PR without one of
-those two decisions.
-
-If a verification fails, inspect the failing log and fix the cause. Do not hide
-the failure by weakening the guard unless the PR explicitly changes that guard's
-contract.
+The migration warning, fresh smoke, and Conditional Go decision are canonical in
+[discipline.md#external-evidence-disiplini](discipline.md#external-evidence-disiplini); do not claim readiness without that decision.
 
 ## Merge Closeout
 
-Every merged PR must leave the project easier to continue:
-
-- PR description states what changed and what did not change.
-- Verification commands and results are recorded.
-- Required checks, mergeability, and final local adversarial review are
-  recorded. GitHub Codex review is not requested while the owner-disabled
-  policy remains active.
-- Follow-up risk is documented when it remains.
-- `current-state.md` is updated when the project handoff, architecture posture,
-  merged PR line, external evidence, or next-action state changed.
+The PR records what changed and did not change, verification, required checks,
+mergeability, final local review, and remaining risk. After merge, verify
+`origin/main` and update `current-state.md` when handoff facts, architecture, external evidence, or next actions changed.

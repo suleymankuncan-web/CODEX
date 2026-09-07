@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-16
+Last verified: 2026-09-07
 
 Bu dosya HR Axis / Store Ops projesinde Codex ile kullanilan pratik calisma
 disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
@@ -11,26 +11,12 @@ tek yerde toplar.
 
 ## Isletim Dokumanlari Rol Haritasi
 
-Bu repo dort ana isletim dokumaniyla calisir:
-
-- `CONTRIBUTING.md`: kisa repo sozlesmesi ve minimum contributor beklentisi.
-- `current-state.md`: canli handoff, son merge durumu, parked kararlar,
-  caveat'ler ve taze proje gercegi.
-- `sokrates.md`: karar kalitesi, risk muhakemesi, onceliklendirme, ne zaman
-  durulacagi veya soru sorulacagi.
-- `discipline.md`: gundelik execution, PR/merge, verification, UI/refactor,
-  dosya boyutu ve done/stop isletim sistemi.
-
-Tekrar eden kurallar bilerek vardir: `CONTRIBUTING.md` hizli sozlesme,
-`discipline.md` uygulama detayi, `sokrates.md` karar muhakemesi verir. Celiski
-gibi gorunurse:
-
-- taze durum ve aktif caveat icin `current-state.md`,
-- karar verme ve risk siniflandirma icin `sokrates.md`,
-- PR/merge/verification/UI/refactor uygulamasi icin `discipline.md`,
-- minimum contributor sozlesmesi icin `CONTRIBUTING.md`
-
-kanonik kabul edilir.
+Reading and document ownership are defined in [AGENTS.md](AGENTS.md#reading-map).
+This file owns execution, agent routing, verification and PR/merge mechanics.
+Decision, risk and stop/ask policy lives in [sokrates.md](sokrates.md).
+Other operating documents link to the owner instead of copying its rules.
+Fresh Git/runtime evidence and the newest user instruction take precedence over
+historical handoff descriptions.
 
 ## Bu Dosya Nasil Okunur
 
@@ -55,27 +41,11 @@ isletim sistemi buradadir. Hizli navigasyon icin:
 
 ## Baslangic Ritueli
 
-Her yeni oturumda veya context kaybi sonrasi minimum baslangic:
-
-1. `CONTRIBUTING.md` oku.
-2. `current-state.md` oku.
-3. `origin/main` ve local git durumunu kontrol et.
-4. Root working tree kirliyse unrelated degisikliklere dokunma.
-5. En guncel talebi eski plandan ustte tut.
-6. Hedefi, riskleri, ilk guvenli adimi ve dogrulama yolunu netlestir.
-
-Sonra riske gore katmanli oku:
-
-- karar, belirsizlik, onceliklendirme veya orta/yuksek risk varsa
-  `sokrates.md`;
-- implementasyon, PR, verification, merge, UI/refactor veya workspace hygiene
-  varsa bu dosyanin ilgili bolumleri;
-- yeni multi-PR hat, yuksek risk veya gercek context recovery varsa dort dosya
-  tamamen.
-
-Dar read-only soru veya dusuk riskli mekanik iste tam dortlu okuma zorunlu
-seremoni degildir. `current-state.md` tarih arsivi olarak kullanilmaz; eski PR
-treni gerekiyorsa onun linkledigi historical archive acilir.
+Follow [the entry reading map](AGENTS.md#reading-map). Before changes, check the
+branch and worktree, preserve unrelated edits, and establish the goal, non-goals,
+acceptance criteria, protected areas and verification path. Reuse already-read
+context within the active task; refresh only when instructions or evidence drift.
+Use current-state as a handoff, not a PR history archive.
 
 ## Ana Ilke
 
@@ -106,6 +76,12 @@ Karpathy prensibi bu ritmin icinde gecerlidir: once dusun, basit tut, cerrahi
 degisiklik yap ve basari kriterini dogrulanabilir yaz. Her degisen satir
 kullanici istegine, repo kanitina veya gerekli verification/cleanup sonucuna
 baglanabilmelidir. Baglanamiyorsa o satir scope creep'tir.
+
+Choose the minimum sufficient implementation: avoid speculative abstractions,
+compatibility layers or a second implementation without a present requirement.
+Each new test must prove an acceptance criterion or a concrete regression risk.
+Final review checks the smallest necessary file set and removes temporary debug
+code introduced by the task.
 
 Zayif basari kriteri ile kodlamaya baslanmaz. "Calissin", "daha iyi olsun" veya
 "modernlestir" gibi hedefler once test, screenshot, role matrix, API contract,
@@ -321,12 +297,10 @@ acikca degistirirse gevsetilir:
 - Ayni hedefte tamamen okunmus operating docs, plan ve skill dosyalari drift
   sinyali yoksa tekrar okunmaz. Fresh Git/runtime gercegi yine her slice'ta
   dogrulanir.
-- High yalniz `AGENTS.md` routing kosulu gercekten olustugunda kullanilir;
-  rutin implementation, polling ve acik mekanik hata icin specialist acilmaz.
-- Normal hizli Luna Max, trivial olmayan ve ownership'i mekanik olarak ayrilabilen
-  execution dilimlerinde kullanicinin tekrar soylemesine gerek olmadan
-  varsayilan worker'dir. Tek satir/tek komut isi, duplicate repo okuma veya
-  self-contained prompt maliyeti isten buyukse seremoni icin agent acilmaz.
+- Risk ve hata incelemesini ana model `Adaptive Reasoning Effort Routing`
+  kosullarina gore inline yurutur; ayri problem-solver agent acilmaz.
+- Isi mevcut ana model dogrudan yurutur. Kullanici mevcut gorev icin acikca
+  istemedikce alt ajan acilmaz veya eski ajan yeniden gorevlendirilmez.
 - Canonical full release oncesi gerekli package binary'leri, dependency
   link/junction'lari ve komut erisimi ucuz bir preflight ile dogrulanir.
 - Targeted kanit normalde bir kez, selector'in sectigi full release normalde bir
@@ -455,251 +429,48 @@ beklenir.
 
 ### Repo-Native Subagent Review Model
 
-Dis arac veya yeni runtime bagimliligi eklemeden, buyuk veya riskli islerde
-subagent benzeri coklu bakis modeli uygulanir. Bu model Pi subagent tarzindaki
-scout/planner/worker/reviewer ayrimini surec prensibi olarak kullanir; projeye
-paket, extension veya runtime dependency eklemek anlamina gelmez.
-
-Roller:
-
-- `Scout`: Kod yazmadan once repo kanitini toplar. Ilgili dosya, test, guard,
-  docs, auth/helper, API client ve onceki PR kararlarini bulur. Varsayimla
-  bosluk doldurmaz.
-- `Planner`: Scout kanitindan kucuk, geri alinabilir slice plani cikarir.
-  Scope, risk, rollback ve verification ladder'i netlestirir.
-- `Worker`: Sadece onaylanan slice'i uygular. Business workflow, auth, API,
-  DB, scoring, queue veya provider davranisini gizlice degistirmez.
-- `Reviewer`: Worker diff'ini yeni gozle okur. P1/P2 sinifi muhtemel reviewer
-  notlarini, guard bypass'larini, test bosluklarini, fake veri riskini ve
-  scope creep'i PR acilmadan yakalamaya calisir.
-- `Closer`: PR acma, GitHub/aktif frontend provider checks, mergeability, final lokal review,
-  merge ve merge sonrasi `origin/main` dogrulamasini yurutur.
-
-Kullanim kurali:
-
-- Dusuk riskli docs-only veya tek satirlik net duzeltmelerde bu roller zihinsel
-  checklist olarak uygulanir; ayri seremoniye donusturulmez.
-- Mimari hardening, auth/permission, import lifecycle, KPI/ranking/snapshot,
-  workflow-heavy Store sayfalari, guard/script degisiklikleri ve buyuk UI
-  refactorlerinde roller acikca ayrilir.
-- Reviewer pass, Worker'in kendi diff'ine bagli kalmaz; mumkunse once git
-  diff okunur, sonra test/guard edge'leri dusunulur, sonra PR metni yazilir.
-- Reviewer "sert bir reviewer bunu sorun eder mi?" sorusunu pratik olarak
-  sorar. Cevap evetse
-  PR acmadan once duzeltme yapilir.
-- Her rol repo kanitina dayanir. Gercek veri/API/model yoksa uydurma metrik,
-  fake workflow, sahte skor veya temsili business sonucu eklenmez.
-
-Bu model `PR Oncesi Adversarial Review` kuralini genisletir. GitHub Codex
-review owner-disabled kalir; lokal reviewer modeli final diff kalitesini ve
-guard/test bosluklarinin erken bulunmasini guclendirir.
-
-Bu modeldeki `Worker`, Luna uygunluk kosullari saglandiginda varsayilan olarak
-`luna_max` roludur. Scout, ilk-pass Reviewer ve Test Hakemi gibi bounded roller
-de Luna'ya verilebilir. Planlama/root, problem solver/High, Closer/root ve owner
-karar yetkileri Luna worker rolune donusmez.
+Scout, Planner, Worker, Reviewer and Closer describe phases of the root's work,
+not separate agents. Perform a distinct final review of the diff and acceptance
+criteria; report it as inline self-review, never independent agent review.
+The [local adversarial review](#pr-oncesi-adversarial-review) remains mandatory.
 
 ### Adaptive Reasoning Effort Routing
 
-Codex calismasinda zeka seviyesi her adimda en yuksek tutulmaz; gorevin risk ve
-muhakeme ihtiyacina gore yonlendirilir. Kanonik yapilandirma
-`.codex/config.toml`, role overlay'leri `.codex/agents/*.toml`, otomatik
-delegasyon giris sozlesmesi ise root `AGENTS.md` dosyasidir. Bu bolum politika
-kaynagidir; `AGENTS.md` ayni politikayi Codex icin calistirilabilir ve kisa
-talimata cevirir.
+The current user-selected model performs discovery, implementation, verification,
+risk investigation and closeout directly. Repository configuration sets Medium
+as the default effort and High for Plan Mode; it does not pin the root model.
+Explicit user selection takes precedence. Do not claim a model or effort changed
+without client/session evidence; permissions remain separately enforced.
 
-Varsayilan model:
+No worker or problem-solver role is configured. Do not spawn or reuse subagents
+unless the user explicitly requests delegation for the current task. Older plans,
+skill recipes, available tool roles and client capacity do not override this rule.
+Do not spawn a model agent only to wait or poll.
 
-- `Medium root coordinator`: scope, Sokrates karari, ajanlar arasi entegrasyon,
-  PR/merge ve handoff tek elde kalir. Root her satiri kendisi yazmak zorunda
-  degildir; uygulanabilir isi dogru sahiplikle Luna'ya dagitir ve final sonucu
-  repo kanitiyla kendisi dogrular.
-- `Luna Max normal-speed execution worker`: owner'in 2026-08-08 tarihli kilitli
-  karariyla, kendine yeterli prompt ile ayrilabilen bounded implementation,
-  repo kesfi, test, fixture, docs/script, mekanik fix, UI/backend slice ve
-  ilk-pass review islerinin varsayilan maliyet-etkin yurutucusudur. Kanonik rol
-  `luna_max`, cagri sekli `fork_turns: "none"`, reasoning seviyesi `max` ve
-  service tier normal/inherited'dir; spawn sirasinda `fast` override verilmez.
-  Ana Sol/root da standart service tier'da kalir.
-- `High root planning`: kapsamli plan/spec, mimari veya multi-PR hat, katmanlar
-  arasi bagimlilik, acceptance/rollback/sequencing belirsizligi ya da scope,
-  acceptance, rollback ve verification'i kilitlenmemis R3-R5 is icin ana
-  koordinator High reasoning ile planlama yapar. Reasoning High'i asmaz.
-- `High problem solver`: iki kanitli denemeden sonra suren hata, ilk odakli
-  incelemede nedeni bulunamayan check, celisen repo/runtime kaniti, auth,
-  security, DB, data integrity, migration, concurrency veya production safety
-  riski icin sinirli salt-okunur inceleme yapar. R4/R5 diff'te final lokal
-  adversarial review de High ile yapilir.
+Inline investigation and review:
 
-Yonlendirme akisi:
+- Inspect auth, permission, security, DB/migration, data integrity, concurrency,
+  destructive or production-safety uncertainty immediately; retain final R4/R5 review.
+- Investigate when the first focused inspection cannot explain a failing check,
+  evidence conflicts, or a material failure survives two evidence-based correction attempts.
+- Switching phases or models does not reset the failure budget. Narrow the
+  problem or report the exact blocker instead of restarting blind retries.
+- Review the diff, acceptance criteria, negative cases and evidence separately
+  from implementation. Record actionable findings and their resolution separately.
+- No dedicated problem-solver agent is used. Self-review does not replace
+  required tests, external evidence, owner authority or Sokrates stop conditions.
 
-1. Ana koordinator risk sinifini ve kabul kriterini belirler.
-2. Planlama tetikleyicisi varsa ana koordinator High reasoning ile kanit,
-   slice, risk, rollback ve verification plani uretir.
-3. Ana koordinator plani `sokrates.md` ile kontrol eder; dosya veya
-   sorumluluk sahipligi acik bounded execution dilimlerini Luna'ya verir,
-   kalan entegrasyonu kendisi yurutur.
-4. Luna verilen dilimi uygular, targeted verification'i kosar ve degisen
-   dosya, kanit, risk ve cozulmemis gate ile kompakt handoff verir. Root diff'i
-   ve kaniti bagimsiz kontrol eder.
-5. Problem tetikleyicisi cikarsa rutin uygulama guvenli noktada tutulur;
-   `problem_solver_high` dar root-cause/review sorusunu inceler.
-6. Medium ana koordinator oneriyi repo kanitiyla kabul veya reddeder, gerekli
-   degisikligi kendisi yapar ve normal verification/closeout'a doner.
-
-Luna kullanim matrisi:
-
-- `Varsayilan delegate`: ilgili kod yolu envanteri, bagimlilik/usage aramasi,
-  bounded frontend veya backend implementation, test-first fixture ve test
-  yazimi, acik lint/type/build hatasi, docs/script degisikligi, saf refactor,
-  dead-code/legacy residue taramasi, responsive/accessibility kontrolu ve PR
-  oncesi ilk-pass diff incelemesi.
-- `Kosullu delegate`: R4/R5 icinde ancak onayli plan, tam contract, tekil
-  ownership, negatif testler, stop kosullari ve rollback mekanik olarak
-  kilitliyse ve verilen slice hassas semantigi secmiyor veya yeniden
-  tanimlamiyorsa izole implementation, test, fixture veya evidence. Root
-  entegrasyon ve final dogrulamayi; High final adversarial review'u elinde
-  tutar.
-- `Root'ta kalir`: owner veya product karari, Sokrates risk kabul/ret karari,
-  cakisan agent ciktisi birlestirme, cross-slice mimari tercih, PR kapsami,
-  merge/rollback karari, final kullanici raporu ve delegasyon overhead'inden
-  daha kucuk tek adimlik is.
-- `Luna'ya verilmez`: sirf check/deploy bekleme veya polling, sinirsiz repo
-  gezintisi, ham secret/credential tasiyan is, owner onayi gerektiren live
-  provider veya production operasyonu, deploy/merge, ayni dosyada ikinci
-  implementerlik ve R4/R5 icin tek final reviewer olma.
-
-Token hedefi:
-
-- Yeterli bounded is bulunan tipik hedefte model tokenlarinin yaklasik
-  `%60-%75`i ve ayrilabilir execution task'larinin `%75-%85`i Luna tarafinda;
-  tokenlarin `%25-%40`i Sol/root koordinasyonunda kalabilir.
-- Bu oran maliyet ve kapasite yonlendirme bandidir; KPI, merge gate veya
-  basari iddiasi degildir. Kesin olcum yoksa tahmin kanit gibi yazilmaz.
-- Orana ulasmak icin yapay task bolme, ayni dosyayi iki kez okutma, duplicate
-  review veya root ile Luna'ya ayni arastirmayi yaptirma yoktur. Delegasyonun
-  self-contained prompt, repo okuma ve handoff maliyeti isi asiyorsa root tek
-  adimda tamamlar.
-
-Verim ve guvenlik guardrail'leri:
-
-- R0 docs duzeltmesi, tek satirlik mekanik fix, acik adimlari olan onayli plan
-  veya yalniz check izleme icin High review agent acilmaz.
-- High review agent dosya edit etmez, commit/push/PR/merge/deploy yapmaz ve owner
-  karari vermez. Bu, ayni dosyada iki implementer cakismasini engeller.
-- Luna edit ve targeted test yapabilir; ancak prompt'ta sahip oldugu dosya veya
-  sorumluluk siniri, diger agentlarin yalniz olmadigi, geri alma/stop kosulu ve
-  beklenen handoff acik yazilir.
-- Her Luna prompt'u workspace, hedef, risk sinifi, gerekli operating-doc/skill
-  okumasi, izinli dosya veya sorumluluk, yasak sinirlar, kabul kriteri, targeted
-  komutlar ve rapor formatini kendi icinde tasir. Spawn sirasinda rolun model,
-  reasoning veya tier ayari yeniden yazilmaz.
-- Varsayilan bir uzman agent'tir. Planner ve problem solver ancak gercekten
-  bagimsiz sorulari varsa paralel calisir.
-- PR check polling icin model agent acilmaz. Kanonik `gh`/aktif frontend provider watcher veya
-  mevcut background shell loop bekler; bekleme suresi reasoning token'i
-  tuketmez. Durum degisince Medium sonucu siniflandirir ve acik hatayi ele alir.
-  Koku ilk odakli incelemede aciklanamiyorsa veya High-risk siniri varsa
-  `problem_solver_high` devreye girer.
-- Ayni problem icin ilk net hata mesajinda High'a cikilmaz; once Medium tek
-  odakli inceleme ve en fazla iki kanitli fix denemesi yapar. Auth/security/DB
-  destructive riskinde bu bekleme uygulanmaz, dogrudan High inceleme kullanilir.
-- Uzman sorusu cevaplaninca agent kapatilir; rutin implementation High'da
-  surdurulmez.
-- Luna task'i kendi bounded sorumlulugu ve targeted verification'i bitince
-  kapanir. Bos ajan genel arka plan worker'i olarak acik tutulmaz; sonraki is
-  icin yeni self-contained prompt verilir.
-- Luna ayni boundary icindeki acik bir failure icin en fazla bir focused
-  correction yapar. Root ve Luna'nin deneme butcesi ortaktir; yeniden delegate
-  etmek sayaci sifirlamaz. Iki kanitli denemeden sonra veya hassas sinirda daha
-  erken `problem_solver_high` routing'i uygulanir.
-- Luna'nin exact HEAD/workspace uzerinde verdigi taze targeted PASS kaniti
-  sirf subagent kostu diye root tarafindan tekrar edilmez. Root final diff'i,
-  entegrasyon-level gate'i, tek canonical full release'i ve PR/provider/merge
-  closeout'unu sahiplenir.
-- Role konfigurasyonu istemcide yuklenmezse calismis gibi raporlanmaz. Capability
-  failure acik yazilir ve `sokrates.md` risk/stop kurali uygulanir.
-- Project config yalniz yeni Codex task'larinda garanti edilir. Acik task'in
-  reasoning seviyesi kendiliginden degisti varsayilmaz.
-
-Bu politika ana agent'in task ortasinda fiziksel olarak Medium/High ayarini
-degistirdigi anlamina gelmez. Otomasyon, Medium ana koordinatorden farkli
-reasoning overlay'i olan salt-okunur High uzman agente gorev delegasyonudur.
-Codex Plan Mode kullanilirsa `plan_mode_reasoning_effort = "high"` uygulanir;
-hicbir repo rolu High'in ustune cikmaz.
+If the user later requests delegation, define non-overlapping ownership and
+protected areas explicitly; root retains integration and all owner decisions.
+Never assign two implementers the same file or workflow. Do not recreate a
+persistent worker configuration without a separate user request.
 
 ### Pilot Subagent Orchestration Discipline
 
-Bu bolum gecici/pilot calisma disiplinidir. Surec olgunlasinca kaldirilabilir,
-daraltilabilir veya kalici role modeline tasinabilir.
-
-Bu pilot bolum coklu-bakisli decomposition'i yonetir. Luna'nin varsayilan
-execution worker olmasi ise `Adaptive Reasoning Effort Routing` altindaki
-kalici kuraldir; pilot bolum kaldirilsa bile Luna-first karar devam eder.
-
-Varsayilan model:
-
-- Ana koordinasyon, kapsam karari, uygulama birlestirme, PR karari ve merge
-  sorumlulugu tek elde kalir.
-- Subagentler once arastirma, denetim, kanit toplama ve review icin kullanilir.
-- Ayni dosya veya ayni workflow uzerinde birden fazla implementer subagent
-  paralel calistirilmaz.
-- Paralel implementasyon sadece dosya/katman sinirlari gercekten bagimsizsa
-  kullanilir.
-- Subagent bulgusu karar degil, kanittir. Nihai karar ana koordinatorde kalir.
-
-Standart akisi:
-
-1. Task hedefi, risk sinifi ve kabul kriteri netlestirilir.
-2. Is bagimsiz inceleme alanlarina ayrilir: UI, veri/API, role/scope, test,
-   performans veya PR hygiene.
-3. Her subagent'e yalnizca kendi alanina yetecek kapali ve dar prompt verilir.
-4. Subagentler repo kaniti, risk, onerilen fix ve verification ihtiyacini
-   raporlar.
-5. Ana koordinator bulgulari birlestirir, cakisma veya ayni dosya riski varsa
-   uygulamayi tek elden yapar.
-6. Uygulama sonrasi targeted test/build/smoke ve lokal adversarial review
-   kosulur.
-7. PR acilacaksa tek review hikayesi, rollback yolu ve verification sonucu
-   PR'da yazilir.
-
-Onerilen pilot roller:
-
-- `Mufettis Gecidi`: Kod, akis, role/scope ve boundary bug taramasi yapar.
-- `Veri Dedektifi`: DB/API/veri tutarliligi ve eksik mapping riskini inceler.
-- `UI Nobetcisi`: Prototype parity, responsive, overflow, font, spacing ve
-  copy hijyenini kontrol eder.
-- `Test Hakemi`: Mevcut testlerin kapsamini, eksik negatif senaryolari ve
-  uygun gate'i belirler.
-- `Performans Gozcusu`: Yavas sayfa acilisi, gereksiz query, polling, render
-  ve bundle risklerini arar.
-- `PR Bekcisi`: Diff hygiene, unrelated change, file-size guard, PR body ve
-  merge hazirligini denetler.
-
-Ne zaman kullanilir:
-
-- Store/Admin sayfalarinda cok katmanli bug veya UI/akis revizyonu varsa.
-- Auth, role/scope, KPI/ranking, checklist, incentives, targets, workforce,
-  reports veya feed gibi domainlerde veri ve UI birlikte etkileniyorsa.
-- PR oncesi "burada mayin var mi?" kontrolu isteniyorsa.
-- Birden fazla bagimsiz bulgu ayni anda incelenebiliyorsa.
-
-Ne zaman kullanilmaz:
-
-- Tek satirlik net fix.
-- Docs-only kucuk duzeltme.
-- Ayni dosyada birbirine bagli refactor.
-- Henuz problem alani bilinmeyen ve once ana kesif gerektiren belirsiz is.
-- Kullanici acikca "sadece cevapla" veya "kodlama yapma" dediyse.
-
-Stop kurali:
-
-- Subagentler ayni dosya veya ayni contract icin celisen fix onerirse
-  paralel uygulama durur; ana koordinator once tek plan cikarir.
-- Subagent yeni API, DB, auth, scoring veya workflow degisikligi onerirse bu
-  otomatik kapsam sayilmaz; once Contract Impact ve risk sinifi yazilir.
-- Subagent kanitsiz varsayimla hareket ederse bulgu gecersiz sayilir ve repo
-  kaniti istenir.
+The previous orchestration pilot is superseded by root-only execution above.
+Historical plans are evidence, not standing delegation authority.
+Measure efficiency by elapsed time, repeated work and actionable findings;
+do not manufacture token-share quotas or performance claims.
 
 ## Merge Disiplini
 
@@ -784,6 +555,18 @@ Release/readiness:
 
 ## Hard Boundaries
 
+Backend implementation boundaries:
+
+- Web/controllers do not import infrastructure repositories directly.
+- Application services orchestrate use cases. Direct PostgreSQL, Supabase or
+  `DatabaseService` access belongs in infrastructure repositories, except for
+  existing allowlisted transition exceptions being removed.
+- New application code must not add broad `as unknown as` repository casts.
+- Source adapters enter through the canonical import boundary before mapping,
+  validation, materialization, snapshotting, scoring or reporting.
+- Store action, Norm Kadro, prim and incentive writes start with an explicit
+  boundary decision.
+
 Asagidakiler ancak acik kapsam ve guclu verification ile degisir:
 
 - business logic,
@@ -825,6 +608,14 @@ Yeni regression trap ortaya cikarsa current-state/evidence yerine once burada
 kisa, operasyonel ve tekrar kontrol edilebilir sekilde kaydedilir.
 
 ## External Evidence Disiplini
+
+Migration-sensitive files (`db/schema.sql`, `db/migrations/*.sql`, migration
+runner/tracking code, database module or `scripts/migration-fresh-db-smoke.mjs`)
+require an explicit readiness decision. The migration-change warning is not a
+failure and does not make Docker smoke an automatic root-gate requirement.
+Prefer `npm.cmd run smoke:migration:fresh-db`; if Docker/PostgreSQL is unavailable,
+record Conditional Go with owner, date, reason and follow-up. Do not claim
+migration readiness without one of these decisions.
 
 Gercek token, provider secret, restore target, Redis URL, alert destination,
 upload dosyasi veya staging input yoksa live evidence kapanmis sayilmaz.

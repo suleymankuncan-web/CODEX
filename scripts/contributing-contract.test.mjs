@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import test from 'node:test'
 
 const contributingPath = 'CONTRIBUTING.md'
@@ -9,7 +10,7 @@ function readContributing() {
 }
 
 function requireText(text, expected) {
-  assert.match(text, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.ok(text.replace(/\s+/g, ' ').includes(expected.replace(/\s+/g, ' ')), `Missing contract: ${expected}`)
 }
 
 test('root contributing contract exists', () => {
@@ -54,7 +55,7 @@ test('contributing contract keeps PR risk separation explicit', () => {
     'Never mix UI polish or docs cleanup',
     'API response shape',
     'auth or permission semantics',
-    'KPI scoring, ranking sort, or checklist weights',
+    'KPI scoring/ranking/checklist weights',
   ]) {
     requireText(text, expected)
   }
@@ -66,8 +67,26 @@ test('contributing contract requires current-state merge closeout', () => {
   for (const expected of [
     'Merge Closeout',
     'After merge, verify `origin/main`',
-    '`current-state.md` is updated when',
+    'update `current-state.md` when',
   ]) {
     requireText(text, expected)
+  }
+})
+
+test('operating documents route readers through live canonical Markdown links', () => {
+  const paths = ['AGENTS.md', 'CONTRIBUTING.md', 'sokrates.md', 'discipline.md', 'current-state.md']
+  requireText(readContributing(), 'AGENTS.md#reading-map')
+  requireText(readFileSync('sokrates.md', 'utf8'), 'AGENTS.md#reading-map')
+  for (const path of paths) {
+    const text = readFileSync(path, 'utf8')
+    for (const [, target, anchor] of text.matchAll(/\]\(([^\s()]+\.md)(?:#([^\s()]+))?\)/g)) {
+      if (/^https?:/.test(target)) continue
+      const absolute = resolve(dirname(path), target)
+      assert.ok(existsSync(absolute), `${path}: missing canonical document ${target}`)
+      if (!anchor) continue
+      const headings = [...readFileSync(absolute, 'utf8').matchAll(/^#{1,6}\s+(.+)$/gm)]
+        .map(([, title]) => title.trim().toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-'))
+      assert.ok(headings.includes(anchor), `${path}: missing canonical heading ${target}#${anchor}`)
+    }
   }
 })
