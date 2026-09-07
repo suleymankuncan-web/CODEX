@@ -210,6 +210,7 @@ const largeTrackedSourceAllowlist = new Map([
 ])
 
 const storeOpsModuleGraphLimits = new Map([
+  ['backend/nestjs/src/modules/store-ops/store-ops-personnel-correction.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops.module.ts', { controllers: 0, providers: 0, exports: 5 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-checklist.module.ts',

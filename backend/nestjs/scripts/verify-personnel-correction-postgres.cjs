@@ -40,6 +40,11 @@ async function main() {
     assert.equal(submissions.filter((r) => r.status === 'fulfilled').length, 1);
     assert.equal(submissions.find((r) => r.status === 'rejected').reason.getStatus(), 409);
     const requestId = submissions.find((r) => r.status === 'fulfilled').value.request_id;
+    const invariantSql = fs.readFileSync(path.join(root, 'db/preflight/personnel-correction-invariants-v1.sql'), 'utf8');
+    assert.equal((await pool.query(invariantSql)).rows.length, 0);
+    await pool.query('UPDATE ops.personnel_correction_request SET company_id=$2 WHERE request_id=$1', [requestId, otherCompany]);
+    assert.equal((await pool.query(invariantSql)).rows.length, 1, 'scope drift must be detected');
+    await pool.query('UPDATE ops.personnel_correction_request SET company_id=$2 WHERE request_id=$1', [requestId, company]);
     assert.equal((await pool.query('SELECT first_name FROM ops.employee WHERE employee_id=$1', [employee])).rows[0].first_name, 'Original');
     await assert.rejects(repository.review({ ...hr, scope: { ...scope, companyIds: [otherCompany] } }, requestId, { decision: 'approve', note: 'Test' }), (e) => e.getStatus() === 404);
     const approvals = await Promise.allSettled([1, 2].map(() => repository.review(hr, requestId, { decision: 'approve', note: 'Checked' })));

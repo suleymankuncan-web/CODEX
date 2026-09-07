@@ -82,6 +82,9 @@ test('database invariant preflight SQL is read only and covers every required ch
     // Migration 062 binds these new scoped records through composite tenant
     // foreign keys. Its local rollback-only smoke proves cross-tenant rows are
     // rejected without mutating the immutable V1 diagnostic query.
+    // Correction scope is checked by personnel-correction-invariants-v1.sql
+    // and the disposable PostgreSQL negative/rollback proof.
+    'ops.personnel_correction_request',
     'ops.media_asset',
     'ops.checklist_response_media',
     'ops.store_action_solution_attempt',
@@ -198,3 +201,14 @@ function stripSqlComments(sql) {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/--.*$/gm, '')
 }
+
+
+test('personnel correction has an additive read-only scope diagnostic and negative database proof', () => {
+  const sql = readFileSync('db/preflight/personnel-correction-invariants-v1.sql', 'utf8')
+  assert.match(sql, /ops\.personnel_correction_request/)
+  assert.doesNotMatch(sql, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE)\b/i)
+  for (const table of ['ops.store', 'ops.region', 'ops.employee', 'ops.employee_assignment_history']) assert.ok(sql.includes(table))
+  const proof = readFileSync('backend/nestjs/scripts/verify-personnel-correction-postgres.cjs', 'utf8')
+  assert.ok(proof.includes('personnel-correction-invariants-v1.sql'))
+  assert.ok(proof.includes('scope drift must be detected'))
+})
