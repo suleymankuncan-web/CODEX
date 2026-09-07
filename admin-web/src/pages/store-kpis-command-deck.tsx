@@ -86,7 +86,7 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
   const storeFilteredPersonnelRows = personnelLeaderboard?.items ?? []
   const managedPersonnelRows = personnelLeaderboard?.managedStorePersonnel ?? []
   const useServerPersonnelPage =
-    model.storeKpiSurfaceMode === 'regionStoreDetail' || model.isReportViewerStoreDetail
+    model.hasGlobalDetailDefault || model.storeKpiSurfaceMode === 'regionStoreDetail' || model.isReportViewerStoreDetail
   const personnelRows =
     model.viewMode === 'live'
       ? useServerPersonnelPage

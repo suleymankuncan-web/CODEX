@@ -521,6 +521,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     companyStoreQuery,
     dailySnapshotQuery,
     effectiveStoreId,
+    hasGlobalDetailDefault,
     getCompanyStoreDetailPath,
     getRegionStoreDetailPath,
     isLoading,

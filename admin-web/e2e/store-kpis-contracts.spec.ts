@@ -860,3 +860,20 @@ test('daily KPI selection binds store and personnel reads to the same day and su
   await expect(page).not.toHaveURL(/periodStart=/)
   await expect.poll(() => reads.some(r => r.path === 'store' && r.type === 'monthly' && r.start === null)).toBe(true)
 })
+
+
+test('company administrator reads selected-store personnel without an action-store assignment', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer', { roleCodes: ['SUPER_ADMIN'], actionStoreIds: [] })
+  await installGenericStoreApiFallbacks(page)
+  await routeKpiContractApi(page)
+  await page.route('**/api/reports/rankings**', async (route) => {
+    const fixture = createPersonnelRankingsFixture()
+    await route.fulfill({ json: { ...fixture, personnelLeaderboard: { ...fixture.personnelLeaderboard,
+      managedStorePersonnel: [], managedStorePersonnelMeta: { total: 0, limit: 50, offset: 0 },
+    } } })
+  })
+  await page.goto(`/store/kpis?storeId=${storeIds[0]}&periodType=daily&periodStart=2026-07-06`)
+  await page.getByRole('button', { name: /Personel KPI/ }).click()
+  await expect(page.getByRole('row', { name: /Süleyman Öztürk/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Profile Git/ }).first()).toHaveAttribute('href', /periodType=daily/)
+})
