@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 type Personnel = ApiGetResponse<'/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}'>
 type Values = Personnel['values']
 type Correction = ApiGetResponse<'/api/workforce/personnel-corrections'>['items'][number]
-const base = '/workforce/personnel-corrections'
 const labels: Record<keyof Values, string> = { firstName: 'Ad', lastName: 'Soyad', phoneNumber: 'Telefon', hireDate: 'İşe giriş tarihi', employmentType: 'Çalışma türü', positionId: 'Pozisyon' }
 const employment: Record<string, string> = { full_time: 'Tam zamanlı', part_time: 'Yarı zamanlı', temporary: 'Geçici' }
 const status: Record<string, string> = { pending_hr_approval: 'İK onayı bekliyor', approved: 'Onaylandı', rejected: 'Reddedildi' }
@@ -26,7 +25,7 @@ export function PersonnelCorrectionButton(input: { employeeId: string; storeId: 
 
 function CorrectionEditor(input: { employeeId: string; storeId: string; scopeKey: string; onDone: () => void }) {
   const query = useQuery({ queryKey: ['personnel-correction-values', input.scopeKey, input.storeId, input.employeeId],
-    queryFn: () => fetchJson<Personnel>(`${base}/personnel/${input.employeeId}/stores/${input.storeId}`), staleTime: 0 })
+    queryFn: () => fetchJson<Personnel>(`/workforce/personnel-corrections/personnel/${input.employeeId}/stores/${input.storeId}`), staleTime: 0 })
   if (query.isPending) return <p role="status">Personel bilgileri yükleniyor…</p>
   if (query.isError) return <p role="alert">{getUserFacingErrorMessage(query.error, 'Personel bilgileri alınamadı.')}</p>
   return <CorrectionForm key={query.data.revision} {...input} personnel={query.data} />
@@ -36,7 +35,7 @@ function CorrectionForm(input: { employeeId: string; storeId: string; scopeKey: 
   const [values, setValues] = useState(input.personnel.values)
   const [reason, setReason] = useState('')
   const client = useQueryClient()
-  const mutation = useMutation({ mutationFn: () => sendJson(base, { method: 'POST', body: {
+  const mutation = useMutation({ mutationFn: () => sendJson('/workforce/personnel-corrections', { method: 'POST', body: {
     employeeId: input.employeeId, storeId: input.storeId, expectedRevision: input.personnel.revision, proposed: values, reason,
   } }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['personnel-corrections'] }); input.onDone() } })
   return <form className="tw:space-y-3" onSubmit={(event) => { event.preventDefault(); mutation.mutate() }}>
@@ -56,7 +55,7 @@ function CorrectionForm(input: { employeeId: string; storeId: string; scopeKey: 
 export function PersonnelCorrectionQueue(input: { scopeKey: string; review?: boolean; storeId?: string }) {
   const [offset, setOffset] = useState(0)
   const query = useQuery({ queryKey: ['personnel-corrections', input.scopeKey, input.review ?? false, input.storeId ?? '', offset],
-    queryFn: () => fetchJson<{ items: Correction[] }>(`${base}?limit=20&offset=${offset}${input.review ? '&status=pending_hr_approval' : ''}${input.storeId ? `&storeId=${input.storeId}` : ''}`) })
+    queryFn: () => fetchJson<{ items: Correction[] }>(`/workforce/personnel-corrections?limit=20&offset=${offset}${input.review ? '&status=pending_hr_approval' : ''}${input.storeId ? `&storeId=${input.storeId}` : ''}`) })
   return <section aria-label="Personel düzeltme talepleri" className="tw:space-y-3 tw:rounded-xl tw:border tw:bg-white tw:p-4">
     <h2 className="tw:text-lg tw:font-semibold">Personel düzeltme talepleri</h2>
     {query.isPending ? <p role="status">Talepler yükleniyor…</p> : query.isError ? <p role="alert">{getUserFacingErrorMessage(query.error, 'Talepler alınamadı.')}</p> : <>
@@ -70,7 +69,7 @@ export function PersonnelCorrectionQueue(input: { scopeKey: string; review?: boo
 function CorrectionReview({ item, review }: { item: Correction; review?: boolean }) {
   const [note, setNote] = useState('')
   const client = useQueryClient()
-  const mutation = useMutation({ mutationFn: (decision: 'approve' | 'reject') => sendJson(`${base}/${item.request_id}/review`, { method: 'PATCH', body: { decision, note } }),
+  const mutation = useMutation({ mutationFn: (decision: 'approve' | 'reject') => sendJson(`/workforce/personnel-corrections/${item.request_id}/review`, { method: 'PATCH', body: { decision, note } }),
     onSuccess: async () => { await client.invalidateQueries({ queryKey: ['personnel-corrections'] }); await client.invalidateQueries({ queryKey: ['store-workforce-command'] }) } })
   return <article className="tw:space-y-2 tw:rounded tw:border tw:p-3">
     <h3 className="tw:font-semibold">{item.previous_values.firstName} {item.previous_values.lastName} · {item.store_name}</h3>

@@ -5,6 +5,9 @@ WITH scope_rows AS (
     SELECT 'ops.employee_offboarding_request', offboarding_request_id::text, company_id, region_id, store_id
     FROM ops.employee_offboarding_request
     UNION ALL
+    SELECT 'ops.personnel_correction_request', request_id::text, company_id, region_id, store_id
+    FROM ops.personnel_correction_request
+    UNION ALL
     SELECT 'ops.target_distribution_request', target_distribution_request_id::text, company_id, region_id, store_id
     FROM ops.target_distribution_request
     UNION ALL
