@@ -14,7 +14,9 @@ this wrapper intentionally cannot pass a write approval.
 
 Only failed/cancelled, completed, manually dispatched offline bundle artifacts
 older than seven days are eligible. The run's latest update must also be older
-than seven days. Protect all successful bundles, image/trust/receipt artifacts,
+than seven days. Only first-attempt runs qualify: reruns are protected because
+artifact metadata cannot prove which attempt produced a bundle, including an
+earlier successful attempt followed by failure. Protect all successful bundles, image/trust/receipt artifacts,
 open-PR branches and head SHAs, the current default-branch SHA, all tag SHAs,
 foreign repository artifacts and unknown/missing metadata. Expired artifacts
 are not deletion candidates. No global retention shortening is performed.

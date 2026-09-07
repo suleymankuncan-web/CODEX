@@ -36,6 +36,8 @@ test('success, active runs, retries, foreign repositories and unknown metadata a
     v => { v.runs[0].status = 'in_progress' },
     v => { v.runs[0].conclusion = 'timed_out' },
     v => { v.runs[0].event = 'pull_request' },
+    v => { v.runs[0].run_attempt = 2 },
+    v => { delete v.runs[0].run_attempt },
     v => { v.runs[0].path = '.github/workflows/other.yml' },
     v => { v.runs[0].updated_at = '2026-08-31T00:00:00Z' },
     v => { v.runs[0].head_repository.id = 9 },

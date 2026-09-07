@@ -34,7 +34,9 @@ export function planArtifactRetention({ repositoryId, artifacts, runs, openPullR
       run.path === '.github/workflows/onprem-offline-proof.yml' &&
       run.event === 'workflow_dispatch' && run.status === 'completed' &&
       ['failure', 'cancelled'].includes(run.conclusion) &&
-      positive(run.id) && positive(run.run_attempt) && time(run.updated_at) <= cutoff &&
+      // Artifact metadata has no attempt provenance: a later failed rerun can
+      // coexist with an earlier successful bundle. Protect every rerun.
+      positive(run.id) && run.run_attempt === 1 && time(run.updated_at) <= cutoff &&
       sha(run.head_sha) && run.head_sha === artifact.workflow_run.head_sha &&
       artifact.name === 'onprem-offline-bundle-' + run.head_sha &&
       typeof run.head_branch === 'string' && run.head_branch.length > 0 &&

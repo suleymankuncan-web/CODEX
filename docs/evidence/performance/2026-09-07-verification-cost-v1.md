@@ -45,7 +45,8 @@ The retention review traced workflow inputs through plan identity and the exact
 GitHub DELETE sink. Default execution is read-only, write permission is isolated
 to an explicitly reviewed-plan job, PR-head code is not executed, and missing
 inventory or changed protection stops deletion. Unexpected DELETE acknowledgement
-is rejected. This was root self-review, not independent-agent review. The
+is rejected. Rerun artifacts remain protected when attempt provenance is absent;
+a regression test reproduces the earlier-success/later-failure ambiguity. This was root self-review, not independent-agent review. The
 documented API check/delete race requires a controlled cleanup window.
 
 Clean dependency installation also exposed existing development-only advisories:
