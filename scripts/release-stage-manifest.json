@@ -6,6 +6,7 @@
       "id": "root-contracts",
       "cwd": ".",
       "commands": [
+        ["node", "scripts/dependency-install-preflight.mjs"],
         ["node", "scripts/migration-change-warning.mjs"],
         ["npm", "run", "test:scripts"]
       ],

@@ -12,6 +12,10 @@ only names reviewed operating guards and two project SKILL.md entries; unknown
 scripts and operational tests still select the full release. Local advice now
 agrees with that gate and lists one canonical run instead of repeating its
 broad child commands. Detailed command metadata remains available to callers.
+The canonical local fresh run now checks npm dependency-tree health before the
+long root suite. This catches missing/invalid installations, including the stale
+qs override found during PR 1 verification. It is not a package-content integrity
+receipt; npm ci remains the clean-install authority and audits remain unchanged.
 
 ## Windows path-conversion microbenchmark
 
