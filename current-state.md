@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-09-07
+Last verified: 2026-09-08
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
@@ -133,6 +133,7 @@ test-data input.
 ## Review, Release, And Merge Policy
 
 - On 7 September 2026 the owner stopped Luna delegation. [AGENTS.md](AGENTS.md#reading-map) owns entry routing; [discipline.md](discipline.md#adaptive-reasoning-effort-routing) owns root-only execution. The current selected model performs implementation and risk review inline. No subagent is started or reused without an explicit request for the current task; repository worker roles are removed. Required verification and permission boundaries are unchanged.
+- Verification-cost tooling shares local/CI docs classification, avoids duplicate broad commands, and preflights installed dependencies before local release. Artifact review is manual/read-only by default; deletion needs exact-list approval. See [cost evidence](docs/evidence/performance/2026-09-07-verification-cost-v1.md) and [retention runbook](docs/runbooks/artifact-retention-review-v1.md); live exact-head checks remain authoritative.
 - Local adversarial review, scope-appropriate verification, required GitHub
   checks, deployment checks when applicable, and clean mergeability are
   mandatory.
