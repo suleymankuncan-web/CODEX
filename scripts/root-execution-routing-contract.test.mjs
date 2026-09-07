@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
 
+// Repository execution policy: roles are opt-in per task, not persistent workers.
 const root = join(import.meta.dirname, '..')
 const read = (path) => readFileSync(join(root, path), 'utf8')
 const config = read('.codex/config.toml')
