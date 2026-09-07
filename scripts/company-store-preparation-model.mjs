@@ -74,11 +74,15 @@ export function prepareCompanyStores(input, evaluationDate) {
   if (selected.length !== input.selectedStoreCodes.length) blockers.push('duplicate_selection')
   if (duplicateIds) blockers.push('duplicate_store_identity')
   if (counts.eligible !== selected.length) blockers.push('selected_store_mapping_incomplete')
-  const runtimeBlockers = ['company_runtime_not_implemented', 'connector_readiness_not_evaluated',
+  const runtimeBlockers = ['company_runtime_not_verified', 'connector_readiness_not_evaluated',
     'shared_ingestion_not_connected']
-  if (input.runtime.strictLocal && input.runtime.dataClass !== 'synthetic') runtimeBlockers.unshift('invalid_strict_local_data_class')
-  else if (input.runtime.strictLocal) runtimeBlockers.unshift('synthetic_runtime_only')
-  else runtimeBlockers.unshift('strict_local_required')
+  if (input.runtime.strictLocal && input.runtime.dataClass === 'synthetic') {
+    runtimeBlockers.unshift('synthetic_runtime_only')
+  } else if (input.runtime.strictLocal && input.runtime.dataClass === 'unspecified') {
+    runtimeBlockers.unshift('invalid_strict_local_data_class')
+  } else if (!input.runtime.strictLocal) {
+    runtimeBlockers.unshift('strict_local_required')
+  }
 
   return {
     summary: { schemaVersion: 1, snapshotDate: input.snapshotDate, evaluationDate,

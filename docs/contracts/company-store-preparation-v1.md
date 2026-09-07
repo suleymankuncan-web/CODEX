@@ -3,11 +3,13 @@
 Status: owner-approved preparation scope, 7 September 2026
 Risk: R3 operator tooling; no runtime writes, API or database changes
 
-The owner requested store mapping and company-data transition preparation,
-with work stopping after the preparation PR is opened. PR #1120 has already
-added sales-observed personnel storage and a company-scoped read surface.
-This slice makes the next mapping decision reviewable without starting a
-second sales connector or changing the synthetic deployment's safeguards.
+The owner requested store mapping and company-data transition preparation.
+The separately reviewed company-mode implementation merged in PR #1122 adds a
+guarded runtime path; this slice observes its reported runtime classification
+without activating or verifying that path. PR #1120 added sales-observed
+personnel storage and a company-scoped read surface. This slice makes the next
+mapping decision reviewable without starting a second sales connector or
+changing the synthetic deployment's safeguards.
 
 ## Inputs and result
 
@@ -101,20 +103,26 @@ Private reports must not be uploaded to the public PR or a CI artifact.
    envelopes, field types, three-date observations, budgets and mapping/alert
    ownership requirements still apply. This tool does not duplicate or certify
    that evidence.
-4. Implement a separately reviewed company-data runtime mode and one shared
-   ingestion acceptance path. Current strict-local runtime requires synthetic
-   data: setting its data class to company is invalid, and disabling strict-local
-   is not a supported transition. Preserve local auth, secret mounts, TLS,
-   network restrictions and backup/restore behavior when designing that mode.
+4. Use the separately reviewed company-data runtime mode from PR #1122 and one
+   shared ingestion acceptance path, subject to actual runtime evidence. This
+   tool observes the supplied `strictLocal` and `dataClass` values; it cannot
+   verify opt-in/configuration, provider connectivity, or runtime behavior.
+   With `strictLocal=true`, `dataClass=synthetic` remains synthetic-only, while
+   `dataClass=company` is a valid observation that reports
+   `company_runtime_not_verified` until that evidence exists. Any
+   `strictLocal=false` observation reports `strict_local_required`. Preserve
+   local auth, secret mounts, TLS, network restrictions and backup/restore
+   behavior when operating that mode.
 5. Connect successful sales acceptance to observations using the existing pure
    normalizer. Joint KPI/observation acceptance and unmapped canonical employee
    behavior must be explicit before daily ingestion is called complete. Exercise
    a synthetic source and failure/retry paths before a controlled company-day
    rehearsal, reconciliation and any deployment/cutover decision.
 
-`company_runtime_not_implemented`, `connector_readiness_not_evaluated`, and
+`company_runtime_not_verified`, `connector_readiness_not_evaluated`, and
 `shared_ingestion_not_connected` are always reported in this version. A prepared
-mapping therefore cannot mask the remaining work or authorize a schedule.
+mapping therefore cannot mask the remaining verification and ingestion work or
+authorize a schedule.
 Power BI/Excel remains the operating import path. No live deployment, provider
 call, company-data import, schedule, or automatic store creation is performed
 by this PR.

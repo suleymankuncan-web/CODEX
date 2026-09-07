@@ -29,6 +29,9 @@ test('exact eligible mapping prepares only mapping, never company activation', (
   assert.equal(result.summary.dataImported, false)
   assert.equal(result.summary.configurationChanged, false)
   assert.ok(result.summary.runtimeBlockers.includes('synthetic_runtime_only'))
+  assert.ok(result.summary.runtimeBlockers.includes('company_runtime_not_verified'))
+  assert.ok(result.summary.runtimeBlockers.includes('connector_readiness_not_evaluated'))
+  assert.ok(result.summary.runtimeBlockers.includes('shared_ingestion_not_connected'))
   assert.deepEqual(input, before)
   assert.doesNotMatch(JSON.stringify(result.summary), /synthetic-001|00000000-/)
 })
@@ -84,10 +87,28 @@ test('stale and future snapshots cannot become current through a config switch',
   for (const evaluation of ['2026-09-06', '2026-09-08']) {
     assert.ok(prepareCompanyStores(fixture(), evaluation).summary.blockers.includes('snapshot_date_mismatch'))
   }
-  for (const runtime of [{strictLocal: true, dataClass: 'company'}, {strictLocal: false, dataClass: 'company'}]) {
+})
+
+test('runtime observations never grant activation or misclassify company mode', () => {
+  for (const [runtime, reason] of [
+    [{strictLocal: true, dataClass: 'company'}, 'company_runtime_not_verified'],
+    [{strictLocal: false, dataClass: 'company'}, 'strict_local_required'],
+    [{strictLocal: true, dataClass: 'synthetic'}, 'synthetic_runtime_only'],
+    [{strictLocal: false, dataClass: 'synthetic'}, 'strict_local_required'],
+    [{strictLocal: true, dataClass: 'unspecified'}, 'invalid_strict_local_data_class'],
+  ]) {
     const result = prepareCompanyStores({...fixture(), runtime}, day)
+    assert.equal(result.summary.mappingState, 'prepared')
     assert.equal(result.summary.activationState, 'blocked')
-    assert.ok(result.summary.runtimeBlockers.includes('company_runtime_not_implemented'))
+    assert.equal(result.summary.dataImported, false)
+    assert.equal(result.summary.configurationChanged, false)
+    assert.ok(result.summary.runtimeBlockers.includes(reason))
+    assert.ok(result.summary.runtimeBlockers.includes('company_runtime_not_verified'))
+    assert.ok(result.summary.runtimeBlockers.includes('connector_readiness_not_evaluated'))
+    assert.ok(result.summary.runtimeBlockers.includes('shared_ingestion_not_connected'))
+    if (runtime.dataClass === 'company') {
+      assert.ok(!result.summary.runtimeBlockers.includes('invalid_strict_local_data_class'))
+    }
   }
 })
 
