@@ -9,6 +9,8 @@ Last verified: 2026-09-07
 Use the manual **Artifact retention review** workflow on main. An empty
 `approved_plan_sha256` input is read-only: it prints the exact candidates,
 bytes and plan digest. It does not delete files or change release proof.
+The repository CLI equivalent is `node scripts/ci_monitor.cjs retention-plan`;
+this wrapper intentionally cannot pass a write approval.
 
 Only failed/cancelled, completed, manually dispatched offline bundle artifacts
 older than seven days are eligible. The run's latest update must also be older
