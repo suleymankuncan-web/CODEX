@@ -12,8 +12,8 @@ real, and stop when the next step would be dishonest, irreversible, or too broad
 
 Use the operating documents as one system, with one owner for each question:
 
-- [AGENTS reading map](AGENTS.md#reading-map): entry routing and bounded-delegation
-  authorization.
+- [AGENTS reading map](AGENTS.md#reading-map): entry routing and the current
+  root-only execution boundary.
 - `CONTRIBUTING.md`: contributor-facing minimum contract.
 - `current-state.md`: freshest project facts, caveats, and handoff state.
 - `sokrates.md`: decisions, prioritization, risk, ambiguity, and stop/ask judgment.
