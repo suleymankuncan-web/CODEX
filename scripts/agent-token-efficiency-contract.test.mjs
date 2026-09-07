@@ -7,14 +7,12 @@ const root = join(import.meta.dirname, "..");
 const agents = readFileSync(join(root, "AGENTS.md"), "utf8");
 const discipline = readFileSync(join(root, "discipline.md"), "utf8");
 
-test("agent entry contract keeps token-efficient monitoring locked", () => {
-  assert.match(agents, /55-60 second idle polling intervals/);
-  assert.match(agents, /never stream complete successful logs/);
-  assert.match(agents, /Do not spawn a model agent only to wait or poll/);
-  assert.match(
-    agents,
-    /run the\s+targeted proof once and the selected full release once/,
-  );
+test("agent entry routes monitoring to its canonical execution policy", () => {
+  assert.match(agents, /discipline\.md#token-verimli-otonom-yurutme/);
+  assert.match(discipline, /### Token-Verimli Otonom Yurutme/);
+  assert.match(discipline, /Do not spawn a model agent only to wait or poll/);
+  assert.match(discipline, /Targeted kanit normalde bir kez/);
+  assert.match(discipline, /selector'in sectigi full release normalde bir/);
 });
 
 test("execution discipline keeps the owner-locked token policy", () => {

@@ -134,7 +134,7 @@ test-data input.
 
 ## Review, Release, And Merge Policy
 
-- Owner-locked routing is Sol/Medium integration, default bounded normal-speed Luna Max execution and read-only High review; substantive planning stays with Sol/root and reasoning never exceeds High. It applies automatically under root `AGENTS.md` and `discipline.md`.
+- The owner approved operating-document consolidation and removal of the dedicated problem-solver agent on 7 September 2026. [AGENTS.md](AGENTS.md#reading-map) owns reading guidance; [discipline.md](discipline.md#adaptive-reasoning-effort-routing) owns agent routing. The selected coordinator model (currently Astra) handles risk review and diagnosis inline; Luna remains the bounded execution worker. Explicit user effort and Luna Max are not subject to a blanket High ceiling. Personal client configuration is outside this repository change.
 - Local adversarial review, scope-appropriate verification, required GitHub
   checks, deployment checks when applicable, and clean mergeability are
   mandatory.
@@ -173,6 +173,7 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
+- Checklist PDF export PR #1118 was closed without merge on 7 September 2026 at the owner's request. The PDF implementation remains excluded from main; do not resume or merge it without a new user instruction.
 - Handoff correction (2026-08-16): the ONP-5 offline-package/rehearsal closure and the mandatory local-proof gate are now merged through PR #1084 at merge commit `50c3cd74f321dae42ec8988cb6fdcf37eebfea3c` (source `120de56eb9ffee91c43ca623f677dee10dccdf41`). Before any expensive hosted image/offline proof job, the repository now requires a fresh local receipt/status bound to the exact SHA, tree, Docker identity, pinned Node image, and archive tests. The local merged-tree evidence is green: archived Linux `test:onprem:offline` 145 tests / 144 pass / 1 expected `iptables-translate` skip / 0 fail; fresh migration/storage smoke 70/70 migrations succeeded with provider-neutral and rollback checks; SeaweedFS 4.41 synthetic runtime proof passed with exact receipt identity. These are synthetic/local gates, not production activation or independent disaster-recovery evidence.
 - Repository/synthetic ONP-3B merged as PR #1050 at `f03ee302596eb4338b75d9dc4bef3e027d50f365`. ONP-4A provider-neutral storage and ONP-4B SeaweedFS synthetic runtime implementation are now present on merged `main`; hosted R2 remains the rollback path, and no local engine or real photo is active in production.
 - The conditional ONP-4B SeaweedFS 4.43 overlay is now documented with its exact digest/license, private internal data-network topology, file-backed distinct bucket-scoped credentials, and synthetic runtime proof. This is a reversible evidence slice only; the same-host backup volume is not production DR, and real photos, visual AI, company-server activation, and hosted rollback retirement remain No-Go.
