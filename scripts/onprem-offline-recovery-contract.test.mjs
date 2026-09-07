@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createShellPath } from './test-shell-path.mjs'
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { createHash, generateKeyPairSync } from 'node:crypto'
 import { tmpdir } from 'node:os'
@@ -51,11 +52,7 @@ function writeDockerSaveArchive(pathname, { repoTags = ['registry.example/backen
   return `sha256:${configId}`
 }
 
-function shellPath(pathname) {
-  if (!cygpath) return pathname
-  const result = spawnSync(cygpath, ['-u', pathname], { encoding: 'utf8' })
-  return result.status === 0 ? result.stdout.trim() : pathname
-}
+const shellPath = createShellPath({ cygpath: cygpath })
 
 function executable(pathname, content) {
   writeFileSync(pathname, content)

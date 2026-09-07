@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { isDocsProcessPath } from './verification-docs-scope.mjs'
 
 const commandCatalog = {
   diffCheck: 'git diff --check',
@@ -193,7 +194,7 @@ function git(args) {
       stdio: ['ignore', 'pipe', 'ignore'],
     })
   } catch {
-    return ''
+    throw new Error('Cannot determine changed files from Git; verification selection is blocked')
   }
 }
 
@@ -236,13 +237,19 @@ export function selectAffectedVerification(files) {
     reasons.push(`${rule.name}: ${rule.reason}`)
   }
 
-  const fullReleaseRequired = matchedRules.some(({ name }) =>
-    rules.find((rule) => rule.name === name)?.fullRelease,
-  )
+  const fullReleaseRequired = normalizedFiles.length > 0 && !normalizedFiles.every(isDocsProcessPath)
 
   if (fullReleaseRequired) {
     commandKeys.push('rootRelease')
+  } else if (normalizedFiles.length > 0) {
+    commandKeys.push('scriptTests')
   }
+
+  // The canonical release already runs these gates. Keep the detail for callers,
+  // but do not instruct operators to run the same broad suites twice.
+  const includedByRelease = new Set(['scriptTests', 'frontendLint', 'frontendBuild',
+    'backendBuild', 'backendRelease', 'frontendRelease'])
+  const executionKeys = unique(commandKeys).filter((key) => !fullReleaseRequired || !includedByRelease.has(key))
 
   const unableToInferAffectedRoutesOrServices =
     normalizedFiles.length > 0 && routes.length === 0
@@ -263,12 +270,13 @@ export function selectAffectedVerification(files) {
     files: normalizedFiles,
     matchedRules,
     commands: unique(commandKeys).map((key) => commandCatalog[key]),
+    executionCommands: executionKeys.map((key) => commandCatalog[key]),
     targeted: unique(targeted),
     affectedRoutesOrServices: unique(routes),
     unableToInferAffectedRoutesOrServices,
     fullReleaseRequired,
     fullReleaseReason: fullReleaseRequired
-      ? 'at least one sensitive or release-class rule matched'
+      ? 'a non-docs/process path changed; aligned with the required release gate'
       : 'no release-class rule matched; reviewer may still require a broader gate',
     notes: [
       'This selector is advisory. discipline.md and release-blocking review remain authoritative.',
@@ -303,9 +311,10 @@ function printSelection(selection) {
   console.log(`Full release required: ${selection.fullReleaseRequired ? 'yes' : 'no'}`)
   console.log(`Reason: ${selection.fullReleaseReason}`)
   console.log('Commands:')
-  for (const command of selection.commands) {
+  for (const command of selection.executionCommands) {
     console.log(`- ${command}`)
   }
+  if (selection.fullReleaseRequired) console.log('Canonical release includes script, backend, frontend and audit gates; do not run those broad suites again separately.')
   if (selection.targeted.length > 0) {
     console.log('Targeted checks:')
     for (const check of selection.targeted) {
