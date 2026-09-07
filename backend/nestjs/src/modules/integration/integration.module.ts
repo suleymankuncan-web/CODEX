@@ -1,3 +1,6 @@
+import { IntegrationPersonnelObservationsController } from "./web/integration-personnel-observations.controller";
+import { PersonnelObservationService } from "./application/personnel-observation.service";
+import { PersonnelObservationRepository } from "./infrastructure/personnel-observation.repository";
 import { Module } from "@nestjs/common";
 import { IntegrationController } from "./web/integration.controller";
 import { IntegrationMasterDataQualityController } from "./web/integration-master-data-quality.controller";
@@ -48,11 +51,14 @@ import { CompanyDailyKpiDailyClosureService } from "./application/company-daily-
 
 @Module({
   controllers: [
+    IntegrationPersonnelObservationsController,
     IntegrationController,
     IntegrationMasterDataQualityController,
     IntegrationPersonnelMasterController,
   ],
   providers: [
+    PersonnelObservationService,
+    PersonnelObservationRepository,
     IntegrationService,
     PersonnelMasterService,
     IntegrationRepository,
@@ -98,6 +104,7 @@ import { CompanyDailyKpiDailyClosureService } from "./application/company-daily-
     MasterDataQualityRepository,
   ],
   exports: [
+    PersonnelObservationService,
     IntegrationService,
     IntegrationRepository,
     ImportBatchReadRepository,

@@ -1,4 +1,20 @@
 export const adminIntegrationsTr = {
+  'adminIntegrations.observationsTitle': 'Satışlarda görülen personeller',
+  'adminIntegrations.observationsCopy': 'Günlük satışlarda görülen personel kodlarıdır; çalışan kadrosu, işe giriş veya mağaza ataması anlamına gelmez.',
+  'adminIntegrations.observationsSearch': 'Personel kodu ara',
+  'adminIntegrations.observationsRange': 'Gözlem tarih aralığı',
+  'adminIntegrations.observationsChooseRange': 'Başlangıç ve bitiş tarihi seçin (en fazla 366 gün).',
+  'adminIntegrations.observationsLoading': 'Satışlarda görülen personeller yükleniyor.',
+  'adminIntegrations.observationsError': 'Satışlarda görülen personeller alınamadı.',
+  'adminIntegrations.observationsEmpty': 'Bu tarih aralığı ve filtre için gözlem yok. Filtreleri değiştirebilirsiniz.',
+  'adminIntegrations.observationsRetry': 'Tekrar dene',
+  'adminIntegrations.observationsCode': 'Personel kodu',
+  'adminIntegrations.observationsDate': 'Görüldüğü gün',
+  'adminIntegrations.observationsStore': 'Mağaza',
+  'adminIntegrations.observationsPrevious': 'Önceki gözlemler',
+  'adminIntegrations.observationsNext': 'Sonraki gözlemler',
+  'adminIntegrations.observationsCount': '{from}-{to} / {total} gözlem',
+
   'adminIntegrations.loadingTitle': 'Entegrasyon yönetimi yükleniyor',
   'adminIntegrations.loadingCopy': 'Aktarım özeti, kanıtlar ve hata kayıtları alınıyor.',
   'adminIntegrations.dashboardUnavailableTitle': 'Entegrasyon paneli açılamadı',
@@ -152,6 +168,22 @@ export const adminIntegrationsTr = {
 } as const
 
 export const adminIntegrationsEn: Record<keyof typeof adminIntegrationsTr, string> = {
+  'adminIntegrations.observationsTitle': 'Personnel observed in sales',
+  'adminIntegrations.observationsCopy': 'Personnel codes observed in daily sales; these do not establish an employment roster, hire, or store assignment.',
+  'adminIntegrations.observationsSearch': 'Search personnel code',
+  'adminIntegrations.observationsRange': 'Observation date range',
+  'adminIntegrations.observationsChooseRange': 'Select a start and end date (up to 366 days).',
+  'adminIntegrations.observationsLoading': 'Loading personnel observed in sales.',
+  'adminIntegrations.observationsError': 'Personnel observed in sales could not be loaded.',
+  'adminIntegrations.observationsEmpty': 'No observations for this date range and filter. Try changing the filters.',
+  'adminIntegrations.observationsRetry': 'Try again',
+  'adminIntegrations.observationsCode': 'Personnel code',
+  'adminIntegrations.observationsDate': 'Observed day',
+  'adminIntegrations.observationsStore': 'Store',
+  'adminIntegrations.observationsPrevious': 'Previous observations',
+  'adminIntegrations.observationsNext': 'Next observations',
+  'adminIntegrations.observationsCount': '{from}-{to} / {total} observations',
+
   'adminIntegrations.loadingTitle': 'Loading integration management',
   'adminIntegrations.loadingCopy': 'Fetching upload summary, evidence, and issue records.',
   'adminIntegrations.dashboardUnavailableTitle': 'Integration panel unavailable',

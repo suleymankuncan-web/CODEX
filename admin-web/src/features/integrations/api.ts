@@ -563,3 +563,21 @@ export async function promoteMasterDataBootstrapPersonnel(batchId: string) {
 }
 
 export { createImportBatch, getImportPayloadTemplate, uploadPowerBiExport } from './import-api'
+
+export type PersonnelObservationList = ApiGetResponse<'/api/integrations/personnel-observations'>
+
+export async function getPersonnelObservations(input: {
+  fromDate: string
+  toDate: string
+  q?: string
+  storeId?: string
+  limit?: number
+  offset?: number
+}) {
+  const query = new URLSearchParams({ fromDate: input.fromDate, toDate: input.toDate })
+  if (input.q) query.set('q', input.q)
+  if (input.storeId) query.set('storeId', input.storeId)
+  if (input.limit !== undefined) query.set('limit', String(input.limit))
+  if (input.offset !== undefined) query.set('offset', String(input.offset))
+  return fetchOpenApiJson('/api/integrations/personnel-observations', { query })
+}

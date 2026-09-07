@@ -63,6 +63,8 @@ import { AdminStatePanel, AdminSurfaceHeader, AdminSurfacePage } from './admin-s
 import { resolveStoreRegionManager, type RegionManagerOption } from './master-data-region-manager'
 import { MasterDataStoreCombobox } from './master-data-store-combobox'
 
+import { PersonnelObservationsSection } from './personnel-observations-section'
+
 type Workspace = 'stores' | 'personnel'
 type PersonnelStatus = 'active' | 'inactive' | 'terminated'
 
@@ -310,6 +312,7 @@ export function MasterDataManagementPage() {
                 />
               </>
             </RecordArea>
+            <PersonnelObservationsSection />
           </TabsContent>
         </section>
       </Tabs>
