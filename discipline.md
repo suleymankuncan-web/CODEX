@@ -299,10 +299,8 @@ acikca degistirirse gevsetilir:
   dogrulanir.
 - Risk ve hata incelemesini ana model `Adaptive Reasoning Effort Routing`
   kosullarina gore inline yurutur; ayri problem-solver agent acilmaz.
-- Normal hizli Luna Max, trivial olmayan ve ownership'i mekanik olarak ayrilabilen
-  execution dilimlerinde kullanicinin tekrar soylemesine gerek olmadan
-  varsayilan worker'dir. Tek satir/tek komut isi, duplicate repo okuma veya
-  self-contained prompt maliyeti isten buyukse seremoni icin agent acilmaz.
+- Isi mevcut ana model dogrudan yurutur. Kullanici mevcut gorev icin acikca
+  istemedikce alt ajan acilmaz veya eski ajan yeniden gorevlendirilmez.
 - Canonical full release oncesi gerekli package binary'leri, dependency
   link/junction'lari ve komut erisimi ucuz bir preflight ile dogrulanir.
 - Targeted kanit normalde bir kez, selector'in sectigi full release normalde bir
@@ -431,105 +429,48 @@ beklenir.
 
 ### Repo-Native Subagent Review Model
 
-Scout, Planner, Worker, Reviewer and Closer are responsibilities, not a requirement
-to start five agents. The coordinator owns planning, integration and closeout.
-A bounded Scout/Worker/first-pass Reviewer task can use Luna under the routing
-contract below. Root's separate review pass starts from the diff and acceptance
-criteria, checks negative cases and scope, and records actionable findings.
-The [local adversarial review](#pr-oncesi-adversarial-review) remains mandatory;
-GitHub Codex review remains owner-disabled.
+Scout, Planner, Worker, Reviewer and Closer describe phases of the root's work,
+not separate agents. Perform a distinct final review of the diff and acceptance
+criteria; report it as inline self-review, never independent agent review.
+The [local adversarial review](#pr-oncesi-adversarial-review) remains mandatory.
 
 ### Adaptive Reasoning Effort Routing
 
-This section is the canonical agent execution policy. Configuration is in
-`.codex/config.toml` and `.codex/agents/*.toml`; [AGENTS.md](AGENTS.md)
-authorizes bounded delegation and routes readers here.
+The current user-selected model performs discovery, implementation, verification,
+risk investigation and closeout directly. Repository configuration sets Medium
+as the default effort and High for Plan Mode; it does not pin the root model.
+Explicit user selection takes precedence. Do not claim a model or effort changed
+without client/session evidence; permissions remain separately enforced.
 
-| Responsibility | Model and effort | Authority |
-| --- | --- | --- |
-| Coordinator | User-selected model (currently Astra); default Medium, complex planning High | Scope, decisions, integration, PR, merge, rollback and final report |
-| `luna_max` | GPT-5.6 Luna, Max; normal service tier | Bounded discovery, implementation, targeted tests and first-pass review |
-| Inline investigation/review | Current coordinator model and selected effort | Root diagnoses failures and performs a distinct risk-review pass |
-
-Reasoning defaults are not model identity or access controls. Root defaults to
-Medium and Plan Mode defaults to High. Explicit user selection, including Max,
-takes precedence; Luna's configured Max is an intentional role exception.
-There is no blanket High ceiling for every role. Do not claim that prose
-instructions changed the running model or effort: verify the client/session
-setting. Project configuration applies to new tasks; an existing task can retain
-its explicit selection. Model/effort precedence must be distinguished from
-sandbox and approval constraints, which remain independently enforced.
-Risk review runs inline on the current model; do not claim a separate reviewer
-agent or an automatic reasoning-level switch.
-
-Delegation and ownership:
-
-- Use `luna_max` with `fork_turns: "none"` for nontrivial, clearly bounded
-  execution when the self-contained prompt and handoff cost is justified.
-  Single-command work, tiny edits and inseparable integration stay with root.
-- Give each agent exclusive files or a non-overlapping responsibility. Never
-  assign two implementers the same file or workflow.
-- A Luna prompt includes workspace, goal, risk class, required document/skill
-  reads, allowed files, forbidden boundaries, acceptance criteria, targeted
-  commands, stop conditions and a compact evidence handoff. State that other
-  agents and user changes may exist and must not be reverted.
-- Do not override Luna's model, effort or service tier at spawn time. Use normal
-  service; do not opt workers into a fast tier.
-- Luna may inspect, edit and test its slice. It must not make product/owner
-  decisions, broaden scope, commit, push, open/merge PRs, deploy, operate live
-  providers or handle unbounded secrets. R4/R5 implementation is delegated only
-  after the root has fixed the sensitive semantics, invariants, rollback,
-  negative tests and allowed scope. Luna never replaces the root's final R4/R5 review.
-- Root validates every handoff against the current diff and evidence, owns
-  integration verification and the authorized PR/merge closeout. Fresh targeted
-  PASS evidence on unchanged inputs is not rerun merely because Luna produced it.
-- Prefer one coordinator plus one worker. Add another agent only for independent
-  work with disjoint ownership and useful work remaining for the coordinator.
-  Repository config records a three-agent-thread budget; a larger client capacity
-  is not a target. Do not change personal global settings to match this budget.
-- Do not spawn a model agent only to wait or poll. Use the native checks/watcher
-  and monitoring intervals in [Token-Verimli Otonom Yurutme](#token-verimli-otonom-yurutme).
-  Full release concurrency/reuse follows the canonical release section.
+No worker or problem-solver role is configured. Do not spawn or reuse subagents
+unless the user explicitly requests delegation for the current task. Older plans,
+skill recipes, available tool roles and client capacity do not override this rule.
+Do not spawn a model agent only to wait or poll.
 
 Inline investigation and review:
 
-- Root performs a focused inspection immediately for
-  auth, permission, security, DB/migration, data integrity, concurrency,
-  destructive or production-safety uncertainty, and for final R4/R5 review.
-- Also switch from routine implementation to focused root investigation when the
-  first focused inspection cannot explain a failing check,
-  repository/runtime evidence conflicts, or a material failure survives two
-  evidence-based correction attempts. An obvious ordinary error alone does not
-  require a separate investigation phase; classify it first.
-- Root and worker share one failure budget. Luna may make one focused correction
-  within its ownership; re-delegation never resets the two-attempt threshold.
-- During the review pass, inspect the diff, acceptance criteria, negative cases
-  and evidence before making corrections. Record actionable findings and their
-  resolution separately from the implementation claims. This is inline review,
-  not an independent agent review. Once the cause is established, root may fix
-  it or delegate a bounded correction to Luna. Do not restart blind retries when
-  the shared failure budget is exhausted; narrow the problem or report the exact
-  unresolved blocker under Sokrates. No dedicated problem-solver agent is used.
-- A completed worker returns changed files, commands/results, unresolved gates
-  and risks. Reuse an idle role only with a new bounded assignment.
-- If Luna is unavailable or its configuration cannot be verified, report it,
-  continue safe independent work, and follow Sokrates for any unresolved risk.
-  Never claim an agent or a review ran when it did not.
+- Inspect auth, permission, security, DB/migration, data integrity, concurrency,
+  destructive or production-safety uncertainty immediately; retain final R4/R5 review.
+- Investigate when the first focused inspection cannot explain a failing check,
+  evidence conflicts, or a material failure survives two evidence-based correction attempts.
+- Switching phases or models does not reset the failure budget. Narrow the
+  problem or report the exact blocker instead of restarting blind retries.
+- Review the diff, acceptance criteria, negative cases and evidence separately
+  from implementation. Record actionable findings and their resolution separately.
+- No dedicated problem-solver agent is used. Self-review does not replace
+  required tests, external evidence, owner authority or Sokrates stop conditions.
 
-Efficiency is assessed from elapsed time, correction attempts, repeated tests
-and actionable review findings when measured. There is no token-share quota or
-guaranteed saving. Do not create artificial tasks, duplicate exploration, or
-repeat large document reads to increase delegation. Report observations as
-observations, not invented performance evidence.
+If the user later requests delegation, define non-overlapping ownership and
+protected areas explicitly; root retains integration and all owner decisions.
+Never assign two implementers the same file or workflow. Do not recreate a
+persistent worker configuration without a separate user request.
 
 ### Pilot Subagent Orchestration Discipline
 
-The earlier pilot is incorporated into [Adaptive Reasoning Effort Routing](#adaptive-reasoning-effort-routing).
-UI, data, test and performance are possible responsibility boundaries, not
-additional configured roles. Conflicting fixes pause overlapping implementation
-until root resolves one plan. A proposed API/DB/auth/scoring/workflow change is
-not automatic authorization: apply Sokrates and record Contract Impact first.
-A finding without repository evidence is not accepted as a decision.
+The previous orchestration pilot is superseded by root-only execution above.
+Historical plans are evidence, not standing delegation authority.
+Measure efficiency by elapsed time, repeated work and actionable findings;
+do not manufacture token-share quotas or performance claims.
 
 ## Merge Disiplini
 

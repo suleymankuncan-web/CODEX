@@ -1,11 +1,11 @@
 # HR Axis Agent Execution Contract
 
 This is the concise repository entry point. It owns the reading map and
-authorizes bounded delegation; it does not duplicate execution recipes.
+defines root-only execution; it does not duplicate execution recipes.
 
 Canonical owners:
 
-- `AGENTS.md`: entry routing, required reading, and delegation authorization.
+- `AGENTS.md`: entry routing, required reading, and execution routing.
 - `CONTRIBUTING.md`: contributor and PR minimum contract.
 - `current-state.md`: freshest project facts, caveats, parked work, and next safe
   action.
@@ -57,13 +57,9 @@ owns scope, Sokrates decisions, integration, PR/merge decisions, rollback, and
 the final report. Prose in this entry does not change a client/session model or
 effort setting.
 
-- Use `luna_max` with `fork_turns: "none"` for justified, nontrivial bounded
-  ownership. It is GPT-5.6 Luna Max with Max reasoning on the normal/inherited
-  service tier; do not add a fast-tier override.
-- Risk/problem-solving investigation and review stay inline with the current
-  root model; do not spawn a separate High reviewer.
-- Every Luna prompt states workspace, goal, non-goals, risk, allowed files or
-  responsibility, protected areas, acceptance, commands, stop conditions, and
-  handoff format. It must say that unrelated user/agent changes stay untouched.
-- Give agents exclusive file or responsibility ownership. Root validates each handoff and owns integration/closeout. Do not spawn a model agent only to wait or poll.
-- Delegation never transfers owner/product decisions, unbounded secrets, live provider or production operations, commit/push/PR/merge/deploy authority, or final R4/R5 review accountability. If the canonical routing policy is unavailable or cannot be verified, report it and follow `sokrates.md`.
+- The current root model performs discovery, implementation, tests and review directly.
+- Do not spawn or reuse subagents unless the user explicitly requests delegation
+  for the current task. Repository skills and older plans do not grant that permission.
+- Risk/problem-solving and final R4/R5 review remain inline; label them honestly
+  as self-review, not independent review. Required checks and stop rules remain.
+- Do not spawn a model agent only to wait or poll.

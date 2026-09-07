@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 
-const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 test('company overlay is explicit and base runtime remains synthetic', () => {
   const base = read('infra/onprem/core/compose.yaml')
   const overlay = read('infra/onprem/core/compose.company-data.yaml')

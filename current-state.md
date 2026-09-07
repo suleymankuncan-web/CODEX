@@ -6,9 +6,7 @@ Use when: resuming work, checking current posture, or choosing the next safe act
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
 Last verified: 2026-09-07
 
-This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
-
-Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
+This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
 ## Authority And Freshness
 
@@ -134,7 +132,7 @@ test-data input.
 
 ## Review, Release, And Merge Policy
 
-- The owner approved operating-document consolidation and removal of the dedicated problem-solver agent on 7 September 2026. [AGENTS.md](AGENTS.md#reading-map) owns reading guidance; [discipline.md](discipline.md#adaptive-reasoning-effort-routing) owns agent routing. The selected coordinator model (currently Astra) handles risk review and diagnosis inline; Luna remains the bounded execution worker. Explicit user effort and Luna Max are not subject to a blanket High ceiling. Personal client configuration is outside this repository change.
+- On 7 September 2026 the owner stopped Luna delegation. [AGENTS.md](AGENTS.md#reading-map) owns entry routing; [discipline.md](discipline.md#adaptive-reasoning-effort-routing) owns root-only execution. The current selected model performs implementation and risk review inline. No subagent is started or reused without an explicit request for the current task; repository worker roles are removed. Required verification and permission boundaries are unchanged.
 - Local adversarial review, scope-appropriate verification, required GitHub
   checks, deployment checks when applicable, and clean mergeability are
   mandatory.

@@ -2,11 +2,3 @@
 # user's active Codex configuration; only reasoning effort is routed here.
 model_reasoning_effort = "medium"
 plan_mode_reasoning_effort = "high"
-
-[agents]
-max_threads = 3
-max_depth = 1
-
-[agents.luna_max]
-description = "Normal-speed Luna Max execution worker for bounded repository discovery, implementation, targeted verification, and first-pass review. Receives exclusive ownership and never makes owner, PR, merge, deploy, or live-provider decisions."
-config_file = "agents/luna-max.toml"

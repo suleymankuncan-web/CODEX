@@ -3,79 +3,37 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import test from 'node:test'
 
-const workspaceRoot = join(import.meta.dirname, '..')
+const root = join(import.meta.dirname, '..')
+const read = (path) => readFileSync(join(root, path), 'utf8')
+const config = read('.codex/config.toml')
 
-function readText(path) {
-  return readFileSync(join(workspaceRoot, path), 'utf8')
-}
-
-function requireText(text, expected) {
-  assert.ok(
-    text.replace(/\s+/g, ' ').includes(expected.replace(/\s+/g, ' ')),
-    `Missing routing contract: ${expected}`,
-  )
-}
-
-const config = readText('.codex/config.toml')
-const agents = readText('AGENTS.md')
-const contributing = readText('CONTRIBUTING.md')
-const discipline = readText('discipline.md')
-const currentState = readText('current-state.md')
-
-test('repository config exposes normal Luna Max with Medium and High defaults', () => {
-  requireText(config, 'model_reasoning_effort = "medium"')
-  requireText(config, 'plan_mode_reasoning_effort = "high"')
-  requireText(config, '[agents.luna_max]')
-  requireText(config, 'config_file = "agents/luna-max.toml"')
-
-  assert.doesNotMatch(config, /\[agents\.luna_max_fast\]/)
-  assert.doesNotMatch(config, /\[agents\.planner_xhigh\]/)
-  assert.equal(existsSync(join(workspaceRoot, '.codex/agents/luna-max-fast.toml')), false)
-  assert.equal(existsSync(join(workspaceRoot, '.codex/agents/planner-xhigh.toml')), false)
-})
-
-test('normal Luna role keeps max reasoning without a fast service-tier override', () => {
-  const lunaPath = join(workspaceRoot, '.codex/agents/luna-max.toml')
-  assert.equal(existsSync(lunaPath), true)
-  const luna = readFileSync(lunaPath, 'utf8')
-
-  requireText(luna, 'model = "gpt-5.6-luna"')
-  requireText(luna, 'model_reasoning_effort = "max"')
-  assert.doesNotMatch(luna, /^service_tier\s*=/m)
-})
-
-test('operating docs link to one routing policy without a blanket High ceiling', () => {
-  for (const text of [agents, contributing, discipline, currentState]) {
-    assert.doesNotMatch(text, /luna_max_fast/)
-    assert.doesNotMatch(text, /Luna Max Fast/)
-    assert.doesNotMatch(text, /planner_xhigh/)
-    assert.doesNotMatch(text, /\bXHigh\b/)
-  }
-
-  for (const text of [agents, contributing, currentState]) {
-    requireText(text, 'discipline.md#adaptive-reasoning-effort-routing')
-  }
-  requireText(discipline, '### Adaptive Reasoning Effort Routing')
-  requireText(discipline, 'Use `luna_max` with `fork_turns: "none"`')
-  requireText(discipline, "Do not override Luna's model, effort or service tier at spawn time.")
-  requireText(discipline, 'Explicit user selection, including Max, takes precedence')
-  requireText(discipline, "Luna's configured Max is an intentional role exception")
-  requireText(discipline, 'Current coordinator model and selected effort')
-  for (const text of [agents, contributing, discipline, currentState]) {
-    assert.doesNotMatch(text, /No repository role may request a reasoning level above High|Repository reasoning never exceeds High|hicbir repo rolu High'in ustune cikmaz|Sol\/root/)
+test('repository inherits selected model and effort defaults without worker roles', () => {
+  assert.match(config, /^model_reasoning_effort = "medium"$/m)
+  assert.match(config, /^plan_mode_reasoning_effort = "high"$/m)
+  assert.doesNotMatch(config, /^model\s*=/m)
+  assert.doesNotMatch(config, /^\[agents(?:\.|\])/m)
+  for (const role of ['luna-max', 'luna-max-fast', 'problem-solver-high', 'planner-xhigh']) {
+    assert.equal(existsSync(join(root, '.codex/agents/' + role + '.toml')), false, role)
   }
 })
 
-test('routing preserves exclusive ownership, inline risk review and a shared failure budget', () => {
-  requireText(discipline, 'Never assign two implementers the same file or workflow')
-  requireText(discipline, 'final R4/R5 review')
-  requireText(discipline, 'Root and worker share one failure budget')
-  requireText(discipline, 'two evidence-based correction attempts')
-  requireText(discipline, 'No dedicated problem-solver agent is used')
-  requireText(discipline, 'Record actionable findings and their resolution separately')
-  assert.doesNotMatch(config, /\[agents\.problem_solver_high\]/)
-  assert.equal(existsSync(join(workspaceRoot, '.codex/agents/problem-solver-high.toml')), false)
-  for (const text of [agents, contributing, discipline]) {
-    assert.doesNotMatch(text, /`problem_solver_high`/)
+test('entry and execution policy require task-specific delegation authority', () => {
+  for (const path of ['AGENTS.md', 'discipline.md']) {
+    const text = read(path).replace(/\s+/g, ' ')
+    assert.ok(text.includes('Do not spawn or reuse subagents unless the user explicitly requests delegation for the current task'))
+    assert.doesNotMatch(text, /Luna prompt|Luna Max|luna_max/)
+    assert.ok(text.includes('final R4/R5 review'))
   }
+  assert.ok(read('AGENTS.md').includes('discipline.md#adaptive-reasoning-effort-routing'))
+})
+
+test('inline review retains failure limits and honest review attribution', () => {
+  const text = read('discipline.md').replace(/\s+/g, ' ')
+  for (const expected of [
+    'two evidence-based correction attempts',
+    'does not reset the failure budget',
+    'never independent agent review',
+    'Record actionable findings and their resolution separately',
+    'No dedicated problem-solver agent is used',
+  ]) assert.ok(text.includes(expected), expected)
 })
