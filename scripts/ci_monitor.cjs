@@ -17,6 +17,7 @@ Commands:
   pr-create <title> <body-file>    Create a PR from the current branch to main
   pr-view <pr-number>              Show mergeability and required PR identity
   pr-merge <pr-number>             Squash-merge a green PR without deleting refs
+  retention-plan                   Dispatch read-only artifact inventory on main
   --help                           Show this help
 `
 
@@ -101,6 +102,10 @@ function main(argv) {
   if (command === 'pr-merge') {
     const prNumber = requireArgument(args[0], 'PR number')
     return runGh(['pr', 'merge', prNumber, '--squash']).status ?? 1
+  }
+  if (command === 'retention-plan') {
+    if (args.length) throw new Error('retention-plan accepts no approval or write arguments')
+    return runGh(['workflow', 'run', 'artifact-retention.yml', '--ref', 'main']).status ?? 1
   }
   throw new Error(`Unknown command: ${command}`)
 }

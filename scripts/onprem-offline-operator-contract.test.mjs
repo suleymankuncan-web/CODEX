@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createShellPath } from './test-shell-path.mjs'
 import { chmodSync, chownSync, copyFileSync, existsSync, linkSync, mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync, readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
@@ -288,11 +289,7 @@ function executable(pathname, content) {
 
 const POSIX_SHELL = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\sh.exe' : 'sh'
 const CYGPATH = process.platform === 'win32' ? 'C:\\Program Files\\Git\\usr\\bin\\cygpath.exe' : null
-function shellPath(pathname) {
-  if (!CYGPATH) return pathname
-  const result = spawnSync(CYGPATH, ['-u', pathname], { encoding: 'utf8' })
-  return result.status === 0 ? result.stdout.trim() : pathname
-}
+const shellPath = createShellPath({ cygpath: CYGPATH })
 
 test('activation failure diagnostics report bounded service state without logs or secrets', (t) => {
   if (process.platform === 'win32' && !existsSync(POSIX_SHELL)) {

@@ -1,22 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
+import { isDocsProcessPath } from './verification-docs-scope.mjs'
+
 import { selectAffectedVerification } from './affected-verification-selector.mjs'
 
 export const REQUIRED_RELEASE_GATE_POLL_INTERVAL_MS = 60_000
 export const RELEASE_REHEARSAL_WORKFLOW_PATH = '.github/workflows/release-rehearsal.yml'
-
-const rootProcessFiles = new Set([
-  'CONTRIBUTING.md',
-  'current-state.md',
-  'discipline.md',
-  'sokrates.md',
-])
-
-const docsProcessContractFiles = new Set([
-  'scripts/current-state-handoff-contract.test.mjs',
-  'scripts/project-control-registries-contract.test.mjs',
-])
 
 function unique(values) {
   return [...new Set(values.filter(Boolean))]
@@ -28,20 +18,6 @@ function normalizePath(path) {
 
 function hasPrefix(file, prefixes) {
   return prefixes.some((prefix) => file.startsWith(prefix))
-}
-
-function isDocsProcessPath(file) {
-  if (file.startsWith('docs/api/')) {
-    return false
-  }
-
-  return (
-    file.startsWith('.codex/') ||
-    file.startsWith('docs/') ||
-    rootProcessFiles.has(file) ||
-    docsProcessContractFiles.has(file) ||
-    (!file.includes('/') && file.endsWith('.md'))
-  )
 }
 
 function isRehearsalPath(file) {
@@ -69,6 +45,7 @@ const fullProofFiles = new Set([
   'scripts/check-release.mjs',
   'scripts/post-merge-release-proof.mjs',
   'scripts/affected-verification-selector.mjs',
+  'scripts/verification-docs-scope.mjs',
   'scripts/affected-verification-selector.test.mjs',
   '.github/workflows/onprem-image-proof.yml',
   '.github/workflows/required-release-gate.yml',

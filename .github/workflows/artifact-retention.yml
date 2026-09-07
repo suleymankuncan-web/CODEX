@@ -1,0 +1,58 @@
+name: Artifact retention review
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_plan_sha256:
+        description: Leave empty for inventory only; exact reviewed plan SHA256 permits bounded cleanup
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: artifact-retention-review
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.19.0
+      - name: Inventory protected and eligible artifacts
+        run: node scripts/artifact-retention.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_ARTIFACT_PLAN_SHA256: ''
+
+  apply-reviewed-plan:
+    needs: plan
+    if: github.ref == 'refs/heads/main' && inputs.approved_plan_sha256 != ''
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.19.0
+      - name: Apply exact reviewed plan after fresh protection checks
+        run: node scripts/artifact-retention.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_ARTIFACT_PLAN_SHA256: ${{ inputs.approved_plan_sha256 }}

@@ -32,7 +32,7 @@ test('affected verification selector is advisory and never replaces release gate
 
   assert.equal(selection.advisory, true)
   assert.equal(selection.replacesReleaseGate, false)
-  assert.match(selection.fullReleaseReason, /reviewer may still require/)
+  assert.match(selection.fullReleaseReason, /aligned with the required release gate/)
   assert.match(selection.notes.join('\n'), /discipline\.md/)
 })
 
@@ -41,7 +41,7 @@ test('docs-only changes select diff check and script tests only when guarded scr
     'docs/plans/request-intake-and-decision-policy.md',
   ])
 
-  assert.deepEqual(docsOnly.commands, ['git diff --check'])
+  assert.deepEqual(docsOnly.commands, ['git diff --check', 'npm.cmd run test:scripts'])
   assert.equal(docsOnly.fullReleaseRequired, false)
 
   const codexProcess = selectAffectedVerification([
@@ -50,7 +50,7 @@ test('docs-only changes select diff check and script tests only when guarded scr
     '.codex/agents/luna-max.toml',
   ])
 
-  assert.deepEqual(codexProcess.commands, ['git diff --check'])
+  assert.deepEqual(codexProcess.commands, ['git diff --check', 'npm.cmd run test:scripts'])
   assert.equal(codexProcess.fullReleaseRequired, false)
   assert.deepEqual(codexProcess.matchedRules[0].files, [
     'AGENTS.md',
@@ -83,7 +83,7 @@ test('Store UI changes select frontend gates and targeted Store Playwright guida
   assert.ok(selection.targeted.includes('targeted Store Playwright route/spec for touched route'))
   assert.ok(selection.affectedRoutesOrServices.includes('/store/*'))
   assert.equal(selection.affectedRoutesOrServices.includes('/admin/*'), false)
-  assert.equal(selection.fullReleaseRequired, false)
+  assert.equal(selection.fullReleaseRequired, true)
 })
 
 test('R5 sensitive changes require root release gate and specific targeted evidence', () => {
@@ -116,7 +116,7 @@ test('frontend import pages do not look like queue or import lifecycle changes',
     'admin-web/src/features/admin-integrations/import-history-panel.tsx',
   ])
 
-  assert.equal(selection.fullReleaseRequired, false)
+  assert.equal(selection.fullReleaseRequired, true)
   assert.equal(
     selection.targeted.includes('targeted import lifecycle or worker smoke/tests'),
     false,
