@@ -25,6 +25,7 @@ when the decision needs them.
 ## Current Product Position
 
 - Owner-authorized private-server company mode is implemented and locally verified (7 September 2026): explicit strict-local opt-in, company resource labels, synthetic initializer rejection, admin deep links and same-origin cookie recovery. Canonical release and isolated login/reload proofs passed; deployment data, credentials and cutover/restore receipts stay private. See `docs/contracts/onprem-company-data-mode-v1.md`.
+- PR #1120 added sales-observed personnel storage/read UI. Offline store mapping preparation is defined in `docs/contracts/company-store-preparation-v1.md`; preparation alone cannot verify company runtime or authorize live ingestion.
 - Frontend ownership is Cloudflare Workers Static Assets. `staging.hr-axis.com` serves the exact merged-main Worker artifact; TLS, deep-link/security-header probes and the real Store Manager cookie-session smoke passed on 2026-07-29. Vercel is retired from the active frontend path.
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
