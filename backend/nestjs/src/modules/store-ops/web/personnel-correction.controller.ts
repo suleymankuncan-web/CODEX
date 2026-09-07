@@ -2,14 +2,14 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req } 
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
-import { PersonnelCorrectionRepository } from "../infrastructure/personnel-correction.repository";
+import { PersonnelCorrectionService } from "../application/personnel-correction.service";
 import { CreatePersonnelCorrectionDto, ReviewPersonnelCorrectionDto } from "./dto/personnel-correction.dto";
 import { ListOffboardingRequestsQueryDto } from "./dto/list-offboarding-requests.query";
 
 @Controller("workforce/personnel-corrections")
 @RequireScope("authenticated")
 export class PersonnelCorrectionController {
-  constructor(private readonly repository: PersonnelCorrectionRepository) {}
+  constructor(private readonly repository: PersonnelCorrectionService) {}
 
   @Get()
   @RequireRoles("STORE_MANAGER", "HR_ADMIN", "SUPER_ADMIN")
@@ -19,7 +19,7 @@ export class PersonnelCorrectionController {
 
   @Get("personnel/:employeeId/stores/:storeId")
   @RequireRoles("STORE_MANAGER")
-  @RequireActionScope("store")
+  @RequireActionScope("authenticated")
   getPersonnel(@Req() request: { user: AuthenticatedUser },
     @Param("employeeId", ParseUUIDPipe) employeeId: string,
     @Param("storeId", ParseUUIDPipe) storeId: string) {
