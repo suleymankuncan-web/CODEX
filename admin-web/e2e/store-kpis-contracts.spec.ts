@@ -823,3 +823,40 @@ function metricRow(
     weightPercent: code === 'TARGET_ACHIEVEMENT' ? 35 : code === 'CR' ? 20 : code === 'GSM_ONAY' || code === 'gsm_approval' || code.includes('CHECKLIST') ? 5 : 15,
   }
 }
+
+
+test('daily KPI selection binds store and personnel reads to the same day and survives reload', async ({ page }) => {
+  await installStoreContractSession(page, 'storeManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeKpiContractApi(page)
+  const reads: Array<{ path: string; type: string | null; start: string | null }> = []
+  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
+    const url = new URL(route.request().url())
+    reads.push({ path: 'store', type: url.searchParams.get('periodType'), start: url.searchParams.get('periodStart') })
+    const fixture = createStoreKpiHighlightsFixture()
+    const daily = url.searchParams.get('periodType') === 'daily'
+    await route.fulfill({ json: daily ? {
+      ...fixture,
+      source: { ...fixture.source, periodType: 'daily' },
+      period: { periodStart: '2026-07-06', periodEnd: '2026-07-06' },
+      availablePeriods: [{ periodType: 'daily', periodStart: '2026-07-06', periodEnd: '2026-07-06' }],
+    } : fixture })
+  })
+  await page.route('**/api/reports/rankings**', async (route) => {
+    const url = new URL(route.request().url())
+    reads.push({ path: 'personnel', type: url.searchParams.get('periodType'), start: url.searchParams.get('periodStart') })
+    await route.fulfill({ json: createEmptyRankingsFixture() })
+  })
+  await page.goto('/store/kpis?periodType=daily&periodStart=2026-07-06')
+  await expect(page.getByRole('combobox', { name: 'KPI dönem türü' })).toHaveValue('daily')
+  const day = page.locator('input[type="date"]')
+  await expect(day).toHaveValue('2026-07-06')
+  await expect.poll(() => reads.some(r => r.path === 'store' && r.type === 'daily' && r.start === '2026-07-06')).toBe(true)
+  await expect.poll(() => reads.some(r => r.path === 'personnel' && r.type === 'daily' && r.start === '2026-07-06')).toBe(true)
+  await page.reload()
+  await expect(day).toHaveValue('2026-07-06')
+  await page.getByRole('combobox', { name: 'KPI dönem türü' }).selectOption('monthly')
+  await expect(day).toHaveCount(0)
+  await expect(page).not.toHaveURL(/periodStart=/)
+  await expect.poll(() => reads.some(r => r.path === 'store' && r.type === 'monthly' && r.start === null)).toBe(true)
+})

@@ -1,6 +1,7 @@
 import { storeKpisCommandEn, storeKpisCommandTr } from './store-kpis-command'
 
 export const storeKpisTr = {
+  'storeKpis.periodTypeSelect': 'KPI dönem türü',
   'storeKpis.unavailableEyebrow': 'KPI görünümü',
   'storeKpis.title': "Mağaza KPI'ları",
   'storeKpis.unavailableCopy':
@@ -283,6 +284,7 @@ export const storeKpisTr = {
 } as const
 
 export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
+  'storeKpis.periodTypeSelect': 'KPI period type',
   'storeKpis.unavailableEyebrow': 'KPI view',
   'storeKpis.title': 'Store KPIs',
   'storeKpis.unavailableCopy':
