@@ -153,6 +153,7 @@ test('admin inbox lets HR return workforce requests with a required note', async
 })
 
 async function routeAdminInboxApi(page: Page) {
+  await page.route('**/api/workforce/personnel-corrections**', (route) => route.fulfill({ json: { items: [] } }))
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
   })
@@ -423,3 +424,29 @@ const offboardingRequestsFixture = {
     offset: 0,
   },
 }
+
+
+test('HR compares personnel corrections and keeps stale approvals visible', async ({ page }) => {
+  const values = { firstName: 'Test', lastName: 'Personel', phoneNumber: '', hireDate: '2026-09-07', employmentType: 'full_time', positionId: 'position-1' }
+  const decisions: string[] = []
+  let rejected = false
+  await page.route('**/api/workforce/personnel-corrections**', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const body = route.request().postDataJSON(); decisions.push(body.decision)
+      if (body.decision === 'approve') { await route.fulfill({ status: 409, json: { message: 'Personnel changed; reject this request and ask for a new correction' } }); return }
+      rejected = true; await route.fulfill({ json: { request_status: 'rejected' } }); return
+    }
+    await route.fulfill({ json: { items: rejected ? [] : [{ request_id: 'request-1', employee_id: 'employee-1', store_name: 'Test Mağaza', request_status: 'pending_hr_approval', request_reason: 'İsim düzeltmesi', previous_values: values, proposed_values: { ...values, firstName: 'Düzeltilmiş' }, review_note: null }] } })
+  })
+  await page.goto('/admin/inbox')
+  const queue = page.getByRole('region', { name: 'Personel düzeltme talepleri' })
+  await expect(queue.getByText('Test → Düzeltilmiş')).toBeVisible()
+  await expect(queue.getByRole('button', { name: 'Onayla', exact: true })).toBeDisabled()
+  await queue.getByRole('textbox', { name: 'İK değerlendirme notu' }).fill('Kontrol edildi')
+  await queue.getByRole('button', { name: 'Onayla', exact: true }).click()
+  await expect(queue.getByRole('alert')).toBeVisible()
+  await expect(queue.getByText('İK onayı bekliyor')).toBeVisible()
+  await queue.getByRole('button', { name: 'Reddet', exact: true }).click()
+  await expect(queue.getByText('Bu sayfada talep bulunmuyor.')).toBeVisible()
+  expect(decisions).toEqual(['approve', 'reject'])
+})

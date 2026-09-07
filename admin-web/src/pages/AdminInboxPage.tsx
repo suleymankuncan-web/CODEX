@@ -1,3 +1,5 @@
+import { PersonnelCorrectionQueue } from '../features/workforce/personnel-corrections'
+import { getStoreQueryScopeSignature } from '../features/auth/store-query-scope'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, CheckCircle2, KeyRound, ReceiptText, TrendingUp } from 'lucide-react'
@@ -402,6 +404,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         ]}
       />
 
+      {sellerCodeEnabled ? <PersonnelCorrectionQueue key={getStoreQueryScopeSignature(input.authSummary)} scopeKey={getStoreQueryScopeSignature(input.authSummary)} review /> : null}
       {sellerCodeEnabled ? (
         <SellerCodeQueuePanel
           approvePending={approveSellerCodeMutation.isPending}
