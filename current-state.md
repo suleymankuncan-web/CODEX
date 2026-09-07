@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-09-01
+Last verified: 2026-09-07
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next safe action in under five minutes.
 
@@ -26,7 +26,7 @@ when the decision needs them.
 
 ## Current Product Position
 
-- Owner-authorized private-server company mode is in preparation (7 September 2026): explicit strict-local opt-in, synthetic initializer rejection, separate empty database and private store/account provisioning. Activation still requires release and login proof; see `docs/contracts/onprem-company-data-mode-v1.md`.
+- Owner-authorized private-server company mode is implemented and locally verified (7 September 2026): explicit strict-local opt-in, company resource labels, synthetic initializer rejection, admin deep links and same-origin cookie recovery. Canonical release and isolated login/reload proofs passed; deployment data, credentials and cutover/restore receipts stay private. See `docs/contracts/onprem-company-data-mode-v1.md`.
 - Frontend ownership is Cloudflare Workers Static Assets. `staging.hr-axis.com` serves the exact merged-main Worker artifact; TLS, deep-link/security-header probes and the real Store Manager cookie-session smoke passed on 2026-07-29. Vercel is retired from the active frontend path.
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
