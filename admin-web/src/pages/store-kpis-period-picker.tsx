@@ -2,6 +2,7 @@ import type { AppLocale } from '../lib/i18n'
 import { MonthYearPeriodPicker } from './store-month-year-period-picker'
 
 export function StoreKpisPeriodPicker(input: {
+  periodType?: 'daily' | 'monthly'
   periodStart: string
   onPeriodStartChange: (periodStart: string) => void
   locale: AppLocale
@@ -9,6 +10,11 @@ export function StoreKpisPeriodPicker(input: {
   ariaLabel?: string
   triggerClassName?: string
 }) {
+  if (input.periodType === 'daily') {
+    return <input type="date" aria-label={input.ariaLabel ?? 'Dönem'}
+      className={input.triggerClassName} value={input.periodStart}
+      onChange={(event) => input.onPeriodStartChange(event.target.value)} />
+  }
   return (
     <MonthYearPeriodPicker
       ariaLabel={input.ariaLabel ?? 'D\u00f6nem'}
