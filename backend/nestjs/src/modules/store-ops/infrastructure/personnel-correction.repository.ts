@@ -3,19 +3,19 @@ import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import { assertCorrectionStore, correctionReviewCompanies, correctionStoreScope } from "../application/personnel-correction-scope";
-import type { CreatePersonnelCorrectionDto, PersonnelCorrectionValuesDto, ReviewPersonnelCorrectionDto } from "../web/dto/personnel-correction.dto";
+import type { CreatePersonnelCorrectionInput, PersonnelCorrectionValues, ReviewPersonnelCorrectionInput } from "../application/personnel-correction.types";
 import { WorkforceRequestAuditRepository } from "./workforce-request-audit.repository";
 
 type PersonnelState = {
   company_id: string; region_id: string; store_id: string; employee_id: string;
   assignment_id: string; employee_revision: string; assignment_revision: string;
-  revision: string; values: PersonnelCorrectionValuesDto;
+  revision: string; values: PersonnelCorrectionValues;
 };
 type CorrectionRow = {
   request_id: string; company_id: string; region_id: string; store_id: string;
   employee_id: string; assignment_id: string; employee_revision: string;
-  assignment_revision: string; previous_values: PersonnelCorrectionValuesDto;
-  proposed_values: PersonnelCorrectionValuesDto; request_reason: string;
+  assignment_revision: string; previous_values: PersonnelCorrectionValues;
+  proposed_values: PersonnelCorrectionValues; request_reason: string;
   request_status: string; review_note: string | null; created_at: string;
 };
 
@@ -83,7 +83,7 @@ export class PersonnelCorrectionRepository {
     return { items: result.rows };
   }
 
-  async submit(actor: AuthenticatedUser, input: CreatePersonnelCorrectionDto) {
+  async submit(actor: AuthenticatedUser, input: CreatePersonnelCorrectionInput) {
     assertCorrectionStore(actor, input.storeId);
     return this.database.withTransaction(async (client) => {
       const state = await this.state(client, input.employeeId, input.storeId);
@@ -106,7 +106,7 @@ export class PersonnelCorrectionRepository {
     });
   }
 
-  async review(actor: AuthenticatedUser, requestId: string, input: ReviewPersonnelCorrectionDto) {
+  async review(actor: AuthenticatedUser, requestId: string, input: ReviewPersonnelCorrectionInput) {
     return this.database.withTransaction(async (client) => {
       const result = await client.query<CorrectionRow>(`SELECT * FROM ops.personnel_correction_request
         WHERE request_id=$1::uuid AND company_id=ANY($2::uuid[]) FOR UPDATE`,

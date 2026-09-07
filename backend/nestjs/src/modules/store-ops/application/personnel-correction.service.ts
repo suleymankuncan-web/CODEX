@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import { PersonnelCorrectionRepository } from "../infrastructure/personnel-correction.repository";
-import type { CreatePersonnelCorrectionDto, ReviewPersonnelCorrectionDto } from "../web/dto/personnel-correction.dto";
+import type { CreatePersonnelCorrectionInput, ReviewPersonnelCorrectionInput } from "../application/personnel-correction.types";
 
 @Injectable()
 export class PersonnelCorrectionService {
@@ -12,10 +12,10 @@ export class PersonnelCorrectionService {
   getPersonnel(actor: AuthenticatedUser, employeeId: string, storeId: string) {
     return this.repository.getPersonnel(actor, employeeId, storeId);
   }
-  submit(actor: AuthenticatedUser, body: CreatePersonnelCorrectionDto) {
+  submit(actor: AuthenticatedUser, body: CreatePersonnelCorrectionInput) {
     return this.repository.submit(actor, body);
   }
-  review(actor: AuthenticatedUser, requestId: string, body: ReviewPersonnelCorrectionDto) {
+  review(actor: AuthenticatedUser, requestId: string, body: ReviewPersonnelCorrectionInput) {
     return this.repository.review(actor, requestId, body);
   }
 }
