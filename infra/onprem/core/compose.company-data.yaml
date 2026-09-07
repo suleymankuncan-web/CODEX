@@ -1,0 +1,58 @@
+# Explicit operator-selected overlay; base/proof Compose remains synthetic.
+# Apply to a reviewed company database only after backup and identity preparation.
+services:
+  api:
+    labels: &company-labels
+      com.hr-axis.data-class: company
+    environment: &company-data
+      HR_AXIS_STRICT_LOCAL: "true"
+      HR_AXIS_DATA_CLASS: company
+      HR_AXIS_COMPANY_DATA_ENABLED: "true"
+      PHOTO_MEDIA_STORAGE_ENABLED: "false"
+      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "false"
+  worker:
+    labels: *company-labels
+    environment: *company-data
+  migrator:
+    labels: *company-labels
+    environment: *company-data
+  # Accidental synthetic initialization must fail rather than repopulate demos.
+  synthetic-seed:
+    labels: *company-labels
+    environment: *company-data
+  identity-binder:
+    labels: *company-labels
+    environment: *company-data
+  keycloak-bootstrap:
+    labels: *company-labels
+    environment: *company-data
+  caddy:
+    labels: *company-labels
+  frontend:
+    labels: *company-labels
+  keycloak:
+    labels: *company-labels
+  redis:
+    labels: *company-labels
+  postgres:
+    labels: *company-labels
+
+networks:
+  edge:
+    labels: *company-labels
+  proxy:
+    labels: *company-labels
+  app:
+    labels: *company-labels
+  data:
+    labels: *company-labels
+
+volumes:
+  postgres_data:
+    labels: *company-labels
+  redis_data:
+    labels: *company-labels
+  keycloak_data:
+    labels: *company-labels
+  keycloak_bootstrap_state:
+    labels: *company-labels

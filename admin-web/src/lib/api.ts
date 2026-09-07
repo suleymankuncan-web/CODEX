@@ -322,6 +322,18 @@ function resolveApiBaseUrl() {
   return configuredApiBaseUrl
 }
 
+// Initial same-origin recovery returns a nonce to the owning session transition.
+// It does not mutate CSRF memory before that transition confirms it is current.
+export async function recoverBrowserSessionAfterReload(signal: AbortSignal): Promise<string | null> {
+  if (!isSameOriginApi(resolveApiBaseUrl)) return null
+  const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session/csrf`, {
+    method: 'POST', headers: { Accept: 'application/json' }, credentials: 'include', signal,
+  })
+  if (!response.ok) return null
+  const payload = await response.json() as { csrfToken?: unknown }
+  return typeof payload.csrfToken === 'string' ? payload.csrfToken.trim() || null : null
+}
+
 export async function createBrowserSession(providerToken: string) {
   const token = providerToken.trim()
   if (!token) {

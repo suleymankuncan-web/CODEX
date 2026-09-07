@@ -102,6 +102,49 @@ function createStrictLocalJwksValues(overrides: Record<string, string | undefine
 }
 
 describe("AppConfigService strict-local", () => {
+  it("accepts explicit company data with local OIDC while retaining strict-local protections", () => {
+    const values = createStrictLocalJwksValues({
+      HR_AXIS_DATA_CLASS: "company", HR_AXIS_COMPANY_DATA_ENABLED: "true",
+      ALLOW_MOCK_AUTH: "false", MIGRATIONS_HTTP_ENABLED: "false",
+    });
+    const config = createConfig(values);
+    expect(config.dataClass).toBe("company");
+    expect(config.isStrictLocal).toBe(true);
+    expect(config.dbSslMode).toBe("verify-full");
+    for (const overrides of [
+      { DB_SSL_MODE: "require" },
+      { DATABASE_URL: "postgres://plaintext.example.invalid/company" },
+      { ERROR_TRACKING_DSN: "https://synthetic.example.invalid/1" },
+      { AUTH_PROVIDER_KEY: "clerk" },
+      { JWT_JWKS_URL: "https://external.example.invalid/jwks" },
+      { BROWSER_SESSION_COOKIE_ENABLED: "false" },
+      { ALLOW_MOCK_AUTH: "true" },
+      { MIGRATIONS_HTTP_ENABLED: "true" },
+      { PHOTO_MEDIA_STORAGE_ENABLED: "true" },
+      { KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "true" },
+      { HR_AXIS_PROCESS_ROLE: "synthetic-seed" },
+      { HR_AXIS_PROCESS_ROLE: "identity-binder" },
+      { HR_AXIS_STRICT_LOCAL: "false" },
+    ]) expect(() => createConfig({ ...values, ...overrides })).toThrow();
+  });
+
+  it("rejects missing, malformed and contradictory company data opt-ins", () => {
+    for (const value of [undefined, "false", "TRUE", "1", "yes"]) {
+      expect(() => createConfig(createStrictLocalJwksValues({
+        HR_AXIS_DATA_CLASS: "company", HR_AXIS_COMPANY_DATA_ENABLED: value,
+      }))).toThrow();
+    }
+    expect(() => createConfig({ ...createStrictLocalValues(), HR_AXIS_COMPANY_DATA_ENABLED: "true" })).toThrow();
+    expect(() => createConfig({ ...createStrictLocalValues(), HR_AXIS_DATA_CLASS: "unknown", HR_AXIS_COMPANY_DATA_ENABLED: "true" })).toThrow();
+  });
+
+  it("allows a company migrator without runtime credentials but still verifies database TLS", () => {
+    const { JWT_SECRET_FILE: _jwt, REDIS_URL_FILE: _redis, QUEUE_BACKEND: _queue, ...values } = createStrictLocalValues();
+    const config = createConfig({ ...values, HR_AXIS_DATA_CLASS: "company", HR_AXIS_COMPANY_DATA_ENABLED: "true", HR_AXIS_PROCESS_ROLE: "migrator" });
+    expect(config.dataClass).toBe("company");
+    expect(config.dbSslMode).toBe("verify-full");
+  });
+
   it("loads database, CA, Redis, and JWT settings only from files", () => {
     const config = createConfig(createStrictLocalValues());
 

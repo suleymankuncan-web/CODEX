@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { isClerkSessionProviderAvailable } from '../auth/clerk-config'
-import { clearBrowserSessionCookie, createBrowserSession } from '../../lib/api'
+import { clearBrowserSessionCookie, createBrowserSession, recoverBrowserSessionAfterReload } from '../../lib/api'
 import {
   SessionContext,
   type ProviderSessionStartOptions,
@@ -17,6 +17,7 @@ import {
   clearClientBearerSession,
   defaultSession,
   isSessionReady,
+  isCookieBrowserSession,
   normalizeSession,
   persistClientSession,
   readClientSession,
@@ -31,7 +32,7 @@ export function SessionProvider(input: { children: ReactNode }) {
   const sessionRef = useRef(session)
   const browserSessionAuthorizationFingerprintRef = useRef('')
   const [isProviderSessionHydrating, setProviderSessionHydrating] = useState(() =>
-    isClerkSessionProviderAvailable(),
+    isClerkSessionProviderAvailable() || (isCookieBrowserSession(session) && Boolean(session.browserSessionKey) && !isSessionReady(session)),
   )
 
   useEffect(() => {
@@ -41,6 +42,25 @@ export function SessionProvider(input: { children: ReactNode }) {
   useEffect(() => {
     persistClientSession(session)
   }, [session])
+
+  useEffect(() => {
+    const initial = sessionRef.current
+    if (isClerkSessionProviderAvailable() || !isCookieBrowserSession(initial) ||
+      !initial.browserSessionKey || isSessionReady(initial)) return
+    const controller = new AbortController()
+    let cancelled = false
+    const timeout = window.setTimeout(() => controller.abort(), 15_000)
+    void recoverBrowserSessionAfterReload(controller.signal).catch(() => null).then((nonce) => {
+      if (cancelled) return
+      setSession((current) => {
+        if (cancelled || !isCookieBrowserSession(current) || current.browserSessionKey !== initial.browserSessionKey) return current
+        writeBrowserSessionCsrfToken(nonce ?? '')
+        return normalizeSession({ ...current, browserSessionKey: nonce ? current.browserSessionKey : '' })
+      })
+      setProviderSessionHydrating(false)
+    }).finally(() => window.clearTimeout(timeout))
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout) }
+  }, [])
 
   const saveSession = useCallback(async (next: SessionState) => {
     const transition = resolveSessionSaveTransition(sessionRef.current, next)
