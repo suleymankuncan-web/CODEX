@@ -17,14 +17,12 @@ Use the freshest verifiable source in this order:
 3. This handoff and active control documents.
 4. Historical plans, evidence, and archives.
 
-Do not infer current merge state, branch ownership, provider status, or pilot
-results from a prior SHA or a historical PR note. Verify `origin/main`, the
-PR head, required checks, mergeability, and relevant provider/runtime evidence
-when the decision needs them.
+Verify merge state, branch ownership, provider status and pilot results from fresh `origin/main`, PR head, checks and relevant runtime evidence; never infer them from historical notes.
 
 ## Current Product Position
 
 - Owner-authorized private-server company mode is implemented and locally verified (7 September 2026): explicit strict-local opt-in, company resource labels, synthetic initializer rejection, admin deep links and same-origin cookie recovery. Canonical release and isolated login/reload proofs passed; deployment data, credentials and cutover/restore receipts stay private. See `docs/contracts/onprem-company-data-mode-v1.md`.
+- PR #1120 added sales-observed personnel storage/read UI. Offline store mapping preparation is defined in `docs/contracts/company-store-preparation-v1.md`; preparation alone cannot verify company runtime or authorize live ingestion.
 - Frontend ownership is Cloudflare Workers Static Assets. `staging.hr-axis.com` serves the exact merged-main Worker artifact; TLS, deep-link/security-header probes and the real Store Manager cookie-session smoke passed on 2026-07-29. Vercel is retired from the active frontend path.
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Controlled pilot or patron-demo rehearsal: the active product signal source.
