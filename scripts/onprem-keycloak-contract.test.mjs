@@ -48,6 +48,17 @@ test('identity lifecycle service account can read realm roles before mapping the
   assert.doesNotMatch(bootstrapScript, /for management_role in[^\n]*manage-realm/)
 })
 
+test('identity lifecycle attributes remain writable only by Keycloak administrators', () => {
+  const bootstrapScript = input().bootstrapScript
+
+  assert.match(bootstrapScript, /kcadm_query get users\/profile -r "\$realm"/)
+  assert.match(bootstrapScript, /"unmanagedAttributePolicy" : "ADMIN_EDIT"/)
+  assert.match(bootstrapScript, /duplicate unmanaged attribute settings/)
+  assert.match(bootstrapScript, /kcadm_quiet update users\/profile -r "\$realm" -f "\$user_profile_file"/)
+  assert.match(bootstrapScript, /user profile policy parity mismatch/)
+  assert.doesNotMatch(bootstrapScript, /"unmanagedAttributePolicy" : "ENABLED"/)
+})
+
 test('ONP-5 photo-proof identity stays separate from the exact five-persona contract', () => {
   const baseline = input()
   assert.doesNotMatch(baseline.compose, /keycloak_synthetic_photo_proof_account/)
