@@ -33,6 +33,8 @@ describe("Workforce seller code requests", () => {
   const nationalId = "12345678901";
   const nationalIdHash = createHash("sha256").update(nationalId).digest("hex");
   const phoneNumber = "05551234567";
+  const username = "ayse.yilmaz";
+  const email = "ayse.yilmaz@example.com";
   const hireDate = "2026-05-01";
 
   it("returns the latest franchise FM seller code reference", async () => {
@@ -118,6 +120,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -169,6 +173,8 @@ describe("Workforce seller code requests", () => {
         lastName: "Yilmaz",
         nationalId,
         phoneNumber,
+        username,
+        email,
         hireDate,
         requestedPositionId: positionId,
         employmentType: "full_time",
@@ -242,6 +248,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -293,6 +301,8 @@ describe("Workforce seller code requests", () => {
         lastName: "Demir",
         nationalId,
         phoneNumber,
+        username,
+        email,
         hireDate,
         requestedPositionId: positionId,
         employmentType: "full_time",
@@ -343,6 +353,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -486,6 +498,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -524,6 +538,26 @@ describe("Workforce seller code requests", () => {
         return { rowCount: 1, rows: [] };
       }
 
+      if (sql.includes("INSERT INTO ops.user_account")) {
+        expect(params).toEqual([
+          "77777777-7777-4777-8777-777777777777",
+          username,
+          email,
+        ]);
+        return {
+          rowCount: 1,
+          rows: [{ user_id: "88888888-8888-4888-8888-888888888888" }],
+        };
+      }
+
+      if (
+        sql.includes("INSERT INTO ops.user_role_assignment") ||
+        sql.includes("INSERT INTO ops.user_action_store_assignment") ||
+        sql.includes("INSERT INTO ops.identity_lifecycle_job")
+      ) {
+        return { rowCount: 1, rows: [] };
+      }
+
       if (sql.includes("INSERT INTO ops.employee") && sql.includes("external_employee_ref")) {
         expect(params).toEqual([
           companyId,
@@ -531,6 +565,8 @@ describe("Workforce seller code requests", () => {
           "Ayse",
           "Yilmaz",
           nationalIdHash,
+          "8901",
+          phoneNumber,
           hireDate,
           "full_time",
         ]);
@@ -559,6 +595,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -665,6 +703,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -754,6 +794,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -799,6 +841,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -886,6 +930,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -963,6 +1009,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: nationalIdHash,
               national_id_last4: "8901",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: hireDate,
               requested_position_id: positionId,
               position_code: positionCode,
@@ -999,6 +1047,8 @@ describe("Workforce seller code requests", () => {
           correctedNationalIdHash,
           "8902",
           phoneNumber,
+          username,
+          email,
           "2026-05-02",
           positionId,
           "full_time",
@@ -1024,6 +1074,8 @@ describe("Workforce seller code requests", () => {
               national_id_hash: correctedNationalIdHash,
               national_id_last4: "8902",
               phone_number: phoneNumber,
+              requested_username: username,
+              requested_email: email,
               requested_hire_date: "2026-05-02",
               requested_position_id: positionId,
               position_code: positionCode,
@@ -1070,6 +1122,8 @@ describe("Workforce seller code requests", () => {
         lastName: "Yilmaz",
         nationalId: correctedNationalId,
         phoneNumber,
+        username,
+        email,
         hireDate: "2026-05-02",
         requestedPositionId: positionId,
         employmentType: "full_time",

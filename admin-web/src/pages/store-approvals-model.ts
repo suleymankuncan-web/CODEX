@@ -103,6 +103,8 @@ export type StoreApprovalsPageState = {
   sellerLastName: string
   sellerNationalId: string
   sellerPhoneNumber: string
+  sellerUsername: string
+  sellerEmail: string
   sellerHireDate: string
   sellerPositionId: string
   sellerEmploymentType: SellerEmploymentType
@@ -142,6 +144,8 @@ export type StoreApprovalsPageAction =
   | { type: 'setSellerLastName'; value: string }
   | { type: 'setSellerNationalId'; value: string }
   | { type: 'setSellerPhoneNumber'; value: string }
+  | { type: 'setSellerUsername'; value: string }
+  | { type: 'setSellerEmail'; value: string }
   | { type: 'setSellerPositionId'; value: string }
   | { type: 'setSellerRequestReason'; value: string }
   | { type: 'resetOffboardingRequestSuccess'; message: string }
@@ -174,6 +178,8 @@ export function createStoreApprovalsPageState(
     sellerLastName: '',
     sellerNationalId: '',
     sellerPhoneNumber: '',
+    sellerUsername: '',
+    sellerEmail: '',
     sellerHireDate: defaults.date,
     sellerPositionId: '',
     sellerEmploymentType: 'full_time',
@@ -197,6 +203,8 @@ function resetSellerRequestState(state: StoreApprovalsPageState, notice: string 
     sellerLastName: '',
     sellerNationalId: '',
     sellerPhoneNumber: '',
+    sellerUsername: '',
+    sellerEmail: '',
     sellerHireDate: getBusinessDateInputValue(),
     sellerPositionId: '',
     sellerEmploymentType: 'full_time',
@@ -262,6 +270,8 @@ export function storeApprovalsPageReducer(
         sellerLastName: action.item.lastName,
         sellerNationalId: '',
         sellerPhoneNumber: action.item.phoneNumber,
+        sellerUsername: action.item.username,
+        sellerEmail: action.item.email,
         sellerHireDate: action.item.hireDate,
         sellerPositionId: action.item.requestedPositionId,
         sellerEmploymentType: action.item.employmentType as SellerEmploymentType,
@@ -282,6 +292,10 @@ export function storeApprovalsPageReducer(
       return { ...state, sellerNationalId: action.value.replace(/\D/g, '').slice(0, 11), sellerRequestNotice: null }
     case 'setSellerPhoneNumber':
       return { ...state, sellerPhoneNumber: action.value, sellerRequestNotice: null }
+    case 'setSellerUsername':
+      return { ...state, sellerUsername: action.value.toLowerCase(), sellerRequestNotice: null }
+    case 'setSellerEmail':
+      return { ...state, sellerEmail: action.value.toLowerCase(), sellerRequestNotice: null }
     case 'setSellerPositionId':
       return { ...state, sellerPositionId: action.value, sellerRequestNotice: null }
     case 'setSellerRequestReason':

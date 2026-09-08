@@ -215,6 +215,9 @@ export type components = {
             "deactivationReason"?: string | null
             "deactivatedByUserId"?: string | null
             "employeeStatus"?: string | null
+            "identityOperation"?: string | null
+            "identityStatus"?: string | null
+            "identityErrorCode"?: string | null
           }
           "roleAssignments": Array<{
               "assignmentId": string
@@ -420,6 +423,9 @@ export type components = {
           "deactivationReason"?: string | null
           "deactivatedByUserId"?: string | null
           "employeeStatus"?: string | null
+          "identityOperation"?: string | null
+          "identityStatus"?: string | null
+          "identityErrorCode"?: string | null
         }
       }
     }
@@ -438,6 +444,9 @@ export type components = {
           "deactivationReason"?: string | null
           "deactivatedByUserId"?: string | null
           "employeeStatus"?: string | null
+          "identityOperation"?: string | null
+          "identityStatus"?: string | null
+          "identityErrorCode"?: string | null
         }>
       "meta": {
         "count": number
@@ -466,6 +475,9 @@ export type components = {
           "deactivationReason"?: string | null
           "deactivatedByUserId"?: string | null
           "employeeStatus"?: string | null
+          "identityOperation"?: string | null
+          "identityStatus"?: string | null
+          "identityErrorCode"?: string | null
         }
         "accessClosure": {
           "closedRoleAssignments": number
@@ -962,6 +974,8 @@ export type components = {
       "externalEmployeeRef"?: string
       "nationalId": string
       "phoneNumber": string
+      "username": string
+      "email": string
       "employmentType": "full_time" | "part_time" | "temporary"
       "hireDate": string
       "storeId": string
@@ -3878,6 +3892,8 @@ export type components = {
           "lastName": string
           "nationalIdLast4": string
           "phoneNumber": string
+          "username": string
+          "email": string
           "hireDate": string
           "requestedPositionId": string
           "positionCode": string

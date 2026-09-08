@@ -26,6 +26,7 @@ const FILE_BACKED_SETTINGS = new Set([
   "BROWSER_SESSION_SECRET",
   "JWT_SECRET",
   "KEYCLOAK_SYNTHETIC_SUBJECT_MANIFEST",
+  "KEYCLOAK_ADMIN_CLIENT_SECRET",
   "REDIS_URL",
 ]);
 
@@ -186,10 +187,7 @@ export class AppConfigService {
         "3000",
     );
   }
-
-  get appName(): string {
-    return this.readString("APP_NAME", "store-ops-backend");
-  }
+  get appName(): string { return this.readString("APP_NAME", "store-ops-backend"); }
 
   get authMode(): string {
     const fallback = this.isProduction ? "jwt" : "mock";
@@ -202,9 +200,11 @@ export class AppConfigService {
     return value;
   }
 
-  get authProviderKey(): string {
-    return this.readString("AUTH_PROVIDER_KEY", "oidc");
-  }
+  get authProviderKey(): string { return this.readString("AUTH_PROVIDER_KEY", "oidc"); }
+  get keycloakAdminBaseUrl(): string | undefined { return this.readOptionalString("KEYCLOAK_ADMIN_BASE_URL"); }
+  get keycloakAdminRealm(): string { return this.readString("KEYCLOAK_ADMIN_REALM", "store-ops"); }
+  get keycloakAdminClientId(): string { return this.readString("KEYCLOAK_ADMIN_CLIENT_ID", "hr-axis-identity-lifecycle"); }
+  get keycloakAdminClientSecret(): string | undefined { return this.readOptionalString("KEYCLOAK_ADMIN_CLIENT_SECRET"); }
 
   get allowMockAuth(): boolean {
     if (this.isProduction) {

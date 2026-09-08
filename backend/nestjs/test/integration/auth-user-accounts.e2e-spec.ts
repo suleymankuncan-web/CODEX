@@ -34,7 +34,7 @@ describe("Auth user accounts", () => {
               username: "new.admin",
               email: "new.admin@example.com",
               auth_provider: "oidc",
-              is_active: true,
+              is_active: false,
               last_login_at: null,
               created_at: "2026-04-17T22:15:00.000Z",
             },
@@ -79,7 +79,7 @@ describe("Auth user accounts", () => {
       email: "new.admin@example.com",
       authProvider: "oidc",
       providerSubject: null,
-      isActive: true,
+      isActive: false,
       lastLoginAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });
@@ -690,7 +690,7 @@ describe("Auth user accounts", () => {
         };
       }
 
-      if (sql.includes("UPDATE ops.user_account") && sql.includes("SET is_active = TRUE")) {
+      if (sql.includes("UPDATE ops.user_account") && sql.includes("CASE WHEN auth_provider = 'oidc'")) {
         expect(sql).toContain("deactivation_reason = NULL");
         expect(sql).toContain("deactivated_by_user_id = NULL");
         return {
@@ -702,12 +702,16 @@ describe("Auth user accounts", () => {
               username: "new.admin",
               email: "new.admin@example.com",
               auth_provider: "oidc",
-              is_active: true,
+              is_active: false,
               last_login_at: null,
               created_at: "2026-04-17T22:15:00.000Z",
             },
           ],
         };
+      }
+
+      if (sql.includes("INSERT INTO ops.identity_lifecycle_job")) {
+        return { rowCount: 1, rows: [] };
       }
 
       if (sql.includes("INSERT INTO audit.event_log")) {
@@ -742,7 +746,7 @@ describe("Auth user accounts", () => {
       email: "new.admin@example.com",
       authProvider: "oidc",
       providerSubject: null,
-      isActive: true,
+      isActive: false,
       lastLoginAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });

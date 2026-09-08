@@ -14,6 +14,8 @@ export function sellerCodeRequestReturnProjection(alias: string) {
             ${alias}.national_id_hash,
             ${alias}.national_id_last4,
             ${alias}.phone_number,
+            ${alias}.requested_username,
+            ${alias}.requested_email,
             ${alias}.requested_hire_date,
             ${alias}.requested_position_id,
             p.position_code,

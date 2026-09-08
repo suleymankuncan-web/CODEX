@@ -5,6 +5,7 @@ import { BullMqWorkerHostService } from "./shared/jobs/bullmq-worker-host.servic
 import { ObservabilityModule } from "./shared/observability/observability.module";
 import { WorkerJobsModule } from "./worker-jobs.module";
 import { RuntimeReadinessModule } from "./onprem/runtime-readiness.module";
+import { IdentityLifecycleWorkerModule } from "./modules/auth/identity-lifecycle-worker.module";
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { RuntimeReadinessModule } from "./onprem/runtime-readiness.module";
     ObservabilityModule,
     WorkerJobsModule,
     RuntimeReadinessModule,
+    IdentityLifecycleWorkerModule,
   ],
   providers: [BullMqWorkerHostService],
 })

@@ -8,6 +8,7 @@ import {
   type ImportBatchEntityType,
 } from "./import-batch-raw-writer.repository";
 import { PersonnelMasterCommandRepository } from "./personnel-master-command.repository";
+import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
 
 const ACTION_STORE_ASSIGNMENT_CONFLICT_MESSAGE = "Active action store assignment already exists";
 const ACTION_STORE_ASSIGNMENT_OVERLAP_CONSTRAINT =
@@ -37,10 +38,12 @@ export class IntegrationRepository {
     private readonly databaseService: DatabaseService,
     private readonly importBatchRawWriterRepository: ImportBatchRawWriterRepository,
     private readonly accessLifecycleRepository: AccessLifecycleRepository,
+    private readonly identityLifecycleRepository?: IdentityLifecycleRepository,
   ) {
     this.personnelMasterCommands = new PersonnelMasterCommandRepository(
       databaseService,
       accessLifecycleRepository,
+      identityLifecycleRepository,
     );
   }
 

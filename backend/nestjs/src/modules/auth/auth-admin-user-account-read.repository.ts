@@ -15,6 +15,9 @@ export type AuthAdminUserAccountRow = {
   deactivation_reason?: string | null;
   deactivated_by_user_id?: string | null;
   employee_status?: string | null;
+  identity_operation?: string | null;
+  identity_status?: string | null;
+  identity_error_code?: string | null;
 };
 
 @Injectable()
@@ -83,10 +86,20 @@ export class AuthAdminUserAccountReadRepository {
           ua.deactivated_at,
           ua.deactivation_reason,
           ua.deactivated_by_user_id,
-          e.employment_status AS employee_status
+          e.employment_status AS employee_status,
+          identity_job.operation AS identity_operation,
+          identity_job.status AS identity_status,
+          identity_job.last_error_code AS identity_error_code
         FROM ops.user_account ua
         LEFT JOIN ops.employee e
           ON e.employee_id = ua.employee_id
+        LEFT JOIN LATERAL (
+          SELECT operation, status, last_error_code
+          FROM ops.identity_lifecycle_job
+          WHERE user_id = ua.user_id
+          ORDER BY created_at DESC, identity_lifecycle_job_id DESC
+          LIMIT 1
+        ) identity_job ON TRUE
         ${whereClause}
         ORDER BY ua.created_at DESC, ua.user_id DESC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}
@@ -116,10 +129,20 @@ export class AuthAdminUserAccountReadRepository {
           ua.deactivated_at,
           ua.deactivation_reason,
           ua.deactivated_by_user_id,
-          e.employment_status AS employee_status
+          e.employment_status AS employee_status,
+          identity_job.operation AS identity_operation,
+          identity_job.status AS identity_status,
+          identity_job.last_error_code AS identity_error_code
         FROM ops.user_account ua
         LEFT JOIN ops.employee e
           ON e.employee_id = ua.employee_id
+        LEFT JOIN LATERAL (
+          SELECT operation, status, last_error_code
+          FROM ops.identity_lifecycle_job
+          WHERE user_id = ua.user_id
+          ORDER BY created_at DESC, identity_lifecycle_job_id DESC
+          LIMIT 1
+        ) identity_job ON TRUE
         WHERE user_id = $1::uuid
       `,
       [userId],

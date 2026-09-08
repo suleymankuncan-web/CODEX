@@ -199,6 +199,10 @@ services:
       MIGRATIONS_HTTP_ENABLED: "false"
       DATABASE_URL_FILE: /run/secrets/worker_database_url
       REDIS_URL_FILE: /run/secrets/redis_worker_url
+      KEYCLOAK_ADMIN_BASE_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_REALM: store-ops
+      KEYCLOAK_ADMIN_CLIENT_ID: hr-axis-identity-lifecycle
+      KEYCLOAK_ADMIN_CLIENT_SECRET_FILE: /run/secrets/keycloak_admin_client_secret
     secrets:
       - source: worker_database_url
         target: worker_database_url
@@ -208,6 +212,8 @@ services:
         target: redis_worker_url
       - source: browser_session_secret
         target: browser_session_secret
+      - source: keycloak_admin_client_secret
+        target: keycloak_admin_client_secret
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     healthcheck:
@@ -311,6 +317,7 @@ services:
       KEYCLOAK_PUBLIC_ORIGIN: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}
       KEYCLOAK_BOOTSTRAP_USERNAME_FILE: /run/secrets/keycloak_bootstrap_username
       KEYCLOAK_BOOTSTRAP_PASSWORD_FILE: /run/secrets/keycloak_bootstrap_password
+      KEYCLOAK_ADMIN_CLIENT_SECRET_FILE: /run/secrets/keycloak_admin_client_secret
       KEYCLOAK_SMTP_HOST: ${KEYCLOAK_SMTP_HOST:?set the approved company SMTP relay host}
       KEYCLOAK_SMTP_PORT: ${KEYCLOAK_SMTP_PORT:-587}
       KEYCLOAK_SMTP_FROM: ${KEYCLOAK_SMTP_FROM:?set the approved sender address}
@@ -331,6 +338,8 @@ services:
         target: keycloak_bootstrap_username
       - source: keycloak_bootstrap_password
         target: keycloak_bootstrap_password
+      - source: keycloak_bootstrap_admin_client_secret
+        target: keycloak_admin_client_secret
       - source: keycloak_database_url
         target: keycloak_database_url
       - source: keycloak_database_username
@@ -691,6 +700,10 @@ secrets:
     file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/bootstrap-username
   keycloak_bootstrap_password:
     file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/bootstrap-password
+  keycloak_admin_client_secret:
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/backend/keycloak-admin-client-secret
+  keycloak_bootstrap_admin_client_secret:
+    file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/admin-client-secret
   keycloak_smtp_auth_user:
     file: ${HR_AXIS_SECRET_ROOT:-./secret-files}/keycloak/smtp-auth-user
   keycloak_smtp_password:

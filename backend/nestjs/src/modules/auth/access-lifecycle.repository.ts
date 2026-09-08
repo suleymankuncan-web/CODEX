@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { PoolClient } from "pg";
 import { buildRequestAuditMetadata } from "../../shared/audit/audit-metadata.factory";
 import { DatabaseService } from "../../shared/database/database.service";
+import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
 
 export type AccessLifecycleReason =
   | "manual_admin_deactivation"
@@ -36,7 +37,10 @@ export type AccessLifecycleResult = {
 
 @Injectable()
 export class AccessLifecycleRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly identityLifecycleRepository?: IdentityLifecycleRepository,
+  ) {}
 
   async deactivateUserAccess(input: {
     userId: string;
@@ -84,8 +88,25 @@ export class AccessLifecycleRepository {
     );
 
     const lockedUser = lockedUserResult.rows[0] ?? null;
-    if (!lockedUser || !lockedUser.is_active) {
+    if (!lockedUser) {
       return emptyAccessLifecycleResult();
+    }
+
+    if (!lockedUser.is_active) {
+      if (input.reason !== "employee_offboarding") return emptyAccessLifecycleResult();
+      await client.query(
+        `UPDATE ops.identity_lifecycle_job SET status = 'completed', completed_at = NOW(), last_error_code = 'superseded_by_offboarding', updated_at = NOW() WHERE user_id = $1::uuid AND operation IN ('provision', 'enable') AND status IN ('pending', 'processing')`,
+        [input.userId],
+      );
+      if (lockedUser.auth_provider === "oidc" && lockedUser.provider_subject) {
+        await this.identityLifecycleRepository?.enqueueInTransaction(client, {
+          userId: input.userId,
+          operation: "disable",
+          actorUserId: input.actorUserId,
+          idempotencyKey: `disable:${input.userId}:offboarding`,
+        });
+      }
+      return { user: lockedUser, closedRoleAssignments: 0, closedActionStoreAssignments: 0, revokedMobileSessions: 0 };
     }
 
     const deactivationReason = input.operatorReason?.trim() || input.reason;
@@ -221,6 +242,19 @@ export class AccessLifecycleRepository {
         ),
       ],
     );
+
+    await client.query(
+      `UPDATE ops.identity_lifecycle_job SET status = 'completed', completed_at = NOW(), last_error_code = 'superseded_by_disable', updated_at = NOW() WHERE user_id = $1::uuid AND operation IN ('provision', 'enable') AND status IN ('pending', 'processing')`,
+      [input.userId],
+    );
+    if (user.auth_provider === "oidc" && user.provider_subject) {
+      await this.identityLifecycleRepository?.enqueueInTransaction(client, {
+        userId: input.userId,
+        operation: "disable",
+        actorUserId: input.actorUserId,
+        idempotencyKey: `disable:${input.userId}:${user.deactivated_at ?? Date.now()}`,
+      });
+    }
 
     return result;
   }

@@ -158,6 +158,8 @@ test('master data uses region-manager identities and exposes direct personnel en
   await personnelDialog.getByRole('textbox', { name: 'Soyad' }).fill('Lovelace')
   await personnelDialog.getByRole('textbox', { name: 'T.C. kimlik numarası' }).fill('12345678901')
   await personnelDialog.getByRole('textbox', { name: 'Telefon numarası' }).fill('+90 555 111 22 33')
+  await personnelDialog.getByRole('textbox', { name: 'Kullanıcı adı' }).fill('ada.lovelace')
+  await personnelDialog.getByRole('textbox', { name: 'E-posta' }).fill('ada.lovelace@example.com')
   await personnelDialog.getByRole('textbox', { name: 'Sicil numarası' }).fill('EMP-NEW')
   await personnelDialog.getByRole('combobox', { name: 'Mağaza seç' }).click()
   await expect(page.getByRole('listbox', { name: 'Mağazalar' }).getByRole('option')).toHaveCount(160)
@@ -176,6 +178,8 @@ test('master data uses region-manager identities and exposes direct personnel en
     lastName: 'Lovelace',
     nationalId: '12345678901',
     phoneNumber: '+90 555 111 22 33',
+    username: 'ada.lovelace',
+    email: 'ada.lovelace@example.com',
     externalEmployeeRef: 'EMP-NEW',
     storeId: '00000000-0000-0000-0001-000000000159',
     positionId: '00000000-0000-0000-0000-000000000400',

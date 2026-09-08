@@ -83,6 +83,9 @@ export function mapAuthUser(item: {
   deactivation_reason?: string | null;
   deactivated_by_user_id?: string | null;
   employee_status?: string | null;
+  identity_operation?: string | null;
+  identity_status?: string | null;
+  identity_error_code?: string | null;
 }) {
   return {
     userId: item.user_id,
@@ -102,5 +105,8 @@ export function mapAuthUser(item: {
       ? { deactivatedByUserId: item.deactivated_by_user_id ?? null }
       : {}),
     ...(item.employee_status !== undefined ? { employeeStatus: item.employee_status ?? null } : {}),
+    ...(item.identity_operation !== undefined ? { identityOperation: item.identity_operation ?? null } : {}),
+    ...(item.identity_status !== undefined ? { identityStatus: item.identity_status ?? null } : {}),
+    ...(item.identity_error_code !== undefined ? { identityErrorCode: item.identity_error_code ?? null } : {}),
   };
 }

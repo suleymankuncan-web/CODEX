@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
+import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
 import { WorkforceLookupReadRepository } from "./workforce-lookup-read.repository";
 import { WorkforceRequestAuditRepository } from "./workforce-request-audit.repository";
 import {
@@ -40,13 +41,14 @@ export class WorkforceRequestRepository {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly accessLifecycleRepository: AccessLifecycleRepository,
+    private readonly identityLifecycleRepository?: IdentityLifecycleRepository,
   ) {
     this.lookupReadRepository =
       new WorkforceLookupReadRepository(databaseService);
     this.offboardingReadRepository =
       new WorkforceOffboardingReadRepository(databaseService);
     this.sellerCodeCommandRepository =
-      new WorkforceSellerCodeCommandRepository(databaseService);
+      new WorkforceSellerCodeCommandRepository(databaseService, identityLifecycleRepository);
     this.sellerCodeReadRepository =
       new WorkforceSellerCodeReadRepository(databaseService);
   }
@@ -87,6 +89,8 @@ export class WorkforceRequestRepository {
     nationalIdHash: string;
     nationalIdLast4: string;
     phoneNumber: string;
+    username: string;
+    email: string;
     hireDate: string;
     requestedPositionId: string;
     employmentType: "full_time" | "part_time" | "temporary";
@@ -112,6 +116,8 @@ export class WorkforceRequestRepository {
               national_id_hash,
               national_id_last4,
               phone_number,
+              requested_username,
+              requested_email,
               requested_hire_date,
               requested_position_id,
               employment_type,
@@ -131,13 +137,15 @@ export class WorkforceRequestRepository {
               $8,
               $9,
               $10,
-              $11::date,
-              $12::uuid,
-              $13,
-              $14,
+              $11,
+              $12,
+              $13::date,
+              $14::uuid,
               $15,
               $16,
-              $17
+              $17,
+              $18,
+              $19
             )
             RETURNING *
           )
@@ -160,6 +168,8 @@ export class WorkforceRequestRepository {
           input.nationalIdHash,
           input.nationalIdLast4,
           input.phoneNumber,
+          input.username,
+          input.email,
           input.hireDate,
           input.requestedPositionId,
           input.employmentType,
@@ -283,6 +293,8 @@ export class WorkforceRequestRepository {
     nationalIdHash: string;
     nationalIdLast4: string;
     phoneNumber: string;
+    username: string;
+    email: string;
     hireDate: string;
     requestedPositionId: string;
     employmentType: "full_time" | "part_time" | "temporary";
@@ -304,14 +316,16 @@ export class WorkforceRequestRepository {
               national_id_hash = $5,
               national_id_last4 = $6,
               phone_number = $7,
-              requested_hire_date = $8::date,
-              requested_position_id = $9::uuid,
-              employment_type = $10,
-              request_reason = $11,
+              requested_username = $8,
+              requested_email = $9,
+              requested_hire_date = $10::date,
+              requested_position_id = $11::uuid,
+              employment_type = $12,
+              request_reason = $13,
               requested_seller_code = NULL,
               approved_seller_code = NULL,
-              last_reference_seller_code = $12,
-              submitted_by_user_id = $13,
+              last_reference_seller_code = $14,
+              submitted_by_user_id = $15,
               reviewed_by_user_id = NULL,
               reviewed_at = NULL,
               review_note = NULL,
@@ -336,6 +350,8 @@ export class WorkforceRequestRepository {
           input.nationalIdHash,
           input.nationalIdLast4,
           input.phoneNumber,
+          input.username,
+          input.email,
           input.hireDate,
           input.requestedPositionId,
           input.employmentType,
@@ -537,7 +553,6 @@ export class WorkforceRequestRepository {
           SELECT user_id
           FROM ops.user_account
           WHERE employee_id = $1::uuid
-            AND is_active = TRUE
           ORDER BY created_at DESC, user_id DESC
           LIMIT 1
         `,

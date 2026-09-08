@@ -202,6 +202,8 @@ export async function resubmitSellerCodeRequest(input: {
   lastName: string
   nationalId: string
   phoneNumber: string
+  username: string
+  email: string
   hireDate: string
   requestedPositionId: string
   employmentType: SellerEmploymentType
@@ -216,6 +218,8 @@ export async function resubmitSellerCodeRequest(input: {
         lastName: input.lastName,
         nationalId: input.nationalId,
         phoneNumber: input.phoneNumber,
+        username: input.username,
+        email: input.email,
         hireDate: input.hireDate,
         requestedPositionId: input.requestedPositionId,
         employmentType: input.employmentType,
@@ -319,6 +323,8 @@ export async function createSellerCodeRequest(input: {
   lastName: string
   nationalId: string
   phoneNumber: string
+  username: string
+  email: string
   hireDate: string
   requestedPositionId: string
   employmentType: SellerEmploymentType

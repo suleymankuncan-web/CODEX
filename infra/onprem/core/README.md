@@ -110,6 +110,8 @@ rotation; until then the operator must prepare them before `compose up`:
 | `postgres/server.key`, `postgres/*-password` | `70:70` | `0400` |
 | `redis/users.acl`, `redis/health-url` | `999:1000` | `0400` |
 | `backend/*` | `65532:65532` | `0400` |
+| `backend/keycloak-admin-client-secret` | `65532:65532` | `0400` |
+| `keycloak/admin-client-secret` | `1000:1000` | `0400` |
 | `keycloak/database-url`, `keycloak/database-username`, `keycloak/bootstrap-*`, `keycloak/smtp-*` | `1000:1000` or operator-controlled | `0400` |
 | `keycloak/database-password` | `1000:1000` | `0400` |
 | `postgres/keycloak-password` | `70:70` | `0400` |
@@ -134,6 +136,11 @@ match, atomically replace and re-apply each owner/mode, stop Keycloak and its
 bootstrap one-shot, re-run the digest preflight, then reconcile bootstrap and
 start the runtime. Never rotate one copy independently or start a partially
 rotated pair.
+
+The backend-side `backend/keycloak-admin-client-secret` and Keycloak-side
+`keycloak/admin-client-secret` files are also ownership-bound copies of one
+credential. Apply the same byte-digest preflight and coordinated rotation to
+this pair before running the Keycloak bootstrap or application worker.
 
 ## Recovery boundary
 
