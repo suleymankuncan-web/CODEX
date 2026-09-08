@@ -550,12 +550,12 @@ fi
 service_account_user_id="$(kcadm_query get "clients/$admin_client_uuid/service-account-user" -r "$realm" --fields id --format csv --noquotes | sed -n '1p')"
 realm_management_uuid="$(kcadm_query get clients -r "$realm" -q 'clientId=realm-management' --fields id --format csv --noquotes | sed -n '1p')"
 [ -n "$service_account_user_id" ] && [ -n "$realm_management_uuid" ] || die 'identity lifecycle service account was not resolved'
-for management_role in query-users view-users manage-users; do
+for management_role in query-users view-users manage-users view-realm; do
   kcadm_query get "clients/$realm_management_uuid/roles/$management_role" -r "$realm" >/dev/null 2>&1 || die 'identity lifecycle management role read failed'
   kcadm_quiet add-roles -r "$realm" --uid "$service_account_user_id" --cid "$realm_management_uuid" --rolename "$management_role" || die 'identity lifecycle management role assignment failed'
 done
 admin_service_roles="$(kcadm_query get "users/$service_account_user_id/role-mappings/clients/$realm_management_uuid" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'identity lifecycle management role parity read failed'
-for management_role in query-users view-users manage-users; do
+for management_role in query-users view-users manage-users view-realm; do
   printf '%s\n' "$admin_service_roles" | grep -Fqx "$management_role" || die 'identity lifecycle management role parity mismatch'
 done
 unset admin_client_secret

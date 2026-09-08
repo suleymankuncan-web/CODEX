@@ -38,6 +38,16 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   assert.equal(result.errors.length, 0)
 })
 
+test('identity lifecycle service account can read realm roles before mapping them', () => {
+  const bootstrapScript = input().bootstrapScript
+  const assignmentLoop = 'for management_role in query-users view-users manage-users view-realm; do'
+
+  assert.equal(bootstrapScript.split(assignmentLoop).length - 1, 2)
+  assert.match(bootstrapScript, /kcadm_quiet add-roles[^\n]+--rolename "\$management_role"/)
+  assert.match(bootstrapScript, /admin_service_roles=.*role-mappings\/clients\/\$realm_management_uuid/)
+  assert.doesNotMatch(bootstrapScript, /for management_role in[^\n]*manage-realm/)
+})
+
 test('ONP-5 photo-proof identity stays separate from the exact five-persona contract', () => {
   const baseline = input()
   assert.doesNotMatch(baseline.compose, /keycloak_synthetic_photo_proof_account/)
