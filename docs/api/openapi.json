@@ -10262,6 +10262,134 @@
           "IntegrationPersonnelObservations"
         ]
       }
+    },
+    "/api/workforce/personnel-corrections": {
+      "get": {
+        "operationId": "PersonnelCorrectionController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Scoped personnel corrections.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelCorrectionList"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PersonnelCorrection"
+        ]
+      },
+      "post": {
+        "operationId": "PersonnelCorrectionController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePersonnelCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Staged correction; no personnel mutation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelCorrection"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PersonnelCorrection"
+        ]
+      }
+    },
+    "/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}": {
+      "get": {
+        "operationId": "PersonnelCorrectionController_getPersonnel",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current editable personnel and revision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelCorrectionPersonnel"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PersonnelCorrection"
+        ]
+      }
+    },
+    "/api/workforce/personnel-corrections/{requestId}/review": {
+      "patch": {
+        "operationId": "PersonnelCorrectionController_review",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewPersonnelCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Atomic HR decision.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelCorrection"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PersonnelCorrection"
+        ]
+      }
     }
   },
   "info": {
@@ -30937,6 +31065,398 @@
           "userId",
           "storeIds"
         ]
+      },
+      "PersonnelCorrectionValuesDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^$|^[0-9+() -]{10,20}$"
+          },
+          "hireDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "employmentType": {
+            "type": "string",
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ]
+          },
+          "positionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName",
+          "phoneNumber",
+          "hireDate",
+          "employmentType",
+          "positionId"
+        ]
+      },
+      "CreatePersonnelCorrectionDto": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "employeeId",
+          "expectedRevision",
+          "proposed",
+          "reason"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedRevision": {
+            "type": "string"
+          },
+          "proposed": {
+            "$ref": "#/components/schemas/PersonnelCorrectionValues"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "ReviewPersonnelCorrectionDto": {
+        "type": "object",
+        "required": [
+          "decision",
+          "note"
+        ],
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "PersonnelCorrectionValues": {
+        "type": "object",
+        "required": [
+          "firstName",
+          "lastName",
+          "phoneNumber",
+          "hireDate",
+          "employmentType",
+          "positionId"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "hireDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "employmentType": {
+            "type": "string",
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ]
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PersonnelCorrection": {
+        "type": "object",
+        "required": [
+          "request_id",
+          "company_id",
+          "region_id",
+          "store_id",
+          "employee_id",
+          "assignment_id",
+          "employee_revision",
+          "assignment_revision",
+          "previous_values",
+          "proposed_values",
+          "request_reason",
+          "request_status",
+          "submitted_by_user_id",
+          "reviewed_by_user_id",
+          "review_note",
+          "reviewed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "company_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "region_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "store_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "employee_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "employee_revision": {
+            "type": "string"
+          },
+          "assignment_revision": {
+            "type": "string"
+          },
+          "previous_values": {
+            "$ref": "#/components/schemas/PersonnelCorrectionValues"
+          },
+          "proposed_values": {
+            "$ref": "#/components/schemas/PersonnelCorrectionValues"
+          },
+          "request_reason": {
+            "type": "string"
+          },
+          "request_status": {
+            "type": "string",
+            "enum": [
+              "pending_hr_approval",
+              "approved",
+              "rejected"
+            ]
+          },
+          "submitted_by_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reviewed_by_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "review_note": {
+            "type": "string",
+            "nullable": true
+          },
+          "reviewed_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "PersonnelCorrectionList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "request_id",
+                "company_id",
+                "region_id",
+                "store_id",
+                "employee_id",
+                "assignment_id",
+                "employee_revision",
+                "assignment_revision",
+                "previous_values",
+                "proposed_values",
+                "request_reason",
+                "request_status",
+                "submitted_by_user_id",
+                "reviewed_by_user_id",
+                "review_note",
+                "reviewed_at",
+                "created_at",
+                "updated_at",
+                "store_name",
+                "previous_position_name",
+                "proposed_position_name"
+              ],
+              "properties": {
+                "request_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "company_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "region_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "store_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "employee_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "assignment_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "employee_revision": {
+                  "type": "string"
+                },
+                "assignment_revision": {
+                  "type": "string"
+                },
+                "previous_values": {
+                  "$ref": "#/components/schemas/PersonnelCorrectionValues"
+                },
+                "proposed_values": {
+                  "$ref": "#/components/schemas/PersonnelCorrectionValues"
+                },
+                "request_reason": {
+                  "type": "string"
+                },
+                "request_status": {
+                  "type": "string",
+                  "enum": [
+                    "pending_hr_approval",
+                    "approved",
+                    "rejected"
+                  ]
+                },
+                "submitted_by_user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reviewed_by_user_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
+                "review_note": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewed_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "store_name": {
+                  "type": "string"
+                },
+                "previous_position_name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "proposed_position_name": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "PersonnelCorrectionPersonnel": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "storeId",
+          "revision",
+          "values",
+          "positions"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "values": {
+            "$ref": "#/components/schemas/PersonnelCorrectionValues"
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "positionId",
+                "positionName"
+              ],
+              "properties": {
+                "positionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "positionName": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },

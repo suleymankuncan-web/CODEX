@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-09-07T08:06:13.601Z",
+  "generatedAt": "2026-09-07T14:39:12.858Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 261,
+    "backendEndpointCount": 265,
     "backendEndpointsWithoutFrontendCallCount": 56,
-    "controllerCount": 37,
-    "frontendApiCallCount": 206,
+    "controllerCount": 38,
+    "frontendApiCallCount": 210,
     "frontendRouteCount": 55,
-    "matchedFrontendApiCallCount": 206,
-    "openApiEndpointCount": 261,
-    "routeApiEdgeCount": 256,
+    "matchedFrontendApiCallCount": 210,
+    "openApiEndpointCount": 265,
+    "routeApiEdgeCount": 262,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -4214,6 +4214,66 @@
         "file": "admin-web/src/features/workforce/api.ts",
         "line": 391
       }
+    },
+    {
+      "id": "api:207",
+      "client": "legacy-json",
+      "functionName": "fetchJson",
+      "method": "GET",
+      "rawPath": "/workforce/personnel-corrections/personnel/${input.employeeId}/stores/${input.storeId}",
+      "path": "/api/workforce/personnel-corrections/personnel/{dynamic}/stores/{dynamic}",
+      "backendEndpointId": "endpoint:GET:/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}",
+      "openApiCovered": true,
+      "exportedFunction": null,
+      "source": {
+        "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
+        "line": 28
+      }
+    },
+    {
+      "id": "api:208",
+      "client": "legacy-json",
+      "functionName": "sendJson",
+      "method": "POST",
+      "rawPath": "/workforce/personnel-corrections",
+      "path": "/api/workforce/personnel-corrections",
+      "backendEndpointId": "endpoint:POST:/api/workforce/personnel-corrections",
+      "openApiCovered": true,
+      "exportedFunction": null,
+      "source": {
+        "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
+        "line": 38
+      }
+    },
+    {
+      "id": "api:209",
+      "client": "legacy-json",
+      "functionName": "fetchJson",
+      "method": "GET",
+      "rawPath": "/workforce/personnel-corrections?limit=20&offset=${offset}${input.review ? '&status=pending_hr_approval' : ''}${input.storeId ? ",
+      "path": "/api/workforce/personnel-corrections",
+      "backendEndpointId": "endpoint:GET:/api/workforce/personnel-corrections",
+      "openApiCovered": true,
+      "exportedFunction": "PersonnelCorrectionQueue",
+      "source": {
+        "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
+        "line": 58
+      }
+    },
+    {
+      "id": "api:210",
+      "client": "legacy-json",
+      "functionName": "sendJson",
+      "method": "PATCH",
+      "rawPath": "/workforce/personnel-corrections/${item.request_id}/review",
+      "path": "/api/workforce/personnel-corrections/{dynamic}/review",
+      "backendEndpointId": "endpoint:PATCH:/api/workforce/personnel-corrections/{requestId}/review",
+      "openApiCovered": true,
+      "exportedFunction": null,
+      "source": {
+        "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
+        "line": 72
+      }
     }
   ],
   "unresolvedFrontendApiCalls": [],
@@ -7761,6 +7821,62 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/workforce/personnel-corrections",
+      "method": "GET",
+      "path": "/api/workforce/personnel-corrections",
+      "rawControllerPath": "workforce/personnel-corrections",
+      "rawMethodPath": "",
+      "controller": "personnel-correction",
+      "domain": "workforce",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/personnel-correction.controller.ts",
+        "line": 14
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/workforce/personnel-corrections",
+      "method": "POST",
+      "path": "/api/workforce/personnel-corrections",
+      "rawControllerPath": "workforce/personnel-corrections",
+      "rawMethodPath": "",
+      "controller": "personnel-correction",
+      "domain": "workforce",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/personnel-correction.controller.ts",
+        "line": 29
+      }
+    },
+    {
+      "id": "endpoint:PATCH:/api/workforce/personnel-corrections/{requestId}/review",
+      "method": "PATCH",
+      "path": "/api/workforce/personnel-corrections/{requestId}/review",
+      "rawControllerPath": "workforce/personnel-corrections",
+      "rawMethodPath": ":requestId/review",
+      "controller": "personnel-correction",
+      "domain": "workforce",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/personnel-correction.controller.ts",
+        "line": 36
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}",
+      "method": "GET",
+      "path": "/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}",
+      "rawControllerPath": "workforce/personnel-corrections",
+      "rawMethodPath": "personnel/:employeeId/stores/:storeId",
+      "controller": "personnel-correction",
+      "domain": "workforce",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/personnel-correction.controller.ts",
+        "line": 20
+      }
+    },
+    {
       "id": "endpoint:GET:/api/workforce/position-options",
       "method": "GET",
       "path": "/api/workforce/position-options",
@@ -9393,6 +9509,30 @@
       "domain": "workforce"
     },
     {
+      "id": "openapi:GET:/api/workforce/personnel-corrections",
+      "method": "GET",
+      "path": "/api/workforce/personnel-corrections",
+      "domain": "workforce"
+    },
+    {
+      "id": "openapi:POST:/api/workforce/personnel-corrections",
+      "method": "POST",
+      "path": "/api/workforce/personnel-corrections",
+      "domain": "workforce"
+    },
+    {
+      "id": "openapi:PATCH:/api/workforce/personnel-corrections/{requestId}/review",
+      "method": "PATCH",
+      "path": "/api/workforce/personnel-corrections/{requestId}/review",
+      "domain": "workforce"
+    },
+    {
+      "id": "openapi:GET:/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}",
+      "method": "GET",
+      "path": "/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}",
+      "domain": "workforce"
+    },
+    {
       "id": "openapi:GET:/api/workforce/position-options",
       "method": "GET",
       "path": "/api/workforce/position-options",
@@ -9837,6 +9977,21 @@
         "id": "edge:route:admin:/admin/inbox:api:205",
         "routeId": "route:admin:/admin/inbox",
         "apiCallId": "api:205"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:207",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:207"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:208",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:208"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:210",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:210"
       },
       {
         "id": "edge:route:admin:/admin/incentives:api:82",
@@ -10722,6 +10877,21 @@
         "id": "edge:route:store:/store/workforce:api:206",
         "routeId": "route:store:/store/workforce",
         "apiCallId": "api:206"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:207",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:207"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:208",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:208"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:210",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:210"
       }
     ],
     "apiToEndpoint": [
@@ -11326,9 +11496,29 @@
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
       },
       {
+        "id": "edge:api:207:endpoint:GET:/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}",
+        "apiCallId": "api:207",
+        "backendEndpointId": "endpoint:GET:/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}"
+      },
+      {
+        "id": "edge:api:208:endpoint:POST:/api/workforce/personnel-corrections",
+        "apiCallId": "api:208",
+        "backendEndpointId": "endpoint:POST:/api/workforce/personnel-corrections"
+      },
+      {
+        "id": "edge:api:209:endpoint:GET:/api/workforce/personnel-corrections",
+        "apiCallId": "api:209",
+        "backendEndpointId": "endpoint:GET:/api/workforce/personnel-corrections"
+      },
+      {
         "id": "edge:api:21:endpoint:POST:/api/auth/action-store-assignments/batch",
         "apiCallId": "api:21",
         "backendEndpointId": "endpoint:POST:/api/auth/action-store-assignments/batch"
+      },
+      {
+        "id": "edge:api:210:endpoint:PATCH:/api/workforce/personnel-corrections/{requestId}/review",
+        "apiCallId": "api:210",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/personnel-corrections/{requestId}/review"
       },
       {
         "id": "edge:api:22:endpoint:POST:/api/auth/roles/{roleId}/permissions",
@@ -12024,6 +12214,13 @@
         "controller": "vm-campaign",
         "domain": "mobile",
         "endpointCount": 6,
+        "frontendCallCount": 4
+      },
+      {
+        "id": "controller:personnel-correction",
+        "controller": "personnel-correction",
+        "domain": "workforce",
+        "endpointCount": 4,
         "frontendCallCount": 4
       },
       {
