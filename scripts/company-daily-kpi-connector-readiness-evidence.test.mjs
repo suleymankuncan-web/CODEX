@@ -405,7 +405,7 @@ test('approved source and storage contracts remain authoritative', () => {
   )
 })
 
-test('intake and current state record approval without enabling runtime', () => {
+test('intake stays pre-runtime while current state records the bounded private activation', () => {
   requireText(intake, contractPath)
   requireText(intake, 'Status: `sample_payload_observed`')
   requireText(
@@ -419,8 +419,9 @@ test('intake and current state record approval without enabling runtime', () => 
   )
   requireText(
     currentState,
-    'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.',
+    'Reusable live connector mapping, hosted scheduling, and Excel replacement remain suspended.',
   )
+  requireText(currentState, 'The private-server schedule and canonical KPI projection described above are active only for the approved company deployment.')
 })
 
 test('public readiness files contain no private endpoint or realistic fixture', () => {
