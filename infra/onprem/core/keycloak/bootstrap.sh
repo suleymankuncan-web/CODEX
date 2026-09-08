@@ -379,6 +379,7 @@ config_file="$tmp_dir/kcadm.config"
 client_file="$tmp_dir/client.json"
 admin_client_file="$tmp_dir/admin-client.json"
 smtp_file="$tmp_dir/smtp.json"
+user_profile_file="$tmp_dir/user-profile.json"
 manifest_tmp="$state_dir/.subjects.v1.json.tmp"
 photo_proof_manifest_tmp="$state_dir/.photo-proof-subject.v1.json.tmp"
 server_log="$tmp_dir/keycloak-server.log"
@@ -520,6 +521,28 @@ for role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAG
     kcadm_quiet create roles -r "$realm" -s "name=$role" || die 'realm role reconciliation failed'
   fi
 done
+
+# Keycloak ignores custom user attributes unless the realm user-profile policy
+# permits administrators to manage them. These attributes carry the immutable
+# HR Axis owner id and authorization scopes, so keep them admin-only.
+kcadm_query get users/profile -r "$realm" > "$user_profile_file" || die 'user profile policy read failed'
+user_profile_policy_count="$(grep -c '"unmanagedAttributePolicy"' "$user_profile_file" || true)"
+case "$user_profile_policy_count" in
+  0)
+    grep -Eq '^[[:space:]]*\{' "$user_profile_file" || die 'user profile policy payload is malformed'
+    sed '1s/{/{\
+  "unmanagedAttributePolicy" : "ADMIN_EDIT",/' "$user_profile_file" > "$user_profile_file.next" || die 'user profile policy preparation failed'
+    ;;
+  1)
+    sed 's/"unmanagedAttributePolicy"[[:space:]]*:[[:space:]]*"[^"]*"/"unmanagedAttributePolicy" : "ADMIN_EDIT"/' "$user_profile_file" > "$user_profile_file.next" || die 'user profile policy preparation failed'
+    ;;
+  *) die 'user profile policy contains duplicate unmanaged attribute settings' ;;
+esac
+mv "$user_profile_file.next" "$user_profile_file"
+kcadm_quiet update users/profile -r "$realm" -f "$user_profile_file" || die 'user profile policy reconciliation failed'
+user_profile_state="$(kcadm_query get users/profile -r "$realm" 2>/dev/null)" || die 'user profile policy parity read failed'
+printf '%s\n' "$user_profile_state" | grep -Eq '"unmanagedAttributePolicy"[[:space:]]*:[[:space:]]*"ADMIN_EDIT"' || die 'user profile policy parity mismatch'
+unset user_profile_state user_profile_policy_count
 
 redirect_uri="$public_origin/auth/callback"
 logout_uri="$public_origin/auth/login"
