@@ -18,6 +18,9 @@ const signedContentGuardStep = workflow
 const signedReleaseManifestStep = workflow
   .split('- name: Self-test signed synthetic release manifest')[1]
   ?.split('- name: Prepare UID-bound ephemeral synthetic secret files')[0] ?? ''
+const syntheticSecretStep = workflow
+  .split('- name: Prepare UID-bound ephemeral synthetic secret files')[1]
+  ?.split('- name: Run mandatory fresh-volume core proof behind a reversible firewall')[0] ?? ''
 const coreRuntimeProof = workflow
   .split('- name: Prepare UID-bound ephemeral synthetic secret files')[1]
   ?.split('- name: Upload sanitized runtime receipt')[0] ?? ''
@@ -300,6 +303,14 @@ test('full proof retains every existing expensive runtime and artifact stage', (
   assert.match(workflow, /onprem-core-runtime-receipt\.json/)
   assert.match(workflow, /onprem-keycloak-runtime-receipt\.json/)
   assert.match(workflow, /proof\/release-manifest\.json/)
+})
+
+test('full proof creates ownership-split copies of the synthetic Keycloak admin client secret', () => {
+  assert.match(syntheticSecretStep, /keycloak_admin_client_secret="\$\(openssl rand -hex 32\)"/)
+  assert.match(syntheticSecretStep, /backend\/keycloak-admin-client-secret/)
+  assert.match(syntheticSecretStep, /cp "\$secret_root\/backend\/keycloak-admin-client-secret" "\$secret_root\/keycloak\/admin-client-secret"/)
+  assert.match(syntheticSecretStep, /sha256sum "\$secret_root\/backend\/keycloak-admin-client-secret"/)
+  assert.match(syntheticSecretStep, /sha256sum "\$secret_root\/keycloak\/admin-client-secret"/)
 })
 
 test('component proof has selected-image build, runtime, SBOM, scan, layer, and license evidence', () => {

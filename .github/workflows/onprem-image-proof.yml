@@ -766,6 +766,7 @@ jobs:
           redis_worker_password="$(openssl rand -hex 24)"
           keycloak_database_password="$(openssl rand -hex 24)"
           keycloak_bootstrap_password="$(openssl rand -hex 24)"
+          keycloak_admin_client_secret="$(openssl rand -hex 32)"
           keycloak_smtp_password="$(openssl rand -hex 24)"
           browser_session_secret="$(openssl rand -hex 32)"
           cat > "$secret_root/postgres/bootstrap-password" <<EOF
@@ -793,6 +794,11 @@ jobs:
           cat > "$secret_root/keycloak/bootstrap-password" <<EOF
           $keycloak_bootstrap_password
           EOF
+          cat > "$secret_root/backend/keycloak-admin-client-secret" <<EOF
+          $keycloak_admin_client_secret
+          EOF
+          cp "$secret_root/backend/keycloak-admin-client-secret" "$secret_root/keycloak/admin-client-secret"
+          test "$(sha256sum "$secret_root/backend/keycloak-admin-client-secret" | cut -d' ' -f1)" = "$(sha256sum "$secret_root/keycloak/admin-client-secret" | cut -d' ' -f1)"
           cat > "$secret_root/keycloak/smtp-auth-user" <<EOF
           synthetic-smtp-user
           EOF
