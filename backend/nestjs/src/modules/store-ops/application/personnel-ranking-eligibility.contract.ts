@@ -1,6 +1,3 @@
-export const officialPersonnelRankingMinimumNetSalesValue = 50_000;
-export const officialPersonnelRankingMinimumStoreSalesShare = 0.02;
-
 export type PersonnelRankingEligibilityReason =
   | "eligible"
   | "store_manager_excluded"
@@ -46,37 +43,10 @@ export function resolvePersonnelRankingEligibility(input: {
     };
   }
 
-  if (netSalesValue < officialPersonnelRankingMinimumNetSalesValue) {
-    return {
-      isEligible: false,
-      reason: "below_minimum_net_sales",
-      netSalesValue,
-      storeNetSalesValue,
-      storeSalesShare: null,
-    };
-  }
-
-  if (storeNetSalesValue === null || storeNetSalesValue <= 0) {
-    return {
-      isEligible: false,
-      reason: "missing_store_sales",
-      netSalesValue,
-      storeNetSalesValue,
-      storeSalesShare: null,
-    };
-  }
-
-  const storeSalesShare = netSalesValue / storeNetSalesValue;
-
-  if (storeSalesShare < officialPersonnelRankingMinimumStoreSalesShare) {
-    return {
-      isEligible: false,
-      reason: "below_minimum_store_share",
-      netSalesValue,
-      storeNetSalesValue,
-      storeSalesShare,
-    };
-  }
+  const storeSalesShare =
+    storeNetSalesValue !== null && storeNetSalesValue > 0
+      ? netSalesValue / storeNetSalesValue
+      : null;
 
   return {
     isEligible: true,

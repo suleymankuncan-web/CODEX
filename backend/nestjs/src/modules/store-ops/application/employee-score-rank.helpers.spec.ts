@@ -22,7 +22,7 @@ describe("buildOfficialEmployeeScoreRankContext", () => {
   };
   const scoringService = new KpiBenchmarkScoringService();
 
-  it("keeps only official non-manager personnel that satisfy sales and store-share thresholds", () => {
+  it("keeps every non-manager personnel row with recorded sales", () => {
     const rows = [
       row("employee-manager", "STORE_MANAGER", "500000", "1000000", "store-1"),
       row("employee-low-sales", "SALES_ASSOCIATE", "49999", "1000000", "store-1"),
@@ -40,11 +40,15 @@ describe("buildOfficialEmployeeScoreRankContext", () => {
     });
 
     expect(result.turkeyScores.map((item) => item.employeeId)).toEqual([
+      "employee-low-sales",
+      "employee-low-share",
       "employee-official",
     ]);
-    expect(result.storeScores).toHaveLength(1);
-    expect(result.regionScores).toHaveLength(1);
+    expect(result.storeScores).toHaveLength(3);
+    expect(result.regionScores).toHaveLength(3);
     expect(result.officialRows.map((item) => item.employee_id)).toEqual([
+      "employee-low-sales",
+      "employee-low-share",
       "employee-official",
     ]);
   });
