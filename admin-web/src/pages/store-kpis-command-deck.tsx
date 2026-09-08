@@ -60,14 +60,14 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
   const personnelPageSize = 50
   const storeId = model.effectiveStoreId ?? ''
   const periodStart = model.liveSummary?.period?.periodStart ?? model.livePeriodStart
-  const personnelScopeKey = `${storeId}|${periodStart || 'latest-monthly'}`
+  const personnelScopeKey = `${storeId}|${model.livePeriodType}|${periodStart || 'latest-monthly'}`
   const personnelPage = personnelPageState.scopeKey === personnelScopeKey ? personnelPageState.page : 0
   const setPersonnelPage = (page: number) => setPersonnelPageState({ page, scopeKey: personnelScopeKey })
   const personnelRankingQuery = useQuery({
-    queryKey: ['store-kpis-personnel-ranking', storeId || 'no-store', periodStart || 'latest-monthly', personnelPage, personnelPageSize],
+    queryKey: ['store-kpis-personnel-ranking', storeId || 'no-store', periodStart || 'latest-monthly', personnelPage, personnelPageSize, model.livePeriodType],
     queryFn: () =>
       getRankings({
-        periodType: 'monthly',
+        periodType: model.livePeriodType,
         ...(periodStart ? { periodStart } : {}),
         ...(storeId ? { storeId } : {}),
         limit: personnelPageSize,
@@ -77,7 +77,10 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
       }),
     enabled: model.reportingAllowed && model.viewMode === 'live' && Boolean(storeId),
     ...transientQueryRetryOptions,
-    placeholderData: (previous) => previous,
+    placeholderData: (previous, query) =>
+      query?.queryKey[1] === (storeId || 'no-store') &&
+      query.queryKey[2] === (periodStart || 'latest-monthly') &&
+      query.queryKey[5] === model.livePeriodType ? previous : undefined,
   })
   const personnelLeaderboard = personnelRankingQuery.data?.personnelLeaderboard
   const storeFilteredPersonnelRows = personnelLeaderboard?.items ?? []
@@ -152,7 +155,7 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
 }
 
 function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const livePeriods = model.liveSummary?.availablePeriods.filter((period) => period.periodType === 'monthly') ?? []
+  const livePeriods = model.liveSummary?.availablePeriods.filter((period) => period.periodType === model.livePeriodType) ?? []
   const activeLivePeriodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart || livePeriods[0]?.periodStart || ''
   const snapshotPeriodStart = model.activeSnapshotRun?.snapshotDate ?? model.activeSnapshotRun?.periodStart ?? ''
   const snapshotPeriodStarts = model.availableSnapshotRuns
@@ -176,7 +179,15 @@ function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
         </div>
       ) : null}
       {model.viewMode === 'live' ? (
+        <>
+        <select aria-label={model.t('storeKpis.periodTypeSelect')} value={model.livePeriodType}
+          className="tw:h-10 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:text-sm"
+          onChange={(event) => model.setLivePeriodType(event.target.value === 'daily' ? 'daily' : 'monthly')}>
+          <option value="monthly">{model.t('storeKpis.periodType.monthly')}</option>
+          <option value="daily">{model.t('storeKpis.periodType.daily')}</option>
+        </select>
         <StoreKpisPeriodPicker
+          periodType={model.livePeriodType}
           ariaLabel={model.t('storeKpis.livePeriodSelect')}
           availablePeriodStarts={livePeriods.map((period) => period.periodStart)}
           locale={model.locale}
@@ -184,6 +195,7 @@ function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
           periodStart={activeLivePeriodStart}
           triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[var(--store-command-ink)]"
         />
+        </>
       ) : (
         <StoreKpisPeriodPicker
           ariaLabel={model.t('storeKpis.closedRecordSelect')}
@@ -542,7 +554,7 @@ function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row:
   const statusTone: MetricTone = personnelStatus === 'strong' ? 'good' : personnelStatus === 'watch' ? 'warn' : personnelStatus === 'behind' ? 'danger' : 'neutral'
   const employeeId = row.employeeId ?? ''
   const activePeriodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart
-  const profilePath = `/store/personnel/${encodeURIComponent(employeeId)}?mode=live&periodType=monthly${activePeriodStart ? `&periodStart=${encodeURIComponent(activePeriodStart)}` : ''}`
+  const profilePath = `/store/personnel/${encodeURIComponent(employeeId)}?mode=live&periodType=${model.livePeriodType}${activePeriodStart ? `&periodStart=${encodeURIComponent(activePeriodStart)}` : ''}`
 
   return (
     <tr className="tw:border-t tw:border-border/70">
