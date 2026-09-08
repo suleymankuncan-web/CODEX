@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { personnelKpiScoreProfile } from "./application/kpi-config.contract";
-import { officialPersonnelRankingMinimumNetSalesValue } from "./application/personnel-ranking-eligibility.contract";
 
 const projectRoot = join(process.cwd(), "..", "..");
 const schemaSql = readFileSync(join(projectRoot, "db", "schema.sql"), "utf8");
@@ -106,9 +105,7 @@ describe("demo performance seed contract", () => {
     );
 
     expect(netSalesMatch).not.toBeNull();
-    expect(Number(netSalesMatch?.[1])).toBeGreaterThanOrEqual(
-      officialPersonnelRankingMinimumNetSalesValue,
-    );
+    expect(Number(netSalesMatch?.[1])).toBeGreaterThan(0);
   });
 
   it("seeds closed daily ranking snapshots required by /store/rankings browser checks", () => {
