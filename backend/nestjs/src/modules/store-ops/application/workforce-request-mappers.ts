@@ -12,6 +12,8 @@ export type WorkforceSellerCodeRequestRow = {
   last_name: string;
   national_id_last4: string;
   phone_number: string;
+  requested_username: string | null;
+  requested_email: string | null;
   requested_hire_date: string;
   requested_position_id: string;
   position_code: string;
@@ -69,6 +71,8 @@ export function mapSellerCodeRequest(row: WorkforceSellerCodeRequestRow) {
     lastName: row.last_name,
     nationalIdLast4: row.national_id_last4,
     phoneNumber: row.phone_number,
+    username: row.requested_username ?? '',
+    email: row.requested_email ?? '',
     hireDate: row.requested_hire_date,
     requestedPositionId: row.requested_position_id,
     positionCode: row.position_code,

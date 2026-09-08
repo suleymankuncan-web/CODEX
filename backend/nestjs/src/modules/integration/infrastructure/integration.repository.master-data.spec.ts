@@ -387,6 +387,8 @@ describe("IntegrationRepository master data writes", () => {
       nationalIdAlternateHash: "hash-prefixed",
       nationalIdLast4: "8901",
       phoneNumber: "+90 555 111 22 33",
+      username: "ada.lovelace",
+      email: "ada.lovelace@example.com",
       employmentType: "full_time",
       hireDate: "2026-08-28",
       storeId: "store-1",

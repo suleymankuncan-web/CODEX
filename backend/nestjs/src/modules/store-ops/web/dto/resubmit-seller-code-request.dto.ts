@@ -18,6 +18,15 @@ export class ResubmitSellerCodeRequestDto {
   @Matches(/^[0-9+() -]{10,20}$/)
   phoneNumber!: string;
 
+  @IsString()
+  @Matches(/^[a-zA-Z0-9._-]{3,80}$/)
+  username!: string;
+
+  @IsString()
+  @Matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+  @Length(5, 254)
+  email!: string;
+
   @IsDateString()
   hireDate!: string;
 

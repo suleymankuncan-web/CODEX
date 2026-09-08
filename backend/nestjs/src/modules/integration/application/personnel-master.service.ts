@@ -131,6 +131,8 @@ export class PersonnelMasterService {
   async create(input: Omit<PersonnelWriteInput, "employeeId" | "employmentStatus" | "assignmentStartDate" | "expectedUpdatedAt"> & {
     nationalId: string;
     phoneNumber: string;
+    username: string;
+    email: string;
   }) {
     const identity = buildPersonnelMasterIdentity(input);
     const personnel = await this.integrationRepository.createPersonnelMaster({
@@ -144,6 +146,8 @@ export class PersonnelMasterService {
       hireDate: input.hireDate.slice(0, 10),
       storeId: input.storeId,
       positionId: input.positionId,
+      username: input.username.trim().toLowerCase(),
+      email: input.email.trim().toLowerCase(),
     });
     if (!personnel) throw new NotFoundException("Store or position not found for personnel entry");
     logStructuredMessage(this.logger, "personnel_master_data.created", {

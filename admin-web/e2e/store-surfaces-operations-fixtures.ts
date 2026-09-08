@@ -155,6 +155,8 @@ export const sellerCodeRequestFixture = {
   lastName: 'Yilmaz',
   nationalIdLast4: '8901',
   phoneNumber: '05551234567',
+  username: 'ayse.yilmaz',
+  email: 'ayse.yilmaz@example.com',
   hireDate: '2026-05-01',
   requestedPositionId: demoPositionId,
   positionCode: 'SALES_CONSULTANT',

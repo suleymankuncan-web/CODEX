@@ -28,6 +28,7 @@ import { MockAuthProvider } from "./providers/mock-auth.provider";
 import { AuthAdminController } from "./web/auth-admin.controller";
 import { AuthSessionController } from "./web/auth-session.controller";
 import { MobileAuthController } from "./web/mobile-auth.controller";
+import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
 
 @Global()
 @Module({
@@ -54,6 +55,7 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
     MobileSessionGuard,
     MockAuthProvider,
     JwtAuthProvider,
+    IdentityLifecycleRepository,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
@@ -77,6 +79,7 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
     AuthContextService,
     AuthAuthorizationRepository,
     BrowserSessionService,
+    IdentityLifecycleRepository,
   ],
 })
 export class AuthModule {}

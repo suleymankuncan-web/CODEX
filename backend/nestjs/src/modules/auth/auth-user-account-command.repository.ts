@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { buildRequestAuditMetadata } from "../../shared/audit/audit-metadata.factory";
 import { DatabaseService } from "../../shared/database/database.service";
+import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
 
 type RoleAssignmentCommandRow = {
   user_role_assignment_id: string;
@@ -111,7 +112,10 @@ export type UpdateUserAccountCommandInput = {
 
 @Injectable()
 export class AuthUserAccountCommandRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly identityLifecycleRepository?: IdentityLifecycleRepository,
+  ) {}
 
   async createUserAccount(input: CreateUserAccountCommandInput) {
     return this.databaseService.withTransaction(async (client) => {
@@ -122,9 +126,10 @@ export class AuthUserAccountCommandRepository {
             username,
             email,
             auth_provider,
-            provider_subject
+            provider_subject,
+            is_active
           )
-          VALUES ($1::uuid, $2, $3, $4, $5)
+          VALUES ($1::uuid, LOWER(BTRIM($2)), LOWER(BTRIM($3)), $4, $5, $6)
           RETURNING
             user_id,
             employee_id,
@@ -142,10 +147,20 @@ export class AuthUserAccountCommandRepository {
           input.email,
           input.authProvider,
           input.providerSubject ?? null,
+          !(input.authProvider === "oidc" && !input.providerSubject),
         ],
       );
 
       const user = result.rows[0];
+
+      if (user.auth_provider === "oidc" && !user.provider_subject) {
+        await this.identityLifecycleRepository?.enqueueInTransaction(client, {
+          userId: user.user_id,
+          operation: "provision",
+          actorUserId: input.actorUserId,
+          idempotencyKey: `provision:${user.user_id}`,
+        });
+      }
 
       await client.query(
         `
@@ -485,7 +500,7 @@ export class AuthUserAccountCommandRepository {
       const result = await client.query<UserAccountCommandRow>(
         `
           UPDATE ops.user_account
-          SET is_active = TRUE,
+          SET is_active = CASE WHEN auth_provider = 'oidc' THEN FALSE ELSE TRUE END,
               updated_at = NOW(),
               deactivated_at = NULL,
               deactivation_reason = NULL,
@@ -509,6 +524,14 @@ export class AuthUserAccountCommandRepository {
       const user = result.rows[0] ?? null;
 
       if (user) {
+        if (user.auth_provider === "oidc") {
+          await this.identityLifecycleRepository?.enqueueInTransaction(client, {
+            userId: user.user_id,
+            operation: user.provider_subject ? "enable" : "provision",
+            actorUserId: input.actorUserId,
+            idempotencyKey: `${user.provider_subject ? "enable" : "provision"}:${user.user_id}:${Date.now()}`,
+          });
+        }
         await client.query(
           `
             INSERT INTO audit.event_log (

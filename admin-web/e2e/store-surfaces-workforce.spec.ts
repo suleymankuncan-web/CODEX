@@ -318,7 +318,7 @@ test('store workforce page keeps the store manager surface usable on mobile', as
   expect(hasHorizontalOverflow).toBe(false)
 })
 
-test('store workforce page submits seller code requests with the existing payload shape', async ({ page }) => {
+test('store workforce page submits seller code requests with Keycloak account details', async ({ page }) => {
   let capturedPayload: unknown = null
 
   await page.route('**/api/workforce/seller-code-requests**', async (route) => {
@@ -333,6 +333,8 @@ test('store workforce page submits seller code requests with the existing payloa
         lastName: 'Yilmaz',
         nationalId: '12345678901',
         phoneNumber: '05551234567',
+        username: 'ayse.yilmaz',
+        email: 'ayse.yilmaz@example.com',
         hireDate: '2026-05-01',
         requestedPositionId: demoPositionId,
         employmentType: 'full_time',
@@ -370,6 +372,8 @@ test('store workforce page submits seller code requests with the existing payloa
   await sellerCodeForm.getByLabel('Soyad', { exact: true }).fill('Yilmaz')
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
   await sellerCodeForm.getByLabel(/Telefon/i).fill('05551234567')
+  await sellerCodeForm.getByLabel('Kullanıcı adı').fill('ayse.yilmaz')
+  await sellerCodeForm.getByLabel('E-posta').fill('ayse.yilmaz@example.com')
   await sellerCodeForm.getByLabel(/giri.*tarihi/i).fill('2026-05-01')
   const positionSelect = sellerCodeForm.getByRole('combobox', { name: 'Pozisyon' })
   await selectComboboxOption(page, positionSelect, 'Satış Danışmanı')
@@ -451,6 +455,8 @@ test('store workforce page keeps returned request resubmit identity and payload 
         lastName: 'Yilmaz',
         nationalId: '12345678902',
         phoneNumber: '05551234567',
+        username: 'ayse.yilmaz',
+        email: 'ayse.yilmaz@example.com',
         hireDate: '2026-05-02',
         requestedPositionId: demoPositionId,
         employmentType: 'full_time',

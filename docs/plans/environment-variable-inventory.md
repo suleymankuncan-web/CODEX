@@ -31,6 +31,10 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `DB_SSL_CA` | Project owner | Render backend secret env | Secret | Required for the DG-3 `verify-full` target; populate only from the Supabase provider certificate contract and never record the value. | Empty placeholder. |
 | `AUTH_MODE` | Auth owner | Render backend env | Internal | Must be `jwt` for real environments. | `mock` |
 | `AUTH_PROVIDER_KEY` | Auth owner | Render backend env | Public | Must match the provider namespace used in `ops.user_account.auth_provider`; Clerk environments use `clerk`. | `oidc` |
+| `KEYCLOAK_ADMIN_BASE_URL` | Auth/Platform owner | On-prem worker env | Internal | Private Keycloak origin used only by the identity lifecycle worker. | Empty; worker is disabled. |
+| `KEYCLOAK_ADMIN_REALM` | Auth owner | On-prem worker env | Internal | Exact realm managed by the identity lifecycle worker. | `store-ops` |
+| `KEYCLOAK_ADMIN_CLIENT_ID` | Auth owner | On-prem worker env | Internal | Dedicated confidential service-account client with bounded user-management roles. | `hr-axis-identity-lifecycle` |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | Auth/Platform owner | On-prem worker secret file | Secret | Required for automatic Keycloak provisioning; stored only as ownership-bound file copies for worker and bootstrap. | Absent. |
 | `ALLOW_MOCK_AUTH` | Auth owner | Render backend env | Internal | Must be `false` or unset in production-like environments. | `true` |
 | `MIGRATIONS_HTTP_ENABLED` | Backend/Data owner | Render backend env | Internal | Must remain disabled in production; migrations run through CLI/CI, not HTTP. | `true` locally, forced disabled when `NODE_ENV=production`. |
 | `CORS_ALLOWED_ORIGINS` | Backend/Frontend owner | Render backend env | Public | Must list explicit HTTPS frontend origins; `*` is forbidden in production. | `http://localhost:5173` |

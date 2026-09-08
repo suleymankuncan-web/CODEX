@@ -199,6 +199,8 @@ export class WorkforceService {
     lastName: string;
     nationalId: string;
     phoneNumber: string;
+    username: string;
+    email: string;
     hireDate: string;
     requestedPositionId: string;
     employmentType: "full_time" | "part_time" | "temporary";
@@ -230,6 +232,8 @@ export class WorkforceService {
       nationalIdHash: this.hashNationalId(input.nationalId),
       nationalIdLast4: input.nationalId.slice(-4),
       phoneNumber: input.phoneNumber.trim(),
+      username: input.username.trim().toLowerCase(),
+      email: input.email.trim().toLowerCase(),
       hireDate: input.hireDate,
       requestedPositionId: input.requestedPositionId,
       employmentType: input.employmentType,
@@ -274,6 +278,10 @@ export class WorkforceService {
     }
 
     this.assertCanReviewWorkforceRequest(input, existing);
+
+    if (!existing.requested_username || !existing.requested_email) {
+      throw new BadRequestException("Request must be returned to the store to add login information");
+    }
 
     const sellerCode = input.sellerCode.trim().toUpperCase();
     if (existing.store_type === "franchise" && !/^FM\d+$/.test(sellerCode)) {
@@ -363,6 +371,8 @@ export class WorkforceService {
     lastName: string;
     nationalId: string;
     phoneNumber: string;
+    username: string;
+    email: string;
     hireDate: string;
     requestedPositionId: string;
     employmentType: "full_time" | "part_time" | "temporary";
@@ -398,6 +408,8 @@ export class WorkforceService {
       nationalIdHash: this.hashNationalId(input.nationalId),
       nationalIdLast4: input.nationalId.slice(-4),
       phoneNumber: input.phoneNumber.trim(),
+      username: input.username.trim().toLowerCase(),
+      email: input.email.trim().toLowerCase(),
       hireDate: input.hireDate,
       requestedPositionId: input.requestedPositionId,
       employmentType: input.employmentType,

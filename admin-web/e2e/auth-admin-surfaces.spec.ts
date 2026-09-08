@@ -47,8 +47,8 @@ test('HR admin creates a management user with one request', async ({ page }) => 
         data: {
           user: {
             userId: 'user-created', employeeId: null, username: 'report.viewer',
-            email: 'report.viewer@example.com', authProvider: 'clerk',
-            providerSubject: 'user_report_viewer', isActive: true,
+            email: 'report.viewer@example.com', authProvider: 'oidc',
+            providerSubject: null, isActive: false, identityLifecycleStatus: 'pending',
             lastLoginAt: null, createdAt: '2026-08-29T09:00:00.000Z',
           },
         },
@@ -59,17 +59,16 @@ test('HR admin creates a management user with one request', async ({ page }) => 
   await page.goto('/admin/auth')
   await page.getByRole('button', { name: 'Kullanıcı ekle' }).click()
   const dialog = page.getByRole('dialog', { name: 'Kullanıcı ekle' })
+  await expect(dialog).toContainText('Keycloak hesabı otomatik oluşturulur')
   await dialog.getByLabel('Kullanıcı adı').fill('report.viewer')
   await dialog.getByLabel('E-posta').fill('report.viewer@example.com')
-  await dialog.getByLabel('Sağlayıcı kullanıcı kimliği').fill('user_report_viewer')
   await dialog.getByRole('button', { name: 'Oluştur' }).click()
 
   await expect(dialog).toBeHidden()
   expect(requestBody).toEqual({
     username: 'report.viewer',
     email: 'report.viewer@example.com',
-    authProvider: 'clerk',
-    providerSubject: 'user_report_viewer',
+    authProvider: 'oidc',
   })
 })
 

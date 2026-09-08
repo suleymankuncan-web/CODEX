@@ -7,6 +7,8 @@ function validDto() {
     lastName: "Lovelace",
     nationalId: "12345678901",
     phoneNumber: "+90 555 111 22 33",
+    username: "ada.lovelace",
+    email: "ada.lovelace@example.com",
     employmentType: "full_time",
     hireDate: "2026-08-28",
     storeId: "10000000-0000-4000-8000-000000000001",

@@ -16,6 +16,8 @@ export type SellerCodeRequestRow = {
   national_id_hash: string;
   national_id_last4: string;
   phone_number: string;
+  requested_username: string | null;
+  requested_email: string | null;
   requested_hire_date: string;
   requested_position_id: string;
   position_code: string;
@@ -101,6 +103,8 @@ export class WorkforceSellerCodeReadRepository {
           scr.national_id_hash,
           scr.national_id_last4,
           scr.phone_number,
+          scr.requested_username,
+          scr.requested_email,
           scr.requested_hire_date,
           scr.requested_position_id,
           p.position_code,
@@ -153,6 +157,8 @@ export class WorkforceSellerCodeReadRepository {
           scr.national_id_hash,
           scr.national_id_last4,
           scr.phone_number,
+          scr.requested_username,
+          scr.requested_email,
           scr.requested_hire_date,
           scr.requested_position_id,
           p.position_code,

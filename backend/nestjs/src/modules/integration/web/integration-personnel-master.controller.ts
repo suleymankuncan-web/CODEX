@@ -86,6 +86,8 @@ export class IntegrationPersonnelMasterController {
       externalEmployeeRef: body.externalEmployeeRef,
       nationalId: body.nationalId,
       phoneNumber: body.phoneNumber,
+      username: body.username,
+      email: body.email,
       employmentType: body.employmentType,
       hireDate: body.hireDate,
       storeId: body.storeId,

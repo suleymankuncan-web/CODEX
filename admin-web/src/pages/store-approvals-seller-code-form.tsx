@@ -33,6 +33,8 @@ export function SellerCodeRequestForm(input: {
   onLastNameChange: StringFieldSetter
   onNationalIdChange: StringFieldSetter
   onPhoneNumberChange: StringFieldSetter
+  onUsernameChange: StringFieldSetter
+  onEmailChange: StringFieldSetter
   onPositionIdChange: StringFieldSetter
   onRequestReasonChange: StringFieldSetter
   onSubmit: () => void
@@ -43,6 +45,8 @@ export function SellerCodeRequestForm(input: {
   sellerLastName: string
   sellerNationalId: string
   sellerPhoneNumber: string
+  sellerUsername: string
+  sellerEmail: string
   sellerPositionId: string
   sellerRequestReason: string
   submission: RequestFormSubmission
@@ -192,6 +196,20 @@ export function SellerCodeRequestForm(input: {
               value={input.sellerHireDate}
               onChange={(event) => input.onHireDateChange(event.target.value)}
             />
+          </div>
+
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-username">
+              {input.t('storeApprovals.username')}
+            </label>
+            <Input id="seller-username" autoComplete="off" value={input.sellerUsername} onChange={(event) => input.onUsernameChange(event.target.value)} />
+          </div>
+
+          <div className="store-request-field">
+            <label className="store-request-label" htmlFor="seller-email">
+              {input.t('storeApprovals.email')}
+            </label>
+            <Input id="seller-email" type="email" autoComplete="email" value={input.sellerEmail} onChange={(event) => input.onEmailChange(event.target.value)} />
           </div>
 
           <div className="store-request-field">

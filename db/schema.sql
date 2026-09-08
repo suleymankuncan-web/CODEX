@@ -128,6 +128,8 @@ CREATE TABLE ops.seller_code_request (
     requested_position_id UUID NOT NULL REFERENCES ops.position(position_id),
     employment_type TEXT NOT NULL,
     requested_seller_code TEXT,
+    requested_username TEXT,
+    requested_email TEXT,
     approved_seller_code TEXT,
     last_reference_seller_code TEXT,
     request_reason TEXT,
@@ -141,6 +143,10 @@ CREATE TABLE ops.seller_code_request (
     CONSTRAINT seller_code_request_type_check CHECK (request_type IN ('create_code')),
     CONSTRAINT seller_code_request_status_check CHECK (request_status IN ('pending_hr_approval', 'approved', 'rejected')),
     CONSTRAINT seller_code_request_employment_type_check CHECK (employment_type IN ('full_time', 'part_time', 'temporary')),
+    CONSTRAINT seller_code_request_identity_check CHECK (
+        (requested_username IS NULL AND requested_email IS NULL)
+        OR (NULLIF(BTRIM(requested_username), '') IS NOT NULL AND NULLIF(BTRIM(requested_email), '') IS NOT NULL)
+    ),
     CONSTRAINT seller_code_request_review_check CHECK (
         (request_status = 'pending_hr_approval' AND reviewed_at IS NULL)
         OR (request_status <> 'pending_hr_approval' AND reviewed_at IS NOT NULL)
@@ -156,6 +162,14 @@ CREATE INDEX idx_seller_code_request_company_status
 CREATE UNIQUE INDEX idx_seller_code_request_approved_code_unique
     ON ops.seller_code_request (UPPER(approved_seller_code))
     WHERE approved_seller_code IS NOT NULL AND request_status = 'approved';
+
+CREATE UNIQUE INDEX idx_seller_code_request_open_username_unique
+    ON ops.seller_code_request (LOWER(requested_username))
+    WHERE requested_username IS NOT NULL AND request_status IN ('pending_hr_approval', 'approved');
+
+CREATE UNIQUE INDEX idx_seller_code_request_open_email_unique
+    ON ops.seller_code_request (LOWER(requested_email))
+    WHERE requested_email IS NOT NULL AND request_status IN ('pending_hr_approval', 'approved');
 
 CREATE TABLE ops.employee_offboarding_request (
     offboarding_request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -245,6 +259,33 @@ CREATE TABLE ops.user_role_assignment (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (end_at IS NULL OR end_at >= start_at)
 );
+
+CREATE TABLE ops.identity_lifecycle_job (
+    identity_lifecycle_job_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES ops.user_account(user_id) ON DELETE CASCADE,
+    operation TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    idempotency_key TEXT NOT NULL UNIQUE,
+    requested_by_user_id TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    claimed_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    last_error_code TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT identity_lifecycle_job_operation_check CHECK (operation IN ('provision', 'enable', 'disable')),
+    CONSTRAINT identity_lifecycle_job_status_check CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+    CONSTRAINT identity_lifecycle_job_attempts_check CHECK (attempts >= 0)
+);
+
+CREATE INDEX idx_identity_lifecycle_job_dispatch
+    ON ops.identity_lifecycle_job (status, available_at, created_at)
+    WHERE status IN ('pending', 'processing');
+
+CREATE UNIQUE INDEX idx_identity_lifecycle_job_user_active_operation
+    ON ops.identity_lifecycle_job (user_id, operation)
+    WHERE status IN ('pending', 'processing');
 
 CREATE TABLE ops.user_action_store_assignment (
     user_action_store_assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

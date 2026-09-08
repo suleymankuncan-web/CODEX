@@ -110,6 +110,8 @@ export function WorkforceRequestDialogs(input: {
       lastName: state.sellerLastName.trim(),
       nationalId: state.sellerNationalId.trim(),
       phoneNumber: state.sellerPhoneNumber.trim(),
+      username: state.sellerUsername.trim(),
+      email: state.sellerEmail.trim(),
       hireDate: state.sellerHireDate,
       requestedPositionId: state.sellerPositionId.trim(),
       employmentType: state.sellerEmploymentType,
@@ -153,6 +155,8 @@ export function WorkforceRequestDialogs(input: {
   const canSubmitSeller = Boolean(
     input.storeId && state.sellerFirstName.trim() && state.sellerLastName.trim()
     && /^[0-9]{11}$/.test(state.sellerNationalId.trim()) && state.sellerPhoneNumber.trim()
+    && /^[a-zA-Z0-9._-]{3,80}$/.test(state.sellerUsername.trim())
+    && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.sellerEmail.trim())
     && state.sellerHireDate && state.sellerPositionId.trim(),
   )
   const canSubmitOffboarding = Boolean(
@@ -182,6 +186,8 @@ export function WorkforceRequestDialogs(input: {
               onLastNameChange={(value) => dispatch({ type: 'setSellerLastName', value })}
               onNationalIdChange={(value) => dispatch({ type: 'setSellerNationalId', value })}
               onPhoneNumberChange={(value) => dispatch({ type: 'setSellerPhoneNumber', value })}
+              onUsernameChange={(value) => dispatch({ type: 'setSellerUsername', value })}
+              onEmailChange={(value) => dispatch({ type: 'setSellerEmail', value })}
               onPositionIdChange={(value) => dispatch({ type: 'setSellerPositionId', value })}
               onRequestReasonChange={(value) => dispatch({ type: 'setSellerRequestReason', value })}
               onSubmit={submitSeller}
@@ -192,6 +198,8 @@ export function WorkforceRequestDialogs(input: {
               sellerLastName={state.sellerLastName}
               sellerNationalId={state.sellerNationalId}
               sellerPhoneNumber={state.sellerPhoneNumber}
+              sellerUsername={state.sellerUsername}
+              sellerEmail={state.sellerEmail}
               sellerPositionId={state.sellerPositionId}
               sellerRequestReason={state.sellerRequestReason}
               submission={{ notice: state.sellerRequestNotice, pending: sellerMutation.isPending || sellerResubmitMutation.isPending }}

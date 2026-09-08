@@ -5,11 +5,15 @@ import {
 import { type SellerCodeRequestRow } from "./workforce-seller-code-read.repository";
 import { WorkforceRequestAuditRepository } from "./workforce-request-audit.repository";
 import { sellerCodeRequestReturnProjection } from "./workforce-request-write-sql";
+import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
 
 export class WorkforceSellerCodeCommandRepository {
   private readonly auditRepository = new WorkforceRequestAuditRepository();
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly identityLifecycleRepository?: IdentityLifecycleRepository,
+  ) {}
 
   async countSellerCodeDuplicates(sellerCode: string) {
     const result = await this.databaseService.query<{
@@ -48,11 +52,13 @@ export class WorkforceSellerCodeCommandRepository {
             first_name,
             last_name,
             national_id_hash,
+            national_id_last4,
+            phone_number,
             hire_date,
             employment_status,
             employment_type
           )
-          VALUES ($1::uuid, $2, $3, $4, $5, $6::date, 'active', $7)
+          VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8::date, 'active', $9)
           RETURNING employee_id
         `,
         [
@@ -61,6 +67,8 @@ export class WorkforceSellerCodeCommandRepository {
           input.request.first_name,
           input.request.last_name,
           input.request.national_id_hash,
+          input.request.national_id_last4,
+          input.request.phone_number,
           input.request.requested_hire_date,
           input.request.employment_type,
         ],
@@ -88,6 +96,16 @@ export class WorkforceSellerCodeCommandRepository {
           input.request.requested_hire_date,
         ],
       );
+
+      await this.identityLifecycleRepository?.createEmployeeUserInTransaction(client, {
+        employeeId,
+        username: input.request.requested_username!,
+        email: input.request.requested_email!,
+        companyId: input.request.company_id,
+        regionId: input.request.region_id,
+        storeId: input.request.store_id,
+        actorUserId: input.actorUserId,
+      });
 
       const result = await client.query<SellerCodeRequestRow>(
         `

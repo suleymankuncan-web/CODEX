@@ -3,12 +3,14 @@ import type { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
+import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
 
 @Injectable()
 export class PersonnelMasterCommandRepository {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly accessLifecycleRepository: AccessLifecycleRepository,
+    private readonly identityLifecycleRepository?: IdentityLifecycleRepository,
   ) {}
 
   private async resolveAuditActorUserId(
@@ -333,6 +335,8 @@ export class PersonnelMasterCommandRepository {
     nationalIdAlternateHash: string;
     nationalIdLast4: string;
     phoneNumber: string;
+    username: string;
+    email: string;
     employmentType: "full_time" | "part_time" | "temporary";
     hireDate: string;
     storeId: string;
@@ -429,6 +433,16 @@ export class PersonnelMasterCommandRepository {
         `,
         [employeeId, store.store_id, store.region_id, input.positionId, input.hireDate],
       );
+
+      await this.identityLifecycleRepository?.createEmployeeUserInTransaction(client, {
+        employeeId,
+        username: input.username,
+        email: input.email,
+        companyId: store.company_id,
+        regionId: store.region_id,
+        storeId: store.store_id,
+        actorUserId: input.actorUserId,
+      });
 
       await client.query(
         `
@@ -622,7 +636,7 @@ export class PersonnelMasterCommandRepository {
         `
           SELECT user_id::text
           FROM ops.user_account
-          WHERE employee_id = $1::uuid AND is_active = TRUE
+          WHERE employee_id = $1::uuid
           ORDER BY created_at DESC, user_id DESC
           LIMIT 1
         `,

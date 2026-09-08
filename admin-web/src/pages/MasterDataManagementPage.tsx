@@ -646,13 +646,13 @@ function PersonnelEntryDialog({ open, stores, positions, onOpenChange, onSave, p
   stores: Array<{ storeId: string; storeName: string; storeCode: string }>
   positions: Array<{ positionId: string; positionName: string; positionCode: string }>
   onOpenChange: (open: boolean) => void
-  onSave: (draft: { firstName: string; lastName: string; externalEmployeeRef?: string; nationalId: string; phoneNumber: string; employmentType: 'full_time' | 'part_time' | 'temporary'; hireDate: string; storeId: string; positionId: string }) => void
+  onSave: (draft: { firstName: string; lastName: string; externalEmployeeRef?: string; nationalId: string; phoneNumber: string; username: string; email: string; employmentType: 'full_time' | 'part_time' | 'temporary'; hireDate: string; storeId: string; positionId: string }) => void
   pending: boolean
 }) {
-  const [draft, setDraft] = useState({ firstName: '', lastName: '', externalEmployeeRef: '', nationalId: '', phoneNumber: '', employmentType: 'full_time' as const, hireDate: today, storeId: '', positionId: '' })
+  const [draft, setDraft] = useState({ firstName: '', lastName: '', externalEmployeeRef: '', nationalId: '', phoneNumber: '', username: '', email: '', employmentType: 'full_time' as const, hireDate: today, storeId: '', positionId: '' })
   const nationalIdValid = /^[0-9]{11}$/.test(draft.nationalId)
   const phoneNumberValid = /^[0-9+() -]{10,20}$/.test(draft.phoneNumber.trim())
-  const valid = Boolean(draft.firstName.trim() && draft.lastName.trim() && nationalIdValid && phoneNumberValid && draft.hireDate && draft.storeId && draft.positionId)
+  const valid = Boolean(draft.firstName.trim() && draft.lastName.trim() && nationalIdValid && phoneNumberValid && /^[a-zA-Z0-9._-]{3,80}$/.test(draft.username.trim()) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim()) && draft.hireDate && draft.storeId && draft.positionId)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="tw:max-h-[calc(100dvh-2rem)] tw:gap-0 tw:overflow-y-auto tw:p-0 tw:sm:max-w-2xl" closeLabel="Kapat">
@@ -684,6 +684,8 @@ function PersonnelEntryDialog({ open, stores, positions, onOpenChange, onSave, p
               value={draft.phoneNumber}
             />
           </Field>
+          <Field label="Kullanıcı adı"><Input aria-label="Kullanıcı adı" autoComplete="off" value={draft.username} onChange={(e) => setDraft({ ...draft, username: e.target.value.toLowerCase() })} /></Field>
+          <Field label="E-posta"><Input aria-label="E-posta" autoComplete="email" type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value.toLowerCase() })} /></Field>
           <Field label="Sicil numarası"><Input aria-label="Sicil numarası" value={draft.externalEmployeeRef} onChange={(e) => setDraft({ ...draft, externalEmployeeRef: e.target.value })} /></Field>
           <Field label="İşe giriş tarihi"><Input aria-label="İşe giriş tarihi" max={today} type="date" value={draft.hireDate} onChange={(e) => setDraft({ ...draft, hireDate: e.target.value })} /></Field>
           <Field label="Mağaza"><MasterDataStoreCombobox stores={stores} value={draft.storeId} onValueChange={(value) => setDraft({ ...draft, storeId: value })} /></Field>

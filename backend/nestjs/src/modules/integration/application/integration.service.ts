@@ -443,6 +443,8 @@ export class IntegrationService {
     externalEmployeeRef?: string;
     nationalId: string;
     phoneNumber: string;
+    username: string;
+    email: string;
     employmentType: "full_time" | "part_time" | "temporary";
     hireDate: string;
     storeId: string;

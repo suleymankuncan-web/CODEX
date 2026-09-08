@@ -333,6 +333,8 @@ bootstrap_username_file="${KEYCLOAK_BOOTSTRAP_USERNAME_FILE:-/run/secrets/keyclo
 bootstrap_password_file="${KEYCLOAK_BOOTSTRAP_PASSWORD_FILE:-/run/secrets/keycloak_bootstrap_password}"
 bootstrap_user="$(read_secret "$bootstrap_username_file")"
 bootstrap_password="$(read_secret "$bootstrap_password_file")"
+admin_client_secret_file="${KEYCLOAK_ADMIN_CLIENT_SECRET_FILE:-/run/secrets/keycloak_admin_client_secret}"
+admin_client_secret="$(read_secret "$admin_client_secret_file")"
 case "$bootstrap_user" in
   bootstrap-[a-z0-9-]*) ;;
   *) die 'bootstrap principal must use the temporary bootstrap-* name' ;;
@@ -375,6 +377,7 @@ chmod 0700 "$state_dir"
 tmp_dir="$(mktemp -d /tmp/keycloak-bootstrap.XXXXXX)"
 config_file="$tmp_dir/kcadm.config"
 client_file="$tmp_dir/client.json"
+admin_client_file="$tmp_dir/admin-client.json"
 smtp_file="$tmp_dir/smtp.json"
 manifest_tmp="$state_dir/.subjects.v1.json.tmp"
 photo_proof_manifest_tmp="$state_dir/.photo-proof-subject.v1.json.tmp"
@@ -444,7 +447,7 @@ cleanup() {
   fi
   scan_server_log || [ "$status" -ne 0 ] || status=1
   rm -rf "$tmp_dir" "$manifest_tmp" "$photo_proof_manifest_tmp"
-  unset bootstrap_password smtp_password smtp_auth_user database_password database_username database_url photo_proof_password KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
+  unset bootstrap_password admin_client_secret smtp_password smtp_auth_user database_password database_username database_url photo_proof_password KEYCLOAK_BOOTSTRAP_SERVICE_SECRET
   trap - EXIT HUP INT TERM
   exit "$status"
 }
@@ -531,6 +534,31 @@ else
   client_uuid="$(kcadm_query get clients -r "$realm" -q "clientId=$client_id" --fields id --format csv --noquotes | sed -n '1p')"
 fi
 [ -n "$client_uuid" ] || die 'browser client id was not resolved'
+
+admin_client_id='hr-axis-identity-lifecycle'
+cat > "$admin_client_file" <<JSON
+{"clientId":"$admin_client_id","name":"HR Axis identity lifecycle","enabled":true,"protocol":"openid-connect","publicClient":false,"bearerOnly":false,"standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":true,"secret":"$admin_client_secret"}
+JSON
+admin_client_uuid="$(kcadm_query get clients -r "$realm" -q "clientId=$admin_client_id" --fields id --format csv --noquotes | sed -n '1p')"
+if [ -n "$admin_client_uuid" ]; then
+  kcadm_quiet update "clients/$admin_client_uuid" -r "$realm" -f "$admin_client_file" || die 'identity lifecycle client reconciliation failed'
+else
+  kcadm_quiet create clients -r "$realm" -f "$admin_client_file" || die 'identity lifecycle client creation failed'
+  admin_client_uuid="$(kcadm_query get clients -r "$realm" -q "clientId=$admin_client_id" --fields id --format csv --noquotes | sed -n '1p')"
+fi
+[ -n "$admin_client_uuid" ] || die 'identity lifecycle client id was not resolved'
+service_account_user_id="$(kcadm_query get "clients/$admin_client_uuid/service-account-user" -r "$realm" --fields id --format csv --noquotes | sed -n '1p')"
+realm_management_uuid="$(kcadm_query get clients -r "$realm" -q 'clientId=realm-management' --fields id --format csv --noquotes | sed -n '1p')"
+[ -n "$service_account_user_id" ] && [ -n "$realm_management_uuid" ] || die 'identity lifecycle service account was not resolved'
+for management_role in query-users view-users manage-users; do
+  kcadm_query get "clients/$realm_management_uuid/roles/$management_role" -r "$realm" >/dev/null 2>&1 || die 'identity lifecycle management role read failed'
+  kcadm_quiet add-roles -r "$realm" --uid "$service_account_user_id" --cid "$realm_management_uuid" --rolename "$management_role" || die 'identity lifecycle management role assignment failed'
+done
+admin_service_roles="$(kcadm_query get "users/$service_account_user_id/role-mappings/clients/$realm_management_uuid" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'identity lifecycle management role parity read failed'
+for management_role in query-users view-users manage-users; do
+  printf '%s\n' "$admin_service_roles" | grep -Fqx "$management_role" || die 'identity lifecycle management role parity mismatch'
+done
+unset admin_client_secret
 
 resolve_client_scope_uuid() {
   scope_name="$1"
@@ -622,6 +650,11 @@ client_state="$(kcadm_query get "clients/$client_uuid" -r "$realm" 2>/dev/null)"
 client_compact="$(printf '%s' "$client_state" | tr -d '[:space:]')"
 for expected_client_field in '"clientId":"store-ops-admin-web"' '"enabled":true' '"publicClient":true' '"standardFlowEnabled":true' '"implicitFlowEnabled":false' '"directAccessGrantsEnabled":false' '"serviceAccountsEnabled":false' '"redirectUris":["'"$redirect_uri"'"]' '"webOrigins":["'"$public_origin"'"]'; do
   printf '%s' "$client_compact" | grep -Fq "$expected_client_field" || die 'browser client parity mismatch'
+done
+admin_client_state="$(kcadm_query get "clients/$admin_client_uuid" -r "$realm" 2>/dev/null)" || die 'identity lifecycle client parity read failed'
+admin_client_compact="$(printf '%s' "$admin_client_state" | tr -d '[:space:]')"
+for expected_admin_client_field in '"clientId":"hr-axis-identity-lifecycle"' '"enabled":true' '"publicClient":false' '"standardFlowEnabled":false' '"directAccessGrantsEnabled":false' '"serviceAccountsEnabled":true'; do
+  printf '%s' "$admin_client_compact" | grep -Fq "$expected_admin_client_field" || die 'identity lifecycle client parity mismatch'
 done
 printf '%s' "$client_compact" | grep -Fq '"pkce.code.challenge.method":"S256"' || die 'browser client PKCE parity mismatch'
 printf '%s' "$client_compact" | grep -Fq '"post.logout.redirect.uris":"'"$logout_uri"'"' || die 'browser client logout parity mismatch'

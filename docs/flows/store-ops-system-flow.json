@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-07T14:39:12.858Z",
+  "generatedAt": "2026-09-08T11:05:46.119Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -4047,7 +4047,7 @@
       "exportedFunction": "resubmitSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 210
+        "line": 212
       }
     },
     {
@@ -4062,7 +4062,7 @@
       "exportedFunction": "getPositionOptions",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 230
+        "line": 234
       }
     },
     {
@@ -4077,7 +4077,7 @@
       "exportedFunction": "getStoreEmployees",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 235
+        "line": 239
       }
     },
     {
@@ -4092,7 +4092,7 @@
       "exportedFunction": "getStoreHeadcountGap",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 248
+        "line": 252
       }
     },
     {
@@ -4107,7 +4107,7 @@
       "exportedFunction": "getOrgStores",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 269
+        "line": 273
       }
     },
     {
@@ -4122,7 +4122,7 @@
       "exportedFunction": "getWorkforceCommandWorkspace",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 299
+        "line": 303
       }
     },
     {
@@ -4137,7 +4137,7 @@
       "exportedFunction": "getOffboardingRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 312
+        "line": 316
       }
     },
     {
@@ -4152,7 +4152,7 @@
       "exportedFunction": "createSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 327
+        "line": 333
       }
     },
     {
@@ -4167,7 +4167,7 @@
       "exportedFunction": "createOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 343
+        "line": 349
       }
     },
     {
@@ -4182,7 +4182,7 @@
       "exportedFunction": "approveOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 356
+        "line": 362
       }
     },
     {
@@ -4197,7 +4197,7 @@
       "exportedFunction": "rejectOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 373
+        "line": 379
       }
     },
     {
@@ -4212,7 +4212,7 @@
       "exportedFunction": "resubmitOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 391
+        "line": 397
       }
     },
     {
@@ -5857,7 +5857,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
-        "line": 96
+        "line": 98
       }
     },
     {
@@ -5913,7 +5913,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
-        "line": 105
+        "line": 107
       }
     },
     {
@@ -5927,7 +5927,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration-personnel-master.controller.ts",
-        "line": 132
+        "line": 134
       }
     },
     {

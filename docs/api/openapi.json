@@ -10642,6 +10642,16 @@
             "type": "string",
             "pattern": "^[0-9+() -]{10,20}$"
           },
+          "username": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9._-]{3,80}$"
+          },
+          "email": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 254,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+          },
           "hireDate": {
             "type": "string"
           },
@@ -10674,6 +10684,8 @@
           "lastName",
           "nationalId",
           "phoneNumber",
+          "username",
+          "email",
           "hireDate",
           "requestedPositionId",
           "employmentType"
@@ -10762,6 +10774,16 @@
             "type": "string",
             "pattern": "^[0-9+() -]{10,20}$"
           },
+          "username": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9._-]{3,80}$"
+          },
+          "email": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 254,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+          },
           "hireDate": {
             "type": "string"
           },
@@ -10787,6 +10809,8 @@
           "lastName",
           "nationalId",
           "phoneNumber",
+          "username",
+          "email",
           "hireDate",
           "requestedPositionId",
           "employmentType"
@@ -14613,6 +14637,8 @@
                 "lastName",
                 "nationalIdLast4",
                 "phoneNumber",
+                "username",
+                "email",
                 "hireDate",
                 "requestedPositionId",
                 "positionCode",
@@ -14667,6 +14693,12 @@
                   "type": "string"
                 },
                 "phoneNumber": {
+                  "type": "string"
+                },
+                "username": {
+                  "type": "string"
+                },
+                "email": {
                   "type": "string"
                 },
                 "hireDate": {
@@ -19957,6 +19989,18 @@
                   "employeeStatus": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "identityOperation": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "identityStatus": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "identityErrorCode": {
+                    "type": "string",
+                    "nullable": true
                   }
                 }
               }
@@ -20050,6 +20094,18 @@
                     "nullable": true
                   },
                   "employeeStatus": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "identityOperation": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "identityStatus": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "identityErrorCode": {
                     "type": "string",
                     "nullable": true
                   }
@@ -20147,6 +20203,18 @@
                   "nullable": true
                 },
                 "employeeStatus": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "identityOperation": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "identityStatus": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "identityErrorCode": {
                   "type": "string",
                   "nullable": true
                 }
@@ -20684,6 +20752,18 @@
                         "nullable": true
                       },
                       "employeeStatus": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "identityOperation": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "identityStatus": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "identityErrorCode": {
                         "type": "string",
                         "nullable": true
                       }
@@ -30991,6 +31071,16 @@
             "type": "string",
             "pattern": "^[0-9+() -]{10,20}$"
           },
+          "username": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9._-]{3,80}$"
+          },
+          "email": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 254,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+          },
           "employmentType": {
             "enum": [
               "full_time",
@@ -31014,6 +31104,8 @@
           "lastName",
           "nationalId",
           "phoneNumber",
+          "username",
+          "email",
           "employmentType",
           "hireDate",
           "storeId",
