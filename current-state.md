@@ -17,10 +17,7 @@ Use the freshest verifiable source in this order:
 3. This handoff and active control documents.
 4. Historical plans, evidence, and archives.
 
-Do not infer current merge state, branch ownership, provider status, or pilot
-results from a prior SHA or a historical PR note. Verify `origin/main`, the
-PR head, required checks, mergeability, and relevant provider/runtime evidence
-when the decision needs them.
+Verify merge state, branch ownership, provider status and pilot results from fresh `origin/main`, PR head, checks and relevant runtime evidence; never infer them from historical notes.
 
 ## Current Product Position
 
