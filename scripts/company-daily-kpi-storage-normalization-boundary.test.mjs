@@ -203,7 +203,7 @@ test('runtime schedule is documented without adding a scheduler', () => {
   }
 })
 
-test('handoff and intake describe observed evidence without enabling runtime', () => {
+test('handoff and intake preserve the contract boundary around private activation', () => {
   requireText(intake, 'Status: `sample_payload_observed`')
   requireText(intake, contractPath)
   requireText(
@@ -212,7 +212,8 @@ test('handoff and intake describe observed evidence without enabling runtime', (
   )
   requireText(currentState, contractPath)
   requireText(currentState, 'The network-free pure adapter, typed daily component storage, and atomic replacement repository are present without projecting into canonical KPI scoring.')
-  requireText(currentState, 'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.')
+  requireText(currentState, 'Reusable live connector mapping, hosted scheduling, and Excel replacement remain suspended.')
+  requireText(currentState, 'The private-server schedule and canonical KPI projection described above are active only for the approved company deployment.')
 })
 
 test('public boundary contains no realistic private connection or fixture values', () => {

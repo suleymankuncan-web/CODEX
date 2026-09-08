@@ -81,7 +81,7 @@ test('daily pull specification has all mandatory sections and requirement tracea
   }
 })
 
-test('daily pull public documents record product-owner approval without authorizing runtime', () => {
+test('daily pull public documents preserve approval boundaries after private activation', () => {
   requireText(
     contract,
     'Status: Approved — product-owner approval recorded 31 August 2026',
@@ -106,7 +106,7 @@ test('daily pull public documents record product-owner approval without authoriz
   )
   requireText(
     currentState,
-    'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.',
+    'Reusable live connector mapping, hosted scheduling, and Excel replacement remain suspended.',
   )
   assert.doesNotMatch(
     contract,
@@ -265,7 +265,7 @@ test('daily pull contract gates incompatible employee KPI uniqueness', () => {
   }
 })
 
-test('public documents use neutral aliases and keep runtime work parked', () => {
+test('public documents use neutral aliases and bound the private runtime exception', () => {
   for (const phrase of [
     'private operation and execution identifiers remain outside Git',
     'provider-native fields, endpoints, or private operation identifiers.',
@@ -275,7 +275,8 @@ test('public documents use neutral aliases and keep runtime work parked', () => 
   }
 
   requireText(genericJsonDraft, 'is not the selected contract for the company daily pull source')
-  requireText(currentState, 'Live connector mapping, scheduler, Docker runtime activation, canonical KPI projection, and Excel replacement remain suspended.')
+  requireText(currentState, 'Reusable live connector mapping, hosted scheduling, and Excel replacement remain suspended.')
+  requireText(currentState, 'The private-server schedule and canonical KPI projection described above are active only for the approved company deployment.')
   for (const alias of ['sales', 'footfall', 'gsm', 'store-directory']) {
     requireText(contract, `\`${alias}\``)
   }
