@@ -12,6 +12,7 @@ import {
   selectCsvFirstFieldsByExactSecond,
   validateOnpremKeycloakContract,
 } from './onprem-keycloak-contract.mjs'
+import { NETTY_PATCHES } from './onprem-keycloak-netty-patch.mjs'
 
 const read = (path) => readFileSync(path, 'utf8')
 
@@ -58,18 +59,22 @@ test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with chec
     'transport-native-unix-common',
   ]
   const patchLines = dockerfile.split(/\r?\n/).filter((line) =>
-    line.startsWith('ADD --checksum=sha256:') && line.includes('repo.maven.apache.org/maven2/io/netty/'),
+    line.startsWith('COPY --from=netty-downloader') && line.includes('/patch/jars/netty-'),
   )
 
+  assert.deepEqual(NETTY_PATCHES.map((artifact) => artifact.module), expectedModules)
   assert.equal(patchLines.length, expectedModules.length)
   for (const [index, module] of expectedModules.entries()) {
+    const artifact = NETTY_PATCHES[index]
+    assert.match(artifact.sha256, /^[a-f0-9]{64}$/)
+    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/io/netty/netty-${module}/4.1.137.Final/netty-${module}-4.1.137.Final.jar`)
     assert.match(
       patchLines[index],
-      new RegExp(`^ADD --checksum=sha256:[a-f0-9]{64} https://repo\\.maven\\.apache\\.org/maven2/io/netty/netty-${module}/4\\.1\\.137\\.Final/netty-${module}-4\\.1\\.137\\.Final\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${module}-4\\.1\\.136\\.Final\\.jar$`),
+      new RegExp(`^COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-${module}\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${module}-4\\.1\\.136\\.Final\\.jar$`),
     )
   }
-  assert.doesNotMatch(dockerfile, /repo\.maven\.apache\.org\/maven2\/io\/netty\/[^\s]+\/4\.1\.136\.Final/)
-  assert.match(dockerfile, /RUN chmod 0644 \/opt\/keycloak\/lib\/lib\/main\/io\.netty\.\*-4\.1\.136\.Final\.jar/)
+  assert.match(dockerfile, /ARG NODE_BUILD_IMAGE=node:24-trixie-slim@sha256:[a-f0-9]{64}/)
+  assert.match(dockerfile, /RUN node \/patch\/download\.mjs/)
 })
 
 test('identity lifecycle service account can read realm roles before mapping them', () => {
