@@ -12,6 +12,7 @@ import {
   selectCsvFirstFieldsByExactSecond,
   validateOnpremKeycloakContract,
 } from './onprem-keycloak-contract.mjs'
+import { NETTY_PATCHES } from './onprem-keycloak-netty-patch.mjs'
 
 const read = (path) => readFileSync(path, 'utf8')
 
@@ -36,6 +37,46 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   const result = validateOnpremKeycloakContract(baseline)
   assert.equal(result.ok, true, result.errors.join('; '))
   assert.equal(result.errors.length, 0)
+})
+
+test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with checksum-pinned 4.1.137 artifacts', () => {
+  const dockerfile = input().keycloakDockerfile
+  const expectedIds = [
+    'buffer',
+    'codec',
+    'codec-dns',
+    'codec-haproxy',
+    'codec-http',
+    'codec-http2',
+    'codec-socks',
+    'common',
+    'handler',
+    'handler-proxy',
+    'resolver',
+    'resolver-dns',
+    'transport',
+    'transport-classes-epoll',
+    'transport-native-epoll-linux-aarch_64',
+    'transport-native-epoll-linux-x86_64',
+    'transport-native-unix-common',
+  ]
+  const patchLines = dockerfile.split(/\r?\n/).filter((line) =>
+    line.startsWith('COPY --from=netty-downloader') && line.includes('/patch/jars/netty-'),
+  )
+
+  assert.deepEqual(NETTY_PATCHES.map((artifact) => artifact.id), expectedIds)
+  assert.equal(patchLines.length, expectedIds.length)
+  for (const [index, artifact] of NETTY_PATCHES.entries()) {
+    const classifierSuffix = artifact.classifier ? `-${artifact.classifier}` : ''
+    assert.match(artifact.sha256, /^[a-f0-9]{64}$/)
+    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/io/netty/netty-${artifact.module}/4.1.137.Final/netty-${artifact.module}-4.1.137.Final${classifierSuffix}.jar`)
+    assert.match(
+      patchLines[index],
+      new RegExp(`^COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-${artifact.id}\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${artifact.module}-4\\.1\\.136\\.Final${classifierSuffix}\\.jar$`),
+    )
+  }
+  assert.match(dockerfile, /ARG NODE_BUILD_IMAGE=node:24-trixie-slim@sha256:[a-f0-9]{64}/)
+  assert.match(dockerfile, /RUN node \/patch\/download\.mjs/)
 })
 
 test('identity lifecycle service account can read realm roles before mapping them', () => {

@@ -64,7 +64,7 @@ additional one-shot capacity and are not part of the 4.0-vCPU steady budget.
 ## Keycloak contract
 
 - The pinned upstream base is
-  `quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067`.
+  `quay.io/keycloak/keycloak:26.7.3@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54`.
   `infra/onprem/images/keycloak.Dockerfile` builds the final image with
   `kc.sh build --db=postgres --health-enabled=true --metrics-enabled=true`;
   the approved env file must contain the owner-signed digest of that final

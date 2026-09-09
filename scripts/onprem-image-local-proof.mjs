@@ -285,7 +285,7 @@ function parseStepSection(lines) {
     if (!['run', 'uses', 'if', 'env', 'with', 'id', 'name'].includes(property)) fail(`unsupported workflow step property: ${property}`)
   }
   const condition = lines.find((line) => /^        if:/.test(line))?.replace(/^        if:\s*/, '').trim() ?? null
-  if (condition !== null && condition !== "inputs.proof_mode == 'full'") fail(`unsupported workflow condition in ${name}`)
+  if (condition !== null && !["inputs.proof_mode == 'full'", "inputs.proof_mode == 'full' && github.event_name != 'pull_request'"].includes(condition)) fail(`unsupported workflow condition in ${name}`)
   for (const line of lines) {
     if (!line.includes('${{')) continue
     // Action inputs include runner.temp for upload paths.  They are resolved
@@ -389,7 +389,7 @@ export function extractFullProofPlan(source) {
     if (!step.uses || !/@[a-f0-9]{40}$/i.test(step.uses)) fail(`workflow action is not pinned: ${step.name}`)
   }
   const uploads = actionSteps.filter((step) => step.uses?.startsWith('actions/upload-artifact@'))
-  if (uploads.length !== 4 || uploads.some((step) => !step.with.path || step.with['if-no-files-found'] !== 'error')) fail('full proof upload action shape changed')
+  if (uploads.length !== 4 || uploads.some((step) => !step.with.path || step.with['if-no-files-found'] !== 'error' || step.with['retention-days'] !== '3')) fail('full proof upload action shape changed')
   const parsedUploads = uploads.map((step) => ({
     name: step.name,
     artifactName: step.with.name,
@@ -398,7 +398,7 @@ export function extractFullProofPlan(source) {
   }))
   for (const upload of uploads) {
     const withKeys = Object.keys(upload.with).sort()
-    if (withKeys.length !== 3 || withKeys.some((key, index) => key !== ['if-no-files-found', 'name', 'path'][index])) {
+    if (withKeys.length !== 4 || withKeys.some((key, index) => key !== ['if-no-files-found', 'name', 'path', 'retention-days'][index])) {
       fail(`full proof upload contract changed: ${upload.name}`)
     }
   }
