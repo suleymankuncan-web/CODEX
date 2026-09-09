@@ -41,7 +41,7 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
 
 test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with checksum-pinned 4.1.137 artifacts', () => {
   const dockerfile = input().keycloakDockerfile
-  const expectedModules = [
+  const expectedIds = [
     'buffer',
     'codec',
     'codec-dns',
@@ -56,21 +56,23 @@ test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with chec
     'resolver-dns',
     'transport',
     'transport-classes-epoll',
+    'transport-native-epoll-linux-aarch_64',
+    'transport-native-epoll-linux-x86_64',
     'transport-native-unix-common',
   ]
   const patchLines = dockerfile.split(/\r?\n/).filter((line) =>
     line.startsWith('COPY --from=netty-downloader') && line.includes('/patch/jars/netty-'),
   )
 
-  assert.deepEqual(NETTY_PATCHES.map((artifact) => artifact.module), expectedModules)
-  assert.equal(patchLines.length, expectedModules.length)
-  for (const [index, module] of expectedModules.entries()) {
-    const artifact = NETTY_PATCHES[index]
+  assert.deepEqual(NETTY_PATCHES.map((artifact) => artifact.id), expectedIds)
+  assert.equal(patchLines.length, expectedIds.length)
+  for (const [index, artifact] of NETTY_PATCHES.entries()) {
+    const classifierSuffix = artifact.classifier ? `-${artifact.classifier}` : ''
     assert.match(artifact.sha256, /^[a-f0-9]{64}$/)
-    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/io/netty/netty-${module}/4.1.137.Final/netty-${module}-4.1.137.Final.jar`)
+    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/io/netty/netty-${artifact.module}/4.1.137.Final/netty-${artifact.module}-4.1.137.Final${classifierSuffix}.jar`)
     assert.match(
       patchLines[index],
-      new RegExp(`^COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-${module}\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${module}-4\\.1\\.136\\.Final\\.jar$`),
+      new RegExp(`^COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-${artifact.id}\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${artifact.module}-4\\.1\\.136\\.Final${classifierSuffix}\\.jar$`),
     )
   }
   assert.match(dockerfile, /ARG NODE_BUILD_IMAGE=node:24-trixie-slim@sha256:[a-f0-9]{64}/)

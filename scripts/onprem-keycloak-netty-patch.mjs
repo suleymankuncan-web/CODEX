@@ -20,11 +20,15 @@ export const NETTY_PATCHES = Object.freeze([
   ['resolver-dns', '898d63ca62ed68ff46543c5344f969424b417f1e8d082fe2bb0181ba10144194'],
   ['transport', '6251adc2a2921572382732a2db188d4f4f2251fd6ebb49c5d44bbf33d6bfb1a7'],
   ['transport-classes-epoll', '55049554b799dc8e53bf234fffa36e001f7b5b65c32994b9bd59fc6356f1c52f'],
+  ['transport-native-epoll', '82fb63a2dc90c0bddb81e04065a1c06fb4c5be722ad5d64b46491daf8b6f9a01', 'linux-aarch_64'],
+  ['transport-native-epoll', '185db6053e0e9573d36fa4eb6567b26139afaa4daa7bf5a068e661568304542b', 'linux-x86_64'],
   ['transport-native-unix-common', '8056e7637f9948f953314894cf995ab664711b66c73c4cd5b593ae84f0b1048c'],
-].map(([module, sha256]) => Object.freeze({
+].map(([module, sha256, classifier]) => Object.freeze({
+  id: classifier ? `${module}-${classifier}` : module,
   module,
+  classifier: classifier ?? null,
   sha256,
-  url: `${MAVEN_ROOT}/netty-${module}/${VERSION}/netty-${module}-${VERSION}.jar`,
+  url: `${MAVEN_ROOT}/netty-${module}/${VERSION}/netty-${module}-${VERSION}${classifier ? `-${classifier}` : ''}.jar`,
 })))
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))
@@ -55,7 +59,7 @@ export async function downloadNettyPatches(outputDirectory = '/patch/jars') {
     if (observed !== artifact.sha256) {
       throw new Error(`checksum mismatch for netty-${artifact.module}: expected ${artifact.sha256}, observed ${observed}`)
     }
-    writeFileSync(`${outputDirectory}/netty-${artifact.module}.jar`, body, { mode: 0o644 })
+    writeFileSync(`${outputDirectory}/netty-${artifact.id}.jar`, body, { mode: 0o644 })
   }
 }
 

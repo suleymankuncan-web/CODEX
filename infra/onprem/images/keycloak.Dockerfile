@@ -29,6 +29,8 @@ COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-resolver
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-resolver-dns.jar /opt/keycloak/lib/lib/main/io.netty.netty-resolver-dns-4.1.136.Final.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-4.1.136.Final.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-classes-epoll.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-classes-epoll-4.1.136.Final.jar
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-native-epoll-linux-aarch_64.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-native-epoll-4.1.136.Final-linux-aarch_64.jar
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-native-epoll-linux-x86_64.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-native-epoll-4.1.136.Final-linux-x86_64.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-native-unix-common.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-native-unix-common-4.1.136.Final.jar
 USER 1000
 
