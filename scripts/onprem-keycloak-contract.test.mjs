@@ -38,6 +38,40 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   assert.equal(result.errors.length, 0)
 })
 
+test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with checksum-pinned 4.1.137 artifacts', () => {
+  const dockerfile = input().keycloakDockerfile
+  const expectedModules = [
+    'buffer',
+    'codec',
+    'codec-dns',
+    'codec-haproxy',
+    'codec-http',
+    'codec-http2',
+    'codec-socks',
+    'common',
+    'handler',
+    'handler-proxy',
+    'resolver',
+    'resolver-dns',
+    'transport',
+    'transport-classes-epoll',
+    'transport-native-unix-common',
+  ]
+  const patchLines = dockerfile.split(/\r?\n/).filter((line) =>
+    line.startsWith('ADD --checksum=sha256:') && line.includes('repo.maven.apache.org/maven2/io/netty/'),
+  )
+
+  assert.equal(patchLines.length, expectedModules.length)
+  for (const [index, module] of expectedModules.entries()) {
+    assert.match(
+      patchLines[index],
+      new RegExp(`^ADD --checksum=sha256:[a-f0-9]{64} https://repo\\.maven\\.apache\\.org/maven2/io/netty/netty-${module}/4\\.1\\.137\\.Final/netty-${module}-4\\.1\\.137\\.Final\\.jar /opt/keycloak/lib/lib/main/io\\.netty\\.netty-${module}-4\\.1\\.136\\.Final\\.jar$`),
+    )
+  }
+  assert.doesNotMatch(dockerfile, /repo\.maven\.apache\.org\/maven2\/io\/netty\/[^\s]+\/4\.1\.136\.Final/)
+  assert.match(dockerfile, /RUN chmod 0644 \/opt\/keycloak\/lib\/lib\/main\/io\.netty\.\*-4\.1\.136\.Final\.jar/)
+})
+
 test('identity lifecycle service account can read realm roles before mapping them', () => {
   const bootstrapScript = input().bootstrapScript
   const assignmentLoop = 'for management_role in query-users view-users manage-users view-realm; do'

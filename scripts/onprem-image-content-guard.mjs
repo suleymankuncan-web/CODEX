@@ -83,12 +83,12 @@ const KEYCLOAK_APPROVED_CONTENT = Object.freeze({
     sha256: 'c00012f3e911e6dbc06059bc7d524a0437150739c32becbb259b78ecf1e75807',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-model-storage-private-26.7.2.jar': Object.freeze({
-    sha256: '6bc023a2104a28940ae248bdc845f6d725ea1285bb6b3a40b7fab071cb48f311',
+  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-model-storage-private-26.7.3.jar': Object.freeze({
+    sha256: 'bc50fbd743d2c5dc5f7c68c0fccbdece69e3d26639e81ff6c180fe3734f22859',
     kind: 'jar',
   }),
-  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-server-spi-private-26.7.2.jar': Object.freeze({
-    sha256: 'a9541ffb99d572a487afdbd0ce112f3038f8d58119857219306e14d3af400afa',
+  'opt/keycloak/lib/lib/main/org.keycloak.keycloak-server-spi-private-26.7.3.jar': Object.freeze({
+    sha256: 'b2ea7aab2eaba5f046c81b61cbbaf2c35f24180c6b85d126aa57a1cb7d05741e',
     kind: 'jar',
   }),
   'opt/keycloak/lib/lib/main/org.wildfly.security.wildfly-elytron-credential-2.8.4.Final.jar': Object.freeze({
