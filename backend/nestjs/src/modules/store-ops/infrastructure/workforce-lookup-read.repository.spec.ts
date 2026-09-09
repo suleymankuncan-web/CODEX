@@ -5,6 +5,19 @@ import {
 } from "./repository-test-helpers";
 
 describe("WorkforceLookupReadRepository", () => {
+  it("orders numeric seller-code suffixes without overflowing PostgreSQL integer", async () => {
+    const query = createRepositoryQueryMock([{ seller_code: "FM9260908140111" }]);
+    const repository = new WorkforceLookupReadRepository({ query } as never);
+
+    await expect(repository.getLatestFranchiseSellerCode()).resolves.toBe(
+      "FM9260908140111",
+    );
+
+    const executed = getExecutedQuery(query);
+    expect(executed.sql).toContain("SUBSTRING(seller_code FROM 3)::bigint DESC");
+    expect(executed.sql).not.toContain("SUBSTRING(seller_code FROM 3)::integer DESC");
+  });
+
   it("uses employee hire date as the store workforce start-date fallback", async () => {
     const query = createRepositoryQueryMock();
     const repository = new WorkforceLookupReadRepository({ query } as never);
