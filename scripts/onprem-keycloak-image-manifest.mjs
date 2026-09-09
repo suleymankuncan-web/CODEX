@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync, statSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-const PINNED_BASE_IMAGE = 'quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067'
+const PINNED_BASE_IMAGE = 'quay.io/keycloak/keycloak:26.7.3@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54'
 const DIGEST = /^sha256:[0-9a-f]{64}$/i
 
 function sha256(path) {

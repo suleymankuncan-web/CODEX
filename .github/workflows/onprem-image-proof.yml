@@ -67,7 +67,7 @@ env:
   BACKEND_RUNTIME_IMAGE: gcr.io/distroless/nodejs24-debian13:nonroot@sha256:fbbdda866ea71aef98c4abece17e3d61fbf820cc2ef3961522caa2478716171a
   FRONTEND_RUNTIME_IMAGE: nginxinc/nginx-unprivileged:1.30.4-alpine-slim@sha256:e88d990b349df8cf4aa82f16642d7a23375016638c9ace4e5c6ca25028e62e65
   CADDY_IMAGE: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
-  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.7.2@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067
+  KEYCLOAK_BASE_IMAGE: quay.io/keycloak/keycloak:26.7.3@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54
   KEYCLOAK_IMAGE: hr-axis-onprem-keycloak:proof
   KEYCLOAK_TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
   TRIVY_IMAGE: aquasec/trivy:0.72.0@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f
@@ -159,7 +159,7 @@ jobs:
         run: |
           set -euo pipefail
           docker pull "$KEYCLOAK_BASE_IMAGE"
-          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:9d1f1b2b7261ff53c66cb1092dfcdc34a5fb77e81f9e6a6e75b8b6a795de8067"]'
+          docker image inspect "$KEYCLOAK_BASE_IMAGE" --format '{{json .RepoDigests}}' | grep -Fqx '["quay.io/keycloak/keycloak@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54"]'
           docker build --file infra/onprem/images/keycloak.Dockerfile --tag "$KEYCLOAK_IMAGE" \
             --build-arg KEYCLOAK_BASE_IMAGE="$KEYCLOAK_BASE_IMAGE" .
           test "$(docker image inspect "$KEYCLOAK_IMAGE" --format '{{.Config.Entrypoint}}')" = '[/opt/keycloak/bin/kc.sh]'
@@ -1007,27 +1007,30 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload sanitized runtime receipt
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-core-runtime-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: ${{ runner.temp }}/onprem-core-runtime-receipt.json
 
       - name: Upload sanitized Keycloak runtime receipt
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-keycloak-runtime-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: ${{ runner.temp }}/onprem-keycloak-runtime-receipt.json
 
       - name: Upload sanitized photo-storage proof and supply-chain evidence
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-photo-storage-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: |
             ${{ runner.temp }}/onprem-photo-storage-runtime-receipt.json
             proof/photo-storage-sbom.spdx.json
@@ -1035,11 +1038,12 @@ jobs:
             proof/photo-storage-license-receipt.json
 
       - name: Upload sanitized proof artifacts
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-image-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: |
             proof/*-content-guard.json
             proof/*-sbom.spdx.json
@@ -1392,6 +1396,7 @@ jobs:
         with:
           name: onprem-image-component-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: |
             proof/*-component-content-guard.json
             proof/*-component-layer-*-content-guard.json

@@ -10,7 +10,7 @@ import { ANGUS_EMBEDDED_LICENSE_POLICY, reconcileKeycloakLicenses } from './onpr
 const purl = (referenceLocator) => [{ referenceType: 'purl', referenceLocator }]
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const TEST_IMAGE_ID = `sha256:${'a'.repeat(64)}`
-const inventoryFor = (packageCount) => ({ image: 'hr-axis-onprem-keycloak:proof', imageId: TEST_IMAGE_ID, baseImage: 'quay.io/keycloak/keycloak:26.7.2@sha256:base', packageCount, dataClass: 'synthetic' })
+const inventoryFor = (packageCount) => ({ image: 'hr-axis-onprem-keycloak:proof', imageId: TEST_IMAGE_ID, baseImage: 'quay.io/keycloak/keycloak:26.7.3@sha256:base', packageCount, dataClass: 'synthetic' })
 const fixturePolicy = (packageCount, overrides = {}) => ({
   ...ANGUS_EMBEDDED_LICENSE_POLICY,
   expectedPackageCount: packageCount,
@@ -33,7 +33,7 @@ test('Keycloak license reconciliation covers every SBOM component and bundled ev
     const pathsPath = join(root, 'paths.txt')
     const bundlePath = join(root, 'evidence.tar')
     const sbom = { packages: [
-      { name: 'keycloak', SPDXID: 'SPDXRef-keycloak', versionInfo: '26.7.2', sourceInfo: 'fixture:keycloak', licenseConcluded: 'Apache-2.0', externalRefs: [{ referenceType: 'purl', referenceLocator: 'pkg:generic/keycloak@26.7.2' }] },
+      { name: 'keycloak', SPDXID: 'SPDXRef-keycloak', versionInfo: '26.7.3', sourceInfo: 'fixture:keycloak', licenseConcluded: 'Apache-2.0', externalRefs: [{ referenceType: 'purl', referenceLocator: 'pkg:generic/keycloak@26.7.3' }] },
       { name: 'runtime', SPDXID: 'SPDXRef-runtime', versionInfo: '1.0.0', sourceInfo: 'fixture:runtime', licenseDeclared: 'MIT', externalRefs: [{ referenceType: 'purl', referenceLocator: 'pkg:generic/runtime@1.0.0' }] },
     ] }
     writeFileSync(sbomPath, JSON.stringify(sbom))
@@ -114,7 +114,7 @@ test('Keycloak license reconciliation covers every SBOM component and bundled ev
 
     const invalidCases = [
       ['missing purl', [{ ...sbom.packages[0], externalRefs: [] }], /exactly one purl/],
-      ['multiple purls', [{ ...sbom.packages[0], externalRefs: [...purl('pkg:generic/keycloak@26.7.2'), ...purl('pkg:generic/other@1')] }], /exactly one purl/],
+      ['multiple purls', [{ ...sbom.packages[0], externalRefs: [...purl('pkg:generic/keycloak@26.7.3'), ...purl('pkg:generic/other@1')] }], /exactly one purl/],
       ['blank source', [{ ...sbom.packages[0], sourceInfo: '' }], /sourceInfo is missing/],
       ['unknown expression', [{ ...sbom.packages[0], licenseConcluded: 'Made-Up-License' }], /unknown SPDX license/],
       ['secondary unknown expression', [{ ...sbom.packages[0], licenseConcluded: 'Apache-2.0', licenseDeclared: 'Made-Up-License' }], /unknown SPDX license/],
