@@ -285,7 +285,7 @@ function parseStepSection(lines) {
     if (!['run', 'uses', 'if', 'env', 'with', 'id', 'name'].includes(property)) fail(`unsupported workflow step property: ${property}`)
   }
   const condition = lines.find((line) => /^        if:/.test(line))?.replace(/^        if:\s*/, '').trim() ?? null
-  if (condition !== null && condition !== "inputs.proof_mode == 'full'") fail(`unsupported workflow condition in ${name}`)
+  if (condition !== null && !["inputs.proof_mode == 'full'", "inputs.proof_mode == 'full' && github.event_name != 'pull_request'"].includes(condition)) fail(`unsupported workflow condition in ${name}`)
   for (const line of lines) {
     if (!line.includes('${{')) continue
     // Action inputs include runner.temp for upload paths.  They are resolved
