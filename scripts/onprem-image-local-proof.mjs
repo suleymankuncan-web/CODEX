@@ -69,21 +69,18 @@ const FULL_PROOF_UPLOAD_CONTRACT = Object.freeze([
     name: 'Upload sanitized runtime receipt',
     artifactName: 'onprem-core-runtime-proof-${{ github.sha }}',
     ifNoFilesFound: 'error',
-    retentionDays: '3',
     paths: Object.freeze(['${{ runner.temp }}/onprem-core-runtime-receipt.json']),
   }),
   Object.freeze({
     name: 'Upload sanitized Keycloak runtime receipt',
     artifactName: 'onprem-keycloak-runtime-proof-${{ github.sha }}',
     ifNoFilesFound: 'error',
-    retentionDays: '3',
     paths: Object.freeze(['${{ runner.temp }}/onprem-keycloak-runtime-receipt.json']),
   }),
   Object.freeze({
     name: 'Upload sanitized photo-storage proof and supply-chain evidence',
     artifactName: 'onprem-photo-storage-proof-${{ github.sha }}',
     ifNoFilesFound: 'error',
-    retentionDays: '3',
     paths: Object.freeze([
       '${{ runner.temp }}/onprem-photo-storage-runtime-receipt.json',
       'proof/photo-storage-sbom.spdx.json',
@@ -95,7 +92,6 @@ const FULL_PROOF_UPLOAD_CONTRACT = Object.freeze([
     name: 'Upload sanitized proof artifacts',
     artifactName: 'onprem-image-proof-${{ github.sha }}',
     ifNoFilesFound: 'error',
-    retentionDays: '3',
     paths: Object.freeze([
       'proof/*-content-guard.json',
       'proof/*-sbom.spdx.json',
@@ -325,7 +321,7 @@ function assertExactUploadContract(uploads) {
   for (const [index, upload] of uploads.entries()) {
     const expected = FULL_PROOF_UPLOAD_CONTRACT[index]
     const actualKeys = isObject(upload) ? Object.keys(upload).sort() : []
-    const expectedKeys = ['artifactName', 'ifNoFilesFound', 'name', 'paths', 'retentionDays']
+    const expectedKeys = ['artifactName', 'ifNoFilesFound', 'name', 'paths']
     const keysMatch = actualKeys.length === expectedKeys.length && actualKeys.every((key, keyIndex) => key === expectedKeys[keyIndex])
     const pathsMatch = Array.isArray(upload?.paths)
       && upload.paths.length === expected.paths.length
@@ -334,7 +330,6 @@ function assertExactUploadContract(uploads) {
       || upload.name !== expected.name
       || upload.artifactName !== expected.artifactName
       || upload.ifNoFilesFound !== expected.ifNoFilesFound
-      || upload.retentionDays !== expected.retentionDays
       || !pathsMatch) {
       fail(`full proof upload contract changed: ${expected.name}`)
     }
@@ -394,12 +389,11 @@ export function extractFullProofPlan(source) {
     if (!step.uses || !/@[a-f0-9]{40}$/i.test(step.uses)) fail(`workflow action is not pinned: ${step.name}`)
   }
   const uploads = actionSteps.filter((step) => step.uses?.startsWith('actions/upload-artifact@'))
-  if (uploads.length !== 4 || uploads.some((step) => !step.with.path || step.with['if-no-files-found'] !== 'error')) fail('full proof upload action shape changed')
+  if (uploads.length !== 4 || uploads.some((step) => !step.with.path || step.with['if-no-files-found'] !== 'error' || step.with['retention-days'] !== '3')) fail('full proof upload action shape changed')
   const parsedUploads = uploads.map((step) => ({
     name: step.name,
     artifactName: step.with.name,
     ifNoFilesFound: step.with['if-no-files-found'],
-    retentionDays: step.with['retention-days'],
     paths: step.with.path.split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
   }))
   for (const upload of uploads) {
