@@ -1012,6 +1012,7 @@ jobs:
         with:
           name: onprem-core-runtime-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: ${{ runner.temp }}/onprem-core-runtime-receipt.json
 
       - name: Upload sanitized Keycloak runtime receipt
@@ -1020,6 +1021,7 @@ jobs:
         with:
           name: onprem-keycloak-runtime-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: ${{ runner.temp }}/onprem-keycloak-runtime-receipt.json
 
       - name: Upload sanitized photo-storage proof and supply-chain evidence
@@ -1028,6 +1030,7 @@ jobs:
         with:
           name: onprem-photo-storage-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: |
             ${{ runner.temp }}/onprem-photo-storage-runtime-receipt.json
             proof/photo-storage-sbom.spdx.json
@@ -1040,6 +1043,7 @@ jobs:
         with:
           name: onprem-image-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: |
             proof/*-content-guard.json
             proof/*-sbom.spdx.json
@@ -1392,6 +1396,7 @@ jobs:
         with:
           name: onprem-image-component-proof-${{ github.sha }}
           if-no-files-found: error
+          retention-days: 3
           path: |
             proof/*-component-content-guard.json
             proof/*-component-layer-*-content-guard.json

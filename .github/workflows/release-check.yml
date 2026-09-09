@@ -90,7 +90,10 @@ jobs:
     name: frontend-release
     needs: root-contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The full browser suite normally finishes in about 14 minutes, but hosted
+    # runner throughput can vary substantially. Individual tests remain bounded
+    # by Playwright's 30-second timeout.
+    timeout-minutes: 40
     permissions:
       contents: read
 
@@ -142,7 +145,7 @@ jobs:
           name: playwright-test-results-${{ github.run_id }}-${{ github.run_attempt }}
           path: admin-web/test-results
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 3
 
   release-check:
     name: release-check
