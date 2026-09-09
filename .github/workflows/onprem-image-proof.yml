@@ -1007,7 +1007,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload sanitized runtime receipt
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-core-runtime-proof-${{ github.sha }}
@@ -1016,7 +1016,7 @@ jobs:
           path: ${{ runner.temp }}/onprem-core-runtime-receipt.json
 
       - name: Upload sanitized Keycloak runtime receipt
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-keycloak-runtime-proof-${{ github.sha }}
@@ -1025,7 +1025,7 @@ jobs:
           path: ${{ runner.temp }}/onprem-keycloak-runtime-receipt.json
 
       - name: Upload sanitized photo-storage proof and supply-chain evidence
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-photo-storage-proof-${{ github.sha }}
@@ -1038,7 +1038,7 @@ jobs:
             proof/photo-storage-license-receipt.json
 
       - name: Upload sanitized proof artifacts
-        if: inputs.proof_mode == 'full'
+        if: inputs.proof_mode == 'full' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: onprem-image-proof-${{ github.sha }}
