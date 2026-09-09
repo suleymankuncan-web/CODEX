@@ -56,7 +56,7 @@ export class WorkforceLookupReadRepository {
         SELECT seller_code
         FROM seller_code_candidates
         WHERE LEFT(seller_code, 2) = 'FM'
-        ORDER BY SUBSTRING(seller_code FROM 3)::integer DESC
+        ORDER BY SUBSTRING(seller_code FROM 3)::bigint DESC
         LIMIT 1
       `,
     );
