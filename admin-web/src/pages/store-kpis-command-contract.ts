@@ -37,8 +37,8 @@ export function classifyKpiReference(input: {
 // KPI-FR-003: personnel status remains independent from reference status.
 export function classifyPersonnelPerformance(score: number | null) {
   if (score === null || !Number.isFinite(score)) return 'unavailable' as const
-  if (score >= 85) return 'strong' as const
-  if (score >= 75) return 'watch' as const
+  if (score >= 59.5) return 'strong' as const
+  if (score >= 52.5) return 'watch' as const
   return 'behind' as const
 }
 

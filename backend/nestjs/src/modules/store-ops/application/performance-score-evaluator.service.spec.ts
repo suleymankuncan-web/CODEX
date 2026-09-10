@@ -89,22 +89,22 @@ describe("PerformanceScoreEvaluator", () => {
       ]),
     });
 
-    expect(result.scoreValue).toBe(87.33);
+    expect(result.scoreValue).toBe(61.13);
     expect(result.metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "TARGET_ACHIEVEMENT",
-          contributionValue: 44,
+          contributionValue: 30.8,
         }),
         expect.objectContaining({
           code: "ATV",
           label: "Average order value",
           benchmarkValue: 1000,
-          contributionValue: 24,
+          contributionValue: 16.8,
         }),
         expect.objectContaining({
           code: "BM_CHECKLIST",
-          contributionValue: 8,
+          contributionValue: 5.6,
         }),
         expect.objectContaining({
           code: "VM_CHECKLIST",
@@ -162,7 +162,7 @@ describe("PerformanceScoreEvaluator", () => {
         benchmarkFallback: "matched-or-canonical",
         useStoreChecklistFallback: false,
       }).scoreValue,
-    ).toBe(60);
+    ).toBe(42);
   });
 
   it("scores gsm_approval with achievementRate while keeping display percentage", () => {
@@ -197,13 +197,13 @@ describe("PerformanceScoreEvaluator", () => {
       ]),
     });
 
-    expect(result.scoreValue).toBe(98.56);
+    expect(result.scoreValue).toBe(68.99);
     expect(result.metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "gsm_approval",
           actualValue: 91.2052,
-          contributionValue: 4.5603,
+          contributionValue: 3.1922,
         }),
       ]),
     );
@@ -247,12 +247,12 @@ describe("PerformanceScoreEvaluator", () => {
       ]),
     });
 
-    expect(result.scoreValue).toBe(91.21);
+    expect(result.scoreValue).toBe(63.84);
     expect(result.metrics[0]).toEqual(
       expect.objectContaining({
         code: "GSM_ONAY",
         actualValue: 91.2052,
-        contributionValue: 91.2052,
+        contributionValue: 63.8436,
       }),
     );
   });

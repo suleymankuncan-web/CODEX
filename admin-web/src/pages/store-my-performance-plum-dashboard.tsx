@@ -424,7 +424,7 @@ export function StoreMyPerformancePlumDashboard({
           <div className="store-me-kpi-body store-me-kpi-copy">
             <p>{isPartial ? `${t('storeMe.incompleteData')} · ${scoreConfidence}` : scoreConfidence}</p>
           </div>
-          <KpiProgress label={t('storeMe.performanceScore')} value={scoreValue} />
+          <KpiProgress label={t('storeMe.performanceScore')} value={scoreValue / 140 * 100} displayValue={`${scoreValue} / 140`} />
           <RankStrip
             regionPopulationLabel={regionPopulationLabel}
             regionRankLabel={regionRankLabel}

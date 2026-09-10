@@ -34,7 +34,7 @@ export function buildRegionManagerSummary(
     current.storeCount += 1
     if (Number.isFinite(row.scoreValue)) {
       current.scores.push(row.scoreValue)
-      if (row.scoreValue < 75) current.riskStoreCount += 1
+      if (row.scoreValue < 52.5) current.riskStoreCount += 1
     }
     groups.set(key, current)
   }

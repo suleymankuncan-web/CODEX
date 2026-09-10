@@ -282,11 +282,11 @@ describe("ReportingService live leaderboard fallback", () => {
     expect(result.currentEmployee).toEqual(
       expect.objectContaining({
         displayName: "Ada Lovelace",
-        scoreValue: 120,
+        scoreValue: 90.3,
         rankings: {
-          turkeyRank: 1,
+          turkeyRank: 2,
           turkeyPopulation: 3,
-          regionRank: 1,
+          regionRank: 2,
           regionPopulation: 3,
           storeRank: 1,
           storePopulation: 2,

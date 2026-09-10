@@ -46,10 +46,10 @@ describe('KPI Command Canvas contract', () => {
   })
 
   it('KPI-FR-003 classifies personnel performance without reusing KPI reference labels', () => {
-    expect(classifyPersonnelPerformance(85)).toBe('strong')
-    expect(classifyPersonnelPerformance(84.99)).toBe('watch')
-    expect(classifyPersonnelPerformance(75)).toBe('watch')
-    expect(classifyPersonnelPerformance(74.99)).toBe('behind')
+    expect(classifyPersonnelPerformance(59.5)).toBe('strong')
+    expect(classifyPersonnelPerformance(59.49)).toBe('watch')
+    expect(classifyPersonnelPerformance(52.5)).toBe('watch')
+    expect(classifyPersonnelPerformance(52.49)).toBe('behind')
     expect(classifyPersonnelPerformance(null)).toBe('unavailable')
   })
 

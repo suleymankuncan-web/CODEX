@@ -231,7 +231,7 @@ export class ReportingStoreKpiReadService {
         !isChecklistMetric && displayBenchmarkSource === "TURKEY_AVERAGE" && row
           ? this.getBenchmarkValue(benchmarkLookup, matchingCodes)
           : null;
-      const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
+      const metricScore = this.kpiBenchmarkScoringService.scoreLiveMetric({
         metricCode: metric.code,
         actualValue: scoringActualValue,
         benchmarkValue,

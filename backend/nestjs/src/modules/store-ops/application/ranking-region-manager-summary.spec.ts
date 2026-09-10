@@ -2,20 +2,24 @@ import type { StoreRankingRow } from './ranking.contract'
 import { buildRegionManagerSummary } from './ranking-region-manager-summary'
 
 describe('KPI Region Manager summary', () => {
+  it('keeps reference performance and the 52.5 boundary outside the risk list', () => {
+    const rows = [70, 52.5, 52.49].map((scoreValue, i) => row({storeId: String(i), regionManagerUserId: 'm', regionManagerName: 'M', scoreValue}));
+    expect(buildRegionManagerSummary(rows, {limit: 10, offset: 0}).riskStoreCount).toBe(1);
+  });
   it('KPI-FR-001 keeps a manager with 51 stores in one authoritative bounded summary row', () => {
     const stores = [
       ...Array.from({ length: 51 }, (_, index) => row({
         storeId: `store-${String(index).padStart(2, '0')}`,
         regionManagerUserId: 'manager-1',
         regionManagerName: 'Onur Kaytan',
-        scoreValue: index === 0 ? 70 : 90,
+        scoreValue: index === 0 ? 49 : 63,
       })),
       row({ storeId: 'store-other', regionManagerUserId: 'manager-2', regionManagerName: 'Zeynep Ak', scoreValue: 80 }),
     ]
 
     expect(buildRegionManagerSummary(stores, { limit: 1, offset: 0 })).toEqual({
       items: [{
-        averageScore: expect.closeTo((70 + 50 * 90) / 51),
+        averageScore: expect.closeTo((49 + 50 * 63) / 51),
         displayName: 'Onur Kaytan',
         riskStoreCount: 1,
         storeCount: 51,
@@ -23,7 +27,7 @@ describe('KPI Region Manager summary', () => {
       }],
       meta: { limit: 1, offset: 0, total: 2 },
       riskItems: [{
-        averageScore: expect.closeTo((70 + 50 * 90) / 51),
+        averageScore: expect.closeTo((49 + 50 * 63) / 51),
         displayName: 'Onur Kaytan',
         riskStoreCount: 1,
         storeCount: 51,
@@ -36,7 +40,7 @@ describe('KPI Region Manager summary', () => {
 
   it('keeps stores without a manager explicit and last', () => {
     const result = buildRegionManagerSummary([
-      row({ storeId: 'store-unassigned', regionManagerUserId: null, regionManagerName: null, scoreValue: 72 }),
+      row({ storeId: 'store-unassigned', regionManagerUserId: null, regionManagerName: null, scoreValue: 50.4 }),
       row({ storeId: 'store-owned', regionManagerUserId: 'manager-1', regionManagerName: 'Ayşe Ak', scoreValue: 88 }),
     ], { limit: 50, offset: 0 })
 
@@ -47,7 +51,7 @@ describe('KPI Region Manager summary', () => {
   it('returns the complete risk-manager page beside the ordinary page', () => {
     const result = buildRegionManagerSummary([
       row({ storeId: 'store-safe', regionManagerUserId: 'manager-safe', regionManagerName: 'Safe Manager', scoreValue: 90 }),
-      row({ storeId: 'store-risk', regionManagerUserId: 'manager-risk', regionManagerName: 'Risk Manager', scoreValue: 60 }),
+      row({ storeId: 'store-risk', regionManagerUserId: 'manager-risk', regionManagerName: 'Risk Manager', scoreValue: 42 }),
     ], { limit: 20, offset: 0, riskOffset: 0 })
 
     expect(result.items).toHaveLength(2)

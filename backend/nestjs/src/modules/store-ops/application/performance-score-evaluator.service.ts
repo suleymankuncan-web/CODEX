@@ -18,7 +18,8 @@ export class PerformanceScoreEvaluator {
       const matchedMetric = matchedCode ? input.values.get(matchedCode) : undefined;
       const actualValue = matchedMetric?.actualValue ?? null;
       const targetValue = matchedMetric?.targetValue ?? null;
-      const scoringActualValue = matchedMetric?.scoreValue ?? actualValue;
+      const scoringActualValue = isGsmApprovalKpiCode(metric.code)
+        ? matchedMetric?.scoreValue ?? actualValue : actualValue;
       const scoringTargetValue =
         isGsmApprovalKpiCode(metric.code) &&
         matchedMetric?.scoreValue !== null &&
@@ -39,10 +40,10 @@ export class PerformanceScoreEvaluator {
         ? {
             scoreContribution:
               actualValue !== null && Number.isFinite(actualValue)
-                ? Number(((actualValue * metric.weightPercent) / 100).toFixed(4))
+                ? Number(((Math.max(0, Math.min(actualValue, 100)) * 0.7 * metric.weightPercent) / 100).toFixed(4))
                 : null,
           }
-        : this.kpiBenchmarkScoringService.scoreMetric({
+        : this.kpiBenchmarkScoringService.scoreLiveMetric({
             metricCode: metric.code,
             actualValue: scoringActualValue,
             benchmarkValue,

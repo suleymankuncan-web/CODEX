@@ -704,7 +704,7 @@ export class ReportingService {
         benchmarkSource === "TURKEY_AVERAGE" && row
           ? benchmarkLookup.get(row.kpi_code) ?? null
           : null;
-      const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
+      const metricScore = this.kpiBenchmarkScoringService.scoreLiveMetric({
         metricCode: metric.code,
         actualValue,
         benchmarkValue,
