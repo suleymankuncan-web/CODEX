@@ -24,6 +24,7 @@ export type EmployeeOffboardingRequestRow = {
   review_note: string | null;
   created_at: string;
   updated_at: string;
+  request_revision?: string;
 };
 
 export type EmployeeOffboardingRequestListResult = {
@@ -158,7 +159,8 @@ export class WorkforceOffboardingReadRepository {
           eor.reviewed_at,
           eor.review_note,
           eor.created_at,
-          eor.updated_at
+          eor.updated_at,
+          eor.updated_at::text AS request_revision
         FROM ops.employee_offboarding_request eor
         INNER JOIN ops.store s
           ON s.store_id = eor.store_id
