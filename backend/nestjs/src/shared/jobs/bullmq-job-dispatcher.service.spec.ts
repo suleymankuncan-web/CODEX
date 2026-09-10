@@ -1,3 +1,4 @@
+const jobStateMock = jest.fn().mockResolvedValue("waiting");
 const queueAddMock = jest.fn();
 const queueCloseMock = jest.fn();
 const queueConstructorMock = jest.fn((name: string) => ({
@@ -39,10 +40,30 @@ function createConfig(strictLocal: boolean) {
 describe("BullMqJobDispatcherService Redis bounds", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    queueAddMock.mockResolvedValue({ id: "synthetic-job" });
+    queueAddMock.mockResolvedValue({ id: "synthetic-job", getState: jobStateMock });
     queueCloseMock.mockResolvedValue(undefined);
     redisQuitMock.mockResolvedValue(undefined);
     redisStatus = "ready";
+    jobStateMock.mockResolvedValue("waiting");
+  });
+
+  it("uses the stable initial import ID in hosted mode as well", async () => {
+    const service = new BullMqJobDispatcherService(createConfig(false));
+    await service.dispatch("import-batch", {}, jest.fn(), { jobId: "batch-initial" });
+    expect(queueAddMock).toHaveBeenCalledWith("import-batch", {}, expect.objectContaining({ jobId: "batch-initial" }));
+  });
+
+  it("reports a retained completed import job honestly", async () => {
+    jobStateMock.mockResolvedValue("completed");
+    const service = new BullMqJobDispatcherService(createConfig(false));
+    expect((await service.dispatch("import-batch", {}, jest.fn(), { jobId: "batch-initial" })).status).toBe("completed");
+  });
+
+  it.each(["failed", "unknown"])("does not report a %s retained import job as queued", async (state) => {
+    jobStateMock.mockResolvedValue(state);
+    const service = new BullMqJobDispatcherService(createConfig(false));
+    await expect(service.dispatch("import-batch", {}, jest.fn(), { jobId: "batch-initial" }))
+      .rejects.toThrow("enqueue was not confirmed");
   });
 
   it("keeps hosted Redis producer retry behavior unchanged", () => {
@@ -56,9 +77,9 @@ describe("BullMqJobDispatcherService Redis bounds", () => {
 
   it("keeps strict-local dispatch pending until Redis confirms the deterministic enqueue", async () => {
     jest.useFakeTimers();
-    let resolveAdd: ((value: { id: string }) => void) | undefined;
+    let resolveAdd: ((value: { id: string; getState: typeof jobStateMock }) => void) | undefined;
     queueAddMock.mockImplementation(
-      () => new Promise<{ id: string }>((resolve) => {
+      () => new Promise<{ id: string; getState: typeof jobStateMock }>((resolve) => {
         resolveAdd = resolve;
       }),
     );
@@ -77,7 +98,7 @@ describe("BullMqJobDispatcherService Redis bounds", () => {
     await jest.advanceTimersByTimeAsync(100);
 
     expect(settled).toBe(false);
-    resolveAdd?.({ id: "import-batch-synthetic-initial" });
+    resolveAdd?.({ id: "import-batch-synthetic-initial", getState: jobStateMock });
 
     await expect(dispatch).resolves.toEqual(
       expect.objectContaining({ jobId: "import-batch-synthetic-initial", status: "queued" }),

@@ -105,15 +105,17 @@ export class IntegrationImportCommandService {
       rows,
     });
 
-    const job = batch.reused
-      ? { status: "queued" as const, jobType: "import-batch" as const, backend: "reused" }
+    // A pending row is not proof of enqueue: retry the same deterministic job.
+    const jobId = `import-batch-${batch.batchId}-initial`;
+    const job = batch.reused && batch.status !== "pending"
+      ? { status: batch.status, jobType: "import-batch" as const, backend: "reused", jobId: null, queueName: null }
       : await this.jobDispatcher.dispatch(
           "import-batch",
           { batchId: batch.batchId } satisfies ImportBatchJobPayload,
           async ({ batchId }: ImportBatchJobPayload) => {
             await this.materializationService.materializeBatch(batchId);
           },
-          { strictLocalJobId: `import-batch-${batch.batchId}-initial` },
+          { jobId, strictLocalJobId: jobId },
         );
 
     logStructuredMessage(this.logger, "import_batch.command.accepted", {

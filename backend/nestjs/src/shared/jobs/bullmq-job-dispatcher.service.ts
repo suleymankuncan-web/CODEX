@@ -90,7 +90,14 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
       jobId,
     });
 
-    logStructuredMessage(this.logger, "job.dispatch.queued", {
+    // queue.add can return an existing retained job for a deterministic ID.
+    const state = type === "import-batch" && jobId ? await job.getState() : undefined;
+    if (state === "failed" || state === "unknown") {
+      throw new Error(`Import job is ${state}; enqueue was not confirmed`);
+    }
+    const status = state === "completed" ? "completed" : "queued";
+
+    logStructuredMessage(this.logger, `job.dispatch.${status}`, {
       jobId: job.id?.toString() ?? null,
       jobType: type,
       queueName: queue.name,
@@ -108,7 +115,7 @@ export class BullMqJobDispatcherService implements JobDispatcher, OnModuleDestro
     });
 
     return {
-      status: "queued" as const,
+      status,
       jobType: type,
       backend: "bullmq",
       jobId: job.id?.toString() ?? null,

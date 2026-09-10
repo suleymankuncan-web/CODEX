@@ -1,7 +1,7 @@
 export type JobType = "import-batch" | "snapshot-run" | "visual-comparison-shadow";
 
 export interface JobDispatchResult {
-  status: "queued";
+  status: "queued" | "completed";
   jobType: JobType;
   backend: string;
   jobId?: string | null;
