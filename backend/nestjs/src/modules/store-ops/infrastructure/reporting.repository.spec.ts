@@ -1,3 +1,4 @@
+import { personnelPeriodTargetSql } from "./personnel-period-sql";
 import { ReportingRepository } from "./reporting.repository";
 
 describe("ReportingRepository access scope contract", () => {
@@ -198,9 +199,9 @@ describe("ReportingRepository benchmark queries", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("scope_type = 'employee'");
-    expect(sql).toContain("kd.kpi_code IN ('ATV', 'UPT', 'NET_SALES', 'ITEM_COUNT', 'TICKET_COUNT')");
-    expect(sql).toContain("SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)");
-    expect(sql).toContain("SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)");
+    expect(sql).toContain("kd.kpi_code IN ('NET_SALES', 'ITEM_COUNT', 'TICKET_COUNT')");
+    expect(sql).toContain("SUM(sales) / NULLIF(SUM(tickets), 0)");
+    expect(sql).toContain("SUM(items) / NULLIF(SUM(tickets), 0)");
     expect(sql).not.toContain("AVG(actual_value)::text AS benchmark_value");
     expect(sql).not.toContain("direct_benchmark");
   });
@@ -251,7 +252,7 @@ describe("ReportingRepository personnel target reference queries", () => {
     expect(sql).toContain(
       "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
     );
-    expect(sql).toContain("ptr.target_value::text AS target_value");
+    expect(sql).toContain(`${personnelPeriodTargetSql}::text AS target_value`);
     expect(sql).toContain(
       "ptr.personnel_target_reference_id::text AS personnel_target_reference_id",
     );
@@ -278,7 +279,7 @@ describe("ReportingRepository personnel target reference queries", () => {
     expect(sql).toContain(
       "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
     );
-    expect(sql).toContain("ptr.target_value::text AS target_value");
+    expect(sql).toContain(`${personnelPeriodTargetSql}::text AS target_value`);
     expect(sql).toContain(
       "ptr.personnel_target_reference_id::text AS personnel_target_reference_id",
     );

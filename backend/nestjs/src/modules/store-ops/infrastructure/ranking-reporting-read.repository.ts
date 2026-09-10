@@ -1,4 +1,7 @@
+import { personnelPeriodTargetSql } from "./personnel-period-sql";
 import { Injectable } from "@nestjs/common";
+import { readRankingStoreRange } from "./ranking-range-read";
+import { readRankingPersonnelRange } from "./ranking-personnel-range-read";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 @Injectable()
@@ -84,7 +87,9 @@ export class RankingReportingReadRepository {
     periodType: string;
     periodStart: string;
     periodEnd: string;
+    isRange?: boolean;
   }) {
+    if (input.isRange || (input.periodType === "daily" && input.periodStart !== input.periodEnd)) return readRankingStoreRange(this.databaseService, input);
     if (input.metricCodes.length === 0) {
       return [];
     }
@@ -192,7 +197,7 @@ export class RankingReportingReadRepository {
     const clauses = [
       `ci.status = 'completed'`,
       `ci.completed_at IS NOT NULL`,
-      `ci.completed_at::date BETWEEN $1::date AND $2::date`,
+      `ci.completed_at >= ($1::date::timestamp AT TIME ZONE 'Europe/Istanbul') AND ci.completed_at < (($2::date + 1)::timestamp AT TIME ZONE 'Europe/Istanbul')`,
       `ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')`,
       `store.kpi_import_enabled = TRUE`,
     ];
@@ -284,12 +289,14 @@ export class RankingReportingReadRepository {
   }
 
   async listRankingPersonnelKpiRows(input: {
+    isRange?: boolean;
     metricCodes: string[];
     companyIds: string[];
     periodType: string;
     periodStart: string;
     periodEnd: string;
   }) {
+    if (input.isRange) return readRankingPersonnelRange(this.databaseService, input);
     if (input.metricCodes.length === 0) {
       return [];
     }
@@ -347,7 +354,7 @@ export class RankingReportingReadRepository {
           kd.kpi_code,
           kd.kpi_name,
           ka.actual_value::text AS actual_value,
-          ptr.target_value::text AS target_value
+          ${personnelPeriodTargetSql}::text AS target_value
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id

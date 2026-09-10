@@ -2385,6 +2385,17 @@ export type components = {
         "riskStoreCount": number
       }
       "storeLeaderboard": {
+        "currentStoreComparisons"?: Array<{
+            "code": string
+            "turkey": {
+              "rank": number | null
+              "population": number
+            }
+            "region": {
+              "rank": number | null
+              "population": number
+            }
+          }>
         "items": Array<{
             "subject": "store"
             "storeId": string
@@ -2449,6 +2460,7 @@ export type components = {
             "storeRank": number | null
             "storePopulation": number
             "scoreValue": number
+            "storeScoreShare"?: number | null
             "canOpenProfile": boolean
             "visibility": "summary" | "detail"
             "metrics"?: Array<{
@@ -2475,6 +2487,7 @@ export type components = {
           "storeRank": number | null
           "storePopulation": number
           "scoreValue": number
+          "storeScoreShare"?: number | null
           "canOpenProfile": boolean
           "visibility": "summary" | "detail"
           "metrics"?: Array<{
@@ -2501,6 +2514,7 @@ export type components = {
             "storeRank": number | null
             "storePopulation": number
             "scoreValue": number
+            "storeScoreShare"?: number | null
             "canOpenProfile": boolean
             "visibility": "summary" | "detail"
             "metrics"?: Array<{

@@ -1,4 +1,5 @@
 import { IsDateString, IsIn, IsOptional } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class GetMyPerformanceQueryDto {
   @IsOptional()
@@ -16,4 +17,9 @@ export class GetMyPerformanceQueryDto {
   @IsOptional()
   @IsDateString()
   periodStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({ format: "date" })
+  periodEnd?: string;
 }

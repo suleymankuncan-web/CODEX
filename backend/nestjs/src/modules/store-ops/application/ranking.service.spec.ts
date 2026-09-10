@@ -373,8 +373,8 @@ describe("RankingService", () => {
       assignedStoreIds: ["store-001"],
       periodType: "monthly",
     });
-
     expect(result.access.globalMode).toBe("top100");
+    expect(result.storeLeaderboard.currentStoreComparisons).toHaveLength(8); expect(result.storeLeaderboard.items[0]).not.toHaveProperty("metrics"); expect(result.storeLeaderboard.currentStoreComparisons?.every(item => !('storeId' in item))).toBe(true);
     expect(result.personnelLeaderboard.items[0]).not.toHaveProperty("metrics");
     expect(result.personnelLeaderboard.managedStorePersonnel).toHaveLength(5);
     expect(result.personnelLeaderboard.managedStorePersonnel[0]).toEqual(

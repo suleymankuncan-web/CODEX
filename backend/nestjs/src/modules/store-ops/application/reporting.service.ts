@@ -1,8 +1,8 @@
+import { resolveRankingDateRange } from "./ranking-date-range";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { buildListResponse } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
-import { KpiScoreProfile } from "./kpi-config.contract";
 import { createSnapshotKpiConfigProvider, getDefaultKpiConfig, mapKpiConfigVersionMetadata, resolveKpiConfigFromRows, validateKpiConfigInput } from "./reporting-kpi-config.helpers";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
@@ -294,6 +294,7 @@ export class ReportingService {
     storeIds: string[];
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    periodEnd?: string;
     storeId?: string; regionManagerUserId?: string;
   }) {
     return this.storeKpiReadService.getStoreKpiHighlights(input);
@@ -317,6 +318,7 @@ export class ReportingService {
     snapshotDate?: string;
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    periodEnd?: string;
   }) {
     if (input.mode === "closed") {
       return this.getClosedMyPerformance(input);
@@ -339,6 +341,7 @@ export class ReportingService {
     snapshotDate?: string;
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    periodEnd?: string;
   }) {
     if (!this.isUuid(input.targetEmployeeId)) {
       throw new BadRequestException("Invalid personnel profile id");
@@ -511,7 +514,9 @@ export class ReportingService {
     storeIds: string[];
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    periodEnd?: string;
   }) {
+    const dateRange = resolveRankingDateRange(input);
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
     const metricCodes = getProfileMetricCodes(profile);
@@ -580,7 +585,20 @@ export class ReportingService {
       storeIds: input.storeIds,
       allowGlobalScope,
     });
-    const latestPeriod = await this.reportingRepository.getLatestEmployeeKpiPeriod({
+    const rangeAssignment = dateRange ? await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId) : null;
+    if (dateRange && !allowGlobalScope && !(rangeAssignment && (
+      input.storeIds.length ? input.storeIds.includes(rangeAssignment.store_id ?? "") :
+      input.regionIds.length ? input.regionIds.includes(rangeAssignment.region_id ?? "") :
+      input.companyIds.length > 0 && input.companyIds.includes(rangeAssignment.company_id ?? "")
+    ))) throw new ForbiddenException("Personnel range is outside the current user's scope");
+    const rangeRows = dateRange ? (await this.rankingReportingReadRepository.listRankingPersonnelKpiRows({
+      isRange: true, metricCodes: employeeDataMetricCodes, companyIds: input.companyIds,
+      periodType: "daily", periodStart: dateRange.period_start, periodEnd: dateRange.period_end,
+    })).filter(row => row.actual_value !== null).map(row => ({
+      ...row, actual_value: row.actual_value!, first_name: row.first_name ?? "", last_name: row.last_name ?? "",
+      kpi_name: row.kpi_name ?? row.kpi_code, personnel_target_reference_id: null,
+    })) : null;
+    const latestPeriod = dateRange ? { ...dateRange, store_id: rangeAssignment?.store_id ?? null } : await this.reportingRepository.getLatestEmployeeKpiPeriod({
       employeeId,
       metricCodes: employeeDataMetricCodes,
       companyIds: input.companyIds,
@@ -639,7 +657,7 @@ export class ReportingService {
       };
     }
 
-    const employeeRows = await this.reportingRepository.getEmployeePerformanceRows({
+    const employeeRows = rangeRows ? rangeRows.filter(row => row.employee_id === employeeId && row.store_id === rangeAssignment?.store_id) : await this.reportingRepository.getEmployeePerformanceRows({
       employeeId,
       metricCodes: employeeDataMetricCodes,
       periodStart: latestPeriod.period_start,
@@ -662,7 +680,7 @@ export class ReportingService {
         periodEnd: latestPeriod.period_end,
       });
     }
-    let turkeyRows = await this.reportingRepository.getPeerEmployeePerformanceRows({
+    let turkeyRows = rangeRows ?? await this.reportingRepository.getPeerEmployeePerformanceRows({
       metricCodes,
       companyId: input.companyIds[0] ?? undefined,
       storeId: null,
@@ -670,7 +688,7 @@ export class ReportingService {
       periodEnd: latestPeriod.period_end,
     });
 
-    if (turkeyRows.length === 0) {
+    if (!dateRange && turkeyRows.length === 0) {
       turkeyRows = await this.reportingRepository.getPeerEmployeePerformanceRows({
         metricCodes,
         companyId: undefined,
@@ -1060,63 +1078,4 @@ export class ReportingService {
     };
   }
 
-  private buildClosedStoreLeaderboard(
-    rows: Array<{
-      store_id: string;
-      store_name: string;
-      kpi_code: string;
-      actual_value: string | null;
-    }>,
-    profile: KpiScoreProfile,
-    limit: number,
-  ) {
-    const byStore = new Map<
-      string,
-      {
-        storeName: string;
-        values: Record<string, number>;
-      }
-    >();
-
-    rows.forEach((row) => {
-      const current = byStore.get(row.store_id) ?? {
-        storeName: row.store_name,
-        values: {},
-      };
-      if (row.actual_value !== null) {
-        current.values[row.kpi_code] = Number(row.actual_value);
-      }
-      byStore.set(row.store_id, current);
-    });
-
-    return [...byStore.entries()]
-      .map(([storeId, value]) => {
-        const scoreValue = profile.metrics.reduce((sum, metric) => {
-          const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-          const matchedValue = matchingCodes
-            .map((code) => value.values[code])
-            .find((candidate) => typeof candidate === "number");
-          return sum + (((matchedValue ?? 0) * metric.weightPercent) / 100);
-        }, 0);
-
-        const matchedMetrics = profile.metrics.filter((metric) => {
-          const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-          return matchingCodes.some((code) => typeof value.values[code] === "number");
-        }).length;
-
-        return {
-          storeId,
-          storeName: value.storeName,
-          scoreValue: Number(scoreValue.toFixed(2)),
-          matchedMetrics,
-          totalMetrics: profile.metrics.length,
-        };
-      })
-      .sort((left, right) => right.scoreValue - left.scoreValue)
-      .slice(0, limit)
-      .map((row, index) => ({
-        ...row,
-        rank: index + 1,
-      }));
-  }
 }

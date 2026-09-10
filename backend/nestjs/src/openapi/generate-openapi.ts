@@ -3084,7 +3084,7 @@ const reportingPersonnelRankingRowSchema = {
     population: { type: "integer", minimum: 0 },
     storeRank: { type: "integer", nullable: true },
     storePopulation: { type: "integer", minimum: 0 },
-    scoreValue: { type: "number" },
+    scoreValue: { type: "number" }, storeScoreShare: { type: "number", nullable: true, minimum: 0, maximum: 1, description: "Net sales × personnel KPI score share within the store before pagination. Null when allocation inputs are incomplete; omitted for summary rows. This is an allocation, not causal impact." },
     canOpenProfile: { type: "boolean" },
     visibility: { type: "string", enum: ["summary", "detail"] },
     metrics: {
@@ -3189,10 +3189,10 @@ const reportingRankingsResponseSchema = {
       },
     },
     scopeSummary: { type: "object", required: ["storeCount", "activePersonnelCount"], properties: { storeCount: { type: "integer", minimum: 0 }, activePersonnelCount: { type: "integer", minimum: 0 } } }, regionManagerLeaderboard: { type: "object", required: ["items", "meta", "riskItems", "riskMeta", "riskStoreCount"], properties: { items: { type: "array", items: { type: "object", required: ["userId", "displayName", "storeCount", "riskStoreCount", "averageScore"], properties: { userId: { type: "string", nullable: true }, displayName: { type: "string", nullable: true }, storeCount: { type: "integer", minimum: 0 }, riskStoreCount: { type: "integer", minimum: 0 }, averageScore: { type: "number", nullable: true } } } }, meta: reportingRankingMetaSchema, riskItems: { type: "array", items: { type: "object", required: ["userId", "displayName", "storeCount", "riskStoreCount", "averageScore"], properties: { userId: { type: "string", nullable: true }, displayName: { type: "string", nullable: true }, storeCount: { type: "integer", minimum: 0 }, riskStoreCount: { type: "integer", minimum: 0 }, averageScore: { type: "number", nullable: true } } } }, riskMeta: reportingRankingMetaSchema, riskStoreCount: { type: "integer", minimum: 0 } } },
-    storeLeaderboard: {
-      type: "object",
+    storeLeaderboard: { type: "object", description: "Store standings; currentStoreComparisons contains aggregate positions for the authorized store only.",
       required: ["items", "currentStore", "meta"],
       properties: {
+        currentStoreComparisons: { type: "array", items: { type: "object", required: ["code", "turkey", "region"], properties: { code: { type: "string" }, turkey: { type: "object", required: ["rank", "population"], properties: { rank: { type: "integer", nullable: true }, population: { type: "integer" } } }, region: { type: "object", required: ["rank", "population"], properties: { rank: { type: "integer", nullable: true }, population: { type: "integer" } } } } } },
         items: {
           type: "array",
           items: reportingStoreRankingRowSchema,

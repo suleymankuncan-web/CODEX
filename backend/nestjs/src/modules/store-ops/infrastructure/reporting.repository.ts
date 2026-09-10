@@ -1,3 +1,5 @@
+import { readEmployeeTurkeyBenchmarks } from "./personnel-benchmark-read";
+import { personnelPeriodTargetSql } from "./personnel-period-sql";
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 
@@ -230,70 +232,7 @@ export class ReportingRepository {
     companyId?: string;
     periodType?: string;
   }) {
-    const params: unknown[] = [input.periodStart, input.periodEnd];
-    const clauses = [
-      `ka.scope_type = 'employee'`,
-      `ka.period_start >= $1::date`,
-      `ka.period_end <= $2::date`,
-      `kd.kpi_code IN ('ATV', 'UPT', 'NET_SALES', 'ITEM_COUNT', 'TICKET_COUNT')`,
-      `COALESCE(ka.source_type, '') <> 'demo_seed'`,
-    ];
-
-    if (input.periodType) {
-      params.push(input.periodType);
-      clauses.push(`ka.period_type = $${params.length}`);
-    }
-
-    if (input.companyId) {
-      params.push(input.companyId);
-      clauses.push(`ka.company_id = $${params.length}::uuid`);
-    }
-
-    const result = await this.databaseService.query<{
-      kpi_code: string;
-      benchmark_value: string | null;
-    }>(
-      `
-        WITH scoped_actual AS (
-          SELECT
-            ka.employee_id,
-            kd.kpi_code,
-            SUM(ka.actual_value) AS actual_value
-          FROM ops.kpi_actual ka
-          INNER JOIN ops.kpi_definition kd
-            ON kd.kpi_id = ka.kpi_id
-          WHERE ${clauses.join(" AND ")}
-          GROUP BY ka.employee_id, kd.kpi_code
-        ),
-        component_benchmark AS (
-          SELECT 'ATV' AS kpi_code,
-                 (SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
-          FROM scoped_actual net_sales
-          INNER JOIN scoped_actual ticket_count
-            ON ticket_count.employee_id = net_sales.employee_id
-           AND ticket_count.kpi_code = 'TICKET_COUNT'
-          WHERE net_sales.kpi_code = 'NET_SALES'
-          UNION ALL
-          SELECT 'UPT' AS kpi_code,
-                 (SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
-          FROM scoped_actual item_count
-          INNER JOIN scoped_actual ticket_count
-            ON ticket_count.employee_id = item_count.employee_id
-           AND ticket_count.kpi_code = 'TICKET_COUNT'
-          WHERE item_count.kpi_code = 'ITEM_COUNT'
-        )
-        SELECT
-          requested.kpi_code,
-          component_benchmark.benchmark_value AS benchmark_value
-        FROM (VALUES ('ATV'), ('UPT')) AS requested(kpi_code)
-        LEFT JOIN component_benchmark
-          ON component_benchmark.kpi_code = requested.kpi_code
-        ORDER BY requested.kpi_code ASC
-      `,
-      params,
-    );
-
-    return result.rows;
+    return readEmployeeTurkeyBenchmarks(this.databaseService, input);
   }
 
   async getLatestEmployeeKpiPeriod(input: {
@@ -503,7 +442,7 @@ export class ReportingRepository {
           store.region_id::text AS region_id,
           kd.kpi_code,
           kd.kpi_name,
-          ptr.target_value::text AS target_value,
+          ${personnelPeriodTargetSql}::text AS target_value,
           ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
           ka.actual_value::text AS actual_value
         FROM ops.kpi_actual ka
@@ -592,7 +531,7 @@ export class ReportingRepository {
           store_sales.store_net_sales_value::text AS store_net_sales_value,
           kd.kpi_code,
           kd.kpi_name,
-          ptr.target_value::text AS target_value,
+          ${personnelPeriodTargetSql}::text AS target_value,
           ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
           ka.actual_value::text AS actual_value
         FROM ops.kpi_actual ka

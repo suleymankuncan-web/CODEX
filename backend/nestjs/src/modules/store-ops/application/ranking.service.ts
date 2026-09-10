@@ -1,4 +1,6 @@
 import { Injectable } from "@nestjs/common";
+import { buildCurrentStoreComparisons } from "./ranking-store-comparisons";
+import { resolveRankingDateRange } from "./ranking-date-range";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
@@ -14,7 +16,6 @@ import {
   RankingMetricValue,
   PersonnelRankingRow,
   RankingPeriodType,
-  RankingReferenceGroup,
   RankingResponse,
   RankingSortDirection,
   RankingSortKey,
@@ -23,9 +24,8 @@ import { resolveRankingAccess } from "./ranking-access.policy";
 import {
   applyPersonnelFilters,
   applyStoreFilters,
-  average,
+  buildRankingReferenceGroup,
   getEmptyRankingResponse,
-  getMetricComparableValue,
   mapAvailablePeriods,
   maskPersonnelRow,
   maskStoreRow,
@@ -49,6 +49,7 @@ import {
 } from "./personnel-ranking-eligibility.contract";
 import { buildRegionManagerSummary } from "./ranking-region-manager-summary";
 import { buildBoundedManagedPersonnelPage } from "./ranking-managed-personnel-page";
+import { personnelStoreScoreShares } from "./personnel-store-score-share";
 import {
   buildScopedRankingFilterOptions,
   selectScopedRankingFilterRows,
@@ -87,6 +88,7 @@ type RawPersonnelRankingKpiRow = {
 };
 type UnrankedPersonnelRankingCandidate = UnrankedPersonnelRankingRow & {
   rankingEligibility: PersonnelRankingEligibilityResult;
+  allocationWeight: number | null;
 };
 type ActivePersonnelAssignmentScope = Awaited<ReturnType<
   ReportingRepository["getActiveEmployeeAssignmentScope"]
@@ -101,6 +103,7 @@ export type GetRankingsInput = RankingFilters & {
   assignedStoreIds: string[];
   periodType?: RankingPeriodType;
   periodStart?: string;
+  periodEnd?: string;
   sortKey?: RankingSortKey;
   sortDirection?: RankingSortDirection;
   limit?: number;
@@ -125,6 +128,7 @@ export class RankingService {
   ) {}
 
   async getRankings(input: GetRankingsInput): Promise<RankingResponse> {
+    const dateRange = resolveRankingDateRange(input);
     const access = resolveRankingAccess({
       roleCodes: input.roleCodes,
       requestedLimit: input.limit,
@@ -156,7 +160,7 @@ export class RankingService {
         employeeId: input.employeeId,
         companyIds: input.companyIds,
       }),
-      this.rankingReportingReadRepository.getLatestRankingPeriod({
+      dateRange ?? this.rankingReportingReadRepository.getLatestRankingPeriod({
         metricCodes: allMetricCodes,
         periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart,
@@ -195,6 +199,7 @@ export class RankingService {
       personnelBenchmarkRows,
     ] = await Promise.all([
       this.rankingReportingReadRepository.listRankingStoreKpiRows({
+        isRange: Boolean(dateRange),
         metricCodes: storeMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
@@ -207,6 +212,7 @@ export class RankingService {
         periodEnd: latestPeriod.period_end,
       }),
       this.rankingReportingReadRepository.listRankingPersonnelKpiRows({
+        isRange: Boolean(dateRange),
         metricCodes: personnelMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
@@ -214,6 +220,7 @@ export class RankingService {
         periodEnd: latestPeriod.period_end,
       }),
       this.getStoreBenchmarks({
+        isRange: Boolean(dateRange),
         companyId: input.companyIds[0],
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
@@ -242,10 +249,15 @@ export class RankingService {
       profile: personnelProfile,
       benchmarkLookup: personnelBenchmarkLookup,
     });
+    const storeScoreShares = personnelStoreScoreShares(personnelCandidates.filter(
+      row => row.rankingEligibility.reason !== "store_manager_excluded",
+    ));
     const personnelRows = rankPersonnelRows(
       personnelCandidates
         .filter((row) => row.rankingEligibility.isEligible)
-        .map(({ rankingEligibility: _rankingEligibility, ...row }) => row),
+        .map(({ rankingEligibility: _rankingEligibility, allocationWeight: _allocationWeight, ...row }) => ({
+          ...row, storeScoreShare: storeScoreShares.get(row.employeeId) ?? null,
+        })),
     );
     const canReadCompanyHierarchy = input.roleCodes.some((role) =>
       role === "REPORT_VIEWER" || role === "SUPER_ADMIN",
@@ -298,12 +310,12 @@ export class RankingService {
       ? applyPersonnelFilters(activeScopedPersonnelRows, personnelDisplayFilters)
       : personnelRows;
     const reference = {
-      store: this.buildReferenceGroup({
+      store: buildRankingReferenceGroup({
         rows: access.isPrivileged ? filteredStoreRows : storeRows,
         profile: storeProfile,
         benchmarkLookup: storeBenchmarkLookup,
       }),
-      personnel: this.buildReferenceGroup({
+      personnel: buildRankingReferenceGroup({
         rows: access.isPrivileged ? filteredPersonnelRows : personnelRows,
         profile: personnelProfile,
         benchmarkLookup: personnelBenchmarkLookup,
@@ -423,6 +435,9 @@ export class RankingService {
       scopeSummary,
       regionManagerLeaderboard,
       storeLeaderboard: {
+        ...(currentStore && ((input.roleCodes.includes("STORE_MANAGER") && managedStoreIds.includes(currentStore.storeId)) ||
+          (input.roleCodes.includes("REGION_MANAGER") && authorizedStoreRows.some(row => row.storeId === currentStore.storeId)))
+          ? { currentStoreComparisons: buildCurrentStoreComparisons(storeRows, currentStore) } : {}),
         items: storeItems,
         currentStore: currentStore
           ? maskStoreRow(currentStore, access.canSeeGlobalDetails ? "detail" : "summary")
@@ -579,6 +594,7 @@ export class RankingService {
   }
 
   private async getStoreBenchmarks(input: {
+    isRange?: boolean;
     companyId?: string;
     periodType: string;
     periodStart: string;
@@ -829,6 +845,11 @@ export class RankingService {
           netSalesValue: value.netSalesValue,
           storeNetSalesValue: value.storeNetSalesValue,
         });
+        const completeScore = input.profile.metrics.filter(metric => metric.weightPercent > 0).every(
+          metric => scoring.metrics.some(result => result.code === metric.code && result.contributionValue !== null),
+        );
+        const allocationWeight = completeScore && value.netSalesValue !== null
+          ? Math.max(0, value.netSalesValue) * Math.max(0, scoring.scoreValue) : null;
 
         return {
           subject: "personnel" as const,
@@ -843,6 +864,7 @@ export class RankingService {
           scoreValue: scoring.scoreValue,
           canOpenProfile: false,
           rankingEligibility,
+          allocationWeight,
           metrics: scoring.metrics,
         };
       })
@@ -868,33 +890,6 @@ export class RankingService {
       benchmarkFallback: "matched-or-canonical",
       useStoreChecklistFallback: true,
     });
-  }
-
-  private buildReferenceGroup(input: {
-    rows: Array<{ scoreValue: number; metrics: RankingMetricValue[] }>;
-    profile: KpiScoreProfile;
-    benchmarkLookup: Map<string, number | null>;
-  }): RankingReferenceGroup {
-    return {
-      averageScore: average(input.rows.map((row) => row.scoreValue)),
-      metrics: input.profile.metrics.map((metric) => {
-        const benchmarkValue = input.benchmarkLookup.get(metric.code) ?? null;
-        const value =
-          metric.code === "TARGET_ACHIEVEMENT" || benchmarkValue === null
-            ? average(
-                input.rows.map((row) =>
-                  getMetricComparableValue(row.metrics, metric.code),
-                ),
-              )
-            : benchmarkValue;
-
-        return {
-          code: metric.code,
-          label: metric.label,
-          value,
-        };
-      }),
-    };
   }
 
 }

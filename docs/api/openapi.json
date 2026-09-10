@@ -2301,7 +2301,17 @@
     "/api/reports/my-performance": {
       "get": {
         "operationId": "ReportingController_getMyPerformance",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "periodEnd",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Current actor personnel performance summary for live or closed reporting.",
@@ -2330,6 +2340,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "periodEnd",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2352,7 +2371,17 @@
     "/api/reports/store-kpi-highlights": {
       "get": {
         "operationId": "ReportingController_getStoreKpiHighlights",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "periodEnd",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Store KPI highlight summary for live reporting surfaces.",
@@ -17878,12 +17907,61 @@
           },
           "storeLeaderboard": {
             "type": "object",
+            "description": "Store standings; currentStoreComparisons contains aggregate positions for the authorized store only.",
             "required": [
               "items",
               "currentStore",
               "meta"
             ],
             "properties": {
+              "currentStoreComparisons": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "turkey",
+                    "region"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "turkey": {
+                      "type": "object",
+                      "required": [
+                        "rank",
+                        "population"
+                      ],
+                      "properties": {
+                        "rank": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "population": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "region": {
+                      "type": "object",
+                      "required": [
+                        "rank",
+                        "population"
+                      ],
+                      "properties": {
+                        "rank": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "population": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
               "items": {
                 "type": "array",
                 "items": {
@@ -18200,6 +18278,13 @@
                     "scoreValue": {
                       "type": "number"
                     },
+                    "storeScoreShare": {
+                      "type": "number",
+                      "nullable": true,
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Net sales × personnel KPI score share within the store before pagination. Null when allocation inputs are incomplete; omitted for summary rows. This is an allocation, not causal impact."
+                    },
                     "canOpenProfile": {
                       "type": "boolean"
                     },
@@ -18323,6 +18408,13 @@
                   },
                   "scoreValue": {
                     "type": "number"
+                  },
+                  "storeScoreShare": {
+                    "type": "number",
+                    "nullable": true,
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Net sales × personnel KPI score share within the store before pagination. Null when allocation inputs are incomplete; omitted for summary rows. This is an allocation, not causal impact."
                   },
                   "canOpenProfile": {
                     "type": "boolean"
@@ -18449,6 +18541,13 @@
                     },
                     "scoreValue": {
                       "type": "number"
+                    },
+                    "storeScoreShare": {
+                      "type": "number",
+                      "nullable": true,
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Net sales × personnel KPI score share within the store before pagination. Null when allocation inputs are incomplete; omitted for summary rows. This is an allocation, not causal impact."
                     },
                     "canOpenProfile": {
                       "type": "boolean"

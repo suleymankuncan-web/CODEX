@@ -1,4 +1,6 @@
+import { PerformanceScoreEvaluator } from "./performance-score-evaluator.service";
 import { ForbiddenException } from "@nestjs/common";
+import { resolveRankingDateRange } from "./ranking-date-range";
 import { KpiScoreProfile, isGsmApprovalKpiCode } from "./kpi-config.contract";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { StoreScoreBlendService } from "./store-score-blend.service";
@@ -28,9 +30,11 @@ export class ReportingStoreKpiReadService {
     storeIds: string[];
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    periodEnd?: string;
     storeId?: string;
     regionManagerUserId?: string;
   }) {
+    const dateRange = resolveRankingDateRange(input);
     const config = await this.getKpiConfig();
     const profile = config.storeProfile;
     const metricCodes = profile.metrics.map((metric) => metric.code);
@@ -89,7 +93,7 @@ export class ReportingStoreKpiReadService {
         storeId,
         metricCodes,
       }),
-      this.storePerformanceReportingReadRepository.getLatestStoreKpiPeriod({
+      dateRange ?? this.storePerformanceReportingReadRepository.getLatestStoreKpiPeriod({
         storeId,
         metricCodes,
         periodType: input.periodType ?? "monthly",
@@ -145,13 +149,22 @@ export class ReportingStoreKpiReadService {
       storeChecklistMetricCodes.has(code),
     );
     const [storePerformanceRows, checklistRows] = await Promise.all([
-      this.storePerformanceReportingReadRepository.getStorePerformanceRows({
-        storeId,
-        metricCodes,
-        periodType: latestPeriod.period_type,
-        periodStart: latestPeriod.period_start,
-        periodEnd: latestPeriod.period_end,
-      }),
+      dateRange
+        ? this.rankingReportingReadRepository.listRankingStoreKpiRows({
+            isRange: true,
+            companyIds: input.companyIds,
+            metricCodes,
+            periodType: "daily",
+            periodStart: dateRange.period_start,
+            periodEnd: dateRange.period_end,
+          }).then(rows => rows.filter(row => row.store_id === storeId))
+        : this.storePerformanceReportingReadRepository.getStorePerformanceRows({
+            storeId,
+            metricCodes,
+            periodType: latestPeriod.period_type,
+            periodStart: latestPeriod.period_start,
+            periodEnd: latestPeriod.period_end,
+          }),
       shouldReadChecklistRows
         ? this.rankingReportingReadRepository.listRankingStoreChecklistRows({
             companyIds: input.companyIds,
@@ -165,6 +178,7 @@ export class ReportingStoreKpiReadService {
       ...checklistRows.filter((row) => row.store_id === storeId),
     ];
     let benchmarkRows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
+      isRange: Boolean(dateRange),
       companyId: input.companyIds[0] ?? undefined,
       periodType: latestPeriod.period_type,
       periodStart: latestPeriod.period_start,
@@ -173,6 +187,7 @@ export class ReportingStoreKpiReadService {
 
     if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
+        isRange: Boolean(dateRange),
         companyId: undefined,
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
@@ -277,15 +292,18 @@ export class ReportingStoreKpiReadService {
       };
     });
 
-    const scoreValue = Number(
-      mappedMetrics
-        .filter((metric) => metric.scoreStatus === "scored" && metric.achievementRate !== null)
-        .reduce(
-          (sum, metric) => sum + ((metric.scoreContribution ?? 0) / 100),
-          0,
-        )
-        .toFixed(2),
-    );
+    const evaluation = new PerformanceScoreEvaluator().evaluate({
+      profile,
+      values: new Map(liveRows.map(row => [row.kpi_code, {
+        label: row.kpi_name ?? row.kpi_code,
+        actualValue: row.actual_value == null ? null : Number(row.actual_value),
+        targetValue: row.target_value == null ? null : Number(row.target_value),
+        scoreValue: "achievement_rate" in row && row.achievement_rate != null ? Number(row.achievement_rate) : null,
+      }])),
+      benchmarkLookup, benchmarkFallback: "matched-or-canonical", useStoreChecklistFallback: true,
+    });
+    // Preserve the API's fractional transport unit without rounding away tenths of a point.
+    const scoreValue = evaluation.scoreValue / 100;
     const matchedMetrics = mappedMetrics.filter(
       (metric) => metric.scoreStatus === "scored",
     ).length;
