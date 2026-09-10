@@ -1,3 +1,4 @@
+import { lockOffboardingTransition } from "./offboarding-transition-lock";
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
@@ -29,7 +30,6 @@ type OffboardingAccessClosure = {
   closedActionStoreAssignments: number;
   revokedMobileSessions: number;
 };
-
 @Injectable()
 export class WorkforceRequestRepository {
   private readonly auditRepository = new WorkforceRequestAuditRepository();
@@ -493,8 +493,8 @@ export class WorkforceRequestRepository {
     reviewNote?: string;
   }) {
     const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.approve;
-
     return this.databaseService.withTransaction(async (client) => {
+      await lockOffboardingTransition(client, input.request, transition.sourceStatus);
       await client.query(
         `
           UPDATE ops.employee
@@ -659,8 +659,8 @@ export class WorkforceRequestRepository {
     reviewNote: string;
   }) {
     const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.reject;
-
     return this.databaseService.withTransaction(async (client) => {
+      await lockOffboardingTransition(client, input.request, transition.sourceStatus);
       const result = await client.query<EmployeeOffboardingRequestRow>(
         `
           WITH updated AS (
@@ -734,8 +734,8 @@ export class WorkforceRequestRepository {
     actorUserId: string;
   }) {
     const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.resubmit;
-
     return this.databaseService.withTransaction(async (client) => {
+      await lockOffboardingTransition(client, input.request, transition.sourceStatus);
       const result = await client.query<EmployeeOffboardingRequestRow>(
         `
           WITH updated AS (

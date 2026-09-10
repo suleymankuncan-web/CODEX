@@ -71,6 +71,7 @@ describe("Workforce offboarding requests", () => {
     review_note: null,
     created_at: "2026-04-27T12:00:00.000Z",
     updated_at: "2026-04-27T12:00:00.000Z",
+    request_revision: "2026-04-27 12:00:00.000123+00",
   };
 
   it("lists active employees for an assigned store", async () => {
