@@ -6,6 +6,8 @@ import { logStructuredError, logStructuredMessage } from "../structured-log";
 @Injectable()
 export class InMemoryJobDispatcherService implements JobDispatcher {
   private readonly logger = new Logger(InMemoryJobDispatcherService.name);
+  private readonly activeJobs = new Set<string>();
+  private readonly completedJobs = new Set<string>();
 
   async dispatch<TPayload>(
     type: JobType,
@@ -14,6 +16,19 @@ export class InMemoryJobDispatcherService implements JobDispatcher {
     options?: { jobId?: string; strictLocalJobId?: string },
   ): Promise<JobDispatchResult> {
     const jobId = options?.jobId ?? randomUUID();
+    const key = `${type}:${jobId}`;
+    const receipt: JobDispatchResult = {
+      status: "queued",
+      jobType: type,
+      backend: "in-memory",
+      jobId,
+      queueName: `in-memory:${type}`,
+    };
+    if (this.completedJobs.has(key)) {
+      return { ...receipt, status: "completed" };
+    }
+    if (this.activeJobs.has(key)) return receipt;
+    this.activeJobs.add(key);
 
     setImmediate(async () => {
       try {
@@ -24,6 +39,11 @@ export class InMemoryJobDispatcherService implements JobDispatcher {
           payload,
         });
         await handler(payload);
+        this.completedJobs.add(key);
+        // Match the bounded completed-job retention used by BullMQ.
+        if (this.completedJobs.size > 1000) {
+          this.completedJobs.delete(this.completedJobs.values().next().value!);
+        }
         logStructuredMessage(this.logger, "job.execution.completed", {
           jobId,
           jobType: type,
@@ -37,15 +57,11 @@ export class InMemoryJobDispatcherService implements JobDispatcher {
           queueName: `in-memory:${type}`,
           payload,
         });
+      } finally {
+        this.activeJobs.delete(key);
       }
     });
 
-    return {
-      status: "queued" as const,
-      jobType: type,
-      backend: "in-memory",
-      jobId,
-      queueName: `in-memory:${type}`,
-    };
+    return receipt;
   }
 }
