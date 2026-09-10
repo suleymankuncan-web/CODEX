@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, Search, UsersRound } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardCheck, UsersRound } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
+import { ChecklistSearchField } from './ChecklistSearchField'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
@@ -132,7 +132,7 @@ export function ReportViewerChecklistCommandPage(input: {
           <aside className="tw:min-w-0 tw:self-start tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:shadow-sm" aria-labelledby="report-viewer-manager-list-title">
             <header className="tw:border-b tw:border-border tw:p-3">
               <div className="tw:mb-2.5 tw:flex tw:items-end tw:justify-between tw:gap-3"><div><p className="tw:m-0 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.14em] tw:text-muted-foreground">{copy.directoryEyebrow}</p><h2 id="report-viewer-manager-list-title" className="tw:mt-0.5 tw:mb-0 tw:text-base tw:font-semibold tw:tracking-[-0.015em]">{copy.listTitle}</h2></div><span className="tw:flex tw:items-center tw:gap-2 tw:text-[11px] tw:font-medium tw:text-muted-foreground"><span aria-live="polite">{regionQuery.isFetching ? copy.refreshing : null}</span>{data.page.total}</span></div>
-              <label className="tw:relative tw:block"><Search aria-hidden className="tw:absolute tw:top-1/2 tw:left-2.5 tw:size-3.5 tw:-translate-y-1/2 tw:text-muted-foreground" /><span className="tw:sr-only">{copy.search}</span><Input className="tw:bg-muted/30 tw:pl-8 tw:text-xs tw:shadow-none" maxLength={120} value={searchDraft} placeholder={copy.searchPlaceholder} onChange={(event) => { retainCurrentRegion(); setSelectedManagerKey(null); setRegionOffset(0); setSearchDraft(event.target.value) }} /></label>
+              <ChecklistSearchField label={copy.search} placeholder={copy.searchPlaceholder} maxLength={120} value={searchDraft} onChange={value => { retainCurrentRegion(); setSelectedManagerKey(null); setRegionOffset(0); setSearchDraft(value) }} />
             </header>
             <div aria-label={copy.listTitle} className="tw:max-h-[520px] tw:overflow-y-auto tw:px-2 tw:py-1.5">
               {managerRows.map((manager) => (

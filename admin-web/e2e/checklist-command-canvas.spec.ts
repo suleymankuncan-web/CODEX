@@ -62,7 +62,7 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(page.locator('.checklist-command-desktop-list .score-vm')).toHaveCount(0)
   await expect(page.locator('.checklist-command-table-head').getByRole('button', { name: 'Geçen süre' })).toBeVisible()
   await expect(page.locator('.checklist-command-compact-sort')).toHaveCount(0)
-  await expect(page.getByTestId('checklist-command-search').getByRole('textbox')).toHaveCSS('text-align', 'start')
+  await expect(page.getByTestId('checklist-command-search').filter({ visible: true }).getByRole('textbox')).toHaveCSS('text-align', 'start')
   await page.locator('.checklist-command-table-head').getByRole('button', { name: 'Geçen süre' }).click()
   await expect.poll(() => requests.some((url) => url.searchParams.get('sort') === 'elapsed_desc')).toBe(true)
   const visitDateCell = page.locator('.checklist-command-date').first()
@@ -73,13 +73,13 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(page.getByRole('button', { name: /Kolonlar/ })).toHaveCount(0)
 
   await page.getByRole('button', { name: /Temmuz 2026/ }).click()
-  await expect(page.getByRole('dialog', { name: /Raporlama dönemi/ })).toBeVisible()
-  await page.getByRole('button', { name: 'Ağustos' }).click()
+  await expect(page.getByRole('dialog', { name: /Dönem seç/ })).toBeVisible()
+  await page.getByRole('dialog', { name: 'Dönem seç' }).getByRole('combobox', { name: 'Ay seç' }).selectOption('7')
   await page.getByRole('button', { name: /Uygula/ }).click()
   await expect.poll(() => requests.some((url) => url.searchParams.get('period') === '2026-08')).toBe(true)
   await page.getByRole('button', { name: /Ağustos 2026/ }).click()
   await page.getByRole('heading', { name: 'Saha Kontrolleri' }).click()
-  await expect(page.getByRole('dialog', { name: /Raporlama dönemi/ })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: /Dönem seç/ })).toHaveCount(0)
 
   await page.screenshot({
     path: checklistEvidenceOutputPath(testInfo, 'checklist-command-canvas-visits-parity-v1-2026-07-14/region-manager-command-canvas-desktop.png'),
@@ -251,7 +251,7 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
   await expect(page.locator('.week-planner-mobile-days > button.is-active')).toContainText('16 Tem')
   await expect(page.locator('.week-planner-grid > .week-day:visible')).toHaveCount(1)
   await expect(page.getByText('1-2 / 2 mağaza')).toBeVisible()
-  expect(await page.getByPlaceholder('Mağaza veya durum ara').evaluate((element) => getComputedStyle(element).fontSize)).toBe('16px')
+  expect(await page.getByRole('textbox', { name: 'Mağaza veya durum ara' }).evaluate((element) => getComputedStyle(element).fontSize)).toBe('16px')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 
@@ -651,7 +651,7 @@ test('explicit region context survives a zero-row command filter', async ({ page
   await page.getByRole('button', { name: 'Ege' }).click()
   await expect.poll(() => requests.some((url) => url.pathname.endsWith('/command-canvas') && url.searchParams.get('regionId') === 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')).toBe(true)
 
-  await page.getByTestId('checklist-command-search').getByRole('textbox').fill('bulunmaz')
+  await page.getByTestId('checklist-command-search').filter({ visible: true }).getByRole('textbox').fill('bulunmaz')
   await expect(page.getByText('Bu filtrelerde mağaza yok')).toBeVisible()
   await expect(page.getByRole('button', { name: /Ziyaret Planı/ })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Saha ziyaretlerini günlere yerleştirin' })).toBeVisible()
@@ -689,7 +689,7 @@ test('server filters retain current rows until the replacement succeeds', async 
 
   await page.goto('/store/checklists')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
-  await page.getByTestId('checklist-command-search').getByRole('textbox').fill('gecikmeli')
+  await page.getByTestId('checklist-command-search').filter({ visible: true }).getByRole('textbox').fill('gecikmeli')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
   await expect(page.getByText('Güncelleniyor…')).toBeVisible()
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
@@ -702,7 +702,7 @@ test('failed server filters retain current rows and expose an inline retry', asy
 
   await page.goto('/store/checklists')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
-  await page.getByTestId('checklist-command-search').getByRole('textbox').fill('hata')
+  await page.getByTestId('checklist-command-search').filter({ visible: true }).getByRole('textbox').fill('hata')
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Yeniden dene' })).toBeVisible()
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
@@ -737,9 +737,9 @@ test('period picker remains keyboard accessible while the plan toolbar stays min
   await page.goto('/store/checklists')
   const periodTrigger = page.locator('.checklist-command-period-trigger')
   await periodTrigger.click()
-  const periodDialog = page.getByRole('dialog', { name: 'Raporlama dönemi' })
+  const periodDialog = page.getByRole('dialog', { name: 'Dönem seç' })
   await expect(periodDialog).toBeVisible()
-  await periodDialog.getByRole('button', { name: 'Temmuz' }).focus()
+  await periodDialog.getByRole('combobox', { name: 'Ay seç' }).focus()
   await page.keyboard.press('Escape')
   await expect(periodDialog).toHaveCount(0)
   await expect(periodTrigger).toBeFocused()
@@ -792,7 +792,7 @@ async function assertPeriodPickerGeometry(page: Page, viewport: { width: number;
   const periodTrigger = page.locator('.checklist-command-period-trigger')
   await expect(periodTrigger).toBeVisible()
   await periodTrigger.click()
-  const periodDialog = page.getByRole('dialog', { name: 'Raporlama dönemi' })
+  const periodDialog = page.getByRole('dialog', { name: 'Dönem seç' })
   await expect(periodDialog).toBeVisible()
 
   const bounds = await periodDialog.boundingBox()
@@ -803,8 +803,8 @@ async function assertPeriodPickerGeometry(page: Page, viewport: { width: number;
   expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height)
 
   for (const control of [
-    periodDialog.getByRole('button', { name: 'Tarih filtresini kapat' }),
-    periodDialog.getByRole('button', { name: 'Temmuz' }),
+    periodDialog.getByRole('combobox', { name: 'Yıl seç' }),
+    periodDialog.getByRole('combobox', { name: 'Ay seç' }),
     periodDialog.getByRole('button', { name: 'Uygula' }),
   ]) {
     await control.scrollIntoViewIfNeeded()
@@ -817,7 +817,7 @@ async function assertPeriodPickerGeometry(page: Page, viewport: { width: number;
     expect(hit).toBe(true)
   }
 
-  await periodDialog.getByRole('button', { name: 'Tarih filtresini kapat' }).click()
+  await page.keyboard.press('Escape')
   await expect(periodDialog).toHaveCount(0)
 }
 

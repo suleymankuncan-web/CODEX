@@ -1,7 +1,7 @@
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { CheckCircle2, ChevronRight, ClipboardCheck, RefreshCw, Store, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,6 @@ export function ChecklistWorkflowCommandOverlay(input: {
     isRetrying,
     locale,
     mobileToday,
-    monthOptions,
     openChecklistResult,
     queueResponseAutoSave,
     responseValues,
@@ -172,10 +171,11 @@ export function ChecklistWorkflowCommandOverlay(input: {
             <div className="checklist-workflow-command-drawer-body tw:min-w-0">
               {input.routeState.kind === 'workflow' && input.routeState.tab === 'visits' && !isLoading && !isError ? (
                 <div className="tw:mb-4 tw:flex tw:justify-end">
-                  <Select value={selectedMonth} onValueChange={(value) => dispatchPageState({ type: 'setSelectedMonth', value })}>
-                    <SelectTrigger aria-label={locale === 'tr' ? 'Ay filtresi' : 'Month filter'} className="tw:w-full tw:sm:w-52"><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectGroup>{monthOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
-                  </Select>
+                  <CalendarPicker mode="month" value={selectedMonth === 'all' ? '' : selectedMonth} locale={locale}
+                    ariaLabel={locale === 'tr' ? 'Ay filtresi' : 'Month filter'}
+                    triggerContent={selectedMonth === 'all' ? (locale === 'tr' ? 'Tüm aylar' : 'All months') : undefined}
+                    onClear={() => dispatchPageState({ type: 'setSelectedMonth', value: 'all' })}
+                    onValueChange={value => dispatchPageState({ type: 'setSelectedMonth', value })} />
                 </div>
               ) : null}
               {isLoading ? (

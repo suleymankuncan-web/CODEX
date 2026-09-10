@@ -22,8 +22,10 @@ test('completed checklist source keeps past month visit rows visible without mon
   await routeChecklistMonthFilterApi(page)
   await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
 
-  await page.getByRole('combobox', { name: 'Month filter' }).click()
-  await page.getByRole('option', { name: 'April 2026' }).click()
+  await page.getByRole('button', { name: 'Month filter' }).click()
+  await page.getByRole('dialog', { name: 'Select period' }).getByRole('combobox', { name: 'Choose year' }).selectOption('2026')
+  await page.getByRole('dialog', { name: 'Select period' }).getByRole('combobox', { name: 'Choose month' }).selectOption('3')
+  await page.getByRole('dialog', { name: 'Select period' }).getByRole('button', { name: 'Apply' }).click()
 
   const workflowDialog = page.getByRole('dialog', { name: 'Checklist workflow' })
   await expect(workflowDialog.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()

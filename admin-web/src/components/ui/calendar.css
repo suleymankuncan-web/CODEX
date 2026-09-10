@@ -1,0 +1,92 @@
+.axis-calendar {
+  --background: #fff;
+  --popover: #fff;
+  --foreground: #1e293b;
+  --popover-foreground: #1e293b;
+  --muted: #edf4ff;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --calendar-endpoint: #cfe0fb;
+  --calendar-selection-ink: #254d88;
+  --calendar-hover: #f0f5fc;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.axis-calendar button,
+.axis-calendar select {
+  font-family: inherit;
+}
+
+/* The app omits Tailwind preflight; reset native gray button fills locally. */
+.axis-calendar :is(.rdp-day button, .rdp-nav button) {
+  background: transparent;
+  color: inherit;
+  font-weight: 400;
+  box-shadow: none;
+  transform: none;
+  transition: background-color 120ms ease;
+}
+
+.axis-calendar :is(.rdp-day button, .rdp-nav button):hover {
+  background: var(--calendar-hover);
+}
+
+.axis-calendar :is(.rdp-day button, .rdp-nav button):focus-visible {
+  outline: 2px solid var(--calendar-selection-ink);
+  outline-offset: 2px;
+}
+
+.axis-calendar .rdp-today:not([data-selected='true']) {
+  background: transparent;
+}
+
+.axis-calendar .rdp-today:not([data-selected='true']) button {
+  color: var(--calendar-selection-ink);
+  font-weight: 600;
+}
+
+.axis-calendar :is(.rdp-day button, .rdp-nav button)[data-range-middle='true'] {
+  background: var(--muted);
+  color: var(--calendar-selection-ink);
+}
+
+.axis-calendar :is(.rdp-day button, .rdp-nav button):is([data-range-start='true'], [data-range-end='true'], [data-selected-single='true']) {
+  background: var(--calendar-endpoint);
+  color: var(--calendar-selection-ink);
+  font-weight: 500;
+}
+
+.axis-calendar .rdp-weekday {
+  color: var(--muted-foreground);
+}
+
+.axis-calendar .rdp-outside:not([data-selected='true']) button {
+  color: var(--muted-foreground);
+}
+
+.axis-calendar-input {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+}
+
+.axis-calendar-input > input {
+  padding-inline-end: 36px;
+}
+
+.axis-calendar-input > input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.axis-calendar-input > button {
+  position: absolute;
+  inset-inline-end: 3px;
+  background: transparent;
+  color: var(--muted-foreground);
+}

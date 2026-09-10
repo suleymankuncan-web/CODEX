@@ -10,14 +10,17 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { buttonVariants } from "@/components/ui/button-variants"
+import { tr } from "react-day-picker/locale"
+import '@fontsource-variable/geist/wght.css'
+import './calendar.css'
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = "label",
+  captionLayout = "dropdown",
   buttonVariant = "ghost",
-  locale,
+  locale = tr,
   formatters,
   components,
   ...props
@@ -30,12 +33,13 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "tw:group/calendar tw:bg-background tw:p-2 tw:[--cell-radius:var(--radius-md)] tw:[--cell-size:--spacing(7)] tw:in-data-[slot=card-content]:bg-transparent tw:in-data-[slot=popover-content]:bg-transparent",
+        "axis-calendar tw:group/calendar tw:bg-background tw:p-2 tw:[--cell-radius:var(--radius-md)] tw:[--cell-size:--spacing(9)] tw:in-data-[slot=card-content]:bg-transparent tw:in-data-[slot=popover-content]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className,
       )}
       captionLayout={captionLayout}
+      weekStartsOn={1}
       locale={locale}
       formatters={{
         formatMonthDropdown: (date) =>

@@ -21,6 +21,10 @@ references live in `docs/ui/golden-surfaces/reference-map.md`.
 
 ## Scope
 
+Date and reporting-period pickers follow the owner-locked
+[HR Axis calendar standard](../ui/calendar-standard-v1.md). Reuse its shared
+components on every page; do not introduce a separate calendar design.
+
 This standard applies to:
 
 - Store and Admin product pages,

@@ -1,3 +1,4 @@
+import { Input } from '@/components/ui/input'
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Megaphone, Pin, Send, ShieldCheck, Trophy } from 'lucide-react'
@@ -511,7 +512,7 @@ function AdminFeedComposerPanel(input: {
         ) : null}
         <label>
           {t('adminFeed.startsAt')}
-          <input
+          <Input
             className="control-input"
             type="datetime-local"
             value={input.form.startsAt}
@@ -520,7 +521,7 @@ function AdminFeedComposerPanel(input: {
         </label>
         <label>
           {t('adminFeed.endsAt')}
-          <input
+          <Input
             className="control-input"
             type="datetime-local"
             value={input.form.endsAt}
@@ -569,7 +570,7 @@ function AdminFeedComposerPanel(input: {
           </label>
           <label>
             {t('adminFeed.challengeStarts')}
-            <input
+            <Input
               className="control-input"
               type="date"
               value={input.form.challengeStartsOn}
@@ -578,7 +579,7 @@ function AdminFeedComposerPanel(input: {
           </label>
           <label>
             {t('adminFeed.challengeEnds')}
-            <input
+            <Input
               className="control-input"
               type="date"
               value={input.form.challengeEndsOn}

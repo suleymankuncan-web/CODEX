@@ -1,10 +1,9 @@
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {
   CalendarDays,
-  Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -12,7 +11,6 @@ import {
   Search,
   X,
 } from 'lucide-react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { AuthSessionSummary } from '../auth/api'
 import { storeChecklistVisitPlanPeriodQueryKey } from '../auth/store-query-scope'
 import { ApiError } from '../../lib/api'
@@ -400,50 +398,13 @@ function VisitCalendarFilterPopover(input: {
   selectedYear: number
   onApply: (year: number, month: number | 'all') => void
 }) {
-  const [open, setOpen] = useState(false)
-  const [draft, setDraft] = useState<{ year: number; month: number | 'all' }>({ year: input.selectedYear, month: input.selectedMonth })
-  const draftCalendar = useMemo(() => buildVisitCalendar(draft.year, input.locale), [draft.year, input.locale])
-  const selectedLabel = visitCalendarFilterLabel(input.selectedYear, input.selectedMonth, input.calendar, input.copy)
-  const draftLabel = visitCalendarFilterLabel(draft.year, draft.month, draftCalendar, input.copy)
-  const currentPeriod = getCurrentVisitCalendarPeriod()
-  const resetDraft = () => setDraft({ year: input.selectedYear, month: input.selectedMonth })
-
-  return <div className={`checklist-command-period visit-calendar-filter${open ? ' is-open' : ''}`}>
-    <Popover open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (nextOpen) resetDraft() }}>
-      <PopoverTrigger asChild>
-        <button type="button" className="checklist-command-period-trigger visit-calendar-filter-trigger" aria-haspopup="dialog" aria-expanded={open}>
-          <CalendarDays size={15} />
-          <span><small>{input.copy.visitCalendarFilters}</small><strong>{selectedLabel}</strong></span>
-          <ChevronDown size={13} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={8} aria-label={input.copy.visitCalendarFilters} className="visit-calendar-filter-popover">
-        <div className="checklist-command-period-popover">
-          <header>
-            <div><span className="checklist-command-period-icon"><CalendarDays size={16} /></span><span><small>{input.locale === 'tr' ? 'TAKVİM GÖRÜNÜMÜ' : 'CALENDAR VIEW'}</small><strong>{input.locale === 'tr' ? 'Yıl ve ay seçin' : 'Select year and month'}</strong></span></div>
-            <button type="button" aria-label={input.copy.close} onClick={() => setOpen(false)}><X size={15} /></button>
-          </header>
-          <div className="checklist-command-period-presets visit-calendar-filter-presets">
-            <button type="button" className={draft.month === 'all' ? 'is-active' : ''} onClick={() => setDraft((current) => ({ ...current, month: 'all' }))}>{input.copy.visitCalendarAllMonths}</button>
-            <button type="button" className={draft.year === currentPeriod.year && draft.month === currentPeriod.month ? 'is-active' : ''} onClick={() => setDraft(currentPeriod)}>{input.copy.visitCalendarCurrentMonth}</button>
-          </div>
-          <div className="checklist-command-period-year">
-            <button type="button" aria-label={input.locale === 'tr' ? 'Önceki yıl' : 'Previous year'} onClick={() => setDraft((current) => ({ ...current, year: current.year - 1 }))}><ChevronLeft size={15} /></button>
-            <span><small>{input.copy.visitCalendarYear}</small><strong>{draft.year}</strong></span>
-            <button type="button" aria-label={input.locale === 'tr' ? 'Sonraki yıl' : 'Next year'} onClick={() => setDraft((current) => ({ ...current, year: current.year + 1 }))}><ChevronRight size={15} /></button>
-          </div>
-          <div className="checklist-command-period-months" role="group" aria-label={input.copy.visitCalendarMonth}>
-            {draftCalendar.map((month) => <button type="button" aria-pressed={draft.month === month.monthIndex} className={draft.month === month.monthIndex ? 'is-active' : ''} key={month.monthIndex} onClick={() => setDraft((current) => ({ ...current, month: month.monthIndex }))}><span>{month.label}</span>{draft.month === month.monthIndex ? <Check size={13} /> : null}</button>)}
-          </div>
-          <footer>
-            <button type="button" onClick={() => { resetDraft(); setOpen(false) }}>{input.copy.cancel}</button>
-            <span>{draftLabel}</span>
-            <button type="button" className="primary visit-calendar-filter-apply" onClick={() => { input.onApply(draft.year, draft.month); setOpen(false) }}><Check size={14} /> {input.copy.apply}</button>
-          </footer>
-        </div>
-      </PopoverContent>
-    </Popover>
-  </div>
+  const month = input.selectedMonth === 'all' ? 1 : input.selectedMonth + 1
+  return <CalendarPicker mode="month" locale={input.locale}
+    value={input.selectedYear + '-' + String(month).padStart(2, '0')}
+    ariaLabel={input.copy.visitCalendarFilters} triggerClassName="checklist-command-period-trigger visit-calendar-filter-trigger"
+    triggerContent={visitCalendarFilterLabel(input.selectedYear, input.selectedMonth, input.calendar, input.copy)}
+    onFullYear={year => input.onApply(year, 'all')}
+    onValueChange={value => input.onApply(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1)} />
 }
 
 type Copy = ReturnType<typeof getCopy>
@@ -476,10 +437,6 @@ function visitCalendarFilterLabel(year: number, month: number | 'all', calendar:
   return month === 'all' ? `${year} · ${copy.visitCalendarAllMonths}` : `${calendar[month]?.label ?? ''} ${year}`
 }
 
-function getCurrentVisitCalendarPeriod() {
-  const now = new Date()
-  return { year: now.getUTCFullYear(), month: now.getUTCMonth() }
-}
 
 function visitCalendarState(item: ChecklistVisitPlanPeriodRow['planItems'][number]): VisitCalendarState {
   if (item.checklistInstanceId) return 'checklist'

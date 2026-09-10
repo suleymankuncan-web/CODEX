@@ -234,7 +234,7 @@ for (const scenario of [
     await page.goto('/store/targets')
     const opener = page.locator('.target-entry-period').getByRole('button').first()
     await opener.click()
-    const picker = page.locator('.target-entry-period-popover')
+    const picker = page.getByRole('dialog', { name: 'Dönem seç' })
     await expect(picker).toBeVisible()
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
