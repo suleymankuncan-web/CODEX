@@ -236,7 +236,7 @@ test('store self-performance tolerates ISO period timestamps from live API', asy
   expect(pageErrors).toEqual([])
 })
 
-test('store self-performance requests exact loaded month without exposing daily filters', async ({ page }) => {
+test('store self-performance requests an exact full month from the shared calendar', async ({ page }) => {
   const myPerformanceRequests: URL[] = []
   const loadedPeriods = [
     {
@@ -272,9 +272,9 @@ test('store self-performance requests exact loaded month without exposing daily 
   await page.goto('/store/me')
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
-  await expect(page.getByRole('radio', { name: /^G.*n$/ })).toHaveCount(0)
-  await expect(page.locator('[data-slot="calendar"]')).toHaveCount(0)
-  await page.getByRole('button', { name: /^May/i }).click()
+  await expect(page.locator('[data-slot="calendar"]')).toBeVisible()
+  await page.getByRole('combobox', { name: 'Ay seç' }).selectOption({ index: 4 })
+  await page.getByRole('button', { name: 'Uygula' }).click()
 
   await expect.poll(() =>
     myPerformanceRequests.some(
@@ -409,14 +409,14 @@ test('store self-performance handles live no-data responses without supporting m
   expect(pageErrors).toEqual([])
 })
 
-test('store self-performance date filter stays month-only without closed snapshot controls', async ({ page }) => {
+test('store self-performance date filter uses the shared calendar without closed snapshot controls', async ({ page }) => {
   await page.goto('/store/me')
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
   await expect(page.getByRole('radio', { name: 'Kapanmış gün' })).toHaveCount(0)
   await expect(page.getByText('Kapanmış performans kaydı seçimi')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^Nis$/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^May$/ })).toBeVisible()
+  await expect(page.locator('[data-slot="calendar"]')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Uygula' })).toBeVisible()
 })
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
@@ -810,7 +810,8 @@ test('region manager store KPI overview waits for selected store before loading 
   expect(highlightRequests).toHaveLength(0)
 
   await page.getByRole('button', { name: 'Müdür KPI dönemi' }).click()
-  await page.getByRole('button', { name: 'Nis', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Ay seç' }).selectOption({ index: 3 })
+  await page.getByRole('button', { name: 'Uygula' }).click()
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-04-01')
 
   const readsBeforeLocalSort = rankingRequests.length

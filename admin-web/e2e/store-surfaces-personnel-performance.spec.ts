@@ -151,7 +151,7 @@ test('store personnel profile falls back when ranking period has no personnel da
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
-test('store personnel profile date filter exposes loaded months without daily controls', async ({ page }) => {
+test('store personnel profile date filter uses the shared calendar', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const loadedPeriods = [
     {
@@ -207,12 +207,9 @@ test('store personnel profile date filter exposes loaded months without daily co
   await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-04-01`)
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
-  await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toHaveCount(0)
-  await expect(page.locator('[data-slot="calendar"]')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^Nis$/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /^May$/ })).toBeVisible()
-
-  await page.getByRole('button', { name: /^May$/ }).click()
+  await expect(page.locator('[data-slot="calendar"]')).toBeVisible()
+  await page.getByRole('combobox', { name: 'Ay seç' }).selectOption({ index: 4 })
+  await page.getByRole('button', { name: 'Uygula' }).click()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some(
@@ -262,7 +259,8 @@ test('store personnel profile derives date filters from the active period when t
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
   await expect(page.getByText('Yüklü dönem yok')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^Mar$/ })).toBeVisible()
+  await expect(page.locator('[data-slot="calendar"]')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tarih filtresi' })).toContainText('Mart 2026')
 })
 
 test('store personnel profile opens daily data when requested month has no rows', async ({ page }) => {
@@ -465,10 +463,9 @@ test('store personnel profile uses employee periods instead of global closed sna
 
   await expect(page.getByText('Kapanmış performans kaydı seçimi')).toHaveCount(0)
   await expect(page.getByText('Kapanmış gün')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /^Mar$/ })).toBeVisible()
+  await expect(page.locator('[data-slot="calendar"]')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tarih filtresi' })).toContainText('Mart 2026')
   await expect(page.getByText('Nisan 2026')).toHaveCount(0)
-  await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toHaveCount(0)
-  await expect(page.locator('[data-slot="calendar"]')).toHaveCount(0)
   expect(snapshotRunRequests).toEqual([])
 })
 
@@ -607,11 +604,11 @@ test('store rankings page switches to English copy and persists locale', async (
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Year filter' })).toContainText('2026')
-  const monthFilter = page.getByRole('button', { name: 'Month filter' })
+  await expect(page.getByRole('button', { name: 'Period filter' })).toContainText('2026')
+  const monthFilter = page.getByRole('button', { name: 'Period filter' })
   await expect(monthFilter).toContainText('Apr')
   await monthFilter.click()
-  await expect(page.getByRole('checkbox', { name: 'Apr' })).toBeChecked()
+  await expect(page.getByRole('dialog', { name: 'Select period' }).getByRole('combobox', { name: 'Choose month' })).toHaveValue('3')
   await monthFilter.click()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.locator('header').getByText('Top 100 view', { exact: true })).toBeVisible()
@@ -709,17 +706,14 @@ test('store rankings requests exact loaded day and returns to monthly view', asy
   })
 
   await page.goto('/store/rankings')
-  await expect(page.getByRole('button', { name: 'Yıl filtresi' })).toContainText('2026')
-  await expect(page.getByRole('button', { name: 'Ay filtresi' })).toContainText('Nis')
-  await expect(page.getByRole('button', { name: 'Gün filtresi' })).toContainText('Tüm ay')
+  await expect(page.getByRole('button', { name: 'Dönem filtresi' })).toContainText('Nis 2026')
   await expect(page.getByText('Top 100 görünüm', { exact: true })).toBeVisible()
   await expect(
     page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Gün filtresi' }).click()
-  await expect(page.getByRole('checkbox', { name: '15', exact: true })).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: '16', exact: true })).toHaveCount(0)
-  await page.getByRole('checkbox', { name: '15', exact: true }).click()
+  await page.getByRole('button', { name: 'Dönem filtresi' }).click()
+  await page.getByRole('button', { name: '15 Nisan 2026 Çarşamba' }).click()
+  await page.getByRole('button', { name: 'Uygula' }).click()
   await expect
     .poll(() =>
       rankingRequests.some(
@@ -729,10 +723,10 @@ test('store rankings requests exact loaded day and returns to monthly view', asy
       ),
     )
     .toBe(true)
-  await expect(page.getByRole('button', { name: 'Gün filtresi' })).toContainText('15')
+  await expect(page.getByRole('button', { name: 'Dönem filtresi' })).toContainText('15 Nis 2026')
   await expect(page.getByText('Seçili gün görünümü')).toBeVisible()
-  await page.getByRole('button', { name: 'Gün filtresi' }).click()
-  await page.getByRole('checkbox', { name: 'Tüm ay' }).click()
+  await page.getByRole('button', { name: 'Dönem filtresi' }).click()
+  await page.getByRole('button', { name: 'Tüm ay' }).click()
   await expect
     .poll(() => {
       const lastRequest = rankingRequests.at(-1)

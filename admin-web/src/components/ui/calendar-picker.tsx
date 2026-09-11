@@ -74,7 +74,7 @@ export function CalendarPanel(input: CalendarPanelProps) {
 }
 
 export function CalendarPopoverContent({ className, ...props }: React.ComponentProps<typeof PopoverContent>) {
-  return <PopoverContent align="end" collisionPadding={12} className={cn('axis-calendar tw:w-auto tw:max-w-[calc(100vw-24px)] tw:max-h-[var(--radix-popover-content-available-height)] tw:overflow-y-auto tw:p-3', className)} {...props} />
+  return <PopoverContent align="end" collisionPadding={12} className={cn('axis-calendar tw:z-[200] tw:w-auto tw:max-w-[calc(100vw-24px)] tw:max-h-[var(--radix-popover-content-available-height)] tw:overflow-y-auto tw:p-3', className)} {...props} />
 }
 
 export function CalendarPicker(input: Omit<CalendarPanelProps, 'onApply'> & {
