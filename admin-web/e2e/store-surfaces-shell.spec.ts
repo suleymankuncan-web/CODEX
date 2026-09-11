@@ -876,7 +876,7 @@ test('store reports package is visible for region managers and stays mobile-safe
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Mağaza İzleyiş Exceli/i })).toBeVisible()
   await expect(page.getByRole('button', { name: /Excel indir/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Haziran 2026/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Dönem seç' })).toContainText('Haziran 2026')
   await expect(page.getByText('Raporları aç')).toHaveCount(0)
   await expect(page.getByText('/admin/reports')).toHaveCount(0)
 
