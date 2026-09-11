@@ -46,7 +46,7 @@ const storeReportingRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'REPORT_VIEWER
 const targetRequestListRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeTaskReadRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeCompetitionReadRoleCodes = ['STORE_MANAGER', 'STORE_PERSONNEL', 'REPORT_VIEWER']
-const storeWorkforceReadRoleCodes = ['STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER']
+const storeWorkforceReadRoleCodes = ['STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER', 'SUPER_ADMIN']
 
 const adminRouteNotes: Record<string, Pick<RolePermissionPreviewRow, 'scopeNoteKey' | 'actionNoteKey'>> = {
   operations: {

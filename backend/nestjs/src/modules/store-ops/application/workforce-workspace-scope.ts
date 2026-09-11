@@ -1,3 +1,4 @@
+import { resolveStoreReportViewerRole, storeReportViewerCompanyIds } from "./store-report-viewer-role";
 import type { AuthActionScope, AuthReadScope } from "../../auth/auth-context.service";
 
 export type WorkforceWorkspaceView = "report_viewer" | "region_manager" | "store_manager";
@@ -18,9 +19,10 @@ export function resolveWorkforceWorkspaceScope(input: {
   actorActionScope: AuthActionScope;
   roleScopes?: Record<string, AuthReadScope>;
 }): WorkforceWorkspaceScope | null {
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
     return scope("report_viewer", {
-      companyIds: unique(input.roleScopes?.REPORT_VIEWER?.companyIds ?? []),
+      companyIds: storeReportViewerCompanyIds(input, reportRole),
       regionIds: [],
       storeIds: [],
     }, []);

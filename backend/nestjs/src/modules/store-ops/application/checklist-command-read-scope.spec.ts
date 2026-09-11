@@ -101,7 +101,7 @@ describe("resolveChecklistCommandReadScope", () => {
         },
       }),
     ).toEqual({
-      view: "super_admin",
+      view: "report_viewer",
       companyIds: ["admin-company"],
       regionIds: [],
       storeIds: [],
@@ -110,7 +110,7 @@ describe("resolveChecklistCommandReadScope", () => {
     });
   });
 
-  it("keeps a mixed Super Admin and Store Manager session in the Super Admin view", () => {
+  it("keeps a mixed Super Admin and Store Manager session in the company read-only view", () => {
     expect(
       resolveChecklistCommandReadScope({
         actorRoleCodes: ["SUPER_ADMIN", "STORE_MANAGER"],
@@ -120,6 +120,7 @@ describe("resolveChecklistCommandReadScope", () => {
           storeIds: ["admin-store"],
         },
         roleScopes: {
+          SUPER_ADMIN: { companyIds: ["admin-company"], regionIds: [], storeIds: [] },
           STORE_MANAGER: {
             companyIds: [],
             regionIds: [],
@@ -128,10 +129,10 @@ describe("resolveChecklistCommandReadScope", () => {
         },
       }),
     ).toEqual({
-      view: "super_admin",
+      view: "report_viewer",
       companyIds: ["admin-company"],
-      regionIds: ["admin-region"],
-      storeIds: ["admin-store"],
+      regionIds: [],
+      storeIds: [],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
       executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });

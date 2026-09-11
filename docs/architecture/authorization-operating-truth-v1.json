@@ -902,7 +902,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 185
+        "line": 188
       }
     },
     {
@@ -934,7 +934,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 364
+        "line": 367
       }
     },
     {
@@ -968,7 +968,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 203
+        "line": 206
       }
     },
     {
@@ -998,7 +998,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 347
+        "line": 350
       }
     },
     {
@@ -1042,7 +1042,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 329
+        "line": 332
       }
     },
     {
@@ -1084,7 +1084,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 184
+        "line": 187
       }
     },
     {
@@ -1119,7 +1119,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 381
+        "line": 384
       }
     },
     {
@@ -1151,7 +1151,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 264
+        "line": 267
       }
     },
     {
@@ -1179,7 +1179,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 281
+        "line": 284
       }
     },
     {
@@ -1213,7 +1213,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 298
+        "line": 301
       }
     },
     {
@@ -1247,7 +1247,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 312
+        "line": 315
       }
     },
     {
@@ -1279,7 +1279,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 452
+        "line": 455
       }
     },
     {
@@ -1323,7 +1323,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 398
+        "line": 401
       }
     },
     {
@@ -1355,7 +1355,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 416
+        "line": 419
       }
     },
     {
@@ -1387,7 +1387,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 247
+        "line": 250
       }
     },
     {
@@ -1413,7 +1413,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 223
+        "line": 226
       }
     },
     {
@@ -1429,12 +1429,14 @@
       "runtimeRoles": [
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "STORE_MANAGER"
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
       ],
       "previewRoles": [
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "STORE_MANAGER"
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
       ],
       "authorization": {
         "routeAccess": "role_and_scope",
@@ -1443,7 +1445,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 435
+        "line": 438
       }
     }
   ],

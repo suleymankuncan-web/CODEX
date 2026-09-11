@@ -40,6 +40,64 @@ async function gotoReportViewerRoute(page: Page, routePath: string) {
   })
 }
 
+test('Super Admin opens the Report Viewer checklist presentation without another role', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer', { roleCodes: ['SUPER_ADMIN'] })
+  await installGenericStoreApiFallbacks(page)
+  await routeCompanyChecklistWorkspace(page)
+
+  await gotoReportViewerRoute(page, '/store/checklists')
+
+  await expect(page.getByRole('heading', { name: 'Checklist Raporları' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toHaveCount(0)
+  await expect(page.getByText('Sayfa geçişi tamamlanamadı')).toHaveCount(0)
+  expect(await page.evaluate(() => window.location.pathname)).toBe('/store/checklists')
+})
+
+async function routeCompanyChecklistWorkspace(page: Page) {
+  await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
+    await route.fulfill({ json: { data: {
+      period: '2026-07',
+      view: 'report_viewer',
+      capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+      metrics: {
+        totalStores: 1,
+        missingVisitStores: 0,
+        storesWithOpenActions: 0,
+        openActionCount: 0,
+        completedCoverageStores: 1,
+      },
+      items: [{
+        managerUserId: 'manager-contract-1',
+        regionId: 'region-contract-1',
+        regionName: 'Marmara',
+        regionManagers: [{ displayName: 'Bölge Müdürü A' }],
+        metrics: {
+          totalStores: 1,
+          missingVisitStores: 0,
+          storesWithOpenActions: 0,
+          openActionCount: 0,
+          completedCoverageStores: 1,
+          blockedActionCount: 0,
+        },
+        visitAverageScore: 88,
+        scoreSampleCount: 1,
+        lastOperationalAt: '2026-07-14T10:00:00.000Z',
+      }],
+      page: { total: 1, limit: 20, offset: 0, hasMore: false },
+    } } })
+  })
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
+    await route.fulfill({ json: { data: {
+      period: '2026-07',
+      view: 'report_viewer',
+      capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+      metrics: { totalStores: 0, needsVisit: 0, active: 0, pending: 0, completed: 0 },
+      items: [],
+      page: { total: 0, limit: 30, offset: 0, hasMore: false },
+    } } })
+  })
+}
+
 test('Report Viewer sees the company read-only Store portfolio', async ({ page }) => {
   test.setTimeout(reportViewerPortfolioTimeoutMs)
   await installStoreContractSession(page, 'reportViewer')

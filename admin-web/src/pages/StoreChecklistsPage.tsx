@@ -2,12 +2,11 @@ import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { resolveStorePersona } from '../app/store-route-registry'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { hasAnyRole } from '../features/auth/authorization'
+import { usesStoreReportViewerView } from '../features/auth/authorization'
 import { ReportViewerChecklistCommandPage } from '../features/checklist-command/ReportViewerChecklistCommandPage'
 import { RegionManagerChecklistCommandPage } from '../features/checklist-command/RegionManagerChecklistCommandPage'
 import {
   StoreManagerChecklistCommandPage,
-  SuperAdminChecklistCommandPage,
   VisualMerchandiserChecklistCommandPage,
 } from '../features/checklist-command/StoreManagerChecklistCommandPage'
 import { ChecklistWorkflowCommandOverlay } from '../features/checklist-workflow/ChecklistWorkflowCommandOverlay'
@@ -28,7 +27,7 @@ export function StoreChecklistsPage(input: {
   const requestedCanvasView = routeParams.get('canvasView')
   const legacyStandalonePlan = routeParams.get('tab') === 'plan' && !routeParams.has('storeId')
   const overlayTriggerRef = useRef<HTMLElement | null>(null)
-  const isReportViewer = hasAnyRole(input.authSummary, ['REPORT_VIEWER'])
+  const isReportViewer = usesStoreReportViewerView(input.authSummary)
 
   useEffect(() => {
     if (isReportViewer || !['regionManager', 'storeManager', 'visualMerchandiser', 'admin'].includes(persona) || !workflowRoute.shouldReplace) return
@@ -131,9 +130,7 @@ export function StoreChecklistsPage(input: {
     ? StoreManagerChecklistCommandPage
     : persona === 'visualMerchandiser'
       ? VisualMerchandiserChecklistCommandPage
-      : persona === 'admin' && hasAnyRole(input.authSummary, ['SUPER_ADMIN'])
-        ? SuperAdminChecklistCommandPage
-        : null
+      : null
 
   if (OperatorPage) {
     return (

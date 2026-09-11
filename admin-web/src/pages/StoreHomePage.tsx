@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
+import { usesStoreReportViewerView, canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
 import {
   storeChecklistAcknowledgementsQueryKey,
   storeMobileChecklistsTodayQueryKey,
@@ -68,10 +68,9 @@ export function StoreHomePage(input: {
 }) {
   const { t } = useLocalization()
   const persona = resolveStorePersona(input.authSummary)
-  const canManageChecklistVisits = hasAnyRole(input.authSummary, [
+  const canManageChecklistVisits = !usesStoreReportViewerView(input.authSummary) && hasAnyRole(input.authSummary, [
     'REGION_MANAGER',
     'VISUAL_MERCHANDISER',
-    'SUPER_ADMIN',
   ])
   const canUseWorkflowInbox = hasAnyRole(input.authSummary, [
     'STORE_MANAGER',
