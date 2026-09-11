@@ -74,21 +74,17 @@ test('store reports route is visible for region managers', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
 })
 
-test('store reports period picker is month-year only and blocks future months', async ({ page }) => {
+test('store reports period picker keeps month semantics in the shared calendar', async ({ page }) => {
   await page.goto('/store/reports')
 
-  await page.getByRole('button', { name: /Haziran 2026/i }).click()
-  const popover = page.locator('.src-period-popover')
+  await page.getByRole('button', { name: 'Dönem seç' }).click()
+  const popover = page.getByRole('dialog', { name: 'Dönem seç' })
 
   await expect(popover).toBeVisible()
   await expect(popover.getByRole('combobox', { name: 'Yıl seç' })).toBeVisible()
-  await expect(popover.getByText('Pt')).toHaveCount(0)
-  await expect(popover.getByText('Pz')).toHaveCount(0)
-  await expect(popover.getByRole('button', { name: /^1$/ })).toHaveCount(0)
-  await expect(popover.getByRole('button', { name: 'Tem' })).toBeDisabled()
-
-  await popover.getByRole('button', { name: 'May' }).click()
-  await expect(page.getByRole('button', { name: /Mayıs 2026/i })).toBeVisible()
+  await popover.getByRole('combobox', { name: 'Ay seç' }).selectOption('4')
+  await popover.getByRole('button', { name: 'Uygula' }).click()
+  await expect(page.getByRole('button', { name: 'Dönem seç' })).toContainText('Mayıs 2026')
   await expect(page.getByText('1-31 Mayıs')).toBeVisible()
 })
 

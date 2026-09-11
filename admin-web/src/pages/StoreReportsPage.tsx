@@ -1,3 +1,4 @@
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -5,7 +6,6 @@ import {
   BarChart3,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   ClipboardCheck,
   Download,
   FileSpreadsheet,
@@ -14,21 +14,6 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -42,10 +27,6 @@ import {
   formatReportPeriodLabel,
   formatSourceReportCoverageLabel,
   getCurrentReportPeriod,
-  getReportMonthLabels,
-  isFutureReportPeriod,
-  listReportYearOptions,
-  parseReportPeriod,
 } from './store-reports-period'
 
 type StoreReportsPageProps = {
@@ -222,82 +203,11 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
   )
 }
 
-function StoreReportsPeriodPicker(input: {
-  period: string
-  onPeriodChange: (period: string) => void
-}) {
+function StoreReportsPeriodPicker(input: { period: string; onPeriodChange: (period: string) => void }) {
   const { locale, t } = useLocalization()
-  const [open, setOpen] = useState(false)
-  const today = useMemo(() => new Date(), [])
-  const parsed = parseReportPeriod(input.period)
-  const [year, setYear] = useState(parsed.year)
-  const yearOptions = listReportYearOptions(today)
-  const monthLabels = getReportMonthLabels(locale, 'short')
-
-  function selectMonth(month: number) {
-    const nextPeriod = `${year}-${String(month).padStart(2, '0')}`
-    if (isFutureReportPeriod({ period: nextPeriod, today })) return
-    input.onPeriodChange(nextPeriod)
-    setOpen(false)
-  }
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-        if (nextOpen) setYear(parsed.year)
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button className="src-period-trigger" type="button" variant="outline">
-          <CalendarDays data-icon="inline-start" />
-          {formatReportPeriodLabel(input.period, locale)}
-          <ChevronDown data-icon="inline-end" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="src-period-popover">
-        <PopoverHeader>
-          <PopoverTitle>{t('storeReports.selectPeriod')}</PopoverTitle>
-        </PopoverHeader>
-        <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
-          <SelectTrigger aria-label={t('storeReports.selectYear')} className="src-year-select">
-            <SelectValue placeholder={t('storeReports.year')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {yearOptions.map((option) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <div className="src-month-grid">
-          {monthLabels.map((label, index) => {
-            const month = index + 1
-            const nextPeriod = `${year}-${String(month).padStart(2, '0')}`
-            const selected = nextPeriod === input.period
-            const disabled = isFutureReportPeriod({ period: nextPeriod, today })
-
-            return (
-              <Button
-                className="src-month-button"
-                disabled={disabled}
-                key={label}
-                onClick={() => selectMonth(month)}
-                type="button"
-                variant={selected ? 'default' : 'outline'}
-              >
-                {label}
-              </Button>
-            )
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
+  return <CalendarPicker mode="month" value={input.period} locale={locale}
+    ariaLabel={t('storeReports.selectPeriod')} triggerClassName="src-period-trigger"
+    onValueChange={input.onPeriodChange} />
 }
 
 function resolvePersonaLabel(authSummary: AuthSessionSummary | null, t: TranslateFunction) {
