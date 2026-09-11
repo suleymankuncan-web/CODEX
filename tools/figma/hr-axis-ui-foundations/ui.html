@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        color: #06142d;
+        background: #f7f9ff;
+        font-family: Inter, system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 20px; }
+      main { display: grid; gap: 16px; }
+      h1 { margin: 0; font-size: 18px; line-height: 24px; }
+      p { margin: 0; color: #325daf; font-size: 12px; line-height: 18px; }
+      .summary {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid #dce4ff;
+        border-radius: 10px;
+        background: #fff;
+        font-size: 12px;
+        line-height: 18px;
+      }
+      button {
+        height: 36px;
+        border: 0;
+        border-radius: 10px;
+        background: #325daf;
+        color: #fff;
+        font: 600 13px/18px Inter, system-ui, sans-serif;
+        cursor: pointer;
+      }
+      button:hover { background: #20407c; }
+      button:disabled { cursor: wait; opacity: .55; }
+      #status { min-height: 36px; white-space: pre-line; }
+      .error { color: #b42318; }
+      .success { color: #087f5b; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <h1>HR Axis UI Foundations</h1>
+        <p>Üretim tokenlarıyla bileşen, pattern ve sayfa şablonları oluşturur.</p>
+      </div>
+      <div class="summary">
+        <strong>Yapacağın işlem</strong>
+        <span>Bu dosyada aşağıdaki butona bas. Plugin tarafından üretilen katalog güncellenir; dosyadaki diğer öğeler korunur.</span>
+      </div>
+      <button id="build" type="button">Sistemi oluştur / güncelle</button>
+      <p id="status">Hazır.</p>
+    </main>
+    <script>
+      const button = document.getElementById("build")
+      const status = document.getElementById("status")
+
+      button.addEventListener("click", () => {
+        button.disabled = true
+        status.className = ""
+        status.textContent = "Tokenlar, bileşenler ve sayfa şablonları hazırlanıyor…"
+        parent.postMessage({ pluginMessage: { type: "build" } }, "*")
+      })
+
+      onmessage = (event) => {
+        const message = event.data.pluginMessage
+        if (!message) return
+        if (message.type === "progress") status.textContent = message.text
+        if (message.type === "complete") {
+          status.className = "success"
+          status.textContent = message.text
+          button.disabled = false
+        }
+        if (message.type === "error") {
+          status.className = "error"
+          status.textContent = message.text
+          button.disabled = false
+        }
+      }
+    </script>
+  </body>
+</html>

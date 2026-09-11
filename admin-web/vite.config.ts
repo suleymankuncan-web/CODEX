@@ -61,6 +61,10 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
+    // Windows Docker bind mounts do not reliably emit native file-change events.
+    ...(process.env.HR_AXIS_VITE_USE_POLLING === 'true'
+      ? { watch: { usePolling: true, interval: 300 } }
+      : {}),
     fs: {
       allow: [projectRoot, dependencyRoot],
     },

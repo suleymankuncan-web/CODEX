@@ -1,0 +1,9 @@
+{
+  "name": "hr-axis-ui-foundations-figma-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/generate-catalog-manifest.mjs --check && node --test scripts/plugin.test.mjs"
+  }
+}

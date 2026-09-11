@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { HrAxisToaster } from './components/hr-axis-toaster'
+import { TooltipProvider } from './components/ui/tooltip'
 import { ClerkSessionProvider } from './features/auth/clerk-session'
 import { LocalizationProvider } from './features/localization/LocalizationProvider'
 import { SessionProvider } from './features/session/session-context'
@@ -45,10 +46,12 @@ createRoot(document.getElementById('root')!, {
       <SessionProvider>
         <ClerkSessionProvider>
           <LocalizationProvider>
-            <BrowserRouter>
-              <App />
-              <HrAxisToaster />
-            </BrowserRouter>
+            <TooltipProvider>
+              <BrowserRouter>
+                <App />
+                <HrAxisToaster />
+              </BrowserRouter>
+            </TooltipProvider>
           </LocalizationProvider>
         </ClerkSessionProvider>
       </SessionProvider>
