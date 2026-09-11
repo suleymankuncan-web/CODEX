@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-08T11:05:46.119Z",
+  "generatedAt": "2026-09-11T02:43:46.412Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -3117,7 +3117,7 @@
       "exportedFunction": "getMyPerformance",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 150
+        "line": 152
       }
     },
     {
@@ -3132,7 +3132,7 @@
       "exportedFunction": "getPersonnelPerformance",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 158
+        "line": 160
       }
     },
     {
@@ -3147,7 +3147,7 @@
       "exportedFunction": "getStoreKpiHighlights",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 181
+        "line": 185
       }
     },
     {
@@ -3162,7 +3162,7 @@
       "exportedFunction": "getStoreScoreBreakdown",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 193
+        "line": 197
       }
     },
     {
@@ -3177,7 +3177,7 @@
       "exportedFunction": "getRankings",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 260
+        "line": 266
       }
     },
     {
@@ -3192,7 +3192,7 @@
       "exportedFunction": "getChecklistReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 282
+        "line": 288
       }
     },
     {
@@ -3207,7 +3207,7 @@
       "exportedFunction": "getTurnoverReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 286
+        "line": 292
       }
     },
     {
@@ -3222,7 +3222,7 @@
       "exportedFunction": "getStoreMonthlyReportPackage",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 296
+        "line": 302
       }
     },
     {
