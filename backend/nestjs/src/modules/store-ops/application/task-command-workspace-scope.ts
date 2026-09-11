@@ -1,3 +1,4 @@
+import { resolveStoreReportViewerRole } from "./store-report-viewer-role";
 type ReadScope = {
   companyIds: readonly string[];
   regionIds: readonly string[];
@@ -44,8 +45,9 @@ export function resolveTaskCommandWorkspaceScope(input: {
   actorActionScope: ActionScope;
   roleScopes?: Record<string, ReadScope>;
 }): TaskCommandWorkspaceScope | null {
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
-    const scope = roleScope(input, "REPORT_VIEWER");
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
+    const scope = roleScope(input, reportRole);
     if (!scope) return null;
     const companyIds = unique(scope.companyIds);
     return companyIds.length > 0
@@ -78,10 +80,7 @@ export function resolveTaskCommandWorkspaceScope(input: {
     };
   }
 
-  if (
-    input.actorRoleCodes.includes("STORE_MANAGER")
-    || input.actorRoleCodes.includes("SUPER_ADMIN")
-  ) {
+  if (input.actorRoleCodes.includes("STORE_MANAGER")) {
     const storeIds = unique(input.actorActionScope.assignedStoreIds);
     return storeIds.length > 0
       ? {

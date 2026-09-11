@@ -109,7 +109,7 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
         ...authSessionFixture,
         user: {
           ...authSessionFixture.user,
-          roleCodes: ['SUPER_ADMIN', 'STORE_MANAGER'],
+            roleCodes: ['STORE_MANAGER'],
         },
       },
     })

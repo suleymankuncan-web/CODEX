@@ -1,7 +1,6 @@
 import type { QueryKey } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../auth/api'
-import {
-  canListTargetDistributionRequests,
+import { usesStoreReportViewerView, canListTargetDistributionRequests,
   hasAnyRole,
 } from '../auth/authorization'
 import { getRequestCenterWorkspace } from './request-center-api'
@@ -39,7 +38,7 @@ export function getStoreApprovalsPrefetchTasks(
 }
 
 function resolveStoreApprovalsPersona(authSummary: AuthSessionSummary | null): StoreApprovalsPersona {
-  if (hasAnyRole(authSummary, ['REPORT_VIEWER'])) {
+  if (usesStoreReportViewerView(authSummary)) {
     return 'reportViewer'
   }
 

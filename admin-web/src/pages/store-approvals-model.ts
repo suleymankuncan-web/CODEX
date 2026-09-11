@@ -1,5 +1,5 @@
 import type { AuthSessionSummary } from '../features/auth/api'
-import { hasAnyRole } from '../features/auth/authorization'
+import { usesStoreReportViewerView, hasAnyRole } from '../features/auth/authorization'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import type { TargetDistributionAllocation } from '../features/targets/api'
 import type {
@@ -490,7 +490,7 @@ export function getStoreSellerPositionOptions(positions: readonly PositionOption
 export function resolveStoreApprovalsPersona(
   authSummary: AuthSessionSummary | null,
 ): StoreApprovalsPersona {
-  if (hasAnyRole(authSummary, ['REPORT_VIEWER'])) {
+  if (usesStoreReportViewerView(authSummary)) {
     return 'reportViewer'
   }
 

@@ -598,54 +598,28 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
   ])
 })
 
-test('store checklist surface switches to English copy and persists locale', async ({ page }, testInfo) => {
+test('admin checklist reports switch to English and persist locale without the retired command UI', async ({ page }, testInfo) => {
   await setupChecklistPage(page, ['SUPER_ADMIN'])
   await page.goto('/store/checklists')
-
   await setStoredLocale(page, 'en')
-  await captureCloseoutRoleEvidence(page, testInfo, 'super-admin', 'Checklist Administration Center')
-
+  await captureCloseoutRoleEvidence(page, testInfo, 'super-admin', 'Checklist Reports')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Checklist Administration Center', { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Notifications' })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Open checklists' }).click()
-  const workflowDialog = page.getByRole('dialog', { name: /Checklist workflow/ })
-  await workflowDialog.getByRole('article').filter({ hasText: 'BM Checklist' }).getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Mark item' })).toHaveCount(0)
-  await expect(page.getByText('Add photo (optional)')).toHaveCount(0)
-  await expect(page.getByText('Not ready')).toHaveCount(0)
-  await expect(page.getByText('Draft saved')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Save draft' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
-  page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Cancel' }).click()
-  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
-  await page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' }).getByRole('button', { name: 'View details' }).click()
-  await expect(page.getByText('Checklist result', { exact: true })).toBeVisible()
-  await expect(page.getByText('Acknowledgement note')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'I acknowledge' })).toBeVisible()
-  await expect(page.getByText('Checklist sonuçları')).toHaveCount(0)
-  await expect(page.getByText('Ziyaretler')).toHaveCount(0)
-  await expect(page.locator('body')).not.toContainText('Ãƒ')
-  await expect(page.locator('body')).not.toContainText('Ã„')
-  await expect(page.locator('body')).not.toContainText('Ã…')
-
-  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
-
+  await expect(page.getByRole('heading', { name: 'Checklist Reports', exact: true })).toBeVisible()
+  await expect(page.getByText('Checklist Administration Center', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Open checklists' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save draft' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Complete', exact: true })).toHaveCount(0)
   await page.reload()
-
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Checklist Administration Center', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Checklist Reports', exact: true })).toBeVisible()
 })
 
-test('mixed Super Admin and Store Manager roles keep the Super Admin command view', async ({ page }) => {
+test('mixed Super Admin and Store Manager use the shared checklist reports', async ({ page }) => {
   await setupChecklistPage(page, ['SUPER_ADMIN', 'STORE_MANAGER'])
   await page.goto('/store/checklists')
-
-  await expect(page.getByRole('region', { name: 'Super Admin checklist görünümü' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Checklist Yönetim Merkezi' })).toBeVisible()
-  await expect(page.getByText('Sunucu yanıtı Super Admin kapsamıyla eşleşmedi.')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Checklist Raporları' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Checklist Yönetim Merkezi' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Checklistleri Aç' })).toHaveCount(0)
 })
 
 test('checklist completion waits for API success before showing completed notice', async ({ page }) => {
@@ -950,15 +924,18 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
     const stores = options.stores ?? [{ storeId, storeName: 'Marmara Park' }]
     const completedAt = options.handoffState?.completed ? '2026-05-20T10:00:00.000Z' : null
     const currentRoles = options.roleState?.current ?? roleCodes
-    const view = currentRoles.includes('REGION_MANAGER')
+    const companyReader = currentRoles.includes('SUPER_ADMIN') || currentRoles.includes('REPORT_VIEWER')
+    if (companyReader && url.pathname === '/api/checklists/command-canvas/regions') {
+      await route.fulfill({ json: { data: { period: url.searchParams.get('period') ?? '2026-05', view: 'report_viewer', items: [], meta: { count: 0, total: 0, limit: 20, offset: 0 } } } })
+      return
+    }
+    const view = companyReader ? 'report_viewer' : currentRoles.includes('REGION_MANAGER')
       ? 'region_manager'
-      : currentRoles.includes('SUPER_ADMIN')
-        ? 'super_admin'
-        : currentRoles.includes('STORE_MANAGER')
+      : currentRoles.includes('STORE_MANAGER')
         ? 'store_manager'
         : currentRoles.includes('VISUAL_MERCHANDISER')
           ? 'visual_merchandiser'
-          : 'super_admin'
+          : 'report_viewer'
     const pendingAcknowledgements = createChecklistAcknowledgementsFixture(currentRoles, options).items
       .filter((item) => item.acknowledgement === null).length
     await route.fulfill({

@@ -1,3 +1,4 @@
+import { resolveStoreReportViewerRole, storeReportViewerCompanyIds } from "./store-report-viewer-role";
 import type { AuthReadScope } from "../../auth/auth-context.service";
 
 export type ChecklistCommandView =
@@ -24,11 +25,11 @@ const BOTH_VISIT_TYPES = ["BM_STORE_VISIT", "VM_STORE_VISIT"] as const;
 export function resolveChecklistCommandReadScope(
   input: ResolveChecklistCommandReadScopeInput,
 ): ChecklistCommandReadScope | null {
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
-    const roleScope = input.roleScopes?.REPORT_VIEWER;
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
     return {
       view: "report_viewer",
-      companyIds: unique(roleScope?.companyIds ?? []),
+      companyIds: storeReportViewerCompanyIds(input, reportRole),
       regionIds: [],
       storeIds: [],
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
@@ -45,17 +46,6 @@ export function resolveChecklistCommandReadScope(
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
       executionTemplateTypes: ["BM_STORE_VISIT"],
-    };
-  }
-
-  if (input.actorRoleCodes.includes("SUPER_ADMIN")) {
-    return {
-      view: "super_admin",
-      companyIds: unique(input.actorReadScope.companyIds),
-      regionIds: unique(input.actorReadScope.regionIds),
-      storeIds: unique(input.actorReadScope.storeIds),
-      allowedTemplateTypes: [...BOTH_VISIT_TYPES],
-      executionTemplateTypes: [...BOTH_VISIT_TYPES],
     };
   }
 

@@ -1,3 +1,4 @@
+import { resolveStoreReportViewerRole, storeReportViewerCompanyIds } from "./store-report-viewer-role";
 import type { AuthActionScope, AuthReadScope } from "../../auth/auth-context.service";
 
 export type TargetWorkspaceView = "report_viewer" | "region_manager" | "store_manager";
@@ -21,11 +22,12 @@ export function resolveTargetWorkspaceScope(input: {
   roleScopes?: Record<string, AuthReadScope>;
 }): TargetWorkspaceScope | null {
   // TGT-FR-005 / EC-017: a mixed Report Viewer session is always company-read-only.
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
     return {
       view: "report_viewer",
       readScope: {
-        companyIds: unique(input.roleScopes?.REPORT_VIEWER?.companyIds ?? []),
+        companyIds: storeReportViewerCompanyIds(input, reportRole),
         regionIds: [],
         storeIds: [],
       },

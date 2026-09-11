@@ -37,19 +37,12 @@ export function VisualMerchandiserChecklistCommandPage(input: {
   return <ChecklistOperatorCommandPage {...input} view="visual_merchandiser" />
 }
 
-export function SuperAdminChecklistCommandPage(input: {
-  authSummary: AuthSessionSummary | null
-  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement, directChecklist?: 'vm') => void
-  onOpenResult?: (checklistInstanceId: string, storeId: string, tab: 'inbox' | 'history', trigger: HTMLElement) => void
-}) {
-  return <ChecklistOperatorCommandPage {...input} view="super_admin" />
-}
 
 function ChecklistOperatorCommandPage(input: {
   authSummary: AuthSessionSummary | null
   onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement, directChecklist?: 'vm') => void
   onOpenResult?: (checklistInstanceId: string, storeId: string, tab: 'inbox' | 'history', trigger: HTMLElement) => void
-  view: 'store_manager' | 'visual_merchandiser' | 'super_admin'
+  view: 'store_manager' | 'visual_merchandiser'
 }) {
   const { locale } = useLocalization()
   const copy = getOperatorCopy(locale === 'tr' ? trCopy : enCopy, input.view, locale)
@@ -163,9 +156,8 @@ function Signal({ label, value }: { label: string; value: number }) { return <sp
 function formatDate(value: string, locale: 'tr' | 'en') { return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB', { dateStyle: 'medium', timeZone: 'Europe/Istanbul' }).format(new Date(value)) }
 function statusLabel(status: ChecklistCommandRow['status'], copy: { statusCompleted: string; statusActive: string; statusPending: string; statusNeedsVisit: string }) { return status === 'completed' ? copy.statusCompleted : status === 'active' ? copy.statusActive : status === 'pending' ? copy.statusPending : copy.statusNeedsVisit }
 
-function getOperatorCopy(base: typeof trCopy | typeof enCopy, view: 'store_manager' | 'visual_merchandiser' | 'super_admin', locale: 'tr' | 'en') {
+function getOperatorCopy(base: typeof trCopy | typeof enCopy, view: 'store_manager' | 'visual_merchandiser', locale: 'tr' | 'en') {
   if (view === 'visual_merchandiser') return { ...base, aria: locale === 'tr' ? 'VM checklist görünümü' : 'Visual Merchandiser checklist view', eyebrow: locale === 'tr' ? 'Atanmış mağazalar · VM kontrolü' : 'Assigned stores · VM control', title: locale === 'tr' ? 'VM Kontrol Merkezi' : 'VM Control Center', scope: locale === 'tr' ? 'Yalnız atanmış mağazalardaki VM checklistleri ve sonuçları' : 'VM checklists and results for assigned stores only', scopeMismatch: locale === 'tr' ? 'Sunucu yanıtı VM kapsamıyla eşleşmedi.' : 'The server response did not match the Visual Merchandiser scope.', total: locale === 'tr' ? 'Atanmış mağaza' : 'Assigned stores', search: locale === 'tr' ? 'Atanmış mağaza ara' : 'Search assigned stores', openControls: locale === 'tr' ? 'VM checklistini aç' : 'Open VM checklist' }
-  if (view === 'super_admin') return { ...base, aria: locale === 'tr' ? 'Super Admin checklist görünümü' : 'Super Admin checklist view', eyebrow: locale === 'tr' ? 'Yönetim kapsamı · Checklist kontrolü' : 'Administrative scope · Checklist control', title: locale === 'tr' ? 'Checklist Yönetim Merkezi' : 'Checklist Administration Center', scope: locale === 'tr' ? 'Yetkili yönetim kapsamındaki mağaza checklistleri ve sonuçları' : 'Store checklists and results in the authorized administrative scope', scopeMismatch: locale === 'tr' ? 'Sunucu yanıtı Super Admin kapsamıyla eşleşmedi.' : 'The server response did not match the Super Admin scope.', total: locale === 'tr' ? 'Kapsamdaki mağaza' : 'Stores in scope', search: locale === 'tr' ? 'Kapsamdaki mağaza ara' : 'Search stores in scope' }
   return base
 }
 

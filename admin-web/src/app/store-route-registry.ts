@@ -5,6 +5,7 @@ import {
   canOpenStoreWorkforce,
   checklistResultReadRoles,
   hasAnyRole,
+  usesStoreReportViewerView,
   storeWorkforceRouteRoles,
   targetRequestListRoles,
 } from '../features/auth/authorization'
@@ -134,6 +135,8 @@ export function isStoreVisualMerchandiserOnly(authSummary: AuthSessionSummary | 
 
 export function resolveStorePersona(authSummary: AuthSessionSummary | null): StorePersona {
   const roles = roleSet(authSummary)
+
+  if (usesStoreReportViewerView(authSummary)) return 'admin'
 
   if (isStoreVisualMerchandiserOnly(authSummary)) {
     return 'visualMerchandiser'

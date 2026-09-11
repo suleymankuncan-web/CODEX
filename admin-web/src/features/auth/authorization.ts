@@ -11,7 +11,7 @@ export const checklistResultReadRoles = [
   'REGION_MANAGER',
   'VISUAL_MERCHANDISER',
 ]
-export const storeWorkforceRouteRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER']
+export const storeWorkforceRouteRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 
 export function hasAnyRole(authSummary: AuthSessionSummary | null, requiredRoles: string[]) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -101,7 +101,7 @@ export function canOpenStoreWorkforce(authSummary: AuthSessionSummary | null) {
     hasAnyRole(authSummary, ['REGION_MANAGER']) &&
     (getReadStoreIds(authSummary).length > 0 || getReadRegionIds(authSummary).length > 0)
   const canOpenAsReportViewer =
-    hasAnyRole(authSummary, ['REPORT_VIEWER']) && getReadCompanyIds(authSummary).length > 0
+    usesStoreReportViewerView(authSummary) && getReadCompanyIds(authSummary).length > 0
 
   return canOpenAsStoreManager || canOpenAsRegionManager || canOpenAsReportViewer
 }
