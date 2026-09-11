@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   CommandCanvasMetric,
   CommandCanvasMetricRail,
-  CommandCanvasMonthYearPicker,
+  CommandCanvasCalendarMonthYearPicker,
   CommandCanvasPage,
   CommandCanvasPageHeader,
   CommandCanvasPartialDataNotice,
@@ -199,7 +199,7 @@ export function StoreManagerTargetCommand(input: {
         actions={
           <div className="target-command-period">
             <span>{copy.viewedPeriod}</span>
-            <CommandCanvasMonthYearPicker
+            <CommandCanvasCalendarMonthYearPicker
               ariaLabel={copy.viewedPeriod}
               locale={locale}
               onValueChange={input.onPeriodChange}
