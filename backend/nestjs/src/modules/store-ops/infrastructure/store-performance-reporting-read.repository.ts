@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { readRankingRangeBenchmarks } from "./ranking-range-read";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 @Injectable()
@@ -262,11 +263,13 @@ export class StorePerformanceReportingReadRepository {
   }
 
   async getStoreTurkeyBenchmarkValues(input: {
+    isRange?: boolean;
     periodType: string;
     periodStart: string;
     periodEnd: string;
     companyId?: string;
   }) {
+    if (input.isRange || (input.periodType === "daily" && input.periodStart !== input.periodEnd)) return readRankingRangeBenchmarks(this.databaseService, input);
     const params: unknown[] = [
       input.periodType,
       input.periodStart,

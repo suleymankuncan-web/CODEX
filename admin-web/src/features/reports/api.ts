@@ -121,6 +121,7 @@ export async function getKpiConfigAudit() {
 }
 
 export type MyPerformanceQueryInput = {
+  periodEnd?: string
   mode?: 'live' | 'closed'
   snapshotDate?: string
   periodType?: 'daily' | 'weekly' | 'monthly'
@@ -129,6 +130,7 @@ export type MyPerformanceQueryInput = {
 
 function buildMyPerformanceQuery(input?: MyPerformanceQueryInput) {
   const params = new URLSearchParams()
+  if (input?.periodEnd) params.set('periodEnd', input.periodEnd)
   if (input?.mode) {
     params.set('mode', input.mode)
   }
@@ -164,12 +166,14 @@ export async function getPersonnelPerformance(
 export async function getStoreKpiHighlights(input?: {
   periodType?: 'daily' | 'weekly' | 'monthly'
   periodStart?: string
+  periodEnd?: string
   storeId?: string
 }) {
   const params = new URLSearchParams()
   if (input?.periodType) {
     params.set('periodType', input.periodType)
   }
+  if (input?.periodEnd) params.set('periodEnd', input.periodEnd)
   if (input?.periodStart) {
     params.set('periodStart', input.periodStart)
   }
@@ -196,6 +200,7 @@ export async function getStoreScoreBreakdown(input: {
 export async function getRankings(input?: {
   periodType?: 'daily' | 'monthly'
   periodStart?: string
+  periodEnd?: string
   regionManagerUserId?: string
   regionId?: string
   storeId?: string
@@ -213,6 +218,7 @@ export async function getRankings(input?: {
 }) {
   const params = new URLSearchParams()
   params.set('periodType', input?.periodType ?? 'monthly')
+  if (input?.periodEnd) params.set('periodEnd', input.periodEnd)
   if (input?.periodStart) {
     params.set('periodStart', input.periodStart)
   }

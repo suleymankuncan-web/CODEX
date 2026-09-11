@@ -68,6 +68,6 @@ describe("ReportingStoreKpiReadService", () => {
     expect((gsm as Record<string, unknown> | undefined)?.benchmarkSource).toBe("TURKEY_AVERAGE");
     expect((gsm as Record<string, unknown> | undefined)?.benchmarkValue).toBe(56.2);
     expect((gsm as Record<string, unknown> | undefined)?.achievementRate).toBe(0.4);
-    expect((gsm as Record<string, unknown> | undefined)?.scoreContribution).toBe(2);
+    expect((gsm as Record<string, unknown> | undefined)?.scoreContribution).toBe(1.4);
   });
 });

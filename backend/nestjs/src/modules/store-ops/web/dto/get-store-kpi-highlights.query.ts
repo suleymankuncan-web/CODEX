@@ -1,4 +1,5 @@
 import { IsDateString, IsIn, IsOptional } from "class-validator";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetStoreKpiHighlightsQueryDto {
@@ -9,6 +10,11 @@ export class GetStoreKpiHighlightsQueryDto {
   @IsOptional()
   @IsDateString()
   periodStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({ format: "date" })
+  periodEnd?: string;
 
   @IsOptional()
   @IsPostgresUuid()

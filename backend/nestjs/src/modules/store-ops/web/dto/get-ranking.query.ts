@@ -10,6 +10,7 @@ import {
   Min,
 } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class GetRankingQueryDto {
   @IsOptional()
@@ -19,6 +20,11 @@ export class GetRankingQueryDto {
   @IsOptional()
   @IsDateString()
   periodStart?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({ format: "date" })
+  periodEnd?: string;
 
   @IsOptional()
   @IsPostgresUuid()

@@ -76,7 +76,7 @@ export function buildEmployeeScoreRankRows<Row extends EmployeePerformanceRankRo
         benchmarkSource === "TURKEY_AVERAGE" && matchedCode
           ? input.benchmarkLookup.get(matchedCode) ?? null
           : null;
-      const metricScore = input.scoringService.scoreMetric({
+      const metricScore = input.scoringService.scoreLiveMetric({
         metricCode: metric.code,
         actualValue: matchedMetric.actualValue,
         benchmarkValue,

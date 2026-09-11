@@ -1,8 +1,10 @@
 import type { resolveRankingAccess } from "./ranking-access.policy";
+import type { KpiScoreProfile } from "./kpi-config.contract";
 import {
   PersonnelRankingRow,
   RankingMetricValue,
   RankingResponse,
+  RankingReferenceGroup,
   RankingSortDirection,
   RankingSortKey,
   RankingVisibility,
@@ -123,6 +125,23 @@ export function getMetricComparableValue(metrics: RankingMetricValue[], code: st
   }
 
   return metric.actualValue / Math.abs(metric.targetValue);
+}
+
+export function buildRankingReferenceGroup(input: {
+  rows: Array<{ scoreValue: number; metrics: RankingMetricValue[] }>;
+  profile: KpiScoreProfile;
+  benchmarkLookup: Map<string, number | null>;
+}): RankingReferenceGroup {
+  return {
+    averageScore: average(input.rows.map((row) => row.scoreValue)),
+    metrics: input.profile.metrics.map((metric) => {
+      const benchmarkValue = input.benchmarkLookup.get(metric.code) ?? null;
+      const value = metric.code === "TARGET_ACHIEVEMENT" || benchmarkValue === null
+        ? average(input.rows.map((row) => getMetricComparableValue(row.metrics, metric.code)))
+        : benchmarkValue;
+      return { code: metric.code, label: metric.label, value };
+    }),
+  };
 }
 
 export function rankStoreRows(rows: UnrankedStoreRankingRow[]): RankedStoreRankingRow[] {
@@ -371,7 +390,7 @@ export function maskPersonnelRow(
     };
   }
 
-  const { metrics: _metrics, ...summary } = row;
+  const { metrics: _metrics, storeScoreShare: _storeScoreShare, ...summary } = row;
   return {
     ...summary,
     visibility,
@@ -379,9 +398,17 @@ export function maskPersonnelRow(
 }
 
 export function resolveCurrentStoreId(
-  input: { assignedStoreIds: string[]; storeIds: string[] },
+  input: { assignedStoreIds: string[]; storeIds: string[]; storeId?: string },
   currentEmployee: PersonnelRankingRow | null,
 ) {
+  const requestedStoreId = input.storeId;
+  if (
+    requestedStoreId &&
+    (input.assignedStoreIds.includes(requestedStoreId) ||
+      input.storeIds.includes(requestedStoreId))
+  ) {
+    return requestedStoreId;
+  }
   return (
     input.assignedStoreIds[0] ??
     input.storeIds[0] ??

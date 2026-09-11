@@ -206,7 +206,7 @@ export class ReportingController {
       mode: query.mode,
       snapshotDate: query.snapshotDate,
       periodType: query.periodType,
-      periodStart: query.periodStart,
+      periodStart: query.periodStart, periodEnd: query.periodEnd,
     });
   }
 
@@ -250,7 +250,7 @@ export class ReportingController {
       mode: query.mode,
       snapshotDate: query.snapshotDate,
       periodType: query.periodType,
-      periodStart: query.periodStart,
+      periodStart: query.periodStart, periodEnd: query.periodEnd,
     });
   }
 
@@ -301,7 +301,7 @@ export class ReportingController {
       regionIds: storeReadScope.regionIds,
       storeIds: storeReadScope.storeIds,
       periodType: query.periodType,
-      periodStart: query.periodStart,
+      periodStart: query.periodStart, periodEnd: query.periodEnd,
       storeId: query.storeId,
       regionManagerUserId:
         isRegionManagerRead && !isReportViewer ? request.user.userId : undefined,
@@ -373,7 +373,7 @@ export class ReportingController {
       ...this.resolveReadScope(request.user),
       assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
       periodType: query.periodType ?? "monthly",
-      periodStart: query.periodStart,
+      periodStart: query.periodStart, periodEnd: query.periodEnd,
       regionManagerUserId: query.regionManagerUserId,
       regionId: query.regionId,
       storeId: query.storeId,

@@ -4,6 +4,20 @@ import {
 } from "./kpi-benchmark-scoring.contract";
 
 export class KpiBenchmarkScoringService {
+  // Live policy v2. Keep scoreMetric unchanged for versioned closed snapshots.
+  scoreLiveMetric(input: KpiBenchmarkMetricInput): KpiBenchmarkMetricResult {
+    const capRatio = ["BM_CHECKLIST", "VM_CHECKLIST"].includes(input.metricCode) ? 1 : 2;
+    const result = this.scoreMetric({ ...input, capRatio });
+    if (result.actualRatio === null) return result;
+    const reference = input.benchmarkSource === "TARGET" ? input.targetValue : input.benchmarkValue;
+    const scoredRatio = Math.max(0, Math.min(input.actualValue! / reference!, capRatio));
+    return {
+      ...result,
+      scoredRatio: this.round(scoredRatio),
+      scoreContribution: this.round(scoredRatio * 70 * input.weightPercent / 100),
+    };
+  }
+
   scoreMetric(input: KpiBenchmarkMetricInput): KpiBenchmarkMetricResult {
     if (input.actualValue === null || !Number.isFinite(input.actualValue)) {
       return this.missing(input, "missing_actual", "actual_missing");

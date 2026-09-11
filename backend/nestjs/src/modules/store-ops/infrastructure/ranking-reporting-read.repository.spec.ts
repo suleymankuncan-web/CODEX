@@ -1,3 +1,4 @@
+import { personnelPeriodTargetSql } from "./personnel-period-sql";
 import { RankingReportingReadRepository } from "./ranking-reporting-read.repository";
 
 describe("RankingReportingReadRepository source filters", () => {
@@ -121,7 +122,7 @@ describe("RankingReportingReadRepository source filters", () => {
     expect(String(sql)).toContain("FROM ops.checklist_instance ci");
     expect(String(sql)).toContain("INNER JOIN ops.checklist_template ct");
     expect(String(sql)).toContain("ci.status = 'completed'");
-    expect(String(sql)).toContain("ci.completed_at::date BETWEEN $1::date AND $2::date");
+    expect(String(sql)).toContain("ci.completed_at >= ($1::date::timestamp AT TIME ZONE 'Europe/Istanbul') AND ci.completed_at < (($2::date + 1)::timestamp AT TIME ZONE 'Europe/Istanbul')");
     expect(String(sql)).toContain("WHEN 'BM_STORE_VISIT' THEN 'BM_CHECKLIST'");
     expect(String(sql)).toContain("WHEN 'VM_STORE_VISIT' THEN 'VM_CHECKLIST'");
     expect(String(sql)).toContain("store.kpi_import_enabled = TRUE");
@@ -152,7 +153,7 @@ describe("RankingReportingReadRepository source filters", () => {
     expect(sql).toContain(
       "kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
     );
-    expect(sql).toContain("ptr.target_value::text AS target_value");
+    expect(sql).toContain(`${personnelPeriodTargetSql}::text AS target_value`);
   });
 
   it("projects personnel position and sales totals for official ranking eligibility", async () => {

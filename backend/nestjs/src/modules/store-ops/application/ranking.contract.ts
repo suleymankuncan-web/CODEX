@@ -51,6 +51,8 @@ export type PersonnelRankingRow = {
   storeRank: number | null;
   storePopulation: number;
   scoreValue: number;
+  /** Sales × personnel score share within the store; omitted for summary visibility. */
+  storeScoreShare?: number | null;
   canOpenProfile: boolean;
   visibility: RankingVisibility;
   metrics?: RankingMetricValue[];
@@ -125,6 +127,7 @@ export type RankingResponse = {
     riskStoreCount: number;
   };
   storeLeaderboard: {
+    currentStoreComparisons?: Array<{ code: string; turkey: { rank: number | null; population: number }; region: { rank: number | null; population: number } }>;
     items: StoreRankingRow[];
     currentStore: StoreRankingRow | null;
     meta: {

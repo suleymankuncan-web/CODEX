@@ -373,8 +373,8 @@ describe("RankingService", () => {
       assignedStoreIds: ["store-001"],
       periodType: "monthly",
     });
-
     expect(result.access.globalMode).toBe("top100");
+    expect(result.storeLeaderboard.currentStoreComparisons).toHaveLength(8); expect(result.storeLeaderboard.items[0]).not.toHaveProperty("metrics"); expect(result.storeLeaderboard.currentStoreComparisons?.every(item => !('storeId' in item))).toBe(true);
     expect(result.personnelLeaderboard.items[0]).not.toHaveProperty("metrics");
     expect(result.personnelLeaderboard.managedStorePersonnel).toHaveLength(5);
     expect(result.personnelLeaderboard.managedStorePersonnel[0]).toEqual(
@@ -752,7 +752,7 @@ describe("RankingService", () => {
       offset: 0,
     });
 
-    expect(result.personnelLeaderboard.items.map((item) => item.scoreValue)).toEqual([72, 72]);
+    expect(result.personnelLeaderboard.items.map((item) => item.scoreValue)).toEqual([50.4, 50.4]);
     expect(result.personnelLeaderboard.items.map((item) => item.employeeId)).toEqual([
       "employee-015",
       "employee-014",
@@ -814,7 +814,7 @@ describe("RankingService", () => {
         expect.objectContaining({
           code: "gsm_approval",
           actualValue: 91.2052,
-          contributionValue: 4.5603,
+          contributionValue: 3.1922,
         }),
       ]),
     );
@@ -904,7 +904,7 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        scoreValue: 94.44,
+        scoreValue: 66.11,
       }),
     );
   });
@@ -987,24 +987,24 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        scoreValue: 94,
+        scoreValue: 65.8,
         metrics: expect.arrayContaining([
           expect.objectContaining({
             code: "BM_CHECKLIST",
             actualValue: 80,
-            contributionValue: 4,
+            contributionValue: 2.8,
           }),
           expect.objectContaining({
             code: "VM_CHECKLIST",
             actualValue: 100,
-            contributionValue: 5,
+            contributionValue: 3.5,
           }),
         ]),
       }),
     );
   });
 
-  it("keeps target achievement weight dominant in default store rankings", async () => {
+  it("distinguishes stronger ATV and CR after lifting the former 1.2 ratio cap", async () => {
     const storeRows = [
       ...createStoreKpiRows({
         storeId: "store-hg-led",
@@ -1041,8 +1041,8 @@ describe("RankingService", () => {
     });
 
     expect(result.storeLeaderboard.items.map((row) => row.storeId)).toEqual([
-      "store-hg-led",
       "store-atv-cr-led",
+      "store-hg-led",
     ]);
     expect(result.storeLeaderboard.items[0].scoreValue).toBeGreaterThan(
       result.storeLeaderboard.items[1].scoreValue,

@@ -47,7 +47,7 @@ describe("ReportingService KPI benchmark scoring", () => {
     })).rejects.toThrow("Personnel profile is outside the current user's scope");
   });
 
-  it("returns capped benchmark metadata for store live KPI highlights", async () => {
+  it("returns the 70-point scale without the former 1.2 cap for live store KPI highlights", async () => {
     const reportingRepository = {
       getStoreNameById: jest.fn(async () => "Marmara Park"),
       listStoreKpiPeriods: jest.fn(async () => [
@@ -88,9 +88,9 @@ describe("ReportingService KPI benchmark scoring", () => {
 
     const upt = result.metrics.find((metric) => metric.code === "UPT");
     expect((upt as Record<string, unknown> | undefined)?.actualRatio).toBe(1.48);
-    expect((upt as Record<string, unknown> | undefined)?.scoredRatio).toBe(1.2);
-    expect((upt as Record<string, unknown> | undefined)?.isCapped).toBe(true);
-    expect((upt as Record<string, unknown> | undefined)?.scoreContribution).toBe(18);
+    expect((upt as Record<string, unknown> | undefined)?.scoredRatio).toBe(1.48);
+    expect((upt as Record<string, unknown> | undefined)?.isCapped).toBe(false);
+    expect((upt as Record<string, unknown> | undefined)?.scoreContribution).toBe(15.54);
   });
 
   it("keeps GSM approval scoring target-based while exposing Turkey average as display reference", async () => {
@@ -138,7 +138,7 @@ describe("ReportingService KPI benchmark scoring", () => {
     expect((gsm as Record<string, unknown> | undefined)?.benchmarkSource).toBe("TURKEY_AVERAGE");
     expect((gsm as Record<string, unknown> | undefined)?.benchmarkValue).toBe(72);
     expect((gsm as Record<string, unknown> | undefined)?.achievementRate).toBe(0.4);
-    expect((gsm as Record<string, unknown> | undefined)?.scoreContribution).toBe(2);
+    expect((gsm as Record<string, unknown> | undefined)?.scoreContribution).toBe(1.4);
     expect((gsm as Record<string, unknown> | undefined)?.scoreStatus).toBe("scored");
   });
 
@@ -215,14 +215,14 @@ describe("ReportingService KPI benchmark scoring", () => {
           code: "BM_CHECKLIST",
           actualValue: 80,
           achievementRate: 0.8,
-          scoreContribution: 4,
+          scoreContribution: 2.8,
           scoreStatus: "scored",
         }),
         expect.objectContaining({
           code: "VM_CHECKLIST",
           actualValue: 100,
           achievementRate: 1,
-          scoreContribution: 5,
+          scoreContribution: 3.5,
           scoreStatus: "scored",
         }),
       ]),
