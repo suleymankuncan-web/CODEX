@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 import path from "node:path"
 
@@ -23,6 +23,7 @@ const banner = [
   "",
 ].join("\n")
 
+await mkdir(path.join(pluginRoot, "dist"), { recursive: true })
 await writeFile(
   path.join(pluginRoot, "dist/code.js"),
   `${banner}${sources.map((source) => source.trimEnd()).join("\n\n")}\n`,
