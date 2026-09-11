@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
   await routeStoreSurfaceApi(page)
 })
 
-test('store personnel profile falls back when ranking period has no personnel data', async ({ page }) => {
+test('store personnel profile preserves a selected no-data period from rankings', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const aprilOnlyPeriods = [
     {
@@ -142,13 +142,8 @@ test('store personnel profile falls back when ranking period has no personnel da
   await expect.poll(() =>
     personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-05-01'),
   ).toBe(true)
-  await expect.poll(() =>
-    personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
-  ).toBe(true)
-  const storeMeHeader = page.locator('.store-me-compact-header')
-  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
-  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
-  await expect(page.getByText('Unknown employee')).toHaveCount(0)
+  await expect(page).toHaveURL(/periodStart=2026-05-01/)
+  await expect(page.getByText('Seçilen tarih için veri bulunamadı')).toBeVisible()
 })
 
 test('store personnel profile date filter uses the shared calendar', async ({ page }) => {
@@ -263,7 +258,7 @@ test('store personnel profile derives date filters from the active period when t
   await expect(page.getByRole('button', { name: 'Tarih filtresi' })).toContainText('Mart 2026')
 })
 
-test('store personnel profile opens daily data when requested month has no rows', async ({ page }) => {
+test('store personnel profile keeps an explicitly selected month when it has no rows', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const loadedPeriods = [
     {
@@ -347,17 +342,10 @@ test('store personnel profile opens daily data when requested month has no rows'
 
   await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-05-01`)
 
-  await expect.poll(() =>
-    personnelPerformanceRequests.some(
-      (requestUrl) =>
-        requestUrl.searchParams.get('periodType') === 'daily' &&
-        requestUrl.searchParams.get('periodStart') === '2026-04-24',
-    ),
-  ).toBe(true)
-  const storeMeHeader = page.locator('.store-me-compact-header')
-  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
-  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
-  await expect(page.getByText('Unknown employee')).toHaveCount(0)
+  await expect(page.getByText('Seçilen tarih için veri bulunamadı')).toBeVisible()
+  expect(personnelPerformanceRequests.some(
+    (requestUrl) => requestUrl.searchParams.get('periodType') === 'daily',
+  )).toBe(false)
 })
 
 test('store personnel profile uses employee periods instead of global closed snapshots', async ({ page }) => {

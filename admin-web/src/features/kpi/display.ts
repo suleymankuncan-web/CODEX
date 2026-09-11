@@ -129,6 +129,9 @@ export function resolveLocalizedKpiScoreReference<T extends KpiDisplayValue>(
     benchmarkSource?: string | null
   },
 ) {
+  if (input.benchmarkSource === 'TURKEY_AVERAGE') {
+    return { value: hasReferenceValue(input.benchmarkValue) ? input.benchmarkValue : null, sourceLabel: t(keys.turkeyAverage) }
+  }
   if (hasReferenceValue(input.targetValue)) {
     return {
       value: input.targetValue,

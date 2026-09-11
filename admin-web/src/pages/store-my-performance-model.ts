@@ -1,3 +1,4 @@
+import { matchingPreviousPerformance, previousPersonnelPeriod } from './personnel-period-comparison'
 import { useMemo, type Dispatch } from 'react'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { formatKpiMetricValue } from '../features/kpi/display'
@@ -18,6 +19,7 @@ export type StoreMyPerformancePageState = {
   sourceMode: StorePerformanceSourceMode
   selectedLivePeriodType: LivePeriodType
   selectedLivePeriodStart: string
+  selectedLivePeriodEnd?: string
   selectedLiveYears: string[]
   selectedLiveMonthKeys: string[]
   selectedLiveDayStarts: string[]
@@ -27,11 +29,13 @@ export type StoreMyPerformancePageState = {
 }
 
 export type StoreMyPerformancePageStateInput = {
+  initialLivePeriodEnd?: string
   initialLivePeriodStart?: string
   initialLivePeriodType?: LivePeriodType
 }
 
 export type StoreMyPerformancePageAction =
+  | { type: 'setLiveRange'; start: string; end: string }
   | { type: 'applyLivePeriodFallback'; periodType: LivePeriodType | null; periodStart: string }
   | { type: 'changeLivePeriodType'; periodType: LivePeriodType; periodStart: string }
   | { type: 'setLiveYearSelection'; years: string[]; periodStart: string }
@@ -87,6 +91,7 @@ export function createStoreMyPerformancePageState(
     sourceMode: 'live',
     selectedLivePeriodType: input.initialLivePeriodType ?? 'monthly',
     selectedLivePeriodStart: input.initialLivePeriodStart?.trim() ?? '',
+    selectedLivePeriodEnd: input.initialLivePeriodEnd?.trim() ?? '',
     selectedLiveYears: [],
     selectedLiveMonthKeys: [],
     selectedLiveDayStarts: [],
@@ -101,29 +106,37 @@ export function storeMyPerformancePageReducer(
   action: StoreMyPerformancePageAction,
 ): StoreMyPerformancePageState {
   switch (action.type) {
+    case 'setLiveRange': return { ...state, selectedLivePeriodType: 'daily', selectedLivePeriodStart: action.start, selectedLivePeriodEnd: action.end, selectedLiveYears: [], selectedLiveMonthKeys: [], selectedLiveDayStarts: [] }
     case 'applyLivePeriodFallback':
       return {
         ...state,
         selectedLivePeriodType: action.periodType ?? state.selectedLivePeriodType,
         selectedLivePeriodStart: action.periodStart,
+        selectedLivePeriodEnd: '',
       }
     case 'changeLivePeriodType':
       return {
         ...state,
         selectedLivePeriodType: action.periodType,
         selectedLivePeriodStart: action.periodStart,
+        selectedLivePeriodEnd: '',
       }
     case 'setLiveYearSelection':
       return {
         ...state,
         selectedLiveYears: action.years,
         selectedLivePeriodStart: action.periodStart,
+        selectedLivePeriodEnd: '',
       }
     case 'setLiveMonthSelection':
       return {
         ...state,
+        selectedLivePeriodType: 'monthly',
+        selectedLiveDayStarts: [],
+        selectedLiveYears: [],
         selectedLiveMonthKeys: action.monthKeys,
         selectedLivePeriodStart: action.periodStart,
+        selectedLivePeriodEnd: '',
       }
     case 'setLiveDaySelection':
       return {
@@ -131,6 +144,7 @@ export function storeMyPerformancePageReducer(
         selectedLivePeriodType: 'daily',
         selectedLiveDayStarts: action.dayStarts,
         selectedLivePeriodStart: action.periodStart,
+        selectedLivePeriodEnd: '',
       }
     case 'toggleDateFilter':
       return { ...state, isDateFilterOpen: !state.isDateFilterOpen }
@@ -594,7 +608,7 @@ export function useStoreMyPerformancePeriodModel(input: {
     return selectedLivePeriods.filter((period) => selectedKeySet.has(getLivePeriodOptionKey(period)))
   }, [input.selectedLiveDayStarts, input.selectedLivePeriodType, selectedLivePeriods])
   const livePeriodFallbackType = useMemo(() => {
-    if (input.sourceMode !== 'live' || !input.performanceQueryIsSuccess || input.performance?.period) {
+    if (input.sourceMode !== 'live' || Boolean(input.selectedLivePeriodStart) || !input.performanceQueryIsSuccess || input.performance?.period) {
       return null
     }
 
@@ -620,6 +634,7 @@ export function useStoreMyPerformancePeriodModel(input: {
     input.performanceQueryIsSuccess,
     input.selectedLivePeriodType,
     input.sourceMode,
+    input.selectedLivePeriodStart,
     scopedAvailableDailyPeriods.length,
     scopedAvailableMonthlyPeriods.length,
     selectedLivePeriods.length,
@@ -634,6 +649,7 @@ export function useStoreMyPerformancePeriodModel(input: {
 
     if (
       input.sourceMode !== 'live' ||
+      Boolean(input.selectedLivePeriodStart) ||
       !input.performanceQueryIsSuccess ||
       input.performance?.period ||
       fallbackPeriods.length === 0
@@ -666,26 +682,12 @@ export function useStoreMyPerformancePeriodModel(input: {
     scopedAvailableMonthlyPeriods,
   ])
   const monthlyDetailPeriods = useMemo(() => {
-    const scopedDetailPeriods = effectiveSelectedLivePeriods.length
-      ? effectiveSelectedLivePeriods
-      : input.selectedLivePeriodType === 'daily'
-        ? scopedAvailableDailyPeriods
-        : scopedAvailableMonthlyPeriods
-    const activeYear = getPeriodYear(input.performance?.period?.periodStart ?? scopedDetailPeriods.at(-1)?.periodStart)
-    const scopedPeriods = activeYear
-      ? scopedDetailPeriods.filter((period) => getPeriodYear(period.periodStart) === activeYear)
-      : scopedDetailPeriods
-
-    return scopedPeriods
+    const activeYear = getPeriodYear(input.selectedLivePeriodStart || input.performance?.period?.periodStart || availableMonthlyPeriods.at(-1)?.periodStart)
+    return availableMonthlyPeriods
+      .filter(period => !activeYear || getPeriodYear(period.periodStart) === activeYear)
       .toSorted((left, right) => comparePeriodStart(left.periodStart, right.periodStart))
       .slice(-12)
-  }, [
-    effectiveSelectedLivePeriods,
-    input.performance?.period?.periodStart,
-    input.selectedLivePeriodType,
-    scopedAvailableDailyPeriods,
-    scopedAvailableMonthlyPeriods,
-  ])
+  }, [availableMonthlyPeriods, input.selectedLivePeriodStart, input.performance?.period?.periodStart])
 
   return {
     availableDailyPeriods,
@@ -751,15 +753,11 @@ export function createStoreMyPerformancePeriodHandlers(input: {
   }
 
   function selectLiveMonth(monthKey: string) {
-    const nextPeriods = getPeriodsForSelection({ periodType: 'monthly', months: [monthKey] })
-    if (nextPeriods.length === 0) {
-      return
-    }
-
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return
     input.dispatch({
       type: 'setLiveMonthSelection',
       monthKeys: [monthKey],
-      periodStart: getLatestAvailablePeriodStart(nextPeriods),
+      periodStart: `${monthKey}-01`,
     })
   }
 
@@ -804,6 +802,7 @@ export function buildStoreMyPerformanceViewModel(input: {
   effectiveSelectedLivePeriods: LivePeriodOption[]
   locale: AppLocale
   monthlyDetailPeriods: LivePeriodOption[]
+  previousPerformance?: MyPerformanceSummary | undefined
   monthlyPerformanceData: Array<MyPerformanceSummary | undefined>
   performance: MyPerformanceSummary
   profileMode: StoreProfileMode
@@ -813,6 +812,7 @@ export function buildStoreMyPerformanceViewModel(input: {
   selectedLiveYears: string[]
   sourceMode: StorePerformanceSourceMode
   t: TranslateFunction
+  isDateRange?: boolean
   gradingBands?: Parameters<typeof resolvePerformanceGrade>[1]
 }) {
   const partial = input.performance.partial ?? {
@@ -827,7 +827,10 @@ export function buildStoreMyPerformanceViewModel(input: {
     targetEntryMode: 'manager_assignment' as const,
     targetEditableByCurrentUser: false,
   }
-  const performanceGrade = resolvePerformanceGrade(input.performance.score.value, input.gradingBands)
+  const performanceGrade = resolvePerformanceGrade(
+    input.sourceMode === 'live' ? input.performance.score.value / 70 : input.performance.score.value,
+    input.gradingBands,
+  )
   const scoreMeaning = resolveLocalizedScoreMeaning({
     t: input.t,
     gradeCode: performanceGrade.code,
@@ -867,11 +870,15 @@ export function buildStoreMyPerformanceViewModel(input: {
   const monthlyPerformanceData = monthlyPeriodsForRows.map((period, index) => {
     const queriedData = input.monthlyPerformanceData[index]
 
-    return queriedData ?? (isSamePeriodStart(period.periodStart, getPeriodStart(input.performance)) ? input.performance : null)
+    const data = queriedData ?? input.performance
+    return isSamePeriodStart(period.periodStart, data.period?.periodStart) &&
+      isSamePeriodStart(period.periodEnd, data.period?.periodEnd) ? data : null
   })
   const monthlyDetailRows = monthlyPeriodsForRows.map((period, index) => {
     const monthPerformance = monthlyPerformanceData[index]
-    const previousPerformance = index > 0 ? monthlyPerformanceData[index - 1] : null
+    const previousPeriod = previousPersonnelPeriod(monthPerformance?.period ?? null)
+    const previousPerformance = monthPerformance ? matchingPreviousPerformance(monthPerformance,
+      monthlyPerformanceData.find(data => data?.period?.periodStart.slice(0, 10) === previousPeriod?.periodStart) ?? undefined) : undefined
     const metrics = monthPerformance?.metrics.filter(isPersonnelMetric) ?? []
     const scoreValue = monthPerformance?.score.value ?? null
 
@@ -894,23 +901,12 @@ export function buildStoreMyPerformanceViewModel(input: {
       trendWidth: getTrendWidth(scoreValue ?? 0),
     }
   })
-  const activeMonthlyRow =
-    monthlyDetailRows.find((row) => isSamePeriodStart(row.key, getPeriodStart(input.performance))) ??
-    monthlyDetailRows.at(-1) ??
-    null
-  const previousMonthlyRow = activeMonthlyRow
-    ? monthlyDetailRows[monthlyDetailRows.findIndex((row) => row.key === activeMonthlyRow.key) - 1] ?? null
-    : null
-  const previousMonthlyIndex = previousMonthlyRow
-    ? monthlyDetailRows.findIndex((row) => row.key === previousMonthlyRow.key)
-    : -1
-  const previousMetrics =
-    previousMonthlyIndex >= 0
-      ? monthlyPerformanceData[previousMonthlyIndex]?.metrics ?? []
-      : []
+  const previousPerformance = input.sourceMode === 'live'
+    ? matchingPreviousPerformance(input.performance, input.previousPerformance) : undefined
+  const previousMetrics = previousPerformance?.metrics ?? []
   const samePeriodScoreDeltaValue = getDeltaPercent(
-    activeMonthlyRow?.scoreValue ?? null,
-    previousMonthlyRow?.scoreValue ?? null,
+    input.performance.period ? input.performance.score.value : null,
+    previousPerformance?.score.value ?? null,
   )
   const samePeriodScoreDelta = formatSignedPercent(input.locale, samePeriodScoreDeltaValue)
   const samePeriodMetrics = (['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const).map((code) => {
@@ -959,7 +955,7 @@ export function buildStoreMyPerformanceViewModel(input: {
   const trendPoints = buildTrendPoints(monthlyDetailRows)
   const employeeStore = input.performance.employee?.storeName ?? input.t('storeMe.noStore')
   const periodLabelWithSource = `${periodLabel} \u00B7 ${formatSourceMode(input.t, input.performance.source.mode)}`
-  const shareCard = buildStoreMeShareCardViewModel({ isPartial: partial.isPartial, performance: input.performance, periodKey: getPeriodDateKey(getPeriodStart(input.performance)), periodLabel, previousPerformance: previousMonthlyIndex >= 0 ? monthlyPerformanceData[previousMonthlyIndex] : null, previousPeriodScore: previousMonthlyRow?.scoreValue ?? null, scoreRows: monthlyDetailRows, storeName: employeeStore, targetMetric, targetProgressPercent, t: input.t })
+  const shareCard = buildStoreMeShareCardViewModel({ isPartial: partial.isPartial, performance: input.performance, periodKey: getPeriodDateKey(getPeriodStart(input.performance)), periodLabel, previousPerformance: previousPerformance ?? null, previousPeriodScore: previousPerformance?.score.value ?? null, scoreRows: monthlyDetailRows, storeName: employeeStore, targetMetric, targetProgressPercent, t: input.t })
 
   return {
     actualSalesLabel: formatCurrency(input.locale, input.t, supporting.netSalesValue),

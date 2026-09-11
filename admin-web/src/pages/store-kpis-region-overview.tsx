@@ -1,407 +1,167 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import {
-  AlertCircle,
-  BarChart3,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Target,
-  Store as StoreIcon,
-} from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { ArrowDown, ArrowUp, BarChart3, ClipboardCheck, ReceiptText, ShoppingBag, RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  CommandCanvasDataList,
-  CommandCanvasFilterBar,
-  CommandCanvasMetricFilter,
-  CommandCanvasMetricRail,
-  CommandCanvasPage,
-  CommandCanvasPageHeader,
-} from '../features/store-command-canvas/primitives'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table'
+import { CommandCanvasPage } from '../features/store-command-canvas/primitives'
 import type { RankingMetricValue, StoreRankingRow } from '../features/reports/api'
-import type {
-  StoreKpiHighlightsPageModel,
-  StoreKpisRegionSortKey,
-} from './store-kpi-highlights-model'
-import {
-  getMetricByCode,
-  getMetricComparableValue,
-} from './store-rankings-page-model'
+import type { StoreKpiHighlightsPageModel, StoreKpisRegionSortKey } from './store-kpi-highlights-model'
+import { getMetricByCode, getMetricComparableValue } from './store-rankings-page-model'
 import { StoreKpisPeriodPicker } from './store-kpis-period-picker'
-import { StoreEmptyState } from './store-surface-primitives'
+import { StoreKpisPeriodEmpty } from './store-kpis-period-empty'
 import './store-kpis-region-command-canvas.css'
 
-const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'gsm_approval'] as const
-const rowGridClass =
-  'kpi-command-store-grid tw:grid tw:items-center'
-
-export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const [query, setQuery] = useState('')
-  const [riskOnly, setRiskOnly] = useState(false)
-  const [rail, setRail] = useState<'stores' | 'score' | 'target' | 'risk'>('stores')
-  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase(model.locale))
-  const summary = buildRegionSummary(model)
-  const regionMeta = model.regionOverviewQuery.data?.storeLeaderboard.meta
-  const regionTotal = regionMeta?.total ?? 0
-  const regionHasPrevious = model.regionOverviewPage > 0
-  const regionHasNext =
-    (model.regionOverviewPage + 1) * model.regionOverviewPageSize < regionTotal
-  const riskCount = model.regionOverviewRows.filter(
-    (row) => typeof row.scoreValue === 'number' && row.scoreValue < 75,
-  ).length
-  const isPageScoped = regionTotal > model.regionOverviewRows.length
-  const visibleRows = useMemo(
-    () =>
-      model.regionOverviewRows.filter((row) => {
-        const matchesQuery =
-          !deferredQuery ||
-          (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(deferredQuery)
-        const matchesRisk =
-          !riskOnly || (typeof row.scoreValue === 'number' && row.scoreValue < 75)
-        return matchesQuery && matchesRisk
-      }),
-    [deferredQuery, model.locale, model.regionOverviewRows, riskOnly],
-  )
-
-  return (
-    <CommandCanvasPage
-      ariaLabelledBy="store-kpis-region-title"
-      className="kpi-command-page"
-      testId="store-kpis-region-overview"
-    >
-      <CommandCanvasPageHeader
-        title="KPI Özetleri"
-        titleId="store-kpis-region-title"
-        eyebrow={`Bölge görünümü · ${summary.periodLabel}`}
-        description="Mağaza seçerek KPI çalışma alanına ilerleyin."
-        actions={<RegionPeriodSelect model={model} />}
-      />
-      {(model.regionOverviewQuery.isError || model.regionOverviewQuery.failureCount > 0) &&
-      model.regionOverviewQuery.data ? <RegionBackgroundError model={model} /> : null}
-
-      <CommandCanvasMetricRail ariaLabel="Bölge KPI özeti">
-        <CommandCanvasMetricFilter
-          label="Toplam mağaza"
-          value={formatInteger(model.locale, summary.storeCount)}
-          note="Yetkili mağazalar"
-          icon={<StoreIcon size={16} />}
-          active={rail === 'stores'}
-          onClick={() => { setRail('stores'); setRiskOnly(false); setQuery('') }}
-        />
-        <CommandCanvasMetricFilter
-          label="Ortalama skor"
-          value={summary.averageScoreLabel}
-          note="Aylık sonuç"
-          icon={<BarChart3 size={16} />}
-          tone="cyan"
-          active={rail === 'score'}
-          onClick={() => { setRail('score'); setRiskOnly(false); model.setRegionOverviewSort('score') }}
-        />
-        <CommandCanvasMetricFilter
-          label="Hedef gerçekleşme"
-          value={summary.metricAverages.TARGET_ACHIEVEMENT}
-          note="Bölge ortalaması"
-          icon={<Target size={16} />}
-          tone="mint"
-          active={rail === 'target'}
-          onClick={() => { setRail('target'); setRiskOnly(false); model.setRegionOverviewSort('TARGET_ACHIEVEMENT') }}
-        />
-        <CommandCanvasMetricFilter
-          label={isPageScoped ? 'Bu sayfada takip' : 'Yakın takip'}
-          value={String(riskCount)}
-          note={isPageScoped ? 'Yüklü mağazalarda skor <75' : 'Mağaza skoru <75'}
-          icon={<AlertCircle size={16} />}
-          tone="rose"
-          active={rail === 'risk'}
-          onClick={() => { const next = rail !== 'risk'; setRail(next ? 'risk' : 'stores'); setRiskOnly(next) }}
-        />
-      </CommandCanvasMetricRail>
-
-      <CommandCanvasFilterBar
-        updatingLabel="KPI görünümü güncelleniyor"
-        isUpdating={model.regionOverviewQuery.isFetching}
-        search={<label className="kpi-command-search"><Search aria-hidden="true" size={15} /><Input aria-label={isPageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} placeholder={isPageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} value={query} onChange={(event) => setQuery(event.target.value)} /></label>}
-        controls={<>
-          <Button variant="outline" onClick={() => model.setRegionOverviewSort('score')}>Skor</Button>
-          <Button variant={riskOnly ? 'secondary' : 'outline'} onClick={() => { setRiskOnly((value) => !value); setRail(riskOnly ? 'stores' : 'risk') }}>Risk durumu</Button>
-        </>}
-      />
-
-      <RegionMobileSort model={model} />
-
-      <div className="kpi-command-list-title">
-        <h2>{model.t('storeKpis.regionStoresTitle')}</h2>
-        <span>{visibleRows.length} mağaza</span>
-      </div>
-      <CommandCanvasDataList
-        ariaLabel={model.t('storeKpis.regionStoresTitle')}
-        className="kpi-command-list"
-        header={<div className={`${rowGridClass} kpi-command-list-head`}>
-          <span>{model.t('storeKpis.regionStoreColumn')}</span>
-          <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" centered />
-          <RegionSortButton label="HG%" model={model} sortKey="TARGET_ACHIEVEMENT" centered />
-          <RegionSortButton label="UPT" model={model} sortKey="UPT" centered />
-          <RegionSortButton label="ATV" model={model} sortKey="ATV" centered />
-          <RegionSortButton label="CR" model={model} sortKey="CR" centered />
-          <RegionSortButton label="GSM Onayı" model={model} sortKey="gsm_approval" centered />
-          <RegionSortButton label="BM" model={model} sortKey="BM_CHECKLIST" centered />
-          <RegionSortButton label="VM" model={model} sortKey="VM_CHECKLIST" centered />
-        </div>}
-        footer={regionHasPrevious || regionHasNext ? <KpiPager model={model} regionHasPrevious={regionHasPrevious} regionHasNext={regionHasNext} regionTotal={regionTotal} /> : undefined}
-      >
-        {visibleRows.length === 0 ? <StoreEmptyState title="Sonuç bulunamadı" description={isPageScoped ? 'Bu sayfadaki filtreleri değiştirin veya diğer mağaza sayfasına geçin.' : 'Filtreleri değiştirerek tekrar deneyin.'} titleAsHeading /> : <>
-          <div className="kpi-command-desktop-rows">
-            {visibleRows.map((row) => <RegionStoreRow key={row.storeId} model={model} row={row} />)}
-          </div>
-          <div className="kpi-command-mobile-rows">
-            {visibleRows.map((row) => <RegionStoreMobileCard key={row.storeId} model={model} row={row} />)}
-          </div>
-        </>}
-      </CommandCanvasDataList>
-    </CommandCanvasPage>
-  )
-}
-
-const mobileSortOptions: Array<{ key: StoreKpisRegionSortKey; label: string }> = [
+const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT', 'CR', 'gsm_approval'] as const
+const columns: Array<{ key: StoreKpisRegionSortKey; label: string }> = [
   { key: 'score', label: 'Skor' },
   { key: 'TARGET_ACHIEVEMENT', label: 'HG%' },
-  { key: 'UPT', label: 'UPT' },
   { key: 'ATV', label: 'ATV' },
+  { key: 'UPT', label: 'UPT' },
   { key: 'CR', label: 'CR' },
-  { key: 'gsm_approval', label: 'GSM Onayı' },
+  { key: 'gsm_approval', label: 'GSM' },
   { key: 'BM_CHECKLIST', label: 'BM' },
   { key: 'VM_CHECKLIST', label: 'VM' },
 ]
 
-function RegionMobileSort({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const value = `${model.regionOverviewSort.sortKey}:${model.regionOverviewSort.sortDirection}`
+export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase(model.locale))
+  const summary = buildRegionSummary(model)
+  const total = model.regionOverviewQuery.data?.storeLeaderboard.meta.total ?? 0
+  const pageScoped = total > model.regionOverviewRows.length
+  const visibleRows = useMemo(() => model.regionOverviewRows.filter(row =>
+    !deferredQuery || (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(deferredQuery),
+  ), [deferredQuery, model.locale, model.regionOverviewRows])
+  const metrics = [
+    { label: 'Bölge Skoru', value: summary.averageScoreLabel, icon: BarChart3 },
+    { label: 'Bölge ATV', value: summary.metricAverages.ATV, icon: ReceiptText },
+    { label: 'Bölge UPT', value: summary.metricAverages.UPT, icon: ShoppingBag },
+    { label: 'Bölge CR', value: summary.metricAverages.CR, icon: RefreshCw },
+  ]
+  const storeSearch = <InputGroup className="region-performance-header-search">
+    <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
+    <InputGroupInput aria-label={pageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} placeholder="Mağaza Ara" value={query} onChange={event => setQuery(event.target.value)} />
+    <InputGroupAddon align="inline-end"><Badge variant="secondary" aria-label={`${visibleRows.length} mağaza`}>{visibleRows.length}</Badge></InputGroupAddon>
+  </InputGroup>
 
   return (
-    <div className="kpi-command-mobile-sort">
-      <Select
-        value={value}
-        onValueChange={(next) => {
-          const [sortKey, sortDirection] = next.split(':') as [
-            StoreKpisRegionSortKey,
-            'asc' | 'desc',
-          ]
-          model.setRegionOverviewSort(sortKey, sortDirection)
-        }}
-      >
-        <SelectTrigger aria-label="KPI sıralama seçenekleri">
-          <SelectValue placeholder="Sıralama" />
-        </SelectTrigger>
-        <SelectContent>
-          {mobileSortOptions.flatMap((option) => [
-            <SelectItem key={`${option.key}:desc`} value={`${option.key}:desc`}>
-              {option.label} · Azalan
-            </SelectItem>,
-            <SelectItem key={`${option.key}:asc`} value={`${option.key}:asc`}>
-              {option.label} · Artan
-            </SelectItem>,
-          ])}
-        </SelectContent>
-      </Select>
-    </div>
+    <CommandCanvasPage ariaLabelledBy="store-kpis-region-title" className="region-performance" testId="store-kpis-region-overview">
+      <header className="region-performance-hero tw:relative tw:isolate tw:overflow-visible tw:rounded-[14px] tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:shadow-sm tw:sm:px-5">
+        <div aria-hidden="true" className="tw:pointer-events-none tw:absolute tw:inset-0 tw:overflow-hidden tw:rounded-[14px]"><span className="tw:absolute tw:right-3 tw:top-3 tw:size-32 tw:rounded-full tw:border tw:border-white/15" /></div>
+        <div className="region-performance-heading tw:relative">
+          <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+            <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:border tw:border-white/20 tw:bg-white/10"><BarChart3 aria-hidden="true" className="tw:size-5" /></span>
+            <div className="tw:min-w-0">
+              <p className="tw:text-[10px] tw:font-semibold tw:uppercase tw:tracking-[0.16em] tw:text-primary-foreground/70">{model.kpiDateRangeEnd ? `${model.regionOverviewActivePeriodStart} – ${model.kpiDateRangeEnd}` : summary.periodLabel} · {total} mağaza</p>
+              <h1 id="store-kpis-region-title" className="tw:mt-0.5 tw:text-xl tw:font-semibold tw:tracking-[-0.025em] tw:sm:text-2xl">Bölge Performansı</h1>
+              <p className="tw:mt-1 tw:text-xs tw:text-primary-foreground/75">Mağazaların KPI değerlerini karşılaştırın.</p>
+            </div>
+          </div>
+          <RegionPeriodSelect model={model} />
+        </div>
+      </header>
+        <div className="region-performance-metrics" role="group" aria-label="Bölge KPI özeti">
+          {metrics.map(({ label, value, icon: Icon }) => (
+            <Card key={label} size="sm">
+              <CardHeader><CardTitle><Icon aria-hidden="true" /><span>{label}</span></CardTitle></CardHeader>
+              <CardContent><strong>{value}</strong></CardContent>
+            </Card>
+          ))}
+        </div>
+        {pageScoped ? <p className="region-performance-coverage">{summary.averageScoreCopy}</p> : null}
+
+      {(model.regionOverviewQuery.isError || model.regionOverviewQuery.failureCount > 0) && model.regionOverviewQuery.data ? (
+        <Alert variant="destructive"><AlertDescription>
+          {model.t('storeKpis.backgroundError')}
+          <Button variant="outline" onClick={() => void model.regionOverviewQuery.refetch()}>{model.t('storeKpis.retry')}</Button>
+        </AlertDescription></Alert>
+      ) : null}
+
+      <section className="region-performance-stores" aria-label="Mağaza KPI değerleri" aria-busy={model.regionOverviewQuery.isFetching}>
+        <div className="region-performance-mobile-controls">
+          {storeSearch}
+          <div className="region-performance-mobile-sort"><RegionMobileSort model={model} /></div>
+        </div>
+          <div className="region-performance-desktop">
+            <Table aria-label="Mağaza KPI değerleri">
+              <colgroup><col />{columns.map(column => <col key={column.key} className="region-performance-metric-column" />)}<col className="region-performance-action-column" /></colgroup>
+              <TableHeader><TableRow>
+                <TableHead>{storeSearch}</TableHead>
+                {columns.map(column => <TableHead key={column.key} aria-sort={model.regionOverviewSort.sortKey === column.key ? (model.regionOverviewSort.sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}><RegionSortButton model={model} column={column} /></TableHead>)}
+                <TableHead><span className="tw:sr-only">Mağaza detayı</span></TableHead>
+              </TableRow></TableHeader>
+              <TableBody>{visibleRows.map(row => <TableRow key={row.storeId}>
+                <TableCell><strong>{row.storeName ?? model.t('storeKpis.noStoreScope')}</strong></TableCell>
+                <TableCell><span className="region-performance-score">{formatNumber(model.locale, row.scoreValue, model.t('common.noData'), 1)}</span></TableCell>
+                {regionMetricCodes.map(code => <TableCell key={code}>{formatRegionMetric(model.locale, model.t('common.noData'), getMetricByCode(row.metrics, code), code)}</TableCell>)}
+                <TableCell><ChecklistValue row={row} model={model} code="BM_CHECKLIST" /></TableCell>
+                <TableCell><ChecklistValue row={row} model={model} code="VM_CHECKLIST" /></TableCell>
+                <TableCell><StoreDetailButton row={row} model={model} /></TableCell>
+              </TableRow>)}</TableBody>
+            </Table>
+          </div>
+          <div className="region-performance-mobile">
+            {visibleRows.map(row => <article className="region-performance-store" key={row.storeId}>
+              <div className="region-performance-store-heading"><h3>{row.storeName ?? model.t('storeKpis.noStoreScope')}</h3><StoreDetailButton row={row} model={model} mobile /></div>
+              <dl>
+                <div><dt>Skor</dt><dd className="region-performance-score">{formatNumber(model.locale, row.scoreValue, model.t('common.noData'), 1)}</dd></div>
+                {regionMetricCodes.map(code => <div key={code}><dt>{columns.find(column => column.key === code)?.label}</dt><dd>{formatRegionMetric(model.locale, model.t('common.noData'), getMetricByCode(row.metrics, code), code)}</dd></div>)}
+                <div><dt>BM</dt><dd><ChecklistValue row={row} model={model} code="BM_CHECKLIST" /></dd></div>
+                <div><dt>VM</dt><dd><ChecklistValue row={row} model={model} code="VM_CHECKLIST" /></dd></div>
+              </dl>
+            </article>)}
+          </div>
+        {visibleRows.length === 0 ? (
+          model.regionOverviewRows.length === 0
+            ? <StoreKpisPeriodEmpty locale={model.locale} start={model.regionOverviewActivePeriodStart} end={model.kpiDateRangeEnd} />
+            : <Empty><EmptyHeader><EmptyTitle>Sonuç bulunamadı</EmptyTitle><EmptyDescription>{pageScoped ? 'Aramanızı değiştirin veya diğer mağaza sayfasına geçin.' : 'Aramanızı değiştirerek tekrar deneyin.'}</EmptyDescription></EmptyHeader></Empty>
+        ) : null}
+        {total > model.regionOverviewPageSize ? <div className="region-performance-pager">
+          <span>{model.regionOverviewPage * model.regionOverviewPageSize + 1}–{Math.min((model.regionOverviewPage + 1) * model.regionOverviewPageSize, total)} / {total}</span>
+          <Button variant="outline" disabled={model.regionOverviewPage === 0} onClick={() => model.setRegionOverviewPage(model.regionOverviewPage - 1)}>{model.t('storeKpis.companyPrevious')}</Button>
+          <Button variant="outline" data-testid="store-kpis-region-next-page" disabled={(model.regionOverviewPage + 1) * model.regionOverviewPageSize >= total} onClick={() => model.setRegionOverviewPage(model.regionOverviewPage + 1)}>{model.t('storeKpis.companyNext')}</Button>
+        </div> : null}
+      </section>
+    </CommandCanvasPage>
   )
 }
 
-function RegionBackgroundError({ model }: { model: StoreKpiHighlightsPageModel }) {
-  return <div role="alert" className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/20 tw:bg-destructive/5 tw:p-3 tw:text-sm"><span>{model.t('storeKpis.backgroundError')}</span><button type="button" className="tw:min-h-11 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:font-semibold" onClick={() => void model.regionOverviewQuery.refetch()}>{model.t('storeKpis.retry')}</button></div>
+function StoreDetailButton({ row, model, mobile = false }: { row: StoreRankingRow; model: StoreKpiHighlightsPageModel; mobile?: boolean }) {
+  return <Button asChild size={mobile ? 'lg' : 'xs'} className="checklist-record-history-result-action region-performance-detail tw:min-w-0"><Link aria-label={`${row.storeName ?? model.t('storeKpis.noStoreScope')} — Detay`} to={model.getRegionStoreDetailPath(row.storeId)}><ClipboardCheck aria-hidden="true" /><span>Detay</span></Link></Button>
+}
+
+function ChecklistValue({ row, model, code }: { row: StoreRankingRow; model: StoreKpiHighlightsPageModel; code: 'BM_CHECKLIST' | 'VM_CHECKLIST' }) {
+  const value = getMetricComparableValue(getMetricByCode(row.metrics, code), code)
+  return value === null || value === undefined || !Number.isFinite(value)
+    ? <span className="region-performance-missing">{model.t('storeKpis.regionChecklistPassive')}</span>
+    : <>{formatNumber(model.locale, value, model.t('common.noData'), 0)}</>
+}
+
+function RegionSortButton({ model, column }: { model: StoreKpiHighlightsPageModel; column: (typeof columns)[number] }) {
+  const active = model.regionOverviewSort.sortKey === column.key
+  const Icon = model.regionOverviewSort.sortDirection === 'asc' ? ArrowUp : ArrowDown
+  return <Button variant="ghost" size="sm" aria-label={model.t('storeKpis.regionSortLabel', { column: column.label })} onClick={() => model.setRegionOverviewSort(column.key)}>{column.label}{active ? <Icon aria-hidden="true" data-icon="inline-end" /> : null}</Button>
+}
+
+function RegionMobileSort({ model }: { model: StoreKpiHighlightsPageModel }) {
+  return <Select value={`${model.regionOverviewSort.sortKey}:${model.regionOverviewSort.sortDirection}`} onValueChange={value => {
+    const [key, direction] = value.split(':') as [StoreKpisRegionSortKey, 'asc' | 'desc']
+    model.setRegionOverviewSort(key, direction)
+  }}><SelectTrigger aria-label="KPI sıralama seçenekleri"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>
+    {columns.flatMap(column => ['desc', 'asc'].map(direction => <SelectItem key={`${column.key}:${direction}`} value={`${column.key}:${direction}`}>{column.label} · {direction === 'desc' ? 'Azalan' : 'Artan'}</SelectItem>))}
+  </SelectGroup></SelectContent></Select>
 }
 
 function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const monthlyPeriods =
-    model.regionOverviewQuery.data?.availablePeriods.filter(
-      (period) => period.periodType === 'monthly',
-    ) ?? []
-  const activePeriodStart =
-    model.regionOverviewActivePeriodStart ??
-    model.regionOverviewQuery.data?.source.periodStart ??
-    ''
-
-  return (
-    <StoreKpisPeriodPicker
-      ariaLabel={model.t('storeKpis.regionPeriodSelect')}
-      availablePeriodStarts={monthlyPeriods.map((period) => period.periodStart)}
-      locale={model.locale}
-      onPeriodStartChange={model.setRegionOverviewPeriodStart}
-      periodStart={activePeriodStart}
-      triggerClassName="command-canvas-period-trigger"
-    />
-  )
+  const periods = model.regionOverviewQuery.data?.availablePeriods.filter(period => period.periodType === 'monthly') ?? []
+  return <StoreKpisPeriodPicker onRangeChange={model.setKpiDateRange} ariaLabel={model.t('storeKpis.regionPeriodSelect')} availablePeriodStarts={periods.map(period => period.periodStart)} locale={model.locale} onPeriodStartChange={model.setRegionOverviewPeriodStart} periodStart={model.regionOverviewActivePeriodStart ?? model.regionOverviewQuery.data?.source.periodStart ?? ''} triggerClassName="region-performance-period" />
 }
-
-function KpiPager(input: {
-  model: StoreKpiHighlightsPageModel
-  regionHasPrevious: boolean
-  regionHasNext: boolean
-  regionTotal: number
-}) {
-  return <>
-    <span className="kpi-command-pager-count">
-      {input.regionTotal === 0 ? 0 : input.model.regionOverviewPage * input.model.regionOverviewPageSize + 1}-
-      {Math.min((input.model.regionOverviewPage + 1) * input.model.regionOverviewPageSize, input.regionTotal)} / {input.regionTotal}
-    </span>
-    <Button variant="outline" size="sm" disabled={!input.regionHasPrevious} onClick={() => input.model.setRegionOverviewPage(Math.max(0, input.model.regionOverviewPage - 1))}>{input.model.t('storeKpis.companyPrevious')}</Button>
-    <Button variant="outline" size="sm" data-testid="store-kpis-region-next-page" disabled={!input.regionHasNext} onClick={() => input.model.setRegionOverviewPage(input.model.regionOverviewPage + 1)}>{input.model.t('storeKpis.companyNext')}</Button>
-  </>
-}
-
-function RegionSortButton(input: {
-  centered?: boolean
-  label: string
-  model: StoreKpiHighlightsPageModel
-  sortKey: StoreKpisRegionSortKey
-  touch?: boolean
-}) {
-  const active = input.model.regionOverviewSort.sortKey === input.sortKey
-  const direction = input.model.regionOverviewSort.sortDirection
-
-  return (
-    <button
-      type="button"
-      aria-label={input.model.t('storeKpis.regionSortLabel', { column: input.label })}
-      className={`tw:inline-flex tw:items-center ${input.touch ? 'tw:min-h-11 tw:shrink-0 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-3' : 'tw:border-0 tw:bg-transparent tw:p-0'} ${
-        input.centered ? 'tw:justify-center tw:text-center' : 'tw:justify-start'
-      } tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] ${
-        active ? 'tw:text-[var(--store-command-plum)]' : 'tw:text-inherit'
-      }`}
-      onClick={() => input.model.setRegionOverviewSort(input.sortKey)}
-    >
-      <span>{input.label}</span>
-      {active ? (
-        direction === 'desc' ? (
-          <ChevronDown aria-hidden="true" className="tw:ml-1 tw:size-3" />
-        ) : (
-          <ChevronUp aria-hidden="true" className="tw:ml-1 tw:size-3" />
-        )
-      ) : null}
-    </button>
-  )
-}
-
-function RegionStoreRow({ model, row }: { model: StoreKpiHighlightsPageModel; row: StoreRankingRow }) {
-  const noData = model.t('common.noData')
-  const storeName = row.storeName ?? model.t('storeKpis.noStoreScope')
-
-  return (
-    <Link
-      aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
-      className={`${rowGridClass} kpi-command-store-row`}
-      to={model.getRegionStoreDetailPath(row.storeId)}
-    >
-      <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2.5">
-        <span className="tw:grid tw:size-9 tw:flex-none tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]">
-          <StoreIcon className="tw:size-5" />
-        </span>
-        <strong className="tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-[var(--store-command-ink)]">
-          {storeName}
-        </strong>
-      </div>
-      <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[46px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-2 tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)] tw:shadow-[inset_0_0_0_1px_var(--store-command-line)]">
-        {formatNumber(model.locale, row.scoreValue, noData, 1)}
-      </span>
-      {regionMetricCodes.map((code) => (
-        <MetricMini
-          key={code}
-          code={code}
-          locale={model.locale}
-          metric={getMetricByCode(row.metrics, code)}
-          noData={noData}
-        />
-      ))}
-      <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
-      <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
-    </Link>
-  )
-}
-
-function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageModel; row: StoreRankingRow }) {
-  const noData = model.t('common.noData')
-  const storeName = row.storeName ?? model.t('storeKpis.noStoreScope')
-
-  return (
-    <Link
-      aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
-      className="kpi-command-mobile-row"
-      to={model.getRegionStoreDetailPath(row.storeId)}
-    >
-      <span className="kpi-command-mobile-store-icon">
-        <StoreIcon className="tw:size-5" />
-      </span>
-      <strong className="kpi-command-mobile-store-name">{storeName}</strong>
-      <span className="kpi-command-mobile-score">
-        <small>Skor</small>
-        <strong>{formatNumber(model.locale, row.scoreValue, noData, 1)}</strong>
-      </span>
-      <div className="kpi-command-mobile-facts">
-        {regionMetricCodes.map((code) => (
-          <span key={code}>
-            <small>{getMobileMetricLabel(code)}</small>
-            <strong>{formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}</strong>
-          </span>
-        ))}
-      </div>
-      <div className="kpi-command-mobile-checklists">
-        <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
-        <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
-      </div>
-    </Link>
-  )
-}
-
-function getMobileMetricLabel(code: (typeof regionMetricCodes)[number]) {
-  if (code === 'TARGET_ACHIEVEMENT') return 'HG%'
-  if (code === 'gsm_approval') return 'GSM'
-  return code
-}
-
-function MetricMini(input: {
-  code: (typeof regionMetricCodes)[number]
-  locale: string
-  metric: RankingMetricValue | undefined
-  noData: string
-}) {
-  return (
-    <div className="tw:text-center">
-      <strong className="tw:block tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
-        {formatRegionMetric(input.locale, input.noData, input.metric, input.code)}
-      </strong>
-    </div>
-  )
-}
-
-function ChecklistChip(input: {
-  label: 'BM' | 'VM'
-  metric: RankingMetricValue | undefined
-  model: StoreKpiHighlightsPageModel
-}) {
-  const value = getMetricComparableValue(input.metric, `${input.label}_CHECKLIST`)
-
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return (
-      <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[var(--store-command-danger-soft)] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[var(--store-command-danger)]">
-        {input.label} {input.model.t('storeKpis.regionChecklistPassive')}
-      </span>
-    )
-  }
-
-  return (
-    <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[var(--store-command-mint-soft)] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[var(--store-command-success-ink)]">
-      {input.label} <b className="tw:ml-1 tw:font-semibold">{formatNumber(input.model.locale, value, input.model.t('common.noData'), 0)}</b>
-    </span>
-  )
-}
-
 function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
   const ranking = model.regionOverviewQuery.data
   const rows = model.regionOverviewRows
@@ -487,6 +247,10 @@ function formatRegionMetricValue(
     }).format(value)
   }
 
+  if (code === 'UPT') {
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+  }
+
   return formatNumber(locale, value, noData, 1)
 }
 
@@ -546,7 +310,7 @@ function parsePeriodStartAsUtcDate(periodStart: string) {
 
 function resolveScoreBadgeKey(score: number | null) {
   if (score === null) return 'storeKpis.regionScoreUnknownBadge'
-  if (score >= 80) return 'storeKpis.regionScoreStableBadge'
-  if (score >= 70) return 'storeKpis.regionScoreWatchBadge'
+  if (score >= 56) return 'storeKpis.regionScoreStableBadge'
+  if (score >= 49) return 'storeKpis.regionScoreWatchBadge'
   return 'storeKpis.regionScoreRiskBadge'
 }

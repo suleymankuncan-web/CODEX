@@ -13,6 +13,7 @@ import {
 } from '../features/reports/api'
 import { formatDate } from '../lib/format'
 import { ApiError } from '../lib/api'
+import { getBusinessDateInputValue } from '../lib/business-date'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import { matchesKpiMetricCode } from '../features/kpi/score-profiles'
 import { resolvePerformanceGrade } from '../features/kpi/grading'
@@ -51,7 +52,6 @@ export {
   resolveLocalizedKpiScoreReference,
   resolveLocalizedKpiSourceSemantics,
 } from './store-kpi-highlights-formatters'
-
 export type DisplayKpiRow = {
   storeId: string
   kpiCode: string
@@ -72,7 +72,6 @@ export type DisplayKpiRow = {
   statusBand: string | null
   scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
-
 export type StoreKpisRegionSortKey = 'score' | 'TARGET_ACHIEVEMENT' | 'UPT' | 'ATV' | 'CR' | 'gsm_approval' | 'BM_CHECKLIST' | 'VM_CHECKLIST'
 
 export type StoreKpisRegionSortDirection = 'asc' | 'desc'
@@ -100,11 +99,14 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   })
   const { companyStoreQuery, effectiveStoreId, isReportViewer, selectedStoreId, storeOptions, storeSelectionReady } = storeSelection
   const routePeriodStart = getQueryValue(searchParams, 'periodStart')
-  const { livePeriodType, activeLivePeriodStart, setLivePeriodType, setLivePeriodFilter } =
+  const { livePeriodType, activeLivePeriodStart: requestedLivePeriodStart, setLivePeriodType, setLivePeriodFilter } =
     buildStoreKpiLivePeriodControls(searchParams, setSearchParams)
+  const ownsStoreView = Boolean(input.authSummary?.user.roleCodes.includes('STORE_MANAGER')) && !isReportViewer && !hasGlobalStoreDetailDefault(input.authSummary) && !input.authSummary?.user.roleCodes.includes('REGION_MANAGER')
+  const regionStoreView = !isReportViewer && selectedStoreId.length > 0 && Boolean(input.authSummary?.user.roleCodes.includes('REGION_MANAGER'))
+  const activeLivePeriodStart = requestedLivePeriodStart || (ownsStoreView || regionStoreView ? (livePeriodType === 'monthly' ? `${getBusinessDateInputValue().slice(0, 7)}-01` : getBusinessDateInputValue()) : '')
   const isReportViewerOverview = isReportViewer && selectedStoreId.length === 0
   const isReportViewerStoreDetail = isReportViewer && selectedStoreId.length > 0
-  const hasRegionManagerRole = input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false
+  const hasRegionManagerRole = !isReportViewer && (input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false)
   const regionManagerUserId = input.authSummary?.user.userId ?? ''
   const hasDetailDefault = hasStoreDetailDefault(input.authSummary)
   const hasGlobalDetailDefault = hasGlobalStoreDetailDefault(input.authSummary)
@@ -131,6 +133,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   })
   const {
     activeRegionOverviewPeriodStart,
+    kpiDateRangeEnd, setKpiDateRange,
     activeReportViewerPeriodStart,
     effectiveRegionOverviewQuery,
     regionOverviewPage,
@@ -167,10 +170,11 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   })
 
   const liveKpiQuery = useQuery({
-    queryKey: ['store-kpis-live', effectiveStoreId || 'no-selected-store', activeLivePeriodStart || 'latest-monthly', livePeriodType],
+    queryKey: ['store-kpis-live', effectiveStoreId || 'no-selected-store', activeLivePeriodStart || 'latest-monthly', livePeriodType, kpiDateRangeEnd],
     queryFn: () =>
       getStoreKpiHighlights({
         periodType: livePeriodType,
+        ...(kpiDateRangeEnd ? { periodEnd: kpiDateRangeEnd } : {}),
         ...(activeLivePeriodStart ? { periodStart: activeLivePeriodStart } : {}),
         ...(effectiveStoreId ? { storeId: effectiveStoreId } : {}),
       }),
@@ -496,16 +500,19 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
       params.set('periodStart', regionOverviewPeriodStart)
     }
 
+    if (kpiDateRangeEnd) { params.set('periodEnd', kpiDateRangeEnd); params.set('periodType', 'daily') }
     return `/store/kpis?${params.toString()}`
   }
   const getCompanyStoreDetailPath = (storeId: string) => {
     const params = new URLSearchParams({ storeId })
     const periodStart = activeReportViewerPeriodStart || reportViewerOverviewQuery.data?.source.periodStart
     if (periodStart) params.set('periodStart', periodStart)
+    if (kpiDateRangeEnd) { params.set('periodEnd', kpiDateRangeEnd); params.set('periodType', 'daily') }
     return `/store/kpis?${params.toString()}`
   }
 
   return {
+    kpiDateRangeEnd, setKpiDateRange,
     activeSnapshotRun,
     activeStoreName,
     availableSnapshotRuns,

@@ -134,7 +134,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/kpis',
       urlPattern: /\/store\/kpis$/,
-      heading: page.getByRole('heading', { name: /KPI/ }).first(),
+      heading: page.getByRole('heading', { name: 'LUFIAN Mağaza Performansı' }),
     },
     {
       path: '/store/feed',

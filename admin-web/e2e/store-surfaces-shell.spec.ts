@@ -794,7 +794,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Mağaza KPI',
     path: '/store/kpis',
-    ready: page.getByRole('heading', { name: /KPI çalışma alanı/ }),
+    ready: page.getByRole('heading', { name: 'IstinyePark Demo Store' }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Türkiye Sıralaması',

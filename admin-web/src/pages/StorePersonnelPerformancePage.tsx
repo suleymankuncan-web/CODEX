@@ -23,15 +23,17 @@ export function StorePersonnelPerformancePage(input: {
     searchParams.get('mode') === 'live' && ['daily', 'monthly'].includes(initialLivePeriodType)
       ? searchParams.get('periodStart') ?? ''
       : ''
+  const initialLivePeriodEnd = initialLivePeriodType === 'daily' ? searchParams.get('periodEnd') ?? '' : ''
   const returnTo = getSafeRankingsReturnTo(location.state)
 
   return (
     <StoreMyPerformancePage
-      key={`${employeeId ?? ''}:${initialLivePeriodType}:${initialLivePeriodStart}`}
+      key={`${employeeId ?? ''}:${initialLivePeriodType}:${initialLivePeriodStart}:${initialLivePeriodEnd}`}
       authSummary={input.authSummary}
       {...(employeeId === undefined ? {} : { employeeId })}
       initialLivePeriodType={initialLivePeriodType}
       initialLivePeriodStart={initialLivePeriodStart}
+      initialLivePeriodEnd={initialLivePeriodEnd}
       profileMode="personnel"
       {...(returnTo ? { returnTo } : {})}
     />

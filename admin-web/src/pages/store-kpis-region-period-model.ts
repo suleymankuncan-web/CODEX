@@ -47,6 +47,7 @@ export function useRegionOverviewPeriodModel(input: {
 
   const setPeriodStart = (value: string) => {
     const nextParams = new URLSearchParams(input.searchParams)
+    nextParams.delete('periodEnd'); nextParams.delete('periodType')
     if (value) {
       nextParams.set('periodStart', value)
     } else {
