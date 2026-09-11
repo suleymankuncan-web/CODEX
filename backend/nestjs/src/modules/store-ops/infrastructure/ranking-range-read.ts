@@ -94,11 +94,14 @@ export async function readRankingStoreRange(
     LEFT JOIN gsm ON gsm.store_id = s.store_id
     LEFT JOIN LATERAL (
       SELECT ua.user_id::text, COALESCE(NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''), ua.username, ua.email, ua.user_id::text) AS display_name
-      FROM ops.user_role_assignment ura
+      FROM ops.user_action_store_assignment manager_store
+      JOIN ops.user_role_assignment ura ON ura.user_id = manager_store.user_id
+        AND ura.start_at <= NOW() AND (ura.end_at IS NULL OR ura.end_at >= NOW())
       JOIN ops.role role ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
       JOIN ops.user_account ua ON ua.user_id = ura.user_id AND ua.is_active = TRUE
       LEFT JOIN ops.employee e ON e.employee_id = ua.employee_id
-      WHERE ura.region_id = s.region_id AND ura.start_at <= NOW() AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+      WHERE manager_store.store_id = s.store_id
+        AND manager_store.start_at <= NOW() AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
       ORDER BY ua.username, ua.user_id LIMIT 1
     ) manager ON TRUE
     WHERE kd.kpi_code = ANY($4::text[])
