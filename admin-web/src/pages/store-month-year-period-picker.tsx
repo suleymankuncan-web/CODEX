@@ -1,4 +1,4 @@
 export {
-  MonthYearPeriodPicker,
+  CalendarMonthYearPeriodPicker as MonthYearPeriodPicker,
   type MonthYearPeriodPickerProps,
 } from '../features/store-command-canvas/month-year-picker'
