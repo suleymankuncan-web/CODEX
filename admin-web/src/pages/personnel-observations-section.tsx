@@ -1,12 +1,11 @@
+import { CalendarPicker } from '@/components/ui/calendar-picker'
+import { parseCalendarDate } from '@/components/ui/calendar-date'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { DateRange } from 'react-day-picker'
-import { enGB, tr } from 'react-day-picker/locale'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Calendar } from '../components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import {
   Table,
@@ -80,32 +79,12 @@ export function PersonnelObservationsSection() {
             setPage(0)
           }}
         />
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              aria-label={t('adminIntegrations.observationsRange')}
-              className="tw:w-full tw:sm:w-auto"
-            >
-              <CalendarDays aria-hidden="true" />
-              {fromDate && toDate
-                ? `${dateLabel(fromDate)} – ${dateLabel(toDate)}`
-                : t('adminIntegrations.observationsRange')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="tw:w-auto tw:p-0">
-            <Calendar
-              locale={locale === 'tr' ? tr : enGB}
-              mode="range"
-              selected={range}
-              onSelect={(value) => {
-                setRange(value)
-                setPage(0)
-              }}
-              max={365}
-            />
-          </PopoverContent>
-        </Popover>
+        <CalendarPicker mode="range" value={fromDate} end={toDate} locale={locale}
+          ariaLabel={t('adminIntegrations.observationsRange')} triggerClassName="tw:w-full tw:sm:w-auto"
+          maxRangeDays={366} onValueChange={(from, to) => {
+            setRange({ from: parseCalendarDate(from), to: parseCalendarDate(to) })
+            setPage(0)
+          }} />
       </div>
       {!validRange ? (
         <p role="status">{t('adminIntegrations.observationsChooseRange')}</p>

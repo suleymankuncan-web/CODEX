@@ -31,6 +31,10 @@ read the relevant owner document:
 
 ## Required Operating Truth
 
+- Date and period pickers use the owner-approved shared calendar. Read
+  [`docs/ui/calendar-standard-v1.md`](docs/ui/calendar-standard-v1.md) before
+  changing or adding a calendar; do not create per-page calendar designs.
+
 - Preserve business behavior, API shape, auth/privacy and permission semantics,
   data integrity, and user changes unless the approved scope says otherwise.
 - Manual image/offline proof starts with
