@@ -86,8 +86,7 @@
 }
 
 .store-me-icon-bubble svg,
-.store-me-action-icon svg,
-.store-me-quote-card svg:first-child {
+.store-me-action-icon svg {
   width: 19px;
   height: 19px;
 }
@@ -311,8 +310,7 @@
 
 .store-me-trend-card,
 .store-me-actions-card,
-.store-me-breakdown-card,
-.store-me-quote-card {
+.store-me-breakdown-card {
   padding: 22px;
 }
 
@@ -456,51 +454,6 @@
   border-radius: inherit;
   background: linear-gradient(90deg, var(--store-me-purple), var(--store-me-teal));
 }
-
-.store-me-quote-card {
-  position: relative;
-  display: grid;
-  min-height: 250px;
-  overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(124, 58, 237, 0.14), rgba(255, 255, 255, 0.78) 48%, rgba(19, 167, 179, 0.2)),
-    var(--store-me-surface);
-}
-
-.store-me-quote-card > div {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  max-width: 32rem;
-}
-
-.store-me-quote-card > div > svg {
-  color: var(--store-me-purple);
-}
-
-.store-me-quote-card p {
-  margin: 0;
-  color: var(--store-me-ink);
-  font-size: 16px;
-  line-height: 1.55;
-}
-
-.store-me-quote-card strong {
-  color: var(--store-me-muted);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.store-me-quote-card > svg {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: min(76%, 420px);
-  opacity: 0.9;
-}
-
 .store-me-sr-only {
   position: absolute;
   width: 1px;
@@ -533,8 +486,7 @@
   .store-me-kpi-card,
   .store-me-trend-card,
   .store-me-actions-card,
-  .store-me-breakdown-card,
-  .store-me-quote-card {
+  .store-me-breakdown-card {
     padding: 16px;
   }
 
@@ -581,3 +533,6 @@
     grid-column: 2 / -1;
   }
 }
+
+.store-me-bottom-grid { grid-template-columns: minmax(0, 1fr); }
+.store-me-score-chart { margin-top: 18px; background: var(--card); border-radius: 8px; padding: 8px 0; }

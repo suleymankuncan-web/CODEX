@@ -18,6 +18,11 @@ export function hasAnyRole(authSummary: AuthSessionSummary | null, requiredRoles
   return requiredRoles.some((role) => roles.includes(role))
 }
 
+// Presentation only: keep the authenticated role and server scope unchanged.
+export function usesStoreReportViewerView(authSummary: AuthSessionSummary | null) {
+  return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER'])
+}
+
 export function getReadStoreIds(authSummary: AuthSessionSummary | null) {
   return authSummary?.user.readScope.storeIds ?? authSummary?.user.scope.storeIds ?? []
 }

@@ -10,10 +10,13 @@ export function buildStoreKpiLivePeriodControls(
     const next = new URLSearchParams(searchParams)
     next.set('periodType', value)
     next.delete('periodStart')
+    next.delete('periodEnd')
     setSearchParams(next, { replace: true })
   }
   const setLivePeriodFilter = (value: string) => {
     const next = new URLSearchParams(searchParams)
+    next.delete('periodEnd')
+    next.set('periodType', 'monthly')
     if (value) next.set('periodStart', value)
     else next.delete('periodStart')
     setSearchParams(next, { replace: true })

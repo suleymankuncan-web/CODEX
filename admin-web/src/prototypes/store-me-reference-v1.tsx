@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useLocalization } from '../features/localization/useLocalization'
 import { MonthYearPeriodPicker } from '../pages/store-month-year-period-picker'
-import { StoreMyPerformanceKpiDialog } from '../pages/store-my-performance-sections'
+import { StoreMyPerformanceKpiDialog } from './store-me-reference-kpi-dialog'
 import { StoreMyPerformancePlumDashboard } from '../pages/store-my-performance-plum-dashboard'
 import { StorePrototypeCommandShell } from './store-prototype-command-shell'
 import './store-me-performance-share-card.css'
@@ -310,6 +310,7 @@ function StoreMeProductMirrorSurface() {
             />
 
             <StoreMyPerformancePlumDashboard
+              locale="tr"
               actualSalesLabel="2.180.400 TL"
               gradeLabel="B - İyi"
               isPartial={false}
@@ -319,8 +320,6 @@ function StoreMeProductMirrorSurface() {
               remainingTargetLabel="0 TL"
               samePeriodScoreDelta="+4,3%"
               scoreConfidence="TR ort. 68 puan · Önceki ay sıralaması #75"
-              scoreFocus="ATV gerilemesini izle; güçlü HG% ritmini koru."
-              scoreSummary="Skor iyi bantta. Genel performans sağlıklı, üst banda çıkmak için metrik bazlı fırsatlar var."
               scoreValue={72}
               regionPopulationLabel="126 kişi içinde"
               regionRankLabel="#18"

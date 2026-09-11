@@ -1,0 +1,31 @@
+.personnel-kpi-details { max-height: 92dvh; width: calc(100vw - 32px); overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 24px; background: var(--card); }
+.personnel-kpi-details [data-slot='dialog-title'] { color: var(--primary); font-size: 22px; }
+.personnel-kpi-details-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; }
+.personnel-kpi-details-toolbar [data-slot='select-trigger'] { width: 110px; }
+.personnel-kpi-details-months { min-height: 0; overflow-y: auto; display: grid; grid-auto-rows: max-content; align-content: start; gap: 20px; padding-right: 4px; }
+.personnel-kpi-month { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; flex-shrink: 0; }
+.personnel-kpi-month h3 { margin: 0; display: flex; gap: 12px; align-items: center; padding: 14px 16px; font-size: 15px; font-weight: 600; color: var(--primary); background: var(--secondary); }
+.personnel-kpi-month table { table-layout: fixed; width: 100%; font-variant-numeric: tabular-nums; }
+.personnel-kpi-month th, .personnel-kpi-month td { white-space: normal; font-size: 12px; padding: 12px 8px; text-align: center; }
+.personnel-kpi-month th { background: color-mix(in srgb, var(--primary) 5%, var(--card)); font-weight: 500; }
+.personnel-kpi-month th:first-child, .personnel-kpi-month td:first-child { width: 27%; text-align: left; padding-left: 16px; }
+.personnel-kpi-month td { border-top: 1px solid var(--border); }
+.personnel-kpi-month td small { display: block; font-size: 10px; line-height: 1.5; margin-top: 5px; color: var(--muted-foreground); }
+.personnel-kpi-month .personnel-kpi-value { color: var(--primary); font-weight: 600; font-size: 14px; }
+.personnel-kpi-comparison { display: grid; justify-items: center; gap: 5px; }
+.personnel-kpi-change { font-size: 11px; gap: 3px; border: 0; }
+.personnel-kpi-change[data-direction='up'] { color: var(--success-foreground); background: var(--success-soft); }
+.personnel-kpi-change[data-direction='down'] { color: var(--destructive); background: color-mix(in srgb, var(--destructive) 9%, var(--card)); }
+.personnel-kpi-change[data-direction='flat'] { color: var(--muted-foreground); background: var(--muted); }
+.personnel-kpi-details-footnote, .personnel-kpi-month-empty { margin: 0; font-size: 12px; color: var(--muted-foreground); line-height: 1.6; }
+.personnel-kpi-month-empty { padding: 16px; }
+@media(max-width: 767px) {
+  .personnel-kpi-details { padding: 16px; gap: 12px; width: calc(100vw - 16px); max-height: 94dvh; }
+  .personnel-kpi-details [data-slot='dialog-title'] { font-size: 18px; padding-right: 16px; }
+  .personnel-kpi-month table, .personnel-kpi-month tbody { display: block; }
+  .personnel-kpi-month thead { display: none; }
+  .personnel-kpi-month tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; padding: 16px; border-top: 1px solid var(--border); }
+  .personnel-kpi-month td { display: block; padding: 0; border: 0; font-size: 11px; }
+  .personnel-kpi-month td:first-child { grid-column: 1/-1; padding: 0; width: auto; }
+  .personnel-kpi-month td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 6px; font-size: 10px; color: var(--muted-foreground); font-weight: 400; }
+}

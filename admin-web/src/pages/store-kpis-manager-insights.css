@@ -1,0 +1,33 @@
+.manager-kpi-dialog { padding: 24px; gap: 20px; border-radius: 20px; font-variant-numeric: tabular-nums; }
+.manager-kpi-dialog [data-slot='dialog-header'] { gap: 8px; padding-right: 24px; text-align: left; }
+.manager-kpi-dialog [data-slot='dialog-title'] { margin: 0; font-size: 22px; line-height: 1.3; letter-spacing: -.025em; color: var(--primary); }
+.manager-kpi-dialog [data-slot='dialog-description'] { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted-foreground); }
+.manager-kpi-summary [data-slot='card'] { padding: 0; background: color-mix(in srgb, var(--primary) 4%, var(--card)); border: 1px solid var(--border); box-shadow: none; }
+.manager-kpi-summary [data-slot='card-header'] { padding: 16px; gap: 8px; }
+.manager-kpi-summary [data-slot='card-description'] { margin: 0; font-size: 12px; color: var(--muted-foreground); }
+.manager-kpi-summary [data-slot='card-title'] { font-size: 20px; line-height: 1.3; font-weight: 600; color: var(--primary); overflow-wrap: anywhere; }
+.manager-kpi-comparisons { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.manager-kpi-dialog th { padding: 12px 14px; height: auto; background: color-mix(in srgb, var(--primary) 7%, var(--card)); color: var(--foreground); font-size: 12px; font-weight: 500; }
+.manager-kpi-dialog td { padding: 16px 14px; font-size: 13px; white-space: normal; }
+.manager-kpi-comparisons td:first-child { width: 44%; }
+.manager-kpi-comparisons td p { margin: 5px 0 0; font-size: 11px; line-height: 1.5; }
+.manager-kpi-dialog .manager-kpi-growth { height: auto; min-height: 30px; padding: 6px 10px; gap: 6px; font-weight: 600; }
+.manager-kpi-dialog .manager-kpi-growth[data-trend='positive'] { background: var(--success-soft); color: var(--success-foreground); }
+.manager-kpi-dialog .manager-kpi-growth[data-trend='negative'] { background: color-mix(in srgb, var(--destructive) 9%, var(--card)); color: var(--destructive); }
+.manager-kpi-dialog .manager-kpi-growth[data-trend='neutral'] { background: var(--muted); color: var(--muted-foreground); }
+.manager-kpi-dialog .manager-kpi-formula { padding: 14px; background: var(--muted); border: 0; border-radius: 12px; }
+.manager-kpi-formula [data-slot='alert-description'] { font-size: 12px; line-height: 1.7; color: var(--muted-foreground); }
+.manager-kpi-breakdown td { padding-block: 10px; }
+.manager-kpi-breakdown td:last-child { text-align: right; color: var(--primary); font-weight: 500; }
+.manager-kpi-breakdown th:last-child { text-align: right; }
+@media (max-width: 520px) {
+  .manager-kpi-dialog { padding: 18px; gap: 16px; }
+  .manager-kpi-dialog [data-slot='dialog-title'] { font-size: 20px; }
+  .manager-kpi-summary [data-slot='card-header'] { padding: 12px; }
+  .manager-kpi-summary [data-slot='card-title'] { font-size: 17px; }
+  .manager-kpi-comparisons thead { display: none; }
+  .manager-kpi-comparisons tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 14px; gap: 12px; }
+  .manager-kpi-comparisons td { padding: 0; }
+  .manager-kpi-comparisons td:first-child { grid-column: 1 / -1; width: auto; }
+  .manager-kpi-comparisons td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 6px; font-size: 11px; color: var(--muted-foreground); }
+}

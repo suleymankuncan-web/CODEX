@@ -49,11 +49,11 @@ test('store me action metrics reject missing or unscorable KPI values', () => {
   assert.match(modelSource, /dataStatus !== 'missing'/u)
 })
 
-test('store me production surface keeps compact prototype primitives', () => {
-  assert.match(dashboardSource, /function StoreMeTrendChart/u)
+test('store me production surface keeps compact primitives and the shared KPI chart', () => {
+  assert.match(dashboardSource, /import \{ KpiScoreChart \}/u)
   assert.match(dashboardSource, /function KpiCardHead/u)
   assert.match(dashboardSource, /todayActionsEmptyTitle/u)
-  assert.match(dashboardSource, /<StoreMeTrendChart points=\{chart\.chartPoints\}/u)
+  assert.match(dashboardSource, /<KpiScoreChart data=\{chart\.chartPoints\.map/u)
   assert.doesNotMatch(dashboardSource, /<svg[\s\S]*store-me-line-chart/u)
   assert.match(storeMeCssSource, /\.store-me-kpi-head/u)
   assert.match(storeMeCssSource, /\.store-me-target-strip\s*\{[\s\S]*grid-template-columns:\s*1fr/u)

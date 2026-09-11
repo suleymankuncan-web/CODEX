@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { usesStoreReportViewerView } from '../features/auth/authorization'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getOrgStores, type OrgStore } from '../features/workforce/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
@@ -47,9 +48,7 @@ export function useReportViewerStoreSelection(input: {
   searchParams: URLSearchParams
   setSearchParams: (nextParams: URLSearchParams, options?: { replace?: boolean }) => void
 }) {
-  const roleCodes = input.authSummary?.user.roleCodes ?? []
-  // EC-001: Report Viewer is the read-only presentation for mixed-role accounts.
-  const isReportViewer = roleCodes.includes('REPORT_VIEWER')
+  const isReportViewer = usesStoreReportViewerView(input.authSummary)
   const readCompanyIds = input.authSummary?.user.readScope.companyIds ?? input.authSummary?.user.scope.companyIds ?? []
   const rawSelectedStoreId = input.searchParams.get('storeId')?.trim() ?? ''
   const companyStoreQuery = useQuery({

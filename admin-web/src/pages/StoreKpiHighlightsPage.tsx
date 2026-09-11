@@ -5,7 +5,7 @@ import {
   type StoreKpiHighlightsPageModel,
   useStoreKpiHighlightsPageModel,
 } from './store-kpi-highlights-model'
-import { StoreKpisCommandDeck } from './store-kpis-command-deck'
+import { StoreKpisStoreDetail } from './store-kpis-store-detail'
 import { StoreKpisCompanyOverview } from './store-kpis-company-overview'
 import { StoreKpisRegionOverview } from './store-kpis-region-overview'
 import {
@@ -182,7 +182,7 @@ export function StoreKpiHighlightsPage(input: {
     )
   }
 
-  return <StoreKpiHighlightsExperience model={model} />
+  return <StoreKpisStoreDetail model={model} />
 }
 
 function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageModel }) {
@@ -217,8 +217,4 @@ function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageMode
       ) : null}
     </StoreSurfacePage>
   )
-}
-
-function StoreKpiHighlightsExperience({ model }: { model: StoreKpiHighlightsPageModel }) {
-  return <StoreKpisCommandDeck model={model} />
 }

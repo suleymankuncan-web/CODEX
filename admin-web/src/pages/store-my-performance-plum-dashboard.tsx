@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react'
 import {
   ChartNoAxesColumnIncreasing,
-  CircleCheck,
   Database,
   LineChart,
   Package,
@@ -9,7 +8,7 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react'
-import { Area, AreaChart, CartesianGrid, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
+import { KpiScoreChart } from '@/components/kpi-score-chart'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
@@ -50,6 +49,7 @@ type MonthlyDetailRow = {
 }
 
 type StoreMyPerformancePlumDashboardProps = {
+  locale: string
   actualSalesLabel: string
   gradeLabel: string
   isPartial: boolean
@@ -59,8 +59,6 @@ type StoreMyPerformancePlumDashboardProps = {
   remainingTargetLabel: string
   samePeriodScoreDelta: string | null
   scoreConfidence: string
-  scoreFocus: string
-  scoreSummary: string
   scoreValue: number
   regionPopulationLabel: string
   regionRankLabel: string
@@ -79,7 +77,7 @@ type StoreMeTrendChartPoint = {
   key: string
   label: string
   scoreLabel: string
-  scoreValue: number
+  scoreValue: number | null
   trendLabel: string | null
 }
 
@@ -174,7 +172,7 @@ function compactChartLabel(label: string) {
 }
 
 function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallbackLabel: string) {
-  const usableRows = rows.filter((row) => row.scoreValue !== null).slice(-7)
+  const usableRows = rows
   const chartRows = usableRows.length
     ? usableRows
     : [{
@@ -188,17 +186,15 @@ function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallba
     key: row.key,
     label: compactChartLabel(row.label),
     scoreLabel: row.scoreLabel,
-    scoreValue: row.scoreValue ?? 0,
+    scoreValue: row.scoreValue,
     trendLabel: row.trendLabel,
   }))
   const firstChartRow = chartRows[0]!
   const bestRow = chartRows.reduce((best, row) => ((row.scoreValue ?? 0) > (best.scoreValue ?? 0) ? row : best), firstChartRow)
-  const currentRow = chartRows[chartRows.length - 1]!
 
   return {
     bestRow,
     chartPoints,
-    currentRow,
   }
 }
 
@@ -232,40 +228,6 @@ function KpiProgress({
       </div>
       <strong>{displayPercent}</strong>
     </div>
-  )
-}
-
-function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
-  return (
-    <ResponsiveContainer width="100%" height={296}>
-      <AreaChart data={points} margin={{ top: 44, right: 30, bottom: 18, left: 34 }}>
-        <defs>
-          <linearGradient id="storeMePlumLine" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="var(--store-me-purple)" />
-            <stop offset="52%" stopColor="var(--store-me-blue)" />
-            <stop offset="100%" stopColor="var(--store-me-teal)" />
-          </linearGradient>
-          <linearGradient id="storeMePlumArea" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--store-me-teal)" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="var(--store-me-purple)" stopOpacity="0.04" />
-          </linearGradient>
-        </defs>
-        <CartesianGrid stroke="rgba(92, 86, 116, 0.18)" strokeDasharray="6 8" vertical={false} />
-        <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} padding={{ left: 22, right: 18 }} />
-        <YAxis hide domain={['dataMin - 8', 'dataMax + 8']} />
-        <Area
-          type="monotone"
-          dataKey="scoreValue"
-          stroke="url(#storeMePlumLine)"
-          strokeWidth={4}
-          fill="url(#storeMePlumArea)"
-          dot={{ r: 5, stroke: 'url(#storeMePlumLine)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
-          activeDot={{ r: 7, stroke: 'var(--store-me-purple)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
-        >
-          <LabelList dataKey="scoreLabel" position="top" offset={12} className="store-me-chart-value" />
-        </Area>
-      </AreaChart>
-    </ResponsiveContainer>
   )
 }
 
@@ -383,6 +345,7 @@ function MetricKpiCard({
 }
 
 export function StoreMyPerformancePlumDashboard({
+  locale,
   actualSalesLabel,
   isPartial,
   metricCards,
@@ -391,8 +354,6 @@ export function StoreMyPerformancePlumDashboard({
   remainingTargetLabel,
   samePeriodScoreDelta,
   scoreConfidence,
-  scoreFocus,
-  scoreSummary,
   scoreValue,
   regionPopulationLabel,
   regionRankLabel,
@@ -503,8 +464,8 @@ export function StoreMyPerformancePlumDashboard({
             </div>
           </div>
 
-          <div className="store-me-chart-frame">
-            <StoreMeTrendChart points={chart.chartPoints} />
+          <div className="store-me-score-chart">
+            <KpiScoreChart data={chart.chartPoints.map(point => ({ month: point.label, score: point.scoreValue }))} locale={locale} label={t('storeMe.score')} />
           </div>
 
           <div className="store-me-summary-strip">
@@ -515,8 +476,8 @@ export function StoreMyPerformancePlumDashboard({
             </span>
             <span>
               <small>{t('storeMe.currentScore')}</small>
-              <strong>{chart.currentRow?.scoreLabel ?? String(scoreValue)}</strong>
-              <em>{chart.currentRow?.trendLabel ?? t('storeMe.noTrendData')}</em>
+              <strong>{scoreValue.toLocaleString(locale)}</strong>
+              <em>{samePeriodScoreDelta ?? t('storeMe.noTrendData')}</em>
             </span>
             <span>
               <small>{t('storeMe.samePeriodDifference')}</small>
@@ -610,18 +571,7 @@ export function StoreMyPerformancePlumDashboard({
           </div>
         </article>
 
-        <article className="store-me-plum-card store-me-quote-card">
-          <div>
-            <CircleCheck aria-hidden="true" />
-            <p>{scoreSummary}</p>
-            <strong>{scoreFocus}</strong>
-          </div>
-          <svg viewBox="0 0 360 130" aria-hidden="true">
-            <path d="M0 130h360V58l-45 18-34 26-44-19-41 33-58-54-52 46-43-20L0 118z" fill="var(--store-me-teal-soft)" />
-            <path d="M78 130h282V88l-52 15-30 18-58-45-39 27-33-11-44 28z" fill="var(--store-me-purple-soft)" />
-            <path d="M151 130h209v-27l-37 10-38-26-38 29-51-13z" fill="var(--store-me-blue-soft)" />
-          </svg>
-        </article>
+
       </section>
     </section>
   )

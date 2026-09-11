@@ -1,3 +1,5 @@
+import { previousPersonnelPeriod } from './personnel-period-comparison'
+import { StoreKpisPeriodEmpty } from './store-kpis-period-empty'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Sparkles, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -13,6 +15,7 @@ import {
   getPersonnelPerformance,
   getReportingSnapshotRuns,
   type MyPerformanceQueryInput,
+  type MyPerformanceSummary,
 } from '../features/reports/api'
 import { getUserFacingErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
@@ -29,9 +32,10 @@ import {
 } from './store-my-performance-model'
 import {
   StoreMyPerformanceDateFilter,
-  StoreMyPerformanceKpiDialog,
   StoreMyPerformancePartialAlert,
 } from './store-my-performance-sections'
+import { CalendarPicker } from '@/components/ui/calendar-picker'
+import { StoreMyPerformanceKpiDetails } from './store-my-performance-kpi-details'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
 import { StoreMeShareCardDialog } from './store-me-share-card-dialog'
 import {
@@ -60,6 +64,7 @@ type StoreMyPerformanceViewModel = ReturnType<typeof buildStoreMyPerformanceView
 type StoreMyPerformancePeriodHandlers = ReturnType<typeof createStoreMyPerformancePeriodHandlers>
 
 type StoreMyPerformancePageExperienceProps = {
+  rangeCalendar?: ReactNode
   activeClosedSnapshotRunId: string
   isDateFilterOpen: boolean
   isKpiDetailOpen: boolean
@@ -70,7 +75,8 @@ type StoreMyPerformancePageExperienceProps = {
   onSelectSourceMode: (mode: StorePerformanceSourceMode) => void
   onToggleDateFilter: () => void
   periodHandlers: StoreMyPerformancePeriodHandlers
-  performanceEmployeeName: string
+  performance: MyPerformanceSummary
+  profileEmployeeId: string
   selectedClosedSnapshotRunId: string
   selectedLivePeriodStart: string
   selectedLivePeriodType: LivePeriodType
@@ -92,6 +98,7 @@ type StoreMeCompactHeaderProps = {
 export function StoreMyPerformancePage(input: {
   authSummary: AuthSessionSummary | null
   employeeId?: string
+  initialLivePeriodEnd?: string
   initialLivePeriodStart?: string
   initialLivePeriodType?: LivePeriodType
   profileMode?: 'self' | 'personnel'
@@ -107,6 +114,7 @@ export function StoreMyPerformancePage(input: {
   const [state, dispatch] = useReducer(
     storeMyPerformancePageReducer,
     {
+      ...(input.initialLivePeriodEnd ? { initialLivePeriodEnd: input.initialLivePeriodEnd } : {}),
       ...(input.initialLivePeriodStart === undefined
         ? {}
         : { initialLivePeriodStart: input.initialLivePeriodStart }),
@@ -120,6 +128,7 @@ export function StoreMyPerformancePage(input: {
     sourceMode,
     selectedLivePeriodType,
     selectedLivePeriodStart,
+    selectedLivePeriodEnd,
     selectedLiveYears,
     selectedLiveMonthKeys,
     selectedLiveDayStarts,
@@ -171,10 +180,12 @@ export function StoreMyPerformancePage(input: {
       selectedLivePeriodType,
       selectedLivePeriodStart,
       selectedClosedSnapshotDate,
+      ...(selectedLivePeriodEnd ? [selectedLivePeriodEnd] : []),
     ],
     queryFn: () =>
       fetchPerformance({
         mode: sourceMode,
+        ...(sourceMode === 'live' && selectedLivePeriodEnd ? { periodEnd: selectedLivePeriodEnd } : {}),
         ...(sourceMode === 'live' ? { periodType: selectedLivePeriodType } : {}),
         ...(sourceMode === 'live' && selectedLivePeriodStart
           ? { periodStart: selectedLivePeriodStart }
@@ -199,6 +210,16 @@ export function StoreMyPerformancePage(input: {
     sourceMode,
   })
 
+  const previousPeriod = sourceMode === 'live' ? previousPersonnelPeriod(performance?.period ?? null) : null
+  const previousPerformanceQuery = useQuery({
+    queryKey: [...queryPrefix, 'previous-calendar-month', previousPeriod],
+    queryFn: () => fetchPerformance({ mode: 'live', periodStart: previousPeriod!.periodStart, periodType: previousPeriod!.periodType,
+      ...(previousPeriod?.periodType === 'daily' ? { periodEnd: previousPeriod.periodEnd } : {}),
+    }),
+    enabled: enabled && Boolean(previousPeriod),
+    ...transientQueryRetryOptions,
+  })
+
   const monthlyPerformanceQueries = useQueries({
     queries: periodModel.monthlyDetailPeriods.map((period) => ({
       queryKey: [
@@ -220,7 +241,7 @@ export function StoreMyPerformancePage(input: {
   })
 
   useEffect(() => {
-    if (!periodModel.livePeriodFallbackStart || periodModel.livePeriodFallbackStart === selectedLivePeriodStart) {
+    if (selectedLivePeriodEnd || !periodModel.livePeriodFallbackStart || periodModel.livePeriodFallbackStart === selectedLivePeriodStart) {
       return undefined
     }
 
@@ -233,7 +254,7 @@ export function StoreMyPerformancePage(input: {
     }, 0)
 
     return () => window.clearTimeout(fallbackTimer)
-  }, [periodModel.livePeriodFallbackStart, periodModel.livePeriodFallbackType, selectedLivePeriodStart])
+  }, [selectedLivePeriodEnd, periodModel.livePeriodFallbackStart, periodModel.livePeriodFallbackType, selectedLivePeriodStart])
 
   useEffect(() => {
     if (!isKpiDetailOpen) {
@@ -339,6 +360,8 @@ export function StoreMyPerformancePage(input: {
   }
 
   const viewModel = buildStoreMyPerformanceViewModel({
+    isDateRange: Boolean(selectedLivePeriodEnd),
+    previousPerformance: previousPerformanceQuery.data,
     availableClosedSnapshotRuns,
     availableLiveMonthOptions: periodModel.availableLiveMonthOptions,
     availableLivePeriods: periodModel.availableLivePeriods,
@@ -371,7 +394,11 @@ export function StoreMyPerformancePage(input: {
       onSelectSourceMode={(mode) => dispatch({ type: 'setSourceMode', mode })}
       onToggleDateFilter={() => dispatch({ type: 'toggleDateFilter' })}
       periodHandlers={periodHandlers}
-      performanceEmployeeName={performance.employee.displayName}
+      rangeCalendar={selectedLivePeriodEnd ? <CalendarPicker mode="range" value={selectedLivePeriodStart} end={selectedLivePeriodEnd} locale={locale} ariaLabel={t('storeMe.dateFilter')} maxRangeDays={366}
+        onValueChange={(start, end) => { if (end) dispatch({ type: 'setLiveRange', start, end }) }}
+        onFullMonth={start => dispatch({ type: 'changeLivePeriodType', periodType: 'monthly', periodStart: start })} /> : undefined}
+      performance={performance}
+      profileEmployeeId={profileMode === 'personnel' ? targetEmployeeId : ''}
       selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
       selectedLivePeriodStart={selectedLivePeriodStart}
       selectedLivePeriodType={selectedLivePeriodType}
@@ -384,6 +411,7 @@ export function StoreMyPerformancePage(input: {
 }
 
 function StoreMyPerformancePageExperience({
+  rangeCalendar,
   activeClosedSnapshotRunId,
   isDateFilterOpen,
   isKpiDetailOpen,
@@ -394,7 +422,8 @@ function StoreMyPerformancePageExperience({
   onSelectSourceMode,
   onToggleDateFilter,
   periodHandlers,
-  performanceEmployeeName,
+  performance,
+  profileEmployeeId,
   selectedClosedSnapshotRunId,
   selectedLivePeriodStart,
   selectedLivePeriodType,
@@ -447,7 +476,7 @@ function StoreMyPerformancePageExperience({
             periodLabel={periodLabel}
             shareCardLabel={t('storeMe.shareCardButton')}
           >
-            <StoreMyPerformanceDateFilter
+            {rangeCalendar ?? <StoreMyPerformanceDateFilter
               activeClosedSnapshotRunId={activeClosedSnapshotRunId}
               availableClosedSnapshotRuns={closedSnapshotRunOptions}
               availableLiveMonthOptions={liveMonthFilterOptions}
@@ -470,9 +499,10 @@ function StoreMyPerformancePageExperience({
               sourceMode={sourceMode}
               t={t}
               usesClosedSnapshotMode={usesClosedSnapshotMode}
-            />
+            />}
           </StoreMeCompactHeader>
 
+          {sourceMode === 'live' && !performance.period ? <StoreKpisPeriodEmpty locale={locale} start={selectedLivePeriodStart} /> : <>
           <StoreMyPerformancePartialAlert
             isPartial={partial.isPartial}
             missingMetricLabels={partial.missingMetricLabels}
@@ -481,6 +511,7 @@ function StoreMyPerformancePageExperience({
           />
 
           <StoreMyPerformancePlumDashboard
+            locale={locale}
             actualSalesLabel={actualSalesLabel}
             gradeLabel={gradeLabel}
             isPartial={partial.isPartial}
@@ -490,8 +521,6 @@ function StoreMyPerformancePageExperience({
             remainingTargetLabel={remainingTargetLabel}
             samePeriodScoreDelta={samePeriodScoreDelta}
             scoreConfidence={scoreMeaning.confidence}
-            scoreFocus={scoreMeaning.focus}
-            scoreSummary={scoreMeaning.summary}
             scoreValue={scoreValue}
             regionPopulationLabel={regionPopulationLabel}
             regionRankLabel={regionRankLabel}
@@ -505,16 +534,11 @@ function StoreMyPerformancePageExperience({
             turkeyPopulationLabel={turkeyPopulationLabel}
             turkeyRankLabel={turkeyRankLabel}
           />
+          </>}
         </section>
       </PerformanceSurface>
 
-      <StoreMyPerformanceKpiDialog
-        employeeName={performanceEmployeeName}
-        isOpen={isKpiDetailOpen}
-        monthlyDetailRows={monthlyDetailRows}
-        onClose={onCloseKpiDetails}
-        t={t}
-      />
+      {isKpiDetailOpen ? <StoreMyPerformanceKpiDetails performance={performance} profileEmployeeId={profileEmployeeId} locale={locale} onClose={onCloseKpiDetails} /> : null}
       <StoreMeShareCardDialog
         card={shareCard}
         isOpen={isShareCardOpen}

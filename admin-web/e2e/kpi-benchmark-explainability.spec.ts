@@ -24,11 +24,9 @@ test('kpi metrics explain capped benchmark performance', async ({ page }) => {
   await page.goto('/store/kpis')
 
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Mağaza KPI' })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('UPT').first()).toBeVisible()
   await expect(page.getByRole('row', { name: /UPT/ })).toContainText('4,44')
   await expect(page.getByRole('row', { name: /UPT/ })).toContainText('3')
-  await expect(page.getByRole('row', { name: /UPT/ })).toContainText('1,48 puan')
   await expect(page.getByRole('row', { name: /UPT/ })).toContainText('18')
 })
 
@@ -41,43 +39,9 @@ test('my performance explains missing benchmark or target', async ({ page }) => 
   await expect(page.getByText('benchmark_missing')).toHaveCount(0)
 })
 
-test('store KPI closed view explains effective BM and VM checklist weights', async ({ page }) => {
-  await page.goto('/store/kpis')
-
-  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
-
-  await expect(page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' })).toContainText('Mart')
-  await expect(page.getByText('BM checklist').first()).toBeVisible()
-  await expect(page.getByText('VM checklist').first()).toBeVisible()
-  await expect(page.getByText('Yapılmadı').first()).toBeVisible()
-  await page.getByRole('button', { name: /Personel KPI/ }).click()
-  await expect(page.getByText('Skor kaynağı')).toBeVisible()
-  await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
-  await expect(page.getByText('Configured 90/5/5')).toHaveCount(0)
-  await expect(page.getByText('Effective 95/5/0')).toHaveCount(0)
-})
-
-test('store KPI closed view lets users choose a closed snapshot from the list', async ({ page }) => {
-  await page.goto('/store/kpis')
-
-  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
-  await page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' }).click()
-  await page.getByRole('button', { name: 'Nis', exact: true }).click()
-
-  await expect(page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' })).toContainText('Nisan')
-  await expect(page.getByText('VM checklist').first()).toBeVisible()
-  await expect(page.getByText('Yapılmadı').first()).toBeVisible()
-  await page.getByRole('button', { name: /Personel KPI/ }).click()
-  await expect(page.getByText('Skor kaynağı')).toBeVisible()
-  await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
-  await expect(page.getByText('Effective 95/0/5')).toHaveCount(0)
-})
-
 for (const scenario of [
   { name: 'configuration', pattern: '**/api/reports/kpi-config', openClosed: false },
   { name: 'live KPI', pattern: '**/api/reports/store-kpi-highlights**', openClosed: false },
-  { name: 'snapshot list', pattern: '**/api/reports/snapshot-runs**', openClosed: true },
-  { name: 'closed KPI', pattern: '**/api/reports/kpis**', openClosed: true },
 ] as const) {
   test(`SH-FR-009 ${scenario.name} full error exposes a working retry action`, async ({ page }) => {
     await page.unroute(scenario.pattern)
@@ -88,7 +52,6 @@ for (const scenario of [
     })
 
     await page.goto('/store/kpis')
-    if (scenario.openClosed) await page.getByRole('button', { name: 'Kapanmış gün' }).click()
     const retry = page.getByRole('button', { name: 'Tekrar dene' }).first()
     await expect(retry).toBeVisible()
     const readsBeforeRetry = failedReads
