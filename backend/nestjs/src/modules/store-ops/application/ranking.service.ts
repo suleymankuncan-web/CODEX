@@ -23,7 +23,6 @@ import {
 import { resolveRankingAccess } from "./ranking-access.policy";
 import {
   applyPersonnelFilters,
-  applyStoreFilters,
   buildRankingReferenceGroup,
   getEmptyRankingResponse,
   mapAvailablePeriods,
@@ -54,6 +53,7 @@ import {
   buildScopedRankingFilterOptions,
   selectScopedRankingFilterRows,
 } from "./ranking-filter-options";
+import { buildCompanyManagerStoreView, replaceManagerFilterOptions } from "./ranking-company-manager-directory";
 
 type RawStoreRankingKpiRow = {
   store_id: string;
@@ -153,7 +153,9 @@ export class RankingService {
     const storeMetricCodes = this.getProfileMetricCodes(storeProfile);
     const personnelMetricCodes = this.getProfileMetricCodes(personnelProfile);
     const allMetricCodes = uniqueIds([...storeMetricCodes, ...personnelMetricCodes]);
-
+    const canReadCompanyHierarchy = input.roleCodes.some(
+      (role) => role === "REPORT_VIEWER" || role === "SUPER_ADMIN",
+    );
     const [employeeId, latestPeriod, activeScopeSummary] = await Promise.all([
       this.reportingRepository.resolveEmployeeIdForAuthIdentity({
         userId: input.userId,
@@ -197,6 +199,7 @@ export class RankingService {
       rawPersonnelRows,
       storeBenchmarkRows,
       personnelBenchmarkRows,
+      companyFilterOptions,
     ] = await Promise.all([
       this.rankingReportingReadRepository.listRankingStoreKpiRows({
         isRange: Boolean(dateRange),
@@ -232,9 +235,16 @@ export class RankingService {
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
+      canReadCompanyHierarchy
+        ? this.rankingReportingReadRepository.listRankingFilterOptions({
+            companyIds: input.companyIds,
+            periodType: latestPeriod.period_type,
+            periodStart: latestPeriod.period_start,
+            periodEnd: latestPeriod.period_end,
+          })
+        : Promise.resolve(null),
     ]);
     const rawStoreRows = [...rawStoreKpiRows, ...rawStoreChecklistRows];
-
     const storeBenchmarkLookup = this.toBenchmarkLookup(storeBenchmarkRows);
     const personnelBenchmarkLookup = this.toBenchmarkLookup(personnelBenchmarkRows);
     const storeRows = rankStoreRows(
@@ -259,9 +269,6 @@ export class RankingService {
           ...row, storeScoreShare: storeScoreShares.get(row.employeeId) ?? null,
         })),
     );
-    const canReadCompanyHierarchy = input.roleCodes.some((role) =>
-      role === "REPORT_VIEWER" || role === "SUPER_ADMIN",
-    );
     const activePersonnelAssignments =
       await this.reportingRepository.getActiveEmployeeAssignmentScopes(
         uniqueIds(personnelRows.map((row) => row.employeeId)),
@@ -269,11 +276,11 @@ export class RankingService {
     const assignmentByEmployeeId = new Map(
       activePersonnelAssignments.map((assignment) => [assignment.employee_id, assignment]),
     );
-    const companyFilters = canReadCompanyHierarchy ? input : {
-      ...input,
-      regionManagerUnassigned: false,
-    };
-    companyFilters.enforceAssignedReadScope = scopePolicy.enforceAssignedReadScope;
+    const { companyFilters, filteredStoreRows } = buildCompanyManagerStoreView({
+      rows: storeRows, filters: input, directory: companyFilterOptions?.regionManagers,
+      canReadCompanyHierarchy, isPrivileged: access.isPrivileged,
+      enforceAssignedReadScope: scopePolicy.enforceAssignedReadScope,
+    });
     const authorizedStoreRows = selectScopedRankingFilterRows({
       rows: storeRows,
       isPrivileged: access.isPrivileged,
@@ -282,9 +289,6 @@ export class RankingService {
       regionIds: input.regionIds,
       storeIds: input.storeIds,
     });
-    const filteredStoreRows = access.isPrivileged
-      ? applyStoreFilters(storeRows, companyFilters)
-      : storeRows;
     const activeScopedPersonnelRows = access.isPrivileged
       ? filterPersonnelByActiveAssignmentScope(personnelRows, {
           roleCodes: input.roleCodes,
@@ -354,6 +358,7 @@ export class RankingService {
           ? [currentStore]
           : authorizedStoreRows,
     );
+    replaceManagerFilterOptions(filters, companyFilterOptions?.regionManagers);
     const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
     const managedStorePersonnelRows =
       access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
@@ -409,7 +414,7 @@ export class RankingService {
           limit: regionManagerLimit,
           offset: regionManagerOffset,
           riskOffset: regionManagerRiskOffset,
-        })
+        }, companyFilterOptions?.regionManagers)
       : {
           items: [],
           meta: { total: 0, limit: regionManagerLimit, offset: regionManagerOffset },

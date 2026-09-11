@@ -50,7 +50,11 @@ describe("RankingService scoped filter options", () => {
       listRankingStoreChecklistRows: jest.fn(async () => []),
       listRankingPersonnelKpiRows: jest.fn(async () => []),
       listRankingFilterOptions: jest.fn(async () => ({
-        regionManagers: [{ id: "manager-2", label: "Forbidden manager" }],
+        regionManagers: [
+          { id: "manager-1", label: "Assigned manager", storeIds: ["store-1"] },
+          { id: "manager-2", label: "Forbidden manager", storeIds: ["store-2"] },
+          { id: "manager-3", label: "Manager without period KPI data", storeIds: [] },
+        ],
         regions: [{ id: "region-2", label: "Forbidden region" }],
         stores: [{ id: "store-2", label: "Forbidden store" }],
       })),
@@ -105,5 +109,62 @@ describe("RankingService scoped filter options", () => {
       stores: [{ id: "store-1", label: "Assigned store" }],
     });
     expect(rankingRepository.listRankingFilterOptions).not.toHaveBeenCalled();
+  });
+
+  it("shows every active company Region Manager to Report Viewer even without period KPI data", async () => {
+    const { rankingRepository, service } = createService();
+
+    const result = await service.getRankings({
+      userId: "viewer-1",
+      roleCodes: ["REPORT_VIEWER"],
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(result.regionManagerLeaderboard.items.map((item) => item.userId)).toEqual([
+      "manager-1",
+      "manager-2",
+      "manager-3",
+    ]);
+    expect(result.regionManagerLeaderboard.items[2]).toEqual(expect.objectContaining({
+      averageScore: null,
+      storeCount: 0,
+    }));
+    expect(result.filters.regionManagers).toHaveLength(3);
+    expect(rankingRepository.listRankingFilterOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it("filters a selected Report Viewer manager by direct store assignments", async () => {
+    const { rankingRepository, service } = createService();
+    rankingRepository.listRankingFilterOptions.mockResolvedValue({
+      regionManagers: [
+        { id: "manager-3", label: "Directly assigned manager", storeIds: ["store-2"] },
+      ],
+      regions: [],
+      stores: [],
+    });
+
+    const result = await service.getRankings({
+      userId: "viewer-1",
+      roleCodes: ["REPORT_VIEWER"],
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      regionManagerUserId: "manager-3",
+      periodType: "monthly",
+    });
+
+    expect(result.storeLeaderboard.items.map((item) => item.storeId)).toEqual(["store-2"]);
+    expect(result.regionManagerLeaderboard.items).toEqual([
+      expect.objectContaining({
+        averageScore: expect.any(Number),
+        storeCount: 1,
+        userId: "manager-3",
+      }),
+    ]);
   });
 });

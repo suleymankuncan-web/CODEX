@@ -11,16 +11,48 @@ export type RegionManagerSummaryRow = {
 export function buildRegionManagerSummary(
   rows: StoreRankingRow[],
   page: { limit: number; offset: number; riskOffset?: number },
+  managers: Array<{ id: string; label: string; storeIds?: string[] }> = [],
 ) {
   const groups = new Map<string, {
     userId: string | null
     displayName: string | null
     scores: number[]
-    storeCount: number
+    storeIds: Set<string>
     riskStoreCount: number
   }>()
+  const managerIdsByStore = new Map<string, string[]>()
+
+  for (const manager of managers) {
+    groups.set(manager.id, {
+      userId: manager.id,
+      displayName: manager.label,
+      scores: [],
+      storeIds: new Set(manager.storeIds ?? []),
+      riskStoreCount: 0,
+    })
+    for (const storeId of manager.storeIds ?? []) {
+      managerIdsByStore.set(storeId, [
+        ...(managerIdsByStore.get(storeId) ?? []),
+        manager.id,
+      ])
+    }
+  }
 
   for (const row of rows) {
+    const directManagerIds = managerIdsByStore.get(row.storeId) ?? []
+    if (directManagerIds.length > 0) {
+      for (const managerId of directManagerIds) {
+        const current = groups.get(managerId)
+        if (!current) continue
+        current.storeIds.add(row.storeId)
+        if (Number.isFinite(row.scoreValue)) {
+          current.scores.push(row.scoreValue)
+          if (row.scoreValue < 52.5) current.riskStoreCount += 1
+        }
+      }
+      continue
+    }
+
     const userId = row.regionManagerUserId ?? null
     const displayName = row.regionManagerName ?? null
     const key = userId ?? '__unassigned__'
@@ -28,10 +60,10 @@ export function buildRegionManagerSummary(
       userId,
       displayName,
       scores: [],
-      storeCount: 0,
+      storeIds: new Set<string>(),
       riskStoreCount: 0,
     }
-    current.storeCount += 1
+    current.storeIds.add(row.storeId)
     if (Number.isFinite(row.scoreValue)) {
       current.scores.push(row.scoreValue)
       if (row.scoreValue < 52.5) current.riskStoreCount += 1
@@ -43,7 +75,7 @@ export function buildRegionManagerSummary(
     .map((group) => ({
       userId: group.userId,
       displayName: group.displayName,
-      storeCount: group.storeCount,
+      storeCount: group.storeIds.size,
       riskStoreCount: group.riskStoreCount,
       averageScore: group.scores.length > 0
         ? group.scores.reduce((sum, score) => sum + score, 0) / group.scores.length

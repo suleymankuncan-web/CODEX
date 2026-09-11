@@ -28,5 +28,8 @@ describe("readRankingStoreRange", () => {
     expect(sql).toContain(
       "COUNT(DISTINCT day) = $2::date - $1::date + 1",
     );
+    expect(sql).toContain("FROM ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("manager_store.store_id = s.store_id");
+    expect(sql).not.toContain("ura.region_id = s.region_id");
   });
 });

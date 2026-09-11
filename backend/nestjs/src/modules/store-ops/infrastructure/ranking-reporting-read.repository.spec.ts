@@ -134,6 +134,55 @@ describe("RankingReportingReadRepository source filters", () => {
     ]);
   });
 
+  it("attributes KPI stores to active Region Manager roles through direct store assignments", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listRankingStoreKpiRows({
+      metricCodes: ["ATV"],
+      companyIds: ["00000000-0000-4000-8000-000000000001"],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.listRankingStoreChecklistRows({
+      companyIds: ["00000000-0000-4000-8000-000000000001"],
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+    await repository.listRankingPersonnelKpiRows({
+      metricCodes: ["ATV"],
+      companyIds: ["00000000-0000-4000-8000-000000000001"],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    for (const [sql] of query.mock.calls) {
+      expect(String(sql)).toContain("FROM ops.user_action_store_assignment manager_store");
+      expect(String(sql)).toContain("manager_store.store_id = store.store_id");
+      expect(String(sql)).toContain("role.role_code = 'REGION_MANAGER'");
+      expect(String(sql)).not.toContain("WHERE ura.region_id = store.region_id");
+    }
+  });
+
+  it("lists every active company Region Manager, including managers reached through direct stores", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listRankingFilterOptions({
+      companyIds: ["00000000-0000-4000-8000-000000000001"],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    const managerSql = String(query.mock.calls[0][0]);
+    expect(managerSql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(managerSql).toContain("ops.user_action_store_assignment manager_store");
+    expect(managerSql).toContain("assigned_store.company_id = ANY($1::uuid[])");
+    expect(managerSql).toContain("ARRAY_AGG(DISTINCT assigned_store.store_id::text)");
+    expect(managerSql).toContain("ua.is_active = TRUE");
+  });
+
   it("joins approved personnel target references for ranking personnel NET_SALES rows", async () => {
     const { query, repository } = createRepository();
 

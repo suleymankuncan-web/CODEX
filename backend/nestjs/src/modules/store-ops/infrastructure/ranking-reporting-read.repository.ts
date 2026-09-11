@@ -164,7 +164,11 @@ export class RankingReportingReadRepository {
               ua.email,
               ua.user_id::text
             ) AS display_name
-          FROM ops.user_role_assignment ura
+          FROM ops.user_action_store_assignment manager_store
+          INNER JOIN ops.user_role_assignment ura
+            ON ura.user_id = manager_store.user_id
+           AND ura.start_at <= NOW()
+           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           INNER JOIN ops.role role
             ON role.role_id = ura.role_id
            AND role.role_code = 'REGION_MANAGER'
@@ -173,9 +177,9 @@ export class RankingReportingReadRepository {
            AND ua.is_active = TRUE
           LEFT JOIN ops.employee employee
             ON employee.employee_id = ua.employee_id
-          WHERE ura.region_id = store.region_id
-            AND ura.start_at <= NOW()
-            AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+          WHERE manager_store.store_id = store.store_id
+            AND manager_store.start_at <= NOW()
+            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
           ORDER BY ua.username ASC, ua.user_id ASC
           LIMIT 1
         ) region_manager ON TRUE
@@ -256,7 +260,11 @@ export class RankingReportingReadRepository {
               ua.email,
               ua.user_id::text
             ) AS display_name
-          FROM ops.user_role_assignment ura
+          FROM ops.user_action_store_assignment manager_store
+          INNER JOIN ops.user_role_assignment ura
+            ON ura.user_id = manager_store.user_id
+           AND ura.start_at <= NOW()
+           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           INNER JOIN ops.role role
             ON role.role_id = ura.role_id
            AND role.role_code = 'REGION_MANAGER'
@@ -265,9 +273,9 @@ export class RankingReportingReadRepository {
            AND ua.is_active = TRUE
           LEFT JOIN ops.employee employee
             ON employee.employee_id = ua.employee_id
-          WHERE ura.region_id = store.region_id
-            AND ura.start_at <= NOW()
-            AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+          WHERE manager_store.store_id = store.store_id
+            AND manager_store.start_at <= NOW()
+            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
           ORDER BY ua.username ASC, ua.user_id ASC
           LIMIT 1
         ) region_manager ON TRUE
@@ -416,7 +424,11 @@ export class RankingReportingReadRepository {
               ua.email,
               ua.user_id::text
             ) AS display_name
-          FROM ops.user_role_assignment ura
+          FROM ops.user_action_store_assignment manager_store
+          INNER JOIN ops.user_role_assignment ura
+            ON ura.user_id = manager_store.user_id
+           AND ura.start_at <= NOW()
+           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           INNER JOIN ops.role role
             ON role.role_id = ura.role_id
            AND role.role_code = 'REGION_MANAGER'
@@ -425,9 +437,9 @@ export class RankingReportingReadRepository {
            AND ua.is_active = TRUE
           LEFT JOIN ops.employee manager_employee
             ON manager_employee.employee_id = ua.employee_id
-          WHERE ura.region_id = COALESCE(ka.region_id, assignment.region_id, store.region_id)
-            AND ura.start_at <= NOW()
-            AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+          WHERE manager_store.store_id = store.store_id
+            AND manager_store.start_at <= NOW()
+            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
           ORDER BY ua.username ASC, ua.user_id ASC
           LIMIT 1
         ) region_manager ON TRUE
@@ -446,7 +458,7 @@ export class RankingReportingReadRepository {
     periodStart: string;
     periodEnd: string;
   }): Promise<{
-    regionManagers: Array<{ id: string; label: string }>;
+    regionManagers: Array<{ id: string; label: string; storeIds: string[] }>;
     regions: Array<{ id: string; label: string }>;
     stores: Array<{ id: string; label: string }>;
   }> {
@@ -468,16 +480,22 @@ export class RankingReportingReadRepository {
     const regionManagers = await this.databaseService.query<{
       id: string;
       label: string;
+      store_ids: string[];
     }>(
       `
-        SELECT DISTINCT
+        SELECT
           ua.user_id::text AS id,
           COALESCE(
             NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
             ua.username,
             ua.email,
             ua.user_id::text
-          ) AS label
+          ) AS label,
+          COALESCE(
+            ARRAY_AGG(DISTINCT assigned_store.store_id::text)
+              FILTER (WHERE assigned_store.store_id IS NOT NULL),
+            ARRAY[]::text[]
+          ) AS store_ids
         FROM ops.user_role_assignment ura
         INNER JOIN ops.role role
           ON role.role_id = ura.role_id
@@ -489,13 +507,33 @@ export class RankingReportingReadRepository {
           ON employee.employee_id = ua.employee_id
         LEFT JOIN ops.region region
           ON region.region_id = ura.region_id
+        LEFT JOIN ops.store role_store
+          ON role_store.store_id = ura.store_id
+        LEFT JOIN ops.user_action_store_assignment manager_store
+          ON manager_store.user_id = ura.user_id
+         AND manager_store.start_at <= NOW()
+         AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+        LEFT JOIN ops.store assigned_store
+          ON assigned_store.store_id = manager_store.store_id
+         ${input.companyIds.length > 0 ? `AND assigned_store.company_id = ANY($1::uuid[])` : ""}
         WHERE ura.start_at <= NOW()
           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           ${
             input.companyIds.length > 0
-              ? `AND (ura.company_id = ANY($1::uuid[]) OR region.company_id = ANY($1::uuid[]))`
+              ? `AND (
+                  ura.company_id = ANY($1::uuid[])
+                  OR region.company_id = ANY($1::uuid[])
+                  OR role_store.company_id = ANY($1::uuid[])
+                  OR assigned_store.company_id = ANY($1::uuid[])
+                )`
               : ""
           }
+        GROUP BY
+          ua.user_id,
+          employee.first_name,
+          employee.last_name,
+          ua.username,
+          ua.email
         ORDER BY label ASC
       `,
       regionManagerParams,
@@ -543,7 +581,11 @@ export class RankingReportingReadRepository {
     );
 
     return {
-      regionManagers: regionManagers.rows,
+      regionManagers: regionManagers.rows.map((row) => ({
+        id: row.id,
+        label: row.label,
+        storeIds: row.store_ids,
+      })),
       regions: regions.rows,
       stores: stores.rows,
     };

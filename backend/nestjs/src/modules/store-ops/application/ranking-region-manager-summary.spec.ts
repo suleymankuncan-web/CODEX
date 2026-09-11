@@ -60,6 +60,35 @@ describe('KPI Region Manager summary', () => {
     expect(result.riskMeta.total).toBe(1)
     expect(result.riskStoreCount).toBe(1)
   })
+
+  it('keeps active role-assigned managers visible when the period has no KPI rows for them', () => {
+    const result = buildRegionManagerSummary([
+      row({ storeId: 'store-owned', regionManagerUserId: 'manager-1', regionManagerName: 'Ayşe Ak', scoreValue: 88 }),
+    ], { limit: 50, offset: 0 }, [
+      { id: 'manager-1', label: 'Ayşe Ak' },
+      { id: 'manager-2', label: 'Mert Yılmaz', storeIds: ['store-2', 'store-3'] },
+    ])
+
+    expect(result.items).toEqual([
+      expect.objectContaining({ userId: 'manager-1', storeCount: 1, averageScore: 88 }),
+      expect.objectContaining({ userId: 'manager-2', storeCount: 2, averageScore: null }),
+    ])
+    expect(result.meta.total).toBe(2)
+  })
+
+  it('uses the direct store directory when more than one manager is assigned to a store', () => {
+    const result = buildRegionManagerSummary([
+      row({ storeId: 'shared-store', regionManagerUserId: 'manager-1', regionManagerName: 'Ayşe Ak', scoreValue: 76 }),
+    ], { limit: 50, offset: 0 }, [
+      { id: 'manager-1', label: 'Ayşe Ak', storeIds: ['shared-store'] },
+      { id: 'manager-2', label: 'Mert Yılmaz', storeIds: ['shared-store'] },
+    ])
+
+    expect(result.items).toEqual([
+      expect.objectContaining({ userId: 'manager-1', storeCount: 1, averageScore: 76 }),
+      expect.objectContaining({ userId: 'manager-2', storeCount: 1, averageScore: 76 }),
+    ])
+  })
 })
 
 function row(input: {
