@@ -6,6 +6,7 @@ import { DialogContent } from '@/components/ui/dialog'
 import { SheetContent } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import {
+  CalendarMonthYearPeriodPicker,
   MonthYearPeriodPicker,
   type MonthYearPeriodPickerProps,
 } from './month-year-picker'
@@ -57,6 +58,16 @@ export function CommandCanvasActionCluster(input: { children: ReactNode; classNa
 export function CommandCanvasMonthYearPicker(input: MonthYearPeriodPickerProps) {
   return (
     <MonthYearPeriodPicker
+      {...input}
+      popoverClassName={cn('command-canvas-period-popover', input.popoverClassName)}
+      triggerClassName={cn('command-canvas-period-trigger', input.triggerClassName)}
+    />
+  )
+}
+
+export function CommandCanvasCalendarMonthYearPicker(input: MonthYearPeriodPickerProps) {
+  return (
+    <CalendarMonthYearPeriodPicker
       {...input}
       popoverClassName={cn('command-canvas-period-popover', input.popoverClassName)}
       triggerClassName={cn('command-canvas-period-trigger', input.triggerClassName)}
