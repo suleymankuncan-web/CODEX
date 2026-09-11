@@ -62,7 +62,8 @@ test('store KPI closed view lets users choose a closed snapshot from the list', 
 
   await page.getByRole('button', { name: 'Kapanmış gün' }).click()
   await page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' }).click()
-  await page.getByRole('button', { name: 'Nis', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Ay seç' }).selectOption({ index: 3 })
+  await page.getByRole('button', { name: 'Uygula', exact: true }).click()
 
   await expect(page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' })).toContainText('Nisan')
   await expect(page.getByText('VM checklist').first()).toBeVisible()

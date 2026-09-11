@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, ChevronsUpDown, ChevronLeft, ChevronRight, ClipboardCheck, LoaderCircle, Search, Store } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
+import { ChecklistSearchField } from './ChecklistSearchField'
 import { StatusBadge } from '../../components/ui/status-badge'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import { ApiError } from '../../lib/api'
@@ -54,10 +54,10 @@ export function ReportViewerManagerWorkspace(input: {
   const pageCount = Math.max(1, Math.ceil((data?.page.total ?? 0) / STORE_PAGE_SIZE))
 
   return (
-    <section className="tw:min-w-0 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:shadow-sm" aria-busy={storesQuery.isFetching} aria-labelledby="report-viewer-active-manager">
-      <header className="tw:flex tw:flex-col tw:gap-2.5 tw:border-b tw:border-border tw:px-3 tw:py-3 tw:sm:px-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+    <section className="tw:@container tw:min-w-0 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:shadow-sm" aria-busy={storesQuery.isFetching} aria-labelledby="report-viewer-active-manager">
+      <header className="tw:flex tw:flex-col tw:gap-2.5 tw:border-b tw:border-border tw:px-3 tw:py-3 tw:sm:px-4 tw:@min-[600px]:flex-row tw:@min-[600px]:items-center tw:@min-[600px]:justify-between">
         <div className="tw:min-w-0"><h2 id="report-viewer-active-manager" data-testid="report-viewer-active-manager" className="tw:m-0 tw:truncate tw:text-lg tw:font-semibold tw:tracking-[-0.02em]">{input.managerName}</h2><p className="tw:mt-0.5 tw:mb-0 tw:flex tw:items-center tw:gap-1.5 tw:text-[11px] tw:text-muted-foreground"><span>{data ? `${data.metrics.totalStores} ${copy.assignedStores}` : copy.storesTitle}</span><LoaderCircle aria-hidden className={`tw:size-3 tw:text-primary ${storesQuery.isFetching && data ? 'tw:animate-spin tw:opacity-100' : 'tw:opacity-0'}`} /></p></div>
-        <label className="tw:relative tw:block tw:w-full tw:lg:max-w-[240px]"><Search aria-hidden className="tw:absolute tw:top-1/2 tw:left-2.5 tw:size-3.5 tw:-translate-y-1/2 tw:text-muted-foreground" /><span className="tw:sr-only">{copy.search}</span><Input className="tw:bg-muted/30 tw:pl-8 tw:text-xs tw:shadow-none" value={search} placeholder={copy.search} onChange={(event) => setFilterState({ workspaceKey, search: event.target.value, offset: 0, sort })} /></label>
+        <div className="tw:w-full tw:@min-[600px]:max-w-[240px]"><ChecklistSearchField label={copy.search} value={search} count={data?.page.total} onChange={value => setFilterState({ workspaceKey, search: value, offset: 0, sort })} /></div>
       </header>
 
       {storesQuery.isLoading && !data ? <WorkspaceMessage icon={<Store />} title={copy.loading} /> : null}
@@ -66,32 +66,29 @@ export function ReportViewerManagerWorkspace(input: {
 
       {data && data.items.length > 0 ? (
         <div role="table" aria-label={copy.storesTitle}>
-          <div role="row" className="tw:hidden tw:min-h-8 tw:grid-cols-[minmax(138px,1fr)_44px_44px_68px_68px_104px_84px_96px_minmax(12px,0.4fr)_88px] tw:items-center tw:gap-3 tw:border-b tw:border-border tw:px-4 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.11em] tw:text-muted-foreground tw:lg:grid">
+          <div role="row" className="checklist-search-heading tw:hidden tw:min-h-11 tw:grid-cols-[minmax(90px,1.35fr)_minmax(40px,.65fr)_28px_minmax(44px,.7fr)_minmax(76px,1fr)_minmax(48px,.75fr)_80px_96px] tw:items-center tw:gap-1.5 tw:border-b tw:border-border tw:px-3 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.11em] tw:text-muted-foreground tw:@min-[600px]:grid">
             <SortableHeader label={copy.store} sort={sort} sortKey="store" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.bmScore} sort={sort} sortKey="bm" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.vmScore} sort={sort} sortKey="vm" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.openTasks} sort={sort} sortKey="open_actions" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
-            <span role="columnheader" className="tw:text-center">{copy.blockedTasks}</span>
             <SortableHeader label={copy.lastVisit} sort={sort} sortKey="last_visit" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.elapsed} sort={sort} sortKey="elapsed" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
             <SortableHeader label={copy.status} sort={sort} sortKey="status" onSort={(sortKey) => setFilterState({ workspaceKey, search, offset: 0, sort: toggleChecklistCommandSort(sort, sortKey) })} />
-            <span role="columnheader" className="tw:col-start-10 tw:sr-only">{copy.actions}</span>
+            <span role="columnheader"><span className="tw:sr-only">{copy.actions}</span></span>
           </div>
           {data.items.map((row) => (
-            <div role="row" key={row.storeId} className="tw:grid tw:min-h-12 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-x-3 tw:gap-y-1.5 tw:border-b tw:border-border/80 tw:px-3 tw:py-2 tw:last:border-b-0 tw:hover:bg-muted/30 tw:lg:grid-cols-[minmax(138px,1fr)_44px_44px_68px_68px_104px_84px_96px_minmax(12px,0.4fr)_88px] tw:lg:gap-3 tw:lg:px-4">
+            <div role="row" key={row.storeId} className="tw:grid tw:min-h-12 tw:grid-cols-[minmax(0,1fr)_auto] tw:items-center tw:gap-x-3 tw:gap-y-1.5 tw:border-b tw:border-border/80 tw:px-3 tw:py-2 tw:last:border-b-0 tw:hover:bg-muted/30 tw:@min-[600px]:grid-cols-[minmax(90px,1.35fr)_minmax(40px,.65fr)_28px_minmax(44px,.7fr)_minmax(76px,1fr)_minmax(48px,.75fr)_80px_96px] tw:@min-[600px]:gap-1.5 tw:@min-[600px]:px-3">
               {(() => {
                 const facts = getChecklistCommandTruthFacts(row)
                 return <>
-              <span role="cell" className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-[13px] tw:font-semibold tw:text-foreground">{row.storeName}</strong></span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-2 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.bmScore}:</small>{formatScore(facts.bmScore)}</span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-3 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.vmScore}:</small>{formatScore(facts.vmScore)}</span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-4 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.openTasks}:</small>{facts.openTaskCount}</span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-5 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:lg:hidden">{copy.blockedTasks}:</small>{facts.blockedTaskCount}</span>
-              <span role="cell" className="tw:col-start-1 tw:row-start-6 tw:text-[11px] tw:text-muted-foreground tw:lg:col-auto tw:lg:row-auto tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:lg:hidden">{copy.lastVisit}:</small>{formatVisit(row.lastCompletedVisitAt, input.locale, copy.noVisit)}</span>
-              <span role="cell" className="tw:col-start-2 tw:row-start-6 tw:justify-self-end tw:text-[11px] tw:text-muted-foreground tw:tabular-nums tw:lg:col-auto tw:lg:row-auto tw:lg:justify-self-stretch tw:lg:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:lg:hidden">{copy.elapsed}:</small>{formatElapsed(row.elapsedDaysSinceLastVisit, copy.days)}</span>
-              <span role="cell" className="tw:col-start-2 tw:row-start-2 tw:justify-self-end tw:lg:col-auto tw:lg:row-auto tw:lg:justify-self-center"><StoreStatus locale={input.locale} row={row} /></span>
-              <span role="cell" className="tw:hidden tw:lg:block" aria-hidden="true" />
-              <span role="cell" className="tw:col-start-2 tw:row-start-1 tw:justify-self-end tw:lg:col-start-10 tw:lg:row-auto"><Button className="checklist-record-history-result-action tw:w-full" size="xs" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStore(row) }}><ClipboardCheck aria-hidden /> {copy.results}</Button></span>
+              <span role="cell" className="tw:min-w-0"><strong className="tw:block tw:break-words tw:text-[13px] tw:leading-snug tw:font-semibold tw:text-foreground">{row.storeName}</strong></span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-2 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:@min-[600px]:hidden">{copy.bmScore}:</small>{formatScore(facts.bmScore)}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-3 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:@min-[600px]:hidden">{copy.vmScore}:</small>{formatScore(facts.vmScore)}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-4 tw:text-[11px] tw:font-semibold tw:tabular-nums tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:@min-[600px]:hidden">{copy.openTasks}:</small>{facts.openTaskCount}</span>
+              <span role="cell" className="tw:col-start-1 tw:row-start-6 tw:text-[11px] tw:text-muted-foreground tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:@min-[600px]:hidden">{copy.lastVisit}:</small>{formatVisit(row.lastCompletedVisitAt, input.locale, copy.noVisit)}</span>
+              <span role="cell" className="tw:col-start-2 tw:row-start-6 tw:justify-self-end tw:text-[11px] tw:text-muted-foreground tw:tabular-nums tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:justify-self-stretch tw:@min-[600px]:text-center"><small className="tw:mr-1 tw:text-[10px] tw:font-semibold tw:text-foreground tw:@min-[600px]:hidden">{copy.elapsed}:</small>{formatElapsed(row.elapsedDaysSinceLastVisit, copy.days)}</span>
+              <span role="cell" className="tw:col-start-2 tw:row-start-2 tw:justify-self-end tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:justify-self-center"><StoreStatus locale={input.locale} row={row} /></span>
+              <span role="cell" className="tw:col-start-2 tw:row-start-1 tw:justify-self-end tw:@min-[600px]:col-auto tw:@min-[600px]:row-auto tw:@min-[600px]:justify-self-stretch"><Button className="checklist-record-history-result-action tw:w-full" size="xs" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStore(row) }}><ClipboardCheck aria-hidden /> {copy.results}</Button></span>
                 </>
               })()}
             </div>
@@ -116,8 +113,8 @@ function SortableHeader(input: { label: string; onSort: (key: ChecklistCommandSo
   const SortIcon = direction === 'ascending' ? ArrowUp : direction === 'descending' ? ArrowDown : ChevronsUpDown
   const centered = input.sortKey !== 'store'
   return <span role="columnheader" aria-sort={direction} className={centered ? 'tw:flex tw:justify-center' : undefined}>
-    <Button className={`tw:!h-6 tw:max-w-full tw:!gap-1 tw:overflow-hidden tw:!rounded-none tw:!border-transparent tw:!bg-transparent tw:!px-0 tw:text-[9px] tw:font-bold tw:text-inherit tw:!shadow-none tw:hover:!bg-transparent tw:hover:text-primary tw:focus-visible:!bg-transparent ${centered ? 'tw:!justify-center' : 'tw:!justify-start'}`} size="xs" type="button" variant="ghost" onClick={() => input.onSort(input.sortKey)}>
-      <span>{input.label}</span><SortIcon aria-hidden className={`tw:size-3 ${active ? 'tw:text-primary' : 'tw:opacity-50'}`} />
+    <Button className={`tw:!h-6 tw:max-w-full tw:!gap-1 tw:overflow-hidden tw:!rounded-none tw:!border-transparent tw:!bg-transparent tw:!px-0 tw:!text-[10px] tw:font-bold tw:text-inherit tw:!shadow-none tw:hover:!bg-transparent tw:hover:text-primary tw:focus-visible:!bg-transparent ${centered ? 'tw:!justify-center' : 'tw:!justify-start'}`} size="xs" type="button" variant="ghost" onClick={() => input.onSort(input.sortKey)}>
+      <span className="tw:min-w-0 tw:whitespace-normal tw:leading-tight">{input.label}</span><SortIcon aria-hidden className={`tw:size-3 tw:shrink-0 ${active ? 'tw:text-primary' : 'tw:opacity-50'}`} />
     </Button>
   </span>
 }

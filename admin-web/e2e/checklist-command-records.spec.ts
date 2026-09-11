@@ -42,11 +42,11 @@ test('Report Viewer keeps manager selection, visit plan, stores, and history in 
   await expect(page.getByRole('heading', { name: 'Checklist Raporları' }).first()).toBeVisible()
   const periodTrigger = page.getByRole('button', { name: /DÖNEM Ağustos 2026/ })
   await periodTrigger.click()
-  const periodDialog = page.getByRole('dialog', { name: 'Raporlama dönemi' })
+  const periodDialog = page.getByRole('dialog', { name: 'Dönem seç' })
   await expect(periodDialog).toBeVisible()
-  await periodDialog.getByRole('button', { name: 'Sonraki yıl' }).click()
-  await expect(periodDialog.getByText('2027', { exact: true })).toBeVisible()
-  await periodDialog.getByRole('button', { name: 'Tarih filtresini kapat' }).click()
+  await periodDialog.getByRole('combobox', { name: 'Yıl seç' }).selectOption('2027')
+  await expect(periodDialog.getByRole('combobox', { name: 'Yıl seç' })).toHaveValue('2027')
+  await page.keyboard.press('Escape')
   await expect(periodDialog).toHaveCount(0)
   await expect(periodTrigger).toBeFocused()
   const onurManager = page.getByRole('button', { name: /Onur Kaytan/ })
@@ -234,8 +234,8 @@ test('Report Viewer does not reuse same-manager rows across reporting periods', 
   await expect(page.getByText('Ağustos 2026 Marmara Park')).toBeVisible()
   const periodTrigger = page.getByRole('button', { name: 'DÖNEM Ağustos 2026' })
   await periodTrigger.click()
-  const periodDialog = page.getByRole('dialog', { name: 'Raporlama dönemi' })
-  await periodDialog.getByRole('button', { name: 'Temmuz', exact: true }).click()
+  const periodDialog = page.getByRole('dialog', { name: 'Dönem seç' })
+  await periodDialog.getByRole('combobox', { name: 'Ay seç' }).selectOption('6')
   const periodRequest = page.waitForRequest((request) => {
     const url = new URL(request.url())
     return url.pathname === '/api/checklists/command-canvas' && url.searchParams.get('period') === '2026-07'
@@ -504,13 +504,33 @@ test('Region Manager unified page normalizes legacy plan links at 320px', async 
 test('Report Viewer dedicated manager workspace stays responsive', async ({ page }, testInfo) => {
   await installStoreContractSession(page, 'reportViewer')
   await routeReportViewerRecords(page)
-  for (const viewport of [{ width: 1024, height: 768 }, { width: 390, height: 844 }] as const) {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1280, height: 800 }, { width: 1024, height: 768 }, { width: 390, height: 844 }] as const) {
     await page.setViewportSize(viewport)
     await page.goto('/store/checklists')
     await expect(page.getByRole('heading', { name: 'Checklist Raporları' }).first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await expect(page.getByText('HAFTALIK PLAN', { exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Sonuçlar' }).first()).toBeVisible()
+    const table = page.getByRole('table', { name: 'Sorumlu mağazalar' })
+    const resultsButton = table.getByRole('button', { name: 'Sonuçlar' }).first()
+    const assertResultsWithinPanel = async () => {
+      const panelBounds = await table.boundingBox()
+      const buttonBounds = await resultsButton.boundingBox()
+      expect(panelBounds).not.toBeNull()
+      expect(buttonBounds).not.toBeNull()
+      expect(buttonBounds!.x).toBeGreaterThanOrEqual(panelBounds!.x)
+      expect(buttonBounds!.x + buttonBounds!.width).toBeLessThanOrEqual(panelBounds!.x + panelBounds!.width - 8)
+    }
+    await assertResultsWithinPanel()
+    if (viewport.width >= 1024) {
+      await table.getByRole('button', { name: 'Geçen süre', exact: true }).scrollIntoViewIfNeeded()
+      await table.evaluate((element) => { element.scrollLeft = element.scrollWidth })
+      await assertResultsWithinPanel()
+      await expect(table.getByRole('button', { name: 'Geçen süre', exact: true })).toBeInViewport()
+      await resultsButton.click()
+      await expect(page.getByRole('dialog', { name: 'Marmara Park mağaza kaydı' })).toBeVisible()
+      await page.keyboard.press('Escape')
+    }
     await page.getByRole('button', { name: 'Ziyaret Takvimi' }).click()
     await expect(page.getByRole('dialog', { name: 'Ziyaret Takvimi' })).toBeVisible()
     await expect(page.getByText('HAFTALIK PLAN', { exact: true })).toHaveCount(1)

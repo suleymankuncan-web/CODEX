@@ -199,11 +199,11 @@ test('admin dashboard exposes Power BI period controls', async ({ page }) => {
 
   await expect(page.getByLabel('Dönem tipi')).toBeVisible()
   await page.getByLabel('Dönem tipi').selectOption('daily')
-  await expect(page.getByLabel('Başlangıç')).toBeVisible()
-  await expect(page.getByLabel('Bitiş')).toBeDisabled()
+  await expect(page.getByRole('textbox', { name: 'Başlangıç', exact: true })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Bitiş', exact: true })).toBeDisabled()
 
   await page.getByLabel('Dönem tipi').selectOption('custom')
-  await expect(page.getByLabel('Bitiş')).toBeEnabled()
+  await expect(page.getByRole('textbox', { name: 'Bitiş', exact: true })).toBeEnabled()
 })
 
 test('admin dashboard explains why Power BI export upload is unavailable', async ({ page }) => {

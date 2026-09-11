@@ -1,8 +1,9 @@
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import type { ReactNode } from 'react'
 import { useEffect, useReducer, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
-import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, LineChart, ListFilter, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
+import { CalendarCheck, CalendarDays, LineChart, ListFilter, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -460,13 +461,6 @@ function RankingControls(input: {
   const selectedYear = activePeriod?.year ?? new Date().getFullYear()
   const selectedMonth = activePeriod?.month ?? new Date().getMonth() + 1
   const yearOptions = getRankingYearOptions(input.ranking, selectedYear)
-  const dayOptions = getLoadedRankingDayOptions(input.ranking, selectedYear, selectedMonth)
-  const setPeriod = (next: { year?: number; month?: number }) => {
-    input.onPeriodStartChange(
-      formatPeriodStart(next.year ?? selectedYear, next.month ?? selectedMonth),
-    )
-    input.onDayOfMonthChange('')
-  }
 
   return (
     <section
@@ -500,75 +494,16 @@ function RankingControls(input: {
           </span>
         </label>
 
-        <RankingCheckboxFilter
-          label={input.t('storeRankings.year')}
-          ariaLabel={input.t('storeRankings.yearFilterLabel')}
-          icon={<CalendarDays data-icon="inline-start" aria-hidden="true" />}
-          summary={String(selectedYear)}
-          open={openFilter === 'year'}
-          onOpenChange={(open) => setOpenFilter(open ? 'year' : null)}
-          options={yearOptions.map((year) => ({
-            value: String(year),
-            label: String(year),
-            checked: selectedYear === year,
-            onCheckedChange: (checked) => {
-              if (checked) setPeriod({ year })
-            },
-          }))}
-        />
-
-        <RankingCheckboxFilter
-          label={input.t('storeRankings.month')}
-          ariaLabel={input.t('storeRankings.monthFilterLabel')}
-          icon={<CalendarRange data-icon="inline-start" aria-hidden="true" />}
-          summary={formatMonthLabel(input.locale, selectedMonth)}
-          open={openFilter === 'month'}
-          onOpenChange={(open) => setOpenFilter(open ? 'month' : null)}
-          options={Array.from({ length: 12 }, (_, index) => {
-            const month = index + 1
-
-            return {
-              value: String(month),
-              label: formatMonthLabel(input.locale, month),
-              checked: selectedMonth === month,
-              onCheckedChange: (checked: boolean) => {
-                if (checked) setPeriod({ month })
-              },
-            }
-          })}
-        />
-
-        <RankingCheckboxFilter
-          label={input.t('storeRankings.day')}
-          ariaLabel={input.t('storeRankings.dayFilterLabel')}
-          icon={<CalendarClock data-icon="inline-start" aria-hidden="true" />}
-          summary={input.dayOfMonth || input.t('storeRankings.allMonth')}
-          open={openFilter === 'day'}
-          onOpenChange={(open) => setOpenFilter(open ? 'day' : null)}
-          options={[
-            {
-              value: 'all',
-              label: input.t('storeRankings.allMonth'),
-              checked: !input.dayOfMonth,
-              onCheckedChange: (checked) => {
-                if (checked) input.onDayOfMonthChange('')
-              },
-              wide: true,
-            },
-            ...dayOptions.map((day) => ({
-              value: day,
-              label: day,
-              checked: input.dayOfMonth === day,
-              onCheckedChange: (checked: boolean) => {
-                if (checked) {
-                  input.onPeriodStartChange(formatPeriodStart(selectedYear, selectedMonth))
-                  input.onDayOfMonthChange(day)
-                }
-              },
-            })),
-          ]}
-          gridClassName="store-rankings-date-grid-days"
-        />
+        <div className="store-rankings-field">
+          <span>{input.locale === 'tr' ? 'Dönem' : 'Period'}</span>
+          <CalendarPicker mode="single" locale={input.locale}
+            value={formatPeriodStart(selectedYear, selectedMonth).slice(0, 8) + String(input.dayOfMonth || 1).padStart(2, '0')}
+            ariaLabel={input.locale === 'tr' ? 'Dönem filtresi' : 'Period filter'}
+            triggerContent={input.dayOfMonth ? undefined : formatMonthLabel(input.locale, selectedMonth) + ' ' + selectedYear}
+            minYear={Math.min(...yearOptions)} maxYear={Math.max(...yearOptions)}
+            onFullMonth={value => { input.onPeriodStartChange(value); input.onDayOfMonthChange('') }}
+            onValueChange={value => { input.onPeriodStartChange(value.slice(0, 8) + '01'); input.onDayOfMonthChange(String(Number(value.slice(8, 10)))) }} />
+        </div>
 
         {input.isPrivileged ? (
           <RankingCheckboxFilter
@@ -801,25 +736,6 @@ function getRequestedRankingPeriod(periodStart: string, dayOfMonth: string): {
   }
 }
 
-function getLoadedRankingDayOptions(ranking: RankingSummary, year: number, month: number) {
-  const days = new Set<number>()
-
-  for (const period of ranking.availablePeriods ?? []) {
-    if (period.periodType !== 'daily') {
-      continue
-    }
-
-    const parsed = parseRankingDayPeriod(period.periodStart)
-    if (parsed?.year === year && parsed.month === month) {
-      days.add(parsed.day)
-    }
-  }
-
-  return Array.from(days)
-    .sort((left, right) => left - right)
-    .map(String)
-}
-
 function getRankingYearOptions(ranking: RankingSummary, selectedYear: number) {
   const currentYear = new Date().getFullYear()
   const years = new Set<number>([
@@ -848,30 +764,4 @@ function formatMonthLabel(locale: AppLocale, month: number) {
   return new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'short' }).format(
     new Date(2026, month - 1, 1),
   )
-}
-
-function parseRankingDayPeriod(value: string | null | undefined) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? '')
-
-  if (!match) {
-    return null
-  }
-
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-
-  if (
-    !Number.isInteger(year) ||
-    !Number.isInteger(month) ||
-    !Number.isInteger(day) ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > 31
-  ) {
-    return null
-  }
-
-  return { year, month, day }
 }

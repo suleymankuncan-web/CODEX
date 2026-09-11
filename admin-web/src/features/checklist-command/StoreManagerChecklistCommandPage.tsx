@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, ClipboardCheck, Clock3, Search, Store } from 'lucide-react'
+import { CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, ClipboardCheck, Clock3, Store } from 'lucide-react'
 import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
+import { ChecklistSearchField } from './ChecklistSearchField'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
@@ -136,7 +136,7 @@ function ChecklistOperatorCommandPage(input: {
 
       <section className="checklist-command-surface tw:overflow-hidden">
         <div className="tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:sm:flex-row tw:sm:items-center">
-          <label className="checklist-operator-search tw:flex tw:min-h-9 tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-input tw:bg-muted/20 tw:px-3 tw:text-muted-foreground tw:sm:max-w-sm"><Search className="tw:size-4" /><Input aria-label={copy.search} className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:shadow-none tw:focus-visible:ring-0" value={searchDraft} placeholder={copy.search} onChange={(event) => { retainCurrent(); setSearchDraft(event.target.value) }} /></label>
+          <div className="tw:min-w-0 tw:flex-1 tw:sm:max-w-sm"><ChecklistSearchField label={copy.search} value={searchDraft} onChange={value => { retainCurrent(); setSearchDraft(value) }} /></div>
           {commandQuery.isFetching ? <small className="checklist-command-inline-refresh" aria-live="polite">{copy.refreshing}</small> : null}
           {commandQuery.isError && response ? <button type="button" className="checklist-command-inline-error" onClick={() => void commandQuery.refetch()}>{copy.partial}</button> : null}
           <div className="tw:flex tw:flex-wrap tw:gap-1.5 tw:sm:ml-auto" aria-label={copy.sort}><Button size="sm" variant="ghost" onClick={() => selectSort('store')}>{getChecklistCommandSortLabel(copy.store, 'store', sort)}</Button><Button size="sm" variant="ghost" onClick={() => selectSort('last_visit')}>{getChecklistCommandSortLabel(copy.lastVisit, 'last_visit', sort)}</Button><Button size="sm" variant="ghost" onClick={() => selectSort('status')}>{getChecklistCommandSortLabel(copy.status, 'status', sort)}</Button></div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarDays, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import {
   Popover,
   PopoverContent,
@@ -123,6 +124,24 @@ export function MonthYearPeriodPicker(input: MonthYearPeriodPickerProps) {
         </div>
       </PopoverContent>
     </Popover>
+  )
+}
+
+/** Shared calendar variant used by migrated non-incentive surfaces. */
+export function CalendarMonthYearPeriodPicker(input: MonthYearPeriodPickerProps) {
+  return (
+    <CalendarPicker
+      mode="month"
+      value={input.value}
+      locale={input.locale}
+      title={input.title}
+      ariaLabel={input.ariaLabel}
+      triggerClassName={input.triggerClassName}
+      contentClassName={input.popoverClassName}
+      onValueChange={(value) =>
+        input.onValueChange(input.outputMode === 'period-start' ? `${value}-01` : value)
+      }
+    />
   )
 }
 

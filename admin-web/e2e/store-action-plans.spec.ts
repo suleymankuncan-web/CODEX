@@ -250,7 +250,7 @@ test('store manager can create an action plan from a projection candidate', asyn
 
   await getWorkflowRow(page, 'UPT projeksiyon riski').click()
   const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
-  await drawer.getByLabel('Termin').fill('2026-06-30')
+  await drawer.getByRole('textbox', { name: 'Termin tarihi', exact: true }).fill('2026-06-30')
   await drawer.getByRole('button', { name: 'Aksiyon planı oluştur' }).click()
 
   expect(api.createPayloads.at(-1)).toMatchObject({

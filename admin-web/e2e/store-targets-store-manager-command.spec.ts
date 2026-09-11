@@ -1,4 +1,4 @@
-import { expect, test } from './test-fixtures'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
 import { routeStoreManagerTargetCommand, storeManagerStoreId } from './store-targets-store-manager-command-fixtures'
 
@@ -15,15 +15,10 @@ test('AC-TGT-004/005/006: viewed and submission periods are independent and appr
   await page.goto('/store/targets')
   await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
   await expect(page.locator('button.command-canvas-metric')).toHaveCount(0)
-  await page.locator('.command-canvas-period-trigger').click()
-  await page.locator('.command-canvas-period-popover').getByRole('button', { name: 'Haz' }).click()
+  await chooseMonth(page, page.locator('.command-canvas-period-trigger'), 'Haz')
   await expect(page.locator('.command-canvas-period-trigger')).toContainText('Haziran 2026')
   await expect(page.locator('.target-entry-period')).toContainText('Temmuz 2026')
-  await page.locator('.target-entry-period').getByRole('button').first().click()
-  await expect(page.getByRole('button', { name: /Haziran.*Onaylı/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Temmuz.*Durum kaydı yok/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Ağustos.*Onay bekliyor/ })).toBeVisible()
-  await page.getByRole('button', { name: /Ağustos/ }).click()
+  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Ağu', 'Onay bekliyor')
   await expect(page.locator('.target-entry-period')).toContainText('Ağustos 2026')
   await expect(page.locator('.command-canvas-period-trigger')).toContainText('Haziran 2026')
 })
@@ -75,8 +70,7 @@ test('TGT-FR-009: revision-basis loading and failure remain fail-closed', async 
 
   await page.unroute('**/api/target-distributions/revision-basis**')
   await routeStoreManagerTargetCommand(page, { basisError: true, inheritedJune: true })
-  await page.locator('.target-entry-period').getByRole('button').first().click()
-  await page.getByRole('button', { name: /Haziran.*Onaylı/ }).click()
+  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Haz', 'Onaylı')
   await expect(page.getByText('Bazı hedef bilgileri eksik')).toBeVisible()
   await expect(page.getByLabel('Revizyon notu')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Revizyonu gönder' })).toBeDisabled()
@@ -105,8 +99,7 @@ test('AC-TGT-008: approved period revision preserves reference and removed-emplo
     divergentLocalRequest: true,
   })
   await page.goto('/store/targets')
-  await page.locator('.target-entry-period').getByRole('button').first().click()
-  await page.getByRole('button', { name: /Haziran.*Onaylı/ }).click()
+  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Haz', 'Onaylı')
   await expect.poll(() => api.basisRequests.join('\n')).toContain('requestMonth=2026-06-01')
   await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveValue('9000000')
   await expect(page.getByLabel('Derya Uslu Aylık hedef')).toHaveValue('4000000')
@@ -136,8 +129,7 @@ test('AC-TGT-008: inherited approved basis remains revisable without a local req
     inheritedJune: true,
   })
   await page.goto('/store/targets')
-  await page.locator('.target-entry-period').getByRole('button').first().click()
-  await page.getByRole('button', { name: /Haziran.*Onaylı/ }).click()
+  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Haz', 'Onaylı')
   await expect.poll(() => api.basisRequests.join('\n')).toContain('requestMonth=2026-06-01')
   await expect(page.getByLabel('Revizyon notu')).toBeVisible()
   await page.getByLabel('Derya Uslu Aylık hedef').fill('4500000')
@@ -155,6 +147,14 @@ test('AC-TGT-008: inherited approved basis remains revisable without a local req
     },
   })
 })
+
+async function chooseMonth(page: Page, trigger: Locator, monthLabel: string, status?: string) {
+  await trigger.click()
+  const picker = page.getByRole('dialog', { name: 'Dönem seç' })
+  await picker.getByRole('combobox', { name: 'Ay seç' }).selectOption({ label: monthLabel })
+  if (status) await expect(picker.getByText(status, { exact: true })).toBeVisible()
+  await picker.getByRole('button', { name: 'Uygula', exact: true }).click()
+}
 
 test('EC-018/019/020: mobile distribution stays reachable and inputs do not trigger browser zoom', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 })

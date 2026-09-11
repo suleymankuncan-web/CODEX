@@ -1,16 +1,17 @@
 import type { ReactNode } from 'react'
 import {
   ArrowDownUp,
+  ArrowDown,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Play,
-  Search,
   Store,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { ChecklistSearchField } from './ChecklistSearchField'
 import { cn } from '@/lib/utils'
 import { useLocalization } from '../localization/useLocalization'
 import type { ChecklistCommandData, ChecklistCommandRow } from './api'
@@ -85,21 +86,8 @@ export function RegionManagerChecklistWorkspace(input: {
       ) : null}
 
       <section className="checklist-command-surface tw:!overflow-hidden tw:!rounded-[14px] tw:!border tw:!border-border tw:!bg-card tw:!shadow-sm" data-testid="checklist-command-surface">
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:px-3 tw:py-3 tw:sm:px-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
-          <div className="tw:min-w-0">
-            <h2 className="tw:m-0 tw:text-sm tw:font-semibold tw:tracking-[-0.01em] tw:text-foreground">{locale === 'tr' ? 'Mağazalar' : 'Stores'}</h2>
-            <p className="tw:mt-0.5 tw:text-[11px] tw:text-muted-foreground">{input.data.page.total} {locale === 'tr' ? 'sorumlu mağaza' : 'assigned stores'}</p>
-          </div>
-          <label data-testid="checklist-command-search" className="tw:flex tw:h-9 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-primary/20 tw:bg-primary/[0.025] tw:px-3 tw:text-muted-foreground tw:shadow-[0_1px_0_rgb(15_23_42/0.03)] tw:transition-colors tw:focus-within:border-primary/45 tw:focus-within:bg-background tw:lg:w-[340px]">
-            <Search className="tw:size-4 tw:shrink-0" />
-            <Input
-              aria-label={t('storeChecklists.command.search')}
-              className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:shadow-none tw:focus-visible:ring-0"
-              placeholder={t('storeChecklists.command.search')}
-              value={input.searchDraft}
-              onChange={(event) => input.onSearchChange(event.target.value)}
-            />
-          </label>
+        <div className="checklist-search-heading tw:border-b tw:border-border tw:p-3 tw:xl:hidden">
+          <ChecklistSearchField label={t('storeChecklists.command.search')} placeholder={locale === 'tr' ? 'Mağaza Ara' : 'Search stores'} value={input.searchDraft} onChange={input.onSearchChange} count={input.data.page.total} testId="checklist-command-search" />
         </div>
 
         <div className={cn('tw:flex tw:min-h-7 tw:items-center tw:justify-end tw:border-b tw:border-border tw:bg-muted/20 tw:px-3 tw:py-1.5', !input.isFetching && !input.isError && 'tw:hidden')}>
@@ -113,6 +101,7 @@ export function RegionManagerChecklistWorkspace(input: {
           </div>
         ) : null}
 
+        <DesktopStoreList {...input} />
         {input.data.items.length === 0 ? (
           <div className="tw:grid tw:min-h-48 tw:place-items-center tw:p-8 tw:text-center">
             <div>
@@ -122,10 +111,7 @@ export function RegionManagerChecklistWorkspace(input: {
             </div>
           </div>
         ) : (
-          <>
-            <DesktopStoreList {...input} />
-            <MobileStoreList {...input} />
-          </>
+          <MobileStoreList {...input} />
         )}
 
         <footer className="tw:flex tw:min-h-12 tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3">
@@ -145,15 +131,20 @@ export function RegionManagerChecklistWorkspace(input: {
 
 function DesktopStoreList(input: Parameters<typeof RegionManagerChecklistWorkspace>[0]) {
   const { locale, t } = useLocalization()
-  const heading = (label: string, key: ChecklistCommandSortKey) => (
-    <Button type="button" size="xs" variant="ghost" className={cn('tw:h-6 tw:w-full tw:px-0 tw:text-[9px] tw:font-semibold tw:uppercase tw:tracking-[0.12em] tw:text-muted-foreground', key === 'store' ? 'tw:justify-start' : 'tw:justify-center')} onClick={() => input.onSort(key)}>
-      {getChecklistCommandSortLabel(label, key, input.sort)}<ArrowDownUp className="tw:size-3" />
+  const DirectionIcon = input.sort.endsWith('_asc') ? ArrowUp : ArrowDown
+  const heading = (label: string, key: ChecklistCommandSortKey) => {
+    const active = input.sort.startsWith(`${key === 'bm' || key === 'vm' ? `${key}_score` : key}_`)
+    return <Button type="button" size="sm" variant="ghost" className="checklist-kpi-column-heading tw:w-full tw:justify-center" onClick={() => input.onSort(key)}>
+      {label}{active ? <DirectionIcon aria-hidden="true" /> : null}
     </Button>
-  )
+  }
   return (
     <div className="checklist-command-desktop-list tw:!hidden tw:xl:!block">
-      <div className="checklist-command-table-head tw:!grid tw:!grid-cols-[minmax(220px,1.7fr)_72px_120px_100px_140px_196px] tw:!items-center tw:!gap-2 tw:!border-b tw:!border-border tw:!bg-background tw:!px-4 tw:!py-2">
-        {heading(t('storeChecklists.command.store'), 'store')}
+      <div className="checklist-command-table-head checklist-search-heading tw:!grid tw:!grid-cols-[minmax(220px,1.7fr)_72px_120px_100px_140px_196px] tw:!items-center tw:!gap-2 tw:!border-b tw:!border-border tw:!px-4 tw:!py-2">
+        <div className="checklist-search-column">
+          <ChecklistSearchField label={t('storeChecklists.command.search')} placeholder={locale === 'tr' ? 'Mağaza Ara' : 'Search stores'} value={input.searchDraft} onChange={input.onSearchChange} count={input.data.page.total} testId="checklist-command-search" />
+          <Button size="icon-xs" variant="ghost" className="checklist-kpi-column-heading" aria-label={getChecklistCommandSortLabel(t('storeChecklists.command.store'), 'store', input.sort)} onClick={() => input.onSort('store')}>{input.sort.startsWith('store_') ? <DirectionIcon aria-hidden="true" /> : <ArrowDownUp aria-hidden="true" />}</Button>
+        </div>
         {heading(locale === 'tr' ? 'Puan' : 'Score', 'bm')}
         {heading(t('storeChecklists.command.visit'), 'last_visit')}
         {heading(t('storeChecklists.command.elapsed'), 'elapsed')}

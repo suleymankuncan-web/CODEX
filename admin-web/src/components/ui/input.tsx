@@ -1,10 +1,12 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { CalendarInput } from './calendar-input'
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+  const Component = type === 'date' || type === 'month' || type === 'datetime-local' ? CalendarInput : 'input'
   return (
-    <input
+    <Component
       type={type}
       data-slot="input"
       className={cn(

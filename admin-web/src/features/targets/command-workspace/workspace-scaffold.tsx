@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   CommandCanvasFilterBar, CommandCanvasMetricFilter, CommandCanvasMetricRail,
-  CommandCanvasMonthYearPicker, CommandCanvasPage, CommandCanvasPageHeader,
+  CommandCanvasCalendarMonthYearPicker, CommandCanvasPage, CommandCanvasPageHeader,
   CommandCanvasPartialDataNotice,
 } from '@/features/store-command-canvas/primitives'
 import { useLocalization } from '@/features/localization/useLocalization'
@@ -50,7 +50,7 @@ export function TargetWorkspaceScaffold(input: {
         titleId="store-targets-command-title" eyebrow={copy.eyebrow}
         title={viewer ? copy.viewerTitle : copy.regionTitle}
         description={viewer ? copy.viewerDescription : copy.regionDescription}
-        actions={<div className="target-command-period"><span>{copy.viewedPeriod}</span><CommandCanvasMonthYearPicker ariaLabel={copy.selectPeriod} locale={locale} onValueChange={input.onPeriodChange} value={input.period} /></div>}
+        actions={<div className="target-command-period"><span>{copy.viewedPeriod}</span><CommandCanvasCalendarMonthYearPicker ariaLabel={copy.selectPeriod} locale={locale} onValueChange={input.onPeriodChange} value={input.period} /></div>}
       />
       <CommandCanvasMetricRail ariaLabel={copy.totalTarget}>
         <CommandCanvasMetricFilter active={false} icon={<CircleDollarSign size={16} />} label={copy.totalTarget} note={copy.selectedPeriod} onClick={() => setStatus('all')} tone="plum" value={formatTargetMoney(input.workspace.summary?.totalTargetValue, locale)} />
