@@ -324,7 +324,7 @@ describe("RankingService", () => {
     ]);
   });
 
-  it("caps store personnel to Turkey Top 100 summary rows and includes own position outside the top list", async () => {
+  it("caps store personnel to Turkey Top 100 detailed rows and includes own position outside the top list", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
 
@@ -337,30 +337,35 @@ describe("RankingService", () => {
       storeIds: [],
       assignedStoreIds: ["store-105"],
       periodType: "monthly",
+      sortKey: "score",
+      sortDirection: "asc",
       limit: 500,
       offset: 250,
+      regionManagerUserId: "region-manager-2",
+      search: "outside",
     });
 
     expect(result.access).toEqual({
       globalMode: "top100",
-      canSeeGlobalDetails: false,
+      canSeeGlobalDetails: true,
       canSeeManagedStorePersonnelDetails: false,
     });
     expect(result.storeLeaderboard.items).toHaveLength(100);
     expect(result.personnelLeaderboard.items).toHaveLength(100);
+    expect(result.storeLeaderboard.items[0].rank).toBe(100);
     expect(result.personnelLeaderboard.currentEmployee).toEqual(
       expect.objectContaining({
         employeeId: "employee-105",
         rank: 105,
-        visibility: "summary",
+        visibility: "detail",
       }),
     );
-    expect(result.personnelLeaderboard.currentEmployee).not.toHaveProperty("metrics");
-    expect(result.storeLeaderboard.items[0]).not.toHaveProperty("metrics");
-    expect(result.personnelLeaderboard.items[0]).not.toHaveProperty("metrics");
+    expect(result.personnelLeaderboard.currentEmployee).toHaveProperty("metrics");
+    expect(result.storeLeaderboard.items[0]).toHaveProperty("metrics");
+    expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
   });
 
-  it("keeps store manager global rankings summary-only while exposing own-store personnel details", async () => {
+  it("keeps store manager global rankings detailed Top 100 while exposing own-store personnel details", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
 
@@ -374,8 +379,8 @@ describe("RankingService", () => {
       periodType: "monthly",
     });
     expect(result.access.globalMode).toBe("top100");
-    expect(result.storeLeaderboard.currentStoreComparisons).toHaveLength(8); expect(result.storeLeaderboard.items[0]).not.toHaveProperty("metrics"); expect(result.storeLeaderboard.currentStoreComparisons?.every(item => !('storeId' in item))).toBe(true);
-    expect(result.personnelLeaderboard.items[0]).not.toHaveProperty("metrics");
+    expect(result.storeLeaderboard.currentStoreComparisons).toHaveLength(8); expect(result.storeLeaderboard.items[0]).toHaveProperty("metrics"); expect(result.storeLeaderboard.currentStoreComparisons?.every(item => !('storeId' in item))).toBe(true);
+    expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
     expect(result.personnelLeaderboard.managedStorePersonnel).toHaveLength(5);
     expect(result.personnelLeaderboard.managedStorePersonnel[0]).toEqual(
       expect.objectContaining({
@@ -396,7 +401,7 @@ describe("RankingService", () => {
       expect.objectContaining({
         canOpenProfile: false,
         storeId: "store-006",
-        visibility: "summary",
+        visibility: "detail",
       }),
     );
   });
@@ -820,7 +825,7 @@ describe("RankingService", () => {
     );
   });
 
-  it("returns Turkey reference metrics even when low roles receive summary-only ranking rows", async () => {
+  it("returns Turkey reference metrics even when low roles receive detailed Top 100 ranking rows", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
 
@@ -835,8 +840,8 @@ describe("RankingService", () => {
       periodType: "monthly",
     });
 
-    expect(result.storeLeaderboard.items[0]).not.toHaveProperty("metrics");
-    expect(result.personnelLeaderboard.items[0]).not.toHaveProperty("metrics");
+    expect(result.storeLeaderboard.items[0]).toHaveProperty("metrics");
+    expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
     expect(result.reference.store.averageScore).toBeGreaterThan(0);
     expect(result.reference.store.metrics).toEqual(
       expect.arrayContaining([
@@ -1132,7 +1137,6 @@ describe("RankingService", () => {
         },
       ]),
     );
-
     const result = await service.getRankings({
       userId: "regional-1",
       roleCodes: ["SUPER_ADMIN"],
@@ -1142,7 +1146,6 @@ describe("RankingService", () => {
       assignedStoreIds: [],
       periodType: "monthly",
     });
-
     expect(repository.listRankingPersonnelKpiRows).toHaveBeenCalledWith(
       expect.objectContaining({
         metricCodes: expect.arrayContaining(["NET_SALES"]),
@@ -1161,11 +1164,9 @@ describe("RankingService", () => {
       }),
     );
   });
-
   it("applies privileged filters without recomputing Turkey ranks", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
-
     const result = await service.getRankings({
       userId: "super-admin-1",
       roleCodes: ["SUPER_ADMIN"],
@@ -1177,7 +1178,6 @@ describe("RankingService", () => {
       regionId: "region-2",
       limit: 10,
     });
-
     expect(result.storeLeaderboard.items).toHaveLength(10);
     expect(
       result.storeLeaderboard.items.every(

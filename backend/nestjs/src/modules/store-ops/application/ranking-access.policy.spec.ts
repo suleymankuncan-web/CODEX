@@ -4,7 +4,7 @@ import {
 } from "./ranking-access.policy";
 
 describe("ranking access policy", () => {
-  it("caps store personnel to Top 100 summary-only rankings", () => {
+  it("caps store personnel to Top 100 detailed Top 100 rankings", () => {
     expect(
       resolveRankingAccess({
         roleCodes: ["STORE_PERSONNEL"],
@@ -13,7 +13,7 @@ describe("ranking access policy", () => {
       }),
     ).toEqual({
       isPrivileged: false,
-      canSeeGlobalDetails: false,
+      canSeeGlobalDetails: true,
       globalLimit: 100,
       globalOffset: 0,
       globalMode: "top100",
@@ -21,7 +21,7 @@ describe("ranking access policy", () => {
     });
   });
 
-  it("allows store managers to see own-store personnel detail but keeps global Top 100 summary-only", () => {
+  it("allows store managers to see own-store personnel detail but keeps global Top 100 detailed Top 100", () => {
     expect(
       resolveRankingAccess({
         roleCodes: ["STORE_MANAGER"],
@@ -30,7 +30,7 @@ describe("ranking access policy", () => {
       }),
     ).toEqual({
       isPrivileged: false,
-      canSeeGlobalDetails: false,
+      canSeeGlobalDetails: true,
       globalLimit: 100,
       globalOffset: 0,
       globalMode: "top100",

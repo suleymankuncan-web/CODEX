@@ -1,4 +1,3 @@
-import type { QueryClient } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import type {
@@ -11,9 +10,14 @@ import type { AppLocale } from '../lib/i18n'
 
 export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 export const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
-export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
-export const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const
+export const storeMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT', 'CR', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
+export const personnelMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT'] as const
 export const rankingPageSize = 100
+
+export function currentRankingPeriod() {
+  const today = new Date()
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+}
 
 export type ActiveRankingList = 'stores' | 'personnel'
 export type RankingSortKey = 'score' | typeof storeMetricCodes[number]
@@ -25,6 +29,8 @@ export type StoreRankingsPageState = {
   regionId: string
   storeId: string
   dayOfMonth: string
+  rangeStart: string
+  rangeEnd: string
   search: string
   offset: number
   activeList: ActiveRankingList
@@ -42,6 +48,7 @@ export type StoreRankingsTextFilter =
 
 export type StoreRankingsPageAction =
   | { type: 'setFilter'; field: StoreRankingsTextFilter; value: string }
+  | { type: 'setPeriod'; periodStart: string; dayOfMonth: string; rangeStart?: string; rangeEnd?: string }
   | { type: 'setOffset'; value: number }
   | { type: 'clearFilters' }
   | { type: 'setActiveList'; value: ActiveRankingList }
@@ -58,6 +65,8 @@ export const initialStoreRankingsPageState: StoreRankingsPageState = {
   regionId: '',
   storeId: '',
   dayOfMonth: '',
+  rangeStart: '',
+  rangeEnd: '',
   search: '',
   offset: 0,
   activeList: 'stores',
@@ -81,8 +90,10 @@ export function createInitialStoreRankingsPageState(
     ...initialStoreRankingsPageState,
     activeList: getInitialRankingsActiveList(searchParams),
     dayOfMonth: parseRankingDay(searchParams.get('day')),
+    rangeStart: parseRankingPeriodStart(searchParams.get('from')),
+    rangeEnd: parseRankingPeriodStart(searchParams.get('to')),
     offset: Number.isFinite(page) && page > 1 ? (page - 1) * rankingPageSize : 0,
-    periodStart: parseRankingPeriodStart(searchParams.get('period')),
+    periodStart: parseRankingPeriodStart(searchParams.get('period')) || currentRankingPeriod(),
     regionId: searchParams.get('region')?.trim() ?? '',
     regionManagerUserId: searchParams.get('regionManager')?.trim() ?? '',
     search: searchParams.get('q')?.trim() ?? '',
@@ -96,6 +107,7 @@ export function buildStoreRankingsSearchParams(state: StoreRankingsPageState) {
   const params = new URLSearchParams()
   if (state.activeList === 'personnel') params.set('list', 'personnel')
   if (state.periodStart) params.set('period', state.periodStart)
+  if (state.rangeStart && state.rangeEnd) { params.set('from', state.rangeStart); params.set('to', state.rangeEnd) }
   if (state.dayOfMonth) params.set('day', state.dayOfMonth)
   if (state.search.trim()) params.set('q', state.search.trim())
   if (state.sortKey !== 'score' || state.sortDirection !== 'desc') {
@@ -110,7 +122,9 @@ export function buildStoreRankingsSearchParams(state: StoreRankingsPageState) {
 }
 
 function parseRankingPeriodStart(input: string | null) {
-  return input && /^\d{4}-\d{2}-\d{2}$/.test(input) ? input : ''
+  if (!input || !/^\d{4}-\d{2}-\d{2}$/.test(input)) return ''
+  const date = new Date(`${input}T12:00:00Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === input ? input : ''
 }
 
 function parseRankingDay(input: string | null) {
@@ -219,7 +233,7 @@ export function formatPeriod(
     return t('common.latestMonthlyData')
   }
 
-  if (source.periodType === 'daily' || source.periodStart === source.periodEnd) {
+  if (source.periodStart === source.periodEnd) {
     return formatDate(source.periodStart, locale)
   }
 
@@ -313,6 +327,8 @@ export function storeRankingsPageReducer(
   action: StoreRankingsPageAction,
 ): StoreRankingsPageState {
   switch (action.type) {
+    case 'setPeriod':
+      return { ...state, periodStart: action.periodStart, dayOfMonth: action.dayOfMonth, rangeStart: action.rangeStart ?? '', rangeEnd: action.rangeEnd ?? '', offset: 0 }
     case 'setFilter':
       return { ...state, [action.field]: action.value, offset: 0 }
     case 'setOffset':
@@ -324,11 +340,13 @@ export function storeRankingsPageReducer(
         regionId: '',
         storeId: '',
         dayOfMonth: '',
+        rangeStart: '',
+        rangeEnd: '',
         search: '',
         offset: 0,
       }
     case 'setActiveList':
-      return { ...state, activeList: action.value }
+      return { ...state, activeList: action.value, offset: 0 }
     case 'setSort':
       return state.sortKey === action.value
         ? {
@@ -345,19 +363,6 @@ export function storeRankingsPageReducer(
     default:
       return state
   }
-}
-
-export function getLatestRankingFromCache(queryClient: QueryClient) {
-  const cachedRankings = queryClient
-    .getQueryCache()
-    .findAll({ queryKey: ['ranking-v1'] })
-    .flatMap((query) => {
-      const data = query.state.data as RankingSummary | undefined
-      return data ? [{ data, updatedAt: query.state.dataUpdatedAt }] : []
-    })
-    .toSorted((left, right) => right.updatedAt - left.updatedAt)
-
-  return cachedRankings[0]?.data ?? null
 }
 
 export function getReferenceMetricValue(

@@ -9,6 +9,7 @@ export class RankingReportingReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async getLatestRankingPeriod(input: {
+    companyIds?: string[];
     metricCodes: string[];
     periodType: "daily" | "monthly";
     periodStart?: string;
@@ -19,31 +20,40 @@ export class RankingReportingReadRepository {
 
     const params: unknown[] = [input.metricCodes, input.periodType];
     const clauses = [
-      `ka.period_type = $2`,
-      `kd.kpi_code = ANY($1::text[])`,
+      `(ka.period_type = $2 OR ($2 = 'monthly' AND ka.period_type = 'daily' AND ka.period_start = ka.period_end))`,
+      `(($2 = 'monthly' AND ka.period_type = 'daily' AND kd.kpi_code IN ('NET_SALES','ITEM_COUNT','TICKET_COUNT','FF')) OR (ka.period_type = $2 AND kd.kpi_code = ANY($1::text[])))`,
       `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
     if (input.periodStart) {
       params.push(input.periodStart);
-      clauses.push(`ka.period_start = $${params.length}::date`);
+      clauses.push(input.periodType === 'monthly'
+        ? `DATE_TRUNC('month', ka.period_start)::date = $${params.length}::date`
+        : `ka.period_start = $${params.length}::date`);
     }
 
+    if (input.companyIds?.length) {
+      params.push(input.companyIds);
+      clauses.push(`store.company_id = ANY($${params.length}::uuid[])`);
+    }
     const result = await this.databaseService.query<{
       period_type: string;
       period_start: string;
       period_end: string;
+      uses_daily_components: boolean;
     }>(
       `
         SELECT
-          ka.period_type,
-          ka.period_start::text AS period_start,
-          ka.period_end::text AS period_end
+          $2::text AS period_type,
+          CASE WHEN $2 = 'monthly' THEN DATE_TRUNC('month', ka.period_start)::date ELSE ka.period_start END::text AS period_start,
+          CASE WHEN $2 = 'monthly' THEN (DATE_TRUNC('month', ka.period_start) + INTERVAL '1 month - 1 day')::date ELSE ka.period_end END::text AS period_end,
+          (ka.period_type = 'daily' AND $2 = 'monthly') AS uses_daily_components
         FROM ops.kpi_actual ka
+        INNER JOIN ops.store store ON store.store_id = ka.store_id AND store.kpi_import_enabled = TRUE
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
         WHERE ${clauses.join(" AND ")}
-        ORDER BY ka.period_end DESC, ka.period_start DESC
+        ORDER BY period_end DESC, uses_daily_components DESC, period_start DESC
         LIMIT 1
       `,
       params,
@@ -452,28 +462,7 @@ export class RankingReportingReadRepository {
     return result.rows;
   }
 
-  async listRankingFilterOptions(input: {
-    companyIds: string[];
-    periodType: string;
-    periodStart: string;
-    periodEnd: string;
-  }): Promise<{
-    regionManagers: Array<{ id: string; label: string; storeIds: string[] }>;
-    regions: Array<{ id: string; label: string }>;
-    stores: Array<{ id: string; label: string }>;
-  }> {
-    const params: unknown[] = [
-      input.periodType,
-      input.periodStart,
-      input.periodEnd,
-    ];
-    const companyClause =
-      input.companyIds.length > 0
-        ? (() => {
-            params.push(input.companyIds);
-            return `AND store.company_id = ANY($${params.length}::uuid[])`;
-          })()
-        : "";
+  async listCompanyRegionManagerDirectory(input: { companyIds: string[] }) {
     const regionManagerParams =
       input.companyIds.length > 0 ? [input.companyIds] : [];
 
@@ -516,7 +505,8 @@ export class RankingReportingReadRepository {
         LEFT JOIN ops.store assigned_store
           ON assigned_store.store_id = manager_store.store_id
          ${input.companyIds.length > 0 ? `AND assigned_store.company_id = ANY($1::uuid[])` : ""}
-        WHERE ura.start_at <= NOW()
+        WHERE (ua.employee_id IS NULL OR employee.employment_status = 'active')
+          AND ura.start_at <= NOW()
           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           ${
             input.companyIds.length > 0
@@ -538,6 +528,33 @@ export class RankingReportingReadRepository {
       `,
       regionManagerParams,
     );
+
+    return regionManagers.rows.map(row => ({ id: row.id, label: row.label, storeIds: row.store_ids }));
+  }
+
+  async listRankingFilterOptions(input: {
+    companyIds: string[];
+    periodType: string;
+    periodStart: string;
+    periodEnd: string;
+  }): Promise<{
+    regionManagers: Array<{ id: string; label: string; storeIds: string[] }>;
+    regions: Array<{ id: string; label: string }>;
+    stores: Array<{ id: string; label: string }>;
+  }> {
+    const params: unknown[] = [
+      input.periodType,
+      input.periodStart,
+      input.periodEnd,
+    ];
+    const companyClause =
+      input.companyIds.length > 0
+        ? (() => {
+            params.push(input.companyIds);
+            return `AND store.company_id = ANY($${params.length}::uuid[])`;
+          })()
+        : "";
+    const regionManagers = await this.listCompanyRegionManagerDirectory(input);
 
     const regions = await this.databaseService.query<{ id: string; label: string }>(
       `
@@ -581,11 +598,7 @@ export class RankingReportingReadRepository {
     );
 
     return {
-      regionManagers: regionManagers.rows.map((row) => ({
-        id: row.id,
-        label: row.label,
-        storeIds: row.store_ids,
-      })),
+      regionManagers,
       regions: regions.rows,
       stores: stores.rows,
     };
