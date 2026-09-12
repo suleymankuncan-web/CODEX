@@ -1,0 +1,66 @@
+/* Shared Store table heading rhythm, matching the Workforce directory. */
+.store-command-app :is([data-store-command-surface], .store-reports-command) table thead th,
+.store-command-app .command-canvas-page table thead th,
+.store-command-app .store-rankings-surface table thead th {
+  height: 44px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--primary) 9%, var(--card));
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .025em;
+  text-align: left;
+  text-transform: uppercase;
+  border-block: 1px solid var(--border);
+}
+.store-command-app :is([data-store-command-surface], .store-reports-command) table thead th + th,
+.store-command-app .command-canvas-page table thead th + th,
+.store-command-app .store-rankings-surface table thead th + th {
+  border-left: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+}
+.store-command-app :is([data-store-command-surface], .store-reports-command) table thead button,
+.store-command-app .command-canvas-page table thead button,
+.store-command-app .store-rankings-surface .store-rankings-sort-button {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+  justify-content: flex-start;
+  gap: 5px;
+}
+.store-command-app .store-rankings-surface .store-rankings-sort-button svg { width: 12px; height: 12px; }
+.store-command-app .target-command-list .command-canvas-list-header,
+.store-command-app .incentive-command-list .command-canvas-list-header {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--primary) 9%, var(--card));
+}
+.store-command-app .target-command-list .command-canvas-list-header > * + *,
+.store-command-app .incentive-command-list .command-canvas-list-header > * + * {
+  border-left: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  padding-left: 10px;
+}
+
+.store-command-app [role=row]:has(> [role=columnheader]) {
+  min-height: 44px;
+  background: color-mix(in srgb, var(--primary) 9%, var(--card));
+  border-block: 1px solid var(--border);
+  color: var(--primary);
+  font-size: 11px;
+  letter-spacing: .025em;
+  font-weight: 600;
+}
+.store-command-app [role=columnheader] { min-width: 0; }
+.store-command-app [role=columnheader] + [role=columnheader] {
+  border-left: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  padding-left: 6px;
+}
+.store-command-app [role=columnheader] button {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .025em;
+}
