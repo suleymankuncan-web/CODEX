@@ -1,4 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
+import { resolveMonthEnd } from "./ranking-list.helpers";
 
 export function resolveRankingDateRange(input: {
   periodType?: string;
@@ -32,4 +33,13 @@ export function resolveRankingDateRange(input: {
     period_start: input.periodStart,
     period_end: input.periodEnd,
   };
+}
+
+/** Metadata for an empty authorized result retains the exact requested interval. */
+export function resolveRequestedRankingPeriodEnd(input: {
+  periodType?: string; periodStart?: string; periodEnd?: string;
+}) {
+  if (input.periodEnd) return input.periodEnd;
+  if (!input.periodStart) return null;
+  return input.periodType === "daily" ? input.periodStart : resolveMonthEnd(input.periodStart);
 }

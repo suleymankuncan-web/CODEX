@@ -1,3 +1,4 @@
+import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
 import type { DatabaseService } from "../../../shared/database/database.service";
 
 export async function readRankingPersonnelRange(database: DatabaseService, input: {
@@ -10,26 +11,7 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
     position_code: string | null; net_sales_value: string | null; store_net_sales_value: string | null;
     kpi_code: string; kpi_name: string | null; actual_value: string | null; target_value: string | null;
   }>(`
-    WITH components AS (
-      SELECT ka.employee_id, ka.store_id, kd.kpi_code,
-        CASE WHEN COUNT(DISTINCT ka.period_start) = $2::date - $1::date + 1
-          THEN SUM(ka.actual_value) END AS value
-      FROM ops.kpi_actual ka JOIN ops.kpi_definition kd USING (kpi_id)
-      JOIN ops.store s ON s.store_id = ka.store_id
-      WHERE ka.scope_type = 'employee' AND ka.period_type = 'daily'
-        AND ka.period_start = ka.period_end AND ka.period_start BETWEEN $1::date AND $2::date
-        AND kd.kpi_code IN ('NET_SALES','ITEM_COUNT','TICKET_COUNT','FF')
-        AND COALESCE(ka.source_type,'') <> 'demo_seed' AND s.kpi_import_enabled = TRUE
-        AND (cardinality($3::uuid[]) = 0 OR ka.company_id = ANY($3::uuid[]))
-      GROUP BY ka.employee_id, ka.store_id, kd.kpi_code
-    ), facts AS (
-      SELECT employee_id, store_id,
-        MAX(value) FILTER (WHERE kpi_code='NET_SALES') AS sales,
-        MAX(value) FILTER (WHERE kpi_code='ITEM_COUNT') AS items,
-        MAX(value) FILTER (WHERE kpi_code='TICKET_COUNT') AS tickets,
-        MAX(value) FILTER (WHERE kpi_code='FF') AS footfall
-      FROM components GROUP BY employee_id,store_id
-    ), store_sales AS (
+    ${rankingDailyComponentsSql("employee")}, store_sales AS (
       SELECT store_id, SUM(sales) AS sales FROM facts GROUP BY store_id
     )
     SELECT e.employee_id::text, e.first_name, e.last_name,
@@ -38,8 +20,8 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
       position.position_code, f.sales::text AS net_sales_value, store_sales.sales::text AS store_net_sales_value,
       kd.kpi_code, kd.kpi_name,
       CASE kd.kpi_code WHEN 'TARGET_ACHIEVEMENT' THEN f.sales WHEN 'NET_SALES' THEN f.sales
-        WHEN 'ATV' THEN f.sales / NULLIF(f.tickets,0) WHEN 'UPT' THEN f.items / NULLIF(f.tickets,0)
-        WHEN 'CR' THEN f.tickets / NULLIF(f.footfall,0) END::text AS actual_value,
+        WHEN 'ATV' THEN f.atv_numerator / NULLIF(f.atv_denominator,0) WHEN 'UPT' THEN f.upt_numerator / NULLIF(f.upt_denominator,0)
+        WHEN 'CR' THEN f.cr_numerator / NULLIF(f.cr_denominator,0) END::text AS actual_value,
       CASE WHEN kd.kpi_code IN ('TARGET_ACHIEVEMENT','NET_SALES') THEN target.value END::text AS target_value
     FROM facts f JOIN ops.employee e USING (employee_id) JOIN ops.store s ON s.store_id=f.store_id
     LEFT JOIN ops.region r ON r.region_id=s.region_id
@@ -64,7 +46,7 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
       JOIN ops.user_role_assignment ura ON ura.user_id=manager_store.user_id
         AND ura.start_at<=NOW() AND (ura.end_at IS NULL OR ura.end_at>=NOW())
       JOIN ops.role role USING (role_id)
-      JOIN ops.user_account ua USING (user_id) LEFT JOIN ops.employee me ON me.employee_id=ua.employee_id
+      JOIN ops.user_account ua ON ua.user_id=ura.user_id LEFT JOIN ops.employee me ON me.employee_id=ua.employee_id
       WHERE role.role_code='REGION_MANAGER' AND manager_store.store_id=s.store_id AND ua.is_active=TRUE
         AND manager_store.start_at<=NOW() AND (manager_store.end_at IS NULL OR manager_store.end_at>NOW())
       ORDER BY ua.username,ua.user_id LIMIT 1

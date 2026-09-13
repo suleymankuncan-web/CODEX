@@ -1,7 +1,7 @@
 import { readRankingStoreRange } from "./ranking-range-read";
 
 describe("readRankingStoreRange", () => {
-  it("prefers complete direct target-achievement facts and falls back to net sales", async () => {
+  it("pairs daily physical facts and prefers direct target-achievement facts", async () => {
     const statements: unknown[] = [];
     const query = jest.fn(async (sql: unknown) => {
       statements.push(sql);
@@ -19,15 +19,13 @@ describe("readRankingStoreRange", () => {
     );
 
     const sql = String(statements[0]);
-    expect(sql).toContain("COALESCE(achievement.value, sales.value)");
-    expect(sql).toContain("COALESCE(achievement.target, sales.target)");
-    expect(sql).toContain(
-      "candidate.kpi_code IN ('TARGET_ACHIEVEMENT', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')",
-    );
-    expect(sql).toContain("LIMIT 1");
-    expect(sql).toContain(
-      "COUNT(DISTINCT day) = $2::date - $1::date + 1",
-    );
+    expect(sql).toContain("facts.achievement");
+    expect(sql).toContain("facts.sales_target");
+    expect(sql).toContain("SUM(sales) FILTER (WHERE tickets IS NOT NULL)");
+    expect(sql).toContain("SUM(tickets) FILTER (WHERE sales IS NOT NULL)");
+    expect(sql).toContain("MAX(ka.actual_value) FILTER (WHERE kd.kpi_code = 'TARGET_ACHIEVEMENT')");
+    expect(sql).not.toContain("COUNT(DISTINCT day) = $2::date - $1::date + 1");
+    expect(sql).toContain("SUM(kt.target_value * g.total_customer_count)");
     expect(sql).toContain("FROM ops.user_action_store_assignment manager_store");
     expect(sql).toContain("manager_store.store_id = s.store_id");
     expect(sql).not.toContain("ura.region_id = s.region_id");

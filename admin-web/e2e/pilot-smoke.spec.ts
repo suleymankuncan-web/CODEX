@@ -186,9 +186,8 @@ test('protected route refresh returns to the same route', async ({ page }) => {
   await page.reload()
   await waitForStoreIncentivesRequest(page)
 
-  await expect(page).toHaveURL(/\/store\/rankings$/)
+  await expect(page).toHaveURL(/\/store\/rankings(?:\?.*)?$/)
   await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
-  await expect(page.getByText('Tam görünüm')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Dönem filtresi', exact: true })).toBeVisible()
   await expect(page.getByLabel('Bölge müdürü filtresi')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Temizle' })).toBeVisible()

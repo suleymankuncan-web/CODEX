@@ -45,7 +45,7 @@ export function resolveRankingAccess(input: {
   if (!isPrivileged) {
     return {
       isPrivileged: false,
-      canSeeGlobalDetails: false,
+      canSeeGlobalDetails: hasStoreManagerRole || input.roleCodes.includes("STORE_PERSONNEL"),
       globalLimit: 100,
       globalOffset: 0,
       globalMode: "top100",

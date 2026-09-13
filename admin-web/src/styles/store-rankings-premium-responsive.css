@@ -1,227 +1,45 @@
-@media (max-width: 1180px) {
-  .store-rankings-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .store-rankings-filter-grid-privileged,
-  .store-rankings-filter-grid-scoped {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .store-rankings-reference-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .store-rankings-reference-title {
-    grid-column: 1 / -1;
-  }
+@media (max-width: 767px) {
+  .store-command-app .store-rankings-surface { gap: 16px; }
+  .store-rankings-topbar { flex-wrap: wrap; padding: 16px; }
+  .store-rankings-title-block h1 { font-size: 20px; }
+  .store-command-app .store-rankings-surface .store-rankings-period { min-height: 44px; margin-left: auto; }
+  .store-rankings-list-toolbar { padding: 12px; }
+  .store-rankings-list-toolbar [data-slot='tabs-list'] { width: 100%; height: 44px; }
+  .store-rankings-list-toolbar [data-slot='tabs-trigger'] { flex: 1; padding-inline: 6px; font-size: 12px; }
+  .store-rankings-list-toolbar [data-slot='tabs-trigger'] svg { display: none; }
+  .store-rankings-filters { width: 100%; }
+  .store-command-app .store-rankings-surface .store-rankings-search-field { width: 100%; min-height: 44px; }
+  .store-rankings-filters [data-slot='select-trigger'] { flex: 1; width: 0; min-height: 44px; }
+  .store-rankings-filters [data-slot='button'], .store-rankings-page-actions [data-slot='button'] { min-height: 44px; min-width: 44px; }
+  .store-rankings-table { display: block; }
+  .store-rankings-table colgroup { display: none; }
+  .store-rankings-table thead { display: block; }
+  .store-rankings-table thead tr { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; }
+  .store-command-app .store-rankings-table th { display: block; height: auto; border: 0; padding: 0; }
+  .store-command-app .store-rankings-surface .store-rankings-sort-button { min-height: 44px; }
+  .store-rankings-table thead th:first-child, .store-rankings-table thead th:nth-child(2), .store-rankings-table thead th:empty { display: none; }
+  .store-rankings-table tbody { display: block; }
+  .store-rankings-table tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+  .store-rankings-table tbody tr:last-child { border-bottom: 0; }
+  .store-command-app .store-rankings-table tbody td { display: flex; flex-direction: column; align-items: flex-start; height: auto; padding: 0; border: 0; text-align: left; }
+  .store-rankings-table tbody td::before { content: attr(data-label); font-size: 11px; margin-bottom: 4px; color: var(--muted-foreground); }
+  .store-command-app .store-rankings-table tbody .store-rankings-cell-entity { grid-column: 2 / -1; }
+  .store-rankings-table tbody .store-rankings-cell-rank::before, .store-rankings-table tbody .store-rankings-cell-entity::before { display: none; }
+  .store-command-app .store-rankings-table tbody .store-rankings-cell-store { display: none; }
+  .store-rankings-entity-detail { display: block; font-size: 12px; color: var(--muted-foreground); }
+  .store-command-app .store-rankings-table tbody .store-rankings-cell-action { grid-column: 1 / -1; align-items: stretch; }
+  .store-rankings-cell-action::before { display: none; }
+  .store-rankings-cell-action [data-slot='button'] { min-height: 44px; }
+  .store-rankings-table tbody td[colspan] { grid-column: 1 / -1; }
+  .store-rankings-reference-strip { padding: 16px; gap: 16px; }
+  .store-rankings-reference-title { width: 100%; }
+  .store-rankings-reference-strip dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
 }
 
-@media (max-width: 760px) {
-  .store-rankings-surface {
-    gap: 12px;
-  }
-
-  .store-rankings-topbar {
-    display: grid;
-    gap: 14px;
-  }
-
-  .store-rankings-top-actions {
-    justify-content: flex-start;
-  }
-
-  .store-rankings-title-block h1 {
-    font-size: 34px;
-  }
-
-  .store-rankings-title-block p {
-    font-size: 14px;
-  }
-
-  .store-rankings-filter-grid-privileged,
-  .store-rankings-filter-grid-scoped,
-  .store-rankings-reference-strip {
-    grid-template-columns: 1fr;
-  }
-
-  .store-rankings-summary-grid {
+@media (max-width: 767px) {
+  .store-rankings-reference-strip[data-list='personnel'] dl {
+    flex: 1 1 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
-
-  .store-rankings-metric-card {
-    min-height: 106px;
-    padding: 12px;
-  }
-
-  .store-rankings-metric-head {
-    gap: 8px;
-  }
-
-  .store-rankings-metric-card .store-rankings-badge {
-    max-width: 112px;
-    overflow: hidden;
-    padding: 0 7px;
-    font-size: 10px;
-    text-overflow: ellipsis;
-  }
-
-  .store-rankings-metric-value {
-    font-size: 22px;
-  }
-
-  .store-rankings-tabs-card {
-    overflow: hidden;
-  }
-
-  .store-rankings-tab {
-    min-height: 40px;
-    font-size: 12px;
-  }
-
-  .store-rankings-leaderboard-header {
-    display: grid;
-  }
-
-  .store-rankings-table-wrap {
-    overflow: visible;
-  }
-
-  .store-rankings-table,
-  .store-rankings-table thead,
-  .store-rankings-table tbody,
-  .store-rankings-table tr,
-  .store-rankings-table th,
-  .store-rankings-table td {
-    display: block;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .store-rankings-table colgroup,
-  .store-rankings-table thead {
-    display: none;
-  }
-
-  .store-rankings-table tbody {
-    display: grid;
-    gap: 10px;
-    padding: 12px;
-  }
-
-  .store-rankings-table tbody tr {
-    display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
-    gap: 8px 12px;
-    border: 1px solid var(--rankings-line);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.76);
-    padding: 12px;
-  }
-
-  .store-rankings-table tbody tr.store-rankings-own-row {
-    border-color: rgba(118, 80, 232, 0.24);
-    background:
-      linear-gradient(135deg, rgba(118, 80, 232, 0.08), rgba(34, 199, 214, 0.05)),
-      rgba(255, 255, 255, 0.78);
-    box-shadow: inset 3px 0 0 var(--rankings-plum);
-  }
-
-  .store-rankings-table td {
-    height: auto;
-    border: 0;
-    padding: 0;
-    text-align: left;
-  }
-
-  .store-rankings-cell-rank {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: center;
-  }
-
-  .store-rankings-cell-entity {
-    grid-column: 2;
-    grid-row: 1;
-    min-width: 0;
-  }
-
-  .store-rankings-entity-detail {
-    display: block;
-    overflow: hidden;
-    color: var(--rankings-muted);
-    font-size: 12px;
-    font-weight: 520;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .store-rankings-table td.store-rankings-cell-store {
-    display: none;
-  }
-
-  .store-rankings-cell-score {
-    display: flex;
-    grid-column: 1 / -1;
-    align-items: center;
-    justify-content: space-between;
-    border-top: 1px solid rgba(88, 100, 146, 0.1);
-    padding-top: 8px;
-  }
-
-  .store-rankings-cell-kpi {
-    display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: 84px minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-  }
-
-  .store-rankings-cell-kpi .store-rankings-kpi-cell {
-    justify-self: end;
-    min-width: 112px;
-  }
-
-  .store-rankings-cell-action {
-    grid-column: 1 / -1;
-  }
-
-  .store-rankings-cell-action .store-rankings-primary-button {
-    width: 100%;
-  }
-
-  .store-rankings-date-menu {
-    position: static;
-    margin-top: 8px;
-    min-width: 0;
-  }
-
-  .store-rankings-table td.store-rankings-cell-rank::before,
-  .store-rankings-table td.store-rankings-cell-entity::before,
-  .store-rankings-table td.store-rankings-cell-store::before {
-    display: none;
-    content: none;
-  }
-
-  .store-rankings-table td.store-rankings-cell-score::before,
-  .store-rankings-table td.store-rankings-cell-kpi::before,
-  .store-rankings-table td.store-rankings-cell-action::before {
-    display: block;
-    color: var(--rankings-quiet);
-    font-size: 10px;
-    font-weight: 760;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    content: attr(data-label);
-  }
-
-  .store-rankings-table td.store-rankings-cell-score::before,
-  .store-rankings-table td.store-rankings-cell-kpi::before {
-    margin-bottom: 0;
-  }
-
-  .store-rankings-table td.store-rankings-cell-action::before {
-    margin-bottom: 4px;
+    gap: 16px 24px;
   }
 }

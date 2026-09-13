@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { buildCurrentStoreComparisons } from "./ranking-store-comparisons";
-import { resolveRankingDateRange } from "./ranking-date-range";
+import { resolveRankingDateRange, resolveRequestedRankingPeriodEnd } from "./ranking-date-range";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
@@ -32,7 +32,6 @@ import {
   RankingFilters,
   rankStoreRows,
   resolveCurrentStoreId,
-  resolveMonthEnd,
   selectGlobalRows,
   sortRowsForList,
   toFiniteNumber,
@@ -142,11 +141,7 @@ export class RankingService {
         availablePeriods: [],
         periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart ?? null,
-        periodEnd: input.periodStart
-          ? input.periodType === "daily"
-            ? input.periodStart
-            : resolveMonthEnd(input.periodStart)
-          : null,
+        periodEnd: resolveRequestedRankingPeriodEnd(input),
       });
     }
     const { storeProfile, personnelProfile } = await this.getKpiProfiles();
@@ -163,6 +158,7 @@ export class RankingService {
         companyIds: input.companyIds,
       }),
       dateRange ?? this.rankingReportingReadRepository.getLatestRankingPeriod({
+        companyIds: input.companyIds,
         metricCodes: allMetricCodes,
         periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart,
@@ -184,15 +180,12 @@ export class RankingService {
         availablePeriods,
         periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart ?? null,
-        periodEnd: input.periodStart
-          ? input.periodType === "daily"
-            ? input.periodStart
-            : resolveMonthEnd(input.periodStart)
-          : null,
+        periodEnd: resolveRequestedRankingPeriodEnd(input),
         scopeSummary,
       });
     }
 
+    const aggregateDaily = Boolean(dateRange || ("uses_daily_components" in latestPeriod && latestPeriod.uses_daily_components));
     const [
       rawStoreKpiRows,
       rawStoreChecklistRows,
@@ -202,7 +195,7 @@ export class RankingService {
       companyFilterOptions,
     ] = await Promise.all([
       this.rankingReportingReadRepository.listRankingStoreKpiRows({
-        isRange: Boolean(dateRange),
+        isRange: aggregateDaily,
         metricCodes: storeMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
@@ -215,7 +208,7 @@ export class RankingService {
         periodEnd: latestPeriod.period_end,
       }),
       this.rankingReportingReadRepository.listRankingPersonnelKpiRows({
-        isRange: Boolean(dateRange),
+        isRange: aggregateDaily,
         metricCodes: personnelMetricCodes,
         companyIds: input.companyIds,
         periodType: latestPeriod.period_type,
@@ -223,13 +216,14 @@ export class RankingService {
         periodEnd: latestPeriod.period_end,
       }),
       this.getStoreBenchmarks({
-        isRange: Boolean(dateRange),
+        isRange: aggregateDaily,
         companyId: input.companyIds[0],
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
       this.getPersonnelBenchmarks({
+        isRange: aggregateDaily,
         companyId: input.companyIds[0],
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
@@ -330,13 +324,13 @@ export class RankingService {
       ? input.sortDirection ?? "desc"
       : "desc";
     const sortedStoreRows = sortRowsForList(
-      filteredStoreRows,
+      access.isPrivileged ? filteredStoreRows : filteredStoreRows.slice(0, 100),
       effectiveSortKey,
       effectiveSortDirection,
       (row) => row.storeId,
     );
     const sortedPersonnelRows = sortRowsForList(
-      filteredPersonnelRows,
+      access.isPrivileged ? filteredPersonnelRows : filteredPersonnelRows.slice(0, 100),
       effectiveSortKey,
       effectiveSortDirection,
       (row) => row.employeeId,
@@ -618,6 +612,7 @@ export class RankingService {
   }
 
   private async getPersonnelBenchmarks(input: {
+    isRange?: boolean;
     companyId?: string;
     periodType: string;
     periodStart: string;

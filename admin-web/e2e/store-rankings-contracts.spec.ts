@@ -7,7 +7,7 @@ import {
   storeIds,
 } from './store-page-contract-fixtures'
 
-test('personnel ranking keeps tab state and list rank after profile navigation', async ({ page }) => {
+test('personnel ranking keeps tab state and exposes no profile navigation', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await installGenericStoreApiFallbacks(page)
   await routeRankingsContractApi(page)
@@ -17,19 +17,12 @@ test('personnel ranking keeps tab state and list rank after profile navigation',
   await expect(page.getByRole('heading', { name: 'Türkiye personel sıralaması' })).toBeVisible()
   const firstRank = await page.locator('[data-testid="personnel-ranking-rank"]').first().innerText()
   expect(firstRank.trim()).toBe('#6')
-  const firstRankNumber = firstRank.trim().replace(/\D/g, '')
-
-  await page.getByRole('button', { name: 'Profile Git' }).first().click()
-
-  await expect(page).toHaveURL(/\/store\/personnel\/employee-contract-1/)
-  await expect(page.getByText(`${firstRankNumber}.`).first()).toBeVisible()
-  await expect(page.getByText('84 kişi içinde').first()).toBeVisible()
-
-  await page.goBack()
-
+  await expect(page.getByRole('button', { name: 'Profile Git' })).toHaveCount(0)
+  await expect(page.locator('.store-rankings-board a')).toHaveCount(0)
   await expect(page).toHaveURL(/\/store\/rankings\?list=personnel/)
+  await page.reload()
   await expect(page.getByRole('heading', { name: 'Türkiye personel sıralaması' })).toBeVisible()
-  await expect(page.locator('[data-testid="personnel-ranking-rank"]').first()).toHaveText(firstRank)
+  await expect(page.locator('[data-testid="personnel-ranking-rank"]').first()).toHaveText('#6')
 })
 
 test('official personnel ranking surface does not render store-manager rows', async ({ page }) => {
@@ -46,9 +39,6 @@ test('official personnel ranking surface does not render store-manager rows', as
 async function routeRankingsContractApi(page: Page) {
   await page.route('**/api/reports/rankings**', async (route) => {
     await route.fulfill({ json: createRankingsContractFixture() })
-  })
-  await page.route('**/api/reports/personnel-performance/**', async (route) => {
-    await route.fulfill({ json: createPersonnelPerformanceFixture() })
   })
 }
 
@@ -138,76 +128,6 @@ function createRankingsContractFixture() {
       items: [storeRow],
       meta: { limit: 100, offset: 0, total: 1 },
     },
-  }
-}
-
-function createPersonnelPerformanceFixture() {
-  return {
-    availablePeriods: [
-      { periodEnd: '2026-07-31', periodStart: '2026-07-01', periodType: 'monthly' },
-    ],
-    employee: {
-      displayName: 'Satış Danışmanı Ayşe',
-      employeeId: employeeIds[0],
-      positionName: 'Satış danışmanı',
-      storeId: storeIds[0],
-      storeName: 'İstanbul MOI AVM',
-    },
-    metricRanks: [
-      {
-        actualValue: 3.4,
-        code: 'UPT',
-        label: 'UPT',
-        regionPopulation: 20,
-        regionRank: 4,
-        storePopulation: 5,
-        storeRank: 1,
-        turkeyPopulation: 84,
-        turkeyRank: 6,
-      },
-    ],
-    metrics: [
-      {
-        achievementRate: 1.18,
-        actualValue: 118,
-        code: 'TARGET_ACHIEVEMENT',
-        contributionValue: 41,
-        dataStatus: 'reported',
-        label: 'Hedef Gerçekleştirme',
-        scoreStatus: 'scored',
-        statusBand: 'on_track',
-        targetValue: 100,
-        weightPercent: 35,
-      },
-      {
-        achievementRate: 1.1,
-        actualValue: 3.4,
-        code: 'UPT',
-        contributionValue: 16,
-        dataStatus: 'reported',
-        label: 'UPT',
-        scoreStatus: 'scored',
-        statusBand: 'on_track',
-        targetValue: 3.1,
-        weightPercent: 15,
-      },
-    ],
-    partial: {
-      isPartial: false,
-      missingMetricCodes: [],
-      missingMetricLabels: [],
-      pendingNormalizationCodes: [],
-      pendingNormalizationLabels: [],
-    },
-    period: { periodEnd: '2026-07-31', periodStart: '2026-07-01' },
-    rankings: {
-      storePopulation: 5,
-      storeRank: 1,
-      turkeyPopulation: 84,
-      turkeyRank: 6,
-    },
-    score: { matchedMetrics: 2, totalMetrics: 2, value: 88 },
-    source: { mode: 'live', periodType: 'monthly', snapshotDate: null, snapshotRunId: null },
   }
 }
 

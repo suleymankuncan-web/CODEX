@@ -1,7 +1,9 @@
-import { ArrowRight, ArrowUpDown, ChevronLeft, ChevronRight, Store as StoreIcon, UserRound, UsersRound } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronLeft, ChevronRight, Store as StoreIcon, UsersRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { PersonnelRankingRow, RankingMetricValue, RankingSummary, StoreRankingRow } from '../features/reports/api'
 import { normalizeDisplayLabel } from '../lib/display-labels'
@@ -22,17 +24,17 @@ import {
 import { StoreEmptyState } from './store-surface-primitives'
 
 export function RankingWorkspace(input: {
+  toolbar?: ReactNode
+  loading?: boolean
   activeList: ActiveRankingList
   ranking: RankingSummary
   storeRows: StoreRankingRow[]
   personnelRows: PersonnelRankingRow[]
   canSeeDetails: boolean
-  canOpenPersonnelProfile: (row: PersonnelRankingRow) => boolean
   sortKey: RankingSortKey
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
   onActiveListChange: (value: ActiveRankingList) => void
-  onOpenPersonnelProfile: (employeeId: string) => void
   onOffsetChange: (value: number) => void
   hasNextPage: boolean
   offset: number
@@ -64,62 +66,17 @@ export function RankingWorkspace(input: {
         })
 
   return (
-    <div className="store-rankings-board">
-      <ToggleGroup
-        type="single"
-        value={input.activeList}
-        onValueChange={(value) => {
-          if (value === 'stores' || value === 'personnel') {
-            input.onActiveListChange(value)
-          }
-        }}
-        variant="outline"
-        role="tablist"
-        aria-label={input.t('storeRankings.listSwitchLabel')}
-        className="store-rankings-tabs-card"
-      >
-        <ToggleGroupItem
-          value="stores"
-          role="tab"
-          aria-selected={input.activeList === 'stores'}
-          className="store-rankings-tab"
-        >
-          <StoreIcon aria-hidden="true" />
-          {input.t('storeRankings.storeList')}
-          <span className="store-rankings-badge store-rankings-badge-plum">
-            {formatNumber(input.locale, input.t, input.ranking.storeLeaderboard.meta.total)}
-          </span>
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="personnel"
-          role="tab"
-          aria-selected={input.activeList === 'personnel'}
-          className="store-rankings-tab"
-        >
-          <UsersRound aria-hidden="true" />
-          {input.t('storeRankings.personnelList')}
-          <span className="store-rankings-badge store-rankings-badge-aqua">
-            {formatNumber(input.locale, input.t, input.ranking.personnelLeaderboard.meta.total)}
-          </span>
-        </ToggleGroupItem>
-      </ToggleGroup>
-
-      <section className="store-rankings-leaderboard" aria-label={title}>
-        <div className="store-rankings-leaderboard-header">
-          <div>
-            <h2>{title}</h2>
-            <p>{caption}</p>
-          </div>
-          <span className={`store-rankings-badge ${
-            input.canSeeDetails ? 'store-rankings-badge-mint' : 'store-rankings-badge-warning'
-          }`}>
-            {input.canSeeDetails
-              ? input.t('storeRankings.fullDetailAccess')
-              : input.t('storeRankings.summaryAccess')}
-          </span>
-        </div>
-
-        <div className="store-rankings-table-wrap">
+    <Tabs value={input.activeList} onValueChange={value => { if (value === 'stores' || value === 'personnel') input.onActiveListChange(value) }} className="store-rankings-board">
+      <div className="store-rankings-list-toolbar">
+        <TabsList aria-label={input.t('storeRankings.listSwitchLabel')}>
+          <TabsTrigger value="stores"><StoreIcon aria-hidden="true" />{input.t('storeRankings.storeList')}<Badge variant="secondary">{input.ranking.storeLeaderboard.meta.total}</Badge></TabsTrigger>
+          <TabsTrigger value="personnel"><UsersRound aria-hidden="true" />{input.t('storeRankings.personnelList')}<Badge variant="secondary">{input.ranking.personnelLeaderboard.meta.total}</Badge></TabsTrigger>
+        </TabsList>
+        {input.toolbar}
+      </div>
+      <TabsContent value={input.activeList} className="store-rankings-leaderboard">
+        <h2 className="tw:sr-only">{title}</h2>
+        <div className="store-rankings-table-wrap" aria-busy={input.loading}>
           <Table
             className={`store-rankings-table${
               input.canSeeDetails ? ' store-rankings-table-detail' : ' store-rankings-table-summary'
@@ -143,11 +100,9 @@ export function RankingWorkspace(input: {
                 rows={input.personnelRows}
                 currentEmployeeId={input.ranking.personnelLeaderboard.currentEmployee?.employeeId ?? null}
                 canSeeDetails={input.canSeeDetails}
-                canOpenPersonnelProfile={input.canOpenPersonnelProfile}
                 sortKey={input.sortKey}
                 sortDirection={input.sortDirection}
                 onSortChange={input.onSortChange}
-                onOpenPersonnelProfile={input.onOpenPersonnelProfile}
                 locale={input.locale}
                 t={input.t}
               />
@@ -191,8 +146,8 @@ export function RankingWorkspace(input: {
             </Button>
           </div>
         </div>
-      </section>
-    </div>
+      </TabsContent>
+    </Tabs>
   )
 }
 
@@ -229,7 +184,7 @@ function StoreRankingTable(input: {
             />
           </TableHead>
           <TableHead>{input.t('storeRankings.store')}</TableHead>
-          <TableHead>
+          <TableHead aria-sort={input.sortKey === 'score' ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}>
             <SortButton
               label={input.t('storeRankings.score')}
               sortKey="score"
@@ -240,7 +195,7 @@ function StoreRankingTable(input: {
           </TableHead>
           {input.canSeeDetails
             ? storeMetricCodes.map((code) => (
-                <TableHead key={code}>
+                <TableHead key={code} aria-sort={input.sortKey === code ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}>
                   <SortButton
                     label={getMetricHeaderLabel(input.t, code)}
                     sortKey={code}
@@ -280,11 +235,9 @@ function PersonnelRankingTable(input: {
   rows: PersonnelRankingRow[]
   currentEmployeeId: string | null
   canSeeDetails: boolean
-  canOpenPersonnelProfile: (row: PersonnelRankingRow) => boolean
   sortKey: RankingSortKey
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
-  onOpenPersonnelProfile: (employeeId: string) => void
   locale: AppLocale
   t: TranslateFunction
 }) {
@@ -298,7 +251,6 @@ function PersonnelRankingTable(input: {
         {input.canSeeDetails
           ? personnelMetricCodes.map((code) => <col key={code} className="store-rankings-col-kpi" />)
           : null}
-        <col className="store-rankings-col-action" />
       </colgroup>
       <TableHeader>
         <TableRow>
@@ -314,7 +266,7 @@ function PersonnelRankingTable(input: {
           </TableHead>
           <TableHead>{input.t('storeRankings.personnel')}</TableHead>
           <TableHead>{input.t('storeRankings.store')}</TableHead>
-          <TableHead>
+          <TableHead aria-sort={input.sortKey === 'score' ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}>
             <SortButton
               label={input.t('storeRankings.score')}
               sortKey="score"
@@ -325,7 +277,7 @@ function PersonnelRankingTable(input: {
           </TableHead>
           {input.canSeeDetails
             ? personnelMetricCodes.map((code) => (
-                <TableHead key={code}>
+                <TableHead key={code} aria-sort={input.sortKey === code ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}>
                   <SortButton
                     label={getMetricHeaderLabel(input.t, code)}
                     sortKey={code}
@@ -336,7 +288,6 @@ function PersonnelRankingTable(input: {
                 </TableHead>
               ))
             : null}
-          <TableHead>{input.t('storeRankings.action')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -347,15 +298,13 @@ function PersonnelRankingTable(input: {
               row={row}
               current={input.currentEmployeeId === row.employeeId}
               canSeeDetails={input.canSeeDetails}
-              canOpenProfile={input.canOpenPersonnelProfile(row)}
               locale={input.locale}
               t={input.t}
-              onOpenPersonnelProfile={input.onOpenPersonnelProfile}
             />
           ))
         ) : (
           <EmptyRankingRow
-            colSpan={input.canSeeDetails ? personnelMetricCodes.length + 5 : 5}
+            colSpan={input.canSeeDetails ? personnelMetricCodes.length + 4 : 4}
             description={input.t('storeRankings.noPersonnel')}
           />
         )}
@@ -381,11 +330,10 @@ function SortButton(input: {
       size="sm"
       variant="ghost"
       onClick={() => input.onSortChange(input.sortKey)}
-      aria-sort={active ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}
       data-active={active ? 'true' : undefined}
     >
       {input.label}
-      <ArrowUpDown data-icon="inline-end" aria-hidden="true" />
+      {active ? input.sortDirection === 'desc' ? <ChevronDown data-icon="inline-end" aria-hidden="true" /> : <ChevronUp data-icon="inline-end" aria-hidden="true" /> : <ChevronsUpDown data-icon="inline-end" aria-hidden="true" />}
     </Button>
   )
 }
@@ -433,10 +381,8 @@ function PersonnelRankingTableRow(input: {
   row: PersonnelRankingRow
   current: boolean
   canSeeDetails: boolean
-  canOpenProfile: boolean
   locale: AppLocale
   t: TranslateFunction
-  onOpenPersonnelProfile: (employeeId: string) => void
 }) {
   const row = input.row
 
@@ -480,35 +426,17 @@ function PersonnelRankingTableRow(input: {
             </TableCell>
           ))
         : null}
-      <TableCell className="store-rankings-cell-action" data-label={input.t('storeRankings.action')}>
-        {input.canOpenProfile ? (
-          <Button
-            type="button"
-            size="sm"
-            className="store-rankings-primary-button"
-            onClick={() => input.onOpenPersonnelProfile(row.employeeId)}
-          >
-            {input.t('storeRankings.profileGo')}
-            <ArrowRight data-icon="inline-end" aria-hidden="true" />
-          </Button>
-        ) : (
-          <span className="store-rankings-action-empty" aria-hidden="true">
-            {input.t('storeRankings.summaryAccess')}
-          </span>
-        )}
-      </TableCell>
+
     </TableRow>
   )
 }
 
 function RankChip(input: { rank: number | null; t: TranslateFunction }) {
-  const medal = input.rank === 1 ? '\u{1F947}' : input.rank === 2 ? '\u{1F948}' : input.rank === 3 ? '\u{1F949}' : null
 
   return (
-    <span className="store-rankings-rank-chip">
-      {medal ? <span aria-hidden="true">{medal}</span> : null}
+    <Badge variant="secondary" className="store-rankings-rank-chip">
       {formatRankBadge(input.t, input.rank)}
-    </span>
+    </Badge>
   )
 }
 
@@ -518,21 +446,7 @@ function RankingEntity(input: {
   kind: 'store' | 'personnel'
   rank: number | null
 }) {
-  const tone =
-    input.rank === 1 ? 'plum' : input.rank === 2 ? 'aqua' : input.rank === 3 ? 'mint' : 'neutral'
-  const Icon = input.kind === 'store' ? StoreIcon : UserRound
-
-  return (
-    <div className="store-rankings-entity">
-      <span className={`store-rankings-entity-icon store-rankings-entity-${tone}`}>
-        <Icon aria-hidden="true" />
-      </span>
-      <span className={`store-rankings-entity-copy store-rankings-entity-copy-${input.kind}`}>
-        <strong>{input.label}</strong>
-        {input.detail ? <span className="store-rankings-entity-detail">{input.detail}</span> : null}
-      </span>
-    </div>
-  )
+  return <div className="store-rankings-entity"><span className={`store-rankings-entity-copy store-rankings-entity-copy-${input.kind}`}><strong>{input.label}</strong>{input.detail ? <span className="store-rankings-entity-detail">{input.detail}</span> : null}</span></div>
 }
 
 function RankingScore(input: {
@@ -558,7 +472,6 @@ function RankingMetricCell(input: {
 
     return (
       <span className={isChecklist ? 'store-rankings-kpi-cell store-rankings-kpi-missing' : 'store-rankings-muted-value'}>
-        {isChecklist ? <span className="store-rankings-live-dot" aria-hidden="true" /> : null}
         {isChecklist ? input.t('storeRankings.notDone') : input.t('common.noData')}
       </span>
     )

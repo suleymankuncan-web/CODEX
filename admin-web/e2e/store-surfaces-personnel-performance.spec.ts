@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
   await routeStoreSurfaceApi(page)
 })
 
-test('store personnel profile preserves a selected no-data period from rankings', async ({ page }) => {
+test('store rankings personnel rows do not navigate to personnel profiles', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const aprilOnlyPeriods = [
     {
@@ -134,16 +134,11 @@ test('store personnel profile preserves a selected no-data period from rankings'
 
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
-  await page
-    .getByRole('row', { name: /Store Personnel - 1/ })
-    .getByRole('button', { name: 'Profile Git' })
-    .click()
-
-  await expect.poll(() =>
-    personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-05-01'),
-  ).toBe(true)
-  await expect(page).toHaveURL(/periodStart=2026-05-01/)
-  await expect(page.getByText('Seçilen tarih için veri bulunamadı')).toBeVisible()
+  const personnelRow = page.getByRole('row', { name: /Store Personnel - 1/ })
+  await expect(personnelRow).toBeVisible()
+  await expect(personnelRow.getByRole('button')).toHaveCount(0)
+  await expect(page.getByRole('columnheader', { name: 'Aksiyon' })).toHaveCount(0)
+  expect(personnelPerformanceRequests).toEqual([])
 })
 
 test('store personnel profile date filter uses the shared calendar', async ({ page }) => {
@@ -586,7 +581,7 @@ test('store personnel profile resets requested live period when switching employ
 })
 
 test('store rankings page switches to English copy and persists locale', async ({ page }) => {
-  await page.goto('/store/rankings')
+  await page.goto('/store/rankings?period=2026-04-01')
 
   await setStoredLocale(page, 'en')
 
@@ -599,7 +594,6 @@ test('store rankings page switches to English copy and persists locale', async (
   await expect(page.getByRole('dialog', { name: 'Select period' }).getByRole('combobox', { name: 'Choose month' })).toHaveValue('3')
   await monthFilter.click()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
-  await expect(page.locator('header').getByText('Top 100 view', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Turkey store ranking' })).toBeVisible()
   await expect(page.getByRole('table', { name: /Showing store results/i })).toBeVisible()
   await page.getByRole('tab', { name: 'Personnel list' }).click()
@@ -636,7 +630,7 @@ test('store rankings personnel mobile cards keep text separated', async ({ page 
   await expect(firstPersonnelCard.locator('.store-rankings-entity-detail')).toBeVisible()
   await expect(firstPersonnelCard.locator('.store-rankings-cell-store')).toBeHidden()
   await expect(firstPersonnelCard.locator('.store-rankings-cell-score')).toBeVisible()
-  await expect(firstPersonnelCard.locator('.store-rankings-cell-action')).toBeVisible()
+  await expect(firstPersonnelCard.locator('.store-rankings-cell-action')).toHaveCount(0)
 
   const overlappingCells = await firstPersonnelCard.evaluate((row) => {
     const cells = Array.from(row.querySelectorAll('td'))
@@ -693,13 +687,11 @@ test('store rankings requests exact loaded day and returns to monthly view', asy
     })
   })
 
-  await page.goto('/store/rankings')
+  await page.goto('/store/rankings?period=2026-04-01')
   await expect(page.getByRole('button', { name: 'Dönem filtresi' })).toContainText('Nis 2026')
   await expect(page.getByText('Top 100 görünüm', { exact: true })).toBeVisible()
-  await expect(
-    page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
-  ).toBeVisible()
   await page.getByRole('button', { name: 'Dönem filtresi' }).click()
+  await page.getByRole('button', { name: '15 Nisan 2026 Çarşamba' }).click()
   await page.getByRole('button', { name: '15 Nisan 2026 Çarşamba' }).click()
   await page.getByRole('button', { name: 'Uygula' }).click()
   await expect
@@ -712,18 +704,18 @@ test('store rankings requests exact loaded day and returns to monthly view', asy
     )
     .toBe(true)
   await expect(page.getByRole('button', { name: 'Dönem filtresi' })).toContainText('15 Nis 2026')
-  await expect(page.getByText('Seçili gün görünümü')).toBeVisible()
   await page.getByRole('button', { name: 'Dönem filtresi' }).click()
   await page.getByRole('button', { name: 'Tüm ay' }).click()
-  await expect
-    .poll(() => {
-      const lastRequest = rankingRequests.at(-1)
-
-      return lastRequest
-        ? `${lastRequest.searchParams.get('periodType')}:${lastRequest.searchParams.get('periodStart')}`
-        : ''
-    })
-    .toBe('monthly:2026-04-01')
+  await expect(page.getByRole('button', { name: 'Dönem filtresi' })).toContainText('Nis 2026')
+  await expect.poll(() => new URL(page.url()).searchParams.get('from')).toBeNull()
+  await expect.poll(() => new URL(page.url()).searchParams.get('to')).toBeNull()
+  expect(
+    rankingRequests.some(
+      (url) =>
+        url.searchParams.get('periodType') === 'monthly' &&
+        url.searchParams.get('periodStart') === '2026-04-01',
+    ),
+  ).toBe(true)
   await expect(page.getByText('Global liste Top 100 ozet; kendi konumun ayrica gorunur.')).toHaveCount(0)
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })

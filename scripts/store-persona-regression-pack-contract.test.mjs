@@ -19,8 +19,8 @@ const protectedEvidence = [
     file: 'backend/nestjs/src/modules/store-ops/application/ranking.service.spec.ts',
     phrases: [
       'marks personnel profile navigation from active assignment scope, not ranking period region',
-      'keeps store manager global rankings summary-only while exposing own-store personnel details',
-      'caps store personnel to Turkey Top 100 summary rows and includes own position outside the top list',
+      'keeps store manager global rankings detailed Top 100 while exposing own-store personnel details',
+      'caps store personnel to Turkey Top 100 detailed rows and includes own position outside the top list',
     ],
   },
   {

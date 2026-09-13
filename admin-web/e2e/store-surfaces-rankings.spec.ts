@@ -21,8 +21,8 @@ test.beforeEach(async ({ page }) => {
   await routeStoreSurfaceApi(page)
 })
 
-test('store rankings page renders Plum ranking table without signal chrome', async ({ page }) => {
-  await page.goto('/store/rankings')
+test('store rankings page renders Azure ranking table with the shared calendar', async ({ page }) => {
+  await page.goto('/store/rankings?period=2026-04-01')
 
   await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
   const periodFilter = page.getByRole('button', { name: 'Dönem filtresi' })
@@ -183,7 +183,7 @@ test('store personnel profile hides backend denial details on direct access', as
   await expect(page.locator('body')).not.toContainText(deniedEmployeeId)
 })
 
-test('store rankings personnel detail opens the selected personnel performance profile', async ({ page }) => {
+test('store rankings preserves filters and has no personnel profile navigation', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const rankingRequests: URL[] = []
 
@@ -250,40 +250,15 @@ test('store rankings personnel detail opens the selected personnel performance p
     ),
   ).toBe(true)
   const personnelRow = page.getByRole('row', { name: /Store Personnel - 1/ })
-  await personnelRow.getByRole('button', { name: 'Profile Git' }).click()
+  await expect(personnelRow.getByRole('button')).toHaveCount(0)
+  await expect(page.locator('.store-rankings-board a')).toHaveCount(0)
   await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
+  expect(personnelPerformanceRequests).toHaveLength(0)
+  expect(new URL(page.url()).pathname).toBe('/store/rankings')
 
-  await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}\\?`))
-  await expect.poll(() => new URL(page.url()).searchParams.get('mode')).toBe('live')
-  await expect.poll(() => new URL(page.url()).searchParams.get('periodType')).toBe('monthly')
-  await expect.poll(() => new URL(page.url()).searchParams.get('periodStart')).toBe('2026-04-01')
-  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
-  const storeMeHeader = page.locator('.store-me-compact-header')
-  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
-  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
-  await expect(page.locator('[data-testid="store-me-metric-card"]')).toHaveCount(3)
-  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'CR' })).toHaveCount(0)
-  await expect
-    .poll(() =>
-      personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
-    )
-    .toBe(true)
-
-  await page.goBack()
-  await expect(page).toHaveURL(/\/store\/rankings\?/)
-  const returnedParams = new URL(page.url()).searchParams
-  expect(returnedParams.get('list')).toBe('personnel')
-  expect(returnedParams.get('period')).toBe('2026-04-01')
-  expect(returnedParams.get('q')).toBe('Store')
-  expect(returnedParams.get('sort')).toBe('ATV')
-  expect(returnedParams.get('dir')).toBe('asc')
-  expect(returnedParams.get('page')).toBe('2')
-  await expect(page.getByRole('tab', { name: 'Personel listesi' })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByRole('searchbox', { name: 'Personel arama' })).toHaveValue('Store')
-  await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toBeVisible()
 })
 
-test('region manager rankings opens only in-region personnel profile actions', async ({ page }) => {
+test('region manager rankings has no personnel profile actions', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
 
   await page.unroute('**/api/auth/session')
@@ -355,18 +330,28 @@ test('region manager rankings opens only in-region personnel profile actions', a
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
 
   const inScopeRow = page.getByRole('row', { name: /BM Region Personnel/ })
-  await inScopeRow.getByRole('button', { name: 'Profile Git' }).click()
-  await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
-  await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}\\?`))
-  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
-  const inScopeRequestCount = personnelPerformanceRequests.length
-  expect(inScopeRequestCount).toBeGreaterThan(0)
-
-  await page.goto('/store/rankings')
-  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await expect(inScopeRow.getByRole('button')).toHaveCount(0)
+  await expect(page.locator('.store-rankings-board a')).toHaveCount(0)
+  const inScopeRequestCount = 0
   const outOfScopeRow = page.getByRole('row', { name: /Other Region Personnel/ })
   await expect(outOfScopeRow).toBeVisible()
   await expect(outOfScopeRow.getByRole('button', { name: 'Profile Git' })).toHaveCount(0)
   await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
   await expect.poll(() => personnelPerformanceRequests.length).toBe(inScopeRequestCount)
 })
+
+for (const role of ['STORE_MANAGER', 'STORE_PERSONNEL']) {
+  test(`${role} sees detailed rankings without manager filters or profile actions`, async ({ page }) => {
+    await page.route('**/api/auth/session', route => route.fulfill({ json: { ...authSessionFixture, user: { ...authSessionFixture.user, roleCodes: [role] } } }))
+    await page.route('**/api/reports/rankings**', route => route.fulfill({ json: { ...rankingsPrivilegedDetailFixture, access: { ...rankingsPrivilegedDetailFixture.access, globalMode: 'top100', canSeeGlobalDetails: true } } }))
+    await page.goto('/store/rankings')
+    await expect(page.locator('.store-rankings-table thead th')).toHaveCount(10)
+    await expect(page.locator('.store-rankings-filters [data-slot=select-trigger]')).toHaveCount(0)
+    const reference = await page.locator('.store-rankings-reference-strip').boundingBox()
+    const list = await page.locator('.store-rankings-board').boundingBox()
+    expect(reference!.y + reference!.height).toBeLessThanOrEqual(list!.y)
+    await page.getByRole('tab', { name: /Personel listesi/ }).click()
+    await expect(page.locator('.store-rankings-table thead th')).toHaveCount(7)
+    await expect(page.locator('.store-rankings-table tbody button')).toHaveCount(0)
+  })
+}
