@@ -1,3 +1,5 @@
+import { formatPersonnelPhone, nationalPhoneDigits } from '../lib/phone-number'
+import { CalendarPicker } from '../components/ui/calendar-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -79,12 +81,12 @@ export function SellerCodeRequestForm(input: {
           copy={input.t('storeApprovals.sellerUnavailableCopy')}
         />
       ) : (
-        <div className="store-request-grid">
+        <div className="store-request-grid"><p className="store-request-field-wide">Tüm alanlar zorunludur.</p>
           <div className="store-request-field">
             <label className="store-request-label" htmlFor="seller-store-id">
               {input.t('storeApprovals.storeId')}
             </label>
-            <Input
+            <Input required
               id="seller-store-id"
               value={input.storeLabel ?? input.t('storeApprovals.unknownStore')}
               readOnly
@@ -95,7 +97,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-first-name">
               {input.t('storeApprovals.firstName')}
             </label>
-            <Input
+            <Input required
               id="seller-first-name"
               value={input.sellerFirstName}
               onChange={(event) => input.onFirstNameChange(event.target.value)}
@@ -107,7 +109,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-last-name">
               {input.t('storeApprovals.lastName')}
             </label>
-            <Input
+            <Input required
               id="seller-last-name"
               value={input.sellerLastName}
               onChange={(event) => input.onLastNameChange(event.target.value)}
@@ -163,7 +165,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-national-id">
               {input.t('storeApprovals.nationalId')}
             </label>
-            <Input
+            <Input required
               id="seller-national-id"
               inputMode="numeric"
               maxLength={11}
@@ -177,12 +179,13 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-phone-number">
               {input.t('storeApprovals.phoneNumber')}
             </label>
-            <Input
+            <Input required
               id="seller-phone-number"
               type="tel"
-              value={input.sellerPhoneNumber}
-              onChange={(event) => input.onPhoneNumberChange(event.target.value)}
-              placeholder="05551234567"
+              value={formatPersonnelPhone(input.sellerPhoneNumber)}
+              onChange={(event) => input.onPhoneNumberChange(nationalPhoneDigits(event.target.value))}
+              placeholder="(539) 123 45 67"
+                aria-describedby="seller-phone-hint"
             />
           </div>
 
@@ -190,26 +193,14 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-hire-date">
               {input.t('storeApprovals.hireDate')}
             </label>
-            <Input
-              id="seller-hire-date"
-              type="date"
-              value={input.sellerHireDate}
-              onChange={(event) => input.onHireDateChange(event.target.value)}
-            />
-          </div>
-
-          <div className="store-request-field">
-            <label className="store-request-label" htmlFor="seller-username">
-              {input.t('storeApprovals.username')}
-            </label>
-            <Input id="seller-username" autoComplete="off" value={input.sellerUsername} onChange={(event) => input.onUsernameChange(event.target.value)} />
+            <CalendarPicker mode="single" ariaLabel={input.t('storeApprovals.hireDate')} value={input.sellerHireDate} onValueChange={input.onHireDateChange} />
           </div>
 
           <div className="store-request-field">
             <label className="store-request-label" htmlFor="seller-email">
               {input.t('storeApprovals.email')}
             </label>
-            <Input id="seller-email" type="email" autoComplete="email" value={input.sellerEmail} onChange={(event) => input.onEmailChange(event.target.value)} />
+            <Input required id="seller-email" type="email" autoComplete="email" value={input.sellerEmail} onChange={(event) => input.onEmailChange(event.target.value)} />
           </div>
 
           <div className="store-request-field">
@@ -237,7 +228,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
-            <Textarea
+            <Textarea required
               id="seller-request-reason"
               rows={3}
               value={input.sellerRequestReason}

@@ -164,6 +164,24 @@ export const AUDIT_EVENT_CATALOG = [
     "Seller code request was edited and resubmitted.",
   ),
   auditEvent(
+    "personnel_correction.submitted",
+    "ops.personnel_correction_request",
+    "store_ops",
+    "Personnel correction request was submitted.",
+  ),
+  auditEvent(
+    "personnel_correction.approved",
+    "ops.personnel_correction_request",
+    "store_ops",
+    "Personnel correction request was approved.",
+  ),
+  auditEvent(
+    "personnel_correction.rejected",
+    "ops.personnel_correction_request",
+    "store_ops",
+    "Personnel correction request was rejected.",
+  ),
+  auditEvent(
     "employee_offboarding_request.created",
     "ops.employee_offboarding_request",
     "store_ops",

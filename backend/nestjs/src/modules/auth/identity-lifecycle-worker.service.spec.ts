@@ -63,4 +63,20 @@ describe("IdentityLifecycleWorkerService", () => {
     expect(keycloak.disable).toHaveBeenCalledWith("subject-1");
     expect(repository.retry).not.toHaveBeenCalled();
   });
+  it("syncs a corrected profile without enabling or changing account access", async () => {
+    const repository = {
+      claimNext: jest.fn().mockResolvedValueOnce({ identity_lifecycle_job_id: "profile-1", user_id: "user-1", operation: "update_profile", attempts: 1 }).mockResolvedValueOnce(null),
+      getUserSnapshot: jest.fn().mockResolvedValue({ ...user, provider_subject: "subject-1" }),
+      complete: jest.fn().mockResolvedValue(true), completeEnable: jest.fn(), retry: jest.fn(),
+    };
+    const keycloak = { updateProfile: jest.fn(), enable: jest.fn(), disable: jest.fn() };
+    const service = new IdentityLifecycleWorkerService(repository as unknown as IdentityLifecycleRepository, keycloak as unknown as KeycloakAdminClient);
+    await (service as unknown as { drain(): Promise<void> }).drain();
+    expect(keycloak.updateProfile).toHaveBeenCalledTimes(1);
+    expect(keycloak.enable).not.toHaveBeenCalled();
+    expect(keycloak.disable).not.toHaveBeenCalled();
+    expect(repository.completeEnable).not.toHaveBeenCalled();
+    expect(repository.retry).not.toHaveBeenCalled();
+  });
+
 });

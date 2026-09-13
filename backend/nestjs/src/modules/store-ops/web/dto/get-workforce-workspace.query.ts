@@ -4,6 +4,10 @@ import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetWorkforceWorkspaceQueryDto {
   @IsOptional()
+  @IsPostgresUuid()
+  regionManagerUserId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   q?: string;

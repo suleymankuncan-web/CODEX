@@ -130,7 +130,7 @@ test('admin target queues stay bounded and Store approvals load one complete pag
   expect(ledgerCalls.every((url) => url.searchParams.get('limit') === '200')).toBe(true)
   expect(ledgerCalls.every((url) => url.searchParams.get('offset') === '0')).toBe(true)
 
-  await page.getByRole('button', { name: 'Sayfa 2' }).click()
+  await page.getByRole('button', { name: 'Sonraki sayfa' }).click()
   await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(5)
   expect(ledgerCalls).toHaveLength(2)
 })

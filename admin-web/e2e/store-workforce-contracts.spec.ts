@@ -82,14 +82,15 @@ test('store detail exposes employment facts and entry-exit-only history', async 
 
   await page.goto('/store/workforce')
   await page.getByRole('button', { name: /Balıkesir 10 Burda AVM/ }).click()
-  await expect(page.getByText('Balıkesir 10 Burda AVM kadro dosyası')).toBeVisible()
-  await expect(page.getByText('Satış Danışmanı').first()).toBeVisible()
   const detail = page.getByTestId('store-workforce-region-detail-dialog')
+  await expect(detail.getByRole('heading', { name: 'Balıkesir 10 Burda AVM' })).toBeVisible()
+  await expect(detail.getByText('Satış Danışmanı').first()).toBeVisible()
   await expect(detail.getByText(/KPI|Güçlü|Takipte|Geride/)).toHaveCount(0)
   await page.getByRole('button', { name: 'Mağaza personel geçmişi' }).click()
-  await expect(page.getByText(/İşe giriş/).first()).toBeVisible()
-  await expect(page.getByText(/İşten çıkış/).first()).toBeVisible()
-  await expect(page.getByText(/Toplam çalışma/).first()).toBeVisible()
+  const history = page.getByRole('dialog', { name: 'Balıkesir 10 Burda AVM · Personel geçmişi' })
+  await expect(history.getByText('İşe giriş', { exact: true }).first()).toBeVisible()
+  await expect(history.getByText('İşten çıkış', { exact: true }).first()).toBeVisible()
+  await expect(history.getByText('Toplam çalışma', { exact: true }).first()).toBeVisible()
   await expect(page.getByText(/puan|destek|rol değiş/i)).toHaveCount(0)
   await page.getByRole('button', { name: /Sonraki/ }).click()
   await expect(page.getByText('Geçmiş Personel 21')).toBeVisible()
@@ -152,13 +153,13 @@ function workspaceFixture(historyStoreId: string | null, historyOffset = 0) {
 }
 
 
-test('store manager stages personnel corrections and sees pending status without a roster mutation', async ({ page }) => {
+test('store manager stages personnel corrections with Turkish confirmation and no roster mutation', async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')
   await installGenericStoreApiFallbacks(page)
   const store = createStore(storeIds[0], 'Test Mağaza', 0)
   const workspace = { ...createWorkspace([store]), view: 'store_manager' }
   await page.route('**/api/store/workforce/workspace**', (route) => route.fulfill({ json: { data: workspace } }))
-  const values = { firstName: 'Ayşe', lastName: 'Çetin', phoneNumber: '', hireDate: '2026-09-07', employmentType: 'full_time', positionId: store.personnel[0].positionId }
+  const values = { firstName: 'Ayşe', lastName: 'Çetin', email: 'ayse@example.com', phoneNumber: '5391234567', nationalIdLast4: '1234', hireDate: '2026-09-07', employmentType: 'full_time', positionId: store.personnel[0].positionId }
   let submitted: Record<string, unknown> | null = null
   let pending = false
   await page.route('**/api/workforce/personnel-corrections**', async (route) => {
@@ -168,12 +169,13 @@ test('store manager stages personnel corrections and sees pending status without
     await route.fulfill({ json: { items: pending ? [{ request_id: 'request-1', employee_id: store.personnel[0].employeeId, store_name: store.storeName, request_status: 'pending_hr_approval', request_reason: 'İsim düzeltmesi', previous_values: values, proposed_values: { ...values, firstName: 'Ayşen' }, review_note: null }] : [] } })
   })
   await page.goto('/store/workforce')
-  await page.getByRole('button', { name: 'Bilgileri düzenle' }).click()
+  await page.getByRole('button', { name: 'Düzenle' }).first().click()
   await page.getByRole('textbox', { name: 'Ad', exact: true }).fill('Ayşen')
+  await page.getByRole('textbox', { name: 'TC kimlik no', exact: true }).fill('10000000146')
   await page.getByRole('textbox', { name: 'Düzeltme gerekçesi' }).fill('İsim düzeltmesi')
   await page.getByRole('button', { name: 'İK onayına gönder' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByText('İK onayı bekliyor')).toBeVisible()
-  expect(submitted).toMatchObject({ employeeId: store.personnel[0].employeeId, storeId: store.storeId, expectedRevision: 'revision-1', proposed: { firstName: 'Ayşen' } })
+  await expect(page.getByText('Talebiniz İK onayına gönderildi.')).toBeVisible()
+  expect(submitted).toMatchObject({ employeeId: store.personnel[0].employeeId, storeId: store.storeId, expectedRevision: 'revision-1', proposed: { firstName: 'Ayşen', nationalId: '10000000146', phoneNumber: '5391234567' } })
   await expect(page.getByText('Ayşe Çetin', { exact: true }).first()).toBeVisible()
 })

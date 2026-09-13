@@ -5,7 +5,7 @@ export type RequestCenterItem = RequestCenterPage['items'][number]
 
 export type RequestCenterListInput = {
   bucket: 'open' | 'done'
-  type: 'all' | 'target' | 'sellerCode' | 'offboarding'
+  type: 'all' | 'target' | 'sellerCode' | 'offboarding' | 'personnelCorrection'
   status: 'all' | 'pending' | 'returned' | 'approved'
   period?: string
   storeId?: string

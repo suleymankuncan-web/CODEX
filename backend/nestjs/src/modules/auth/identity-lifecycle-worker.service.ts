@@ -44,6 +44,7 @@ export class IdentityLifecycleWorkerService implements OnModuleInit, OnModuleDes
           } else {
             if (!user.provider_subject) throw new Error("identity_subject_missing");
             if (job.operation === "disable") await this.keycloak.disable(user.provider_subject);
+            else if (job.operation === "update_profile") await this.keycloak.updateProfile(user.provider_subject, user);
             else await this.keycloak.enable(user.provider_subject, user);
             const completed = job.operation === "enable"
               ? await this.repository.completeEnable(job.identity_lifecycle_job_id, user.user_id)

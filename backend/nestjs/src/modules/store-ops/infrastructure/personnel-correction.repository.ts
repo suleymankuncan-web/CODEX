@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
@@ -12,6 +13,7 @@ type PersonnelState = {
   revision: string; values: PersonnelCorrectionValues;
 };
 type CorrectionRow = {
+  proposed_national_id_hash?: string | null;
   request_id: string; company_id: string; region_id: string; store_id: string;
   employee_id: string; assignment_id: string; employee_revision: string;
   assignment_revision: string; previous_values: PersonnelCorrectionValues;
@@ -39,6 +41,8 @@ export class PersonnelCorrectionRepository {
       e.updated_at::text employee_revision, a.updated_at::text assignment_revision,
       concat(e.updated_at::text, '|', a.assignment_id::text, '|', a.updated_at::text) revision,
       jsonb_build_object('firstName', e.first_name, 'lastName', e.last_name,
+        'email', COALESCE((SELECT u.email FROM ops.user_account u WHERE u.employee_id=e.employee_id LIMIT 1),e.email,''),
+        'nationalIdLast4', COALESCE(e.national_id_last4,''),
         'phoneNumber', COALESCE(e.phone_number,''), 'hireDate', e.hire_date::text,
         'employmentType', e.employment_type, 'positionId', a.position_id::text) AS "values"
       FROM ops.employee e JOIN ops.employee_assignment_history a ON a.employee_id=e.employee_id
@@ -52,7 +56,7 @@ export class PersonnelCorrectionRepository {
 
   private async validatePosition(client: PoolClient, companyId: string, positionId: string) {
     const result = await client.query(`SELECT position_id FROM ops.position
-      WHERE company_id=$1::uuid AND position_id=$2::uuid FOR SHARE`, [companyId, positionId]);
+      WHERE company_id=$1::uuid AND position_id=$2::uuid AND position_code IN ('STORE_MANAGER','ASSISTANT_MANAGER','SENIOR_SALES_CONSULTANT','SALES_ASSOCIATE','CASHIER','WAREHOUSE_SUPERVISOR') FOR SHARE`, [companyId, positionId]);
     if (!result.rows.length) throw new BadRequestException("Position must belong to the personnel company");
   }
 
@@ -62,7 +66,7 @@ export class PersonnelCorrectionRepository {
       const state = await this.state(client, employeeId, storeId);
       const positions = await client.query<{ positionId: string; positionName: string }>(
         `SELECT position_id::text AS "positionId", position_name AS "positionName"
-         FROM ops.position WHERE company_id=$1::uuid ORDER BY position_name`, [state.company_id]);
+         FROM ops.position WHERE company_id=$1::uuid AND position_code IN ('STORE_MANAGER','ASSISTANT_MANAGER','SENIOR_SALES_CONSULTANT','SALES_ASSOCIATE','CASHIER','WAREHOUSE_SUPERVISOR') ORDER BY array_position(ARRAY['STORE_MANAGER','ASSISTANT_MANAGER','SENIOR_SALES_CONSULTANT','SALES_ASSOCIATE','CASHIER','WAREHOUSE_SUPERVISOR'], position_code)`, [state.company_id]);
       return { employeeId, storeId, revision: state.revision, values: state.values, positions: positions.rows };
     });
   }
@@ -80,7 +84,7 @@ export class PersonnelCorrectionRepository {
        ORDER BY r.created_at DESC, r.request_id DESC LIMIT $5 OFFSET $6`,
       [correctionReviewCompanies(actor), correctionStoreScope(actor), input.status ?? null,
         input.storeId ?? null, input.limit ?? 50, input.offset ?? 0]);
-    return { items: result.rows };
+    return { items: result.rows.map(publicCorrection) };
   }
 
   async submit(actor: AuthenticatedUser, input: CreatePersonnelCorrectionInput) {
@@ -92,17 +96,21 @@ export class PersonnelCorrectionRepository {
       const pending = await client.query(`SELECT request_id FROM ops.personnel_correction_request
         WHERE employee_id=$1::uuid AND request_status='pending_hr_approval'`, [input.employeeId]);
       if (pending.rows.length) throw new ConflictException("Personnel already has a pending correction");
+      const { nationalId, ...requested } = input.proposed;
+      const proposed = { ...state.values, ...requested,
+        ...(nationalId ? { nationalIdLast4: nationalId.slice(-4) } : {}) };
+      const nationalIdHash = nationalId ? createHash("sha256").update(nationalId).digest("hex") : null;
       const result = await client.query<CorrectionRow>(`INSERT INTO ops.personnel_correction_request
         (company_id, region_id, store_id, employee_id, assignment_id, employee_revision,
-         assignment_revision, previous_values, proposed_values, request_reason, submitted_by_user_id)
+         assignment_revision, previous_values, proposed_values, request_reason, submitted_by_user_id, proposed_national_id_hash)
         VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::timestamptz,$7::timestamptz,
-          $8::jsonb,$9::jsonb,$10,$11::uuid) RETURNING *`,
+          $8::jsonb,$9::jsonb,$10,$11::uuid,$12) RETURNING *`,
       [state.company_id, state.region_id, input.storeId, input.employeeId, state.assignment_id,
         state.employee_revision, state.assignment_revision, JSON.stringify(state.values),
-        JSON.stringify(input.proposed), input.reason, actor.userId]);
+        JSON.stringify(proposed), input.reason, actor.userId, nationalIdHash]);
       const row = result.rows[0];
       await this.writeAudit(client, actor, row, "submitted");
-      return row;
+      return publicCorrection(row);
     });
   }
 
@@ -124,11 +132,32 @@ export class PersonnelCorrectionRepository {
           throw new ConflictException("Personnel changed; reject this request and ask for a new correction");
         }
         const values = row.proposed_values;
+        if (row.previous_values.email !== undefined && state.values.email !== row.previous_values.email) {
+          throw new ConflictException("Personnel email changed; submit a new correction");
+        }
+        if (values.email && values.email !== state.values.email) {
+          const accounts = await client.query<{user_id: string; email: string; provider_subject: string | null}>(
+            `SELECT user_id, email, provider_subject FROM ops.user_account WHERE employee_id=$1::uuid FOR UPDATE`, [row.employee_id]);
+          if (accounts.rows.some(account => account.email !== state.values.email)) throw new ConflictException("Personnel email changed; submit a new correction");
+          const duplicate = await client.query(`SELECT user_id FROM ops.user_account WHERE (LOWER(email)=$1 OR LOWER(username)=$1) AND employee_id IS DISTINCT FROM $2::uuid`, [values.email, row.employee_id]);
+          if (duplicate.rows.length) throw new ConflictException("Email is already in use");
+          for (const account of accounts.rows) {
+            const active = await client.query(`SELECT identity_lifecycle_job_id FROM ops.identity_lifecycle_job WHERE user_id=$1::uuid AND status IN ('pending','processing')`, [account.user_id]);
+            if (active.rows.length) throw new ConflictException("Identity synchronization is pending; retry approval later");
+            await client.query(`UPDATE ops.user_account SET email=$2, username=$2, updated_at=NOW() WHERE user_id=$1::uuid`, [account.user_id, values.email]);
+            if (account.provider_subject) await client.query(`INSERT INTO ops.identity_lifecycle_job (user_id,operation,idempotency_key,requested_by_user_id) VALUES ($1::uuid,'update_profile',$2,$3)`, [account.user_id, `personnel-correction:${requestId}:${account.user_id}`, actor.userId]);
+          }
+        }
+        if (row.proposed_national_id_hash) {
+          const duplicate = await client.query(`SELECT employee_id FROM ops.employee WHERE company_id=$1::uuid AND national_id_hash=$2 AND employee_id<>$3::uuid`, [state.company_id, row.proposed_national_id_hash, row.employee_id]);
+          if (duplicate.rows.length) throw new ConflictException("National ID is already in use");
+        }
         await this.validatePosition(client, state.company_id, values.positionId);
         await client.query(`UPDATE ops.employee SET first_name=$2, last_name=$3,
-          phone_number=NULLIF($4,''), hire_date=$5::date, employment_type=$6, updated_at=NOW()
+          phone_number=NULLIF($4,''), hire_date=$5::date, employment_type=$6, email=COALESCE(NULLIF($7,''),email),
+          national_id_hash=COALESCE($8,national_id_hash), national_id_last4=COALESCE(NULLIF($9,''),national_id_last4), updated_at=NOW()
           WHERE employee_id=$1::uuid`, [row.employee_id, values.firstName, values.lastName,
-          values.phoneNumber, values.hireDate, values.employmentType]);
+          values.phoneNumber, values.hireDate, values.employmentType, values.email ?? null, row.proposed_national_id_hash ?? null, values.nationalIdLast4 ?? null]);
         // A profile correction does not transfer, terminate or rewrite assignment history.
         await client.query(`UPDATE ops.employee_assignment_history SET position_id=$2::uuid,
           updated_at=NOW() WHERE assignment_id=$1::uuid`, [state.assignment_id, values.positionId]);
@@ -138,7 +167,7 @@ export class PersonnelCorrectionRepository {
           reviewed_at=NOW(), updated_at=NOW() WHERE request_id=$1::uuid RETURNING *`,
       [requestId, input.decision === "approve" ? "approved" : "rejected", actor.userId, input.note]);
       await this.writeAudit(client, actor, row, input.decision === "approve" ? "approved" : "rejected");
-      return updated.rows[0];
+      return publicCorrection(updated.rows[0]);
     });
   }
 
@@ -150,4 +179,11 @@ export class PersonnelCorrectionRepository {
       metadata: { employeeId: row.employee_id, requestId: row.request_id, status },
     });
   }
+}
+
+/** Private staging hashes never cross the HTTP response boundary. */
+function publicCorrection<T extends CorrectionRow>(row: T): Omit<T, "proposed_national_id_hash"> {
+  const safe = { ...row };
+  delete safe.proposed_national_id_hash;
+  return safe;
 }

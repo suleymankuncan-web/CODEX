@@ -18,7 +18,8 @@ export function applyPersonnelCorrectionOpenApi(document: {
     review_note: nullableText, reviewed_at: nullableText, created_at: text, updated_at: text });
   document.components ??= {};
   document.components.schemas = { ...document.components.schemas,
-    PersonnelCorrectionValues: values,
+    PersonnelCorrectionValues: { ...values, properties: { ...values.properties, email: text, nationalIdLast4: text } },
+    PersonnelCorrectionInputValues: { ...values, required: [...values.required, "email", "nationalId"], properties: { ...values.properties, email: { type: "string", format: "email" }, nationalId: { type: "string", pattern: "^[0-9]{11}$" } } },
     PersonnelCorrection: row,
     PersonnelCorrectionList: object({ items: { type: "array", items: {
       ...row, required: [...row.required, "store_name", "previous_position_name", "proposed_position_name"],
@@ -27,7 +28,7 @@ export function applyPersonnelCorrectionOpenApi(document: {
     PersonnelCorrectionPersonnel: object({ employeeId: uuid, storeId: uuid, revision: text,
       values: ref("PersonnelCorrectionValues"), positions: { type: "array", items: object({ positionId: uuid, positionName: text }) } }),
     CreatePersonnelCorrectionDto: object({ storeId: uuid, employeeId: uuid, expectedRevision: text,
-      proposed: ref("PersonnelCorrectionValues"), reason: { type: "string", minLength: 1, maxLength: 500 } }),
+      proposed: ref("PersonnelCorrectionInputValues"), reason: { type: "string", minLength: 1, maxLength: 500 } }),
     ReviewPersonnelCorrectionDto: object({ decision: { type: "string", enum: ["approve", "reject"] }, note: { type: "string", minLength: 1, maxLength: 500 } }),
   };
   const base = "/api/workforce/personnel-corrections";

@@ -8,6 +8,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useLocalization } from '../localization/useLocalization'
+import { translatedNotificationMessage } from '../../lib/notification-messages'
+import { nationalPhoneDigits } from '../../lib/phone-number'
 import {
   createOffboardingRequest,
   createSellerCodeRequest,
@@ -34,6 +36,7 @@ export function WorkforceRequestDialogs(input: {
   dialog: WorkforceRequestDialog
   onDialogChange: (dialog: WorkforceRequestDialog) => void
   storeId: string
+  storeName: string
   handoffRequestId?: string | null
   handoffRequestType?: string | null
 }) {
@@ -79,14 +82,14 @@ export function WorkforceRequestDialogs(input: {
     mutationFn: createSellerCodeRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
+      dispatch({ type: 'resetSellerRequestSuccess', message: translatedNotificationMessage(result.command.message) ?? result.command.message })
     },
   })
   const sellerResubmitMutation = useMutation({
     mutationFn: resubmitSellerCodeRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
+      dispatch({ type: 'resetSellerRequestSuccess', message: translatedNotificationMessage(result.command.message) ?? result.command.message })
     },
   })
   const offboardingMutation = useMutation({
@@ -94,14 +97,14 @@ export function WorkforceRequestDialogs(input: {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
       void queryClient.invalidateQueries({ queryKey: ['store-workforce-command'] })
-      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
+      dispatch({ type: 'resetOffboardingRequestSuccess', message: translatedNotificationMessage(result.command.message) ?? result.command.message })
     },
   })
   const offboardingResubmitMutation = useMutation({
     mutationFn: resubmitOffboardingRequest,
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
-      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
+      dispatch({ type: 'resetOffboardingRequestSuccess', message: translatedNotificationMessage(result.command.message) ?? result.command.message })
     },
   })
   const submitSeller = () => {
@@ -109,8 +112,8 @@ export function WorkforceRequestDialogs(input: {
       firstName: state.sellerFirstName.trim(),
       lastName: state.sellerLastName.trim(),
       nationalId: state.sellerNationalId.trim(),
-      phoneNumber: state.sellerPhoneNumber.trim(),
-      username: state.sellerUsername.trim(),
+      phoneNumber: nationalPhoneDigits(state.sellerPhoneNumber),
+      username: state.sellerEmail.trim().toLowerCase(),
       email: state.sellerEmail.trim(),
       hireDate: state.sellerHireDate,
       requestedPositionId: state.sellerPositionId.trim(),
@@ -132,13 +135,13 @@ export function WorkforceRequestDialogs(input: {
     else offboardingMutation.mutate({ storeId: input.storeId, ...payload })
   }
   const editSeller = useCallback((item: SellerCodeRequest) => {
-    dispatch({ type: 'loadSellerRequestEdit', item, notice: item.reviewNote ?? t('storeApprovals.returnedSellerLoaded') })
+    dispatch({ type: 'loadSellerRequestEdit', item, notice: '' })
     onDialogChange('seller')
-  }, [onDialogChange, t])
+  }, [onDialogChange])
   const editOffboarding = useCallback((item: OffboardingRequest) => {
-    dispatch({ type: 'loadOffboardingRequestEdit', item, notice: item.reviewNote ?? t('storeApprovals.returnedOffboardingLoaded') })
+    dispatch({ type: 'loadOffboardingRequestEdit', item, notice: '' })
     onDialogChange('offboarding')
-  }, [onDialogChange, t])
+  }, [onDialogChange])
   useEffect(() => {
     if (!input.handoffRequestId || !input.handoffRequestType) return
     const key = `${input.handoffRequestType}:${input.handoffRequestId}`
@@ -154,10 +157,9 @@ export function WorkforceRequestDialogs(input: {
   }, [editOffboarding, editSeller, input.handoffRequestId, input.handoffRequestType, offboardingRequestsQuery.data?.items, sellerRequestsQuery.data?.items])
   const canSubmitSeller = Boolean(
     input.storeId && state.sellerFirstName.trim() && state.sellerLastName.trim()
-    && /^[0-9]{11}$/.test(state.sellerNationalId.trim()) && state.sellerPhoneNumber.trim()
-    && /^[a-zA-Z0-9._-]{3,80}$/.test(state.sellerUsername.trim())
+    && /^[0-9]{11}$/.test(state.sellerNationalId.trim()) && /^(?=(?:\D*\d){10,15}\D*$)[0-9+() -]{10,20}$/.test(state.sellerPhoneNumber.trim())
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.sellerEmail.trim())
-    && state.sellerHireDate && state.sellerPositionId.trim(),
+    && state.sellerHireDate && state.sellerPositionId.trim() && state.sellerEmploymentType && state.sellerRequestReason.trim(),
   )
   const canSubmitOffboarding = Boolean(
     input.storeId && state.offboardingEmployeeId.trim()
@@ -166,14 +168,14 @@ export function WorkforceRequestDialogs(input: {
 
   return (
     <Dialog open={input.dialog !== null} onOpenChange={(open) => { if (!open) input.onDialogChange(null) }}>
-      <DialogContent className="tw:max-h-[min(88vh,760px)] tw:overflow-y-auto tw:rounded-[1.35rem] tw:p-0 tw:sm:max-w-3xl">
-        <DialogHeader className="tw:border-b tw:px-5 tw:py-4 tw:pr-12">
+      <DialogContent className="workforce-request-dialog">
+        <DialogHeader className="workforce-drawer-heading">
           <DialogTitle>
             {input.dialog === 'seller' ? 'Personel sicil talebi' : input.dialog === 'offboarding' ? 'İşten ayrılma talebi' : 'İade edilen talepler'}
           </DialogTitle>
-          <DialogDescription>Yetkili mağaza kapsamında mevcut talep akışı kullanılır.</DialogDescription>
+          <DialogDescription>{input.storeName}</DialogDescription>
         </DialogHeader>
-        <div className="tw:p-4">
+        <div className="workforce-request-body">
           {input.dialog === 'seller' ? (
             <SellerCodeRequestForm
               access={{ createAllowed: Boolean(input.storeId), submitAllowed: canSubmitSeller }}
@@ -204,6 +206,7 @@ export function WorkforceRequestDialogs(input: {
               sellerRequestReason={state.sellerRequestReason}
               submission={{ notice: state.sellerRequestNotice, pending: sellerMutation.isPending || sellerResubmitMutation.isPending }}
               storeId={input.storeId}
+              storeLabel={input.storeName}
               t={t}
             />
           ) : null}

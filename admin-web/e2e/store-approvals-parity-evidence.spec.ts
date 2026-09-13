@@ -96,10 +96,15 @@ test('Approvals Report Viewer remains company-scoped and read-only', async ({ pa
 
 async function prepare(
   page: Page,
-  persona: 'regionManager' | 'reportViewer',
+  persona: 'regionManager' | 'reportViewer' | 'storeManager',
 ) {
   await installStoreContractSession(page, persona)
   await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/org/region-managers', route => route.fulfill({json:{items:[
+    {userId:'manager-one',displayName:'Mert Yalçın',storeIds:[storeIds[0]]},
+    {userId:'manager-two',displayName:'Can Kaya',storeIds:[storeIds[1]]},
+    {userId:'manager-no-requests',displayName:'Derya Akın',storeIds:[]},
+  ]}}))
   await page.route('**/api/workflow/request-center**', async (route) => {
     const url = new URL(route.request().url())
     const type = url.searchParams.get('type') ?? 'all'
@@ -206,3 +211,63 @@ async function expectNoHorizontalOverflow(page: Page) {
 function evidencePath(file: string) {
   return fileURLToPath(new URL(`${evidenceRoot}/${file}`, import.meta.url))
 }
+
+for (const persona of ['storeManager','regionManager','reportViewer'] as const) {
+  for (const width of [1440,390]) {
+    test(`Azure request center and inline history for ${persona} at ${width}`, async ({page},testInfo) => {
+      await page.setViewportSize({width,height:900})
+      await prepare(page,persona)
+      await page.goto('/store/approvals')
+      const rows=page.locator('[data-testid="store-approvals-request-row"]:visible')
+      await expect(rows).toHaveCount(2)
+      await expectCommandCanvasFrame(page)
+      await page.screenshot({path:testInfo.outputPath(`requests-${persona}-${width}.png`),fullPage:true})
+      await rows.first().click()
+      const history=page.getByRole('region',{name:/İşlem geçmişi/})
+      await expect(history).toBeVisible()
+      await expect(history.getByText('İşlem geçmişi',{exact:true})).toBeVisible()
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(history.getByRole('link')).toHaveCount(0)
+      await expectNoHorizontalOverflow(page)
+      await page.screenshot({path:testInfo.outputPath(`request-history-${persona}-${width}.png`),fullPage:true})
+      await rows.first().click()
+      await expect(history).toBeHidden()
+    })
+  }
+}
+
+test('request directory filters actual assigned managers independently of region and includes empty assignments',async ({page})=>{
+  await prepare(page,'reportViewer')
+  await page.route('**/api/workflow/request-center**',route=>{
+    const bucket=new URL(route.request().url()).searchParams.get('bucket')
+    const items=bucket === 'done' ? [] : requestItems().map(item=>({...item,regionId}))
+    return route.fulfill({json:{items,meta:{count:items.length,total:items.length,limit:200,offset:0},summary:{open:2,done:0,returned:1,overdue:1,periods:['2026-07']}}})
+  })
+  await page.goto('/store/approvals')
+  const directory=page.getByRole('complementary',{name:'Bölge müdürleri'})
+  await directory.getByText('Mert Yalçın',{exact:true}).click()
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(1)
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toContainText('Mall of İstanbul')
+  await directory.getByText('Can Kaya',{exact:true}).click()
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(1)
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toContainText('Bursa Downtown')
+  await directory.getByText('Derya Akın',{exact:true}).click()
+  await expect(page.getByText('Bu görünümde talep yok',{exact:true})).toBeVisible()
+})
+
+test('request search, returned filter and shared full-month calendar compose locally',async ({page})=>{
+  await prepare(page,'storeManager')
+  await page.goto('/store/approvals')
+  await page.getByLabel('Talep, mağaza veya kişi ara').fill('Örnek')
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(1)
+  await page.getByRole('button',{name:'Sıfırla',exact:true}).click()
+  await page.getByRole('button',{name:'İade edilen 1',exact:true}).click()
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toContainText('Örnek Personel')
+  await page.getByRole('button',{name:'Talep dönemi',exact:true}).click()
+  const calendar=page.getByRole('dialog',{name:'Dönem seç'})
+  await calendar.getByRole('combobox',{name:'Yıl'}).click()
+  await page.getByRole('option',{name:'2026',exact:true}).click()
+  await calendar.getByRole('group',{name:'Ay'}).getByRole('button',{name:'Temmuz',exact:true}).click()
+  await calendar.getByRole('button',{name:'Uygula',exact:true}).click()
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(1)
+})

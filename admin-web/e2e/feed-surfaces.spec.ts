@@ -24,7 +24,7 @@ test('admin feed allows HR admin to publish a challenge post', async ({ page }) 
   await page.getByLabel('Yarışma bitişi').fill('2026-05-31')
   await page.getByRole('button', { name: 'Postu yayınla' }).click()
 
-  await expect(page.getByText('Feed post created')).toBeVisible()
+  await expect(page.getByText('Gönderi oluşturuldu.')).toBeVisible()
   expect(createdPayload).toMatchObject({
     postType: 'challenge',
     title: 'May UPT Challenge',

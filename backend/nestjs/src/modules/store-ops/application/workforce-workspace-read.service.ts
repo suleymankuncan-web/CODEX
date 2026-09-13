@@ -20,6 +20,7 @@ export class WorkforceWorkspaceReadService {
 
   async getWorkspace(input: {
     actor: AuthenticatedUser;
+    regionManagerUserId?: string;
     limit?: number;
     offset?: number;
     historyStoreId?: string;
@@ -47,7 +48,7 @@ export class WorkforceWorkspaceReadService {
     const historyOffset = Math.max(input.historyOffset ?? 0, 0);
     const personnelLimit = clamp(input.personnelLimit ?? 50, 1, 100);
     const personnelOffset = Math.max(input.personnelOffset ?? 0, 0);
-    const query = input.query?.trim() ?? "";
+    const query = scope.view === "store_manager" ? "" : input.query?.trim() ?? "";
     const status = input.status ?? "all";
     const sort = input.sort ?? "store";
     const direction = input.direction ?? "ascending";
@@ -59,15 +60,21 @@ export class WorkforceWorkspaceReadService {
       return emptyWorkspace(scope.view, scope.capabilities, limit, offset);
     }
 
+    const managerFilter = scope.view === "report_viewer" && input.regionManagerUserId
+      ? { regionManagerUserId: input.regionManagerUserId }
+      : {};
     const [page, summaryRow] = await Promise.all([
-      this.repository.listStorePage({ scope: scope.readScope, limit, offset, query, status, sort, direction }),
-      this.repository.summarizeScope({ scope: scope.readScope }),
+      this.repository.listStorePage({ scope: scope.readScope, limit, offset, query, status, sort, direction, ...managerFilter }),
+      this.repository.summarizeScope({ scope: scope.readScope, ...managerFilter }),
     ]);
     const personnelStoreId = input.personnelStoreId
       ?? (scope.view === "store_manager" ? page.items[0]?.store_id : undefined);
     if (personnelStoreId && !(await this.repository.isStoreInScope({ scope: scope.readScope, storeId: personnelStoreId }))) {
       throw new ForbiddenException("Requested personnel store is outside workforce read scope");
     }
+    const personnelSummary = personnelStoreId
+      ? await this.repository.summarizeScope({ scope: { companyIds: [], regionIds: [], storeIds: [personnelStoreId] } })
+      : null;
     const personnelPage = personnelStoreId
       ? await this.repository.listActivePersonnel({
           scope: scope.readScope,
@@ -94,6 +101,7 @@ export class WorkforceWorkspaceReadService {
         storeStatus: row.store_status,
         norm,
         active,
+        turnoverRate: row.store_id === personnelStoreId ? nullableNumber(personnelSummary?.turnover_rate ?? null) : null,
         averageTenureDays: nullableNumber(row.average_tenure_days),
         gap: norm === null ? null : norm - active,
         shortageDays: row.shortage_days,
@@ -132,6 +140,7 @@ export class WorkforceWorkspaceReadService {
         items: historyPage.items.map((row): WorkforceWorkspaceHistoryRow => ({
           employeeId: row.employee_id,
           displayName: row.display_name || "Personel adı mevcut değil",
+          positionName: row.position_name ?? null,
           entryDate: row.entry_date,
           exitDate: row.exit_date,
           totalWorkingDays: row.total_working_days,
@@ -151,6 +160,7 @@ export class WorkforceWorkspaceReadService {
         shortageStores: Number(summaryRow.shortage_stores),
         openPositions: Number(summaryRow.open_positions),
         averageTenureDays: nullableNumber(summaryRow.average_tenure_days),
+        turnoverRate: nullableNumber(summaryRow.turnover_rate),
       },
       stores: {
         items: stores,
@@ -179,6 +189,7 @@ function emptyWorkspace(
       shortageStores: 0,
       openPositions: 0,
       averageTenureDays: null,
+      turnoverRate: null,
     },
     stores: { items: [], total: 0, limit, offset, hasMore: false },
     history: null,

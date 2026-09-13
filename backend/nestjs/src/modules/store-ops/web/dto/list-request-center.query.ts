@@ -17,8 +17,8 @@ export class ListRequestCenterQueryDto {
   bucket?: "open" | "done";
 
   @IsOptional()
-  @IsIn(["all", "target", "sellerCode", "offboarding"])
-  type?: "all" | "target" | "sellerCode" | "offboarding";
+  @IsIn(["all", "target", "sellerCode", "offboarding", "personnelCorrection"])
+  type?: "all" | "target" | "sellerCode" | "offboarding" | "personnelCorrection";
 
   @IsOptional()
   @IsIn(["all", "pending", "returned", "approved"])

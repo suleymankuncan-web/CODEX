@@ -72,6 +72,7 @@ export type WorkforceCommandWorkspace = {
     activePersonnel: number
     shortageStores: number
     openPositions: number
+    turnoverRate: number | null
     averageTenureDays: number | null
   }
   stores: {
@@ -86,6 +87,7 @@ export type WorkforceCommandWorkspace = {
     items: Array<{
       employeeId: string
       displayName: string
+      positionName: string | null
       entryDate: string
       exitDate: string | null
       totalWorkingDays: number | null
@@ -113,6 +115,7 @@ export type WorkforceCommandStore = {
   storeStatus: string
   norm: number | null
   active: number
+  turnoverRate?: number | null
   averageTenureDays: number | null
   gap: number | null
   shortageDays: number | null
@@ -274,6 +277,7 @@ export async function getOrgStores() {
 }
 
 export async function getWorkforceCommandWorkspace(input?: {
+  regionManagerUserId?: string | undefined
   limit?: number
   offset?: number
   historyStoreId?: string
@@ -293,6 +297,7 @@ export async function getWorkforceCommandWorkspace(input?: {
   appendOptionalQueryParam(params, 'historyStoreId', input?.historyStoreId)
   appendOptionalQueryParam(params, 'historyLimit', input?.historyLimit)
   appendOptionalQueryParam(params, 'historyOffset', input?.historyOffset)
+  appendOptionalQueryParam(params, 'regionManagerUserId', input?.regionManagerUserId)
   appendOptionalQueryParam(params, 'personnelStoreId', input?.personnelStoreId)
   appendOptionalQueryParam(params, 'personnelLimit', input?.personnelLimit)
   appendOptionalQueryParam(params, 'personnelOffset', input?.personnelOffset)

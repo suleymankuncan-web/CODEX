@@ -53,6 +53,14 @@ export class KeycloakAdminClient {
     await this.replaceRealmRoles(subject, user.role_codes);
   }
 
+  async updateProfile(subject: string, user: IdentityUserSnapshot) {
+    await this.request(`/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}`, {
+      method: "PUT",
+      body: JSON.stringify({ username: user.username, email: user.email, emailVerified: false,
+        firstName: user.first_name ?? undefined, lastName: user.last_name ?? undefined }),
+    });
+  }
+
   async disable(subject: string) {
     await this.request(`/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}`, {
       method: "PUT",

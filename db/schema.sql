@@ -68,6 +68,7 @@ CREATE TABLE ops.employee (
     external_employee_ref TEXT,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
+    email TEXT,
     national_id_hash TEXT,
     national_id_last4 TEXT,
     phone_number TEXT,
@@ -274,7 +275,7 @@ CREATE TABLE ops.identity_lifecycle_job (
     last_error_code TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT identity_lifecycle_job_operation_check CHECK (operation IN ('provision', 'enable', 'disable')),
+    CONSTRAINT identity_lifecycle_job_operation_check CHECK (operation IN ('provision', 'enable', 'disable', 'update_profile')),
     CONSTRAINT identity_lifecycle_job_status_check CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
     CONSTRAINT identity_lifecycle_job_attempts_check CHECK (attempts >= 0)
 );
@@ -4341,6 +4342,7 @@ CREATE TABLE IF NOT EXISTS ops.personnel_correction_request (
     employee_revision TIMESTAMPTZ NOT NULL,
     assignment_revision TIMESTAMPTZ NOT NULL,
     previous_values JSONB NOT NULL CHECK (jsonb_typeof(previous_values) = 'object'),
+    proposed_national_id_hash TEXT,
     proposed_values JSONB NOT NULL CHECK (jsonb_typeof(proposed_values) = 'object'),
     request_reason TEXT NOT NULL CHECK (length(btrim(request_reason)) BETWEEN 1 AND 500),
     request_status TEXT NOT NULL DEFAULT 'pending_hr_approval'

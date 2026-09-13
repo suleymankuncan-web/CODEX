@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { REQUEST_CENTER_SLA_POLICY } from "../application/request-center-sla-policy";
 
-export type RequestCenterRequestType = "target" | "sellerCode" | "offboarding";
+export type RequestCenterRequestType = "target" | "sellerCode" | "offboarding" | "personnelCorrection";
 
 export type RequestCenterReadRow = {
   request_id: string;
@@ -34,7 +34,12 @@ export type RequestCenterAuditRow = {
   event_total: string;
 };
 
+const terminalRequestSql = "(request_status = 'approved' OR (request_type = 'personnelCorrection' AND request_status = 'rejected'))";
+
 const requestCenterAuditEventTypes = [
+  "personnel_correction.submitted",
+  "personnel_correction.approved",
+  "personnel_correction.rejected",
   "target_distribution_request.created",
   "target_distribution_request.approved",
   "seller_code_request.created",
@@ -147,6 +152,20 @@ const offboardingRequestBranch = `
     ON e.employee_id = eor.employee_id
 `;
 
+const personnelCorrectionBranch = `
+  SELECT r.request_id::text AS request_id, 'personnelCorrection'::text AS request_type,
+    r.company_id, r.region_id, r.store_id, s.store_name, r.request_status,
+    'personnel_correction_request'::text AS entity_name,
+    r.created_at, r.reviewed_at, r.updated_at,
+    NULL::text AS target_label, NULL::text AS request_month,
+    NULL::integer AS allocation_count, NULL::text AS approval_mode,
+    NULLIF(BTRIM(CONCAT_WS(' ', r.previous_values->>'firstName', r.previous_values->>'lastName')), '') AS person_display_name,
+    NULL::text AS national_id_last4, NULL::text AS external_employee_ref,
+    CONCAT_WS(' ', r.previous_values->>'firstName', r.previous_values->>'lastName', s.store_name) AS search_text
+  FROM ops.personnel_correction_request r
+  INNER JOIN ops.store s ON s.store_id = r.store_id AND s.company_id = r.company_id
+`;
+
 @Injectable()
 export class RequestCenterReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -177,14 +196,14 @@ export class RequestCenterReadRepository {
 
     selectionClauses.push(
       input.bucket === "done"
-        ? "request_status = 'approved'"
-        : "request_status <> 'approved'",
+        ? terminalRequestSql
+        : `NOT ${terminalRequestSql}`,
     );
 
     if (input.status === "pending") {
       selectionClauses.push("request_status NOT IN ('approved', 'rejected')");
     } else if (input.status === "returned") {
-      selectionClauses.push("request_status = 'rejected'");
+      selectionClauses.push("request_status = 'rejected' AND request_type <> 'personnelCorrection'");
     } else if (input.status === "approved") {
       selectionClauses.push("request_status = 'approved'");
     }
@@ -228,7 +247,7 @@ export class RequestCenterReadRepository {
           SELECT
             scoped_rows.*,
             CASE
-              WHEN request_status = 'approved' THEN NULL
+              WHEN ${terminalRequestSql} THEN NULL
               WHEN request_type = 'target' AND request_status = 'pending_region_approval'
                 THEN created_at
               WHEN request_status = 'pending_hr_approval' THEN COALESCE(
@@ -241,7 +260,7 @@ export class RequestCenterReadRepository {
                       'seller_code_request.created',
                       'seller_code_request.resubmitted',
                       'employee_offboarding_request.created',
-                      'employee_offboarding_request.resubmitted'
+                      'employee_offboarding_request.resubmitted', 'personnel_correction.submitted'
                     )
                 ),
                 created_at
@@ -255,7 +274,7 @@ export class RequestCenterReadRepository {
                     AND event.entity_id = scoped_rows.request_id::uuid
                     AND event.event_type IN (
                       'seller_code_request.rejected',
-                      'employee_offboarding_request.rejected'
+                      'employee_offboarding_request.rejected', 'personnel_correction.rejected'
                     )
                 ),
                 reviewed_at
@@ -266,15 +285,15 @@ export class RequestCenterReadRepository {
         )
         SELECT
           COUNT(*) FILTER (WHERE ${selectionWhereSql})::text AS total_count,
-          COUNT(*) FILTER (WHERE request_status <> 'approved')::text AS open_count,
-          COUNT(*) FILTER (WHERE request_status = 'approved')::text AS done_count,
-          COUNT(*) FILTER (WHERE request_status = 'rejected')::text AS returned_count,
+          COUNT(*) FILTER (WHERE NOT ${terminalRequestSql})::text AS open_count,
+          COUNT(*) FILTER (WHERE ${terminalRequestSql})::text AS done_count,
+          COUNT(*) FILTER (WHERE request_status = 'rejected' AND request_type <> 'personnelCorrection')::text AS returned_count,
           COUNT(*) FILTER (WHERE
             (request_type = 'target' AND request_status = 'pending_region_approval'
               AND CURRENT_TIMESTAMP >= waiting_since + INTERVAL '${REQUEST_CENTER_SLA_POLICY.targetPendingRegionDays} days')
             OR (request_type <> 'target' AND request_status = 'pending_hr_approval'
               AND CURRENT_TIMESTAMP >= waiting_since + INTERVAL '${REQUEST_CENTER_SLA_POLICY.workforcePendingHrDays} days')
-            OR (request_type <> 'target' AND request_status = 'rejected'
+            OR (request_type NOT IN ('target', 'personnelCorrection') AND request_status = 'rejected'
               AND CURRENT_TIMESTAMP >= waiting_since + INTERVAL '${REQUEST_CENTER_SLA_POLICY.workforceReturnedStoreDays} days')
           )::text AS overdue_count,
           (SELECT COALESCE(
@@ -422,6 +441,7 @@ export class RequestCenterReadRepository {
   }
 
   private buildRequestRowsSql(type: RequestCenterListInput["type"]) {
+    if (type === "personnelCorrection") return personnelCorrectionBranch;
     if (type === "target") {
       return targetRequestBranch;
     }
@@ -435,11 +455,13 @@ export class RequestCenterReadRepository {
       targetRequestBranch,
       sellerCodeRequestBranch,
       offboardingRequestBranch,
+      personnelCorrectionBranch,
     ].join("\nUNION ALL\n");
   }
 }
 
 function requestEntityName(type: RequestCenterRequestType) {
+  if (type === "personnelCorrection") return "personnel_correction_request";
   if (type === "target") return "ops.target_distribution_request";
   if (type === "sellerCode") return "ops.seller_code_request";
   return "ops.employee_offboarding_request";

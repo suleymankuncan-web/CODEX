@@ -4,6 +4,7 @@ export function HrAxisToaster() {
   return (
     <Toaster
       closeButton
+      containerAriaLabel="Bildirimler"
       richColors={false}
       position="bottom-right"
       visibleToasts={3}
@@ -18,6 +19,7 @@ export function HrAxisToaster() {
         bottom: 'var(--hr-axis-toast-mobile-bottom)',
       }}
       toastOptions={{
+        closeButtonAriaLabel: 'Bildirimi kapat',
         classNames: {
           toast: 'hr-axis-toast',
           title: 'hr-axis-toast__title',

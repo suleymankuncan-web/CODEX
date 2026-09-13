@@ -7,7 +7,7 @@ export const REQUEST_CENTER_SLA_POLICY = {
   terminalStopsClock: true,
 } as const;
 
-export type RequestCenterPolicyType = "target" | "sellerCode" | "offboarding";
+export type RequestCenterPolicyType = "target" | "sellerCode" | "offboarding" | "personnelCorrection";
 export type RequestCenterNextOwner = "store" | "region" | "hr" | "system" | null;
 export type RequestCenterPolicyEvent = { eventType: string; occurredAt: string };
 
@@ -18,18 +18,18 @@ export function resolveAuthoritativeWaitingSince(input: {
   reviewedAt: string | null;
   events: RequestCenterPolicyEvent[];
 }) {
-  if (input.status === "approved") return null;
+  if (input.status === "approved" || (input.requestType === "personnelCorrection" && input.status === "rejected")) return null;
   if (input.requestType === "target" && input.status === "pending_region_approval") return input.createdAt;
   if (input.requestType === "target" && input.status === "rejected") return input.reviewedAt;
 
-  const prefix = input.requestType === "sellerCode"
+  const prefix = input.requestType === "personnelCorrection" ? "personnel_correction" : input.requestType === "sellerCode"
     ? "seller_code_request"
     : input.requestType === "offboarding"
       ? "employee_offboarding_request"
       : "target_distribution_request";
   const relevantTypes = input.status === "rejected"
     ? [`${prefix}.rejected`]
-    : [`${prefix}.created`, `${prefix}.resubmitted`];
+    : [`${prefix}.created`, `${prefix}.resubmitted`, `${prefix}.submitted`];
   const latest = input.events
     .filter((event) => relevantTypes.includes(event.eventType))
     .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))[0];
@@ -45,7 +45,7 @@ export function resolveRequestCenterTiming(input: {
   waitingSince: string | null;
   now?: Date;
 }) {
-  if (input.status === "approved") {
+  if (input.status === "approved" || (input.requestType === "personnelCorrection" && input.status === "rejected")) {
     return { waitingSince: null, nextOwner: null, dueAt: null, isOverdue: false } as const;
   }
   const policy = resolveActivePolicy(input.requestType, input.status);

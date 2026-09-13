@@ -1,8 +1,16 @@
 import { Transform, Type } from "class-transformer";
-import { IsDateString, IsDefined, IsIn, IsString, Length, Matches, ValidateNested } from "class-validator";
+import { IsEmail, IsDateString, IsDefined, IsIn, IsString, Length, Matches, ValidateNested } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class PersonnelCorrectionValuesDto {
+  @Transform(({ value }) => typeof value === "string" ? value.trim().toLowerCase() : value)
+  @IsEmail()
+  @Length(5, 254)
+  email!: string;
+
+  @Matches(/^[0-9]{11}$/)
+  nationalId!: string;
+
   @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
   @IsString()
   @Length(1, 100)
@@ -14,7 +22,7 @@ export class PersonnelCorrectionValuesDto {
   lastName!: string;
 
   @IsString()
-  @Matches(/^$|^[0-9+() -]{10,20}$/)
+  @Matches(/^(?=(?:\D*\d){10,15}\D*$)[0-9+() -]{10,20}$/)
   phoneNumber!: string;
 
   @Matches(/^\d{4}-\d{2}-\d{2}$/)

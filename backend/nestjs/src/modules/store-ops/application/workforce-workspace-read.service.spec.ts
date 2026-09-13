@@ -25,6 +25,7 @@ describe("WorkforceWorkspaceReadService", () => {
     };
     const service = new WorkforceWorkspaceReadService(repository as never);
     const result = await service.getWorkspace({
+      query: "Person",
       actor: buildAuthenticatedUser({
         userId: "user", roleCodes: ["STORE_MANAGER"],
         readScope: { companyIds: [], regionIds: [], storeIds: [storeId] },
@@ -61,4 +62,16 @@ describe("WorkforceWorkspaceReadService", () => {
       historyStoreId: storeId,
     })).rejects.toBeInstanceOf(ForbiddenException);
   });
+  it("filters the viewer store page and summary by the selected manager assignment", async () => {
+    const repository = {
+      listStorePage: jest.fn().mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 }),
+      summarizeScope: jest.fn().mockResolvedValue({ total_stores: "10", active_personnel: "60", shortage_stores: "0", open_positions: "0", average_tenure_days: null, turnover_rate: "12.5" }),
+    };
+    const service = new WorkforceWorkspaceReadService(repository as never);
+    const result = await service.getWorkspace({ actor: buildAuthenticatedUser({ userId: "viewer", roleCodes: ["REPORT_VIEWER"], roleScopes: { REPORT_VIEWER: { companyIds: ["company"], regionIds: [], storeIds: [] } } }), regionManagerUserId: "manager" });
+    expect(repository.listStorePage).toHaveBeenCalledWith(expect.objectContaining({ regionManagerUserId: "manager" }));
+    expect(repository.summarizeScope).toHaveBeenCalledWith({ scope: { companyIds: ["company"], regionIds: [], storeIds: [] }, regionManagerUserId: "manager" });
+    expect(result.summary.turnoverRate).toBe(12.5);
+  });
+
 });

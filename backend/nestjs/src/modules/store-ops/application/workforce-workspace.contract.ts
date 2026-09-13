@@ -22,6 +22,7 @@ export type WorkforceWorkspaceStore = {
   storeStatus: string;
   norm: number | null;
   active: number;
+  turnoverRate?: number | null
   averageTenureDays: number | null;
   gap: number | null;
   shortageDays: number | null;
@@ -35,7 +36,8 @@ export type WorkforceWorkspaceStore = {
 export type WorkforceWorkspaceHistoryRow = {
   employeeId: string;
   displayName: string;
-  entryDate: string;
+  positionName: string | null
+      entryDate: string;
   exitDate: string | null;
   totalWorkingDays: number | null;
 };
@@ -47,6 +49,7 @@ export type WorkforceCommandWorkspace = {
     activePersonnel: number;
     shortageStores: number;
     openPositions: number;
+    turnoverRate: number | null
     averageTenureDays: number | null;
   };
   stores: {

@@ -2,7 +2,7 @@ import { ConflictException, Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../shared/database/database.service";
 
-export type IdentityOperation = "provision" | "enable" | "disable";
+export type IdentityOperation = "provision" | "enable" | "disable" | "update_profile";
 
 type IdentityJobRow = {
   identity_lifecycle_job_id: string;

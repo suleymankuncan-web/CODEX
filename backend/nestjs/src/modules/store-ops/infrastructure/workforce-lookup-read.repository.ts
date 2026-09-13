@@ -97,7 +97,8 @@ export class WorkforceLookupReadRepository {
         INNER JOIN ops.position p
           ON p.company_id = s.company_id
         WHERE s.store_id = $1::uuid
-        ORDER BY p.is_managerial ASC, p.position_name ASC, p.position_code ASC
+        AND p.position_code IN ('STORE_MANAGER','ASSISTANT_MANAGER','SENIOR_SALES_CONSULTANT','SALES_ASSOCIATE','CASHIER','WAREHOUSE_SUPERVISOR')
+          ORDER BY array_position(ARRAY['STORE_MANAGER','ASSISTANT_MANAGER','SENIOR_SALES_CONSULTANT','SALES_ASSOCIATE','CASHIER','WAREHOUSE_SUPERVISOR'], p.position_code)
       `,
       [input.storeId],
     );
