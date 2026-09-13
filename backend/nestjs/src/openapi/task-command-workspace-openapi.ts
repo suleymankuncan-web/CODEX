@@ -68,6 +68,7 @@ export function applyTaskCommandWorkspaceOpenApi(document: MutableOpenApiDocumen
   setQueryParameters(document.paths, workspacePath, "get", [
     { name: "periodStart", in: "query", required: true, schema: { type: "string", format: "date" } },
     { name: "periodEnd", in: "query", required: true, schema: { type: "string", format: "date" } },
+    { name: "regionManagerUserId", in: "query", required: false, schema: uuid() },
     { name: "limit", in: "query", required: false, schema: boundedInteger() },
     { name: "offset", in: "query", required: false, schema: integer() },
   ]);

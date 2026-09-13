@@ -1,7 +1,12 @@
 import { Type } from "class-transformer";
 import { IsDateString, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetTaskCommandWorkspaceQueryDto {
+  @IsOptional()
+  @IsPostgresUuid()
+  regionManagerUserId?: string;
+
   @IsDateString({ strict: true })
   periodStart!: string;
 

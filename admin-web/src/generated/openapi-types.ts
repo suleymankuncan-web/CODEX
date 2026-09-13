@@ -547,7 +547,7 @@ export type components = {
     }
     "ChecklistCommandRegionRow": {
       "managerUserId": string
-      "regionId": string
+      "regionId": string | null
       "regionName": string
       "regionManagers": Array<{
           "displayName": string

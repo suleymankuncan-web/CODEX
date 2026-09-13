@@ -271,7 +271,7 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-report-package-read.module.ts',
-    { controllers: 1, providers: 2, exports: 0 },
+    { controllers: 1, providers: 3, exports: 0 },
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts',

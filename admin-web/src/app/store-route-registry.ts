@@ -111,7 +111,7 @@ const authenticatedStoreRoles = [
   'STORE_PERSONNEL',
 ]
 const allAuthenticatedStoreRoles = [...authenticatedStoreRoles, 'VISUAL_MERCHANDISER']
-const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER']
+const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER', 'STORE_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
@@ -496,6 +496,7 @@ const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
     'workforce',
     'tasks',
     'visualCampaigns',
+    'reports',
     'feed',
     'settings',
   ],

@@ -1,4 +1,4 @@
-import type { StoreMonthlyReportPackage } from '../features/reports/api'
+import type { StoreMonthlyReportPackage, StoreMonthlyReportPackageRow } from '../features/reports/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 
 export type StoreReportMetricTone = 'plum' | 'cyan' | 'mint' | 'amber'
@@ -49,21 +49,21 @@ export function buildStoreReportsViewModel(
       {
         id: 'period-package',
         label: t('storeReports.metric.periodPackage'),
-        value: '1',
+        value: summary ? '1' : t('storeReports.noValue'),
         copy: t('storeReports.metric.combinedExcel'),
         tone: 'plum',
       },
       {
         id: 'scope',
         label: t('storeReports.metric.scope'),
-        value: String(sections.length),
-        copy: t('storeReports.metric.processesTogether'),
+        value: summary ? String(storeCount) : t('storeReports.noValue'),
+        copy: t('storeReports.metric.stores'),
         tone: 'cyan',
       },
       {
         id: 'detail-output',
         label: t('storeReports.metric.detailOutput'),
-        value: String(readySections),
+        value: summary ? String(readySections) : t('storeReports.noValue'),
         copy: t('storeReports.metric.singleFile'),
         tone: 'mint',
       },
@@ -80,6 +80,11 @@ export function buildStoreReportsViewModel(
       },
     ] satisfies StoreReportMetric[],
   }
+}
+
+export function filterStoreReportRows(items: StoreMonthlyReportPackageRow[], search: string, locale: string) {
+  const query = search.trim().toLocaleLowerCase(locale)
+  return query ? items.filter(row => [row.storeName, row.city].some(value => value?.toLocaleLowerCase(locale).includes(query))) : items
 }
 
 function normalizeSections(

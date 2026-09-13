@@ -1,368 +1,142 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { ArrowRight, BriefcaseBusiness, ClipboardCheck, Database, FileSpreadsheet, Layers3, TrendingDown, Trophy } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, ClipboardCheck, FileSpreadsheet, Layers3, TrendingDown, Trophy } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
+import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../components/ui/empty'
+import { Skeleton } from '../components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getReportingSnapshotRuns, getReportingSummary } from '../features/reports/api'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
-import {
-  AdminKeyValue,
-  AdminKeyValueGrid,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty,
-} from './admin-surface-primitives'
-import {
-  AdminOperationalHeader,
-  AdminOperationalMetrics,
-  AdminOperationalPage,
-  AdminOperationalSection,
-} from './admin-operational-primitives'
+import { AdminAzureHeader } from './admin-azure-header'
+import './reports-summary-azure.css'
+
+const reportDefinitions = [
+  { id: 'workforce', rows: 'workforceRows', title: 'reportsSummary.workforceTitle', note: 'reportsSummary.workforceNote', action: 'reportsSummary.openWorkforce', snapshotAction: 'reportsSummary.openWorkforceForSnapshot', icon: BriefcaseBusiness },
+  { id: 'kpis', rows: 'kpiRows', title: 'reportsSummary.kpisTitle', note: 'reportsSummary.kpisNote', action: 'reportsSummary.openKpis', snapshotAction: 'reportsSummary.openKpisForSnapshot', icon: Trophy },
+  { id: 'checklists', rows: 'checklistRows', title: 'reportsSummary.checklistsTitle', note: 'reportsSummary.checklistsNote', action: 'reportsSummary.openChecklists', snapshotAction: 'reportsSummary.openChecklistsForSnapshot', icon: ClipboardCheck },
+  { id: 'turnover', rows: 'turnoverRows', title: 'reportsSummary.turnoverTitle', note: 'reportsSummary.turnoverNote', action: 'reportsSummary.openTurnover', snapshotAction: 'reportsSummary.openTurnoverForSnapshot', icon: TrendingDown },
+] as const
 
 const runStatusLabelKeys: Record<string, TranslationKey> = {
-  completed: 'reportsSummary.status.completed',
-  failed: 'reportsSummary.status.failed',
-  running: 'reportsSummary.status.running',
-  processing: 'reportsSummary.status.running',
-  queued: 'reportsSummary.status.queued',
-  pending: 'reportsSummary.status.pending',
+  completed: 'reportsSummary.status.completed', failed: 'reportsSummary.status.failed',
+  running: 'reportsSummary.status.running', processing: 'reportsSummary.status.running',
+  queued: 'reportsSummary.status.queued', pending: 'reportsSummary.status.pending',
 }
-
 const snapshotTypeLabelKeys: Record<string, TranslationKey> = {
-  daily: 'reportsSummary.snapshotType.daily',
-  monthly: 'reportsSummary.snapshotType.monthly',
+  daily: 'reportsSummary.snapshotType.daily', monthly: 'reportsSummary.snapshotType.monthly',
 }
 
 export function ReportsSummaryPage() {
   const { locale, t } = useLocalization()
-  const summaryQuery = useQuery({
-    queryKey: ['reporting-summary'],
-    queryFn: getReportingSummary,
-  })
-  const runsQuery = useQuery({
-    queryKey: ['reporting-snapshot-runs'],
-    queryFn: () => getReportingSnapshotRuns(),
-  })
-
-  if (summaryQuery.isLoading || runsQuery.isLoading) {
-    return (
-      <AdminOperationalPage>
-        <AdminStatePanel
-          title={t('reportsSummary.loadingTitle')}
-          description={t('reportsSummary.loadingCopy')}
-          isLoading
-        />
-      </AdminOperationalPage>
-    )
-  }
-
-  if (summaryQuery.isError) {
-    return (
-      <AdminOperationalPage>
-        <AdminStatePanel
-          title={t('reportsSummary.errorTitle')}
-          description={getErrorMessage(summaryQuery.error)}
-          tone="danger"
-        />
-      </AdminOperationalPage>
-    )
-  }
-
-  if (runsQuery.isError) {
-    return (
-      <AdminOperationalPage>
-        <AdminStatePanel
-          title={t('reportsSummary.runsErrorTitle')}
-          description={getErrorMessage(runsQuery.error)}
-          tone="danger"
-        />
-      </AdminOperationalPage>
-    )
-  }
-
+  const summaryQuery = useQuery({ queryKey: ['reporting-summary'], queryFn: getReportingSummary })
+  const runsQuery = useQuery({ queryKey: ['reporting-snapshot-runs'], queryFn: () => getReportingSnapshotRuns() })
   const summary = summaryQuery.data
-  if (!summary) {
-    return (
-      <AdminOperationalPage>
-        <AdminStatePanel
-          title={t('reportsSummary.noSummaryTitle')}
-          description={t('reportsSummary.noSummaryCopy')}
-          tone="danger"
-        />
-      </AdminOperationalPage>
-    )
-  }
-
-  const latestRun = summary.latestCompletedSnapshotRun
-  const totalRows =
-    summary.cards.workforceRows +
-    summary.cards.kpiRows +
-    summary.cards.checklistRows +
-    summary.cards.turnoverRows
-  const reportCoverageRows = [
-    {
-      id: 'workforce',
-      label: t('reportsSummary.workforceTitle'),
-      rows: summary.cards.workforceRows,
-      note: t('reportsSummary.workforceNote'),
-      href: latestRun ? `/admin/reports/workforce/${latestRun.snapshotRunId}` : null,
-      actionLabel: t('reportsSummary.openWorkforce'),
-    },
-    {
-      id: 'kpis',
-      label: t('reportsSummary.kpisTitle'),
-      rows: summary.cards.kpiRows,
-      note: t('reportsSummary.kpisNote'),
-      href: latestRun ? `/admin/reports/kpis/${latestRun.snapshotRunId}` : null,
-      actionLabel: t('reportsSummary.openKpis'),
-    },
-    {
-      id: 'checklists',
-      label: t('reportsSummary.checklistsTitle'),
-      rows: summary.cards.checklistRows,
-      note: t('reportsSummary.checklistsNote'),
-      href: latestRun ? `/admin/reports/checklists/${latestRun.snapshotRunId}` : null,
-      actionLabel: t('reportsSummary.openChecklists'),
-    },
-    {
-      id: 'turnover',
-      label: t('reportsSummary.turnoverTitle'),
-      rows: summary.cards.turnoverRows,
-      note: t('reportsSummary.turnoverNote'),
-      href: latestRun ? `/admin/reports/turnover/${latestRun.snapshotRunId}` : null,
-      actionLabel: t('reportsSummary.openTurnover'),
-    },
-  ]
+  const latestRun = summary?.latestCompletedSnapshotRun
+  const isLoading = summaryQuery.isLoading || runsQuery.isLoading
+  const errorTitle = summaryQuery.isError ? t('reportsSummary.errorTitle')
+    : runsQuery.isError ? t('reportsSummary.runsErrorTitle')
+      : !isLoading && !summary ? t('reportsSummary.noSummaryTitle') : null
+  const errorDescription = summaryQuery.isError ? getErrorMessage(summaryQuery.error)
+    : runsQuery.isError ? getErrorMessage(runsQuery.error) : t('reportsSummary.noSummaryCopy')
 
   return (
-    <AdminOperationalPage ariaLabel={t('reportsSummary.heroEyebrow')}>
-      <AdminOperationalHeader
-        eyebrow={t('reportsSummary.heroEyebrow')}
+    <section className="reports-summary-azure" aria-label={t('reportsSummary.heroEyebrow')}>
+      <AdminAzureHeader
         title={t('reportsSummary.heroTitle')}
         description={t('reportsSummary.heroCopy')}
-        icon={<FileSpreadsheet size={18} />}
-        actions={
-          <Button asChild variant="outline">
-            <Link to="/admin/reports/snapshot-runs">
-              {t('reportsSummary.openDrillDownChooser')}
-              <ArrowRight aria-hidden="true" />
-            </Link>
-          </Button>
-        }
+        icon={<FileSpreadsheet aria-hidden="true" />}
+        actions={<Button asChild variant="outline"><Link to="/admin/reports/snapshot-runs">
+          {t('reportsSummary.openDrillDownChooser')}<ArrowRight data-icon="inline-end" aria-hidden="true" />
+        </Link></Button>}
       />
-
-      <AdminOperationalMetrics
-        items={[
-          {
-            id: 'total-report-rows',
-            label: t('reportsSummary.totalReportRows'),
-            value: totalRows,
-            icon: <Database size={18} />,
-            tone: 'neutral',
-          },
-          {
-            id: 'latest-run',
-            label: t('reportsSummary.latestRun'),
-            value: latestRun ? formatSnapshotType(latestRun.snapshotType, t) : t('reportsSummary.noCompletedRun'),
-            icon: <Layers3 size={18} />,
-            tone: latestRun ? 'success' : 'warning',
-          },
-          {
-            id: 'status',
-            label: t('reportsSummary.status'),
-            value: latestRun ? formatRunStatus(latestRun.runStatus, t) : t('reportsSummary.unavailable'),
-            icon: <Trophy size={18} />,
-            tone: latestRun ? 'success' : 'neutral',
-          },
-        ]}
-      />
-
-      {latestRun ? (
-        <AdminOperationalSection
-          title={t('reportsSummary.reportingAnchorTitle')}
-          description={t('reportsSummary.latestSnapshotEyebrow')}
-        >
-          <AdminKeyValueGrid>
-            <AdminKeyValue label={t('reportsSummary.snapshotRunId')} value={latestRun.snapshotRunId} />
-            <AdminKeyValue label={t('reportsSummary.snapshotType')} value={formatSnapshotType(latestRun.snapshotType, t)} />
-            <AdminKeyValue
-              label={t('reportsSummary.period')}
-              value={`${formatDate(latestRun.periodStart, locale)} - ${formatDate(latestRun.periodEnd, locale)}`}
-            />
-            <AdminKeyValue label={t('reportsSummary.generatedAt')} value={formatDateTime(latestRun.generatedAt, locale)} />
-          </AdminKeyValueGrid>
-        </AdminOperationalSection>
-      ) : (
-        <AdminOperationalSection title={t('reportsSummary.reportingAnchorTitle')}>
-          <AdminSurfaceEmpty
-            title={t('reportsSummary.noCompletedTitle')}
-            copy={t('reportsSummary.noCompletedCopy')}
-          />
-        </AdminOperationalSection>
-      )}
-
-      <AdminOperationalMetrics
-        items={[
-          {
-            id: 'workforce-rows',
-            label: t('reportsSummary.workforceTitle'),
-            value: summary.cards.workforceRows,
-            description: t('reportsSummary.workforceNote'),
-            icon: <BriefcaseBusiness size={18} />,
-            tone: 'success',
-          },
-          {
-            id: 'kpi-rows',
-            label: t('reportsSummary.kpisTitle'),
-            value: summary.cards.kpiRows,
-            description: t('reportsSummary.kpisNote'),
-            icon: <Trophy size={18} />,
-            tone: 'accent',
-          },
-          {
-            id: 'checklist-rows',
-            label: t('reportsSummary.checklistsTitle'),
-            value: summary.cards.checklistRows,
-            description: t('reportsSummary.checklistsNote'),
-            icon: <ClipboardCheck size={18} />,
-            tone: 'warning',
-          },
-          {
-            id: 'turnover-rows',
-            label: t('reportsSummary.turnoverTitle'),
-            value: summary.cards.turnoverRows,
-            description: t('reportsSummary.turnoverNote'),
-            icon: <TrendingDown size={18} />,
-            tone: 'danger',
-          },
-        ]}
-      />
-
-      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
-        <AdminOperationalSection
-          title={t('reportsSummary.coverageTitle')}
-          description={t('reportsSummary.coverageEyebrow')}
-        >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('reportsSummary.coverageSlice')}</TableHead>
-                <TableHead>{t('reportsSummary.coverageRows')}</TableHead>
-                <TableHead className="tw:text-right">{t('reportsSummary.coverageAction')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reportCoverageRows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <div className="tw:font-medium">{row.label}</div>
-                    <div className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{row.note}</div>
-                  </TableCell>
-                  <TableCell>{row.rows}</TableCell>
-                  <TableCell className="tw:text-right">
-                    {row.href ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={row.href}>{row.actionLabel}</Link>
-                      </Button>
-                    ) : (
-                      <AdminSurfaceBadge tone="neutral">{t('reportsSummary.unavailable')}</AdminSurfaceBadge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </AdminOperationalSection>
-
-        <AdminOperationalSection
-          title={t('reportsSummary.recentRunsTitle')}
-          description={t('reportsSummary.recentRunsEyebrow')}
-        >
-          {runsQuery.data?.items.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
+      {isLoading ? (
+        <div role="status" aria-live="polite" className="reports-summary-loading">
+          <p>{t('reportsSummary.loadingTitle')}</p>
+          <div className="reports-summary-metrics" aria-hidden="true">
+            {reportDefinitions.map((report) => <Skeleton key={report.id} className="tw:h-40" />)}
+          </div>
+          <Skeleton className="tw:h-56" aria-hidden="true" />
+        </div>
+      ) : errorTitle ? (
+        <Alert variant="destructive">
+          <AlertTitle>{errorTitle}</AlertTitle>
+          <AlertDescription>{errorDescription}</AlertDescription>
+          <Button variant="outline" size="sm" className="tw:mt-3 tw:w-fit" onClick={() => {
+            void summaryQuery.refetch()
+            void runsQuery.refetch()
+          }}>{t('reportsSummary.retry')}</Button>
+        </Alert>
+      ) : summary ? (
+        <>
+          <div className="reports-summary-metrics" aria-label={t('reportsSummary.coverageEyebrow')}>
+            {reportDefinitions.map((report) => (
+              <Card key={report.id} className="reports-summary-metric" data-report={report.id}>
+                <CardHeader>
+                  <CardTitle><h2><report.icon aria-hidden="true" />{t(report.title)}</h2></CardTitle>
+                  <CardDescription>{t(report.note)}</CardDescription>
+                </CardHeader>
+                <CardContent><strong>{summary.cards[report.rows].toLocaleString(locale)}</strong><span>{t('reportsSummary.coverageRows')}</span></CardContent>
+                <CardFooter>
+                  {latestRun ? <Button asChild variant="ghost" size="sm"><Link to={`/admin/reports/${report.id}/${latestRun.snapshotRunId}`}>
+                    {t(report.action)}<ArrowRight data-icon="inline-end" aria-hidden="true" />
+                  </Link></Button> : <Badge variant="outline">{t('reportsSummary.unavailable')}</Badge>}
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+          <Card className="reports-summary-section">
+            <CardHeader>
+              <CardTitle><h2><Layers3 aria-hidden="true" />{t('reportsSummary.reportingAnchorTitle')}</h2></CardTitle>
+              <CardDescription>{t('reportsSummary.latestSnapshotEyebrow')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {latestRun ? <dl className="reports-summary-context">
+                <div><dt>{t('reportsSummary.period')}</dt><dd>{formatDate(latestRun.periodStart, locale)} - {formatDate(latestRun.periodEnd, locale)}</dd></div>
+                <div><dt>{t('reportsSummary.snapshotType')}</dt><dd>{formatSnapshotType(latestRun.snapshotType, t)} <RunStatus status={latestRun.runStatus} t={t} /></dd></div>
+                <div><dt>{t('reportsSummary.generatedAt')}</dt><dd>{formatDateTime(latestRun.generatedAt, locale)}</dd></div>
+                <div><dt>{t('reportsSummary.snapshotRunId')}</dt><dd className="reports-summary-run-id">{latestRun.snapshotRunId}</dd></div>
+              </dl> : <Empty><EmptyHeader><EmptyTitle>{t('reportsSummary.noCompletedTitle')}</EmptyTitle><EmptyDescription>{t('reportsSummary.noCompletedCopy')}</EmptyDescription></EmptyHeader></Empty>}
+            </CardContent>
+            <CardFooter className="reports-summary-total"><span>{t('reportsSummary.totalReportRows')}</span><strong>{reportDefinitions.reduce((total, report) => total + summary.cards[report.rows], 0).toLocaleString(locale)}</strong></CardFooter>
+          </Card>
+          <Card className="reports-summary-section reports-summary-history">
+            <CardHeader>
+              <CardTitle><h2>{t('reportsSummary.recentRunsTitle')}</h2></CardTitle>
+              <CardDescription>{t('reportsSummary.recentRunsEyebrow')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {runsQuery.data?.items.length ? <Table aria-label={t('reportsSummary.recentRunsTitle')}>
+                <TableHeader><TableRow>
                   <TableHead>{t('reportsSummary.latestRun')}</TableHead>
                   <TableHead>{t('reportsSummary.period')}</TableHead>
-                  <TableHead className="tw:text-right">{t('reportsSummary.openDrillDownChooser')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {runsQuery.data.items.map((run) => (
-                  <TableRow key={run.snapshotRunId}>
-                    <TableCell>
-                      <div className="tw:font-medium">
-                        {t('reportsSummary.snapshotLabel', { type: formatSnapshotType(run.snapshotType, t) })}
-                      </div>
-                      <div className="tw:mt-1 tw:max-w-56 tw:truncate tw:text-xs tw:text-muted-foreground">
-                        {run.snapshotRunId}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}</div>
-                      <AdminSurfaceBadge tone="success">{formatRunStatus(run.runStatus, t)}</AdminSurfaceBadge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="tw:flex tw:flex-wrap tw:justify-end tw:gap-2">
-                        <Button asChild size="sm" variant="outline">
-                          <Link
-                            to={`/admin/reports/workforce/${run.snapshotRunId}`}
-                            aria-label={t('reportsSummary.openWorkforceForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                          >
-                            {t('reportsSummary.openWorkforce')}
-                          </Link>
-                        </Button>
-                        <Button asChild size="sm" variant="outline">
-                          <Link
-                            to={`/admin/reports/kpis/${run.snapshotRunId}`}
-                            aria-label={t('reportsSummary.openKpisForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                          >
-                            {t('reportsSummary.openKpis')}
-                          </Link>
-                        </Button>
-                        <Button asChild size="sm" variant="outline">
-                          <Link
-                            to={`/admin/reports/checklists/${run.snapshotRunId}`}
-                            aria-label={t('reportsSummary.openChecklistsForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                          >
-                            {t('reportsSummary.openChecklists')}
-                          </Link>
-                        </Button>
-                        <Button asChild size="sm" variant="outline">
-                          <Link
-                            to={`/admin/reports/turnover/${run.snapshotRunId}`}
-                            aria-label={t('reportsSummary.openTurnoverForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                          >
-                            {t('reportsSummary.openTurnover')}
-                          </Link>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <AdminSurfaceEmpty copy={t('reportsSummary.recentRunsEmpty')} />
-          )}
-        </AdminOperationalSection>
-      </div>
-    </AdminOperationalPage>
+                  <TableHead>{t('reportsSummary.status')}</TableHead>
+                  <TableHead>{t('reportsSummary.coverageAction')}</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>{runsQuery.data.items.map((run) => <TableRow key={run.snapshotRunId}>
+                  <TableCell><strong>{t('reportsSummary.snapshotLabel', { type: formatSnapshotType(run.snapshotType, t) })}</strong><span className="reports-summary-run-id">{run.snapshotRunId}</span></TableCell>
+                  <TableCell><span className="reports-summary-mobile-label">{t('reportsSummary.period')}</span>{formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}</TableCell>
+                  <TableCell><RunStatus status={run.runStatus} t={t} /></TableCell>
+                  <TableCell><nav className="reports-summary-run-links" aria-label={run.snapshotRunId}>
+                    {reportDefinitions.map((report) => <Button key={report.id} asChild size="sm" variant="outline"><Link to={`/admin/reports/${report.id}/${run.snapshotRunId}`} aria-label={t(report.snapshotAction, { snapshotRunId: run.snapshotRunId })}>{t(report.action)}</Link></Button>)}
+                  </nav></TableCell>
+                </TableRow>)}</TableBody>
+              </Table> : <Empty><EmptyHeader><EmptyDescription>{t('reportsSummary.recentRunsEmpty')}</EmptyDescription></EmptyHeader></Empty>}
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+    </section>
   )
 }
 
-function formatRunStatus(status: string, t: TranslateFunction) {
+function RunStatus({ status, t }: { status: string; t: TranslateFunction }) {
   const key = runStatusLabelKeys[status]
-  return key ? t(key) : status
+  return <Badge variant={status === 'failed' ? 'destructive' : status === 'completed' ? 'secondary' : 'outline'}>{key ? t(key) : status}</Badge>
 }
 
 function formatSnapshotType(type: string, t: TranslateFunction) {

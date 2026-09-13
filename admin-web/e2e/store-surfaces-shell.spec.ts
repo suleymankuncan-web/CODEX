@@ -31,7 +31,7 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   const storeSidebar = page.locator('.store-command-sidebar')
   await expect(storeNav.locator('a[href="/store/checklists"]')).toBeVisible()
   await expect(storeNav.locator('a[href="/store/targets"]')).toBeVisible()
-  await expect(storeNav.locator('a[href="/store/reports"]')).toHaveCount(0)
+  await expect(storeNav.locator('a[href="/store/reports"]')).toBeVisible()
   await expect(page.getByRole('main', { name: 'Mağaza çalışma alanı' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Operasyon Paneli' })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
@@ -116,7 +116,7 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
     .getByRole('link', { name: 'Görevler', exact: true })
     .click()
 
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', level: 1 })).toBeVisible()
   expect(workflowInboxRequests).toBe(1)
 })
 
@@ -809,7 +809,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Görevler',
     path: '/store/tasks',
-    ready: page.getByRole('heading', { name: 'Görevler' }),
+    ready: page.getByRole('heading', { name: 'Görevler', exact: true }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Duyurular',
@@ -847,13 +847,13 @@ test('store settings utility pages show honest preferences and stay mobile-safe'
 
   await page.goto('/store/reports')
 
-  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Raporlar' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Raporlar', level: 1 })).toBeVisible()
+  await expect(page.locator('.operations-directory')).toHaveCount(0)
 
   await page.setViewportSize({ width: 390, height: 900 })
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raporlar', level: 1 })).toBeVisible()
   await expect.poll(
     () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
   ).toBe(true)
@@ -908,6 +908,7 @@ test('store reports package is visible for region managers and stays mobile-safe
       return window.getComputedStyle(nav).position !== 'fixed'
     }),
   ).toBe(true)
+  await page.getByLabel('Paket içeriği').locator('summary').click()
   await expect(page.getByText('KPI kolonları')).toBeVisible()
 })
 
@@ -927,12 +928,14 @@ test('store reports switches owned package copy to English', async ({ page }) =>
 
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Download Excel/i })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Package contents' })).toBeVisible()
+  await expect(page.getByLabel('Package contents')).toBeVisible()
+  await page.getByLabel('Package contents').locator('summary').click()
   await expect(page.getByText('KPI kolonları')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toHaveCount(0)
 
   await setStoredLocale(page, 'tr')
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
+  await page.getByLabel('Paket içeriği').locator('summary').click()
   await expect(page.getByText('KPI kolonları')).toBeVisible()
 })
 

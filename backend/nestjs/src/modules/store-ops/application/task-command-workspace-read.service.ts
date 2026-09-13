@@ -4,6 +4,7 @@ import { TaskCommandWorkspaceReadRepository } from "../infrastructure/task-comma
 import type { StoreActionPlanStatus } from "./store-action-plan.contract";
 import type { TaskCommandWorkspace } from "./task-command-workspace.contract";
 import { resolveTaskCommandWorkspaceScope } from "./task-command-workspace-scope";
+import { RegionManagerDirectoryService } from "./region-manager-directory.service";
 
 const resultStatuses: StoreActionPlanStatus[] = ["closed", "cancelled"];
 const regionStatuses: StoreActionPlanStatus[] = ["solution_review_pending", "closed", "cancelled"];
@@ -11,17 +12,24 @@ const allStatuses: StoreActionPlanStatus[] = ["open", "in_progress", "blocked", 
 
 @Injectable()
 export class TaskCommandWorkspaceReadService {
-  constructor(private readonly repository: TaskCommandWorkspaceReadRepository) {}
+  constructor(private readonly repository: TaskCommandWorkspaceReadRepository, private readonly managerDirectory: RegionManagerDirectoryService) {}
 
   async getWorkspace(input: {
-    actor: AuthenticatedUser; periodStart: string; periodEnd: string; limit?: number; offset?: number;
+    actor: AuthenticatedUser; periodStart: string; periodEnd: string; limit?: number; offset?: number; regionManagerUserId?: string;
   }): Promise<TaskCommandWorkspace> {
     const scope = this.resolveScope(input.actor);
     const period = normalizePeriod(input.periodStart, input.periodEnd);
     const limit = clamp(input.limit ?? 20, 1, 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
+    let filterStoreIds: string[] | undefined;
+    if (input.regionManagerUserId) {
+      if (scope.view !== "report_viewer") throw new ForbiddenException("Manager filtering requires company read access");
+      const directory = await this.managerDirectory.list(input.actor);
+      filterStoreIds = directory.items.find(manager => manager.userId === input.regionManagerUserId)?.storeIds ?? [];
+    }
     const page = await this.repository.readPage({
       companyIds: scope.companyIds, regionIds: scope.regionIds, storeIds: scope.storeIds,
+      ...(filterStoreIds ? { filterStoreIds } : {}),
       statuses: scope.view === "store_manager" ? allStatuses : scope.view === "region_manager" ? regionStatuses : resultStatuses,
       periodStart: period.periodStart, periodEnd: period.periodEnd,
       limit, offset, eventLimit: 3,

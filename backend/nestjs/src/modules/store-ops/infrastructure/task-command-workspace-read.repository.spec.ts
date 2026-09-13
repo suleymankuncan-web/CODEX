@@ -5,6 +5,20 @@ const companyId = "22222222-2222-4222-8222-222222222222";
 const actionPlanId = "33333333-3333-4333-8333-333333333333";
 
 describe("TaskCommandWorkspaceReadRepository", () => {
+  it.each([[storeId], []])("intersects manager stores with company scope before count and pagination: %j", async (...storeIds: string[]) => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const repository = new TaskCommandWorkspaceReadRepository({ query } as never);
+    await repository.readPage({
+      companyIds: [companyId], regionIds: [], storeIds: [], filterStoreIds: storeIds,
+      statuses: ["closed"], periodStart: "2026-07-01", periodEnd: "2026-07-31",
+      limit: 20, offset: 20, eventLimit: 3,
+    });
+    for (const [sql, params] of query.mock.calls) {
+      expect(sql).toContain("p.company_id = ANY($1::uuid[])");
+      expect(sql).toContain("p.store_id = ANY($2::uuid[])");
+      expect(params.slice(0, 2)).toEqual([[companyId], storeIds]);
+    }
+  });
   it("reads one bounded page and one batched audit preview without exposing actor ids", async () => {
     const query = jest.fn()
       .mockResolvedValueOnce({ rows: [{ total: 1 }] })

@@ -127,7 +127,7 @@ export function ReportViewerChecklistCommandPage(input: {
 
       {regionQuery.isError ? <div role="alert" className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/25 tw:bg-destructive/5 tw:p-3 tw:text-xs tw:text-destructive"><span>{copy.partialError}</span><Button size="sm" variant="outline" onClick={() => void regionQuery.refetch()}>{copy.retry}</Button></div> : null}
 
-      {managerRows.length === 0 ? <EmptyState title={searchValue ? copy.searchEmptyTitle : copy.emptyTitle} copy={searchValue ? copy.searchEmptyCopy : copy.emptyCopy} /> : (
+      {
         <div className="tw:grid tw:min-w-0 tw:gap-3 tw:xl:grid-cols-[264px_minmax(0,1fr)]">
           <aside className="tw:min-w-0 tw:self-start tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:shadow-sm" aria-labelledby="report-viewer-manager-list-title">
             <header className="tw:border-b tw:border-border tw:p-3">
@@ -148,9 +148,9 @@ export function ReportViewerChecklistCommandPage(input: {
             <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{Math.floor(regionOffset / REGION_PAGE_SIZE) + 1}</span><div className="tw:flex tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={copy.previous} disabled={regionOffset === 0} onClick={() => { retainCurrentRegion(); setRegionOffset(Math.max(0, regionOffset - REGION_PAGE_SIZE)); setSelectedManagerKey(null) }}><ChevronLeft /></Button><Button size="icon-xs" variant="ghost" aria-label={copy.next} disabled={!data.page.hasMore} onClick={() => { retainCurrentRegion(); setRegionOffset(regionOffset + REGION_PAGE_SIZE); setSelectedManagerKey(null) }}><ChevronRight /></Button></div></footer>
           </aside>
 
-          {activeManager ? <ReportViewerManagerWorkspace authSummary={input.authSummary} locale={locale} managerName={activeManager.managerName} managerUserId={activeManager.region.managerUserId} onOpenResult={input.onOpenResult} period={period} /> : null}
+          {activeManager ? <ReportViewerManagerWorkspace authSummary={input.authSummary} locale={locale} managerName={activeManager.managerName} managerUserId={activeManager.region.managerUserId} onOpenResult={input.onOpenResult} period={period} /> : <EmptyState title={searchValue ? copy.searchEmptyTitle : copy.emptyTitle} copy={searchValue ? copy.searchEmptyCopy : copy.emptyCopy} />}
         </div>
-      )}
+      }
 
       <ReportViewerVisitCalendarDialog authSummary={input.authSummary} initialManagerKey={activeManager?.key ?? null} locale={locale} managers={calendarManagers} open={calendarOpen} period={period} onOpenChange={setCalendarOpen} />
     </StoreSurfacePage>
@@ -178,7 +178,7 @@ function isResolvedManagerDisplayName(value: string) {
 }
 
 function isResolvedManagerUserId(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
 function EmptyState({ title, copy }: { title: string; copy: string }) {

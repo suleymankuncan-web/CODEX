@@ -14,18 +14,12 @@ import { Link } from 'react-router'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   getStoreQueryScopeSignature,
-  retainScopedPlaceholder,
   storeWorkflowInboxQueryKey,
 } from '../features/auth/store-query-scope'
 import {
-  CommandCanvasDataList,
   CommandCanvasFilterBar,
-  CommandCanvasMetricFilter,
-  CommandCanvasMetricRail,
-  CommandCanvasCalendarMonthYearPicker,
   CommandCanvasOperationalDrawerContent,
   CommandCanvasPage,
-  CommandCanvasPageHeader,
   CommandCanvasSortableHeading,
 } from '../features/store-command-canvas/primitives'
 import {
@@ -51,6 +45,12 @@ import { Input } from '../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
 import { Textarea } from '../components/ui/textarea'
+import { Badge } from '../components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../components/ui/input-group'
+import { getRegionManagerDirectory } from '../features/org/region-manager-directory'
+import { ApiError } from '../lib/api'
+import { OperationsDirectory, OperationsMetrics, OperationsPeriod, StoreOperationsHeader } from './store-operations-layout'
 import { actionToast } from '../lib/action-toast'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import './store-tasks-command-canvas.css'
@@ -79,6 +79,7 @@ function StoreTasksWorkspace(input: {
   const scopeSignature = input.scopeSignature
   const [period, setPeriod] = useState(currentMonth())
   const [offset, setOffset] = useState(0)
+  const [managerUserId, setManagerUserId] = useState('all')
   const [search, setSearch] = useState('')
   const deferredSearch = useDeferredValue(search)
   const [status, setStatus] = useState('all')
@@ -86,17 +87,22 @@ function StoreTasksWorkspace(input: {
   const [sort, setSort] = useState<SortKey>('date')
   const [direction, setDirection] = useState<Direction>('descending')
   const [selection, setSelection] = useState<{ row: TaskRow; scopeSignature: string } | null>(null)
-  const selected = selection?.scopeSignature === scopeSignature ? selection.row : null
   const range = useMemo(() => monthRange(period), [period])
-  const queryKey = ['store-tasks-command-workspace', scopeSignature, period, offset] as const
+  const queryKey = ['store-tasks-command-workspace', scopeSignature, period, managerUserId, offset] as const
   const workspaceQuery = useQuery({
     queryKey,
-    queryFn: () => getTaskCommandWorkspace({ ...range, limit: PAGE_SIZE, offset }),
-    placeholderData: (previousData, previousQuery) =>
-      retainScopedPlaceholder(previousData, previousQuery?.queryKey, scopeSignature),
+    queryFn: () => getTaskCommandWorkspace({ ...range, limit: PAGE_SIZE, offset, ...(managerUserId === 'all' ? {} : { regionManagerUserId: managerUserId }) }),
     ...transientQueryRetryOptions,
   })
-  const workspace = workspaceQuery.data
+  const denied = workspaceQuery.error instanceof ApiError && [401,403].includes(workspaceQuery.error.status)
+  const workspace = denied ? undefined : workspaceQuery.data
+  const viewer = workspace?.view === 'report_viewer'
+  const directoryQuery = useQuery({
+    queryKey: ['region-manager-directory', scopeSignature],
+    queryFn: getRegionManagerDirectory,
+    enabled: viewer,
+    ...transientQueryRetryOptions,
+  })
   const canMutate = workspace?.view === 'store_manager' && Boolean(workspace.capabilities.canUpdate)
   const inboxQuery = useQuery({
     queryKey: storeWorkflowInboxQueryKey(input.authSummary),
@@ -133,6 +139,9 @@ function StoreTasksWorkspace(input: {
     () => filterAndSort(rows, { search: deferredSearch, status, rail, sort, direction }),
     [deferredSearch, direction, rail, rows, sort, status],
   )
+  const selected = !denied && selection?.scopeSignature === scopeSignature
+    ? rows.find(row => row.id === selection.row.id) ?? null
+    : null
 
   function selectSort(next: SortKey) {
     if (sort === next) setDirection((value) => value === 'ascending' ? 'descending' : 'ascending')
@@ -154,12 +163,13 @@ function StoreTasksWorkspace(input: {
 
   return (
     <CommandCanvasPage ariaLabelledBy="tasks-command-title" className="tasks-command-page" testId="store-tasks-page">
-      <CommandCanvasPageHeader
+      <StoreOperationsHeader
         title="Görevler"
         titleId="tasks-command-title"
+        icon={ListTodo}
         eyebrow={workspace?.view === 'report_viewer' ? 'RAPOR GÖRÜNÜMÜ' : workspace?.view === 'region_manager' ? 'BÖLGE GÖRÜNÜMÜ' : 'MAĞAZA ÇALIŞMA ALANI'}
         description={workspace?.view === 'store_manager' ? 'Aksiyonları başlatın, takip edin ve sonucu kaydedin.' : 'Tamamlanan mağaza aksiyonlarını ve denetlenebilir sonuç geçmişini inceleyin.'}
-        actions={<CommandCanvasCalendarMonthYearPicker ariaLabel="Görev dönemini seç" locale={locale} value={period} maxValue={currentMonth()} onValueChange={(value) => { setPeriod(value.slice(0, 7)); setOffset(0); setSelection(null) }} />}
+        actions={<OperationsPeriod label="Görev dönemini seç" locale={locale} value={period} onChange={(value) => { setPeriod(value); setOffset(0); setSelection(null) }} />}
       />
       {workspaceQuery.isError && workspace ? (
         <div className="tasks-command-partial-error" role="alert">
@@ -173,37 +183,40 @@ function StoreTasksWorkspace(input: {
           <Button variant="outline" onClick={() => void inboxQuery.refetch()}>Tekrar dene</Button>
         </div>
       ) : null}
-      <CommandCanvasMetricRail ariaLabel="Görev sonuç özeti">
-        <CommandCanvasMetricFilter label="Toplam sonuç" value={String(workspace?.summary.retained ?? 0)} note={canMutate ? `${workspace?.summary.actionable ?? 0} aksiyon alınacak` : 'Bu sayfadaki kayıt'} icon={<ListTodo />} tone="plum" active={rail === 'all'} onClick={() => setRail('all')} />
-        <CommandCanvasMetricFilter label="Çözüm bildirildi" value={String(workspace?.summary.completed ?? 0)} note="Bu sayfadaki tamamlanan" icon={<CheckCircle2 />} tone="mint" active={rail === 'completed'} onClick={() => setRail('completed')} />
-        <CommandCanvasMetricFilter label="İptal edildi" value={String(workspace?.summary.cancelled ?? 0)} note="Bu sayfadaki iptal" icon={<Ban />} tone="rose" active={rail === 'cancelled'} onClick={() => setRail('cancelled')} />
-        <CommandCanvasMetricFilter label="Checklist kaynağı" value={String(workspace?.summary.checklist ?? 0)} note="Bu sayfadaki denetim" icon={<ClipboardCheck />} tone="cyan" active={rail === 'checklist'} onClick={() => setRail('checklist')} />
-      </CommandCanvasMetricRail>
+      <OperationsMetrics label="Görev sonuç özeti" items={[
+        {id:'all',label:'Görev sayısı',value:rows.length,icon:ListTodo,selected:rail==='all',onClick:()=>setRail('all')},
+        {id:'completed',label:'Çözüm bildirildi',value:workspace?.summary.completed ?? 0,icon:CheckCircle2,selected:rail==='completed',onClick:()=>setRail('completed')},
+        {id:'cancelled',label:'İptal edildi',value:workspace?.summary.cancelled ?? 0,icon:Ban,selected:rail==='cancelled',onClick:()=>setRail('cancelled')},
+        {id:'checklist',label:'Checklist kaynağı',value:workspace?.summary.checklist ?? 0,icon:ClipboardCheck,selected:rail==='checklist',onClick:()=>setRail('checklist')},
+      ]} />
+      <div className={viewer ? 'operations-workspace operations-workspace-with-directory' : 'operations-workspace'}>
+        {viewer ? <div>
+          <OperationsDirectory locale={locale} value={managerUserId} items={(directoryQuery.data?.items ?? []).map(manager=>({id:manager.userId,label:manager.displayName,detail:manager.storeIds.length+' mağaza'}))} onChange={value=>{setManagerUserId(value);setOffset(0);setSelection(null)}} />
+          {directoryQuery.isLoading ? <p role="status">Bölge müdürleri yükleniyor…</p> : null}
+          {directoryQuery.isError ? <div className="tasks-command-partial-error" role="alert"><span>Bölge müdürleri alınamadı.</span><Button variant="outline" onClick={()=>void directoryQuery.refetch()}>Tekrar dene</Button></div> : null}
+        </div> : null}
+        <section className="operations-board tasks-command-board" aria-label="Görev listesi">
+          <div className="operations-board-toolbar">
+            <div className="operations-board-title"><h2>{viewer ? 'Mağaza sonuçları' : 'Mağaza görevleri'}</h2><span className="tasks-summary-context">Özet ve filtreler bu sayfadaki {rows.length} görev içindir.</span></div>
       <CommandCanvasFilterBar
-        search={<label className="tasks-command-search"><Search aria-hidden="true" /><Input aria-label="Görev veya mağaza ara" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Görev veya mağaza ara" /></label>}
+        search={<InputGroup className="tasks-command-search"><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label="Görev veya mağaza ara" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Görev veya mağaza ara" /><InputGroupAddon align="inline-end"><Badge variant="secondary">{visibleRows.length}</Badge></InputGroupAddon></InputGroup>}
         controls={<><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Duruma göre filtrele"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tüm durumlar</SelectItem>{canMutate ? <><SelectItem value="open">Açık</SelectItem><SelectItem value="in_progress">İşlemde</SelectItem><SelectItem value="blocked">Bloke</SelectItem><SelectItem value="correction_required">Düzeltme gerekli</SelectItem></> : null}{workspace?.view === 'region_manager' || canMutate ? <SelectItem value="solution_review_pending">İnceleme bekliyor</SelectItem> : null}<SelectItem value="closed">Kapandı</SelectItem><SelectItem value="cancelled">İptal edildi</SelectItem></SelectContent></Select><Select value={`${sort}:${direction}`} onValueChange={selectMobileSort}><SelectTrigger className="tasks-command-mobile-sort" aria-label="Görevleri sırala"><SelectValue /></SelectTrigger><SelectContent>{(['date', 'task', 'store', 'source', 'priority', 'status'] as SortKey[]).flatMap((key) => [<SelectItem key={`${key}:descending`} value={`${key}:descending`}>{sortLabel(key)} · Azalan</SelectItem>, <SelectItem key={`${key}:ascending`} value={`${key}:ascending`}>{sortLabel(key)} · Artan</SelectItem>])}</SelectContent></Select></>}
-        context={<span>{workspace?.page.total ?? 0} kayıt</span>}
+        context={<span>{workspace?.page.total ?? 0} kayıtlı görev</span>}
         isUpdating={workspaceQuery.isFetching}
         updatingLabel="Görevler güncelleniyor"
       />
-      <CommandCanvasDataList
-        ariaLabel="Görev ve sonuç listesi"
-        testId="store-action-plans-panel"
-        className="tasks-command-list"
-        header={<div className="tasks-command-grid tasks-command-list-head">
-          <CommandCanvasSortableHeading label="Görev" direction={sort === 'task' ? direction : 'none'} onClick={() => selectSort('task')} semantic={false} />
-          <CommandCanvasSortableHeading label="Mağaza" direction={sort === 'store' ? direction : 'none'} onClick={() => selectSort('store')} semantic={false} />
-          <CommandCanvasSortableHeading label="Kaynak" direction={sort === 'source' ? direction : 'none'} onClick={() => selectSort('source')} semantic={false} />
-          <CommandCanvasSortableHeading label="Tarih" direction={sort === 'date' ? direction : 'none'} onClick={() => selectSort('date')} semantic={false} />
-          <CommandCanvasSortableHeading label="Öncelik" direction={sort === 'priority' ? direction : 'none'} onClick={() => selectSort('priority')} semantic={false} />
-          <CommandCanvasSortableHeading label="Durum" direction={sort === 'status' ? direction : 'none'} onClick={() => selectSort('status')} semantic={false} />
-        </div>}
-        footer={<Pager {...(workspace?.page ? { page: workspace.page } : {})} fetching={workspaceQuery.isFetching} onOffset={setOffset} />}
-      >
-        {workspaceQuery.isLoading ? <TaskInlineState icon={<LoaderCircle className="tw:animate-spin" />} title="Görevler yükleniyor" description="Rol kapsamındaki sonuçlar hazırlanıyor." /> : null}
-        {!workspaceQuery.isLoading && visibleRows.length === 0 ? <TaskInlineState icon={<ListTodo />} title="Kayıt bulunamadı" description="Seçili dönem ve filtrelerde görev yok." /> : null}
-        {visibleRows.map((row) => <TaskListRow key={row.id} row={row} onClick={() => setSelection({ row, scopeSignature })} />)}
-      </CommandCanvasDataList>
+          </div>
+          <div data-testid="store-action-plans-panel" className="tasks-command-list">
+            <Table className="tasks-data-table" aria-label="Görev ve sonuç listesi">
+              <TableHeader className="tasks-command-list-head"><TableRow>{(['task','store','source','date','priority','status'] as SortKey[]).map(key=><TableHead key={key} aria-sort={sort===key?direction:'none'}><CommandCanvasSortableHeading label={sortLabel(key)} direction={sort===key?direction:'none'} onClick={()=>selectSort(key)} semantic={false}/></TableHead>)}</TableRow></TableHeader>
+              <TableBody>{visibleRows.map(row=><TaskListRow key={row.id} row={row} onClick={()=>setSelection({row,scopeSignature})}/>)}</TableBody>
+            </Table>
+            {workspaceQuery.isLoading ? <TaskInlineState icon={<LoaderCircle className="tw:animate-spin"/>} title="Görevler yükleniyor" description="Rol kapsamındaki sonuçlar hazırlanıyor."/> : null}
+            {!workspaceQuery.isLoading && visibleRows.length===0 ? <TaskInlineState icon={<ListTodo/>} title="Kayıt bulunamadı" description="Seçili dönem ve filtrelerde görev yok."/> : null}
+            <Pager {...(workspace?.page ? {page:workspace.page} : {})} fetching={workspaceQuery.isFetching} onOffset={value=>{setOffset(value);setSelection(null)}}/>
+          </div>
+        </section>
+      </div>
       <TaskDrawer
         key={`${scopeSignature}:${selected?.id ?? 'closed'}`}
         row={selected}
@@ -225,17 +238,15 @@ function StoreTasksWorkspace(input: {
 }
 
 function TaskListRow(input: { row: TaskRow; onClick: () => void }) {
-  const values = rowValues(input.row)
-  return (
-    <button type="button" className="tasks-command-grid tasks-command-row" onClick={input.onClick} data-testid={input.row.kind === 'plan' ? 'store-action-plan-row' : 'store-task-queue-row'}>
-      <span className="tasks-command-primary"><b>{values.title}</b><small>{values.summary}</small></span>
-      <span>{values.store}</span>
-      <span>{values.source}</span>
-      <span>{formatDate(values.date)}</span>
-      <span><i data-priority={values.priority}>{priorityLabel(values.priority)}</i></span>
-      <span><i data-status={values.status}>{statusLabel(values.status)}</i></span>
-    </button>
-  )
+  const values=rowValues(input.row)
+  return <TableRow className="tasks-command-row" onClick={input.onClick} data-testid={input.row.kind==='plan'?'store-action-plan-row':'store-task-queue-row'}>
+    <TableCell className="tasks-command-primary"><Button variant="ghost" onClick={event=>{event.stopPropagation();input.onClick()}} className="tasks-row-open"><b>{values.title}</b><small>{values.summary}</small></Button></TableCell>
+    <TableCell data-label="Mağaza">{values.store}</TableCell>
+    <TableCell data-label="Kaynak">{values.source}</TableCell>
+    <TableCell data-label="Tarih">{formatDate(values.date)}</TableCell>
+    <TableCell data-label="Öncelik"><Badge variant="outline" data-priority={values.priority}>{priorityLabel(values.priority)}</Badge></TableCell>
+    <TableCell data-label="Durum"><Badge variant="secondary" data-status={values.status}>{statusLabel(values.status)}</Badge></TableCell>
+  </TableRow>
 }
 
 function TaskDrawer(input: {
@@ -320,7 +331,7 @@ function TaskDrawer(input: {
             <section className="tasks-command-facts"><Fact label="Durum" value={statusLabel(values.status)} /><Fact label="Öncelik" value={priorityLabel(values.priority)} /><Fact label="Tarih" value={formatDate(values.date)} /></section>
             {!input.canMutate && plan ? <section><h3>Mağaza müdürü notu</h3><p>{plan.resultNote ?? 'Not eklenmemiş.'}</p></section> : null}
             <section><h3>Kaynak ve sonuç</h3><p>{values.summary}</p>{plan?.resultNote ? <p className="tasks-command-result">{plan.resultNote}</p> : null}{sourceLink ? <Button asChild variant="outline"><Link to={sourceLink}>Kaynağı aç</Link></Button> : <p className="tasks-command-source-unavailable">Kaynak artık kullanılamıyor.</p>}</section>
-            {input.canMutate && (active || candidate) ? <section className="tasks-command-actions"><h3>Görev işlemi</h3>{candidate ? <Input aria-label="Termin tarihi" type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} /> : <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="Kısa not yaz" />}<div>{candidate ? <Button disabled={!dueOn || mutation.isPending} onClick={() => mutation.mutate('create')}>Aksiyon planı oluştur</Button> : <><Button disabled={mutation.isPending || plan?.status === 'in_progress'} onClick={() => mutation.mutate('start')}><PlayCircle data-icon="inline-start" />İşleme al</Button><Button variant="outline" disabled={mutation.isPending || plan?.status === 'blocked'} onClick={() => mutation.mutate('block')}><ShieldAlert data-icon="inline-start" />Bloke et</Button>{plan?.resolutionWorkflowVersion !== 2 ? <><Button disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('complete')}><CheckCircle2 data-icon="inline-start" />Çözüm bildir</Button><Button variant="ghost" disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('cancel')}><Ban data-icon="inline-start" />İptal et</Button></> : null}</>}</div></section> : null}
+            {input.canMutate && (active || candidate) ? <section className="tasks-command-actions"><h3>Görev işlemi</h3>{candidate ? <Input aria-label="Termin tarihi" type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} /> : <Textarea aria-label="Görev notu" value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="Kısa not yaz" />}<div>{candidate ? <Button disabled={!dueOn || mutation.isPending} onClick={() => mutation.mutate('create')}>Aksiyon planı oluştur</Button> : <><Button disabled={mutation.isPending || plan?.status === 'in_progress'} onClick={() => mutation.mutate('start')}><PlayCircle data-icon="inline-start" />İşleme al</Button><Button variant="outline" disabled={mutation.isPending || plan?.status === 'blocked'} onClick={() => mutation.mutate('block')}><ShieldAlert data-icon="inline-start" />Bloke et</Button>{plan?.resolutionWorkflowVersion !== 2 ? <><Button disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('complete')}><CheckCircle2 data-icon="inline-start" />Çözüm bildir</Button><Button variant="ghost" disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('cancel')}><Ban data-icon="inline-start" />İptal et</Button></> : null}</>}</div></section> : null}
             {plan ? <StoreActionPhotoReviewControl plan={plan} view={input.view} canReview={input.canReview} onChanged={() => input.onChanged(false)} /> : null}
             {plan ? <section><h3>Denetim geçmişi</h3>{eventsQuery.isLoading ? <p>Geçmiş yükleniyor…</p> : null}{eventsQuery.isError ? <div className="tasks-command-history-state" role="alert"><p>Görev geçmişi alınamadı.</p><Button variant="outline" onClick={() => void eventsQuery.refetch()}>Tekrar dene</Button></div> : null}{!eventsQuery.isLoading && !eventsQuery.isError && auditEvents.length === 0 ? <p>Bu görev için henüz geçmiş kaydı yok.</p> : null}<div className="tasks-command-timeline">{auditEvents.map((event) => <article key={event.eventId}><span /><div><b>{eventLabel(event.eventType)}</b><p>{event.actorDisplayName}{event.actorRoleLabel ? ` · ${event.actorRoleLabel}` : ''}</p>{event.note ? <em>{event.note}</em> : null}<time>{formatDateTime(event.occurredAt)}</time></div></article>)}</div>{eventsQuery.hasNextPage ? <Button variant="outline" disabled={eventsQuery.isFetchingNextPage} onClick={() => void eventsQuery.fetchNextPage()}>{eventsQuery.isFetchingNextPage ? 'Yükleniyor…' : 'Daha fazla göster'}</Button> : null}</section> : null}
           </div>
@@ -386,7 +397,7 @@ function Pager(input: { page?: { total: number; limit: number; offset: number; c
   return <div className="tasks-command-pager"><span>{input.page.offset + 1}-{input.page.offset + input.page.count} / {input.page.total}</span><div><Button variant="outline" disabled={input.fetching || input.page.offset === 0} onClick={() => input.onOffset(Math.max(0, input.page!.offset - input.page!.limit))}>Önceki</Button><Button variant="outline" disabled={input.fetching || !input.page.hasMore} onClick={() => input.onOffset(input.page!.offset + input.page!.limit)}>Sonraki</Button></div></div>
 }
 function TaskInlineState(input: { icon: React.ReactNode; title: string; description: string }) { return <div className="tasks-command-empty">{input.icon}<b>{input.title}</b><span>{input.description}</span></div> }
-function TaskState(input: { title: string; description: string; onRetry: () => void }) { return <CommandCanvasPage ariaLabelledBy="tasks-state-title"><CommandCanvasPageHeader title="Görevler" titleId="tasks-state-title" description="Mağaza operasyon görevleri" /><TaskInlineState icon={<ShieldAlert />} title={input.title} description={input.description} /><Button onClick={input.onRetry}>Tekrar dene</Button></CommandCanvasPage> }
+function TaskState(input: { title: string; description: string; onRetry: () => void }) { return <CommandCanvasPage ariaLabelledBy="tasks-state-title"><StoreOperationsHeader title="Görevler" titleId="tasks-state-title" eyebrow="MAĞAZA OPERASYONLARI" icon={ListTodo} description="Mağaza operasyon görevleri" /><TaskInlineState icon={<ShieldAlert />} title={input.title} description={input.description} /><Button onClick={input.onRetry}>Tekrar dene</Button></CommandCanvasPage> }
 function Fact(input: { label: string; value: string }) { return <div><span>{input.label}</span><b>{input.value}</b></div> }
 function currentMonth() {
   const parts = new Intl.DateTimeFormat('en', {
@@ -398,7 +409,7 @@ function currentMonth() {
   const month = parts.find((part) => part.type === 'month')?.value ?? '01'
   return `${year}-${month}`
 }
-function monthRange(period: string) { const [yearText = '2026', monthText = '01'] = period.split('-'); const last = new Date(Date.UTC(Number(yearText), Number(monthText), 0)).getUTCDate(); return { periodStart: `${period}-01`, periodEnd: `${period}-${String(last).padStart(2, '0')}` } }
+function monthRange(period: string) { if (period.length === 10) return {periodStart:period,periodEnd:period}; const [yearText = '2026', monthText = '01'] = period.split('-'); const last = new Date(Date.UTC(Number(yearText), Number(monthText), 0)).getUTCDate(); return { periodStart: `${period}-01`, periodEnd: `${period}-${String(last).padStart(2, '0')}` } }
 function formatDate(value: string) { if (!value) return '—'; return new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)) }
 function formatDateTime(value: string) { return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) }
 function priorityLabel(value: string) { return value === 'high' ? 'Yüksek' : value === 'medium' ? 'Orta' : 'Düşük' }

@@ -8,6 +8,12 @@ describe("Task command workspace OpenAPI", () => {
 
   it("publishes the bounded workspace and audit operations", () => {
     expect(document.paths["/api/store/tasks/workspace"]?.get).toBeDefined();
+    expect(document.paths["/api/store/tasks/workspace"].get.parameters).toEqual(
+      expect.arrayContaining([expect.objectContaining({
+        name: "regionManagerUserId", in: "query", required: false,
+        schema: expect.objectContaining({ format: "uuid" }),
+      })]),
+    );
     expect(document.paths["/api/store/tasks/{actionPlanId}/events"]?.get).toBeDefined();
     expect(document.components.schemas.TaskCommandWorkspace.properties.capabilities)
       .toEqual({ $ref: "#/components/schemas/TaskCommandCapabilities" });

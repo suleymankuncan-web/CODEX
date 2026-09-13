@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
   await routeStoreManagerApi(page)
 })
 
-test('store manager sees pilot routes and stays blocked from reports', async ({ page }) => {
+test('store manager sees pilot routes and own-store reports', async ({ page }) => {
   await page.goto('/store/home')
 
   const nav = page.locator('.store-command-nav')
@@ -40,10 +40,10 @@ test('store manager sees pilot routes and stays blocked from reports', async ({ 
   await expect(nav.getByRole('link', { name: 'Görevler' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Duyurular' })).toBeVisible()
   await expect(nav.getByRole('link', { name: /Ayarlar/ })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Raporlar' })).toHaveCount(0)
+  await expect(nav.getByRole('link', { name: 'Raporlar' })).toBeVisible()
 
   await page.goto('/store/reports')
-  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raporlar', exact: true })).toBeVisible()
 })
 
 test('store manager can acknowledge completed checklist work and refresh the task queue', async ({ page }) => {

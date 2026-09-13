@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T11:07:47.343Z",
+  "generatedAt": "2026-09-13T13:45:15.378Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -13,7 +13,7 @@
     "matchedFrontendApiCallCount": 214,
     "openApiEndpointCount": 269,
     "routeApiEdgeCount": 265,
-    "routesWithoutApiCallCount": 3,
+    "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
   },
@@ -982,6 +982,7 @@
         "AUDITOR",
         "REGION_MANAGER",
         "REPORT_VIEWER",
+        "STORE_MANAGER",
         "SUPER_ADMIN"
       ],
       "authorization": {
@@ -3283,7 +3284,7 @@
       "exportedFunction": "getStoreMonthlyReportPackage",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 302
+        "line": 304
       }
     },
     {
@@ -3613,7 +3614,7 @@
       "exportedFunction": "getTaskCommandWorkspace",
       "source": {
         "file": "admin-web/src/features/store-tasks/api.ts",
-        "line": 21
+        "line": 23
       }
     },
     {
@@ -3628,7 +3629,7 @@
       "exportedFunction": "getTaskCommandEvents",
       "source": {
         "file": "admin-web/src/features/store-tasks/api.ts",
-        "line": 33
+        "line": 35
       }
     },
     {
@@ -6926,7 +6927,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-monthly-report-package.controller.ts",
-        "line": 131
+        "line": 133
       }
     },
     {
@@ -7486,7 +7487,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/task-command-workspace.controller.ts",
-        "line": 34
+        "line": 35
       }
     },
     {
@@ -10825,9 +10826,9 @@
         "apiCallId": "api:141"
       },
       {
-        "id": "edge:route:store:/store/reports:api:144",
-        "routeId": "route:store:/store/reports",
-        "apiCallId": "api:144"
+        "id": "edge:route:store:/store/tasks:api:124",
+        "routeId": "route:store:/store/tasks",
+        "apiCallId": "api:124"
       },
       {
         "id": "edge:route:store:/store/tasks:api:156",
@@ -12630,6 +12631,7 @@
     ],
     "routesWithoutApiCalls": [
       "route:store:/store/incentives",
+      "route:store:/store/reports",
       "route:store:/store/settings",
       "route:store:/store/targets"
     ],

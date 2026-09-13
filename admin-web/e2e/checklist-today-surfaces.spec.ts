@@ -926,7 +926,36 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
     const currentRoles = options.roleState?.current ?? roleCodes
     const companyReader = currentRoles.includes('SUPER_ADMIN') || currentRoles.includes('REPORT_VIEWER')
     if (companyReader && url.pathname === '/api/checklists/command-canvas/regions') {
-      await route.fulfill({ json: { data: { period: url.searchParams.get('period') ?? '2026-05', view: 'report_viewer', items: [], meta: { count: 0, total: 0, limit: 20, offset: 0 } } } })
+      await route.fulfill({ json: { data: {
+        period: url.searchParams.get('period') ?? '2026-05',
+        view: 'report_viewer',
+        capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+        metrics: {
+          totalStores: stores.length,
+          missingVisitStores: 0,
+          storesWithOpenActions: 0,
+          openActionCount: 0,
+          completedCoverageStores: stores.length,
+        },
+        items: [{
+          managerUserId: '80000000-0000-4000-8000-000000000012',
+          regionId: '12121212-1212-4121-8121-121212121212',
+          regionName: 'Marmara',
+          regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
+          metrics: {
+            totalStores: stores.length,
+            missingVisitStores: 0,
+            storesWithOpenActions: 0,
+            openActionCount: 0,
+            completedCoverageStores: stores.length,
+            blockedActionCount: 0,
+          },
+          visitAverageScore: null,
+          scoreSampleCount: 0,
+          lastOperationalAt: null,
+        }],
+        page: { total: 1, limit: 20, offset: 0, hasMore: false },
+      } } })
       return
     }
     const view = companyReader ? 'report_viewer' : currentRoles.includes('REGION_MANAGER')

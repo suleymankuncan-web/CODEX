@@ -104,7 +104,7 @@ export type ChecklistCommandRegionMetrics = {
 
 export type ChecklistCommandRegionRow = {
   managerUserId: string;
-  regionId: string;
+  regionId: string | null;
   regionName: string;
   regionManagers: Array<{ displayName: string }>;
   metrics: ChecklistCommandRegionMetrics & { blockedActionCount: number };

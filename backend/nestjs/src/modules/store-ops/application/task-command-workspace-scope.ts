@@ -70,7 +70,7 @@ export function resolveTaskCommandWorkspaceScope(input: {
     const storeIds = scopedStores.length === 0
       ? actionStores
       : actionStores.filter((storeId) => scopedStores.includes(storeId));
-    if (regionIds.length === 0 || storeIds.length === 0) return null;
+    if (storeIds.length === 0 || (regionIds.length === 0 && scopedStores.length === 0)) return null;
     return {
       view: "region_manager",
       companyIds: [],

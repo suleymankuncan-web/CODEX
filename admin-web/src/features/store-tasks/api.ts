@@ -11,6 +11,7 @@ export async function getTaskCommandWorkspace(input: {
   periodEnd: string
   limit?: number
   offset?: number
+  regionManagerUserId?: string
 }) {
   const query = new URLSearchParams({
     periodStart: input.periodStart,
@@ -18,6 +19,7 @@ export async function getTaskCommandWorkspace(input: {
   })
   append(query, 'limit', input.limit)
   append(query, 'offset', input.offset)
+  if (input.regionManagerUserId) query.set('regionManagerUserId', input.regionManagerUserId)
   const response = await fetchOpenApiJson('/api/store/tasks/workspace', { query })
   return response.data
 }

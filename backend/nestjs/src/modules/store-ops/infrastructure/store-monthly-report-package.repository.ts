@@ -18,6 +18,7 @@ WITH scoped_stores AS (
   LEFT JOIN ops.region region
     ON region.region_id = store.region_id
   WHERE store.status = 'active'
+    AND ($7::uuid[] IS NULL OR store.store_id = ANY($7::uuid[]))
     AND (
       (CARDINALITY($3::uuid[]) > 0 AND store.company_id = ANY($3::uuid[]))
       OR (CARDINALITY($4::uuid[]) > 0 AND store.region_id = ANY($4::uuid[]))
@@ -37,64 +38,34 @@ WITH scoped_stores AS (
 ),
 region_manager_names AS (
   SELECT
-    ranked.store_id,
-    ranked.region_manager_name
-  FROM (
-    SELECT
-      scoped.store_id,
-      COALESCE(
-        NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-        NULLIF(TRIM(REGEXP_REPLACE(scoped.region_name, '\\s+B(?:ö|o)lgesi$', '', 'i')), ''),
-        user_account.username,
-        user_account.email,
-        user_account.user_id::text
-      ) AS region_manager_name,
-      ROW_NUMBER() OVER (
-        PARTITION BY scoped.store_id
-        ORDER BY
-          CASE
-            WHEN user_account.email ILIKE 'pilot.%'
-              OR user_account.email ILIKE '%+clerk_test%'
-              OR user_account.email ILIKE '%@example.%'
-              OR user_account.email ILIKE '%+%@%'
-              THEN 1
-            ELSE 0
-          END ASC,
-          CASE
-            WHEN NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), '') IS NULL
-              THEN 1
-            ELSE 0
-          END ASC,
-          role_assignment.created_at DESC NULLS LAST,
-          user_account.email ASC,
-          user_account.user_id ASC
-      ) AS manager_rank
-    FROM scoped_stores scoped
-    INNER JOIN ops.user_role_assignment role_assignment
-      ON role_assignment.company_id = scoped.company_id
-     AND (
-       (
-         role_assignment.scope_type = 'region'
-         AND role_assignment.region_id = scoped.region_id
-       )
-       OR (
-         role_assignment.scope_type = 'store'
-         AND role_assignment.region_id = scoped.region_id
-         AND role_assignment.store_id = scoped.store_id
-       )
-     )
-     AND role_assignment.start_at <= ($2::date + TIME '23:59:59')::timestamptz
-     AND (role_assignment.end_at IS NULL OR role_assignment.end_at >= $1::date::timestamptz)
+    scoped.store_id,
+    STRING_AGG(DISTINCT COALESCE(
+      NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
+      user_account.username,
+      user_account.email,
+      user_account.user_id::text
+    ), ', ') AS region_manager_name
+  FROM scoped_stores scoped
+  INNER JOIN ops.user_action_store_assignment manager_store
+    ON manager_store.store_id = scoped.store_id
+   AND manager_store.start_at <= NOW()
+   AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+  INNER JOIN ops.user_account user_account
+    ON user_account.user_id = manager_store.user_id
+   AND user_account.is_active = TRUE
+  LEFT JOIN ops.employee employee
+    ON employee.employee_id = user_account.employee_id
+  WHERE EXISTS (
+    SELECT 1
+    FROM ops.user_role_assignment role_assignment
     INNER JOIN ops.role role
       ON role.role_id = role_assignment.role_id
      AND role.role_code = 'REGION_MANAGER'
-    INNER JOIN ops.user_account user_account
-      ON user_account.user_id = role_assignment.user_id
-     AND user_account.is_active = TRUE
-    LEFT JOIN ops.employee employee
-      ON employee.employee_id = user_account.employee_id
-  ) ranked
-  WHERE ranked.manager_rank = 1
+    WHERE role_assignment.user_id = user_account.user_id
+      AND role_assignment.start_at <= NOW()
+      AND (role_assignment.end_at IS NULL OR role_assignment.end_at >= NOW())
+  )
+  GROUP BY scoped.store_id
 ),
 store_kpis AS (
   SELECT
@@ -329,8 +300,9 @@ export class StoreMonthlyReportPackageRepository {
     regionIds: string[];
     storeIds: string[];
     regionManagerUserId?: string;
+    selectedStoreIds?: string[];
   }): Promise<StoreMonthlyReportPackageRow[]> {
-    if (!this.hasStoreScope(input)) {
+    if (!this.hasStoreScope(input) || input.selectedStoreIds?.length === 0) {
       return [];
     }
 
@@ -343,6 +315,7 @@ export class StoreMonthlyReportPackageRepository {
         input.regionIds,
         input.storeIds,
         input.regionManagerUserId ?? null,
+        input.selectedStoreIds ?? null,
       ],
     );
 

@@ -5,6 +5,23 @@ const regionId = "22222222-2222-4222-8222-222222222222";
 const storeId = "33333333-3333-4333-8333-333333333333";
 
 describe("resolveTaskCommandWorkspaceScope", () => {
+  it("accepts directly assigned manager stores without requiring a region identifier", () => {
+    const result = resolveTaskCommandWorkspaceScope({
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorReadScope: { companyIds: [], regionIds: [], storeIds: [storeId] },
+      actorActionScope: { assignedStoreIds: [storeId, "other-store"] },
+      roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: [storeId] } },
+    });
+    expect(result).toEqual(expect.objectContaining({view:"region_manager",regionIds:[],storeIds:[storeId]}));
+  });
+  it("does not borrow another role's action stores for an empty manager role", () => {
+    expect(resolveTaskCommandWorkspaceScope({
+      actorRoleCodes: ["REGION_MANAGER","STORE_MANAGER"],
+      actorReadScope: {companyIds:[],regionIds:[],storeIds:[storeId]},
+      actorActionScope: {assignedStoreIds:[storeId]},
+      roleScopes: {REGION_MANAGER:{companyIds:[],regionIds:[],storeIds:[]}},
+    })).toBeNull();
+  });
   it("keeps mixed Report Viewer sessions company scoped and read only", () => {
     expect(
       resolveTaskCommandWorkspaceScope({

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import * as XLSX from "xlsx-js-style";
 import { RankingService } from "./ranking.service";
+import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { StoreMonthlyReportPackageRepository } from "../infrastructure/store-monthly-report-package.repository";
 import {
   StoreMonthlyReportPackageItem,
@@ -122,6 +123,7 @@ export function resolveMonthlyRange(period: string, today = getIstanbulToday()) 
 
 type StoreMonthlyReportPackageInput = StoreMonthlyReportPackageScope & {
   period: string;
+  requestedRegionManagerUserId?: string;
   today?: string;
   rankingContext?: {
     userId: string;
@@ -140,10 +142,15 @@ export class StoreMonthlyReportPackageService {
     private readonly storeMonthlyReportPackageRepository: StoreMonthlyReportPackageRepository,
     @Optional()
     private readonly rankingService?: RankingService,
+    @Optional()
+    private readonly managerDirectoryRepository?: RankingReportingReadRepository,
   ) {}
 
   async getSummary(input: StoreMonthlyReportPackageInput): Promise<StoreMonthlyReportPackageSummary> {
     const range = resolveMonthlyRange(input.period, input.today);
+    const managerFilter = input.requestedRegionManagerUserId
+      ? { selectedStoreIds: await this.resolveSelectedManagerStores(input) }
+      : {};
     const rows = await this.storeMonthlyReportPackageRepository.getStoreMonthlyReportPackageRows({
       periodStart: range.periodStart,
       periodEnd: range.periodEnd,
@@ -151,6 +158,7 @@ export class StoreMonthlyReportPackageService {
       regionIds: input.regionIds,
       storeIds: input.storeIds,
       regionManagerUserId: input.regionManagerUserId,
+      ...managerFilter,
     });
     const scoreByStoreId = await this.getRankingScoresByStoreId({
       input,
@@ -228,6 +236,12 @@ export class StoreMonthlyReportPackageService {
       ),
       fileName: `magaza-izleyis-${input.period}.xlsx`,
     };
+  }
+
+  private async resolveSelectedManagerStores(input: StoreMonthlyReportPackageInput): Promise<string[]> {
+    if (!input.companyIds.length || !this.managerDirectoryRepository) return [];
+    const managers = await this.managerDirectoryRepository.listCompanyRegionManagerDirectory({ companyIds: input.companyIds });
+    return managers.find(manager => manager.id === input.requestedRegionManagerUserId)?.storeIds ?? [];
   }
 
   private async getRankingScoresByStoreId(input: {

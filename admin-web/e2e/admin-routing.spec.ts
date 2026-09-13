@@ -470,10 +470,10 @@ test('admin checklist templates page switches chrome to English copy and persist
 
   const main = page.getByRole('main')
 
-  await expect(main.getByText('Admin checklist', { exact: true })).toBeVisible()
+  await expect(main.getByText('Admin checklist', { exact: true })).toHaveCount(0)
   await expect(main.getByRole('heading', { name: 'Checklist şablon editörü' })).toBeVisible()
   await expect(
-    main.getByText('Bölüm ekle, madde ekle, ağırlıkları 100’e tamamla ve yayınla.'),
+    main.getByText('Ziyaret sorularını ve değerlendirme kurallarını düzenleyin.'),
   ).toBeVisible()
   await expect(main.getByRole('button', { name: 'Bölüm Ekle' }).first()).toBeVisible()
   await expect(main.getByRole('button', { name: 'Taslak Kaydet' })).toBeVisible()
@@ -487,10 +487,10 @@ test('admin checklist templates page switches chrome to English copy and persist
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(main.getByText('Admin checklist', { exact: true })).toBeVisible()
+  await expect(main.getByText('Admin checklist', { exact: true })).toHaveCount(0)
   await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
   await expect(
-    main.getByText('Add sections, add items, bring weights to 100, and publish.'),
+    main.getByText('Manage visit questions and evaluation rules.'),
   ).toBeVisible()
   await expect(main.getByRole('button', { name: 'Add Section' }).first()).toBeVisible()
   await expect(main.getByRole('button', { name: 'Save Draft' })).toBeVisible()
@@ -538,7 +538,7 @@ test('admin checklist template editor stays bounded on mobile width', async ({ p
 
   await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
   await expect(main.getByTestId('checklist-template-editor')).toBeVisible()
-  await expect(main.getByTestId('admin-metric-weight')).toBeVisible()
+  await expect(main.locator('.admin-checklist-summary')).toBeVisible()
   await expect(main.getByTestId('checklist-item-editor').first()).toBeVisible()
   await expect(main.getByRole('button', { name: 'Add Section' }).first()).toBeVisible()
   await expectNoHorizontalOverflow(page)

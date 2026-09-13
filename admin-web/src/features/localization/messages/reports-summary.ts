@@ -7,9 +7,10 @@ export const reportsSummaryTr = {
   'reportsSummary.noSummaryCopy': 'Özet verisi dönmedi.',
 
   'reportsSummary.heroEyebrow': 'Raporlama özeti',
-  'reportsSummary.heroTitle': 'Güvenilir son snapshot üzerinden salt okunur raporlama.',
+  'reportsSummary.heroTitle': 'Raporlar',
   'reportsSummary.heroCopy':
-    'Bu ekran operatöre son tamamlanan raporlama çalışmasını ve her raporlama kesitinde üretilen veri hacmini gösterir.',
+    'Son tamamlanan dönemin raporlarını ve geçmiş çalışmaları inceleyin.',
+  'reportsSummary.retry': 'Tekrar dene',
   'reportsSummary.totalReportRows': 'Toplam rapor satırı',
   'reportsSummary.latestRun': 'Son çalışma',
   'reportsSummary.status': 'Durum',
@@ -42,9 +43,9 @@ export const reportsSummaryTr = {
   'reportsSummary.coverageSlice': 'Rapor kesiti',
   'reportsSummary.coverageRows': 'Satır',
   'reportsSummary.coverageAction': 'Aç',
-  'reportsSummary.recentRunsEyebrow': 'Son tamamlanan çalışmalar',
-  'reportsSummary.recentRunsTitle': 'Seçilebilir raporlama bağlamı',
-  'reportsSummary.openDrillDownChooser': 'Detay seçiciyi aç',
+  'reportsSummary.recentRunsEyebrow': 'Her çalışmanın dönemine ait raporları açın.',
+  'reportsSummary.recentRunsTitle': 'Son raporlama çalışmaları',
+  'reportsSummary.openDrillDownChooser': 'Tüm rapor dönemleri',
   'reportsSummary.recentRunsEmpty': 'Raporlama için tamamlanan snapshot çalışması henüz yok.',
 
   'reportsSummary.snapshotLabel': '{type} snapshot',
@@ -74,9 +75,10 @@ export const reportsSummaryEn: Record<keyof typeof reportsSummaryTr, string> = {
   'reportsSummary.noSummaryCopy': 'No summary payload was returned.',
 
   'reportsSummary.heroEyebrow': 'Reporting Summary',
-  'reportsSummary.heroTitle': 'Read-only reporting from the latest trustworthy snapshot.',
+  'reportsSummary.heroTitle': 'Reports',
   'reportsSummary.heroCopy':
-    'This page orients the operator around the last completed reporting run and the data volume materialized into each reporting slice.',
+    'Review reports from the latest completed period and previous runs.',
+  'reportsSummary.retry': 'Try again',
   'reportsSummary.totalReportRows': 'Total report rows',
   'reportsSummary.latestRun': 'Latest run',
   'reportsSummary.status': 'Status',
@@ -109,9 +111,9 @@ export const reportsSummaryEn: Record<keyof typeof reportsSummaryTr, string> = {
   'reportsSummary.coverageSlice': 'Report slice',
   'reportsSummary.coverageRows': 'Rows',
   'reportsSummary.coverageAction': 'Open',
-  'reportsSummary.recentRunsEyebrow': 'Recent completed runs',
-  'reportsSummary.recentRunsTitle': 'Reporting selectable context',
-  'reportsSummary.openDrillDownChooser': 'Open drill-down chooser',
+  'reportsSummary.recentRunsEyebrow': 'Open reports for the period recorded by each run.',
+  'reportsSummary.recentRunsTitle': 'Recent reporting runs',
+  'reportsSummary.openDrillDownChooser': 'All report periods',
   'reportsSummary.recentRunsEmpty': 'No completed snapshot runs are available for reporting yet.',
 
   'reportsSummary.snapshotLabel': '{type} snapshot',

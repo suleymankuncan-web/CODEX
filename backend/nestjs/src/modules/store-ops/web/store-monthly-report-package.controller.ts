@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, Res, StreamableFile } from "@nestjs/common";
+import { Controller, ForbiddenException, Get, Query, Req, Res, StreamableFile } from "@nestjs/common";
 import { ApiOkResponse, ApiProduces, ApiQuery } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
@@ -112,8 +112,9 @@ export class StoreMonthlyReportPackageController {
 
   @Get("store-monthly-package")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("REPORT_VIEWER", "AUDITOR", "REGION_MANAGER", "SUPER_ADMIN", "STORE_MANAGER")
   @ApiQuery(STORE_MONTHLY_REPORT_PERIOD_QUERY)
+  @ApiQuery({ name: "regionManagerUserId", required: false, type: String, format: "uuid" })
   @ApiOkResponse({
     schema: STORE_MONTHLY_REPORT_PACKAGE_RESPONSE_SCHEMA,
   })
@@ -124,14 +125,16 @@ export class StoreMonthlyReportPackageController {
     return this.storeMonthlyReportPackageService.getSummary({
       period: query.period,
       ...this.resolveReadScope(request.user),
+      ...this.resolveManagerFilter(request.user, query.regionManagerUserId),
       rankingContext: this.resolveRankingContext(request.user),
     });
   }
 
   @Get("store-monthly-package.xlsx")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("REPORT_VIEWER", "AUDITOR", "REGION_MANAGER", "SUPER_ADMIN", "STORE_MANAGER")
   @ApiQuery(STORE_MONTHLY_REPORT_PERIOD_QUERY)
+  @ApiQuery({ name: "regionManagerUserId", required: false, type: String, format: "uuid" })
   @ApiProduces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
   @ApiOkResponse({
     schema: {
@@ -147,6 +150,7 @@ export class StoreMonthlyReportPackageController {
     const workbook = await this.storeMonthlyReportPackageService.buildWorkbook({
       period: query.period,
       ...this.resolveReadScope(request.user),
+      ...this.resolveManagerFilter(request.user, query.regionManagerUserId),
       rankingContext: this.resolveRankingContext(request.user),
     });
 
@@ -160,6 +164,14 @@ export class StoreMonthlyReportPackageController {
     );
 
     return new StreamableFile(workbook.buffer);
+  }
+
+  private resolveManagerFilter(user: ReportPackageRequest["user"], regionManagerUserId?: string) {
+    if (!regionManagerUserId) return {};
+    if (!user.roleCodes.some(role => ["REPORT_VIEWER", "SUPER_ADMIN"].includes(role))) {
+      throw new ForbiddenException("Manager selection is unavailable for this role");
+    }
+    return { requestedRegionManagerUserId: regionManagerUserId };
   }
 
   private resolveReadScope(user: ReportPackageRequest["user"]) {

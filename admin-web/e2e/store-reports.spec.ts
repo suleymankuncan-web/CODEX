@@ -36,6 +36,7 @@ test('store reports product page renders the package contract for region manager
   await expect(page.getByRole('button', { name: /Excel indir/i })).toBeVisible()
 
   const packageSections = page.getByLabel('Paket içeriği')
+  await packageSections.locator('summary').click()
   for (const section of [
     'KPI kolonları',
     'Onay skorları',
@@ -52,15 +53,15 @@ test('store reports product page renders the package contract for region manager
   await expect(page.getByText('/admin/reports')).toHaveCount(0)
 })
 
-test('store reports route is hidden for store managers and direct access is denied', async ({ page }) => {
+test('store managers can read their store report without a manager directory', async ({ page }) => {
   await routeAuthSession(page, ['STORE_MANAGER'])
 
   await page.goto('/store/home')
-  await expect(page.locator('.store-command-nav a[href="/store/reports"]')).toHaveCount(0)
+  await expect(page.locator('.store-command-nav a[href="/store/reports"]')).toBeVisible()
 
   await page.goto('/store/reports')
-  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
-  await expect(page.locator('.store-reports-command')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Raporlar', exact: true })).toBeVisible()
+  await expect(page.locator('.operations-directory')).toHaveCount(0)
 })
 
 test('store reports route is visible for region managers', async ({ page }) => {
@@ -72,6 +73,36 @@ test('store reports route is visible for region managers', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/store\/reports$/)
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
+})
+
+test('report viewers select manager user IDs for the report and Excel, including empty managers', async ({ page }) => {
+  await routeAuthSession(page, ['REPORT_VIEWER'])
+  await page.route('**/api/org/region-managers', route => route.fulfill({ json: { items: [
+    { userId: '11111111-1111-4111-8111-111111111111', displayName: 'Deniz Kaya', storeIds: [demoStoreId] },
+    { userId: '22222222-2222-4222-8222-222222222222', displayName: 'Ece Yılmaz', storeIds: [] },
+  ] } }))
+  await page.goto('/store/reports')
+  const reportRequest = page.waitForRequest(request => request.url().includes('store-monthly-package?') && new URL(request.url()).searchParams.get('regionManagerUserId') === '11111111-1111-4111-8111-111111111111')
+  await page.getByRole('radio', { name: /Deniz Kaya/ }).click()
+  await reportRequest
+  await expect(page.getByRole('button', { name: 'Excel indir', exact: true })).toBeEnabled()
+  const exportRequest = page.waitForRequest(request => request.url().includes('store-monthly-package.xlsx?') && new URL(request.url()).searchParams.get('regionManagerUserId') === '11111111-1111-4111-8111-111111111111')
+  await page.getByRole('button', { name: 'Excel indir', exact: true }).click()
+  await exportRequest
+  await page.getByRole('radio', { name: /Ece Yılmaz/ }).click()
+  await expect(page.getByText('Bu seçimde rapor kaydı yok.')).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Ece Yılmaz/ })).toBeVisible()
+})
+
+test('store report search and tabs expose recorded data without changing export scope', async ({ page }) => {
+  await page.goto('/store/reports')
+  const report = page.getByRole('region', { name: 'Mağaza raporu' })
+  await expect(report.getByRole('cell', { name: '87,20', exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'Operasyon', exact: true }).click()
+  await expect(report.getByRole('cell', { name: 'Devam ediyor', exact: true })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Mağaza veya bölge ara' }).fill('olmayan mağaza')
+  await expect(page.getByText('Eşleşen mağaza bulunamadı.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Excel indir', exact: true })).toBeEnabled()
 })
 
 test('store reports period picker keeps month semantics in the shared calendar', async ({ page }) => {
@@ -137,12 +168,34 @@ test('store reports page stays within desktop and mobile viewport width', async 
   await page.setViewportSize({ width: 1366, height: 900 })
   await page.goto('/store/reports')
   await expectNoHorizontalOverflow(page)
-  await expect(page.locator('.src-metric-icon').first()).toBeVisible()
+  await expect(page.locator('.src-metric-label svg').first()).toBeVisible()
 
   await page.setViewportSize({ width: 390, height: 900 })
   await page.reload()
   await expectNoHorizontalOverflow(page)
-  await expect(page.locator('.src-package-card')).toBeVisible()
+  await expect(page.locator('.src-package')).toBeVisible()
+})
+
+test('report columns remain reachable and row separators survive desktop and mobile layouts', async ({ page }) => {
+  await page.goto('/store/reports')
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(page.getByRole('table', { name: 'Mağaza raporu' })).toBeVisible()
+    for (const tab of ['KPI ve skorlar', 'Operasyon']) {
+      await page.getByRole('tab', { name: tab, exact: true }).click()
+      const table = page.getByRole('table', { name: 'Mağaza raporu' })
+      await expect(table.getByRole('cell').last()).toBeVisible()
+      await expect(table.locator('tbody tr').first()).toHaveCSS('border-bottom-width', '1px')
+      const geometry = await table.evaluate(element => {
+        const board = element.closest('.src-records')!.getBoundingClientRect()
+        const cells = Array.from(element.querySelectorAll('tbody td')).map(cell => cell.getBoundingClientRect())
+        return cells.every(cell => cell.left >= board.left && cell.right <= board.right)
+      })
+      expect(geometry).toBe(true)
+      await expectNoHorizontalOverflow(page)
+    }
+    await expect(page.getByRole('button', { name: 'Excel indir', exact: true })).toHaveCSS('background-image', 'none')
+  }
 })
 
 async function routeAuthSession(page: Page, roleCodes: string[]) {
@@ -187,6 +240,7 @@ async function routeReportPackage(page: Page) {
   await page.route('**/api/reports/store-monthly-package?**', async (route) => {
     const period = new URL(route.request().url()).searchParams.get('period') ?? '2026-06'
     const may = period === '2026-05'
+    const emptyManager = new URL(route.request().url()).searchParams.get('regionManagerUserId') === '22222222-2222-4222-8222-222222222222'
 
     await route.fulfill({
       json: {
@@ -194,7 +248,7 @@ async function routeReportPackage(page: Page) {
         periodLabel: may ? 'Mayıs 2026' : 'Haziran 2026',
         coverageLabel: may ? '1-31 Mayıs' : '1-29 Haziran',
         isCurrentPeriod: !may,
-        storeCount: 30,
+        storeCount: emptyManager ? 0 : 30,
         sections: [
           { code: 'kpis', label: 'KPI kolonları', value: 'Skor, UPT, ATV, CR, HG%', status: 'ready' },
           { code: 'approval_scores', label: 'Onay skorları', value: 'GSM, BM Checklist, VM Checklist', status: 'ready' },
@@ -204,7 +258,7 @@ async function routeReportPackage(page: Page) {
           { code: 'workforce', label: 'Norm Kadro', value: 'Aktif, norm, eksik gün, turnover', status: 'ready' },
           { code: 'visits', label: 'Ziyaret', value: 'Son ziyaret ve geçen gün', status: 'ready' },
         ],
-        items: [
+        items: emptyManager ? [] : [
           {
             regionManager: 'Onur Kaytan',
             storeName: 'IstinyePark Demo Store',

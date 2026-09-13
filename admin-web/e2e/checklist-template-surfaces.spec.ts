@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page } from './test-fixtures'
 
 test.beforeEach(async ({ page }) => {
@@ -132,6 +133,8 @@ test('admin checklist template publish preserves create and publish payload shap
     requiresLowScoreNote: true,
   })
   expect(publishPayloads[0]).toEqual({ effectiveFrom: createPayload.effectiveFrom })
+  await expect(page.getByText('Version 1', { exact: true })).toBeVisible()
+  await expect(page.locator('.admin-checklist-summary-item').last().getByText('Published', { exact: true })).toBeVisible()
 })
 
 test('admin checklist template authoring stays bounded on mobile', async ({ page }) => {
@@ -145,6 +148,127 @@ test('admin checklist template authoring stays bounded on mobile', async ({ page
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
     .toBe(true)
 })
+
+test('checklist search preserves the complete draft and recovers from no results', async ({ page }) => {
+  await page.goto('/admin/checklists')
+  const main = page.getByRole('main')
+  const search = main.getByRole('textbox', { name: 'Search sections or items' })
+  await search.fill('Kasa')
+  await expect(main.getByTestId('checklist-item-editor')).toHaveCount(1)
+  await main.getByRole('button', { name: 'Preview', exact: true }).click()
+  const preview = page.getByRole('dialog', { name: 'Preview' })
+  await expect(preview.locator('ol > li')).toHaveCount(4)
+  await page.keyboard.press('Escape')
+  await search.fill('no-matching-question')
+  await expect(main.getByText('No matching items')).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Publish', exact: true })).toBeEnabled()
+  await main.getByRole('button', { name: 'Clear search' }).click()
+  await expect(main.getByTestId('checklist-item-editor')).toHaveCount(4)
+})
+
+test('item settings retain score, note and evidence rules while publishing stays validated', async ({ page }) => {
+  await page.goto('/admin/checklists')
+  const settingsButton = page.getByRole('button', { name: /^Item settings:/ }).first()
+  await settingsButton.click()
+  const sheet = page.getByRole('dialog', { name: 'Item settings', exact: true })
+  await expect(sheet.getByRole('spinbutton', { name: 'Evidence limit' })).toBeDisabled()
+  await sheet.getByRole('spinbutton', { name: 'Weight', exact: true }).fill('19')
+  await sheet.getByRole('textbox', { name: 'Item description' }).fill('Edited draft note')
+  await sheet.getByRole('combobox', { name: 'Photo evidence' }).click()
+  await page.getByRole('option', { name: 'Required', exact: true }).click()
+  await sheet.getByRole('spinbutton', { name: 'Evidence limit' }).fill('3')
+  await sheet.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(settingsButton).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeDisabled()
+  await expect(page.getByText('Item weights must total 100 before publishing.')).toBeVisible()
+  await settingsButton.click()
+  await expect(sheet.getByRole('textbox', { name: 'Item description' })).toHaveValue('Edited draft note')
+  await expect(sheet.getByRole('spinbutton', { name: 'Evidence limit' })).toHaveValue('3')
+  await sheet.getByRole('spinbutton', { name: 'Weight', exact: true }).fill('20')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeEnabled()
+})
+
+test('failed draft creation keeps edits, ends pending state and does not publish', async ({ page }) => {
+  let releaseRequest!: () => void
+  const responseGate = new Promise<void>((resolve) => { releaseRequest = resolve })
+  let publishes = 0
+  await page.route('**/api/admin/checklist-templates', async (route) => {
+    await responseGate
+    await route.fulfill({ status: 500, json: { message: 'Unable to save template' } })
+  })
+  await page.route('**/api/admin/checklist-templates/*/publish', async (route) => {
+    publishes += 1
+    await route.fulfill({ status: 500, json: {} })
+  })
+  await page.goto('/admin/checklists')
+  const question = page.getByTestId('checklist-question-input').first()
+  await question.fill('Preserved question after failed save')
+  const publish = page.getByRole('button', { name: 'Publish', exact: true })
+  await publish.click()
+  await expect(publish).toBeDisabled()
+  await expect(question).toBeDisabled()
+  releaseRequest()
+  await expect(publish).toBeEnabled()
+  await expect(question).toHaveValue('Preserved question after failed save')
+  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toBeVisible()
+  expect(publishes).toBe(0)
+})
+
+test('company context is required before saving or publishing', async ({ page }) => {
+  await page.route('**/api/auth/session', (route) => route.fulfill({ json: {
+    ...authSessionFixture,
+    user: { ...authSessionFixture.user, scope: { companyIds: [], regionIds: [], storeIds: [] }, readScope: { companyIds: [], regionIds: [], storeIds: [] } },
+  } }))
+  await page.goto('/admin/checklists')
+  await expect(page.getByRole('button', { name: 'Publish', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Save Draft', exact: true })).toBeDisabled()
+  await expect(page.getByText('Company context was not found. This user cannot publish templates.')).toBeVisible()
+})
+
+test('publishing can retry the saved version after failure without creating another draft', async ({ page }) => {
+  let creates = 0
+  let publishes = 0
+  await page.route('**/api/admin/checklist-templates', (route) => {
+    creates += 1
+    return route.fulfill({ json: { command: { status: 'created' }, data: { checklistTemplate: { checklistTemplateId: 'retry-template', versionNo: 7, status: 'draft' } } } })
+  })
+  await page.route('**/api/admin/checklist-templates/*/publish', (route) => {
+    publishes += 1
+    return publishes === 1
+      ? route.fulfill({ status: 500, json: { message: 'Unable to publish template' } })
+      : route.fulfill({ json: { command: { status: 'published' }, data: { checklistTemplate: { checklistTemplateId: 'retry-template', versionNo: 7, status: 'published' } } } })
+  })
+  await page.goto('/admin/checklists')
+  const publish = page.getByRole('button', { name: 'Publish', exact: true })
+  await publish.click()
+  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toBeVisible()
+  await expect(page.getByText('Version 7', { exact: true })).toBeVisible()
+  await expect(publish).toBeEnabled()
+  await publish.click()
+  await expect(page.locator('.admin-checklist-summary-item').last().getByText('Published', { exact: true })).toBeVisible()
+  expect(creates).toBe(1)
+  expect(publishes).toBe(2)
+})
+
+for (const [width, height] of [[1440, 900], [1024, 768], [390, 844], [360, 800]] as const) {
+  test(`checklist workspace and settings are accessible at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height })
+    await page.goto('/admin/checklists')
+    await expect(page.getByTestId('checklist-question-input').first()).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    const workspaceAudit = await new AxeBuilder({ page }).include('.admin-checklist-templates').withTags(['wcag2a', 'wcag2aa']).analyze()
+    expect(workspaceAudit.violations).toEqual([])
+    await page.screenshot({ path: testInfo.outputPath(`admin-checklist-${width}.png`), fullPage: true })
+    await page.getByRole('button', { name: /^Item settings:/ }).first().click()
+    const sheet = page.getByRole('dialog', { name: 'Item settings', exact: true })
+    await expect(sheet.getByRole('button', { name: 'Done', exact: true })).toBeInViewport()
+    expect(await sheet.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
+    const sheetAudit = await new AxeBuilder({ page }).include('.admin-checklist-sheet').withTags(['wcag2a', 'wcag2aa']).analyze()
+    expect(sheetAudit.violations).toEqual([])
+    await page.screenshot({ path: testInfo.outputPath(`admin-checklist-settings-${width}.png`) })
+  })
+}
 
 async function chooseChecklistTemplate(page: Page, trigger: Locator, optionName: string) {
   await trigger.click()
