@@ -50,7 +50,12 @@ Measurements above are observations from September 13, not new-run estimates.
 Playwright enumerates the actual full case inventory before selection. Only
 explicitly reviewed isolated specs in `playwright-recovery-policy.json` may
 retain results. The initial cohort is three target-page specs with per-test
-clock freezing and isolated page/API mocks. Other specs execute every time.
+clock freezing and isolated page/API mocks. Their reviewed source hashes are
+pinned: edits require a new isolation review before retention is possible again.
+Review hashes normalize CRLF to LF for Git checkouts; execution proof still
+compares exact file bytes and platform identity.
+Other specs execute every time. TypeScript syntax analysis covers side-effect,
+type-only, namespace, barrel, require and dynamic spec imports.
 The product, shared fixtures/config/scripts, environment, actual browser
 version and actual build must match. Uncertain spec imports trigger full execution.
 

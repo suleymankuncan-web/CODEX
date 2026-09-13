@@ -1,8 +1,29 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { combineSpecResults, reportCases, selectSpecRecovery } from './playwright-recovery.mjs'
+import { combineSpecResults, hasUncertainSpecImports, reportCases, selectSpecRecovery } from './playwright-recovery.mjs'
 
 const head = 'a'.repeat(40)
+test('spec dependency analysis covers static, side-effect, type, namespace, barrel and dynamic imports', () => {
+  for (const source of [
+    "import './other.spec.ts'",
+    "import/**/'./other.spec.ts'",
+    "import type { T } from './other.spec'",
+    "import * as ns from './other.spec.ts'",
+    "export * from './other.spec.ts'",
+    "export { item } from './other.spec.ts'",
+    "import x = require('./other.spec.ts')",
+    "type X = import('./other.spec.ts').T",
+    "const x = import('./other.spec.ts')",
+    "const x = require(path)",
+    "const x = import(path)",
+    "import './safe-helper'; import './other.spec.ts'",
+  ]) assert.equal(hasUncertainSpecImports(source), true, source)
+  for (const source of [
+    "import { helper } from './helper'",
+    "// import './other.spec.ts'\nconst safe = 1",
+    'const text = "import other from other.spec.ts"',
+  ]) assert.equal(hasUncertainSpecImports(source), false, source)
+})
 function report(files = ['one.spec.ts', 'two.spec.ts']) {
   return { errors: [], suites: files.map((file) => ({ title: file, file, specs: [
     { title: 'case', file, tests: [{ projectName: 'chromium', expectedStatus: 'passed', status: 'expected',
@@ -15,7 +36,7 @@ function fixture() {
   const digests = { 'one.spec.ts': 'one', 'two.spec.ts': 'two' }
   const selection = { execute: Object.keys(digests), reused: [] }
   const previous = combineSpecResults({ inventory, report: raw, selection, sharedDigest: 'shared', digests, sourceHead: head, exitCode: 0 })
-  return { inventory, previous, sharedDigest: 'shared', digests, reviewedSpecs: Object.keys(digests) }
+  return { inventory, previous, sharedDigest: 'shared', digests, reviewedSpecs: Object.keys(digests), reviewedSpecDigests: { ...digests } }
 }
 
 test('changed or failed spec executes; unchanged reviewed passing spec is retained with complete coverage', () => {
@@ -44,6 +65,7 @@ test('unknown inputs, dependencies, inventory drift, malformed data, expired pro
     (x) => { x.previous.completedAt = '2000-01-01' },
     (x) => { x.previous.globalErrors = true },
     (x) => { x.previous.outcome = 'cancelled' },
+    (x) => { x.reviewedSpecDigests = {} },
   ]
   for (const mutate of variants) {
     const input = fixture(); mutate(input)

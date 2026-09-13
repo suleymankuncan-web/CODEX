@@ -45,10 +45,12 @@ export async function runRecoverablePlaywright({ adminRoot, cli, env, resume }) 
   const shared = inputs()
   const beforeDigests = specDigests(root)
   const policy = readJson(join(adminRoot, 'scripts/playwright-recovery-policy.json'))
-  if (policy?.version !== 1 || !Array.isArray(policy.reviewedSpecs)) throw new Error('Invalid recovery policy')
+  if (policy?.version !== 1 || !Array.isArray(policy.reviewedSpecs) || policy.reviewedSpecs.some((file) =>
+    !/^[a-f0-9]{64}$/.test(policy.specDigests?.[file] ?? ''))) throw new Error('Invalid recovery policy')
   const selection = selectSpecRecovery({
     inventory, previous, sharedDigest: shared.digest, digests: beforeDigests,
-    reviewedSpecs: policy.reviewedSpecs, uncertain: uncertainSpecDependencies(root),
+    reviewDigests: specDigests(root, true),
+    reviewedSpecs: policy.reviewedSpecs, reviewedSpecDigests: policy.specDigests, uncertain: uncertainSpecDependencies(root),
   })
   console.log('[playwright-recovery] ' + selection.reason + '; execute=' + selection.execute.length + ' specs; reuse=' + selection.reused.length)
   mkdirSync(join(root, 'tmp/release-gate'), { recursive: true })

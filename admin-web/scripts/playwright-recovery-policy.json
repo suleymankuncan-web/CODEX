@@ -5,5 +5,10 @@
     "store-targets-parity-evidence.spec.ts",
     "store-targets-store-manager-command.spec.ts"
   ],
-  "reason": "These target specs freeze browser time before each test, use isolated page/session fixtures and mock their API state. Other specs always rerun until their determinism is reviewed."
+  "reason": "These target specs freeze browser time before each test, use isolated page/session fixtures and mock their API state. Other specs always rerun until their determinism is reviewed.",
+  "specDigests": {
+    "store-targets-contracts.spec.ts": "60498544d5050fe40988a1ceb5f5de89ae9e0c4aff36f8717d65968c7ff4ec47",
+    "store-targets-parity-evidence.spec.ts": "22e670a21d5ecc5213551024a122c00afbcb818716aba8419e757a977cdb5272",
+    "store-targets-store-manager-command.spec.ts": "4659d20ecbcd8cef31ab14e2de6a80ce7157a60e6016267890a1894fec567172"
+  }
 }

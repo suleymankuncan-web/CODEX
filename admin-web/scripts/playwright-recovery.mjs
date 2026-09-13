@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { createRequire } from 'node:module'
 import { MAX_PROOF_AGE_MS, isSpec, workspacePaths } from '../../scripts/release-recovery.mjs'
 import { sha256, stableJson } from '../../scripts/release-stage-proof.mjs'
 
@@ -28,21 +29,38 @@ export function reportCases(report) {
   return result
 }
 
-export function specDigests(root) {
-  return Object.fromEntries(workspacePaths(root).filter(isSpec).map((path) =>
-    [path.split('/').at(-1), sha256(readFileSync(join(root, path)))]))
+export function specDigests(root, normalizeLineEndings = false) {
+  return Object.fromEntries(workspacePaths(root).filter(isSpec).map((path) => {
+    const bytes = readFileSync(join(root, path))
+    return [path.split('/').at(-1), sha256(normalizeLineEndings ? bytes.toString('utf8').replaceAll('\r\n', '\n') : bytes)]
+  }))
 }
 
 export function uncertainSpecDependencies(root) {
   const files = workspacePaths(root).filter((path) => /^admin-web\/e2e\/.*\.[tj]sx?$/.test(path))
-  return files.some((path) => {
-    const source = readFileSync(join(root, path), 'utf8')
-    return /(?:from\s*|import\s*\(|require\s*\()[\s'"][^\n]*\.spec(?:\.|['"])/.test(source) ||
-      /(?:import|require)\s*\(\s*[^\s'"]/.test(source)
-  })
+  return files.some((path) => hasUncertainSpecImports(readFileSync(join(root, path), 'utf8'), path))
 }
 
-export function selectSpecRecovery({ inventory, previous, sharedDigest, digests, reviewedSpecs, now = Date.now(), uncertain = false }) {
+export function hasUncertainSpecImports(source, path = 'spec.ts') {
+  const ts = createRequire(import.meta.url)('typescript')
+  const tree = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
+  let uncertain = tree.parseDiagnostics.length > 0
+  const inspect = (argument) => {
+    if (!argument || !ts.isStringLiteralLike(argument) || /\.spec(?:[./?#]|$)/.test(argument.text)) uncertain = true
+  }
+  function visit(node) {
+    if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) inspect(node.moduleSpecifier)
+    if (ts.isExternalModuleReference(node)) inspect(node.expression)
+    if (ts.isImportTypeNode(node)) inspect(ts.isLiteralTypeNode(node.argument) ? node.argument.literal : null)
+    if (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+      (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) inspect(node.arguments[0])
+    ts.forEachChild(node, visit)
+  }
+  visit(tree)
+  return uncertain
+}
+
+export function selectSpecRecovery({ inventory, previous, sharedDigest, digests, reviewedSpecs, reviewedSpecDigests, reviewDigests = digests, now = Date.now(), uncertain = false }) {
   const files = [...new Set(inventory.map((item) => item.file))].sort()
   const fresh = (reason) => ({ execute: files, reused: [], reason })
   if (uncertain) return fresh('spec dependencies are uncertain')
@@ -58,6 +76,7 @@ export function selectSpecRecovery({ inventory, previous, sharedDigest, digests,
   const inventoryFiles = new Map(inventory.map((item) => [item.id, item.file]))
   if (previous.cases.some((item) => inventoryFiles.get(item.id) !== item.file)) return fresh('case file provenance changed')
   const reused = files.filter((file) => reviewedSpecs.includes(file) &&
+    reviewedSpecDigests?.[file] === reviewDigests[file] &&
     inventory.filter((item) => item.file === file).length === previous.cases.filter((item) => item.file === file).length &&
     previous.specDigests?.[file] === digests[file] &&
     previous.cases.filter((item) => item.file === file).every((item) => item.passed &&
