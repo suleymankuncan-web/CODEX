@@ -1,9 +1,10 @@
-import { KeyRound, LogIn, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
+import { KeyRound, LogIn, Menu, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import { Button } from '../components/ui/button'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -35,6 +36,15 @@ export function AdminSidebar(input: {
 }) {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 761px)')
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileOpen(false)
+    }
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => desktop.removeEventListener('change', closeOnDesktop)
+  }, [])
   const warmingRouteDedupeRef = useRef<Set<string>>(new Set())
   const ToggleIcon = input.collapsed ? PanelLeftOpen : PanelLeftClose
   const roleSummary = formatDisplayRoles(input.authSummary?.user.roleCodes, t('adminShell.noResolvedRoles'))
@@ -61,8 +71,7 @@ export function AdminSidebar(input: {
       .catch(() => undefined)
   }
 
-  return (
-    <aside className="admin-command-sidebar" aria-label={t('adminShell.primaryNavigation')}>
+  const brand = (
       <div className="admin-command-brand">
         <span className="admin-command-brand-logo" aria-hidden="true">
           <img src={lufianLogoUrl} alt="" />
@@ -72,19 +81,8 @@ export function AdminSidebar(input: {
           <small>{t('adminShell.adminWorkspace')}</small>
         </span>
       </div>
-
-      <Button
-        aria-expanded={!input.collapsed}
-        className="admin-command-sidebar-toggle"
-        size="sm"
-        type="button"
-        variant="ghost"
-        onClick={() => input.onCollapsedChange(!input.collapsed)}
-      >
-        <ToggleIcon aria-hidden="true" size={18} />
-        <span>{input.collapsed ? t('adminShell.sidebar.expand') : t('adminShell.sidebar.collapse')}</span>
-      </Button>
-
+  )
+  const navigation = (
       <nav className="admin-command-nav" aria-label={t('adminShell.primaryNavigation')}>
         {primaryNavItems.map((item) => {
           const Icon = item.icon
@@ -95,6 +93,7 @@ export function AdminSidebar(input: {
                 `admin-command-nav-link${isActive ? ' admin-command-nav-link-active' : ''}`
               }
               key={item.to}
+              onClick={() => setMobileOpen(false)}
               onFocus={() => warmAdminRoute(item.to)}
               onPointerDown={() => warmAdminRoute(item.to)}
               onPointerEnter={() => warmAdminRoute(item.to)}
@@ -109,7 +108,8 @@ export function AdminSidebar(input: {
           )
         })}
       </nav>
-
+  )
+  const footer = (
       <div className="admin-command-sidebar-footer">
         <div className="admin-command-identity">
           <span className="admin-command-avatar" aria-hidden="true">
@@ -124,6 +124,7 @@ export function AdminSidebar(input: {
         <div className="admin-command-utility-links">
           <NavLink
             className="admin-command-utility-link"
+            onClick={() => setMobileOpen(false)}
             onFocus={() => warmAdminRoute('/admin/session')}
             onPointerDown={() => warmAdminRoute('/admin/session')}
             onPointerEnter={() => warmAdminRoute('/admin/session')}
@@ -143,6 +144,45 @@ export function AdminSidebar(input: {
           </NavLink>
         </div>
       </div>
+  )
+
+  return (
+    <>
+    <aside className="admin-command-sidebar" aria-label={t('adminShell.primaryNavigation')}>
+      <div className="admin-command-sidebar-heading">
+        {brand}
+        <Button
+          aria-expanded={!input.collapsed}
+          aria-label={input.collapsed ? t('adminShell.sidebar.expand') : t('adminShell.sidebar.collapse')}
+          className="admin-command-sidebar-toggle"
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+          onClick={() => input.onCollapsedChange(!input.collapsed)}
+        >
+          <ToggleIcon aria-hidden="true" />
+        </Button>
+      </div>
+      {navigation}
+      {footer}
     </aside>
+    <div className="admin-command-mobile-toolbar">
+      {brand}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetTrigger asChild>
+          <Button aria-label={t('adminShell.primaryNavigation')} size="icon" variant="outline">
+            <Menu aria-hidden="true" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent className="admin-command-mobile-drawer" aria-describedby={undefined}>
+          <SheetHeader>
+            <SheetTitle>{t('adminShell.adminWorkspace')}</SheetTitle>
+          </SheetHeader>
+          {navigation}
+          {footer}
+        </SheetContent>
+      </Sheet>
+    </div>
+    </>
   )
 }

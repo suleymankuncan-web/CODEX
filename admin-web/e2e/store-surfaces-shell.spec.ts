@@ -702,7 +702,7 @@ test('store sidebar recovers when a lazy route module fails during SPA navigatio
     .click()
 
   await expect(page).toHaveURL(/\/store\/feed$/)
-  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular', level: 1 })).toBeVisible()
   expect(failedFeedRouteModuleOnce).toBe(true)
 })
 
@@ -776,14 +776,14 @@ test('store feed switches owned product copy to English and preserves source pos
   await page.goto('/store/feed')
   await setStoredLocale(page, 'en')
 
-  await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Announcements', level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()
-  await expect(page.getByText('Region feed')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Search announcements' })).toBeVisible()
   await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toHaveCount(0)
 
   await setStoredLocale(page, 'tr')
-  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular', level: 1 })).toBeVisible()
   await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
 })
 
@@ -809,12 +809,12 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Görevler',
     path: '/store/tasks',
-    ready: page.getByRole('heading', { name: 'Görevler', exact: true }),
+    ready: page.getByRole('heading', { name: 'Görevler', level: 1 }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Duyurular',
     path: '/store/feed',
-    ready: page.getByRole('heading', { name: 'Duyurular' }),
+    ready: page.getByRole('heading', { name: 'Duyurular', level: 1 }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Ana Sayfa',
@@ -831,7 +831,7 @@ test('store settings utility pages show honest preferences and stay mobile-safe'
 
   await expect(page.getByRole('heading', { name: 'Profil ve ayarlar' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Kullanıcı profili' })).toBeVisible()
-  await page.getByRole('button', { name: 'Tercihler' }).click()
+  await page.getByRole('tab', { name: 'Tercihler' }).click()
   await expect(page.getByRole('heading', { name: 'Uygulama tercihleri' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Dil seçimi' })).toBeVisible()
   const settingsOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

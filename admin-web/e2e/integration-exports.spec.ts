@@ -154,7 +154,7 @@ test('integration queue export fetches every server page from offset zero', asyn
   })
 
   await page.goto('/admin/integrations')
-  await page.getByRole('button', { name: 'Hatalar' }).click()
+  await page.getByRole('tab', { name: 'Hatalar' }).click()
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Kuyruğu dışa aktar' }).click()
@@ -198,7 +198,7 @@ test('integration queue export refuses revision drift without downloading', asyn
   })
 
   await page.goto('/admin/integrations')
-  await page.getByRole('button', { name: 'Hatalar' }).click()
+  await page.getByRole('tab', { name: 'Hatalar' }).click()
 
   let downloadCount = 0
   page.on('download', () => {
@@ -230,7 +230,7 @@ test('integration queue export refuses over-cap totals without a download', asyn
   })
 
   await page.goto('/admin/integrations')
-  await page.getByRole('button', { name: 'Hatalar' }).click()
+  await page.getByRole('tab', { name: 'Hatalar' }).click()
 
   let downloadCount = 0
   page.on('download', () => {

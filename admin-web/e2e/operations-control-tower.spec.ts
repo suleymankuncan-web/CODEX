@@ -25,7 +25,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(page).toHaveURL(/\/admin\/operations$/)
   await expect(page.getByRole('navigation', { name: 'Birincil' }).getByRole('link', { name: 'Operasyon' })).toBeVisible()
   await expect(main.getByText('Operasyon kontrol kulesi')).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Pilot güven sinyalleri tek ekranda görünmeli.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Operasyon kontrol kulesi' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Backend', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Import', exact: true })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Veri kalitesi', exact: true })).toBeVisible()
@@ -77,7 +77,7 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(capacityPanel).toContainText('Protected role baseline')
   await expect(capacityPanel).toContainText('Blocked')
   await expect(page.locator('body')).not.toContainText(/production ready|broad launch approved/i)
-  await expect(main.getByRole('heading', { name: 'Pilot confidence signals should be visible in one place.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Operations Control Tower' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operator action list' })).toBeVisible()
   await expect(main.getByText('Open import queue')).toBeVisible()
   await expect(main.getByText('Verify data quality signal')).toBeVisible()
@@ -122,8 +122,10 @@ test('operations control tower composes read-only readiness signals', async ({ p
   await expect(workflowPanel).toContainText('1')
   await expect(workflowPanel).toContainText('Total workflow pressure')
   await expect(workflowPanel).toContainText('3')
-  await expect(main.getByRole('heading', { name: 'KPI and ranking readiness' })).toBeVisible()
   const kpiPanel = page.getByTestId('operations-kpi-ranking-signal')
+  await expect(
+    kpiPanel.getByRole('heading', { name: 'KPI and ranking readiness', hidden: true }),
+  ).toHaveCount(1)
   await expect(kpiPanel).toContainText('Published KPI config')
   await expect(kpiPanel).toContainText('v4')
   await expect(kpiPanel).toContainText('Leaderboard population')
@@ -246,7 +248,7 @@ test('operations backend metric treats health error payloads as failures', async
   const main = page.getByRole('main')
   const backendMetric = page.getByTestId('admin-metric-backend')
   await expect(main.getByText('Attention', { exact: true })).toBeVisible()
-  await expect(backendMetric).toHaveClass(/tw:bg-rose-50\/70/)
+  await expect(backendMetric).toHaveClass(/tw:bg-destructive\/10/)
   await expect(backendMetric).toContainText('Unavailable')
   await expect(backendMetric).toContainText('The health endpoint reports an error; deployment/readiness needs review.')
 })
@@ -375,7 +377,7 @@ test('operations control tower keeps mobile width bounded', async ({ page }) => 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/admin/operations')
 
-  await expect(page.getByRole('heading', { name: 'Pilot güven sinyalleri tek ekranda görünmeli.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operasyon kontrol kulesi' })).toBeVisible()
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   expect(overflow).toBeLessThanOrEqual(1)

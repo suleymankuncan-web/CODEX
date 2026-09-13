@@ -131,30 +131,29 @@ test('admin shell switches chrome to English copy and persists locale', async ({
   await expect(sidebar.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
 })
 
-test('admin shell uses locked Plum Glacier sidebar palette tokens', async ({ page }) => {
+test('admin shell uses the shared semantic sidebar palette tokens', async ({ page }) => {
   await page.goto('/admin/audit')
 
   const sidebar = page.locator('.admin-command-sidebar')
   await expect(sidebar).toBeVisible()
 
   const app = await readComputedStyle(page, '.admin-command-app')
-  expect(app.backgroundColor).toBe('rgb(248, 245, 251)')
-  expect(app.backgroundImage).toContain('rgba(248, 245, 251, 0.98)')
-  expect(app.backgroundImage).toContain('rgba(237, 247, 246, 0.94)')
-  expect(app.color).toBe('rgb(23, 20, 33)')
+  expect(app.backgroundColor).toBe('rgb(242, 245, 255)')
+  expect(app.backgroundImage).toBe('none')
+  expect(app.color).toBe('rgb(6, 20, 45)')
 
   const activeNav = await readComputedStyle(page, '.admin-command-nav-link-active')
-  expect(activeNav.backgroundImage).toContain('rgba(124, 58, 237, 0.12)')
-  expect(activeNav.backgroundImage).toContain('rgba(19, 167, 179, 0.12)')
-  expect(activeNav.color).toBe('rgb(76, 42, 165)')
+  expect(activeNav.backgroundColor).toBe('rgb(50, 93, 175)')
+  expect(activeNav.backgroundImage).toBe('none')
+  expect(activeNav.color).toBe('rgb(255, 255, 255)')
 
   const sidebarStyle = await readComputedStyle(page, '.admin-command-sidebar')
-  expect(sidebarStyle.backgroundColor).toBe('rgba(255, 255, 255, 0.72)')
-  expect(sidebarStyle.borderColor).toContain('rgba(36, 28, 50, 0.1)')
+  expect(sidebarStyle.backgroundColor).toBe('rgb(255, 255, 255)')
+  expect(sidebarStyle.borderColor).toContain('rgb(220, 228, 255)')
 
   const avatar = await readComputedStyle(page, '.admin-command-avatar')
-  expect(avatar.backgroundColor).toBe('rgba(19, 167, 179, 0.12)')
-  expect(avatar.color).toBe('rgb(8, 123, 134)')
+  expect(avatar.backgroundColor).toBe('rgba(124, 58, 237, 0.12)')
+  expect(avatar.color).toBe('rgb(50, 93, 175)')
 
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,

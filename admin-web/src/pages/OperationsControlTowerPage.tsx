@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, DatabaseZap, Inbox, Layers3, ShieldCheck, Trophy, Users } from 'lucide-react'
 import { Link } from 'react-router'
@@ -8,7 +8,8 @@ import {
   AdminSurfacePage,
   type AdminMetricStripItem,
 } from './admin-surface-primitives'
-import { AdminOperationalPage } from './admin-operational-primitives'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import './operations-control-tower.css'
 import { Button } from '../components/ui/button'
 import {
   getImportOverview,
@@ -113,6 +114,7 @@ const providerBlockers: ProviderBlocker[] = [
 
 export function OperationsControlTowerPage() {
   const { locale, t } = useLocalization()
+  const [view, setView] = useState('all')
   const healthQuery = useQuery({
     queryKey: ['operations-health'],
     queryFn: getOperationsHealth,
@@ -393,88 +395,80 @@ export function OperationsControlTowerPage() {
     )
   }
 
-  return (
-    <AdminOperationalPage ariaLabel={t('adminOperations.heroTitle')}>
-      <OperationsCommandHeader
-        backendMetric={backendMetric}
-        hasSignalError={hasSignalError}
-        operationalPressure={operationalPressure}
-        providerBlockerCount={providerBlockers.length}
-        readiness={readiness}
-        t={t}
-      />
-
-      <OperatorActionListPanel actions={operatorActions} t={t} />
-      <OperationsCapacityReadinessPanel t={t} />
-      <AdminMetricStrip
+  const operationalPanels = (
+    <>
+      <AdminMetricStrip className="operations-signal-metrics"
         items={summaryCards.map((card): AdminMetricStripItem => ({
-          description: card.note,
-          icon: card.icon,
-          id: card.id,
-          label: card.title,
-          tone: toAdminSurfaceTone(card.tone),
-          value: card.value,
+          description: card.note, icon: card.icon, id: card.id, label: card.title,
+          tone: toAdminSurfaceTone(card.tone), value: card.value,
         }))}
       />
-      <MetricCoveragePanel t={t} />
-      <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
-      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
-        <BackendSignalPanel error={healthQuery.error} health={healthQuery.data} isError={healthQuery.isError} locale={locale} t={t} />
-        <OperationsApiFailureSnapshotPanel locale={locale} t={t} />
-      </section>
-      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
-        <ProviderBlockersPanel t={t} />
-      </section>
-      <DataQualitySignalPanel
-        dataQuality={dataQuality}
-        isError={importNeedsActionQuery.isError || importOverviewQuery.isError || snapshotOverviewQuery.isError}
-        t={t}
-      />
-      <WorkforceSignalPanel
-        error={sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error}
-        isError={sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError}
-        offboardingItems={offboardingItems}
-        pressure={workforcePressure}
-        sellerCodeItems={sellerCodeItems}
-        t={t}
-      />
-
-      <WorkflowSignalPanel
-        error={workflowInboxQuery.error}
-        isError={workflowInboxQuery.isError}
-        items={workflowItems}
-        pressure={workflowPressure}
-        t={t}
-      />
-
-      <KpiRankingSignalPanel
-        config={kpiConfigQuery.data}
-        error={kpiConfigQuery.error ?? rankingsQuery.error}
-        isError={hasKpiRankingSignalError}
-        isLoading={isKpiRankingSignalLoading}
-        locale={locale}
-        rankings={rankingsQuery.data}
-        readiness={kpiRankingReadiness}
-        t={t}
-      />
-
-      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
+      <div className="operations-signal-grid">
+        <DataQualitySignalPanel
+          dataQuality={dataQuality}
+          isError={importNeedsActionQuery.isError || importOverviewQuery.isError || snapshotOverviewQuery.isError}
+          t={t}
+        />
+        <WorkforceSignalPanel
+          error={sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error}
+          isError={hasWorkforceSignalError}
+          offboardingItems={offboardingItems} pressure={workforcePressure} sellerCodeItems={sellerCodeItems} t={t}
+        />
+        <WorkflowSignalPanel
+          error={workflowInboxQuery.error} isError={workflowInboxQuery.isError}
+          items={workflowItems} pressure={workflowPressure} t={t}
+        />
+        <KpiRankingSignalPanel
+          config={kpiConfigQuery.data} error={kpiConfigQuery.error ?? rankingsQuery.error}
+          isError={hasKpiRankingSignalError} isLoading={isKpiRankingSignalLoading}
+          locale={locale} rankings={rankingsQuery.data} readiness={kpiRankingReadiness} t={t}
+        />
         <ImportSignalPanel
           error={importOverviewQuery.error ?? importNeedsActionQuery.error}
           isError={importOverviewQuery.isError || importNeedsActionQuery.isError}
-          items={importNeedsActionItems}
-          overview={importOverviewQuery.data}
-          t={t}
+          items={importNeedsActionItems} overview={importOverviewQuery.data} t={t}
         />
         <SnapshotSignalPanel
           error={snapshotOverviewQuery.error ?? snapshotNeedsActionQuery.error}
           isError={snapshotOverviewQuery.isError || snapshotNeedsActionQuery.isError}
-          items={snapshotNeedsActionItems}
-          overview={snapshotOverviewQuery.data}
-          t={t}
+          items={snapshotNeedsActionItems} overview={snapshotOverviewQuery.data} t={t}
         />
-      </section>
-    </AdminOperationalPage>
+      </div>
+      <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
+    </>
+  )
+  const systemPanels = (
+    <>
+      <div className="operations-signal-grid">
+        <BackendSignalPanel error={healthQuery.error} health={healthQuery.data} isError={healthQuery.isError} locale={locale} t={t} />
+        <OperationsApiFailureSnapshotPanel locale={locale} t={t} />
+      </div>
+      <OperationsCapacityReadinessPanel t={t} />
+      <ProviderBlockersPanel t={t} />
+      <MetricCoveragePanel t={t} />
+    </>
+  )
+
+  return (
+    <AdminSurfacePage ariaLabel={t('adminOperations.heroEyebrow')} className="operations-control-tower">
+      <OperationsCommandHeader
+        backendMetric={backendMetric} hasSignalError={hasSignalError}
+        operationalPressure={operationalPressure} providerBlockerCount={providerBlockers.length}
+        readiness={readiness} t={t}
+      />
+      <OperatorActionListPanel actions={operatorActions} t={t} />
+      <Tabs value={view} onValueChange={setView} className="operations-signal-tabs">
+        <TabsList aria-label={t('adminOperations.view.label')}>
+          <TabsTrigger value="all">{t('adminOperations.view.all')}</TabsTrigger>
+          <TabsTrigger value="operational">{t('adminOperations.view.queues')}</TabsTrigger>
+          <TabsTrigger value="system">{t('adminOperations.view.system')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value={view} className="operations-signal-content">
+          {view !== 'system' ? operationalPanels : null}
+          {view !== 'operational' ? systemPanels : null}
+        </TabsContent>
+      </Tabs>
+    </AdminSurfacePage>
   )
 }
 

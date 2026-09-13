@@ -1,11 +1,11 @@
 import { Activity, ServerCog, ShieldCheck } from 'lucide-react'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import {
-  AdminOperationalBadge,
-  AdminOperationalHeader,
-  type AdminOperationalMetric,
-  AdminOperationalMetrics,
-} from './admin-operational-primitives'
+  AdminSurfaceBadge,
+  type AdminMetricStripItem,
+  AdminMetricStrip,
+} from './admin-surface-primitives'
+import { AdminAzureHeader } from './admin-azure-header'
 import type { SignalStatus } from './operations-hero'
 import { toAdminSurfaceTone, type OperationsTone } from './operations-surface-tones'
 
@@ -23,7 +23,7 @@ export function OperationsCommandHeader(input: {
   readiness: SignalStatus
   t: TranslateFunction
 }) {
-  const primaryMetrics: AdminOperationalMetric[] = [
+  const primaryMetrics: AdminMetricStripItem[] = [
     {
       description: input.readiness.copy,
       icon: <ShieldCheck size={18} />,
@@ -58,23 +58,21 @@ export function OperationsCommandHeader(input: {
 
   return (
     <>
-      <AdminOperationalHeader
-        eyebrow={input.t('adminOperations.heroEyebrow')}
-        title={input.t('adminOperations.heroTitle')}
-        description={input.t('adminOperations.heroCopy')}
+      <AdminAzureHeader
+        title={input.t('adminOperations.heroEyebrow')}
         icon={<ServerCog size={18} />}
-        meta={
+        actions={
           <>
-            <AdminOperationalBadge tone={input.operationalPressure > 0 ? 'warning' : 'success'}>
+            <AdminSurfaceBadge tone={input.operationalPressure > 0 ? 'warning' : 'success'}>
               {input.t('adminOperations.operatorPressure')}: {input.operationalPressure}
-            </AdminOperationalBadge>
-            <AdminOperationalBadge tone={input.hasSignalError ? 'warning' : 'success'}>
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone={input.hasSignalError ? 'warning' : 'success'}>
               {input.hasSignalError ? input.t('adminOperations.unavailable') : input.t('adminOperations.ready')}
-            </AdminOperationalBadge>
+            </AdminSurfaceBadge>
           </>
         }
       />
-      <AdminOperationalMetrics items={primaryMetrics} />
+      <AdminMetricStrip className="operations-overview-metrics" items={primaryMetrics} />
     </>
   )
 }

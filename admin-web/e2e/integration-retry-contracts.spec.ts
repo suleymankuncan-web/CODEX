@@ -27,7 +27,7 @@ test('admin integrations retry command posts from issue queue without changing p
 
   await page.goto('/admin/integrations')
   await setStoredLocale(page, 'en')
-  await page.getByRole('button', { name: /^Issues/ }).click()
+  await page.getByRole('tab', { name: /^Issues/ }).click()
   await expect(page.getByText('batch-retry-ready-1')).toBeVisible()
   await page.getByRole('button', { name: 'Retry batch' }).click()
   await expect(page.getByText('Retry queued from dashboard')).toBeVisible()

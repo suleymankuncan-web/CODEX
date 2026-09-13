@@ -6,7 +6,7 @@
   grid-auto-rows: max-content;
   gap: 14px;
   color: var(--foreground);
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .command-canvas-page-header {

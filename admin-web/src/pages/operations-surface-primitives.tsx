@@ -4,11 +4,11 @@ import {
   AdminKeyValueGrid,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
+  AdminSurfaceSection,
 } from './admin-surface-primitives'
-import {
-  AdminOperationalRow,
-  AdminOperationalSection,
-} from './admin-operational-primitives'
+import { ArrowUpRight, Info } from 'lucide-react'
+import { Link } from 'react-router'
+import { Alert, AlertDescription } from '../components/ui/alert'
 import { cn } from '../lib/utils'
 import { toAdminSurfaceTone, type OperationsTone } from './operations-surface-tones'
 
@@ -52,7 +52,8 @@ function OperationsPanel({
   title: ReactNode
 }) {
   return (
-    <AdminOperationalSection
+    <AdminSurfaceSection
+      className="operations-signal-panel"
       actions={actions}
       badge={badge}
       description={description}
@@ -65,7 +66,7 @@ function OperationsPanel({
       }
     >
       {children}
-    </AdminOperationalSection>
+    </AdminSurfaceSection>
   )
 }
 
@@ -81,7 +82,7 @@ function OperationsQueueList({
   status?: ReactNode | undefined
 }) {
   return (
-    <div className="tw:grid tw:gap-2">
+    <div className="operations-queue-list">
       {header || status ? (
         <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
           {header ? <div className="tw:text-sm tw:font-medium tw:text-foreground">{header}</div> : <span />}
@@ -98,19 +99,27 @@ function OperationsQueueList({
 }
 
 function OperationsQueueRow({ item }: { item: OperationsQueueItem }) {
-  return (
-    <AdminOperationalRow
-      href={item.href}
-      meta={item.meta}
-      status={item.status ? <OperationsStatusBadge tone={item.tone}>{item.status}</OperationsStatusBadge> : null}
-      testId="operations-queue-row"
-      title={item.title}
-      tone={item.tone}
-    >
+  const content = (
+    <>
+      <div className="operations-queue-heading">
+        <div className="tw:min-w-0">
+          <div className="operations-queue-title">{item.title}</div>
+          {item.meta ? <div className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{item.meta}</div> : null}
+        </div>
+        <div className="tw:flex tw:shrink-0 tw:items-center tw:gap-2">
+          {item.status ? <OperationsStatusBadge tone={item.tone}>{item.status}</OperationsStatusBadge> : null}
+          {item.href ? <ArrowUpRight size={16} aria-hidden="true" /> : null}
+        </div>
+      </div>
       {item.reason ? <p className="tw:m-0 tw:text-xs tw:leading-5 tw:text-muted-foreground">{item.reason}</p> : null}
       {item.body ? <div className="tw:mt-2">{item.body}</div> : null}
       {item.footer ? <p className="tw:mt-2 tw:text-xs tw:text-muted-foreground">{item.footer}</p> : null}
-    </AdminOperationalRow>
+    </>
+  )
+  return item.href ? (
+    <Link className="operations-queue-row" data-testid="operations-queue-row" to={item.href}>{content}</Link>
+  ) : (
+    <article className="operations-queue-row" data-testid="operations-queue-row">{content}</article>
   )
 }
 
@@ -122,16 +131,17 @@ function OperationsInlineState({
   tone?: OperationsTone | undefined
 }) {
   return (
-    <div
+    <Alert
       className={cn(
         'tw:rounded-lg tw:border tw:p-3 tw:text-sm',
-        tone === 'warning' && 'tw:border-amber-200 tw:bg-amber-50/70 tw:text-amber-900',
-        tone === 'danger' && 'tw:border-rose-200 tw:bg-rose-50/70 tw:text-rose-900',
+        tone === 'warning' && 'tw:border-warning/25 tw:bg-warning-soft tw:text-warning-foreground',
+        tone === 'danger' && 'tw:border-destructive/25 tw:bg-destructive/10 tw:text-destructive',
         tone !== 'warning' && tone !== 'danger' && 'tw:border-border tw:bg-background/60 tw:text-muted-foreground',
       )}
     >
-      {children}
-    </div>
+      <Info aria-hidden="true" />
+      <AlertDescription>{children}</AlertDescription>
+    </Alert>
   )
 }
 

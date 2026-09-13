@@ -7,10 +7,16 @@ import {
   LogOut,
   Mail,
   ShieldCheck,
+  Settings2,
   UserRound,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { StoreOperationsHeader } from './store-operations-layout'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -70,140 +76,77 @@ export function StoreSettingsPage(input: { authSummary: AuthSessionSummary | nul
   }
 
   return (
-    <StoreSurfacePage ariaLabel={t('storeHome.settings.aria')} className="store-settings-page">
-      <header className="store-settings-header">
-        <div>
-          <span className="store-settings-eyebrow">{t('storeHome.settings.eyebrow')}</span>
-          <h1>{t('storeHome.settings.title')}</h1>
-          <p>{t('storeHome.settings.copy')}</p>
-        </div>
-      </header>
+    <StoreSurfacePage ariaLabelledBy="store-settings-title" className="store-settings-page" testId="store-settings-page">
+      <StoreOperationsHeader title={t('storeHome.settings.title')} titleId="store-settings-title" eyebrow={personaLabel} description={t('storeHome.settings.copy')} icon={Settings2} />
 
-      <nav className="store-settings-tabs" aria-label={t('storeHome.settings.aria')}>
-        <button className={section === 'profile' ? 'is-active' : ''} type="button" onClick={() => selectSection('profile')}>
-          <UserRound size={16} aria-hidden="true" />
-          {t('storeHome.settings.profileTab')}
-        </button>
-        <button className={section === 'preferences' ? 'is-active' : ''} type="button" onClick={() => selectSection('preferences')}>
-          <Languages size={16} aria-hidden="true" />
-          {t('storeHome.settings.preferencesTab')}
-        </button>
-        <button className={section === 'security' ? 'is-active' : ''} type="button" onClick={() => selectSection('security')}>
-          <ShieldCheck size={16} aria-hidden="true" />
-          {t('storeHome.settings.securityTab')}
-        </button>
-      </nav>
+      <div className="store-settings-layout">
+        <Card className="store-settings-identity" aria-labelledby="store-settings-identity-title">
+          <CardHeader>
+            <StoreAccountAvatar displayName={displayName} />
+            <CardTitle><h2 id="store-settings-identity-title">{displayName}</h2></CardTitle>
+            <CardDescription><Badge variant="secondary">{personaLabel}</Badge></CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="store-settings-scope"><Building2 aria-hidden="true" /><div><span>{t('storeHome.settings.scopeLabel')}</span><strong>{scopeLabel}</strong></div></div>
+          </CardContent>
+          <CardFooter>
+            <p>{t('storeHome.settings.photoCopy')}</p>
+            <StoreAccountManagementButton>{t('storeHome.settings.managePhoto')}</StoreAccountManagementButton>
+          </CardFooter>
+        </Card>
 
-      {section === 'profile' ? (
-        <section className="store-settings-panel" aria-labelledby="store-settings-profile-title">
-          <div className="store-settings-panel-heading">
-            <span className="store-settings-section-icon"><UserRound aria-hidden="true" /></span>
-            <div>
-              <h2 id="store-settings-profile-title">{t('storeHome.settings.profileTitle')}</h2>
-              <p>{t('storeHome.settings.profileCopy')}</p>
-            </div>
-          </div>
+        <Card className="store-settings-workspace">
+          <Tabs value={section} onValueChange={value => selectSection(parseSection(value))}>
+            <TabsList aria-label={t('storeHome.settings.aria')}>
+              <TabsTrigger value="profile"><UserRound aria-hidden="true" />{t('storeHome.settings.profileTab')}</TabsTrigger>
+              <TabsTrigger value="preferences"><Languages aria-hidden="true" />{t('storeHome.settings.preferencesTab')}</TabsTrigger>
+              <TabsTrigger value="security"><ShieldCheck aria-hidden="true" />{t('storeHome.settings.securityTab')}</TabsTrigger>
+            </TabsList>
 
-          <div className="store-settings-profile-workspace">
-            <div className="store-settings-profile-portrait">
-              <StoreAccountAvatar displayName={displayName} />
-              <div>
-                <strong>{displayName}</strong>
-                <span>{personaLabel}</span>
-              </div>
-              <p>{t('storeHome.settings.photoCopy')}</p>
-              <StoreAccountManagementButton>{t('storeHome.settings.managePhoto')}</StoreAccountManagementButton>
-            </div>
+            <TabsContent value="profile" className="store-settings-panel">
+              <CardHeader>
+                <CardTitle><h2>{t('storeHome.settings.profileTitle')}</h2></CardTitle>
+                <CardDescription>{t('storeHome.settings.profileCopy')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <dl className="store-settings-profile-details">
+                  <div><dt><UserRound aria-hidden="true" />{t('storeHome.settings.nameLabel')}</dt><dd>{displayName}</dd></div>
+                  <div><dt><Mail aria-hidden="true" />{t('storeHome.settings.emailLabel')}</dt><dd>{email ?? t('storeHome.settings.noEmail')}</dd></div>
+                  <div><dt><ShieldCheck aria-hidden="true" />{t('storeHome.settings.roleLabel')}</dt><dd>{personaLabel}</dd></div>
+                  <div><dt><Building2 aria-hidden="true" />{t('storeHome.settings.scopeLabel')}</dt><dd>{scopeLabel}</dd></div>
+                </dl>
+              </CardContent>
+            </TabsContent>
 
-            <dl className="store-settings-profile-details">
-              <div>
-                <dt><UserRound size={15} aria-hidden="true" />{t('storeHome.settings.nameLabel')}</dt>
-                <dd>{displayName}</dd>
-              </div>
-              <div>
-                <dt><Mail size={15} aria-hidden="true" />{t('storeHome.settings.emailLabel')}</dt>
-                <dd>{email ?? t('storeHome.settings.noEmail')}</dd>
-              </div>
-              <div>
-                <dt><ShieldCheck size={15} aria-hidden="true" />{t('storeHome.settings.roleLabel')}</dt>
-                <dd>{personaLabel}</dd>
-              </div>
-              <div>
-                <dt><Building2 size={15} aria-hidden="true" />{t('storeHome.settings.scopeLabel')}</dt>
-                <dd>{scopeLabel}</dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-      ) : null}
+            <TabsContent value="preferences" className="store-settings-panel">
+              <CardHeader>
+                <CardTitle><h2>{t('storeHome.settings.preferencesTitle')}</h2></CardTitle>
+                <CardDescription>{t('storeHome.settings.preferencesCopy')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="store-settings-preference-row">
+                  <div className="store-settings-preference-copy"><span className="store-settings-action-icon"><Globe2 aria-hidden="true" /></span><div><h3>{t('storeHome.settings.languageTitle')}</h3><p>{t('storeHome.settings.languageCopy')}</p><Badge variant="secondary">{t('storeHome.settings.localPreferenceBadge')}</Badge></div></div>
+                  <ToggleGroup aria-label={t('language.groupLabel')} className="store-settings-language-toggle" variant="outline" type="single" value={locale} onValueChange={value => { const nextLocale = parseLocale(value); if (nextLocale) setLocale(nextLocale) }}>
+                    {appLocales.map(option => <ToggleGroupItem aria-label={t(switchLabelByLocale[option])} key={option} value={option}>{locale === option ? <Check aria-hidden="true" /> : null}{t(localeLabelByLocale[option])}</ToggleGroupItem>)}
+                  </ToggleGroup>
+                </div>
+              </CardContent>
+            </TabsContent>
 
-      {section === 'preferences' ? (
-        <section className="store-settings-panel" aria-labelledby="store-settings-preferences-title">
-          <div className="store-settings-panel-heading">
-            <span className="store-settings-section-icon"><Globe2 aria-hidden="true" /></span>
-            <div>
-              <h2 id="store-settings-preferences-title">{t('storeHome.settings.preferencesTitle')}</h2>
-              <p>{t('storeHome.settings.preferencesCopy')}</p>
-            </div>
-          </div>
-          <article className="store-settings-preference-row">
-            <div>
-              <h3>{t('storeHome.settings.languageTitle')}</h3>
-              <p>{t('storeHome.settings.languageCopy')}</p>
-              <small>{t('storeHome.settings.localPreferenceBadge')}</small>
-            </div>
-            <ToggleGroup
-              aria-label={t('language.groupLabel')}
-              className="store-settings-language-toggle"
-              type="single"
-              value={locale}
-              onValueChange={(value) => {
-                const nextLocale = parseLocale(value)
-                if (nextLocale) setLocale(nextLocale)
-              }}
-            >
-              {appLocales.map((option) => (
-                <ToggleGroupItem aria-label={t(switchLabelByLocale[option])} key={option} value={option}>
-                  {locale === option ? <Check size={14} aria-hidden="true" /> : null}
-                  {t(localeLabelByLocale[option])}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </article>
-        </section>
-      ) : null}
-
-      {section === 'security' ? (
-        <section className="store-settings-panel" aria-labelledby="store-settings-security-title">
-          <div className="store-settings-panel-heading">
-            <span className="store-settings-section-icon"><KeyRound aria-hidden="true" /></span>
-            <div>
-              <h2 id="store-settings-security-title">{t('storeHome.settings.securityTitle')}</h2>
-              <p>{t('storeHome.settings.securityCopy')}</p>
-            </div>
-          </div>
-          <div className="store-settings-security-grid">
-            <article>
-              <span className="store-settings-action-icon"><ShieldCheck aria-hidden="true" /></span>
-              <div>
-                <h3>{t('storeHome.settings.securityTitle')}</h3>
-                <p>{t('storeHome.settings.securityHint')}</p>
-              </div>
-              <StoreAccountManagementButton>{t('storeHome.settings.manageSecurity')}</StoreAccountManagementButton>
-            </article>
-            <article>
-              <span className="store-settings-action-icon is-danger"><LogOut aria-hidden="true" /></span>
-              <div>
-                <h3>{t('storeHome.settings.signOutTitle')}</h3>
-                <p>{t('storeHome.settings.signOutCopy')}</p>
-              </div>
-              <Button variant="outline" asChild>
-                <Link to="/auth/logout">{t('storeHome.settings.logout')}</Link>
-              </Button>
-            </article>
-          </div>
-        </section>
-      ) : null}
+            <TabsContent value="security" className="store-settings-panel">
+              <CardHeader>
+                <CardTitle><h2>{t('storeHome.settings.securityTitle')}</h2></CardTitle>
+                <CardDescription>{t('storeHome.settings.securityCopy')}</CardDescription>
+              </CardHeader>
+              <CardContent className="store-settings-security-list">
+                <article><span className="store-settings-action-icon"><KeyRound aria-hidden="true" /></span><div><h3>{t('storeHome.settings.securityTitle')}</h3><p>{t('storeHome.settings.securityHint')}</p></div><StoreAccountManagementButton>{t('storeHome.settings.manageSecurity')}</StoreAccountManagementButton></article>
+                <Separator />
+                <article><span className="store-settings-action-icon"><LogOut aria-hidden="true" /></span><div><h3>{t('storeHome.settings.signOutTitle')}</h3><p>{t('storeHome.settings.signOutCopy')}</p></div><Button variant="outline" asChild><Link to="/auth/logout"><LogOut aria-hidden="true" data-icon="inline-start" />{t('storeHome.settings.logout')}</Link></Button></article>
+              </CardContent>
+            </TabsContent>
+          </Tabs>
+        </Card>
+      </div>
     </StoreSurfacePage>
   )
 }

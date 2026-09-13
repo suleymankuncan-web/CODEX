@@ -1,4 +1,6 @@
-import type { ReactNode, SelectHTMLAttributes } from 'react'
+import { Children, cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react'
+import { Field, FieldLabel } from '../../components/ui/field'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { AdminKeyValue } from '../../pages/admin-surface-primitives'
 import type { TranslateFunction } from '../localization/dictionary'
 
@@ -9,20 +11,33 @@ function formatNumber(value: number) {
 }
 
 function IntegrationField(input: { children: ReactNode; label: string }) {
+  const id = useId()
   return (
-    <label className="tw:grid tw:gap-1.5">
-      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      {input.children}
-    </label>
+    <Field>
+      <FieldLabel htmlFor={id}>{input.label}</FieldLabel>
+      {isValidElement(input.children) ? cloneElement(input.children as ReactElement<{ id: string }>, { id }) : input.children}
+    </Field>
   )
 }
 
-function IntegrationSelect(input: SelectHTMLAttributes<HTMLSelectElement>) {
+function IntegrationSelect(input: {
+  children: ReactNode
+  value: string
+  onValueChange: (value: string) => void
+  disabled?: boolean
+  id?: string
+  'aria-label'?: string
+}) {
+  const options = Children.toArray(input.children).filter(isValidElement) as ReactElement<{ value: string; children: ReactNode }>[]
   return (
-    <select
-      {...input}
-      className={`tw:h-8 tw:min-w-0 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:px-2.5 tw:text-sm tw:font-medium tw:text-foreground tw:shadow-sm tw:outline-none tw:transition focus-visible:tw:border-ring focus-visible:tw:ring-3 focus-visible:tw:ring-ring/50 disabled:tw:cursor-not-allowed disabled:tw:opacity-50 ${input.className ?? ''}`}
-    />
+    <Select value={`value:${input.value}`} onValueChange={(value) => input.onValueChange(value.slice(6))} disabled={input.disabled ?? false}>
+      <SelectTrigger id={input.id} aria-label={input['aria-label']} className="integration-select">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent><SelectGroup>
+        {options.map((option) => <SelectItem key={option.props.value} value={`value:${option.props.value}`}>{option.props.children}</SelectItem>)}
+      </SelectGroup></SelectContent>
+    </Select>
   )
 }
 
@@ -33,7 +48,7 @@ function IntegrationUploadDrop(input: {
   title: string
 }) {
   return (
-    <label className="tw:flex tw:min-w-0 tw:cursor-pointer tw:items-center tw:gap-3 tw:rounded-xl tw:border tw:border-dashed tw:border-border tw:bg-background/70 tw:p-3 tw:transition hover:tw:border-primary/50">
+    <label className="integration-upload-drop tw:flex tw:min-w-0 tw:cursor-pointer tw:items-center tw:gap-3 tw:rounded-xl tw:border tw:border-dashed tw:border-border tw:bg-card tw:p-4 tw:transition hover:tw:border-primary/50 focus-within:tw:ring-2 focus-within:tw:ring-ring">
       <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
         {input.icon}
       </span>
@@ -42,6 +57,7 @@ function IntegrationUploadDrop(input: {
         <span className="tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{input.fileName}</span>
       </span>
       <input
+        aria-label={input.title}
         className="tw:sr-only"
         type="file"
         onChange={(event) => input.onFileChange(event.target.files?.[0] ?? null)}

@@ -586,7 +586,7 @@ test('store rankings page switches to English copy and persists locale', async (
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rankings', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Period filter' })).toContainText('2026')
   const monthFilter = page.getByRole('button', { name: 'Period filter' })
   await expect(monthFilter).toContainText('Apr')

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { DatabaseZap, RefreshCw } from 'lucide-react'
+import { Button } from '../components/ui/button'
+import { AdminAzureHeader } from './admin-azure-header'
 import {
   buildNeedsActionQueryKey,
   createImportBatch,
@@ -23,6 +26,7 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { actionToast } from '../lib/action-toast'
 import { getErrorMessage } from '../lib/format'
 import { AdminStatePanel, AdminSurfacePage } from './admin-surface-primitives'
+import '../features/integrations/integration-dashboard.css'
 
 export function IntegrationDashboardPage() {
   const { t } = useLocalization()
@@ -181,6 +185,7 @@ export function IntegrationDashboardPage() {
   if (overviewQuery.isLoading || needsActionQuery.isLoading || lookupsQuery.isLoading) {
     return (
       <AdminSurfacePage>
+        <AdminAzureHeader title={t('adminIntegrations.title')} icon={<DatabaseZap />} />
         <AdminStatePanel
           title={t('adminIntegrations.loadingTitle')}
           description={t('adminIntegrations.loadingCopy')}
@@ -193,10 +198,12 @@ export function IntegrationDashboardPage() {
   if (overviewQuery.isError) {
     return (
       <AdminSurfacePage>
+        <AdminAzureHeader title={t('adminIntegrations.title')} icon={<DatabaseZap />} />
         <AdminStatePanel
           title={t('adminIntegrations.dashboardUnavailableTitle')}
           description={getErrorMessage(overviewQuery.error)}
           tone="danger"
+          action={<Button variant="outline" onClick={() => void overviewQuery.refetch()}><RefreshCw data-icon="inline-start" />{t('adminIntegrations.observationsRetry')}</Button>}
         />
       </AdminSurfacePage>
     )
@@ -205,10 +212,12 @@ export function IntegrationDashboardPage() {
   if (needsActionQuery.isError) {
     return (
       <AdminSurfacePage>
+        <AdminAzureHeader title={t('adminIntegrations.title')} icon={<DatabaseZap />} />
         <AdminStatePanel
           title={t('adminIntegrations.needsActionUnavailableTitle')}
           description={getErrorMessage(needsActionQuery.error)}
           tone="danger"
+          action={<Button variant="outline" onClick={() => void needsActionQuery.refetch()}><RefreshCw data-icon="inline-start" />{t('adminIntegrations.observationsRetry')}</Button>}
         />
       </AdminSurfacePage>
     )
@@ -217,10 +226,12 @@ export function IntegrationDashboardPage() {
   if (lookupsQuery.isError) {
     return (
       <AdminSurfacePage>
+        <AdminAzureHeader title={t('adminIntegrations.title')} icon={<DatabaseZap />} />
         <AdminStatePanel
           title={t('adminIntegrations.lookupsUnavailableTitle')}
           description={getErrorMessage(lookupsQuery.error)}
           tone="danger"
+          action={<Button variant="outline" onClick={() => void lookupsQuery.refetch()}><RefreshCw data-icon="inline-start" />{t('adminIntegrations.observationsRetry')}</Button>}
         />
       </AdminSurfacePage>
     )
@@ -230,6 +241,7 @@ export function IntegrationDashboardPage() {
   if (!overview) {
     return (
       <AdminSurfacePage>
+        <AdminAzureHeader title={t('adminIntegrations.title')} icon={<DatabaseZap />} />
         <AdminStatePanel
           title={t('adminIntegrations.overviewUnavailableTitle')}
           description={t('adminIntegrations.overviewUnavailableCopy')}

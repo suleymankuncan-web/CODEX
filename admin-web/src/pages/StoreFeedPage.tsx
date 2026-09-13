@@ -1,58 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router'
-import {
-  BellRing,
-  Check,
-  ChevronRight,
-  Clock3,
-  Megaphone,
-  MoreVertical,
-  Pencil,
-  Pin,
-  RefreshCcw,
-  Send,
-  Store,
-  Trash2,
-} from 'lucide-react'
+import { Check, Clock3, Megaphone, Pin, RefreshCcw, Search, Send, Store } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
-import {
-  archiveFeedPost,
-  createFeedPost,
-  getAdminFeedQueryKey,
-  getVisibleFeedPosts,
-  getVisibleFeedQueryKey,
-  pinFeedPost,
-  unpinFeedPost,
-  updateFeedPost,
-} from '../features/feed/api'
+import { archiveFeedPost, createFeedPost, getAdminFeedQueryKey, getVisibleFeedPosts, getVisibleFeedQueryKey, pinFeedPost, unpinFeedPost, updateFeedPost } from '../features/feed/api'
 import type { FeedPost } from '../features/feed/contracts'
+import { CommandCanvasPage } from '../features/store-command-canvas/primitives'
 import { actionToast } from '../lib/action-toast'
 import { getUserFacingErrorMessage } from '../lib/format'
-import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import { StoreOperationsHeader } from './store-operations-layout'
+import { StoreFeedTable } from './store-feed-table'
+import { compareFeedPosts, derivePostTitle, filterStoreFeedPosts, getPostBody, isToday, type StoreFeedFilter } from './store-feed-model'
+import './store-feed-azure.css'
 
-type FeedTone = 'plum' | 'cyan' | 'mint' | 'amber'
-type FeedRowType = 'announcement' | 'focus'
 type FeedListResponse = Awaited<ReturnType<typeof getVisibleFeedPosts>>
-
-type RemovedPostSnapshot = {
-  post: FeedPost
-}
-
-type MetricCard = {
-  icon: typeof Megaphone
-  label: string
-  note: string
-  tone: FeedTone
-  value: string
-}
-
+type RemovedPostSnapshot = { post: FeedPost }
 const archiveUndoDelayMs = 4500
 
 export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null }) {
+  return <StoreFeedSurface key={getVisibleFeedQueryKey(input.authSummary)[1]} {...input} />
+}
+
+function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
@@ -75,12 +56,13 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   }, [input.authSummary])
   const activeRegionId = regionIds[0] ?? ''
   const canComposeRegionFeed = roleCodes.includes('REGION_MANAGER') && activeRegionId.length > 0
-  const roleLabel = formatRoleLabel(roleCodes, t)
+  const roleLabel = roleCodes.includes('REPORT_VIEWER') ? t('storeFeed.role.reportViewer') : formatRoleLabel(roleCodes, t)
   const contextLabel = canComposeRegionFeed ? t('storeFeed.context.regionStores') : roleLabel
   const [notice, setNotice] = useState<TranslationKey | null>(null)
   const [body, setBody] = useState('')
   const [pinNextPost, setPinNextPost] = useState(false)
-  const [openPostMenuId, setOpenPostMenuId] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<StoreFeedFilter>('all')
   const [editingPostId, setEditingPostId] = useState<string | null>(null)
   const [editingBody, setEditingBody] = useState('')
   const [removedPostSnapshot, setRemovedPostSnapshot] = useState<RemovedPostSnapshot | null>(null)
@@ -104,37 +86,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   const todayPosts = visiblePosts.filter((post) => isToday(post.publishedAt ?? post.createdAt))
   const canPublish = body.trim().length > 0 && canComposeRegionFeed
 
-  const metricCards = useMemo<MetricCard[]>(() => [
-    {
-      label: t('storeFeed.metric.visible'),
-      value: String(visiblePosts.length),
-      note: t('storeFeed.metric.visibleNote'),
-      icon: Megaphone,
-      tone: 'plum',
-    },
-    {
-      label: t('storeFeed.metric.pinned'),
-      value: String(pinnedPosts.length),
-      note: t('storeFeed.metric.pinnedNote'),
-      icon: Pin,
-      tone: 'amber',
-    },
-    {
-      label: t('storeFeed.metric.today'),
-      value: String(todayPosts.length),
-      note: t('storeFeed.metric.todayNote'),
-      icon: Clock3,
-      tone: 'cyan',
-    },
-    {
-      label: t('storeFeed.metric.regionStores'),
-      value: String(storeCount),
-      note: t('storeFeed.metric.regionStoresNote'),
-      icon: Store,
-      tone: 'mint',
-    },
-  ], [pinnedPosts.length, storeCount, t, todayPosts.length, visiblePosts.length])
-
+  const filteredPosts = filterStoreFeedPosts(visiblePosts, query, filter, locale)
   const createMutation = useMutation({
     mutationFn: createFeedPost,
     onSuccess: async (response) => {
@@ -207,20 +159,6 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   })
 
   useEffect(() => {
-    if (!openPostMenuId) return
-
-    function closeMenuWithEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setOpenPostMenuId(null)
-      }
-    }
-
-    window.addEventListener('keydown', closeMenuWithEscape)
-
-    return () => window.removeEventListener('keydown', closeMenuWithEscape)
-  }, [openPostMenuId])
-
-  useEffect(() => {
     return () => {
       if (archiveTimerRef.current) {
         window.clearTimeout(archiveTimerRef.current)
@@ -247,7 +185,6 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   function startEditingPost(post: FeedPost) {
     setEditingPostId(post.feedPostId)
     setEditingBody(getPostBody(post))
-    setOpenPostMenuId(null)
   }
 
   function cancelEditingPost() {
@@ -270,7 +207,6 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   }
 
   function togglePostPin(post: FeedPost) {
-    setOpenPostMenuId(null)
     setRemovedPostSnapshot(null)
 
     if (post.isPinned) {
@@ -285,10 +221,10 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
     if (archiveTimerRef.current) {
       window.clearTimeout(archiveTimerRef.current)
       archiveTimerRef.current = null
+      if (removedPostSnapshot) archiveMutation.mutate(removedPostSnapshot.post.feedPostId)
     }
 
     setHiddenPostIds((current) => new Set(current).add(post.feedPostId))
-    setOpenPostMenuId(null)
     setRemovedPostSnapshot({ post })
     setNotice('storeFeed.notice.removed')
 
@@ -323,402 +259,47 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   }
 
   return (
-    <section
-      className="feed-command store-feed-command-page"
-      aria-labelledby="feed-production-title"
-      onClick={() => setOpenPostMenuId(null)}
-    >
-      <header className="feed-command-hero">
-        <div className="feed-command-title-block">
-          <div className="feed-command-pills">
-            <span className="feed-pill feed-pill-primary">
-              <Megaphone size={15} />
-              {t('storeFeed.heroEyebrow')}
-            </span>
-            <span className="feed-pill">{roleLabel}</span>
-            <span className="feed-pill feed-pill-soft">{contextLabel}</span>
-          </div>
-          <h1 id="feed-production-title">{t('storeFeed.heroEyebrow')}</h1>
-          <p>{t('storeFeed.productionHeroCopy')}</p>
-        </div>
-        <div className="feed-command-actions">
-          <button
-            type="button"
-            className="feed-button feed-button-muted"
-            onClick={() => void feedQuery.refetch()}
-          >
-            <RefreshCcw size={16} />
-            {t('storeFeed.refresh')}
-          </button>
-        </div>
-      </header>
+    <CommandCanvasPage className="store-feed-azure" ariaLabelledBy="feed-production-title">
+      <StoreOperationsHeader title={t('storeFeed.heroEyebrow')} titleId="feed-production-title" eyebrow={roleLabel}
+        description={t('storeFeed.productionDescription')} icon={Megaphone}
+        actions={<Button variant="outline" size="sm" className="operations-period" disabled={feedQuery.isFetching} onClick={() => void feedQuery.refetch()}><RefreshCcw data-icon="inline-start" />{t('storeFeed.refresh')}</Button>} />
 
-      <div className="feed-metrics">
-        {metricCards.map((card) => {
-          const Icon = card.icon
-          return (
-            <article className={`feed-metric feed-metric-${card.tone}`} key={card.label}>
-              <span className="feed-metric-icon" aria-hidden="true">
-                <Icon size={20} />
-              </span>
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <small>{card.note}</small>
-            </article>
-          )
-        })}
+      <div className="store-feed-summary" aria-label={t('storeFeed.heroEyebrow')}>
+        {[
+          { label: t('storeFeed.metric.visible'), value: visiblePosts.length, icon: Megaphone },
+          { label: t('storeFeed.metric.pinned'), value: pinnedPosts.length, icon: Pin },
+          { label: t('storeFeed.metric.today'), value: todayPosts.length, icon: Clock3 },
+          { label: t('storeFeed.storeScope'), value: storeCount, icon: Store },
+        ].map((item, index) => <Card key={item.label} size="sm"><CardHeader><CardTitle><item.icon aria-hidden="true" />{item.label}</CardTitle></CardHeader><CardContent>{index < 3 && (feedQuery.isLoading || feedQuery.isError) ? <span aria-label={t('storeFeed.unavailable')}>—</span> : item.value}</CardContent></Card>)}
       </div>
 
-      {canComposeRegionFeed ? (
-        <section
-          className="feed-composer-card feed-composer-card-compact"
-          aria-label={t('storeFeed.composerAria')}
-        >
-          <div className="feed-composer-avatar" aria-hidden="true">
-            <Megaphone size={20} />
+      {canComposeRegionFeed ? <Card size="sm" className="store-feed-composer" aria-label={t('storeFeed.composerAria')}>
+        <CardHeader><CardTitle>{t('storeFeed.composerAria')}</CardTitle><CardDescription>{contextLabel}</CardDescription></CardHeader>
+        <CardContent><FieldGroup><Field><FieldLabel htmlFor="store-feed-body">{t('storeFeed.composerBodyAria')}</FieldLabel><Textarea id="store-feed-body" placeholder={t('storeFeed.composerPlaceholder')} rows={2} value={body} disabled={createMutation.isPending} onChange={event => setBody(event.target.value)} /></Field></FieldGroup></CardContent>
+        <CardFooter><Button variant="outline" size="sm" aria-pressed={pinNextPost} disabled={createMutation.isPending} onClick={() => setPinNextPost(current => !current)}><Pin data-icon="inline-start" />{t('storeFeed.pinAction')}</Button><Button size="sm" disabled={!canPublish || createMutation.isPending} onClick={publishPost}><Send data-icon="inline-start" />{t('storeFeed.shareAction')}</Button></CardFooter>
+      </Card> : null}
+
+      {notice ? <Alert role="status"><Check /><AlertDescription className="tw:flex tw:items-center tw:justify-between tw:gap-3"><span>{t(notice)}</span>{removedPostSnapshot ? <Button variant="outline" size="sm" onClick={undoRemovePost}>{t('storeFeed.undoAction')}</Button> : null}</AlertDescription></Alert> : null}
+
+      <Card className="store-feed-board">
+        <CardHeader>
+          <div className="store-feed-board-heading"><CardTitle><h2>{t('storeFeed.boardTitle')}</h2></CardTitle><Badge variant="secondary" aria-live="polite">{feedQuery.isLoading || feedQuery.isError ? '—' : t('storeFeed.recordCount', { count: filteredPosts.length })}</Badge></div>
+          <div className="store-feed-toolbar">
+            <InputGroup><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label={t('storeFeed.search')} placeholder={t('storeFeed.search')} value={query} onChange={event => setQuery(event.target.value)} /></InputGroup>
+            <ToggleGroup type="single" value={filter} aria-label={t('storeFeed.filterAria')} onValueChange={value => { if (value === 'all' || value === 'pinned' || value === 'today') setFilter(value) }}>
+              <ToggleGroupItem value="all">{t('storeFeed.filter.all')}</ToggleGroupItem><ToggleGroupItem value="pinned">{t('storeFeed.pinned')}</ToggleGroupItem><ToggleGroupItem value="today">{t('storeFeed.filter.today')}</ToggleGroupItem>
+            </ToggleGroup>
           </div>
-          <div className="feed-composer-form">
-            <textarea
-              aria-label={t('storeFeed.composerBodyAria')}
-              className="feed-composer-body"
-              placeholder={t('storeFeed.composerPlaceholder')}
-              rows={3}
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-            />
-            <div className="feed-composer-footer">
-              <span className="feed-composer-context">{contextLabel}</span>
-              <div className="feed-composer-actions">
-                <button
-                  type="button"
-                  className={`feed-pin-toggle${pinNextPost ? ' feed-pin-toggle-active' : ''}`}
-                  aria-pressed={pinNextPost}
-                  onClick={() => setPinNextPost((current) => !current)}
-                >
-                  <Pin size={15} />
-                  {t('storeFeed.pinAction')}
-                </button>
-                <button
-                  type="button"
-                  className="feed-button feed-button-primary feed-composer-submit"
-                  disabled={!canPublish || createMutation.isPending}
-                  onClick={publishPost}
-                >
-                  <Send size={16} />
-                  {t('storeFeed.shareAction')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {notice ? (
-        <div className="feed-notice">
-          <span className="feed-notice-copy">
-            <Check size={16} />
-            {t(notice)}
-          </span>
-          {removedPostSnapshot ? (
-            <button type="button" className="feed-notice-action" onClick={undoRemovePost}>
-              {t('storeFeed.undoAction')}
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      <section className="feed-list-panel feed-list-panel-full">
-        <div className="feed-list-head">
-          <div>
-            <h2>{t('storeFeed.regionFeed')}</h2>
-            <p>{t('storeFeed.regionFeedCopy')}</p>
-          </div>
-          <span>{t('storeFeed.recordCount', { count: visiblePosts.length })}</span>
-        </div>
-
-        <div className="feed-list">
-          {feedQuery.isLoading ? (
-            <FeedStateRow
-              title={t('storeFeed.loadingTitle')}
-              copy={t('storeFeed.loadingCopy')}
-            />
-          ) : null}
-
-          {feedQuery.isError ? (
-            <FeedStateRow
-              title={t('storeFeed.errorTitle')}
-              copy={getUserFacingErrorMessage(feedQuery.error, t('storeFeed.loadError'))}
-              actionLabel={t('storeFeed.retryAction')}
-              onAction={() => void feedQuery.refetch()}
-            />
-          ) : null}
-
-          {!feedQuery.isLoading && !feedQuery.isError && visiblePosts.length === 0 ? (
-            <FeedStateRow
-              title={t('storeFeed.emptyTitle')}
-              copy={t('storeFeed.productionEmptyCopy')}
-            />
-          ) : null}
-
-          {!feedQuery.isLoading && !feedQuery.isError
-            ? visiblePosts.map((post, index) => (
-                <FeedPostRow
-                  key={post.feedPostId}
-                  locale={locale}
-                  canManage={canComposeRegionFeed}
-                  editingBody={editingBody}
-                  isEditing={editingPostId === post.feedPostId}
-                  isMenuOpen={openPostMenuId === post.feedPostId}
-                  isMutationPending={
-                    updateMutation.isPending ||
-                    pinMutation.isPending ||
-                    unpinMutation.isPending ||
-                    archiveMutation.isPending
-                  }
-                  opensUp={index === visiblePosts.length - 1}
-                  onCancelEdit={cancelEditingPost}
-                  onEditBodyChange={setEditingBody}
-                  onMenuToggle={() => setOpenPostMenuId((current) => (
-                    current === post.feedPostId ? null : post.feedPostId
-                  ))}
-                  onRemove={() => removePost(post)}
-                  onSaveEdit={saveEditingPost}
-                  onStartEdit={() => startEditingPost(post)}
-                  onTogglePin={() => togglePostPin(post)}
-                  post={post}
-                  t={t}
-                />
-              ))
-            : null}
-        </div>
-      </section>
-    </section>
+        </CardHeader>
+        <CardContent>
+          {feedQuery.isLoading ? <div role="status" className="store-feed-loading"><span>{t('storeFeed.loadingTitle')}</span>{[0, 1, 2].map(item => <Skeleton key={item} className="tw:h-16 tw:w-full" />)}</div> : null}
+          {feedQuery.isError ? <Alert variant="destructive"><AlertTitle>{t('storeFeed.errorTitle')}</AlertTitle><AlertDescription>{getUserFacingErrorMessage(feedQuery.error, t('storeFeed.loadError'))}<Button variant="outline" size="sm" disabled={feedQuery.isFetching} onClick={() => void feedQuery.refetch()}>{t('storeFeed.retryAction')}</Button></AlertDescription></Alert> : null}
+          {!feedQuery.isLoading && !feedQuery.isError && !filteredPosts.length ? <Empty><EmptyHeader><EmptyTitle>{visiblePosts.length ? t('storeFeed.noMatchTitle') : t('storeFeed.emptyTitle')}</EmptyTitle><EmptyDescription>{visiblePosts.length ? t('storeFeed.noMatchCopy') : t('storeFeed.productionEmptyCopy')}</EmptyDescription></EmptyHeader>{query || filter !== 'all' ? <Button variant="outline" size="sm" onClick={() => { setQuery(''); setFilter('all') }}>{t('storeFeed.clearFilters')}</Button> : null}</Empty> : null}
+          {!feedQuery.isLoading && !feedQuery.isError && filteredPosts.length ? <StoreFeedTable posts={filteredPosts} locale={locale} t={t} canManage={canComposeRegionFeed} editingPostId={editingPostId} editingBody={editingBody} onEditBodyChange={setEditingBody} onStartEdit={startEditingPost} onCancelEdit={cancelEditingPost} onSaveEdit={saveEditingPost} onTogglePin={togglePostPin} onRemove={removePost} isMutationPending={updateMutation.isPending || pinMutation.isPending || unpinMutation.isPending || archiveMutation.isPending} /> : null}
+        </CardContent>
+      </Card>
+    </CommandCanvasPage>
   )
-}
-
-function FeedPostRow(input: {
-  canManage: boolean
-  editingBody: string
-  isEditing: boolean
-  isMenuOpen: boolean
-  isMutationPending: boolean
-  locale: AppLocale
-  opensUp: boolean
-  onCancelEdit: () => void
-  onEditBodyChange: (value: string) => void
-  onMenuToggle: () => void
-  onRemove: () => void
-  onSaveEdit: () => void
-  onStartEdit: () => void
-  onTogglePin: () => void
-  post: FeedPost
-  t: TranslateFunction
-}) {
-  const rowType = getPostRowType(input.post)
-  const destination = input.post.targetRoute ?? input.post.linkUrl
-
-  return (
-    <article
-      className={`feed-post-row feed-post-${rowType}${input.canManage ? '' : ' feed-post-row-readonly'}`}
-      data-testid="store-feed-post-row"
-    >
-      {input.canManage ? (
-        <div
-          className={`feed-post-menu-wrap${input.isMenuOpen ? ' feed-post-menu-wrap-open' : ''}${
-            input.opensUp ? ' feed-post-menu-wrap-up' : ''
-          }`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="feed-post-menu-button"
-            aria-expanded={input.isMenuOpen}
-            aria-label={input.t('storeFeed.postOptionsAria')}
-            onClick={input.onMenuToggle}
-          >
-            <MoreVertical size={18} />
-          </button>
-          {input.isMenuOpen ? (
-            <div className="feed-post-menu" role="menu">
-              <button type="button" role="menuitem" onClick={input.onStartEdit}>
-                <Pencil size={15} />
-                {input.t('storeFeed.editAction')}
-              </button>
-              <button type="button" role="menuitem" onClick={input.onTogglePin}>
-                <Pin size={15} />
-                {input.post.isPinned
-                  ? input.t('storeFeed.unpinAction')
-                  : input.t('storeFeed.pinAction')}
-              </button>
-              <button type="button" role="menuitem" className="feed-post-menu-danger" onClick={input.onRemove}>
-                <Trash2 size={15} />
-                {input.t('storeFeed.archiveAction')}
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      <div className="feed-post-icon" aria-hidden="true">
-        {rowType === 'focus' ? <Megaphone size={18} /> : <BellRing size={18} />}
-      </div>
-      <div className="feed-post-main">
-        {input.isEditing ? (
-          <div className="feed-post-edit">
-            <textarea
-              className="feed-post-editor"
-              aria-label={input.t('storeFeed.editBodyAria')}
-              value={input.editingBody}
-              onChange={(event) => input.onEditBodyChange(event.target.value)}
-            />
-            <div className="feed-post-edit-actions">
-              <button type="button" className="feed-button feed-button-muted" onClick={input.onCancelEdit}>
-                {input.t('storeFeed.cancelAction')}
-              </button>
-              <button
-                type="button"
-                className="feed-button feed-button-primary"
-                disabled={input.editingBody.trim().length === 0 || input.isMutationPending}
-                onClick={input.onSaveEdit}
-              >
-                <Check size={15} />
-                {input.t('storeFeed.saveAction')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <p>{getPostBody(input.post)}</p>
-        )}
-        <div className="feed-post-meta">
-          <span className="feed-post-time">
-            <Clock3 size={14} />
-            {formatPostTimestamp(
-              input.post.publishedAt ?? input.post.createdAt,
-              input.locale,
-              input.t,
-            )}
-          </span>
-          {input.post.isPinned ? (
-            <span className="feed-post-meta-pin">{input.t('storeFeed.pinned')}</span>
-          ) : null}
-          {isEditedPost(input.post) ? (
-            <span className="feed-post-meta-edited">{input.t('storeFeed.edited')}</span>
-          ) : null}
-          <span className="feed-post-meta-live">{input.t('storeFeed.published')}</span>
-          <span>
-            {rowType === 'focus'
-              ? input.t('storeFeed.regionFocus')
-              : input.t('storeFeed.type.announcement')}
-          </span>
-          {input.post.metricLabel ? <span>{input.post.metricLabel}</span> : null}
-          {destination && input.post.linkLabel ? (
-            <Link className="feed-post-meta-link" to={destination}>
-              {input.post.linkLabel}
-              <ChevronRight size={14} />
-            </Link>
-          ) : null}
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function FeedStateRow(input: {
-  actionLabel?: string
-  copy: string
-  onAction?: () => void
-  title: string
-}) {
-  return (
-    <div className="feed-state-row">
-      <strong>{input.title}</strong>
-      <span>{input.copy}</span>
-      {input.actionLabel && input.onAction ? (
-        <button type="button" className="feed-button feed-button-muted" onClick={input.onAction}>
-          {input.actionLabel}
-        </button>
-      ) : null}
-    </div>
-  )
-}
-
-function compareFeedPosts(left: FeedPost, right: FeedPost) {
-  const pinnedDelta = Number(right.isPinned) - Number(left.isPinned)
-
-  if (pinnedDelta !== 0) return pinnedDelta
-
-  return getFeedPostTime(right) - getFeedPostTime(left)
-}
-
-function getFeedPostTime(post: FeedPost) {
-  return new Date(post.publishedAt ?? post.updatedAt ?? post.createdAt).getTime()
-}
-
-function getPostRowType(post: FeedPost): FeedRowType {
-  return post.postType === 'challenge' ? 'focus' : 'announcement'
-}
-
-function getPostBody(post: FeedPost) {
-  return post.body.trim() || post.title
-}
-
-function derivePostTitle(body: string) {
-  const firstLine = body
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean)
-
-  if (!firstLine) return 'Bölge duyurusu'
-
-  return firstLine.length > 96 ? `${firstLine.slice(0, 93)}...` : firstLine
-}
-
-function isEditedPost(post: FeedPost) {
-  return new Date(post.updatedAt).getTime() !== new Date(post.createdAt).getTime()
-}
-
-function isToday(input: string) {
-  const date = new Date(input)
-  const today = new Date()
-
-  return (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
-  )
-}
-
-function formatPostTimestamp(input: string, locale: AppLocale, t: TranslateFunction) {
-  const date = new Date(input)
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(today.getDate() - 1)
-  const time = new Intl.DateTimeFormat(getIntlLocale(locale), {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-
-  if (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
-  ) {
-    return t('storeFeed.todayAt', { time })
-  }
-
-  if (
-    date.getFullYear() === yesterday.getFullYear() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getDate() === yesterday.getDate()
-  ) {
-    return t('storeFeed.yesterdayAt', { time })
-  }
-
-  return new Intl.DateTimeFormat(getIntlLocale(locale), {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
 }
 
 function formatRoleLabel(roleCodes: string[], t: TranslateFunction) {

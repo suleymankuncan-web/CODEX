@@ -1,9 +1,9 @@
+import { adminOperationsNavigationEn, adminOperationsNavigationTr } from './admin-operations-navigation'
 export const adminOperationsTr = {
+  ...adminOperationsNavigationTr,
   'adminOperations.loadingTitle': 'Operasyon kontrol kulesi yükleniyor',
   'adminOperations.loadingCopy': 'Sağlık, import ve snapshot sinyalleri tek ekrana alınıyor.',
 
-  'adminOperations.heroEyebrow': 'Operasyon kontrol kulesi',
-  'adminOperations.heroTitle': 'Pilot güven sinyalleri tek ekranda görünmeli.',
   'adminOperations.heroCopy':
     'Bu yüzey mevcut read-only sinyalleri bir araya getirir: API sağlığı, import baskısı, snapshot tazeliği ve canlı/provider kanıt blockerları.',
   'adminOperations.readiness': 'Hazırlık',
@@ -299,11 +299,10 @@ export const adminOperationsTr = {
 } as const
 
 export const adminOperationsEn: Record<keyof typeof adminOperationsTr, string> = {
+  ...adminOperationsNavigationEn,
   'adminOperations.loadingTitle': 'Loading operations control tower',
   'adminOperations.loadingCopy': 'Composing health, import, and snapshot signals into one surface.',
 
-  'adminOperations.heroEyebrow': 'Operations Control Tower',
-  'adminOperations.heroTitle': 'Pilot confidence signals should be visible in one place.',
   'adminOperations.heroCopy':
     'This surface composes existing read-only signals: API health, import pressure, snapshot freshness, and live/provider evidence blockers.',
   'adminOperations.readiness': 'Readiness',

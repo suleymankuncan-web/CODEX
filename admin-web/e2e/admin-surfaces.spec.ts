@@ -33,9 +33,13 @@ test('PR-3 migrated admin read surfaces render with honest empty states', async 
 
   await routeAdminInbox(page)
   await page.goto('/admin/inbox')
-  await expect(page.getByRole('heading', { name: 'One queue for admin-side approvals and KPI follow-up.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Admin inbox' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'No admin-side queue items' })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Seller code' }).click()
   await expect(page.getByRole('heading', { name: 'No seller code requests are pending.' })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Offboarding' }).click()
   await expect(page.getByRole('heading', { name: 'No offboarding requests are pending.' })).toBeVisible()
 })
 
