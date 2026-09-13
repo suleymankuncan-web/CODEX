@@ -66,7 +66,7 @@ route. A separate Admin role may still grant its own Admin routes.
 | `/store/competitions` | store | secondary | `STORE_MANAGER`, `STORE_PERSONNEL`, `REPORT_VIEWER` | direct navigation only | must return to same route after auth verification | company-scoped competition reads for Report Viewer; stage/template writes remain unavailable | yes |
 | `/store/incentives` | store | secondary | frontend runtime: `REGION_MANAGER`; backend read compatibility also declares `STORE_MANAGER`; Auth Admin preview is broader; DG-1 owns the final alignment | direct navigation only | must return to same route after auth verification | region-scoped incentive command surface; personnel own projection remains under `/store/me` | no |
 | `/store/workforce` | store | secondary | `STORE_MANAGER` with assigned action store, `REGION_MANAGER` with read store or read region scope, `REPORT_VIEWER` with non-empty company read scope, `SUPER_ADMIN` with company read scope | direct navigation only | must return to same route after auth verification | read-only company portfolio for Report Viewer and Super Admin; request/forms and action-assisted lookups remain unavailable | yes |
-| `/store/reports` | store | secondary | `SUPER_ADMIN`, `REPORT_VIEWER`, `AUDITOR`, `REGION_MANAGER`; `STORE_MANAGER` is forbidden for now | direct navigation only | must return to same route after auth verification | monthly store report package by read scope | yes |
+| `/store/reports` | store | secondary | `SUPER_ADMIN`, `REPORT_VIEWER`, `AUDITOR`, `REGION_MANAGER`, `STORE_MANAGER` | direct navigation only | must return to same route after auth verification | monthly store report package by read scope; Store Manager remains assigned-store scoped | yes |
 
 ## Landing Order
 
@@ -115,8 +115,8 @@ npm.cmd --prefix admin-web run test:e2e:store-manager -- --workers=1
 npm.cmd --prefix admin-web run smoke:auth:staging:store-manager
 ```
 
-The contract keeps `/store/reports` forbidden for `STORE_MANAGER`, keeps
-Region Manager-only incentive approval controls out of the Store Manager
+The contract keeps `/store/reports` assigned-store scoped for `STORE_MANAGER`,
+keeps Region Manager-only incentive approval controls out of the Store Manager
 surface, and verifies that checklist result acknowledgement stays available
 without exposing raw identifiers in the UI.
 

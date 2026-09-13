@@ -15,7 +15,7 @@ for (const viewport of [
   { width: 390, height: 844, file: 'store-manager-mobile.png' },
   { width: 320, height: 844, file: 'store-manager-narrow.png' },
 ]) {
-  test(`Tasks store_manager frame at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`Tasks store_manager frame at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport)
     await prepare(page, 'storeManager', 'store_manager')
     await page.goto('/store/tasks')
@@ -29,6 +29,7 @@ for (const viewport of [
     await expectNoPrototypeOrLegacyOwner(page)
     await expectNoHorizontalOverflow(page)
     await page.evaluate(async () => { await document.fonts.ready })
+    await page.screenshot({ path: testInfo.outputPath(`tasks-${viewport.width}.png`), fullPage: true, animations: 'disabled' })
 
     if (capture) {
       await page.locator('.store-shell').screenshot({
@@ -192,6 +193,33 @@ for (const viewport of [
   })
 }
 
+test('Tasks actual manager selection is sent to the server and includes managers with no records', async ({page})=>{
+  await prepare(page,'reportViewer','report_viewer')
+  await page.goto('/store/tasks')
+  await expect(page.getByTestId('store-action-plan-row')).toHaveCount(2)
+  const request=page.waitForRequest(request=>new URL(request.url()).searchParams.get('regionManagerUserId')==='manager-a')
+  await page.getByRole('radio',{name:/Ayşe Demir/}).click()
+  await request
+  await expect(page.getByTestId('store-action-plan-row')).toHaveCount(1)
+  await expect(page.getByTestId('store-action-plan-row')).toContainText('Bursa Downtown')
+  await page.getByRole('radio',{name:/Mert Yılmaz/}).click()
+  await expect(page.getByTestId('store-action-plan-row')).toContainText('Balıkesir')
+  await page.getByRole('radio',{name:/Derya Aydın/}).click()
+  await expect(page.getByTestId('store-action-plan-row')).toHaveCount(0)
+  await expect(page.getByText('Kayıt bulunamadı',{exact:true})).toBeVisible()
+})
+
+test('Tasks keeps the approved calendar and supports a single day with paired request bounds', async ({page})=>{
+  await prepare(page,'storeManager','store_manager')
+  await page.goto('/store/tasks')
+  await page.getByRole('button',{name:'Görev dönemini seç'}).click()
+  const calendar=page.getByRole('dialog')
+  await calendar.getByRole('button',{name:/17 Temmuz 2026/}).click()
+  const request=page.waitForRequest(request=>new URL(request.url()).searchParams.get('periodStart')==='2026-07-17')
+  await calendar.getByRole('button',{name:'Uygula',exact:true}).click()
+  expect(new URL((await request).url()).searchParams.get('periodEnd')).toBe('2026-07-17')
+})
+
 async function prepare(
   page: Page,
   persona: 'storeManager' | 'regionManager' | 'reportViewer',
@@ -200,6 +228,11 @@ async function prepare(
   await page.clock.setFixedTime(new Date('2026-07-17T12:00:00.000Z'))
   await installStoreContractSession(page, persona)
   await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/org/region-managers', route => route.fulfill({json:{items:[
+    {userId:'manager-a',displayName:'Ayşe Demir',storeIds:['store-task-closed']},
+    {userId:'manager-b',displayName:'Mert Yılmaz',storeIds:['store-task-cancelled']},
+    {userId:'manager-empty',displayName:'Derya Aydın',storeIds:[]},
+  ]}}))
   await page.route('**/api/store/tasks/*/events**', async (route) => {
     await route.fulfill({
       json: {
@@ -214,9 +247,11 @@ async function prepare(
     })
   })
   await page.route('**/api/store/tasks/workspace**', async (route) => {
+    const selected = new URL(route.request().url()).searchParams.get('regionManagerUserId')
+    const scopedItems = selected === 'manager-a' ? taskItems.filter(item=>item.actionPlanId==='task-closed') : selected === 'manager-b' ? taskItems.filter(item=>item.actionPlanId==='task-cancelled') : selected ? [] : taskItems
     const visibleItems = view === 'store_manager'
       ? taskItems
-      : taskItems.filter((item) => item.status === 'closed' || item.status === 'cancelled')
+      : scopedItems.filter((item) => item.status === 'closed' || item.status === 'cancelled')
     await route.fulfill({
       json: {
         data: {

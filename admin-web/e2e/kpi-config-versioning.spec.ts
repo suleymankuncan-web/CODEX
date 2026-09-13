@@ -59,25 +59,25 @@ test('snapshot runs page localizes KPI config version reporting context', async 
   await expect(page.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
 })
 
-test('reports summary page switches hub chrome to English copy and persists locale', async ({ page }) => {
+test('reports summary page switches hub chrome to English copy and persists locale', async ({ page }, testInfo) => {
   await page.goto('/admin/reports')
 
-  await expect(page.getByText('Raporlama özeti')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Güvenilir son snapshot üzerinden salt okunur raporlama.' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Raporlama özeti' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raporlar', exact: true })).toBeVisible()
   await expect(page.getByText('Toplam rapor satırı')).toBeVisible()
   await expect(page.getByText('Son tamamlanan snapshot')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Raporlama bağlamı', exact: true })).toBeVisible()
   await expect(page.getByText('Snapshot çalışma ID')).toBeVisible()
   await expect(page.getByText('tamamlandı').first()).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Detay seçiciyi aç' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Tüm rapor dönemleri' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'snapshot-versioned için işgücü raporunu aç' })).toHaveAttribute(
     'href',
     '/admin/reports/workforce/snapshot-versioned',
   )
   await expect(page.getByText("KPI'lar").first()).toBeVisible()
-  await expect(page.getByText('Reporting Summary')).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Reporting Summary' })).toHaveCount(0)
   await expect(page.getByText('Total report rows')).toHaveCount(0)
-  await expect(page.getByText('Open drill-down chooser')).toHaveCount(0)
+  await expect(page.getByText('All report periods')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
@@ -85,12 +85,12 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByText('Reporting Summary')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Reporting Summary' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible()
   await expect(page.getByText('Total report rows')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Reporting anchor' })).toBeVisible()
   await expect(page.getByText('completed').first()).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Open drill-down chooser' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'All report periods' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Open workforce report for snapshot-versioned' })).toHaveAttribute(
     'href',
     '/admin/reports/workforce/snapshot-versioned',
@@ -101,10 +101,11 @@ test('reports summary page switches hub chrome to English copy and persists loca
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('reports-overview-desktop.png'), fullPage: true })
 })
 
-test('reports hub and snapshot chooser stay bounded on mobile width', async ({ page }) => {
+test('reports hub and snapshot chooser stay bounded on mobile width', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 900 })
 
   await page.goto('/admin/reports')
@@ -113,13 +114,14 @@ test('reports hub and snapshot chooser stay bounded on mobile width', async ({ p
   let main = page.getByRole('main')
 
   await expect(page).toHaveURL(/\/admin\/reports$/)
-  await expect(main.getByText('Reporting Summary')).toBeVisible()
+  await expect(main.getByRole('region', { name: 'Reporting Summary' })).toBeVisible()
   await expect(
-    main.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' }),
+    main.getByRole('heading', { name: 'Reports', exact: true }),
   ).toBeVisible()
-  await expect(main.getByRole('link', { name: 'Open drill-down chooser' })).toBeVisible()
+  await expect(main.getByRole('link', { name: 'All report periods' })).toBeVisible()
   await expect(main.getByRole('link', { name: 'Open workforce report for snapshot-versioned' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
+  await page.screenshot({ path: testInfo.outputPath('reports-overview-mobile.png'), fullPage: true })
 
   await page.goto('/admin/reports/snapshot-runs')
   await setStoredLocale(page, 'en')

@@ -53,6 +53,20 @@ test('Super Admin opens the Report Viewer checklist presentation without another
   expect(await page.evaluate(() => window.location.pathname)).toBe('/store/checklists')
 })
 
+test('checklist directory preserves assigned identities and recovers from an empty search', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await installGenericStoreApiFallbacks(page)
+  await routeCompanyChecklistWorkspace(page)
+  await page.goto('/store/checklists')
+  await expect(page.getByRole('button', { name: /Bölge Müdürü A/ })).toBeVisible()
+  const search = page.getByRole('textbox', { name: 'Bölge müdürü ara', exact: true })
+  await search.fill('no-match')
+  await expect(page.getByText('Eşleşen bölge müdürü yok', { exact: true })).toBeVisible()
+  await expect(search).toBeVisible()
+  await search.fill('')
+  await expect(page.getByRole('button', { name: /Bölge Müdürü A/ })).toBeVisible()
+})
+
 async function routeCompanyChecklistWorkspace(page: Page) {
   await page.route('**/api/checklists/command-canvas/regions**', async (route) => {
     await route.fulfill({ json: { data: {
@@ -66,8 +80,8 @@ async function routeCompanyChecklistWorkspace(page: Page) {
         openActionCount: 0,
         completedCoverageStores: 1,
       },
-      items: [{
-        managerUserId: 'manager-contract-1',
+      items: new URL(route.request().url()).searchParams.get('query') === 'no-match' ? [] : [{
+        managerUserId: '80000000-0000-0000-0000-000000000012',
         regionId: 'region-contract-1',
         regionName: 'Marmara',
         regionManagers: [{ displayName: 'Bölge Müdürü A' }],
@@ -179,7 +193,7 @@ test('Report Viewer forbidden routes make no protected request and no action req
   await gotoReportViewerRoute(page, '/store/me')
   await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toBeVisible()
   await gotoReportViewerRoute(page, '/store/incentives')
-  await expect(page.getByRole('heading', { name: 'LUFIAN Mağaza Primleri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'LUFIAN Mağaza Primleri', level: 1 })).toBeVisible()
 
   expect(protectedRequests.length).toBe(beforeForbiddenRoutes)
   expect(protectedRequests).toEqual([])
@@ -197,12 +211,10 @@ test('Report Viewer cannot open any Admin route family', async ({ page }) => {
 })
 
 async function routeReportViewerWorkforce(page: Page) {
-  await page.route('**/api/org/region-managers', async (route) => {
-    await route.fulfill({ json: { items: [
-      { userId: 'manager-a', displayName: 'Bölge Müdürü A', storeIds: ['viewer-store-1', 'viewer-store-3'] },
-      { userId: 'manager-b', displayName: 'Bölge Müdürü B', storeIds: ['viewer-store-2'] },
-    ] } })
-  })
+  await page.route('**/api/org/region-managers', route => route.fulfill({ json: { items: [
+    { userId: 'manager-a', displayName: 'Bölge Müdürü A', storeIds: ['viewer-store-1', 'viewer-store-3'] },
+    { userId: 'manager-b', displayName: 'Bölge Müdürü B', storeIds: ['viewer-store-2'] },
+  ] } }))
   await page.route('**/api/store/workforce/workspace**', async (route) => {
     const stores = [
       createWorkforceStore('viewer-store-1', 'Ankara Mağaza', 'viewer-region-1', 'Bölge Müdürü A'),

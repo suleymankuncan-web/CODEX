@@ -27,6 +27,7 @@ export class TaskCommandWorkspaceController {
         periodEnd: query.periodEnd,
         limit: query.limit,
         offset: query.offset,
+        regionManagerUserId: query.regionManagerUserId,
       }),
     };
   }

@@ -1264,12 +1264,14 @@
         "AUDITOR",
         "REGION_MANAGER",
         "REPORT_VIEWER",
+        "STORE_MANAGER",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
         "AUDITOR",
         "REGION_MANAGER",
         "REPORT_VIEWER",
+        "STORE_MANAGER",
         "SUPER_ADMIN"
       ],
       "authorization": {

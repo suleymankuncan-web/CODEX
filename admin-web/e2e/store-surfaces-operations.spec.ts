@@ -25,10 +25,10 @@ test.beforeEach(async ({ page }) => {
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
   await expect(page.getByText('Aksiyonları başlatın, takip edin ve sonucu kaydedin.')).toBeVisible()
   await expect(page.getByText('Detay ozeti')).toHaveCount(0)
-  await expect(page.getByText('Toplam sonuç')).toBeVisible()
+  await expect(page.getByText('Görev sayısı')).toBeVisible()
   await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Hedef' })).toHaveCount(0)
   await expect(page.getByText('Store Action İş Akışı')).toHaveCount(0)
@@ -66,7 +66,7 @@ test('store tasks lets managers retry after the queue load fails', async ({ page
   allowWorkspace = true
   await retryButton.click()
 
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
   await expect.poll(() => workspaceAttempts).toBeGreaterThan(1)
   await expect(page.getByText('Görevler açılamadı', { exact: true })).toHaveCount(0)
 })
@@ -77,8 +77,8 @@ test('store tasks command-center copy stays stable when locale changes', async (
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
-  await expect(page.getByText('Toplam sonuç')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
+  await expect(page.getByText('Görev sayısı')).toBeVisible()
   await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
   await expect(page.getByText('Store Action workflow')).toHaveCount(0)
   await expect(page.getByText('Store action list')).toHaveCount(0)
@@ -91,7 +91,7 @@ test('store tasks command-center copy stays stable when locale changes', async (
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
 })
 
 test('store tasks checklist acknowledgement opens the exact checklist receipt', async ({ page }) => {

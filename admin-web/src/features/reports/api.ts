@@ -298,12 +298,16 @@ export async function getTurnoverReport(snapshotRunId: string) {
   })
 }
 
-export async function getStoreMonthlyReportPackage(input: { period: string }) {
+export async function getStoreMonthlyReportPackage(input: { period: string; regionManagerUserId?: string }) {
+  const query = new URLSearchParams({ period: input.period })
+  if (input.regionManagerUserId) query.set('regionManagerUserId', input.regionManagerUserId)
   return fetchOpenApiJson('/api/reports/store-monthly-package', {
-    query: new URLSearchParams({ period: input.period }),
+    query,
   })
 }
 
-export async function downloadStoreMonthlyReportPackage(input: { period: string }) {
-  return fetchBlob(`/reports/store-monthly-package.xlsx?period=${encodeURIComponent(input.period)}`)
+export async function downloadStoreMonthlyReportPackage(input: { period: string; regionManagerUserId?: string }) {
+  const query = new URLSearchParams({ period: input.period })
+  if (input.regionManagerUserId) query.set('regionManagerUserId', input.regionManagerUserId)
+  return fetchBlob(`/reports/store-monthly-package.xlsx?${query}`)
 }

@@ -524,7 +524,9 @@ function createStoreMonthlyPackage() {
     generatedAt: '2026-07-01T09:00:00.000Z',
     isCurrentPeriod: true,
     period: '2026-07',
-    rows: [],
+    periodLabel: 'Temmuz 2026',
+    coverageLabel: '1-31 Temmuz',
+    items: [],
     sections: [
       { code: 'kpis', label: 'KPI kolonları', ready: true, status: 'ready', value: 'Skor' },
       { code: 'visits', label: 'Ziyaret', ready: true, status: 'ready', value: 'Son ziyaret' },

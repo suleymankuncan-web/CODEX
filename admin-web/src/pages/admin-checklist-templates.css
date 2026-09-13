@@ -1,0 +1,71 @@
+.admin-checklist-templates { min-width: 0; }
+.admin-checklist-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.admin-checklist-summary-item { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-height: 84px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 14px; color: var(--primary); background: var(--card); }
+.admin-checklist-summary-item > span { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.admin-checklist-summary-item svg { width: 16px; height: 16px; flex: none; }
+.admin-checklist-summary-item strong { font-size: 24px; font-weight: 600; line-height: 1.2; }
+.admin-checklist-summary-item:last-child strong { font-size: 16px; }
+.admin-checklist-workspace { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+.admin-checklist-configuration[data-slot=field-group] { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(200px, 1.5fr) minmax(180px, .8fr); gap: 16px; padding: 16px; border-bottom: 1px solid var(--border); }
+.admin-checklist-configuration [data-slot=field] { min-width: 0; }
+.admin-checklist-configuration [data-slot=select-trigger] { width: 100%; }
+.admin-checklist-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.admin-checklist-toolbar > div:first-child { display: flex; align-items: baseline; gap: 8px; flex: 1; }
+.admin-checklist-toolbar h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.admin-checklist-toolbar > div:first-child > span { color: var(--muted-foreground); font-size: 12px; white-space: nowrap; }
+.admin-checklist-toolbar [data-slot=input-group] { width: 280px; background: var(--card); }
+.admin-checklist-section[data-slot=card] { display: block; border: 0; border-radius: 0; padding: 0; gap: 0; box-shadow: none; background: var(--card); }
+.admin-checklist-section-header[data-slot=card-header] { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--primary) 6%, var(--card)); }
+.admin-checklist-section-header > [data-slot=input] { width: auto; min-width: 0; flex: 1; }
+.admin-checklist-section-number { display: grid; place-items: center; width: 28px; height: 28px; flex: none; color: var(--primary); font-size: 14px; font-weight: 600; }
+.admin-checklist-section-content[data-slot=card-content] { padding: 0; }
+.admin-checklist-item { display: grid; grid-template-columns: 28px minmax(0, 1fr) 80px auto; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.admin-checklist-item:last-child { border-bottom: 0; }
+.admin-checklist-item-number { font-size: 12px; color: var(--muted-foreground); align-self: start; padding-top: 10px; }
+.admin-checklist-item-copy { min-width: 0; }
+.admin-checklist-item-copy p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.admin-checklist-item-meta { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted-foreground); }
+.admin-checklist-item-meta strong { font-size: 14px; font-weight: 600; color: var(--primary); }
+.admin-checklist-row-actions { display: flex; align-items: center; gap: 4px; }
+.admin-checklist-validation { padding: 12px 16px; border-top: 1px solid var(--border); }
+.admin-checklist-sheet[data-slot=sheet-content] { max-width: 540px; }
+.admin-checklist-overlay-body { min-height: 0; min-width: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 4px 2px 16px; }
+.admin-checklist-overlay-body [data-slot=select-trigger] { width: 100%; }
+.admin-checklist-score-fields[data-slot=field-group] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.admin-checklist-preview[data-slot=dialog-content] { display: flex; flex-direction: column; max-width: min(800px, calc(100% - 32px)); max-height: calc(100dvh - 32px); }
+.admin-checklist-preview-heading { padding-bottom: 16px; }
+.admin-checklist-preview-heading h2 { margin: 0; font-size: 18px; color: var(--primary); }
+.admin-checklist-preview-heading p, .admin-checklist-preview-section li > p { margin: 6px 0; font-size: 12px; color: var(--muted-foreground); }
+.admin-checklist-preview-section h3 { margin: 0; padding: 12px; font-size: 14px; color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, var(--card)); }
+.admin-checklist-preview-section ol { margin: 0; padding: 0 0 0 28px; }
+.admin-checklist-preview-section li { padding: 12px 8px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.admin-checklist-preview-rules { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 12px 0 0; font-size: 12px; }
+.admin-checklist-preview-rules dt { color: var(--muted-foreground); }
+.admin-checklist-preview-rules dd { margin: 4px 0 0; }
+@media (max-width: 900px) {
+  .admin-checklist-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-checklist-configuration[data-slot=field-group] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-checklist-configuration [data-slot=field]:nth-child(2) { grid-column: 2; grid-row: span 2; }
+  .admin-checklist-toolbar { flex-wrap: wrap; }
+  .admin-checklist-item { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .admin-checklist-item-meta { grid-column: 2; flex-direction: row; align-items: center; }
+  .admin-checklist-item > .admin-checklist-row-actions { grid-column: 3; grid-row: 1 / span 2; }
+}
+@media (max-width: 600px) {
+  .admin-checklist-summary { gap: 8px; }
+  .admin-checklist-summary-item { padding: 12px; }
+  .admin-checklist-summary-item strong { font-size: 20px; }
+  .admin-checklist-summary-item:last-child strong { font-size: 14px; }
+  .admin-checklist-configuration[data-slot=field-group] { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .admin-checklist-configuration [data-slot=field]:nth-child(2) { grid-column: auto; grid-row: auto; }
+  .admin-checklist-toolbar [data-slot=input-group] { width: 100%; order: 3; }
+  .admin-checklist-section-header[data-slot=card-header] { flex-wrap: wrap; gap: 8px; padding: 12px; }
+  .admin-checklist-section-header > [data-slot=input] { flex-basis: calc(100% - 36px); }
+  .admin-checklist-section-header > .admin-checklist-row-actions { margin-left: auto; }
+  .admin-checklist-item { grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 12px; }
+  .admin-checklist-item > .admin-checklist-row-actions { grid-column: 2; grid-row: auto; justify-content: flex-end; }
+  .admin-checklist-item-meta { grid-column: 2; }
+  .admin-checklist-templates button, .admin-checklist-sheet button, .admin-checklist-preview button { min-height: 44px; }
+  .admin-checklist-row-actions > button { min-width: 44px; }
+  .admin-checklist-sheet[data-slot=sheet-content] { max-width: 100%; }
+}

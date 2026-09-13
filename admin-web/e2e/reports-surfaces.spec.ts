@@ -32,17 +32,17 @@ test.beforeEach(async ({ page }) => {
   await routeReportsApi(page)
 })
 
-test('reports hub and snapshot chooser keep route semantics on AdminSurface primitives', async ({ page }) => {
+test('reports hub and snapshot chooser keep route semantics on Azure surfaces', async ({ page }) => {
   await page.goto('/admin/reports')
 
   let main = page.getByRole('main')
 
-  await expect(main.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible()
   await expect(main.getByText('Total report rows')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Reporting anchor' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Which reports this snapshot output feeds' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
   await expect(main.getByText('/api/reports/summary')).toHaveCount(0)
-  await expect(main.getByRole('link', { name: 'Open drill-down chooser' })).toHaveAttribute(
+  await expect(main.getByRole('link', { name: 'All report periods' })).toHaveAttribute(
     'href',
     '/admin/reports/snapshot-runs',
   )
@@ -50,7 +50,12 @@ test('reports hub and snapshot chooser keep route semantics on AdminSurface prim
     'href',
     '/admin/reports/workforce/snapshot-versioned',
   )
-  await expect(main.locator('[data-slot="table"]')).toHaveCount(2)
+  await expect(main.locator('[data-slot="table"]')).toHaveCount(1)
+  for (const [report, rows] of Object.entries({ workforce: '12', kpis: '24', checklists: '6', turnover: '3' })) {
+    const card = main.locator(`[data-report="${report}"]`)
+    await expect(card.locator('[data-slot="card-content"] strong')).toHaveText(rows)
+    await expect(card.getByRole('link')).toHaveAttribute('href', `/admin/reports/${report}/snapshot-versioned`)
+  }
   await expect(main.locator(legacyReportSelector)).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 
@@ -71,6 +76,70 @@ test('reports hub and snapshot chooser keep route semantics on AdminSurface prim
   await expect(main.locator(legacyReportSelector)).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 })
+
+test('reports hub preserves empty counts and does not offer a missing snapshot', async ({ page }) => {
+  await page.route('**/api/reports/summary', (route) => route.fulfill({ json: {
+    latestCompletedSnapshotRun: null,
+    cards: { workforceRows: 0, kpiRows: 0, checklistRows: 0, turnoverRows: 0 },
+  } }))
+  await page.route('**/api/reports/snapshot-runs?**', (route) => route.fulfill({ json: {
+    items: [], meta: { count: 0, total: 0, limit: 8, offset: 0 },
+  } }))
+  await page.goto('/admin/reports')
+  const surface = page.locator('.reports-summary-azure')
+  await expect(surface.getByText('No completed snapshot run exists yet.')).toBeVisible()
+  await expect(surface.locator('[data-report] [data-slot="card-content"] strong')).toHaveText(['0', '0', '0', '0'])
+  await expect(surface.locator('[data-report] a')).toHaveCount(0)
+  await expect(surface.getByRole('link', { name: 'All report periods' })).toBeVisible()
+})
+
+test('reports hub keeps navigation during loading and announces a failed read with retry', async ({ page }) => {
+  let releaseSummary: (() => void) | undefined
+  const pendingSummary = new Promise<void>((resolve) => { releaseSummary = resolve })
+  let shouldFail = true
+  await page.route('**/api/reports/summary', async (route) => {
+    await pendingSummary
+    await route.fulfill(shouldFail
+      ? { status: 403, json: { message: 'Reporting access denied' } }
+      : { json: reportingSummaryFixture })
+  })
+  await page.goto('/admin/reports')
+  const surface = page.locator('.reports-summary-azure')
+  await expect(surface.getByRole('status')).toContainText('Loading reporting summary')
+  await expect(surface.getByRole('link', { name: 'All report periods' })).toBeVisible()
+  await expect(surface.locator('[data-report]')).toHaveCount(0)
+  releaseSummary?.()
+  await expect(surface.getByRole('alert')).toContainText('Reporting summary unavailable')
+  await expect(surface.locator('[data-report]')).toHaveCount(0)
+  shouldFail = false
+  await surface.getByRole('button', { name: 'Try again' }).click()
+  await expect(surface.locator('[data-report="kpis"] strong')).toHaveText('24')
+})
+
+test('reports hub does not disguise failed snapshot list reads as an empty history', async ({ page }) => {
+  await page.route('**/api/reports/snapshot-runs?**', (route) => route.fulfill({ status: 403, json: { message: 'History unavailable' } }))
+  await page.goto('/admin/reports')
+  await expect(page.locator('.reports-summary-azure').getByRole('alert')).toContainText('Snapshot run list unavailable')
+  await expect(page.locator('.reports-summary-azure [data-report]')).toHaveCount(0)
+})
+
+for (const width of [390, 320]) {
+  test(`reports hub preserves periods and all report links at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/admin/reports')
+    const surface = page.locator('.reports-summary-azure')
+    await expect(surface.getByRole('heading', { name: 'Reports', exact: true })).toBeVisible()
+    const run = surface.locator('nav[aria-label="snapshot-pre-governance"]')
+    await expect(run.getByRole('link')).toHaveCount(4)
+    await expect(run.getByRole('link', { name: 'Open KPI report for snapshot-pre-governance' })).toHaveAttribute('href', '/admin/reports/kpis/snapshot-pre-governance')
+    await expect(surface.locator('.reports-summary-context').getByText('Period', { exact: true })).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+    for (const link of await run.getByRole('link').all()) {
+      const box = await link.boundingBox()
+      expect(box?.height).toBeGreaterThanOrEqual(44)
+    }
+  })
+}
 
 const detailScenarios = [
   {

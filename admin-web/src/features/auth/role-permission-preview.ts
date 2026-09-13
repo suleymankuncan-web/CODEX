@@ -42,7 +42,7 @@ const checklistReadRoleCodes = [
 ]
 const storePerformanceRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL', 'REPORT_VIEWER']
 const storeKpiRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
-const storeReportingRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'REPORT_VIEWER', 'AUDITOR']
+const storeReportingRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
 const targetRequestListRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeTaskReadRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeCompetitionReadRoleCodes = ['STORE_MANAGER', 'STORE_PERSONNEL', 'REPORT_VIEWER']

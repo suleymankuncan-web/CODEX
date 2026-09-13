@@ -49,6 +49,7 @@ export class TaskCommandWorkspaceReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async readPage(input: {
+    filterStoreIds?: readonly string[];
     companyIds: readonly string[];
     regionIds: readonly string[];
     storeIds: readonly string[];
@@ -61,6 +62,10 @@ export class TaskCommandWorkspaceReadRepository {
   }) {
     const params: unknown[] = [];
     const filters = this.scopeFilters(params, input);
+    if (input.filterStoreIds) {
+      params.push([...input.filterStoreIds]);
+      filters.push(`p.store_id = ANY($${params.length}::uuid[])`);
+    }
     params.push([...input.statuses]);
     filters.push(`p.status = ANY($${params.length}::text[])`);
     params.push(input.periodStart);

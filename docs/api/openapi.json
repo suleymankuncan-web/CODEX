@@ -5601,6 +5601,15 @@
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
               "example": "2026-06"
             }
+          },
+          {
+            "name": "regionManagerUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5770,6 +5779,15 @@
               "type": "string",
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
               "example": "2026-06"
+            }
+          },
+          {
+            "name": "regionManagerUserId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
             }
           }
         ],
@@ -6931,6 +6949,15 @@
             "schema": {
               "type": "string",
               "format": "date"
+            }
+          },
+          {
+            "name": "regionManagerUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -26858,7 +26885,8 @@
           },
           "regionId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "regionName": {
             "type": "string"

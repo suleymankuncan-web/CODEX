@@ -535,11 +535,11 @@ export class ChecklistCommandReadRepository {
             ss.region_name,
             ss.store_id
           FROM manager_accounts ma
-          INNER JOIN ops.user_action_store_assignment manager_store
+          LEFT JOIN ops.user_action_store_assignment manager_store
             ON manager_store.user_id = ma.manager_user_id
            AND manager_store.start_at <= NOW()
            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
-          INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
+          LEFT JOIN scoped_stores ss ON ss.store_id = manager_store.store_id
           GROUP BY ma.manager_user_id, ma.display_name, ss.region_id, ss.region_name, ss.store_id
         ),
         region_base AS (

@@ -68,7 +68,7 @@ test('store reports do not mark empty backend packages as ready', () => {
   const model = reportsModel.buildStoreReportsViewModel(null, storeReportsT)
 
   assert.equal(model.metrics.find((metric) => metric.id === 'period-state')?.value, 'Bekliyor')
-  assert.equal(model.metrics.find((metric) => metric.id === 'detail-output')?.value, '0')
+  assert.equal(model.metrics.find((metric) => metric.id === 'detail-output')?.value, 'Veri yok')
   assert.ok(model.sections.every((section) => section.status !== 'ready'))
 })
 

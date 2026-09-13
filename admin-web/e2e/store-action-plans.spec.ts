@@ -26,9 +26,9 @@ test('store tasks renders the command center and keeps target approvals out', as
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
   await expect(page.getByText('Aksiyonları başlatın, takip edin ve sonucu kaydedin.')).toBeVisible()
-  await expect(page.getByText('Toplam sonuç')).toBeVisible()
+  await expect(page.getByText('Görev sayısı')).toBeVisible()
   const queuePanel = page.getByTestId('store-action-plans-panel')
   await expect(queuePanel.getByText('Görev', { exact: true })).toBeVisible()
   await expect(queuePanel.getByText('Kaynak', { exact: true })).toBeVisible()
@@ -189,7 +189,7 @@ test('region manager with no action-store assignment does not read persisted pla
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
   await expect(getActionPlanRow(page, 'Haziran çözüm kaydı')).toHaveCount(0)
   await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Açık takipler' })).toHaveCount(0)

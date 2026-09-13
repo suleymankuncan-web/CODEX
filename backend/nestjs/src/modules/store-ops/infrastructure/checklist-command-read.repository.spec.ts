@@ -46,10 +46,10 @@ describe("ChecklistCommandReadRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(query).toHaveBeenCalledTimes(1);
-    expect(sql).toContain("INNER JOIN ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("LEFT JOIN ops.user_action_store_assignment manager_store");
     expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
     expect(sql).toContain("manager_store.user_id = ma.manager_user_id");
-    expect(sql).toContain("INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id");
+    expect(sql).toContain("LEFT JOIN scoped_stores ss ON ss.store_id = manager_store.store_id");
     expect(sql).toContain("ura.company_id = ANY($1::uuid[])");
     expect(sql).toContain("company.status = 'active'");
     expect(sql).toContain("r.status = 'active'");
@@ -117,9 +117,9 @@ describe("ChecklistCommandReadRepository", () => {
     const sql = String(query.mock.calls[0][0]);
     expect(result.total).toBe(1);
     expect(result.items[0]?.regionId).toBe("region-from-store");
-    expect(sql).toContain("INNER JOIN scoped_stores ss ON ss.store_id = manager_store.store_id");
+    expect(sql).toContain("LEFT JOIN scoped_stores ss ON ss.store_id = manager_store.store_id");
     expect(sql).toContain("MIN(manager.region_id::text)::uuid AS region_id");
-    expect(sql).not.toContain("LEFT JOIN ops.user_action_store_assignment manager_store");
+    expect(sql).not.toContain("INNER JOIN ops.user_action_store_assignment manager_store");
     expect(sql).not.toContain("COALESCE(MIN(manager.region_id::text)::uuid, manager.manager_user_id)");
     expect(sql).not.toContain("ura.region_id");
   });

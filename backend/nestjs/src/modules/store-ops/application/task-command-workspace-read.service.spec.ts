@@ -19,6 +19,23 @@ function actor(
 }
 
 describe("TaskCommandWorkspaceReadService", () => {
+  it("intersects a selected assigned manager's stores before the page read", async () => {
+    const repository = {readPage:jest.fn().mockResolvedValue({total:1,items:[]})};
+    const directory = {list:jest.fn().mockResolvedValue({items:[{userId:"manager-one",storeIds:["store-one"]}]})};
+    const service = new TaskCommandWorkspaceReadService(repository as never,directory as never);
+    await service.getWorkspace({actor:actor(["REPORT_VIEWER"]),periodStart:"2026-07-01",periodEnd:"2026-07-31",regionManagerUserId:"manager-one",offset:20});
+    expect(repository.readPage).toHaveBeenCalledWith(expect.objectContaining({companyIds:[companyId],filterStoreIds:["store-one"],offset:20}));
+    await service.getWorkspace({actor:actor(["REPORT_VIEWER"]),periodStart:"2026-07-01",periodEnd:"2026-07-31",regionManagerUserId:"unknown"});
+    expect(repository.readPage).toHaveBeenLastCalledWith(expect.objectContaining({filterStoreIds:[]}));
+  });
+  it("does not expose manager selection to store or region managers", async () => {
+    const repository={readPage:jest.fn()}; const directory={list:jest.fn()};
+    const service=new TaskCommandWorkspaceReadService(repository as never,directory as never);
+    for(const role of ["STORE_MANAGER","REGION_MANAGER"]) {
+      await expect(service.getWorkspace({actor:actor([role],{companyIds:[],regionIds:[],storeIds:["store-one"]}),periodStart:"2026-07-01",periodEnd:"2026-07-31",regionManagerUserId:"manager-one"})).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    expect(directory.list).not.toHaveBeenCalled();expect(repository.readPage).not.toHaveBeenCalled();
+  });
   it("uses result-only statuses for report viewers and computes retained-page metrics", async () => {
     const repository = {
       readPage: jest.fn().mockResolvedValue({
@@ -30,7 +47,7 @@ describe("TaskCommandWorkspaceReadService", () => {
       }),
       readEvents: jest.fn(),
     };
-    const service = new TaskCommandWorkspaceReadService(repository as never);
+    const service = new TaskCommandWorkspaceReadService(repository as never, {} as never);
     const result = await service.getWorkspace({
       actor: actor(["REPORT_VIEWER"]), periodStart: "2026-07-01", periodEnd: "2026-07-31",
       limit: 20, offset: 0,
@@ -48,7 +65,7 @@ describe("TaskCommandWorkspaceReadService", () => {
 
   it("keeps store-manager actions enabled and includes active statuses", async () => {
     const repository = { readPage: jest.fn().mockResolvedValue({ total: 0, items: [] }), readEvents: jest.fn() };
-    const service = new TaskCommandWorkspaceReadService(repository as never);
+    const service = new TaskCommandWorkspaceReadService(repository as never, {} as never);
     const storeScope = { companyIds: [], regionIds: [], storeIds: ["11111111-1111-4111-8111-111111111111"] };
     const result = await service.getWorkspace({
       actor: actor(["STORE_MANAGER"], storeScope), periodStart: "2026-07-01", periodEnd: "2026-07-31",
@@ -60,7 +77,7 @@ describe("TaskCommandWorkspaceReadService", () => {
   });
 
   it("rejects invalid periods and unsupported scopes", async () => {
-    const service = new TaskCommandWorkspaceReadService({ readPage: jest.fn() } as never);
+    const service = new TaskCommandWorkspaceReadService({ readPage: jest.fn() } as never, {} as never);
     await expect(service.getWorkspace({
       actor: actor(["REPORT_VIEWER"]), periodStart: "2026-08-01", periodEnd: "2026-07-01",
     })).rejects.toBeInstanceOf(BadRequestException);
@@ -74,7 +91,7 @@ describe("TaskCommandWorkspaceReadService", () => {
       readPage: jest.fn(),
       readEvents: jest.fn().mockResolvedValueOnce({ items: [], total: 0, limit: 20, offset: 0 }).mockResolvedValueOnce(null),
     };
-    const service = new TaskCommandWorkspaceReadService(repository as never);
+    const service = new TaskCommandWorkspaceReadService(repository as never, {} as never);
     await expect(service.getEvents({ actor: actor(["REPORT_VIEWER"]), actionPlanId }))
       .resolves.toEqual({ items: [], total: 0, limit: 20, offset: 0 });
     expect(repository.readEvents).toHaveBeenNthCalledWith(1, expect.objectContaining({

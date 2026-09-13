@@ -227,6 +227,7 @@ export class ReportingRepository {
   }
 
   async getEmployeeTurkeyBenchmarkValues(input: {
+    isRange?: boolean;
     periodStart: string;
     periodEnd: string;
     companyId?: string;

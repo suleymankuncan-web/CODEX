@@ -206,7 +206,7 @@ const checklistCommandRegionRowSchema = {
     "lastOperationalAt",
   ],
   properties: {
-    managerUserId: { type: "string", format: "uuid" }, regionId: { type: "string", format: "uuid" },
+    managerUserId: { type: "string", format: "uuid" }, regionId: { type: "string", format: "uuid", nullable: true },
     regionName: { type: "string" },
     regionManagers: { type: "array", items: regionManagerSchema },
     metrics: {

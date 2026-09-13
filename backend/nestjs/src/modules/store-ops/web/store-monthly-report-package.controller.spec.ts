@@ -1,7 +1,35 @@
-import { StreamableFile } from "@nestjs/common";
+import { ForbiddenException, StreamableFile } from "@nestjs/common";
 import { StoreMonthlyReportPackageController } from "./store-monthly-report-package.controller";
 
 describe("StoreMonthlyReportPackageController", () => {
+  it.each([false, true])("restricts store manager %s exports to assigned stores even with company scope", async (download) => {
+    const { controller, service } = createController();
+    const request = { user: { userId: "sm-1", roleCodes: ["STORE_MANAGER"], scope: { companyIds: ["company-1"], regionIds: ["region-1"], storeIds: ["read-store"] }, actionScope: { assignedStoreIds: ["own-store"] } } };
+    if (download) await controller.downloadStoreMonthlyReportPackage(request, { period: "2026-06" }, { setHeader: jest.fn() });
+    else await controller.getStoreMonthlyReportPackage(request, { period: "2026-06" });
+    expect(download ? service.buildWorkbook : service.getSummary).toHaveBeenCalledWith(expect.objectContaining({ companyIds: [], regionIds: [], storeIds: ["own-store"], regionManagerUserId: undefined }));
+  });
+
+  it("does not grant company access to a store manager with no assigned store", async () => {
+    const { controller, service } = createController();
+    await controller.getStoreMonthlyReportPackage({ user: { userId: "sm-1", roleCodes: ["STORE_MANAGER"], scope: { companyIds: ["company-1"], regionIds: ["region-1"], storeIds: [] }, actionScope: { assignedStoreIds: [] } } }, { period: "2026-06" });
+    expect(service.getSummary).toHaveBeenCalledWith(expect.objectContaining({ companyIds: [], regionIds: [], storeIds: [], regionManagerUserId: undefined }));
+  });
+
+  it.each(["STORE_MANAGER", "REGION_MANAGER"])("rejects manager selection by %s", async role => {
+    const { controller, service } = createController();
+    const request = { user: { userId: "user-1", roleCodes: [role], scope: { companyIds: ["company-1"], regionIds: [], storeIds: ["own-store"] } } };
+    await expect(controller.getStoreMonthlyReportPackage(request, { period: "2026-06", regionManagerUserId: "other-manager" })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(controller.downloadStoreMonthlyReportPackage(request, { period: "2026-06", regionManagerUserId: "other-manager" }, { setHeader: jest.fn() })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(service.getSummary).not.toHaveBeenCalled();
+    expect(service.buildWorkbook).not.toHaveBeenCalled();
+  });
+
+  it("uses the viewer's own company role scope for selected managers", async () => {
+    const { controller, service } = createController();
+    await controller.getStoreMonthlyReportPackage({ user: { userId: "viewer", roleCodes: ["REPORT_VIEWER", "SUPER_ADMIN"], scope: { companyIds: ["other-company"], regionIds: [], storeIds: [] }, roleScopes: { REPORT_VIEWER: { companyIds: ["viewer-company"], regionIds: [], storeIds: [] } } } }, { period: "2026-06", regionManagerUserId: "manager-1" });
+    expect(service.getSummary).toHaveBeenCalledWith(expect.objectContaining({ companyIds: ["viewer-company"], regionIds: [], storeIds: [], requestedRegionManagerUserId: "manager-1" }));
+  });
   function createController() {
     const service = {
       getSummary: jest.fn(async () => ({ ok: true })),

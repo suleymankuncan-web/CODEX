@@ -52,6 +52,7 @@ describe("StoreMonthlyReportPackageRepository", () => {
       ["00000000-0000-4000-8000-000000000010"],
       ["00000000-0000-4000-8000-000000000100"],
       "00000000-0000-4000-8000-000000000900",
+      null,
     ]);
   });
 
@@ -75,10 +76,11 @@ describe("StoreMonthlyReportPackageRepository", () => {
       [],
       [],
       "00000000-0000-4000-8000-000000000900",
+      null,
     ]);
   });
 
-  it("resolves report region manager names from active role assignments, not action assignments", async () => {
+  it("resolves report manager names from active users with direct store assignments and the manager role", async () => {
     const { query, repository } = createRepository();
 
     await repository.getStoreMonthlyReportPackageRows({
@@ -95,9 +97,24 @@ describe("StoreMonthlyReportPackageRepository", () => {
 
     expect(managerNameCte).toContain("ops.user_role_assignment");
     expect(managerNameCte).toContain("role.role_code = 'REGION_MANAGER'");
-    expect(managerNameCte).toContain("\\s+B(?:ö|o)lgesi$");
-    expect(managerNameCte).toContain("ROW_NUMBER() OVER");
-    expect(managerNameCte).not.toContain("ops.user_action_store_assignment action_scope");
+    expect(managerNameCte).toContain("ops.user_action_store_assignment manager_store");
+    expect(managerNameCte).toContain("manager_store.store_id = scoped.store_id");
+    expect(managerNameCte).toContain("STRING_AGG(DISTINCT");
+    expect(managerNameCte).not.toContain("REGEXP_REPLACE");
+    expect(managerNameCte).not.toContain("role_assignment.region_id = scoped.region_id");
+  });
+
+  it("keeps selected manager stores inside the existing server scope", async () => {
+    const { query, repository } = createRepository();
+    await repository.getStoreMonthlyReportPackageRows({ periodStart: "2026-06-01", periodEnd: "2026-06-14", companyIds: ["company-1"], regionIds: [], storeIds: [], selectedStoreIds: ["store-1"] });
+    expect(query.mock.calls[0][0]).toContain("AND ($7::uuid[] IS NULL OR store.store_id = ANY($7::uuid[]))");
+    expect(query.mock.calls[0][1]).toEqual(["2026-06-01", "2026-06-14", ["company-1"], [], [], null, ["store-1"]]);
+  });
+
+  it("does not fall back to company results for an empty manager portfolio", async () => {
+    const { query, repository } = createRepository();
+    await expect(repository.getStoreMonthlyReportPackageRows({ periodStart: "2026-06-01", periodEnd: "2026-06-14", companyIds: ["company-1"], regionIds: [], storeIds: [], selectedStoreIds: [] })).resolves.toEqual([]);
+    expect(query).not.toHaveBeenCalled();
   });
 
   it("projects year-to-date turnover from assignments and turnover events", async () => {
