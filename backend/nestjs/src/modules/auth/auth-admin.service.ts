@@ -37,10 +37,14 @@ export class AuthAdminService {
     companyId?: string;
     regionId?: string;
     storeId?: string;
+    incentiveApproval?: boolean;
     effectiveFrom?: string;
     effectiveTo?: string;
     actorUserId: string;
   }) {
+    if (input.incentiveApproval && (input.roleCode !== "REPORT_VIEWER" || input.scopeType !== "company")) {
+      throw new ForbiddenException("Prim approval requires a company-scoped Report Viewer assignment");
+    }
     this.authRoleScopePolicyService.validateAssignmentScope(input);
     await this.assertAssignmentScopeHierarchy(input);
 
@@ -76,6 +80,7 @@ export class AuthAdminService {
       companyId: this.getCompanyId(input),
       regionId: this.getRegionId(input),
       storeId: this.getStoreId(input),
+      incentiveApproval: input.incentiveApproval ?? false,
       effectiveFrom: input.effectiveFrom ?? null,
       effectiveTo: input.effectiveTo ?? null,
       actorUserId: input.actorUserId,
@@ -105,6 +110,12 @@ export class AuthAdminService {
       limit: input.limit,
       offset: input.offset,
     });
+  }
+
+  async updateIncentiveApproval(input: { assignmentId: string; enabled: boolean; actorUserId: string }) {
+    const assignment = await this.authAdminRepository.updateIncentiveApproval(input);
+    if (!assignment) throw new ConflictException("An active company-scoped Report Viewer assignment is required");
+    return buildCommandResponse({ status: "updated", message: "Incentive approval permission updated", data: { assignment: mapAuthAssignment(assignment) } });
   }
 
   async deactivateRoleAssignment(assignmentId: string, actorUserId: string) {

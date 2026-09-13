@@ -149,7 +149,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/incentives',
       urlPattern: /\/store\/incentives$/,
-      heading: page.getByRole('heading', { name: 'Şirket Prim Görünümü' }),
+      heading: page.getByRole('heading', { name: 'LUFIAN Mağaza Primleri' }),
     },
     {
       path: '/store/approvals',

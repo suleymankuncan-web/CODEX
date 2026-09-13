@@ -1,3 +1,4 @@
+import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Textarea } from '../components/ui/textarea'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -80,9 +80,6 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
   const [reasonNote, setReasonNote] = useState('')
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({})
-  const selectedYear = period.slice(0, 4)
-  const selectedMonth = period.slice(5, 7)
-  const yearOptions = useMemo(() => buildYearOptions(), [])
   const queryIdentity = useMemo(
     () => getSalesTargetIncentiveQueryIdentity(input.authSummary),
     [input.authSummary],
@@ -149,13 +146,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
     })
   }
 
-  function updateYear(year: string) {
-    setPeriod(`${year}-${selectedMonth}`)
-  }
 
-  function updateMonth(month: string) {
-    setPeriod(`${selectedYear}-${month}`)
-  }
 
   function exportRows() {
     exportAdminIncentiveRowsToExcel({
@@ -242,32 +233,8 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
         />
 
         <AdminFilterBar>
-          <div className="tw:grid tw:min-w-32 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-            <span>{t('adminIncentives.year')}</span>
-            <Select value={selectedYear} onValueChange={updateYear}>
-              <SelectTrigger id="admin-incentive-year" aria-label={t('adminIncentives.year')} className="tw:w-full tw:min-w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {yearOptions.map((year) => (
-                  <SelectItem key={year} value={year}>{year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="tw:grid tw:min-w-44 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-            <span>{t('adminIncentives.month')}</span>
-            <Select value={selectedMonth} onValueChange={updateMonth}>
-              <SelectTrigger id="admin-incentive-month" aria-label={t('adminIncentives.month')} className="tw:w-full tw:min-w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {periodMonths(locale).map((month) => (
-                  <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <CalendarPicker mode="month" value={period} locale={locale} onValueChange={setPeriod}
+            ariaLabel={t('adminIncentives.periodAria')} />
           <span className="tw:text-xs tw:leading-5 tw:text-muted-foreground" data-testid="admin-incentive-period-summary">
             {t('adminIncentives.periodSummary', { period: displayedPeriodLabel })}
           </span>
@@ -562,11 +529,6 @@ function SummaryValue(input: { label: string; value: string }) {
   )
 }
 
-function buildYearOptions(date = new Date()) {
-  const currentYear = date.getFullYear()
-  return [currentYear + 1, currentYear, currentYear - 1, currentYear - 2].map(String)
-}
-
 function resolveCurrentPeriodKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
     month: '2-digit',
@@ -579,16 +541,6 @@ function resolveCurrentPeriodKey(date = new Date()) {
   return year && month
     ? `${year}-${month}`
     : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function periodMonths(locale: AppLocale) {
-  return Array.from({ length: 12 }, (_, index) => ({
-    label: new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', {
-      month: 'long',
-      timeZone: 'UTC',
-    }).format(new Date(Date.UTC(2026, index, 1))),
-    value: String(index + 1).padStart(2, '0'),
-  }))
 }
 
 function formatPeriodLabel(period: string, locale: AppLocale) {

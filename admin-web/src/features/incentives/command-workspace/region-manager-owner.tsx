@@ -1,7 +1,8 @@
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { actionToast } from '@/lib/action-toast'
@@ -121,15 +122,15 @@ export function RegionManagerIncentivesOwner(input: {
   })
   const pendingStoreIds = useMemo(() => new Set(reviewMutation.isPending ? [reviewMutation.variables?.storeId ?? ''] : []), [reviewMutation.isPending, reviewMutation.variables])
   const correctionPending = correctionMutation.isPending || voidMutation.isPending
-  const writesReady = !input.isUpdating && input.period === input.workspace.period
+  const writesReady = !input.isUpdating && !input.backgroundError && input.period === input.workspace.period
 
   return (
-    <>
+    <Tabs value={tab} onValueChange={value => setTab(value as typeof tab)}>
       <IncentiveWorkspaceScaffold
         {...input}
         actions={(
           <div className="incentive-submit-cluster">
-            <Button disabled={!writesReady || !input.workspace.capabilities.canSubmitPackage} onClick={() => setSubmitOpen(true)}>
+            <Button disabled={!writesReady || reviewMutation.isPending || correctionPending || submitMutation.isPending || !input.workspace.capabilities.canSubmitPackage} onClick={() => setSubmitOpen(true)}>
               <Send aria-hidden="true" data-icon="inline-start" />
               {input.t('storeIncentives.regionManagerSubmit')}
             </Button>
@@ -137,35 +138,18 @@ export function RegionManagerIncentivesOwner(input: {
           </div>
         )}
         tabs={(
-          <div
-            aria-label={input.t('storeIncentives.command.workspaceSections')}
-            className="incentive-workspace-tabs"
-            onKeyDown={(event) => moveTabFocus(event, tab, setTab)}
-            role="tablist"
-          >
-            {([
-              ['stores', input.t('storeIncentives.command.storeChecks'), tabCounts.stores],
-              ['corrections', input.t('storeIncentives.command.corrections'), tabCounts.corrections],
-              ['rates', input.t('storeIncentives.command.rateTables'), null],
-            ] as const).map(([value, label]) => (
-              <Button
-                aria-controls="incentive-workspace-panel"
-                aria-selected={tab === value}
-                data-tab-value={value}
-                id={`incentive-workspace-tab-${value}`}
-                key={value}
-                onClick={() => setTab(value)}
-                role="tab"
-                size="sm"
-                tabIndex={tab === value ? 0 : -1}
-                variant={tab === value ? 'secondary' : 'ghost'}
-              >{label}{value !== 'rates' ? <span className="incentive-tab-count">{value === 'stores' ? tabCounts.stores : tabCounts.corrections}</span> : null}</Button>
+          <TabsList aria-label={input.t('storeIncentives.command.workspaceSections')}>
+            {(['stores', 'corrections', 'rates'] as const).map(value => (
+              <TabsTrigger key={value} value={value}>
+                {input.t(value === 'stores' ? 'storeIncentives.command.storeChecks' : value === 'corrections' ? 'storeIncentives.command.corrections' : 'storeIncentives.command.rateTables')}
+                {value !== 'rates' ? <span className="incentive-tab-count">{tabCounts[value]}</span> : null}
+              </TabsTrigger>
             ))}
-          </div>
+          </TabsList>
         )}
         sectionHeader={<h2 className="tw:sr-only">{input.t('storeIncentives.command.storeChecks')}</h2>}
         renderContent={(workspace) => (
-          <div aria-labelledby={`incentive-workspace-tab-${tab}`} id="incentive-workspace-panel" role="tabpanel">
+          <TabsContent value={tab}>
             {tab === 'rates'
               ? <RateTables workspace={workspace} locale={input.locale} t={input.t} />
               : (
@@ -184,10 +168,10 @@ export function RegionManagerIncentivesOwner(input: {
               workspace={tab === 'corrections' ? filterIncentiveWorkspace(workspace, { search: '', status: 'corrected' }) : workspace}
             />
               )}
-          </div>
+          </TabsContent>
         )}
       />
-      {selection && selection.store.capabilities.canCreateCorrection ? <IncentiveCorrectionDrawer
+      {selection && selection.store.capabilities.canCreateCorrection && selection.store.review.periodCloseStatus === 'closed' ? <IncentiveCorrectionDrawer
         key={`${selection.store.storeId}:${selection.row.employeeId}:${selection.row.participantType}`}
         locale={input.locale}
         onClose={() => {
@@ -210,6 +194,7 @@ export function RegionManagerIncentivesOwner(input: {
         t={input.t}
         workspace={input.workspace}
       /> : selection ? <ReadOnlyCorrectionDrawer
+        workspace={input.workspace}
         locale={input.locale}
         onClose={() => {
           const opener = selection.opener
@@ -222,39 +207,15 @@ export function RegionManagerIncentivesOwner(input: {
       {submitOpen ? <IncentiveSubmitDialog
         locale={input.locale}
         onOpenChange={setSubmitOpen}
-        onSubmit={(value) => submitMutation.mutate({ period: input.workspace.period, ...value })}
+        onSubmit={(value) => { if (writesReady) submitMutation.mutate({ period: input.workspace.period, ...value }) }}
         open={submitOpen}
         pending={submitMutation.isPending}
+        disabled={!writesReady}
         t={input.t}
         workspace={input.workspace}
       /> : null}
-    </>
+    </Tabs>
   )
-}
-
-const workspaceTabs = ['stores', 'corrections', 'rates'] as const
-
-function moveTabFocus(
-  event: KeyboardEvent<HTMLDivElement>,
-  current: (typeof workspaceTabs)[number],
-  select: (tab: (typeof workspaceTabs)[number]) => void,
-) {
-  const key = event.key
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return
-  event.preventDefault()
-  const tablist = event.currentTarget
-  const currentIndex = workspaceTabs.indexOf(current)
-  const nextIndex = key === 'Home'
-    ? 0
-    : key === 'End'
-      ? workspaceTabs.length - 1
-      : (currentIndex + (key === 'ArrowRight' ? 1 : -1) + workspaceTabs.length) % workspaceTabs.length
-  const next = workspaceTabs[nextIndex]
-  if (!next) return
-  select(next)
-  requestAnimationFrame(() => {
-    tablist.querySelector<HTMLButtonElement>(`[data-tab-value="${next}"]`)?.focus()
-  })
 }
 
 function RateTables(input: { workspace: IncentiveWorkspace; locale: AppLocale; t: Translate }) {

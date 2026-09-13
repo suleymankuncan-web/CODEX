@@ -289,6 +289,9 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("review.final_snapshot_id");
     expect(sql).toContain("latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id");
     expect(sql).toContain("THEN 'submitted'");
+    // CASE with an untyped parameter and NULL otherwise resolves to text in PostgreSQL.
+    expect(sql).toContain("THEN $1::uuid ELSE NULL END");
+    expect(sql).toContain("THEN $2::uuid ELSE NULL END");
     expect(sql).toContain("ELSE 'voided'");
     expect(sql).toContain("correction_status IN ('draft', 'admin_returned', 'submitted')");
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");

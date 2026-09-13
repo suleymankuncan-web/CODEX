@@ -110,6 +110,7 @@ describe("Auth role assignments", () => {
       effectiveFrom: "2026-04-17T20:00:00.000Z",
       effectiveTo: null,
       createdAt: "2026-04-17T20:00:00.000Z",
+      incentiveApproval: false,
       active: true,
     });
 
@@ -201,6 +202,7 @@ describe("Auth role assignments", () => {
       effectiveFrom: "2026-04-17T20:00:00.000Z",
       effectiveTo: null,
       createdAt: "2026-04-17T20:00:00.000Z",
+      incentiveApproval: false,
       active: true,
     });
 
@@ -542,6 +544,7 @@ describe("Auth role assignments", () => {
         effectiveFrom: "2026-04-17T20:00:00.000Z",
         effectiveTo: null,
         createdAt: "2026-04-17T20:00:00.000Z",
+        incentiveApproval: false,
         active: true,
       },
       {
@@ -558,6 +561,7 @@ describe("Auth role assignments", () => {
         effectiveFrom: "2026-04-17T21:00:00.000Z",
         effectiveTo: null,
         createdAt: "2026-04-17T21:00:00.000Z",
+        incentiveApproval: false,
         active: true,
       },
     ]);
@@ -870,6 +874,7 @@ describe("Auth role assignments", () => {
       effectiveFrom: "2026-04-17T20:00:00.000Z",
       effectiveTo: "2026-04-17T22:00:00.000Z",
       createdAt: "2026-04-17T20:00:00.000Z",
+      incentiveApproval: false,
       active: false,
     });
 

@@ -248,6 +248,8 @@ CREATE TABLE ops.user_account (
 );
 
 CREATE TABLE ops.user_role_assignment (
+    incentive_approval BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT user_role_assignment_incentive_company_check CHECK (NOT incentive_approval OR (scope_type = 'company' AND company_id IS NOT NULL)),
     user_role_assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
     role_id UUID NOT NULL REFERENCES ops.role(role_id),

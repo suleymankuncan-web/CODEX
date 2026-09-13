@@ -16,6 +16,7 @@ type RoleAssignmentRow = {
   email?: string;
   role_code: string;
   role_name?: string;
+  incentive_approval?: boolean;
   scope_type: string;
   company_id: string | null;
   region_id: string | null;
@@ -284,6 +285,7 @@ export class AuthAdminRepository {
           ua.email,
           r.role_code,
           r.role_name,
+          ura.incentive_approval,
           ura.scope_type,
           ura.company_id,
           ura.region_id,
@@ -314,6 +316,7 @@ export class AuthAdminRepository {
           ura.user_role_assignment_id,
           ura.user_id,
           r.role_code,
+          ura.incentive_approval,
           ura.scope_type,
           ura.company_id,
           ura.region_id,
@@ -329,6 +332,10 @@ export class AuthAdminRepository {
     );
 
     return result.rows[0] ?? null;
+  }
+
+  async updateIncentiveApproval(input: { assignmentId: string; enabled: boolean; actorUserId: string }) {
+    return this.roleAssignmentCommandRepository.updateIncentiveApproval(input);
   }
 
   async deactivateRoleAssignment(input: DeactivateRoleAssignmentCommandInput) {

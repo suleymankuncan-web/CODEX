@@ -195,12 +195,12 @@ test('admin incentive period filter requests the selected year and month', async
   await expect(page.getByTestId('admin-incentives-page')).toBeVisible()
 
   requestedUrls.length = 0
-  await page.getByRole('combobox', { name: 'Yıl' }).click()
-  await page.getByRole('option', { name: '2025' }).click()
-  await page.getByRole('combobox', { name: 'Yıl' }).click()
-  await page.getByRole('option', { name: '2026' }).click()
-  await page.getByRole('combobox', { name: 'Ay' }).click()
-  await page.getByRole('option', { name: 'Mayıs' }).click()
+  await page.getByRole('button', { name: 'Prim dönemi' }).click()
+  const calendar = page.getByRole('dialog', { name: 'Dönem seç' })
+  await calendar.getByRole('combobox', { name: 'Yıl seç' }).selectOption('2025')
+  await calendar.getByRole('combobox', { name: 'Yıl seç' }).selectOption('2026')
+  await calendar.getByRole('combobox', { name: 'Ay seç' }).selectOption('4')
+  await calendar.getByRole('button', { name: 'Uygula' }).click()
   await expect.poll(() => requestedUrls.some((url) => url.includes('period=2026-05'))).toBe(true)
   await expect(page.getByTestId('admin-incentive-period-summary')).toContainText('Mayıs 2026')
 })

@@ -10458,6 +10458,106 @@
           "RegionManagerDirectory"
         ]
       }
+    },
+    "/api/auth/role-assignments/{assignmentId}/incentive-approval": {
+      "patch": {
+        "operationId": "AuthAdminController_updateIncentiveApproval",
+        "parameters": [
+          {
+            "name": "assignmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIncentiveApprovalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Individual Report Viewer incentive approval permission updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthRoleAssignmentCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AuthAdmin"
+        ]
+      }
+    },
+    "/api/store/incentives/final-approval": {
+      "get": {
+        "operationId": "IncentiveFinalApprovalController_list",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Company-scoped packages for explicitly authorized Report Viewers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveFinalApprovalPackages"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveFinalApproval"
+        ]
+      },
+      "post": {
+        "operationId": "IncentiveFinalApprovalController_approve",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveFinalIncentivePackageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Final approval of the exact submitted package.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveFinalApprovalResult"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveFinalApproval"
+        ]
+      }
     }
   },
   "info": {
@@ -10480,6 +10580,9 @@
       "CreateRoleAssignmentDto": {
         "type": "object",
         "properties": {
+          "incentiveApproval": {
+            "type": "boolean"
+          },
           "userId": {
             "type": "string"
           },
@@ -20488,6 +20591,11 @@
                   },
                   "active": {
                     "type": "boolean"
+                  },
+                  "incentiveApproval": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Individual company-scoped Report Viewer final incentive approval grant."
                   }
                 }
               }
@@ -20569,6 +20677,11 @@
                 },
                 "active": {
                   "type": "boolean"
+                },
+                "incentiveApproval": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Individual company-scoped Report Viewer final incentive approval grant."
                 }
               }
             }
@@ -20981,6 +21094,11 @@
                         },
                         "active": {
                           "type": "boolean"
+                        },
+                        "incentiveApproval": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "Individual company-scoped Report Viewer final incentive approval grant."
                         }
                       }
                     }
@@ -31831,6 +31949,190 @@
           "nationalId": {
             "type": "string",
             "pattern": "^[0-9]{11}$"
+          }
+        }
+      },
+      "UpdateIncentiveApprovalDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "ApproveFinalIncentivePackageDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "regionPackageId": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "regionId",
+          "regionPackageId",
+          "submittedAt"
+        ]
+      },
+      "IncentiveFinalApprovalPackages": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "regionId",
+                "regionName",
+                "regionPackageId",
+                "regionManagerUserId",
+                "regionManagerName",
+                "submittedByUserId",
+                "submittedByName",
+                "submittedAt",
+                "reviewedByUserId",
+                "reviewedByName",
+                "reviewedAt",
+                "reviewNote",
+                "status",
+                "storeCount",
+                "reviewedStoreCount",
+                "submittedStoreCount",
+                "draftCorrectionCount",
+                "submittedCorrectionCount"
+              ],
+              "properties": {
+                "regionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "regionName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionPackageId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
+                "regionManagerUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionManagerName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "submittedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "submittedByName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
+                },
+                "reviewedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewedByName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reviewedAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
+                },
+                "reviewNote": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "not_submitted",
+                    "submitted",
+                    "admin_approved",
+                    "admin_returned"
+                  ]
+                },
+                "storeCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "reviewedStoreCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "submittedStoreCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "draftCorrectionCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "submittedCorrectionCount": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      },
+      "IncentiveFinalApprovalResult": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "regionPackageId",
+              "status",
+              "reviewedAt"
+            ],
+            "properties": {
+              "regionPackageId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "admin_approved"
+                ]
+              },
+              "reviewedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              }
+            }
           }
         }
       }
