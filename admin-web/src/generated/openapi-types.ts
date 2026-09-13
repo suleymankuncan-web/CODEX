@@ -1847,6 +1847,13 @@ export type components = {
       "storeIds": string[]
       "reason": string
     }
+    "RegionManagerDirectoryResponse": {
+      "items": Array<{
+          "userId": string
+          "displayName": string
+          "storeIds": string[]
+        }>
+    }
     "ReportingChecklistResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -4027,6 +4034,17 @@ export type components = {
 }
 
 export type paths = {
+  "/api/org/region-managers": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["RegionManagerDirectoryResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/workforce/personnel-corrections": {
     get: {
       responses: {

@@ -10419,6 +10419,27 @@
           "PersonnelCorrection"
         ]
       }
+    },
+    "/api/org/region-managers": {
+      "get": {
+        "operationId": "RegionManagerDirectoryController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Company-scoped active Region Manager directory.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionManagerDirectoryResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "RegionManagerDirectory"
+        ]
+      }
     }
   },
   "info": {
@@ -31643,6 +31664,41 @@
                 },
                 "positionName": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RegionManagerDirectoryResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "userId",
+                "displayName",
+                "storeIds"
+              ],
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "storeIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 }
               }
             }

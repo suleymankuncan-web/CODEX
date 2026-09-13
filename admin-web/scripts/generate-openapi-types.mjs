@@ -17,6 +17,7 @@ const document = JSON.parse(await readFile(openApiPath, 'utf8'))
 
 const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete'])
 const selectedOperations = [
+  { path: '/api/org/region-managers', method: 'get' },
   { path: '/api/workforce/personnel-corrections', method: 'get' },
   { path: '/api/workforce/personnel-corrections', method: 'post' },
   { path: '/api/workforce/personnel-corrections/personnel/{employeeId}/stores/{storeId}', method: 'get' },
