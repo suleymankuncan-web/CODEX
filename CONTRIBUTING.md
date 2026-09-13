@@ -78,9 +78,11 @@ not close provider, token, restore, queue, alert, or broad-production evidence.
 The [canonical verification ladder](discipline.md#verification-ladder) owns
 commands and escalation. Docs/process work normally runs `git diff --check` and,
 when active docs or guards change, `npm.cmd run test:scripts`; tie broader checks
-to acceptance. Exact-input `npm.cmd run check:release -- --resume` may reuse only
-matching proof: coverage, test selection, audits, builds, API checks, and
-Playwright selection remain unchanged. Do not run two local canonical gates concurrently.
+to acceptance. Input-bound `npm.cmd run check:release -- --resume` may retain
+verified backend/static outputs and reviewed isolated spec results when their
+inputs match. Complete current test coverage remains mandatory; root contracts
+and audits always execute. See `docs/plans/ci-incremental-recovery-v1.md`.
+Do not run two local canonical gates concurrently.
 Idle check polling uses 55-60 second intervals; details remain in discipline.
 
 Before manual image/offline proof, run

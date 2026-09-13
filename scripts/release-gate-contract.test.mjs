@@ -74,7 +74,7 @@ test('github release workflow is reusable and runs the canonical proof DAG on No
   assert.match(workflow, /google-chrome --version/)
   assert.match(workflow, /pull-requests:\s*read/)
   assert.match(workflow, /PLAYWRIGHT_USE_SYSTEM_CHROME:\s*"1"/)
-  assert.match(workflow, /run:\s*npm run check:release:static/)
+  assert.match(workflow, /run:\s*node scripts\/release-stage-ci\.mjs frontend-static/)
   assert.match(workflow, /run:\s*npm run check:release:e2e/)
   assert.match(workflow, /run:\s*node scripts\/release-workflow-final\.mjs/)
 })

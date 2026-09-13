@@ -33,10 +33,11 @@ test('release status distinguishes successful, invalid, and missing receipts', (
   assert.deepEqual(
     collectReleaseStatus(workspaceRoot).stages.map(({ id, status }) => ({ id, status })),
     [
-      { id: 'one', status: 'success' },
+      { id: 'one', status: 'stale' },
       { id: 'two', status: 'invalid' },
       { id: 'three', status: 'missing' },
     ],
   )
   assert.equal(formatDuration(1250), '1.3s')
+  assert.equal(collectReleaseStatus(workspaceRoot, '1234567890abcdef').stages[0].status, 'current')
 })

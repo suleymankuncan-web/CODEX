@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "reviewedSpecs": [
+    "store-targets-contracts.spec.ts",
+    "store-targets-parity-evidence.spec.ts",
+    "store-targets-store-manager-command.spec.ts"
+  ],
+  "reason": "These target specs freeze browser time before each test, use isolated page/session fixtures and mock their API state. Other specs always rerun until their determinism is reviewed."
+}

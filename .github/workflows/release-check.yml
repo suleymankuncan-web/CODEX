@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
       pull-requests: read
 
     steps:
@@ -43,10 +44,13 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -59,9 +63,19 @@ jobs:
         working-directory: backend/nestjs
         run: npm ci
 
-      - name: Run backend release proof
-        working-directory: backend/nestjs
-        run: npm run check:release:proof
+      - name: Verify backend inputs and release proof
+        id: proof
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-stage-ci.mjs backend-release
+
+      - name: Preserve verified backend result
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.proof.outputs.artifact_name }}
+          path: tmp/release-export/backend-release/bundle.json
+          if-no-files-found: error
+          retention-days: 1
 
   dependency-audit:
     name: dependency-audit
@@ -70,10 +84,13 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -86,20 +103,22 @@ jobs:
       - name: Audit frontend production dependencies
         run: npm --prefix admin-web run check:release:audit
 
-  frontend-release:
-    name: frontend-release
+  frontend-static:
+    name: frontend-static
+    outputs:
+      artifact_name: ${{ steps.proof.outputs.artifact_name }}
     needs: root-contracts
     runs-on: ubuntu-latest
-    # The full browser suite normally finishes in about 14 minutes, but hosted
-    # runner throughput can vary substantially. Individual tests remain bounded
-    # by Playwright's 30-second timeout.
-    timeout-minutes: 40
+    timeout-minutes: 15
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -121,17 +140,99 @@ jobs:
           fi
           google-chrome --version
 
-      - name: Run frontend static proof
-        working-directory: admin-web
+      - name: Verify frontend static inputs and proof
+        id: proof
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
-        run: npm run check:release:static
+        run: node scripts/release-stage-ci.mjs frontend-static
 
-      - name: Run full frontend E2E proof exactly once
+      - name: Preserve verified static result and build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.proof.outputs.artifact_name }}
+          path: tmp/release-export/frontend-static/bundle.json
+          if-no-files-found: error
+          retention-days: 1
+
+  frontend-release:
+    name: frontend-release
+    needs: frontend-static
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: admin-web
+        run: npm ci
+
+      - name: Ensure system Chrome
+        timeout-minutes: 5
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y google-chrome-stable
+          fi
+          google-chrome --version
+
+      - name: Download current static build
+        id: build-download
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.frontend-static.outputs.artifact_name }}
+          path: tmp/current-frontend-build
+
+      - name: Verify static build identity
+        if: steps.build-download.outcome == 'success'
+        run: node scripts/release-stage-ci.mjs import-build tmp/current-frontend-build/bundle.json
+
+      - name: Rebuild static proof when the same-run artifact is unavailable
+        if: steps.build-download.outcome != 'success'
+        env:
+          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
+        run: node scripts/release-stage-ci.mjs frontend-static
+
+      - name: Inspect prior completed CI test inventory
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release-stage-ci.mjs restore-e2e
+
+      - name: Verify complete frontend E2E inventory
         working-directory: admin-web
         env:
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
+          RELEASE_RECOVERY_MODE: resume
         run: npm run check:release:e2e
+
+      - name: Prepare completed test inventory
+        id: proof
+        if: ${{ always() }}
+        run: node scripts/release-stage-ci.mjs export-e2e
+
+      - name: Preserve completed test inventory
+        if: ${{ always() && steps.proof.outputs.artifact_name != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.proof.outputs.artifact_name }}
+          path: tmp/release-export/frontend-e2e/bundle.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Publish Playwright test summary
         if: ${{ always() }}
@@ -154,6 +255,7 @@ jobs:
     needs:
       - root-contracts
       - backend-release
+      - frontend-static
       - frontend-release
       - dependency-audit
     if: ${{ always() }}
@@ -163,6 +265,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -173,6 +277,7 @@ jobs:
         env:
           RELEASE_ROOT_CONTRACTS_RESULT: ${{ needs.root-contracts.result }}
           RELEASE_BACKEND_RESULT: ${{ needs.backend-release.result }}
+          RELEASE_FRONTEND_STATIC_RESULT: ${{ needs.frontend-static.result }}
           RELEASE_FRONTEND_RESULT: ${{ needs.frontend-release.result }}
           RELEASE_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
         run: node scripts/release-workflow-final.mjs

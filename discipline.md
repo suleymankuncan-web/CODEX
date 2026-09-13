@@ -311,23 +311,25 @@ acikca degistirirse gevsetilir:
 
 ### Canonical Release Sure Ve Tekrar-Kosum Disiplini
 
-Owner'in 2026-07-16 tarihli kilitli karariyla canonical release suresi test
-kapsami azaltmadan dusurulur. `docs/plans/canonical-release-gate-wall-time-
-optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
+Owner'in Eylul 2026 onayiyla canonical release suresi test kapsami azaltmadan
+dusurulur. Guncel recovery contract `docs/plans/ci-incremental-recovery-v1.md`;
+Temmuz wall-time plani tarihsel baseline olarak kalir.
 
 - Root `npm.cmd run check:release` tek kanonik yerel giristir. Fresh kosu
   varsayilandir; onceki kosuda gec E2E gibi somut bir asama hatasi duzeltildiyse
-  ayni HEAD, manifest, komut, Node/platform, lockfile ve tracked/non-ignored
-  workspace kimliginde `npm.cmd run check:release -- --resume` kullanilir.
+  `npm.cmd run check:release -- --resume` kullanilir. Backend/static asamalar
+  komut, Node/npm/platform, lockfile, ilgili kaynak/ortam ve gercek build
+  ciktisi ayniysa SHA degisse bile onceki kaniti koruyabilir. Kaynak SHA ve
+  mevcut execution SHA ayri kaydedilir; 24 saati gecen kanit kullanilmaz.
 - Resume bir gate atlama mekanizmasi degildir. Yalniz atomic ve digest-bound
   basarili receipt tekrar kullanilir. Eksik, bozuk, stale, farkli input'lu veya
-  unknown receipt fresh kosuya doner; dependency audit volatile'dir ve her
+  unknown receipt fresh kosuya doner; root contracts ve dependency audit volatile'dir ve her
   resume'da yeniden kosar.
 - Backend release, frontend static ve audit kaniti bagimliliklari izin verdigi
   anda paralel kosabilir. Frontend E2E frontend static PASS olmadan baslamaz;
   frontend build ve tam Playwright suite fresh kosuda birer kez kosar.
-- GitHub Actions'ta root, backend, frontend ve volatile audit proof aileleri
-  native ayri job'lardir. Gec bir hata sonrasi
+- GitHub Actions'ta root, backend, frontend static, frontend E2E ve volatile
+  audit proof aileleri native ayri job'lardir. Ayni SHA'da gec bir hata sonrasi
   `Re-run failed jobs` kullanilir; yesil sibling job'lar sebepsiz yeniden
   kosturulmaz. Required aggregate selected child eksik, skipped, cancelled,
   timed-out veya failed ise fail-closed kalir.
@@ -338,7 +340,8 @@ optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
 - Bir GitHub job'i kirmiziysa kor push/rerun dongusu acilmaz. Once failure'in
   exact alt asamasi yerelde yeniden uretilir, tek kok neden dar bir diff ile
   duzeltilir ve ilgili yerel kanit tekrar yesile getirilir. Ancak bundan sonra
-  yeni push yapilir ve gec hata icin native `Re-run failed jobs` kullanilir.
+  yeni push yapilir; yeni SHA yeni run gerektirir. Native `Re-run failed jobs`
+  eski run'in SHA'sini degistirmez.
   Ag/429/5xx icin mevcut sinirli retry kurali bu disiplini gevsetmez.
 - Harici release-rehearsal observer tek kanit otoritesi olarak exact
   `release-rehearsal.yml` workflow run'ini kullanir. Event, PR numarasi, base
@@ -357,11 +360,16 @@ optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
   required gate'in zaten calistirdigi backend lint/Jest/build/audit paketini
   ikinci kez kosturmaz. Post-merge exact-tree reuse kesin degilse full release
   fallback devam eder.
-- Test, spec, lint, build, API check, audit, Playwright test secimi veya coverage
-  hiz ugruna azaltilmaz; retry/skip ile hata gizlenmez ve yeni worker/shard
-  deneyi acilmaz.
-- Basarili PASS receipt'leri Actions cache/artifact olarak tasinmaz,
-  `node_modules` cache'lenmez. Yalniz npm download cache'i kullanilabilir.
+- Test kapsami, lint, build, API check ve audit korunur. E2E'de yalniz explicit
+  reviewed isolated spec listesi sonuc koruyabilir; degisen/basarisiz veya
+  incelenmemis spec yeniden kosar. Shared input, inventory veya browser
+  degisikligi tam kosu gerektirir. Skip/flaky/global error PASS sayilmaz;
+  mevcut tam inventory, executed + retained union ile birebir dogrulanir.
+- CI recovery artifact'lari 1 gun tutulur; yalniz ayni repository/PR/base,
+  en yeni onceki run/attempt, workflow, tested merge tree, job sonucu ve
+  artifact digest dogrulanirsa kullanilir. Yerel kanit CI kaniti olmaz.
+  Eksik veya belirsiz API/artifact bilgisi fresh kosuya doner.
+  `node_modules` cache'lenmez. On-prem runtime kaniti SHA'lar arasinda tasinmaz.
 - Required gate p95 hedefi 13 dakika, DAG hedefi 12 dakika 30 saniyedir.
   Toplam runner-minute eski on-kosu baseline'inin 110%'unu asarsa veya wall-time
   kazanci coverage/izolasyon riski yaratirsa otomatik optimizasyon durur ve yeni

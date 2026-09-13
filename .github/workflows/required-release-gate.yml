@@ -78,6 +78,7 @@ jobs:
     if: needs.scope.outputs.run_root_release == 'true'
     uses: ./.github/workflows/release-check.yml
     permissions:
+      actions: read
       contents: read
       pull-requests: read
 

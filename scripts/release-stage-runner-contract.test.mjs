@@ -338,7 +338,7 @@ test('CI release DAG has independent proof jobs and one fail-closed aggregate', 
     assert.match(workflow, new RegExp(`^  ${job}`, 'm'))
   }
   assert.match(workflow, /backend-release:\s*\n\s*name:\s*backend-release\s*\n\s*needs:\s*root-contracts/)
-  assert.match(workflow, /frontend-release:\s*\n\s*name:\s*frontend-release\s*\n\s*needs:\s*root-contracts/)
+  assert.match(workflow, /frontend-release:\s*\n\s*name:\s*frontend-release\s*\n\s*needs:\s*frontend-static/)
   assert.match(workflow, /name:\s*release-check/)
   assert.match(workflow, /if:\s*\$\{\{ always\(\) \}\}/)
   assert.match(workflow, /RELEASE_ROOT_CONTRACTS_RESULT/)
@@ -353,6 +353,7 @@ test('CI release DAG has independent proof jobs and one fail-closed aggregate', 
       rootContractsResult: 'success',
       backendResult: 'success',
       frontendResult: 'success',
+      frontendStaticResult: 'success',
       auditResult: 'success',
     }).ok,
     true,
@@ -362,10 +363,17 @@ test('CI release DAG has independent proof jobs and one fail-closed aggregate', 
       rootContractsResult: 'success',
       backendResult: 'success',
       frontendResult: result,
+      frontendStaticResult: 'success',
       auditResult: 'success',
     })
     assert.equal(final.ok, false)
     assert.match(final.failures.join(', '), /frontend-release=/)
+    const staticFailure = evaluateReleaseWorkflowFinal({
+      rootContractsResult: 'success', backendResult: 'success', frontendResult: 'success',
+      frontendStaticResult: result, auditResult: 'success',
+    })
+    assert.equal(staticFailure.ok, false)
+    assert.match(staticFailure.failures.join(', '), /frontend-static=/)
   }
 })
 
