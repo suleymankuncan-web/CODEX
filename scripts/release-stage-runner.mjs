@@ -11,12 +11,12 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
+import { clearStageRecovery, prepareStageRecovery, recordStageRecovery } from './release-stage-execution.mjs'
 
 import {
   RELEASE_RECEIPT_SCHEMA_VERSION,
   buildReleaseProofIdentity,
   commandDigest,
-  receiptCanBeReused,
   receiptDigest,
   validateReleaseManifest,
 } from './release-stage-proof.mjs'
@@ -154,7 +154,7 @@ export async function runCanonicalRelease({ workspaceRoot, resume = false }) {
         const invocation = commandInvocation(command)
         const child = spawn(invocation.command, invocation.args, {
           cwd: join(workspaceRoot, ...stage.cwd.split('/')),
-          env: process.env,
+          env: { ...process.env, RELEASE_RECOVERY_MODE: resume ? 'resume' : 'fresh' },
           stdio: 'inherit',
           windowsHide: true,
           detached: process.platform !== 'win32',
@@ -182,27 +182,25 @@ export async function runCanonicalRelease({ workspaceRoot, resume = false }) {
           stage.dependsOn.map((id) => [id, receiptDigest(completedReceipts.get(id))]),
         )
         const path = receiptPath(receiptRoot, stage.id)
-        const existingReceipt = resume ? readReceipt(path) : null
-        if (
-          receiptCanBeReused({
-            receipt: existingReceipt,
-            stage,
-            proofIdentityDigest: identity.proofIdentityDigest,
-            upstreamReceiptDigests,
-          })
-        ) {
-          completedReceipts.set(stage.id, existingReceipt)
-          console.log(`[release] reuse ${stage.id} (${existingReceipt.durationMs}ms prior proof)`)
-          return
-        }
-
+        const recovery = prepareStageRecovery({ root: workspaceRoot, stage, resume })
         rmSync(path, { force: true })
         const startedAt = new Date()
         const started = Date.now()
-        console.log(`[release] start ${stage.id}`)
+        console.log(`[release] ${recovery.reuse ? 'reuse' : 'start'} ${stage.id}: ${recovery.reason}`)
         try {
-          for (const command of stage.commands) await runCommand(stage, command)
+          if (!recovery.reuse) {
+            clearStageRecovery(recovery)
+            for (const command of stage.commands) await runCommand(stage, command)
+            recordStageRecovery({
+              root: workspaceRoot, stage, prepared: recovery,
+              startedAt: startedAt.toISOString(), durationMs: Date.now() - started,
+              write: writeReceiptAtomic,
+            })
+          }
         } catch (error) {
+          writeReceiptAtomic(path, { schemaVersion: RELEASE_RECEIPT_SCHEMA_VERSION, stageId: stage.id,
+            status: 'failed', proofIdentityDigest: identity.proofIdentityDigest,
+            startedAt: startedAt.toISOString(), completedAt: new Date().toISOString(), durationMs: Date.now() - started })
           stopChildren()
           throw error
         }
@@ -217,6 +215,8 @@ export async function runCanonicalRelease({ workspaceRoot, resume = false }) {
           proofIdentityDigest: identity.proofIdentityDigest,
           commandDigest: commandDigest(stage),
           upstreamReceiptDigests,
+          recovery: { action: recovery.reuse ? 'reused' : 'executed', reason: recovery.reason,
+            sourceHead: recovery.reuse ? recovery.record.sourceHead : identity.headSha },
         }
         writeReceiptAtomic(path, receipt)
         completedReceipts.set(stage.id, receipt)
@@ -227,6 +227,11 @@ export async function runCanonicalRelease({ workspaceRoot, resume = false }) {
     }
 
     await Promise.all(manifest.stages.map((stage) => runStage(stage.id)))
+    const finalIdentity = buildReleaseProofIdentity({ workspaceRoot, manifestPath })
+    if (finalIdentity.proofIdentityDigest !== identity.proofIdentityDigest) {
+      for (const stage of manifest.stages) rmSync(receiptPath(receiptRoot, stage.id), { force: true })
+      throw new Error('Workspace or environment changed during canonical verification')
+    }
     console.log('[release] canonical proof complete')
   } finally {
     stopChildren()

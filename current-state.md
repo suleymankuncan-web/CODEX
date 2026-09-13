@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-09-08
+Last verified: 2026-09-14
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
@@ -83,12 +83,10 @@ Report Viewer checklist ownership is the active `REGION_MANAGER` role plus activ
 ### A3 Release Measurement
 
 PR #919's A3 observation is closed from ten successful root-release jobs. The
-nearest-rank p95 is `13.23` minutes. The canonical release DAG now preserves
-the complete suite while separating native CI proof jobs and offering exact-
-input local `--resume`; volatile audits rerun and every uncertain identity
-falls back fresh. Keep all 371 tests and two CI workers; runner-minutes above
-110% of baseline require an owner decision. Source: `docs/evidence/performance/
-2026-07-10-e2e-worker-concurrency-a3.md`.
+nearest-rank p95 was `13.23` minutes for that historical 371-case cohort. September's baseline is 682 E2E cases in 82 files; PRs #1145–#1152 required gates averaged 21m32s.
+Owner-approved incremental recovery separates static/browser jobs and binds retained proof to stage inputs and actual outputs. Only three reviewed isolated specs initially retain results; complete current inventory, root contracts, volatile audits and two CI workers remain mandatory.
+New-run p50/p95 and runner-minute gains are not yet measured. See `docs/plans/ci-incremental-recovery-v1.md`; 110% of comparable runner-minutes still requires an owner decision.
+Historical source: `docs/evidence/performance/2026-07-10-e2e-worker-concurrency-a3.md`.
 
 ### B1 Controlled Pilot Evidence
 

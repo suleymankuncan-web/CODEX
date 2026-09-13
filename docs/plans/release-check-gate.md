@@ -21,17 +21,19 @@ The fresh root gate runs the versioned stage manifest:
    as soon as their dependencies allow
 3. Full frontend E2E after frontend static proof
 
-After a concrete late-stage failure, an unchanged exact-input workspace may
-resume:
+After a concrete late-stage failure, inspect the affected families and resume:
 
 ```powershell
 npm.cmd run check:release -- --resume
 ```
 
-Resume binds HEAD, manifest/commands, Node/platform, package locks, tracked and
-non-ignored untracked content, and upstream receipt digests. It reuses only
-atomic successful receipts. Dependency audits are volatile and always rerun;
-unknown or mismatched evidence falls back to fresh execution.
+Use `npm.cmd run check:release -- --plan` for a read-only family decision.
+Resume binds each family's commands, Node/npm/platform, locks, relevant content,
+environment and actual build outputs. Proof source SHA is separate from current
+execution SHA. Root contracts and audits always run. Reviewed isolated E2E specs
+may retain clean matching results, but the complete current case inventory must
+still be proven. Unknown, expired or mismatched evidence selects execution.
+The detailed contract is [incremental recovery v1](ci-incremental-recovery-v1.md).
 
 Backend currently owns:
 
@@ -52,13 +54,14 @@ Frontend currently owns:
 
 The GitHub Actions workflow `.github/workflows/release-check.yml` is the one
 full-release workflow. It is reusable and manually dispatchable. Root
-contracts, backend release, frontend release, and volatile dependency audit
-are native jobs;
-frontend static proof precedes its full E2E proof in the same job so the build
-and Playwright suite each run once. A fail-closed internal aggregate rejects
+contracts, backend release, frontend static, frontend E2E, and volatile dependency
+audit are native jobs. E2E imports and verifies the static job's build artifact.
+A fail-closed internal aggregate rejects
 every missing, skipped, cancelled, timed-out, or failed proof job. Native
 `Re-run failed jobs` therefore preserves successful sibling jobs after a late
-failure without transferring PASS receipts or `node_modules` artifacts.
+failure on the same SHA. A new SHA starts a new run; bounded recovery bundles
+may retain verified stage/spec evidence under the recovery contract.
+`node_modules` is never transferred.
 
 CI uses Node.js 24 to match the current local runtime family used by the project scripts.
 

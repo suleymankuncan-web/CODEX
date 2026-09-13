@@ -4,12 +4,14 @@ export function evaluateReleaseWorkflowFinal({
   rootContractsResult,
   backendResult,
   frontendResult,
+  frontendStaticResult,
   auditResult,
 }) {
   const results = {
     'root-contracts': rootContractsResult,
     'backend-release': backendResult,
     'frontend-release': frontendResult,
+    'frontend-static': frontendStaticResult,
     'dependency-audit': auditResult,
   }
   const failures = Object.entries(results)
@@ -23,6 +25,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     rootContractsResult: process.env.RELEASE_ROOT_CONTRACTS_RESULT,
     backendResult: process.env.RELEASE_BACKEND_RESULT,
     frontendResult: process.env.RELEASE_FRONTEND_RESULT,
+    frontendStaticResult: process.env.RELEASE_FRONTEND_STATIC_RESULT,
     auditResult: process.env.RELEASE_AUDIT_RESULT,
   })
   if (!final.ok) {

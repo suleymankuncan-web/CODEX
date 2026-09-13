@@ -129,7 +129,7 @@ function git(workspaceRoot, args) {
   })
 }
 
-function npmVersion(workspaceRoot) {
+export function npmVersion(workspaceRoot) {
   const command = process.platform === 'win32' ? process.env.ComSpec ?? 'cmd.exe' : 'npm'
   const args = process.platform === 'win32'
     ? ['/d', '/s', '/c', 'npm.cmd --version']

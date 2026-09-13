@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { buildReleaseProofIdentity } from './release-stage-proof.mjs'
+import { prepareStageRecovery } from './release-stage-execution.mjs'
 
 function readJson(path) {
   try {
@@ -10,10 +12,15 @@ function readJson(path) {
   }
 }
 
-export function collectReleaseStatus(workspaceRoot) {
+export function collectReleaseStatus(workspaceRoot, suppliedIdentity) {
   const manifest = readJson(join(workspaceRoot, 'scripts', 'release-stage-manifest.json'))
   if (!Array.isArray(manifest?.stages)) throw new Error('Release stage manifest is unavailable')
   const receiptRoot = join(workspaceRoot, 'tmp', 'release-gate')
+  let identity = suppliedIdentity
+  if (!identity) {
+    try { identity = buildReleaseProofIdentity({ workspaceRoot, manifestPath: join(workspaceRoot, 'scripts/release-stage-manifest.json') }).proofIdentityDigest }
+    catch { identity = null }
+  }
   const stages = manifest.stages.map((stage) => {
     const path = join(receiptRoot, `${stage.id}.json`)
     const receipt = readJson(path)
@@ -23,7 +30,8 @@ export function collectReleaseStatus(workspaceRoot) {
       receipt?.status === 'success'
     return {
       id: stage.id,
-      status: !existsSync(path) ? 'missing' : validSuccess ? 'success' : 'invalid',
+      status: !existsSync(path) ? 'missing' : receipt?.status === 'failed' ? 'failed' :
+        validSuccess ? identity && receipt.proofIdentityDigest === identity ? 'current' : 'stale' : 'invalid',
       durationMs: Number.isFinite(receipt?.durationMs) ? receipt.durationMs : null,
       completedAt: typeof receipt?.completedAt === 'string' ? receipt.completedAt : null,
       proofIdentity: typeof receipt?.proofIdentityDigest === 'string'
@@ -35,6 +43,14 @@ export function collectReleaseStatus(workspaceRoot) {
     stages,
     lockPresent: existsSync(join(receiptRoot, 'runner.lock')),
   }
+}
+
+export function collectRecoveryPlan(workspaceRoot) {
+  const manifest = readJson(join(workspaceRoot, 'scripts/release-stage-manifest.json'))
+  return manifest.stages.map((stage) => {
+    const result = prepareStageRecovery({ root: workspaceRoot, stage, resume: true })
+    return { stage: stage.id, action: result.reuse ? 'reuse' : 'execute', reason: result.reason }
+  })
 }
 
 export function formatDuration(durationMs) {

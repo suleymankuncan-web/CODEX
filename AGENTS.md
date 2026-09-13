@@ -43,8 +43,9 @@ read the relevant owner document:
   with `publish`. Automatic workflows begin with bounded exact-SHA
   `github-source-preflight`; runtime proofs are final evidence, never a GitHub
   diagnostic loop.
-- Exact-input `npm.cmd run check:release -- --resume` never reduces coverage or
-  test selection. Use native GitHub `Re-run failed jobs` after a late failure;
+- Input-bound `npm.cmd run check:release -- --resume` preserves complete coverage;
+  reviewed unchanged specs may retain verified results under the recovery contract.
+  Use native GitHub `Re-run failed jobs` for the same SHA after a late failure;
   efficiency details remain in [`discipline.md#token-verimli-otonom-yurutme`](discipline.md#token-verimli-otonom-yurutme).
 - Idle check polling uses 55-60 second intervals; return state changes or a
   compact failure tail, not complete successful logs.

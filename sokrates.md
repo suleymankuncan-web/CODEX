@@ -250,8 +250,11 @@ reversal. Do not force the original plan after such a signal.
 ## Canonical Execution Boundary
 
 Execution, PR/merge, verification, UI/refactor, agent routing, and on-prem proof
-recipes belong to [`discipline.md`](discipline.md). Exact-input
-`npm.cmd run check:release -- --resume` cannot reduce coverage or test selection;
+recipes belong to [`discipline.md`](discipline.md). Input-bound
+`npm.cmd run check:release -- --resume` cannot reduce complete test coverage;
+the September 2026 owner-approved recovery contract may retain reviewed isolated
+spec results with identical inputs and provenance. Unknown dependencies require
+full execution;
 the rule is that the fail-closed aggregate remain unchanged. The owner-disabled
 GitHub Codex review remains off, while required checks and independent runtime
 evidence remain mandatory.
