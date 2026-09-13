@@ -22,7 +22,7 @@ export class TargetDistributionController {
   @ApiQuery({ name: "storeId", type: String })
   @ApiQuery({ name: "requestMonth", type: String })
   @RequireActionScope("store")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "SUPER_ADMIN")
   async getRevisionBasis(
     @Req() request: {
       user: {

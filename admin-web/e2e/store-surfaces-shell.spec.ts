@@ -840,8 +840,8 @@ test('store settings utility pages show honest preferences and stay mobile-safe'
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-command-canvas-page].target-store-manager-page')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
-  await expect(page.getByText('Personel hedef dağılımı')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mall of İstanbul' })).toBeVisible()
+  await expect(page.getByText('Hedef dağıtım günü', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: /Hedef ak/i })).toHaveCount(0)
   await expect(page.getByText('/admin/targets')).toHaveCount(0)
 

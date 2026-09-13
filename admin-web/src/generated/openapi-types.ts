@@ -16,6 +16,7 @@ export type components = {
       "employeeId": string
       "assigneeLabel": string
       "targetValue": number
+      "distributionDays"?: number
       "note"?: string
     }
     "AuthActionStoreAssignmentCommandResponse": {
@@ -3338,6 +3339,7 @@ export type components = {
       "employeeId": string
       "assigneeLabel": string
       "targetValue": number
+      "distributionDays"?: number
       "note"?: string
     }
     "TargetDistributionRequestsResponse": {
@@ -3422,6 +3424,7 @@ export type components = {
       "displayName": string
       "targetValue": string
       "note": string | null
+      "distributionDays"?: number
     }
     "TargetWorkspaceCapabilities": {
       "canCreateRequest": boolean
@@ -3450,6 +3453,9 @@ export type components = {
       "positionCode": string | null
       "positionLabel": string | null
       "targetValue": string | null
+      "hireDate"?: string | null
+      "terminationDate"?: string | null
+      "actualSales"?: string | null
       "eligibilityStatus": "targetable" | "historical_allocation"
     }
     "TargetWorkspaceRegion": {

@@ -331,6 +331,7 @@ describe("TargetDistributionRepository", () => {
       original_total_target_value: "175000",
     };
     const query = createRepositoryQueryMock().mockImplementation(async (sql) => {
+      if (sql.includes("AS actual_sales")) return { rows: [] };
       if (sql.includes("WITH existing AS")) return { rows: [requestRow] };
       if (sql.includes("FROM rpt.snapshot_run")) return { rows: [{ exists: false }] };
       if (sql.includes("FROM ops.employee WHERE")) return { rows: [{ employee_id: employeeId }] };
@@ -407,6 +408,7 @@ describe("TargetDistributionRepository", () => {
       original_total_target_value: "175000",
     };
     const query = createRepositoryQueryMock().mockImplementation(async (sql) => {
+      if (sql.includes("AS actual_sales")) return { rows: [] };
       if (sql.includes("WITH existing AS")) return { rows: [requestRow] };
       if (sql.includes("FROM ops.employee WHERE")) return { rows: [{ employee_id: employeeId }] };
       if (sql.includes("eligible_count")) return { rows: [{ eligible_count: "1" }] };

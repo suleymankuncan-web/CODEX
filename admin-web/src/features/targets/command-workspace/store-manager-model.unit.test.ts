@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import {
   createStoreTargetDraft,
+  distributeTargetByDays,
+  hasCompleteDistributionDays,
   isApprovedTargetMonth,
+  isDepartedForTarget,
   sanitizeTargetMoneyInput,
   storeTargetDraftSummary,
   targetPrecisionUnits,
@@ -140,9 +143,80 @@ describe('Store Manager target draft', () => {
         { clearRequestNote: true },
       ),
     ).toEqual({
+      fixedSales: {},
       total: '100',
       note: '',
       allocations: { e1: '40', e2: '60' },
     })
   })
+})
+
+describe('day-weighted target distribution', () => {
+  test('matches the spreadsheet and keeps the store total exact', () => {
+    const days = [0, 22, 30, 26, 22, 10]
+    const people = days.map((_, i) => ({ employeeId: `p${i}` }))
+    const draft = distributeTargetByDays({ total: '2500000', note: '', allocations: {}, distributionDays: Object.fromEntries(people.map((person, i) => [person.employeeId, String(days[i])])) }, people)
+    expect(draft.allocations.p0).toBe('0.0000')
+    expect(draft.allocations.p1).toBe('500000.0000')
+    expect(Number(draft.allocations.p2)).toBeCloseTo(681818.1818, 4)
+    expect(Object.values(draft.allocations).reduce((sum, value) => sum + targetPrecisionUnits(value), 0)).toBe(25000000000)
+    expect(hasCompleteDistributionDays(draft, people)).toBe(true)
+  })
+  test('accepts an explicit zero share but rejects blank or all-zero days', () => {
+    const draft = distributeTargetByDays({ total: '100', note: '', allocations: {}, distributionDays: { e1: '26', e2: '0' } }, store.personnel)
+    expect(storeTargetDraftSummary(store, draft).valid).toBe(true)
+    expect(hasCompleteDistributionDays({ ...draft, distributionDays: { e1: '0', e2: '0' } }, store.personnel)).toBe(false)
+    expect(hasCompleteDistributionDays({ ...draft, distributionDays: { e1: '26', e2: '' } }, store.personnel)).toBe(false)
+  })
+  test('recalculates when total changes and rounds deterministically', () => {
+    const draft = { total: '0.01', note: '', allocations: {}, distributionDays: { e1: '1', e2: '2' } }
+    expect(distributeTargetByDays(draft, store.personnel).allocations).toEqual({ e1: '0.0033', e2: '0.0067' })
+    expect(distributeTargetByDays({ ...draft, total: '300' }, store.personnel).allocations).toEqual({ e1: '100.0000', e2: '200.0000' })
+  })
+})
+
+test('approved revision fills zero-target roster members and restores recorded days', () => {
+  const approved = { ...store, request: { allocations: [{ employeeId: 'e1', targetValue: '100', distributionDays: 26 }], totalTargetValue: '100' } } as TargetCommandStore
+  const draft = createStoreTargetDraft(approved, [{ employeeId: 'e1', targetValue: 100 }])
+  expect(draft.allocations).toEqual({ e1: '100', e2: '0' })
+  expect(draft.distributionDays).toEqual({ e1: '26', e2: '0' })
+  expect(hasCompleteDistributionDays(draft, store.personnel)).toBe(true)
+})
+
+
+test('departure sales are fixed while the remaining target follows active day weights', () => {
+  const people = [{ employeeId: 'left' }, { employeeId: 'a' }, { employeeId: 'b' }]
+  const draft = { total: '1000', note: '', allocations: {}, fixedSales: { left: '300' }, distributionDays: { left: '26', a: '10', b: '20' } }
+  const first = distributeTargetByDays(draft, people)
+  expect(first.allocations).toEqual({ left: '300.0000', a: '233.3333', b: '466.6667' })
+  const next = distributeTargetByDays({ ...first, distributionDays: { left: '999', a: '20', b: '20' } }, people)
+  expect(next.allocations).toEqual({ left: '300.0000', a: '350.0000', b: '350.0000' })
+  expect(next.fixedSales).toEqual({ left: '300' })
+})
+
+test('missing departure sales and fixed sales over the store total block submission', () => {
+  const missing = { total: '100', note: '', allocations: {e1: '100', e2: '0'}, fixedSales: {e1: null}, distributionDays: {e1: '26', e2: '0'} }
+  expect(storeTargetDraftSummary(store, missing).valid).toBe(false)
+  const excessive = distributeTargetByDays({...missing, fixedSales: {e1: '150'}}, store.personnel)
+  expect(storeTargetDraftSummary(store, excessive).valid).toBe(false)
+})
+
+
+test('pending revisions show submitted amounts instead of the previous approved basis', () => {
+  const pending = { ...store, request: {status:'pending_region_approval',totalTargetValue:'100',allocations:[{employeeId:'e1',targetValue:'60',distributionDays:30},{employeeId:'e2',targetValue:'40',distributionDays:20}]}} as TargetCommandStore
+  expect(createStoreTargetDraft(pending,[{employeeId:'e1',targetValue:50},{employeeId:'e2',targetValue:50}]).allocations).toEqual({e1:'60',e2:'40'})
+})
+
+test('adjusted approved amounts survive reopening even when weights differ or legacy days are absent', () => {
+  const approved = {...store,personnel:store.personnel.map((p,i)=>({...p,...(i===0?{terminationDate:'2026-09-10',actualSales:'30'}:{})})),request:{status:'approved',totalTargetValue:'100',allocations:[{employeeId:'e1',targetValue:'30',distributionDays:26},{employeeId:'e2',targetValue:'70',distributionDays:26}]}} as TargetCommandStore
+  const basis=[{employeeId:'e1',targetValue:30},{employeeId:'e2',targetValue:70}]
+  expect(createStoreTargetDraft(approved,basis,{revisionPeriod:'2026-09',today:'2026-09-12'}).allocations).toEqual({e1:'30',e2:'70'})
+  const legacy={...approved,request:{...approved.request!,allocations:approved.request!.allocations.map(a=>({...a,distributionDays:undefined}))}} as unknown as TargetCommandStore
+  expect(createStoreTargetDraft(legacy,basis,{revisionPeriod:'2026-09',today:'2026-09-12'}).allocations).toEqual({e1:'30',e2:'70'})
+})
+
+test('future exits remain active until their Istanbul business date', () => {
+  expect(isDepartedForTarget('2026-09-30','2026-09','2026-09-12')).toBe(false)
+  expect(isDepartedForTarget('2026-09-12','2026-09','2026-09-12')).toBe(true)
+  expect(isDepartedForTarget('2026-09-12','2026-08','2026-09-12')).toBe(false)
 })

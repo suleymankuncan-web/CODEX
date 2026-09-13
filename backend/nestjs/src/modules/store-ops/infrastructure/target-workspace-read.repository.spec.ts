@@ -55,9 +55,9 @@ describe("TargetWorkspaceReadRepository", () => {
     expect(sql).toContain("position.position_name");
     expect(sql).toContain("position.position_code NOT IN ('STORE_MANAGER', 'CASHIER')");
     expect(sql).toContain("assignment.start_date <= $2::date");
-    expect(sql).toContain("assignment.end_date IS NULL OR assignment.end_date >= $2::date");
+    expect(sql).toContain("assignment.end_date IS NULL OR assignment.end_date >= date_trunc('month', $2::date)::date");
     expect(sql).toContain("employee.hire_date <= $2::date");
-    expect(sql).toContain("employee.termination_date IS NULL OR employee.termination_date >= $2::date");
+    expect(sql).toContain("employee.termination_date IS NULL OR employee.termination_date >= date_trunc('month', $2::date)::date");
     expect(sql).not.toContain("assignment.assignment_status = 'active'");
     expect(sql).not.toContain("employee.employment_status = 'active'");
     expect(sql).toContain("Kayıt sahibi bilgisi yok");

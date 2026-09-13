@@ -1,3 +1,4 @@
+import { assertDepartureTargets } from "../infrastructure/target-departure-contract";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
@@ -30,6 +31,7 @@ export class TargetDistributionService {
       employeeId: string;
       assigneeLabel: string;
       targetValue: number;
+      distributionDays?: number;
       note?: string;
     }>;
     revision?: TargetRevisionInput;
@@ -49,9 +51,15 @@ export class TargetDistributionService {
       });
     }
 
+    const departed = input.revision ? await this.targetDistributionRepository.getDepartureTargets({
+      storeId: input.storeId, requestMonth: input.requestMonth,
+      employeeIds: [...input.allocations.map(a => a.employeeId), ...input.revision.removedEmployeeIds],
+    }) : [];
+    assertDepartureTargets(departed, input.allocations);
+    const departedIds = new Set(departed.map(row => row.employee_id));
     await this.assertAllocationsBelongToStore({
       storeId: input.storeId,
-      allocations: input.allocations,
+      allocations: input.allocations.filter(a => !departedIds.has(a.employeeId)),
     });
 
     const storeScope = await this.resolveStoreScope(input.storeId);
@@ -198,6 +206,7 @@ export class TargetDistributionService {
       employeeId: string;
       assigneeLabel: string;
       targetValue: number;
+      distributionDays?: number;
       note?: string;
     }>;
   }) {
@@ -245,9 +254,15 @@ export class TargetDistributionService {
         );
       }
 
+      const departures = await this.targetDistributionRepository.getDepartureTargets({
+        employeeIds: input.approvedAllocations.map(a => a.employeeId),
+        storeId: requestScope.storeId, requestMonth: requestScope.requestMonth,
+      });
+      assertDepartureTargets(departures, input.approvedAllocations);
+      const departedIds = new Set(departures.map(row => row.employee_id));
       await this.assertAllocationsBelongToStore({
         storeId: requestScope.storeId,
-        allocations: input.approvedAllocations,
+        allocations: input.approvedAllocations.filter(a => !departedIds.has(a.employeeId)),
       });
     }
 

@@ -27,12 +27,13 @@ export function applyTargetWorkspaceOpenApi(document: MutableOpenApiDocument) {
       {
         employeeId: { type: "string", format: "uuid" }, displayName: { type: "string" },
         positionCode: nullableString, positionLabel: nullableString, targetValue: decimal,
+        hireDate: nullableString, terminationDate: nullableString, actualSales: decimal,
         eligibilityStatus: { type: "string", enum: ["targetable", "historical_allocation"] },
       },
     ),
     TargetWorkspaceAllocation: objectSchema(["employeeId", "displayName", "targetValue", "note"], {
       employeeId: { type: "string", format: "uuid" }, displayName: { type: "string" },
-      targetValue: { type: "string", pattern: "^-?\\d+(?:\\.\\d+)?$" }, note: nullableString,
+      targetValue: { type: "string", pattern: "^-?\\d+(?:\\.\\d+)?$" }, note: nullableString, distributionDays: { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
     }),
     TargetWorkspaceRequest: objectSchema(
       ["requestId", "status", "targetLabel", "totalTargetValue", "allocationCount", "requestReason", "approvalMode", "approvedAt", "approvalNote", "createdAt", "updatedAt", "allocations"],
@@ -112,6 +113,7 @@ export function applyTargetWorkspaceOpenApi(document: MutableOpenApiDocument) {
   const path = "/api/store/targets/workspace";
   setJsonResponseSchema(document.paths, path, "get", "Role-scoped Targets command workspace.", "TargetWorkspaceResponse");
   setQueryParameters(document.paths, path, "get", [
+    { name: "regionManagerUserId", in: "query", required: false, schema: { type: "string", format: "uuid" } },
     { name: "period", in: "query", required: false, schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } },
     { name: "historyYear", in: "query", required: false, schema: { type: "integer", minimum: 2000, maximum: 2100 } },
     { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 100 } },

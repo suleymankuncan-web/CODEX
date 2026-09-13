@@ -3,6 +3,8 @@ import {
   IsArray,
   IsDateString,
   IsNumber,
+  IsInt,
+  Max,
   IsOptional,
   IsString,
   Min,
@@ -34,6 +36,13 @@ class TargetDistributionAllocationDto {
   @IsNumber()
   @Min(0)
   targetValue!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  distributionDays?: number;
 
   @IsOptional()
   @IsString()

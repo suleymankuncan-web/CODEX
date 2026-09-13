@@ -33,6 +33,9 @@ export type TargetWorkspacePersonnel = {
   positionCode: string | null;
   positionLabel: string | null;
   targetValue: string | null;
+  actualSales?: string | null;
+  hireDate?: string | null;
+  terminationDate?: string | null;
   eligibilityStatus: "targetable" | "historical_allocation";
 };
 
@@ -52,6 +55,7 @@ export type TargetWorkspaceRequest = {
     employeeId: string;
     displayName: string;
     targetValue: string;
+    distributionDays?: number;
     note: string | null;
   }>;
 };

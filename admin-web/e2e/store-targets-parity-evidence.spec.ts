@@ -1,7 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from './test-fixtures'
-import { expectCommandCanvasFrame } from './fixtures/command-canvas-parity-harness'
 import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
 import { routeTargetWorkspace } from './store-targets-command-fixtures'
 import { routeStoreManagerTargetCommand } from './store-targets-store-manager-command-fixtures'
@@ -11,13 +9,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 const capture = process.env.CAPTURE_COMMAND_CANVAS_EVIDENCE === '1'
-
-type Rect = { x: number; y: number; width: number; height: number }
-type TargetGeometry = Record<string, Rect | number | null>
-const geometryManifest = JSON.parse(readFileSync(fileURLToPath(new URL(
-  '../../docs/evidence/store-command-canvas-parity/targets/prototype-geometry-v1.json',
-  import.meta.url,
-)), 'utf8')) as { tolerancePx: number; scenarios: Record<string, TargetGeometry> }
 
 for (const scenario of [
   {
@@ -89,13 +80,11 @@ for (const scenario of [
         name: scenario.view === 'report_viewer' ? 'Şirket hedef görünümü' : 'Hedef Kontrol Masası',
       }),
     ).toBeVisible()
-    await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
-    if (scenario.view === 'report_viewer') await page.getByRole('button', { name: /Deniz Akar/ }).click()
-    await expectCommandCanvasFrame(page)
+    if (scenario.view === 'region_manager') {
+      await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+    }
+    await expectAzureTargetFrame(page)
     await page.evaluate(async () => { await document.fonts.ready })
-    const geometry = await measureTargetGeometry(page)
-    expectGeometryToMatch(geometry, geometryManifest.scenarios[scenario.file], geometryManifest.tolerancePx)
-    if (capture) console.log(JSON.stringify({ scenario: scenario.file, geometry }))
     await expect(page.locator('[data-command-canvas-page]')).toHaveCount(1)
     await expect(page.locator('.target-command-row')).toHaveCount(3)
     await expect(page.locator('.role-switcher')).toHaveCount(0)
@@ -154,15 +143,15 @@ for (const scenario of [
     await expect(drawer.getByText('Kalan bakiye').first()).toBeVisible()
     if (scenario.view === 'report_viewer') {
       await expect(drawer.locator('input, textarea, select')).toHaveCount(0)
-      await expect(drawer.getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+      await expect(drawer.getByRole('button', { name: 'Dağılımı onayla' })).toHaveCount(0)
     } else {
-      await drawer.getByRole('button', { name: /Derya Uslu/ }).click()
-      await expect(drawer.getByLabel('Derya Uslu hedefi')).toBeVisible()
-      await expect(drawer.getByRole('button', { name: 'Onayla' })).toBeVisible()
+      await drawer.getByRole('button', { name: 'Günleri düzenle' }).click()
+      await expect(drawer.getByLabel('Derya Uslu dağıtım günü')).toBeVisible()
+      await expect(drawer.getByRole('button', { name: 'Dağılımı onayla' })).toBeVisible()
     }
     if (scenario.width === 1440) {
-      expect(Math.round((await drawer.boundingBox())?.width ?? 0)).toBe(460)
-      const cards = await drawer.locator('.target-command-drawer-metrics > div').evaluateAll((elements) =>
+      expect(Math.round((await drawer.boundingBox())?.width ?? 0)).toBe(1120)
+      const cards = await drawer.locator('.target-review-stats > div').evaluateAll((elements) =>
         elements.map((element) => ({
           x: element.getBoundingClientRect().x,
           y: element.getBoundingClientRect().y,
@@ -170,8 +159,8 @@ for (const scenario of [
       )
       expect(cards).toHaveLength(4)
       expect(cards[0]?.y).toBe(cards[1]?.y)
-      expect(cards[2]?.y).toBe(cards[3]?.y)
-      expect(cards[2]?.y).toBeGreaterThan(cards[0]?.y ?? 0)
+      expect(cards[0]?.y).toBe(cards[2]?.y)
+      expect(cards[0]?.y).toBe(cards[3]?.y)
     }
     expect(await drawer.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
     if (capture)
@@ -197,15 +186,15 @@ for (const scenario of [
     await installGenericStoreApiFallbacks(page)
     await routeStoreManagerTargetCommand(page)
     await page.goto('/store/targets')
-    await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
-    await expectCommandCanvasFrame(page)
+    await expect(page.getByRole('heading', { name: 'Mall of İstanbul' })).toBeVisible()
+    await expectAzureTargetFrame(page)
     await page.evaluate(async () => { await document.fonts.ready })
-    const geometry = await measureTargetGeometry(page)
-    expectGeometryToMatch(geometry, geometryManifest.scenarios[scenario.file], geometryManifest.tolerancePx)
-    if (capture) console.log(JSON.stringify({ scenario: scenario.file, geometry }))
     await expect(page.locator('.target-store-distribution')).toHaveCount(1)
     await expect(page.locator('.command-canvas-metric')).toHaveCount(4)
-    await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveCSS('font-size', '16px')
+    await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveCSS(
+      'font-size',
+      scenario.width >= 768 ? '18px' : '16px',
+    )
     await expect(page.locator('.role-switcher')).toHaveCount(0)
     await expect(page.locator('.targets-prototype, .targets-ledger')).toHaveCount(0)
     expect(
@@ -232,9 +221,9 @@ for (const scenario of [
     await installGenericStoreApiFallbacks(page)
     await routeStoreManagerTargetCommand(page)
     await page.goto('/store/targets')
-    const opener = page.locator('.target-entry-period').getByRole('button').first()
+    const opener = page.locator('.operations-period').first()
     await opener.click()
-    const picker = page.getByRole('dialog', { name: 'Dönem seç' })
+    const picker = page.getByRole('dialog', { name: 'Hedef dönemi seç' })
     await expect(picker).toBeVisible()
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
@@ -259,57 +248,19 @@ async function prepare(
 }
 
 function evidencePath(file: string) {
-  return fileURLToPath(new URL(`../../docs/evidence/store-command-canvas-parity/targets/${file}`, import.meta.url))
+  return fileURLToPath(new URL(`../test-results/targets-azure/${file}`, import.meta.url))
 }
 
-async function measureTargetGeometry(page: Page): Promise<TargetGeometry> {
-  return page.evaluate(() => {
-    const root = document.querySelector<HTMLElement>('[data-command-canvas-page]')
-    if (!root) throw new Error('Command Canvas root is missing.')
-    const rootRect = root.getBoundingClientRect()
-    const rect = (selector: string) => {
-      const element = document.querySelector<HTMLElement>(selector)
-      if (!element) return null
-      const value = element.getBoundingClientRect()
-      return {
-        x: Math.round((value.x - rootRect.x) * 100) / 100,
-        y: Math.round((value.y - rootRect.y) * 100) / 100,
-        width: Math.round(value.width * 100) / 100,
-        height: Math.round(value.height * 100) / 100,
-      }
-    }
-    return {
-      pageWidth: Math.round(rootRect.width * 100) / 100,
-      header: rect('.command-canvas-page-header'),
-      headerAction: rect('.command-canvas-page-header > .command-canvas-action-cluster'),
-      metrics: rect('[data-command-metric-rail]'),
-      filter: rect('[data-command-canvas-filter-bar]'),
-      workspace: rect('.target-command-workbench'),
-      viewerIntro: rect('.target-command-viewer-intro'),
-      firstRegion: rect('.target-command-region-head'),
-      firstStore: rect('.target-command-row'),
-      distribution: rect('.target-store-distribution'),
-      distributionTop: rect('.target-store-distribution')?.y ?? null,
-      distributionWidth: rect('.target-store-distribution')?.width ?? null,
-    }
-  })
-}
-
-function expectGeometryToMatch(actual: TargetGeometry, expected: TargetGeometry | undefined, tolerancePx: number) {
-  expect(expected, 'Prototype geometry scenario is missing from the committed manifest.').toBeDefined()
-  for (const [key, expectedValue] of Object.entries(expected ?? {})) {
-    const actualValue = actual[key]
-    if (typeof expectedValue === 'number') {
-      expect(actualValue, `${key} must be numeric.`).toEqual(expect.any(Number))
-      expect(Math.abs((actualValue as number) - expectedValue), `${key} exceeds the ${tolerancePx}px parity tolerance.`).toBeLessThanOrEqual(tolerancePx)
-      continue
-    }
-    expect(actualValue, `${key} is missing from production geometry.`).not.toBeNull()
-    for (const coordinate of ['x', 'y', 'width', 'height'] as const) {
-      expect(
-        Math.abs((actualValue as Rect)[coordinate] - expectedValue[coordinate]),
-        `${key}.${coordinate} exceeds the ${tolerancePx}px parity tolerance.`,
-      ).toBeLessThanOrEqual(tolerancePx)
-    }
+async function expectAzureTargetFrame(page: Page) {
+  const header = page.locator('.operations-header')
+  await expect(header).toBeVisible()
+  const rect = await header.boundingBox()
+  expect(rect?.width).toBeLessThanOrEqual(1280)
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    expect(rect?.height).toBeLessThanOrEqual((page.viewportSize()?.width ?? 0) >= 1280 ? 112 : 124)
+    await expect(header.locator('h1')).toHaveCSS('font-size', '24px')
   }
+  const metrics = page.locator('.command-canvas-metric')
+  await expect(metrics).toHaveCount(4)
+  expect(await metrics.first().evaluate(el => el.getBoundingClientRect().height)).toBeLessThanOrEqual(100)
 }

@@ -10,8 +10,8 @@ describe("Targets Workspace OpenAPI", () => {
     expect(operation.responses["200"].content["application/json"].schema).toEqual({
       $ref: "#/components/schemas/TargetWorkspaceResponse",
     });
-    expect(operation.parameters.map((parameter: { name: string }) => parameter.name)).toEqual([
-      "period", "historyYear", "limit", "offset",
+    expect(operation.parameters.map((parameter: { name: string }) => parameter.name).sort()).toEqual([
+      "historyYear", "limit", "offset", "period", "regionManagerUserId",
     ]);
     expect(JSON.stringify(operation.parameters)).not.toMatch(/companyId|regionId|storeId/);
     expect(document.components.schemas.TargetWorkspaceCapabilities.properties).toEqual({

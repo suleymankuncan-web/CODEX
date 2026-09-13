@@ -2,7 +2,7 @@ import type { AppLocale } from '@/lib/i18n'
 
 const tr = {
   eyebrow: 'Store · Hedefler', regionTitle: 'Hedef Kontrol Masası', viewerTitle: 'Şirket hedef görünümü',
-  regionDescription: 'Atanmış mağazaların hedef dağılımlarını kontrol edin ve bekleyen kararları tamamlayın.',
+  regionDescription: 'Mağaza hedeflerini inceleyin ve dağılımları onaylayın.',
   viewerDescription: 'Bölge ve mağaza hedef durumlarını salt okunur izleyin.',
   totalStores: 'Toplam mağaza', totalTarget: 'Toplam hedef', selectedPeriod: 'Seçili dönem', regionPortfolio: 'Yetkili portföy', companyScope: 'Şirket kapsamı',
   approved: 'Onaylanan', approvedNote: 'Kararı tamamlanan', pending: 'Onay bekleyen', pendingNote: 'Gönderildi · karar bekliyor',
@@ -25,7 +25,7 @@ const tr = {
 
 const en: Record<keyof typeof tr, string> = {
   eyebrow: 'Store · Targets', regionTitle: 'Target Control Desk', viewerTitle: 'Company target view',
-  regionDescription: 'Manage store targets, personnel allocation and region decisions in one workspace.',
+  regionDescription: 'Review store targets and approve personnel allocations.',
   viewerDescription: 'Review Region Managers and every store target status in a read-only hierarchy.',
   totalStores: 'Total stores', totalTarget: 'Total target', selectedPeriod: 'Selected period', regionPortfolio: 'Authorized portfolio', companyScope: 'Company scope',
   approved: 'Approved', approvedNote: 'Decision completed', pending: 'Awaiting approval', pendingNote: 'Submitted · awaiting decision',

@@ -119,7 +119,7 @@ test('store manager critical pages keep correct workflow boundaries', async ({ p
   await routeStoreManagerTargetCommand(page)
   await page.goto('/store/targets?tab=distribution')
   await expect(page.locator('[data-command-canvas-page].target-store-manager-page')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mall of İstanbul' })).toBeVisible()
   await expect(page).toHaveURL(/tab=distribution/)
   await expect(page).not.toHaveURL(/tab=approval/)
 

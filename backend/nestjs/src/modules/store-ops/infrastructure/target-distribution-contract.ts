@@ -30,6 +30,7 @@ export type TargetDistributionAllocation = {
   employeeId: string;
   assigneeLabel: string;
   targetValue: number;
+      distributionDays?: number;
   note?: string;
 };
 
@@ -118,9 +119,10 @@ export function parseTargetDistributionAllocations(
       if (!employeeId || !assigneeLabel || !Number.isFinite(targetValue) || targetValue <= 0) {
         return null;
       }
-      return note === undefined
-        ? { employeeId, assigneeLabel, targetValue }
-        : { employeeId, assigneeLabel, targetValue, note };
+      return { employeeId, assigneeLabel, targetValue,
+        ...(note === undefined ? {} : { note }),
+        ...(typeof allocation.distributionDays === "number" && Number.isSafeInteger(allocation.distributionDays) && allocation.distributionDays >= 0 ? { distributionDays: allocation.distributionDays } : {}),
+      };
     })
     .filter((item): item is TargetDistributionAllocation => item !== null);
 }

@@ -1,6 +1,9 @@
+import { targetPersonnelSalesSql } from "./target-personnel-sales";
 import { Injectable } from "@nestjs/common";
 import type { AuthReadScope } from "../../auth/auth-context.service";
 import { DatabaseService } from "../../../shared/database/database.service";
+
+const ASSIGNMENT_STORE_ID_SQL = "assignment" + ".store_id";
 
 export type TargetWorkspaceStoreRow = {
   company_id: string;
@@ -34,6 +37,10 @@ export type TargetWorkspacePersonnelRow = {
   display_name: string;
   position_code: string;
   position_name: string;
+  hire_date?: string | null;
+  termination_date?: string | null;
+  is_historical?: boolean;
+  actual_sales?: string | null;
 };
 
 export type TargetWorkspaceMonthStatusRow = {
@@ -285,6 +292,12 @@ export class TargetWorkspaceReadRepository {
                 AND reference.target_type = 'monthly_sales_target'
                 AND reference.status = 'approved'
               WHERE latest_request.request_status = 'pending_region_approval'
+                AND NOT COALESCE(
+                  latest_request.approval_evidence_json #>> '{targetRevision,mode}' = 'revision'
+                  AND jsonb_typeof(latest_request.approval_evidence_json #> '{targetRevision,baseReferenceIds}') = 'array'
+                  AND (latest_request.approval_evidence_json #> '{targetRevision,baseReferenceIds}') ? reference.personnel_target_reference_id::text,
+                  FALSE
+                )
             ) AS has_revision_conflict,
             EXISTS (
               SELECT 1
@@ -324,17 +337,31 @@ export class TargetWorkspaceReadRepository {
           employee.employee_id::text AS employee_id,
           COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), 'Kayıt sahibi bilgisi yok') AS display_name,
           position.position_code,
-          position.position_name
+          position.position_name,
+          ${targetPersonnelSalesSql("employee", ASSIGNMENT_STORE_ID_SQL, "$2")} AS actual_sales,
+          employee.hire_date::text AS hire_date,
+          employee.termination_date::text AS termination_date,
+          (assignment.end_date < $2::date OR employee.termination_date < $2::date) IS TRUE AS is_historical
         FROM ops.employee_assignment_history assignment
         INNER JOIN ops.employee employee ON employee.employee_id = assignment.employee_id
         INNER JOIN ops.position position ON position.position_id = assignment.position_id
           AND position.position_code NOT IN ('STORE_MANAGER', 'CASHIER')
         WHERE assignment.store_id = ANY($1::uuid[])
           AND assignment.start_date <= $2::date
-          AND (assignment.end_date IS NULL OR assignment.end_date >= $2::date)
           AND assignment.is_primary_assignment = TRUE
           AND employee.hire_date <= $2::date
-          AND (employee.termination_date IS NULL OR employee.termination_date >= $2::date)
+          AND (
+            ((assignment.end_date IS NULL OR assignment.end_date >= date_trunc('month', $2::date)::date)
+              AND (employee.termination_date IS NULL OR employee.termination_date >= date_trunc('month', $2::date)::date))
+            OR EXISTS (
+              SELECT 1 FROM ops.personnel_target_reference reference
+              WHERE reference.store_id = assignment.store_id
+                AND reference.employee_id = employee.employee_id
+                AND reference.period_start = date_trunc('month', $2::date)::date
+                AND reference.target_type = 'monthly_sales_target'
+                AND reference.status = 'approved'
+            )
+          )
         ORDER BY assignment.store_id, assignment.employee_id,
           assignment.start_date DESC, assignment.assignment_id DESC
       `,

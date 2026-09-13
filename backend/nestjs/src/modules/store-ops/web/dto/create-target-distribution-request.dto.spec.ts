@@ -67,3 +67,20 @@ describe("CreateTargetDistributionRequestDto", () => {
     expect(JSON.stringify(await validate(dto))).toContain("baseReferenceIds");
   });
 });
+
+it.each([26, 0, 60])("accepts distribution weight %s independently of calendar days", async distributionDays => {
+  const dto = plainToInstance(CreateTargetDistributionRequestDto, {
+    storeId: "00000000-0000-4000-8000-000000000201", requestMonth: "2026-03-01",
+    targetLabel: "Hedef", totalTargetValue: 100,
+    allocations: [{ employeeId: "00000000-0000-4000-8000-000000000301", assigneeLabel: "Personel", targetValue: 100, distributionDays }],
+  });
+  expect(await validate(dto)).toEqual([]);
+});
+it.each([-1, 1.5])("rejects invalid distribution weight %s", async distributionDays => {
+  const dto = plainToInstance(CreateTargetDistributionRequestDto, {
+    storeId: "00000000-0000-4000-8000-000000000201", requestMonth: "2026-03-01",
+    targetLabel: "Hedef", totalTargetValue: 100,
+    allocations: [{ employeeId: "00000000-0000-4000-8000-000000000301", assigneeLabel: "Personel", targetValue: 100, distributionDays }],
+  });
+  expect(JSON.stringify(await validate(dto))).toContain("distributionDays");
+});
