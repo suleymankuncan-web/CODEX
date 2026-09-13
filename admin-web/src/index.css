@@ -43,3 +43,5 @@
 @import './styles/store-reports-command.css';
 @import './styles/admin-auth-access-workbench.css';
 @import './styles/admin-auth-access-workbench-detail.css';
+
+@import './styles/store-column-headers.css';
