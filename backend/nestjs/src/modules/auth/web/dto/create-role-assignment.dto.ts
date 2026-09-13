@@ -1,7 +1,11 @@
-import { IsDateString, IsIn, IsOptional } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsOptional } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateRoleAssignmentDto {
+  @IsOptional()
+  @IsBoolean()
+  incentiveApproval?: boolean;
+
   @IsPostgresUuid()
   userId!: string;
 

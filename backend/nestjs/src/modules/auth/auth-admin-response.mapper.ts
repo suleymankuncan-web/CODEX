@@ -5,6 +5,7 @@ export function mapAuthAssignment(item: {
   email?: string;
   role_code: string;
   role_name?: string;
+  incentive_approval?: boolean;
   scope_type: string;
   company_id: string | null;
   region_id: string | null;
@@ -20,6 +21,7 @@ export function mapAuthAssignment(item: {
     ...(item.email ? { email: item.email } : {}),
     roleCode: item.role_code,
     ...(item.role_name ? { roleName: item.role_name } : {}),
+    incentiveApproval: item.incentive_approval ?? false,
     scopeType: item.scope_type,
     companyId: item.company_id,
     regionId: item.region_id,

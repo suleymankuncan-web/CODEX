@@ -339,3 +339,53 @@ const permissionsFixture = {
 }
 
 const emptyList = { items: [], meta: { count: 0, total: 0, limit: 200, offset: 0 } }
+
+
+test('Prim Onayı is individual, persists across reload and can be revoked', async ({ page }) => {
+  let enabled = false
+  const changes: boolean[] = []
+  await page.route('**/api/auth/role-assignments?**', (route) => route.fulfill({ json: {
+    items: [{ assignmentId: 'viewer-assignment', userId: 'user-active', roleCode: 'REPORT_VIEWER', roleName: 'Viewer', scopeType: 'company', companyId: 'company-1', regionId: null, storeId: null, active: true, incentiveApproval: enabled }], meta: { total: 1, count: 1, limit: 100, offset: 0 },
+  } }))
+  await page.route('**/api/auth/role-assignments/viewer-assignment/incentive-approval', async (route) => {
+    expect(route.request().method()).toBe('PATCH')
+    enabled = route.request().postDataJSON().enabled
+    changes.push(enabled)
+    await route.fulfill({ json: { command: { status: 'updated' }, data: { assignment: { incentiveApproval: enabled } } } })
+  })
+  await page.goto('/admin/auth')
+  const checkbox = page.getByRole('checkbox', { name: 'Prim Onayı' })
+  await expect(checkbox).not.toBeChecked()
+  await checkbox.click()
+  await expect(checkbox).toBeChecked()
+  await page.reload()
+  await expect(checkbox).toBeChecked()
+  await checkbox.click()
+  await expect(checkbox).not.toBeChecked()
+  expect(changes).toEqual([true, false])
+})
+
+test('new Report Viewer assignment includes opt-in Prim Onayı and resets it on role change', async ({ page }) => {
+  await page.route('**/api/auth/lookups', (route) => route.fulfill({ json: { ...lookupsFixture, roles: [...lookupsFixture.roles, { roleCode: 'REPORT_VIEWER', roleName: 'Viewer', scopeType: 'company' }] } }))
+  let payload: unknown
+  await page.route('**/api/auth/role-assignments', async (route) => {
+    payload = route.request().postDataJSON()
+    await route.fulfill({ status: 201, json: { command: { status: 'created' }, data: { assignment: {} } } })
+  })
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Rol ekle' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Rol ekle' })
+  await dialog.getByLabel('Rol', { exact: true }).click()
+  await page.getByRole('option', { name: 'Rapor görüntüleyici' }).click()
+  await expect(dialog.getByRole('checkbox', { name: 'Prim Onayı' })).not.toBeChecked()
+  await dialog.getByRole('checkbox', { name: 'Prim Onayı' }).check()
+  await dialog.getByLabel('Rol', { exact: true }).click()
+  await page.getByRole('option', { name: 'Sistem yöneticisi' }).click()
+  await expect(dialog.getByRole('checkbox', { name: 'Prim Onayı' })).toHaveCount(0)
+  await dialog.getByLabel('Rol', { exact: true }).click()
+  await page.getByRole('option', { name: 'Rapor görüntüleyici' }).click()
+  await expect(dialog.getByRole('checkbox', { name: 'Prim Onayı' })).not.toBeChecked()
+  await dialog.getByRole('checkbox', { name: 'Prim Onayı' }).check()
+  await dialog.getByRole('button', { name: 'Rolü ata' }).click()
+  await expect.poll(() => payload).toMatchObject({ userId: 'user-active', roleCode: 'REPORT_VIEWER', scopeType: 'company', companyId: 'company-1', incentiveApproval: true })
+})

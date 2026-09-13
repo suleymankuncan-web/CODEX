@@ -1,3 +1,4 @@
+import { resolveStoreReportViewerRole, storeReportViewerCompanyIds } from "./store-report-viewer-role";
 import type { AuthReadScope } from "../../auth/auth-context.service";
 
 export type SalesTargetIncentiveWorkspaceCapabilities = {
@@ -28,11 +29,11 @@ const readOnlyCapabilities = (): SalesTargetIncentiveWorkspaceCapabilities => ({
 export function resolveSalesTargetIncentiveWorkspaceScope(
   input: ResolveWorkspaceScopeInput,
 ): SalesTargetIncentiveWorkspaceScope | null {
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
-    const roleScope = input.roleScopes?.REPORT_VIEWER;
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
     return {
       view: "report_viewer",
-      companyIds: unique(roleScope?.companyIds ?? []),
+      companyIds: storeReportViewerCompanyIds(input, reportRole),
       regionIds: [],
       storeIds: [],
       capabilities: readOnlyCapabilities(),

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs"; import { applyRegionManagerDirectoryOpenApi } from "./region-manager-directory-openapi"; import { applyIncentiveFinalApprovalOpenApi } from "./incentive-final-approval-openapi";
 import { dirname, resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -28,7 +28,7 @@ import {
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi"; import { applyWorkforceWorkspaceOpenApi } from "./workforce-workspace-openapi"; import { applyTaskCommandWorkspaceOpenApi } from "./task-command-workspace-openapi"; import { applyRankingOpenApi } from "./ranking-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi"; import { applyVmReferenceManagementOpenApi } from "./vm-reference-management-openapi";
-import { applyWorkforceOpenApi } from "./workforce-openapi"; import { applyPersonnelCorrectionOpenApi } from "./personnel-correction-openapi"; import { applyRegionManagerDirectoryOpenApi } from "./region-manager-directory-openapi";
+import { applyWorkforceOpenApi } from "./workforce-openapi"; import { applyPersonnelCorrectionOpenApi } from "./personnel-correction-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
 import {
   personnelMasterItemSchema,
@@ -4887,7 +4887,7 @@ async function generateOpenApi(): Promise<void> {
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
-  preserveOpenApiBaselineFromFile(document, outputPath); applyTaskCommandWorkspaceOpenApi(document); applyVmReferenceManagementOpenApi(document); applyPersonnelCorrectionOpenApi(document); applyRegionManagerDirectoryOpenApi(document);
+  preserveOpenApiBaselineFromFile(document, outputPath); applyTaskCommandWorkspaceOpenApi(document); applyVmReferenceManagementOpenApi(document); applyPersonnelCorrectionOpenApi(document); applyIncentiveFinalApprovalOpenApi(document); applyRegionManagerDirectoryOpenApi(document);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
 

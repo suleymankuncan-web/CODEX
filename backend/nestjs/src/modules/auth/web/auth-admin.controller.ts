@@ -18,6 +18,7 @@ import { AuthAdminUserAccountService } from '../auth-admin-user-account.service'
 import { CreateActionStoreAssignmentDto } from './dto/create-action-store-assignment.dto';
 import { CreateActionStoreAssignmentsBatchDto } from './dto/create-action-store-assignments-batch.dto';
 import { CreatePilotUserBindingDto } from './dto/create-pilot-user-binding.dto';
+import { UpdateIncentiveApprovalDto } from './dto/update-incentive-approval.dto';
 import { CreateRoleAssignmentDto } from './dto/create-role-assignment.dto';
 import { CreateUserAccountDto } from './dto/create-user-account.dto';
 import { DeactivateUserAccountDto } from './dto/deactivate-user-account.dto';
@@ -86,6 +87,15 @@ export class AuthAdminController {
       limit: query.limit,
       offset: query.offset,
     });
+  }
+
+  @Patch('role-assignments/:assignmentId/incentive-approval')
+  async updateIncentiveApproval(
+    @Param('assignmentId', new ParseUUIDPipe()) assignmentId: string,
+    @Req() request: { user: { userId: string } },
+    @Body() body: UpdateIncentiveApprovalDto,
+  ) {
+    return this.authAdminService.updateIncentiveApproval({ assignmentId, enabled: body.enabled, actorUserId: request.user.userId });
   }
 
   @Patch('role-assignments/:assignmentId/deactivate')

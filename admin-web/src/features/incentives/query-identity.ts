@@ -1,6 +1,5 @@
 import type { AuthSessionSummary } from '../auth/api'
-import {
-  getAssignedStoreIds,
+import { usesStoreReportViewerView, getAssignedStoreIds,
   getAssignedStoreTypes,
   getReadCompanyIds,
   getReadRegionIds,
@@ -40,7 +39,7 @@ export function getSalesTargetIncentiveQueryIdentity(
 export function getSalesTargetIncentiveRoleScope(
   authSummary: AuthSessionSummary | null,
 ): SalesTargetIncentiveRoleScope | null {
-  if (hasAnyRole(authSummary, ['REPORT_VIEWER'])) return 'admin'
+  if (usesStoreReportViewerView(authSummary)) return 'admin'
   if (hasAnyRole(authSummary, ['REGION_MANAGER'])) return 'region'
   if (hasAnyRole(authSummary, ['STORE_MANAGER'])) return 'store'
   if (hasAnyRole(authSummary, ['STORE_PERSONNEL'])) return 'own'

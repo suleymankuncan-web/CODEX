@@ -88,8 +88,13 @@ export class AuthAuthorizationRepository {
             INNER JOIN ops.permission permission
               ON permission.permission_id = role_permission.permission_id
             WHERE role_permission.role_id = ura.role_id
+              AND permission.permission_code <> 'INCENTIVE_FINAL_APPROVAL'
             ORDER BY permission.permission_code ASC
-          ) AS permission_codes
+          ) || CASE WHEN ura.incentive_approval AND r.role_code = 'REPORT_VIEWER'
+                     AND ura.scope_type = 'company' AND r.role_scope_type = 'company'
+                     AND ura.company_id IS NOT NULL
+                     AND (ura.end_at IS NULL OR ura.end_at > NOW())
+               THEN ARRAY['INCENTIVE_FINAL_APPROVAL']::text[] ELSE ARRAY[]::text[] END AS permission_codes
         FROM ops.user_account ua
         INNER JOIN ops.user_role_assignment ura
           ON ura.user_id = ua.user_id

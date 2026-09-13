@@ -7,6 +7,12 @@ export type components = {
     "AcknowledgeChecklistInstanceDto": {
       "acknowledgementNote"?: string
     }
+    "ApproveFinalIncentivePackageDto": {
+      "period": string
+      "regionId": string
+      "regionPackageId": string
+      "submittedAt": string
+    }
     "ApproveTargetDistributionRequestDto": {
       "approvalNote"?: string
       "approvedTotalTargetValue"?: number
@@ -235,6 +241,7 @@ export type components = {
               "effectiveTo": string | null
               "createdAt": string
               "active": boolean
+              "incentiveApproval"?: boolean
             }>
           "actionStoreAssignments": Array<{
               "assignmentId": string
@@ -285,6 +292,7 @@ export type components = {
           "effectiveTo": string | null
           "createdAt": string
           "active": boolean
+          "incentiveApproval"?: boolean
         }
       }
     }
@@ -304,6 +312,7 @@ export type components = {
           "effectiveTo": string | null
           "createdAt": string
           "active": boolean
+          "incentiveApproval"?: boolean
         }>
       "meta": {
         "count": number
@@ -1000,6 +1009,7 @@ export type components = {
       "storeIds": string[]
     }
     "CreateRoleAssignmentDto": {
+      "incentiveApproval"?: boolean
       "userId": string
       "roleCode": "SUPER_ADMIN" | "HR_ADMIN" | "INTEGRATION_ADMIN" | "SNAPSHOT_OPERATOR" | "REPORT_VIEWER" | "AUDITOR" | "REGION_MANAGER" | "STORE_MANAGER" | "STORE_PERSONNEL" | "VISUAL_MERCHANDISER"
       "scopeType": "company" | "region" | "store"
@@ -1340,6 +1350,35 @@ export type components = {
       "note"?: string
       "requestBody": {
         [key: string]: unknown
+      }
+    }
+    "IncentiveFinalApprovalPackages": {
+      "items": Array<{
+          "regionId": string
+          "regionName": string | null
+          "regionPackageId": string | null
+          "regionManagerUserId": string | null
+          "regionManagerName": string | null
+          "submittedByUserId": string | null
+          "submittedByName": string | null
+          "submittedAt": string | null
+          "reviewedByUserId": string | null
+          "reviewedByName": string | null
+          "reviewedAt": string | null
+          "reviewNote": string | null
+          "status": "not_submitted" | "submitted" | "admin_approved" | "admin_returned"
+          "storeCount": number
+          "reviewedStoreCount": number
+          "submittedStoreCount": number
+          "draftCorrectionCount": number
+          "submittedCorrectionCount": number
+        }>
+    }
+    "IncentiveFinalApprovalResult": {
+      "data": {
+        "regionPackageId": string
+        "status": "admin_approved"
+        "reviewedAt": string | null
       }
     }
     "IntegrationLookups": {
@@ -3610,6 +3649,9 @@ export type components = {
       "reason": string
       "expectedUpdatedAt"?: string
     }
+    "UpdateIncentiveApprovalDto": {
+      "enabled": boolean
+    }
     "UpdateKpiImportStoreScopeDto": {
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
@@ -4055,6 +4097,47 @@ export type components = {
 }
 
 export type paths = {
+  "/api/auth/role-assignments/{assignmentId}/incentive-approval": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["UpdateIncentiveApprovalDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthRoleAssignmentCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/final-approval": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["IncentiveFinalApprovalPackages"]
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ApproveFinalIncentivePackageDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["IncentiveFinalApprovalResult"]
+          }
+        }
+      }
+    }
+  }
   "/api/org/region-managers": {
     get: {
       responses: {

@@ -220,6 +220,12 @@ export async function getPermissions() {
   return fetchOpenApiJson('/api/auth/permissions')
 }
 
+export async function updateIncentiveApproval(input: { assignmentId: string; enabled: boolean }) {
+  return sendOpenApiJson('/api/auth/role-assignments/{assignmentId}/incentive-approval', {
+    method: 'PATCH', params: { assignmentId: input.assignmentId }, body: { enabled: input.enabled },
+  })
+}
+
 export async function deactivateRoleAssignment(assignmentId: string) {
   return sendOpenApiJson('/api/auth/role-assignments/{assignmentId}/deactivate', {
     method: 'PATCH',

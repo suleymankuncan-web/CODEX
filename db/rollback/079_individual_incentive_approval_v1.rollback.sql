@@ -1,0 +1,2 @@
+ALTER TABLE ops.user_role_assignment DROP CONSTRAINT user_role_assignment_incentive_company_check;
+ALTER TABLE ops.user_role_assignment DROP COLUMN incentive_approval;

@@ -20,6 +20,7 @@ export function IncentiveSubmitDialog(input: {
   workspace: IncentiveWorkspace
   onSubmit: (input: { regionId: string; submissionNote?: string }) => void
   pending: boolean
+  disabled?: boolean
   locale: AppLocale
   t: Translate
 }) {
@@ -36,7 +37,7 @@ export function IncentiveSubmitDialog(input: {
   const reviewedCount = regionStores.filter((store) => store.review.status === 'reviewed').length
 
   const submit = () => {
-    if (!regionId || !ready || input.pending) return
+    if (!regionId || !ready || input.pending || input.disabled) return
     input.onSubmit({ regionId, ...(note.trim() ? { submissionNote: note.trim() } : {}) })
   }
 
@@ -77,7 +78,7 @@ export function IncentiveSubmitDialog(input: {
         </div>
         <DialogFooter className="incentive-confirm-footer">
           <Button disabled={input.pending} onClick={() => input.onOpenChange(false)} variant="outline">{input.t('storeIncentives.command.cancel')}</Button>
-          <Button disabled={!regionId || !ready || input.pending} onClick={submit}>
+          <Button disabled={!regionId || !ready || input.pending || input.disabled} onClick={submit}>
             <Send aria-hidden="true" data-icon="inline-start" />
             {input.t('storeIncentives.command.submitConfirm')}
           </Button>

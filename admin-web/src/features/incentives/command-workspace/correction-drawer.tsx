@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BadgeDollarSign, Check, RotateCcw } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Field, FieldLabel, FieldSet, FieldLegend } from '@/components/ui/field'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Sheet, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { CommandCanvasOperationalDrawerContent } from '@/features/store-command-canvas/primitives'
@@ -28,24 +29,42 @@ export function IncentiveCorrectionDrawer(input: {
 }) {
   const row = input.selection.row
   const store = input.selection.store
+  const headerRef = useRef<HTMLDivElement>(null)
   const [amount, setAmount] = useState(() => toMoneyInputBuffer(row.finalAmount ?? row.calculatedAmount ?? ''))
   const [note, setNote] = useState(() => row.correction?.reasonNote ?? '')
-  const [selectedRate, setSelectedRate] = useState<string | null>(() => row.rate)
+  const [selectedRate, setSelectedRate] = useState<string | null>(() => {
+    if (!row.correction) return row.rate
+    const table = input.workspace.rateMetadata.tables.find(candidate => candidate.audience === (row.participantType === 'store_manager' ? 'manager' : 'personnel'))
+    return table?.brackets.find(bracket => subtractMoney(calculateRateProposal(row.actual, bracket.rate), row.finalAmount) === '0.00')?.rate ?? null
+  })
   const audience = row.participantType === 'store_manager' ? 'manager' : 'personnel'
   const rateTable = useMemo(
     () => input.workspace.rateMetadata.tables.find((table) => table.audience === audience) ?? null,
     [audience, input.workspace.rateMetadata.tables],
   )
   const normalizedAmount = normalizeMoneyInput(amount)
+  const rateOptions = useMemo(() => {
+    const grouped = new Map<string, { rate: string; labels: string[] }>()
+    for (const bracket of rateTable?.brackets ?? []) {
+      const rate = Number(bracket.rate).toString()
+      const option = grouped.get(rate) ?? { rate, labels: [] }
+      const min = bracket.minAchievementPct === null ? null : Number(bracket.minAchievementPct).toLocaleString(input.locale)
+      const max = bracket.maxAchievementPct === null ? null : Number(bracket.maxAchievementPct).toLocaleString(input.locale)
+      option.labels.push(max === null ? `${min}% +` : min === null ? `< ${max}%` : `${min}% – < ${max}%`)
+      grouped.set(rate, option)
+    }
+    return [...grouped.values()]
+  }, [rateTable, input.locale])
   const signedDifference = subtractMoney(normalizedAmount, row.calculatedAmount)
   const changed = signedDifference !== null && Number(signedDifference) !== 0
   const achievement = calculateAchievement(row.target, row.actual)
-  const canSave = Boolean(store.capabilities.canCreateCorrection && normalizedAmount && note.trim().length >= 3)
+  const currentDifference = subtractMoney(normalizedAmount, row.finalAmount ?? row.calculatedAmount)
+  const canSave = Boolean(store.capabilities.canCreateCorrection && normalizedAmount && currentDifference !== null && currentDifference !== '0.00' && note.trim().length >= 3)
 
   return (
     <Sheet open onOpenChange={(open) => { if (!open && !input.pending) input.onClose() }}>
-      <CommandCanvasOperationalDrawerContent>
-        <SheetHeader className="incentive-drawer-header">
+      <CommandCanvasOperationalDrawerContent onOpenAutoFocus={event => { event.preventDefault(); headerRef.current?.focus() }}>
+        <SheetHeader ref={headerRef} tabIndex={-1} className="incentive-drawer-header">
           <span className="incentive-drawer-icon"><BadgeDollarSign aria-hidden="true" size={20} /></span>
           <div>
             <SheetTitle>{row.displayName}</SheetTitle>
@@ -70,54 +89,53 @@ export function IncentiveCorrectionDrawer(input: {
 
           <section className="incentive-correction-editor">
             <div className="incentive-correction-section-heading">
-              <div><h3>{input.t('storeIncentives.command.adjustmentSection')}</h3><p>{input.t('storeIncentives.command.correctionCopy')}</p></div>
+              <div><h3>{input.locale === 'tr' ? 'Prim sistemi' : 'Incentive settings'}</h3><p>{input.locale === 'tr' ? 'Oranı seçin, güncellenen tutarı kontrol edin ve notunuzu ekleyin.' : 'Select a rate, review the updated amount and add your note.'}</p></div>
               <Badge variant={changed ? 'secondary' : 'outline'}>{input.t(changed ? 'storeIncentives.command.changePresent' : 'storeIncentives.command.noChange')}</Badge>
             </div>
 
-            <fieldset className="incentive-rate-picker">
-              <legend>{input.t('storeIncentives.command.rateColumn')}</legend>
-              <div>
+            <FieldSet className="incentive-rate-picker">
+              <FieldLegend>{input.t('storeIncentives.command.rateColumn')}</FieldLegend>
+              <ToggleGroup type="single" variant="outline" value={selectedRate === null ? '' : Number(selectedRate).toString()} disabled={input.pending} aria-label={input.t('storeIncentives.command.rateColumn')} onValueChange={rate => { const proposal = rate ? calculateRateProposal(row.actual, rate) : null; if (proposal !== null) { setSelectedRate(rate); setAmount(toMoneyInputBuffer(proposal)) } }}>
                 {input.workspace.rateMetadata.status === 'resolved' && rateTable && row.actual !== null
-                  ? rateTable.brackets.map((bracket) => {
+                  ? rateOptions.map((bracket) => {
                       const proposal = calculateRateProposal(row.actual, bracket.rate)
                       return (
-                        <Button
-                          aria-label={`${formatIncentiveRate(bracket.rate, input.locale)} · ${bracket.displayLabel}`}
-                          aria-pressed={selectedRate === bracket.rate}
+                        <ToggleGroupItem
+                          value={bracket.rate}
+                          aria-label={`${formatIncentiveRate(bracket.rate, input.locale)} · ${bracket.labels.join(' / ')}`}
                           className="incentive-rate-option"
                           disabled={proposal === null}
-                          key={`${rateTable.version}:${bracket.minAchievementPct ?? 'min'}:${bracket.maxAchievementPct ?? 'max'}:${bracket.rate}`}
-                          onClick={() => { if (proposal) { setSelectedRate(bracket.rate); setAmount(toMoneyInputBuffer(proposal)) } }}
+                          key={bracket.rate}
                           size="sm"
                           type="button"
-                          variant={selectedRate === bracket.rate ? 'default' : 'outline'}
                         >
                           {formatIncentiveRate(bracket.rate, input.locale)}
-                          <small>{bracket.displayLabel}</small>
-                        </Button>
+                          <small>{bracket.labels.join(' / ')}</small>
+                          <small>{formatIncentiveMoney(proposal, input.locale)}</small>
+                        </ToggleGroupItem>
                       )
                     })
                   : <p>{input.t('storeIncentives.command.rateUnavailable')}</p>}
-              </div>
-            </fieldset>
+              </ToggleGroup>
+            </FieldSet>
 
             <div className={`incentive-impact-preview ${Number(signedDifference ?? 0) > 0 ? 'is-increase' : Number(signedDifference ?? 0) < 0 ? 'is-decrease' : 'is-neutral'}`} aria-live="polite">
               <span><small>{input.t('storeIncentives.command.afterCorrection')}</small><strong>{formatIncentiveMoney(normalizedAmount, input.locale)}</strong></span>
               <span><small>{input.t('storeIncentives.command.changeAmount')}</small><strong>{formatSignedIncentiveMoney(signedDifference, input.locale)}</strong></span>
             </div>
 
-            <div className="incentive-form-field">
-              <Label htmlFor="incentive-final-amount">{input.t('storeIncentives.command.finalAmount')}</Label>
+            <Field className="incentive-form-field">
+              <FieldLabel htmlFor="incentive-final-amount">{input.t('storeIncentives.command.finalAmount')}</FieldLabel>
               <div className="incentive-money-input">
-                <Input id="incentive-final-amount" inputMode="decimal" onChange={(event) => { setAmount(event.target.value); setSelectedRate(null) }} value={amount} />
+                <Input id="incentive-final-amount" disabled={input.pending} inputMode="decimal" onChange={(event) => { setAmount(event.target.value); setSelectedRate(null) }} value={amount} />
                 <span>TL</span>
               </div>
-            </div>
-            <div className="incentive-form-field">
-              <Label htmlFor="incentive-correction-note">{input.t('storeIncentives.command.correctionNote')}</Label>
-              <Textarea id="incentive-correction-note" maxLength={1000} onChange={(event) => setNote(event.target.value)} placeholder={input.t('storeIncentives.command.notePlaceholder')} value={note} />
-              <small>{note.trim().length}/1000</small>
-            </div>
+            </Field>
+            <Field className="incentive-form-field incentive-note-field">
+              <FieldLabel htmlFor="incentive-correction-note">{input.t('storeIncentives.command.correctionNote')}</FieldLabel>
+              <Textarea id="incentive-correction-note" required disabled={input.pending} aria-describedby="incentive-note-help" maxLength={1000} onChange={(event) => setNote(event.target.value)} placeholder={input.t('storeIncentives.command.notePlaceholder')} value={note} />
+              <small id="incentive-note-help">{input.locale === 'tr' ? 'Zorunlu · En az 3 karakter' : 'Required · At least 3 characters'} · {note.trim().length}/1000</small>
+            </Field>
           </section>
         </div>
 

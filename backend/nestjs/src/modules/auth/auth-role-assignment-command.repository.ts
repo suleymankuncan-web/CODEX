@@ -6,6 +6,7 @@ type RoleAssignmentCommandRow = {
   user_role_assignment_id: string;
   user_id: string;
   role_code: string;
+  incentive_approval?: boolean;
   scope_type: string;
   company_id: string | null;
   region_id: string | null;
@@ -22,6 +23,7 @@ export type CreateRoleAssignmentCommandInput = {
   companyId?: string | null;
   regionId?: string | null;
   storeId?: string | null;
+  incentiveApproval?: boolean;
   effectiveFrom?: string | null;
   effectiveTo?: string | null;
   actorUserId: string;
@@ -48,7 +50,8 @@ export class AuthRoleAssignmentCommandRepository {
             region_id,
             store_id,
             start_at,
-            end_at
+            end_at,
+            incentive_approval
           )
           SELECT
             $1::uuid,
@@ -58,7 +61,8 @@ export class AuthRoleAssignmentCommandRepository {
             $5::uuid,
             $6::uuid,
             COALESCE($7::timestamptz, NOW()),
-            $8::timestamptz
+            $8::timestamptz,
+            $9::boolean
           RETURNING
             user_role_assignment_id,
             user_id,
@@ -69,7 +73,8 @@ export class AuthRoleAssignmentCommandRepository {
             store_id,
             start_at,
             end_at,
-            created_at
+            created_at,
+            incentive_approval
         `,
         [
           input.userId,
@@ -80,6 +85,7 @@ export class AuthRoleAssignmentCommandRepository {
           input.storeId ?? null,
           input.effectiveFrom ?? null,
           input.effectiveTo ?? null,
+          input.incentiveApproval ?? false,
         ],
       );
 
@@ -124,6 +130,7 @@ export class AuthRoleAssignmentCommandRepository {
                 operation: "create-role-assignment",
               },
               changedFields: [
+                "incentiveApproval",
                 "roleId",
                 "scopeType",
                 "companyId",
@@ -133,6 +140,7 @@ export class AuthRoleAssignmentCommandRepository {
                 "effectiveTo",
               ],
               details: {
+                incentiveApproval: input.incentiveApproval ?? false,
                 userId: input.userId,
                 roleId: input.roleId,
                 scopeType: input.scopeType,
@@ -148,6 +156,32 @@ export class AuthRoleAssignmentCommandRepository {
       );
 
       return assignment;
+    });
+  }
+
+  async updateIncentiveApproval(input: { assignmentId: string; enabled: boolean; actorUserId: string }) {
+    return this.databaseService.withTransaction(async (client) => {
+      const existing = await client.query<RoleAssignmentCommandRow>(`
+        SELECT ura.*, r.role_code FROM ops.user_role_assignment ura
+        JOIN ops.role r ON r.role_id = ura.role_id
+        WHERE ura.user_role_assignment_id = $1::uuid
+          AND r.role_code = 'REPORT_VIEWER' AND ura.scope_type = 'company'
+          AND ura.company_id IS NOT NULL AND ura.start_at <= NOW()
+          AND (ura.end_at IS NULL OR ura.end_at > NOW())
+        FOR UPDATE OF ura`, [input.assignmentId]);
+      const before = existing.rows[0];
+      if (!before) return null;
+      const result = await client.query<RoleAssignmentCommandRow>(`
+        UPDATE ops.user_role_assignment SET incentive_approval = $2
+        WHERE user_role_assignment_id = $1::uuid RETURNING *`, [input.assignmentId, input.enabled]);
+      await client.query(`
+        INSERT INTO audit.event_log (actor_user_id, event_type, entity_name, entity_id, scope_type, company_id, metadata_json)
+        VALUES ($1::uuid, 'user_role_assignment.incentive_approval_updated', 'ops.user_role_assignment', $2::uuid, 'company', $3::uuid, $4::jsonb)`,
+        [input.actorUserId, input.assignmentId, before.company_id, JSON.stringify({
+          ...buildRequestAuditMetadata({ sourceContext: { module: "auth-admin", operation: "update-incentive-approval" } }),
+          changedFields: ["incentiveApproval"], before: { incentiveApproval: before.incentive_approval }, after: { incentiveApproval: input.enabled },
+        })]);
+      return { ...result.rows[0], role_code: before.role_code };
     });
   }
 

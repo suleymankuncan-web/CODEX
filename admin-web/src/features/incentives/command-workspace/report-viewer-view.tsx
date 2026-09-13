@@ -1,5 +1,6 @@
+import type { AuthSessionSummary } from '@/features/auth/api'
+import { FinalIncentiveApproval } from './final-incentive-approval'
 import { useState } from 'react'
-import { Badge } from '@/components/ui/badge'
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { IncentiveWorkspaceHierarchy } from './workspace-hierarchy'
@@ -10,6 +11,7 @@ import type { IncentiveRow, IncentiveStore, IncentiveWorkspace } from './types'
 type Translate = ReturnType<typeof useLocalization>['t']
 
 export function ReportViewerIncentivesView(input: {
+  authSummary?: AuthSessionSummary | null
   workspace: IncentiveWorkspace
   period: string
   onPeriodChange: (period: string) => void
@@ -23,12 +25,7 @@ export function ReportViewerIncentivesView(input: {
     <>
       <IncentiveWorkspaceScaffold
         {...input}
-        sectionHeader={(
-          <div className="incentive-viewer-section-header">
-            <div><h2>{input.t('storeIncentives.command.viewerSection')}</h2><p>{input.t('storeIncentives.command.viewerSectionCopy')}</p></div>
-            <Badge variant="secondary">{input.t('storeIncentives.command.readOnly')}</Badge>
-          </div>
-        )}
+        renderApproval={regionIds => <FinalIncentiveApproval key={`${input.period}:${input.authSummary?.user.userId}:${input.authSummary?.user.authorizationContextVersion}:${regionIds?.join(',') ?? 'all'}`} authSummary={input.authSummary ?? null} period={input.period} locale={input.locale} regionIds={regionIds} disabled={input.isUpdating || Boolean(input.backgroundError)} />}
         renderContent={(workspace) => (
           <IncentiveWorkspaceHierarchy
             locale={input.locale}
@@ -39,7 +36,8 @@ export function ReportViewerIncentivesView(input: {
           />
         )}
       />
-      <ReadOnlyCorrectionDrawer locale={input.locale} onClose={() => {
+
+      <ReadOnlyCorrectionDrawer workspace={input.workspace} locale={input.locale} onClose={() => {
         const opener = selection?.opener
         setSelection(null)
         if (opener) requestAnimationFrame(() => opener.focus())

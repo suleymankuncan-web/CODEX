@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import { incentiveFinalApprovalCompanyIds } from "./incentive-final-approval-scope";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
   SalesTargetIncentiveAdminPackageReadRepository,
@@ -90,6 +91,27 @@ export class SalesTargetIncentiveAdminPackageWorkflowService {
         reviewNote: packageRow.review_note,
       },
     };
+  }
+
+  async listFinalApprovalPackages(input: { actor: AuthenticatedUser; periodKey: string }) {
+    const companyIds = incentiveFinalApprovalCompanyIds(input.actor);
+    const rows = await this.adminPackageReadRepository.listRegionPackageSummaries({
+      periodKey: input.periodKey, companyIds, regionIds: [], storeIds: [], allowGlobalScope: false,
+    });
+    return rows.filter((row) => companyIds.includes(row.company_id)).map((row) => ({
+      ...toAdminRegionPackageSummary(row), regionPackageId: row.region_package_id,
+    }));
+  }
+
+  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionId: string; regionPackageId: string; submittedAt: string }) {
+    const companyIds = incentiveFinalApprovalCompanyIds(input.actor);
+    const row = await this.approvalRepository.reviewRegionPackage({
+      periodKey: input.periodKey, regionId: input.regionId, actorUserId: input.actor.userId,
+      packageStatus: "admin_approved", finalApproval: {
+        companyIds, regionPackageId: input.regionPackageId, submittedAt: input.submittedAt,
+      },
+    });
+    return { data: { regionPackageId: row.sales_target_incentive_region_package_id, status: row.package_status, reviewedAt: row.reviewed_at } };
   }
 
   private assertSuperAdmin(actor: AuthenticatedUser) {

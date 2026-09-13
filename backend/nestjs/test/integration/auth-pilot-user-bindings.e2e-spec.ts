@@ -202,6 +202,7 @@ describe("Auth pilot user bindings", () => {
         effectiveFrom: "2026-04-29T18:30:00.000Z",
         effectiveTo: null,
         createdAt: "2026-04-29T18:30:00.000Z",
+        incentiveApproval: false,
         active: true,
       },
     ]);

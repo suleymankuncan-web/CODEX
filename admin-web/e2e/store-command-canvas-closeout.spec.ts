@@ -63,7 +63,7 @@ test('SH-FR-002: Incentives has one production owner and no internal prototype c
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('report_viewer', { prototypeParity: true }))
   await page.goto('/store/incentives')
 
-  await expect(page.getByRole('heading', { name: 'Şirket Prim Görünümü' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'LUFIAN Mağaza Primleri' })).toBeVisible()
   await expect(page.locator('[data-command-canvas-page]')).toHaveCount(1)
   await expect(page.locator('.role-switcher, [data-prototype-role-switcher]')).toHaveCount(0)
   await expect(page.getByText(/command-v2/i)).toHaveCount(0)

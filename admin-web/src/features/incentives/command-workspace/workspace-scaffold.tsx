@@ -1,21 +1,16 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { ClipboardCheck, Clock3, ListFilter, PenLine, RotateCcw, Search, Store, UsersRound, WalletCards } from 'lucide-react'
+import { ClipboardCheck, Clock3, PenLine, Search, WalletCards } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  CommandCanvasFilterBar,
-  CommandCanvasMetricFilter,
-  CommandCanvasMetricRail,
-  CommandCanvasMonthYearPicker,
-  CommandCanvasPage,
-  CommandCanvasPageHeader,
-  CommandCanvasPartialDataNotice,
-} from '@/features/store-command-canvas/primitives'
+import { Badge } from '@/components/ui/badge'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CommandCanvasPage, CommandCanvasPartialDataNotice } from '@/features/store-command-canvas/primitives'
+import { ReportViewerPeriodPicker } from '@/features/checklist-command/ReportViewerPeriodPicker'
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { buildIncentiveMetrics, filterIncentiveWorkspace } from './model'
-import { formatIncentiveMoney, formatIncentivePeriod } from './format'
+import { formatIncentiveMoney } from './format'
+import { IncentiveManagerDirectory } from './manager-directory'
 import type { IncentiveStatusFilter, IncentiveWorkspace } from './types'
 import './workspace.css'
 
@@ -33,144 +28,79 @@ export function IncentiveWorkspaceScaffold(input: {
   tabs?: ReactNode
   sectionHeader?: ReactNode
   renderContent: (workspace: IncentiveWorkspace) => ReactNode
+  renderApproval?: (regionIds: string[] | undefined) => ReactNode
 }) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<IncentiveStatusFilter>('all')
-  const metrics = useMemo(() => buildIncentiveMetrics(input.workspace), [input.workspace])
-  const filtered = useMemo(
-    () => filterIncentiveWorkspace(input.workspace, { search, status }),
-    [input.workspace, search, status],
-  )
+  const [regionId, setRegionId] = useState<string | null>(null)
   const viewer = input.workspace.view === 'report_viewer'
-  const partial = input.backgroundError !== null || Object.values(input.workspace.sections)
-    .some((section) => section.status === 'unavailable')
-  const toggleStatus = (next: IncentiveStatusFilter) => setStatus((current) => current === next ? 'all' : next)
+  const tr = input.locale === 'tr'
+  const selectedRegion = input.workspace.regions.find(region => region.regionId === regionId)
+  const scoped = useMemo(() => ({ ...input.workspace, regions: selectedRegion ? [selectedRegion] : input.workspace.regions }), [input.workspace, selectedRegion])
+  const metrics = useMemo(() => buildIncentiveMetrics(scoped), [scoped])
+  const filtered = useMemo(() => filterIncentiveWorkspace(scoped, { search, status }), [scoped, search, status])
+  const partial = Boolean(input.backgroundError) || Object.values(input.workspace.sections).some(section => section.status === 'unavailable')
+  const metricItems = [
+    { key: 'earning', icon: WalletCards, label: input.t('storeIncentives.command.periodTotal'), value: formatIncentiveMoney(metrics.finalTotal, input.locale) },
+    { key: 'pending_review', icon: Clock3, label: input.t('storeIncentives.command.pendingReview'), value: String(metrics.pendingReviewCount) },
+    { key: 'reviewed', icon: ClipboardCheck, label: input.t('storeIncentives.command.reviewed'), value: `${metrics.reviewedStoreCount}/${metrics.storeCount}` },
+    { key: 'corrected', icon: PenLine, label: input.t('storeIncentives.command.corrections'), value: String(metrics.correctionCount) },
+  ] as const
 
-  return (
-    <CommandCanvasPage ariaLabelledBy="store-incentives-command-title" className={`incentive-command-page ${viewer ? 'is-report-viewer' : 'is-region-manager'}`}>
-      <CommandCanvasPageHeader
-        titleId="store-incentives-command-title"
-        eyebrow={input.t('storeIncentives.command.eyebrow')}
-        title={input.t(viewer ? 'storeIncentives.command.viewerTitle' : 'storeIncentives.command.regionTitle')}
-        description={input.t(
-          viewer ? 'storeIncentives.command.viewerDescription' : 'storeIncentives.command.regionDescription',
-          { period: formatIncentivePeriod(input.workspace.period, input.locale) },
-        )}
-        actions={(
-          <>
-            <CommandCanvasMonthYearPicker
-              ariaLabel={input.t('storeIncentives.regionManagerSelectPeriod')}
-              locale={input.locale}
-              onValueChange={input.onPeriodChange}
-              value={input.period}
-            />
-            {input.actions}
-          </>
-        )}
-      />
-
-      <CommandCanvasMetricRail ariaLabel={input.t('storeIncentives.regionManagerSummaryAria')}>
-        <CommandCanvasMetricFilter
-          active={status === 'earning'}
-          icon={<WalletCards size={16} />}
-          label={input.t(viewer ? 'storeIncentives.command.companyTotal' : 'storeIncentives.command.periodTotal')}
-          note={input.t('storeIncentives.command.finalColumn')}
-          onClick={() => toggleStatus('earning')}
-          tone="plum"
-          value={formatIncentiveMoney(metrics.finalTotal, input.locale)}
-        />
-        <CommandCanvasMetricFilter
-          active={!viewer && status === 'pending_review'}
-          icon={viewer ? <UsersRound size={16} /> : <Clock3 size={16} />}
-          label={input.t(viewer ? 'storeIncentives.command.regionManagers' : 'storeIncentives.command.pendingReview')}
-          note={viewer ? input.t('storeIncentives.command.viewerSection') : input.t('storeIncentives.command.stores')}
-          onClick={() => { if (!viewer) toggleStatus('pending_review') }}
-          tone="amber"
-          value={String(viewer ? metrics.regionCount : metrics.pendingReviewCount)}
-        />
-        <CommandCanvasMetricFilter
-          active={!viewer && status === 'corrected'}
-          icon={viewer ? <Store size={16} /> : <PenLine size={16} />}
-          label={input.t(viewer ? 'storeIncentives.command.stores' : 'storeIncentives.command.corrections')}
-          note={input.t(viewer ? 'storeIncentives.command.storeColumn' : 'storeIncentives.regionManagerCorrectionNote')}
-          onClick={() => { if (!viewer) toggleStatus('corrected') }}
-          tone="cyan"
-          value={String(viewer ? metrics.storeCount : metrics.correctionCount)}
-        />
-        <CommandCanvasMetricFilter
-          active={!viewer && status === 'reviewed'}
-          icon={<ClipboardCheck size={16} />}
-          label={input.t('storeIncentives.command.storeReview')}
-          note={input.t('storeIncentives.command.reviewed')}
-          onClick={() => { if (!viewer) toggleStatus('reviewed') }}
-          tone="mint"
-          value={`${metrics.reviewedStoreCount}/${metrics.storeCount}`}
-        />
-      </CommandCanvasMetricRail>
-
-      {partial ? (
-        <CommandCanvasPartialDataNotice
-          title={input.t('storeIncentives.command.partialTitle')}
-          description={input.t('storeIncentives.command.partialCopy')}
-        />
-      ) : null}
-
-      <div className="incentive-command-workbench">
-        <CommandCanvasFilterBar
-          search={(
-            <div className="incentive-command-search">
-              <Search aria-hidden="true" size={16} />
-              <Input
-                aria-label={input.t('storeIncentives.command.search')}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={input.t('storeIncentives.command.search')}
-                value={search}
-              />
-            </div>
-          )}
-          controls={(
-            <Select value={status} onValueChange={(value) => setStatus(value as IncentiveStatusFilter)}>
-              <SelectTrigger aria-label={input.t('storeIncentives.command.status')} className="incentive-command-filter-trigger">
-                <ListFilter aria-hidden="true" size={14} />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{input.t('storeIncentives.command.allStatuses')}</SelectItem>
-                <SelectItem value="pending_review">{input.t('storeIncentives.command.pending')}</SelectItem>
-                <SelectItem value="reviewed">{input.t('storeIncentives.command.reviewed')}</SelectItem>
-                <SelectItem value="corrected">{input.t('storeIncentives.command.corrected')}</SelectItem>
-                <SelectItem value="earning">{input.t('storeIncentives.command.earning')}</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-          actions={(
-            <Button
-              aria-label={input.t('storeIncentives.command.clear')}
-              className="incentive-command-clear"
-              onClick={() => { setSearch(''); setStatus('all') }}
-              size="sm"
-              variant="ghost"
-            >
-              <RotateCcw data-icon="inline-start" />
-              {input.t('storeIncentives.command.clear')}
-            </Button>
-          )}
-          isUpdating={input.isUpdating}
-          updatingLabel={input.t('storeIncentives.command.updating')}
-        />
-        {input.tabs}
-        {input.sectionHeader}
-        {input.workspace.regions.length === 0
-          ? (
-            <div className="incentive-command-empty-state">
-              <h2>{input.t('storeIncentives.command.emptyTitle')}</h2>
-              <p>{input.t('storeIncentives.command.emptyCopy')}</p>
-            </div>
-          )
-          : filtered.regions.length > 0
-          ? input.renderContent(filtered)
-          : <div className="incentive-command-empty">{input.t('storeIncentives.command.noMatch')}</div>}
+  return <CommandCanvasPage ariaLabelledBy="store-incentives-command-title" className="incentive-performance">
+    <header className="incentive-performance-hero">
+      <div className="incentive-performance-heading">
+        <span className="incentive-performance-icon"><WalletCards aria-hidden="true" /></span>
+        <div>
+          <p>{viewer ? (tr ? 'RAPOR GÖRÜNTÜLEYİCİ' : 'REPORT VIEWER') : (tr ? 'BÖLGE MÜDÜRÜ' : 'REGION MANAGER')}</p>
+          <h1 id="store-incentives-command-title">{tr ? (viewer ? 'LUFIAN Mağaza Primleri' : 'Bölge Primleri') : (viewer ? 'LUFIAN Store Incentives' : 'Regional Incentives')}</h1>
+          <small>{tr ? (viewer ? 'Bölge müdürlerini seçin, mağaza ve personel primlerini inceleyin.' : 'Mağaza primlerini inceleyin, kontrol edin ve onaya gönderin.') : (viewer ? 'Select a regional manager to review store and personnel incentives.' : 'Review store incentives and submit your regional package.')}</small>
+        </div>
       </div>
-    </CommandCanvasPage>
-  )
+      <div className="incentive-performance-actions">
+        <ReportViewerPeriodPicker locale={input.locale} period={input.period} onChange={input.onPeriodChange} />
+        {input.actions}
+      </div>
+    </header>
+
+    {!viewer ? <div className="incentive-performance-metrics" aria-label={input.t('storeIncentives.regionManagerSummaryAria')}>
+      {metricItems.map(({ key, icon: Icon, label, value }) => <Button key={key} variant="outline" aria-pressed={status === key} onClick={() => setStatus(current => current === key ? 'all' : key)}>
+        <span><Icon aria-hidden="true" /><span>{label}</span></span><strong>{value}</strong>
+      </Button>)}
+    </div> : null}
+
+    {partial ? <CommandCanvasPartialDataNotice title={input.t('storeIncentives.command.partialTitle')} description={input.t('storeIncentives.command.partialCopy')} /> : null}
+
+    <div className={viewer ? 'incentive-performance-layout is-viewer' : 'incentive-performance-layout'}>
+      {viewer ? <IncentiveManagerDirectory regions={input.workspace.regions} selectedId={selectedRegion?.regionId ?? null} onSelect={id => { setRegionId(id); setSearch(''); setStatus('all') }} locale={input.locale} /> : null}
+      <div className="incentive-performance-content" aria-busy={input.isUpdating}>
+        {input.renderApproval?.(selectedRegion ? [selectedRegion.regionId] : undefined)}
+        <section className="incentive-performance-list" aria-label={input.t('storeIncentives.command.stores')}>
+          {viewer ? <div className="incentive-performance-context">
+            <div><h2>{selectedRegion?.regionManager.displayName || (tr ? 'Tüm Mağazalar' : 'All stores')}</h2><small>{selectedRegion?.regionName || (tr ? 'Şirket mağazaları' : 'Company stores')}</small></div>
+            <div><small>{tr ? 'Toplam prim' : 'Total incentive'}</small><strong>{formatIncentiveMoney(metrics.finalTotal, input.locale)}</strong></div>
+          </div> : null}
+          {input.tabs}
+          <div className="incentive-performance-toolbar">
+            <InputGroup className="incentive-performance-search">
+              <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
+              <InputGroupInput aria-label={input.t('storeIncentives.command.search')} placeholder={tr ? 'Mağaza veya personel ara' : 'Search stores or personnel'} value={search} onChange={event => setSearch(event.target.value)} />
+              <InputGroupAddon align="inline-end"><Badge variant="secondary">{filtered.regions.reduce((count, region) => count + region.stores.length, 0)}</Badge></InputGroupAddon>
+            </InputGroup>
+            <Select value={status} onValueChange={value => setStatus(value as IncentiveStatusFilter)}>
+              <SelectTrigger aria-label={input.t('storeIncentives.command.status')}><SelectValue /></SelectTrigger>
+              <SelectContent><SelectGroup>
+                {([['all', 'allStatuses'], ['pending_review', 'pending'], ['reviewed', 'reviewed'], ['corrected', 'corrected'], ['earning', 'earning']] as const).map(([value, key]) => <SelectItem value={value} key={value}>{input.t(`storeIncentives.command.${key}`)}</SelectItem>)}
+              </SelectGroup></SelectContent>
+            </Select>
+            {search || status !== 'all' ? <Button size="sm" variant="ghost" onClick={() => { setSearch(''); setStatus('all') }}>{input.t('storeIncentives.command.clear')}</Button> : null}
+            <span className="incentive-performance-updating" role="status">{input.isUpdating ? input.t('storeIncentives.command.updating') : null}</span>
+          </div>
+          {input.sectionHeader}
+          {input.workspace.regions.length === 0 ? <div className="incentive-command-empty-state"><h2>{input.t('storeIncentives.command.emptyTitle')}</h2><p>{input.t('storeIncentives.command.emptyCopy')}</p></div>
+            : input.renderContent(filtered)}
+        </section>
+      </div>
+    </div>
+  </CommandCanvasPage>
 }

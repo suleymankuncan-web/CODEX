@@ -80,8 +80,8 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
     t,
   }
   return workspace.view === 'report_viewer'
-    ? <ReportViewerIncentivesView {...shared} />
-    : <RegionManagerIncentivesOwner {...shared} />
+    ? <ReportViewerIncentivesView key={`${JSON.stringify(identity)}:${shared.period}`} {...shared} authSummary={input.authSummary} />
+    : <RegionManagerIncentivesOwner key={`${JSON.stringify(identity)}:${shared.period}`} {...shared} />
 }
 
 function IncentiveRouteLoading(input: { title: string; description: string }) {
