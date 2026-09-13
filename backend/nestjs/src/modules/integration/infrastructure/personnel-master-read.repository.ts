@@ -189,7 +189,7 @@ export class PersonnelMasterReadRepository {
               'ASSISTANT_MANAGER',
               'SENIOR_SALES_CONSULTANT',
               'SALES_ASSOCIATE',
-              'CASHIER'
+              'CASHIER', 'WAREHOUSE_SUPERVISOR'
             )
           ORDER BY p.is_managerial DESC, p.position_name ASC, p.position_code ASC
         `,

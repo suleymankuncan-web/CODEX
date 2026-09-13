@@ -15,10 +15,10 @@ const manager = { readScope: { companyIds: [companyId], regionIds: [], storeIds:
 const hr = { ...manager, roleCodes: ["HR_ADMIN"] };
 const state = { employee_id: id, company_id: companyId, region_id: id, store_id: storeId, assignment_id: id, employee_revision: "2026-09-07 00:00:00+00", assignment_revision: "2026-09-07 00:00:00+00", revision: "revision", values };
 const row = { ...state, request_id: id, previous_values: values, proposed_values: { ...values, firstName: "Corrected" }, request_status: "pending_hr_approval" };
-const input = { employeeId: id, storeId, expectedRevision: "revision", proposed: values, reason: "Correction" };
+const input = { employeeId: id, storeId, expectedRevision: "revision", proposed: { ...values, phoneNumber: "05551234567", email: "person@example.test", nationalId: "12345678901" }, reason: "Correction" };
 
 function setup() {
-  const query = jest.fn(async (sql: string): Promise<{ rows: unknown[] }> => {
+  const query = jest.fn(async (sql: string, _params?: unknown[]): Promise<{ rows: unknown[] }> => {
     if (sql.includes("SELECT employee_id FROM ops.employee")) return { rows: [{ employee_id: id }] };
     if (sql.includes("concat(e.updated_at")) return { rows: [state] };
     if (sql.includes("SELECT position_id FROM ops.position")) return { rows: [{ position_id: id }] };
@@ -55,6 +55,14 @@ describe("Personnel correction boundaries", () => {
     expect(query.mock.calls.some(([sql]) => sql.includes("INSERT INTO ops.personnel_correction_request"))).toBe(true);
     expect(query.mock.calls.some(([sql]) => sql.includes("INSERT INTO audit.event_log"))).toBe(true);
     expect(query.mock.calls.some(([sql]) => sql.includes("UPDATE ops.employee"))).toBe(false);
+  });
+  it("hashes national ID before staging and never exposes its hash", async () => {
+    const { repository, query } = setup();
+    const output = await repository.submit(manager, { ...input, proposed: { ...values, email: "person@example.test", nationalId: "12345678901" } });
+    const serialized = JSON.stringify(query.mock.calls);
+    expect(serialized).not.toContain("12345678901");
+    expect(serialized).toContain("8901");
+    expect(output).not.toHaveProperty("proposed_national_id_hash");
   });
   it("rejects stale form data before staging", async () => {
     const { repository, query } = setup();
@@ -112,9 +120,10 @@ describe("Personnel correction input validation", () => {
     expect(await validate(plainToInstance(CreatePersonnelCorrectionDto, input))).toHaveLength(0);
   });
   it.each([
-    { proposed: undefined }, { proposed: { ...values, firstName: " " } },
+    { proposed: undefined }, { proposed: { ...input.proposed, email: undefined } }, { proposed: { ...input.proposed, nationalId: undefined } }, { proposed: { ...input.proposed, phoneNumber: "" } }, { proposed: { ...values, firstName: " " } },
     { proposed: { ...values, phoneNumber: "abc" } }, { proposed: { ...values, hireDate: "2026-02-30" } },
     { proposed: { ...values, employmentType: "owner" } }, { proposed: { ...values, positionId: "bad" } },
+    { proposed: { ...values, email: "bad" } }, { proposed: { ...values, nationalId: "123" } },
     { reason: " " }, { storeId: "bad" }, { employeeId: "bad" },
   ])("rejects invalid input %#", async (patch) => {
     expect((await validate(plainToInstance(CreatePersonnelCorrectionDto, { ...input, ...patch }))).length).toBeGreaterThan(0);

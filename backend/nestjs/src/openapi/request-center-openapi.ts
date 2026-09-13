@@ -54,7 +54,7 @@ const requestCenterItemSchema = {
     requestId: { type: "string" },
     requestType: {
       type: "string",
-      enum: ["target", "sellerCode", "offboarding"],
+      enum: ["target", "sellerCode", "offboarding", "personnelCorrection"],
     },
     storeId: { type: "string" },
             storeName: { type: "string", nullable: true },

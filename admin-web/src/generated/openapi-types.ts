@@ -966,7 +966,7 @@ export type components = {
       "storeId": string
       "employeeId": string
       "expectedRevision": string
-      "proposed": components['schemas']["PersonnelCorrectionValues"]
+      "proposed": components['schemas']["PersonnelCorrectionInputValues"]
       "reason": string
     }
     "CreatePersonnelMasterDto": {
@@ -1670,6 +1670,16 @@ export type components = {
       "created_at": string
       "updated_at": string
     }
+    "PersonnelCorrectionInputValues": {
+      "firstName": string
+      "lastName": string
+      "phoneNumber": string
+      "hireDate": string
+      "employmentType": "full_time" | "part_time" | "temporary"
+      "positionId": string
+      "email": string
+      "nationalId": string
+    }
     "PersonnelCorrectionList": {
       "items": Array<{
           "request_id": string
@@ -1712,6 +1722,8 @@ export type components = {
       "hireDate": string
       "employmentType": "full_time" | "part_time" | "temporary"
       "positionId": string
+      "email"?: string
+      "nationalIdLast4"?: string
     }
     "PersonnelMasterCommandResponse": {
       "command": {
@@ -2742,7 +2754,7 @@ export type components = {
     "RequestCenterResponse": {
       "items": Array<{
           "requestId": string
-          "requestType": "target" | "sellerCode" | "offboarding"
+          "requestType": "target" | "sellerCode" | "offboarding" | "personnelCorrection"
           "storeId": string
           "storeName": string | null
           "regionId": string
@@ -3985,6 +3997,7 @@ export type components = {
     "WorkforceWorkspaceHistoryRow": {
       "employeeId": string
       "displayName": string
+      "positionName": string | null
       "entryDate": string
       "exitDate": string | null
       "totalWorkingDays": number | null
@@ -4013,6 +4026,7 @@ export type components = {
       "storeStatus": string
       "norm": number | null
       "active": number
+      "turnoverRate"?: number | null
       "averageTenureDays": number | null
       "gap": number | null
       "shortageDays": number | null
@@ -4035,6 +4049,7 @@ export type components = {
       "shortageStores": number
       "openPositions": number
       "averageTenureDays": number | null
+      "turnoverRate": number | null
     }
   }
 }

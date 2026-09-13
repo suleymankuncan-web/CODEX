@@ -1,15 +1,15 @@
-import { PersonnelCorrectionButton, PersonnelCorrectionQueue } from '../features/workforce/personnel-corrections'
+import { PersonnelCorrectionButton } from '../features/workforce/personnel-corrections'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   BriefcaseBusiness,
+  RefreshCw,
   ChevronLeft,
   ChevronRight,
   Clock3,
   History,
   Search,
-  Store,
   UserMinus,
   UserPlus,
   UsersRound,
@@ -18,12 +18,8 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { getStoreQueryScopeSignature, retainScopedPlaceholder } from '../features/auth/store-query-scope'
 import {
   CommandCanvasDataList,
-  CommandCanvasFilterBar,
-  CommandCanvasMetricFilter,
-  CommandCanvasMetricRail,
   CommandCanvasOperationalDrawerContent,
   CommandCanvasPage,
-  CommandCanvasPageHeader,
   CommandCanvasSortableHeading,
 } from '../features/store-command-canvas/primitives'
 import {
@@ -45,14 +41,19 @@ import {
   type WorkforceRequestDialog,
 } from '../features/workforce/workforce-request-dialogs'
 import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../components/ui/input-group'
+import { Badge } from '../components/ui/badge'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '../components/ui/empty'
+import { Alert, AlertDescription } from '../components/ui/alert'
+import { OperationsDirectory, OperationsMetrics, StoreOperationsHeader } from './store-operations-layout'
+import { getRegionManagerDirectory, type RegionManagerDirectoryItem } from '../features/org/region-manager-directory'
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
 import { getUserFacingErrorMessage } from '../lib/format'
 import './store-workforce-command-canvas.css'
+import './workforce-polish.css'
 
 const STORE_PAGE_SIZE = 50
-const PERSON_PAGE_SIZE = 8
+const PERSON_PAGE_SIZE = 50
 const HISTORY_PAGE_SIZE = 20
 
 export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | null }) {
@@ -60,6 +61,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
   const previousScopeSignature = useRef(scopeSignature)
   const [searchParams] = useSearchParams()
   const [offset, setOffset] = useState(0)
+  const [managerUserId, setManagerUserId] = useState('all')
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
   const [status, setStatus] = useState<'all' | 'shortage' | 'balanced' | 'surplus' | 'unconfigured'>('all')
@@ -82,6 +84,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
     if (previousScopeSignature.current === scopeSignature) return
     previousScopeSignature.current = scopeSignature
     setOffset(0)
+    setManagerUserId('all')
     setPersonnelOffset(0)
     setPersonPage(0)
     setSelectedStoreId(null)
@@ -93,6 +96,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
   const workspaceQuery = useQuery({
     queryKey: workforceWorkspaceQueryKey({
       scopeSignature,
+      regionManagerUserId: managerUserId === 'all' ? undefined : managerUserId,
       offset,
       personnelOffset,
       query: deferredQuery,
@@ -102,6 +106,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
       rail,
     }),
     queryFn: () => getWorkforceCommandWorkspace({
+      regionManagerUserId: managerUserId === 'all' ? undefined : managerUserId,
       limit: STORE_PAGE_SIZE,
       offset,
       personnelLimit: 50,
@@ -114,11 +119,20 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
     placeholderData: (previousData, previousQuery) => retainScopedPlaceholder(previousData, previousQuery?.queryKey, scopeSignature),
   })
   const workspace = workspaceQuery.data
+  const managerDirectory = useQuery({
+    queryKey: ['org-region-manager-directory', scopeSignature],
+    queryFn: getRegionManagerDirectory,
+    enabled: workspace?.view === 'report_viewer',
+  })
+  const managers = managerDirectory.data?.items ?? []
+  const selectedManager = managers.find(manager => manager.userId === managerUserId)
+  const isStoreManager = workspace?.view === 'store_manager'
   const directStore = workspace?.view === 'store_manager' ? workspace.stores.items[0] ?? null : null
   const selectedStoreSummary = workspace?.stores.items.find((item) => item.storeId === selectedStoreId) ?? null
   const detailQuery = useQuery({
-    queryKey: ['store-workforce-command-detail', scopeSignature, selectedStoreId, offset, personnelOffset, deferredQuery, status, storeSort, storeDirection, rail],
+    queryKey: ['store-workforce-command-detail', scopeSignature, selectedStoreId, offset, personnelOffset, deferredQuery, status, storeSort, storeDirection, rail, managerUserId],
     queryFn: () => getWorkforceCommandWorkspace({
+      regionManagerUserId: managerUserId === 'all' ? undefined : managerUserId,
       limit: STORE_PAGE_SIZE,
       offset,
       personnelStoreId: selectedStoreId!,
@@ -140,10 +154,9 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
     stores: workspace?.stores.items ?? [], query, status, rail, sort: storeSort, direction: storeDirection,
   }), [workspace?.stores.items, query, status, rail, storeSort, storeDirection])
   const visiblePersonnel = useMemo(() => filterAndSortPersonnel({
-    personnel: personnelStore?.personnel ?? [], query, position, sort: personSort,
+    personnel: personnelStore?.personnel ?? [], query: isStoreManager ? query : '', position, sort: personSort,
     direction: personDirection, now,
-  }), [personnelStore?.personnel, query, position, personSort, personDirection, now])
-  const positions = useMemo(() => [...new Set((personnelStore?.personnel ?? []).map((item) => item.positionName))].sort(), [personnelStore?.personnel])
+  }), [personnelStore?.personnel, query, position, personSort, personDirection, now, isStoreManager])
   const personPageCount = Math.max(1, Math.ceil(visiblePersonnel.length / PERSON_PAGE_SIZE))
   const safePersonPage = Math.min(personPage, personPageCount - 1)
   const pagedPersonnel = visiblePersonnel.slice(safePersonPage * PERSON_PAGE_SIZE, (safePersonPage + 1) * PERSON_PAGE_SIZE)
@@ -160,10 +173,9 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
   }
   if (!workspace) return null
 
-  const isStoreManager = workspace.view === 'store_manager'
   const canManageRequests = workspace.capabilities.canCreateSellerCodeRequest
     || workspace.capabilities.canCreateOffboardingRequest
-  const totalLabel = isStoreManager ? 'Mağaza' : 'Toplam mağaza'
+  const totalLabel = 'Aktif Personel'
   const averageTenure = formatTenure(workspace.summary.averageTenureDays)
   const openRequestDialog = (dialog: Exclude<WorkforceRequestDialog, null>) => setRequestDialog(dialog)
   const requestStoreId = directStore?.storeId ?? ''
@@ -189,102 +201,65 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
 
   return (
     <CommandCanvasPage ariaLabelledBy="workforce-command-title" className="workforce-command-page" testId="store-workforce-page">
-      <CommandCanvasPageHeader
+      <StoreOperationsHeader
+        icon={UsersRound}
         title="Norm Kadro"
         titleId="workforce-command-title"
-        eyebrow={workspace.view === 'report_viewer' ? 'Şirket görünümü · Salt okunur' : isStoreManager ? 'Mağaza görünümü' : 'Bölge görünümü'}
+        eyebrow={workspace.view === 'report_viewer' ? 'Şirket görünümü · Salt okunur' : isStoreManager ? directStore?.storeName ?? 'Mağaza görünümü' : 'Bölge görünümü'}
         description={isStoreManager ? 'Personel durumunuzu ve açık hareketleri yönetin.' : 'Mağaza kadro dengesini ve eksik sürelerini izleyin.'}
         actions={isStoreManager && canManageRequests ? (
           <>
-            <Button variant="ghost" onClick={() => openRequestDialog('returned')}>İade edilen talepler</Button>
+            <Button variant="outline" onClick={() => openRequestDialog('returned')}>İade edilen talepler</Button>
             {workspace.capabilities.canCreateOffboardingRequest ? <Button variant="outline" onClick={() => openRequestDialog('offboarding')}><UserMinus /> İşten ayrılma talebi</Button> : null}
             {workspace.capabilities.canCreateSellerCodeRequest ? <Button onClick={() => openRequestDialog('seller')}><UserPlus /> Personel sicil talebi</Button> : null}
           </>
         ) : undefined}
       />
       {workspaceQuery.isError && workspace ? (
-        <div className="workforce-partial-error" role="alert">
-          <span>Son alınan kadro verileri gösteriliyor; güncel veriler alınamadı.</span>
+        <Alert variant="destructive" className="workforce-partial-error">
+          <AlertDescription>Son alınan kadro verileri gösteriliyor; güncel veriler alınamadı.</AlertDescription>
           <Button variant="outline" onClick={() => void workspaceQuery.refetch()}>Tekrar dene</Button>
-        </div>
+        </Alert>
       ) : null}
 
-      <CommandCanvasMetricRail ariaLabel="Norm Kadro özeti">
-        <CommandCanvasMetricFilter label={totalLabel} value={String(workspace.summary.totalStores)} note="Aktif görünüm" icon={<Store size={16} />} active={rail === 'all'} onClick={() => { setRail('all'); setStatus('all'); setPosition('all'); setQuery(''); setOffset(0); setPersonPage(0) }} />
-        <CommandCanvasMetricFilter label="Aktif personel" value={String(workspace.summary.activePersonnel)} note="Toplam çalışan" icon={<UsersRound size={16} />} tone="cyan" active={rail === 'active'} onClick={() => { setRail('active'); if (isStoreManager) { setPersonSort('person'); setPersonDirection('ascending'); setPersonPage(0) } else { setStoreSort('active'); setStoreDirection('descending'); setOffset(0) } }} />
-        <CommandCanvasMetricFilter label={isStoreManager ? 'Eksik kadro' : 'Eksik mağaza'} value={String(isStoreManager ? workspace.summary.openPositions : workspace.summary.shortageStores)} note={`${workspace.summary.openPositions} açık pozisyon`} icon={<UserMinus size={16} />} tone="rose" active={rail === 'gap'} onClick={() => { setRail(rail === 'gap' ? 'all' : 'gap'); setOffset(0) }} />
-        <CommandCanvasMetricFilter label="Ortalama kıdem" value={averageTenure} note="Aktif personel" icon={<Clock3 size={16} />} tone="amber" active={rail === 'tenure'} onClick={() => { setRail('tenure'); if (isStoreManager) { setPersonSort('tenure'); setPersonDirection('descending'); setPersonPage(0) } else { setStoreSort('tenure'); setStoreDirection('descending'); setOffset(0) } }} />
-      </CommandCanvasMetricRail>
+      <OperationsMetrics label="Norm Kadro özeti" items={[
+        { id: 'all', label: totalLabel, value: workspace.summary.activePersonnel, icon: UsersRound, selected: rail === 'all', onClick: () => { setRail('all'); setStatus('all'); setPosition('all'); setQuery(''); setOffset(0); setPersonPage(0) } },
+        { id: 'active', label: 'Turnover Oranı', value: workspace.summary.turnoverRate == null ? 'Veri yok' : `%${workspace.summary.turnoverRate.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`, icon: RefreshCw, selected: rail === 'active', onClick: () => setRail(rail === 'active' ? 'all' : 'active') },
+        { id: 'gap', label: isStoreManager ? 'Eksik kadro' : 'Eksik mağaza', value: isStoreManager ? workspace.summary.openPositions : workspace.summary.shortageStores, icon: UserMinus, selected: rail === 'gap', onClick: () => { setRail(rail === 'gap' ? 'all' : 'gap'); setOffset(0) } },
+        { id: 'tenure', label: 'Ortalama kıdem', value: averageTenure, icon: Clock3, selected: rail === 'tenure', onClick: () => { setRail('tenure'); if (isStoreManager) { setPersonSort('tenure'); setPersonDirection('descending'); setPersonPage(0) } else { setStoreSort('tenure'); setStoreDirection('descending'); setOffset(0) } } },
+      ]} />
+
+      {rail === 'active' ? <div className="workforce-gap-notice"><strong>Yılbaşından bugüne personel devir oranı</strong><span>İşten ayrılan personel sayısı / dönem başı ve güncel personel sayısının ortalaması × 100.</span></div> : null}
 
       {isStoreManager && rail === 'gap' ? <div className="workforce-gap-notice"><strong>{workspace.summary.openPositions} açık pozisyon</strong><span>{workspace.summary.openPositions > 0 ? 'Norm ile aktif personel arasındaki güncel fark.' : 'Mağaza kadrosu güncel normla dengede.'}</span></div> : null}
 
-      <CommandCanvasFilterBar
-        updatingLabel="Norm Kadro güncelleniyor"
-        isUpdating={workspaceQuery.isFetching}
-        search={<label className="workforce-search"><Search aria-hidden="true" size={15} /><Input aria-label={isStoreManager ? 'Personel veya pozisyon ara' : 'Mağaza veya müdür ara'} placeholder={isStoreManager ? 'Personel veya pozisyon ara' : 'Mağaza veya müdür ara'} value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); setPersonPage(0) }} /></label>}
-        controls={isStoreManager ? (
-          <>
-            <Select value={position} onValueChange={(value) => { setPosition(value); setPersonPage(0) }}>
-              <SelectTrigger aria-label="Pozisyon"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm pozisyonlar</SelectItem>
-                {positions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={personSort} onValueChange={(value) => choosePersonSort(value as WorkforcePersonSort)}>
-              <SelectTrigger aria-label="Personel sıralaması"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="person">Ad</SelectItem>
-                <SelectItem value="position">Pozisyon</SelectItem>
-                <SelectItem value="start">İşe giriş</SelectItem>
-                <SelectItem value="tenure">Çalışma süresi</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        ) : (
-          <>
-            <Select value={status} onValueChange={(value) => { setStatus(value as typeof status); setOffset(0) }}>
-              <SelectTrigger aria-label="Kadro durumu"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tüm durumlar</SelectItem>
-                <SelectItem value="shortage">Eksik</SelectItem>
-                <SelectItem value="balanced">Tam</SelectItem>
-                <SelectItem value="surplus">Fazla</SelectItem>
-                <SelectItem value="unconfigured">Tanımsız</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={storeSort} onValueChange={(value) => chooseStoreSort(value as WorkforceStoreSort)}>
-              <SelectTrigger aria-label="Mağaza sıralaması"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="store">Mağaza</SelectItem>
-                <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="norm">Norm</SelectItem>
-                <SelectItem value="status">Durum</SelectItem>
-                <SelectItem value="shortage">Eksik süre</SelectItem>
-                <SelectItem value="tenure">Ortalama kıdem</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        )}
-        actions={<Button variant="outline" onClick={() => { if (isStoreManager) setPersonDirection((value) => value === 'ascending' ? 'descending' : 'ascending'); else { setStoreDirection((value) => value === 'ascending' ? 'descending' : 'ascending'); setOffset(0) } }}>Yön: {(isStoreManager ? personDirection : storeDirection) === 'ascending' ? 'Artan' : 'Azalan'}</Button>}
-      />
-
+      <div className={workspace.view === 'report_viewer' ? 'operations-workspace operations-workspace-with-directory' : 'operations-workspace'}>
+        {workspace.view === 'report_viewer' ? <div className="workforce-manager-directory">
+          <OperationsDirectory avatars allLabel="Tüm Mağazalar" allDetail={`${workspace.summary.totalStores} mağaza`} locale="tr" items={managers.map(manager => ({ id: manager.userId, label: manager.displayName, detail: `${manager.storeIds.length} mağaza` }))} value={managerUserId} onChange={value => { setManagerUserId(value); setOffset(0); setPersonnelOffset(0); setPersonPage(0); setSelectedStoreId(null); setHistoryStoreId(null) }} />
+          {managerDirectory.isLoading ? <p role="status">Bölge müdürleri yükleniyor.</p> : managerDirectory.isError ? <Alert variant="destructive"><AlertDescription>Bölge müdürleri alınamadı.</AlertDescription><Button variant="outline" size="sm" onClick={() => void managerDirectory.refetch()}>Tekrar dene</Button></Alert> : !managers.length ? <p>Tanımlı bölge müdürü bulunamadı.</p> : null}
+        </div> : null}
+        <section className="operations-board" aria-label="Kadro çalışma alanı" aria-busy={workspaceQuery.isFetching}>
+          {workspaceQuery.isPlaceholderData ? <span className="workforce-refresh-status" role="status">Liste güncelleniyor…</span> : null}
+          {!isStoreManager ? <div className="operations-board-toolbar"><div className="operations-board-title"><h2>{selectedManager?.displayName ?? 'Mağaza kadro dengesi'}</h2><Badge variant="secondary">{workspace.stores.total} mağaza</Badge></div></div> : null}
       {workspace.stores.items.length === 0 ? (
-        <WorkforceInlineEmpty title="Kapsamda mağaza yok" description="Bu rol için görüntülenebilir aktif mağaza bulunamadı." />
+        <WorkforceInlineEmpty title={managerUserId !== 'all' ? 'Bu seçimde mağaza yok' : 'Kapsamda mağaza yok'} description={managerUserId !== 'all' ? 'Seçilen bölge müdürü ve filtrelerle eşleşen mağaza bulunamadı.' : 'Bu rol için görüntülenebilir aktif mağaza bulunamadı.'} />
       ) : isStoreManager && directStore ? (
         <div data-testid="store-workforce-personnel-list">
-          <PersonnelList correctionScope={scopeSignature} store={directStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(directStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={directStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />
+          <PersonnelList search={{ value: query, onChange: value => { setQuery(value); setPersonPage(0) } }} correctionScope={scopeSignature} store={directStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(directStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={directStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />
         </div>
       ) : (
-        <StoreList stores={visibleStores} view={workspace.view} sort={storeSort} direction={storeDirection} onSort={chooseStoreSort} onSelect={(store) => { setSelectedStoreId(store.storeId); setPersonPage(0); setPersonnelOffset(0); setQuery('') }} pagination={workspace.stores} onOffset={setOffset} />
+        <StoreList query={query} onQuery={value => { setQuery(value); setOffset(0) }} stores={visibleStores} managers={managers} view={workspace.view} sort={storeSort} direction={storeDirection} onSort={chooseStoreSort} onSelect={(store) => { if (workspaceQuery.isPlaceholderData) return; setSelectedStoreId(store.storeId); setPersonPage(0); setPersonnelOffset(0) }} pagination={workspace.stores} onOffset={setOffset} />
       )}
 
-      <Sheet open={Boolean(selectedStore)} onOpenChange={(open) => { if (!open) setSelectedStoreId(null) }}>
-        <CommandCanvasOperationalDrawerContent data-testid="store-workforce-region-detail-dialog">
+        </section>
+      </div>
+
+      <Sheet open={Boolean(selectedStore) && !historyStoreId} onOpenChange={(open) => { if (!open) setSelectedStoreId(null) }}>
+        <CommandCanvasOperationalDrawerContent className="workforce-detail-sheet" data-testid="store-workforce-region-detail-dialog">
           {selectedStore ? (
             <div className="workforce-drawer">
-              <SheetHeader><SheetTitle>{selectedStore.storeName} kadro dosyası</SheetTitle><SheetDescription>Aktif personel ve norm dengesi.</SheetDescription></SheetHeader>
-              <div className="workforce-drawer-facts"><Fact label="Norm / Fiili" value={selectedStore.norm === null ? `Tanımsız / ${selectedStore.active}` : `${selectedStore.norm} / ${selectedStore.active}`} /><Fact label="Kadro farkı" value={formatGap(selectedStore.gap)} /><Fact label="Eksik süre" value={formatShortage(selectedStore)} /></div>
+              <SheetHeader className="workforce-drawer-heading"><SheetTitle>{selectedStore.storeName}</SheetTitle><SheetDescription>Aktif personel ve norm dengesi.</SheetDescription></SheetHeader>
+              <div className="workforce-drawer-facts"><Fact label="Norm / Fiili" value={selectedStore.norm === null ? `Tanımsız / ${selectedStore.active}` : `${selectedStore.norm} / ${selectedStore.active}`} /><Fact label="Kadro farkı" value={formatGap(selectedStore.gap)} /><Fact label="Eksik süre" value={formatShortage(selectedStore)} /><Fact label="Turnover Oranı" value={selectedStore.turnoverRate == null ? detailQuery.isFetching ? 'Yükleniyor…' : 'Veri yok' : `%${selectedStore.turnoverRate.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`} /></div>
               {detailQuery.isError ? <WorkforceInlineEmpty title="Mağaza dosyası alınamadı" description="Personel ayrıntıları yüklenemedi." action={() => void detailQuery.refetch()} /> : detailQuery.isFetching && selectedStore.personnel.length === 0 ? <WorkforceInlineEmpty title="Mağaza dosyası hazırlanıyor" description="Aktif personel bilgileri yükleniyor." /> : <PersonnelList compact store={selectedStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(selectedStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={selectedStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />}
             </div>
           ) : null}
@@ -292,38 +267,36 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
       </Sheet>
 
       <Sheet open={Boolean(historyStoreId)} onOpenChange={(open) => { if (!open) setHistoryStoreId(null) }}>
-        <CommandCanvasOperationalDrawerContent>
+        <CommandCanvasOperationalDrawerContent className="workforce-detail-sheet">
           <div className="workforce-drawer">
-            <SheetHeader><SheetTitle>{selectedHistoryStore?.storeName ?? 'Mağaza'} · Personel geçmişi</SheetTitle><SheetDescription>Yalnız işe giriş, işten çıkış ve toplam çalışma süresi.</SheetDescription></SheetHeader>
+            <SheetHeader className="workforce-drawer-heading"><Button variant="secondary" size="sm" className="workforce-back" onClick={() => setHistoryStoreId(null)}><ChevronLeft />Geri Git</Button><SheetTitle>{selectedHistoryStore?.storeName ?? 'Mağaza'} · Personel geçmişi</SheetTitle><SheetDescription>Yalnız işe giriş, işten çıkış ve toplam çalışma süresi.</SheetDescription></SheetHeader>
             <HistoryList query={historyQuery} onOffset={setHistoryOffset} />
           </div>
         </CommandCanvasOperationalDrawerContent>
       </Sheet>
 
-      {isStoreManager && directStore ? <PersonnelCorrectionQueue key={scopeSignature} scopeKey={scopeSignature} storeId={directStore.storeId} /> : null}
-      {isStoreManager && canManageRequests ? <WorkforceRequestDialogs dialog={requestDialog} onDialogChange={setRequestDialog} storeId={requestStoreId} handoffRequestId={requestId} handoffRequestType={requestType} /> : null}
+
+      {isStoreManager && canManageRequests ? <WorkforceRequestDialogs dialog={requestDialog} onDialogChange={setRequestDialog} storeId={requestStoreId} storeName={directStore?.storeName ?? ''} handoffRequestId={requestId} handoffRequestType={requestType} /> : null}
     </CommandCanvasPage>
   )
 }
 
-function StoreList(input: { stores: WorkforceCommandStore[]; view: 'report_viewer' | 'region_manager' | 'store_manager'; sort: WorkforceStoreSort; direction: SortDirection; onSort: (sort: WorkforceStoreSort) => void; onSelect: (store: WorkforceCommandStore) => void; pagination: { total: number; limit: number; offset: number; hasMore: boolean }; onOffset: (offset: number) => void }) {
-  const stores = input.view === 'report_viewer'
-    ? [...input.stores].sort((left, right) => left.regionId.localeCompare(right.regionId))
-    : input.stores
+function StoreList(input: { query: string; onQuery: (value: string) => void; managers: RegionManagerDirectoryItem[]; stores: WorkforceCommandStore[]; view: 'report_viewer' | 'region_manager' | 'store_manager'; sort: WorkforceStoreSort; direction: SortDirection; onSort: (sort: WorkforceStoreSort) => void; onSelect: (store: WorkforceCommandStore) => void; pagination: { total: number; limit: number; offset: number; hasMore: boolean }; onOffset: (offset: number) => void }) {
+  const stores = input.stores
   return (
-    <CommandCanvasDataList ariaLabel="Mağaza kadro dengesi" header={<div className="workforce-store-grid workforce-list-head"><CommandCanvasSortableHeading semantic={false} label="Mağaza" direction={input.sort === 'store' ? input.direction : 'none'} onClick={() => input.onSort('store')} /><CommandCanvasSortableHeading semantic={false} label="Aktif" direction={input.sort === 'active' ? input.direction : 'none'} onClick={() => input.onSort('active')} /><CommandCanvasSortableHeading semantic={false} label="Norm / Fiili" direction={input.sort === 'norm' ? input.direction : 'none'} onClick={() => input.onSort('norm')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /><CommandCanvasSortableHeading semantic={false} label="Eksik süre" direction={input.sort === 'shortage' ? input.direction : 'none'} onClick={() => input.onSort('shortage')} /><CommandCanvasSortableHeading semantic={false} label="Ortalama kıdem" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /></div>} footer={<Pager offset={input.pagination.offset} limit={input.pagination.limit} total={input.pagination.total} hasMore={input.pagination.hasMore} onOffset={input.onOffset} />}>
-      {stores.length === 0 ? <WorkforceInlineEmpty title="Sonuç bulunamadı" description="Filtreleri değiştirerek tekrar deneyin." /> : stores.map((store, index) => {
-        const showRegion = input.view === 'report_viewer' && (index === 0 || stores[index - 1]?.regionId !== store.regionId)
-        return <div key={store.storeId}>{showRegion ? <div className="workforce-region-divider"><strong>{store.regionManagerName ?? 'Bölge müdürü tanımlı değil'}</strong><span>{store.regionName ?? 'Bölge bilgisi yok'}</span></div> : null}<button className="workforce-store-grid workforce-store-row" data-testid="store-workforce-region-row" onClick={() => input.onSelect(store)} type="button"><span><strong>{store.storeName}</strong></span><b>{store.active}</b><span>{store.norm === null ? `Tanımsız / ${store.active}` : `${store.norm} / ${store.active}`}</span><Status value={workforceStoreStatus(store)} /><span>{formatShortage(store)}</span><span>{formatTenure(store.averageTenureDays)}</span></button></div>
+    <CommandCanvasDataList ariaLabel="Mağaza kadro dengesi" header={<div className="workforce-store-grid workforce-list-head"><InputGroup className="workforce-store-search"><InputGroupAddon><Search /></InputGroupAddon><InputGroupInput aria-label="Mağaza ara" placeholder="Mağaza ara" value={input.query} onChange={event => input.onQuery(event.target.value)} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{input.pagination.total}</Badge></InputGroupAddon></InputGroup><CommandCanvasSortableHeading semantic={false} label="Aktif" direction={input.sort === 'active' ? input.direction : 'none'} onClick={() => input.onSort('active')} /><CommandCanvasSortableHeading semantic={false} label="Norm / Fiili" direction={input.sort === 'norm' ? input.direction : 'none'} onClick={() => input.onSort('norm')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /><CommandCanvasSortableHeading semantic={false} label="Eksik süre" direction={input.sort === 'shortage' ? input.direction : 'none'} onClick={() => input.onSort('shortage')} /><CommandCanvasSortableHeading semantic={false} label="Ortalama kıdem" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /></div>} footer={<Pager offset={input.pagination.offset} limit={input.pagination.limit} total={input.pagination.total} hasMore={input.pagination.hasMore} onOffset={input.onOffset} />}>
+      {stores.length === 0 ? <WorkforceInlineEmpty title="Sonuç bulunamadı" description="Filtreleri değiştirerek tekrar deneyin." /> : stores.map((store) => {
+        const managerNames = input.managers.filter(manager => manager.storeIds.includes(store.storeId)).map(manager => manager.displayName).join(', ')
+        return <div key={store.storeId}><button className="workforce-store-grid workforce-store-row" data-testid="store-workforce-region-row" onClick={() => input.onSelect(store)} type="button"><span><strong>{store.storeName}</strong><small>{input.view === 'report_viewer' ? managerNames || store.storeCode : store.storeCode}</small></span><b data-label="Aktif personel">{store.active}</b><span data-label="Norm / Fiili">{store.norm === null ? `Tanımsız / ${store.active}` : `${store.norm} / ${store.active}`}</span><Status value={workforceStoreStatus(store)} /><span data-label="Eksik süre">{formatShortage(store)}</span><span data-label="Ortalama kıdem">{formatTenure(store.averageTenureDays)}</span></button></div>
       })}
     </CommandCanvasDataList>
   )
 }
 
-function PersonnelList(input: { correctionScope?: string; store: WorkforceCommandStore; rows: WorkforceCommandStore['personnel']; sort: WorkforcePersonSort; direction: SortDirection; onSort: (sort: WorkforcePersonSort) => void; onHistory: () => void; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void; compact?: boolean }) {
-  return <CommandCanvasDataList className={input.compact ? 'workforce-personnel-list compact' : 'workforce-personnel-list'} ariaLabel={`${input.store.storeName} personel listesi`} header={<div className="workforce-list-title"><strong>{input.store.storeName} personel listesi</strong><span>{input.total} personel</span><Button variant="outline" onClick={input.onHistory}><History /> Mağaza personel geçmişi</Button></div>} footer={input.pageCount > 1 || input.store.personnelHasMore ? <PersonnelPager {...input} /> : undefined}>
+function PersonnelList(input: { search?: { value: string; onChange: (value: string) => void }; correctionScope?: string; store: WorkforceCommandStore; rows: WorkforceCommandStore['personnel']; sort: WorkforcePersonSort; direction: SortDirection; onSort: (sort: WorkforcePersonSort) => void; onHistory: () => void; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void; compact?: boolean }) {
+  return <CommandCanvasDataList className={input.compact ? 'workforce-personnel-list compact' : 'workforce-personnel-list'} ariaLabel={`${input.store.storeName} personel listesi`} header={<div className="workforce-list-title">{input.search ? <InputGroup className="workforce-person-search"><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label="Personel ara" placeholder="Personel ara" value={input.search.value} onChange={event => input.search?.onChange(event.target.value)} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{input.total}</Badge></InputGroupAddon></InputGroup> : <><strong>{input.store.storeName} personel listesi</strong><span>{input.total} personel</span></>}<Button size="sm" onClick={input.onHistory}><History /> Mağaza personel geçmişi</Button></div>} footer={input.pageCount > 1 || input.store.personnelHasMore || input.store.personnelOffset > 0 ? <PersonnelPager {...input} /> : undefined}>
     <div className="workforce-person-grid workforce-list-head"><CommandCanvasSortableHeading semantic={false} label="Personel" direction={input.sort === 'person' ? input.direction : 'none'} onClick={() => input.onSort('person')} /><CommandCanvasSortableHeading semantic={false} label="Pozisyon" direction={input.sort === 'position' ? input.direction : 'none'} onClick={() => input.onSort('position')} /><CommandCanvasSortableHeading semantic={false} label="İşe giriş" direction={input.sort === 'start' ? input.direction : 'none'} onClick={() => input.onSort('start')} /><CommandCanvasSortableHeading semantic={false} label="Çalışma süresi" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /></div>
-    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong data-label="Personel">{person.displayName}</strong><span data-label="Pozisyon">{person.positionName}</span><span data-label="İşe giriş">{formatDate(person.assignmentStartDate)}</span><span data-label="Çalışma süresi">{formatTenureFromDate(person.assignmentStartDate)}</span><span><span className="workforce-active-pill">Aktif</span>{input.correctionScope ? <PersonnelCorrectionButton scopeKey={input.correctionScope} storeId={input.store.storeId} employeeId={person.employeeId} /> : null}</span></div>)}
+    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong data-label="Personel">{person.displayName}</strong><span data-label="Pozisyon">{person.positionName}</span><span data-label="İşe giriş">{formatDate(person.assignmentStartDate)}</span><span data-label="Çalışma süresi">{formatTenureFromDate(person.assignmentStartDate)}</span><span><Badge variant="secondary">Aktif</Badge>{input.correctionScope ? <PersonnelCorrectionButton scopeKey={input.correctionScope} storeId={input.store.storeId} employeeId={person.employeeId} /> : null}</span></div>)}
   </CommandCanvasDataList>
 }
 
@@ -333,14 +306,14 @@ function HistoryList(input: { query: ReturnType<typeof useQuery<Awaited<ReturnTy
   const rows = input.query.data?.history?.items ?? []
   if (rows.length === 0) return <WorkforceInlineEmpty title="Geçmiş bulunamadı" description="Bu mağaza için giriş veya çıkış dönemi yok." />
   const history = input.query.data?.history
-  return <><div className="workforce-history-list">{rows.map((row, index) => <article key={`${row.employeeId}-${row.entryDate}-${index}`}><div><strong>{row.displayName}</strong><span>{row.exitDate ? 'İşten çıkış kaydı' : 'Aktif çalışma dönemi'}</span></div><dl><div><dt>İşe giriş</dt><dd>{formatDate(row.entryDate)}</dd></div><div><dt>İşten çıkış</dt><dd>{formatDate(row.exitDate)}</dd></div><div><dt>Toplam çalışma</dt><dd>{formatTenure(row.totalWorkingDays)}</dd></div></dl></article>)}</div>{history ? <div className="command-canvas-list-footer"><Pager offset={history.offset} limit={history.limit} total={history.total} hasMore={history.hasMore} onOffset={input.onOffset} /></div> : null}</>
+  return <><div className="workforce-history-list">{rows.map((row, index) => <article key={`${row.employeeId}-${row.entryDate}-${index}`}><div><strong>{row.displayName}</strong><span>{row.positionName || 'Unvan bilgisi yok'}</span></div><dl><div><dt>İşe giriş</dt><dd>{formatDate(row.entryDate)}</dd></div><div><dt>İşten çıkış</dt><dd>{formatDate(row.exitDate)}</dd></div><div><dt>Toplam çalışma</dt><dd>{formatTenure(row.totalWorkingDays)}</dd></div></dl></article>)}</div>{history ? <div className="command-canvas-list-footer"><Pager offset={history.offset} limit={history.limit} total={history.total} hasMore={history.hasMore} onOffset={input.onOffset} /></div> : null}</>
 }
 
 function Pager(input: { offset: number; limit: number; total: number; hasMore: boolean; onOffset: (offset: number) => void }) { return <><span className="workforce-pager-count">{input.total === 0 ? 0 : input.offset + 1}-{Math.min(input.offset + input.limit, input.total)} / {input.total}</span><Button size="sm" variant="outline" disabled={input.offset === 0} onClick={() => input.onOffset(Math.max(0, input.offset - input.limit))}><ChevronLeft /> Önceki</Button><Button size="sm" variant="outline" disabled={!input.hasMore} onClick={() => input.onOffset(input.offset + input.limit)}>Sonraki <ChevronRight /></Button></> }
 function PersonnelPager(input: { store: WorkforceCommandStore; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void }) { const atBatchEnd = input.page + 1 >= input.pageCount; const atStart = input.page === 0; return <><span className="workforce-pager-count">{input.store.personnelOffset + input.page * PERSON_PAGE_SIZE + 1}-{Math.min(input.store.personnelOffset + (input.page + 1) * PERSON_PAGE_SIZE, input.total)} / {input.total}</span><Button size="sm" variant="outline" disabled={atStart && input.store.personnelOffset === 0} onClick={() => atStart ? input.onPreviousBatch() : input.onPage(input.page - 1)}><ChevronLeft /> Önceki</Button><Button size="sm" variant="outline" disabled={atBatchEnd && !input.store.personnelHasMore} onClick={() => atBatchEnd ? input.onNextBatch() : input.onPage(input.page + 1)}>Sonraki <ChevronRight /></Button></> }
-function WorkforceState(input: { title: string; description: string; onRetry?: () => void; loading?: boolean }) { return <CommandCanvasPage ariaLabelledBy="workforce-state-title" {...(input.loading ? { testId: 'store-workforce-loading' } : {})}><CommandCanvasPageHeader title="Norm Kadro" titleId="workforce-state-title" description="Personel ve kadro görünümü" /><WorkforceInlineEmpty title={input.title} description={input.description} {...(input.onRetry ? { action: input.onRetry } : {})} /></CommandCanvasPage> }
-function WorkforceInlineEmpty(input: { title: string; description: string; action?: () => void }) { return <div className="workforce-empty"><BriefcaseBusiness aria-hidden="true" /><strong>{input.title}</strong><p>{input.description}</p>{input.action ? <Button variant="outline" onClick={input.action}>Tekrar dene</Button> : null}</div> }
-function Status(input: { value: ReturnType<typeof workforceStoreStatus> }) { const copy = { shortage: 'Eksik', balanced: 'Tam', surplus: 'Fazla', unconfigured: 'Tanımsız' }[input.value]; return <span className="workforce-status" data-status={input.value}>{copy}</span> }
+function WorkforceState(input: { title: string; description: string; onRetry?: () => void; loading?: boolean }) { return <CommandCanvasPage ariaLabelledBy="workforce-state-title" {...(input.loading ? { testId: 'store-workforce-loading' } : {})}><StoreOperationsHeader title="Norm Kadro" titleId="workforce-state-title" eyebrow="Personel ve kadro" description="Güncel mağaza kadro görünümü" icon={UsersRound} /><WorkforceInlineEmpty title={input.title} description={input.description} {...(input.onRetry ? { action: input.onRetry } : {})} /></CommandCanvasPage> }
+function WorkforceInlineEmpty(input: { title: string; description: string; action?: () => void }) { return <Empty className="workforce-empty"><EmptyHeader><EmptyMedia variant="icon"><BriefcaseBusiness aria-hidden="true" /></EmptyMedia><EmptyTitle>{input.title}</EmptyTitle><EmptyDescription>{input.description}</EmptyDescription></EmptyHeader>{input.action ? <Button variant="outline" onClick={input.action}>Tekrar dene</Button> : null}</Empty> }
+function Status(input: { value: ReturnType<typeof workforceStoreStatus> }) { const copy = { shortage: 'Eksik', balanced: 'Tam', surplus: 'Fazla', unconfigured: 'Tanımsız' }[input.value]; return <Badge variant={input.value === 'shortage' ? 'destructive' : 'secondary'}>{copy}</Badge> }
 function Fact(input: { label: string; value: string }) { return <div><span>{input.label}</span><strong>{input.value}</strong></div> }
 function formatGap(value: number | null) { if (value === null) return 'Tanımsız'; if (value > 0) return `${value} açık`; if (value < 0) return `${Math.abs(value)} fazla`; return 'Dengede' }
 function formatShortage(store: WorkforceCommandStore) { if ((store.gap ?? 0) <= 0) return 'Yok'; return store.shortageDays === null ? 'Bilgi yok' : `${store.shortageDays} gündür` }

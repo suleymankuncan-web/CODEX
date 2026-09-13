@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { toast, type ExternalToast } from 'sonner'
 import { getUserFacingErrorMessage } from './format'
+import { translatedNotificationMessage } from './notification-messages'
 
 type ActionToastOptions = ExternalToast
 type ActionToastMessage = string | ReactNode
@@ -21,7 +22,7 @@ export function toastErrorFromUnknown(error: unknown, fallbackMessage: string) {
 
 export const actionToast = {
   success(message: ActionToastMessage, options?: ActionToastOptions) {
-    return toast.success(message, withDefaultDuration(options))
+    return toast.success(typeof message === 'string' ? translatedNotificationMessage(message) ?? message : message, withDefaultDuration(options))
   },
 
   error(error: unknown, fallbackMessage: string, options?: ActionToastOptions) {
@@ -32,7 +33,7 @@ export const actionToast = {
   },
 
   info(message: ActionToastMessage, options?: ActionToastOptions) {
-    return toast.info(message, withDefaultDuration(options))
+    return toast.info(typeof message === 'string' ? translatedNotificationMessage(message) ?? message : message, withDefaultDuration(options))
   },
 
   warning(message: ActionToastMessage, options?: ActionToastOptions) {

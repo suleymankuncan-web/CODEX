@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T03:00:55.566Z",
+  "generatedAt": "2026-09-13T04:22:19.819Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 211,
     "openApiEndpointCount": 266,
-    "routeApiEdgeCount": 262,
+    "routeApiEdgeCount": 264,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -4003,7 +4003,7 @@
       "exportedFunction": "getSellerCodeReference",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 150
+        "line": 153
       }
     },
     {
@@ -4018,7 +4018,7 @@
       "exportedFunction": "getSellerCodeRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 164
+        "line": 167
       }
     },
     {
@@ -4033,7 +4033,7 @@
       "exportedFunction": "approveSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 172
+        "line": 175
       }
     },
     {
@@ -4048,7 +4048,7 @@
       "exportedFunction": "rejectSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 188
+        "line": 191
       }
     },
     {
@@ -4063,7 +4063,7 @@
       "exportedFunction": "resubmitSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 212
+        "line": 215
       }
     },
     {
@@ -4078,7 +4078,7 @@
       "exportedFunction": "getPositionOptions",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 234
+        "line": 237
       }
     },
     {
@@ -4093,7 +4093,7 @@
       "exportedFunction": "getStoreEmployees",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 239
+        "line": 242
       }
     },
     {
@@ -4108,7 +4108,7 @@
       "exportedFunction": "getStoreHeadcountGap",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 252
+        "line": 255
       }
     },
     {
@@ -4123,7 +4123,7 @@
       "exportedFunction": "getOrgStores",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 273
+        "line": 276
       }
     },
     {
@@ -4138,7 +4138,7 @@
       "exportedFunction": "getWorkforceCommandWorkspace",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 303
+        "line": 308
       }
     },
     {
@@ -4153,7 +4153,7 @@
       "exportedFunction": "getOffboardingRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 316
+        "line": 321
       }
     },
     {
@@ -4168,7 +4168,7 @@
       "exportedFunction": "createSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 333
+        "line": 338
       }
     },
     {
@@ -4183,7 +4183,7 @@
       "exportedFunction": "createOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 349
+        "line": 354
       }
     },
     {
@@ -4198,7 +4198,7 @@
       "exportedFunction": "approveOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 362
+        "line": 367
       }
     },
     {
@@ -4213,7 +4213,7 @@
       "exportedFunction": "rejectOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 379
+        "line": 384
       }
     },
     {
@@ -4228,7 +4228,7 @@
       "exportedFunction": "resubmitOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 397
+        "line": 402
       }
     },
     {
@@ -4243,7 +4243,7 @@
       "exportedFunction": null,
       "source": {
         "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
-        "line": 28
+        "line": 34
       }
     },
     {
@@ -4258,7 +4258,7 @@
       "exportedFunction": null,
       "source": {
         "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
-        "line": 38
+        "line": 48
       }
     },
     {
@@ -4273,7 +4273,7 @@
       "exportedFunction": "PersonnelCorrectionQueue",
       "source": {
         "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
-        "line": 58
+        "line": 85
       }
     },
     {
@@ -4288,7 +4288,7 @@
       "exportedFunction": null,
       "source": {
         "file": "admin-web/src/features/workforce/personnel-corrections.tsx",
-        "line": 72
+        "line": 99
       }
     }
   ],
@@ -10495,6 +10495,11 @@
         "apiCallId": "api:45"
       },
       {
+        "id": "edge:route:store:/store/approvals:api:121",
+        "routeId": "route:store:/store/approvals",
+        "apiCallId": "api:121"
+      },
+      {
         "id": "edge:route:store:/store/approvals:api:162",
         "routeId": "route:store:/store/approvals",
         "apiCallId": "api:162"
@@ -10868,6 +10873,11 @@
         "id": "edge:route:store:/store/visual-campaigns:api:190",
         "routeId": "route:store:/store/visual-campaigns",
         "apiCallId": "api:190"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:121",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:121"
       },
       {
         "id": "edge:route:store:/store/workforce:api:193",

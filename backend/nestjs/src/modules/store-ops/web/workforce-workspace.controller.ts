@@ -19,6 +19,7 @@ export class WorkforceWorkspaceController {
     return {
       data: await this.service.getWorkspace({
         actor: request.user,
+        regionManagerUserId: query.regionManagerUserId,
         limit: query.limit,
         offset: query.offset,
         historyStoreId: query.historyStoreId,

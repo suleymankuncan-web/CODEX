@@ -53,3 +53,20 @@ describe('request center command canvas model', () => {
     expect(filterAndSortRequestCenterRows({ ...input, sort: 'waitingAsc' }).map((row) => row.title)).toEqual(['Newer', 'Older'])
   })
 })
+
+it('filters the same Istanbul month that is displayed at a UTC month boundary', () => {
+  const rows = buildRequestCenterRows({ copy: requestCenterCopy.tr, locale: 'tr', persona: 'regionManager', items: [{ ...baseItem, requestType: 'target', updatedAt: '2026-08-31T22:30:00.000Z' }] })
+  const options = { rows, tab: 'open' as const, query: '', type: 'all' as const, status: 'all' as const, sort: 'updatedDesc' as const }
+  expect(filterAndSortRequestCenterRows({ ...options, period: '2026-09' })).toHaveLength(1)
+  expect(filterAndSortRequestCenterRows({ ...options, period: '2026-08' })).toHaveLength(0)
+})
+it('includes personnel corrections in their own type filter', () => {
+  const rows = buildRequestCenterRows({ copy: requestCenterCopy.tr, locale: 'tr', persona: 'storeManager', items: [{ ...baseItem, requestType: 'personnelCorrection', status: 'pending_hr_approval', nextOwner: 'hr', personDisplayName: 'Personel' }] })
+  expect(rows[0]?.subtitle).toBe('Personel bilgisi düzeltme')
+  expect(filterAndSortRequestCenterRows({ rows, tab: 'open', query: '', type: 'personnelCorrection', status: 'pending', period: 'all', sort: 'updatedDesc' })).toHaveLength(1)
+})
+it('places rejected personnel corrections in completed requests without calling them returned', () => {
+  const [row] = buildRequestCenterRows({ copy: requestCenterCopy.tr, locale: 'tr', persona: 'storeManager', items: [{ ...baseItem, requestType: 'personnelCorrection', status: 'rejected', waitingSince: null, nextOwner: null, dueAt: null, isOverdue: false }] })
+  expect(row?.bucket).toBe('done')
+  expect(row?.statusLabel).toBe('Reddedildi')
+})

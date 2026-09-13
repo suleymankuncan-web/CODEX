@@ -199,7 +199,7 @@ export class WorkforceService {
     lastName: string;
     nationalId: string;
     phoneNumber: string;
-    username: string;
+    username?: string;
     email: string;
     hireDate: string;
     requestedPositionId: string;
@@ -216,6 +216,8 @@ export class WorkforceService {
       throw new NotFoundException(`Store not found: ${input.storeId}`);
     }
 
+    const allowedPositions = await this.workforceRequestRepository.listPositionOptionsForStore({ storeId: input.storeId });
+    if (!allowedPositions.some(position => position.position_id === input.requestedPositionId)) throw new BadRequestException("Select an available store position");
     const lastReferenceSellerCode =
       store.store_type === "franchise"
         ? await this.workforceRequestRepository.getLatestFranchiseSellerCode()
@@ -232,7 +234,7 @@ export class WorkforceService {
       nationalIdHash: this.hashNationalId(input.nationalId),
       nationalIdLast4: input.nationalId.slice(-4),
       phoneNumber: input.phoneNumber.trim(),
-      username: input.username.trim().toLowerCase(),
+      username: input.email.trim().toLowerCase(),
       email: input.email.trim().toLowerCase(),
       hireDate: input.hireDate,
       requestedPositionId: input.requestedPositionId,
@@ -371,7 +373,7 @@ export class WorkforceService {
     lastName: string;
     nationalId: string;
     phoneNumber: string;
-    username: string;
+    username?: string;
     email: string;
     hireDate: string;
     requestedPositionId: string;
@@ -396,6 +398,8 @@ export class WorkforceService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
+    const allowedPositions = await this.workforceRequestRepository.listPositionOptionsForStore({ storeId: existing.store_id });
+    if (!allowedPositions.some(position => position.position_id === input.requestedPositionId)) throw new BadRequestException("Select an available store position");
     const lastReferenceSellerCode =
       existing.store_type === "franchise"
         ? await this.workforceRequestRepository.getLatestFranchiseSellerCode()
@@ -408,7 +412,7 @@ export class WorkforceService {
       nationalIdHash: this.hashNationalId(input.nationalId),
       nationalIdLast4: input.nationalId.slice(-4),
       phoneNumber: input.phoneNumber.trim(),
-      username: input.username.trim().toLowerCase(),
+      username: input.email.trim().toLowerCase(),
       email: input.email.trim().toLowerCase(),
       hireDate: input.hireDate,
       requestedPositionId: input.requestedPositionId,

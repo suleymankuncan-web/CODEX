@@ -1,10 +1,21 @@
 import { expect, test } from './test-fixtures'
+import type { Locator, Page } from '@playwright/test'
 import { setStoredLocale } from './locale-test-utils'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
 import { pressTabFromDocumentStart } from './keyboard-test-utils'
 import { demoStoreId, demoRegionId, demoEmployeeId, demoPositionId, regionSecondStoreId, outsideStoreId } from './store-surfaces-identities'
 import { selectComboboxOption, createStoreAuthSession, routeAuthSession, routeRegionWorkforceReadCalls, routeStoreSurfaceApi } from './store-surfaces-api-fixtures'
 import { sellerCodeRequestFixture, offboardingRequestFixture, rejectedSellerCodeRequestFixture, outsideStoreSellerCodeRequestFixture, outsideStoreRejectedSellerCodeRequestFixture, rejectedOffboardingRequestFixture, returnedOffboardingStatusFixture, outsideStoreOffboardingRequestFixture, outsideStoreRejectedOffboardingRequestFixture, storeEmployeesFixture, returnedOffboardingEmployeeFixture } from './store-surfaces-operations-fixtures'
+
+async function selectSingleCalendarDate(page: Page, trigger: Locator, date: string) {
+  const [year, month, day] = date.split('-')
+  await trigger.click()
+  const calendar = page.getByRole('dialog', { name: 'Dönem seç' })
+  await calendar.getByRole('combobox', { name: 'Yıl seç' }).selectOption(year)
+  await calendar.getByRole('combobox', { name: 'Ay seç' }).selectOption(String(Number(month) - 1))
+  await calendar.locator('button[data-day]').filter({ hasText: new RegExp(`^${Number(day)}$`) }).first().click()
+  await calendar.getByRole('button', { name: 'Uygula', exact: true }).click()
+}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -208,8 +219,8 @@ test('store workforce region command layout stays aligned on compact desktop', a
   const layout = await page.evaluate(() => {
     const ledger = document.querySelector('.command-canvas-data-list')?.getBoundingClientRect()
     const root = document.documentElement.getBoundingClientRect()
-    const icon = document.querySelector('.command-canvas-metric-icon')?.getBoundingClientRect()
-    const svg = document.querySelector('.command-canvas-metric-icon svg')?.getBoundingClientRect()
+    const icon = document.querySelector('.operations-metric-icon')?.getBoundingClientRect()
+    const svg = document.querySelector('.operations-metric-icon svg')?.getBoundingClientRect()
     const row = document.querySelector('.workforce-store-row')?.getBoundingClientRect()
 
     return {
@@ -332,8 +343,8 @@ test('store workforce page submits seller code requests with Keycloak account de
         firstName: 'Ayse',
         lastName: 'Yilmaz',
         nationalId: '12345678901',
-        phoneNumber: '05551234567',
-        username: 'ayse.yilmaz',
+        phoneNumber: '5551234567',
+        username: 'ayse.yilmaz@example.com',
         email: 'ayse.yilmaz@example.com',
         hireDate: '2026-05-01',
         requestedPositionId: demoPositionId,
@@ -367,20 +378,19 @@ test('store workforce page submits seller code requests with Keycloak account de
   await page.getByRole('button', { name: 'Personel sicil talebi' }).click()
 
   const sellerCodeForm = page.getByLabel(/Sat.*kodu.*formu/i)
-  await expect(sellerCodeForm.getByRole('heading', { name: /Sat.*kodu.*talebi/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Personel sicil talebi' })).toBeVisible()
   await sellerCodeForm.getByLabel('Ad', { exact: true }).fill('Ayse')
   await sellerCodeForm.getByLabel('Soyad', { exact: true }).fill('Yilmaz')
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
   await sellerCodeForm.getByLabel(/Telefon/i).fill('05551234567')
-  await sellerCodeForm.getByLabel('Kullanıcı adı').fill('ayse.yilmaz')
   await sellerCodeForm.getByLabel('E-posta').fill('ayse.yilmaz@example.com')
-  await sellerCodeForm.getByLabel(/giri.*tarihi/i).fill('2026-05-01')
+  await selectSingleCalendarDate(page, sellerCodeForm.getByLabel(/giri.*tarihi/i), '2026-05-01')
   const positionSelect = sellerCodeForm.getByRole('combobox', { name: 'Pozisyon' })
   await selectComboboxOption(page, positionSelect, 'Satış Danışmanı')
   await sellerCodeForm.getByLabel('Talep nedeni').fill('Yeni personel')
   await sellerCodeForm.getByRole('button', { name: /g.*nder/i }).click()
 
-  await expect(page.getByText('Seller code request submitted for HR approval')).toBeVisible()
+  await expect(page.getByText('Personel sicil talebi İK onayına gönderildi.')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
 })
 
@@ -428,11 +438,11 @@ test('store workforce page submits offboarding requests with the existing payloa
   const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
   const employeeSelect = offboardingForm.getByRole('combobox', { name: 'Personel' })
   await selectComboboxOption(page, employeeSelect, /Store Personnel/)
-  await offboardingForm.getByLabel(/tarihi/i).fill('2026-05-10')
+  await selectSingleCalendarDate(page, offboardingForm.getByLabel(/tarihi/i), '2026-05-10')
   await offboardingForm.getByLabel('Talep nedeni').fill('Personel istifa etti')
   await offboardingForm.getByRole('button', { name: /g.*nder/i }).click()
 
-  await expect(page.getByText('Offboarding request submitted for HR approval')).toBeVisible()
+  await expect(page.getByText('İşten ayrılma talebi İK onayına gönderildi.')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
 })
 
@@ -454,8 +464,8 @@ test('store workforce page keeps returned request resubmit identity and payload 
         firstName: 'Ayse',
         lastName: 'Yilmaz',
         nationalId: '12345678902',
-        phoneNumber: '05551234567',
-        username: 'ayse.yilmaz',
+        phoneNumber: '5551234567',
+        username: 'ayse.yilmaz@example.com',
         email: 'ayse.yilmaz@example.com',
         hireDate: '2026-05-02',
         requestedPositionId: demoPositionId,
@@ -541,23 +551,23 @@ test('store workforce page keeps returned request resubmit identity and payload 
   await expect(page.getByText('Outside store correction')).toHaveCount(0)
   await expect(page.getByText('Outside offboarding correction')).toHaveCount(0)
 
-  await page.getByRole('button', { name: /Sat.*kodu.*d.*zenle/i }).click()
+  await page.locator('.workforce-returned-row').filter({ hasText: 'Ayse Yilmaz' }).getByRole('button', { name: 'Düzenle' }).click()
   const sellerCodeForm = page.getByLabel(/Sat.*kodu.*formu/i)
   await expect(sellerCodeForm.getByLabel('Ad', { exact: true })).toHaveValue('Ayse')
   await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678902')
-  await sellerCodeForm.getByLabel(/giri.*tarihi/i).fill('2026-05-02')
+  await selectSingleCalendarDate(page, sellerCodeForm.getByLabel(/giri.*tarihi/i), '2026-05-02')
   await sellerCodeForm.getByLabel('Talep nedeni').fill('TC guncellendi')
   await sellerCodeForm.getByRole('button', { name: /yeniden.*g.*nder/i }).click()
-  await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
+  await expect(page.getByText('Personel sicil talebi yeniden İK onayına gönderildi.')).toBeVisible()
 
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: /ade.*talepler/i }).click()
-  await page.getByRole('button', { name: /Personel.*d.*zenle/i }).click()
+  await page.locator('.workforce-returned-row').filter({ hasText: 'Store Personnel' }).getByRole('button', { name: 'Düzenle' }).click()
   const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
-  await offboardingForm.getByLabel(/tarihi/i).fill('2026-05-12')
+  await selectSingleCalendarDate(page, offboardingForm.getByLabel(/tarihi/i), '2026-05-12')
   await offboardingForm.getByLabel('Talep nedeni').fill('Tarih ve sebep guncellendi')
   await offboardingForm.getByRole('button', { name: /yeniden.*g.*nder/i }).click()
-  await expect(page.getByText('Offboarding request resubmitted for HR approval')).toBeVisible()
+  await expect(page.getByText('İşten ayrılma talebi yeniden İK onayına gönderildi.')).toBeVisible()
 
   expect(capturedSellerPayloads).toHaveLength(1)
   expect(capturedOffboardingPayloads).toHaveLength(1)

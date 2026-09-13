@@ -52,4 +52,10 @@ describe('workforce command model', () => {
     expect(reportViewer[1]).toBe('REPORT_VIEWER:company-a')
     expect(storeManager[1]).toBe('STORE_MANAGER:store-a')
   })
+  it('keeps real manager user selections in separate workspace caches', () => {
+    const common = { scopeSignature: 'REPORT_VIEWER:company', offset: 0, personnelOffset: 0, query: '', status: 'all' as const, sort: 'store' as const, direction: 'ascending' as const, rail: 'all' as const }
+    expect(workforceWorkspaceQueryKey({ ...common, regionManagerUserId: 'user-a' })).not.toEqual(workforceWorkspaceQueryKey({ ...common, regionManagerUserId: 'user-b' }))
+    expect(workforceWorkspaceQueryKey(common)).not.toEqual(workforceWorkspaceQueryKey({ ...common, regionManagerUserId: 'user-a' }))
+  })
+
 })

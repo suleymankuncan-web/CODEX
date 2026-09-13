@@ -22,7 +22,7 @@ export function OperationsPeriod(input: { value: string; locale: AppLocale; onCh
 }
 
 export function OperationsMetrics(input: { label: string; items: Array<{ id: string; label: string; value: number | string; icon: LucideIcon; selected: boolean; onClick: () => void }> }) {
-  return <div className="operations-metrics" role="group" aria-label={input.label}>{input.items.map(item => <Button key={item.id} variant="outline" className="operations-metric command-canvas-metric" aria-pressed={item.selected} onClick={item.onClick}><span><item.icon aria-hidden="true" />{item.label}</span><strong>{item.value}</strong></Button>)}</div>
+  return <div className="operations-metrics" role="group" aria-label={input.label}>{input.items.map(item => <Button key={item.id} variant="outline" className="operations-metric command-canvas-metric" aria-pressed={item.selected} onClick={item.onClick}><span><span className="operations-metric-icon"><item.icon aria-hidden="true" /></span>{item.label}</span><strong>{item.value}</strong></Button>)}</div>
 }
 
 export type OperationsDirectoryItem = { id: string; label: string; detail: string }

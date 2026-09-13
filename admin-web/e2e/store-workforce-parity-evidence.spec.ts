@@ -74,11 +74,10 @@ for (const scenario of [
     await page.goto('/store/workforce')
 
     await expect(page.getByTestId('store-workforce-region-row')).toHaveCount(3)
-    const expectedDividerCount = scenario.view === 'report_viewer' ? 2 : 0
-    await expect(page.locator('.workforce-region-divider')).toHaveCount(expectedDividerCount)
+    await expect(page.getByRole('complementary', { name: 'Bölge müdürleri', exact: true })).toHaveCount(scenario.view === 'report_viewer' ? 1 : 0)
     if (scenario.view === 'report_viewer') {
-      await expect(page.locator('.workforce-region-divider').filter({ hasText: 'Bölge Müdürü A' })).toHaveCount(1)
-      await expect(page.locator('.workforce-region-divider').filter({ hasText: 'Bölge Müdürü B' })).toHaveCount(1)
+      await expect(page.locator('.operations-directory-items').getByRole('radio', { name: /Bölge Müdürü A/ })).toHaveCount(1)
+      await expect(page.locator('.operations-directory-items').getByRole('radio', { name: /Bölge Müdürü B/ })).toHaveCount(1)
     }
     await expect(page.getByRole('button', { name: /Personel sicil talebi|İşten ayrılma talebi/ })).toHaveCount(0)
     await expectCommandCanvasFrame(page)
@@ -128,11 +127,23 @@ async function prepare(
 ) {
   await installStoreContractSession(page, persona)
   await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/org/region-managers', route => route.fulfill({ json: { items: [
+    { userId: 'manager-a', displayName: 'Bölge Müdürü A', storeIds: [storeIds[0], storeIds[2]] },
+    { userId: 'manager-b', displayName: 'Bölge Müdürü B', storeIds: [storeIds[1]] },
+    { userId: 'manager-empty', displayName: 'Yeni Bölge Müdürü', storeIds: [] },
+  ] } }))
   await page.route('**/api/store/workforce/workspace**', async (route) => {
     const url = new URL(route.request().url())
     const historyStoreId = url.searchParams.get('historyStoreId')
     const historyOffset = Number(url.searchParams.get('historyOffset') ?? '0')
-    await route.fulfill({ json: { data: createWorkspace(view, historyStoreId, historyOffset) } })
+    const data = createWorkspace(view, historyStoreId, historyOffset)
+    const manager = url.searchParams.get('regionManagerUserId')
+    if (manager) {
+      data.stores.items = data.stores.items.filter(store => manager === 'manager-a' ? [storeIds[0], storeIds[2]].includes(store.storeId) : manager === 'manager-b' ? store.storeId === storeIds[1] : false)
+      data.stores.total = data.stores.items.length
+      data.summary.totalStores = data.stores.items.length
+    }
+    await route.fulfill({ json: { data } })
   })
 }
 
@@ -224,3 +235,20 @@ async function expectNoHorizontalOverflow(page: Page) {
 function evidencePath(file: string) {
   return fileURLToPath(new URL(`${evidenceRoot}/${file}`, import.meta.url))
 }
+
+
+test('Workforce real manager directory retains managers without rows and filters by user identity', async ({ page }) => {
+  await prepare(page, 'reportViewer', 'report_viewer')
+  await page.goto('/store/workforce')
+  const directory = page.getByRole('complementary', { name: 'Bölge müdürleri', exact: true })
+  await expect(directory.getByRole('radio', { name: /Yeni Bölge Müdürü/ })).toBeVisible()
+  const selectedRequest = page.waitForRequest(request => request.url().includes('/api/store/workforce/workspace') && new URL(request.url()).searchParams.get('regionManagerUserId') === 'manager-b')
+  await directory.getByRole('radio', { name: /Bölge Müdürü B/ }).click()
+  expect(new URL((await selectedRequest).url()).searchParams.has('regionId')).toBe(false)
+  await expect(page.getByTestId('store-workforce-region-row')).toHaveCount(1)
+  await expect(page.getByTestId('store-workforce-region-row')).toContainText('İstinyePark İzmir')
+  await directory.getByRole('radio', { name: /Yeni Bölge Müdürü/ }).click()
+  await expect(page.getByText('Bu seçimde mağaza yok')).toBeVisible()
+  await expect(directory.getByRole('radio', { name: /Bölge Müdürü A/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Personel sicil talebi|İşten ayrılma talebi|Bilgileri düzenle/ })).toHaveCount(0)
+})

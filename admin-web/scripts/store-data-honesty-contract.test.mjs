@@ -214,9 +214,10 @@ test('workforce command view preserves missing norm values instead of inventing 
   assert.doesNotMatch(workforceViewSource, /storeLabel:\s*storeId/u)
 })
 
-test('Norm Kadro has no demo-only turnover field or fallback percentage', () => {
-  assert.doesNotMatch(workforceApiSource, /turnover_rate|turnoverRate/u)
-  assert.doesNotMatch(workforceViewSource, /turnover:\s*null/u)
-  assert.doesNotMatch(workforceViewSource, /turnoverMetric/u)
+test('Norm Kadro renders only backend turnover values and preserves missing data', () => {
+  assert.match(workforceApiSource, /turnoverRate:\s*number \| null/u)
+  assert.match(workforceViewSource, /workspace\.summary\.turnoverRate == null \? 'Veri yok'/u)
+  assert.match(workforceViewSource, /selectedStore\.turnoverRate == null \?/u)
+  assert.doesNotMatch(workforceViewSource, /turnoverRate\s*\?\?\s*0/u)
   assert.doesNotMatch(workforceViewSource, /averageTurnover|turnoverValues/u)
 })

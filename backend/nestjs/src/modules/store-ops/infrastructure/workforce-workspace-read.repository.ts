@@ -35,6 +35,7 @@ export type WorkforceWorkspacePersonRow = {
 };
 
 export type WorkforceWorkspaceHistoryRow = {
+  position_name: string | null;
   employee_id: string;
   display_name: string;
   entry_date: string;
@@ -58,6 +59,7 @@ export class WorkforceWorkspaceReadRepository {
 
   async listStorePage(input: {
     scope: AuthReadScope;
+    regionManagerUserId?: string;
     limit: number;
     offset: number;
     query: string;
@@ -65,7 +67,7 @@ export class WorkforceWorkspaceReadRepository {
     sort: WorkforceStoreSort;
     direction: WorkforceSortDirection;
   }) {
-    const scoped = scopeClause(input.scope, "store");
+    const scoped = scopeClause(input.scope, "store", input.regionManagerUserId);
     const queryIndex = scoped.params.length + 1;
     const statusIndex = queryIndex + 1;
     const limitIndex = statusIndex + 1;
@@ -126,13 +128,16 @@ export class WorkforceWorkspaceReadRepository {
           LEFT JOIN active_assignment ON active_assignment.store_id = scoped_store.store_id
           LEFT JOIN norm_plan ON norm_plan.store_id = scoped_store.store_id
           LEFT JOIN LATERAL (
-            SELECT NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), '') AS display_name
+            SELECT COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), account.username, account.email, account.user_id::text) AS display_name
             FROM ops.user_role_assignment role_assignment
             INNER JOIN ops.role role ON role.role_id = role_assignment.role_id AND role.role_code = 'REGION_MANAGER'
-            INNER JOIN ops.user_account account ON account.user_id = role_assignment.user_id
+            INNER JOIN ops.user_account account ON account.user_id = role_assignment.user_id AND account.is_active = TRUE
+            INNER JOIN ops.user_action_store_assignment manager_store ON manager_store.user_id = account.user_id
+              AND manager_store.store_id = scoped_store.store_id
+              AND manager_store.start_at <= NOW()
+              AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
             LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id
-            WHERE role_assignment.region_id = scoped_store.region_id
-              AND role_assignment.start_at <= NOW()
+            WHERE role_assignment.start_at <= NOW()
               AND (role_assignment.end_at IS NULL OR role_assignment.end_at >= NOW())
             ORDER BY display_name ASC NULLS LAST, role_assignment.start_at DESC
             LIMIT 1
@@ -166,11 +171,11 @@ export class WorkforceWorkspaceReadRepository {
     };
   }
 
-  async summarizeScope(input: { scope: AuthReadScope }) {
-    const scoped = scopeClause(input.scope, "store");
+  async summarizeScope(input: { scope: AuthReadScope; regionManagerUserId?: string }) {
+    const scoped = scopeClause(input.scope, "store", input.regionManagerUserId);
     const result = await this.databaseService.query<{
       total_stores: string; active_personnel: string; shortage_stores: string;
-      open_positions: string; average_tenure_days: string | null;
+      turnover_rate: string | null; open_positions: string; average_tenure_days: string | null;
     }>(
       `
         WITH business_clock AS (
@@ -191,6 +196,19 @@ export class WorkforceWorkspaceReadRepository {
             AND employee.employment_status = 'active'
           GROUP BY assignment.store_id
         ),
+        turnover_counts AS (
+          SELECT
+            (SELECT COUNT(DISTINCT assignment.employee_id) FROM ops.employee_assignment_history assignment
+              JOIN scoped_store USING (store_id) CROSS JOIN business_clock clock
+              WHERE assignment.start_date <= DATE_TRUNC('year', clock.business_today)::date
+                AND (assignment.end_date IS NULL OR assignment.end_date >= DATE_TRUNC('year', clock.business_today)::date)) AS opening,
+            (SELECT COUNT(DISTINCT assignment.employee_id) FROM ops.employee_assignment_history assignment
+              JOIN scoped_store USING (store_id) CROSS JOIN business_clock clock
+              WHERE assignment.assignment_status = 'active' AND assignment.start_date <= clock.business_today
+                AND (assignment.end_date IS NULL OR assignment.end_date >= clock.business_today)) AS closing,
+            (SELECT COUNT(*) FROM ops.turnover_event event JOIN scoped_store USING (store_id) CROSS JOIN business_clock clock
+              WHERE event.event_type = 'termination' AND event.event_date BETWEEN DATE_TRUNC('year', clock.business_today)::date AND clock.business_today) AS leavers
+        ),
         norm_plan AS (
           SELECT plan.store_id, SUM(plan.planned_headcount)::numeric AS planned_count
           FROM ops.workforce_norm_plan plan
@@ -205,14 +223,15 @@ export class WorkforceWorkspaceReadRepository {
           COALESCE(SUM(GREATEST(norm_plan.planned_count - COALESCE(active_assignment.active_count, 0), 0)), 0)::text AS open_positions,
           CASE WHEN SUM(active_assignment.active_count) > 0
             THEN (SUM(active_assignment.average_tenure_days * active_assignment.active_count) / SUM(active_assignment.active_count))::text
-            ELSE NULL END AS average_tenure_days
+            ELSE NULL END AS average_tenure_days,
+          (SELECT ROUND(100.0 * leavers / NULLIF((opening + closing) / 2.0, 0), 1)::text FROM turnover_counts) AS turnover_rate
         FROM scoped_store
         LEFT JOIN active_assignment ON active_assignment.store_id = scoped_store.store_id
         LEFT JOIN norm_plan ON norm_plan.store_id = scoped_store.store_id
       `,
       scoped.params,
     );
-    return result.rows[0] ?? { total_stores: "0", active_personnel: "0", shortage_stores: "0", open_positions: "0", average_tenure_days: null };
+    return result.rows[0] ?? { total_stores: "0", active_personnel: "0", shortage_stores: "0", open_positions: "0", average_tenure_days: null, turnover_rate: null };
   }
 
   async listActivePersonnel(input: { scope: AuthReadScope; storeId: string; limit: number; offset: number }) {
@@ -263,13 +282,14 @@ export class WorkforceWorkspaceReadRepository {
         WITH business_clock AS (SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date AS business_today),
         scoped_store AS (SELECT store.store_id FROM ops.store store WHERE ${scoped.sql} AND store.store_id = $${storeIndex}::uuid),
         intervals AS (
-          SELECT assignment.employee_id,
+          SELECT assignment.employee_id, assignment.assignment_id, position.position_name,
             COALESCE(assignment.start_date, employee.hire_date)::date AS entry_date,
             assignment.end_date::date AS exit_date,
             NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), '') AS display_name
           FROM ops.employee_assignment_history assignment
           INNER JOIN scoped_store ON scoped_store.store_id = assignment.store_id
           INNER JOIN ops.employee employee ON employee.employee_id = assignment.employee_id
+          LEFT JOIN ops.position position ON position.position_id = assignment.position_id AND position.company_id = employee.company_id
           WHERE COALESCE(assignment.start_date, employee.hire_date) IS NOT NULL
         ),
         with_prior_end AS (
@@ -289,7 +309,8 @@ export class WorkforceWorkspaceReadRepository {
           FROM marked
         ),
         presence_periods AS (
-          SELECT employee_id, MAX(display_name) AS display_name, MIN(entry_date)::text AS entry_date,
+          SELECT employee_id, MAX(display_name) AS display_name,
+            (ARRAY_AGG(position_name ORDER BY entry_date DESC, exit_date DESC NULLS FIRST, assignment_id))[1] AS position_name, MIN(entry_date)::text AS entry_date,
             CASE WHEN BOOL_OR(exit_date IS NULL) THEN NULL ELSE MAX(exit_date)::text END AS exit_date,
             CASE WHEN MIN(entry_date) IS NULL THEN NULL
               ELSE COALESCE(MAX(exit_date), clock.business_today) - MIN(entry_date) END AS total_working_days
@@ -311,13 +332,32 @@ export class WorkforceWorkspaceReadRepository {
   }
 }
 
-function scopeClause(scope: AuthReadScope, alias: string) {
+function scopeClause(scope: AuthReadScope, alias: string, regionManagerUserId?: string) {
   const clauses: string[] = [];
   const params: unknown[] = [];
   if (scope.companyIds.length > 0) { params.push(scope.companyIds); clauses.push(`${alias}.company_id = ANY($${params.length}::uuid[])`); }
   if (scope.regionIds.length > 0) { params.push(scope.regionIds); clauses.push(`${alias}.region_id = ANY($${params.length}::uuid[])`); }
   if (scope.storeIds.length > 0) { params.push(scope.storeIds); clauses.push(`${alias}.store_id = ANY($${params.length}::uuid[])`); }
-  return { sql: clauses.length > 0 ? `(${clauses.join(" OR ")})` : "FALSE", params };
+  let sql = clauses.length > 0 ? `(${clauses.join(" OR ")})` : "FALSE";
+  if (regionManagerUserId) {
+    params.push(regionManagerUserId);
+    sql += ` AND EXISTS (
+      SELECT 1 FROM ops.user_action_store_assignment manager_store
+      INNER JOIN ops.user_account manager_account ON manager_account.user_id = manager_store.user_id AND manager_account.is_active = TRUE
+      WHERE manager_store.store_id = ${alias}.store_id
+        AND manager_store.user_id = $${params.length}::uuid
+        AND manager_store.start_at <= NOW()
+        AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+        AND EXISTS (
+          SELECT 1 FROM ops.user_role_assignment manager_role
+          INNER JOIN ops.role role ON role.role_id = manager_role.role_id AND role.role_code = 'REGION_MANAGER'
+          WHERE manager_role.user_id = manager_store.user_id
+            AND manager_role.start_at <= NOW()
+            AND (manager_role.end_at IS NULL OR manager_role.end_at >= NOW())
+        )
+    )`;
+  }
+  return { sql, params };
 }
 
 function storeOrder(sort: WorkforceStoreSort, direction: WorkforceSortDirection) {

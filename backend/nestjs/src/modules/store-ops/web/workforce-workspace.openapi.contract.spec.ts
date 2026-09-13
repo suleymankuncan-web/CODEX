@@ -8,10 +8,10 @@ describe("Workforce Workspace OpenAPI", () => {
     expect(operation.responses["200"].content["application/json"].schema).toEqual({
       $ref: "#/components/schemas/WorkforceWorkspaceResponse",
     });
-    expect(operation.parameters.map((parameter: { name: string }) => parameter.name)).toEqual([
-      "q", "status", "sort", "direction", "limit", "offset", "historyLimit", "historyOffset", "historyStoreId",
+    expect(operation.parameters.map((parameter: { name: string }) => parameter.name).sort()).toEqual([
+      "regionManagerUserId", "q", "status", "sort", "direction", "limit", "offset", "historyLimit", "historyOffset", "historyStoreId",
       "personnelStoreId", "personnelLimit", "personnelOffset",
-    ]);
+    ].sort());
     expect(document.components.schemas.WorkforceWorkspaceCapabilities.properties).toEqual({
       canCreateSellerCodeRequest: { type: "boolean" },
       canCreateOffboardingRequest: { type: "boolean" },

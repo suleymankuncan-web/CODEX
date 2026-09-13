@@ -134,7 +134,7 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
   await gotoReportViewerRoute(page, '/store/workforce')
   await expect(page.getByText('Bölge Müdürü A').first()).toBeVisible()
   await expect(page.getByText('Bölge Müdürü B').first()).toBeVisible()
-  await expect(page.locator('.workforce-region-divider').filter({ hasText: 'Bölge Müdürü A' })).toHaveCount(1)
+  await expect(page.getByRole('radio', { name: /Bölge Müdürü A.*2 mağaza/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Personel sicil talebi|İşten ayrılma talebi/ })).toHaveCount(0)
 })
 
@@ -197,6 +197,12 @@ test('Report Viewer cannot open any Admin route family', async ({ page }) => {
 })
 
 async function routeReportViewerWorkforce(page: Page) {
+  await page.route('**/api/org/region-managers', async (route) => {
+    await route.fulfill({ json: { items: [
+      { userId: 'manager-a', displayName: 'Bölge Müdürü A', storeIds: ['viewer-store-1', 'viewer-store-3'] },
+      { userId: 'manager-b', displayName: 'Bölge Müdürü B', storeIds: ['viewer-store-2'] },
+    ] } })
+  })
   await page.route('**/api/store/workforce/workspace**', async (route) => {
     const stores = [
       createWorkforceStore('viewer-store-1', 'Ankara Mağaza', 'viewer-region-1', 'Bölge Müdürü A'),

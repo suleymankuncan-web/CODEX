@@ -1,5 +1,5 @@
+import { CalendarPicker } from '../components/ui/calendar-picker'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type { TranslateFunction } from '../features/localization/dictionary'
@@ -106,12 +106,7 @@ export function OffboardingRequestForm(input: {
             <label className="store-request-label" htmlFor="offboarding-termination-date">
               {input.t('storeApprovals.terminationDate')}
             </label>
-            <Input
-              id="offboarding-termination-date"
-              type="date"
-              value={input.offboardingTerminationDate}
-              onChange={(event) => input.onTerminationDateChange(event.target.value)}
-            />
+            <CalendarPicker mode="single" ariaLabel={input.t('storeApprovals.terminationDate')} value={input.offboardingTerminationDate} onValueChange={input.onTerminationDateChange} />
           </div>
 
           <div className="store-request-field store-request-field-wide">

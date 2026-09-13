@@ -1,11 +1,14 @@
+import { Transform } from "class-transformer";
 import { IsDateString, IsIn, IsOptional, IsString, Length, Matches } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class ResubmitSellerCodeRequestDto {
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
   @IsString()
   @Length(1, 80)
   firstName!: string;
 
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
   @IsString()
   @Length(1, 80)
   lastName!: string;
@@ -15,12 +18,13 @@ export class ResubmitSellerCodeRequestDto {
   nationalId!: string;
 
   @IsString()
-  @Matches(/^[0-9+() -]{10,20}$/)
+  @Matches(/^(?=(?:\D*\d){10,15}\D*$)[0-9+() -]{10,20}$/)
   phoneNumber!: string;
 
   @IsString()
-  @Matches(/^[a-zA-Z0-9._-]{3,80}$/)
-  username!: string;
+  @IsOptional()
+  @Length(1, 254)
+  username?: string;
 
   @IsString()
   @Matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
@@ -36,8 +40,8 @@ export class ResubmitSellerCodeRequestDto {
   @IsIn(["full_time", "part_time", "temporary"])
   employmentType!: "full_time" | "part_time" | "temporary";
 
-  @IsOptional()
+  @Transform(({ value }) => typeof value === "string" ? value.trim() : value)
   @IsString()
   @Length(1, 500)
-  requestReason?: string;
+  requestReason!: string;
 }

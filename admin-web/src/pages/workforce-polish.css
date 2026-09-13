@@ -1,0 +1,103 @@
+.workforce-detail-sheet[data-slot='sheet-content'] { width:min(900px,96vw); max-width:900px; padding:0; background:var(--card); overflow-y:auto; }
+.workforce-drawer { padding:0; gap:0; min-height:0; }
+.workforce-drawer-heading { padding:22px 48px 22px 24px; background:var(--primary); color:var(--primary-foreground); gap:6px; }
+.workforce-drawer-heading [data-slot$='title'] { color:inherit; font-size:20px; font-weight:650; }
+.workforce-drawer-heading [data-slot$='description'] { color:var(--primary-foreground); opacity:.85; font-size:12px; }
+.workforce-back { width:fit-content; margin-bottom:8px; }
+.workforce-drawer-facts { margin:16px 20px; gap:10px; }
+.workforce-drawer-facts > div { padding:10px 14px; border-radius:10px; background:var(--accent); gap:3px; }
+.workforce-drawer .command-canvas-data-list { margin:0 20px 20px; border-radius:10px; overflow:hidden; }
+.workforce-personnel-list.compact .workforce-list-head { display:grid; }
+.workforce-personnel-list.compact .workforce-person-row { grid-template-columns:minmax(140px,1.3fr) minmax(150px,1.2fr) minmax(100px,1fr) minmax(85px,.8fr) minmax(65px,.65fr); min-height:46px; padding:6px 8px; gap:0; }
+.workforce-personnel-list.compact .workforce-person-row > :first-child { grid-column:auto; }
+.workforce-personnel-list.compact .workforce-person-row [data-label]::before { display:none !important; }
+.workforce-person-grid { grid-template-columns:minmax(140px,1.3fr) minmax(150px,1.2fr) minmax(100px,1fr) minmax(85px,.8fr) minmax(100px,1fr); }
+.workforce-person-row { min-height:50px; padding-block:6px; }
+.workforce-list-title { min-height:52px; padding:10px 12px; background:var(--accent); }
+.workforce-list-title > strong { font-size:12px; }
+.workforce-list-title > button { flex-shrink:0; }
+.workforce-history-list { gap:0; padding:12px 20px 20px; }
+.workforce-history-list article { grid-template-columns:1fr 2fr; gap:16px; padding:13px 8px; border:0; border-bottom:1px solid var(--border); border-radius:0; }
+.workforce-history-list article strong { color:var(--primary); }
+.workforce-history-list dl { gap:14px; align-items:center; }
+.workforce-store-search[data-slot='input-group'] { background:var(--card); margin:6px 0; padding:0; height:34px; min-height:34px; }
+.workforce-list-head:has(.workforce-store-search) { min-height:52px; }
+.workforce-store-search input { min-width:0; width:100%; }
+.workforce-manager-directory .operations-directory { padding:0; border:1px solid var(--border); border-radius:16px; overflow:hidden; background:var(--card); }
+.workforce-manager-directory .operations-directory-heading { padding:16px 14px 8px; }
+.workforce-manager-directory .operations-directory > [data-slot='input-group'] { margin:0 12px 12px; width:calc(100% - 24px); background:var(--card); }
+.workforce-manager-directory .operations-directory-items { padding:0 8px; gap:0; }
+.workforce-manager-directory .operations-directory-items > button { min-height:58px; height:auto; border:0; border-bottom:1px solid var(--border); border-radius:0; padding:10px 12px; justify-content:flex-start; width:100%; }
+.workforce-manager-directory .operations-directory-items > button[data-state='on'] { background:var(--accent); box-shadow:inset 3px 0 var(--primary); }
+.workforce-manager-directory .operations-directory-items strong { font-size:13px; }
+.workforce-manager-directory .operations-directory-items small { font-size:11px; color:var(--primary); }
+.workforce-request-dialog[data-slot='dialog-content'] { width:min(760px,calc(100vw - 24px)); max-width:760px; padding:0; gap:0; max-height:92dvh; overflow:hidden; display:flex; flex-direction:column; border-color:var(--border); border-radius:18px; }
+.workforce-request-dialog .workforce-drawer-heading { flex-shrink:0; }
+.workforce-request-body { padding:20px; overflow-y:auto; min-height:0; }
+.workforce-request-dialog .store-request-sheet { border:0; background:transparent; box-shadow:none; padding:0; }
+.workforce-request-dialog .store-request-sheet-head { display:none; }
+.workforce-request-dialog .store-request-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; padding:0; }
+.workforce-request-dialog .store-request-field { padding:0; border:0; border-radius:0; background:transparent; min-width:0; }
+.workforce-request-dialog .store-request-label { color:var(--foreground); font-size:12px; font-weight:550; text-transform:none; letter-spacing:0; margin-bottom:6px; }
+.workforce-request-dialog input,.workforce-request-dialog textarea,.workforce-request-dialog [data-slot='select-trigger'] { background:var(--card); border-color:var(--input); border-radius:8px; color:var(--foreground); }
+.workforce-request-dialog .store-request-field-wide { grid-column:1 / -1; }
+.workforce-request-dialog .store-request-actions { border-top:1px solid var(--border); padding-top:16px; }
+.workforce-request-dialog .store-request-actions button { min-height:38px; }
+.workforce-request-dialog .store-request-note { color:var(--muted-foreground); }
+.workforce-returned-list { display:grid; gap:0; }
+.workforce-returned-row { display:grid; grid-template-columns:1fr auto; align-items:center; gap:10px; padding:14px 0; border-bottom:1px solid var(--border); }
+.workforce-returned-row:first-child { padding-top:0; }
+.workforce-returned-row:last-child { border:0; padding-bottom:0; }
+.workforce-returned-row strong { display:block; color:var(--foreground); font-size:14px; }
+.workforce-returned-row p { margin:4px 0; color:var(--muted-foreground); font-size:12px; }
+.workforce-correction-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 18px; padding:20px; overflow-y:auto; }
+.workforce-correction-form .workforce-form-wide { grid-column:1 / -1; }
+@media(max-width:650px) {
+ .workforce-detail-sheet[data-slot='sheet-content'] { width:100%; max-width:100%; }
+ .workforce-drawer-heading { padding:20px 44px 18px 16px; }
+ .workforce-drawer-facts { margin:12px; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+ .workforce-drawer-facts > div { padding:8px; }
+ .workforce-drawer-facts span { font-size:10px; }
+ .workforce-drawer-facts strong { font-size:14px; }
+ .workforce-drawer .command-canvas-data-list { margin:0 12px 12px; }
+ .workforce-personnel-list.compact .workforce-list-head { display:none; }
+ .workforce-personnel-list.compact .workforce-person-row { grid-template-columns:1fr auto; gap:3px 8px; padding:10px; }
+ .workforce-personnel-list.compact .workforce-person-row > :first-child { grid-column:1; }
+ .workforce-personnel-list.compact .workforce-person-row > :nth-child(2) { grid-column:1; font-size:11px; }
+ .workforce-personnel-list.compact .workforce-person-row > :nth-child(3) { grid-column:2; grid-row:2; font-size:11px; }
+ .workforce-personnel-list.compact .workforce-person-row > :nth-child(4) { display:none; }
+ .workforce-personnel-list.compact .workforce-person-row > :last-child { grid-column:2; grid-row:1; }
+ .workforce-history-list article { grid-template-columns:1fr; gap:8px; }
+ .workforce-history-list dl { grid-template-columns:repeat(3,1fr); }
+ .workforce-request-body { padding:16px; }
+ .workforce-request-dialog .store-request-grid,.workforce-correction-form { gap:12px; }
+ .workforce-returned-row { grid-template-columns:1fr auto; }
+ .workforce-store-grid.workforce-list-head:has(.workforce-store-search) { display:flex; padding:6px 12px; }
+ .workforce-list-head:has(.workforce-store-search) > :not(.workforce-store-search) { display:none; }
+ .workforce-store-search { flex:1; }
+}
+
+.workforce-correction-form label { display:grid; gap:6px; font-size:12px; }
+.workforce-correction-form [data-slot="select-trigger"] { width:100%; }
+
+.store-command-app .workforce-personnel-list [data-slot='button'][data-variant='default'],
+.workforce-request-dialog [data-slot='button'][data-variant='default'],
+.workforce-detail-sheet [data-slot='button'][data-variant='default'] { background:var(--primary); background-image:none; color:var(--primary-foreground); }
+.workforce-drawer-heading h2,.workforce-drawer-heading p { margin:0; }
+.workforce-drawer-heading { min-height:0; }
+.workforce-manager-directory [data-slot='avatar'] { width:32px; height:32px; }
+.workforce-manager-directory [data-slot='avatar-fallback'] { color:var(--primary); background:var(--accent); font-size:11px; }
+.workforce-manager-directory button[data-state='on'] [data-slot='avatar-fallback'] { color:white; background:var(--primary); }
+
+.store-command-app .workforce-personnel-list .workforce-edit-button { background:#f1f1f1; color:#111; border:0; box-shadow:none; height:28px; min-height:28px; padding:4px 10px; gap:4px; }
+.workforce-edit-button svg { width:14px; height:14px; }
+
+.workforce-person-search[data-slot='input-group'] { background:var(--card); width:min(420px,100%); flex:1; min-width:160px; height:34px; }
+@media(max-width:650px) { .workforce-list-title:has(.workforce-person-search) { flex-wrap:wrap; } .workforce-person-search[data-slot='input-group'] { flex-basis:100%; width:100%; } }
+
+.workforce-command-page .operations-board { position:relative; }
+.workforce-refresh-status { position:absolute; z-index:2; top:10px; right:12px; padding:4px 10px; background:var(--card); border:1px solid var(--border); color:var(--primary); border-radius:8px; font-size:11px; }
+
+@media(min-width:901px) { .workforce-command-page .operations-workspace-with-directory { grid-template-columns:280px minmax(0,1fr); } }
+.workforce-detail-sheet .workforce-drawer-facts { grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media(max-width:650px) { .workforce-detail-sheet .workforce-drawer-facts { grid-template-columns:repeat(2,minmax(0,1fr)); } }

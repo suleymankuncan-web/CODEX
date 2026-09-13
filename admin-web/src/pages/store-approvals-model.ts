@@ -326,6 +326,7 @@ export function storeApprovalsPageReducer(
 }
 
 const storeSellerPositionLabels = {
+  warehouseResponsible: 'Depo Sorumlusu',
   cashierResponsible: 'Kasa Sorumlusu',
   salesConsultant: 'Satış Danışmanı',
   seniorSalesConsultant: 'Uzman Satış Danışmanı',
@@ -340,6 +341,7 @@ export type StoreSellerPositionOption = {
 }
 
 const storeSellerPositionAliases = {
+  warehouseResponsible: ['WAREHOUSE_SUPERVISOR', 'DEPO SORUMLUSU', 'DEPO_SORUMLUSU'],
   cashierResponsible: [
     'CASH RESPONSIBLE',
     'CASH REGISTER RESPONSIBLE',
@@ -408,9 +410,11 @@ const storeSellerPositionOrder: StoreSellerPositionKey[] = [
   'seniorSalesConsultant',
   'salesConsultant',
   'cashierResponsible',
+  'warehouseResponsible',
 ]
 
 const storeSellerCanonicalCodes = {
+  warehouseResponsible: 'WAREHOUSE_SUPERVISOR',
   cashierResponsible: 'CASHIER',
   salesConsultant: 'SALES_ASSOCIATE',
   seniorSalesConsultant: 'SENIOR_SALES_CONSULTANT',

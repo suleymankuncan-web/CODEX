@@ -1,4 +1,6 @@
 export type PersonnelCorrectionValues = {
+  email?: string;
+  nationalIdLast4?: string;
   firstName: string;
   lastName: string;
   phoneNumber: string;
@@ -10,7 +12,7 @@ export type CreatePersonnelCorrectionInput = {
   storeId: string;
   employeeId: string;
   expectedRevision: string;
-  proposed: PersonnelCorrectionValues;
+  proposed: PersonnelCorrectionValues & { nationalId?: string };
   reason: string;
 };
 export type ReviewPersonnelCorrectionInput = {

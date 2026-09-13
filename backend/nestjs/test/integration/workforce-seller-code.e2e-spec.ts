@@ -73,6 +73,7 @@ describe("Workforce seller code requests", () => {
 
   it("lets a store manager submit a seller code request with the current FM reference", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.store s") && sql.includes("s.store_type")) {
         expect(params).toEqual([storeId]);
         return {
@@ -99,6 +100,8 @@ describe("Workforce seller code requests", () => {
 
       if (sql.includes("INSERT INTO ops.seller_code_request")) {
         expect(params).toContain(nationalIdHash);
+        expect(params).toContain(email);
+        expect(params).not.toContain(username);
         expect(params).toContain("8901");
         expect(params).toContain(phoneNumber);
         expect(params).toContain(hireDate);
@@ -208,6 +211,7 @@ describe("Workforce seller code requests", () => {
 
   it("lets a store manager submit a non-franchise request without entering the seller code", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.store s") && sql.includes("s.store_type")) {
         expect(params).toEqual([storeId]);
         return {
@@ -227,6 +231,8 @@ describe("Workforce seller code requests", () => {
 
       if (sql.includes("INSERT INTO ops.seller_code_request")) {
         expect(params).toContain(nationalIdHash);
+        expect(params).toContain(email);
+        expect(params).not.toContain(username);
         expect(params).toContain("8901");
         expect(params).toContain(phoneNumber);
         expect(params).toContain(hireDate);
@@ -333,6 +339,7 @@ describe("Workforce seller code requests", () => {
 
   it("keeps store manager seller code request lists limited to assigned stores even when company scope is present", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("ORDER BY scr.created_at DESC")) {
         expect(params).toEqual([[storeId], "pending_hr_approval", 50, 0]);
         return {
@@ -478,6 +485,7 @@ describe("Workforce seller code requests", () => {
 
   it("lets HR approve a request with a manually entered FM seller code", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
         expect(params).toEqual([requestId]);
         return {
@@ -683,6 +691,7 @@ describe("Workforce seller code requests", () => {
 
   it("rejects duplicate seller code approval before employee mutation", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
         expect(params).toEqual([requestId]);
         return {
@@ -774,6 +783,7 @@ describe("Workforce seller code requests", () => {
 
   it("lets HR reject a pending seller code request without creating an employee", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
         expect(params).toEqual([requestId]);
         return {
@@ -910,6 +920,7 @@ describe("Workforce seller code requests", () => {
 
   it("rejects HR approval for seller code requests outside actor company scope", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
         expect(params).toEqual([requestId]);
         return {
@@ -989,6 +1000,7 @@ describe("Workforce seller code requests", () => {
     const correctedNationalIdHash = createHash("sha256").update(correctedNationalId).digest("hex");
 
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("p.position_code IN (")) return { rowCount: 1, rows: [{ position_id: positionId, position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı" }] };
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
         expect(params).toEqual([requestId]);
         return {
@@ -1047,7 +1059,7 @@ describe("Workforce seller code requests", () => {
           correctedNationalIdHash,
           "8902",
           phoneNumber,
-          username,
+          email,
           email,
           "2026-05-02",
           positionId,

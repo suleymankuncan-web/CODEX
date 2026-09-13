@@ -182,3 +182,15 @@ describe("RequestCenterReadRepository", () => {
     expect(String(databaseService.query.mock.calls[0][0])).toContain("FALSE");
   });
 });
+
+it("reads correction tracking without private proposed values and keeps store scope", async () => {
+  const query = jest.fn().mockResolvedValue({ rows: [] });
+  const repo = new RequestCenterReadRepository({ query } as never);
+  await repo.listRequests({ companyIds: [], regionIds: [], storeIds: [requestRow.store_id], bucket: "open", type: "personnelCorrection", status: "all", limit: 20, offset: 0 });
+  const sql = query.mock.calls.map(call => call[0]).join("\n");
+  expect(sql).toContain("ops.personnel_correction_request");
+  expect(sql).toContain("store_id = ANY($1::uuid[])");
+  expect(sql).not.toContain("proposed_values");
+  expect(sql).not.toContain("proposed_national_id_hash");
+  expect(sql).toContain("personnel_correction.submitted");
+});

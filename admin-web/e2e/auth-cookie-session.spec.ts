@@ -278,7 +278,7 @@ test('PKCE callback creates cookie session without storing provider tokens', asy
   await page.getByLabel('Yarışma bitişi').fill('2026-06-30')
   await page.getByRole('button', { name: 'Postu yayınla' }).click()
 
-  await expect(page.getByText('Feed post created')).toBeVisible()
+  await expect(page.getByText('Gönderi oluşturuldu.')).toBeVisible()
   expect(feedPostCount).toBe(1)
   expect(feedPostCsrf).toBe(csrfToken)
   expect(feedPostAuthorization).toBeUndefined()

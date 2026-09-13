@@ -230,7 +230,7 @@ export class WorkflowInboxService {
       storeIds: string[];
     };
     bucket: "open" | "done";
-    type: "all" | "target" | "sellerCode" | "offboarding";
+    type: "all" | "target" | "sellerCode" | "offboarding" | "personnelCorrection";
     status: "all" | "pending" | "returned" | "approved";
     period?: string;
     storeId?: string;
@@ -426,7 +426,7 @@ function sanitizeRequestCenterEvents(events: Array<{
 }
 
 function requestCenterEventType(eventType: string) {
-  if (eventType.endsWith(".created")) return "created" as const;
+  if (eventType.endsWith(".created") || eventType === "personnel_correction.submitted") return "created" as const;
   if (eventType.endsWith(".approved")) return "approved" as const;
   if (eventType.endsWith(".rejected")) return "returned" as const;
   return "resubmitted" as const;

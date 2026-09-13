@@ -1,3 +1,4 @@
+import { translatedNotificationMessage } from './notification-messages'
 import type { Tone } from '../components/dashboard-primitives'
 import { defaultAppLocale, getIntlLocale, type AppLocale } from './i18n'
 
@@ -34,6 +35,8 @@ const technicalErrorMessagePattern =
 
 export function getUserFacingErrorMessage(error: unknown, fallback: string) {
   const raw = getErrorMessage(error).trim()
+  const translated = translatedNotificationMessage(raw)
+  if (translated) return translated
 
   if (!raw || raw === 'Unexpected error' || technicalErrorMessagePattern.test(raw)) {
     return fallback

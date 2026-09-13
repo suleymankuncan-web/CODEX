@@ -6883,6 +6883,15 @@
               "type": "integer",
               "minimum": 0
             }
+          },
+          {
+            "name": "regionManagerUserId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -10699,11 +10708,12 @@
           },
           "phoneNumber": {
             "type": "string",
-            "pattern": "^[0-9+() -]{10,20}$"
+            "pattern": "^(?=(?:\\D*\\d){10,15}\\D*$)[0-9+() -]{10,20}$"
           },
           "username": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9._-]{3,80}$"
+            "minLength": 1,
+            "maxLength": 254
           },
           "email": {
             "type": "string",
@@ -10743,11 +10753,11 @@
           "lastName",
           "nationalId",
           "phoneNumber",
-          "username",
           "email",
           "hireDate",
           "requestedPositionId",
-          "employmentType"
+          "employmentType",
+          "requestReason"
         ]
       },
       "CreateOffboardingRequestDto": {
@@ -10831,11 +10841,12 @@
           },
           "phoneNumber": {
             "type": "string",
-            "pattern": "^[0-9+() -]{10,20}$"
+            "pattern": "^(?=(?:\\D*\\d){10,15}\\D*$)[0-9+() -]{10,20}$"
           },
           "username": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9._-]{3,80}$"
+            "minLength": 1,
+            "maxLength": 254
           },
           "email": {
             "type": "string",
@@ -10868,11 +10879,11 @@
           "lastName",
           "nationalId",
           "phoneNumber",
-          "username",
           "email",
           "hireDate",
           "requestedPositionId",
-          "employmentType"
+          "employmentType",
+          "requestReason"
         ]
       },
       "ApproveOffboardingRequestDto": {
@@ -26150,7 +26161,8 @@
                   "enum": [
                     "target",
                     "sellerCode",
-                    "offboarding"
+                    "offboarding",
+                    "personnelCorrection"
                   ]
                 },
                 "storeId": {
@@ -28968,6 +28980,10 @@
             "type": "integer",
             "minimum": 0
           },
+          "turnoverRate": {
+            "type": "number",
+            "nullable": true
+          },
           "averageTenureDays": {
             "type": "number",
             "nullable": true
@@ -29009,6 +29025,7 @@
         "required": [
           "employeeId",
           "displayName",
+          "positionName",
           "entryDate",
           "exitDate",
           "totalWorkingDays"
@@ -29020,6 +29037,10 @@
           },
           "displayName": {
             "type": "string"
+          },
+          "positionName": {
+            "type": "string",
+            "nullable": true
           },
           "entryDate": {
             "type": "string",
@@ -29116,7 +29137,8 @@
           "activePersonnel",
           "shortageStores",
           "openPositions",
-          "averageTenureDays"
+          "averageTenureDays",
+          "turnoverRate"
         ],
         "properties": {
           "totalStores": {
@@ -29136,6 +29158,10 @@
             "minimum": 0
           },
           "averageTenureDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "turnoverRate": {
             "type": "number",
             "nullable": true
           }
@@ -31318,6 +31344,16 @@
       "PersonnelCorrectionValuesDto": {
         "type": "object",
         "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "minLength": 5,
+            "maxLength": 254
+          },
+          "nationalId": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
+          },
           "firstName": {
             "type": "string",
             "minLength": 1,
@@ -31330,7 +31366,7 @@
           },
           "phoneNumber": {
             "type": "string",
-            "pattern": "^$|^[0-9+() -]{10,20}$"
+            "pattern": "^(?=(?:\\D*\\d){10,15}\\D*$)[0-9+() -]{10,20}$"
           },
           "hireDate": {
             "type": "string",
@@ -31349,6 +31385,8 @@
           }
         },
         "required": [
+          "email",
+          "nationalId",
           "firstName",
           "lastName",
           "phoneNumber",
@@ -31379,7 +31417,7 @@
             "type": "string"
           },
           "proposed": {
-            "$ref": "#/components/schemas/PersonnelCorrectionValues"
+            "$ref": "#/components/schemas/PersonnelCorrectionInputValues"
           },
           "reason": {
             "type": "string",
@@ -31444,6 +31482,12 @@
           "positionId": {
             "type": "string",
             "format": "uuid"
+          },
+          "email": {
+            "type": "string"
+          },
+          "nationalIdLast4": {
+            "type": "string"
           }
         }
       },
@@ -31739,6 +31783,54 @@
                 }
               }
             }
+          }
+        }
+      },
+      "PersonnelCorrectionInputValues": {
+        "type": "object",
+        "required": [
+          "firstName",
+          "lastName",
+          "phoneNumber",
+          "hireDate",
+          "employmentType",
+          "positionId",
+          "email",
+          "nationalId"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "hireDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "employmentType": {
+            "type": "string",
+            "enum": [
+              "full_time",
+              "part_time",
+              "temporary"
+            ]
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "nationalId": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$"
           }
         }
       }

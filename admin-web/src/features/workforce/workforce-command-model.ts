@@ -6,6 +6,7 @@ export type WorkforcePersonSort = 'person' | 'position' | 'start' | 'tenure' | '
 export type SortDirection = 'ascending' | 'descending'
 
 export function workforceWorkspaceQueryKey(input: {
+  regionManagerUserId?: string | undefined
   scopeSignature: string
   offset: number
   personnelOffset: number
@@ -25,6 +26,7 @@ export function workforceWorkspaceQueryKey(input: {
     input.sort,
     input.direction,
     input.rail,
+    input.regionManagerUserId ?? null,
   ] as const
 }
 
