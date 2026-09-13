@@ -50,3 +50,15 @@ describe("ApproveTargetDistributionRequestDto", () => {
     expect(JSON.stringify(errors)).toContain("employeeId");
   });
 });
+
+
+describe("approval distribution days", () => {
+  it.each([0,22,26,60])("accepts valid distribution day %s", async distributionDays => {
+    const dto=plainToInstance(ApproveTargetDistributionRequestDto,{approvedTotalTargetValue:100,approvedAllocations:[{employeeId:"00000000-0000-0000-0000-000000000501",assigneeLabel:"Demo",targetValue:100,distributionDays}]});
+    expect(await validate(dto)).toHaveLength(0);
+  });
+  it.each([-1,1.5,Number.MAX_SAFE_INTEGER+1])("rejects invalid distribution day %s", async distributionDays => {
+    const dto=plainToInstance(ApproveTargetDistributionRequestDto,{approvedTotalTargetValue:100,approvedAllocations:[{employeeId:"00000000-0000-0000-0000-000000000501",assigneeLabel:"Demo",targetValue:100,distributionDays}]});
+    expect((await validate(dto)).length).toBeGreaterThan(0);
+  });
+});

@@ -24,23 +24,20 @@ test('AC-TGT-001/002: Region Manager sees every assigned store and approves a ba
 
   await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
-  await page.getByRole('dialog').getByRole('button', { name: /Derya Uslu/ }).click()
-  await page.getByLabel('Derya Uslu hedefi').fill('4000000')
-  await page.getByRole('dialog').locator('.target-command-inline-editor').getByRole('button', { name: 'Kapat' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: /Can Erdem/ }).click()
-  await page.getByLabel('Can Erdem hedefi').fill('4200000')
-  await page.getByRole('dialog').locator('.target-command-inline-editor').getByRole('button', { name: 'Kapat' }).click()
-  await expect(page.getByRole('dialog').getByRole('button', { name: 'Onayla' })).toBeDisabled()
-  await page.getByLabel('Bölge karar notu').fill('Dağılım kontrol edildi.')
-  await page.getByRole('button', { name: 'Onayla' }).click()
+  await page.getByRole('button', {name:'Günleri düzenle',exact:true}).click()
+  await page.getByLabel('Derya Uslu dağıtım günü').fill('20')
+  await page.getByLabel('Can Erdem dağıtım günü').fill('21')
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Dağılımı onayla' })).toBeDisabled()
+  await page.getByLabel('Onay notu', {exact:false}).fill('Dağılım kontrol edildi.')
+  await page.getByRole('button', { name: 'Dağılımı onayla' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(api.mutations).toEqual(['PATCH'])
   expect(api.approvedPayload).toEqual({
     approvalNote: 'Dağılım kontrol edildi.',
     approvedTotalTargetValue: 8200000,
     approvedAllocations: [
-      { employeeId: 'employee-1', assigneeLabel: 'Derya Uslu', targetValue: 4000000 },
-      { employeeId: 'employee-2', assigneeLabel: 'Can Erdem', targetValue: 4200000 },
+      { employeeId: 'employee-1', assigneeLabel: 'Derya Uslu', targetValue: 4000000, distributionDays:20 },
+      { employeeId: 'employee-2', assigneeLabel: 'Can Erdem', targetValue: 4200000, distributionDays:21 },
     ],
   })
 })
@@ -51,7 +48,7 @@ test('AC-TGT-002: unchanged approval remains direct and sends no adjusted payloa
   const api = await routeTargetWorkspace(page, 'region_manager')
   await page.goto('/store/targets')
   await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Onayla' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Dağılımı onayla' }).click()
   expect(api.approvedPayload).toEqual({})
 })
 
@@ -61,7 +58,7 @@ test('AC-TGT-002: unchanged direct approval defers legacy balance validation to 
   const api = await routeTargetWorkspace(page, 'region_manager', { directUnbalanced: true })
   await page.goto('/store/targets')
   await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
-  const approve = page.getByRole('dialog').getByRole('button', { name: 'Onayla' })
+  const approve = page.getByRole('dialog').getByRole('button', { name: 'Dağılımı onayla' })
   await expect(approve).toBeEnabled()
   await approve.click()
   expect(api.approvedPayload).toEqual({})
@@ -87,13 +84,13 @@ test('AC-TGT-003/009: Report Viewer gets company hierarchy and emits no mutation
   const api = await routeTargetWorkspace(page, 'report_viewer')
   await page.goto('/store/targets')
   await expect(page.getByRole('heading', { name: 'Şirket hedef görünümü' })).toBeVisible()
-  await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+  await expect(page.locator('.target-command-row')).toHaveCount(3)
   await expect(page.getByText('Süleyman Öztürk').first()).toBeVisible()
   await expect(page.getByText('Deniz Akar').first()).toBeVisible()
   await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
   const drawer = page.getByRole('dialog')
   await expect(drawer.locator('input, textarea, select')).toHaveCount(0)
-  await expect(drawer.getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+  await expect(drawer.getByRole('button', { name: 'Dağılımı onayla' })).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(drawer).toHaveCount(0)
   expect(api.mutations).toEqual([])
@@ -141,7 +138,7 @@ test('EC-005/006: missing target drawer never fabricates a balanced zero package
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Hedef bekleniyor', { exact: true }).first()).toBeVisible()
   await expect(drawer.getByText('₺0', { exact: true })).toHaveCount(0)
-  await expect(drawer.getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+  await expect(drawer.getByRole('button', { name: 'Dağılımı onayla' })).toHaveCount(0)
 })
 
 test('scope capability is authoritative even when a pending row is visible', async ({ page }) => {
@@ -150,6 +147,6 @@ test('scope capability is authoritative even when a pending row is visible', asy
   await routeTargetWorkspace(page, 'report_viewer')
   await page.goto('/store/targets')
   await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
-  await expect(page.getByRole('dialog').getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Dağılımı onayla' })).toHaveCount(0)
   await expect(page.getByText(targetStoreA)).toHaveCount(0)
 })

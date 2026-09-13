@@ -8,19 +8,19 @@ test.beforeEach(async ({ page }) => {
   await installGenericStoreApiFallbacks(page)
 })
 
-test('AC-TGT-004/005/006: viewed and submission periods are independent and approval marks are persisted', async ({
+test('AC-TGT-004/005/006: year/month selection synchronizes the entry period without a day grid', async ({
   page,
 }) => {
   await routeStoreManagerTargetCommand(page)
   await page.goto('/store/targets')
-  await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mall of İstanbul' })).toBeVisible()
   await expect(page.locator('button.command-canvas-metric')).toHaveCount(0)
-  await chooseMonth(page, page.locator('.command-canvas-period-trigger'), 'Haz')
-  await expect(page.locator('.command-canvas-period-trigger')).toContainText('Haziran 2026')
-  await expect(page.locator('.target-entry-period')).toContainText('Temmuz 2026')
-  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Ağu', 'Onay bekliyor')
-  await expect(page.locator('.target-entry-period')).toContainText('Ağustos 2026')
-  await expect(page.locator('.command-canvas-period-trigger')).toContainText('Haziran 2026')
+  await chooseMonth(page, page.locator('.operations-period'), 'Haz')
+  await expect(page.locator('.operations-period')).toContainText('Haziran 2026')
+  await expect(page.locator('.operations-period')).toContainText('Haziran 2026')
+  await chooseMonth(page, page.locator('.operations-period'), 'Ağu')
+  await expect(page.locator('.operations-period')).toContainText('Ağustos 2026')
+  await expect(page.locator('.operations-period')).toContainText('Ağustos 2026')
 })
 
 test('AC-TGT-007: new distribution submits only when minor-unit balance is zero', async ({ page }) => {
@@ -28,8 +28,8 @@ test('AC-TGT-007: new distribution submits only when minor-unit balance is zero'
   await page.goto('/store/targets')
   await page.getByLabel('Toplam mağaza hedefi').fill('10000000.10049')
   await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveValue('10000000.1004')
-  await page.getByLabel('Derya Uslu Aylık hedef').fill('5000000.0502')
-  await page.getByLabel('Can Erdem Aylık hedef').fill('5000000.0502')
+  await page.getByLabel('Derya Uslu hedef dağıtım günü').fill('26')
+  await page.getByLabel('Can Erdem hedef dağıtım günü').fill('26')
   await page.getByLabel('Onay notu').fill('Temmuz dağılımı hazırlandı.')
   await page.getByRole('button', { name: 'Onaya gönder' }).click()
   expect(api.payloads).toEqual([
@@ -44,11 +44,13 @@ test('AC-TGT-007: new distribution submits only when minor-unit balance is zero'
           employeeId: 'employee-1',
           assigneeLabel: 'Derya Uslu',
           targetValue: 5000000.0502,
+          distributionDays: 26,
         },
         {
           employeeId: 'employee-2',
           assigneeLabel: 'Can Erdem',
           targetValue: 5000000.0502,
+          distributionDays: 26,
         },
       ],
     },
@@ -59,18 +61,18 @@ test('TGT-FR-009: revision-basis loading and failure remain fail-closed', async 
   const loadingApi = await routeStoreManagerTargetCommand(page, { holdBasis: true })
   await page.goto('/store/targets')
   await expect(page.getByLabel('Toplam mağaza hedefi')).toBeDisabled()
-  await expect(page.getByLabel('Derya Uslu Aylık hedef')).toBeDisabled()
+  await expect(page.getByLabel('Derya Uslu hedef dağıtım günü')).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Onaya gönder' })).toBeDisabled()
   loadingApi.releaseBasis()
   await expect(page.getByLabel('Toplam mağaza hedefi')).toBeEnabled()
   await page.getByLabel('Toplam mağaza hedefi').fill('10000000')
-  await page.getByLabel('Derya Uslu Aylık hedef').fill('5000000')
-  await page.getByLabel('Can Erdem Aylık hedef').fill('5000000')
+  await page.getByLabel('Derya Uslu hedef dağıtım günü').fill('26')
+  await page.getByLabel('Can Erdem hedef dağıtım günü').fill('26')
   await expect(page.getByRole('button', { name: 'Onaya gönder' })).toBeEnabled()
 
   await page.unroute('**/api/target-distributions/revision-basis**')
   await routeStoreManagerTargetCommand(page, { basisError: true, inheritedJune: true })
-  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Haz', 'Onaylı')
+  await chooseMonth(page, page.locator('.operations-period'), 'Haz')
   await expect(page.getByText('Bazı hedef bilgileri eksik')).toBeVisible()
   await expect(page.getByLabel('Revizyon notu')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Revizyonu gönder' })).toBeDisabled()
@@ -89,7 +91,7 @@ test('EC-007/009: unsafe lifecycle truth stays visible and non-actionable', asyn
   await page.goto('/store/targets')
   await expect(page.getByText('Revizyon çakışması')).toBeVisible()
   await expect(page.getByLabel('Toplam mağaza hedefi')).toBeDisabled()
-  await expect(page.getByLabel('Derya Uslu Aylık hedef')).toBeDisabled()
+  await expect(page.getByLabel('Derya Uslu hedef dağıtım günü')).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Onaya gönder' })).toBeDisabled()
 })
 
@@ -99,15 +101,15 @@ test('AC-TGT-008: approved period revision preserves reference and removed-emplo
     divergentLocalRequest: true,
   })
   await page.goto('/store/targets')
-  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Haz', 'Onaylı')
+  await chooseMonth(page, page.locator('.operations-period'), 'Haz')
   await expect.poll(() => api.basisRequests.join('\n')).toContain('requestMonth=2026-06-01')
   await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveValue('9000000')
-  await expect(page.getByLabel('Derya Uslu Aylık hedef')).toHaveValue('4000000')
-  await expect(page.getByLabel('Can Erdem Aylık hedef')).toHaveValue('4000000')
-  await expect(page.getByLabel('Eski Personel Aylık hedef')).toHaveValue('1000000')
-  await page.getByLabel('Derya Uslu Aylık hedef').fill('4500000')
-  await page.getByLabel('Can Erdem Aylık hedef').fill('4500000')
-  await page.getByLabel('Eski Personel Aylık hedef').fill('0')
+  await expect(page.getByLabel('Derya Uslu hedef dağıtım günü')).toHaveValue('')
+  await expect(page.getByLabel('Can Erdem hedef dağıtım günü')).toHaveValue('')
+  await expect(page.getByLabel('Eski Personel hedef dağıtım günü')).toHaveValue('')
+  await page.getByLabel('Derya Uslu hedef dağıtım günü').fill('26')
+  await page.getByLabel('Can Erdem hedef dağıtım günü').fill('26')
+  await page.getByLabel('Eski Personel hedef dağıtım günü').fill('0')
   await expect(page.getByText('İlk dağıtım notu')).toBeVisible()
   await expect(page.getByLabel('Revizyon notu')).toHaveValue('')
   await expect(page.getByRole('button', { name: 'Revizyonu gönder' })).toBeDisabled()
@@ -129,12 +131,12 @@ test('AC-TGT-008: inherited approved basis remains revisable without a local req
     inheritedJune: true,
   })
   await page.goto('/store/targets')
-  await chooseMonth(page, page.locator('.target-entry-period').getByRole('button').first(), 'Haz', 'Onaylı')
+  await chooseMonth(page, page.locator('.operations-period'), 'Haz')
   await expect.poll(() => api.basisRequests.join('\n')).toContain('requestMonth=2026-06-01')
   await expect(page.getByLabel('Revizyon notu')).toBeVisible()
-  await page.getByLabel('Derya Uslu Aylık hedef').fill('4500000')
-  await page.getByLabel('Can Erdem Aylık hedef').fill('4500000')
-  await page.getByLabel('Eski Personel Aylık hedef').fill('0')
+  await page.getByLabel('Derya Uslu hedef dağıtım günü').fill('26')
+  await page.getByLabel('Can Erdem hedef dağıtım günü').fill('26')
+  await page.getByLabel('Eski Personel hedef dağıtım günü').fill('0')
   await page.getByLabel('Revizyon notu').fill('Devralınan onaylı baz revize edildi.')
   await page.getByRole('button', { name: 'Revizyonu gönder' }).click()
   expect(api.payloads[0]).toMatchObject({
@@ -150,8 +152,11 @@ test('AC-TGT-008: inherited approved basis remains revisable without a local req
 
 async function chooseMonth(page: Page, trigger: Locator, monthLabel: string, status?: string) {
   await trigger.click()
-  const picker = page.getByRole('dialog', { name: 'Dönem seç' })
-  await picker.getByRole('combobox', { name: 'Ay seç' }).selectOption({ label: monthLabel })
+  const picker = page.getByRole('dialog', { name: 'Hedef dönemi seç' })
+  await expect(picker.getByRole('grid')).toHaveCount(0)
+  await picker.getByRole('group', { name: 'Ay', exact: true })
+    .getByRole('button', { name: monthLabel === 'Haz' ? 'Haziran' : 'Ağustos', exact: true })
+    .click()
   if (status) await expect(picker.getByText(status, { exact: true })).toBeVisible()
   await picker.getByRole('button', { name: 'Uygula', exact: true }).click()
 }
@@ -164,7 +169,7 @@ test('EC-018/019/020: mobile distribution stays reachable and inputs do not trig
     true,
   )
   expect(
-    await page.getByLabel('Derya Uslu Aylık hedef').evaluate((element) => getComputedStyle(element).fontSize),
+    await page.getByLabel('Derya Uslu hedef dağıtım günü').evaluate((element) => getComputedStyle(element).fontSize),
   ).toBe('16px')
   await expect(page.getByRole('button', { name: 'Onaya gönder' })).toBeVisible()
 })
@@ -184,8 +189,8 @@ test('EC-016: failed submission preserves the completed distribution draft', asy
   const api = await routeStoreManagerTargetCommand(page, { failSubmit: true })
   await page.goto('/store/targets')
   await page.getByLabel('Toplam mağaza hedefi').fill('10000000.10')
-  await page.getByLabel('Derya Uslu Aylık hedef').fill('5000000.05')
-  await page.getByLabel('Can Erdem Aylık hedef').fill('5000000.05')
+  await page.getByLabel('Derya Uslu hedef dağıtım günü').fill('26')
+  await page.getByLabel('Can Erdem hedef dağıtım günü').fill('26')
   const failedResponse = page.waitForResponse(
     (response) =>
       response.url().includes('/api/target-distributions/requests') &&
@@ -197,7 +202,7 @@ test('EC-016: failed submission preserves the completed distribution draft', asy
   await expect.poll(() => api.payloads.length).toBe(1)
   await expect(page.getByText('Hedef kaydedilemedi.')).toBeVisible()
   await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveValue('10000000.10')
-  await expect(page.getByLabel('Derya Uslu Aylık hedef')).toHaveValue('5000000.05')
+  await expect(page.getByLabel('Derya Uslu hedef dağıtım günü')).toHaveValue('26')
   await expect(page.getByRole('button', { name: 'Onaya gönder' })).toBeEnabled()
 })
 
@@ -205,16 +210,16 @@ test('TGT-NFR-003/EC-015: a failed background refresh preserves the draft but fa
   const api = await routeStoreManagerTargetCommand(page)
   await page.goto('/store/targets')
   await page.getByLabel('Toplam mağaza hedefi').fill('10000000')
-  await page.getByLabel('Derya Uslu Aylık hedef').fill('5000000')
-  await page.getByLabel('Can Erdem Aylık hedef').fill('5000000')
+  await page.getByLabel('Derya Uslu hedef dağıtım günü').fill('26')
+  await page.getByLabel('Can Erdem hedef dağıtım günü').fill('26')
   api.failWorkspaceRefresh()
   await page.getByRole('button', { name: 'Onaya gönder' }).click()
 
   await expect(page.getByText('Bazı hedef bilgileri eksik')).toBeVisible()
   await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveValue('10000000')
-  await expect(page.getByLabel('Derya Uslu Aylık hedef')).toHaveValue('5000000')
+  await expect(page.getByLabel('Derya Uslu hedef dağıtım günü')).toHaveValue('26')
   await expect(page.getByLabel('Toplam mağaza hedefi')).toBeDisabled()
-  await expect(page.getByLabel('Derya Uslu Aylık hedef')).toBeDisabled()
+  await expect(page.getByLabel('Derya Uslu hedef dağıtım günü')).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Onaya gönder' })).toBeDisabled()
 
   api.restoreWorkspaceRefresh()

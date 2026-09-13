@@ -1,16 +1,17 @@
+import { getTargetStatusMeta } from './status'
+import { StoreTargetHistory } from './store-target-history'
+import { isDepartedForTarget } from './store-manager-model'
 import { useMemo, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, CircleDollarSign, Clock3, Send, TriangleAlert } from 'lucide-react'
+import { BadgeCheck, Check, CircleDollarSign, Clock3, Send, Target, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TargetMonthPicker } from './target-month-picker'
+import { StoreOperationsHeader } from '@/pages/store-operations-layout'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  CommandCanvasMetric,
-  CommandCanvasMetricRail,
-  CommandCanvasCalendarMonthYearPicker,
   CommandCanvasPage,
-  CommandCanvasPageHeader,
   CommandCanvasPartialDataNotice,
 } from '@/features/store-command-canvas/primitives'
 import { useLocalization } from '@/features/localization/useLocalization'
@@ -21,10 +22,11 @@ import {
   getTargetRevisionBasis,
   type TargetDistributionAllocation,
 } from '../api'
-import { TargetEntryPeriodPicker } from './entry-period-picker'
 import { flattenTargetStores, mergeTargetWorkspacePages } from './model'
 import {
   createStoreTargetDraft,
+  distributeTargetByDays,
+  hasCompleteDistributionDays,
   isApprovedTargetMonth,
   sanitizeTargetMoneyInput,
   storeTargetDraftSummary,
@@ -32,6 +34,7 @@ import {
   withHistoricalTargetPersonnel,
 } from './store-manager-model'
 import type { TargetCommandWorkspace } from './types'
+import './workspace.css'
 import './store-manager.css'
 
 export function StoreManagerTargetCommand(input: {
@@ -107,6 +110,7 @@ export function StoreManagerTargetCommand(input: {
   const authoritativeDraft = authoritativeDraftReady
     ? createStoreTargetDraft(editableStore, basisItems, {
         clearRequestNote: revision,
+        ...(revision ? { revisionPeriod: entryPeriod } : {}),
       })
     : null
   const draft = draftState.identity === nextDraftIdentity ? draftState.value : (authoritativeDraft ?? draftState.value)
@@ -133,7 +137,7 @@ export function StoreManagerTargetCommand(input: {
     entryQuery.isPlaceholderData ||
     entrySectionsUnavailable ||
     !basisReady
-  const canSubmit = !ambiguousStoreScope && draftSummary.valid && !formLocked && basisReady && revisionReady
+  const canSubmit = !ambiguousStoreScope && draftSummary.valid && hasCompleteDistributionDays(draft, editableStore?.personnel ?? []) && !formLocked && basisReady && revisionReady
   const mutation = useMutation({
     mutationFn: createTargetDistributionRequest,
     onSuccess: async (result) => {
@@ -155,6 +159,7 @@ export function StoreManagerTargetCommand(input: {
         employeeId: person.employeeId,
         assigneeLabel: person.displayName,
         targetValue: targetPrecisionUnits(draft.allocations[person.employeeId]) / 10_000,
+        distributionDays: Number(draft.distributionDays?.[person.employeeId] ?? 0),
       }))
     const basis = basisItems
     const finalIds = new Set(allocations.map((item) => item.employeeId))
@@ -191,53 +196,42 @@ export function StoreManagerTargetCommand(input: {
 
   return (
     <CommandCanvasPage ariaLabelledBy="store-targets-store-manager-title" className="target-store-manager-page">
-      <CommandCanvasPageHeader
+      <StoreOperationsHeader
+        icon={Target}
         titleId="store-targets-store-manager-title"
-        eyebrow={copy.eyebrow}
-        title={copy.title}
+        eyebrow={copy.title}
+        title={editableStore?.storeName ?? copy.title}
         description={copy.description}
         actions={
           <div className="target-command-period">
-            <span>{copy.viewedPeriod}</span>
-            <CommandCanvasCalendarMonthYearPicker
+            {editableStore && <StoreTargetHistory storeId={editableStore.storeId} storeName={editableStore.storeName} period={entryPeriod} locale={locale} onSelect={period => { input.onPeriodChange(period); setEntryPeriod(period); setPreviewYear(Number(period.slice(0, 4))) }} />}
+            <span className={`target-store-state is-${entryStore?.status ?? 'unknown'}`}>
+              {entryStore?.status === 'approved' || entryStore?.status === 'adjusted_approved' ? <><Check size={13} aria-hidden="true" />{getTargetStatusMeta(locale)[entryStore.status].label}</> : storeStatusLabel(entryStore?.status, copy)}
+            </span>
+            <TargetMonthPicker
+              triggerClassName="operations-period"
               ariaLabel={copy.viewedPeriod}
+              onMonthPreview={(month) => setPreviewYear(month.getFullYear())}
+              monthDescription={(month) => {
+                const period = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`
+                const status = entryStore?.monthStatuses.find(item => item.period === period)
+                return <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">{status?.isApproved ? copy.approved : status?.status === 'pending' ? copy.pending : status?.status === 'returned' ? copy.returned : copy.missingStatus}</p>
+              }}
               locale={locale}
-              onValueChange={input.onPeriodChange}
+              onValueChange={(period) => { input.onPeriodChange(period); setEntryPeriod(period); setPreviewYear(Number(period.slice(0, 4))) }}
               value={input.period}
             />
           </div>
         }
       />
-      <CommandCanvasMetricRail ariaLabel={copy.summary}>
-        <CommandCanvasMetric
-          icon={<CircleDollarSign />}
-          label={copy.totalTarget}
-          note={copy.viewedPeriod}
-          tone="plum"
-          value={formatMoney(summary?.totalTargetValue, locale)}
-        />
-        <CommandCanvasMetric
-          icon={<BadgeCheck />}
-          label={copy.approved}
-          note={copy.completed}
-          tone="mint"
-          value={String(approvedCount)}
-        />
-        <CommandCanvasMetric
-          icon={<Clock3 />}
-          label={copy.pending}
-          note={copy.awaitingDecision}
-          tone="amber"
-          value={String(summary?.pendingStores ?? 0)}
-        />
-        <CommandCanvasMetric
-          icon={<TriangleAlert />}
-          label={copy.missing}
-          note={copy.notSubmitted}
-          tone="rose"
-          value={String(summary?.missingStores ?? 0)}
-        />
-      </CommandCanvasMetricRail>
+      <div className="operations-metrics" role="group" aria-label={copy.summary}>
+        {[
+          { id: 'total', label: copy.totalTarget, value: formatMoney(summary?.totalTargetValue, locale), icon: CircleDollarSign },
+          { id: 'approved', label: copy.approved, value: String(approvedCount), icon: BadgeCheck },
+          { id: 'pending', label: copy.pending, value: String(summary?.pendingStores ?? 0), icon: Clock3 },
+          { id: 'missing', label: copy.missing, value: String(summary?.missingStores ?? 0), icon: TriangleAlert },
+        ].map(item => <div className="operations-metric command-canvas-metric" key={item.id}><span><item.icon aria-hidden="true" />{item.label}</span><strong>{item.value}</strong></div>)}
+      </div>
       {input.isUpdating ? (
         <div aria-live="polite" className="target-store-update">
           {copy.updating}
@@ -254,25 +248,7 @@ export function StoreManagerTargetCommand(input: {
         <CommandCanvasPartialDataNotice title={copy.scopeAmbiguous} description={copy.scopeAmbiguousCopy} />
       ) : (
         <section className="target-store-distribution">
-          <header>
-            <div>
-              <span className={`target-store-state is-${entryStore?.status ?? 'unknown'}`}>
-                {storeStatusLabel(entryStore?.status, copy)}
-              </span>
-              <h2>{editableStore?.storeName ?? copy.store}</h2>
-              <p>
-                {entryPeriod} · {copy.personnelDistribution}
-              </p>
-            </div>
-            <TargetEntryPeriodPicker
-              locale={locale}
-              onPreviewYearChange={setPreviewYear}
-              onValueChange={setEntryPeriod}
-              previewYear={previewYear}
-              store={entryStore}
-              value={entryPeriod}
-            />
-          </header>
+
           {entryQuery.isPending && !entryWorkspace ? (
             <div className="target-store-message">{copy.loading}</div>
           ) : entryQuery.isError && !entryWorkspace ? (
@@ -281,6 +257,23 @@ export function StoreManagerTargetCommand(input: {
             <div className="target-store-message">{copy.noStore}</div>
           ) : (
             <>
+              {entryStore?.status === 'adjusted_approved' && <div className="target-store-approval-notice" role="status"><BadgeCheck size={20} aria-hidden="true"/><div><strong>{locale === 'tr' ? 'Bölge müdürü hedef dağılımını düzenleyerek onayladı.' : 'The region manager approved this distribution with adjustments.'}</strong>{entryStore.request?.approvalNote && <p>{locale === 'tr' ? 'Onay notu: ' : 'Approval note: '}{entryStore.request.approvalNote}</p>}</div></div>}
+              <div className="target-store-allocations">
+              <div className="target-store-position-reference">
+                <div>
+                  <strong>Pozisyona göre örnek günler</strong>
+                  <ul aria-label="Pozisyonlara göre örnek hedef dağıtım günleri">
+                    <li><span>Mağaza Müdürü</span><b>0 gün</b></li>
+                    <li><span>Mağaza Müdür Yardımcısı</span><b>22 gün</b></li>
+                    <li><span>Uzman Satış Danışmanı</span><b>30 gün</b></li>
+                    <li><span>Satış Danışmanı</span><b>26 gün</b></li>
+                    <li><span>Kasa Sorumlusu</span><b>10 gün</b></li>
+                    <li><span>Depo Sorumlusu</span><b>10 gün</b></li>
+                  </ul>
+                  <small>Örnek değerlerdir; günleri mağaza müdürü belirler.</small>
+                </div>
+              </div>
+              <div className="target-store-distribution-guide">
               <div className="target-store-balance-grid">
                 <label>
                   <span>{copy.storeTarget}</span>
@@ -291,15 +284,15 @@ export function StoreManagerTargetCommand(input: {
                       inputMode="decimal"
                       value={draft.total}
                       onChange={(event) =>
-                        updateDraft((current) => ({
+                        updateDraft((current) => distributeTargetByDays({
                           ...current,
                           total: sanitizeTargetMoneyInput(event.target.value),
-                        }))
+                        }, editableStore.personnel))
                       }
                     />
                     <b>TL</b>
                   </span>
-                  <small>{copy.targetLimit}</small>
+                  <small>{revision ? 'Onaylı mağaza hedefi' : 'Günleri girdikçe personel hedefleri hesaplanır.'}</small>
                 </label>
                 <div>
                   <small>{copy.distributed}</small>
@@ -326,39 +319,63 @@ export function StoreManagerTargetCommand(input: {
                   </span>
                 </div>
               </div>
-              <div className="target-store-allocations">
-                <div className="target-store-allocation-head">
-                  <span>{copy.personnel}</span>
-                  <span>{copy.monthlyTarget}</span>
+
+              </div>
+                {Object.values(draft.fixedSales ?? {}).some(value => value === null || Number(value) < 0) && <p role="alert">Ayrılan personelin satış verisi eksik veya negatif. Revizyon göndermeden önce satış verilerini kontrol edin.</p>}
+                <div className={`target-store-allocation-head${revision ? ' is-revision' : ''}`}>
+                  <span>İsim</span>
+                  <span>Pozisyon</span>
+                  <span>Hedef dağıtım günü</span>
+                  <span>Gerçekleşen satış</span>
+                  {revision && <span>Önceki hedef</span>}
+                  <span>{revision ? 'Yeni hedef' : copy.monthlyTarget}</span>
                   <span>{copy.share}</span>
                 </div>
                 {editableStore.personnel.length ? (
                   editableStore.personnel.map((person) => {
                     const value = draft.allocations[person.employeeId] ?? ''
+                    const previousTarget = basisItems.find(item => item.employeeId === person.employeeId)?.targetValue ?? 0
+                    const difference = (targetPrecisionUnits(value) - targetPrecisionUnits(previousTarget)) / 10000
                     return (
-                      <div className="target-store-allocation-row" key={person.employeeId}>
-                        <span>
+                      <div className={`target-store-allocation-row${revision ? ' is-revision' : ''}`} key={person.employeeId}>
+                        <span className="target-person-name">
                           <strong>{person.displayName}</strong>
-                          <small>{person.positionLabel ?? '—'}</small>
+                          {isDepartedForTarget(person.terminationDate, entryPeriod) ? (
+                            <small className="target-person-departed">İşten ayrıldı</small>
+                          ) : person.hireDate?.slice(0, 7) === entryPeriod ? (
+                            <small className="target-person-new">Yeni Personel</small>
+                          ) : null}
                         </span>
+                        <span className="target-store-person-position">{person.positionLabel ?? '—'}</span>
                         <label className="target-store-money-input">
                           <Input
-                            aria-label={`${person.displayName} ${copy.monthlyTarget}`}
-                            disabled={formLocked}
+                            aria-label={`${person.displayName} hedef dağıtım günü`}
+                            type="number" min={0} step={1}
+                            disabled={formLocked || person.employeeId in (draft.fixedSales ?? {})}
                             inputMode="decimal"
-                            value={value}
+                            value={draft.distributionDays?.[person.employeeId] ?? ''}
                             onChange={(event) =>
-                              updateDraft((current) => ({
+                              updateDraft((current) => distributeTargetByDays({
                                 ...current,
-                                allocations: {
-                                  ...current.allocations,
-                                  [person.employeeId]: sanitizeTargetMoneyInput(event.target.value),
+                                distributionDays: {
+                                  ...current.distributionDays,
+                                  [person.employeeId]: event.target.value,
                                 },
-                              }))
+                              }, editableStore.personnel))
                             }
                           />
-                          <b>TL</b>
+                          <b>gün</b>
                         </label>
+                        <strong>{person.actualSales == null ? '—' : formatMoney(person.actualSales, locale)}</strong>
+                        {revision && <span className="target-previous-value"><small className="target-mobile-heading">Önceki hedef</small><strong>{formatMoney(previousTarget, locale)}</strong></span>}
+                        <span className="target-next-value">
+                          {revision && <small className="target-mobile-heading">Yeni hedef</small>}
+                          <strong>{formatMoney(value, locale)}</strong>
+                          {revision && <small className={`target-difference ${difference > 0 ? 'is-positive' : difference < 0 ? 'is-negative' : ''}`}>
+                            {difference === 0 ? 'Değişmedi' : `${difference > 0 ? '+' : '−'}${formatMoney(Math.abs(difference), locale)}`}
+                          </small>}
+                          {person.employeeId in (draft.fixedSales ?? {}) && <small>Satış tutarına sabitlendi</small>}
+                        </span>
                         <span>
                           <strong>
                             {draftSummary.totalUnits > 0
@@ -452,7 +469,7 @@ function storeStatusLabel(
 const tr = {
   eyebrow: 'Store · Hedefler',
   title: 'Mağaza Hedef Dağılımı',
-  description: 'Mağaza hedefini personele dağıtın, onaya gönderin ve dönem içi revizyonu yönetin.',
+  description: 'Mağaza hedefini personele dağıtın ve onaya gönderin.',
   viewedPeriod: 'Görüntülenen dönem',
   summary: 'Hedef özeti',
   totalTarget: 'Toplam hedef',
@@ -481,7 +498,7 @@ const tr = {
   loading: 'Hedef dönemi yükleniyor…',
   noStore: 'Yetkili mağaza kaydı bulunamadı.',
   storeTarget: 'Toplam mağaza hedefi',
-  targetLimit: 'Personel hedeflerinin toplam üst sınırı',
+  targetLimit: 'Girdiğiniz tutar dağıtım günlerine göre otomatik paylaştırılır',
   distributed: 'Dağıtılan',
   balance: 'Kalan bakiye',
   complete: 'Dağılım tamamlandı',
@@ -500,10 +517,10 @@ const tr = {
   revisionRequired: 'Onaylı hedef revizyonunda gerekçe zorunludur.',
   ready: 'Dağılım onaya hazır',
   revisionReady: 'Revizyon onaya hazır',
-  balanceRequired: 'Bakiye sıfırlanmalı',
+  balanceRequired: 'Hedef tutarını ve dağıtım günlerini girin',
   pendingHelp: 'Bölge müdürü kararı bekleniyor.',
   readyHelp: 'Toplam mağaza hedefi personel hedefleriyle eşleşiyor.',
-  balanceHelp: 'Tüm personele hedef girin ve kalan bakiyeyi sıfırlayın.',
+  balanceHelp: 'Her personele dağıtım günü girin. En az bir personelin günü sıfırdan büyük olmalıdır.',
   send: 'Onaya gönder',
   sendRevision: 'Revizyonu gönder',
   saving: 'Gönderiliyor',
@@ -515,7 +532,7 @@ const tr = {
 const en: Record<keyof typeof tr, string> = {
   eyebrow: 'Store · Targets',
   title: 'Store Target Distribution',
-  description: 'Distribute the store target to personnel, submit it for approval and manage in-period revisions.',
+  description: 'Distribute the store target and submit it for approval.',
   viewedPeriod: 'Viewed period',
   summary: 'Target summary',
   totalTarget: 'Total target',

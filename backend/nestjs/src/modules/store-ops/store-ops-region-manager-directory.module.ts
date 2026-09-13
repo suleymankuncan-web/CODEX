@@ -6,5 +6,6 @@ import { RegionManagerDirectoryController } from "./web/region-manager-directory
 @Module({
   controllers: [RegionManagerDirectoryController],
   providers: [RegionManagerDirectoryService, RankingReportingReadRepository],
+  exports: [RegionManagerDirectoryService],
 })
 export class StoreOpsRegionManagerDirectoryModule {}

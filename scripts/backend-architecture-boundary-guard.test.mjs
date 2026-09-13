@@ -249,7 +249,7 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-region-manager-directory.module.ts',
-    { controllers: 1, providers: 2, exports: 0 },
+    { controllers: 1, providers: 2, exports: 1 },
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-workforce.module.ts',

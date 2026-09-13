@@ -29,6 +29,11 @@ export function createTargetWorkspace(view: 'region_manager' | 'report_viewer', 
 }
 
 export async function routeTargetWorkspace(page: Page, view: 'region_manager' | 'report_viewer', options: { directUnbalanced?: boolean; partial?: boolean; partialPage2?: boolean } = {}) {
+  await page.route('**/api/org/region-managers', route => route.fulfill({ json: { items: [
+    { userId: 'manager-a', displayName: 'Süleyman Öztürk', storeIds: [targetStoreA, targetStoreB] },
+    { userId: 'manager-b', displayName: 'Deniz Akar', storeIds: [targetStoreC] },
+    { userId: 'manager-empty', displayName: 'Selin Yılmaz', storeIds: [] },
+  ] } }))
   let reads = 0
   const mutations: string[] = []
   let approvedPayload: unknown = null
@@ -37,6 +42,7 @@ export async function routeTargetWorkspace(page: Page, view: 'region_manager' | 
     const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
     await route.fulfill({ json: createTargetWorkspace(view, { directUnbalanced: options.directUnbalanced, partial: options.partial || (options.partialPage2 && offset > 0), offset }) })
   })
+  await page.route('**/api/target-distributions/revision-basis**', route => route.fulfill({json:{storeId:targetStoreA,requestMonth:'2026-07-01',periodClosed:false,items:[]}}))
   await page.route('**/api/target-distributions/requests/*/approve', async (route) => {
     mutations.push(route.request().method())
     approvedPayload = route.request().postDataJSON()
@@ -55,7 +61,7 @@ function store(storeId: string, storeName: string, storeCode: string, status: 'p
     targetLabel: 'Aylık personel hedef dağıtımı', totalTargetValue: status === 'approved' ? '9100000.00' : '8200000.00', allocationCount: 2,
     requestReason: status === 'pending' ? 'Temmuz kadro değişimi dikkate alındı.' : null, approvalMode: status === 'approved' ? 'direct' as const : null,
     approvedAt: status === 'approved' ? '2026-07-10T09:00:00Z' : null, approvalNote: null, createdAt: '2026-07-08T09:42:00Z', updatedAt: '2026-07-11T09:42:00Z',
-    allocations: [{ employeeId: 'employee-1', displayName: 'Derya Uslu', targetValue: status === 'approved' ? '5000000.00' : '4200000.00', note: null }, { employeeId: 'employee-2', displayName: 'Can Erdem', targetValue: '4000000.00', note: null }],
+    allocations: [{ employeeId: 'employee-1', displayName: 'Derya Uslu', distributionDays:21, targetValue: status === 'approved' ? '5000000.00' : '4200000.00', note: null }, { employeeId: 'employee-2', displayName: 'Can Erdem', distributionDays:20, targetValue: '4000000.00', note: null }],
   }
   const personnel = status === 'missing'
     ? [{ employeeId: 'employee-3', displayName: 'Yeni Personel', positionCode: 'SALES', positionLabel: 'Satış danışmanı', targetValue: null, eligibilityStatus: 'targetable' as const }]

@@ -592,6 +592,13 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/org/region-managers')) {
+      await route.fulfill({ json: { items: [
+        { userId: 'region-manager-user', displayName: 'Pilot Bölge Müdürü', storeIds: [storeId] },
+      ] } })
+      return
+    }
+
     if (pathname.endsWith('/api/store/workforce/workspace')) {
       await route.fulfill({ json: { data: {
         view: 'region_manager',

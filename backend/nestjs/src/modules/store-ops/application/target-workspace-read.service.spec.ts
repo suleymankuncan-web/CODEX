@@ -17,7 +17,7 @@ function storeRow(overrides: Record<string, unknown> = {}) {
     request_id: "00000000-0000-4000-8000-000000000701",
     request_status: "pending_region_approval", target_label: "Temmuz hedefi",
     total_target_value: "1000.0000", allocation_count: 1, request_reason: "İlk dağılım",
-    allocation_json: [{ employeeId: "00000000-0000-4000-8000-000000000201", assigneeLabel: "Personel A", targetValue: 1000 }],
+    allocation_json: [{ employeeId: "00000000-0000-4000-8000-000000000201", assigneeLabel: "Personel A", targetValue: 1000, distributionDays: 26 }],
     approved_at: null, approval_note: null, approval_evidence_json: null,
     created_at: "2026-07-01T08:00:00.000Z", updated_at: "2026-07-01T08:00:00.000Z",
     has_revision_conflict: false, has_stale_reference: false,
@@ -47,6 +47,7 @@ function repository(overrides: Record<string, unknown> = {}) {
     }),
     listPersonnel: jest.fn().mockResolvedValue([{
       store_id: storeA, employee_id: "00000000-0000-4000-8000-000000000201",
+      hire_date: "2026-07-01", termination_date: "2026-07-15", is_historical: true,
       display_name: "Personel A", position_code: "SALES_ASSOCIATE", position_name: "Satış Danışmanı",
     }]),
     listMonthStatuses: jest.fn().mockResolvedValue([
@@ -84,7 +85,7 @@ function regionManagerActor(storeIds: string[]) {
 describe("TargetWorkspaceReadService", () => {
   it("returns a company hierarchy, complete missing store, safe personnel and persisted month truth", async () => {
     const repo = repository();
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = buildAuthenticatedUser({
       userId: "00000000-0000-4000-8000-000000000901",
       roleCodes: ["REPORT_VIEWER", "REGION_MANAGER"],
@@ -110,8 +111,10 @@ describe("TargetWorkspaceReadService", () => {
     expect(result.companies[0].regions[0].regionManager).toEqual({ displayName: "Bölge Müdürü", identityStatus: "resolved" });
     expect(result.companies[0].regions[0].stores).toHaveLength(2);
     const first = result.companies[0].regions[0].stores[0];
+    expect(first.request?.allocations[0].distributionDays).toBe(26);
     expect(first.personnel).toEqual([expect.objectContaining({
       displayName: "Personel A", positionLabel: "Satış Danışmanı", targetValue: "1000",
+      hireDate: "2026-07-01", terminationDate: "2026-07-15", eligibilityStatus: "historical_allocation",
     })]);
     expect(first.monthStatuses).toHaveLength(12);
     expect(first.monthStatuses.find((item) => item.period === "2026-05")).toEqual({
@@ -128,7 +131,7 @@ describe("TargetWorkspaceReadService", () => {
 
   it("grants Store Manager create capability only on its exact own store", async () => {
     const repo = repository({ listStorePage: jest.fn().mockResolvedValue({ items: [storeRow()], total: 1, limit: 20, offset: 0 }) });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = buildAuthenticatedUser({
       userId: "00000000-0000-4000-8000-000000000902", roleCodes: ["STORE_MANAGER"],
       readScope: { companyIds: [], regionIds: [], storeIds: [storeA, storeB] },
@@ -153,7 +156,7 @@ describe("TargetWorkspaceReadService", () => {
       }),
       listPersonnel: jest.fn().mockResolvedValue([]), listMonthStatuses: jest.fn().mockResolvedValue([]),
     });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = regionManagerActor(["1", "2", "3", "4"]);
     const result = await service.getWorkspace({ actor, periodKey: "2026-07" });
     expect(result.companies[0].regions[0].stores.map((item) => item.status)).toEqual([
@@ -171,7 +174,7 @@ describe("TargetWorkspaceReadService", () => {
         region_name: "Marmara", manager_assignment_exists: false, region_manager_name: null,
       }]),
     });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = regionManagerActor([storeA]);
     const result = await service.getWorkspace({ actor, periodKey: "2026-07", limit: 20 });
     expect(result.pagination).toEqual({ total: 35, limit: 20, offset: 0, hasMore: true });
@@ -182,7 +185,7 @@ describe("TargetWorkspaceReadService", () => {
 
   it("returns an empty typed workspace without repository access when persona scope is absent", async () => {
     const repo = repository();
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = buildAuthenticatedUser({ userId: "u", roleCodes: ["REPORT_VIEWER"], roleScopes: {} });
     const result = await service.getWorkspace({ actor, periodKey: "2026-07" });
     expect(result.companies).toEqual([]);
@@ -191,7 +194,7 @@ describe("TargetWorkspaceReadService", () => {
   });
 
   it("rejects roles outside the workspace", async () => {
-    const service = new TargetWorkspaceReadService(repository() as never);
+    const service = new TargetWorkspaceReadService(repository() as never, {} as never);
     const actor = buildAuthenticatedUser({ userId: "u", roleCodes: ["STORE_PERSONNEL"] });
     await expect(service.getWorkspace({ actor, periodKey: "2026-07" })).rejects.toBeInstanceOf(ForbiddenException);
   });
@@ -216,7 +219,7 @@ describe("TargetWorkspaceReadService", () => {
         },
       ]),
     });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = regionManagerActor([storeA]);
     const result = await service.getWorkspace({ actor, periodKey: "2026-07", historyYear: 2026 });
     const months = result.companies[0].regions[0].stores[0].monthStatuses;
@@ -235,7 +238,7 @@ describe("TargetWorkspaceReadService", () => {
     ["listMonthStatuses", "monthStatuses", "month_statuses_unavailable"],
   ] as const)("returns typed partial data when %s fails", async (method, section, warning) => {
     const repo = repository({ [method]: jest.fn().mockRejectedValue(new Error("private repository failure")) });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = regionManagerActor([storeA]);
     const result = await service.getWorkspace({ actor, periodKey: "2026-07" });
     expect(result.sections[section]).toEqual({ status: "unavailable" });
@@ -271,7 +274,7 @@ describe("TargetWorkspaceReadService", () => {
         },
       ]),
     });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = buildAuthenticatedUser({
       userId: "u", roleCodes: ["REPORT_VIEWER"],
       roleScopes: { REPORT_VIEWER: { companyIds: [companyId, emptyCompany], regionIds: [], storeIds: [] } },
@@ -291,7 +294,7 @@ describe("TargetWorkspaceReadService", () => {
         approved_source_status: "approved", approved_source_evidence_json: null,
       }]),
     });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const actor = regionManagerActor([storeA]);
     const result = await service.getWorkspace({ actor, periodKey: "2026-07", historyYear: 2026 });
     expect(result.warnings).toContain("approval_basis_conflict");
@@ -313,7 +316,7 @@ describe("TargetWorkspaceReadService", () => {
         approved_source_status: "approved", approved_source_evidence_json: malformed,
       }]),
     });
-    const service = new TargetWorkspaceReadService(repo as never);
+    const service = new TargetWorkspaceReadService(repo as never, {} as never);
     const result = await service.getWorkspace({
       actor: regionManagerActor([storeA]), periodKey: "2026-07", historyYear: 2026,
     });
@@ -323,5 +326,31 @@ describe("TargetWorkspaceReadService", () => {
     expect(store.monthStatuses[4]).toEqual({
       period: "2026-05", status: "approved", approvalStatus: "approved", isApproved: true,
     });
+  });
+});
+
+
+describe("Targets manager selection", () => {
+  const actor = () => buildAuthenticatedUser({ userId: "viewer", roleCodes: ["REPORT_VIEWER"], roleScopes: { REPORT_VIEWER: { companyIds: [companyId], regionIds: [], storeIds: [] } } });
+  it("filters before pagination, summary and hierarchy while retaining company scope", async () => {
+    const repo = repository();
+    const directory = { list: jest.fn().mockResolvedValue({ items: [{ userId: "manager", displayName: "A", storeIds: [storeB] }] }) };
+    await new TargetWorkspaceReadService(repo as never, directory as never).getWorkspace({ actor: actor(), periodKey: "2026-07", regionManagerUserId: "manager", offset: 50 });
+    const scope = { companyIds: [companyId], regionIds: [], storeIds: [storeB] };
+    expect(repo.listStorePage).toHaveBeenCalledWith(expect.objectContaining({ scope, offset: 50 }));
+    expect(repo.summarizeScope).toHaveBeenCalledWith(expect.objectContaining({ scope }));
+    expect(repo.listHierarchy).toHaveBeenCalledWith(expect.objectContaining({ scope }));
+  });
+  it.each(["unknown", "empty"])("returns no stores for %s without broadening scope", async regionManagerUserId => {
+    const repo = repository();
+    const directory = { list: jest.fn().mockResolvedValue({ items: [{ userId: "empty", displayName: "Empty", storeIds: [] }] }) };
+    const result = await new TargetWorkspaceReadService(repo as never, directory as never).getWorkspace({ actor: actor(), periodKey: "2026-07", regionManagerUserId });
+    expect(result.pagination.total).toBe(0);
+    expect(repo.listStorePage).not.toHaveBeenCalled();
+  });
+  it("rejects Region Manager selection", async () => {
+    const repo = repository();
+    await expect(new TargetWorkspaceReadService(repo as never, {} as never).getWorkspace({ actor: regionManagerActor([storeA]), periodKey: "2026-07", regionManagerUserId: "manager" })).rejects.toThrow(ForbiddenException);
+    expect(repo.listStorePage).not.toHaveBeenCalled();
   });
 });

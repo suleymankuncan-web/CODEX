@@ -326,6 +326,7 @@ describe("TargetDistributionService", () => {
 
   it("approves with edited allocations when every employee belongs to the request store", async () => {
     const targetDistributionRepository = {
+      getDepartureTargets: jest.fn(async () => []),
       getRequestScope: jest.fn(async () => ({
         storeId: "00000000-0000-4000-8000-000000000201",
       })),
@@ -407,6 +408,7 @@ describe("TargetDistributionService", () => {
 
   it("rejects duplicate employees in edited approval allocations", async () => {
     const targetDistributionRepository = {
+      getDepartureTargets: jest.fn(async () => []),
       getRequestScope: jest.fn(async () => ({
         storeId: "00000000-0000-4000-8000-000000000201",
       })),
@@ -450,6 +452,7 @@ describe("TargetDistributionService", () => {
 
   it("rejects edited approve payloads when allocation total does not match the approved target total", async () => {
     const targetDistributionRepository = {
+      getDepartureTargets: jest.fn(async () => []),
       getRequestScope: jest.fn(async () => ({
         storeId: "00000000-0000-4000-8000-000000000201",
       })),
@@ -484,6 +487,7 @@ describe("TargetDistributionService", () => {
 
   it("rejects partial edited approve payloads before persisting", async () => {
     const targetDistributionRepository = {
+      getDepartureTargets: jest.fn(async () => []),
       getRequestScope: jest.fn(async () => ({
         storeId: "00000000-0000-4000-8000-000000000201",
       })),
@@ -513,6 +517,7 @@ describe("TargetDistributionService", () => {
 
   it("requires a note when approving edited target allocations", async () => {
     const targetDistributionRepository = {
+      getDepartureTargets: jest.fn(async () => []),
       getRequestScope: jest.fn(async () => ({
         storeId: "00000000-0000-4000-8000-000000000201",
       })),

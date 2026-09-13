@@ -2,6 +2,8 @@ import {
   ArrayMinSize,
   IsArray,
   IsNumber,
+  IsInt,
+  Max,
   IsOptional,
   IsString,
   Min,
@@ -25,6 +27,14 @@ export class ApprovedTargetDistributionAllocationDto {
   @IsNumber()
   @Min(0)
   targetValue!: number;
+
+  @ApiPropertyOptional({ type: Number, minimum: 0, maximum: Number.MAX_SAFE_INTEGER })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(Number.MAX_SAFE_INTEGER)
+  distributionDays?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -54,6 +64,7 @@ export class ApproveTargetDistributionRequestDto {
         employeeId: { type: "string" },
         assigneeLabel: { type: "string" },
         targetValue: { minimum: 0, type: "number" },
+        distributionDays: { minimum: 0, maximum: Number.MAX_SAFE_INTEGER, type: "integer" },
         note: { type: "string" },
       },
     },

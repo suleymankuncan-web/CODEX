@@ -1,3 +1,4 @@
+import { assertDepartureTargets, targetDepartureSql, type TargetDeparture } from "./target-departure-contract";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
@@ -7,7 +8,6 @@ import {
   TargetRevisionConflict,
 } from "./target-reference-lifecycle";
 import {
-  parseApprovalEvidence,
   parseTargetDistributionAllocations,
   parseTargetRevisionEvidence,
   throwTargetRevisionError,
@@ -16,6 +16,7 @@ import {
   type TargetDistributionRow,
   type TargetRevisionInput,
 } from "./target-distribution-contract";
+import { mapTargetDistributionRow } from "./target-distribution-row-mapper";
 
 export type { TargetRevisionInput } from "./target-distribution-contract";
 
@@ -29,13 +30,15 @@ export class TargetDistributionRepository {
       company_id: string;
       region_id: string;
       store_id: string;
+      request_month: string;
     }>(
       `
         SELECT
           target_distribution_request_id,
           company_id,
           region_id,
-          store_id
+          store_id,
+          request_month::text
         FROM ops.target_distribution_request
         WHERE target_distribution_request_id = $1::uuid
       `,
@@ -49,6 +52,7 @@ export class TargetDistributionRepository {
           companyId: row.company_id,
           regionId: row.region_id,
           storeId: row.store_id,
+          requestMonth: row.request_month,
         }
       : null;
   }
@@ -119,6 +123,11 @@ export class TargetDistributionRepository {
     };
   }
 
+  async getDepartureTargets(input: { employeeIds: string[]; storeId: string; requestMonth: string }) {
+    const result = await this.databaseService.query<TargetDeparture>(targetDepartureSql, [input.employeeIds, input.storeId, input.requestMonth]);
+    return result.rows;
+  }
+
   async createRequest(input: {
     companyId: string;
     regionId: string;
@@ -131,6 +140,7 @@ export class TargetDistributionRepository {
       employeeId: string;
       assigneeLabel: string;
       targetValue: number;
+      distributionDays?: number;
       note?: string;
     }>;
     revision?: TargetRevisionInput;
@@ -250,7 +260,7 @@ export class TargetDistributionRepository {
         ],
       );
 
-      return this.mapRequest({ ...request, store_name: "" });
+      return mapTargetDistributionRow({ ...request, store_name: "" });
     });
   }
 
@@ -346,7 +356,7 @@ export class TargetDistributionRepository {
     );
 
     return {
-      items: result.rows.map((row) => this.mapRequest(row)),
+      items: result.rows.map(mapTargetDistributionRow),
       total: Number(countResult.rows[0]?.total_count ?? 0),
       limit,
       offset,
@@ -499,6 +509,18 @@ export class TargetDistributionRepository {
               AND request_status = 'pending_region_approval'
             FOR UPDATE
           ),
+          merged AS (
+            SELECT existing.*, (
+              SELECT jsonb_agg(item.value || CASE WHEN NOT (item.value ? 'distributionDays') AND original.value ? 'distributionDays'
+                THEN jsonb_build_object('distributionDays', original.value->'distributionDays')
+                ELSE '{}'::jsonb END ORDER BY item.ordinality)
+              FROM jsonb_array_elements($6::jsonb) WITH ORDINALITY item(value, ordinality)
+              LEFT JOIN LATERAL (
+                SELECT value FROM jsonb_array_elements(existing.original_allocation_json)
+                WHERE value->>'employeeId' = item.value->>'employeeId' LIMIT 1
+              ) original ON TRUE
+            ) AS final_allocation_json FROM existing
+          ),
           updated AS (
             UPDATE ops.target_distribution_request AS tdr
             SET
@@ -508,7 +530,7 @@ export class TargetDistributionRepository {
               approval_note = $3,
               total_target_value = COALESCE($4::numeric, tdr.total_target_value),
               allocation_count = COALESCE($5::int, tdr.allocation_count),
-              allocation_json = COALESCE($6::jsonb, tdr.allocation_json),
+              allocation_json = COALESCE(existing.final_allocation_json, tdr.allocation_json),
               approval_evidence_json = COALESCE(tdr.approval_evidence_json, '{}'::jsonb) || jsonb_build_object(
                 'approvalMode',
                 CASE WHEN $6::jsonb IS NULL THEN 'direct' ELSE 'adjusted' END,
@@ -519,10 +541,10 @@ export class TargetDistributionRepository {
                 'originalAllocations',
                 existing.original_allocation_json,
                 'approvedAllocations',
-                COALESCE($6::jsonb, tdr.allocation_json)
+                COALESCE(existing.final_allocation_json, tdr.allocation_json)
               ),
               updated_at = NOW()
-            FROM existing
+            FROM merged existing
             WHERE tdr.target_distribution_request_id = $1::uuid
               AND tdr.request_status = 'pending_region_approval'
             RETURNING
@@ -614,6 +636,12 @@ export class TargetDistributionRepository {
         `SELECT employee_id FROM ops.employee WHERE employee_id = ANY($1::uuid[]) ORDER BY employee_id FOR UPDATE`,
         [sortedEmployeeIds],
       );
+      const departed = revision?.mode === "revision"
+        ? await client.query<TargetDeparture>(targetDepartureSql, [sortedEmployeeIds, request.store_id, request.request_month])
+        : { rows: [] as TargetDeparture[] };
+      assertDepartureTargets(departed.rows, allocations);
+      const departedIds = new Set(departed.rows.map(row => row.employee_id));
+      const activeAllocationIds = allocations.filter(a => !departedIds.has(a.employeeId)).map(a => a.employeeId);
       const eligibleResult = await client.query<{ eligible_count: string }>(
         `
           SELECT COUNT(*)::text AS eligible_count
@@ -640,11 +668,11 @@ export class TargetDistributionRepository {
             HAVING COUNT(*) = 1
           ) eligible
         `,
-        [allocations.map((allocation) => allocation.employeeId), request.store_id],
+        [activeAllocationIds, request.store_id],
       );
       if (
         eligibleResult.rows[0] &&
-        Number(eligibleResult.rows[0].eligible_count) !== allocations.length
+        Number(eligibleResult.rows[0].eligible_count) !== activeAllocationIds.length
       ) {
         throwTargetRevisionError("target_revision_active_conflict");
       }
@@ -951,37 +979,7 @@ export class TargetDistributionRepository {
         ],
       );
 
-      return this.mapRequest({ ...request, store_name: "" });
+      return mapTargetDistributionRow({ ...request, store_name: "" });
     });
-  }
-
-  private mapRequest(row: TargetDistributionRow) {
-    const approvalEvidence = parseApprovalEvidence(row.approval_evidence_json);
-
-    return {
-      requestId: row.target_distribution_request_id,
-      companyId: row.company_id,
-      regionId: row.region_id,
-      storeId: row.store_id,
-      storeName: row.store_name,
-      requestMonth: row.request_month,
-      targetLabel: row.target_label,
-      totalTargetValue: Number(row.total_target_value),
-      allocationCount: row.allocation_count,
-      status: row.request_status,
-      requestReason: row.request_reason,
-      allocations: Array.isArray(row.allocation_json) ? row.allocation_json : [],
-      submittedByUserId: row.submitted_by_user_id,
-      approvedByUserId: row.approved_by_user_id,
-      approvedAt: row.approved_at,
-      approvalNote: row.approval_note,
-      approvalMode: approvalEvidence?.approvalMode ?? null,
-      originalTotalTargetValue: approvalEvidence?.originalTotalTargetValue ?? null,
-      approvedTotalTargetValue: approvalEvidence?.approvedTotalTargetValue ?? null,
-      originalAllocations: approvalEvidence?.originalAllocations ?? [],
-      approvedAllocations: approvalEvidence?.approvedAllocations ?? [],
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
   }
 }

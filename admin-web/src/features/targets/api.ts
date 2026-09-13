@@ -29,12 +29,14 @@ export type TargetWorkspace = TargetWorkspaceResponse['data']
 export const storeTargetWorkspaceQueryKey = (input: {
   period: string
   historyYear: number
+  regionManagerUserId?: string
   actorUserId?: string
   roleCodes?: readonly string[]
 }) => [
   'store-target-workspace',
   input.period,
   input.historyYear,
+  input.regionManagerUserId ?? 'all-managers',
   input.actorUserId ?? 'anonymous',
   [...(input.roleCodes ?? [])].sort().join(',') || 'no-role',
 ] as const
@@ -42,6 +44,7 @@ export const storeTargetWorkspaceQueryKey = (input: {
 export async function getStoreTargetWorkspace(input: {
   period: string
   historyYear: number
+  regionManagerUserId?: string
   limit?: number
   offset?: number
 }) {
@@ -52,6 +55,7 @@ export async function getStoreTargetWorkspace(input: {
     offset: String(input.offset ?? 0),
   })
 
+  if (input.regionManagerUserId) query.set('regionManagerUserId', input.regionManagerUserId)
   return fetchOpenApiJson('/api/store/targets/workspace', { query })
 }
 

@@ -1,4 +1,4 @@
-import { CalendarPicker } from '@/components/ui/calendar-picker'
+import { TargetMonthPicker } from './target-month-picker'
 import type { AppLocale } from '@/lib/i18n'
 import type { TargetCommandStore } from './types'
 
@@ -12,8 +12,7 @@ export function TargetEntryPeriodPicker(input: {
 }) {
   const label = input.locale === 'tr' ? 'Hedef Gönderilecek Ayı Seçin' : 'Select Target Submission Month'
   return <div className="target-entry-period"><span>{label}</span>
-    <CalendarPicker mode="month" value={input.value} locale={input.locale} ariaLabel={label}
-      contentClassName="target-entry-period-popover"
+    <TargetMonthPicker value={input.value} locale={input.locale} ariaLabel={label}
       onMonthPreview={month => input.onPreviewYearChange(month.getFullYear())}
       onValueChange={input.onValueChange}
       monthDescription={month => {

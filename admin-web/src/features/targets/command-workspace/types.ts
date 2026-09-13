@@ -10,3 +10,12 @@ export type TargetCommandSortState = {
   key: TargetCommandSortKey
   direction: 'ascending' | 'descending'
 }
+
+export type TargetManagerSelection = {
+  items: import('@/features/org/region-manager-directory').RegionManagerDirectoryItem[]
+  value: string
+  onChange: (value: string) => void
+  loading: boolean
+  error: boolean
+  onRetry: () => void
+}

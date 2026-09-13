@@ -20,6 +20,7 @@ export class TargetWorkspaceController {
       data: await this.service.getWorkspace({
         actor: request.user,
         periodKey: query.period,
+        regionManagerUserId: query.regionManagerUserId,
         historyYear: query.historyYear,
         limit: query.limit,
         offset: query.offset,

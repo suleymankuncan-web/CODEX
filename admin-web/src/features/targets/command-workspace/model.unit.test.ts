@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import type { TargetWorkspaceResponse } from '../api'
+import { storeTargetWorkspaceQueryKey, type TargetWorkspaceResponse } from '../api'
 import {
   buildTargetMetrics,
   filterTargetWorkspace,
@@ -61,4 +61,11 @@ describe('Targets Command Canvas model', () => {
     const stores = flattenTargetStores(mergeTargetWorkspacePages([response(0, [{ id: 'store-2', name: 'Novada', status: 'missing' }, { id: 'store-1', name: 'Mall', status: 'pending' }])])).map((item) => item.store)
     expect(sortTargetStores(stores, { key: 'target', direction: 'descending' }).map((store) => store.storeId)).toEqual(['store-1', 'store-2'])
   })
+})
+
+
+test('manager selection has a separate paginated query identity', () => {
+  const input = { period: '2026-07', historyYear: 2026, actorUserId: 'viewer', roleCodes: ['REPORT_VIEWER'] }
+  expect(storeTargetWorkspaceQueryKey(input)).not.toEqual(storeTargetWorkspaceQueryKey({ ...input, regionManagerUserId: 'manager-a' }))
+  expect(storeTargetWorkspaceQueryKey({ ...input, regionManagerUserId: 'manager-a' })).not.toEqual(storeTargetWorkspaceQueryKey({ ...input, regionManagerUserId: 'manager-b' }))
 })

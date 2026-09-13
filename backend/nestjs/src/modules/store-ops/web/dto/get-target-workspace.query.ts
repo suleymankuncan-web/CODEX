@@ -1,7 +1,12 @@
 import { Type } from "class-transformer";
 import { IsInt, IsOptional, Matches, Max, Min } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetTargetWorkspaceQueryDto {
+  @IsOptional()
+  @IsPostgresUuid()
+  regionManagerUserId?: string;
+
   @IsOptional()
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
   period?: string;

@@ -1,3 +1,4 @@
+import { RegionManagerDirectoryService } from "./region-manager-directory.service";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import { parseTargetDistributionAllocations } from "../infrastructure/target-distribution-contract";
@@ -23,10 +24,11 @@ import { resolveTargetWorkspaceScope } from "./target-workspace-scope";
 
 @Injectable()
 export class TargetWorkspaceReadService {
-  constructor(private readonly repository: TargetWorkspaceReadRepository) {}
+  constructor(private readonly repository: TargetWorkspaceReadRepository, private readonly directory: RegionManagerDirectoryService) {}
 
   async getWorkspace(input: {
     actor: AuthenticatedUser;
+    regionManagerUserId?: string;
     periodKey?: string;
     historyYear?: number;
     limit?: number;
@@ -50,6 +52,16 @@ export class TargetWorkspaceReadService {
 
     if (scope.readScope.companyIds.length + scope.readScope.regionIds.length + scope.readScope.storeIds.length === 0) {
       return emptyWorkspace({ period, historyYear, view: scope.view, capabilities: scope.capabilities, limit, offset });
+    }
+
+    if (input.regionManagerUserId) {
+      if (scope.view !== "report_viewer") throw new ForbiddenException("Manager selection requires company reporting access");
+      const directory = await this.directory.list(input.actor);
+      const selected = directory.items.find(item => item.userId === input.regionManagerUserId);
+      if (!selected?.storeIds.length) {
+        return emptyWorkspace({ period, historyYear, view: scope.view, capabilities: scope.capabilities, limit, offset });
+      }
+      scope.readScope = { ...scope.readScope, storeIds: selected.storeIds };
     }
 
     const page = await this.repository.listStorePage({
@@ -145,8 +157,11 @@ function toStore(input: {
       displayName: row.display_name,
       positionCode: row.position_code,
       positionLabel: row.position_name,
+      actualSales: row.actual_sales ?? null,
+      hireDate: row.hire_date ?? null,
+      terminationDate: row.termination_date ?? null,
       targetValue: allocation ? formatDecimal(allocation.targetValue) : null,
-      eligibilityStatus: "targetable" as const,
+      eligibilityStatus: row.is_historical ? "historical_allocation" as const : "targetable" as const,
     };
   });
   for (const allocation of allocationByEmployee.values()) {
@@ -156,6 +171,7 @@ function toStore(input: {
       positionCode: null,
       positionLabel: null,
       targetValue: formatDecimal(allocation.targetValue),
+          ...(allocation.distributionDays === undefined ? {} : { distributionDays: allocation.distributionDays }),
       eligibilityStatus: "historical_allocation" as const,
     });
   }
@@ -181,6 +197,7 @@ function toStore(input: {
           employeeId: allocation.employeeId,
           displayName: allocation.assigneeLabel,
           targetValue: formatDecimal(allocation.targetValue),
+          ...(allocation.distributionDays === undefined ? {} : { distributionDays: allocation.distributionDays }),
           note: allocation.note ?? null,
         })),
       }
