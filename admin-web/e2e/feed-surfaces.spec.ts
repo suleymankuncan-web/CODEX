@@ -146,11 +146,11 @@ test('store feed renders prototype-parity read-only surface for store personnel'
   await page.goto('/store/feed')
 
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
-  await expect(page.getByText('Müdür akışı')).toBeVisible()
+  await expect(page.getByText('Personel', { exact: true })).toBeVisible()
   await expect(page.getByText('Görünür duyuru')).toBeVisible()
   await expect(page.getByText('Sabitlenen')).toBeVisible()
   await expect(page.getByText('Bugün paylaşılan')).toBeVisible()
-  await expect(page.getByText('Sorumlu mağaza', { exact: true })).toBeVisible()
+  await expect(page.getByText('Yetkili mağaza', { exact: true })).toBeVisible()
   await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toHaveCount(0)
   await expect(page.getByLabel('Gönderi seçenekleri')).toHaveCount(0)
 
@@ -171,7 +171,7 @@ test('store feed keeps pinned posts first and source copy stable across locale c
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible()
-  await expect(page.getByText('A fast announcement and sharing feed for region stores.')).toBeVisible()
+  await expect(page.getByText('Announcements and updates shared with your stores.')).toBeVisible()
   await expect(page.getByText('Visible announcements', { exact: true })).toBeVisible()
 
   const rows = page.getByTestId('store-feed-post-row')

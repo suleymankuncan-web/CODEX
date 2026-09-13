@@ -1,5 +1,6 @@
-import { FileSpreadsheet, Store, UploadCloud } from 'lucide-react'
+import { FileSpreadsheet, Store } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { FieldGroup } from '../../components/ui/field'
 import { Input } from '../../components/ui/input'
 import {
   IntegrationField,
@@ -71,33 +72,18 @@ function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
         </AdminSurfaceBadge>
       }
       description={t('adminIntegrations.uploadPanelCopy')}
-      eyebrow={t('adminIntegrations.tabUploads')}
       title={t('adminIntegrations.uploadPanelTitle')}
     >
-      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,0.8fr)]">
+      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="tw:grid tw:gap-4">
-          <div className="tw:flex tw:min-w-0 tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
-            <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
-              <UploadCloud size={18} aria-hidden="true" />
-            </span>
-            <div className="tw:min-w-0">
-              <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">
-                {t('adminIntegrations.newUpload')}
-              </h3>
-              <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-                {t('adminIntegrations.separateFilesCopy')}
-              </p>
-            </div>
-          </div>
-
-          <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:md:grid-cols-2">
+          <FieldGroup className="integration-form-fields">
             <IntegrationField label={t('adminIntegrations.powerBiKpiSource')}>
               <IntegrationSelect
                 value={resolvedPowerBiSourceCode}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   dispatchPageState({
                     type: 'setPowerBiSourceCode',
-                    value: event.target.value,
+                    value: value,
                   })
                 }
                 disabled={powerBiSources.length === 0}
@@ -117,10 +103,10 @@ function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
               <IntegrationSelect
                 aria-label={t('adminIntegrations.periodType')}
                 value={powerBiPeriodType}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   dispatchPageState({
                     type: 'setPowerBiPeriodType',
-                    value: event.target.value as PowerBiPeriodType,
+                    value: value as PowerBiPeriodType,
                   })
                 }
               >
@@ -175,7 +161,7 @@ function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
                 </IntegrationField>
               </>
             )}
-          </div>
+          </FieldGroup>
 
           <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:md:grid-cols-2">
             <IntegrationUploadDrop
@@ -248,20 +234,10 @@ function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
         </section>
 
         <aside
-          className="tw:rounded-xl tw:border tw:border-border tw:bg-background/60 tw:p-4"
-          aria-label={t('adminIntegrations.uploadDecisionTitle')}
+          className="integration-upload-summary"
+          aria-label={t('adminIntegrations.uploadDecisionEyebrow')}
         >
-          <div className="tw:mb-3">
-            <div className="tw:text-[0.7rem] tw:font-medium tw:tracking-[0.08em] tw:text-muted-foreground tw:uppercase">
-              {t('adminIntegrations.uploadDecisionEyebrow')}
-            </div>
-            <h3 className="tw:mt-1 tw:text-base tw:font-medium tw:text-foreground">
-              {t('adminIntegrations.uploadDecisionTitle')}
-            </h3>
-            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              {t('adminIntegrations.uploadDecisionCopy')}
-            </p>
-          </div>
+          <h3 className="tw:mb-3 tw:text-sm tw:font-semibold tw:text-primary">{t('adminIntegrations.uploadDecisionEyebrow')}</h3>
           <AdminKeyValueGrid className="tw:lg:grid-cols-1">
             <AdminKeyValue
               label={t('adminIntegrations.latestCompleted')}

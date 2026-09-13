@@ -1,0 +1,59 @@
+.integration-dashboard { min-width: 0; }
+.integration-summary > [data-slot="card"] { min-height: 104px; background: var(--card); color: var(--primary); }
+.integration-summary [data-slot="card-title"] { color: var(--primary); }
+.integration-summary [data-slot="card-header"] svg { color: var(--primary); }
+.integration-summary [data-slot="card-content"] { overflow-wrap: anywhere; }
+.integration-next-action { margin: 0; }
+.integration-workspace { min-width: 0; gap: 16px; }
+.integration-workspace > [data-slot="tabs-list"] { gap: 24px; padding-inline: 0; }
+.integration-workspace > [data-slot="tabs-list"] > [data-slot="tabs-trigger"] { min-width: 0; padding-inline: 12px; }
+.integration-workspace [data-slot="tabs-content"] { min-width: 0; }
+.integration-workspace [data-slot="card"] { background: var(--card); }
+.integration-workspace [data-slot="card-header"] { gap: 8px; }
+.integration-workspace [data-slot="card-title"] { color: var(--primary); }
+.integration-select { width: 100%; min-width: 0; height: 40px; background: var(--card); }
+.integration-workspace [data-slot="card-action"] .integration-select { width: auto; max-width: 100%; }
+.integration-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.integration-upload-drop { min-height: 88px; }
+.integration-upload-summary { min-width: 0; border-left: 1px solid var(--border); padding-left: 24px; }
+.integration-upload-summary > div { display: flex; flex-direction: column; gap: 16px; }
+.integration-upload-summary > div > div { border: 0; background: transparent; padding: 0; }
+.integration-search { height: 40px; background: var(--card); }
+.integration-issues-table { width: 100%; table-layout: fixed; }
+.integration-issues-table thead { background: var(--accent); }
+.integration-issues-table th { height: 44px; color: var(--primary); font-size: 12px; font-weight: 600; }
+.integration-issues-table th:first-child { width: 23%; }
+.integration-issues-table th:nth-child(2) { width: 14%; }
+.integration-issues-table th:nth-child(3) { width: 14%; }
+.integration-issues-table th:nth-child(4) { width: 30%; }
+.integration-issues-table th:last-child { width: 19%; }
+.integration-issues-table td { padding: 16px 12px; white-space: normal; overflow-wrap: anywhere; vertical-align: top; border-bottom: 1px solid var(--border); }
+.integration-issue-counts span { display: block; font-size: 12px; line-height: 20px; }
+.integration-issue-actions > * { display: flex; width: 100%; margin-bottom: 8px; }
+.integration-issue-actions [data-slot="button"] { white-space: normal; height: auto; min-height: 36px; text-align: center; }
+.integration-issue-reason p { margin-top: 0; }
+.integration-dashboard input[data-slot="input"] { min-height: 40px; background: var(--card); }
+
+@media (max-width: 1279px) {
+  .integration-upload-summary { border-left: 0; border-top: 1px solid var(--border); padding: 16px 0 0; }
+  .integration-upload-summary > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .integration-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .integration-summary > [data-slot="card"]:first-child { grid-column: 1 / -1; min-height: 88px; }
+  .integration-summary > [data-slot="card"] { min-height: 112px; }
+  .integration-workspace > [data-slot="tabs-list"] { gap: 4px; }
+  .integration-workspace > [data-slot="tabs-list"] > [data-slot="tabs-trigger"] { flex: 1; padding-inline: 4px; font-size: 12px; }
+  .integration-form-fields { grid-template-columns: minmax(0, 1fr); }
+  .integration-upload-summary > div { grid-template-columns: minmax(0, 1fr); }
+  .integration-issues-table, .integration-issues-table tbody { display: block; }
+  .integration-issues-table thead { display: none; }
+  .integration-issues-table tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .integration-issues-table td { display: block; padding: 0; border: 0; }
+  .integration-issue-source, .integration-issue-reason, .integration-issue-actions { grid-column: 1 / -1; }
+  .integration-issue-counts { grid-column: 2; grid-row: 2; text-align: right; }
+  .integration-issues-table td:nth-child(2) { grid-column: 1; grid-row: 2; }
+  .integration-issue-actions { display: flex !important; flex-wrap: wrap; gap: 8px; }
+  .integration-issue-actions > * { flex: 1; margin: 0; }
+  .integration-dashboard [data-slot="button"], .integration-select, .integration-search { min-height: 44px; }
+}

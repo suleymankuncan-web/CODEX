@@ -10,6 +10,8 @@ import {
   UploadCloud,
 } from 'lucide-react'
 import { Link } from 'react-router'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { AdminAzureHeader } from '../../pages/admin-azure-header'
 import { Button } from '../../components/ui/button'
 import type { ImportOverview, NeedsActionItem } from './api'
 import type { TranslateFunction } from '../localization/dictionary'
@@ -20,6 +22,8 @@ import {
 } from './integration-dashboard-surface-controls'
 import {
   AdminActionRow,
+  AdminMetricStrip,
+  AdminSurfacePage,
   AdminKeyValue,
   AdminKeyValueGrid,
   AdminStatePanel,
@@ -27,7 +31,6 @@ import {
   AdminSurfaceSection,
   type AdminMetricStripItem,
 } from '../../pages/admin-surface-primitives'
-import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage } from '../../pages/admin-operational-primitives'
 import { IntegrationLifecycleStrip } from '../../pages/integration-lifecycle-strip'
 import {
   formatNumber,
@@ -137,6 +140,7 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
   const metricItems: AdminMetricStripItem[] = [
     {
       id: 'status',
+      icon: <DatabaseZap size={18} />,
       label: t('adminIntegrations.status'),
       value: actionCount === 0 ? t('adminIntegrations.controlled') : t('adminIntegrations.needsReview'),
       description:
@@ -180,11 +184,9 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
   ]
 
   return (
-    <AdminOperationalPage ariaLabel={t('adminIntegrations.heroEyebrow')}>
-      <AdminOperationalHeader
-        eyebrow={t('adminIntegrations.heroEyebrow')}
+    <AdminSurfacePage className="integration-dashboard" ariaLabel={t('adminIntegrations.heroEyebrow')}>
+      <AdminAzureHeader
         title={t('adminIntegrations.title')}
-        description={t('adminIntegrations.heroCopy')}
         icon={<DatabaseZap size={18} />}
         meta={
           <>
@@ -209,12 +211,12 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
         }
       />
 
-      <AdminOperationalMetrics
-        className="tw:xl:grid-cols-5"
-        items={metricItems}
+      <AdminMetricStrip
+        className="integration-summary tw:xl:grid-cols-5"
+        items={metricItems.map((item) => ({ ...item, tone: 'neutral' }))}
       />
 
-      <IntegrationLifecycleStrip actionCount={actionCount} overview={overview} primaryItem={sortedItems[0]} t={t} onOpenIssues={() => dispatchPageState({ type: 'setActiveTab', value: 'errors' })} />
+      <IntegrationLifecycleStrip actionCount={actionCount} primaryItem={sortedItems[0]} t={t} onOpenIssues={() => dispatchPageState({ type: 'setActiveTab', value: 'errors' })} />
       {(createdBatchId || uploadedBatchId) ? (
         <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:lg:grid-cols-2">
           {createdBatchId ? (
@@ -236,28 +238,17 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
         </div>
       ) : null}
 
-      <AdminActionRow
-        className="tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-2 tw:shadow-sm"
-      >
-        {tabs.map((tab) => (
-          <Button
-            aria-pressed={activeTab === tab.id}
-            key={tab.id}
-            variant={activeTab === tab.id ? 'default' : 'outline'}
-            type="button"
-            onClick={() => dispatchPageState({ type: 'setActiveTab', value: tab.id })}
-          >
-            <span>{tab.label}</span>
-            {typeof tab.count === 'number' ? (
-              <AdminSurfaceBadge tone={tab.count > 0 ? 'warning' : 'neutral'}>
-                {formatNumber(tab.count)}
-              </AdminSurfaceBadge>
-            ) : null}
-          </Button>
-        ))}
-      </AdminActionRow>
+      <Tabs value={activeTab} onValueChange={(value) => dispatchPageState({ type: 'setActiveTab', value: value as IntegrationTab })} className="integration-workspace">
+        <TabsList aria-label={t('adminIntegrations.tabsAria')}>
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.id} value={tab.id}>
+              {tab.label}
+              {typeof tab.count === 'number' ? <AdminSurfaceBadge tone={tab.count > 0 ? 'warning' : 'neutral'}>{formatNumber(tab.count)}</AdminSurfaceBadge> : null}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {activeTab === 'uploads' ? (
+      <TabsContent value="uploads">
         <IntegrationUploadsPanel
           dispatchPageState={dispatchPageState}
           isPowerBiUploadDisabled={isPowerBiUploadDisabled}
@@ -274,9 +265,9 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
           t={t}
           uploadPowerBiMutation={uploadPowerBiMutation}
         />
-      ) : null}
+      </TabsContent>
 
-      {activeTab === 'evidence' ? (
+      <TabsContent value="evidence">
         <IntegrationEvidencePanel
           compatibleSources={compatibleSources}
           createBatchMutation={createBatchMutation}
@@ -290,9 +281,9 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
           t={t}
           templateSourceSystem={templateSourceSystem}
         />
-      ) : null}
+      </TabsContent>
 
-      {activeTab === 'errors' ? (
+      <TabsContent value="errors">
         <IntegrationErrorsPanel
           canGoBack={canGoBack}
           canGoForward={canGoForward}
@@ -308,8 +299,9 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
           statusFilter={statusFilter}
           t={t}
         />
-      ) : null}
-    </AdminOperationalPage>
+      </TabsContent>
+      </Tabs>
+    </AdminSurfacePage>
   )
 }
 
@@ -349,10 +341,10 @@ function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
         <IntegrationSelect
           aria-label={t('adminIntegrations.templateSourceSystem')}
           value={templateSourceSystem}
-          onChange={(event) =>
+          onValueChange={(value) =>
             dispatchPageState({
               type: 'setTemplateSourceSystem',
-              value: event.target.value as IntegrationTemplateSourceSystem,
+              value: value as IntegrationTemplateSourceSystem,
             })
           }
         >
@@ -361,7 +353,6 @@ function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
         </IntegrationSelect>
       }
       description={t('adminIntegrations.evidencePanelCopy')}
-      eyebrow={t('adminIntegrations.tabEvidence')}
       title={t('adminIntegrations.evidencePanelTitle')}
     >
       <AdminKeyValueGrid className="tw:lg:grid-cols-3">
@@ -401,10 +392,10 @@ function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
             <IntegrationSelect
               aria-label={t('adminIntegrations.executionSource')}
               value={resolvedTemplateSourceCode}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 dispatchPageState({
                   type: 'setSelectedTemplateSourceCode',
-                  value: event.target.value,
+                  value: value,
                 })
               }
               disabled={compatibleSources.length === 0}
@@ -461,7 +452,7 @@ function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
           ) : null}
 
           <pre
-            className="tw:max-h-96 tw:overflow-auto tw:rounded-lg tw:border tw:border-border tw:bg-slate-950 tw:p-3 tw:text-xs tw:leading-5 tw:text-slate-100"
+            className="tw:max-h-96 tw:overflow-auto tw:rounded-lg tw:border tw:border-border tw:bg-muted tw:p-3 tw:text-xs tw:leading-5 tw:text-foreground"
             data-testid="integration-code-block"
           >
             {JSON.stringify(importTemplateQuery.data.requestBody, null, 2)}

@@ -41,14 +41,7 @@
 }
 [data-store-command-surface] {
   color: var(--store-command-ink);
-  font-family:
-    "Segoe UI Variable",
-    "Segoe UI",
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font-family: inherit;
   line-height: 1.45;
 }
 .store-command-sidebar {

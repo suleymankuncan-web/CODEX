@@ -80,6 +80,53 @@ test('operations surface remains mobile-width bounded', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(1)
 })
 
+test('Azure operations views and admin navigation stay usable across screen sizes', async ({ page }, testInfo) => {
+  const writes: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) {
+      writes.push(`${request.method()} ${new URL(request.url()).pathname}`)
+    }
+  })
+
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 360, height: 800 }]) {
+    await page.setViewportSize(viewport)
+    await page.goto('/admin/operations')
+    await expect(page.getByRole('heading', { name: 'Operations Control Tower', exact: true })).toBeVisible()
+    await expect(page.getByTestId('operations-action-list')).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: testInfo.outputPath(`operations-${viewport.width}.png`) })
+
+    await page.getByRole('tab', { name: 'Work queues', exact: true }).click()
+    await expect(page.getByTestId('operations-workforce-signal')).toBeVisible()
+    await expect(page.getByTestId('operations-backend-signal')).toHaveCount(0)
+    await page.getByRole('tab', { name: 'System status', exact: true }).click()
+    await expect(page.getByTestId('operations-backend-signal')).toBeVisible()
+    await expect(page.getByTestId('operations-workforce-signal')).toHaveCount(0)
+    await page.getByRole('tab', { name: 'All signals', exact: true }).click()
+    await expect(page.getByTestId('operations-workforce-signal')).toBeVisible()
+
+    if (viewport.width < 760) {
+      const menu = page.locator('.admin-command-mobile-toolbar button')
+      await menu.click()
+      const drawer = page.getByRole('dialog')
+      await expect(drawer).toBeVisible()
+      await expect(drawer.getByRole('link', { name: 'Operations', exact: true })).toBeVisible()
+      await page.screenshot({ path: testInfo.outputPath(`admin-navigation-${viewport.width}.png`) })
+      await page.keyboard.press('Escape')
+      await expect(drawer).toHaveCount(0)
+      await expect(menu).toBeFocused()
+    } else {
+      const toggle = page.locator('.admin-command-sidebar-toggle')
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(page.locator('.admin-command-app')).toHaveClass(/admin-command-app-collapsed/)
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    }
+  }
+  expect(writes).toEqual([])
+})
+
 async function routeReadyOperationsApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({

@@ -87,7 +87,9 @@ export async function verifyStoreNavTransition(
 ) {
   await storeNav.getByRole('link', { name: input.linkName, exact: true }).click()
 
-  await expect(page).toHaveURL(new RegExp(`${escapeRegex(input.path)}$`))
+  await expect(page).toHaveURL(
+    new RegExp(`${escapeRegex(input.path)}(?:[?#].*)?$`),
+  )
   await expect(input.ready).toBeVisible()
   await expectHealthyStoreTransition(page)
 }

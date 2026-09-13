@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { ArrowRight, Search } from 'lucide-react'
 import { Link } from 'react-router'
 import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../../components/ui/input-group'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { actionToast } from '../../lib/action-toast'
 import { downloadCsv } from '../../lib/download-csv'
 import { formatState, mapHealthTone } from '../../lib/format'
@@ -131,8 +132,8 @@ function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
           <IntegrationSelect
             aria-label={t('adminIntegrations.sortPriority')}
             value={sortBy}
-            onChange={(event) =>
-              dispatchPageState({ type: 'setSortBy', value: event.target.value as IntegrationSortValue })
+            onValueChange={(value) =>
+              dispatchPageState({ type: 'setSortBy', value: value as IntegrationSortValue })
             }
           >
             <option value="priority">{t('adminIntegrations.sortPriority')}</option>
@@ -152,18 +153,13 @@ function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
         </AdminActionRow>
       }
       description={t('adminIntegrations.errorsPanelCopy')}
-      eyebrow={t('adminIntegrations.tabErrors')}
       title={t('adminIntegrations.errorsPanelTitle')}
     >
-      <div className="tw:grid tw:grid-cols-1 tw:gap-2 tw:lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]">
-        <label className="tw:relative tw:block">
-          <Search
-            aria-hidden="true"
-            className="tw:pointer-events-none tw:absolute tw:left-3 tw:top-1/2 tw:size-4 tw:-translate-y-1/2 tw:text-muted-foreground"
-          />
-          <span className="tw:sr-only">{t('adminIntegrations.filterQueue')}</span>
-          <Input
-            className="tw:pl-9"
+      <div className="tw:grid tw:grid-cols-1 tw:gap-2 tw:xl:grid-cols-[minmax(0,1fr)_10rem_11rem_auto]">
+        <InputGroup className="integration-search">
+          <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
+          <InputGroupInput
+            aria-label={t('adminIntegrations.filterQueue')}
             maxLength={SEARCH_MAX_LENGTH}
             value={search}
             onChange={(event) =>
@@ -171,15 +167,15 @@ function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
             }
             placeholder={t('adminIntegrations.searchQueuePlaceholder')}
           />
-        </label>
+        </InputGroup>
         <IntegrationSelect
           aria-label={t('adminIntegrations.filterEntityType')}
           value={entityTypeFilter}
-          onChange={(event) =>
+          onValueChange={(value) =>
             dispatchPageState({
               type: 'setQueueFilter',
               field: 'entityTypeFilter',
-              value: event.target.value,
+              value: value,
             })
           }
         >
@@ -191,11 +187,11 @@ function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
         <IntegrationSelect
           aria-label={t('adminIntegrations.filterStatus')}
           value={statusFilter}
-          onChange={(event) =>
+          onValueChange={(value) =>
             dispatchPageState({
               type: 'setQueueFilter',
               field: 'statusFilter',
-              value: event.target.value,
+              value: value,
             })
           }
         >
@@ -219,64 +215,55 @@ function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
           copy={t('adminIntegrations.noQueueItemsCopy')}
         />
       ) : (
-        <div className="tw:grid tw:gap-2">
-          {sortedItems.map((item) => (
-            <article
-              className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:p-3 tw:shadow-sm tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-center"
-              key={item.batchId}
-            >
-              <Link
-                className="tw:block tw:min-w-0 tw:no-underline"
-                to={`/admin/integrations/${item.batchId}`}
-              >
-                <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2">
-                  <div className="tw:min-w-0 tw:font-medium tw:text-foreground">
-                    {item.sourceCode} / {item.entityType}
-                  </div>
-                  <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(item.healthState))}>
-                    {formatState(item.healthState)}
-                  </AdminSurfaceBadge>
-                </div>
-                <div className="tw:mt-1 tw:break-all tw:text-xs tw:text-muted-foreground">{item.batchId}</div>
-                <p className="tw:mt-2 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-                  {item.actionReason}
-                </p>
-                <div className="tw:mt-3 tw:flex tw:flex-wrap tw:gap-2 tw:text-xs tw:text-muted-foreground">
-                  <AdminSurfaceBadge tone="neutral">
-                    {t('adminIntegrations.records', { count: item.recordCount })}
-                  </AdminSurfaceBadge>
-                  <AdminSurfaceBadge tone={item.errorCount > 0 ? 'danger' : 'neutral'}>
-                    {t('adminIntegrations.errors', { count: item.errorCount })}
-                  </AdminSurfaceBadge>
-                  <AdminSurfaceBadge tone="neutral">
-                    {t('adminIntegrations.retryCount', { count: item.retryCount })}
-                  </AdminSurfaceBadge>
+        <Table className="integration-issues-table" aria-label={t('adminIntegrations.errorsPanelTitle')} aria-busy={isFetching}>
+          <TableHeader><TableRow>
+            <TableHead>{t('adminIntegrations.source')}</TableHead>
+            <TableHead>{t('adminIntegrations.status')}</TableHead>
+            <TableHead>{t('adminIntegrations.uploadDecisionEyebrow')}</TableHead>
+            <TableHead>{t('adminIntegrations.issueReason')}</TableHead>
+            <TableHead><span className="tw:sr-only">{t('adminIntegrations.openBatchDetail')}</span></TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {sortedItems.map((item) => (
+              <TableRow key={item.batchId}>
+                <TableCell className="integration-issue-source">
+                  <Link to={`/admin/integrations/${item.batchId}`} className="tw:font-medium tw:text-primary tw:underline-offset-4 hover:tw:underline">
+                    {item.sourceCode}
+                  </Link>
+                  <span className="tw:mt-1 tw:block tw:text-xs tw:text-muted-foreground">{item.sourceName} / {formatState(item.entityType)}</span>
+                  <span className="tw:mt-1 tw:block tw:break-all tw:text-xs tw:text-muted-foreground">{item.batchId}</span>
+                </TableCell>
+                <TableCell>
+                  <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(item.healthState))}>{formatState(item.healthState)}</AdminSurfaceBadge>
+                </TableCell>
+                <TableCell className="integration-issue-counts">
+                  <span>{t('adminIntegrations.records', { count: item.recordCount })}</span>
+                  <span>{t('adminIntegrations.errors', { count: item.errorCount })}</span>
+                  <span>{t('adminIntegrations.retryCount', { count: item.retryCount })}</span>
+                </TableCell>
+                <TableCell className="integration-issue-reason">
+                  <p>{item.actionReason}</p>
+                  <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{item.recommendedAction}</p>
                   {item.recommendedNextEntityType ? (
-                    <AdminSurfaceBadge tone="warning">
-                      {t('adminIntegrations.nextImport', { entity: item.recommendedNextEntityType })}
-                    </AdminSurfaceBadge>
+                    <AdminSurfaceBadge tone="warning">{t('adminIntegrations.nextImport', { entity: item.recommendedNextEntityType })}</AdminSurfaceBadge>
                   ) : null}
-                </div>
-                <div className="tw:mt-3 tw:flex tw:items-center tw:gap-2 tw:text-sm tw:font-medium tw:text-primary">
-                  <span>{item.recommendedAction}</span>
-                  <ArrowRight className="tw:size-4" aria-hidden="true" />
-                </div>
-              </Link>
-              {item.canRetryNow ? (
-                <AdminActionRow className="tw:lg:justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => retryMutation.mutate(item.batchId)}
-                    disabled={retryMutation.isPending}
-                  >
-                    {retryMutation.isPending ? t('adminIntegrations.retrying') : t('adminIntegrations.retryBatch')}
+                </TableCell>
+                <TableCell className="integration-issue-actions">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={`/admin/integrations/${item.batchId}`}>
+                      {t('adminIntegrations.openBatchDetail')}<ArrowRight data-icon="inline-end" aria-hidden="true" />
+                    </Link>
                   </Button>
-                </AdminActionRow>
-              ) : null}
-            </article>
-          ))}
-        </div>
+                  {item.canRetryNow ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => retryMutation.mutate(item.batchId)} disabled={retryMutation.isPending}>
+                      {retryMutation.isPending ? t('adminIntegrations.retrying') : t('adminIntegrations.retryBatch')}
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       <AdminActionRow className="tw:justify-between">

@@ -19,13 +19,11 @@
   --admin-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
   --admin-command-soft-shadow: 0 18px 48px rgba(32, 24, 48, 0.08);
   --admin-command-focus: rgba(124, 58, 237, 0.22);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   padding-left: var(--admin-command-sidebar);
-  color: var(--admin-command-ink);
-  background:
-    linear-gradient(135deg, rgba(248, 245, 251, 0.98), rgba(237, 247, 246, 0.94)),
-    var(--admin-command-bg);
+  color: var(--foreground);
+  background: var(--background);
   transition: padding-left 220ms ease;
 }
 
@@ -40,12 +38,11 @@
   display: flex;
   width: var(--admin-command-sidebar);
   flex-direction: column;
-  gap: 14px;
-  border-right: 1px solid var(--admin-command-line);
-  background: rgba(255, 255, 255, 0.72);
-  padding: 18px;
+  gap: 16px;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  padding: 20px 12px 12px;
   box-shadow: none;
-  backdrop-filter: blur(18px);
   transition: width 220ms ease, padding 220ms ease;
 }
 
@@ -55,10 +52,10 @@
 }
 
 .admin-command-main {
-  width: min(1220px, calc(100vw - var(--admin-command-sidebar) - 44px));
-  min-height: 100vh;
+  width: min(1280px, 100%);
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: 28px 22px 42px;
+  padding: 20px 24px 40px;
 }
 
 .admin-command-app[data-admin-surface-foundation="v1"] .admin-command-main {
@@ -66,7 +63,7 @@
 }
 
 .admin-command-app-collapsed .admin-command-main {
-  width: min(1260px, calc(100vw - var(--admin-command-sidebar-collapsed) - 44px));
+  width: min(1280px, 100%);
 }
 
 .admin-command-brand,
@@ -90,9 +87,9 @@
   flex: 0 0 42px;
   place-items: center;
   overflow: hidden;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 14px 30px rgba(32, 24, 48, 0.12);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--card);
 }
 
 .admin-command-brand-logo img {
@@ -115,7 +112,7 @@
 .admin-command-identity-text strong {
   display: block;
   font-size: 0.82rem;
-  font-weight: 900;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.12;
 }
@@ -124,9 +121,9 @@
 .admin-command-identity-text small {
   display: block;
   overflow: hidden;
-  color: var(--admin-command-muted);
+  color: var(--muted-foreground);
   font-size: 0.68rem;
-  font-weight: 750;
+  font-weight: 400;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -137,30 +134,33 @@
 .admin-command-utility-link {
   min-height: 40px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 0.625rem;
   background: transparent;
-  color: var(--admin-command-muted);
+  color: var(--muted-foreground);
   font: inherit;
   font-size: 13px;
-  font-weight: 720;
+  font-weight: 500;
   text-decoration: none;
 }
 
 .admin-command-sidebar-toggle {
-  width: 100%;
+  flex-shrink: 0;
   cursor: pointer;
   justify-content: center;
 }
 
 .admin-command-nav {
-  display: grid;
-  gap: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
   overflow: auto;
   padding: 4px 0;
 }
 
 .admin-command-nav-link {
   padding: 0 10px;
+  flex-shrink: 0;
 }
 
 .admin-command-nav-link:hover,
@@ -169,36 +169,36 @@
 .admin-command-utility-link:focus-visible,
 .admin-command-sidebar-toggle:hover,
 .admin-command-sidebar-toggle:focus-visible {
-  border-color: rgba(124, 58, 237, 0.10);
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--admin-command-ink);
+  border-color: var(--border);
+  background: var(--admin-command-plum-soft);
+  color: var(--primary);
   outline: none;
 }
 
 .admin-command-nav-link:focus-visible,
 .admin-command-utility-link:focus-visible,
 .admin-command-sidebar-toggle:focus-visible {
-  box-shadow: 0 0 0 3px var(--admin-command-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
 }
 
 .admin-command-nav-link-active {
   border-color: transparent;
-  background: linear-gradient(135deg, var(--admin-command-plum-soft), var(--admin-command-cyan-soft));
-  color: var(--admin-command-plum-deep);
+  background: var(--primary);
+  color: var(--primary-foreground);
   box-shadow: none;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .admin-command-nav-link-active:hover,
 .admin-command-nav-link-active:focus-visible,
 .admin-command-nav-link-active:active {
   border-color: transparent;
-  background: linear-gradient(135deg, var(--admin-command-plum-soft), var(--admin-command-cyan-soft));
-  color: var(--admin-command-plum-deep);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .admin-command-nav-link-active:focus-visible {
-  box-shadow: 0 0 0 3px var(--admin-command-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
 }
 
 .admin-command-nav-icon {
@@ -219,11 +219,10 @@
   width: 100%;
   min-width: 0;
   min-height: 54px;
-  border: 1px solid var(--admin-command-line);
-  border-radius: 16px;
-  background: var(--admin-command-surface);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--background);
   padding: 8px;
-  box-shadow: 0 14px 34px rgba(32, 24, 48, 0.08);
 }
 
 .admin-command-avatar {
@@ -232,11 +231,11 @@
   height: 34px;
   flex: 0 0 34px;
   place-items: center;
-  border-radius: 12px;
-  background: var(--admin-command-cyan-soft);
-  color: #087b86;
+  border-radius: 0.625rem;
+  background: var(--admin-command-plum-soft);
+  color: var(--primary);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .admin-command-utility-links {
@@ -249,6 +248,7 @@
   width: 100%;
   min-width: 0;
   padding: 0 10px;
+  flex-shrink: 0;
 }
 
 .admin-command-app-collapsed .admin-command-brand-text,
@@ -266,4 +266,15 @@
 .admin-command-app-collapsed .admin-command-utility-link,
 .admin-command-app-collapsed .admin-command-identity {
   justify-content: center;
+}
+
+.admin-command-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-command-mobile-toolbar { display: none; }
+.admin-command-brand { min-width: 0; }
+.admin-command-app-collapsed .admin-command-sidebar-heading { flex-direction: column; }
+.admin-command-identity-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-command-identity-text { min-width: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-command-app, .admin-command-sidebar, .admin-command-brand-text,
+  .admin-command-nav-label, .admin-command-identity-text, .admin-command-utility-link span { transition: none; }
 }

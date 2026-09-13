@@ -61,7 +61,7 @@
 .sh-dashboard-heading h1 {
   margin: 0;
   color: var(--store-command-ink);
-  font-family: Manrope, sans-serif;
+  font-family: inherit;
   font-size: clamp(27px, 3vw, 34px);
   font-weight: 690;
   letter-spacing: -0.035em;
@@ -185,7 +185,7 @@ button.sh-metric:focus-visible {
 
 .sh-metric-copy strong {
   color: var(--store-command-ink);
-  font-family: Manrope, sans-serif;
+  font-family: inherit;
   font-size: 24px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -230,7 +230,7 @@ button.sh-metric:focus-visible {
 .sh-section-head h2 {
   margin: 0;
   color: var(--store-command-ink);
-  font-family: Manrope, sans-serif;
+  font-family: inherit;
   font-size: 18px;
   font-weight: 680;
   letter-spacing: -0.02em;
@@ -311,7 +311,7 @@ button.sh-metric:focus-visible {
 
 .sh-agenda-action > strong {
   color: var(--store-command-ink);
-  font-family: Manrope, sans-serif;
+  font-family: inherit;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
