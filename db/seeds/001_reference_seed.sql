@@ -346,6 +346,135 @@ VALUES
     ('a1000000-0000-0000-0000-000000000006', 'a0000000-0000-0000-0000-000000000002', 'Visual Standards', 3, 'Display is clean and complete', 'score', TRUE, 3, 3)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO ops.checklist_template (
+    checklist_template_id, company_id, template_code, template_type, template_name,
+    category, version_no, status, effective_from, created_by
+)
+VALUES (
+    'a0000000-0000-0000-0000-000000000003',
+    '00000000-0000-0000-0000-000000000001',
+    'BM_STORE_VISIT_2026',
+    'BM_STORE_VISIT',
+    'BM Mağaza Ziyareti',
+    'operations',
+    7,
+    'published',
+    DATE '2026-09-15',
+    '80000000-0000-0000-0000-000000000001'
+)
+ON CONFLICT (template_code, version_no) DO UPDATE SET
+    template_name = EXCLUDED.template_name,
+    template_type = EXCLUDED.template_type,
+    category = EXCLUDED.category,
+    status = EXCLUDED.status,
+    effective_from = EXCLUDED.effective_from,
+    effective_to = NULL;
+
+UPDATE ops.checklist_template
+SET status = 'archived',
+    effective_to = LEAST(COALESCE(effective_to, DATE '2026-09-14'), DATE '2026-09-14')
+WHERE company_id = '00000000-0000-0000-0000-000000000001'::uuid
+  AND template_type = 'BM_STORE_VISIT'
+  AND NOT (template_code = 'BM_STORE_VISIT_2026' AND version_no = 7)
+  AND status = 'published';
+
+WITH final_bm_checklist_items AS (
+    SELECT *
+    FROM jsonb_to_recordset($bm_checklist_v7$
+    [
+      {"itemNo":1,"sectionName":"Vitrin & VM","itemText":"Vitrin camı, zemin ve vitrin alanı temiz mi?","weight":1},
+      {"itemNo":2,"sectionName":"Vitrin & VM","itemText":"Vitrin spotları ve diğer aydınlatmalar yeterli ve eksiksiz çalışıyor mu?","weight":2},
+      {"itemNo":3,"sectionName":"Vitrin & VM","itemText":"Kampanya görselleri eksiksiz ve güncel mi? (vitrin ve mağaza içi görseller için geçerlidir)","weight":2},
+      {"itemNo":4,"sectionName":"Vitrin & VM","itemText":"Vitrin mankenleri doğru giydirilmiş mi?","weight":2},
+      {"itemNo":5,"sectionName":"Vitrin & VM","itemText":"Mankendeki ürünler ütülü ve düzgün mü?","weight":2},
+      {"itemNo":6,"sectionName":"Vitrin & VM","itemText":"Fiyat/indirim etiketleri doğru, güncel ve standartlara uygun mu?","weight":2},
+      {"itemNo":7,"sectionName":"Vitrin & VM","itemText":"Işıklı vitrin görselleri çalışır durumda mı?","weight":2},
+      {"itemNo":8,"sectionName":"Vitrin & VM","itemText":"Mağaza içi yerleşim ve görsel düzen marka standartlarına uygun mu?","weight":2},
+      {"itemNo":9,"sectionName":"Vitrin & VM","itemText":"Askıdaki ürünler ütülü, düzgün ve satışa hazır mı?","weight":2},
+      {"itemNo":10,"sectionName":"Vitrin & VM","itemText":"Ürünler doğru kat/askı/masa üzerinde ve beden sıralaması düzenli mi?","weight":2},
+      {"itemNo":11,"sectionName":"Operasyon","itemText":"Kamera sistemi çalışıyor mu? Kör nokta mevcut mu?","weight":1},
+      {"itemNo":12,"sectionName":"Operasyon","itemText":"Müzik yayını çalışıyor mu?","weight":1},
+      {"itemNo":13,"sectionName":"Operasyon","itemText":"Kişi sayaç sistemi çalışıyor mu?","weight":1},
+      {"itemNo":14,"sectionName":"Operasyon","itemText":"Ziyaretçi Analizi ve Sayım sisteminde bulunan yüz tanıma ekranında tüm ekip tanımlı mı?","weight":1},
+      {"itemNo":15,"sectionName":"Operasyon","itemText":"Koku cihazı ve ütü gb. mağaza ekipmanları çalışıyor mu?","weight":2},
+      {"itemNo":16,"sectionName":"Operasyon","itemText":"Yangın çıkışı, acil durum ekipmanı ve güvenlik alanları erişilebilir mi? Skt güncel mi?","weight":2},
+      {"itemNo":17,"sectionName":"Operasyon","itemText":"Kasa evrakları ve günlük kasa süreçleri eksiksiz mi?","weight":2},
+      {"itemNo":18,"sectionName":"Operasyon","itemText":"Kasa nakit tutarı ve son dekont kontrolü doğru mu?(merkez mağazaları için) / Gider pusulaları imzalatılmış mı?","weight":1},
+      {"itemNo":19,"sectionName":"Operasyon","itemText":"10 günü geçmiş onaylanmamış irsaliye bulunuyor mu?","weight":1},
+      {"itemNo":20,"sectionName":"Operasyon","itemText":"Mağaza, depo ve kabinler temizlik standardına uygun mu?","weight":3},
+      {"itemNo":21,"sectionName":"Operasyon","itemText":"Mağazadaki teknik arıza, bakım ve eksik ekipmanlar kayıt altına alınmış ve takip ediliyor mu?","weight":2},
+      {"itemNo":22,"sectionName":"Personel","itemText":"Mağaza norm kadrosu yeterli mi?","weight":2},
+      {"itemNo":23,"sectionName":"Personel","itemText":"Eksik kadro varsa tamamlamak için aksiyon planı var mı?","weight":1},
+      {"itemNo":24,"sectionName":"Personel","itemText":"Çalışma programına uyulmuş mu? Ziyaret sırasında mağazada yeterli sayıda çalışan var mı?","weight":2},
+      {"itemNo":25,"sectionName":"Personel","itemText":"Nebim satıcı ekranı ile çalışan kişilerin isimler aynı mı? (aktif personel dışı herhangi bir satıcı kodu aktif mi?)","weight":3},
+      {"itemNo":26,"sectionName":"Personel","itemText":"Personel kıyafeti, kişisel bakım ve isimlik kullanımı standartlara uygun mu?","weight":2},
+      {"itemNo":27,"sectionName":"Personel","itemText":"Personel devamlılık, geç kalma ve devamsızlık problemleri takip edilip aksiyona dönüştürülüyor mu?","weight":2},
+      {"itemNo":28,"sectionName":"Personel","itemText":"Mağaza yöneticisi ekip üyelerine düzenli geri bildirim ve koçluk yapıyor mu?","weight":2},
+      {"itemNo":29,"sectionName":"Satış & Müşteri","itemText":"Ekip günlük/haftalık hedef ve önceliklere hakim mi?","weight":2},
+      {"itemNo":30,"sectionName":"Satış & Müşteri","itemText":"Ekip kampanyalara ve müşteri avantajlarına (Hopi, Zubizu, Chippin vb.) hakim mi? Görselleri mevcut mu?","weight":1},
+      {"itemNo":31,"sectionName":"Satış & Müşteri","itemText":"Yeni başlayan/eksik yetkinliği olan personel için eğitim ve gelişim takibi yapılıyor mu?","weight":2},
+      {"itemNo":32,"sectionName":"Satış & Müşteri","itemText":"Mağaza satış performansı hedefe göre takip ediliyor ve aksiyonlar belirleniyor mu?","weight":2},
+      {"itemNo":33,"sectionName":"Satış & Müşteri","itemText":"CR, ATV ve UPT gibi temel KPI'lar takip edilip aksiyona dönüştürülüyor mu?","weight":5},
+      {"itemNo":34,"sectionName":"Satış & Müşteri","itemText":"Müşteri karşılama, ihtiyaç analizi ve ürün önerme standartlarına uyuluyor mu?","weight":1},
+      {"itemNo":35,"sectionName":"Satış & Müşteri","itemText":"Kasa önü, ödeme ve uğurlama süreci müşteri deneyimi açısından uygun mu?","weight":1},
+      {"itemNo":36,"sectionName":"Satış & Müşteri","itemText":"İade/değişim süreçleri doğru ve müşteri odaklı yürütülüyor mu?","weight":2},
+      {"itemNo":37,"sectionName":"Satış & Müşteri","itemText":"Mağaza ekibi CRM/üyelik/kampanya fırsatlarını aktif şekilde kullanıyor mu?","weight":2},
+      {"itemNo":38,"sectionName":"Satış & Müşteri","itemText":"İletişim izinleri tolerans rakamının üzerinde mi?","weight":1},
+      {"itemNo":39,"sectionName":"Stok & Ürün","itemText":"Ürünlerde alarm mevcut ve doğru noktalara uygulanmış mı?","weight":2},
+      {"itemNo":40,"sectionName":"Stok & Ürün","itemText":"Yönetici el terminali ile manuel sayım yapıyor ve stok durumuna hakim mi?","weight":2},
+      {"itemNo":41,"sectionName":"Stok & Ürün","itemText":"Tesadüfi seçilen iki ürün(option) stokları sistemsel ve fiili kontrol edildi mi? Doğru mu? (varyant sapmaları hata kabul edilir)","weight":4},
+      {"itemNo":42,"sectionName":"Stok & Ürün","itemText":"Depo ürün yerleşimi, etiketleme ve ürün bulma kolaylığı standartlara uygun mu? (poşetinden çıkartılmış ürün var mı?)","weight":2},
+      {"itemNo":43,"sectionName":"Stok & Ürün","itemText":"Transfer, sevkiyat ve mağazalar arası ürün hareketleri zamanında ve doğru şekilde yönetiliyor mu?","weight":3},
+      {"itemNo":44,"sectionName":"Müşteri Hizmetleri","itemText":"Müşteriden gelen inceleme ürünlerinin sisteme girişi yapılmış mı?","weight":2},
+      {"itemNo":45,"sectionName":"Müşteri Hizmetleri","itemText":"İnceleme kabulü olan ürünlerin sistemsel çıkışları yapılmış mı?","weight":2},
+      {"itemNo":46,"sectionName":"Müşteri Hizmetleri","itemText":"Müşteri şikayetleri ve geri bildirimleri kayıt altına alınıyor, çözüm ve tekrarını önleme aksiyonu takip ediliyor mu?","weight":2},
+      {"itemNo":47,"sectionName":"Yönetim","itemText":"Haftalık görsel fotoğraflar ilgili ekip ile paylaşılmış mı?","weight":5},
+      {"itemNo":48,"sectionName":"Yönetim","itemText":"Mağaza yöneticisi önceki bölge müdürü ziyaretindeki aksiyonları kapatmış mı?","weight":5},
+      {"itemNo":49,"sectionName":"Yönetim","itemText":"Mağaza ekibi iletişim, motivasyon ve iş birliği açısından sağlıklı çalışıyor mu?","weight":2}
+    ]
+    $bm_checklist_v7$::jsonb) AS item(
+        "itemNo" INTEGER,
+        "sectionName" TEXT,
+        "itemText" TEXT,
+        weight NUMERIC
+    )
+), final_bm_template AS (
+    SELECT checklist_template_id
+    FROM ops.checklist_template
+    WHERE template_code = 'BM_STORE_VISIT_2026'
+      AND version_no = 7
+)
+INSERT INTO ops.checklist_template_item (
+    template_item_id, checklist_template_id, section_name, item_no, item_text,
+    response_type, is_mandatory, weight, max_score, expected_value,
+    evidence_policy, max_evidence_count, creates_remediation_task
+)
+SELECT
+    gen_random_uuid(),
+    final_bm_template.checklist_template_id,
+    item."sectionName",
+    item."itemNo",
+    item."itemText",
+    'compliance',
+    TRUE,
+    item.weight,
+    2,
+    NULL,
+    'optional',
+    3,
+    FALSE
+FROM final_bm_checklist_items item
+CROSS JOIN final_bm_template
+ORDER BY item."itemNo"
+ON CONFLICT (checklist_template_id, item_no) DO UPDATE SET
+    section_name = EXCLUDED.section_name,
+    item_text = EXCLUDED.item_text,
+    response_type = EXCLUDED.response_type,
+    is_mandatory = EXCLUDED.is_mandatory,
+    weight = EXCLUDED.weight,
+    max_score = EXCLUDED.max_score,
+    creates_remediation_task = EXCLUDED.creates_remediation_task;
+
 INSERT INTO ops.kpi_definition (
     kpi_id, kpi_code, kpi_name, metric_type, unit_type, aggregation_type, scope_type, formula_definition, target_direction, is_active
 )

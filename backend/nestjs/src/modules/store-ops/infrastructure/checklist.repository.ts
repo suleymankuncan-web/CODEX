@@ -167,6 +167,7 @@ export class ChecklistRepository {
           expected_value: string | null;
           evidence_policy: "none" | "optional" | "required";
           max_evidence_count: number;
+          creates_remediation_task: boolean;
         }>(
           `
             INSERT INTO ops.checklist_template_item (
@@ -179,9 +180,10 @@ export class ChecklistRepository {
               max_score,
               expected_value,
               evidence_policy,
-              max_evidence_count
+              max_evidence_count,
+              creates_remediation_task
             )
-            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING
               template_item_id,
               section_name,
@@ -192,7 +194,8 @@ export class ChecklistRepository {
               max_score,
               expected_value,
               evidence_policy,
-              max_evidence_count
+              max_evidence_count,
+              creates_remediation_task
           `,
           [
             template.checklist_template_id,
@@ -205,6 +208,7 @@ export class ChecklistRepository {
             item.expectedValue ?? null,
             item.evidencePolicy ?? "none",
             item.maxEvidenceCount ?? 0,
+            item.createsRemediationTask ?? true,
           ],
         );
         const row = itemResult.rows[0];
@@ -219,6 +223,7 @@ export class ChecklistRepository {
           expectedValue: row.expected_value ?? undefined,
           evidencePolicy: row.evidence_policy,
           maxEvidenceCount: Number(row.max_evidence_count),
+          createsRemediationTask: row.creates_remediation_task,
         });
       }
 

@@ -379,6 +379,9 @@ describe("ChecklistRepository", () => {
             weight: "100.00",
             max_score: "5.00",
             expected_value: null,
+            evidence_policy: "none",
+            max_evidence_count: 0,
+            creates_remediation_task: false,
           },
         ],
       });
@@ -399,6 +402,7 @@ describe("ChecklistRepository", () => {
           responseType: "score",
           weight: 100,
           maxScore: 5,
+          createsRemediationTask: false,
         },
       ],
     });
@@ -414,6 +418,7 @@ describe("ChecklistRepository", () => {
       expect.stringContaining("COALESCE(MAX(version_no), 0) + 1"),
       ["HR_OPENING"],
     );
+    expect(client.query.mock.calls[3]?.[1]?.at(-1)).toBe(false);
   });
 
   it("returns draft checklist template metadata and items for publishing", async () => {

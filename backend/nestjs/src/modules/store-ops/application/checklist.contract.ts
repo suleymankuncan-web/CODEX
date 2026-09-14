@@ -24,6 +24,7 @@ export type ChecklistTemplateItemInput = {
   expectedValue?: string;
   evidencePolicy?: ChecklistEvidencePolicy;
   maxEvidenceCount?: number;
+  createsRemediationTask?: boolean;
 };
 
 export type ChecklistTemplateActorScope = {

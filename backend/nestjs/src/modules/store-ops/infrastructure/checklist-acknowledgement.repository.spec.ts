@@ -177,6 +177,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
               scoreValue: "2.00",
               commentText: "Kasa alani duzensiz",
               isNonCompliant: true,
+              createsRemediationTask: false,
             },
             {
               templateItemId: "item-2",
@@ -201,6 +202,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
     const [sql, params] = query.mock.calls[0];
     expect(sql).toContain("ci.status = 'completed'");
     expect(sql).toContain("'isNonCompliant', COALESCE(cr.is_non_compliant, FALSE)");
+    expect(sql).toContain("'createsRemediationTask', cti.creates_remediation_task");
     expect(sql).toContain("'expectedValue', cti.expected_value");
     expect(params).toEqual(["instance-1"]);
     expect(result).toMatchObject({
@@ -215,6 +217,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
           itemText: "Kasa duzeni standartlara uygun mu?",
           scoreValue: 2,
           isNonCompliant: true,
+          createsRemediationTask: false,
         },
         {
           templateItemId: "item-2",

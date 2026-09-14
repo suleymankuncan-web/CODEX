@@ -27,6 +27,7 @@ export type DraftChecklistItem = {
   requiresLowScoreNote: boolean
   evidencePolicy?: ChecklistEvidencePolicy
   maxEvidenceCount?: number
+  createsRemediationTask: boolean
 }
 
 export type DraftChecklistSection = {
@@ -87,6 +88,7 @@ const initialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 6,
         weight: 20,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
       {
         id: 'item-mannequin-combination',
@@ -98,6 +100,7 @@ const initialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 7,
         weight: 25,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
     ],
   },
@@ -115,6 +118,7 @@ const initialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 6,
         weight: 35,
         requiresLowScoreNote: false,
+        createsRemediationTask: true,
       },
     ],
   },
@@ -132,6 +136,7 @@ const initialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 6,
         weight: 20,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
     ],
   },
@@ -152,6 +157,7 @@ const vmInitialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 7,
         weight: 30,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
       {
         id: 'vm-item-mannequin-story',
@@ -163,6 +169,7 @@ const vmInitialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 7,
         weight: 25,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
     ],
   },
@@ -180,6 +187,7 @@ const vmInitialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 6,
         weight: 25,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
     ],
   },
@@ -197,6 +205,7 @@ const vmInitialSections: DraftChecklistSection[] = [
         lowScoreThreshold: 6,
         weight: 20,
         requiresLowScoreNote: true,
+        createsRemediationTask: true,
       },
     ],
   },
@@ -246,6 +255,7 @@ function createEmptyItem(): DraftChecklistItem {
     lowScoreThreshold: 6,
     weight: 10,
     requiresLowScoreNote: false,
+    createsRemediationTask: true,
   }
 }
 
@@ -307,6 +317,7 @@ function createPayload(input: {
         maxEvidenceCount: item.evidencePolicy && item.evidencePolicy !== 'none'
           ? Math.max(1, item.maxEvidenceCount ?? 1)
           : 0,
+        createsRemediationTask: item.createsRemediationTask,
       })),
     ),
   }

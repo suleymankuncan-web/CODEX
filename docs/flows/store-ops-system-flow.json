@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-14T19:08:53.950Z",
+  "generatedAt": "2026-09-14T22:34:12.717Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -1679,7 +1679,7 @@
       "exportedFunction": "getMobileChecklistToday",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 174
+        "line": 175
       }
     },
     {
@@ -1694,7 +1694,7 @@
       "exportedFunction": "startMobileChecklistInstance",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 181
+        "line": 182
       }
     },
     {
@@ -1709,7 +1709,7 @@
       "exportedFunction": "saveMobileChecklistResponse",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 197
+        "line": 198
       }
     },
     {
@@ -1724,7 +1724,7 @@
       "exportedFunction": "completeMobileChecklistInstance",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 214
+        "line": 215
       }
     },
     {
@@ -1739,7 +1739,7 @@
       "exportedFunction": "linkMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 238
+        "line": 239
       }
     },
     {
@@ -1754,7 +1754,7 @@
       "exportedFunction": "uploadApprovedSyntheticMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 255
+        "line": 256
       }
     },
     {
@@ -1769,7 +1769,7 @@
       "exportedFunction": "finalizeApprovedSyntheticMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 266
+        "line": 267
       }
     },
     {
@@ -1784,7 +1784,7 @@
       "exportedFunction": "unlinkMobileChecklistItemEvidence",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 280
+        "line": 281
       }
     },
     {
@@ -1799,7 +1799,7 @@
       "exportedFunction": "getMobileChecklistItemEvidenceReadUrl",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 296
+        "line": 297
       }
     },
     {
@@ -1814,7 +1814,7 @@
       "exportedFunction": "getChecklistAcknowledgements",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 314
+        "line": 315
       }
     },
     {
@@ -1829,7 +1829,7 @@
       "exportedFunction": "createAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 340
+        "line": 341
       }
     },
     {
@@ -1844,7 +1844,7 @@
       "exportedFunction": "publishAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 350
+        "line": 351
       }
     },
     {
@@ -1859,7 +1859,7 @@
       "exportedFunction": "acknowledgeChecklist",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 366
+        "line": 367
       }
     },
     {
