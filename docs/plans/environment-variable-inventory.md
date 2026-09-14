@@ -279,6 +279,7 @@ These values are read by `admin-web/src`.
 | `VITE_CLERK_PUBLISHABLE_KEY` | P0 conditional | Required when `VITE_AUTH_PROVIDER=clerk`. | Public Clerk publishable key only; never store Clerk secret key in frontend env. |
 | `VITE_CLERK_JWT_TEMPLATE` | P1 conditional | Set to the Clerk JWT template used for the backend API audience when required. | Leave empty to use the default Clerk session token. |
 | `VITE_OIDC_AUTHORIZATION_URL` | P0 fallback | Real provider authorize URL if bootstrap is unavailable. | Backend bootstrap is preferred. |
+| `VITE_OIDC_AUTO_REDIRECT` | P1 on-premises | Docker builds set `true` to enter the native Keycloak form directly. | Defaults to `false`; applies only with `VITE_AUTH_PROVIDER=oidc`. |
 | `VITE_OIDC_CLIENT_ID` | P0 fallback | Real public client id if bootstrap is unavailable. | Public, not secret. |
 | `VITE_OIDC_SCOPE` | P0 fallback | Includes `openid profile email`. | Match backend/provider registration. |
 | `VITE_OIDC_RESPONSE_TYPE` | P0 fallback | Must be `code` for PKCE. | Do not use `token` in production examples. |

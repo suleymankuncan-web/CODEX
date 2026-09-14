@@ -508,6 +508,10 @@ if ! kcadm_query get "realms/$realm" >/dev/null 2>&1; then
 fi
 kcadm_quiet update "realms/$realm" \
   -s enabled=true \
+  -s loginTheme=hr-axis \
+  -s internationalizationEnabled=true \
+  -s 'supportedLocales=["tr"]' \
+  -s defaultLocale=tr \
   -s sslRequired=external \
   -s registrationAllowed=false \
   -s loginWithEmailAllowed=true \

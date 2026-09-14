@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-13T13:45:15.378Z",
+  "generatedAt": "2026-09-14T19:08:53.950Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -45,7 +45,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/auth-flow-shell.tsx",
-        "line": 33
+        "line": 39
       }
     },
     {
@@ -646,7 +646,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/auth-flow-shell.tsx",
-        "line": 31
+        "line": 37
       }
     },
     {
@@ -661,7 +661,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/auth-flow-shell.tsx",
-        "line": 21
+        "line": 27
       }
     },
     {
@@ -676,7 +676,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/auth-flow-shell.tsx",
-        "line": 32
+        "line": 38
       }
     },
     {

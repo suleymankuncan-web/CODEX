@@ -8,6 +8,10 @@ Last verified: 2026-09-14
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
+## Active Local Login Preview — 14 September 2026
+
+Owner-approved Keycloak design on `codex/keycloak-login-studio-v1` passed trusted-browser login, reload, logout, Turkish error/help and desktop/mobile checks over the verified GitHub bundle with explicit local mounts. Six first-paint tests cover the shared React/Keycloak layout. The owner authorized one PR and squash merge after required gates, deferred URL masking, and requested a separately reversible staggered entrance. See `docs/plans/keycloak-login-studio-v1.md`; runtime addresses, credentials and detailed receipts remain local. No newly published bundle is claimed.
+
 ## Authority And Freshness
 
 Use the freshest verifiable source in this order:

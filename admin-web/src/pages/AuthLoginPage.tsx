@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { preloadRouteModule } from '../app/route-preloaders'
 import { getAuthBootstrap } from '../features/auth/api'
-import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'
+import { buildProviderLoginUrl, hasProviderLoginConfig, isDirectOidcLoginEnabled } from '../features/auth/auth-flow'
+import { AuthLoginTransition } from '../features/auth/auth-login-transition'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLoginActions, type ClerkLoginShellMode } from '../features/auth/clerk-session'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
@@ -19,6 +20,7 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
   }>({ url: null, error: null })
   const returnTo = searchParams.get('returnTo') ?? location.state?.returnTo ?? '/store'
   const clerkReady = isClerkSessionProviderAvailable()
+  const directOidcLogin = isDirectOidcLoginEnabled()
   const bootstrapQuery = useQuery({
     queryKey: ['auth-bootstrap'],
     queryFn: getAuthBootstrap,
@@ -61,6 +63,19 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
       cancelled = true
     }
   }, [bootstrapQuery.data, clerkReady, returnTo])
+
+  useEffect(() => {
+    // The on-premises Keycloak page contains the complete sign-in form.
+    if (directOidcLogin && !clerkReady && providerLogin.url) {
+      window.location.replace(providerLogin.url)
+    }
+  }, [clerkReady, directOidcLogin, providerLogin.url])
+
+  if (directOidcLogin) {
+    const failed = Boolean(providerLogin.error) || bootstrapQuery.isError ||
+      (!bootstrapQuery.isPending && !providerReady)
+    return <AuthLoginTransition failed={failed} />
+  }
 
   return (
     <section className="auth-login-page" aria-labelledby="auth-login-title">
