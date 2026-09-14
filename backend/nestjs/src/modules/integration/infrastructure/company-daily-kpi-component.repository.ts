@@ -28,6 +28,12 @@ type StoreSalesFact = {
   storeId: string;
   saleInvoiceCount: number;
   returnInvoiceCount: number;
+  saleQuantity: string;
+  signedReturnQuantity: string;
+  netQuantity: string;
+  saleAmountTry: string;
+  signedReturnAmountTry: string;
+  netAmountTry: string;
 };
 
 type StoreFootfallFact = {
@@ -250,12 +256,19 @@ export class CompanyDailyKpiComponentRepository {
           `
             INSERT INTO ops.company_daily_kpi_store_sales (
               component_outcome_id, business_date, store_id,
-              sale_invoice_count, return_invoice_count
+              sale_invoice_count, return_invoice_count,
+              sale_quantity, signed_return_quantity, net_quantity,
+              sale_amount_try, signed_return_amount_try, net_amount_try
             )
             SELECT $1::uuid, $2::date, fact.store_id,
-                   fact.sale_invoice_count, fact.return_invoice_count
+                   fact.sale_invoice_count, fact.return_invoice_count,
+                   fact.sale_quantity, fact.signed_return_quantity, fact.net_quantity,
+                   fact.sale_amount_try, fact.signed_return_amount_try, fact.net_amount_try
             FROM jsonb_to_recordset($3::jsonb) AS fact(
-              store_id uuid, sale_invoice_count integer, return_invoice_count integer
+              store_id uuid, sale_invoice_count integer, return_invoice_count integer,
+              sale_quantity numeric(38,12), signed_return_quantity numeric(38,12),
+              net_quantity numeric(38,12), sale_amount_try numeric(38,12),
+              signed_return_amount_try numeric(38,12), net_amount_try numeric(38,12)
             )
           `,
           [
@@ -265,6 +278,12 @@ export class CompanyDailyKpiComponentRepository {
               input.storeSales.map((fact) => ({
                 return_invoice_count: fact.returnInvoiceCount,
                 sale_invoice_count: fact.saleInvoiceCount,
+                sale_quantity: fact.saleQuantity,
+                signed_return_quantity: fact.signedReturnQuantity,
+                net_quantity: fact.netQuantity,
+                sale_amount_try: fact.saleAmountTry,
+                signed_return_amount_try: fact.signedReturnAmountTry,
+                net_amount_try: fact.netAmountTry,
                 store_id: fact.storeId,
               })),
             ),
@@ -395,6 +414,7 @@ export class CompanyDailyKpiComponentRepository {
       this.assertUuid(fact.storeId);
       this.assertCount(fact.saleInvoiceCount);
       this.assertCount(fact.returnInvoiceCount);
+      this.assertSalesTotals(fact);
     }
 
     for (const fact of employeeFacts) {
@@ -415,22 +435,33 @@ export class CompanyDailyKpiComponentRepository {
       }
       employeeGrains.add(grain);
 
-      const saleQuantity = parseDecimal(fact.saleQuantity);
-      const returnQuantity = parseDecimal(fact.signedReturnQuantity);
-      const netQuantity = parseDecimal(fact.netQuantity);
-      const saleAmount = parseDecimal(fact.saleAmountTry);
-      const returnAmount = parseDecimal(fact.signedReturnAmountTry);
-      const netAmount = parseDecimal(fact.netAmountTry);
-      if (
-        saleQuantity.units < 0n ||
-        saleAmount.units < 0n ||
-        returnQuantity.units > 0n ||
-        returnAmount.units > 0n ||
-        !equalsDecimalSum(saleQuantity, returnQuantity, netQuantity) ||
-        !equalsDecimalSum(saleAmount, returnAmount, netAmount)
-      ) {
-        throw new BadRequestException("company_daily_kpi_invalid_sales_totals");
-      }
+      this.assertSalesTotals(fact);
+    }
+  }
+
+  private assertSalesTotals(fact: {
+    saleQuantity: string;
+    signedReturnQuantity: string;
+    netQuantity: string;
+    saleAmountTry: string;
+    signedReturnAmountTry: string;
+    netAmountTry: string;
+  }) {
+    const saleQuantity = parseDecimal(fact.saleQuantity);
+    const returnQuantity = parseDecimal(fact.signedReturnQuantity);
+    const netQuantity = parseDecimal(fact.netQuantity);
+    const saleAmount = parseDecimal(fact.saleAmountTry);
+    const returnAmount = parseDecimal(fact.signedReturnAmountTry);
+    const netAmount = parseDecimal(fact.netAmountTry);
+    if (
+      saleQuantity.units < 0n ||
+      saleAmount.units < 0n ||
+      returnQuantity.units > 0n ||
+      returnAmount.units > 0n ||
+      !equalsDecimalSum(saleQuantity, returnQuantity, netQuantity) ||
+      !equalsDecimalSum(saleAmount, returnAmount, netAmount)
+    ) {
+      throw new BadRequestException("company_daily_kpi_invalid_sales_totals");
     }
   }
 

@@ -362,6 +362,7 @@ function aggregateConversion(
 ): RatioWithCoverage {
   let numerator = 0n;
   let denominator = 0n;
+  let hasNumerator = false;
   const includedDays: ISODate[] = [];
   const missingDays: ISODate[] = [];
 
@@ -375,20 +376,32 @@ function aggregateConversion(
       ? findFootfallFact(footfallSet.aggregates, storeCode)
       : undefined;
 
+    if (salesFact !== undefined) {
+      numerator += BigInt(salesFact.saleInvoiceCount);
+      hasNumerator = true;
+    }
+    if (footfallFact !== undefined) {
+      denominator += BigInt(footfallFact.footfall);
+    }
+
     if (
       salesFact !== undefined &&
       footfallFact !== undefined &&
       footfallFact.footfall > 0
     ) {
-      numerator += BigInt(salesFact.saleInvoiceCount);
-      denominator += BigInt(footfallFact.footfall);
       includedDays.push(day);
     } else {
       missingDays.push(day);
     }
   }
 
-  return ratioWithCoverage(numerator, denominator, expectedDays, includedDays, missingDays);
+  return ratioWithCoverage(
+    numerator,
+    hasNumerator ? denominator : 0n,
+    expectedDays,
+    includedDays,
+    missingDays,
+  );
 }
 
 function aggregateGsm(

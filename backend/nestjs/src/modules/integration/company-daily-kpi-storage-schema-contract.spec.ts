@@ -21,6 +21,15 @@ const rollbackSql = readFileSync(
   ),
   "utf8",
 );
+const storeTotalsMigrationSql = readFileSync(
+  join(
+    projectRoot,
+    "db",
+    "migrations",
+    "081_store_sales_signed_totals_v1.sql",
+  ),
+  "utf8",
+);
 
 describe("company daily KPI component storage schema contract", () => {
   it.each([schemaSql, migrationSql])(
@@ -72,6 +81,20 @@ describe("company daily KPI component storage schema contract", () => {
     expect(migrationSql).not.toContain("kpi_actual_employee_live_unique_idx");
     expect(migrationSql).not.toMatch(/CREATE (?:OR REPLACE )?VIEW/i);
     expect(migrationSql).not.toMatch(/(?:DOUBLE PRECISION|\bREAL\b)/i);
+  });
+
+  it("persists signed store totals independently from personnel facts", () => {
+    for (const sql of [schemaSql, storeTotalsMigrationSql]) {
+      expect(sql).toMatch(/sale_quantity\s+NUMERIC\(38,12\)/);
+      expect(sql).toMatch(/signed_return_quantity\s+NUMERIC\(38,12\)/);
+      expect(sql).toMatch(/net_quantity\s+NUMERIC\(38,12\)/);
+      expect(sql).toMatch(/sale_amount_try\s+NUMERIC\(38,12\)/);
+      expect(sql).toMatch(/signed_return_amount_try\s+NUMERIC\(38,12\)/);
+      expect(sql).toMatch(/net_amount_try\s+NUMERIC\(38,12\)/);
+      expect(sql).toContain(
+        "net_amount_try = sale_amount_try + signed_return_amount_try",
+      );
+    }
   });
 
   it("provides a fail-closed rollback before dropping typed facts", () => {

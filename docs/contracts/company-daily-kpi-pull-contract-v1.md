@@ -88,7 +88,9 @@ in private runtime configuration outside the repository.
   values MUST NOT be used.
 - **FR-19 Code-only identity:** Store and personnel matching MUST use approved
   stable codes. Name-based matching MUST NOT be used for this source. A sales
-  row without a safe personnel code MUST NOT become a personnel KPI fact.
+  row without a safe personnel code MUST NOT become a personnel KPI fact, but
+  its signed quantity, amount, and distinct invoice contribution MUST remain in
+  the store-day aggregate.
 - **FR-20 Canonical boundary:** Sanitized aggregates MUST enter the existing
   source-agnostic import boundary. The source MUST NOT introduce a separate
   scoring, ranking, snapshot, or reporting path.
@@ -109,9 +111,11 @@ in private runtime configuration outside the repository.
   return values.
 - **FR-24 Range aggregation:** A selected inclusive local reporting range `R`
   MUST calculate conversion and GSM rate from sums of eligible daily numerator
-  and denominator values. It MUST NOT average daily percentages. A day `D` MAY
-  enter `conversion(R, S)` only when both `sales` and `footfall` succeeded for
-  that same `D` and `S`. A day `D` MAY enter `gsmRate(R, S)` only when the `gsm`
+  and denominator values. It MUST NOT average daily percentages. Every
+  successful sales day contributes its store sale-invoice numerator and every
+  successful footfall day contributes its store footfall denominator; a
+  missing component MUST NOT discard the other observed component. A day `D`
+  MAY enter `gsmRate(R, S)` only when the `gsm`
   component succeeded for that `D` and `S`, its total customer count is a valid
   integer greater than zero, and its yes count is between zero and that total.
   Missing or unsuccessful days MUST NOT be treated as zero. `RangeCoverage`
@@ -119,12 +123,13 @@ in private runtime configuration outside the repository.
   the result MUST carry an incomplete-coverage warning when any expected day is
   missing.
 - **FR-25 Return-aware KPI projection:** Store sales performance MUST use the
-  signed net amount and quantity after returns. Store `NET_SALES` MUST be the
-  sum of employee `netAmountTry`, and store `ATV` MUST divide that net amount
-  by the distinct store-day sale invoice count. Personnel sales performance
-  MUST continue to use positive `salesAmountTry` and sale quantities; signed
-  returns remain reconciliation evidence and MUST NOT reduce personnel KPI
-  values.
+  signed store-day net amount and quantity after returns. Store `NET_SALES`
+  MUST come from the store aggregate over every source sales line and MUST NOT
+  be reconstructed by summing personnel facts. Store `ATV` MUST divide that
+  net amount by the distinct store-day sale invoice count. Personnel sales
+  performance MUST continue to use positive `salesAmountTry` and sale
+  quantities; signed returns remain reconciliation evidence and MUST NOT reduce
+  personnel KPI values.
 
 ## Calculation Rules
 
@@ -140,8 +145,7 @@ conversion(D, S) = salesInvoiceCount(D, S) / footfall(D, S)
 gsmRate(D, S) = gsmYesCustomerCount(D, S) / gsmTotalCustomerCount(D, S)
 
 conversion(R, S) = sum(salesInvoiceCount(D, S)) / sum(footfall(D, S))
-                   for D in R where sales(D, S) and footfall(D, S) both
-                   succeeded for the same D and S
+                   for independently observed successful component-days in R
 
 gsmRate(R, S) = sum(gsmYesCustomerCount(D, S)) /
                 sum(gsmTotalCustomerCount(D, S))
@@ -156,7 +160,7 @@ netQuantity(D, S, P) = salesQuantity(D, S, P) + signedReturnQuantity(D, S, P)
 salesAmountTry(D, S, P) = decimal-safe sum(Tutar where Durum=false)
 signedReturnAmountTry(D, S, P) = decimal-safe sum(Tutar where Durum=true)
 netAmountTry(D, S, P) = salesAmountTry(D, S, P) + signedReturnAmountTry(D, S, P)
-storeNetSales(D, S) = sum(netAmountTry(D, S, P))
+storeNetSales(D, S) = decimal-safe sum(Tutar for every sale and return line at D, S)
 storeAtv(D, S) = storeNetSales(D, S) / salesInvoiceCount(D, S)
 personnelPerformanceSales(D, S, P) = salesAmountTry(D, S, P)
 ```
@@ -255,10 +259,10 @@ personnelPerformanceSales(D, S, P) = salesAmountTry(D, S, P)
   performance claim and keeps runtime implementation gated on a measurable
   volume and performance budget.
 - **AC-14 (FR-24):** Given a selected local range containing complete and
-  incomplete days, when a store ratio is calculated, then the numerator and
-  denominator are summed only across days where both relevant sides succeeded,
-  daily percentages are not averaged, excluded days are not zero-filled, and
-  the result reports incomplete coverage.
+  incomplete days, when store conversion is calculated, then all observed sale
+  invoice numerators and all observed footfall denominators are independently
+  summed, daily percentages are not averaged, missing values are not
+  zero-filled, and the result reports incomplete coverage.
 - **AC-15 (FR-22, NFR-1):** Given sales or footfall rows with a different or
   mixed Istanbul business date, when the component is validated against target
   `D`, then the component is rejected; a successful dateless GSM response is
@@ -267,10 +271,11 @@ personnelPerformanceSales(D, S, P) = salesAmountTry(D, S, P)
   lines at employee grain, when the aggregate is produced, then all eight
   required count, quantity, and TRY amount metrics are present, return signs are
   preserved, and net values are decimal-safe signed sums.
-- **AC-17 (FR-15, FR-23, FR-25):** Given a store with `5000 TRY` of positive
-  sales, `-500 TRY` of signed returns, and one distinct sale invoice, when KPI
-  projection runs, then store `NET_SALES` and `ATV` are `4500 TRY` while
-  personnel sales performance remains `5000 TRY`.
+- **AC-17 (FR-15, FR-19, FR-23, FR-25):** Given a store with `5000 TRY` of
+  personnel-attributed positive sales, a `-500 TRY` return without a personnel
+  code, and one distinct sale invoice, when KPI projection runs, then store
+  `NET_SALES` and `ATV` are `4500 TRY` while personnel sales performance remains
+  `5000 TRY`.
 
 ## Edge Cases
 
@@ -340,7 +345,7 @@ interface LocalMetricDateFilter {
 
 interface RangeCoverage {
   expectedDays: ISODate[]
-  includedDays: ISODate[] // both relevant ratio sides succeeded
+  includedDays: ISODate[] // both relevant ratio sides succeeded; partial days remain missing coverage
   missingDays: ISODate[] // never zero-filled
   warning?: 'incomplete_coverage'
 }

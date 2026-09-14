@@ -34,6 +34,12 @@ const sales = (
   storeCode,
   saleInvoiceCount,
   returnInvoiceCount,
+  saleQuantity: "0",
+  signedReturnQuantity: "0",
+  netQuantity: "0",
+  saleAmountTry: "0",
+  signedReturnAmountTry: "0",
+  netAmountTry: "0",
 });
 
 const footfall = (

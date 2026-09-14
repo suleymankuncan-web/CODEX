@@ -1549,6 +1549,12 @@ CREATE TABLE IF NOT EXISTS ops.company_daily_kpi_store_sales (
     store_id UUID NOT NULL REFERENCES ops.store(store_id),
     sale_invoice_count INTEGER NOT NULL,
     return_invoice_count INTEGER NOT NULL,
+    sale_quantity NUMERIC(38,12) NOT NULL,
+    signed_return_quantity NUMERIC(38,12) NOT NULL,
+    net_quantity NUMERIC(38,12) NOT NULL,
+    sale_amount_try NUMERIC(38,12) NOT NULL,
+    signed_return_amount_try NUMERIC(38,12) NOT NULL,
+    net_amount_try NUMERIC(38,12) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_company_daily_kpi_store_sales_grain
         UNIQUE (component_outcome_id, business_date, store_id),
@@ -1561,7 +1567,15 @@ CREATE TABLE IF NOT EXISTS ops.company_daily_kpi_store_sales (
         ) ON DELETE CASCADE,
     CONSTRAINT ck_company_daily_kpi_store_sales_operation CHECK (operation = 'sales'),
     CONSTRAINT ck_company_daily_kpi_store_sales_counts
-        CHECK (sale_invoice_count >= 0 AND return_invoice_count >= 0)
+        CHECK (sale_invoice_count >= 0 AND return_invoice_count >= 0),
+    CONSTRAINT ck_company_daily_kpi_store_sales_signed_totals CHECK (
+        sale_quantity >= 0
+        AND signed_return_quantity <= 0
+        AND net_quantity = sale_quantity + signed_return_quantity
+        AND sale_amount_try >= 0
+        AND signed_return_amount_try <= 0
+        AND net_amount_try = sale_amount_try + signed_return_amount_try
+    )
 );
 
 CREATE INDEX IF NOT EXISTS idx_company_daily_kpi_store_sales_store_day

@@ -76,6 +76,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/;
 const INTEGER_TEXT_PATTERN = /^(0|[1-9]\d*)$/;
+const DECIMAL_TEXT_PATTERN = /^-?\d+(?:\.\d{1,12})?$/;
 const MAX_SAFE_INTEGER_BIGINT = BigInt(Number.MAX_SAFE_INTEGER);
 const MAX_RANGE_DAYS = 366;
 const MAX_STORE_IDS = 250;
@@ -229,7 +230,13 @@ scoped_facts AS (
         'store_id', store_fact.store_id::text,
         'store_code', store.store_code,
         'sale_invoice_count', store_fact.sale_invoice_count::text,
-        'return_invoice_count', store_fact.return_invoice_count::text
+        'return_invoice_count', store_fact.return_invoice_count::text,
+        'sale_quantity', store_fact.sale_quantity::text,
+        'signed_return_quantity', store_fact.signed_return_quantity::text,
+        'net_quantity', store_fact.net_quantity::text,
+        'sale_amount_try', store_fact.sale_amount_try::text,
+        'signed_return_amount_try', store_fact.signed_return_amount_try::text,
+        'net_amount_try', store_fact.net_amount_try::text
       ) ORDER BY store_fact.store_id::text
     ) AS store_facts
   FROM outcomes outcome
@@ -540,6 +547,12 @@ function parseStoreFacts(
         storeCode,
         saleInvoiceCount: parseSafeCount(candidate.sale_invoice_count, "company_daily_kpi_invalid_count"),
         returnInvoiceCount: parseSafeCount(candidate.return_invoice_count, "company_daily_kpi_invalid_count"),
+        saleQuantity: parseDecimalText(candidate.sale_quantity),
+        signedReturnQuantity: parseDecimalText(candidate.signed_return_quantity),
+        netQuantity: parseDecimalText(candidate.net_quantity),
+        saleAmountTry: parseDecimalText(candidate.sale_amount_try),
+        signedReturnAmountTry: parseDecimalText(candidate.signed_return_amount_try),
+        netAmountTry: parseDecimalText(candidate.net_amount_try),
       });
     } else if (operation === "footfall") {
       facts.push({
@@ -662,6 +675,13 @@ function parseSafeCount(value: unknown, message: string): number {
     throw invalidRead(message);
   }
   return Number(bigintValue);
+}
+
+function parseDecimalText(value: unknown): string {
+  if (typeof value !== "string" || !DECIMAL_TEXT_PATTERN.test(value)) {
+    throw invalidRead("company_daily_kpi_invalid_decimal");
+  }
+  return value;
 }
 
 function parseJsonArray(value: unknown): unknown[] {

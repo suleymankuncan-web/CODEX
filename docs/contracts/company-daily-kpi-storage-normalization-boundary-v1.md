@@ -75,7 +75,8 @@ typed daily aggregates may reach future persistence.
 - **FR-6 Signed returns:** Sale rows and return rows MUST be accumulated
   separately. Return quantity and amount values are already negative and MUST
   NOT be negated again. Net values MUST be decimal-safe sums of sale and signed
-  return values.
+  return values. Store-day quantity and amount totals MUST include every valid
+  sales line independently of personnel-code eligibility.
 - **FR-7 Distinct invoice scopes:** Ephemeral invoice identifiers MAY be used in
   memory to calculate distinct sale and return invoice counts. Employee counts
   MUST use day + store + personnel scope. Store sale invoice count MUST be
@@ -88,7 +89,8 @@ typed daily aggregates may reach future persistence.
 - **FR-9 Code-only identity:** Sanitized aggregates MUST contain only stable
   store and personnel codes at the adapter boundary. Display names and store
   descriptions MUST be discarded. Missing personnel code MUST reject the
-  affected personnel sales row without retaining a fallback name.
+  affected personnel sales row without retaining a fallback name; the line
+  MUST remain represented in the store-day aggregate.
 - **FR-10 Allowlist before acceptance:** Future persistence MUST resolve codes
   through approved exact mappings and MUST accept aggregates only for existing,
   active, KPI-import-enabled stores. Directory rows MUST NOT create, activate,
@@ -295,6 +297,12 @@ interface StoreSalesDailyAggregate {
   storeCode: string
   saleInvoiceCount: number
   returnInvoiceCount: number
+  saleQuantity: DecimalText
+  signedReturnQuantity: DecimalText
+  netQuantity: DecimalText
+  saleAmountTry: DecimalText
+  signedReturnAmountTry: DecimalText
+  netAmountTry: DecimalText
 }
 
 interface StoreFootfallDailyAggregate {
@@ -329,7 +337,7 @@ interface SanitizedComponentSet<TAggregate> {
 | --- | --- | --- | --- |
 | Component outcome | source + business day + component | status, retry count, aggregate count, safe reason, sanitized digest, timestamps | payload, name, invoice id, endpoint |
 | Employee sales daily | component set + day + store + personnel | eight approved count/quantity/TRY metrics | name, invoice id, footfall, GSM |
-| Store sales daily | component set + day + store | distinct sale and return invoice counts | invoice ids, personnel denominator |
+| Store sales daily | component set + day + store | distinct sale/return invoice counts and signed sale/return/net quantity and TRY totals | invoice ids, personnel denominator |
 | Store footfall daily | component set + day + store | non-negative integer footfall | personnel id |
 | Store GSM daily | component set + day + store | valid yes and total counts | customer identity, personnel id |
 | Directory reconciliation | no KPI fact persistence in V1 | safe code-level comparison only | automatic activation, display description persistence |
