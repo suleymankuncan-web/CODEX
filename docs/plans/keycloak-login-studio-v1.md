@@ -39,9 +39,21 @@ and a hash-bound receipt remain in the private local QA directory. Credentials
 remain private; WSL is kept alive by the active local session.
 
 The owner subsequently requested a staggered entrance while preserving this
-design, with an isolated commit so animation can be reverted independently.
-Remaining: implement/inspect that motion, resolve generated-document/env-inventory
-guards, complete canonical release, then open and squash-merge one PR.
+design. Its separate optional stylesheet brings in the header, scene, heading,
+card and form groups over 1.28 seconds. Only a presentation timestamp crosses
+the same-origin handoff, so the sequence continues rather than restarting.
+Provider errors/secondary pages settle immediately and reduced-motion users
+receive the static layout. Browser inspection confirmed staggered initial
+opacities, the continuing provider timeline, and the unchanged settled mobile
+layout. Seven motion tests cover remounts, handoff, reload, unavailable storage
+and invalid/future timestamps; six first-paint tests still pass.
+
+Static rollback point: `1ffef191`. The animation is isolated in the following
+commit; reverting it preserves the approved design and auth configuration.
+The local static frontend and provider theme are also retained for immediate
+preview rollback. Generated route/authorization documents and the environment
+inventory were refreshed; all 52 previously affected documentation guards pass.
+Remaining: canonical release and provider gates, then one PR and squash merge.
 
 Self-review: authentication uses the inherited provider form and existing
 PKCE/state/session flow. No custom password submission, token storage, role,

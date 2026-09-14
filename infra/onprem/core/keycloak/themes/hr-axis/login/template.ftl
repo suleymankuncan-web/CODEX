@@ -8,6 +8,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8fa">
   <title>${title!"HR Axis"}</title>
+  <script>
+    // Continue the same presentation timeline after the React handoff.
+    // This timestamp never contains identity, credential or OIDC state data.
+    (() => {
+      let startedAt = Date.now();
+      try {
+        const saved = Number(sessionStorage.getItem('hr-axis-login-entrance-start'));
+        const navigation = performance.getEntriesByType('navigation')[0];
+        if (saved > 0 && saved <= startedAt && navigation?.type !== 'reload') startedAt = saved;
+        sessionStorage.setItem('hr-axis-login-entrance-start', String(startedAt));
+      } catch { /* Sign-in still works when browser storage is unavailable. */ }
+      const elapsed = Math.min(2000, Math.max(0, Date.now() - startedAt));
+      document.documentElement.style.setProperty('--login-motion-offset', '-' + elapsed + 'ms');
+    })();
+  </script>
   <#list properties.styles?split(' ') as style>
     <link href="${url.resourcesPath}/${style}" rel="stylesheet">
   </#list>

@@ -1,19 +1,25 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Eye, LifeBuoy, LockKeyhole, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import logo from '../../assets/login-studio/hr-axis-logo.png'
 import photograph from '../../assets/login-studio/retail-editorial.png'
 import { useLocalization } from '../localization/useLocalization'
+import { prepareLoginEntrance } from './login-entrance'
 import '@fontsource-variable/geist/wght.css'
 import '../../styles/onprem-login.css'
+import '../../styles/onprem-login-motion.css'
 
 export function AuthLoginTransition({ failed = false }: { failed?: boolean }) {
   const { t } = useLocalization()
   const [helpOpen, setHelpOpen] = useState(false)
+  const entranceRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    if (entranceRef.current) prepareLoginEntrance(entranceRef.current)
+  }, [])
 
   return (
-    <div className="onprem-login-entry" data-entry-pending="true">
+    <div ref={entranceRef} className="onprem-login-entry" data-entry-pending="true">
       <div className="login-site">
         <header className="site-header">
           <a href="/auth/login" className="brand" aria-label="HR Axis">

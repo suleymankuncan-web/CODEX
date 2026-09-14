@@ -20,6 +20,12 @@ layout. Both the lazy-route fallback and the entry avoid the older login shell.
 The shared stylesheet is scoped so hosted Clerk and application pages retain
 their existing styles.
 
+The optional `onprem-login-motion.css` entrance layer uses a presentation-only
+session timestamp to continue the React-to-Keycloak sequence. It does not read
+or change authentication state. Error and secondary pages appear immediately;
+reduced-motion preferences disable the entrance. The motion commit can be
+reverted independently of the static design.
+
 Assets are local; the page makes no third-party font or image requests. The
 storefront image was generated for the approved prototype, and the supplied
 HR Axis concept 06 logo is used without alteration. Geist's license is in
@@ -30,6 +36,6 @@ particularly session scripts, extension resources and nested form sections.
 Verify failed/successful login, logout, password reset, password visibility,
 remember-me and help, plus desktop and narrow mobile layouts.
 
-Local installation evidence and the remaining browser check are recorded in
+Local installation and browser verification evidence are recorded in
 `docs/plans/keycloak-login-studio-v1.md`. Local mounts are not a published image
 or a canonical image/offline proof receipt.

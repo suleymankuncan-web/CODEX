@@ -47,6 +47,7 @@ FROM patched-base
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 COPY --chown=1000:0 infra/onprem/core/keycloak/themes/hr-axis/ /opt/keycloak/themes/hr-axis/
 COPY --chown=1000:0 admin-web/src/styles/onprem-login.css /opt/keycloak/themes/hr-axis/login/resources/css/login-studio.css
+COPY --chown=1000:0 admin-web/src/styles/onprem-login-motion.css /opt/keycloak/themes/hr-axis/login/resources/css/login-motion.css
 COPY --chown=1000:0 admin-web/src/assets/login-studio/ /opt/keycloak/themes/hr-axis/login/resources/img/
 USER root
 RUN mkdir -p /var/lib/keycloak-bootstrap \
