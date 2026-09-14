@@ -19,10 +19,12 @@ import { getRegionManagerDirectory } from '../features/org/region-manager-direct
 import { CommandCanvasPage } from '../features/store-command-canvas/primitives'
 import { ApiError } from '../lib/api'
 import { getUserFacingErrorMessage } from '../lib/format'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 import type { AppLocale } from '../lib/i18n'
 import { buildRequestCenterRows, requestBusinessMonth, filterAndSortRequestCenterRows, formatCopy, PAGE_SIZE, requestCenterCopy, type RequestCenterCopy, type RequestCenterRow, type RequestCenterSort, type RequestCenterStatus, type RequestCenterTab, type RequestCenterType } from './store-approvals-request-center-model'
 import { RequestCenterMobileCard, RequestCenterSelect, RequestCenterTableRow } from './store-approvals-request-center-sections'
 import { resolveStoreApprovalsPersona, type StoreApprovalsPersona } from './store-approvals-model'
+import { resolveRequestManagerDirectory } from './store-approvals-manager-directory'
 import { OperationsMetrics, StoreOperationsHeader } from './store-operations-layout'
 import { StoreEmptyState } from './store-surface-primitives'
 import './store-approvals-command-canvas.css'
@@ -44,17 +46,18 @@ function RequestCenterSurface(input: { canRead: boolean; copy: RequestCenterCopy
   const [sort, setSort] = useState<RequestCenterSort>('updatedDesc')
   const [selectedRow, setSelectedRow] = useState<RequestCenterRow | null>(null)
   const workspaceQuery = useQuery({ queryKey: ['request-center-workspace', input.scopeKey], queryFn: getRequestCenterWorkspace, enabled: input.canRead })
-  const directoryQuery = useQuery({ queryKey:['region-manager-directory',input.scopeKey], queryFn:getRegionManagerDirectory, enabled:input.canRead && input.persona === 'reportViewer' })
+  const directoryQuery = useQuery({ queryKey:['region-manager-directory',input.scopeKey], queryFn:getRegionManagerDirectory, enabled:input.canRead && input.persona === 'reportViewer', ...transientQueryRetryOptions })
   const denied = workspaceQuery.error instanceof ApiError && [401, 403].includes(workspaceQuery.error.status)
   const items = denied ? undefined : workspaceQuery.data?.items
-  const allRows = useMemo(() => buildRequestCenterRows({ copy: input.copy, locale: input.locale, persona: input.persona, items: input.persona === 'reportViewer' ? (items ?? []).map(item => ({ ...item, regionName: '', regionManagerNames: (directoryQuery.data?.items ?? []).filter(manager => manager.storeIds.includes(item.storeId)).map(manager => manager.displayName) })) : items ?? [] }), [input.copy, input.locale, input.persona, items, directoryQuery.data])
+  const managerDirectory = useMemo(() => resolveRequestManagerDirectory(directoryQuery.data?.items ?? [], items ?? []), [directoryQuery.data, items])
+  const allRows = useMemo(() => buildRequestCenterRows({ copy: input.copy, locale: input.locale, persona: input.persona, items: input.persona === 'reportViewer' ? (items ?? []).map(item => { const assignedNames = managerDirectory.filter(manager => manager.storeIds.includes(item.storeId)).map(manager => manager.displayName); return { ...item, regionName: '', regionManagerNames: assignedNames.length ? assignedNames : item.regionManagerNames } }) : items ?? [] }), [input.copy, input.locale, input.persona, items, managerDirectory])
   const scopedRows = useMemo(() => {
     if(managerUserId === 'all') return allRows
-    const manager=directoryQuery.data?.items.find(item => item.userId === managerUserId)
+    const manager=managerDirectory.find(item => item.userId === managerUserId)
     const storeIds=new Set(manager?.storeIds ?? [])
     const requestIds=new Set((items ?? []).filter(item => storeIds.has(item.storeId)).map(item => `${item.requestType}:${item.requestId}`))
     return allRows.filter(row => requestIds.has(row.id))
-  }, [allRows, items, directoryQuery.data, managerUserId])
+  }, [allRows, items, managerDirectory, managerUserId])
   const visibleRows = useMemo(() => filterAndSortRequestCenterRows({ rows: scopedRows, tab: activeTab, query, type: typeFilter, status: statusFilter, period: periodFilter, sort }), [activeTab, scopedRows, periodFilter, query, sort, statusFilter, typeFilter])
   const metricRows = scopedRows.filter(row => periodFilter === 'all' || requestBusinessMonth(row.updatedAt) === periodFilter)
   const counts = { open:metricRows.filter(row => row.bucket === 'open').length, done:metricRows.filter(row => row.bucket === 'done').length, returned:metricRows.filter(row => row.status === 'rejected' && row.bucket === 'open').length, overdue:metricRows.filter(row => row.isOverdue).length }
@@ -79,7 +82,7 @@ function RequestCenterSurface(input: { canRead: boolean; copy: RequestCenterCopy
         {id:'overdue',label:input.copy.overdueMetric,value:counts.overdue,icon:AlertTriangle,selected:metricActive === 'overdue',onClick:() => chooseMetric('overdue')},
       ]} />
       <div className={`operations-workspace${input.persona === 'reportViewer' ? ' operations-workspace-with-directory' : ''}`}>
-        {input.persona === 'reportViewer' ? <RequestManagerDirectory locale={input.locale} selection={{ items: directoryQuery.data?.items ?? [], value: managerUserId, onChange: value => { setManagerUserId(value); setPage(1); setSelectedRow(null) }, loading: directoryQuery.isPending, error: directoryQuery.isError, onRetry: () => void directoryQuery.refetch() }} /> : null}
+        {input.persona === 'reportViewer' ? <RequestManagerDirectory locale={input.locale} selection={{ items: managerDirectory, value: managerUserId, onChange: value => { setManagerUserId(value); setPage(1); setSelectedRow(null) }, loading: directoryQuery.isPending && managerDirectory.length === 0, error: directoryQuery.isError && managerDirectory.length === 0, onRetry: () => void directoryQuery.refetch() }} /> : null}
         <Tabs className="operations-board approvals-command-list" value={activeTab} onValueChange={value => {setActiveTab(value as RequestCenterTab);setStatusFilter('all');setPage(1)}}>
           <div className="operations-board-toolbar"><div className="operations-board-title"><h2>{input.persona === 'reportViewer' ? input.copy.viewerTableTitle : input.persona === 'regionManager' ? input.copy.regionTableTitle : input.copy.storeTableTitle}</h2><TabsList className="approvals-view-tabs" aria-label={tr ? 'Talep görünümü' : 'Request view'}><TabsTrigger value="open"><Clock3 size={16} aria-hidden="true"/>{input.copy.openTab}<Badge variant="secondary">{counts.open}</Badge></TabsTrigger><TabsTrigger value="done"><CheckCircle2 size={16} aria-hidden="true"/>{input.copy.doneTab}<Badge variant="secondary">{counts.done}</Badge></TabsTrigger></TabsList></div>
           <div className="operations-filters"><InputGroup><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label={input.copy.searchPlaceholder} value={query} onChange={event => {setQuery(event.target.value);setPage(1)}} placeholder={input.copy.searchPlaceholder} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{visibleRows.length}</Badge></InputGroupAddon></InputGroup>

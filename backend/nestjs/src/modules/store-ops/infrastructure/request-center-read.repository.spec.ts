@@ -118,6 +118,9 @@ describe("RequestCenterReadRepository", () => {
     expect(pageSql).toContain("created_at");
     expect(pageSql).toContain("reviewed_at");
     expect(pageSql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(pageSql).toContain("FROM ops.user_action_store_assignment manager_store");
+    expect(pageSql).toContain("manager_store.store_id = rr.store_id");
+    expect(pageSql).not.toContain("assignment.region_id = rr.region_id");
     expect(pageSql).toContain("region_manager_names");
     expect(pageSql).toContain("ARRAY_AGG");
     expect(eventSql).toContain("audit.event_log");

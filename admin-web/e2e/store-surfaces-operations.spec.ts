@@ -716,6 +716,28 @@ test('store approvals report viewer reads company-scoped manager and store hiera
   await expect(page.getByLabel('Hedef dağıtım talebi formu')).toHaveCount(0)
 })
 
+test('store approvals keeps assigned manager identity when the directory response is empty', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => route.fulfill({ json: {
+    ...authSessionFixture,
+    user: { ...authSessionFixture.user, roleCodes: ['REPORT_VIEWER'], actionScope: { assignedStoreIds: [] }, assignedStoreIds: [] },
+  } }))
+  await routeRequestCenter(page, [{
+    requestId: 'viewer-request-fallback', requestType: 'target', storeId: demoStoreId,
+    storeName: 'Viewer Store', regionId: demoRegionId, regionName: 'Marmara', regionManagerNames: ['Mert Yalçın'],
+    status: 'pending_region_approval', createdAt: '2026-07-10T09:00:00.000Z', updatedAt: '2026-07-10T09:00:00.000Z',
+    waitingSince: '2026-07-10T09:00:00.000Z', nextOwner: 'region', dueAt: '2026-07-12T09:00:00.000Z', isOverdue: false,
+    events: [], eventTotal: 0, targetLabel: 'Viewer target', requestMonth: '2026-07-01', allocationCount: 2,
+    approvalMode: null, personDisplayName: null, nationalIdLast4: null, externalEmployeeRef: null,
+  }])
+  await page.route('**/api/org/region-managers', async (route) => route.fulfill({ json: { items: [] } }))
+
+  await page.goto('/store/approvals')
+
+  await expect(page.getByRole('button', { name: /Mert Yalçın.*1 sorumlu mağaza/ })).toBeVisible()
+  await expect(page.getByText('Bölge yöneticisi tanımsız')).toHaveCount(0)
+})
+
 test('store approvals page presents bounded ledger load failures as an alert', async ({ page }) => {
   await page.unroute('**/api/workflow/request-center**')
   await page.route('**/api/workflow/request-center**', async (route) => {

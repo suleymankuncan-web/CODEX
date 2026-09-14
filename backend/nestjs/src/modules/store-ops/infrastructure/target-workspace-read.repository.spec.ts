@@ -21,6 +21,9 @@ describe("TargetWorkspaceReadRepository", () => {
     expect(countSql).not.toContain("target_distribution_request");
     expect(pageSql).toContain("LEFT JOIN ops.region");
     expect(pageSql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(pageSql).toContain("FROM ops.user_action_store_assignment manager_store");
+    expect(pageSql).toContain("manager_store.store_id = store.store_id");
+    expect(pageSql).not.toContain("role_assignment.region_id = store.region_id");
     expect(pageSql).toContain("AT TIME ZONE 'Europe/Istanbul'");
     expect(pageSql).toContain("jsonb_typeof(latest_request.allocation_json) = 'array'");
     expect(pageSql).toContain("reference.period_end = (latest_request.request_month + INTERVAL '1 month' - INTERVAL '1 day')::date");
@@ -92,6 +95,9 @@ describe("TargetWorkspaceReadRepository", () => {
     expect(sql).toContain("FROM ops.company company");
     expect(sql).toContain("LEFT JOIN ops.region region ON region.company_id = company.company_id");
     expect(sql).toContain("TRUE AS assignment_exists");
+    expect(sql).toContain("FROM ops.user_action_store_assignment manager_store");
+    expect(sql).toContain("manager_assigned_store.region_id = region.region_id");
+    expect(sql).not.toContain("role_assignment.region_id = region.region_id");
     expect(sql).toContain("LEFT JOIN ops.employee employee");
     expect(sql).toContain("company.company_id = ANY($1::uuid[])");
     expect(query.mock.calls[0][1]).toEqual([["company"], "2026-07-31"]);

@@ -13,6 +13,7 @@ import { getRegionManagerDirectory } from '@/features/org/region-manager-directo
 import { downloadStoreMonthlyReportPackage, getStoreMonthlyReportPackage } from '@/features/reports/api'
 import { actionToast } from '@/lib/action-toast'
 import { cn } from '@/lib/utils'
+import { transientQueryRetryOptions } from '@/lib/query-retry'
 import { OperationsDirectory, StoreOperationsHeader } from './store-operations-layout'
 import { buildStoreReportsViewModel } from './store-reports-model'
 import { StoreReportsTable } from './store-reports-table'
@@ -38,6 +39,7 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
     queryKey: ['store-reports-manager-directory', actorId, roleScope],
     queryFn: getRegionManagerDirectory,
     enabled: showDirectory,
+    ...transientQueryRetryOptions,
   })
   const model = useMemo(() => {
     const summary = packageQuery.isError ? null : packageQuery.data ?? null

@@ -9,6 +9,7 @@ import { RegionManagerTargetCommand } from './region-manager-view'
 import { ReportViewerTargetCommand } from './report-viewer-view'
 import { StoreManagerTargetCommand } from './store-manager-view'
 import { TargetCommandFailure, TargetCommandLoading } from './workspace-states'
+import { transientQueryRetryOptions } from '@/lib/query-retry'
 
 function currentPeriod() {
   const parts = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', timeZone: 'Europe/Istanbul' })
@@ -24,7 +25,7 @@ export function TargetCommandWorkspaceOwner(input: { authSummary: AuthSessionSum
   const user = input.authSummary?.user
   const viewer = user?.roleCodes.some(role => role === 'REPORT_VIEWER' || role === 'SUPER_ADMIN') ?? false
   const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
-  const directory = useQuery({ queryKey: ['org-region-manager-directory', scopeSignature], queryFn: getRegionManagerDirectory, enabled: viewer, staleTime: 30_000 })
+  const directory = useQuery({ queryKey: ['org-region-manager-directory', scopeSignature], queryFn: getRegionManagerDirectory, enabled: viewer, staleTime: 30_000, ...transientQueryRetryOptions })
   const managerFilter = viewer && managerId !== 'all' ? { regionManagerUserId: managerId } : {}
   const queryIdentity = storeTargetWorkspaceQueryKey({
     period, historyYear, ...managerFilter,
