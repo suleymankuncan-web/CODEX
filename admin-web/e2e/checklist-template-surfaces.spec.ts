@@ -92,6 +92,9 @@ test('admin checklist template publish preserves create and publish payload shap
   })
 
   await page.goto('/admin/checklists')
+  await page.getByRole('button', { name: /Item settings:/ }).first().click()
+  await page.getByRole('checkbox', { name: 'Create a task when non-compliant' }).uncheck()
+  await page.getByRole('button', { name: 'Done' }).click()
   await page.getByRole('button', { name: 'Publish' }).first().click()
 
   await expect.poll(() => createdPayloads.length).toBe(1)
@@ -102,6 +105,7 @@ test('admin checklist template publish preserves create and publish payload shap
     effectiveFrom: string
     items: Array<{
       expectedValue: string
+      createsRemediationTask: boolean
       itemNo: number
       maxScore: number
       responseType: string
@@ -126,6 +130,7 @@ test('admin checklist template publish preserves create and publish payload shap
   expect(createPayload.items.map((item) => item.itemNo)).toEqual([1, 2, 3, 4])
   expect(createPayload.items.reduce((total, item) => total + item.weight, 0)).toBe(100)
   expect(createPayload.items.every((item) => item.responseType === 'score')).toBe(true)
+  expect(createPayload.items.map((item) => item.createsRemediationTask)).toEqual([false, true, true, true])
   expect(firstExpectedValue).toEqual({
     lowScoreThreshold: 6,
     minScore: 0,

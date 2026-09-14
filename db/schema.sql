@@ -533,6 +533,7 @@ CREATE TABLE ops.checklist_template_item (
     expected_value TEXT,
     evidence_policy TEXT NOT NULL DEFAULT 'none',
     max_evidence_count INTEGER NOT NULL DEFAULT 0,
+    creates_remediation_task BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT ck_checklist_template_item_evidence_policy
         CHECK (evidence_policy IN ('none', 'optional', 'required')),
     CONSTRAINT ck_checklist_template_item_evidence_count CHECK (
@@ -3407,6 +3408,7 @@ BEGIN
     ) AND (
         NEW.evidence_policy IS DISTINCT FROM OLD.evidence_policy
         OR NEW.max_evidence_count IS DISTINCT FROM OLD.max_evidence_count
+        OR NEW.creates_remediation_task IS DISTINCT FROM OLD.creates_remediation_task
     ) THEN
         RAISE EXCEPTION 'published checklist item evidence policy is immutable';
     END IF;

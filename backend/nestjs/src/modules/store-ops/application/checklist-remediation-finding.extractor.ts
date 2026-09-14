@@ -11,6 +11,7 @@ export type ChecklistRemediationResponseSource = {
   scoreValue: number | null;
   commentText: string | null;
   isNonCompliant: boolean;
+  createsRemediationTask: boolean;
 };
 
 export type ChecklistRemediationChecklistSource = {
@@ -67,7 +68,7 @@ export function extractChecklistRemediationFindings(
   const blockedReasons: string[] = [];
 
   for (const response of source.responses) {
-    if (!response.isNonCompliant) {
+    if (!response.isNonCompliant || response.createsRemediationTask === false) {
       continue;
     }
 

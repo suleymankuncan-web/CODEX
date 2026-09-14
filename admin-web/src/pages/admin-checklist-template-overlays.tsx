@@ -55,6 +55,10 @@ export function ChecklistItemSettingsSheet({ model, sectionId, item, trigger }: 
               <Checkbox id={`${item.id}-required-note`} checked={item.requiresLowScoreNote} disabled={model.isSaving} onCheckedChange={(checked) => update({ requiresLowScoreNote: checked === true })} />
               <FieldLabel htmlFor={`${item.id}-required-note`}>{t('adminChecklists.lowScoreNoteRequired')}</FieldLabel>
             </Field>
+            <Field orientation="horizontal">
+              <Checkbox id={`${item.id}-remediation-task`} checked={item.createsRemediationTask} disabled={model.isSaving} onCheckedChange={(checked) => update({ createsRemediationTask: checked === true })} />
+              <FieldLabel htmlFor={`${item.id}-remediation-task`}>{t('adminChecklists.createsRemediationTask')}</FieldLabel>
+            </Field>
             <Field><FieldLabel htmlFor={`${item.id}-evidence`}>{t('adminChecklists.photoEvidence')}</FieldLabel>
               <Select value={evidencePolicy} disabled={model.isSaving} onValueChange={(value) => update({ evidencePolicy: value as ChecklistEvidencePolicy, maxEvidenceCount: value === 'none' ? 0 : Math.max(1, item.maxEvidenceCount ?? 1) })}>
                 <SelectTrigger id={`${item.id}-evidence`} aria-label={t('adminChecklists.photoEvidence')}><SelectValue /></SelectTrigger>
@@ -95,6 +99,7 @@ export function ChecklistTemplatePreview({ model }: ModelProps) {
                 <div><dt>{t('adminChecklists.minScore')} / {t('adminChecklists.maxScore')}</dt><dd>{item.minScore} / {item.maxScore}</dd></div>
                 <div><dt>{t('adminChecklists.lowScoreThreshold')}</dt><dd>{item.lowScoreThreshold}</dd></div>
                 <div><dt>{t('adminChecklists.photoEvidence')}</dt><dd>{t(item.evidencePolicy === 'required' ? 'adminChecklists.evidenceRequired' : item.evidencePolicy === 'optional' ? 'adminChecklists.evidenceOptional' : 'adminChecklists.evidenceNone')}{item.evidencePolicy && item.evidencePolicy !== 'none' ? ` (${item.maxEvidenceCount ?? 1})` : ''}</dd></div>
+                <div><dt>{t('adminChecklists.remediationTask')}</dt><dd>{t(item.createsRemediationTask ? 'adminChecklists.remediationTaskOn' : 'adminChecklists.remediationTaskOff')}</dd></div>
               </dl>
               {item.requiresLowScoreNote && <p>{t('adminChecklists.lowScoreNoteRequired')}</p>}
             </li>)}</ol>

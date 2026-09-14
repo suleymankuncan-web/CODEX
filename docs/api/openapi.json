@@ -11162,6 +11162,9 @@
             "type": "number",
             "minimum": 0,
             "maximum": 10
+          },
+          "createsRemediationTask": {
+            "type": "boolean"
           }
         },
         "required": [

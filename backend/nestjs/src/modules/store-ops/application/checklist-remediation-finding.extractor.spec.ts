@@ -29,11 +29,21 @@ function response(
     scoreValue: 4,
     commentText: "Etiketler eksik",
     isNonCompliant: true,
+    createsRemediationTask: true,
     ...overrides,
   };
 }
 
 describe("extractChecklistRemediationFindings", () => {
+  it("creates no task when remediation is disabled for the item", () => {
+    const result = extractChecklistRemediationFindings({
+      ...baseSource,
+      responses: [response({ createsRemediationTask: false })],
+    });
+
+    expect(result).toEqual({ findings: [], blockedReasons: [] });
+  });
+
   it("creates no findings when the checklist has no non-compliant source rows", () => {
     const result = extractChecklistRemediationFindings({
       ...baseSource,

@@ -53,6 +53,7 @@ type ChecklistRemediationSourceRow = {
 type ChecklistRemediationResponseRow = ChecklistAcknowledgementResponseRow & {
   isNonCompliant?: boolean | string | null;
   expectedValue?: unknown;
+  createsRemediationTask?: boolean | null;
 };
 
 @Injectable()
@@ -338,7 +339,8 @@ export class ChecklistAcknowledgementRepository {
                 'responseValue', cr.response_value,
                 'scoreValue', cr.score_value,
                 'commentText', cr.comment_text,
-                'isNonCompliant', COALESCE(cr.is_non_compliant, FALSE)
+                'isNonCompliant', COALESCE(cr.is_non_compliant, FALSE),
+                'createsRemediationTask', cti.creates_remediation_task
               )
               ORDER BY cti.section_name ASC, cti.item_no ASC, cti.template_item_id ASC
             ) FILTER (WHERE cti.template_item_id IS NOT NULL),
@@ -436,6 +438,7 @@ export class ChecklistAcknowledgementRepository {
                   ? null
                   : Number(row.scoreValue),
             }),
+      createsRemediationTask: row.createsRemediationTask !== false,
     }));
   }
 

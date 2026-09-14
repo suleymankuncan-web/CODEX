@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
@@ -56,6 +57,10 @@ export class CreateChecklistTemplateItemDto {
   @Min(0)
   @Max(10)
   maxEvidenceCount?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  createsRemediationTask?: boolean;
 }
 
 export class CreateChecklistTemplateDto {
