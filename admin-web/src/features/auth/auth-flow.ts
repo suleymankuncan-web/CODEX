@@ -8,6 +8,11 @@ const DEFAULT_SCOPE = 'openid profile email'
 const PKCE_STORAGE_KEY = 'store-ops-admin-pkce-login'
 const PKCE_MAX_AGE_MS = 10 * 60 * 1000
 
+export function isDirectOidcLoginEnabled() {
+  return import.meta.env.VITE_OIDC_AUTO_REDIRECT === 'true' &&
+    import.meta.env.VITE_AUTH_PROVIDER?.trim().toLowerCase() === 'oidc'
+}
+
 type CallbackPayload = {
   accessToken: string
   code: string

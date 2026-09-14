@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
+import { isDirectOidcLoginEnabled } from '../features/auth/auth-flow'
+import { AuthLoginTransition } from '../features/auth/auth-login-transition'
 import { AuthCallbackPage, AuthLoginPage, AuthLogoutPage } from './route-loaders'
 import { RouteLoadingState } from './route-states'
 import { RouteRecoveryBoundary } from './route-recovery-boundary'
@@ -11,12 +13,16 @@ export function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath:
   const [searchParams] = useSearchParams()
   const returnTo = sanitizeAuthReturnPath(searchParams.get('returnTo'))
   const readyPath = returnTo ?? input.firstAllowedPath
-  const shellClassName = location.pathname === '/auth/login' ? 'auth-flow-shell auth-flow-shell-login' : 'auth-flow-shell'
+  const isLogin = location.pathname === '/auth/login'
+  const directOidcLogin = isLogin && isDirectOidcLoginEnabled()
+  const shellClassName = directOidcLogin
+    ? 'auth-flow-shell auth-flow-shell-direct'
+    : isLogin ? 'auth-flow-shell auth-flow-shell-login' : 'auth-flow-shell'
 
   return (
     <div className={shellClassName}>
       <RouteRecoveryBoundary firstAllowedPath={readyPath}>
-        <Suspense fallback={<RouteLoadingState />}>
+        <Suspense fallback={directOidcLogin ? <AuthLoginTransition /> : <RouteLoadingState />}>
           <Routes>
           <Route
             path="/auth/login"

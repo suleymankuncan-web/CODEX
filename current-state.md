@@ -8,6 +8,23 @@ Last verified: 2026-09-14
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
+## Active Local Login Preview — 14 September 2026
+
+Owner-approved Keycloak login work is on `codex/keycloak-login-studio-v1`.
+The GitHub offline package from run 32924025570 is installed locally with explicit
+theme/frontend mounts; its six loaded image configurations match the signed
+bundle. Seven containers are healthy in the Ubuntu WSL Docker project
+`hr-axis-login`, at `https://hr-axis.localhost/auth/login`. Docker Desktop has a
+Windows socket startup failure and is stopped; the former port 5188 prototype
+server is stopped. Windows CA trust confirmation is pending, so actual browser
+login/logout and Docker visual checks remain unverified. See
+`docs/plans/keycloak-login-studio-v1.md` for scope, evidence and the next action.
+The first-paint correction now uses the approved layout for both the React
+entry/lazy fallback and native Keycloak form, sharing CSS and image sources.
+Six first-paint tests passed. The owner authorized one PR and squash merge once
+design verification and required gates pass; URL masking was deferred.
+No PR, image publication or remote deployment has been performed yet.
+
 ## Authority And Freshness
 
 Use the freshest verifiable source in this order:

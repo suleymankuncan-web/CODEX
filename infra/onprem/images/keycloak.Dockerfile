@@ -45,6 +45,9 @@ RUN /opt/keycloak/bin/kc.sh build --db=postgres --health-enabled=true --metrics-
 # the exact base image while making `start --optimized` a valid command.
 FROM patched-base
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
+COPY --chown=1000:0 infra/onprem/core/keycloak/themes/hr-axis/ /opt/keycloak/themes/hr-axis/
+COPY --chown=1000:0 admin-web/src/styles/onprem-login.css /opt/keycloak/themes/hr-axis/login/resources/css/login-studio.css
+COPY --chown=1000:0 admin-web/src/assets/login-studio/ /opt/keycloak/themes/hr-axis/login/resources/img/
 USER root
 RUN mkdir -p /var/lib/keycloak-bootstrap \
     && chown 1000:1000 /var/lib/keycloak-bootstrap \

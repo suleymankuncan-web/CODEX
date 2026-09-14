@@ -1,0 +1,616 @@
+/* Shared by the Docker entry and the native Keycloak theme. */
+.onprem-login-entry[data-entry-pending] input:disabled,
+.onprem-login-entry[data-entry-pending] .login-submit:disabled {
+  opacity: 1;
+}
+.onprem-login-entry .remember-label input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #3159ae;
+}
+.onprem-login-entry {
+  font-family: "Geist Variable", sans-serif;
+  color: #202b3b;
+  background: #f7f8fa;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+.onprem-login-entry * {
+  box-sizing: border-box;
+}
+.onprem-login-entry {
+  margin: 0;
+  min-width: 320px;
+}
+.onprem-login-entry button,
+.onprem-login-entry input {
+  font: inherit;
+}
+.onprem-login-entry button,
+.onprem-login-entry a,
+.onprem-login-entry label:has(button) {
+  -webkit-tap-highlight-color: transparent;
+}
+.onprem-login-entry button {
+  cursor: pointer;
+}
+.onprem-login-entry button:focus-visible,
+.onprem-login-entry a:focus-visible {
+  outline: 3px solid #6389e4;
+  outline-offset: 4px;
+}
+.onprem-login-entry ::selection {
+  background: #d6e2ff;
+  color: #142c58;
+}
+.onprem-login-entry .login-site {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 18px;
+}
+.onprem-login-entry .site-header {
+  height: 86px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 24px;
+}
+.onprem-login-entry .brand {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  line-height: 1;
+}
+.onprem-login-entry .brand img {
+  display: block;
+  width: 164px;
+  height: 52px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.onprem-login-entry .header-caption {
+  font-size: 12px;
+  font-weight: 440;
+  color: #647084;
+  letter-spacing: 0.05em;
+  padding-right: 56px;
+}
+.onprem-login-entry .help-button {
+  color: #3c485c;
+  font-size: 12px;
+  gap: 9px;
+  height: 40px;
+  padding: 0 6px 0 12px;
+}
+.onprem-login-entry .help-button svg:last-child {
+  width: 13px;
+  margin-left: 8px;
+}
+.onprem-login-entry .login-stage {
+  flex: 1;
+  min-height: 660px;
+  position: relative;
+  isolation: isolate;
+  border-radius: 15px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 432px minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+  padding: 28px 40px;
+  background: #4b453c;
+}
+.onprem-login-entry .stage-image,
+.onprem-login-entry .stage-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  object-fit: cover;
+  object-position: center 57%;
+}
+.onprem-login-entry .stage-image {
+}
+.onprem-login-entry .stage-shade {
+  z-index: -1;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(15 21 22 / 0.7),
+      rgb(20 25 24 / 0.16) 42%,
+      rgb(14 20 18 / 0.02) 62%,
+      rgb(15 21 22 / 0.16)
+    ),
+    linear-gradient(0deg, rgb(15 20 20 / 0.55), transparent 32%);
+}
+.onprem-login-entry .editorial-copy {
+  color: #fff;
+  max-width: 340px;
+  align-self: center;
+  margin-top: -2px;
+}
+.onprem-login-entry .eyebrow {
+  font-size: 10px;
+  font-weight: 570;
+  letter-spacing: 0.18em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 29px;
+}
+.onprem-login-entry .eyebrow > span {
+  width: 22px;
+  height: 1px;
+  background: #fff;
+}
+.onprem-login-entry .editorial-copy h1 {
+  font-size: clamp(42px, 4.25vw, 68px);
+  letter-spacing: -0.057em;
+  line-height: 1.08;
+  font-weight: 430;
+  margin: 0 0 25px;
+}
+.onprem-login-entry .editorial-copy p {
+  font-size: 13px;
+  font-weight: 380;
+  line-height: 1.85;
+  margin: 0;
+  color: #f2f2ef;
+}
+.onprem-login-entry .login-panel {
+  background: #fff;
+  border: 1px solid #ffffff;
+  border-radius: 15px;
+  padding: 34px 37px 0;
+  box-shadow:
+    0 24px 80px #191d2530,
+    0 2px 8px #191d2510;
+}
+.onprem-login-entry .panel-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  margin: 0 0 39px;
+}
+.onprem-login-entry .panel-brand > span:first-child {
+  font-size: 17px;
+  font-weight: 550;
+  letter-spacing: 0.22em;
+  color: #263248;
+}
+.onprem-login-entry .panel-brand > span:last-child {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: #697387;
+  font-weight: 550;
+}
+.onprem-login-entry .panel-brand-line {
+  height: 17px;
+  width: 1px;
+  background: #d8dde5;
+}
+.onprem-login-entry .welcome {
+  margin-bottom: 29px;
+}
+.onprem-login-entry .welcome-kicker {
+  display: block;
+  line-height: 1.5;
+  font-size: 9px;
+  font-weight: 550;
+  letter-spacing: 0.18em;
+  color: #657389;
+}
+.onprem-login-entry .welcome h2 {
+  margin: 6px 0 8px;
+  font-size: 37px;
+  font-weight: 520;
+  letter-spacing: -0.06em;
+  line-height: 1.25;
+}
+.onprem-login-entry .welcome h2 > span {
+  color: #3159ae;
+}
+.onprem-login-entry .welcome p {
+  font-size: 12px;
+  line-height: 1.65;
+  color: #687386;
+  margin: 0;
+}
+.onprem-login-entry .field-block {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 19px;
+}
+.onprem-login-entry .field-block > label {
+  font-size: 11px;
+  font-weight: 560;
+  color: #344157;
+}
+.onprem-login-entry .field-block input:not([type="checkbox"]):not([type="submit"]):not([type="hidden"]) {
+  height: 49px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid #c9cfd8;
+  background: #fcfcfd;
+  font-size: 12px;
+  color: #25344d;
+  box-shadow: 0 1px 2px #202b3b03;
+}
+.onprem-login-entry .field-block input::placeholder {
+  color: #737e8e;
+}
+.onprem-login-entry .field-block input:focus-visible {
+  border-color: #3159ae;
+  background: #fff;
+  outline: 3px solid #3159ae20;
+  box-shadow: none;
+}
+.onprem-login-entry .field-block input[aria-invalid="true"] {
+  border-color: #ad3535;
+}
+.onprem-login-entry .field-error {
+  font-size: 11px;
+  color: #9b2828;
+}
+.onprem-login-entry .password-wrap {
+  position: relative;
+}
+.onprem-login-entry .password-wrap input {
+  padding-right: 47px;
+  width: 100%;
+}
+.onprem-login-entry .password-toggle {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 41px;
+  height: 41px;
+  color: #758195;
+  border-radius: 5px;
+}
+.onprem-login-entry .password-toggle svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.6;
+}
+.onprem-login-entry .form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 1px 0 24px;
+}
+.onprem-login-entry .remember-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #59657a;
+  cursor: pointer;
+  min-height: 32px;
+}
+.onprem-login-entry .remember-label button {
+  width: 15px;
+  height: 15px;
+  border: 1px solid #aab4c4;
+}
+.onprem-login-entry .remember-label button[data-state="checked"] {
+  color: #fff;
+  background: #3159ae;
+  border-color: #3159ae;
+}
+.onprem-login-entry .forgot-button {
+  padding: 0;
+  height: 32px;
+  color: #3159ae;
+  font-size: 11px;
+  font-weight: 550;
+}
+.onprem-login-entry .login-submit {
+  width: 100%;
+  height: 49px;
+  border-radius: 7px;
+  background: #3159ae;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 550;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 18px;
+  box-shadow: 0 4px 8px #3159ae13;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+.onprem-login-entry .login-submit:hover {
+  background: #254991;
+  box-shadow: 0 6px 15px #3159ae30;
+}
+.onprem-login-entry .login-submit svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s;
+}
+.onprem-login-entry .login-submit:hover svg {
+  transform: translateX(3px);
+}
+.onprem-login-entry .panel-footer {
+  margin: 26px -37px 0;
+  padding: 18px 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid #eceef2;
+  font-size: 10px;
+  color: #657186;
+  background: #fafbfc;
+  border-radius: 0 0 14px 14px;
+}
+.onprem-login-entry .inline-notice {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  background: #f0f4fb;
+  border: 1px solid #dce5f5;
+  border-radius: 7px;
+  animation: onprem-content-arrive 0.25s both;
+}
+.onprem-login-entry .inline-notice strong {
+  color: #254991;
+  font-size: 11px;
+  font-weight: 600;
+}
+.onprem-login-entry .inline-notice p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #51617c;
+  margin: 4px 0 0;
+}
+.onprem-login-entry .inline-notice button {
+  color: #51617c;
+  margin: -5px -5px 0 0;
+  flex-shrink: 0;
+}
+.onprem-login-entry .site-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 52px;
+  padding: 9px 24px;
+  color: #6a7484;
+  font-size: 10px;
+  gap: 15px;
+}
+@keyframes onprem-content-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes onprem-image-arrive {
+  from {
+    transform: scale(1.025);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (min-width: 1600px) {
+  .onprem-login-entry .login-stage {
+    gap: 68px;
+    padding-left: 70px;
+    padding-right: 70px;
+  }
+  .onprem-login-entry .editorial-copy {
+    margin-left: 30px;
+  }
+}
+@media (max-width: 1100px) {
+  .onprem-login-entry .login-stage {
+    grid-template-columns: minmax(0, 1fr) 410px minmax(0, 1fr);
+    gap: 22px;
+    padding-left: 26px;
+    padding-right: 26px;
+  }
+  .onprem-login-entry .editorial-copy h1 {
+    font-size: 42px;
+  }
+  .onprem-login-entry .editorial-copy p {
+    font-size: 11px;
+  }
+  .onprem-login-entry .eyebrow {
+    letter-spacing: 0.07em;
+    font-size: 8px;
+    gap: 6px;
+  }
+  .onprem-login-entry .eyebrow > span {
+    width: 12px;
+  }
+}
+@media (max-width: 900px) {
+  .onprem-login-entry .login-stage {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    min-height: 740px;
+    gap: 26px;
+    padding: 34px 24px 64px;
+  }
+  .onprem-login-entry .editorial-copy {
+    text-align: center;
+    margin: 0;
+    max-width: none;
+  }
+  .onprem-login-entry .editorial-copy h1 {
+    font-size: 34px;
+    margin: 0;
+    letter-spacing: -0.045em;
+  }
+  .onprem-login-entry .editorial-copy h1 br {
+    display: none;
+  }
+  .onprem-login-entry .editorial-copy h1 {
+    max-width: 420px;
+  }
+  .onprem-login-entry .editorial-copy .eyebrow {
+    justify-content: center;
+    font-size: 8px;
+    margin-bottom: 12px;
+  }
+  .onprem-login-entry .editorial-copy p {
+    display: none;
+  }
+  .onprem-login-entry .login-panel {
+    width: min(410px, 100%);
+    min-width: 0;
+  }
+  .onprem-login-entry .header-caption {
+    display: none;
+  }
+  .onprem-login-entry .stage-shade {
+    background: linear-gradient(0deg, #151e2270, #151e2240 50%, #151e2270);
+  }
+}
+@media (max-width: 540px) {
+  .onprem-login-entry .login-site {
+    padding: 0 9px;
+  }
+  .onprem-login-entry .site-header {
+    height: 68px;
+    padding: 0 12px;
+  }
+  .onprem-login-entry .brand {
+    font-size: 28px;
+  }
+  .onprem-login-entry .login-stage {
+    border-radius: 11px;
+    min-height: 0;
+    padding: 29px 14px 26px;
+    gap: 25px;
+  }
+  .onprem-login-entry .editorial-copy h1 {
+    font-size: 31px;
+  }
+  .onprem-login-entry .login-panel {
+    padding: 28px 24px 0;
+    border-radius: 12px;
+  }
+  .onprem-login-entry .panel-brand {
+    margin-bottom: 28px;
+  }
+  .onprem-login-entry .welcome {
+    margin-bottom: 24px;
+  }
+  .onprem-login-entry .welcome h2 {
+    font-size: 35px;
+  }
+  .onprem-login-entry .field-block input:not([type="checkbox"]):not([type="submit"]):not([type="hidden"]) {
+    font-size: 16px;
+    height: 50px;
+  }
+  .onprem-login-entry .field-block {
+    margin-bottom: 17px;
+  }
+  .onprem-login-entry .password-toggle {
+    top: 5px;
+  }
+  .onprem-login-entry .form-options {
+    margin-bottom: 19px;
+  }
+  .onprem-login-entry .panel-footer {
+    margin-left: -24px;
+    margin-right: -24px;
+    border-radius: 0 0 11px 11px;
+    font-size: 9px;
+  }
+  .onprem-login-entry .site-footer {
+    padding: 12px 8px;
+    flex-wrap: wrap;
+    font-size: 9px;
+    min-height: 53px;
+  }
+  .onprem-login-entry .site-footer > span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
+  .onprem-login-entry .login-stage {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  .onprem-login-entry .login-panel {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .onprem-login-entry .panel-footer {
+    margin-left: -20px;
+    margin-right: -20px;
+  }
+  .onprem-login-entry .form-options {
+    gap: 7px;
+  }
+  .onprem-login-entry .remember-label,
+  .onprem-login-entry .forgot-button {
+    font-size: 10px;
+  }
+  .onprem-login-entry .editorial-copy h1 {
+    font-size: 27px;
+  }
+}
+@media (min-width: 901px) and (max-height: 850px) {
+  .onprem-login-entry .site-header {
+    height: 72px;
+  }
+  .onprem-login-entry .site-footer {
+    min-height: 40px;
+  }
+  .onprem-login-entry .login-stage {
+    min-height: 0;
+    padding-top: 22px;
+    padding-bottom: 22px;
+  }
+  .onprem-login-entry .login-panel {
+    padding-top: 25px;
+  }
+  .onprem-login-entry .panel-brand {
+    margin-bottom: 25px;
+  }
+  .onprem-login-entry .welcome {
+    margin-bottom: 23px;
+  }
+  .onprem-login-entry .field-block {
+    margin-bottom: 15px;
+  }
+  .onprem-login-entry .form-options {
+    margin-bottom: 18px;
+  }
+  .onprem-login-entry .panel-footer {
+    margin-top: 21px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onprem-login-entry *,
+  .onprem-login-entry *::before,
+  .onprem-login-entry *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

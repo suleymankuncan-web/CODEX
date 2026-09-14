@@ -14,6 +14,16 @@
   background-size: 56px 56px, 56px 56px, auto;
 }
 
+.auth-flow-shell-direct {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  min-height: 100dvh;
+  padding: 0;
+  background: #f7f8fa;
+}
+
 .auth-login-page {
   position: relative;
   display: grid;
