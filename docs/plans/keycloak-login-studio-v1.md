@@ -30,14 +30,18 @@ provider template and shared assets render HTTP 200 without provider errors.
 The owner authorized one PR and squash merge after design verification and
 required checks. URL masking was explicitly deferred; native realm paths stay.
 
-Remaining: Windows is waiting for the owner's local CA trust confirmation.
-Browser navigation currently returns `ERR_CERT_AUTHORITY_INVALID`; it was not
-bypassed. After confirmation, inspect `https://hr-axis.localhost/auth/login`,
-complete real negative/positive login and logout checks, and capture the real
-desktop/mobile theme. The prototype was previously inspected, but those images
-are not Docker runtime visual evidence. Credentials remain in the private WSL
-runtime; no exported credential file was created. WSL is currently kept alive
-by the active local session.
+Browser verification completed with trusted HTTPS and no certificate bypass:
+native form, Turkish invalid-credentials error, approved help, password visibility,
+reset-page navigation without sending email, successful synthetic Store Manager
+login, authenticated reload, native logout and return to the new form. Desktop
+1440/1024 and mobile 390/320 layouts passed visual/overflow checks. Screenshots
+and a hash-bound receipt remain in the private local QA directory. Credentials
+remain private; WSL is kept alive by the active local session.
+
+The owner subsequently requested a staggered entrance while preserving this
+design, with an isolated commit so animation can be reverted independently.
+Remaining: implement/inspect that motion, resolve generated-document/env-inventory
+guards, complete canonical release, then open and squash-merge one PR.
 
 Self-review: authentication uses the inherited provider form and existing
 PKCE/state/session flow. No custom password submission, token storage, role,

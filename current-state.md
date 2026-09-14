@@ -10,20 +10,7 @@ This is the canonical short handoff for the HR Axis / Store Ops workspace. Recov
 
 ## Active Local Login Preview — 14 September 2026
 
-Owner-approved Keycloak login work is on `codex/keycloak-login-studio-v1`.
-The GitHub offline package from run 32924025570 is installed locally with explicit
-theme/frontend mounts; its six loaded image configurations match the signed
-bundle. Seven containers are healthy in the Ubuntu WSL Docker project
-`hr-axis-login`, at `https://hr-axis.localhost/auth/login`. Docker Desktop has a
-Windows socket startup failure and is stopped; the former port 5188 prototype
-server is stopped. Windows CA trust confirmation is pending, so actual browser
-login/logout and Docker visual checks remain unverified. See
-`docs/plans/keycloak-login-studio-v1.md` for scope, evidence and the next action.
-The first-paint correction now uses the approved layout for both the React
-entry/lazy fallback and native Keycloak form, sharing CSS and image sources.
-Six first-paint tests passed. The owner authorized one PR and squash merge once
-design verification and required gates pass; URL masking was deferred.
-No PR, image publication or remote deployment has been performed yet.
+Owner-approved Keycloak design on `codex/keycloak-login-studio-v1` passed trusted-browser login, reload, logout, Turkish error/help and desktop/mobile checks over the verified GitHub bundle with explicit local mounts. Six first-paint tests cover the shared React/Keycloak layout. The owner authorized one PR and squash merge after required gates, deferred URL masking, and requested a separately reversible staggered entrance. See `docs/plans/keycloak-login-studio-v1.md`; runtime addresses, credentials and detailed receipts remain local. No newly published bundle is claimed.
 
 ## Authority And Freshness
 
