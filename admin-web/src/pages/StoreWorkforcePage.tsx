@@ -47,6 +47,7 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '..
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { OperationsDirectory, OperationsMetrics, StoreOperationsHeader } from './store-operations-layout'
 import { getRegionManagerDirectory, type RegionManagerDirectoryItem } from '../features/org/region-manager-directory'
+import { transientQueryRetryOptions } from '../lib/query-retry'
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
 import { getUserFacingErrorMessage } from '../lib/format'
 import './store-workforce-command-canvas.css'
@@ -122,6 +123,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
   const managerDirectory = useQuery({
     queryKey: ['org-region-manager-directory', scopeSignature],
     queryFn: getRegionManagerDirectory,
+    ...transientQueryRetryOptions,
     enabled: workspace?.view === 'report_viewer',
   })
   const managers = managerDirectory.data?.items ?? []

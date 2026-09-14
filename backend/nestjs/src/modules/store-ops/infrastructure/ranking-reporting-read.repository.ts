@@ -505,8 +505,7 @@ export class RankingReportingReadRepository {
         LEFT JOIN ops.store assigned_store
           ON assigned_store.store_id = manager_store.store_id
          ${input.companyIds.length > 0 ? `AND assigned_store.company_id = ANY($1::uuid[])` : ""}
-        WHERE (ua.employee_id IS NULL OR employee.employment_status = 'active')
-          AND ura.start_at <= NOW()
+        WHERE ura.start_at <= NOW()
           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
           ${
             input.companyIds.length > 0

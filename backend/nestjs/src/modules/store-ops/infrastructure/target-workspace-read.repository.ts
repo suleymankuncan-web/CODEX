@@ -110,13 +110,25 @@ export class TargetWorkspaceReadRepository {
         LEFT JOIN LATERAL (
           SELECT
             TRUE AS assignment_exists,
-            NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), '') AS display_name
-          FROM ops.user_role_assignment role_assignment
+            COALESCE(
+              NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
+              account.username,
+              account.email,
+              account.user_id::text
+            ) AS display_name
+          FROM ops.user_action_store_assignment manager_store
+          INNER JOIN ops.store manager_assigned_store
+            ON manager_assigned_store.store_id = manager_store.store_id
+          INNER JOIN ops.user_role_assignment role_assignment
+            ON role_assignment.user_id = manager_store.user_id
           INNER JOIN ops.role role ON role.role_id = role_assignment.role_id
             AND role.role_code = 'REGION_MANAGER'
           INNER JOIN ops.user_account account ON account.user_id = role_assignment.user_id
+            AND account.is_active = TRUE
           LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id
-          WHERE role_assignment.region_id = region.region_id
+          WHERE manager_assigned_store.region_id = region.region_id
+            AND manager_store.start_at <= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond')
+            AND (manager_store.end_at IS NULL OR manager_store.end_at >= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond'))
             AND role_assignment.start_at <= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond')
             AND (role_assignment.end_at IS NULL OR role_assignment.end_at >= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond'))
           ORDER BY display_name ASC NULLS LAST, role_assignment.start_at DESC, role_assignment.user_role_assignment_id DESC
@@ -254,13 +266,23 @@ export class TargetWorkspaceReadRepository {
         LEFT JOIN ops.company company ON company.company_id = store.company_id
         LEFT JOIN ops.region region ON region.region_id = store.region_id
         LEFT JOIN LATERAL (
-          SELECT NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), '') AS display_name
-          FROM ops.user_role_assignment role_assignment
+          SELECT COALESCE(
+            NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
+            account.username,
+            account.email,
+            account.user_id::text
+          ) AS display_name
+          FROM ops.user_action_store_assignment manager_store
+          INNER JOIN ops.user_role_assignment role_assignment
+            ON role_assignment.user_id = manager_store.user_id
           INNER JOIN ops.role role ON role.role_id = role_assignment.role_id
             AND role.role_code = 'REGION_MANAGER'
           INNER JOIN ops.user_account account ON account.user_id = role_assignment.user_id
+            AND account.is_active = TRUE
           LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id
-          WHERE role_assignment.region_id = store.region_id
+          WHERE manager_store.store_id = store.store_id
+            AND manager_store.start_at <= ((($${periodEndIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond')
+            AND (manager_store.end_at IS NULL OR manager_store.end_at >= ((($${periodEndIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond'))
             AND role_assignment.start_at <= ((($${periodEndIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond')
             AND (role_assignment.end_at IS NULL OR role_assignment.end_at >= ((($${periodEndIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond'))
           ORDER BY display_name ASC NULLS LAST, role_assignment.start_at DESC, role_assignment.user_role_assignment_id DESC

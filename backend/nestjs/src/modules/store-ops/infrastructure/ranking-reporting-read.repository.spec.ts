@@ -181,6 +181,7 @@ describe("RankingReportingReadRepository source filters", () => {
     expect(managerSql).toContain("assigned_store.company_id = ANY($1::uuid[])");
     expect(managerSql).toContain("ARRAY_AGG(DISTINCT assigned_store.store_id::text)");
     expect(managerSql).toContain("ua.is_active = TRUE");
+    expect(managerSql).not.toContain("employee.employment_status = 'active'");
   });
 
   it("joins approved personnel target references for ranking personnel NET_SALES rows", async () => {

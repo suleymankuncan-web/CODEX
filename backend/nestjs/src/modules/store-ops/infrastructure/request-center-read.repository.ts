@@ -352,7 +352,9 @@ export class RequestCenterReadRepository {
                 account.email,
                 account.user_id::text
               ) AS display_name
-            FROM ops.user_role_assignment assignment
+            FROM ops.user_action_store_assignment manager_store
+            INNER JOIN ops.user_role_assignment assignment
+              ON assignment.user_id = manager_store.user_id
             INNER JOIN ops.role role
               ON role.role_id = assignment.role_id
               AND role.role_code = 'REGION_MANAGER'
@@ -360,7 +362,9 @@ export class RequestCenterReadRepository {
               ON account.user_id = assignment.user_id
               AND account.is_active = TRUE
             LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id
-            WHERE assignment.region_id = rr.region_id
+            WHERE manager_store.store_id = rr.store_id
+              AND manager_store.start_at <= CURRENT_TIMESTAMP
+              AND (manager_store.end_at IS NULL OR manager_store.end_at > CURRENT_TIMESTAMP)
               AND assignment.start_at <= CURRENT_TIMESTAMP
               AND (assignment.end_at IS NULL OR assignment.end_at >= CURRENT_TIMESTAMP)
           ) manager
