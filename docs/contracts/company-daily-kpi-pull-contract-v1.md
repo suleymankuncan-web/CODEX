@@ -118,6 +118,13 @@ in private runtime configuration outside the repository.
   MUST show every expected day, every included day, and every missing day, and
   the result MUST carry an incomplete-coverage warning when any expected day is
   missing.
+- **FR-25 Return-aware KPI projection:** Store sales performance MUST use the
+  signed net amount and quantity after returns. Store `NET_SALES` MUST be the
+  sum of employee `netAmountTry`, and store `ATV` MUST divide that net amount
+  by the distinct store-day sale invoice count. Personnel sales performance
+  MUST continue to use positive `salesAmountTry` and sale quantities; signed
+  returns remain reconciliation evidence and MUST NOT reduce personnel KPI
+  values.
 
 ## Calculation Rules
 
@@ -149,6 +156,9 @@ netQuantity(D, S, P) = salesQuantity(D, S, P) + signedReturnQuantity(D, S, P)
 salesAmountTry(D, S, P) = decimal-safe sum(Tutar where Durum=false)
 signedReturnAmountTry(D, S, P) = decimal-safe sum(Tutar where Durum=true)
 netAmountTry(D, S, P) = salesAmountTry(D, S, P) + signedReturnAmountTry(D, S, P)
+storeNetSales(D, S) = sum(netAmountTry(D, S, P))
+storeAtv(D, S) = storeNetSales(D, S) / salesInvoiceCount(D, S)
+personnelPerformanceSales(D, S, P) = salesAmountTry(D, S, P)
 ```
 
 - Store conversion is unavailable when footfall is missing, unsuccessful, or
@@ -257,6 +267,10 @@ netAmountTry(D, S, P) = salesAmountTry(D, S, P) + signedReturnAmountTry(D, S, P)
   lines at employee grain, when the aggregate is produced, then all eight
   required count, quantity, and TRY amount metrics are present, return signs are
   preserved, and net values are decimal-safe signed sums.
+- **AC-17 (FR-15, FR-23, FR-25):** Given a store with `5000 TRY` of positive
+  sales, `-500 TRY` of signed returns, and one distinct sale invoice, when KPI
+  projection runs, then store `NET_SALES` and `ATV` are `4500 TRY` while
+  personnel sales performance remains `5000 TRY`.
 
 ## Edge Cases
 
