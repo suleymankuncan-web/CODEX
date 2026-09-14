@@ -23,6 +23,9 @@ describe("readRankingStoreRange", () => {
     expect(sql).toContain("facts.sales_target");
     expect(sql).toContain("SUM(sales) FILTER (WHERE tickets IS NOT NULL)");
     expect(sql).toContain("SUM(tickets) FILTER (WHERE sales IS NOT NULL)");
+    expect(sql).toContain("SUM(tickets) AS cr_numerator");
+    expect(sql).toContain("SUM(footfall) AS cr_denominator");
+    expect(sql).not.toContain("SUM(tickets) FILTER (WHERE footfall IS NOT NULL)");
     expect(sql).toContain("MAX(ka.actual_value) FILTER (WHERE kd.kpi_code = 'TARGET_ACHIEVEMENT')");
     expect(sql).not.toContain("COUNT(DISTINCT day) = $2::date - $1::date + 1");
     expect(sql).toContain("SUM(kt.target_value * g.total_customer_count)");

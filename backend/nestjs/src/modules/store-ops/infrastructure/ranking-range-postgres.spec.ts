@@ -69,14 +69,14 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
   });
   afterAll(() => { if (created) psql(`DROP DATABASE ${databaseName}`, "postgres"); });
   const input = { companyIds: [company], periodStart: "2026-09-01", periodEnd: "2026-09-30", metricCodes: ["TARGET_ACHIEVEMENT", "ATV", "UPT", "CR", "gsm_approval"] };
-  it("uses all observed month days, matching ratio pairs, weighted GSM and exact physical targets", async () => {
+  it("uses all observed month components, weighted GSM and exact physical targets", async () => {
     const rows = await readRankingStoreRange(database as never, input);
     const metric = (code: string) => rows.find(row => row.kpi_code === code)!;
     expect(Number(metric("TARGET_ACHIEVEMENT").actual_value)).toBe(1300);
     expect(Number(metric("TARGET_ACHIEVEMENT").target_value)).toBe(1300);
     expect(Number(metric("ATV").actual_value)).toBe(100);
     expect(Number(metric("UPT").actual_value)).toBe(3.2);
-    expect(Number(metric("CR").actual_value)).toBe(0.25);
+    expect(Number(metric("CR").actual_value)).toBeCloseTo(10 / 140);
     expect(Number(metric("gsm_approval").actual_value)).toBe(75);
     expect(Number(metric("gsm_approval").target_value)).toBe(75);
     const benchmarks = await readRankingRangeBenchmarks(database as never, { ...input, companyId: company });

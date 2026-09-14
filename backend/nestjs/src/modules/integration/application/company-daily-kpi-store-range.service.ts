@@ -69,6 +69,12 @@ function buildProjection(
               storeCode: fact.storeCode,
               saleInvoiceCount: fact.saleInvoiceCount,
               returnInvoiceCount: fact.returnInvoiceCount,
+              saleQuantity: fact.saleQuantity,
+              signedReturnQuantity: fact.signedReturnQuantity,
+              netQuantity: fact.netQuantity,
+              saleAmountTry: fact.saleAmountTry,
+              signedReturnAmountTry: fact.signedReturnAmountTry,
+              netAmountTry: fact.netAmountTry,
             };
           }),
         },
@@ -278,10 +284,20 @@ function isSalesFact(
     isRecord(value) &&
     isSafeCount(value.saleInvoiceCount) &&
     isSafeCount(value.returnInvoiceCount) &&
+    isDecimalText(value.saleQuantity) &&
+    isDecimalText(value.signedReturnQuantity) &&
+    isDecimalText(value.netQuantity) &&
+    isDecimalText(value.saleAmountTry) &&
+    isDecimalText(value.signedReturnAmountTry) &&
+    isDecimalText(value.netAmountTry) &&
     !hasOwn(value, "footfall") &&
     !hasOwn(value, "yesCustomerCount") &&
     !hasOwn(value, "totalCustomerCount")
   );
+}
+
+function isDecimalText(value: unknown): value is string {
+  return typeof value === "string" && /^-?\d+(?:\.\d{1,12})?$/.test(value);
 }
 
 function isFootfallFact(

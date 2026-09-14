@@ -40,8 +40,28 @@ function successfulSalesInput() {
       },
     ],
     storeSales: [
-      { storeId: STORE_A_ID, saleInvoiceCount: 2, returnInvoiceCount: 1 },
-      { storeId: STORE_B_ID, saleInvoiceCount: 1, returnInvoiceCount: 0 },
+      {
+        storeId: STORE_A_ID,
+        saleInvoiceCount: 2,
+        returnInvoiceCount: 1,
+        saleQuantity: "3.5",
+        signedReturnQuantity: "-1.25",
+        netQuantity: "2.25",
+        saleAmountTry: "1250.40",
+        signedReturnAmountTry: "-250.10",
+        netAmountTry: "1000.30",
+      },
+      {
+        storeId: STORE_B_ID,
+        saleInvoiceCount: 1,
+        returnInvoiceCount: 0,
+        saleQuantity: "1",
+        signedReturnQuantity: "0",
+        netQuantity: "1",
+        saleAmountTry: "100",
+        signedReturnAmountTry: "0",
+        netAmountTry: "100",
+      },
     ],
   };
 }

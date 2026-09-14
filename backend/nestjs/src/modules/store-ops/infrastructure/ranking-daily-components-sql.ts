@@ -1,5 +1,5 @@
-/** Daily physical facts are paired on the same entity/day before reducing the interval.
- * Missing days are omitted, never zero-filled; imported ratios and scores are not summed.
+/** Daily physical facts are independently reduced over the interval.
+ * Missing components are omitted, never zero-filled; imported ratios and scores are not summed.
  */
 export function rankingDailyComponentsSql(scope: "store" | "employee") {
   const employee = scope === "employee" ? "ka.employee_id," : "";
@@ -38,8 +38,8 @@ export function rankingDailyComponentsSql(scope: "store" | "employee") {
       SUM(tickets) FILTER (WHERE sales IS NOT NULL) AS atv_denominator,
       SUM(items) FILTER (WHERE tickets IS NOT NULL) AS upt_numerator,
       SUM(tickets) FILTER (WHERE items IS NOT NULL) AS upt_denominator,
-      SUM(tickets) FILTER (WHERE footfall IS NOT NULL) AS cr_numerator,
-      SUM(footfall) FILTER (WHERE tickets IS NOT NULL) AS cr_denominator
+      SUM(tickets) AS cr_numerator,
+      SUM(footfall) AS cr_denominator
     FROM daily GROUP BY ${groupEmployee} store_id
   )`;
 }

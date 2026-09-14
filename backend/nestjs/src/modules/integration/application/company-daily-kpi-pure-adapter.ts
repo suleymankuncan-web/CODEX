@@ -49,6 +49,12 @@ export type StoreSalesDailyAggregate = {
   storeCode: string;
   saleInvoiceCount: number;
   returnInvoiceCount: number;
+  saleQuantity: DecimalText;
+  signedReturnQuantity: DecimalText;
+  netQuantity: DecimalText;
+  saleAmountTry: DecimalText;
+  signedReturnAmountTry: DecimalText;
+  netAmountTry: DecimalText;
 };
 
 export type StoreFootfallDailyAggregate = {
@@ -117,6 +123,10 @@ type MutableStoreSales = {
   storeCode: string;
   saleInvoices: Set<string>;
   returnInvoices: Set<string>;
+  saleQuantity: DecimalValue;
+  signedReturnQuantity: DecimalValue;
+  saleAmountTry: DecimalValue;
+  signedReturnAmountTry: DecimalValue;
 };
 
 const ISTANBUL_TIME_ZONE = "Europe/Istanbul";
@@ -160,12 +170,26 @@ export function normalizeCompanyDailySales(
       storeCode: row.storeCode,
       saleInvoices: new Set<string>(),
       returnInvoices: new Set<string>(),
+      saleQuantity: ZERO_DECIMAL,
+      signedReturnQuantity: ZERO_DECIMAL,
+      saleAmountTry: ZERO_DECIMAL,
+      signedReturnAmountTry: ZERO_DECIMAL,
     };
 
     if (row.isReturn) {
       store.returnInvoices.add(row.ephemeralInvoiceId);
+      store.signedReturnQuantity = addDecimal(
+        store.signedReturnQuantity,
+        quantity,
+      );
+      store.signedReturnAmountTry = addDecimal(
+        store.signedReturnAmountTry,
+        amountTry,
+      );
     } else {
       store.saleInvoices.add(row.ephemeralInvoiceId);
+      store.saleQuantity = addDecimal(store.saleQuantity, quantity);
+      store.saleAmountTry = addDecimal(store.saleAmountTry, amountTry);
     }
 
     storeSales.set(row.storeCode, store);
@@ -234,6 +258,16 @@ export function normalizeCompanyDailySales(
       storeCode: aggregate.storeCode,
       saleInvoiceCount: aggregate.saleInvoices.size,
       returnInvoiceCount: aggregate.returnInvoices.size,
+      saleQuantity: formatDecimal(aggregate.saleQuantity),
+      signedReturnQuantity: formatDecimal(aggregate.signedReturnQuantity),
+      netQuantity: formatDecimal(
+        addDecimal(aggregate.saleQuantity, aggregate.signedReturnQuantity),
+      ),
+      saleAmountTry: formatDecimal(aggregate.saleAmountTry),
+      signedReturnAmountTry: formatDecimal(aggregate.signedReturnAmountTry),
+      netAmountTry: formatDecimal(
+        addDecimal(aggregate.saleAmountTry, aggregate.signedReturnAmountTry),
+      ),
     }));
 
   return succeededSet(
