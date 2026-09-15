@@ -1,4 +1,5 @@
 import { useSignIn } from '@clerk/react'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useLocalization } from '../localization/useLocalization'
 import { useSession } from '../session/session-context-value'
@@ -11,6 +12,7 @@ import {
   type ClerkFinalizeState,
   type ClerkSignInErrorKind,
 } from './clerk-sign-in-flow'
+import { AuthLoginNotice } from './auth-login-notice'
 
 const rememberedIdentifierKey = 'hr-axis:remembered-login-identifier'
 
@@ -35,6 +37,7 @@ export function ClerkSignInForm() {
   const rememberedIdentifier = readRememberedIdentifier()
   const [identifier, setIdentifier] = useState(rememberedIdentifier)
   const [password, setPassword] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [code, setCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState('')
@@ -250,8 +253,8 @@ export function ClerkSignInForm() {
 
   if (view === 'finalize-failed') {
     return (
-      <div className="auth-login-form-state" role="alert">
-        <p>{t('authFlow.loginUnavailableCopy')}</p>
+      <div className="auth-login-form-state">
+        <AuthLoginNotice>{t('authFlow.loginUnavailableCopy')}</AuthLoginNotice>
         <button className="auth-login-primary" type="button" onClick={() => void finalize()}>
           {t('authFlow.retrySignIn')}
         </button>
@@ -266,7 +269,7 @@ export function ClerkSignInForm() {
     <div className="auth-login-native">
       {view !== 'email-code' ? (
         <form className="auth-login-form" onSubmit={(event) => void handleCredentials(event)} noValidate>
-          <div className="auth-login-field">
+          <div className="auth-login-field field-block">
             <label className="auth-login-label" htmlFor="auth-identifier">{t('authFlow.identifierLabel')}</label>
             <input
               id="auth-identifier" className="auth-login-input" name="identifier" type="text"
@@ -276,31 +279,44 @@ export function ClerkSignInForm() {
               required autoFocus
             />
           </div>
-          <div className="auth-login-field">
-            <div className="auth-login-password-heading">
-              <label className="auth-login-label" htmlFor="auth-password">{t('authFlow.passwordLabel')}</label>
-              <button className="auth-login-link" type="button" onClick={beginPasswordRecovery} disabled={busy}>
-                {t('authFlow.forgotPassword')}
+          <div className="auth-login-field field-block">
+            <label className="auth-login-label" htmlFor="auth-password">{t('authFlow.passwordLabel')}</label>
+            <div className="password-wrap">
+              <input
+                id="auth-password" className="auth-login-input" name="password" type={passwordVisible ? 'text' : 'password'}
+                autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)}
+                placeholder={t('authFlow.passwordPlaceholder')} disabled={busy} aria-invalid={Boolean(errorMessage)}
+                aria-describedby={errorMessage ? 'auth-login-error' : undefined} required
+              />
+              <button
+                className="password-toggle"
+                type="button"
+                aria-label={t(passwordVisible ? 'authFlow.hidePassword' : 'authFlow.showPassword')}
+                aria-pressed={passwordVisible}
+                onClick={() => setPasswordVisible((visible) => !visible)}
+                disabled={busy}
+              >
+                {passwordVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
               </button>
             </div>
-            <input
-              id="auth-password" className="auth-login-input" name="password" type="password"
-              autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)}
-              placeholder={t('authFlow.passwordPlaceholder')} disabled={busy} aria-invalid={Boolean(errorMessage)}
-              aria-describedby={errorMessage ? 'auth-login-error' : undefined} required
-            />
           </div>
-          <label className="auth-login-remember">
-            <input
-              type="checkbox"
-              checked={rememberIdentifier}
-              onChange={(event) => setRememberIdentifier(event.target.checked)}
-              disabled={busy}
-            />
-            <span>{t('authFlow.rememberIdentifier')}</span>
-          </label>
-          <button className="auth-login-primary" type="submit" disabled={busy}>
-            {busy ? t('authFlow.loginSubmitting') : t('authFlow.loginTitle')}
+          <div className="form-options">
+            <label className="auth-login-remember remember-label">
+              <input
+                type="checkbox"
+                checked={rememberIdentifier}
+                onChange={(event) => setRememberIdentifier(event.target.checked)}
+                disabled={busy}
+              />
+              <span>{t('authFlow.rememberIdentifier')}</span>
+            </label>
+            <button className="auth-login-link forgot-button" type="button" onClick={beginPasswordRecovery} disabled={busy}>
+              {t('authFlow.forgotPassword')}
+            </button>
+          </div>
+          <button className="auth-login-primary login-submit" type="submit" disabled={busy}>
+            <span>{busy ? t('authFlow.loginSubmitting') : t('authFlow.loginTitle')}</span>
+            <ArrowRight aria-hidden="true" />
           </button>
         </form>
       ) : null}
@@ -338,7 +354,7 @@ export function ClerkSignInForm() {
             {recoveryView === 'identifier' ? (
               <form className="auth-login-form" onSubmit={(event) => void sendPasswordRecoveryCode(event)} noValidate>
                 <p className="auth-recovery-copy">{t('authFlow.passwordRecoveryIdentifierCopy')}</p>
-                <div className="auth-login-field">
+                <div className="auth-login-field field-block">
                   <label className="auth-login-label" htmlFor="auth-recovery-identifier">{t('authFlow.identifierLabel')}</label>
                   <input
                     id="auth-recovery-identifier" className="auth-login-input" name="recovery-identifier" type="text"
@@ -347,7 +363,7 @@ export function ClerkSignInForm() {
                     disabled={busy} aria-invalid={Boolean(errorMessage)} required autoFocus
                   />
                 </div>
-                <button className="auth-login-primary" type="submit" disabled={busy}>
+                <button className="auth-login-primary login-submit login-submit-centered" type="submit" disabled={busy}>
                   {busy ? t('authFlow.verificationSending') : t('authFlow.sendVerificationCode')}
                 </button>
               </form>
@@ -356,7 +372,7 @@ export function ClerkSignInForm() {
             {recoveryView === 'code' ? (
               <form className="auth-login-form" onSubmit={(event) => void verifyRecoveryCode(event)} noValidate>
                 <p className="auth-recovery-copy">{t('authFlow.passwordRecoveryCodeCopy')}</p>
-                <div className="auth-login-field">
+                <div className="auth-login-field field-block">
                   <label className="auth-login-label" htmlFor="auth-recovery-code">{t('authFlow.verificationCodeLabel')}</label>
                   <input
                     id="auth-recovery-code" className="auth-login-input auth-login-code-input" name="recovery-code" type="text"
@@ -364,7 +380,7 @@ export function ClerkSignInForm() {
                     disabled={busy} aria-invalid={Boolean(errorMessage)} required autoFocus
                   />
                 </div>
-                <button className="auth-login-primary" type="submit" disabled={busy}>
+                <button className="auth-login-primary login-submit login-submit-centered" type="submit" disabled={busy}>
                   {busy ? t('authFlow.verificationSubmitting') : t('authFlow.continueSignIn')}
                 </button>
               </form>
@@ -373,7 +389,7 @@ export function ClerkSignInForm() {
             {recoveryView === 'password' ? (
               <form className="auth-login-form" onSubmit={(event) => void submitRecoveredPassword(event)} noValidate>
                 <p className="auth-recovery-copy">{t('authFlow.newPasswordCopy')}</p>
-                <div className="auth-login-field">
+                <div className="auth-login-field field-block">
                   <label className="auth-login-label" htmlFor="auth-new-password">{t('authFlow.newPasswordLabel')}</label>
                   <input
                     id="auth-new-password" className="auth-login-input" name="new-password" type="password"
@@ -381,7 +397,7 @@ export function ClerkSignInForm() {
                     disabled={busy} aria-invalid={Boolean(errorMessage)} required autoFocus
                   />
                 </div>
-                <div className="auth-login-field">
+                <div className="auth-login-field field-block">
                   <label className="auth-login-label" htmlFor="auth-new-password-confirmation">{t('authFlow.newPasswordConfirmationLabel')}</label>
                   <input
                     id="auth-new-password-confirmation" className="auth-login-input" name="new-password-confirmation" type="password"
@@ -390,13 +406,13 @@ export function ClerkSignInForm() {
                     aria-invalid={Boolean(errorMessage)} required
                   />
                 </div>
-                <button className="auth-login-primary" type="submit" disabled={busy}>
+                <button className="auth-login-primary login-submit login-submit-centered" type="submit" disabled={busy}>
                   {busy ? t('authFlow.loginSubmitting') : t('authFlow.updatePassword')}
                 </button>
               </form>
             ) : null}
 
-            {recoveryView !== null && errorMessage ? <p className="auth-login-error" role="alert">{errorMessage}</p> : null}
+            {recoveryView !== null && errorMessage ? <AuthLoginNotice>{errorMessage}</AuthLoginNotice> : null}
             <button className="auth-recovery-cancel" type="button" onClick={() => void closePasswordRecovery()} disabled={busy}>
               {t('authFlow.cancelPasswordRecovery')}
             </button>
@@ -410,16 +426,18 @@ export function ClerkSignInForm() {
             <strong>{t('authFlow.verificationTitle')}</strong>
             <p>{codeSent ? t('authFlow.verificationCopy') : t('authFlow.verificationReadyCopy')}</p>
           </div>
-          <label className="auth-login-label" htmlFor="auth-code">{t('authFlow.verificationCodeLabel')}</label>
-          <input
-            id="auth-code" className="auth-login-input auth-login-code-input" name="code" type="text"
-            inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)}
-            disabled={busy || !codeSent} aria-invalid={Boolean(errorMessage)}
-            aria-describedby={errorMessage ? 'auth-login-error' : undefined} required autoFocus={codeSent}
-          />
+          <div className="auth-login-field field-block">
+            <label className="auth-login-label" htmlFor="auth-code">{t('authFlow.verificationCodeLabel')}</label>
+            <input
+              id="auth-code" className="auth-login-input auth-login-code-input" name="code" type="text"
+              inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value)}
+              disabled={busy || !codeSent} aria-invalid={Boolean(errorMessage)}
+              aria-describedby={errorMessage ? 'auth-login-error' : undefined} required autoFocus={codeSent}
+            />
+          </div>
           {codeSent ? (
             <>
-              <button className="auth-login-primary" type="submit" disabled={busy}>
+              <button className="auth-login-primary login-submit login-submit-centered" type="submit" disabled={busy}>
                 {busy ? t('authFlow.verificationSubmitting') : t('authFlow.verifyAndContinue')}
               </button>
               <button className="auth-login-link" type="button" onClick={() => void sendVerificationCode()} disabled={busy}>
@@ -427,14 +445,14 @@ export function ClerkSignInForm() {
               </button>
             </>
           ) : (
-            <button className="auth-login-primary" type="button" onClick={() => void sendVerificationCode()} disabled={busy}>
+            <button className="auth-login-primary login-submit login-submit-centered" type="button" onClick={() => void sendVerificationCode()} disabled={busy}>
               {busy ? t('authFlow.verificationSending') : t('authFlow.sendVerificationCode')}
             </button>
           )}
         </form>
       ) : null}
 
-      {recoveryView === null && errorMessage ? <p id="auth-login-error" className="auth-login-error" role="alert">{errorMessage}</p> : null}
+      {recoveryView === null && errorMessage ? <AuthLoginNotice id="auth-login-error">{errorMessage}</AuthLoginNotice> : null}
     </div>
   )
 }

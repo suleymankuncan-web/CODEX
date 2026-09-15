@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
-import { isDirectOidcLoginEnabled } from '../features/auth/auth-flow'
 import { AuthLoginTransition } from '../features/auth/auth-login-transition'
 import { AuthCallbackPage, AuthLoginPage, AuthLogoutPage } from './route-loaders'
 import { RouteLoadingState } from './route-states'
@@ -14,15 +13,16 @@ export function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath:
   const returnTo = sanitizeAuthReturnPath(searchParams.get('returnTo'))
   const readyPath = returnTo ?? input.firstAllowedPath
   const isLogin = location.pathname === '/auth/login'
-  const directOidcLogin = isLogin && isDirectOidcLoginEnabled()
-  const shellClassName = directOidcLogin
+  // Every login provider uses the shared neutral canvas. Keeping the legacy
+  // login background here caused a visible flash before the Clerk bundle loaded.
+  const shellClassName = isLogin
     ? 'auth-flow-shell auth-flow-shell-direct'
-    : isLogin ? 'auth-flow-shell auth-flow-shell-login' : 'auth-flow-shell'
+    : 'auth-flow-shell'
 
   return (
     <div className={shellClassName}>
       <RouteRecoveryBoundary firstAllowedPath={readyPath}>
-        <Suspense fallback={directOidcLogin ? <AuthLoginTransition /> : <RouteLoadingState />}>
+        <Suspense fallback={isLogin ? <AuthLoginTransition /> : <RouteLoadingState />}>
           <Routes>
           <Route
             path="/auth/login"

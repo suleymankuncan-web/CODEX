@@ -1,7 +1,7 @@
 /* Optional entrance layer: removing this file's imports restores the static design. */
 .onprem-login-entry :is(.brand, .header-caption, .help-button, .eyebrow,
   .editorial-copy h1, .editorial-copy p, .panel-brand, .welcome,
-  .field-block, .form-options, .login-submit, #kc-form-buttons,
+  .field-block, .form-options, .login-submit, .auth-login-form-state, #kc-form-buttons,
   .panel-footer, .site-footer) {
   animation: login-piece-arrive 440ms cubic-bezier(.16, 1, .3, 1) both;
   animation-delay: calc(var(--login-motion-offset, 0ms) + var(--piece-delay, 0ms));
@@ -31,8 +31,28 @@
 
 /* Validation and secondary provider pages stay immediately readable. */
 .onprem-login-entry[data-page-id]:not([data-page-id='login-login']),
-.onprem-login-entry:has([aria-invalid='true'], .axis-message-error) {
+.onprem-login-entry:has(
+  [aria-invalid='true'],
+  .axis-message-error,
+  .auth-recovery-dialog[open],
+  .auth-login-verification-copy,
+  .auth-login-form-state
+) {
   --login-motion-offset: -2000ms;
+}
+.onprem-login-entry:has(
+  [aria-invalid='true'],
+  .axis-message-error,
+  .auth-recovery-dialog[open],
+  .auth-login-verification-copy,
+  .auth-login-form-state
+) :is(
+  .field-block,
+  .form-options,
+  .login-submit,
+  .auth-login-form-state
+) {
+  animation-delay: -2000ms !important;
 }
 @keyframes login-piece-arrive {
   from { opacity: 0; transform: translateY(14px); }

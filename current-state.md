@@ -4,13 +4,13 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-09-14
+Last verified: 2026-09-15
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
-## Active Local Login Preview — 14 September 2026
+## Shared Login Experience — 15 September 2026
 
-Owner-approved Keycloak design on `codex/keycloak-login-studio-v1` passed trusted-browser login, reload, logout, Turkish error/help and desktop/mobile checks over the verified GitHub bundle with explicit local mounts. Six first-paint tests cover the shared React/Keycloak layout. The owner authorized one PR and squash merge after required gates, deferred URL masking, and requested a separately reversible staggered entrance. See `docs/plans/keycloak-login-studio-v1.md`; runtime addresses, credentials and detailed receipts remain local. No newly published bundle is claimed.
+The owner-approved login studio is shared by the private Keycloak handoff and the hosted Clerk entry. Clerk retains its existing credential, MFA, recovery, session and authorization behavior while rendering the live interactive form, validation messages and recovery surfaces inside the same shell. The login route uses the neutral shell during lazy loading so the retired hosted card and purple background do not flash before Clerk is ready. See `docs/plans/keycloak-login-studio-v1.md`; runtime addresses, credentials and detailed receipts remain local.
 
 ## Authority And Freshness
 
