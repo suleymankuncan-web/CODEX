@@ -76,10 +76,13 @@ describe('Docker login first paint', () => {
     expect(firstPaint()).toContain('auth-login-panel')
   })
 
-  it('preserves hosted Clerk login even if the Docker flag is accidentally set', () => {
+  it('uses the shared login studio around the hosted Clerk form', () => {
     vi.stubEnv('VITE_AUTH_PROVIDER', 'clerk')
     vi.stubEnv('VITE_CLERK_PUBLISHABLE_KEY', 'pk_test_local_fixture')
     expect(firstPaint()).toContain('Clerk form')
-    expect(firstPaint()).not.toContain('onprem-login-entry')
+    expect(firstPaint()).toContain('onprem-login-entry')
+    expect(firstPaint()).toContain('İyi bir gün,')
+    expect(firstPaint()).toContain('Hoş geldin.')
+    expect(firstPaint()).not.toContain('auth-login-panel')
   })
 })

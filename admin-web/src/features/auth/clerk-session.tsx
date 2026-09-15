@@ -3,7 +3,6 @@ import {
   useAuth,
 } from '@clerk/react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ScreenState } from '../../components/dashboard-primitives'
 import { registerBearerTokenRefreshHandler } from '../../lib/api'
 import { readStoredAppLocale } from '../../lib/i18n'
 import { translate } from '../localization/dictionary'
@@ -11,6 +10,8 @@ import { useLocalization } from '../localization/useLocalization'
 import { useSession } from '../session/session-context-value'
 import { isSessionReady } from '../session/session-storage'
 import { isClerkAuthEnabled, resolveClerkPublishableKey } from './clerk-config'
+import { AuthLoginNotice } from './auth-login-notice'
+import { AuthLoginStudio } from './auth-login-studio'
 import { ClerkSignInForm } from './clerk-sign-in-form'
 import {
   restartClerkSignIn,
@@ -33,13 +34,15 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
     const locale = readStoredAppLocale()
 
     return (
-      <section className="auth-flow-shell">
-        <ScreenState
-          title={translate(locale, 'authFlow.clerkPublishableKeyMissingTitle')}
-          copy={translate(locale, 'authFlow.clerkPublishableKeyMissingCopy')}
-          tone="error"
-        />
-      </section>
+      <AuthLoginStudio>
+        <div className="auth-login-form-state">
+          <AuthLoginNotice>
+            <strong>{translate(locale, 'authFlow.clerkPublishableKeyMissingTitle')}</strong>
+            {' '}
+            {translate(locale, 'authFlow.clerkPublishableKeyMissingCopy')}
+          </AuthLoginNotice>
+        </div>
+      </AuthLoginStudio>
     )
   }
 
@@ -87,12 +90,12 @@ export function ClerkLoginActions(input: { shellMode: ClerkLoginShellMode }) {
   if (isSignedIn) {
     if (resolveClerkAppSessionHandoffView(input.shellMode) === 'recover') {
       return (
-        <div className="auth-login-form-state" role="alert">
-          <p>{t('authFlow.sessionVerificationFailed')}</p>
+        <div className="auth-login-form-state">
+          <AuthLoginNotice>{t('authFlow.sessionVerificationFailed')}</AuthLoginNotice>
           <button className="auth-login-primary" type="button" onClick={() => void restartSignIn()} disabled={restarting}>
             {restarting ? t('authFlow.loginPreparing') : t('authFlow.restartSignIn')}
           </button>
-          {restartFailed ? <p className="auth-login-error">{t('authFlow.logoutFailedCopy')}</p> : null}
+          {restartFailed ? <AuthLoginNotice>{t('authFlow.logoutFailedCopy')}</AuthLoginNotice> : null}
         </div>
       )
     }

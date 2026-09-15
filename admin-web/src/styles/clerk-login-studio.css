@@ -1,0 +1,155 @@
+/* Hosted Clerk states inside the shared HR Axis login studio. */
+.onprem-login-entry .auth-login-form {
+  display: grid;
+  gap: 0;
+}
+.onprem-login-entry .auth-login-field {
+  min-width: 0;
+}
+.onprem-login-entry .auth-login-primary:not(.login-submit) {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #3159ae;
+  border-radius: 7px;
+  background: #3159ae;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 550;
+}
+.onprem-login-entry .auth-login-primary:not(.login-submit):hover:not(:disabled) {
+  border-color: #254991;
+  background: #254991;
+}
+.onprem-login-entry .auth-login-link {
+  color: #3159ae;
+}
+.onprem-login-entry .auth-login-remember input {
+  appearance: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.onprem-login-entry .auth-login-error {
+  margin: 12px 0 0;
+  color: #9b2828;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.onprem-login-entry .axis-login-notice {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 11px 12px;
+  border: 1px solid #e8caca;
+  border-radius: 7px;
+  background: #fff6f6;
+  color: #812b2b;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.onprem-login-entry .axis-login-notice svg {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  stroke-width: 1.8;
+}
+.onprem-login-entry .auth-login-form-state .axis-login-notice p,
+.onprem-login-entry .axis-login-notice p {
+  margin: 0;
+  color: inherit;
+}
+.onprem-login-entry .axis-login-notice-info {
+  border-color: #dce5f5;
+  background: #f0f4fb;
+  color: #31538e;
+}
+.onprem-login-entry .auth-login-form-state {
+  display: grid;
+  gap: 12px;
+}
+.onprem-login-entry .auth-login-form-state p {
+  margin: 0;
+  color: #59657a;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.onprem-login-entry .auth-login-form-state .auth-login-primary,
+.onprem-login-entry .auth-login-form-state .auth-login-secondary {
+  min-height: 46px;
+  border-radius: 7px;
+}
+.onprem-login-entry .auth-login-form-state .auth-login-primary {
+  border-color: #3159ae;
+  background: #3159ae;
+}
+.onprem-login-entry .auth-login-form-state .auth-login-secondary {
+  border: 1px solid #c9cfd8;
+  background: #fff;
+  color: #3159ae;
+}
+.onprem-login-entry .auth-login-verification-copy {
+  margin-bottom: 18px;
+}
+.onprem-login-entry .auth-login-verification-copy strong {
+  color: #344157;
+  font-size: 12px;
+}
+.onprem-login-entry .auth-login-verification-copy p {
+  margin: 5px 0 0;
+  color: #687386;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.onprem-login-entry .auth-login-code-input {
+  margin-bottom: 0;
+}
+.onprem-login-entry .auth-recovery-dialog {
+  color: #202b3b;
+}
+.onprem-login-entry .auth-recovery-dialog::backdrop {
+  background: rgb(15 21 22 / 0.58);
+  backdrop-filter: blur(8px);
+}
+.onprem-login-entry .auth-recovery-surface {
+  border: 1px solid #dfe3e9;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 30px 90px rgb(15 21 22 / 0.28);
+}
+.onprem-login-entry .auth-recovery-head {
+  border-bottom-color: #eceef2;
+}
+.onprem-login-entry .auth-recovery-head span {
+  color: #3159ae;
+}
+.onprem-login-entry .auth-recovery-head h2 {
+  color: #202b3b;
+  font-weight: 560;
+  letter-spacing: -0.025em;
+}
+.onprem-login-entry .auth-recovery-close {
+  border-color: #dfe3e9;
+  background: #f7f8fa;
+  color: #59657a;
+}
+.onprem-login-entry .auth-recovery-close:hover:not(:disabled) {
+  border-color: #b8c8e8;
+  background: #eef3fc;
+  color: #3159ae;
+}
+.onprem-login-entry .auth-recovery-copy {
+  color: #687386;
+}
+.onprem-login-entry .auth-recovery-cancel {
+  color: #59657a;
+}
+.onprem-login-entry .auth-recovery-cancel:hover:not(:disabled) {
+  color: #3159ae;
+}
+.onprem-login-entry .auth-recovery-close:focus-visible,
+.onprem-login-entry .auth-recovery-cancel:focus-visible {
+  outline-color: #3159ae33;
+}

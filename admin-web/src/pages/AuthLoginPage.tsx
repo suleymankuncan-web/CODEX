@@ -5,6 +5,7 @@ import { preloadRouteModule } from '../app/route-preloaders'
 import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig, isDirectOidcLoginEnabled } from '../features/auth/auth-flow'
 import { AuthLoginTransition } from '../features/auth/auth-login-transition'
+import { AuthLoginStudio } from '../features/auth/auth-login-studio'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLoginActions, type ClerkLoginShellMode } from '../features/auth/clerk-session'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
@@ -75,6 +76,14 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
     const failed = Boolean(providerLogin.error) || bootstrapQuery.isError ||
       (!bootstrapQuery.isPending && !providerReady)
     return <AuthLoginTransition failed={failed} />
+  }
+
+  if (clerkReady) {
+    return (
+      <AuthLoginStudio>
+        <ClerkLoginActions shellMode={input.shellMode} />
+      </AuthLoginStudio>
+    )
   }
 
   return (

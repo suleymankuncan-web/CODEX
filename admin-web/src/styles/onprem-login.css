@@ -275,6 +275,17 @@
   height: 41px;
   color: #758195;
   border-radius: 5px;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+.onprem-login-entry .password-toggle:hover:not(:disabled) {
+  color: #3159ae;
+  background: #eef3fc;
+}
+.onprem-login-entry .password-toggle:disabled {
+  cursor: not-allowed;
 }
 .onprem-login-entry .password-toggle svg {
   width: 17px;
@@ -313,6 +324,8 @@
   color: #3159ae;
   font-size: 11px;
   font-weight: 550;
+  justify-self: auto;
+  margin-left: auto;
 }
 .onprem-login-entry .login-submit {
   width: 100%;
@@ -335,10 +348,17 @@
   background: #254991;
   box-shadow: 0 6px 15px #3159ae30;
 }
+.onprem-login-entry .login-submit:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
 .onprem-login-entry .login-submit svg {
   width: 18px;
   height: 18px;
   transition: transform 0.2s;
+}
+.onprem-login-entry .login-submit-centered {
+  justify-content: center;
 }
 .onprem-login-entry .login-submit:hover svg {
   transform: translateX(3px);
