@@ -5,13 +5,14 @@ const storeId = "11111111-1111-4111-8111-111111111111";
 const roleScopes = {
   REGION_MANAGER: { companyIds: [], regionIds: ["33333333-3333-4333-8333-333333333333"], storeIds: [] },
 };
+const actorReadScope = { companyIds: [], regionIds: roleScopes.REGION_MANAGER.regionIds, storeIds: [] };
 
 describe("ChecklistOperationalHistoryService", () => {
   it("fails closed for unsupported and empty role scopes", async () => {
     const repository = { read: jest.fn() };
     const service = new ChecklistOperationalHistoryService(repository as never);
-    await expect(service.read({ actorRoleCodes: ["VISUAL_MERCHANDISER"], roleScopes: {}, storeId })).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(service.read({ actorRoleCodes: ["REGION_MANAGER"], roleScopes: {}, storeId })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.read({ actorRoleCodes: ["VISUAL_MERCHANDISER"], actorReadScope, roleScopes: {}, storeId })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.read({ actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes: {}, storeId })).rejects.toBeInstanceOf(NotFoundException);
     expect(repository.read).not.toHaveBeenCalled();
   });
 
@@ -48,7 +49,7 @@ describe("ChecklistOperationalHistoryService", () => {
     };
     const service = new ChecklistOperationalHistoryService(repository as never);
     const result = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "6m", kinds: "task_assigned",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "6m", kinds: "task_assigned",
     });
     expect(result.items).toHaveLength(20);
     expect(result.page).toEqual({ hasMore: true, nextCursor: expect.any(String) });
@@ -58,7 +59,7 @@ describe("ChecklistOperationalHistoryService", () => {
     }));
 
     await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "6m", kinds: "task_assigned", cursor: result.page.nextCursor!,
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "6m", kinds: "task_assigned", cursor: result.page.nextCursor!,
     });
     expect(repository.read).toHaveBeenLastCalledWith(expect.objectContaining({
       cursor: { occurredAt: "2026-07-14T10:00:00.000Z", kindRank: 3, eventKey: "00000000000000000000000000000013" },
@@ -67,6 +68,6 @@ describe("ChecklistOperationalHistoryService", () => {
 
   it("uses one generic missing result for out-of-scope and nonexistent stores", async () => {
     const service = new ChecklistOperationalHistoryService({ read: jest.fn().mockResolvedValue(null) } as never);
-    await expect(service.read({ actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.read({ actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId })).rejects.toBeInstanceOf(NotFoundException);
   });
 });
