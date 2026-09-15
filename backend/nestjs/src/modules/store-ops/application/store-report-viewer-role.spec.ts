@@ -1,4 +1,5 @@
 import { resolveChecklistCommandReadScope } from "./checklist-command-read-scope";
+import { resolveChecklistOperationalHistoryScope } from "./checklist-operational-history-scope";
 import { resolveTargetWorkspaceScope } from "./target-workspace-scope";
 import { resolveTaskCommandWorkspaceScope } from "./task-command-workspace-scope";
 import { resolveWorkforceWorkspaceScope } from "./workforce-workspace-scope";
@@ -11,6 +12,7 @@ const input = {
 };
 const resolvers = {
   checklist: resolveChecklistCommandReadScope,
+  checklistHistory: resolveChecklistOperationalHistoryScope,
   targets: resolveTargetWorkspaceScope,
   tasks: resolveTaskCommandWorkspaceScope,
   workforce: resolveWorkforceWorkspaceScope,

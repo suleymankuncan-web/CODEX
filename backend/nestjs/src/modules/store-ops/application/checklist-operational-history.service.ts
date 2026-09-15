@@ -14,6 +14,7 @@ import { resolveChecklistOperationalHistoryScope } from "./checklist-operational
 
 type ReadInput = {
   actorRoleCodes: string[];
+  actorReadScope: AuthReadScope;
   roleScopes?: Record<string, AuthReadScope>;
   storeId: string;
   range?: ChecklistOperationalHistoryRange;
@@ -28,6 +29,7 @@ export class ChecklistOperationalHistoryService {
   async read(input: ReadInput): Promise<ChecklistOperationalHistoryResult> {
     const scope = resolveChecklistOperationalHistoryScope({
       actorRoleCodes: input.actorRoleCodes,
+      actorReadScope: input.actorReadScope,
       roleScopes: input.roleScopes,
     });
     if (!scope) throw new ForbiddenException("Operational history is not available for this role");

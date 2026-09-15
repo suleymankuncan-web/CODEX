@@ -12,7 +12,7 @@ export class ChecklistOperationalHistoryController {
 
   @Get(":storeId/operational-history")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "REGION_MANAGER", "STORE_MANAGER")
+  @RequireRoles("REPORT_VIEWER", "SUPER_ADMIN", "REGION_MANAGER", "STORE_MANAGER")
   async read(
     @Req() request: { user: AuthenticatedUser },
     @Param() params: GetChecklistOperationalHistoryParamsDto,
@@ -21,6 +21,7 @@ export class ChecklistOperationalHistoryController {
     return {
       data: await this.service.read({
         actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
         roleScopes: request.user.roleScopes,
         storeId: params.storeId,
         range: query.range,

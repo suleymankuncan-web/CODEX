@@ -1,4 +1,8 @@
 import type { AuthReadScope } from "../../auth/auth-context.service";
+import {
+  resolveStoreReportViewerRole,
+  storeReportViewerCompanyIds,
+} from "./store-report-viewer-role";
 
 export type ChecklistOperationalHistoryView =
   | "report_viewer"
@@ -11,14 +15,21 @@ export type ChecklistOperationalHistoryScope = AuthReadScope & {
 
 type ResolveInput = {
   actorRoleCodes: readonly string[];
+  actorReadScope: AuthReadScope;
   roleScopes?: Record<string, AuthReadScope>;
 };
 
 export function resolveChecklistOperationalHistoryScope(
   input: ResolveInput,
 ): ChecklistOperationalHistoryScope | null {
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
-    return scoped("report_viewer", input.roleScopes?.REPORT_VIEWER, "company");
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
+    return {
+      view: "report_viewer",
+      companyIds: storeReportViewerCompanyIds(input, reportRole),
+      regionIds: [],
+      storeIds: [],
+    };
   }
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
     return scoped("region_manager", input.roleScopes?.REGION_MANAGER, "region_store");
@@ -31,11 +42,11 @@ export function resolveChecklistOperationalHistoryScope(
 function scoped(
   view: ChecklistOperationalHistoryView,
   scope: AuthReadScope | undefined,
-  mode: "company" | "region_store" | "store",
+  mode: "region_store" | "store",
 ): ChecklistOperationalHistoryScope {
   return {
     view,
-    companyIds: mode === "company" ? unique(scope?.companyIds ?? []) : [],
+    companyIds: [],
     regionIds: mode === "region_store" ? unique(scope?.regionIds ?? []) : [],
     storeIds: mode === "region_store" || mode === "store" ? unique(scope?.storeIds ?? []) : [],
   };

@@ -322,6 +322,43 @@ test('Report Viewer presentation wins for a mixed report-viewer and region-manag
   await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toHaveCount(0)
 })
 
+test('Super Admin Report Viewer presentation opens the store timeline and checklist result', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer', { roleCodes: ['SUPER_ADMIN'] })
+  await routeReportViewerRecords(page)
+  await page.route('**/api/checklists/acknowledgements/list**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [{
+          checklistInstanceId: '55555555-5555-4555-8555-555555555555',
+          checklistTemplateId: 'template-command-bm',
+          templateName: 'BM Store Visit',
+          templateType: 'BM_STORE_VISIT',
+          category: 'BM',
+          storeId,
+          storeName: 'Marmara Park',
+          completedByUserId: '10000000-0000-4000-8000-000000000001',
+          completedAt: '2026-07-14T10:00:00.000Z',
+          status: 'completed',
+          totalScore: 88,
+          complianceRate: 88,
+          responses: [],
+          acknowledgement: null,
+        }],
+        meta: { count: 1, limit: 50, offset: 0, total: 1 },
+      },
+    })
+  })
+
+  await page.goto('/store/checklists')
+  await page.getByRole('button', { name: 'Sonuçlar' }).first().click()
+
+  const drawer = page.getByRole('dialog', { name: 'Marmara Park mağaza kaydı' })
+  await expect(drawer.getByRole('heading', { name: 'Kayıt akışı' })).toBeVisible()
+  await expect(drawer.getByText('Denetim tamamlandı').first()).toBeVisible()
+  await expect(drawer.getByLabel('Checklist puanı: 88 puan')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Sonucu Gör' }).first()).toBeVisible()
+})
+
 test('Region Manager opens store history from the persistent Results action', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
