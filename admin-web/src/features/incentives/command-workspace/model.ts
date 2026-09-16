@@ -4,6 +4,7 @@ import type {
   IncentiveStore,
   IncentiveWorkspace,
 } from './types'
+import type { RegionManagerDirectoryItem } from '@/features/org/region-manager-directory'
 
 export function buildIncentiveMetrics(workspace: IncentiveWorkspace) {
   const stores = workspace.regions.flatMap((region) => region.stores)
@@ -15,6 +16,24 @@ export function buildIncentiveMetrics(workspace: IncentiveWorkspace) {
     reviewedStoreCount: stores.filter((store) => store.review.status === 'reviewed').length,
     storeCount: stores.length,
     regionCount: workspace.regions.length,
+  }
+}
+
+export function scopeIncentiveWorkspaceToManager(
+  workspace: IncentiveWorkspace,
+  manager: RegionManagerDirectoryItem | null,
+): IncentiveWorkspace {
+  if (!manager) return workspace
+  const storeIds = new Set(manager.storeIds)
+  return {
+    ...workspace,
+    regions: workspace.regions
+      .map((region) => ({
+        ...region,
+        regionManager: { displayName: manager.displayName },
+        stores: region.stores.filter((store) => storeIds.has(store.storeId)),
+      }))
+      .filter((region) => region.stores.length > 0),
   }
 }
 

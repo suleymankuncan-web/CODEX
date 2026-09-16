@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
-import { createIncentiveWorkspace, incentiveStoreA, incentiveStoreB, routeIncentiveCommands, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
+import { createIncentiveWorkspace, incentiveStoreA, incentiveStoreB, routeIncentiveCommands, routeIncentiveManagerDirectory, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
 
 // Owner replaced the historical command-center prototype with Checklist/KPI list + drawer anatomy.
 for (const view of ['region_manager', 'report_viewer'] as const) {
@@ -109,7 +109,9 @@ test('report viewer directory and search operate together', async ({ page }) => 
 async function prepare(page: Page, view: 'region_manager' | 'report_viewer', options?: Parameters<typeof createIncentiveWorkspace>[1]) {
   await installStoreContractSession(page, view === 'region_manager' ? 'regionManager' : 'reportViewer', view === 'region_manager' ? { actionStoreIds: [incentiveStoreA, incentiveStoreB] } : undefined)
   await installGenericStoreApiFallbacks(page)
-  await routeIncentiveWorkspace(page, createIncentiveWorkspace(view, options))
+  const workspace = createIncentiveWorkspace(view, options)
+  await routeIncentiveWorkspace(page, workspace)
+  if (view === 'report_viewer') await routeIncentiveManagerDirectory(page, workspace)
   if (view === 'region_manager') await routeIncentiveCommands(page, [])
 }
 

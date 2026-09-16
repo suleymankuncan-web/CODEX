@@ -1,4 +1,5 @@
 import type { AuthSessionSummary } from '@/features/auth/api'
+import type { RegionManagerDirectoryItem } from '@/features/org/region-manager-directory'
 import { FinalIncentiveApproval } from './final-incentive-approval'
 import { useState } from 'react'
 import type { useLocalization } from '@/features/localization/useLocalization'
@@ -19,6 +20,10 @@ export function ReportViewerIncentivesView(input: {
   backgroundError: Error | null
   locale: AppLocale
   t: Translate
+  managerDirectory: RegionManagerDirectoryItem[]
+  managerDirectoryError: boolean
+  managerDirectoryLoading: boolean
+  onRetryManagerDirectory: () => void
 }) {
   const [selection, setSelection] = useState<{ store: IncentiveStore; row: IncentiveRow; opener: HTMLButtonElement } | null>(null)
   return (

@@ -8,6 +8,21 @@ export const incentiveStoreC = '20000000-0000-4000-8000-000000000003'
 const employeeA = '30000000-0000-4000-8000-000000000001'
 const employeeB = '30000000-0000-4000-8000-000000000002'
 
+export async function routeIncentiveManagerDirectory(
+  page: Page,
+  workspace: ReturnType<typeof createIncentiveWorkspace>,
+) {
+  await page.route('**/api/org/region-managers', route => route.fulfill({
+    json: {
+      items: workspace.data.regions.map((region) => ({
+        userId: `manager-${region.regionId}`,
+        displayName: region.regionManager.displayName ?? 'Yetkili Bölge Müdürü',
+        storeIds: region.stores.map(store => store.storeId),
+      })),
+    },
+  }))
+}
+
 export function createIncentiveWorkspace(
   view: 'region_manager' | 'report_viewer',
   options: { partial?: boolean; allReviewed?: boolean; multipleRegions?: boolean; mixedClosure?: boolean; draftCorrection?: boolean; prototypeParity?: boolean } = {},

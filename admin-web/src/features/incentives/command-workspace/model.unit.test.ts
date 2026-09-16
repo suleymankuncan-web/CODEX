@@ -6,6 +6,7 @@ import {
   filterIncentiveWorkspace,
   getSubmitRegionOptions,
   isIncentiveRegionSubmitReady,
+  scopeIncentiveWorkspaceToManager,
   sumMoney,
 } from './model'
 
@@ -72,6 +73,19 @@ const workspace: IncentiveWorkspace = {
 }
 
 describe('Incentives Command Canvas model', () => {
+  test('uses the role-backed manager directory to scope report viewer stores', () => {
+    const scoped = scopeIncentiveWorkspaceToManager(workspace, {
+      userId: 'manager-1',
+      displayName: 'Gerçek Bölge Müdürü',
+      storeIds: ['store-b'],
+    })
+
+    expect(scoped.regions).toHaveLength(1)
+    expect(scoped.regions[0]?.stores.map((store) => store.storeId)).toEqual(['store-b'])
+    expect(scoped.regions[0]?.regionManager.displayName).toBe('Gerçek Bölge Müdürü')
+    expect(scopeIncentiveWorkspaceToManager(workspace, null)).toBe(workspace)
+  })
+
   test('derives honest metrics from the complete authorized workspace', () => {
     expect(buildIncentiveMetrics(workspace)).toEqual({
       finalTotal: '10.25',

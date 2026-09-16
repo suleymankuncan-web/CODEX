@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './test-fixtures'
 import { createStoreContractSession, installStoreContractSession, installGenericStoreApiFallbacks, companyId } from './store-page-contract-fixtures'
-import { createIncentiveWorkspace, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
+import { createIncentiveWorkspace, routeIncentiveManagerDirectory, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
 
 async function prepare(page: Page, granted: boolean) {
   await installStoreContractSession(page, 'reportViewer')
@@ -48,6 +48,7 @@ test('directory selection shows only the selected regions approval package', asy
   await prepare(page, true)
   const workspace = createIncentiveWorkspace('report_viewer', { multipleRegions: true })
   await routeIncentiveWorkspace(page, workspace)
+  await routeIncentiveManagerDirectory(page, workspace)
   await page.route('**/api/store/incentives/final-approval**', route => route.fulfill({ json: { items: workspace.data.regions.map(region => ({ ...item, regionId: region.regionId, regionName: region.regionName })) } }))
   await page.goto('/store/incentives')
   await expect(page.getByRole('button', { name: 'Final onay ver', exact: true })).toHaveCount(2)
