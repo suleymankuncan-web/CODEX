@@ -263,8 +263,10 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-ranking.module.ts',
-    { controllers: 0, providers: 8, exports: 3 },
+    { imports: 1, controllers: 0, providers: 8, exports: 3 },
   ],
+  // Redis lifecycle belongs to the ranking-only cache module, never the global/shared module.
+  ['backend/nestjs/src/modules/store-ops/store-ops-ranking-cache.module.ts', { controllers: 0, providers: 1, exports: 1 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-reporting-read.module.ts',
     { controllers: 1, providers: 8, exports: 1 },

@@ -45,6 +45,7 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `RATE_LIMIT_REDIS_PREFIX` | Backend/Platform owner | Render backend env | Internal | Must be stable and environment-specific when Redis rate limiting is enabled. | `hr-axis:rate-limit` |
 | `QUEUE_BACKEND` | Backend/Platform owner | Render backend env | Internal | Use `bullmq` before broad production durable background processing. | `in-memory` |
 | `REDIS_URL` | Platform owner | Render backend env | Secret | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis`. | Local Redis URL. |
+| `RANKING_FACTS_CACHE_ENABLED` | Backend/Platform owner | Backend runtime env | Internal | Opt-in ranking daily aggregate cache using the existing `REDIS_URL`; leave disabled until the target Redis ACL and measured hit rate are verified. Redis failures fall back to PostgreSQL. | `false` |
 | `UPLOAD_PARSE_MAX_CONCURRENCY` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `1` |
 | `UPLOAD_PARSE_TIMEOUT_MS` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `15000` |
 | `PHOTO_MEDIA_STORAGE_ENABLED` | Project owner | Backend runtime env | Internal | Keep `false` until the selected synthetic-only storage runtime proof is verified. | `false` |

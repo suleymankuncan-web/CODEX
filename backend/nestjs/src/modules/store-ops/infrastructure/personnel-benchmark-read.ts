@@ -1,16 +1,19 @@
 import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
+import { cachedRankingFactsSql } from "./ranking-facts-cache-sql";
+import type { RankingFactsCache } from "./ranking-facts-cache";
 import type { DatabaseService } from "../../../shared/database/database.service";
 
 export async function readEmployeeTurkeyBenchmarks(database: DatabaseService, input: {
   isRange?: boolean; periodStart: string; periodEnd: string; companyId?: string; periodType?: string;
-}) {
+}, cache?: RankingFactsCache) {
+  const facts = input.isRange ? await cache?.get("employee", { ...input, companyIds: input.companyId ? [input.companyId] : [] }) : undefined;
   if (input.isRange) return (await database.query<{ kpi_code: string; benchmark_value: string | null }>(`
-    ${rankingDailyComponentsSql("employee")}
+    ${facts === undefined ? rankingDailyComponentsSql("employee") : cachedRankingFactsSql("employee", 4)}
     SELECT 'ATV' AS kpi_code,
       (SUM(atv_numerator) / NULLIF(SUM(atv_denominator), 0))::text AS benchmark_value FROM facts
     UNION ALL SELECT 'UPT', (SUM(upt_numerator) / NULLIF(SUM(upt_denominator), 0))::text FROM facts
     ORDER BY kpi_code
-  `, [input.periodStart, input.periodEnd, input.companyId ? [input.companyId] : []])).rows;
+  `, [input.periodStart, input.periodEnd, input.companyId ? [input.companyId] : [], ...(facts === undefined ? [] : [facts])])).rows;
   return (await database.query<{ kpi_code: string; benchmark_value: string | null }>(`
     WITH components AS (
       SELECT ka.employee_id, ka.store_id, kd.kpi_code,

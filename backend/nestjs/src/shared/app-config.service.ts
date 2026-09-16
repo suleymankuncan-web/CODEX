@@ -760,9 +760,9 @@ export class AppConfigService {
     return value as QueueBackend;
   }
 
-  get redisUrl(): string {
-    return this.readString("REDIS_URL", "redis://localhost:6379");
-  }
+  get redisUrl(): string { return this.readString("REDIS_URL", "redis://localhost:6379"); }
+
+  get rankingFactsCacheEnabled(): boolean { return this.readString("RANKING_FACTS_CACHE_ENABLED", "false") === "true"; }
 
   get redisOperationTimeoutMs(): number {
     return this.readPositiveInteger("REDIS_OPERATION_TIMEOUT_MS", "5000");

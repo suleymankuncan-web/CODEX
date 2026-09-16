@@ -1,6 +1,7 @@
 import { readEmployeeTurkeyBenchmarks } from "./personnel-benchmark-read";
 import { personnelPeriodTargetSql } from "./personnel-period-sql";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
+import { RankingFactsCache } from "./ranking-facts-cache";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 type ActiveEmployeeAssignmentScopeRow = {
@@ -22,7 +23,8 @@ type ActiveStorePersonnelScopeSummaryRow = {
 
 @Injectable()
 export class ReportingRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService,
+    @Optional() private readonly rankingFactsCache?: RankingFactsCache) {}
 
   private hasStoreAccessScope(input: {
     companyIds: string[];
@@ -233,7 +235,7 @@ export class ReportingRepository {
     companyId?: string;
     periodType?: string;
   }) {
-    return readEmployeeTurkeyBenchmarks(this.databaseService, input);
+    return readEmployeeTurkeyBenchmarks(this.databaseService, input, this.rankingFactsCache);
   }
 
   async getLatestEmployeeKpiPeriod(input: {

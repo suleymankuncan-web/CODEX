@@ -1,9 +1,12 @@
 import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
+import { cachedRankingFactsSql } from "./ranking-facts-cache-sql";
+import type { RankingFactsCache } from "./ranking-facts-cache";
 import type { DatabaseService } from "../../../shared/database/database.service";
 
 export async function readRankingPersonnelRange(database: DatabaseService, input: {
   companyIds: string[]; metricCodes: string[]; periodStart: string; periodEnd: string;
-}) {
+}, cache?: RankingFactsCache) {
+  const facts = await cache?.get("employee", input);
   return (await database.query<{
     employee_id: string; first_name: string | null; last_name: string | null;
     store_id: string | null; store_name: string | null; region_id: string | null; region_name: string | null;
@@ -11,7 +14,7 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
     position_code: string | null; net_sales_value: string | null; store_net_sales_value: string | null;
     kpi_code: string; kpi_name: string | null; actual_value: string | null; target_value: string | null;
   }>(`
-    ${rankingDailyComponentsSql("employee")}, store_sales AS (
+    ${facts === undefined ? rankingDailyComponentsSql("employee") : cachedRankingFactsSql("employee", 5)}, store_sales AS (
       SELECT store_id, SUM(sales) AS sales FROM facts GROUP BY store_id
     )
     SELECT e.employee_id::text, e.first_name, e.last_name,
@@ -54,5 +57,5 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
     CROSS JOIN ops.kpi_definition kd
     WHERE kd.kpi_code=ANY($4::text[])
     ORDER BY e.last_name,e.first_name,e.employee_id,kd.kpi_code
-  `, [input.periodStart,input.periodEnd,input.companyIds,input.metricCodes])).rows;
+  `, [input.periodStart,input.periodEnd,input.companyIds,input.metricCodes, ...(facts === undefined ? [] : [facts])])).rows;
 }

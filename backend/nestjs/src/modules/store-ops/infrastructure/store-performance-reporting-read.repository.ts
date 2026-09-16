@@ -1,10 +1,12 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
+import { RankingFactsCache } from "./ranking-facts-cache";
 import { readRankingRangeBenchmarks } from "./ranking-range-read";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 @Injectable()
 export class StorePerformanceReportingReadRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService,
+    @Optional() private readonly rankingFactsCache?: RankingFactsCache) {}
 
   async getStoreNameById(storeId: string) {
     const result = await this.databaseService.query<{ store_name: string | null }>(
@@ -269,7 +271,7 @@ export class StorePerformanceReportingReadRepository {
     periodEnd: string;
     companyId?: string;
   }) {
-    if (input.isRange || (input.periodType === "daily" && input.periodStart !== input.periodEnd)) return readRankingRangeBenchmarks(this.databaseService, input);
+    if (input.isRange || (input.periodType === "daily" && input.periodStart !== input.periodEnd)) return readRankingRangeBenchmarks(this.databaseService, input, this.rankingFactsCache);
     const params: unknown[] = [
       input.periodType,
       input.periodStart,
