@@ -4,6 +4,7 @@ import { Pool } from "pg";
 import { ChecklistOperationalHistoryService } from "../src/modules/store-ops/application/checklist-operational-history.service";
 import { ChecklistOperationalHistoryRepository } from "../src/modules/store-ops/infrastructure/checklist-operational-history.repository";
 import { DatabaseService } from "../src/shared/database/database.service";
+import { verifyChecklistAccountNames } from "./checklist-account-name-postgres-proof";
 
 const databaseUrl = process.env.DATABASE_URL ?? "";
 const parsedDatabaseUrl = new URL(databaseUrl);
@@ -15,7 +16,7 @@ if (!/^store_ops_fresh_migration_smoke(_[a-z0-9_]+)?$/.test(databaseName)) {
   throw new Error("Operational history API PostgreSQL smoke refuses a non-disposable database");
 }
 
-const pool = new Pool({ connectionString: databaseUrl });
+const pool = new Pool({ connectionString: databaseUrl, max: 1 });
 const companyId = randomUUID();
 const regionId = randomUUID();
 const otherRegionId = randomUUID();
@@ -49,9 +50,11 @@ const privateCanaries = [
 const roleScopes = {
   REGION_MANAGER: { companyIds: [], regionIds: [regionId], storeIds: [] },
 };
+const actorReadScope = roleScopes.REGION_MANAGER;
 
 async function main() {
   try {
+    await pool.query("BEGIN");
     await seedFixtures();
 
     let queryCount = 0;
@@ -70,7 +73,7 @@ async function main() {
 
     const start = performance.now();
     const firstPage = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "3m", kinds: "task_assigned",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "3m", kinds: "task_assigned",
     });
     const firstPageMs = performance.now() - start;
     assert(queryCount === 1, "history read must use one SQL roundtrip");
@@ -81,7 +84,7 @@ async function main() {
 
     queryCount = 0;
     const secondPage = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "3m", kinds: "task_assigned",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "3m", kinds: "task_assigned",
       cursor: firstPage.page.nextCursor,
     });
     assert(queryCount === 1, "cursor page must use one SQL roundtrip");
@@ -93,7 +96,7 @@ async function main() {
     queryCount = 0;
     const longHistoryStart = performance.now();
     const allHistory = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "all",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "all",
     });
     const longHistoryMs = performance.now() - longHistoryStart;
     const longHistorySql = capturedSql;
@@ -101,14 +104,14 @@ async function main() {
     assert(queryCount === 1, "long-history read must use one SQL roundtrip");
     assert(allHistory.summary.assignedTaskCount === 23 + longHistoryTaskCount, "all-history summary must include the deterministic long-history fixture");
     const resolvedHistory = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "all", kinds: "task_resolved",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "all", kinds: "task_resolved",
     });
     assert(resolvedHistory.items.length === 1, "only a closed task may emit resolution history");
     const completionHistory = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "all", kinds: "checklist_completed",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "all", kinds: "checklist_completed",
     });
     const acknowledgementHistory = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "all", kinds: "acknowledgement",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "all", kinds: "acknowledgement",
     });
     const completed = completionHistory.items[0];
     const acknowledged = acknowledgementHistory.items[0];
@@ -116,7 +119,7 @@ async function main() {
     assert(acknowledged?.occurredAt === firstAcknowledgementAt, "first immutable acknowledgement audit must win");
     assert(completed?.actorSnapshot.assignmentLabel === "History Store", "store assignment must outrank region assignment at event time");
     const planHistory = await service.read({
-      actorRoleCodes: ["REGION_MANAGER"], roleScopes, storeId, range: "all", kinds: "visit_plan_revised",
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope, roleScopes, storeId, range: "all", kinds: "visit_plan_revised",
     });
     const planEvents = planHistory.items;
     assert(planEvents.some((event) => event.details.some((detail) => detail.label === "Revizyon" && detail.value === "2")), "a revision that removes the store must remain in its history");
@@ -141,9 +144,12 @@ async function main() {
     const planEvidence = summarizePlan(plan?.Plan);
     assert(firstPageMs < 1_200 && longHistoryMs < 1_200 && explainMs < 1_200 && executionMs < 1_200, "disposable history query budget must stay below 1200 ms");
 
+    await verifyChecklistAccountNames(pool, { companyId, storeId, otherStoreId, actorUserId, checklistInstanceId });
+
     console.log(JSON.stringify({
       event: "checklist_operational_history_api_postgres_smoke.completed",
       actorProjection: "bulk_store_precedence_verified",
+      accountOnlyNames: "history_and_pdf_signatories_verified",
       cursorPrivacy: "verified",
       executionMs: Math.round(executionMs),
       firstPageMs: Math.round(firstPageMs),
@@ -156,6 +162,7 @@ async function main() {
       sameTimestampPagination: "verified",
     }));
   } finally {
+    await pool.query("ROLLBACK");
     await pool.end();
   }
 }

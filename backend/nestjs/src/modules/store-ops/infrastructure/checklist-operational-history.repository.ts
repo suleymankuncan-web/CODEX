@@ -273,7 +273,8 @@ actor_candidates AS (
     event.*,
     COALESCE(
       NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
-      NULLIF(BTRIM(CONCAT_WS(' ', auditor.first_name, auditor.last_name)), '')
+      NULLIF(BTRIM(CONCAT_WS(' ', auditor.first_name, auditor.last_name)), ''),
+      NULLIF(BTRIM(account.username), '')
     ) AS actor_display_name,
     role.role_name AS actor_role_label,
     CASE assignment.scope_type

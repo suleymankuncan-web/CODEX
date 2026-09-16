@@ -45,6 +45,8 @@ describe("ChecklistOperationalHistoryRepository", () => {
     expect(query.mock.calls[0][0]).toContain("auditor.employee_id = completed_instance.auditor_employee_id");
     expect(query.mock.calls[0][0]).toContain("event.kind = 'checklist_completed' AND completed_instance.checklist_instance_id = event.source_id");
     expect(query.mock.calls[0][0]).toContain("NULLIF(BTRIM(CONCAT_WS(' ', auditor.first_name, auditor.last_name)), '')");
+    expect(query.mock.calls[0][0]).toContain("NULLIF(BTRIM(account.username), '')");
+    expect(query.mock.calls[0][0]).not.toContain("account.email");
     expect(query.mock.calls[0][0]).toContain("task.status = 'closed' AND task.closed_at IS NOT NULL");
     expect(query.mock.calls[0][0]).toContain("FROM ops.region_weekly_visit_plan_completion AS visit");
     expect(query.mock.calls[0][0]).toContain("'visit_completed'");

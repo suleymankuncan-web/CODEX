@@ -282,10 +282,13 @@ export class ChecklistAcknowledgementRepository {
               FILTER (WHERE names.role_code = 'STORE_MANAGER'), ARRAY[]::text[]) AS store_manager_names
           FROM (
             SELECT role.role_code,
-              NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '') AS display_name
+              COALESCE(
+                NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
+                NULLIF(BTRIM(account.username), '')
+              ) AS display_name
             FROM ops.user_action_store_assignment assigned
             JOIN ops.user_account account ON account.user_id = assigned.user_id AND account.is_active = TRUE
-            JOIN ops.employee employee ON employee.employee_id = account.employee_id
+            LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id
             JOIN ops.user_role_assignment assignment ON assignment.user_id = account.user_id
             JOIN ops.role role ON role.role_id = assignment.role_id
             WHERE assigned.store_id = ci.store_id
