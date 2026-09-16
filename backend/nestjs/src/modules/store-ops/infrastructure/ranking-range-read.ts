@@ -1,4 +1,6 @@
 import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
+import { cachedRankingFactsSql } from "./ranking-facts-cache-sql";
+import type { RankingFactsCache } from "./ranking-facts-cache";
 import type { DatabaseService } from "../../../shared/database/database.service";
 
 export type RankingRangeInput = {
@@ -25,11 +27,13 @@ export type RankingRangeRow = {
 export async function readRankingStoreRange(
   database: DatabaseService,
   input: RankingRangeInput,
+  cache?: RankingFactsCache,
 ) {
+  const facts = await cache?.get("store", input);
   return (
     await database.query<RankingRangeRow>(
       `
-    ${rankingDailyComponentsSql("store")}, gsm AS (
+    ${facts === undefined ? rankingDailyComponentsSql("store") : cachedRankingFactsSql("store", 5)}, gsm AS (
       SELECT g.store_id,
         CASE WHEN COUNT(DISTINCT g.business_date) = COUNT(*) AND COUNT(DISTINCT outcome.integration_source_id) = 1
           THEN SUM(g.yes_customer_count)::numeric / NULLIF(SUM(g.total_customer_count), 0) END AS value,
@@ -79,7 +83,7 @@ export async function readRankingStoreRange(
     WHERE kd.kpi_code = ANY($4::text[])
     ORDER BY s.store_name, s.store_id, kd.kpi_code
   `,
-      [input.periodStart, input.periodEnd, input.companyIds, input.metricCodes],
+      [input.periodStart, input.periodEnd, input.companyIds, input.metricCodes, ...(facts === undefined ? [] : [facts])],
     )
   ).rows;
 }
@@ -87,11 +91,13 @@ export async function readRankingStoreRange(
 export async function readRankingRangeBenchmarks(
   database: DatabaseService,
   input: { companyId?: string; periodStart: string; periodEnd: string },
+  cache?: RankingFactsCache,
 ) {
+  const facts = await cache?.get("store", { ...input, companyIds: input.companyId ? [input.companyId] : [] });
   return (
     await database.query<{ kpi_code: string; benchmark_value: string | null }>(
       `
-    ${rankingDailyComponentsSql("store")}, pairs AS (
+    ${facts === undefined ? rankingDailyComponentsSql("store") : cachedRankingFactsSql("store", 4)}, pairs AS (
       SELECT 'ATV' AS kpi_code, atv_numerator AS numerator, atv_denominator AS denominator FROM facts
       UNION ALL SELECT 'UPT', upt_numerator, upt_denominator FROM facts
       UNION ALL SELECT 'CR', cr_numerator, cr_denominator FROM facts
@@ -109,7 +115,7 @@ export async function readRankingRangeBenchmarks(
       (SUM(numerator) / NULLIF(SUM(denominator), 0))::text AS benchmark_value FROM pairs GROUP BY kpi_code
     UNION ALL SELECT 'gsm_approval', (100 * SUM(yes_count)::numeric / NULLIF(SUM(total_count), 0))::text FROM gsm
   `,
-      [input.periodStart, input.periodEnd, input.companyId ? [input.companyId] : []],
+      [input.periodStart, input.periodEnd, input.companyId ? [input.companyId] : [], ...(facts === undefined ? [] : [facts])],
     )
   ).rows;
 }

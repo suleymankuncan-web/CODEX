@@ -1,12 +1,14 @@
 import { personnelPeriodTargetSql } from "./personnel-period-sql";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
+import { RankingFactsCache } from "./ranking-facts-cache";
 import { readRankingStoreRange } from "./ranking-range-read";
 import { readRankingPersonnelRange } from "./ranking-personnel-range-read";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 @Injectable()
 export class RankingReportingReadRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService,
+    @Optional() private readonly rankingFactsCache?: RankingFactsCache) {}
 
   async getLatestRankingPeriod(input: {
     companyIds?: string[];
@@ -99,7 +101,7 @@ export class RankingReportingReadRepository {
     periodEnd: string;
     isRange?: boolean;
   }) {
-    if (input.isRange || (input.periodType === "daily" && input.periodStart !== input.periodEnd)) return readRankingStoreRange(this.databaseService, input);
+    if (input.isRange || (input.periodType === "daily" && input.periodStart !== input.periodEnd)) return readRankingStoreRange(this.databaseService, input, this.rankingFactsCache);
     if (input.metricCodes.length === 0) {
       return [];
     }
@@ -314,7 +316,7 @@ export class RankingReportingReadRepository {
     periodStart: string;
     periodEnd: string;
   }) {
-    if (input.isRange) return readRankingPersonnelRange(this.databaseService, input);
+    if (input.isRange) return readRankingPersonnelRange(this.databaseService, input, this.rankingFactsCache);
     if (input.metricCodes.length === 0) {
       return [];
     }

@@ -1,7 +1,7 @@
 /** Daily physical facts are independently reduced over the interval.
  * Missing components are omitted, never zero-filled; imported ratios and scores are not summed.
  */
-export function rankingDailyComponentsSql(scope: "store" | "employee") {
+export function rankingDailyComponentsSql(scope: "store" | "employee", guard?: string) {
   const employee = scope === "employee" ? "ka.employee_id," : "";
   const groupEmployee = scope === "employee" ? "employee_id," : "";
   return `WITH daily AS (
@@ -23,7 +23,7 @@ export function rankingDailyComponentsSql(scope: "store" | "employee") {
     LEFT JOIN ops.kpi_target kt ON kt.kpi_id = ka.kpi_id AND kt.store_id = ka.store_id
       AND kt.scope_type = '${scope}' AND kt.period_type = 'daily'
       AND kt.period_start = ka.period_start AND kt.period_end = ka.period_end
-    WHERE ka.scope_type = '${scope}' AND ka.period_type = 'daily'
+    WHERE ${guard ? `${guard} AND ` : ""}ka.scope_type = '${scope}' AND ka.period_type = 'daily'
       AND ka.period_start = ka.period_end AND ka.period_start BETWEEN $1::date AND $2::date
       AND kd.kpi_code IN ('NET_SALES','ITEM_COUNT','TICKET_COUNT','FF',
         'TARGET_ACHIEVEMENT','STORE_SALES','SALES_TARGET_ACHIEVEMENT','gsm_approval')
