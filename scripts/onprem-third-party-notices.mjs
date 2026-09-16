@@ -19,6 +19,11 @@ const ONP1_LICENSE_ALLOWLIST = new Set([
   'OFL-1.1',
   'Python-2.0',
 ])
+// Owner-directed PR #1164 closeout, 2026-09-16: the PDF dependency is
+// approved only at this identity/expression, with both upstream notices.
+const PACKAGE_LICENSE_DISPOSITIONS = new Map([
+  ['pako@1.0.11', { license: '(MIT AND Zlib)', files: ['LICENSE', 'lib/zlib/README'] }],
+])
 
 function readJson(pathname, label) {
   try {
@@ -40,9 +45,26 @@ function isUnknownLicense(value) {
 }
 
 function assertLicensePolicy(license, identity) {
-  if (!ONP1_LICENSE_ALLOWLIST.has(license)) {
+  if (!ONP1_LICENSE_ALLOWLIST.has(license) && PACKAGE_LICENSE_DISPOSITIONS.get(identity)?.license !== license) {
     throw new Error(`license policy review required before packaging ${identity}: ${license}`)
   }
+}
+
+function readPackageLicenseFiles(packageDir, identity, license) {
+  const disposition = PACKAGE_LICENSE_DISPOSITIONS.get(identity)
+  const required = disposition?.license === license ? disposition.files : []
+  for (const name of required) {
+    const pathname = join(packageDir, name)
+    if (!existsSync(pathname) || !readFileSync(pathname, 'utf8').trim()) {
+      throw new Error(`required license notice is missing or empty for ${identity}: ${name}`)
+    }
+  }
+  const standard = readdirSync(packageDir, { withFileTypes: true })
+    .filter((item) => item.isFile() && LICENSE_FILE_NAMES.test(item.name))
+    .map((item) => item.name)
+  return [...new Set([...standard, ...required])]
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ name, text: readFileSync(join(packageDir, name), 'utf8') }))
 }
 
 function spdxLicenseIds(expression) {
@@ -182,11 +204,7 @@ function collectProductionPackages({ packageJson, lockfile, nodeModulesPath, spd
     const license = normalizeLicense(installed.license ?? installed.licenses ?? lockEntry.license)
     if (isUnknownLicense(license)) throw new Error(`unknown or missing license for ${identityName}@${identityVersion}`)
     assertLicensePolicy(license, `${identityName}@${identityVersion}`)
-    const licenseFiles = readdirSync(packageDir, { withFileTypes: true })
-      .filter((item) => item.isFile() && LICENSE_FILE_NAMES.test(item.name))
-      .map((item) => item.name)
-      .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({ name, text: readFileSync(join(packageDir, name), 'utf8') }))
+    const licenseFiles = readPackageLicenseFiles(packageDir, `${identityName}@${identityVersion}`, license)
     const canonicalTexts = licenseFiles.length === 0
       ? canonicalLicenseTexts(spdxLicenseDirectory, license, `${identityName}@${identityVersion}`)
       : []

@@ -95,6 +95,10 @@ export type ChecklistAcknowledgementItem = {
   storeName: string
   completedByUserId: string | null
   completedByDisplayName: string | null
+  signatories?: {
+    regionManagerNames: string[]
+    storeManagerNames: string[]
+  }
   completedAt: string | null
   status: string
   totalScore: number | null

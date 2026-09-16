@@ -110,7 +110,7 @@ test.beforeEach(async ({ page }) => {
 test('admin inbox renders item detail, due, escalation, and source action signals', async ({ page }) => {
   await page.goto('/admin/inbox')
 
-  await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu', level: 1, exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'İş akışı kayıtları' })).toBeVisible()
   await expect(page.getByText('April Target Distribution')).toBeVisible()
   await openInboxRecord(page, 'April Target Distribution')
@@ -151,9 +151,20 @@ test('admin inbox renders item detail, due, escalation, and source action signal
 })
 
 test('admin inbox page switches chrome to English copy and persists locale', async ({ page }) => {
+  let releaseInbox: (() => void) | undefined
+  const inboxResponseGate = new Promise<void>(resolve => { releaseInbox = resolve })
+  await page.route('**/api/workflow/inbox', async route => {
+    await inboxResponseGate
+    await route.fallback()
+  })
   await page.goto('/admin/inbox')
 
-  await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu' })).toBeVisible()
+  try {
+    await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu yükleniyor', exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu', level: 1, exact: true })).toBeVisible()
+  } finally {
+    releaseInbox?.()
+  }
   await expect(page.getByRole('heading', { name: 'Aksiyon bekleyenler' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Satıcı kodu', exact: true })).toBeVisible()
   await expect(page.getByText('One queue for admin-side approvals and KPI follow-up.')).toHaveCount(0)
@@ -164,7 +175,7 @@ test('admin inbox page switches chrome to English copy and persists locale', asy
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Admin inbox', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Admin inbox', level: 1, exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Seller code', exact: true })).toBeVisible()
   await expect(page.getByText('Admin iş kuyruğu')).toHaveCount(0)
@@ -172,7 +183,7 @@ test('admin inbox page switches chrome to English copy and persists locale', asy
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Admin inbox', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Admin inbox', level: 1, exact: true })).toBeVisible()
 })
 
 test('admin sidebar prefetches inbox queues before opening admin inbox', async ({ page }) => {

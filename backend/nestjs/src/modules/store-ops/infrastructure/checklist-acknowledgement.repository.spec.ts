@@ -93,6 +93,8 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
           completed_at: "2026-05-14T08:00:00.000Z",
           status: "completed",
           total_score: "74.50",
+          region_manager_names: ["Ayşe Bölge"],
+          store_manager_names: ["Çağrı Mağaza"],
           compliance_rate: "0.7500",
           checklist_acknowledgement_id: null,
           acknowledged_by_user_id: null,
@@ -132,11 +134,18 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
     expect(sql).toContain("ops.checklist_response");
     expect(sql).toContain("ops.user_account completed_user");
     expect(sql).toContain("ops.employee auditor_employee");
+    expect(sql).toContain("ORDER BY cti.item_no ASC, cti.template_item_id ASC");
+    expect(sql).toContain("cti.checklist_template_id = ci.checklist_template_id");
+    expect(sql).toContain("assigned.store_id = ci.store_id");
+    expect(sql).toContain("assigned.end_at > NOW()");
+    expect(sql).toContain("role.role_code IN ('REGION_MANAGER', 'STORE_MANAGER')");
+    expect(sql).toContain("region.company_id = s.company_id");
     expect(params).toEqual([["store-1"], ["VM_STORE_VISIT"], 50, 0]);
     expect(result.items[0]).toMatchObject({
       templateType: "VM_STORE_VISIT",
       completedByUserId: "vm-user-1",
       completedByDisplayName: "Eda Doğanay",
+      signatories: { regionManagerNames: ["Ayşe Bölge"], storeManagerNames: ["Çağrı Mağaza"] },
       responses: [
         {
           templateItemId: "item-1",

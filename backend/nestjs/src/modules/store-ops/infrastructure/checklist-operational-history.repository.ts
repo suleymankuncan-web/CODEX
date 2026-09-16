@@ -271,7 +271,10 @@ filtered_events AS (
 actor_candidates AS (
   SELECT
     event.*,
-    CONCAT_WS(' ', employee.first_name, employee.last_name) AS actor_display_name,
+    COALESCE(
+      NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
+      NULLIF(BTRIM(CONCAT_WS(' ', auditor.first_name, auditor.last_name)), '')
+    ) AS actor_display_name,
     role.role_name AS actor_role_label,
     CASE assignment.scope_type
       WHEN 'store' THEN assignment_store.store_name
@@ -280,7 +283,8 @@ actor_candidates AS (
       WHEN 'global' THEN 'Genel kapsam'
       ELSE NULL
     END AS actor_assignment_label,
-    CASE WHEN account.user_id IS NOT NULL THEN 'historical_projection' ELSE 'unknown' END AS actor_identity_status,
+    CASE WHEN account.user_id IS NOT NULL OR auditor.employee_id IS NOT NULL
+      THEN 'historical_projection' ELSE 'unknown' END AS actor_identity_status,
     ROW_NUMBER() OVER (
       PARTITION BY event.kind, event.source_id
       ORDER BY
@@ -292,6 +296,9 @@ actor_candidates AS (
   CROSS JOIN scoped_store
   LEFT JOIN ops.user_account AS account ON account.user_id = event.actor_user_id
   LEFT JOIN ops.employee AS employee ON employee.employee_id = account.employee_id
+  LEFT JOIN ops.checklist_instance AS completed_instance
+    ON event.kind = 'checklist_completed' AND completed_instance.checklist_instance_id = event.source_id
+  LEFT JOIN ops.employee AS auditor ON auditor.employee_id = completed_instance.auditor_employee_id
   LEFT JOIN ops.user_role_assignment AS assignment
     ON assignment.user_id = event.actor_user_id
     AND assignment.start_at <= event.occurred_at

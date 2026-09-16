@@ -59,7 +59,7 @@ export function groupChecklistResultResponses(items: ChecklistAcknowledgementIte
     }
   >()
 
-  for (const item of items) {
+  for (const item of items.toSorted((left, right) => left.itemNo - right.itemNo)) {
     const section = sections.get(item.sectionName) ?? {
       name: item.sectionName,
       items: [],

@@ -22,6 +22,8 @@ type ChecklistAcknowledgementRow = {
   acknowledgement_note: string | null;
   acknowledged_at: string | null;
   responses_json: unknown;
+  region_manager_names?: string[];
+  store_manager_names?: string[];
   total_count: string | number;
 };
 
@@ -178,7 +180,7 @@ export class ChecklistAcknowledgementRepository {
                 'scoreValue', cr.score_value,
                 'commentText', cr.comment_text
               )
-              ORDER BY cti.section_name ASC, cti.item_no ASC, cti.template_item_id ASC
+              ORDER BY cti.item_no ASC, cti.template_item_id ASC
             ) FILTER (WHERE cti.template_item_id IS NOT NULL),
             '[]'::jsonb
           ) AS responses_json,
@@ -205,6 +207,8 @@ export class ChecklistAcknowledgementRepository {
           s.store_name,
           ci.completed_by_user_id,
           completed_identity.completed_by_display_name,
+          signatories.region_manager_names,
+          signatories.store_manager_names,
           ci.completed_at,
           ci.status,
           ci.total_score,
@@ -243,6 +247,7 @@ export class ChecklistAcknowledgementRepository {
           ca.acknowledgement_note,
           ca.acknowledged_at,
           ${responsesSelect}
+          ${includeResponses ? "signatories.region_manager_names, signatories.store_manager_names," : ""}
           COUNT(*) OVER() AS total_count
         FROM ops.checklist_instance ci
         INNER JOIN ops.checklist_template ct
@@ -269,6 +274,33 @@ export class ChecklistAcknowledgementRepository {
             NULLIF(BTRIM(completed_user.email), '')
           ) AS completed_by_display_name
         ) completed_identity ON TRUE
+        ${includeResponses ? `LEFT JOIN LATERAL (
+          SELECT
+            COALESCE(array_agg(DISTINCT names.display_name ORDER BY names.display_name)
+              FILTER (WHERE names.role_code = 'REGION_MANAGER'), ARRAY[]::text[]) AS region_manager_names,
+            COALESCE(array_agg(DISTINCT names.display_name ORDER BY names.display_name)
+              FILTER (WHERE names.role_code = 'STORE_MANAGER'), ARRAY[]::text[]) AS store_manager_names
+          FROM (
+            SELECT role.role_code,
+              NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '') AS display_name
+            FROM ops.user_action_store_assignment assigned
+            JOIN ops.user_account account ON account.user_id = assigned.user_id AND account.is_active = TRUE
+            JOIN ops.employee employee ON employee.employee_id = account.employee_id
+            JOIN ops.user_role_assignment assignment ON assignment.user_id = account.user_id
+            JOIN ops.role role ON role.role_id = assignment.role_id
+            WHERE assigned.store_id = ci.store_id
+              AND assigned.start_at <= NOW() AND (assigned.end_at IS NULL OR assigned.end_at > NOW())
+              AND assignment.start_at <= NOW() AND (assignment.end_at IS NULL OR assignment.end_at >= NOW())
+              AND role.role_code IN ('REGION_MANAGER', 'STORE_MANAGER')
+              AND (assignment.scope_type = 'global'
+                OR (assignment.scope_type = 'company' AND assignment.company_id = s.company_id)
+                OR (assignment.scope_type = 'store' AND assignment.store_id = s.store_id)
+                OR (assignment.scope_type = 'region' AND EXISTS (
+                  SELECT 1 FROM ops.region region
+                  WHERE region.region_id = assignment.region_id AND region.company_id = s.company_id
+                )))
+          ) names WHERE names.display_name IS NOT NULL
+        ) signatories ON TRUE` : ""}
         ${responseJoins}
         ${whereClause}
         ${groupByClause}
@@ -300,6 +332,10 @@ export class ChecklistAcknowledgementRepository {
         totalScore: row.total_score === null ? null : Number(row.total_score),
         complianceRate: row.compliance_rate === null ? null : Number(row.compliance_rate),
         responses: this.mapResponseDetails(row.responses_json),
+        ...(includeResponses ? { signatories: {
+          regionManagerNames: row.region_manager_names ?? [],
+          storeManagerNames: row.store_manager_names ?? [],
+        } } : {}),
         acknowledgement: row.checklist_acknowledgement_id
           ? {
               checklistAcknowledgementId: row.checklist_acknowledgement_id,

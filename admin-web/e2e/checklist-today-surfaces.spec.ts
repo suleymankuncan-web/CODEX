@@ -1,4 +1,6 @@
 import type { TestInfo } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+import { PDFDocument } from 'pdf-lib'
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { setStoredLocale } from './locale-test-utils'
@@ -8,6 +10,49 @@ const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
 const vmTemplateId = '99999999-9999-4999-8999-999999999999'
 const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
+
+test.describe('mobile checklist note editing', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 820, height: 1180 } })
+
+  test('keeps notes and the session open across keyboard resize, zoom and outside touches', async ({ page, context, browserName }) => {
+    const requests = createChecklistRequestLog()
+    await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
+    const url = `/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`
+    await page.goto(url)
+    const dialog = page.getByRole('dialog', { name: 'Checklist Oturumu' })
+    await answerChecklistScoreQuestion(page, '8', 'Mobil denetim notu')
+    const note = dialog.getByRole('textbox', { name: /Not/ })
+    const cdp = browserName === 'chromium' ? await context.newCDPSession(page) : null
+    for (const viewport of [{ width: 390, height: 400 }, { width: 820, height: 600 }, { width: 820, height: 1180 }]) {
+      await page.setViewportSize(viewport)
+      await cdp?.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1.5 })
+      await expect(dialog).toBeVisible()
+      await expect(note).toHaveValue('Mobil denetim notu')
+      await cdp?.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 })
+    }
+    await page.touchscreen.tap(10, 300)
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/workflowChecklist=bm/)
+    await expect(note).toHaveValue('Mobil denetim notu')
+    await note.fill('Mobil denetim notu devam ediyor')
+    await expect.poll(() => requests.saves.at(-1)?.body.commentText).toBe('Mobil denetim notu devam ediyor')
+    await dialog.getByRole('button', { name: 'Kapat', exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Checklisti kapat' }).click()
+    await expect(dialog).toHaveCount(0)
+  })
+
+  test('keeps mobile note text at a readable size without disabling zoom', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await setupChecklistPage(page, ['REGION_MANAGER'])
+    await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
+    await answerChecklistScoreQuestion(page, '8', 'Okunabilir not')
+    const note = page.getByRole('dialog').getByRole('textbox', { name: /Not/ })
+    expect(await note.evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16)
+    await expect(page.locator('meta[name="viewport"]')).not.toHaveAttribute('content', /user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?:\D|$)/)
+  })
+})
 
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
@@ -111,7 +156,7 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   await expect(dialog).toBeVisible()
   await expectChecklistResultModalVisualContract(dialog)
   await expectNoElementHorizontalOverflow(dialog)
-  await expect(page.getByText('Eksik manken')).toHaveCount(0)
+  await expect(dialog.getByText('Eksik manken', { exact: true })).toBeVisible()
   await page.getByLabel('Kabul notu').fill('Mağaza sonucu gördü')
   await expect(page.getByText('Kabul ettim')).toBeVisible()
   await page.getByRole('button', { name: 'Kabul ettim' }).click()
@@ -658,6 +703,35 @@ test('store manager checklist result treats unavailable score as neutral', async
   await expectChecklistResultModalNoScoreContract(dialog)
 })
 
+test('checklist result displays item comments and downloads a signed PDF record', async ({ page }, testInfo) => {
+  await setupChecklistPage(page, ['STORE_MANAGER'])
+  await page.goto('/store/checklists?tab=inbox&result=44444444-4444-4444-8444-444444444444')
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.locator('.store-checklist-result-item-comment p')).toHaveText(['Eksik manken', 'Takipte kalacak etiket düzeni', 'Temiz'])
+  await expect(dialog.locator('.store-checklist-result-hero-facts')).toContainText('Özgür Şahin')
+  let failFont = true
+  await page.route('**/*.ttf', async (route) => {
+    if (failFont) { failFont = false; await route.abort(); return }
+    await route.continue()
+  })
+  await dialog.getByRole('button', { name: 'PDF indir', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toHaveText('PDF hazırlanamadı. Tekrar deneyin.')
+  const pendingDownload = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'PDF indir', exact: true }).click()
+  const download = await pendingDownload
+  expect(download.suggestedFilename()).toBe('Checklist-Marmara Park-2026-05-20.pdf')
+  const filePath = testInfo.outputPath('checklist-result.pdf')
+  await download.saveAs(filePath)
+  const bytes = await readFile(filePath)
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-')
+  const pdf = await PDFDocument.load(bytes)
+  expect(pdf.getTitle()).toContain('Marmara Park')
+  expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1)
+  await expect(dialog.getByRole('button', { name: 'PDF indir', exact: true })).toBeEnabled()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+  await dialog.screenshot({ path: testInfo.outputPath('checklist-result.png') })
+})
+
 test('store manager checklist result modal stays usable on mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 844 })
   await setupChecklistPage(page, ['STORE_MANAGER'], { longCopy: true })
@@ -768,6 +842,8 @@ type ChecklistAcknowledgementFixture = {
   checklistTemplateId: string
   completedAt: string
   completedByUserId: string
+  completedByDisplayName?: string
+  signatories?: { regionManagerNames: string[]; storeManagerNames: string[] }
   complianceRate: number | null
   responses: Array<{
     commentText: string | null
@@ -1383,6 +1459,8 @@ function createChecklistAcknowledgementsFixture(
       storeId,
       storeName: fixtureStoreName,
       completedByUserId: 'region-user-1',
+      completedByDisplayName: 'Özgür Şahin',
+      signatories: { regionManagerNames: ['Özgür Şahin'], storeManagerNames: ['Çağrı Işık'] },
       completedAt: options.acknowledgementCompletedAt ?? '2026-05-20T09:00:00.000Z',
       status: 'completed',
       totalScore: options.resultWithoutScore ? null : 86,

@@ -223,6 +223,7 @@ function ChecklistVisitModal(input: {
         <DialogContent
         className="store-checklist-session-dialog tw:max-w-[min(760px,calc(100vw-1rem))] tw:sm:max-w-[min(760px,calc(100vw-1rem))]"
         closeLabel={input.t('storeChecklists.closeSession')}
+        onInteractOutside={(event) => event.preventDefault()}
         showCloseButton={false}
       >
         <div className="store-checklist-session-shell">

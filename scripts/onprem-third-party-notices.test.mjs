@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -57,6 +57,67 @@ function packageFixture({ includeUnknown = false, blockedLicense = null, omitPro
   writeFileSync(join(spdxLicenseDirectory, 'LGPL-3.0-or-later.json'), JSON.stringify({ name: 'GNU Lesser General Public License v3.0 or later', licenseText: 'canonical LGPL license text\n' }))
   return { root, modules, packagePath, lockPath, spdxLicenseDirectory }
 }
+
+function pdfDependencyFixture({ name = 'pako', version = '1.0.11', license = '(MIT AND Zlib)', missing = null, empty = null } = {}) {
+  const fixture = packageFixture()
+  const packageDir = join(fixture.modules, name)
+  mkdirSync(join(packageDir, 'lib/zlib'), { recursive: true })
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify({ name, version, license }))
+  for (const [path, text] of [['LICENSE', 'MIT notice\n'], ['lib/zlib/README', 'Zlib notice: Jean-loup Gailly and Mark Adler\n']]) {
+    if (path !== missing) writeFileSync(join(packageDir, path), path === empty ? '  \n' : text)
+  }
+  const application = JSON.parse(readFileSync(fixture.packagePath, 'utf8'))
+  const lockfile = JSON.parse(readFileSync(fixture.lockPath, 'utf8'))
+  application.dependencies[name] = version
+  lockfile.packages[''].dependencies[name] = version
+  lockfile.packages[`node_modules/${name}`] = { version, license }
+  writeFileSync(fixture.packagePath, JSON.stringify(application))
+  writeFileSync(fixture.lockPath, JSON.stringify(lockfile))
+  return fixture
+}
+
+function inventoryFor(fixture) {
+  return generateLicenseInventory({ packageJsonPath: fixture.packagePath, lockfilePath: fixture.lockPath, nodeModulesPath: fixture.modules })
+}
+
+test('approved PDF dependency preserves both upstream license notices', () => {
+  const fixture = pdfDependencyFixture()
+  try {
+    const inventory = inventoryFor(fixture)
+    const dependency = inventory.packages.find((entry) => entry.name === 'pako')
+    assert.equal(dependency.license, '(MIT AND Zlib)')
+    assert.deepEqual(dependency.licenseFiles.map((file) => file.name).sort(), ['LICENSE', 'lib/zlib/README'])
+    const notices = renderThirdPartyNotices(inventory)
+    assert.match(notices, /MIT notice/)
+    assert.match(notices, /Zlib notice: Jean-loup Gailly and Mark Adler/)
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('PDF disposition does not permit a different package, version or license expression', () => {
+  for (const change of [{ name: 'other-lib' }, { version: '1.0.12' }, { license: '(MIT OR Zlib)' }, { license: '(MIT AND Zlib AND AGPL-3.0-only)' }]) {
+    const fixture = pdfDependencyFixture(change)
+    try {
+      assert.throws(() => inventoryFor(fixture), /license policy review required/)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('PDF disposition requires both nonempty upstream notices', () => {
+  for (const path of ['LICENSE', 'lib/zlib/README']) {
+    for (const change of [{ missing: path }, { empty: path }]) {
+      const fixture = pdfDependencyFixture(change)
+      try {
+        assert.throws(() => inventoryFor(fixture), /required license notice/)
+      } finally {
+        rmSync(fixture.root, { recursive: true, force: true })
+      }
+    }
+  }
+})
 
 test('license inventory and notices are deterministic and exclude dev-only roots', () => {
   const fixture = packageFixture()
