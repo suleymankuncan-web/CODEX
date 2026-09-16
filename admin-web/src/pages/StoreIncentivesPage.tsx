@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { canOpenStoreIncentives } from '@/app/store-navigation'
 import type { AuthSessionSummary } from '@/features/auth/api'
+import { usesStoreReportViewerView } from '@/features/auth/authorization'
+import { getStoreQueryScopeSignature } from '@/features/auth/store-query-scope'
 import {
   getStoreSalesTargetIncentiveWorkspace,
   storeSalesTargetIncentiveWorkspaceQueryKey,
@@ -13,6 +15,7 @@ import { getSalesTargetIncentiveWorkspaceQueryIdentity } from '@/features/incent
 import { RegionManagerIncentivesOwner } from '@/features/incentives/command-workspace/region-manager-owner'
 import { ReportViewerIncentivesView } from '@/features/incentives/command-workspace/report-viewer-view'
 import type { IncentiveWorkspace } from '@/features/incentives/command-workspace/types'
+import { getRegionManagerDirectory } from '@/features/org/region-manager-directory'
 import { useLocalization } from '@/features/localization/useLocalization'
 import {
   CommandCanvasMetricRail,
@@ -27,6 +30,7 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
   const { locale, t } = useLocalization()
   const [period, setPeriod] = useState<string | undefined>()
   const enabled = canOpenStoreIncentives(input.authSummary)
+  const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
   const identity = useMemo(
     () => getSalesTargetIncentiveWorkspaceQueryIdentity(input.authSummary),
     [input.authSummary],
@@ -40,6 +44,14 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
     queryFn: () => getStoreSalesTargetIncentiveWorkspace(period ? { period } : undefined),
     enabled,
     placeholderData: (previous) => previous,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    ...transientQueryRetryOptions,
+  })
+  const managerDirectoryQuery = useQuery({
+    queryKey: ['org-region-manager-directory', scopeSignature],
+    queryFn: getRegionManagerDirectory,
+    enabled: enabled && usesStoreReportViewerView(input.authSummary),
     refetchOnWindowFocus: false,
     staleTime: 30_000,
     ...transientQueryRetryOptions,
@@ -80,7 +92,15 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
     t,
   }
   return workspace.view === 'report_viewer'
-    ? <ReportViewerIncentivesView key={`${JSON.stringify(identity)}:${shared.period}`} {...shared} authSummary={input.authSummary} />
+    ? <ReportViewerIncentivesView
+        key={`${JSON.stringify(identity)}:${shared.period}`}
+        {...shared}
+        authSummary={input.authSummary}
+        managerDirectory={managerDirectoryQuery.data?.items ?? []}
+        managerDirectoryError={managerDirectoryQuery.isError}
+        managerDirectoryLoading={managerDirectoryQuery.isLoading}
+        onRetryManagerDirectory={() => void managerDirectoryQuery.refetch()}
+      />
     : <RegionManagerIncentivesOwner key={`${JSON.stringify(identity)}:${shared.period}`} {...shared} />
 }
 

@@ -2,12 +2,12 @@ import { expect, test, type Page } from './test-fixtures'
 import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
 import {
   createIncentiveWorkspace,
-  incentiveRegionA,
   incentiveRegionB,
   incentiveStoreA,
   incentiveStoreB,
   incentiveStoreC,
   routeIncentiveCommands,
+  routeIncentiveManagerDirectory,
   routeIncentiveWorkspace,
 } from './store-incentives-command-fixtures'
 
@@ -211,13 +211,27 @@ test('report viewer hierarchy and audit drawer are structurally read only and em
   const mutations: string[] = []
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
-  await routeIncentiveWorkspace(page, createIncentiveWorkspace('report_viewer', { multipleRegions: true }))
+  const workspace = createIncentiveWorkspace('report_viewer', { multipleRegions: true })
+  workspace.data.regions[0]!.regionManager.displayName = ''
+  await routeIncentiveWorkspace(page, workspace)
+  await routeIncentiveManagerDirectory(page, {
+    ...workspace,
+    data: {
+      ...workspace.data,
+      regions: workspace.data.regions.map((region, index) => index === 0
+        ? { ...region, regionManager: { displayName: 'Süleyman Öztürk' } }
+        : region),
+    },
+  })
   page.on('request', (request) => {
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method()) && request.url().includes('/api/store/incentives')) mutations.push(request.url())
   })
 
   await page.goto('/store/incentives')
   await expect(page.getByRole('heading', { name: 'LUFIAN Mağaza Primleri' })).toBeVisible()
+  const directory = page.getByRole('complementary', { name: 'Bölge müdürleri' })
+  await expect(directory.getByRole('button', { name: 'Süleyman Öztürk 2 mağaza', exact: true })).toBeVisible()
+  await expect(directory).not.toContainText('Atanmamış')
   await expect(page.getByRole('checkbox', { name: 'Mall of İstanbul: Mağaza kontrol onayı', exact: true }).filter({ visible: true })).toBeDisabled()
   await expandStore(page)
   await expect(page.getByText('Süleyman Öztürk').first()).toBeVisible()

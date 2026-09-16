@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { CommandCanvasPage, CommandCanvasPartialDataNotice } from '@/features/store-command-canvas/primitives'
 import { ReportViewerPeriodPicker } from '@/features/checklist-command/ReportViewerPeriodPicker'
 import type { useLocalization } from '@/features/localization/useLocalization'
+import type { RegionManagerDirectoryItem } from '@/features/org/region-manager-directory'
 import type { AppLocale } from '@/lib/i18n'
-import { buildIncentiveMetrics, filterIncentiveWorkspace } from './model'
+import { buildIncentiveMetrics, filterIncentiveWorkspace, scopeIncentiveWorkspaceToManager } from './model'
 import { formatIncentiveMoney } from './format'
 import { IncentiveManagerDirectory } from './manager-directory'
 import type { IncentiveStatusFilter, IncentiveWorkspace } from './types'
@@ -29,14 +30,25 @@ export function IncentiveWorkspaceScaffold(input: {
   sectionHeader?: ReactNode
   renderContent: (workspace: IncentiveWorkspace) => ReactNode
   renderApproval?: (regionIds: string[] | undefined) => ReactNode
+  managerDirectory?: RegionManagerDirectoryItem[]
+  managerDirectoryError?: boolean
+  managerDirectoryLoading?: boolean
+  onRetryManagerDirectory?: () => void
 }) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<IncentiveStatusFilter>('all')
-  const [regionId, setRegionId] = useState<string | null>(null)
+  const [managerUserId, setManagerUserId] = useState<string | null>(null)
   const viewer = input.workspace.view === 'report_viewer'
   const tr = input.locale === 'tr'
-  const selectedRegion = input.workspace.regions.find(region => region.regionId === regionId)
-  const scoped = useMemo(() => ({ ...input.workspace, regions: selectedRegion ? [selectedRegion] : input.workspace.regions }), [input.workspace, selectedRegion])
+  const selectedManager = input.managerDirectory?.find(manager => manager.userId === managerUserId) ?? null
+  const scoped = useMemo(
+    () => managerUserId === null
+      ? input.workspace
+      : selectedManager
+        ? scopeIncentiveWorkspaceToManager(input.workspace, selectedManager)
+        : { ...input.workspace, regions: [] },
+    [input.workspace, managerUserId, selectedManager],
+  )
   const metrics = useMemo(() => buildIncentiveMetrics(scoped), [scoped])
   const filtered = useMemo(() => filterIncentiveWorkspace(scoped, { search, status }), [scoped, search, status])
   const partial = Boolean(input.backgroundError) || Object.values(input.workspace.sections).some(section => section.status === 'unavailable')
@@ -72,12 +84,21 @@ export function IncentiveWorkspaceScaffold(input: {
     {partial ? <CommandCanvasPartialDataNotice title={input.t('storeIncentives.command.partialTitle')} description={input.t('storeIncentives.command.partialCopy')} /> : null}
 
     <div className={viewer ? 'incentive-performance-layout is-viewer' : 'incentive-performance-layout'}>
-      {viewer ? <IncentiveManagerDirectory regions={input.workspace.regions} selectedId={selectedRegion?.regionId ?? null} onSelect={id => { setRegionId(id); setSearch(''); setStatus('all') }} locale={input.locale} /> : null}
+      {viewer ? <IncentiveManagerDirectory
+        managers={input.managerDirectory ?? []}
+        storeCount={input.workspace.regions.reduce((count, region) => count + region.stores.length, 0)}
+        selectedId={managerUserId}
+        onSelect={id => { setManagerUserId(id); setSearch(''); setStatus('all') }}
+        locale={input.locale}
+        loading={Boolean(input.managerDirectoryLoading)}
+        error={Boolean(input.managerDirectoryError)}
+        {...(input.onRetryManagerDirectory ? { onRetry: input.onRetryManagerDirectory } : {})}
+      /> : null}
       <div className="incentive-performance-content" aria-busy={input.isUpdating}>
-        {input.renderApproval?.(selectedRegion ? [selectedRegion.regionId] : undefined)}
+        {input.renderApproval?.(selectedManager ? [...new Set(scoped.regions.map(region => region.regionId))] : undefined)}
         <section className="incentive-performance-list" aria-label={input.t('storeIncentives.command.stores')}>
           {viewer ? <div className="incentive-performance-context">
-            <div><h2>{selectedRegion?.regionManager.displayName || (tr ? 'Tüm Mağazalar' : 'All stores')}</h2><small>{selectedRegion?.regionName || (tr ? 'Şirket mağazaları' : 'Company stores')}</small></div>
+            <div><h2>{selectedManager?.displayName || (tr ? 'Tüm Mağazalar' : 'All stores')}</h2><small>{selectedManager ? `${selectedManager.storeIds.length} ${tr ? 'atanmış mağaza' : 'assigned stores'}` : (tr ? 'Şirket mağazaları' : 'Company stores')}</small></div>
             <div><small>{tr ? 'Toplam prim' : 'Total incentive'}</small><strong>{formatIncentiveMoney(metrics.finalTotal, input.locale)}</strong></div>
           </div> : null}
           {input.tabs}
