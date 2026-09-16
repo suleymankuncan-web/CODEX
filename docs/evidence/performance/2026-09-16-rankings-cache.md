@@ -73,3 +73,13 @@ per database namespace plus Redis overhead. Minute-spaced `ranking.facts-cache`
 logs expose aggregate hit/fill/coalesced/bypass/unavailable counters without user
 data. Turning the flag off is the immediate rollback. Hosted activation and
 end-to-end gains are not claimed by this local evidence.
+
+Review follow-up (17 September): oversized results now publish a tiny bypass
+marker, bounded and expired with the normal cache index. The targeted regression
+reduced three oversized requests from six aggregate scans to four (one initial
+size discovery plus three original reads), including reuse by another instance.
+An additional real PostgreSQL/Redis fixture with 2,200 stores confirmed the same
+four-scan result, exact output parity and a 27-byte expiring marker.
+Snapshot changes and marker expiry permit a fresh size check. Local fixture URL
+tests reject plain, encoded and duplicate host overrides before any connection.
+These boundary fixes do not replace the paired timing measurements above.

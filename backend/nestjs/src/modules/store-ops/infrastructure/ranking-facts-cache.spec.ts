@@ -1,5 +1,6 @@
 import { RankingFactsCache } from "./ranking-facts-cache";
 import { parseRankingFacts, rankingFactsNumericFields } from "./ranking-facts-cache-sql";
+import { readRankingStoreRange } from "./ranking-range-read";
 
 const redis = {
   status: "ready", on: jest.fn(), disconnect: jest.fn(), connect: jest.fn(),
@@ -101,4 +102,40 @@ it("rejects malformed identifiers, missing components and non-numeric cache fiel
     expect(() => parseRankingFacts(JSON.stringify([bad]), "store")).toThrow();
   }
   expect(() => parseRankingFacts(JSON.stringify([row]), "employee")).toThrow();
+});
+
+it("remembers oversized results across instances and retries only after expiry or a new snapshot", async () => {
+  const entries = new Map<string, string>();
+  redis.get.mockImplementation(async (key: string) => entries.get(key) ?? null);
+  redis.eval.mockImplementation(async (script: string, _count: number, key: string, ...args: unknown[]) => {
+    if (script.includes("ZADD")) entries.set(key, args[3] as string);
+    return 1;
+  });
+  const first = fixture();
+  const second = fixture();
+  const largeRows = Array.from({ length: 1800 }, (_, i) => ({
+    ...row, store_id: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+  }));
+  expect(Buffer.byteLength(JSON.stringify(largeRows))).toBeGreaterThan(512 * 1024);
+  let snapshot = revision.revision;
+  let aggregateScans = 0;
+  const query = jest.fn(async (sql: string) => {
+    if (sql.includes("pg_current_snapshot")) return { rows: [{ ...revision, revision: snapshot }] };
+    aggregateScans++;
+    return { rows: sql.includes("SELECT store_id::text,") ? largeRows : [] };
+  });
+  first.database.query.mockImplementation(query);
+  second.database.query.mockImplementation(query);
+  for (const cache of [first.cache, second.cache, first.cache]) {
+    expect(await readRankingStoreRange(first.database as never, { ...input, metricCodes: ["ATV"] }, cache)).toEqual([]);
+  }
+  expect(aggregateScans).toBe(4); // One size discovery, then one original scan per request.
+  expect([...entries.values()].every(value => Buffer.byteLength(value) < 100)).toBe(true);
+  expect(redis.eval.mock.calls.find(call => call[0].includes("ZADD"))?.[7]).toBeGreaterThan(0);
+  snapshot = "2:2:";
+  await first.cache.get("store", input);
+  expect(aggregateScans).toBe(5);
+  entries.clear(); // Simulate Redis TTL expiration.
+  await second.cache.get("store", input);
+  expect(aggregateScans).toBe(6);
 });

@@ -12,6 +12,7 @@ import {
 const TTL_SECONDS = 6 * 60 * 60;
 const MAX_BYTES = 512 * 1024;
 const MAX_ENTRIES = 64;
+const OVERSIZED = "!oversized-ranking-facts:v1";
 const UNLOCK = "if redis.call('GET',KEYS[1]) == ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0";
 // Bound cache memory independently of queue Redis's noeviction policy. Only our keys are touched.
 const PUBLISH = `
@@ -120,6 +121,9 @@ export class RankingFactsCache implements OnModuleDestroy {
     const read = async () => {
       const value = await redis.get(key);
       if (value === null) return undefined;
+      // Shared, TTL-bound negative entry. Its key includes the source snapshot,
+      // company scope and range, so a data change permits a fresh size check.
+      if (value === OVERSIZED) { this.counts.bypass++; return null; }
       if (Buffer.byteLength(value) > MAX_BYTES) { await redis.del(key); return undefined; }
       try { validateRankingFactsPayload(value, scope); }
       catch { await redis.del(key); return undefined; }
@@ -127,7 +131,7 @@ export class RankingFactsCache implements OnModuleDestroy {
       return value;
     };
     const value = await read();
-    if (value !== undefined) return value;
+    if (value !== undefined) return value ?? undefined;
     const lock = `${key}:lock`;
     const token = randomUUID();
     if (!(await redis.set(lock, token, "PX", 10_000, "NX"))) {
@@ -135,7 +139,7 @@ export class RankingFactsCache implements OnModuleDestroy {
       while (Date.now() < until) {
         await new Promise(resolve => setTimeout(resolve, 40));
         const filled = await read();
-        if (filled !== undefined) return filled;
+        if (filled !== undefined) return filled ?? undefined;
       }
       this.counts.bypass++;
       return undefined;
@@ -143,19 +147,23 @@ export class RankingFactsCache implements OnModuleDestroy {
     try {
       // Another process may have completed between GET and lock acquisition.
       const filled = await read();
-      if (filled !== undefined) return filled;
+      if (filled !== undefined) return filled ?? undefined;
       const result = await this.database.query(rankingFactsSelectSql(scope), [
         input.periodStart, input.periodEnd, input.companyIds,
       ]);
       const payload = JSON.stringify({ snapshot: expected.snapshot, rows: result.rows });
-      if (Buffer.byteLength(payload) > MAX_BYTES) { this.counts.bypass++; return undefined; }
-      validateRankingFactsPayload(payload, scope);
-      const current = await this.revision();
-      if (current?.namespace !== expected.namespace || current.revision !== expected.revision) {
-        this.counts.bypass++;
-        return undefined;
+      const oversized = Buffer.byteLength(payload) > MAX_BYTES;
+      if (!oversized) {
+        validateRankingFactsPayload(payload, scope);
+        const current = await this.revision();
+        if (current?.namespace !== expected.namespace || current.revision !== expected.revision) {
+          this.counts.bypass++;
+          return undefined;
+        }
       }
-      await redis.eval(PUBLISH, 3, key, index, lock, token, payload, TTL_SECONDS, Date.now(), MAX_ENTRIES, index.slice(0, -"index".length));
+      // Use the same bounded index, TTL and fenced publication for negative entries.
+      await redis.eval(PUBLISH, 3, key, index, lock, token, oversized ? OVERSIZED : payload, TTL_SECONDS, Date.now(), MAX_ENTRIES, index.slice(0, -"index".length));
+      if (oversized) { this.counts.bypass++; return undefined; }
       this.counts.fill++;
       return payload;
     } finally {

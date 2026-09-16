@@ -41,6 +41,11 @@ new store metadata during a concurrent reassignment.
 Payloads are limited to 512 KiB and 64 entries per database namespace (~32 MiB
 payload ceiling plus Redis overhead). Periods shorter than seven days bypass the
 cache: initial two-day measurement showed no meaningful gain.
+Oversized results publish a small bypass marker through the same fenced, bounded
+Redis index and TTL. Only the first discovery adds an aggregate scan; later reads
+use the original SQL until that snapshot/range/company key changes or expires.
+Fixture URLs reject query parameters and fragments before constructing a driver,
+so connection-string options cannot override the validated loopback host.
 
 Acceptance: original/cached query results match for month and custom range;
 source updates and rollback are correct; current assignments and personnel target

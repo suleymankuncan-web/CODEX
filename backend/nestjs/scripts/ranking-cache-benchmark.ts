@@ -14,6 +14,7 @@ import { readRankingPersonnelRange } from "../src/modules/store-ops/infrastructu
 import { readEmployeeTurkeyBenchmarks } from "../src/modules/store-ops/infrastructure/personnel-benchmark-read";
 import { fixtureCompany, seedRankingCacheFixture } from "./ranking-cache-local-fixture";
 import { proveRankingCache } from "./ranking-cache-proof";
+import { localRankingCacheUrl } from "./ranking-cache-local-url";
 
 class MeasuredDatabase extends DatabaseService {
   queries = 0;
@@ -25,16 +26,10 @@ class MeasuredDatabase extends DatabaseService {
   }
 }
 
-function localUrl(name: string, protocols: string[]) {
-  const url = new URL(process.env[name] ?? "");
-  assert(protocols.includes(url.protocol) && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname), `${name} must be an explicitly supplied loopback URL`);
-  return url;
-}
-
 async function main() {
   assert(process.env.RANKING_CACHE_LOCAL_PROOF === "true" && process.env.NODE_ENV !== "production", "Explicit local fixture opt-in required");
-  const pgUrl = localUrl("RANKING_CACHE_POSTGRES_URL", ["postgres:", "postgresql:"]);
-  const redisUrl = localUrl("RANKING_CACHE_REDIS_URL", ["redis:"]);
+  const pgUrl = localRankingCacheUrl("RANKING_CACHE_POSTGRES_URL", process.env.RANKING_CACHE_POSTGRES_URL, ["postgres:", "postgresql:"]);
+  const redisUrl = localRankingCacheUrl("RANKING_CACHE_REDIS_URL", process.env.RANKING_CACHE_REDIS_URL, ["redis:"]);
   pgUrl.pathname = "/postgres";
   const admin = new Pool({ connectionString: pgUrl.toString(), max: 1 });
   const name = `ranking_cache_fixture_${randomUUID().replace(/-/g, "")}`;
