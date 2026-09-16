@@ -182,8 +182,8 @@ export async function createChecklistResultPdf(input: {
     `Bu belge, ${date(item.completedAt)} tarihinde yapılan denetimin sonuçlarını ve madde yorumlarını kayıt altına almak amacıyla düzenlenmiştir. Aşağıdaki imzalar, sonuçların ilgili yöneticiler tarafından incelendiğini ve teslim alındığını gösterir.`,
     `This document records the results and item comments of the inspection completed on ${date(item.completedAt)}. The signatures below confirm that the relevant managers have reviewed and received these results.`,
   )
-  const managerNames = [item.signatories?.regionManagerNames ?? [], item.signatories?.storeManagerNames ?? []]
-  const signatureLines = managerNames.map((names) => lines(names.length ? names.join(', ') : copy('İsim kaydı yok', 'Name unavailable'), contentWidth / 2 - 36, 11))
+  const regionNames = item.signatories?.regionManagerNames ?? []
+  const signatureLines = [lines(regionNames.length ? regionNames.join(', ') : copy('İsim kaydı yok', 'Name unavailable'), contentWidth / 2 - 36, 11), []]
   const signatureHeight = Math.max(...signatureLines.map((value) => value.length)) * 15 + 108
   ensure(lines(statement, contentWidth - 24).length * 15 + 50 + Math.min(signatureHeight, 220))
   paragraph(copy('Kayıt ve imza', 'Record and signatures'), 13)
@@ -191,7 +191,7 @@ export async function createChecklistResultPdf(input: {
   paragraph(statement, 10, colors.muted)
   y += 8
   paragraph(`${copy('Belge tarihi', 'Document date')}: ${date(input.exportedAt)}`, 9, colors.muted)
-  paragraph(copy('İmza alanındaki isimler belge tarihindeki mağaza atamalarına aittir.', 'Signatory names reflect store assignments on the document date.'), 8, colors.muted)
+  paragraph(copy('Bölge müdürü adı belge tarihindeki mağaza atamasına göre gösterilir. Mağaza müdürü adı elle doldurulur.', 'The regional manager name reflects the store assignment on the document date. Enter the store manager name by hand.'), 8, colors.muted)
   y += 14
   ensure(signatureHeight)
   for (let index = 0; index < 2; index += 1) {
@@ -199,6 +199,7 @@ export async function createChecklistResultPdf(input: {
     rect(x, y, contentWidth / 2 - 6, signatureHeight, colors.white, true)
     text(index === 0 ? copy('Bölge Müdürü', 'Regional Manager') : copy('Mağaza Müdürü', 'Store Manager'), x + 12, y + 12, 9, colors.muted)
     signatureLines[index]?.forEach((line, lineIndex) => text(line, x + 12, y + 30 + lineIndex * 15, 11))
+    if (index === 1) text(copy('Ad soyad: ..................................', 'Full name: ..................................'), x + 12, y + 30, 10, colors.muted)
     text(copy('İmza: ........................................', 'Signature: ..................................'), x + 12, y + signatureHeight - 47, 9, colors.muted)
     text(copy('Tarih: ........ / ........ / ................', 'Date: ........ / ........ / ................'), x + 12, y + signatureHeight - 25, 9, colors.muted)
   }

@@ -11,6 +11,49 @@ const templateId = '22222222-2222-4222-8222-222222222222'
 const vmTemplateId = '99999999-9999-4999-8999-999999999999'
 const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
 
+test.describe('mobile checklist note editing', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 820, height: 1180 } })
+
+  test('keeps notes and the session open across keyboard resize, zoom and outside touches', async ({ page, context, browserName }) => {
+    const requests = createChecklistRequestLog()
+    await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
+    const url = `/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`
+    await page.goto(url)
+    const dialog = page.getByRole('dialog', { name: 'Checklist Oturumu' })
+    await answerChecklistScoreQuestion(page, '8', 'Mobil denetim notu')
+    const note = dialog.getByRole('textbox', { name: /Not/ })
+    const cdp = browserName === 'chromium' ? await context.newCDPSession(page) : null
+    for (const viewport of [{ width: 390, height: 400 }, { width: 820, height: 600 }, { width: 820, height: 1180 }]) {
+      await page.setViewportSize(viewport)
+      await cdp?.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1.5 })
+      await expect(dialog).toBeVisible()
+      await expect(note).toHaveValue('Mobil denetim notu')
+      await cdp?.send('Emulation.setPageScaleFactor', { pageScaleFactor: 1 })
+    }
+    await page.touchscreen.tap(10, 300)
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/workflowChecklist=bm/)
+    await expect(note).toHaveValue('Mobil denetim notu')
+    await note.fill('Mobil denetim notu devam ediyor')
+    await expect.poll(() => requests.saves.at(-1)?.body.commentText).toBe('Mobil denetim notu devam ediyor')
+    await dialog.getByRole('button', { name: 'Kapat', exact: true }).click()
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Checklisti kapat' }).click()
+    await expect(dialog).toHaveCount(0)
+  })
+
+  test('keeps mobile note text at a readable size without disabling zoom', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await setupChecklistPage(page, ['REGION_MANAGER'])
+    await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits&workflowChecklist=bm`)
+    await answerChecklistScoreQuestion(page, '8', 'Okunabilir not')
+    const note = page.getByRole('dialog').getByRole('textbox', { name: /Not/ })
+    expect(await note.evaluate(element => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16)
+    await expect(page.locator('meta[name="viewport"]')).not.toHaveAttribute('content', /user-scalable\s*=\s*no|maximum-scale\s*=\s*1(?:\D|$)/)
+  })
+})
+
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['REGION_MANAGER'], { requests })

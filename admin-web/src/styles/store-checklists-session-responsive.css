@@ -271,3 +271,9 @@
     width: 100%;
   }
 }
+
+@media (max-width: 900px), (pointer: coarse) {
+  .store-checklist-session-note-field textarea {
+    font-size: max(1rem, 16px);
+  }
+}
