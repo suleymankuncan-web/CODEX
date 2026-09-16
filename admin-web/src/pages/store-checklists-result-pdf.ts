@@ -52,7 +52,7 @@ export async function createChecklistResultPdf(input: {
   const document = await PDFDocument.create()
   document.registerFontkit(fontkit)
   const font = await document.embedFont(input.fontBytes, { subset: true })
-  document.setTitle(`${item.storeName} · ${item.templateName}`)
+  document.setTitle(`LUFIAN · ${item.storeName} · ${item.templateName}`)
   document.setCreator('HR Axis')
   document.setLanguage(locale === 'tr' ? 'tr-TR' : 'en-GB')
   document.setCreationDate(input.exportedAt)
@@ -67,7 +67,7 @@ export async function createChecklistResultPdf(input: {
   }
   function newPage() {
     page = document.addPage([width, height])
-    text('HR AXIS', margin, 22, 9, colors.muted)
+    text('LUFIAN', margin, 22, 9, colors.muted)
     y = 44
   }
   function ensure(space: number) { if (y + space > bottom) newPage() }
@@ -79,6 +79,8 @@ export async function createChecklistResultPdf(input: {
     }
   }
 
+  text('LUFIAN', margin, y, 22)
+  y += 38
   const title = lines(item.templateName, contentWidth - 32, 19)
   const titleHeight = 62 + title.length * 24
   const storeLines = lines(item.storeName, 190, 12)
@@ -191,7 +193,6 @@ export async function createChecklistResultPdf(input: {
   paragraph(statement, 10, colors.muted)
   y += 8
   paragraph(`${copy('Belge tarihi', 'Document date')}: ${date(input.exportedAt)}`, 9, colors.muted)
-  paragraph(copy('Bölge müdürü adı belge tarihindeki mağaza atamasına göre gösterilir. Mağaza müdürü adı elle doldurulur.', 'The regional manager name reflects the store assignment on the document date. Enter the store manager name by hand.'), 8, colors.muted)
   y += 14
   ensure(signatureHeight)
   for (let index = 0; index < 2; index += 1) {
