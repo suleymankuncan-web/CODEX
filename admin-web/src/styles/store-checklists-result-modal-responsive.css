@@ -621,3 +621,37 @@
 .store-checklist-result-body--solo .store-checklist-result-findings {
   width: 100%;
 }
+
+.store-checklist-result-download {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.store-checklist-result-download [role="alert"] {
+  color: var(--checklist-danger);
+  font-size: 0.8rem;
+}
+
+.store-checklist-result-item-comment {
+  margin-top: 0.45rem;
+  border-left: 2px solid var(--checklist-line);
+  padding-left: 0.6rem;
+}
+
+.store-checklist-result-item-comment > span {
+  color: var(--checklist-muted);
+  font-size: 0.65rem;
+  font-weight: 650;
+}
+
+.store-checklist-result-item-comment > p {
+  margin: 0.15rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--checklist-ink);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}

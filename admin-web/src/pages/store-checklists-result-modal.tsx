@@ -16,62 +16,13 @@ import type { AppLocale } from '../lib/i18n'
 import {
   formatCompletedSentence,
   formatScoreValue,
-  getResponseRatio,
   getStaticCopy,
   getWeightedResponsePoints,
   groupChecklistResultResponses,
 } from './store-checklists-logic'
 import type { ChecklistTone } from './store-checklists-model'
-
-type ChecklistResultItemTone = 'danger' | 'warning' | 'success' | 'neutral'
-type ChecklistResultResponse = ChecklistAcknowledgementItem['responses'][number]
-
-function getChecklistResultItemTone(item: ChecklistResultResponse): ChecklistResultItemTone {
-  const ratio = getResponseRatio(item)
-  if (ratio === null) return 'neutral'
-  if (ratio < 70) return 'danger'
-  if (ratio < 80) return 'warning'
-  return 'success'
-}
-
-function getChecklistResultAnswerLabel(locale: AppLocale, response: ChecklistResultResponse) {
-  if (response.scoreValue === null) return getStaticCopy(locale, 'Yanıt yok', 'No answer')
-
-  switch (response.responseType.trim().toLowerCase()) {
-    case 'compliance':
-      switch (response.responseValue) {
-        case 'compliant':
-          return getStaticCopy(locale, 'Uygun', 'Compliant')
-        case 'partially_compliant':
-          return getStaticCopy(locale, 'Kısmen Uygun', 'Partially compliant')
-        case 'non_compliant':
-          return getStaticCopy(locale, 'Uygun Değil', 'Non-compliant')
-        case 'not_applicable':
-          return 'N/A'
-        default:
-          return getStaticCopy(locale, 'Yanıt yok', 'No answer')
-      }
-    case 'yes_no':
-    case 'boolean':
-      return response.scoreValue > 0
-        ? getStaticCopy(locale, 'Evet', 'Yes')
-        : getStaticCopy(locale, 'Hayır', 'No')
-    case 'partial': {
-      const ratio = getResponseRatio(response)
-      if (ratio === null) return getStaticCopy(locale, 'Yanıt yok', 'No answer')
-      if (ratio >= 80) return getStaticCopy(locale, 'Uygun', 'Good')
-      if (ratio >= 40) return getStaticCopy(locale, 'Takip', 'Watch')
-      return getStaticCopy(locale, 'Kritik', 'Critical')
-    }
-    case 'text':
-      return normalizeDisplayLabel(
-        response.commentText,
-        getStaticCopy(locale, 'Yanıt yok', 'No answer'),
-      )
-    default:
-      return String(response.scoreValue)
-  }
-}
+import { ChecklistResultDownload } from './store-checklists-result-download'
+import { getChecklistResultAnswerLabel, getChecklistResultItemTone } from './store-checklists-result-presentation'
 
 function ChecklistResultSectionScore(input: {
   earnedPoints: number
@@ -200,6 +151,8 @@ export function ChecklistResultModal(input: {
           </div>
         </section>
 
+        <ChecklistResultDownload item={input.item} locale={input.locale} />
+
         <div className={`store-checklist-result-body${showAcknowledgementPanel ? '' : ' store-checklist-result-body--solo'}`}>
           <section className="store-checklist-result-findings" aria-label={input.t('storeChecklists.resultBreakdownTitle')}>
             <div className="store-checklist-result-block-head">
@@ -261,6 +214,10 @@ export function ChecklistResultModal(input: {
                             <div className="store-checklist-result-item-title-line">
                               <strong title={response.itemText}>{response.itemText}</strong>
                             </div>
+                            {response.commentText?.trim() ? <div className="store-checklist-result-item-comment">
+                              <span>{getStaticCopy(input.locale, 'Yorum', 'Comment')}</span>
+                              <p>{response.commentText}</p>
+                            </div> : null}
                           </div>
                           <dl className="store-checklist-result-item-outcome">
                             <div>

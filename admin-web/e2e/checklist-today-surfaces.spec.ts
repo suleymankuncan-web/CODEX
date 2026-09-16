@@ -1,4 +1,6 @@
 import type { TestInfo } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
+import { PDFDocument } from 'pdf-lib'
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { checklistEvidenceOutputPath } from './checklist-evidence-output'
 import { setStoredLocale } from './locale-test-utils'
@@ -111,7 +113,7 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   await expect(dialog).toBeVisible()
   await expectChecklistResultModalVisualContract(dialog)
   await expectNoElementHorizontalOverflow(dialog)
-  await expect(page.getByText('Eksik manken')).toHaveCount(0)
+  await expect(dialog.getByText('Eksik manken', { exact: true })).toBeVisible()
   await page.getByLabel('Kabul notu').fill('Mağaza sonucu gördü')
   await expect(page.getByText('Kabul ettim')).toBeVisible()
   await page.getByRole('button', { name: 'Kabul ettim' }).click()
@@ -658,6 +660,35 @@ test('store manager checklist result treats unavailable score as neutral', async
   await expectChecklistResultModalNoScoreContract(dialog)
 })
 
+test('checklist result displays item comments and downloads a signed PDF record', async ({ page }, testInfo) => {
+  await setupChecklistPage(page, ['STORE_MANAGER'])
+  await page.goto('/store/checklists?tab=inbox&result=44444444-4444-4444-8444-444444444444')
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.locator('.store-checklist-result-item-comment p')).toHaveText(['Eksik manken', 'Takipte kalacak etiket düzeni', 'Temiz'])
+  await expect(dialog.locator('.store-checklist-result-hero-facts')).toContainText('Özgür Şahin')
+  let failFont = true
+  await page.route('**/*.ttf', async (route) => {
+    if (failFont) { failFont = false; await route.abort(); return }
+    await route.continue()
+  })
+  await dialog.getByRole('button', { name: 'PDF indir', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toHaveText('PDF hazırlanamadı. Tekrar deneyin.')
+  const pendingDownload = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'PDF indir', exact: true }).click()
+  const download = await pendingDownload
+  expect(download.suggestedFilename()).toBe('Checklist-Marmara Park-2026-05-20.pdf')
+  const filePath = testInfo.outputPath('checklist-result.pdf')
+  await download.saveAs(filePath)
+  const bytes = await readFile(filePath)
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-')
+  const pdf = await PDFDocument.load(bytes)
+  expect(pdf.getTitle()).toContain('Marmara Park')
+  expect(pdf.getPageCount()).toBeGreaterThanOrEqual(1)
+  await expect(dialog.getByRole('button', { name: 'PDF indir', exact: true })).toBeEnabled()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+  await dialog.screenshot({ path: testInfo.outputPath('checklist-result.png') })
+})
+
 test('store manager checklist result modal stays usable on mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 844 })
   await setupChecklistPage(page, ['STORE_MANAGER'], { longCopy: true })
@@ -768,6 +799,8 @@ type ChecklistAcknowledgementFixture = {
   checklistTemplateId: string
   completedAt: string
   completedByUserId: string
+  completedByDisplayName?: string
+  signatories?: { regionManagerNames: string[]; storeManagerNames: string[] }
   complianceRate: number | null
   responses: Array<{
     commentText: string | null
@@ -1383,6 +1416,8 @@ function createChecklistAcknowledgementsFixture(
       storeId,
       storeName: fixtureStoreName,
       completedByUserId: 'region-user-1',
+      completedByDisplayName: 'Özgür Şahin',
+      signatories: { regionManagerNames: ['Özgür Şahin'], storeManagerNames: ['Çağrı Işık'] },
       completedAt: options.acknowledgementCompletedAt ?? '2026-05-20T09:00:00.000Z',
       status: 'completed',
       totalScore: options.resultWithoutScore ? null : 86,

@@ -4,9 +4,22 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-09-15
+Last verified: 2026-09-16
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
+
+## Checklist Result Records — 16 September 2026
+
+Completed checklist results display item comments and follow the item numbers and
+weights of the instance's own template version. The owner explicitly chose to
+preserve historical results when a new template is published. The shared result
+screen can download a styled PDF with Turkish text, comments, section scores,
+record/date text and signature spaces. Signatory names come from active regional
+manager/store manager roles with direct assignments to that store at download
+time; the PDF labels that date basis. Unavailable names remain explicit. The
+history projection can resolve legacy completion actors from the instance's
+auditor employee without exposing raw identifiers or contact details. Scoring,
+stored results, permissions and acknowledgement commands remain unchanged.
 
 ## Shared Login Experience — 15 September 2026
 
