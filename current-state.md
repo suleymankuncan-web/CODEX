@@ -5,21 +5,7 @@ Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
 Last verified: 2026-09-16
-
 This is the canonical short handoff for the HR Axis / Store Ops workspace. Recover the current decision, external blockers and next action in under five minutes. Historical detail: `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
-
-## Checklist Result Records — 16 September 2026
-
-Completed checklist results display item comments and follow the item numbers and
-weights of the instance's own template version. The owner explicitly chose to
-preserve historical results when a new template is published. The shared result
-screen can download a styled PDF with Turkish text, comments, section scores,
-record/date text and signature spaces. Signatory names come from active regional
-manager/store manager roles with direct assignments to that store at download
-time; the PDF labels that date basis. Unavailable names remain explicit. The
-history projection can resolve legacy completion actors from the instance's
-auditor employee without exposing raw identifiers or contact details. Scoring,
-stored results, permissions and acknowledgement commands remain unchanged.
 
 ## Shared Login Experience — 15 September 2026
 
@@ -38,6 +24,7 @@ Verify merge state, branch ownership, provider status and pilot results from fre
 
 ## Current Product Position
 
+- Checklist results show item comments and export styled PDFs with dates, record text and manager signature spaces. Names follow active roles and direct store assignments at document time; unavailable names remain explicit. Legacy completion history can resolve the instance's auditor employee. The owner chose to preserve each completed instance's template version, item order, weights and stored score; new inspections use their own updated template. Scoring, permissions and acknowledgement commands are unchanged.
 - Owner-authorized private-server company mode is implemented and locally verified (8 September 2026): explicit strict-local opt-in, company resource labels, synthetic initializer rejection, admin deep links and same-origin cookie recovery. Canonical release and isolated login/reload proofs passed; deployment data, credentials and cutover/restore receipts stay private. See `docs/contracts/onprem-company-data-mode-v1.md`. Daily store-detail KPI selection and matching personnel reads are implemented, including company administrators without an action-store assignment. Store managers can stage personnel corrections for scoped HR approval through additive migration 077; submission does not edit personnel, and approval checks revisions and audits atomically. Manager accounts remain unprovisioned. The owner-authorized private server polls the four approved company feeds for the previous Europe/Istanbul day from 05:15 through 11:15 and serializes each run. Identical normalized snapshots are no-ops; a changed snapshot atomically replaces that source's component and canonical day so late invoices, returns and other source corrections do not remain frozen at the first successful pull. Store totals include all signed return rows, while personnel KPI projection keeps the approved positive-sale convention. Before each database apply, the private runtime writes an immutable, date-and-capture-time keyed sanitized aggregate JSON under its local operations archive and atomically rebuilds a SHA-256 manifest; only a successful apply advances that date's regular-file `final.json`. Archive directories/files are owner-only, names, descriptions and raw invoice identifiers are excluded, and no automatic retention deletion is enabled. The runtime reconciles only configured company stores and keeps provider configuration, normalized data, archives, receipts and rollback artifacts outside Git. Legacy dates captured before store-level signed totals require exact daily source evidence for historical correction; range-only totals are not assigned to arbitrary days. Personnel rankings no longer apply the TRY 50,000 minimum or two-percent store-share filter; finite recorded net sales qualify while store managers remain excluded. PR reconciliation does not redeploy the private server.
 - PR #1120 added sales-observed personnel storage/read UI. Offline store mapping preparation is defined in `docs/contracts/company-store-preparation-v1.md`; preparation alone cannot verify company runtime or authorize live ingestion.
 - Frontend ownership is Cloudflare Workers Static Assets. `staging.hr-axis.com` serves the exact merged-main Worker artifact; TLS, deep-link/security-header probes and the real Store Manager cookie-session smoke passed on 2026-07-29. Vercel is retired from the active frontend path.
