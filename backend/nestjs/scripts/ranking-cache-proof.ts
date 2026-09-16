@@ -157,4 +157,3 @@ export async function proveRankingCache(context: {
     corruptionAndExpiryRecovery: true, boundedEntries: 64, unrelatedRedisKeysPreserved: true,
     stalledRedisFallbackMs: Number(unavailableMs.toFixed(2)) };
 }
-

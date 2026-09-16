@@ -102,5 +102,3 @@ it("rejects malformed identifiers, missing components and non-numeric cache fiel
   }
   expect(() => parseRankingFacts(JSON.stringify([row]), "employee")).toThrow();
 });
-
-
