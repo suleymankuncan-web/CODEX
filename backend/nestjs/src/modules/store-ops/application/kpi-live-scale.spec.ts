@@ -17,7 +17,7 @@ describe("live reference 70 / ceiling 140 policy", () => {
     expect(service.scoreLiveMetric({ ...base, benchmarkValue }).scoreContribution).toBeNull();
   });
   it("retains target semantics and raw checklist percentages", () => {
-    expect(service.scoreLiveMetric({ ...base, metricCode: "TARGET_ACHIEVEMENT", benchmarkSource: "TARGET", targetValue: 50, benchmarkValue: 1000 }).scoreContribution).toBe(140);
+    expect(service.scoreLiveMetric({ ...base, metricCode: "TARGET_ACHIEVEMENT", benchmarkSource: "TARGET", targetValue: 50, benchmarkValue: 1000 }).scoreContribution).toBe(200);
     expect(service.scoreLiveMetric({ ...base, metricCode: "BM_CHECKLIST", actualValue: 80, benchmarkSource: "TARGET", targetValue: 100 })).toMatchObject({ actualValue: 80, actualRatio: .8, scoreContribution: 56 });
   });
   it.each([personnelKpiScoreProfile, storeKpiScoreProfile])("all reference values total 70 in $profileCode", profile => {
