@@ -114,6 +114,11 @@ its earlier 11 passing Playwright checks remain scoped evidence, not a new run.
   targets, date boundaries, scope isolation, old cache namespace rejection,
   dynamic weights and closed snapshot preservation. No remaining actionable
   finding was identified. This is self-review, not independent agent review.
+- Full root verification identified two repository guard failures: the frozen
+  admin page grew by one line, and the disposable cache proof's target write
+  was not inventoried. Grouping publication invalidations preserves the size
+  budget; explicitly classifying the local-only fixture preserves the fail-closed
+  writer guard without changing runtime writers. Both guards passed after fixes.
 
 Run the canonical full release on the committed change before opening the PR;
 record its exact-head receipt and subsequent CI in the PR. No schema/data repair,
