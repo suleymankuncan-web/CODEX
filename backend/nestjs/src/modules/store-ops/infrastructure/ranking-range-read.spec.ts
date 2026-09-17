@@ -1,7 +1,7 @@
 import { readRankingStoreRange } from "./ranking-range-read";
 
 describe("readRankingStoreRange", () => {
-  it("pairs daily physical facts and prefers direct target-achievement facts", async () => {
+  it("pairs daily physical facts with full monthly targets and prefers recorded net sales", async () => {
     const statements: unknown[] = [];
     const query = jest.fn(async (sql: unknown) => {
       statements.push(sql);
@@ -19,8 +19,10 @@ describe("readRankingStoreRange", () => {
     );
 
     const sql = String(statements[0]);
-    expect(sql).toContain("facts.achievement");
-    expect(sql).toContain("facts.sales_target");
+    expect(sql).toContain("WHEN 'TARGET_ACHIEVEMENT' THEN facts.achievement");
+    expect(sql).toContain("THEN monthly_target.value");
+    expect(sql).toContain("request.request_status = 'approved'");
+    expect(sql).toContain("kt.period_type = 'monthly'");
     expect(sql).toContain("SUM(sales) FILTER (WHERE tickets IS NOT NULL)");
     expect(sql).toContain("SUM(tickets) FILTER (WHERE sales IS NOT NULL)");
     expect(sql).toContain("SUM(tickets) AS cr_numerator");

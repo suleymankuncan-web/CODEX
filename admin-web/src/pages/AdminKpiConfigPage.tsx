@@ -129,9 +129,9 @@ export function AdminKpiConfigPage() {
     onSuccess: (result) => {
       syncEditorState(result, setDraft, setPublished)
       actionToast.success('Yayınlandı')
-      void queryClient.invalidateQueries({ queryKey: ['kpi-config-editor'] })
-      void queryClient.invalidateQueries({ queryKey: ['kpi-config'] })
-      void queryClient.invalidateQueries({ queryKey: ['kpi-config-audit'] })
+      for (const key of ['kpi-config-editor', 'kpi-config', 'kpi-config-audit', 'ranking-v1']) {
+        void queryClient.invalidateQueries({ queryKey: [key] })
+      }
     },
     onError: (error) => {
       actionToast.error(error, 'Yayınlanamadı.')

@@ -7,7 +7,7 @@ import { AppConfigService } from "../src/shared/app-config.service";
 import type { DatabaseService } from "../src/shared/database/database.service";
 import { RankingFactsCache } from "../src/modules/store-ops/infrastructure/ranking-facts-cache";
 import { readRankingFactsRevision } from "../src/modules/store-ops/infrastructure/ranking-facts-cache-revision";
-import { cachedRankingFactsSql } from "../src/modules/store-ops/infrastructure/ranking-facts-cache-sql";
+import { cachedRankingFactsSql, rankingFactsCacheVersion } from "../src/modules/store-ops/infrastructure/ranking-facts-cache-sql";
 import { readRankingStoreRange, type RankingRangeInput } from "../src/modules/store-ops/infrastructure/ranking-range-read";
 import { readRankingPersonnelRange } from "../src/modules/store-ops/infrastructure/ranking-personnel-range-read";
 
@@ -18,9 +18,15 @@ export async function proveRankingCache(context: {
   const { pool, database, cache, redis, config, input } = context;
   const revision = () => readRankingFactsRevision(database, config.databaseUrl);
   const namespace = (await revision())!.namespace;
-  const index = `hr-axis:ranking-facts:v1:{${namespace}}:index`;
+  const index = `hr-axis:ranking-facts:v${rankingFactsCacheVersion}:{${namespace}}:index`;
+  // Mixed old/new daily codes must remain additive even on a warm monthly cache.
+  await pool.query(`UPDATE ops.kpi_actual SET kpi_id=8 WHERE scope_type='store' AND kpi_id=1 AND period_start='2026-09-01';
+    INSERT INTO ops.kpi_actual SELECT 8,store_id,NULL,company_id,scope_type,period_type,period_start,period_end,9999999,source_type
+    FROM ops.kpi_actual WHERE scope_type='store' AND kpi_id=1 AND period_start='2026-09-02'`);
   const original = await readRankingStoreRange(database, input, cache);
-  await pool.query("UPDATE ops.kpi_actual SET actual_value=actual_value+100 WHERE scope_type='store' AND kpi_id=1 AND period_start='2026-09-01'");
+  assert.equal(Number(original.find(row => row.store_name === 'Store 1' && row.kpi_code === 'TARGET_ACHIEVEMENT')?.actual_value), 10010 * 8 * 15);
+  assert.deepEqual(await readRankingStoreRange(database, input, cache), await readRankingStoreRange(database, input));
+  await pool.query("UPDATE ops.kpi_actual SET actual_value=actual_value+100 WHERE scope_type='store' AND kpi_id=8 AND period_start='2026-09-01'");
   const changed = await readRankingStoreRange(database, input, cache);
   assert.notDeepEqual(changed, original);
   assert.deepEqual(changed, await readRankingStoreRange(database, input));
@@ -69,7 +75,15 @@ export async function proveRankingCache(context: {
   const personnel = await readRankingPersonnelRange(database, input, cache);
   assert.notDeepEqual(await revision(), beforeMetadata, "unrelated committed writes conservatively invalidate");
   assert(personnel.some(row => row.first_name === "Fresh name"));
+  assert(personnel.filter(row => row.kpi_code === "TARGET_ACHIEVEMENT").every(row => Number(row.target_value) === 401000));
   assert.deepEqual(personnel, await readRankingPersonnelRange(database, input));
+  const beforeStoreApproval = await readRankingStoreRange(database, input, cache);
+  await pool.query(`INSERT INTO ops.target_distribution_request(company_id,store_id,request_month,total_target_value,request_status,approved_at)
+    SELECT company_id,store_id,'2026-09-01',4200000,'approved',NOW() FROM ops.store`);
+  const afterStoreApproval = await readRankingStoreRange(database, input, cache);
+  assert.notDeepEqual(afterStoreApproval, beforeStoreApproval);
+  assert(afterStoreApproval.filter(row => row.kpi_code === "TARGET_ACHIEVEMENT").every(row => Number(row.target_value) === 4200000));
+  assert.deepEqual(afterStoreApproval, await readRankingStoreRange(database, input));
   await pool.query(`INSERT INTO ops.role VALUES (1,'REGION_MANAGER');
     INSERT INTO ops.user_account VALUES (md5('manager')::uuid,NULL,'Manager one',NULL,true);
     INSERT INTO ops.user_role_assignment VALUES (md5('manager')::uuid,1,NOW()-interval '1 day',NULL);
@@ -95,9 +109,9 @@ export async function proveRankingCache(context: {
   const secondWriter = await pool.connect();
   try {
     await firstWriter.query("BEGIN");
-    await firstWriter.query("UPDATE ops.kpi_actual SET actual_value=actual_value+10 WHERE scope_type='store' AND kpi_id=1 AND store_id=md5('store-1')::uuid AND period_start='2026-09-01'");
+    await firstWriter.query("UPDATE ops.kpi_actual SET actual_value=actual_value+10 WHERE scope_type='store' AND kpi_id=8 AND store_id=md5('store-1')::uuid AND period_start='2026-09-01'");
     await secondWriter.query("BEGIN");
-    await secondWriter.query("UPDATE ops.kpi_actual SET actual_value=actual_value+20 WHERE scope_type='store' AND kpi_id=1 AND store_id=md5('store-2')::uuid AND period_start='2026-09-01'");
+    await secondWriter.query("UPDATE ops.kpi_actual SET actual_value=actual_value+20 WHERE scope_type='store' AND kpi_id=8 AND store_id=md5('store-2')::uuid AND period_start='2026-09-01'");
     await readRankingStoreRange(database, input, cache);
     await secondWriter.query("COMMIT");
     assert.deepEqual(await readRankingStoreRange(database, input, cache), await readRankingStoreRange(database, input));
@@ -152,7 +166,7 @@ export async function proveRankingCache(context: {
     await new Promise<void>(resolve => stalled.close(() => resolve()));
   }
   return { committedUpdate: true, uncommittedAndRollback: true, truncateRollback: true,
-    freshPersonnelTargetAndName: true, freshManagerRoleExpiry: true, companyIsolation: true,
+    mixedDailySalesAliases: true, freshStoreMonthlyTarget: true, freshPersonnelTargetAndName: true, freshManagerRoleExpiry: true, companyIsolation: true,
     crossInstanceColdFillCount: 1, postLookupCommitFallback: true, outOfOrderCommits: true, warmFactScanLoops: 0,
     corruptionAndExpiryRecovery: true, boundedEntries: 64, unrelatedRedisKeysPreserved: true,
     stalledRedisFallbackMs: Number(unavailableMs.toFixed(2)) };

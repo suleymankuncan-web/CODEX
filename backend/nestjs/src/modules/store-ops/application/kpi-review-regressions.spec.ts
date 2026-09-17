@@ -37,7 +37,7 @@ describe("KPI review regressions", () => {
     const {reporting, ranking} = fixture();
     const detail = await reporting.getStoreKpiHighlights({...scope, periodType: "monthly", periodStart: period.period_start});
     const list = await ranking.getRankings({...scope, roleCodes: ["STORE_MANAGER"], periodType: "monthly", periodStart: period.period_start});
-    expect(detail.score.value * 100).toBe(70);
+    expect(detail.score.value * 100).toBe(81.67);
     expect(list.storeLeaderboard.currentStore?.scoreValue).toBe(detail.score.value * 100);
   });
   it("exposes aggregate ranks for an authorized region manager only", async () => {
@@ -47,7 +47,7 @@ describe("KPI review regressions", () => {
     const denied = await ranking.getRankings({...scope, storeIds: ["other"], assignedStoreIds: ["other"], regionIds: ["other"], roleCodes: ["REGION_MANAGER"], storeId: "store-1"});
     expect(denied.storeLeaderboard.currentStoreComparisons).toBeUndefined();
   });
-  it("uses the same personnel range facts and prorated target in profile and ranking", async () => {
+  it("uses the same personnel range facts and full monthly target in profile and ranking", async () => {
     const {repository, reporting, ranking} = fixture();
     repository.getActiveEmployeeAssignmentScopes.mockResolvedValue([{employee_id: employeeId, store_id: "store-1", region_id: "region-1", company_id: "company-1"}] as never);
     const facts = [["TARGET_ACHIEVEMENT", "600", "500"], ["NET_SALES", "600", "500"], ["ATV", "300", null], ["UPT", "3", null]].map(([code, actual, target]) => ({
@@ -60,7 +60,7 @@ describe("KPI review regressions", () => {
     const profile = await reporting.getPersonnelPerformance({...input, targetEmployeeId: employeeId});
     const list = await ranking.getRankings(input);
     expect(profile.period).toEqual({periodStart: input.periodStart, periodEnd: input.periodEnd});
-    expect(profile.score.value).toBe(75.6);
+    expect(profile.score.value).toBe(90);
     expect(list.personnelLeaderboard.managedStorePersonnel[0].scoreValue).toBe(profile.score.value);
     expect(profile.metrics.find(m => m.code === "TARGET_ACHIEVEMENT")).toMatchObject({targetValue: 500});
     expect(repository.listRankingPersonnelKpiRows).toHaveBeenCalledWith(expect.objectContaining({isRange: true, periodEnd: input.periodEnd}));

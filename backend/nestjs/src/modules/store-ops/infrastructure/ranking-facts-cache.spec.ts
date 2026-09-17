@@ -41,6 +41,17 @@ it("reuses physical NUMERIC strings without caching a final role-scoped response
   expect(cache.metrics().hit).toBe(1);
 });
 
+it("does not reuse v1 aggregates after changing the daily HG source precedence", async () => {
+  const { cache, database } = fixture();
+  redis.get.mockImplementation(async (key: string) => key.startsWith("hr-axis:ranking-facts:v1:")
+    ? JSON.stringify({ snapshot: revision.revision, rows: [{ ...row, achievement: "999999" }] }) : null);
+  const result = JSON.parse((await cache.get("store", input))!);
+  expect(result.rows).toEqual([row]);
+  expect(cache.metrics().fill).toBe(1);
+  expect(redis.get.mock.calls.every(([key]) => key.startsWith("hr-axis:ranking-facts:v2:"))).toBe(true);
+  expect(database.query.mock.calls.some(([sql]) => sql.includes("WITH daily AS"))).toBe(true);
+});
+
 it("separates companies, inclusive ranges and entity kinds; canonicalizes company order", async () => {
   const { cache } = fixture();
   const employee = { ...row, employee_id: input.companyIds[0] };

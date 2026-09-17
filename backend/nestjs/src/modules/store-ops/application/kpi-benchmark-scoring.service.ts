@@ -4,8 +4,11 @@ import {
 } from "./kpi-benchmark-scoring.contract";
 
 export class KpiBenchmarkScoringService {
-  // Live policy v2. Keep scoreMetric unchanged for versioned closed snapshots.
+  // Live HG earns its published weight at 100% of target; other KPIs retain base 70.
+  // Keep scoreMetric unchanged for versioned closed snapshots.
   scoreLiveMetric(input: KpiBenchmarkMetricInput): KpiBenchmarkMetricResult {
+    const isTargetAchievement = input.metricCode === "TARGET_ACHIEVEMENT";
+    if (isTargetAchievement) input = { ...input, benchmarkSource: "TARGET" };
     const capRatio = ["BM_CHECKLIST", "VM_CHECKLIST"].includes(input.metricCode) ? 1 : 2;
     const result = this.scoreMetric({ ...input, capRatio });
     if (result.actualRatio === null) return result;
@@ -14,7 +17,7 @@ export class KpiBenchmarkScoringService {
     return {
       ...result,
       scoredRatio: this.round(scoredRatio),
-      scoreContribution: this.round(scoredRatio * 70 * input.weightPercent / 100),
+      scoreContribution: this.round(scoredRatio * input.weightPercent * (isTargetAchievement ? 1 : 0.7)),
     };
   }
 

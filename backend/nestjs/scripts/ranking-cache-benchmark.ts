@@ -8,6 +8,7 @@ import IORedis from "ioredis";
 import { AppConfigService } from "../src/shared/app-config.service";
 import { DatabaseService } from "../src/shared/database/database.service";
 import { RankingFactsCache } from "../src/modules/store-ops/infrastructure/ranking-facts-cache";
+import { rankingFactsCacheVersion } from "../src/modules/store-ops/infrastructure/ranking-facts-cache-sql";
 import { readRankingFactsRevision } from "../src/modules/store-ops/infrastructure/ranking-facts-cache-revision";
 import { readRankingStoreRange, readRankingRangeBenchmarks } from "../src/modules/store-ops/infrastructure/ranking-range-read";
 import { readRankingPersonnelRange } from "../src/modules/store-ops/infrastructure/ranking-personnel-range-read";
@@ -97,10 +98,11 @@ async function main() {
       results, metrics: cache.metrics(), proof }, null, 2));
   } finally {
     if (namespace) {
-      const index = `hr-axis:ranking-facts:v1:{${namespace}}:index`;
+      const prefix = `hr-axis:ranking-facts:v${rankingFactsCacheVersion}:{${namespace}}:`;
+      const index = `${prefix}index`;
       const keys = await redis.zrange(index, 0, -1).catch(() => []);
       // Only entries owned by this freshly generated disposable database.
-      for (const key of keys) { assert(key.startsWith(`hr-axis:ranking-facts:v1:{${namespace}}:`)); await redis.del(key); }
+      for (const key of keys) { assert(key.startsWith(prefix)); await redis.del(key); }
       await redis.del(index).catch(() => undefined);
     }
     cache.onModuleDestroy(); redis.disconnect(false);

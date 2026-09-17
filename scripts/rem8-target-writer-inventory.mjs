@@ -11,6 +11,9 @@ export const targetWriterInventory = Object.freeze({
   "backend/nestjs/scripts/rem8-target-constraint-disposable-rehearsal.ts": {
     class: "rem8_disposable_fixture", mutationCount: 7,
   },
+  "backend/nestjs/scripts/ranking-cache-proof.ts": {
+    class: "ranking_disposable_cache_proof", mutationCount: 1,
+  },
   "backend/nestjs/scripts/verify-target-reference-supersession-postgres.mjs": {
     class: "tref_disposable_repository_proof", mutationCount: 1,
   },

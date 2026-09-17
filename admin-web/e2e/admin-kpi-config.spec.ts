@@ -1,5 +1,7 @@
 import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+import { installGenericStoreApiFallbacks } from './store-page-contract-fixtures'
+import { rankingsPrivilegedDetailFixture } from './store-surfaces-ranking-fixtures'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -168,6 +170,52 @@ test('admin KPI config labels repeated editor rows and actions with row context'
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
   )
   expect(hasNoHorizontalOverflow).toBe(true)
+})
+
+test('publishing refreshes cached rankings without a page reload; a draft save does not', async ({ page }) => {
+  await installGenericStoreApiFallbacks(page)
+  let published = false
+  let rankingReads = 0
+  await page.route('**/api/reports/rankings**', async route => {
+    rankingReads += 1
+    await route.fulfill({ json: {
+      ...rankingsPrivilegedDetailFixture,
+      storeLeaderboard: {
+        ...rankingsPrivilegedDetailFixture.storeLeaderboard,
+        items: rankingsPrivilegedDetailFixture.storeLeaderboard.items.map(row => ({
+          ...row, scoreValue: published ? 79 : 82,
+        })),
+      },
+    } })
+  })
+  await page.route('**/api/reports/kpi-config', route => route.fulfill({ json: kpiConfigEditorFixture }))
+  await page.route('**/api/reports/kpi-config/publish', async route => {
+    published = true
+    await route.fulfill({ json: { ...kpiConfigEditorFixture,
+      publishedConfig: draftConfig, hasUnpublishedChanges: false } })
+  })
+  const rankingsPath = '/store/rankings?period=2026-04-01'
+  // SPA navigation preserves the QueryClient; a document reload would hide this regression.
+  const navigate = (path: string) => page.evaluate(destination => {
+    window.history.pushState({}, '', destination)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, path)
+  const firstRow = () => page.getByTestId('store-rankings-page').locator('tbody tr').first()
+  await page.goto(rankingsPath)
+  await expect(firstRow()).toContainText('82')
+  const readsBefore = rankingReads
+  await navigate('/admin/kpi-config')
+  await page.getByRole('button', { name: 'Taslağı kaydet' }).click()
+  await expect(page.getByText('Taslak kaydedildi', { exact: true })).toBeVisible()
+  await navigate(rankingsPath)
+  await expect(firstRow()).toContainText('82')
+  expect(rankingReads).toBe(readsBefore)
+  await navigate('/admin/kpi-config')
+  await page.getByRole('button', { name: 'Canlı ayarı yayınla' }).click()
+  await expect(page.getByText('Yayınlandı', { exact: true })).toBeVisible()
+  await navigate(rankingsPath)
+  await expect(firstRow()).toContainText('79')
+  expect(rankingReads).toBeGreaterThan(readsBefore)
 })
 
 async function routeAdminKpiConfigApi(page: Page) {
