@@ -1,4 +1,4 @@
-import { personnelPeriodTargetSql } from "./personnel-period-sql";
+import { rankingMonthlyTargetJoinSql } from "./ranking-monthly-target-sql";
 import { Injectable, Optional } from "@nestjs/common";
 import { RankingFactsCache } from "./ranking-facts-cache";
 import { readRankingStoreRange } from "./ranking-range-read";
@@ -152,12 +152,14 @@ export class RankingReportingReadRepository {
           kd.kpi_name,
           ka.actual_value::text AS actual_value,
           ka.achievement_rate::text AS achievement_rate,
-          kt.target_value::text AS target_value
+          CASE WHEN kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')
+            THEN monthly_target.value ELSE kt.target_value END::text AS target_value
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
         INNER JOIN ops.store store
           ON store.store_id = ka.store_id
+        ${rankingMonthlyTargetJoinSql({ store: "store", startParameter: 3, endParameter: 4 })}
         LEFT JOIN ops.region region
           ON region.region_id = store.region_id
         LEFT JOIN ops.kpi_target kt
@@ -374,7 +376,8 @@ export class RankingReportingReadRepository {
           kd.kpi_code,
           kd.kpi_name,
           ka.actual_value::text AS actual_value,
-          ${personnelPeriodTargetSql}::text AS target_value
+          CASE WHEN kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')
+            THEN monthly_target.value END::text AS target_value
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
@@ -420,13 +423,7 @@ export class RankingReportingReadRepository {
             AND net_ka.period_end = ka.period_end
             AND COALESCE(net_ka.source_type, '') <> 'demo_seed'
         ) employee_sales ON TRUE
-        LEFT JOIN ops.personnel_target_reference ptr
-          ON ptr.employee_id = ka.employee_id
-         AND ptr.period_start <= ka.period_start
-         AND ptr.period_end >= ka.period_end
-         AND ptr.target_type = 'monthly_sales_target'
-         AND ptr.status = 'approved'
-         AND kd.kpi_code IN ('TARGET_ACHIEVEMENT', 'NET_SALES', 'STORE_SALES', 'SALES_TARGET_ACHIEVEMENT')
+        ${rankingMonthlyTargetJoinSql({ store: "store", employee: "employee", startParameter: 3, endParameter: 4 })}
         LEFT JOIN LATERAL (
           SELECT
             ua.user_id::text AS user_id,

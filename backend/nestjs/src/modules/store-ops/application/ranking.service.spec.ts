@@ -757,7 +757,7 @@ describe("RankingService", () => {
       offset: 0,
     });
 
-    expect(result.personnelLeaderboard.items.map((item) => item.scoreValue)).toEqual([50.4, 50.4]);
+    expect(result.personnelLeaderboard.items.map((item) => item.scoreValue)).toEqual([62.4, 62.4]);
     expect(result.personnelLeaderboard.items.map((item) => item.employeeId)).toEqual([
       "employee-015",
       "employee-014",
@@ -909,7 +909,7 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        scoreValue: 66.11,
+        scoreValue: 77.78,
       }),
     );
   });
@@ -992,7 +992,7 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        scoreValue: 65.8,
+        scoreValue: 76.3,
         metrics: expect.arrayContaining([
           expect.objectContaining({
             code: "BM_CHECKLIST",

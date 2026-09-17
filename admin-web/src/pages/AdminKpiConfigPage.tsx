@@ -131,6 +131,7 @@ export function AdminKpiConfigPage() {
       actionToast.success('Yayınlandı')
       void queryClient.invalidateQueries({ queryKey: ['kpi-config-editor'] })
       void queryClient.invalidateQueries({ queryKey: ['kpi-config'] })
+      void queryClient.invalidateQueries({ queryKey: ['ranking-v1'] })
       void queryClient.invalidateQueries({ queryKey: ['kpi-config-audit'] })
     },
     onError: (error) => {

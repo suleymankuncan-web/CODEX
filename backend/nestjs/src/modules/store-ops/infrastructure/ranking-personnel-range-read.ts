@@ -1,5 +1,6 @@
 import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
 import { cachedRankingFactsSql } from "./ranking-facts-cache-sql";
+import { rankingMonthlyTargetJoinSql } from "./ranking-monthly-target-sql";
 import type { RankingFactsCache } from "./ranking-facts-cache";
 import type { DatabaseService } from "../../../shared/database/database.service";
 
@@ -25,7 +26,7 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
       CASE kd.kpi_code WHEN 'TARGET_ACHIEVEMENT' THEN f.sales WHEN 'NET_SALES' THEN f.sales
         WHEN 'ATV' THEN f.atv_numerator / NULLIF(f.atv_denominator,0) WHEN 'UPT' THEN f.upt_numerator / NULLIF(f.upt_denominator,0)
         WHEN 'CR' THEN f.cr_numerator / NULLIF(f.cr_denominator,0) END::text AS actual_value,
-      CASE WHEN kd.kpi_code IN ('TARGET_ACHIEVEMENT','NET_SALES') THEN target.value END::text AS target_value
+      CASE WHEN kd.kpi_code IN ('TARGET_ACHIEVEMENT','NET_SALES') THEN monthly_target.value END::text AS target_value
     FROM facts f JOIN ops.employee e USING (employee_id) JOIN ops.store s ON s.store_id=f.store_id
     LEFT JOIN ops.region r ON r.region_id=s.region_id
     LEFT JOIN store_sales ON store_sales.store_id=s.store_id
@@ -35,14 +36,7 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
       ORDER BY a.is_primary_assignment DESC,a.start_date DESC LIMIT 1
     ) assignment ON TRUE
     LEFT JOIN ops.position position USING (position_id)
-    LEFT JOIN LATERAL (
-      SELECT CASE WHEN COUNT(*) = $2::date - $1::date + 1 AND COUNT(DISTINCT day) = COUNT(*)
-        THEN SUM(ptr.target_value / (ptr.period_end-ptr.period_start+1)) END AS value
-      FROM generate_series($1::date,$2::date,interval '1 day') day
-      JOIN ops.personnel_target_reference ptr ON ptr.employee_id=e.employee_id AND ptr.store_id=s.store_id
-        AND day::date BETWEEN ptr.period_start AND ptr.period_end
-        AND ptr.target_type='monthly_sales_target' AND ptr.status='approved'
-    ) target ON TRUE
+    ${rankingMonthlyTargetJoinSql({ store: "s", employee: "e", startParameter: 1, endParameter: 2 })}
     LEFT JOIN LATERAL (
       SELECT ua.user_id::text, COALESCE(NULLIF(TRIM(CONCAT(me.first_name,' ',me.last_name)),''),ua.username,ua.email,ua.user_id::text) AS display_name
       FROM ops.user_action_store_assignment manager_store

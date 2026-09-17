@@ -39,6 +39,21 @@ describe("RankingService aggregated periods", () => {
     expect(result.source).toEqual({ mode: "live", periodType: "daily", periodStart: "2026-08-31", periodEnd: "2026-09-02" });
     expect(repository.getEmployeeTurkeyBenchmarkValues).toHaveBeenCalledWith(expect.objectContaining({ isRange: true, periodStart: "2026-08-31", periodEnd: "2026-09-02" }));
   });
+  it("uses physical daily facts for an explicit one-day calendar range", async () => {
+    const { service, repository } = fixture();
+    await service.getRankings({ ...input, periodType: "daily", periodStart: "2026-09-02", periodEnd: "2026-09-02" });
+    expect(repository.getLatestRankingPeriod).not.toHaveBeenCalled();
+    for (const read of [repository.listRankingStoreKpiRows, repository.listRankingPersonnelKpiRows, repository.getStoreTurkeyBenchmarkValues, repository.getEmployeeTurkeyBenchmarkValues]) {
+      expect(read).toHaveBeenCalledWith(expect.objectContaining({ isRange: true, periodStart: "2026-09-02", periodEnd: "2026-09-02" }));
+    }
+  });
+  it("preserves imported KPIs for a legacy daily period without an explicit end date", async () => {
+    const { service, repository } = fixture();
+    repository.getLatestRankingPeriod.mockResolvedValue({ period_type: "daily", period_start: "2026-07-04", period_end: "2026-07-04", uses_daily_components: false });
+    await service.getRankings({ ...input, periodType: "daily", periodStart: "2026-07-04" });
+    expect(repository.listRankingStoreKpiRows).toHaveBeenCalledWith(expect.objectContaining({ isRange: false }));
+    expect(repository.listRankingPersonnelKpiRows).toHaveBeenCalledWith(expect.objectContaining({ isRange: false }));
+  });
   it("retains both dates when scope fails closed before any data read", async () => {
     const { service, repository } = fixture();
     const result = await service.getRankings({ ...input, companyIds: [], periodType: "daily", periodStart: "2026-08-31", periodEnd: "2026-09-02" });

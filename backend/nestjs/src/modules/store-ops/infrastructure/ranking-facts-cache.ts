@@ -5,14 +5,14 @@ import { AppConfigService } from "../../../shared/app-config.service";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { readRankingFactsRevision } from "./ranking-facts-cache-revision";
 import {
-  validateRankingFactsPayload, rankingFactsSelectSql,
+  validateRankingFactsPayload, rankingFactsSelectSql, rankingFactsCacheVersion,
   type RankingFactsInput, type RankingFactsScope,
 } from "./ranking-facts-cache-sql";
 
 const TTL_SECONDS = 6 * 60 * 60;
 const MAX_BYTES = 512 * 1024;
 const MAX_ENTRIES = 64;
-const OVERSIZED = "!oversized-ranking-facts:v1";
+const OVERSIZED = `!oversized-ranking-facts:v${rankingFactsCacheVersion}`;
 const UNLOCK = "if redis.call('GET',KEYS[1]) == ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0";
 // Bound cache memory independently of queue Redis's noeviction policy. Only our keys are touched.
 const PUBLISH = `
@@ -54,7 +54,7 @@ export class RankingFactsCache implements OnModuleDestroy {
     try {
       const revision = await this.revision();
       if (!revision) return undefined;
-      const prefix = `hr-axis:ranking-facts:v1:{${revision.namespace}}`;
+      const prefix = `hr-axis:ranking-facts:v${rankingFactsCacheVersion}:{${revision.namespace}}`;
       const digest = createHash("sha256").update(JSON.stringify([
         scope, [...new Set(input.companyIds.map(id => id.toLowerCase()))].sort(),
         input.periodStart, input.periodEnd,

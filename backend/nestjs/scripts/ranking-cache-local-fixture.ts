@@ -20,6 +20,7 @@ export async function seedRankingCacheFixture(pool: Pool) {
     CREATE TABLE ops.employee_assignment_history(employee_id uuid, position_id int, assignment_status text, is_primary_assignment boolean, start_date date);
     CREATE TABLE ops.position(position_id int, position_code text);
     CREATE TABLE ops.personnel_target_reference(employee_id uuid, store_id uuid, target_value numeric, period_start date, period_end date, target_type text, status text);
+    CREATE TABLE ops.target_distribution_request(target_distribution_request_id uuid DEFAULT gen_random_uuid(), company_id uuid, store_id uuid, request_month date, total_target_value numeric, request_status text, approved_at timestamptz, updated_at timestamptz DEFAULT NOW(), created_at timestamptz DEFAULT NOW());
     INSERT INTO ops.store SELECT md5('store-'||s)::uuid,'${fixtureCompany}',NULL,'Store '||s,true FROM generate_series(1,100) s;
     INSERT INTO ops.employee SELECT md5('employee-'||e)::uuid,'Fixture','Employee '||e FROM generate_series(1,800) e;
     INSERT INTO ops.position VALUES (1,'SALES_ASSOCIATE');
@@ -32,6 +33,7 @@ export async function seedRankingCacheFixture(pool: Pool) {
       CASE metric WHEN 1 THEN 10000+e*10 WHEN 2 THEN 40 WHEN 3 THEN 20 ELSE 200 END,'company'
       FROM generate_series(1,800) e CROSS JOIN generate_series(1,4) metric CROSS JOIN generate_series('2026-09-01'::date,'2026-09-15'::date,interval '1 day') day;
     INSERT INTO ops.kpi_target SELECT 1,store_id,'store','daily',day::date,day::date,100000 FROM ops.store CROSS JOIN generate_series('2026-09-01'::date,'2026-09-30'::date,interval '1 day') day;
+    INSERT INTO ops.kpi_target SELECT 8,store_id,'store','monthly','2026-09-01','2026-09-30',3000000 FROM ops.store;
     INSERT INTO ops.personnel_target_reference SELECT md5('employee-'||e)::uuid,md5('store-'||((e-1)/8+1))::uuid,400000,'2026-09-01','2026-09-30','monthly_sales_target','approved' FROM generate_series(1,800) e;
     CREATE INDEX ON ops.kpi_actual(kpi_id,scope_type,company_id,store_id,employee_id,period_start,period_end);
     CREATE INDEX ON ops.kpi_target(kpi_id,store_id,period_type,period_start,period_end);

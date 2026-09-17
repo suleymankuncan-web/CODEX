@@ -1,5 +1,6 @@
 import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
 import { cachedRankingFactsSql } from "./ranking-facts-cache-sql";
+import { rankingMonthlyTargetJoinSql } from "./ranking-monthly-target-sql";
 import type { RankingFactsCache } from "./ranking-facts-cache";
 import type { DatabaseService } from "../../../shared/database/database.service";
 
@@ -61,10 +62,11 @@ export async function readRankingStoreRange(
         WHEN 'gsm_approval' THEN gsm.value * 100
         WHEN 'TARGET_ACHIEVEMENT' THEN facts.achievement
       END::text AS actual_value,
-      CASE WHEN kd.kpi_code = 'TARGET_ACHIEVEMENT' THEN facts.sales_target WHEN kd.kpi_code = 'gsm_approval' THEN gsm.target * 100 END::text AS target_value,
+      CASE WHEN kd.kpi_code = 'TARGET_ACHIEVEMENT' THEN monthly_target.value WHEN kd.kpi_code = 'gsm_approval' THEN gsm.target * 100 END::text AS target_value,
       NULL::text AS achievement_rate
     FROM facts
     JOIN ops.store s USING (store_id)
+    ${rankingMonthlyTargetJoinSql({ store: "s", startParameter: 1, endParameter: 2 })}
     LEFT JOIN ops.region r USING (region_id)
     CROSS JOIN ops.kpi_definition kd
     LEFT JOIN gsm ON gsm.store_id = s.store_id

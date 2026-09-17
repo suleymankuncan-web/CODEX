@@ -89,12 +89,12 @@ describe("PerformanceScoreEvaluator", () => {
       ]),
     });
 
-    expect(result.scoreValue).toBe(61.13);
+    expect(result.scoreValue).toBe(76.53);
     expect(result.metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           code: "TARGET_ACHIEVEMENT",
-          contributionValue: 30.8,
+          contributionValue: 44,
         }),
         expect.objectContaining({
           code: "ATV",
@@ -197,7 +197,7 @@ describe("PerformanceScoreEvaluator", () => {
       ]),
     });
 
-    expect(result.scoreValue).toBe(68.99);
+    expect(result.scoreValue).toBe(79.49);
     expect(result.metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -1,5 +1,7 @@
 import { rankingDailyComponentsSql } from "./ranking-daily-components-sql";
 
+// v2 prefers NET_SALES per day before reducing HG; v1 aggregates cannot be reused.
+export const rankingFactsCacheVersion = 2;
 export type RankingFactsScope = "store" | "employee";
 export type RankingFactsInput = {
   companyIds: string[];
