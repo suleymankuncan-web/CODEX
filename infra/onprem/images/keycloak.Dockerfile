@@ -9,7 +9,9 @@ ARG KEYCLOAK_BASE_IMAGE=quay.io/keycloak/keycloak:26.7.3@sha256:ff4257d0d64efbe9
 FROM ${NODE_BUILD_IMAGE} AS netty-downloader
 WORKDIR /patch
 COPY scripts/onprem-keycloak-netty-patch.mjs /patch/download.mjs
-RUN node /patch/download.mjs
+COPY scripts/onprem-keycloak-bouncycastle-patch.mjs /patch/download-bouncycastle.mjs
+RUN node /patch/download.mjs \
+    && node /patch/download-bouncycastle.mjs
 
 FROM ${KEYCLOAK_BASE_IMAGE} AS patched-base
 USER root
@@ -32,6 +34,12 @@ COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transpor
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-native-epoll-linux-aarch_64.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-native-epoll-4.1.136.Final-linux-aarch_64.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-native-epoll-linux-x86_64.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-native-epoll-4.1.136.Final-linux-x86_64.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/jars/netty-transport-native-unix-common.jar /opt/keycloak/lib/lib/main/io.netty.netty-transport-native-unix-common-4.1.136.Final.jar
+# Keycloak 26.7.3 ships Bouncy Castle 1.84. Preserve Quarkus' recorded paths
+# while replacing the vulnerable provider family with checksum-pinned 1.85.
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcprov-jdk18on-1.84.jar
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/bin/client/lib/bcprov-jdk18on-1.84.jar
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcpkix-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcpkix-jdk18on-1.84.jar
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcutil-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcutil-jdk18on-1.84.jar
 USER 1000
 
 FROM patched-base AS builder
