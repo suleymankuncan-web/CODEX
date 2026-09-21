@@ -211,6 +211,7 @@ const personnelMasterItems = [
       terminationDate: null,
       employmentStatus: 'active',
       employmentType: 'full_time',
+      accountStatus: 'active',
       assignmentId: '00000000-0000-0000-0000-000000000300',
       assignmentStartDate: '2025-06-28',
       storeId,
@@ -230,6 +231,7 @@ const personnelMasterItems = [
 
 function buildPersonnelFixture(index: number, employmentStatus: 'active' | 'inactive' | 'terminated') {
   const number = String(index).padStart(3, '0')
+  const accountStatuses = ['active', 'pending', 'inactive', 'failed', 'none'] as const
   return {
     employeeId: `00000000-0000-0000-0003-${String(index).padStart(12, '0')}`,
     externalEmployeeRef: `EMP-${number}`,
@@ -242,6 +244,7 @@ function buildPersonnelFixture(index: number, employmentStatus: 'active' | 'inac
     terminationDate: employmentStatus === 'terminated' ? '2026-08-27' : null,
     employmentStatus,
     employmentType: 'full_time',
+    accountStatus: employmentStatus === 'terminated' ? 'inactive' : accountStatuses[(index - 1) % accountStatuses.length],
     assignmentId: employmentStatus === 'terminated' ? null : `00000000-0000-0000-0004-${String(index).padStart(12, '0')}`,
     assignmentStartDate: employmentStatus === 'terminated' ? null : '2025-06-28',
     storeId,

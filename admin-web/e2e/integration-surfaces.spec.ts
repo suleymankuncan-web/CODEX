@@ -244,6 +244,7 @@ test('integration tabs keep upload drafts and filters without starting an import
   await expect(page.getByRole('tab', { name: 'Kanıtlar' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Hatalar' }).click()
   await page.getByRole('textbox', { name: 'Hata kaydı filtresi' }).fill('power-bi')
+  await expect.poll(() => queries.some((url) => url.searchParams.get('q') === 'power-bi')).toBe(true)
   await page.getByRole('combobox', { name: 'Varlık tipi filtresi' }).click()
   await page.getByRole('option', { name: 'kpi', exact: true }).click()
   await expect.poll(() => queries.some((url) => url.searchParams.get('q') === 'power-bi' && url.searchParams.get('entityType') === 'kpi')).toBe(true)
