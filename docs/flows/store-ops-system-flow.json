@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-16T10:11:25.608Z",
+  "generatedAt": "2026-09-21T14:48:47.564Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 214,
     "openApiEndpointCount": 269,
-    "routeApiEdgeCount": 265,
+    "routeApiEdgeCount": 263,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -10316,11 +10316,6 @@
         "apiCallId": "api:118"
       },
       {
-        "id": "edge:route:admin:/admin/master-data:api:119",
-        "routeId": "route:admin:/admin/master-data",
-        "apiCallId": "api:119"
-      },
-      {
         "id": "edge:route:admin:/admin/master-data/:batchId:api:102",
         "routeId": "route:admin:/admin/master-data/:batchId",
         "apiCallId": "api:102"
@@ -10404,11 +10399,6 @@
         "id": "edge:route:admin:/admin/master-data/:batchId:api:118",
         "routeId": "route:admin:/admin/master-data/:batchId",
         "apiCallId": "api:118"
-      },
-      {
-        "id": "edge:route:admin:/admin/master-data/:batchId:api:119",
-        "routeId": "route:admin:/admin/master-data/:batchId",
-        "apiCallId": "api:119"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:123",
