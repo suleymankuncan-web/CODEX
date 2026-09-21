@@ -230,6 +230,9 @@ acikca degistirirse gevsetilir:
 ### Canonical Release Sure Ve Tekrar-Kosum Disiplini
 
 Read [the complete procedure](docs/process/execution-release.md#canonical-release-sure-ve-tekrar-kosum-disiplini).
+Manual image/offline proof remains `npm.cmd run check:onprem:dispatch -- prove`
+on the exact clean committed HEAD, followed by wrapper `publish` and dispatch.
+GitHub runtime proof is final evidence, never a diagnostic loop.
 
 ### PR Oncesi Adversarial Review
 
