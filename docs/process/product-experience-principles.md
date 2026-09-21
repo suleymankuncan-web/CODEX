@@ -52,7 +52,7 @@ Store/Admin product UI uses:
 - Tailwind v4,
 - lucide icons,
 - the relevant shared Store/Admin surface primitives,
-- `design-taste-frontend` / taste-skill as an anti-slop quality pass.
+- [project UI skill](../../.agents/skills/hr-axis-ui/SKILL.md) as the operational quality pass; marketing taste recipes are optional for explicit marketing scope.
 
 The concrete component, button, icon, color, copy, and page-anatomy rules live
 in `docs/process/ui-surface-standard-v1.md`. Reusable implementation recipes

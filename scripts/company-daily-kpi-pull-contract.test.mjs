@@ -23,6 +23,7 @@ const contract = readText(contractPath)
 const intake = readText('docs/plans/real-ingest-connector-contract-intake.md')
 const genericJsonDraft = readText('docs/plans/json-ingestion-contract-v1.md')
 const currentState = readText('current-state.md')
+const historicalState = readText('docs/history/current-state-before-context-budget-2026-09-18.md')
 
 function sectionBetween(text, startHeading, endHeading) {
   const start = text.indexOf(startHeading)
@@ -89,7 +90,7 @@ test('daily pull public documents preserve approval boundaries after private act
   requireText(contract, 'Reviewers: Product owner (approved 31 August 2026)')
   requireText(contract, 'approved source-semantics boundary')
   requireText(
-    currentState,
+    historicalState,
     'the product owner approved the documented source semantics in `docs/contracts/company-daily-kpi-pull-contract-v1.md` on 31 August 2026',
   )
   requireText(

@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-09-07
+Last verified: 2026-09-18
 
 Bu dosya HR Axis / Store Ops projesinde Codex ile kullanilan pratik calisma
 disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
@@ -20,24 +20,10 @@ historical handoff descriptions.
 
 ## Bu Dosya Nasil Okunur
 
-Bu dosya tek parca kalir; alt process dosyalarina bolunmedigi surece baglayici
-isletim sistemi buradadir. Hizli navigasyon icin:
-
-- Genel calisma: `Baslangic Ritueli`, `Ana Ilke`, `Calisma Ritmi`.
-- Kodlama freni ve scope: `Istisare ve Kodlama Freni`, `Slice Disiplini`,
-  `PR Risk Class`, `Feature Intake`.
-- PR ve merge: `PR Disiplini`, `PR Oncesi Adversarial Review`,
-  `Repo-Native Subagent Review Model`, `Pilot Subagent Orchestration
-  Discipline`, `Merge Disiplini`.
-- Verification: `Verification Ladder`, `External Evidence Disiplini`.
-- UI refactor: `UI/UX Disiplini`, `Prototype to Product`, Store Me
-  refactorundan cikan tekrar kullanilabilir sayfa kurallari,
-  `docs/process/product-experience-principles.md`,
-  `docs/process/ui-surface-standard-v1.md` ve taste-skill kalite pass'i.
-- Mimari/refactor: `Hard Boundaries`, `Refactor Disiplini`,
-  `Dosya Satir Prensipleri`.
-- Risk ve durma: `Regression Trap Register`, `Stop Rules`,
-  `Done Definition`.
+Read this core once for implementation, then only the task's linked execution
+procedure. Detailed PR/release, UI and maintenance rules have one owner each in
+`docs/process/execution-*.md`. Root headings preserve existing links. A link is
+mandatory routing when its task applies, not permission to skip a gate.
 
 ## Baslangic Ritueli
 
@@ -128,31 +114,7 @@ kod degisikligine gecilmez.
 
 ## Worktree Dependency Bootstrap
 
-Yeni git worktree acildiginda `node_modules` beklenmez. `node_modules` git'e
-girmez ve worktree'ler arasinda otomatik tasinmaz. Bu normaldir.
-
-Yeni worktree'de ilk gate oncesi ihtiyaca gore bootstrap yap:
-
-- Frontend isi varsa: `npm.cmd --prefix admin-web ci`.
-- Backend isi varsa: backend dependency kurulumu yap.
-- Playwright gerekiyorsa browser kurulum/check adimini dogrula.
-- Sadece docs-only is varsa full release icin dependency kurulumu yapma.
-  `git diff --check` minimumdur; active docs veya contract degisiyorsa uygun
-  root script/contract testi de calistirilir.
-
-Kural:
-
-- "Module not found" gordugunde once worktree dependency bootstrap eksik mi
-  kontrol et.
-- Dependency kurulumunu behavior degisikligi sayma, ama lockfile degisirse
-  sebebini anlamadan stage etme.
-- Worktree'ler arasi `node_modules` symlink/junction paylasimi varsayilan
-  cozum degildir; hiz kazandirabilir ama garip Windows ve lockfile sorunlari
-  yaratabilir.
-- Merge edilmis ve artik kullanilmayan worktree'ler status dogrulamasiyla
-  otomatik temizlenmez. Branch, worktree, stash veya remote ref silme/tasima,
-  drop, reset ya da rewrite ancak ayri dogrulanmis owner-onayli proposed-delete
-  listesinde acikca yer aliyorsa yapilabilir.
+Read the applicable [canonical procedure](docs/process/execution-maintenance.md#worktree-dependency-bootstrap) before this work.
 
 ## Slice Disiplini
 
@@ -232,55 +194,11 @@ Bu baslik olmadan riskli PR merge edilmez.
 
 ## PR Disiplini
 
-PR acmak icin minimum bar:
-
-- Branch temiz ve `origin/main` uzerinden guncel.
-- Diff beklenen dosyalardan olusuyor.
-- Local gate gecmis.
-- PR oncesi adversarial local review yapilmis.
-- PR tek review hikayesi tasiyor.
-- PR revert edilebilir.
-- PR acikca neyi degistirmedigini soyluyor.
-
-PR cok kucukse ve ayni hikayenin parcasiysa bekletilebilir. PR cok buyukse veya
-birden fazla risk tasiyorsa bolunur.
+Read the applicable [canonical procedure](docs/process/execution-release.md#pr-disiplini) before this work.
 
 ### PR Check Beklerken Paralel Ilerleme
 
-Owner'in 2026-07-10 tarihli acik karariyla, PR acildiktan ve lokal verification
-tamamlandiktan sonra GitHub ve aktif Cloudflare frontend provider deploy check suresi bos bekleme suresi degildir.
-Closer check, deployment ve mergeability durumunu arka planda izlerken sonraki
-bagimsiz PR'in Scout, Planner, test veya implementasyon calismasi ayri bir
-branch/worktree'de ilerletilir.
-
-Bu concurrency merge kapilarini kaldirmaz; yalnizca bekleme suresini verimli
-kullanir:
-
-- Acik PR'in required check'leri, deployment durumu, mergeability'si ve yeni
-  actionable yorumlari izlenmeye devam eder.
-- Sonraki calisma, acik PR'in dosya, contract, migration veya workflow'una
-  bagimliysa paralel implementasyon yapilmaz. Varsayilan izinli alan repo
-  kesfi, finding-specific spec, test tasarimi ve gercekten bagimsiz diff'tir.
-- Bagimsiz uygulama gerekiyorsa ayri `codex/` branch ve ayri worktree kullanilir.
-  Acik PR'in branch'inde ikinci review hikayesi biriktirilmez.
-- Sonraki PR acilmadan once merged `origin/main` ile yenilenir ve diff'in onceki
-  PR'i gizli dependency olarak tasimadigi dogrulanir. Stacked PR ancak dependency
-  PR body'de acikca yazilirsa kullanilir; varsayilan sira merge sonrasi acilistir.
-- Acik PR'da failed check, actionable yorum, merge conflict veya branch drift
-  gorulurse sonraki calisma guvenli bir noktada durdurulur; once acik PR
-  duzeltilir ve yeniden dogrulanir.
-- Ayni makinede iki root/full release suite eszamanli calistirilmaz. Targeted ve
-  kaynak tuketimi cakismayan kontroller paralel olabilir; agir release kosulari
-  siraya alinir.
-- Check beklerken calisilan worktree, branch, stash veya remote ref otomatik
-  temizlenmez; normal no-delete inventory kurali devam eder.
-- Sonraki PR hazir olsa bile onceki PR'in check sonucu hakkinda erken yesil veya
-  merge-ready iddiasi yapilmaz.
-
-Aktif calisma varken Closer status'u guvenli kilometre taslarinda ve merge
-kararindan hemen once yeniler. Bosta bekleme durumunda 55-60 saniyelik
-kanonik loop kullanilir. Her iki modelde de merge karari ancak ayni taze
-snapshot'ta tum required durumlar temizken verilir.
+Read [the complete procedure](docs/process/execution-release.md#pr-check-beklerken-paralel-ilerleme).
 
 ### Token-Verimli Otonom Yurutme
 
@@ -311,129 +229,17 @@ acikca degistirirse gevsetilir:
 
 ### Canonical Release Sure Ve Tekrar-Kosum Disiplini
 
-Owner'in Eylul 2026 onayiyla canonical release suresi test kapsami azaltmadan
-dusurulur. Guncel recovery contract `docs/plans/ci-incremental-recovery-v1.md`;
-Temmuz wall-time plani tarihsel baseline olarak kalir.
-
-- Root `npm.cmd run check:release` tek kanonik yerel giristir. Fresh kosu
-  varsayilandir; onceki kosuda gec E2E gibi somut bir asama hatasi duzeltildiyse
-  `npm.cmd run check:release -- --resume` kullanilir. Backend/static asamalar
-  komut, Node/npm/platform, lockfile, ilgili kaynak/ortam ve gercek build
-  ciktisi ayniysa SHA degisse bile onceki kaniti koruyabilir. Kaynak SHA ve
-  mevcut execution SHA ayri kaydedilir; 24 saati gecen kanit kullanilmaz.
-- Resume bir gate atlama mekanizmasi degildir. Yalniz atomic ve digest-bound
-  basarili receipt tekrar kullanilir. Eksik, bozuk, stale, farkli input'lu veya
-  unknown receipt fresh kosuya doner; root contracts ve dependency audit volatile'dir ve her
-  resume'da yeniden kosar.
-- Backend release, frontend static ve audit kaniti bagimliliklari izin verdigi
-  anda paralel kosabilir. Frontend E2E frontend static PASS olmadan baslamaz;
-  frontend build ve tam Playwright suite fresh kosuda birer kez kosar.
-- GitHub Actions'ta root, backend, frontend static, frontend E2E ve volatile
-  audit proof aileleri native ayri job'lardir. Ayni SHA'da gec bir hata sonrasi
-  `Re-run failed jobs` kullanilir; yesil sibling job'lar sebepsiz yeniden
-  kosturulmaz. Required aggregate selected child eksik, skipped, cancelled,
-  timed-out veya failed ise fail-closed kalir.
-- GitHub Actions problem bulma, hipotez deneme veya debug laboratuvari olarak
-  kullanilmaz. Ilk push'tan once exact HEAD icin verification ladder, targeted
-  kanitlar ve selector'in sectigi canonical yerel kanit yesil olmalidir;
-  GitHub yalniz temiz Linux runner'da bagimsiz yeniden dogrulama yapar.
-- Bir GitHub job'i kirmiziysa kor push/rerun dongusu acilmaz. Once failure'in
-  exact alt asamasi yerelde yeniden uretilir, tek kok neden dar bir diff ile
-  duzeltilir ve ilgili yerel kanit tekrar yesile getirilir. Ancak bundan sonra
-  yeni push yapilir; yeni SHA yeni run gerektirir. Native `Re-run failed jobs`
-  eski run'in SHA'sini degistirmez.
-  Ag/429/5xx icin mevcut sinirli retry kurali bu disiplini gevsetmez.
-- Harici release-rehearsal observer tek kanit otoritesi olarak exact
-  `release-rehearsal.yml` workflow run'ini kullanir. Event, PR numarasi, base
-  SHA, head SHA ve en yeni run/attempt birebir uyusmadan PASS kabul edilmez;
-  eski bir basari yeni pending veya failure'i maskeleyemez. Yalniz ag hatasi,
-  HTTP 429 ve 5xx 55-60 saniyelik butce icinde yeniden denenir; diger provider
-  contract hatalari ve tukenen butce fail-closed kalir.
-- Manual image/offline proof dispatch oncesinde exact clean committed HEAD
-  icin `npm.cmd run check:onprem:dispatch -- prove` zorunludur; push sonrasinda
-  yalniz `publish`, ardindan wrapper `dispatch image|offline` kullanilir.
-  Automatic PR/reusable workflows once bounded exact-SHA
-  `github-source-preflight` kosar; GitHub runtime prooflari bagimsiz final
-  kanittir, hata ayiklama ortami degildir; coverage veya retry azaltimi
-  yapilmaz.
-- Release rehearsal Docker/live fixture ve smoke kanitini korur, fakat ayni
-  required gate'in zaten calistirdigi backend lint/Jest/build/audit paketini
-  ikinci kez kosturmaz. Post-merge exact-tree reuse kesin degilse full release
-  fallback devam eder.
-- Test kapsami, lint, build, API check ve audit korunur. E2E'de yalniz explicit
-  reviewed isolated spec listesi sonuc koruyabilir; degisen/basarisiz veya
-  incelenmemis spec yeniden kosar. Shared input, inventory veya browser
-  degisikligi tam kosu gerektirir. Skip/flaky/global error PASS sayilmaz;
-  mevcut tam inventory, executed + retained union ile birebir dogrulanir.
-- CI recovery artifact'lari 1 gun tutulur; yalniz ayni repository/PR/base,
-  en yeni onceki run/attempt, workflow, tested merge tree, job sonucu ve
-  artifact digest dogrulanirsa kullanilir. Yerel kanit CI kaniti olmaz.
-  Eksik veya belirsiz API/artifact bilgisi fresh kosuya doner.
-  `node_modules` cache'lenmez. On-prem runtime kaniti SHA'lar arasinda tasinmaz.
-- Required gate p95 hedefi 13 dakika, DAG hedefi 12 dakika 30 saniyedir.
-  Toplam runner-minute eski on-kosu baseline'inin 110%'unu asarsa veya wall-time
-  kazanci coverage/izolasyon riski yaratirsa otomatik optimizasyon durur ve yeni
-  owner karari gerekir.
-- Tek makinede ikinci canonical full gate ayni anda acilmaz. Yerel lock,
-  child-process cleanup ve receipt yazimi Windows dahil fail-closed test edilir.
-- PR/aktif frontend provider bosta polling 55-60 saniyedir; check izlemek icin model agent
-  acilmaz. Basarili uzun log yerine state transition ve sinirli failure tail
-  raporlanir.
+Read [the complete procedure](docs/process/execution-release.md#canonical-release-sure-ve-tekrar-kosum-disiplini).
+Manual image/offline proof remains `npm.cmd run check:onprem:dispatch -- prove`
+on the exact clean committed HEAD, followed by wrapper `publish` and dispatch.
+GitHub runtime proof is final evidence, never a diagnostic loop.
+`--resume` retains coverage; use native `Re-run failed jobs`. Volatile stages,
+the 110% ceiling, `release-rehearsal.yml`, HTTP 429 ve 5xx handling, and the rule
+that iki root/full release suite eszamanli calistirilmaz remain in force.
 
 ### PR Oncesi Adversarial Review
 
-GitHub Codex review owner karariyla devre disidir. Lokal adversarial review,
-acik hata siniflarini PR acilmadan yakalayan aktif review backstop'udur.
-
-Bu kural proje geneli calisma prensibidir; sadece hardening, guard veya mimari
-PR'lar icin degildir. Her PR acilmadan once ve her yeni push oncesinde lokal
-adversarial review yapilir.
-
-Zorunlu lokal review pass:
-
-1. `git diff --stat` ile diff'in tek review hikayesi tasidigini dogrula.
-2. `git diff --check` calistir.
-3. Degisen dosyalari tek tek oku; scope creep, behavior drift, fake data,
-   layer leak, broad cast ve buyuk dosya buyumesi ara.
-4. Backend degisikliklerinde yeni direct `DatabaseService` importu,
-   application-to-web importu, web-to-infrastructure importu, yeni broad
-   `as unknown as` repository cast'i ve allowlist genislemesi ara.
-5. Frontend degisikliklerinde role-disinda UI, fake metric/copy, eski Store UI
-   class'lari, debug/handoff copy ve mobile/desktop kirilma riski ara.
-6. PR slice'ina uygun targeted verification'i PR description yazmadan once
-   calistir.
-7. Sert bir reviewer'in bulmasi muhtemel P1/P2 notlarini kendin listele;
-   actionable olanlari PR acmadan once duzelt.
-
-Her PR acilmadan veya review isteyen yeni push'tan once diff'e su gozle bak:
-
-- Degisiklik nasil delinebilir?
-- Allowlist, guard veya validation duplicate, path varyasyonu, type-only import,
-  barrel/re-export ya da ayni signature tekrariyla atlatilabilir mi?
-- Negatif test sadece happy-path'i mi donduruyor, yoksa gercek bypass
-  senaryosunu fail ettiriyor mu?
-- Yeni script/guard mevcut exception'i donduruyor mu, yoksa butun dosyayi veya
-  genis domaini sessizce muaf mi birakiyor?
-- UI PR'inda prototype, role/scope matrix, mobile/desktop durumlari ve eski UI
-  kalintisi taramasi PR oncesi yapildi mi?
-- Docs/process PR'inda yeni kuralin enforcement noktasi veya en azindan
-  verification beklentisi acik mi?
-
-Guard ve mimari script PR'larinda minimum negatif test matrisi:
-
-- allowlist disi yeni ihlal,
-- allowlist icinde duplicate ihlal,
-- type-only import/re-export edge'i,
-- side-effect static import edge'i,
-- namespace import edge'i,
-- yorum veya string icindeki sahte import ile allowlist kandirma denemesi,
-- barrel `export * from` edge'i,
-- ayni dosyada mevcut exception korunurken yeni exception ekleme girisimi.
-
-Bu preflight temiz degilse PR acilmaz; PR acildiysa yeni push yapmadan once
-duzeltilir. GitHub Codex yine actionable yorum bulursa normal merge disiplini
-gecerlidir: yorum duzeltilir, ilgili local gate yeniden kosulur ve review tekrar
-beklenir.
+Read [the complete procedure](docs/process/execution-release.md#pr-oncesi-adversarial-review).
 
 ### Repo-Native Subagent Review Model
 
@@ -482,45 +288,7 @@ do not manufacture token-share quotas or performance claims.
 
 ## Merge Disiplini
 
-Merge icin her zaman gerekenler:
-
-- Local verification gecti.
-- GitHub ve aktif Cloudflare frontend provider deployment checks yesil.
-- PR mergeable.
-
-Kontrollu PR'larda varsayilan strateji squash merge'dir. Tek parent ve ayni tree
-kaniti post-merge exact-tree reuse yolunu korur ve gereksiz ikinci full release'i
-onler. Merge commit veya rebase merge ancak belgelenmis bir istisna ve fail-safe
-post-merge full release maliyeti kabul edilerek kullanilir.
-
-Owner'in 2026-07-10 tarihli acik karariyla GitHub Codex review devre disidir:
-
-- `@codex review` yazilmaz,
-- baska bir entegrasyon uzerinden Codex review istenmez,
-- bot reaction/comment beklenmez ve merge kapisi sayilmaz,
-- ancak daha yeni acik owner talimatiyla yeniden etkinlestirilir.
-
-Bu karar required check, aktif frontend provider/deploy check, mergeability, local adversarial
-review, diff scope okuma veya verification'i waive etmez. Insan reviewer ya da
-baska bir otomatik kontrol actionable yorum birakirsa normal sekilde okunur ve
-cozulur.
-
-GitHub kontrolu tek seferlik snapshot degildir. PR acildiktan veya branch'e yeni
-push geldikten sonra merge karari verilene kadar gereken durum birlikte
-degerlendirilir:
-
-- GitHub Actions checks,
-- aktif Cloudflare frontend provider/deploy checks,
-- status check rollup,
-- mergeability / branch state.
-
-Bosta bekleniyorsa bu durumlar 55-60 saniyelik kanonik loop ile tekrar cekilir.
-Sonraki bagimsiz PR uzerinde calisiliyorsa `PR Check Beklerken Paralel Ilerleme`
-kurali uygulanir; status guvenli kilometre taslarinda ve merge kararindan hemen
-once yenilenir. Tum required checks yesil, PR mergeable ve final lokal diff
-review temiz oldugunda izleme biter. Failed check, pending belirsizlik veya yeni
-actionable insan/tool yorumu gorulurse merge yapilmaz; once sebep okunur,
-gerekirse duzeltme push'lanir ve izleme yeniden baslatilir.
+Read the applicable [canonical procedure](docs/process/execution-release.md#merge-disiplini) before this work.
 
 ## Verification Ladder
 
@@ -641,255 +409,27 @@ Input yoksa bu isler park edilir ve local-only guvenli ise gecilir.
 
 ## UI/UX Disiplini
 
-Admin/SaaS yuzeyleri sessiz, operasyonel, yogun ama okunabilir olmalidir.
+Read the applicable [canonical procedure](docs/process/execution-ui.md#uiux-disiplini) before this work.
 
-UI/prototype/redesign/refactor veya workflow-heavy Store/Admin yuzeyi varsa
-`docs/process/product-experience-principles.md` zorunlu urun deneyimi
-referansidir. Bu dosya her gorev icin besinci read-first dokumani degildir;
-sadece product experience, sayfa yapisi, interaction, mobil aksiyon veya gorsel
-kalite degistiren islerde okunur. Ana kural: clean but premium, decorative
-degil; visually strong ama operationally honest.
-
-Bu tur islerde `docs/process/ui-surface-standard-v1.md` de uygulanir. Bu
-standart shadcn-first component secimi, Button varyant anlamlari, lucide ikon
-sinirlari, semantic token kullanimi, product copy hijyeni ve sayfa anatomisini
-kalici UI sozlesmesi olarak tanimlar.
-
-Store/Admin operasyonel yuzeylerinde
-`docs/process/store-admin-surface-standardization-v1.md` de uygulanir. Guncel
-kanonik yuzey referansi Region Manager prim command-center prototipidir; bu
-referans her sayfayi prim sayfasina cevirmek icin degil, kompakt premium
-yogunluk, sakin tipografi, metrik karti ikon ritmi, shadcn toolbar, drawer,
-dialog, status copy ve mobile davranis kalite citasini sabitlemek icindir.
-
-UI/prototype/redesign/refactor islerinde `design-taste-frontend` / taste-skill
-zorunlu kalite pass'idir. Bu skill tek basina urun karari veya design system
-yerine gecmez; shadcn/ui, Tailwind v4, lucide, AdminSurface/Store primitive,
-gercek veri, role/scope ve workflow kurallarinin ustune anti-slop tasarim
-denetimi olarak uygulanir.
-
-Taste-skill kullanilirken:
-
-- once kisa design read yapilir: yuzey turu, persona, operasyonel yogunluk ve
-  gorsel dil netlesir,
-- landing/marketing varsayilanlari admin/store operasyonel yuzeylerine
-  tasinmaz,
-- generic AI-purple gradient, gereksiz hero, uc esit kart, dekoratif
-  glassmorphism, sahte premium copy ve gostermelik animasyon engellenir,
-- UI kararinin gercek kullanici kararina veya aksiyonuna hizmet edip etmedigi
-  kontrol edilir,
-- mobile/desktop overflow, button contrast, shape consistency, copy kalitesi ve
-  eski UI kalintisi preflight olarak okunur,
-- skill'in dashboard disi notlari baglamli uygulanir; operasyonel product UI'da
-  veri ve workflow dogrulugu her zaman estetik tercihin ustundedir.
-
-- Landing/hero pazarlama dili yok.
-- Broad redesign yok.
-- Nested card ve dekoratif gradient/orb yok.
-- Primary action, loading, empty, error ve recovery state net olur.
-- Mobile overflow ve text overlap kontrol edilir.
-- Accessibility icin label, focus, link/button anlamlari korunur.
-- Copy TR/EN tutarliligi korunur.
-- Kullanici ekraninda ic mimari notu gosterilmez. Route, auth, scope,
-  permission, provider, contract, token, evidence, mock, staging, API, DB,
-  OpenAPI, queue, Redis veya benzeri uygulama-ici teknik aciklamalar sadece
-  docs/evidence/dev tooling icinde kalir; sayfa refactorlerinde bu metinler
-  temizlenir veya kullanici diline cevrilir.
-- Sayfa UI refactoru yapildiginda eski UI kalintisi birakilmaz. Eski
-  hero-card, metric-card sisirmesi, buyuk gradient blok, nested card, uzun
-  aciklama paragraflari, placeholder/handoff metni, dev/debug aksiyonu,
-  scaffold/readiness/evidence dili veya eski sayfa iskeleti refactor edilen
-  yuzeyde gorunur kalamaz.
-- Refactor edilen sayfa yeni sade iskelete iner: kucuk baslik, gerekli durum
-  veya filtre satiri, tek net primary action, ana tablo/liste/form ve kisa
-  loading/empty/error state. Bu iskelete uymayan eski bolumler ya kaldirilir
-  ya da acikca ayri kapsam olarak park edilir; park edilen parca varsa sayfa
-  tamamen refactor edilmis sayilmaz.
-- Sayfa yapisi redesign kapsamindaysa `shadcn/ui` componentleri, Tailwind v4
-  utility/token yapisi ve `lucide-icons/lucide` ikonlari zorunlu stacktir.
-  Hazir olmayan yuzeylerde once bu stack icin kucuk kurulum/entegrasyon slice'i
-  planlanir; lokal ad hoc component veya ikon dili yeni standart yerine
-  gecemez.
-- Admin sayfa refactorlerinde ortak sayfa iskeleti `AdminSurface*`
-  primitive katmanidir. Yeni veya migrate edilmis admin page dosyalari bu
-  katmana baglanir; henuz migrate edilmemis yuzeyler sadece acik exception
-  allowlist ile eski primitive/class dilini gecici olarak tasiyabilir.
-- Plum Glacier pilot dili kullaniliyorsa renk/token daginikligi geri
-  getirilmez. Yeni pilot/refactor sayfalari eski krem/teal foundation
-  gorunumuyle plum/glacier iskeleti karistirmaz.
-- UI pilotlarinda aktif renk sozlugu
-  `docs/prototypes/plum-glacier-token-set-v1.md` dosyasidir. Bu karar global
-  tema rewrite'i degildir; login ve sonraki yeni/refactor edilen sayfalarda
-  tek token setiyle ilerleme disiplinidir.
-- Kullanici bir HTML/prototip ciktisini "bunu sayfaya gecir", "birebir olsun"
-  veya benzeri sekilde onayladiginda prototip artik sadece ilham degil,
-  implementation contract'tir. Uretim sayfasi mevcut eski iskeletin
-  giydirilmis hali olarak kalamaz. Layout, renk paleti, spacing, satir/kart
-  ritmi, status tone'lari, modal/drawer modeli ve interaction akisi prototipten
-  tasinir; demo-only kontroller, fake veri ve rol switch gibi prototip
-  yardimcilari ise kaldirilir. Gercek veri, role/scope, permission,
-  accessibility, responsive davranis veya eksik backend contract nedeniyle
-  sapma gerekiyorsa bu sapma evidence dosyasinda acikca yazilir.
-- Prototip copy'si production copy contract'idir. Prototipte temiz gorunen
-  baslik, filtre, status, metrik, drawer, empty/error ve confirmation metinleri
-  production'da internal/source/scope/debug diliyle degistirilemez. Rol,
-  permission, eksik veri veya backend contract nedeniyle fark gerekiyorsa bu
-  fark uygulama tamam denmeden once kayda gecirilir.
-- Prototype-to-product UI slice'i desktop ve mobile screenshot karsilastirmasi
-  olmadan bitmis sayilmaz. Screenshot prototiple maddi olarak uyusmuyorsa
-  "yaklasti" yeterli degildir; sayfa tekrar duzeltilir veya hangi urun/contract
-  sebebiyle birebir tasinamadigi acik stop notu olarak verilir.
-
-Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
-
-- Redesign once data envanteriyle baslar: hangi API/view-model alani, hangi
-  rol, hangi KPI/aksiyon/rank gorunecek netlesmeden layout uretilmez.
-- Gorunen her metrik, aksiyon ve onerinin gercek veri kaynagi olmalidir.
-  Kaynak yoksa motivasyonel/coaching metni, fake todo veya temsili skor
-  yazilmaz; bolum ya gizlenir ya da dogru empty state alir.
-- Operasyonel dashboard ilk viewportta kompakt olmalidir: kisa baslik,
-  gerekli filtre, sinirli KPI kartlari, anlasilir trend ve data-driven action
-  listesi. Uzun aciklama havuzlari ve cok parcali bilgi bloklari dagitilmaz.
-- KPI kartlari tek basina anlamli olur: ana deger, hedef/ilerleme, durum,
-  rank veya kapsam, varsa weight/puan katkisi ayni ritimde verilir. Yuzde,
-  puan ve siralama bilgisi alelade chip/bar olarak dagitilmaz.
-- Chart karari mobile-first verilir. Mobilde anlasilmayan aylik/haftalik
-  grafik desktopta da dogru sayilmaz; checkpoint, tarih etiketi ve ozet copy
-  veri okumayi kolaylastirmalidir.
-- Sidebar/toolbar refactoru role-aware olmak zorundadir. Kullanici rolune
-  tanimli olmayan sayfa navigasyonda gorunmez; mevcut route guard ile toolbar
-  listesi birlikte kontrol edilir.
-- Eski UI kalintisi sadece CSS rengi degildir. Eski class, eski hero iskeleti,
-  eski copy, eski loading/empty state, rol disi link ve debug/handoff metni de
-  kalinti sayilir.
-- Store sayfa refactorlerinde final consistency pass zorunludur: aktif Store
-  route'larinda eski primitive/class/copy taranir, role disi toolbar linkleri
-  kontrol edilir, parked route istisnalari acikca belgelenir, mobil/desktop
-  verification kosulur ve current-state/evidence guncellenir.
-- Parked Store route'lari sessizce yeni urun UI'ina alinmaz. Bir route ancak
-  owner onu acikca kapsamladiginda ve real data/role/workflow contract'i
-  tanimlandiginda productize edilir. `/store/incentives` bu kosulu daha sonra
-  Sales Target Incentive V1 ile saglamistir; artik parked route ornegi degildir.
+Start with [.agents/skills/hr-axis-ui/SKILL.md](.agents/skills/hr-axis-ui/SKILL.md).
+It routes relevant sections of `docs/process/product-experience-principles.md`,
+`docs/process/ui-surface-standard-v1.md` and
+`docs/process/store-admin-surface-standardization-v1.md`.
+Keep the approved calendar, real data, roles, accessibility and prototype parity.
 
 ### Prototype to Product
 
-HTML/prototype begenilmis olsa bile product implementation sayilmaz. Product'a
-tasinmadan once su pass zorunludur:
-
-- Production-bound prototype runtime: Kullanici prototipi "birebir", "tam
-  implement" veya "sayfaya gecir" diyerek production beklentisine cevirdiyse
-  kabul artefakti standalone HTML olamaz. Store/Admin yuzeyleri icin kabul
-  edilecek prototip React + proje shadcn/ui + Tailwind v4 `tw:` + lucide +
-  AdminSurface/StoreSurface primitive katmani icinde uretilir. HTML sadece
-  konsept eskizidir; production parity claim'i icin once ayni rhythm shared
-  primitive veya app-ici slice'a tasinir.
-- Production-contract faithful prototype: UI prototipi varsayilan olarak yeni
-  feature onerisi degildir; mevcut production route/component/API/query/model,
-  role/scope, state ve workflow contract'inin daha iyi gorsellestirilmesidir.
-  Prototip uretmeden once hedef yuzeyin route'u, component'i, veri contract'i,
-  aksiyonlari, role gorunurlugu ve loading/empty/error/access state'i okunur.
-  Prototipte mevcut projede olmayan metric, filtre, tarih semantigi, sosyal
-  etkilesim, notification, detail action, media upload, workflow adimi veya
-  backend alan gerekiyorsa bu parca acikca `contract-discovery / future idea`
-  olarak etiketlenir ve kullanici ayrica kapsamlamadan product
-  implementation'a tasinmaz.
-- Taste-skill pass'i: design read, density, operasyonel karar akisi,
-  anti-slop preflight, mobile/desktop kalite ve copy denetimi yapildi mi?
-- Gercek veri mapping'i: her gorunen metrik, liste, status ve aksiyon hangi
-  API/query/model/config alanindan geliyor?
-- Role matrix: hangi rol hangi sekme, toolbar item, route ve aksiyonu gorecek?
-- Contract check: yeni API shape gerekiyor mu, yoksa mevcut contract yeterli mi?
-- State modeli: loading, empty, error, access denied ve partial-data durumlari
-  nasil gorunecek?
-- Responsive QA: desktop ve mobile viewportta text overflow, yatay kayma,
-  buton/toolbar tasmasi ve modal kullanilabilirligi kontrol edildi mi?
-- Eski UI cleanup: eski class, copy, loading/empty state, debug/handoff metni ve
-  role disi navigation temizlendi mi?
-- Verification: targeted Playwright/component/backend test veya bilincli
-  docs-only karar PR'da yazildi mi?
-
-Bu pass tamamlanmadan prototype tasarimi "bitti" sayilmaz; sadece taslak veya
-visual direction sayilir.
-
-UI iyilestirmesi business workflow degistirmez.
+Read [the parity contract](docs/process/execution-ui.md#prototype-to-product).
 
 ## Refactor Disiplini
 
-Refactor icin gerekce gerekir:
-
-- somut product/risk slice dokunuyor,
-- dosya siniri gercekten review zorlastiriyor,
-- davranis korunabiliyor,
-- test kapsami var,
-- rollback net.
-
-Sadece satir sayisi yuksek diye mekanik refactor trenine donulmez.
+Read the applicable [canonical procedure](docs/process/execution-maintenance.md#refactor-disiplini) before this work.
 
 ## Dosya Satir Prensipleri
 
-Satir sayisi tek basina kalite olcusu degildir, ama reviewability ve
-maintainability icin erken uyari sinyalidir. Bu limitler soft guardrail'dir:
-asildiginda otomatik rewrite degil, Sokrates triage gerekir.
+Read the applicable [canonical procedure](docs/process/execution-maintenance.md#dosya-satir-prensipleri) before this work.
 
-File Size Guard V1 bu prensibi otomatik kontrol eder. Guard
-`scripts/file-size-guard.test.mjs` icindedir ve `npm.cmd run test:scripts`
-ile calisir.
-
-Kural:
-
-- Yeni aktif source dosyalari standart limitleri asamaz.
-- Mevcut buyuk dosyalar frozen baseline olarak kalabilir, ama buyuyemez.
-- Bir baseline dosyasi kuculup standart limite girerse exception kaldirilir.
-- Limit asimi gerekiyorsa once Sokrates triage yapilir: gerekce, alternatif,
-  rollback ve dogrulama netlesmeden guard gevsetilmez.
-- Generated OpenAPI/type dosyalari guard disindadir; source generator dosyalari
-  generated sayilmaz ve baseline ile dondurulur.
-
-Genel kural:
-
-- Yeni dosyalar mumkunse 300 satirin altinda kalir.
-- 500 satir uzeri dosyada sorumluluk siniri tekrar sorgulanir.
-- 800 satir uzeri dosya icin yeni ekleme yapmadan once extraction firsati
-  aranir.
-- 1200 satir uzeri dosyada dogrudan buyutme yerine planli split/inventory
-  tercih edilir.
-- 2000 satir uzeri dosya "kritik reviewability debt" sayilir; sadece cok
-  zorunlu bugfix yapilir veya once refactor plani cikarilir.
-
-Frontend hedefleri:
-
-- React page/container: hedef 500-700 satir; 900 uzeri split adayi.
-- React component: hedef 200-300 satir; 450 uzeri split adayi.
-- Hook: hedef 150-250 satir; 350 uzeri sorumluluk siniri sorgulanir.
-- Pure model/util/reducer: hedef 150-300 satir; 400 uzeri bolunur.
-- E2E spec: hedef 500-800 satir; buyurse fixture/helper ayirma dusunulur.
-- CSS entry dosyasi: hedef import/entry rolu; 250 satir uzeri sorgulanir.
-- CSS partial/module: hedef 300-500 satir; 700 uzeri bolunur.
-
-Backend hedefleri:
-
-- Controller: hedef 200-350 satir; 500 uzeri endpoint boundary sorgulanir.
-- Service/application file: hedef 400-700 satir; 900 uzeri domain/use-case
-  boundary arastirilir.
-- Repository facade: hedef 500-800 satir; 1000 uzeri read/write/domain split
-  adayi.
-- Repository implementation/helper: hedef 300-600 satir; 800 uzeri split adayi.
-- DTO/schema/type dosyalari: hedef 200-400 satir; 600 uzeri domain bazli
-  bolunur.
-- Test file: hedef 500-900 satir; 1000 uzeri fixture/builder/helper ayirma
-  dusunulur.
-
-Istisnalar:
-
-- Generated OpenAPI/type dosyalari.
-- Lockfile'lar.
-- Snapshot veya fixture-heavy dosyalar.
-- Migration history dosyalari.
-- Bilerek tek yerde tutulan decision/roadmap dokumanlari.
-
-Bu istisnalar bile okunabilirlik veya review zorlugu yaratirsa belgeyle
-aciklanir; fakat sirf satir sayisi icin davranis riski tasiyan refactor
-yapilmaz.
+File Size Guard V1 is enforced by `scripts/file-size-guard.test.mjs`; no baseline or exception changes are authorized by this extraction.
 
 ## What Next Disiplini
 

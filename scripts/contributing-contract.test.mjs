@@ -74,7 +74,12 @@ test('contributing contract requires current-state merge closeout', () => {
 })
 
 test('operating documents route readers through live canonical Markdown links', () => {
-  const paths = ['AGENTS.md', 'CONTRIBUTING.md', 'sokrates.md', 'discipline.md', 'current-state.md']
+  const paths = [
+    'AGENTS.md', 'CONTRIBUTING.md', 'sokrates.md', 'discipline.md', 'current-state.md',
+    'docs/process/execution-release.md', 'docs/process/execution-ui.md',
+    'docs/process/execution-maintenance.md', 'docs/process/decision-risk-reference.md',
+    '.agents/skills/hr-axis-ui/SKILL.md', 'SKILL/ui-ux-pro-max/SKILL.md',
+  ]
   requireText(readContributing(), 'AGENTS.md#reading-map')
   requireText(readFileSync('sokrates.md', 'utf8'), 'AGENTS.md#reading-map')
   for (const path of paths) {

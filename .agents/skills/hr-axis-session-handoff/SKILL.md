@@ -22,6 +22,10 @@ Do not select a branch or infer deployment readiness from a historical PR note.
 - discipline.md: durable execution rules; sokrates.md: decision/risk rules.
 - Relevant docs shelf: detailed plans, receipts and historical evidence.
 
+Keep the active handoff below 6,500 characters, with Now/Next/Park/Stop,
+verification date and current external gates. Archive superseded narratives;
+do not copy the archive back into a resume. Follow the task row in AGENTS.md.
+
 Record exact references and distinguish verified facts from assumptions.
 Never include secrets, private data, chat transcripts or complete successful
 logs. Do not turn a handoff into unrelated code edits or claim missing live proof.

@@ -414,7 +414,7 @@ test('intake stays pre-runtime while current state records the bounded private a
   )
   requireText(currentState, contractPath)
   requireText(
-    currentState,
+    readText('docs/history/current-state-before-context-budget-2026-09-18.md'),
     'The connector readiness evidence contract is approved; it defines evidence collection requirements but contains no evidence instance.',
   )
   requireText(

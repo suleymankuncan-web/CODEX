@@ -211,7 +211,8 @@ test('handoff and intake preserve the contract boundary around private activatio
     'does not authorize live API access, migration, scheduling, Docker runtime changes, deployment, or Excel replacement',
   )
   requireText(currentState, contractPath)
-  requireText(currentState, 'The network-free pure adapter, typed daily component storage, and atomic replacement repository are present without projecting into canonical KPI scoring.')
+  const historicalState = readText('docs/history/current-state-before-context-budget-2026-09-18.md')
+  requireText(historicalState, 'The network-free pure adapter, typed daily component storage, and atomic replacement repository are present without projecting into canonical KPI scoring.')
   requireText(currentState, 'Reusable live connector mapping, hosted scheduling, and Excel replacement remain suspended.')
   requireText(currentState, 'The private-server schedule and canonical KPI projection described above are active only for the approved company deployment.')
 })

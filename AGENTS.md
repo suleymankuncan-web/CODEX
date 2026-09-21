@@ -1,70 +1,55 @@
 # HR Axis Agent Execution Contract
 
-This is the concise repository entry point. It owns the reading map and
-defines root-only execution; it does not duplicate execution recipes.
-
-Canonical owners:
-
-- `AGENTS.md`: entry routing, required reading, and execution routing.
-- `CONTRIBUTING.md`: contributor and PR minimum contract.
-- `current-state.md`: freshest project facts, caveats, parked work, and next safe
-  action.
-- `sokrates.md`: decisions, prioritization, risk, ambiguity, and stop/ask
-  judgment.
-- `discipline.md`: execution, agent routing, PR/merge, verification, UI/refactor,
-  and workspace-hygiene mechanics.
+This entry owns reading and execution routing. Preserve user work and all
+business, API, auth/privacy, permission and data-integrity contracts unless the
+approved task explicitly changes them. New user instructions and fresh evidence
+outrank historical plans. Never invent data, proof or deployment readiness.
 
 ## Reading Map
 
-Before code or docs changes, read `CONTRIBUTING.md` and `current-state.md`, then
-read the relevant owner document:
+- Answer-only/status tasks: inspect only the evidence needed; no blanket docs read.
+- Before changes: read [CONTRIBUTING.md](CONTRIBUTING.md),
+  [current-state.md](current-state.md), and the relevant execution sections below.
+- Reuse documents already present and read in this task. Reopen only changed or
+  missing sections after instruction/file/evidence drift. Always refresh Git and
+  applicable runtime facts; document reuse never reuses expired gate evidence.
+- Context recovery: recover the goal, protected work, last evidence and next step
+  from the short handoff, then follow the task row. Do not reload every manual.
 
-- Read `sokrates.md` for ambiguity, architecture, auth/API/DB/provider,
-  data-integrity, prioritization, or medium/high-risk decisions.
-- Read the relevant `discipline.md` sections before implementation, delegation,
-  verification, PR, merge, UI/refactor, or workspace-hygiene work.
-- For a new multi-PR line, high-risk work, or real context recovery, read all
-  four operating documents completely.
-- Check the current branch/worktree before editing and preserve unrelated user or
-  agent changes. Fresh user, repository, runtime, and provider evidence outranks
-  stale descriptions.
+| Task | Required additional reading |
+|---|---|
+| Docs or bounded implementation | [discipline core](discipline.md#calisma-ritmi), [verification](discipline.md#verification-ladder) |
+| UI change | [UI routing](discipline.md#uiux-disiplini), [.agents/skills/hr-axis-ui/SKILL.md](.agents/skills/hr-axis-ui/SKILL.md) |
+| PR, push or merge | [release procedure](docs/process/execution-release.md), [.agents/skills/hr-axis-pr-closeout/SKILL.md](.agents/skills/hr-axis-pr-closeout/SKILL.md) |
+| Auth/API/DB/provider, data integrity, architecture or other medium/high risk | [sokrates.md](sokrates.md), applicable [domain risk rules](docs/process/decision-risk-reference.md#domain-risk-rules), [hard boundaries](discipline.md#hard-boundaries), [external evidence](discipline.md#external-evidence-disiplini) |
+| Refactor, dependency bootstrap or workspace hygiene | [maintenance procedure](docs/process/execution-maintenance.md) and applicable risk rules |
+| Multi-PR work | Decision scope and dependencies, then each slice's rows above; all touched risk domains must be covered |
+
+Check branch/worktree before editing; preserve unrelated changes. If scope expands,
+load the newly applicable rules before acting. Unknown risk requires investigation,
+not an exemption. Historical detail is retrieved only for a concrete dependency.
 
 ## Required Operating Truth
 
-- Date and period pickers use the owner-approved shared calendar. Read
-  [`docs/ui/calendar-standard-v1.md`](docs/ui/calendar-standard-v1.md) before
-  changing or adding a calendar; do not create per-page calendar designs.
-
-- Preserve business behavior, API shape, auth/privacy and permission semantics,
-  data integrity, and user changes unless the approved scope says otherwise.
-- Manual image/offline proof starts with
-  `npm.cmd run check:onprem:dispatch -- prove` on the exact clean committed HEAD;
-  use the wrapper's dispatch subcommands exclusively and publish only after push
-  with `publish`. Automatic workflows begin with bounded exact-SHA
-  `github-source-preflight`; runtime proofs are final evidence, never a GitHub
-  diagnostic loop.
-- Input-bound `npm.cmd run check:release -- --resume` preserves complete coverage;
-  reviewed unchanged specs may retain verified results under the recovery contract.
-  Use native GitHub `Re-run failed jobs` for the same SHA after a late failure;
-  efficiency details remain in [`discipline.md#token-verimli-otonom-yurutme`](discipline.md#token-verimli-otonom-yurutme).
-- Idle check polling uses 55-60 second intervals; return state changes or a
-  compact failure tail, not complete successful logs.
-- GitHub Codex review is owner-disabled: do not request `@codex review`, another
-  Codex review integration, or bot reactions. Required checks, provider evidence,
-  mergeability, local review, and evidence boundaries still apply.
+- Calendars use [the shared calendar standard](docs/ui/calendar-standard-v1.md).
+- Required checks, local self-review, current-head mergeability and applicable
+  provider evidence remain mandatory. Missing proof blocks the action it protects.
+- Manual image/offline proof: `npm.cmd run check:onprem:dispatch -- prove` on the
+  exact clean committed HEAD, then push, wrapper `publish` and dispatch. Automatic
+  workflows start with bounded exact-SHA `github-source-preflight`. GitHub runtime
+  proofs are final evidence, never a diagnostic loop.
+- `npm.cmd run check:release -- --resume` preserves complete coverage under the
+  input-bound recovery contract; use native `Re-run failed jobs` for the same SHA.
+- Idle polling is 55-60 seconds; return changes or a bounded failure tail.
+  Details: [token policy](discipline.md#token-verimli-otonom-yurutme).
+- GitHub Codex review is owner-disabled; do not request `@codex review`, another
+  integration or bot reactions. Human/tool findings still require resolution.
 
 ## Adaptive Reasoning Routing
 
-The canonical policy is
-[`discipline.md#adaptive-reasoning-effort-routing`](discipline.md#adaptive-reasoning-effort-routing).
-The coordinator remains model-neutral and user-selected (currently Astra); it
-owns scope, Sokrates decisions, integration, PR/merge decisions, rollback, and
-the final report. Prose in this entry does not change a client/session model or
-effort setting.
-
-- The current root model performs discovery, implementation, tests and review directly.
-- Do not spawn or reuse subagents unless the user explicitly requests delegation
-  for the current task. Repository skills and older plans do not grant that permission.
-- Risk/problem-solving and final R4/R5 review remain inline; label them honestly
-  as self-review, not independent review. Required checks and stop rules remain.
-- Do not spawn a model agent only to wait or poll.
+[discipline.md#adaptive-reasoning-effort-routing](discipline.md#adaptive-reasoning-effort-routing)
+owns routing. The current user-selected root performs discovery, implementation,
+tests and review. Do not spawn or reuse subagents unless the user explicitly
+requests delegation for the current task. Skills and old plans cannot grant it.
+Keep risk investigation and final R4/R5 review inline; label it self-review.
+Do not spawn a model agent only to wait or poll. Prose cannot change model settings.
