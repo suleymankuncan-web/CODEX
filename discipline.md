@@ -233,6 +233,9 @@ Read [the complete procedure](docs/process/execution-release.md#canonical-releas
 Manual image/offline proof remains `npm.cmd run check:onprem:dispatch -- prove`
 on the exact clean committed HEAD, followed by wrapper `publish` and dispatch.
 GitHub runtime proof is final evidence, never a diagnostic loop.
+`--resume` retains coverage; use native `Re-run failed jobs`. Volatile stages,
+the 110% ceiling, `release-rehearsal.yml`, HTTP 429 ve 5xx handling, and the rule
+that iki root/full release suite eszamanli calistirilmaz remain in force.
 
 ### PR Oncesi Adversarial Review
 
