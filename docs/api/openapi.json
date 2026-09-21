@@ -23014,6 +23014,7 @@
                 "positionId",
                 "positionCode",
                 "positionName",
+                "accountStatus",
                 "updatedAt"
               ],
               "properties": {
@@ -23097,6 +23098,16 @@
                 "updatedAt": {
                   "type": "string",
                   "nullable": true
+                },
+                "accountStatus": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "pending",
+                    "active",
+                    "inactive",
+                    "failed"
+                  ]
                 }
               }
             }
@@ -25818,6 +25829,7 @@
                   "positionId",
                   "positionCode",
                   "positionName",
+                  "accountStatus",
                   "updatedAt"
                 ],
                 "properties": {
@@ -25901,6 +25913,16 @@
                   "updatedAt": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "accountStatus": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "pending",
+                      "active",
+                      "inactive",
+                      "failed"
+                    ]
                   }
                 }
               }

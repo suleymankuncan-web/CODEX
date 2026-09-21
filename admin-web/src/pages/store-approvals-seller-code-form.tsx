@@ -99,6 +99,9 @@ export function SellerCodeRequestForm(input: {
             </label>
             <Input required
               id="seller-first-name"
+              autoCapitalize="words"
+              autoComplete="given-name"
+              className="tw:normal-case"
               value={input.sellerFirstName}
               onChange={(event) => input.onFirstNameChange(event.target.value)}
               placeholder={input.t('storeApprovals.firstNamePlaceholder')}
@@ -111,6 +114,9 @@ export function SellerCodeRequestForm(input: {
             </label>
             <Input required
               id="seller-last-name"
+              autoCapitalize="words"
+              autoComplete="family-name"
+              className="tw:normal-case"
               value={input.sellerLastName}
               onChange={(event) => input.onLastNameChange(event.target.value)}
               placeholder={input.t('storeApprovals.lastNamePlaceholder')}

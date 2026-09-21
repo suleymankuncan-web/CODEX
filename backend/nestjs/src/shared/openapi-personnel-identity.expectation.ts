@@ -18,6 +18,10 @@ export function expectPersonnelIdentityOpenApi(
             properties: expectValue.objectContaining({
               nationalIdLast4: { type: "string", nullable: true },
               phoneNumber: { type: "string", nullable: true },
+              accountStatus: {
+                type: "string",
+                enum: ["none", "pending", "active", "inactive", "failed"],
+              },
             }),
           }),
         }),

@@ -171,6 +171,7 @@ export function mapPersonnelMaster(item: {
   position_id: string | null;
   position_code: string | null;
   position_name: string | null;
+  account_status: "none" | "pending" | "active" | "inactive" | "failed";
   updated_at?: string;
 }) {
   const firstName = item.first_name.trim();
@@ -198,6 +199,7 @@ export function mapPersonnelMaster(item: {
     positionId: item.position_id,
     positionCode: item.position_code,
     positionName: item.position_name,
+    accountStatus: item.account_status,
     updatedAt: item.updated_at ?? null,
   };
 }
