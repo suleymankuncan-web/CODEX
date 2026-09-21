@@ -13,6 +13,7 @@ import {
   validateOnpremKeycloakContract,
 } from './onprem-keycloak-contract.mjs'
 import { NETTY_PATCHES } from './onprem-keycloak-netty-patch.mjs'
+import { BOUNCY_CASTLE_PATCHES } from './onprem-keycloak-bouncycastle-patch.mjs'
 
 const read = (path) => readFileSync(path, 'utf8')
 
@@ -77,6 +78,26 @@ test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with chec
   }
   assert.match(dockerfile, /ARG NODE_BUILD_IMAGE=node:24-trixie-slim@sha256:[a-f0-9]{64}/)
   assert.match(dockerfile, /RUN node \/patch\/download\.mjs/)
+})
+
+test('ONP-3B Keycloak image replaces the vulnerable Bouncy Castle 1.84 family with checksum-pinned 1.85 artifacts', () => {
+  const dockerfile = input().keycloakDockerfile
+  const expectedArtifacts = ['bcprov-jdk18on', 'bcpkix-jdk18on', 'bcutil-jdk18on']
+  const expectedCopies = [
+    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcprov-jdk18on-1.84.jar',
+    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/bin/client/lib/bcprov-jdk18on-1.84.jar',
+    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcpkix-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcpkix-jdk18on-1.84.jar',
+    'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcutil-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcutil-jdk18on-1.84.jar',
+  ]
+
+  assert.deepEqual(BOUNCY_CASTLE_PATCHES.map((artifact) => artifact.artifact), expectedArtifacts)
+  for (const artifact of BOUNCY_CASTLE_PATCHES) {
+    assert.match(artifact.sha256, /^[a-f0-9]{64}$/)
+    assert.equal(artifact.url, `https://repo.maven.apache.org/maven2/org/bouncycastle/${artifact.artifact}/1.85/${artifact.artifact}-1.85.jar`)
+  }
+  assert.match(dockerfile, /COPY scripts\/onprem-keycloak-bouncycastle-patch\.mjs \/patch\/download-bouncycastle\.mjs/)
+  assert.match(dockerfile, /node \/patch\/download-bouncycastle\.mjs/)
+  for (const copy of expectedCopies) assert.ok(dockerfile.includes(copy), copy)
 })
 
 test('identity lifecycle service account can read realm roles before mapping them', () => {

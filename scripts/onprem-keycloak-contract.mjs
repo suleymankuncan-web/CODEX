@@ -140,6 +140,15 @@ export function validateOnpremKeycloakContract(input) {
   fail(hasImmutableImage(envValue(input.envTemplate, 'KEYCLOAK_BASE_IMAGE')), 'env.template must pin the exact upstream Keycloak 26.7.3 base digest')
   fail(/image:\s*\$\{KEYCLOAK_IMAGE:\?set an immutable built Keycloak image reference\}/.test(keycloak), 'Keycloak service must use the immutable built image supplied by the release env')
   fail(/ARG KEYCLOAK_BASE_IMAGE=.*ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54/.test(input.keycloakDockerfile) && /kc\.sh build --db=postgres --health-enabled=true --metrics-enabled=true/.test(input.keycloakDockerfile) && /var\/lib\/keycloak-bootstrap/.test(input.keycloakDockerfile) && /chown 1000:1000/.test(input.keycloakDockerfile), 'Keycloak image must be built and optimized from the pinned upstream base with a writable private state mountpoint')
+  fail(
+    /COPY scripts\/onprem-keycloak-bouncycastle-patch\.mjs \/patch\/download-bouncycastle\.mjs/.test(input.keycloakDockerfile)
+      && /node \/patch\/download-bouncycastle\.mjs/.test(input.keycloakDockerfile)
+      && /\/patch\/bouncycastle\/bcprov-jdk18on\.jar \/opt\/keycloak\/lib\/lib\/main\/org\.bouncycastle\.bcprov-jdk18on-1\.84\.jar/.test(input.keycloakDockerfile)
+      && /\/patch\/bouncycastle\/bcprov-jdk18on\.jar \/opt\/keycloak\/bin\/client\/lib\/bcprov-jdk18on-1\.84\.jar/.test(input.keycloakDockerfile)
+      && /\/patch\/bouncycastle\/bcpkix-jdk18on\.jar \/opt\/keycloak\/lib\/lib\/main\/org\.bouncycastle\.bcpkix-jdk18on-1\.84\.jar/.test(input.keycloakDockerfile)
+      && /\/patch\/bouncycastle\/bcutil-jdk18on\.jar \/opt\/keycloak\/lib\/lib\/main\/org\.bouncycastle\.bcutil-jdk18on-1\.84\.jar/.test(input.keycloakDockerfile),
+    'Keycloak image must replace the complete vulnerable Bouncy Castle 1.84 provider family with checksum-pinned 1.85 artifacts',
+  )
   fail(!/start-dev/i.test(input.compose) && !/start-dev/i.test(input.bootstrap), 'production Compose and bootstrap must never use start-dev')
   fail(!/KEYCLOAK_ADMIN(?:_PASSWORD)?\s*:/i.test(input.compose) && !/admin\s*[:=]\s*admin/i.test(input.compose), 'default Keycloak admin credentials must be absent')
   fail(/start\s+--optimized/.test(keycloak), 'Keycloak must use optimized production startup')
