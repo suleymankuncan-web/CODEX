@@ -365,7 +365,7 @@ test('status selector requires latest exact owner success and rejects stale/fore
 
 test('repository operating docs make the local proof wrapper mandatory before GitHub evidence', () => {
   const agents = readFileSync('AGENTS.md', 'utf8')
-  const discipline = readFileSync('discipline.md', 'utf8')
+  const discipline = readFileSync('docs/process/execution-release.md', 'utf8')
   for (const text of [agents, discipline]) {
     assert.match(text, /check:onprem:dispatch.*prove/s)
     assert.match(text, /publish/s)

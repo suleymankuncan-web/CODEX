@@ -5,8 +5,9 @@ description: Check and close HR Axis PRs using exact-head CI evidence, authorize
 
 # HR Axis PR closeout
 
-Read the repository AGENTS.md reading map and discipline.md PR, verification and
-merge sections. They own execution and delegation policy; this skill grants no
+Read the repository AGENTS.md reading map, the applicable verification ladder,
+and [release/merge procedure](../../../docs/process/execution-release.md).
+Reuse already-read unchanged sections. They own execution policy; this skill grants no
 additional mutation, deployment or subagent authority.
 
 ## Before merge

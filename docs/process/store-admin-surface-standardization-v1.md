@@ -209,7 +209,7 @@ Use this process whenever a Store/Admin prototype is requested.
     mapping, formatting, drawer internals, and table/list components into the
     owning feature folder.
 
-The taste-skill is an anti-slop audit only. It does not define dashboards, data
+The project `hr-axis-ui` skill is the bounded operational quality entry. Marketing taste recipes do not define dashboards, data
 tables, or multi-step product UI and cannot replace the selected archetype
 recipe.
 

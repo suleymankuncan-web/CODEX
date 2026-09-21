@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-09-07
+Last verified: 2026-09-18
 
 Sokrates is the repository's decision-quality system. Apply it automatically and
 proportionally: move quickly when work is safe, become skeptical when risk is
@@ -40,16 +40,7 @@ from memory or stale history.
 
 ## Operating Modes
 
-- **Scout:** inspect and inventory without editing.
-- **Planner:** turn evidence into a small, reversible slice with risk, rollback,
-  acceptance, and verification.
-- **Builder:** implement only a ready, bounded slice.
-- **Reviewer:** inspect scope, behavior, security, regression, and test gaps.
-- **Finisher:** use the canonical discipline closeout when PR/merge work is
-  authorized.
-
-If the mode changes mid-turn, say why. A review or plan is evidence, not owner
-authorization for a new behavior, provider, permission, or production action.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#operating-modes).
 
 ## Triage Gate
 
@@ -78,151 +69,43 @@ Unless the user explicitly changes them:
 
 ## Socratic Question Loop
 
-For strategic, architectural, refactor, or high-risk work:
-
-1. State the claim: what are we being asked to do or believe?
-2. Name the assumptions and label each as proven, inferred, or unverified.
-3. Inspect repository and applicable runtime/provider evidence.
-4. Test the strongest counterexample and likely failure path.
-5. Shrink the claim to the smallest safe, reversible slice.
-6. Define failure signals, stop conditions, rollback, and acceptance.
-7. Choose: proceed, narrow, gather evidence, ask, park, or stop.
-
-Do not turn this loop into ceremony for a tiny mechanical documentation edit.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#socratic-question-loop).
 
 ## Definition Of Ready
 
-A slice is ready only when its problem, why-now, success signal, intended files or
-responsibility, non-goals, protected areas, risk, acceptance criteria,
-verification path, and two-way/one-way-door classification are clear enough to
-review. If not, inventory the state, update a plan, ask one blocking question,
-park it with exact missing evidence, or choose a smaller reversible slice.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#definition-of-ready).
 
 ## Decision Record Format
 
-For medium/high-risk decisions, record concisely:
-
-- **Decision:** what will be done and what will not.
-- **Why now:** user/business value, blocker, or risk reduced.
-- **Evidence:** repo, test, runtime, user preference, inference, or assumption.
-- **Counterargument:** strongest reasonable case against it.
-- **Risk and door:** LOW/MEDIUM/HIGH and two-way, one-way, or near-one-way.
-- **Scope:** slice, branch, PR, batch, spike, park, or stop.
-- **Guardrails:** behavior, auth/privacy, API, data, provider, and user changes
-  that are forbidden.
-- **Acceptance and verification:** the signals tied to the goal.
-- **Change-my-mind trigger and next action:** what stops/splits/reverses the plan.
-
-Keep the record short enough for a cold reader to audit.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#decision-record-format).
 
 ## Decision Quality Score
 
-Use this calibration for medium/high-risk choices:
-
-- 0: unclear goal, assumptions, rollback, or verification.
-- 1: goal is clear but evidence or verification is weak.
-- 2: goal, scope, risk, and tests are clear but counterargument/rollback is thin.
-- 3: evidence, counterargument, risk, rollback, and verification are clear.
-- 4: those are clear plus blast radius and runtime/handoff confidence.
-- 5: the next alternative and cost of delay are also compared and the decision
-  survives cold-reader review.
-
-LOW work may proceed at 2; MEDIUM should reach 3; HIGH or one-way-door work should
-reach 4 or stop for evidence; strategic, production, auth/DB/API, or batching
-decisions should aim for 5.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#decision-quality-score).
 
 ## Sokrates Quality Bar
 
-Before an important decision, check evidence discipline, priority/value,
-proportionality, boundary protection, reviewability, verification, rollback,
-freshness, plain communication, and learning from prior misses. Passing tests are
-necessary, not sufficient: the diff, user behavior, evidence level, and skipped
-gates must also be understood.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#sokrates-quality-bar).
 
 ## Self-Audit
 
-Before finalizing a plan or decision, ask: Did I identify the real problem? Separate
-evidence from inference? Test the strongest counterargument? Name what changes my
-mind? Choose the smallest useful reversible step? Protect hard boundaries? Match
-report depth to risk? Avoid reckless speed and ceremonial overthinking? If two or
-more answers are weak, revise before acting.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#self-audit).
 
 ## Prioritization Matrix
 
-When valid paths compete, compare in this order: blocker removal; user/business
-value; risk reduction; dependency unlock; reviewability; rollback clarity;
-verification cost; external-input dependency; and cost of delay. Prefer a smaller
-blast radius and clearer proof when choices are close, unless a real user workflow
-or urgent gate is being harmed.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#prioritization-matrix).
 
 ## Next Best Step Heuristic
 
-Read `current-state.md`, then compare product-value, risk-reduction, blocker,
-cleanup, evidence, and park paths. For each serious candidate state why now, risk,
-cost of doing nothing, smallest first slice, and required evidence. Recommend:
-
-- **Now:** the best immediate slice and why.
-- **Next:** likely follow-up if it succeeds.
-- **Park:** what waits and the exact unpark evidence.
-- **Stop:** the first invalidating condition.
-
-Avoid auth, permission, DB, API-shape, provider, production, and broad architecture
-work without a concrete bug, blocker, user request, or approved plan.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#next-best-step-heuristic).
 
 ## Scope Brake And Blast Radius
 
-Describe work in slices, branches, and PRs. Stop and re-plan when one PR becomes a
-multi-PR line, a batch loses one review story, verification expands risk class,
-external input appears, or the next slice changes the goal. Map frontend, API,
-backend/domain, auth/scope, DB/data, queue, provider/production, tests, docs, and
-release-gate layers. An unexpected auth, DB, API-shape, provider, or production
-layer is a stop-and-replan signal.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#scope-brake-and-blast-radius).
 
 ## Domain Risk Rules
 
-### Auth And Permissions
-
-Default HIGH. Preserve role, session, scope, action-store, and fail-closed
-semantics. Start from existing matrices/tests and include negative cases. Stop if
-access could broaden, denial could weaken, or the actor/portfolio could change.
-
-### API Contracts And Generated Clients
-
-Default MEDIUM, HIGH for auth/write/response-shape changes. Check path, params,
-body, status, response, errors, generated schema/types, wrappers, and contract
-tests. Stop on an unplanned path, status, auth, or response change.
-
-### DB, Migrations, And Data
-
-Default HIGH or one-way-door. Do not add migrations or repair live data without
-explicit scope, rollback, disposable/local smoke, and a recovery plan. Stop when
-rollback needs unplanned manual repair or production data is being used as a
-scratchpad.
-
-### Frontend UX And Product Feel
-
-Default MEDIUM, LOW for isolated copy/layout. Optimize a real operator decision,
-preserve data/workflow semantics, and keep role/accessibility/responsive states
-honest. Stop when polish changes business, permission, API, or data behavior.
-
-### Refactor
-
-LOW to MEDIUM, HIGH when shared auth/API/DB behavior is touched. Require a real
-product or risk reason, preserved behavior, test coverage, and clear rollback;
-stop if new product rules are needed to make the refactor correct.
-
-### CI, Release, And Checks
-
-Treat a failing check as signal. Never bypass, delete, weaken, or hide a gate;
-understand the cause and record intentional skips. The exact-input release,
-coverage, provider, and on-prem mechanics are owned by `discipline.md`.
-
-### External Evidence And Live Providers
-
-Default HIGH. Identify required tokens, targets, approvals, privacy boundaries,
-and rollback. Local code cannot prove live provider, restore, alert, queue, or
-authenticated user behavior. Park unavailable evidence or prepare clearly labelled
-local-only work; never invent a runtime result or expose secrets.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#domain-risk-rules).
 
 ## Evidence Labels And Freshness
 
@@ -235,17 +118,11 @@ blocked until its required input exists.
 
 ## Counterargument And Bias Checks
 
-For medium/high-risk work, ask why this might be wrong, what happens if nothing is
-done, what narrower step gives the same learning, and whether a split improves
-review/rollback/testing. Watch for urgency, novelty, refactor, green-check, batch,
-local-optimum, sunk-cost, and user-pleasing bias. Narrow or ask for alignment when
-one is present.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#counterargument-and-bias-checks).
 
 ## Change-My-Mind Triggers
 
-Before acting, name the diff, failing test, unexpected file/domain, behavior
-change, evidence conflict, or review finding that would force a split, stop, or
-reversal. Do not force the original plan after such a signal.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#change-my-mind-triggers).
 
 ## Canonical Execution Boundary
 
@@ -297,10 +174,7 @@ alignment, stronger evidence, and a recovery plan.
 
 ## Rollback And Recovery
 
-Before medium/high-risk work, know whether one revert is sufficient, generated and
-source files stay in sync, data repair/provider changes are needed, a failed deploy
-could harm users, and what signal triggers rollback. If recovery is unclear, reduce
-scope before implementation.
+Read [the applicable decision rule](docs/process/decision-risk-reference.md#rollback-and-recovery).
 
 ## Report Depth And Overrides
 

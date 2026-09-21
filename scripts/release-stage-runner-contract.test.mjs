@@ -387,7 +387,7 @@ test('release rehearsal keeps Docker proof without repeating backend release pro
 })
 
 test('operating truth permanently defines release resume and native failed-job reuse', () => {
-  const discipline = readText('discipline.md')
+  const discipline = readText('discipline.md') + '\n' + readText('docs/process/execution-release.md')
   const agents = readText('AGENTS.md')
   const contributing = readText('CONTRIBUTING.md')
   const sokrates = readText('sokrates.md')

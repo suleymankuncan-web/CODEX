@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const currentState = readFileSync('current-state.md', 'utf8')
+const archivedState = readFileSync('docs/history/current-state-before-context-budget-2026-09-18.md', 'utf8')
 const archive = readFileSync(
   'docs/history/current-state-through-pr-913-2026-07-09.md',
   'utf8',
@@ -16,19 +17,34 @@ function requireText(text, expected) {
   assert.ok(text.includes(expected), `expected text: ${expected}`)
 }
 
-test('active handoff stays short and points historical detail to the archive', () => {
-  const lineCount = currentState.split(/\r?\n/).length
+function assertActiveHandoff(text) {
+  // Count characters, not lines: long single-line paragraphs are still context.
+  assert.ok([...text.replace(/\r\n/g, '\n')].length <= 6500, 'active handoff exceeds character budget')
+  for (const heading of ['## Now', '## Next', '## Active Evidence Gates', '## Park', '## Stop']) {
+    requireText(text, heading)
+  }
+  for (const boundary of [
+    'Last verified:', 'Conditional Go / Continue', 'Broad production rollout: `No-Go`',
+    'Deployment of this change is not established', 'outside Git',
+    'Reusable live connector mapping, hosted scheduling, and Excel replacement remain suspended.',
+    'default-off and advisory-only', 'no authorized winners/manifests',
+  ]) requireText(text, boundary)
+  assert.doesNotMatch(text, /PDF implementation remains excluded from main|pending PR\/deployment|ONP-3B is active on/)
+}
 
-  assert.ok(lineCount >= 150, `expected a useful handoff, got ${lineCount} lines`)
-  assert.ok(lineCount <= 250, `active handoff grew to ${lineCount} lines`)
+test('active handoff stays bounded and links preserved historical evidence', () => {
+  assertActiveHandoff(currentState)
   requireText(currentState, 'Status: active')
   requireText(currentState, 'Shelf: operating')
+  requireText(currentState, 'docs/history/current-state-before-context-budget-2026-09-18.md')
+  requireText(archivedState, 'Status: historical')
+  requireText(archivedState, 'Superseded by: `current-state.md`')
   requireText(
-    currentState,
+    archivedState,
     'docs/history/current-state-through-pr-913-2026-07-09.md',
   )
   requireText(
-    currentState,
+    archivedState,
     'docs/history/operating-truth-alignment-plan-execution-2026-07-10.md',
   )
   requireText(archive, 'Status: historical')
@@ -38,7 +54,7 @@ test('active handoff stays short and points historical detail to the archive', (
   requireText(transitionArchive, 'Superseded by: `current-state.md`')
 })
 
-test('active handoff records the owner-approved operating truth', () => {
+test('historical owner decisions remain preserved without loading them on resume', () => {
   for (const expected of [
     'Controlled staging/internal pilot: `Conditional Go / Continue`',
     'Broad production rollout: `No-Go`',
@@ -60,12 +76,19 @@ test('active handoff records the owner-approved operating truth', () => {
     'check:release -- --resume',
     'docs/plans/workspace-hygiene-inventory-2026-07-09.md',
   ]) {
-    requireText(currentState, expected)
+    requireText(archivedState, expected)
   }
 
   for (const heading of ['Now:', 'Next:', 'Park:', 'Stop:']) {
-    requireText(currentState, heading)
+    requireText(archivedState, heading)
   }
+})
+
+test('handoff budget cannot be bypassed with one long line or missing safety fields', () => {
+  assert.throws(() => assertActiveHandoff(currentState + 'x'.repeat(6501)))
+  assert.throws(() => assertActiveHandoff(currentState.replace('## Stop', '## Removed')))
+  assert.throws(() => assertActiveHandoff(currentState.replace('Broad production rollout: `No-Go`', 'Broad rollout enabled')))
+  assert.throws(() => assertActiveHandoff(currentState + '\nPDF implementation remains excluded from main'))
 })
 
 test('active handoff does not regain stale archive-only direction', () => {
