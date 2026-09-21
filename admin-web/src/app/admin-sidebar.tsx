@@ -1,15 +1,16 @@
-import { KeyRound, LogIn, Menu, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
+import { ChevronDown, KeyRound, Layers3, LogIn, Menu, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
-import { NavLink } from 'react-router'
+import { NavLink, useLocation } from 'react-router'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import { Button } from '../components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '../components/ui/sheet'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { useLocalization } from '../features/localization/useLocalization'
 import { resolveUserDisplayLabel } from '../lib/display-labels'
-import type { NavDefinition } from './admin-navigation'
+import { groupAdminNavigation, type NavDefinition } from './admin-navigation'
 import { preloadRouteModule } from './route-preloaders'
 
 const adminRouteWarmDedupeMs = 2_000
@@ -36,7 +37,11 @@ export function AdminSidebar(input: {
 }) {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
+  const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const groupedNavigation = groupAdminNavigation(input.allowedAdminNav)
+  const secondaryRouteActive = groupedNavigation.secondary.some((item) => location.pathname.startsWith(item.to))
+  const [secondaryOpen, setSecondaryOpen] = useState(secondaryRouteActive)
   useEffect(() => {
     const desktop = window.matchMedia('(min-width: 761px)')
     const closeOnDesktop = (event: MediaQueryListEvent) => {
@@ -49,7 +54,6 @@ export function AdminSidebar(input: {
   const ToggleIcon = input.collapsed ? PanelLeftOpen : PanelLeftClose
   const roleSummary = formatDisplayRoles(input.authSummary?.user.roleCodes, t('adminShell.noResolvedRoles'))
   const identityLabel = resolveUserDisplayLabel(input.authSummary?.user, t('adminShell.sessionUser'))
-  const primaryNavItems = input.allowedAdminNav.filter((item) => item.id !== 'session')
   const warmAdminRoute = (path: string) => {
     preloadRouteModule(path)
     if (warmingRouteDedupeRef.current.has(path)) {
@@ -82,31 +86,50 @@ export function AdminSidebar(input: {
         </span>
       </div>
   )
+  const renderNavLink = (item: NavDefinition) => {
+    const Icon = item.icon
+
+    return (
+      <NavLink
+        className={({ isActive }) =>
+          `admin-command-nav-link${isActive ? ' admin-command-nav-link-active' : ''}`
+        }
+        key={item.to}
+        onClick={() => setMobileOpen(false)}
+        onFocus={() => warmAdminRoute(item.to)}
+        onPointerDown={() => warmAdminRoute(item.to)}
+        onPointerEnter={() => warmAdminRoute(item.to)}
+        title={t(item.labelKey)}
+        to={item.to}
+      >
+        <span className="admin-command-nav-icon" aria-hidden="true">
+          <Icon size={19} />
+        </span>
+        <span className="admin-command-nav-label">{t(item.labelKey)}</span>
+      </NavLink>
+    )
+  }
   const navigation = (
       <nav className="admin-command-nav" aria-label={t('adminShell.primaryNavigation')}>
-        {primaryNavItems.map((item) => {
-          const Icon = item.icon
-
-          return (
-            <NavLink
-              className={({ isActive }) =>
-                `admin-command-nav-link${isActive ? ' admin-command-nav-link-active' : ''}`
-              }
-              key={item.to}
-              onClick={() => setMobileOpen(false)}
-              onFocus={() => warmAdminRoute(item.to)}
-              onPointerDown={() => warmAdminRoute(item.to)}
-              onPointerEnter={() => warmAdminRoute(item.to)}
-              title={t(item.labelKey)}
-              to={item.to}
-            >
-              <span className="admin-command-nav-icon" aria-hidden="true">
-                <Icon size={19} />
-              </span>
-              <span className="admin-command-nav-label">{t(item.labelKey)}</span>
-            </NavLink>
-          )
-        })}
+        {groupedNavigation.primary.map(renderNavLink)}
+        {groupedNavigation.secondary.length ? (
+          <Collapsible className="admin-command-nav-group" open={secondaryOpen || secondaryRouteActive} onOpenChange={setSecondaryOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                className="admin-command-nav-group-trigger"
+                title={t('adminShell.nav.otherPages')}
+                type="button"
+              >
+                <span className="admin-command-nav-icon" aria-hidden="true"><Layers3 size={19} /></span>
+                <span className="admin-command-nav-label">{t('adminShell.nav.otherPages')}</span>
+                <ChevronDown className="admin-command-nav-group-chevron" aria-hidden="true" size={16} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="admin-command-nav-group-content">
+              {groupedNavigation.secondary.map(renderNavLink)}
+            </CollapsibleContent>
+          </Collapsible>
+        ) : null}
       </nav>
   )
   const footer = (

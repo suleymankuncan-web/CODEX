@@ -163,6 +163,57 @@
   flex-shrink: 0;
 }
 
+.admin-command-nav-group {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-command-nav-group-trigger {
+  display: flex;
+  min-height: 40px;
+  width: 100%;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
+  background: transparent;
+  padding: 0 10px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.admin-command-nav-group-trigger:hover,
+.admin-command-nav-group-trigger:focus-visible {
+  border-color: var(--border);
+  background: var(--admin-command-plum-soft);
+  color: var(--primary);
+  outline: none;
+}
+
+.admin-command-nav-group-trigger:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
+}
+
+.admin-command-nav-group-chevron {
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+
+.admin-command-nav-group[data-state="open"] .admin-command-nav-group-chevron {
+  transform: rotate(180deg);
+}
+
+.admin-command-nav-group-content {
+  display: grid;
+  gap: 4px;
+  padding-left: 10px;
+}
+
 .admin-command-nav-link:hover,
 .admin-command-nav-link:focus-visible,
 .admin-command-utility-link:hover,
@@ -263,9 +314,18 @@
 
 .admin-command-app-collapsed .admin-command-brand,
 .admin-command-app-collapsed .admin-command-nav-link,
+.admin-command-app-collapsed .admin-command-nav-group-trigger,
 .admin-command-app-collapsed .admin-command-utility-link,
 .admin-command-app-collapsed .admin-command-identity {
   justify-content: center;
+}
+
+.admin-command-app-collapsed .admin-command-nav-group-content {
+  padding-left: 0;
+}
+
+.admin-command-app-collapsed .admin-command-nav-group-chevron {
+  display: none;
 }
 
 .admin-command-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -276,5 +336,6 @@
 .admin-command-identity-text { min-width: 0; }
 @media (prefers-reduced-motion: reduce) {
   .admin-command-app, .admin-command-sidebar, .admin-command-brand-text,
-  .admin-command-nav-label, .admin-command-identity-text, .admin-command-utility-link span { transition: none; }
+  .admin-command-nav-label, .admin-command-identity-text, .admin-command-utility-link span,
+  .admin-command-nav-group-chevron { transition: none; }
 }

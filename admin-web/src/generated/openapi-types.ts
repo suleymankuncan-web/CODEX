@@ -1793,6 +1793,7 @@ export type components = {
           "positionCode": string | null
           "positionName": string | null
           "updatedAt": string | null
+          "accountStatus": "none" | "pending" | "active" | "inactive" | "failed"
         }
       }
     }
@@ -1820,6 +1821,7 @@ export type components = {
           "positionCode": string | null
           "positionName": string | null
           "updatedAt": string | null
+          "accountStatus": "none" | "pending" | "active" | "inactive" | "failed"
         }>
       "meta": {
         "count": number

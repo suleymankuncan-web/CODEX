@@ -265,6 +265,7 @@ export class PersonnelMasterCommandRepository {
         position_id: string | null;
         position_code: string | null;
         position_name: string | null;
+        account_status: "none" | "pending" | "active" | "inactive" | "failed";
         updated_at: string;
       }>(
         `
@@ -289,6 +290,13 @@ export class PersonnelMasterCommandRepository {
             p.position_id::text AS position_id,
             p.position_code,
             p.position_name,
+            CASE
+              WHEN account.user_id IS NULL THEN 'none'
+              WHEN account.identity_status = 'failed' THEN 'failed'
+              WHEN account.identity_status IN ('pending', 'processing') THEN 'pending'
+              WHEN account.is_active = FALSE THEN 'inactive'
+              ELSE 'active'
+            END AS account_status,
             GREATEST(
               e.updated_at,
               COALESCE(assignment.updated_at, e.updated_at)
@@ -316,6 +324,20 @@ export class PersonnelMasterCommandRepository {
             ON r.region_id = assignment.region_id
           LEFT JOIN ops.position p
             ON p.position_id = assignment.position_id
+          LEFT JOIN LATERAL (
+            SELECT ua.user_id, ua.is_active, identity_job.status AS identity_status
+            FROM ops.user_account ua
+            LEFT JOIN LATERAL (
+              SELECT job.status
+              FROM ops.identity_lifecycle_job job
+              WHERE job.user_id = ua.user_id
+              ORDER BY job.created_at DESC, job.identity_lifecycle_job_id DESC
+              LIMIT 1
+            ) identity_job ON TRUE
+            WHERE ua.employee_id = e.employee_id
+            ORDER BY ua.is_active DESC, ua.updated_at DESC, ua.created_at DESC
+            LIMIT 1
+          ) account ON TRUE
           WHERE e.employee_id = $1::uuid
         `,
         [input.employeeId],
@@ -487,6 +509,13 @@ export class PersonnelMasterCommandRepository {
             p.position_id::text AS position_id,
             p.position_code,
             p.position_name,
+            CASE
+              WHEN account.user_id IS NULL THEN 'none'
+              WHEN account.identity_status = 'failed' THEN 'failed'
+              WHEN account.identity_status IN ('pending', 'processing') THEN 'pending'
+              WHEN account.is_active = FALSE THEN 'inactive'
+              ELSE 'active'
+            END AS account_status,
             GREATEST(e.updated_at, a.updated_at)::text AS updated_at
           FROM ops.employee e
           INNER JOIN ops.employee_assignment_history a
@@ -494,6 +523,20 @@ export class PersonnelMasterCommandRepository {
           INNER JOIN ops.store s ON s.store_id = a.store_id
           INNER JOIN ops.region r ON r.region_id = a.region_id
           INNER JOIN ops.position p ON p.position_id = a.position_id
+          LEFT JOIN LATERAL (
+            SELECT ua.user_id, ua.is_active, identity_job.status AS identity_status
+            FROM ops.user_account ua
+            LEFT JOIN LATERAL (
+              SELECT job.status
+              FROM ops.identity_lifecycle_job job
+              WHERE job.user_id = ua.user_id
+              ORDER BY job.created_at DESC, job.identity_lifecycle_job_id DESC
+              LIMIT 1
+            ) identity_job ON TRUE
+            WHERE ua.employee_id = e.employee_id
+            ORDER BY ua.is_active DESC, ua.updated_at DESC, ua.created_at DESC
+            LIMIT 1
+          ) account ON TRUE
           WHERE e.employee_id = $1::uuid
           ORDER BY a.created_at DESC
           LIMIT 1
@@ -699,6 +742,13 @@ export class PersonnelMasterCommandRepository {
             p.position_id::text AS position_id,
             p.position_code,
             p.position_name,
+            CASE
+              WHEN account.user_id IS NULL THEN 'none'
+              WHEN account.identity_status = 'failed' THEN 'failed'
+              WHEN account.identity_status IN ('pending', 'processing') THEN 'pending'
+              WHEN account.is_active = FALSE THEN 'inactive'
+              ELSE 'active'
+            END AS account_status,
             GREATEST(e.updated_at, COALESCE(a.updated_at, e.updated_at))::text AS updated_at
           FROM ops.employee e
           LEFT JOIN LATERAL (
@@ -711,6 +761,20 @@ export class PersonnelMasterCommandRepository {
           LEFT JOIN ops.store s ON s.store_id = a.store_id
           LEFT JOIN ops.region r ON r.region_id = a.region_id
           LEFT JOIN ops.position p ON p.position_id = a.position_id
+          LEFT JOIN LATERAL (
+            SELECT ua.user_id, ua.is_active, identity_job.status AS identity_status
+            FROM ops.user_account ua
+            LEFT JOIN LATERAL (
+              SELECT job.status
+              FROM ops.identity_lifecycle_job job
+              WHERE job.user_id = ua.user_id
+              ORDER BY job.created_at DESC, job.identity_lifecycle_job_id DESC
+              LIMIT 1
+            ) identity_job ON TRUE
+            WHERE ua.employee_id = e.employee_id
+            ORDER BY ua.is_active DESC, ua.updated_at DESC, ua.created_at DESC
+            LIMIT 1
+          ) account ON TRUE
           WHERE e.employee_id = $1::uuid
         `,
         [input.employeeId],

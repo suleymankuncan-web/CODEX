@@ -129,6 +129,9 @@ test('master data uses region-manager identities and exposes direct personnel en
   const personnelDownload = await personnelDownloadPromise
   expect(personnelDownload.suggestedFilename()).toMatch(/^personel-listesi-\d{4}-\d{2}-\d{2}\.xlsx$/)
   await expect(main.getByRole('table', { name: 'Personel' }).locator('tbody tr')).toHaveCount(20)
+  await expect(main.getByRole('table', { name: 'Personel' }).getByRole('columnheader', { name: 'Kullanıcı hesabı' })).toBeVisible()
+  await expect(main.getByRole('table', { name: 'Personel' }).getByText('Hazırlanıyor', { exact: true }).first()).toBeVisible()
+  await expect(main.getByRole('table', { name: 'Personel' }).getByText('Hesap yok', { exact: true }).first()).toBeVisible()
   await expect(main).toContainText('1-20 / 25 personel')
   await main.getByRole('group', { name: 'Personel durumu' }).screenshot({
     path: testInfo.outputPath('personnel-status-control.png'),

@@ -110,6 +110,7 @@ describe("integration read model helpers", () => {
         position_id: "position-1",
         position_code: "SALES",
         position_name: "Sales Consultant",
+        account_status: "active",
         updated_at: "2026-06-30T10:00:00.000Z",
       }),
     ).toEqual({
@@ -134,6 +135,7 @@ describe("integration read model helpers", () => {
       positionId: "position-1",
       positionCode: "SALES",
       positionName: "Sales Consultant",
+      accountStatus: "active",
       updatedAt: "2026-06-30T10:00:00.000Z",
     });
   });

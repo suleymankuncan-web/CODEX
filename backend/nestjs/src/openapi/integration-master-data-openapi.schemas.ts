@@ -76,7 +76,7 @@ export const personnelMasterItemSchema = {
     "employeeId", "externalEmployeeRef", "firstName", "lastName", "displayName", "nationalIdLast4",
     "phoneNumber", "hireDate", "terminationDate", "employmentStatus", "employmentType", "assignmentId",
     "assignmentStartDate", "storeId", "storeCode", "storeName", "regionId", "regionName", "positionId",
-    "positionCode", "positionName", "updatedAt",
+    "positionCode", "positionName", "accountStatus", "updatedAt",
   ],
   properties: {
     ...stringProperties(["employeeId", "firstName", "lastName", "displayName", "hireDate", "employmentStatus", "employmentType"]),
@@ -85,6 +85,7 @@ export const personnelMasterItemSchema = {
       "assignmentStartDate", "storeId", "storeCode", "storeName", "regionId", "regionName", "positionId",
       "positionCode", "positionName", "updatedAt",
     ]),
+    accountStatus: { type: "string", enum: ["none", "pending", "active", "inactive", "failed"] },
   },
 };
 

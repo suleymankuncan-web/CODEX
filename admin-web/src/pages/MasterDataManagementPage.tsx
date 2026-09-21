@@ -6,13 +6,18 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  CircleCheck,
+  CircleMinus,
+  Clock3,
   FileSpreadsheet,
   LogOut,
   PencilLine,
   Plus,
   Search,
   Store,
+  TriangleAlert,
   UserRound,
+  UserMinus,
   UsersRound,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
@@ -62,8 +67,6 @@ import { actionToast } from '../lib/action-toast'
 import { AdminStatePanel, AdminSurfaceHeader, AdminSurfacePage } from './admin-surface-primitives'
 import { resolveStoreRegionManager, type RegionManagerOption } from './master-data-region-manager'
 import { MasterDataStoreCombobox } from './master-data-store-combobox'
-
-import { PersonnelObservationsSection } from './personnel-observations-section'
 
 type Workspace = 'stores' | 'personnel'
 type PersonnelStatus = 'active' | 'inactive' | 'terminated'
@@ -312,7 +315,6 @@ export function MasterDataManagementPage() {
                 />
               </>
             </RecordArea>
-            <PersonnelObservationsSection />
           </TabsContent>
         </section>
       </Tabs>
@@ -509,6 +511,7 @@ function PersonnelList({ items, onEdit, onExit }: {
               <TableHead>Mağaza / Pozisyon</TableHead>
               <TableHead>İşe giriş</TableHead>
               <TableHead>Çıkış</TableHead>
+              <TableHead>Kullanıcı hesabı</TableHead>
               <TableHead>Durum</TableHead>
               <TableHead className="tw:pr-5 tw:text-right"><span className="tw:sr-only">İşlem</span></TableHead>
             </TableRow>
@@ -528,6 +531,7 @@ function PersonnelList({ items, onEdit, onExit }: {
                 </TableCell>
                 <TableCell className="tw:whitespace-nowrap tw:text-muted-foreground">{formatDisplayDate(item.hireDate)}</TableCell>
                 <TableCell className="tw:whitespace-nowrap tw:text-muted-foreground">{formatDisplayDate(item.terminationDate)}</TableCell>
+                <TableCell><PersonnelAccountStatus status={item.accountStatus} /></TableCell>
                 <TableCell><StatusBadge status={item.employmentStatus} /></TableCell>
                 <TableCell className="tw:pr-5 tw:text-right">
                   {item.employmentStatus !== 'terminated' ? (
@@ -565,6 +569,10 @@ function PersonnelList({ items, onEdit, onExit }: {
                   <PersonnelFact label="Pozisyon" value={item.positionName ?? 'Atanmamış'} />
                   <PersonnelFact label="İşe giriş" value={formatDisplayDate(item.hireDate)} />
                   <PersonnelFact label="Çıkış" value={formatDisplayDate(item.terminationDate)} />
+                  <div className="tw:min-w-0">
+                    <div className="tw:text-[11px] tw:font-semibold tw:tracking-wide tw:text-muted-foreground tw:uppercase">Kullanıcı hesabı</div>
+                    <div className="tw:mt-1"><PersonnelAccountStatus status={item.accountStatus} /></div>
+                  </div>
                 </div>
                 {item.employmentStatus !== 'terminated' ? (
                   <div className="tw:mt-3 tw:grid tw:grid-cols-2 tw:gap-2">
@@ -658,8 +666,8 @@ function PersonnelEntryDialog({ open, stores, positions, onOpenChange, onSave, p
       <DialogContent className="tw:max-h-[calc(100dvh-2rem)] tw:gap-0 tw:overflow-y-auto tw:p-0 tw:sm:max-w-2xl" closeLabel="Kapat">
         <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-3 tw:pr-14"><DialogTitle>Personel girişi</DialogTitle><DialogDescription className="tw:sr-only">Personel kaydı ve ilk mağaza ataması.</DialogDescription></DialogHeader>
         <div className="tw:grid tw:gap-3 tw:px-5 tw:pt-3 tw:pb-4 tw:sm:grid-cols-2">
-          <Field label="Ad"><Input aria-label="Ad" value={draft.firstName} onChange={(e) => setDraft({ ...draft, firstName: e.target.value })} /></Field>
-          <Field label="Soyad"><Input aria-label="Soyad" value={draft.lastName} onChange={(e) => setDraft({ ...draft, lastName: e.target.value })} /></Field>
+          <Field label="Ad"><Input aria-label="Ad" autoCapitalize="words" autoComplete="given-name" className="tw:normal-case" value={draft.firstName} onChange={(e) => setDraft({ ...draft, firstName: e.target.value })} /></Field>
+          <Field label="Soyad"><Input aria-label="Soyad" autoCapitalize="words" autoComplete="family-name" className="tw:normal-case" value={draft.lastName} onChange={(e) => setDraft({ ...draft, lastName: e.target.value })} /></Field>
           <Field label="T.C. kimlik numarası">
             <Input
               aria-invalid={draft.nationalId.length > 0 && !nationalIdValid}
@@ -761,8 +769,8 @@ function PersonnelEditorDialog({ item, stores, positions, onOpenChange, onSave, 
           <DialogDescription className="tw:sr-only">Personel bilgileri ve mağaza ataması.</DialogDescription>
         </DialogHeader>
         <div className="tw:grid tw:gap-3 tw:px-5 tw:pt-3 tw:pb-4 tw:sm:grid-cols-2">
-          <Field label="Ad"><Input aria-label="Ad" value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
-          <Field label="Soyad"><Input aria-label="Soyad" value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
+          <Field label="Ad"><Input aria-label="Ad" autoCapitalize="words" autoComplete="given-name" className="tw:normal-case" value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
+          <Field label="Soyad"><Input aria-label="Soyad" autoCapitalize="words" autoComplete="family-name" className="tw:normal-case" value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
           <Field label="T.C. (değiştirilemez)"><Input aria-label="T.C. (değiştirilemez)" disabled value={formatMaskedNationalId(item?.nationalIdLast4 ?? null)} /></Field>
           <Field label="Telefon numarası"><Input aria-invalid={draft.phoneNumber.length > 0 && !phoneNumberValid} aria-label="Telefon numarası" autoComplete="tel" inputMode="tel" maxLength={20} value={draft.phoneNumber} onChange={(event) => setDraft({ ...draft, phoneNumber: event.target.value })} /></Field>
           <Field label="Sicil numarası"><Input aria-label="Sicil numarası" value={draft.externalEmployeeRef} onChange={(event) => setDraft({ ...draft, externalEmployeeRef: event.target.value })} /></Field>
@@ -829,6 +837,22 @@ function StatusBadge({ status }: { status: string }) {
       {active ? 'Aktif' : status === 'terminated' ? 'Çıkış yapıldı' : status === 'closed' ? 'Kapalı' : 'Pasif'}
     </SemanticStatusBadge>
   )
+}
+
+function PersonnelAccountStatus({ status }: { status: PersonnelMasterItem['accountStatus'] }) {
+  if (status === 'active') {
+    return <SemanticStatusBadge tone="success"><CircleCheck aria-hidden="true" /> Aktif</SemanticStatusBadge>
+  }
+  if (status === 'pending') {
+    return <SemanticStatusBadge tone="warning"><Clock3 aria-hidden="true" /> Hazırlanıyor</SemanticStatusBadge>
+  }
+  if (status === 'failed') {
+    return <SemanticStatusBadge tone="danger"><TriangleAlert aria-hidden="true" /> Hata</SemanticStatusBadge>
+  }
+  if (status === 'inactive') {
+    return <SemanticStatusBadge tone="neutral"><CircleMinus aria-hidden="true" /> Pasif</SemanticStatusBadge>
+  }
+  return <SemanticStatusBadge tone="neutral"><UserMinus aria-hidden="true" /> Hesap yok</SemanticStatusBadge>
 }
 
 function formatBusinessDate(value: Date) {

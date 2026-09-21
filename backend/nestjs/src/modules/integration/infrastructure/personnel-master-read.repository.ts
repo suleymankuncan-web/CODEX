@@ -68,6 +68,25 @@ export class PersonnelMasterReadRepository {
       LEFT JOIN ops.position p
         ON p.position_id = assignment.position_id
     `;
+    const accountFromClause = `
+      LEFT JOIN LATERAL (
+        SELECT
+          ua.user_id,
+          ua.is_active,
+          identity_job.status AS identity_status
+        FROM ops.user_account ua
+        LEFT JOIN LATERAL (
+          SELECT job.status
+          FROM ops.identity_lifecycle_job job
+          WHERE job.user_id = ua.user_id
+          ORDER BY job.created_at DESC, job.identity_lifecycle_job_id DESC
+          LIMIT 1
+        ) identity_job ON TRUE
+        WHERE ua.employee_id = e.employee_id
+        ORDER BY ua.is_active DESC, ua.updated_at DESC, ua.created_at DESC
+        LIMIT 1
+      ) account ON TRUE
+    `;
 
     const totalResult = await this.databaseService.query<{ total_count: string }>(
       `
@@ -102,6 +121,7 @@ export class PersonnelMasterReadRepository {
       position_id: string | null;
       position_code: string | null;
       position_name: string | null;
+      account_status: "none" | "pending" | "active" | "inactive" | "failed";
       updated_at: string;
     }>(
       `
@@ -126,11 +146,19 @@ export class PersonnelMasterReadRepository {
           p.position_id::text AS position_id,
           p.position_code,
           p.position_name,
+          CASE
+            WHEN account.user_id IS NULL THEN 'none'
+            WHEN account.identity_status = 'failed' THEN 'failed'
+            WHEN account.identity_status IN ('pending', 'processing') THEN 'pending'
+            WHEN account.is_active = FALSE THEN 'inactive'
+            ELSE 'active'
+          END AS account_status,
           GREATEST(
             e.updated_at,
             COALESCE(assignment.updated_at, e.updated_at)
           )::text AS updated_at
         ${fromClause}
+        ${accountFromClause}
         ${whereClause}
         ORDER BY e.first_name ASC, e.last_name ASC, e.external_employee_ref ASC
         LIMIT $${params.length + 1}
