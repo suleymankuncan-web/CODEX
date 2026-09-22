@@ -1,5 +1,17 @@
 import type { AppLocale } from '@/lib/i18n'
 
+export function formatIncentivePosition(code: string | null, locale: AppLocale) {
+  const labels: Record<string, [string, string]> = {
+    STORE_MANAGER: ['Mağaza Müdürü', 'Store Manager'],
+    ASSISTANT_MANAGER: ['Mağaza Müdür Yardımcısı', 'Assistant Manager'],
+    SENIOR_SALES_CONSULTANT: ['Uzman Satış Danışmanı', 'Senior Sales Consultant'],
+    SALES_ASSOCIATE: ['Satış Danışmanı', 'Sales Associate'],
+    CASHIER: ['Kasa Sorumlusu', 'Cashier'],
+    STOCKROOM: ['Depo Sorumlusu', 'Stockroom Associate'],
+  }
+  return code ? labels[code]?.[locale === 'tr' ? 0 : 1] ?? code : '—'
+}
+
 export function formatIncentiveMoney(value: string | null | undefined, locale: AppLocale) {
   if (value === null || value === undefined) return '—'
   const parsed = Number(value)

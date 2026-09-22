@@ -50,7 +50,7 @@ test('blocking workspace error uses the new route language and retry recovers', 
   await expect(page.getByRole('heading', { name: 'Prim görünümü açılamadı' })).toBeVisible()
   allowSuccess = true
   await page.getByRole('button', { name: 'Tekrar dene' }).click()
-  await expect(page.getByRole('heading', { name: 'Bölge Primleri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Primler', level: 1 })).toBeVisible()
 })
 
 test('period refetch retains the previous complete workspace without a blank page', async ({ page }) => {
@@ -66,7 +66,7 @@ test('period refetch retains the previous complete workspace without a blank pag
   await expect(page.getByText('Mall of İstanbul').first()).toBeVisible()
   await expandStore(page)
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: /^DÖNEM / }).click()
+  await page.getByRole('button', { name: 'Prim dönemi' }).click()
   await page.getByRole('dialog').getByRole('combobox', { name: 'Ay seç' }).selectOption('4')
   await page.getByRole('dialog').getByRole('button', { name: 'Uygula' }).click()
   await expect(page.getByText('Mall of İstanbul').first()).toBeVisible({ timeout: 300 })
@@ -75,7 +75,7 @@ test('period refetch retains the previous complete workspace without a blank pag
   await expect(page.getByRole('button', { name: 'Onaya gönder', exact: true }).first()).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Onaya gönder', exact: true })).toBeEnabled()
   await expandStore(page)
-  await expect(page.getByRole('button', { name: 'Derya Uslu' })).toBeEnabled()
+  await expect(page.getByLabel('Derya Uslu: Final prim tutarı')).toBeEnabled()
 })
 
 test('unresolved persisted rates disable shortcuts while direct authorized correction remains available', async ({ page }) => {
@@ -86,13 +86,12 @@ test('unresolved persisted rates disable shortcuts while direct authorized corre
   await page.goto('/store/incentives')
   await expandStore(page)
 
-  await page.getByRole('button', { name: 'Derya Uslu' }).click()
   const drawer = page.getByRole('dialog')
-  await expect(drawer.getByText('Bu dönem için oran seçenekleri kullanılamıyor.')).toBeVisible()
-  await expect(drawer.getByLabel('Final prim tutarı')).toBeEnabled()
+  await expect(drawer.getByRole('combobox', { name: 'Derya Uslu: Prim oranı' })).toHaveCount(0)
+  await expect(drawer.getByLabel('Derya Uslu: Final prim tutarı')).toBeEnabled()
 })
 
-test('failed optimistic store review rolls back to the server-backed state', async ({ page }) => {
+test('failed store completion keeps the server-backed pending state', async ({ page }) => {
   await prepareRegionManager(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('region_manager', { allReviewed: false }))
   await page.route('**/api/store/incentives/store-reviews', async (route) => {
@@ -101,22 +100,21 @@ test('failed optimistic store review rolls back to the server-backed state', asy
   })
   await page.goto('/store/incentives')
   await expandStore(page, 'Marmara Forum')
-  const review = page.getByRole('checkbox', { name: 'Marmara Forum: Mağaza kontrol onayı', exact: true }).filter({ visible: true })
-  await review.click()
-  await expect(review).toBeChecked({ timeout: 150 })
-  await expect(review).not.toBeChecked()
+  const drawer = page.getByRole('dialog', { name: 'Marmara Forum', exact: true })
+  await drawer.getByRole('button', { name: 'Tamamla', exact: true }).click()
+  await expect(drawer.getByRole('alert')).toContainText('İşlem tamamlanamadı')
+  await expect(drawer.getByText('Kontrol bekliyor', { exact: true })).toBeVisible()
 })
 
-test('correction drawer closes on Escape and restores focus to its opener', async ({ page }) => {
+test('store drawer closes on Escape and restores focus to its opener', async ({ page }) => {
   await prepareRegionManager(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('region_manager'))
   await page.goto('/store/incentives')
-  await expandStore(page)
-  const opener = page.getByRole('button', { name: 'Derya Uslu' })
+  const opener = page.getByRole('button', { name: 'Mall of İstanbul', exact: true }).filter({ visible: true })
   await opener.click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: 'Derya Uslu', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true })).toHaveCount(0)
   await expect(opener).toBeFocused()
 })
 
@@ -154,7 +152,7 @@ test('local metrics, search and sort do not refetch the workspace', async ({ pag
   await page.goto('/store/incentives')
   await expect.poll(() => reads).toBe(1)
 
-  await page.locator('.incentive-performance-metrics > button').filter({ hasText: 'Kontrol bekleyen' }).click()
+  await page.getByRole('button', { name: /Kontrol bekliyor 1/ }).click()
   await page.getByLabel('Mağaza veya personel ara').fill('Marmara')
   await page.getByRole('button', { name: 'Mağaza', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Marmara Forum' }).filter({ visible: true })).toBeVisible()

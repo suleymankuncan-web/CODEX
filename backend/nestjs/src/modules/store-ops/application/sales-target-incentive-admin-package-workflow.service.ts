@@ -103,11 +103,13 @@ export class SalesTargetIncentiveAdminPackageWorkflowService {
     }));
   }
 
-  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionId: string; regionPackageId: string; submittedAt: string }) {
+  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionId: string; regionPackageId: string; submittedAt: string; decision?: "approve" | "return"; reviewNote?: string }) {
     const companyIds = incentiveFinalApprovalCompanyIds(input.actor);
+    const reviewNote = input.reviewNote?.trim() || null;
+    if (input.decision === "return" && !reviewNote) throw new BadRequestException("Return note is required");
     const row = await this.approvalRepository.reviewRegionPackage({
       periodKey: input.periodKey, regionId: input.regionId, actorUserId: input.actor.userId,
-      packageStatus: "admin_approved", finalApproval: {
+      packageStatus: input.decision === "return" ? "admin_returned" : "admin_approved", reviewNote, finalApproval: {
         companyIds, regionPackageId: input.regionPackageId, submittedAt: input.submittedAt,
       },
     });

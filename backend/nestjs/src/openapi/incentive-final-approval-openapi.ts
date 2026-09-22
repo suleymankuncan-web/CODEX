@@ -16,10 +16,10 @@ export function applyIncentiveFinalApprovalOpenApi(document: Document) {
     ...Object.fromEntries(["storeCount", "reviewedStoreCount", "submittedStoreCount", "draftCorrectionCount", "submittedCorrectionCount"].map(key => [key, { type: "integer", minimum: 0 }])),
   };
   schemas.IncentiveFinalApprovalPackages = object({ items: { type: "array", items: object(properties) } });
-  schemas.IncentiveFinalApprovalResult = object({ data: object({ regionPackageId: uuid, status: { type: "string", enum: ["admin_approved"] }, reviewedAt: { type: "string", format: "date-time", nullable: true } }) });
+  schemas.IncentiveFinalApprovalResult = object({ data: object({ regionPackageId: uuid, status: { type: "string", enum: ["admin_approved", "admin_returned"] }, reviewedAt: { type: "string", format: "date-time", nullable: true } }) });
   const path = "/api/store/incentives/final-approval";
   setJsonResponseSchema(document.paths, path, "get", "Company-scoped packages for explicitly authorized Report Viewers.", "IncentiveFinalApprovalPackages");
-  setJsonResponseSchema(document.paths, path, "post", "Final approval of the exact submitted package.", "IncentiveFinalApprovalResult", "201");
+  setJsonResponseSchema(document.paths, path, "post", "Approve or return the exact submitted package. Return requires a note; omitted decision preserves approval behavior.", "IncentiveFinalApprovalResult", "201");
   setQueryParameters(document.paths, path, "get", [{ name: "period", in: "query", required: false, schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } }]);
   setJsonResponseSchema(document.paths, "/api/auth/role-assignments/{assignmentId}/incentive-approval", "patch", "Individual Report Viewer incentive approval permission updated.", "AuthRoleAssignmentCommandResponse");
   for (const name of ["AuthRoleAssignmentsResponse", "AuthRoleAssignmentCommandResponse"]) addIndividualGrant(schemas[name]);

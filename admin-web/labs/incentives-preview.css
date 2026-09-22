@@ -1,0 +1,7 @@
+.incentive-lab-bar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; min-height: 52px; padding: 8px 24px; background: var(--card); border-bottom: 1px solid var(--border); font-family: var(--font-sans); }
+.incentive-lab-bar > span { display: flex; align-items: center; gap: 8px; color: var(--muted-foreground); font-size: 12px; }
+.incentive-lab-bar nav { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.store-shell-store-incentives .store-command-main { padding-top: 12px; }
+@media (min-width: 1081px) { .store-command-sidebar { top: 53px; } }
+@media (max-width: 1080px) { .store-command-sidebar { top: 0; } }
+@media (max-width: 600px) { .incentive-lab-bar { padding: 10px 14px; } .incentive-lab-bar nav button { min-height: 44px; } }

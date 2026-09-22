@@ -1,13 +1,13 @@
 import type { AuthSessionSummary } from '@/features/auth/api'
 import type { RegionManagerDirectoryItem } from '@/features/org/region-manager-directory'
+import { canApproveIncentives } from './final-incentive-approval-permission'
 import { FinalIncentiveApproval } from './final-incentive-approval'
-import { useState } from 'react'
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { IncentiveWorkspaceHierarchy } from './workspace-hierarchy'
 import { IncentiveWorkspaceScaffold } from './workspace-scaffold'
-import { ReadOnlyCorrectionDrawer } from './read-only-correction-drawer'
-import type { IncentiveRow, IncentiveStore, IncentiveWorkspace } from './types'
+import { StorePackageDecision } from './store-package-decision'
+import type { IncentiveWorkspace } from './types'
 
 type Translate = ReturnType<typeof useLocalization>['t']
 
@@ -25,16 +25,18 @@ export function ReportViewerIncentivesView(input: {
   managerDirectoryLoading: boolean
   onRetryManagerDirectory: () => void
 }) {
-  const [selection, setSelection] = useState<{ store: IncentiveStore; row: IncentiveRow; opener: HTMLButtonElement } | null>(null)
   return (
     <>
       <IncentiveWorkspaceScaffold
         {...input}
-        renderApproval={regionIds => <FinalIncentiveApproval key={`${input.period}:${input.authSummary?.user.userId}:${input.authSummary?.user.authorizationContextVersion}:${regionIds?.join(',') ?? 'all'}`} authSummary={input.authSummary ?? null} period={input.period} locale={input.locale} regionIds={regionIds} disabled={input.isUpdating || Boolean(input.backgroundError)} />}
+        renderApproval={canApproveIncentives(input.authSummary) ? (regionIds, onBusyChange) => <FinalIncentiveApproval key={`${input.period}:${input.authSummary?.user.userId}:${input.authSummary?.user.authorizationContextVersion}:${regionIds?.join(',') ?? 'all'}`} authSummary={input.authSummary ?? null} period={input.period} locale={input.locale} regionIds={regionIds} onBusyChange={onBusyChange} disabled={input.isUpdating || Boolean(input.backgroundError)} /> : undefined}
         renderContent={(workspace) => (
           <IncentiveWorkspaceHierarchy
             locale={input.locale}
-            onOpenRow={(store, row, opener) => setSelection({ store, row, opener })}
+            renderDecision={store => {
+              const region = input.workspace.regions.find(item => item.stores.some(candidate => candidate.storeId === store.storeId))
+              return region ? <StorePackageDecision region={region} period={input.period} locale={input.locale} auth={input.authSummary ?? null} disabled={input.isUpdating || Boolean(input.backgroundError)} /> : null
+            }}
             readOnly
             t={input.t}
             workspace={workspace}
@@ -42,11 +44,6 @@ export function ReportViewerIncentivesView(input: {
         )}
       />
 
-      <ReadOnlyCorrectionDrawer workspace={input.workspace} locale={input.locale} onClose={() => {
-        const opener = selection?.opener
-        setSelection(null)
-        if (opener) requestAnimationFrame(() => opener.focus())
-      }} selection={selection} t={input.t} />
     </>
   )
 }

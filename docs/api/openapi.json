@@ -10571,7 +10571,7 @@
         },
         "responses": {
           "201": {
-            "description": "Final approval of the exact submitted package.",
+            "description": "Approve or return the exact submitted package. Return requires a note; omitted decision preserves approval behavior.",
             "content": {
               "application/json": {
                 "schema": {
@@ -32031,6 +32031,17 @@
           },
           "submittedAt": {
             "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "approve",
+              "return"
+            ],
+            "type": "string"
+          },
+          "reviewNote": {
+            "type": "string",
+            "maxLength": 1000
           }
         },
         "required": [
@@ -32177,7 +32188,8 @@
               "status": {
                 "type": "string",
                 "enum": [
-                  "admin_approved"
+                  "admin_approved",
+                  "admin_returned"
                 ]
               },
               "reviewedAt": {
