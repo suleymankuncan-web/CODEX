@@ -47,7 +47,7 @@ export function FinalIncentiveApproval(input: {
   const eligible = visible.filter(isEligible)
   const chosen = eligible.filter(item => selected.has(packageKey(item)))
   const mutation = useMutation({
-    retry: false,
+    retry: 0,
     mutationFn: async (packages: Package[]): Promise<BatchResult> => {
       const approved: string[] = []
       for (const item of packages) {

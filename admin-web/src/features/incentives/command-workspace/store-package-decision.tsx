@@ -8,6 +8,7 @@ import type { AuthSessionSummary } from '@/features/auth/api'
 import type { AppLocale } from '@/lib/i18n'
 import { fetchOpenApiJson, sendOpenApiJson } from '@/lib/openapi-client'
 import { actionToast } from '@/lib/action-toast'
+import { transientQueryRetryOptions } from '@/lib/query-retry'
 import { canApproveIncentives } from './final-incentive-approval-permission'
 import type { IncentiveRegion } from './types'
 
@@ -21,7 +22,8 @@ export function StorePackageDecision(input: { region: IncentiveRegion; period: s
   const query = useQuery({
     queryKey: ['incentive-final-approval', input.auth?.user.userId, input.auth?.user.authorizationContextVersion, input.period],
     queryFn: () => fetchOpenApiJson('/api/store/incentives/final-approval', { query: new URLSearchParams({ period: input.period }) }),
-    enabled, retry: false,
+    enabled,
+    ...transientQueryRetryOptions,
   })
   const item = query.data?.items.find(candidate => candidate.regionId === input.region.regionId)
   // Confirm the same submission that was displayed, never a replacement package after a refresh.
@@ -29,7 +31,7 @@ export function StorePackageDecision(input: { region: IncentiveRegion; period: s
   const version = item ? `${item.regionPackageId}:${item.submittedAt}` : null
   const eligible = enabled && item?.status === 'submitted' && Boolean(item.regionPackageId && item.submittedAt) && item.submittedByUserId !== input.auth?.user.userId
   const mutation = useMutation({
-    retry: false,
+    retry: 0,
     mutationFn: async (value: 'approve' | 'return') => {
       if (!item?.regionPackageId || !item.submittedAt || !eligible || confirmationVersion !== version || (value === 'return' && !note.trim())) throw new Error('Package decision unavailable')
       return sendOpenApiJson('/api/store/incentives/final-approval', { method: 'POST', body: {

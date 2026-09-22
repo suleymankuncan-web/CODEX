@@ -52,7 +52,7 @@ export function RegionManagerIncentivesOwner(input: {
     }
   }
   const submission = useMutation({
-    mutationFn: submitStoreSalesTargetIncentiveRegionPackage, retry: false,
+    mutationFn: submitStoreSalesTargetIncentiveRegionPackage, retry: 0,
     onError: error => actionToast.error(error, input.t('storeIncentives.command.submitError')),
     onSuccess: () => { setSubmitOpen(false); actionToast.success(input.t('storeIncentives.command.submitSaved')) },
     onSettled: invalidate,
