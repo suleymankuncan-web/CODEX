@@ -4,8 +4,6 @@ import {
   BadgePlus,
   BriefcaseBusiness,
   Building2,
-  ChevronLeft,
-  ChevronRight,
   CircleCheck,
   CircleMinus,
   Clock3,
@@ -67,6 +65,7 @@ import { actionToast } from '../lib/action-toast'
 import { AdminStatePanel, AdminSurfaceHeader, AdminSurfacePage } from './admin-surface-primitives'
 import { resolveStoreRegionManager, type RegionManagerOption } from './master-data-region-manager'
 import { MasterDataStoreCombobox } from './master-data-store-combobox'
+import { PaginationFooter, RecordArea } from './master-data-management-list-support'
 
 type Workspace = 'stores' | 'personnel'
 type PersonnelStatus = 'active' | 'inactive' | 'terminated'
@@ -299,6 +298,7 @@ export function MasterDataManagementPage() {
                   offset={storesQuery.data?.meta.offset ?? storePage * pageSize}
                   onPageChange={setStorePage}
                   page={storePage}
+                  pageSize={pageSize}
                   pending={storesQuery.isFetching}
                   total={storeTotal}
                 />
@@ -318,6 +318,7 @@ export function MasterDataManagementPage() {
                   offset={personnelQuery.data?.meta.offset ?? personnelPage * pageSize}
                   onPageChange={setPersonnelPage}
                   page={personnelPage}
+                  pageSize={pageSize}
                   pending={personnelQuery.isFetching}
                   total={personnelTotal}
                 />
@@ -361,68 +362,6 @@ export function MasterDataManagementPage() {
         pending={updatePersonnel.isPending}
       />
     </AdminSurfacePage>
-  )
-}
-
-function RecordArea({ children, error, loading, onRetry }: { children: React.ReactNode; error: unknown; loading: boolean; onRetry: () => void }) {
-  if (loading) {
-    return <div className="tw:p-4 tw:sm:p-5"><AdminStatePanel isLoading title="Kayıtlar yükleniyor" /></div>
-  }
-  if (error) {
-    return (
-      <div className="tw:p-4 tw:sm:p-5">
-        <AdminStatePanel
-          tone="danger"
-          title="Kayıtlar alınamadı"
-          description="Bağlantınızı kontrol edip yeniden deneyin."
-          action={<Button onClick={onRetry} size="sm" variant="outline">Yeniden dene</Button>}
-        />
-      </div>
-    )
-  }
-  return children
-}
-
-function PaginationFooter({ label, offset, onPageChange, page, pending, total }: {
-  label: string
-  offset: number
-  onPageChange: (page: number) => void
-  page: number
-  pending: boolean
-  total: number
-}) {
-  const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  const visiblePage = Math.floor(offset / pageSize)
-  const from = total === 0 ? 0 : offset + 1
-  const to = Math.min(offset + pageSize, total)
-
-  return (
-    <footer aria-busy={pending} className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border tw:bg-muted/25 tw:px-4 tw:py-3 tw:sm:px-5">
-      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-        {from}-{to} / {total} {label}
-      </span>
-      <div className="tw:flex tw:items-center tw:gap-2">
-        <span className="tw:min-w-10 tw:text-center tw:text-xs tw:text-muted-foreground">{visiblePage + 1} / {pageCount}</span>
-        <Button
-          aria-label={`Önceki ${label} sayfası`}
-          disabled={pending || page === 0}
-          onClick={() => onPageChange(Math.max(0, page - 1))}
-          size="icon-sm"
-          variant="outline"
-        >
-          <ChevronLeft aria-hidden="true" />
-        </Button>
-        <Button
-          aria-label={`Sonraki ${label} sayfası`}
-          disabled={pending || page + 1 >= pageCount}
-          onClick={() => onPageChange(Math.min(pageCount - 1, page + 1))}
-          size="icon-sm"
-          variant="outline"
-        >
-          <ChevronRight aria-hidden="true" />
-        </Button>
-      </div>
-    </footer>
   )
 }
 

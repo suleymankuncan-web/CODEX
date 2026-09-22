@@ -57,11 +57,7 @@ const ownerRoleOptions: KpiOwnerRole[] = [
   'VISUAL_TEAM',
 ]
 
-const behaviorOptions: KpiScoreBehavior[] = [
-  'score_only',
-  'warning_first',
-  'task_candidate',
-]
+const behaviorOptions: KpiScoreBehavior[] = ['score_only', 'warning_first', 'task_candidate']
 
 const ownerRoleLabelKeys: Record<KpiOwnerRole, TranslationKey> = {
   DEPUTY_GM: 'adminKpiConfig.ownerRole.DEPUTY_GM',
@@ -157,11 +153,7 @@ export function AdminKpiConfigPage() {
           title={t('adminKpiConfig.errorTitle')}
           description={getErrorMessage(configQuery.error)}
           tone="danger"
-          action={
-            <Button type="button" variant="outline" size="sm" onClick={() => void configQuery.refetch()}>
-              {t('reportsSummary.retry')}
-            </Button>
-          }
+          action={<Button type="button" variant="outline" size="sm" onClick={() => void configQuery.refetch()}>{t('reportsSummary.retry')}</Button>}
         />
       </AdminOperationalPage>
     )
@@ -827,13 +819,7 @@ function KpiConfigPersistPanel(input: {
         <AdminSurfaceBadge
           tone={input.status.savePending || input.status.publishPending || !input.status.weightTotalsValid ? 'warning' : 'success'}
         >
-          {input.status.savePending
-            ? input.t('adminKpiConfig.saving')
-            : input.status.publishPending
-              ? input.t('adminKpiConfig.publishPending')
-              : input.status.weightTotalsValid
-                ? input.t('adminKpiConfig.ready')
-                : input.t('adminKpiConfig.needsWeightBalance')}
+          {input.status.savePending ? input.t('adminKpiConfig.saving') : input.status.publishPending ? input.t('adminKpiConfig.publishPending') : input.status.weightTotalsValid ? input.t('adminKpiConfig.ready') : input.t('adminKpiConfig.needsWeightBalance')}
         </AdminSurfaceBadge>
       }
     >

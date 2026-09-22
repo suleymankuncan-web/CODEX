@@ -100,7 +100,6 @@ type Feedback = {
 }
 
 type SortValue = 'priority' | 'newest' | 'name'
-
 const tabLabels: Record<MasterDataWorkbenchTab, string> = {
   issues: 'Düzeltilecekler',
   stores: 'Mağazalar',
@@ -625,8 +624,8 @@ export function MasterDataControlCenterPage() {
             auditRows={auditRows}
             importRows={importRows}
             issueRows={issueRows}
-            isError={isTabError(activeTab, issuesQuery.isError, storesQuery.isError, personnelQuery.isError, importsQuery.isError, auditQuery.isError)}
-            isLoading={isTabLoading(activeTab, issuesQuery.isLoading, storesQuery.isLoading, personnelQuery.isLoading, importsQuery.isLoading, auditQuery.isLoading)}
+            isError={getActiveTabFlag(activeTab, issuesQuery.isError, storesQuery.isError, personnelQuery.isError, importsQuery.isError, auditQuery.isError)}
+            isLoading={getActiveTabFlag(activeTab, issuesQuery.isLoading, storesQuery.isLoading, personnelQuery.isLoading, importsQuery.isLoading, auditQuery.isLoading)}
             personnelRows={personnelRows}
             selectedAuditId={selectedAudit?.id ?? null}
             selectedImportId={selectedImport?.id ?? null}
@@ -885,22 +884,7 @@ function getTabCount(
   return history ?? 0
 }
 
-function isTabLoading(
-  activeTab: MasterDataWorkbenchTab,
-  issues: boolean,
-  stores: boolean,
-  personnel: boolean,
-  imports: boolean,
-  history: boolean,
-) {
-  if (activeTab === 'issues') return issues
-  if (activeTab === 'stores') return stores
-  if (activeTab === 'personnel') return personnel
-  if (activeTab === 'imports') return imports
-  return history
-}
-
-function isTabError(
+function getActiveTabFlag(
   activeTab: MasterDataWorkbenchTab,
   issues: boolean,
   stores: boolean,
