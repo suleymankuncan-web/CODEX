@@ -5,6 +5,10 @@ import { personnelKpiScoreProfile } from "./application/kpi-config.contract";
 const projectRoot = join(process.cwd(), "..", "..");
 const schemaSql = readFileSync(join(projectRoot, "db", "schema.sql"), "utf8");
 const seedSql = readFileSync(join(projectRoot, "db", "seeds", "001_reference_seed.sql"), "utf8");
+const onpremPersonaSeedSql = readFileSync(
+  join(projectRoot, "db", "seeds", "002_onprem_keycloak_personas.sql"),
+  "utf8",
+);
 const keycloakRealm = JSON.parse(
   readFileSync(join(projectRoot, "infra", "keycloak", "store-ops-realm.json"), "utf8"),
 ) as {
@@ -83,6 +87,18 @@ describe("demo performance seed contract", () => {
     expect(seedSql).toContain("demo_seed");
     expect(seedSql).toContain("DATE '2026-04-01'");
     expect(seedSql).toContain("DATE '2026-04-30'");
+  });
+
+  it("links on-prem self-performance personas to the seeded employees", () => {
+    expect(onpremPersonaSeedSql).toContain(
+      "'80000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000201', 'onprem.store-manager'",
+    );
+    expect(onpremPersonaSeedSql).toContain(
+      "'80000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000202', 'onprem.store-personnel'",
+    );
+    expect(onpremPersonaSeedSql).toContain(
+      "WHEN EXCLUDED.username IN ('onprem.store-manager', 'onprem.store-personnel')",
+    );
   });
 
   it("seeds live scoring references required by /store/me smoke checks", () => {

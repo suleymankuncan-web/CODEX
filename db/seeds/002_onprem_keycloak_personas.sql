@@ -60,13 +60,18 @@ INSERT INTO ops.user_account (
     is_active
 )
 VALUES
-    ('80000000-0000-0000-0000-000000000011', NULL, 'onprem.store-manager', 'store-manager@onprem.invalid', NULL, 'local', NULL, TRUE),
+    ('80000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000201', 'onprem.store-manager', 'store-manager@onprem.invalid', NULL, 'local', NULL, TRUE),
     ('80000000-0000-0000-0000-000000000012', NULL, 'onprem.region-manager', 'region-manager@onprem.invalid', NULL, 'local', NULL, TRUE),
     ('80000000-0000-0000-0000-000000000013', NULL, 'onprem.report-viewer', 'report-viewer@onprem.invalid', NULL, 'local', NULL, TRUE),
-    ('80000000-0000-0000-0000-000000000014', NULL, 'onprem.store-personnel', 'store-personnel@onprem.invalid', NULL, 'local', NULL, TRUE),
+    ('80000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000202', 'onprem.store-personnel', 'store-personnel@onprem.invalid', NULL, 'local', NULL, TRUE),
     ('80000000-0000-0000-0000-000000000015', NULL, 'onprem.visual-merchandiser', 'visual-merchandiser@onprem.invalid', NULL, 'local', NULL, TRUE),
     ('80000000-0000-0000-0000-000000000016', NULL, 'onprem.photo-proof-admin', 'photo-proof-admin@onprem.invalid', NULL, 'local', NULL, FALSE)
 ON CONFLICT (username) DO UPDATE SET
+    employee_id = CASE
+        WHEN EXCLUDED.username IN ('onprem.store-manager', 'onprem.store-personnel')
+            THEN EXCLUDED.employee_id
+        ELSE ops.user_account.employee_id
+    END,
     email = EXCLUDED.email,
     is_active = CASE WHEN EXCLUDED.username = 'onprem.photo-proof-admin' THEN FALSE ELSE TRUE END,
     auth_provider = CASE WHEN EXCLUDED.username = 'onprem.photo-proof-admin' THEN 'local' ELSE ops.user_account.auth_provider END,

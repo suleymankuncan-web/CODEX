@@ -715,6 +715,41 @@ test('ONP-3B synthetic personas receive a complete non-personal Keycloak profile
   }
 })
 
+test('ONP-3B self-performance personas retain their seeded employee bindings', () => {
+  const baseline = input()
+  const bindings = [
+    [
+      "'80000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000201', 'onprem.store-manager'",
+      'store manager',
+    ],
+    [
+      "'80000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000202', 'onprem.store-personnel'",
+      'store personnel',
+    ],
+  ]
+
+  for (const [binding, label] of bindings) {
+    const mutated = {
+      ...baseline,
+      personaSeed: baseline.personaSeed.replace(binding, binding.replace(/'00000000-0000-0000-0000-00000000020[12]'/, 'NULL')),
+    }
+    const result = validateOnpremKeycloakContract(mutated)
+    assert.equal(result.ok, false, label)
+    assert.ok(result.errors.some((error) => /seeded .* employee/i.test(error)), label)
+  }
+
+  const withoutRepair = {
+    ...baseline,
+    personaSeed: baseline.personaSeed.replace(
+      /employee_id\s*=\s*CASE[\s\S]*?END,\s*\n\s*email = EXCLUDED\.email,/,
+      'email = EXCLUDED.email,',
+    ),
+  }
+  const repairResult = validateOnpremKeycloakContract(withoutRepair)
+  assert.equal(repairResult.ok, false)
+  assert.ok(repairResult.errors.some((error) => /reruns must repair/i.test(error)))
+})
+
 test('ONP-3B synthetic role assignments retain the complete active scope ancestry', () => {
   const baseline = input()
   const expectedRows = [
