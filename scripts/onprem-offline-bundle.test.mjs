@@ -30,8 +30,9 @@ const ALL_REQUIRED = [
   ...REQUIRED_BUNDLE_PATHS.operations, ...REQUIRED_BUNDLE_PATHS.evidence, ...REQUIRED_BUNDLE_PATHS.docs,
 ]
 
-test('bundle closure reserves the exact PR-B photo-proof deployment overlay', () => {
+test('bundle closure reserves the company and photo-proof deployment overlays', () => {
   assert.ok(REQUIRED_BUNDLE_PATHS.deployment.includes('deployment/compose.photo-proof.yaml'))
+  assert.ok(REQUIRED_BUNDLE_PATHS.deployment.includes('deployment/compose.company-data.yaml'))
   assert.ok(REQUIRED_BUNDLE_PATHS.deployment.includes('deployment/proof.compose.yaml'))
 })
 

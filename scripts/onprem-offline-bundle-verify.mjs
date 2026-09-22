@@ -22,7 +22,7 @@ const VENDOR_EVIDENCE_SUFFIXES = Object.freeze({ sbom: 'sbom.spdx.json', vulnera
 export const REQUIRED_BUNDLE_PATHS = Object.freeze({
   imageArchives: Object.freeze(Object.fromEntries(IMAGE_NAMES.map((name) => [name, `images/${name}.tar`]))),
   deployment: Object.freeze([
-    'deployment/compose.yaml', 'deployment/compose.photo-proof.yaml', 'deployment/photo-compose.yaml', 'deployment/proof.compose.yaml', 'deployment/restore.compose.yaml',
+    'deployment/compose.yaml', 'deployment/compose.company-data.yaml', 'deployment/compose.photo-proof.yaml', 'deployment/photo-compose.yaml', 'deployment/proof.compose.yaml', 'deployment/restore.compose.yaml',
     'deployment/templates/core.env.template', 'deployment/templates/photo.env.template',
     'deployment/caddy/Caddyfile', 'deployment/keycloak/bootstrap.sh', 'deployment/keycloak/realm-config.json',
     'deployment/postgres/entrypoint-tls.sh', 'deployment/postgres/010-bootstrap-roles.sh',

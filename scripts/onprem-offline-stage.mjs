@@ -30,6 +30,7 @@ const PHOTO_COMPOSE_BIND_STAGED = Buffer.from('      - ./photo-storage/bootstrap
 const PHOTO_COMPOSE_BIND_TARGET = Buffer.from(':/opt/hr-axis/photo-storage/bootstrap.sh:')
 const STAGE_FILES = Object.freeze([
   ['deployment/compose.yaml', 'infra/onprem/core/compose.yaml'],
+  ['deployment/compose.company-data.yaml', 'infra/onprem/core/compose.company-data.yaml'],
   ['deployment/compose.photo-proof.yaml', 'infra/onprem/core/compose.photo-proof.yaml'],
   ['deployment/photo-compose.yaml', 'infra/onprem/photo-storage/compose.yaml'],
   ['deployment/proof.compose.yaml', 'infra/onprem/offline/proof.compose.yaml'],
@@ -75,7 +76,7 @@ const EXECUTABLES = new Set([
   ...OPERATION_SHELLS.map((name) => `operations/${name}`),
 ])
 const SOURCE_ROOT_ALLOWLIST = new Set([
-  'infra/onprem/core/compose.yaml', 'infra/onprem/core/compose.photo-proof.yaml', 'infra/onprem/core/env.template', 'infra/onprem/core/README.md',
+  'infra/onprem/core/compose.yaml', 'infra/onprem/core/compose.company-data.yaml', 'infra/onprem/core/compose.photo-proof.yaml', 'infra/onprem/core/env.template', 'infra/onprem/core/README.md',
   'infra/onprem/core/caddy/Caddyfile', 'infra/onprem/core/keycloak/bootstrap.sh',
   'infra/onprem/core/keycloak/README.md', 'infra/onprem/core/keycloak/realm-config.json',
   'infra/onprem/core/postgres/entrypoint-tls.sh', 'infra/onprem/core/postgres/010-bootstrap-roles.sh',

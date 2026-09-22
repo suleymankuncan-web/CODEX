@@ -37,7 +37,7 @@ function write(root, relativePath, content, mode = 0o644) {
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'onprem-offline-stage-')); const repo = join(root, 'repo'); const proof = join(root, 'proof'); const output = join(root, 'staged'); mkdirSync(repo); mkdirSync(proof)
   for (const [destination, source] of [
-    ['deployment/compose.yaml', 'infra/onprem/core/compose.yaml'], ['deployment/compose.photo-proof.yaml', 'infra/onprem/core/compose.photo-proof.yaml'], ['deployment/photo-compose.yaml', 'infra/onprem/photo-storage/compose.yaml'], ['deployment/proof.compose.yaml', 'infra/onprem/offline/proof.compose.yaml'], ['deployment/restore.compose.yaml', 'infra/onprem/offline/restore.compose.yaml'],
+    ['deployment/compose.yaml', 'infra/onprem/core/compose.yaml'], ['deployment/compose.company-data.yaml', 'infra/onprem/core/compose.company-data.yaml'], ['deployment/compose.photo-proof.yaml', 'infra/onprem/core/compose.photo-proof.yaml'], ['deployment/photo-compose.yaml', 'infra/onprem/photo-storage/compose.yaml'], ['deployment/proof.compose.yaml', 'infra/onprem/offline/proof.compose.yaml'], ['deployment/restore.compose.yaml', 'infra/onprem/offline/restore.compose.yaml'],
     ['deployment/templates/core.env.template', 'infra/onprem/core/env.template'], ['deployment/templates/photo.env.template', 'infra/onprem/photo-storage/env.template'], ['deployment/caddy/Caddyfile', 'infra/onprem/core/caddy/Caddyfile'], ['deployment/keycloak/bootstrap.sh', 'infra/onprem/core/keycloak/bootstrap.sh'], ['deployment/keycloak/realm-config.json', 'infra/onprem/core/keycloak/realm-config.json'], ['deployment/postgres/entrypoint-tls.sh', 'infra/onprem/core/postgres/entrypoint-tls.sh'], ['deployment/postgres/010-bootstrap-roles.sh', 'infra/onprem/core/postgres/010-bootstrap-roles.sh'], ['deployment/redis/redis.conf', 'infra/onprem/core/redis/redis.conf'], ['deployment/photo-storage/bootstrap.sh', 'infra/onprem/photo-storage/bootstrap.sh'], ['deployment/photo-storage/LICENSE', 'infra/onprem/photo-storage/LICENSE'],
   ]) write(repo, source, readFileSync(join(REPO, source)), destination.endsWith('.sh') ? 0o755 : 0o644)
   write(repo, 'infra/onprem/offline/postgres-gosu.trivyignore.yaml', readFileSync(join(REPO, 'infra/onprem/offline/postgres-gosu.trivyignore.yaml')))
@@ -85,6 +85,7 @@ test('stages the exact source-free closure with verifier and auth proof runtime 
     visit(value.output)
     assert.deepEqual(new Set(files), expected)
     assert.equal(result.releaseId, value.metadata.releaseId)
+    assert.equal(readFileSync(join(value.output, 'deployment/compose.company-data.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/core/compose.company-data.yaml'), 'utf8'))
     assert.equal(readFileSync(join(value.output, 'deployment/compose.photo-proof.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/core/compose.photo-proof.yaml'), 'utf8'))
     assert.equal(readFileSync(join(value.output, 'deployment/proof.compose.yaml'), 'utf8'), readFileSync(join(value.repo, 'infra/onprem/offline/proof.compose.yaml'), 'utf8'))
     const sourcePhotoCompose = readFileSync(join(value.repo, 'infra/onprem/photo-storage/compose.yaml'), 'utf8')
