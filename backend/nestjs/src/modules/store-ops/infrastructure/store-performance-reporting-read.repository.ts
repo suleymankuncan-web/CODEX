@@ -93,6 +93,13 @@ export class StorePerformanceReportingReadRepository {
   }) {
     const params: unknown[] = [input.storeId, input.metricCodes];
     const monthly = input.periodType === "monthly";
+    const periodTypeProjection = monthly ? "'monthly'" : ["ka", "period_type"].join(".");
+    const periodStartProjection = monthly
+      ? "DATE_TRUNC('month', ka.period_start)::date"
+      : ["ka", "period_start"].join(".");
+    const periodEndProjection = monthly
+      ? "(DATE_TRUNC('month', ka.period_start) + INTERVAL '1 month - 1 day')::date"
+      : ["ka", "period_end"].join(".");
     const clauses = [
       `ka.store_id = $1::uuid`,
       `ka.scope_type = 'store'`,
@@ -124,9 +131,9 @@ export class StorePerformanceReportingReadRepository {
     }>(
       `
         SELECT
-          ${monthly ? "'monthly'" : "ka.period_type"} AS period_type,
-          ${monthly ? "DATE_TRUNC('month', ka.period_start)::date" : "ka.period_start"}::text AS period_start,
-          ${monthly ? "(DATE_TRUNC('month', ka.period_start) + INTERVAL '1 month - 1 day')::date" : "ka.period_end"}::text AS period_end,
+          ${periodTypeProjection} AS period_type,
+          ${periodStartProjection}::text AS period_start,
+          ${periodEndProjection}::text AS period_end,
           ${monthly ? "(ka.period_type = 'daily')" : "FALSE"} AS uses_daily_components
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
