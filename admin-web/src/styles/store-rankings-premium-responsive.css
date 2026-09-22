@@ -43,3 +43,8 @@
     gap: 16px 24px;
   }
 }
+@media (max-width: 360px) {
+  .store-rankings-list-toolbar [data-slot='tabs-list'] { gap: 8px; padding-inline: 0; }
+  .store-rankings-list-toolbar [data-slot='tabs-trigger'] { gap: 2px; padding-inline: 2px; }
+  .store-rankings-list-toolbar [data-slot='badge'] { padding-inline: 4px; }
+}

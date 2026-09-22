@@ -170,6 +170,7 @@ export function SnapshotsDashboardPage() {
         queryClient.invalidateQueries({ queryKey: ['snapshot-overview'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, t('adminSnapshots.actionFailed')),
   })
   const dailyClosureMutation = useMutation({
     mutationFn: runDailyClosure,
@@ -181,6 +182,7 @@ export function SnapshotsDashboardPage() {
         queryClient.invalidateQueries({ queryKey: ['snapshot-overview'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, t('adminSnapshots.actionFailed')),
   })
 
   const filteredItems = useMemo(() => {
@@ -210,6 +212,16 @@ export function SnapshotsDashboardPage() {
           title={t('adminSnapshots.overviewUnavailableTitle')}
           description={getErrorMessage(overviewQuery.error)}
           tone="danger"
+          action={
+            <Button
+              variant="outline"
+              onClick={() => void overviewQuery.refetch()}
+              disabled={overviewQuery.isFetching}
+              aria-busy={overviewQuery.isFetching}
+            >
+              {t('adminSnapshots.tryAgain')}
+            </Button>
+          }
         />
       </AdminOperationalPage>
     )
@@ -222,6 +234,16 @@ export function SnapshotsDashboardPage() {
           title={t('adminSnapshots.queueUnavailableTitle')}
           description={getErrorMessage(needsActionQuery.error)}
           tone="danger"
+          action={
+            <Button
+              variant="outline"
+              onClick={() => void needsActionQuery.refetch()}
+              disabled={needsActionQuery.isFetching}
+              aria-busy={needsActionQuery.isFetching}
+            >
+              {t('adminSnapshots.tryAgain')}
+            </Button>
+          }
         />
       </AdminOperationalPage>
     )
@@ -233,6 +255,16 @@ export function SnapshotsDashboardPage() {
           title={t('adminSnapshots.dailyClosureUnavailableTitle')}
           description={getErrorMessage(dailyClosureQuery.error)}
           tone="danger"
+          action={
+            <Button
+              variant="outline"
+              onClick={() => void dailyClosureQuery.refetch()}
+              disabled={dailyClosureQuery.isFetching}
+              aria-busy={dailyClosureQuery.isFetching}
+            >
+              {t('adminSnapshots.tryAgain')}
+            </Button>
+          }
         />
       </AdminOperationalPage>
     )
@@ -291,6 +323,7 @@ export function SnapshotsDashboardPage() {
         locale={locale}
         meta={meta}
         offset={offset}
+        isFetching={needsActionQuery.isFetching}
         pagination={{ canGoBack, canGoForward }}
         searchFilter={deferredSearch}
         sortedItems={sortedItems}
@@ -503,6 +536,7 @@ function SnapshotActionQueuePanel(input: {
     runStatusFilter: SnapshotRunStatusFilter
   }
   isRerunning: boolean
+  isFetching: boolean
   locale: AppLocale
   meta: SnapshotNeedsActionMeta | undefined
   offset: number
@@ -665,6 +699,7 @@ function SnapshotActionQueuePanel(input: {
         dispatchPageState={input.dispatchPageState}
         meta={input.meta}
         offset={input.offset}
+        isFetching={input.isFetching}
         pagination={input.pagination}
         t={input.t}
       />
@@ -815,6 +850,7 @@ function SnapshotQueuePagination(input: {
   dispatchPageState: Dispatch<SnapshotsDashboardPageAction>
   meta: SnapshotNeedsActionMeta | undefined
   offset: number
+  isFetching: boolean
   pagination: {
     canGoBack: boolean
     canGoForward: boolean
@@ -827,20 +863,22 @@ function SnapshotQueuePagination(input: {
         type="button"
         variant="outline"
         onClick={() => input.dispatchPageState({ type: 'previousPage' })}
-        disabled={!input.pagination.canGoBack}
+        disabled={input.isFetching || !input.pagination.canGoBack}
       >
         {input.t('adminSnapshots.previous')}
       </Button>
       <AdminSurfaceBadge tone="neutral">
         {input.meta
-          ? `${input.offset + 1}-${Math.min(input.offset + PAGE_SIZE, input.meta.total)} / ${input.meta.total}`
+          ? input.meta.total === 0
+            ? input.t('adminSnapshots.zeroResults')
+            : `${input.offset + 1}-${Math.min(input.offset + PAGE_SIZE, input.meta.total)} / ${input.meta.total}`
           : input.t('adminSnapshots.zeroResults')}
       </AdminSurfaceBadge>
       <Button
         type="button"
         variant="outline"
         onClick={() => input.dispatchPageState({ type: 'nextPage' })}
-        disabled={!input.pagination.canGoForward}
+        disabled={input.isFetching || !input.pagination.canGoForward}
       >
         {input.t('adminSnapshots.next')}
       </Button>

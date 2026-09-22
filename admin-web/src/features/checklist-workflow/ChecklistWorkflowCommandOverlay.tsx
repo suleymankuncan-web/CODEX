@@ -84,6 +84,11 @@ export function ChecklistWorkflowCommandOverlay(input: {
     && canMutateChecklistTemplateType(input.authSummary, directChecklistRow.template.templateType),
   )
   const nestedModalOpen = Boolean(selectedSession || selectedResult)
+  const restoreTriggerFocus = (event: Event) => {
+    if (!input.returnFocusRef.current?.isConnected) return
+    event.preventDefault()
+    input.returnFocusRef.current.focus()
+  }
   const closeSelectedResult = () => {
     if (input.routeState.kind === 'result' && !input.routeState.returnStoreId) {
       input.onClose()
@@ -136,11 +141,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
           <DialogContent
             className={`checklist-workflow-command-drawer tw:min-w-0 tw:p-0${resultSurface ? ' checklist-workflow-command-drawer--results' : ''}`}
             closeLabel={locale === 'tr' ? 'Checklist panelini kapat' : 'Close checklist panel'}
-            onCloseAutoFocus={(event) => {
-              if (!input.returnFocusRef.current) return
-              event.preventDefault()
-              input.returnFocusRef.current.focus()
-            }}
+            onCloseAutoFocus={restoreTriggerFocus}
             showCloseButton={false}
           >
             <DialogHeader className="checklist-workflow-command-drawer-header tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-3 tw:text-left">
@@ -292,6 +293,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
       ) : null}
 
       <StoreChecklistsModals
+        onCloseAutoFocus={restoreTriggerFocus}
         acknowledgementNote={selectedResult ? (ackNotes[selectedResult.checklistInstanceId] ?? '') : ''}
         comments={comments}
         {...(mobileToday?.evidenceCapabilities

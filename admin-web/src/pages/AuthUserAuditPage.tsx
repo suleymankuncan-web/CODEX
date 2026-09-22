@@ -56,6 +56,8 @@ export function AuthUserAuditPage() {
     queryKey: ['auth-user-audit', userId, AUDIT_PAGE_SIZE, offset],
     queryFn: () => getUserAudit(userId ?? '', { limit: AUDIT_PAGE_SIZE, offset }),
     enabled: Boolean(userId),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[1] === userId ? previousData : undefined,
   })
 
   if (!userId) {
@@ -88,6 +90,7 @@ export function AuthUserAuditPage() {
           title={t('authAuditDetails.userErrorTitle')}
           description={getErrorMessage(auditQuery.error)}
           tone="danger"
+          action={<AuthButton onClick={() => void auditQuery.refetch()}>Yeniden dene</AuthButton>}
         />
       </AdminSurfacePage>
     )
@@ -113,16 +116,19 @@ export function AuthUserAuditPage() {
 
       {items.length === 0 ? (
         <AdminSurfaceSection title={t('authAuditDetails.userTimelineTitle')}>
-          <AdminSurfaceEmpty copy={t('authAuditDetails.userEmptyCopy')} />
-          <AuditPagination isFetching={auditQuery.isFetching} meta={meta} offset={offset} onOffsetChange={setOffset} t={t} />
+          <div aria-busy={auditQuery.isFetching} className="tw:grid tw:gap-3">
+            <AdminSurfaceEmpty copy={t('authAuditDetails.userEmptyCopy')} />
+            <AuditPagination isFetching={auditQuery.isFetching} meta={meta} offset={offset} onOffsetChange={setOffset} t={t} />
+          </div>
         </AdminSurfaceSection>
       ) : (
         <AdminSurfaceSection
           eyebrow={t('authAuditDetails.timelineEyebrow')}
           title={t('authAuditDetails.userTimelineTitle')}
         >
-          <AuthTimeline>
-            {items.map((item) => (
+          <div aria-busy={auditQuery.isFetching} className="tw:grid tw:gap-3">
+            <AuthTimeline>
+              {items.map((item) => (
               <AuthTimelineItem key={item.eventLogId}>
                 <AuthRowHead>
                   <strong className="tw:text-sm tw:font-medium tw:text-foreground">{item.eventType}</strong>
@@ -144,9 +150,10 @@ export function AuthUserAuditPage() {
                   ))}
                 </AdminKeyValueGrid>
               </AuthTimelineItem>
-            ))}
-          </AuthTimeline>
-          <AuditPagination isFetching={auditQuery.isFetching} meta={meta} offset={offset} onOffsetChange={setOffset} t={t} />
+              ))}
+            </AuthTimeline>
+            <AuditPagination isFetching={auditQuery.isFetching} meta={meta} offset={offset} onOffsetChange={setOffset} t={t} />
+          </div>
         </AdminSurfaceSection>
       )}
     </AdminSurfacePage>

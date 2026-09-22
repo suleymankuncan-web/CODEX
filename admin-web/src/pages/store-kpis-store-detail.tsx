@@ -49,12 +49,16 @@ export function StoreKpisStoreDetail({ model }: { model: StoreKpiHighlightsPageM
   const personnelTotal = useServerPersonnelPage
     ? personnelLeaderboard?.meta.total ?? 0
     : personnelLeaderboard?.managedStorePersonnelMeta?.total ?? managedPersonnelRows.length
+  const personnelOffset = useServerPersonnelPage
+    ? personnelLeaderboard?.meta.offset
+    : personnelLeaderboard?.managedStorePersonnelMeta?.offset
+  const displayedPersonnelPage = personnelOffset === undefined ? personnelPage : Math.floor(personnelOffset / personnelPageSize)
   const failedQueries = [model.configQuery, model.liveKpiQuery, model.dailySnapshotQuery, model.closedKpiQuery]
     .filter(query => query.isError && Boolean(query.data))
   return <StoreKpisManagerOverview
     key={`${storeId}|${periodStart}|${model.kpiDateRangeEnd}|${model.viewMode}`}
     model={model}
-    personnel={{ rows: personnelRows, total: personnelTotal, page: personnelPage, pageSize: personnelPageSize, onPageChange: setPersonnelPage, query: personnelRankingQuery }}
+    personnel={{ rows: personnelRows, total: personnelTotal, page: displayedPersonnelPage, pageSize: personnelPageSize, onPageChange: setPersonnelPage, query: personnelRankingQuery }}
     backgroundError={failedQueries.length ? <StoreErrorState
       title={model.t('storeKpis.rowsErrorTitle')}
       description={model.t('storeKpis.backgroundError')}

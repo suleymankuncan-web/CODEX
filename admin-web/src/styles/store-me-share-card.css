@@ -1,4 +1,6 @@
 .store-me-share-dialog {
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   --share-card-bg: #050711;
   --share-card-ink: #ffffff;
   --share-card-muted: rgba(227, 236, 255, 0.72);

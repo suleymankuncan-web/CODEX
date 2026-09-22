@@ -2,6 +2,12 @@ export const adminAuditTr = {
   'adminAudit.loadingTitle': 'Denetim merkezi yükleniyor',
   'adminAudit.loadingCopy': 'Kimlik ve operasyon denetim giriş noktaları toplanıyor.',
   'adminAudit.errorTitle': 'Denetim merkezi açılamadı',
+  'adminAudit.partialDataTitle': 'Bazı denetim kaynakları yüklenemedi',
+  'adminAudit.partialDataCopy':
+    'Kullanılabilir bölümler gösterilmeye devam ediyor. Eksik kaynakları yeniden deneyin.',
+  'adminAudit.sourceUnavailable': 'Bu denetim kaynağı şu anda yüklenemedi.',
+  'adminAudit.retryAction': 'Tekrar dene',
+  'adminAudit.retryingAction': 'Tekrar deneniyor...',
 
   'adminAudit.heroEyebrow': 'Denetim',
   'adminAudit.title': 'Denetim merkezi',
@@ -24,6 +30,10 @@ export const adminAuditTr = {
   'adminAudit.recentTraceTitle': 'Kimlik ve operasyon genelindeki son izler',
   'adminAudit.hydrating': 'Yükleniyor',
   'adminAudit.liveSlice': 'Canlı kesit',
+  'adminAudit.incomplete': 'Eksik',
+  'adminAudit.partialTraceTitle': 'Bazı kimlik izleri yüklenemedi',
+  'adminAudit.partialTraceCopy':
+    'Kullanılabilir olaylar gösteriliyor. Eksik kimlik izlerini yeniden deneyin.',
   'adminAudit.noTraceItems':
     'Henüz iz öğesi yok. Tüm zaman çizelgelerini incelemek için kimlik, import veya snapshot detaylarını aç.',
   'adminAudit.correlation': 'korelasyon {correlationId}',
@@ -84,6 +94,12 @@ export const adminAuditEn: Record<keyof typeof adminAuditTr, string> = {
   'adminAudit.loadingTitle': 'Loading audit center',
   'adminAudit.loadingCopy': 'Collecting the main audit entry points across auth and operations.',
   'adminAudit.errorTitle': 'Audit center unavailable',
+  'adminAudit.partialDataTitle': 'Some audit sources could not be loaded',
+  'adminAudit.partialDataCopy':
+    'Available sections remain visible. Retry the missing sources.',
+  'adminAudit.sourceUnavailable': 'This audit source could not be loaded right now.',
+  'adminAudit.retryAction': 'Try again',
+  'adminAudit.retryingAction': 'Retrying...',
 
   'adminAudit.heroEyebrow': 'Audit',
   'adminAudit.title': 'Audit Center',
@@ -106,6 +122,10 @@ export const adminAuditEn: Record<keyof typeof adminAuditTr, string> = {
   'adminAudit.recentTraceTitle': 'Latest visible events across auth and operations',
   'adminAudit.hydrating': 'Hydrating',
   'adminAudit.liveSlice': 'Live slice',
+  'adminAudit.incomplete': 'Incomplete',
+  'adminAudit.partialTraceTitle': 'Some auth traces could not be loaded',
+  'adminAudit.partialTraceCopy':
+    'Available events remain visible. Retry the missing auth traces.',
   'adminAudit.noTraceItems':
     'No trace items were available yet. Open auth, import, or snapshot detail views to inspect full timelines.',
   'adminAudit.correlation': 'correlation {correlationId}',

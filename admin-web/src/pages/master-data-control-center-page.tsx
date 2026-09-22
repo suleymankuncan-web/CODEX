@@ -100,7 +100,6 @@ type Feedback = {
 }
 
 type SortValue = 'priority' | 'newest' | 'name'
-
 const tabLabels: Record<MasterDataWorkbenchTab, string> = {
   issues: 'Düzeltilecekler',
   stores: 'Mağazalar',
@@ -625,7 +624,8 @@ export function MasterDataControlCenterPage() {
             auditRows={auditRows}
             importRows={importRows}
             issueRows={issueRows}
-            isLoading={isTabLoading(activeTab, issuesQuery.isLoading, storesQuery.isLoading, personnelQuery.isLoading, importsQuery.isLoading, auditQuery.isLoading)}
+            isError={getActiveTabFlag(activeTab, issuesQuery.isError, storesQuery.isError, personnelQuery.isError, importsQuery.isError, auditQuery.isError)}
+            isLoading={getActiveTabFlag(activeTab, issuesQuery.isLoading, storesQuery.isLoading, personnelQuery.isLoading, importsQuery.isLoading, auditQuery.isLoading)}
             personnelRows={personnelRows}
             selectedAuditId={selectedAudit?.id ?? null}
             selectedImportId={selectedImport?.id ?? null}
@@ -645,6 +645,7 @@ export function MasterDataControlCenterPage() {
             audit={selectedAudit}
             conflictMessage={feedback?.tone === 'warning' ? feedback.message : null}
             importDetail={importDetailQuery.data ?? null}
+            importError={importDetailQuery.isError || importReadinessQuery.isError}
             importReadiness={importReadinessQuery.data ?? null}
             importRow={selectedImport}
             isImportProcessing={validateMutation.isPending || promoteMutation.isPending}
@@ -663,6 +664,7 @@ export function MasterDataControlCenterPage() {
                 promoteMutation.mutate({ batchId: selectedImport.id, entity: selectedImport.record.bootstrapEntity })
               }
             }}
+            onRetryImport={() => void Promise.all([importDetailQuery.refetch(), importReadinessQuery.refetch()])}
             onSave={() => void saveAllDrafts()}
             onUpdatePersonnelDraft={updatePersonnelDraft}
             onUpdateStoreDraft={updateStoreDraft}
@@ -882,7 +884,7 @@ function getTabCount(
   return history ?? 0
 }
 
-function isTabLoading(
+function getActiveTabFlag(
   activeTab: MasterDataWorkbenchTab,
   issues: boolean,
   stores: boolean,

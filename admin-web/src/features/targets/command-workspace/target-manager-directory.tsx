@@ -9,7 +9,8 @@ export function TargetManagerDirectory({ selection, locale }: { selection: Targe
   const [page, setPage] = useState(0)
   const tr = locale === 'tr'
   const filtered = selection.items.filter(item => item.displayName.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale)))
-  const rows = filtered.slice(page * 20, (page + 1) * 20)
+  const activePage = Math.min(page, Math.max(0, Math.ceil(filtered.length / 20) - 1))
+  const rows = filtered.slice(activePage * 20, (activePage + 1) * 20)
   const title = tr ? 'Bölge müdürleri' : 'Region managers'
   const entries = [{ userId: 'all', displayName: tr ? 'Tüm mağazalar' : 'All stores', storeIds: [] as string[] }, ...rows]
   return <aside className="tw:min-w-0 tw:self-start tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:shadow-sm" aria-labelledby="target-manager-list-title">
@@ -26,7 +27,7 @@ export function TargetManagerDirectory({ selection, locale }: { selection: Targe
       </button>)}
       {!filtered.length && !selection.loading && !selection.error && <p className="tw:p-3 tw:text-xs tw:text-muted-foreground">{tr ? 'Eşleşen bölge müdürü yok.' : 'No matching region managers.'}</p>}
     </div>
-    <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{page + 1}</span><div className="tw:flex tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={tr ? 'Önceki bölge müdürü sayfası' : 'Previous region manager page'} disabled={page === 0} onClick={() => setPage(page - 1)}><ChevronLeft/></Button><Button size="icon-xs" variant="ghost" aria-label={tr ? 'Sonraki bölge müdürü sayfası' : 'Next region manager page'} disabled={(page + 1) * 20 >= filtered.length} onClick={() => setPage(page + 1)}><ChevronRight/></Button></div></footer>
+    <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{activePage + 1}</span><div className="tw:flex tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={tr ? 'Önceki bölge müdürü sayfası' : 'Previous region manager page'} disabled={activePage === 0} onClick={() => setPage(activePage - 1)}><ChevronLeft/></Button><Button size="icon-xs" variant="ghost" aria-label={tr ? 'Sonraki bölge müdürü sayfası' : 'Next region manager page'} disabled={(activePage + 1) * 20 >= filtered.length} onClick={() => setPage(activePage + 1)}><ChevronRight/></Button></div></footer>
   </aside>
 }
 function initials(name: string, locale: string) { const words = name.trim().split(/\s+/).filter(Boolean); return `${words[0]?.[0] ?? ''}${words.at(-1)?.[0] ?? ''}`.toLocaleUpperCase(locale) }

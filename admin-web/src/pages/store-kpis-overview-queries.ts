@@ -18,6 +18,10 @@ export function useStoreKpisOverviewQueries(input: {
 }) {
   const kpiDateRangeEnd = input.searchParams.get('periodEnd') || ''
   const queryClient = useQueryClient()
+  const getPreviousOverview = (queryKey: readonly unknown[]) => queryClient
+    .getQueriesData<RankingSummary>({ queryKey })
+    .filter(([, data]) => Boolean(data))
+    .sort(([left], [right]) => (queryClient.getQueryState(right)?.dataUpdatedAt ?? 0) - (queryClient.getQueryState(left)?.dataUpdatedAt ?? 0))[0]?.[1]
   const [reportViewerPage, setReportViewerPage] = useState(0)
   const [reportViewerRiskPage, setReportViewerRiskPage] = useState(0)
   const [reportViewerRiskOnly, setReportViewerRiskOnlyState] = useState(false)
@@ -80,13 +84,13 @@ export function useStoreKpisOverviewQueries(input: {
     }),
     enabled: input.reportingAllowed && input.isRegionManagerOverview && Boolean(input.regionManagerUserId) && Boolean(activeRegionOverviewPeriodStart),
     ...transientQueryRetryOptions,
-    initialData: () => queryClient.getQueriesData<RankingSummary>({
-      queryKey: ['store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart],
-    }).find(([, data]) => data)?.[1],
+    initialData: () => getPreviousOverview([
+      'store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart, input.regionManagerUserId,
+    ]),
     initialDataUpdatedAt: 0,
   })
   const reportViewerOverviewQuery = useQuery({
-    queryKey: ['store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', reportViewerPage, reportViewerRiskPage, reportViewerPageSize],
+    queryKey: ['store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', input.regionManagerUserId, reportViewerPage, reportViewerRiskPage, reportViewerPageSize],
     queryFn: () => getRankings({
       periodType: kpiDateRangeEnd ? 'daily' : 'monthly',
       ...(kpiDateRangeEnd ? { periodEnd: kpiDateRangeEnd } : {}),
@@ -98,9 +102,9 @@ export function useStoreKpisOverviewQueries(input: {
     }),
     enabled: input.reportingAllowed && input.isReportViewerOverview,
     ...transientQueryRetryOptions,
-    initialData: () => queryClient.getQueriesData<RankingSummary>({
-      queryKey: ['store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest'],
-    }).find(([, data]) => data)?.[1],
+    initialData: () => getPreviousOverview([
+      'store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', input.regionManagerUserId,
+    ]),
     initialDataUpdatedAt: 0,
   })
 

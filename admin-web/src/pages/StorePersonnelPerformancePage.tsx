@@ -23,7 +23,10 @@ export function StorePersonnelPerformancePage(input: {
     searchParams.get('mode') === 'live' && ['daily', 'monthly'].includes(initialLivePeriodType)
       ? searchParams.get('periodStart') ?? ''
       : ''
-  const initialLivePeriodEnd = initialLivePeriodType === 'daily' ? searchParams.get('periodEnd') ?? '' : ''
+  const initialLivePeriodEnd =
+    initialLivePeriodType === 'daily' && initialLivePeriodStart.trim()
+      ? searchParams.get('periodEnd') ?? ''
+      : ''
   const returnTo = getSafeRankingsReturnTo(location.state)
 
   return (

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {
@@ -45,14 +45,15 @@ export function ChecklistAnnualVisitHistoryLauncher(input: {
   regionName: string
 }) {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const label = input.locale === 'tr' ? 'Yıllık Ziyaretler' : 'Annual Visits'
 
   return <>
-    <button type="button" className="annual-visit-trigger tw:!border-white/20 tw:!bg-[#20407c] tw:!bg-none tw:!text-white tw:!shadow-none tw:[&_*]:!text-white" aria-label={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+    <button ref={triggerRef} type="button" className="annual-visit-trigger tw:!border-white/20 tw:!bg-[#20407c] tw:!bg-none tw:!text-white tw:!shadow-none tw:[&_*]:!text-white" aria-label={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
       <CalendarCheck2 size={15} />
       <span><small>{input.locale === 'tr' ? 'ZİYARET GEÇMİŞİ' : 'VISIT HISTORY'}</small><strong>{label}</strong></span>
     </button>
-    {open ? <AnnualVisitHistoryDialog {...input} onClose={() => setOpen(false)} /> : null}
+    {open ? <AnnualVisitHistoryDialog {...input} onClose={() => setOpen(false)} onCloseAutoFocus={(event) => { event.preventDefault(); triggerRef.current?.focus() }} /> : null}
   </>
 }
 
@@ -63,6 +64,7 @@ function AnnualVisitHistoryDialog(input: {
   regionId: string
   regionName: string
   onClose: () => void
+  onCloseAutoFocus: (event: Event) => void
 }) {
   const initialYear = Number(input.period.slice(0, 4)) || new Date().getUTCFullYear()
   const [selectedYear, setSelectedYear] = useState(initialYear)
@@ -104,7 +106,7 @@ function AnnualVisitHistoryDialog(input: {
   return <DialogPrimitive.Root open onOpenChange={(nextOpen) => { if (!nextOpen) input.onClose() }}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="annual-visit-history-backdrop" />
-      <DialogPrimitive.Content className="annual-visit-history-dialog tw:!rounded-[18px] tw:!border-primary/20 tw:!bg-card" aria-describedby={descriptionId}>
+      <DialogPrimitive.Content className="annual-visit-history-dialog tw:!rounded-[18px] tw:!border-primary/20 tw:!bg-card" aria-describedby={descriptionId} onCloseAutoFocus={input.onCloseAutoFocus}>
         <header className="tw:relative tw:flex tw:min-h-[88px] tw:items-center tw:justify-between tw:gap-4 tw:overflow-hidden tw:bg-primary tw:px-4 tw:py-4 tw:text-primary-foreground tw:sm:px-5">
           <div className="tw:pointer-events-none tw:absolute tw:-right-10 tw:-top-16 tw:size-44 tw:rounded-full tw:border tw:border-primary-foreground/15" />
           <div className="tw:relative tw:flex tw:min-w-0 tw:items-center tw:gap-3">

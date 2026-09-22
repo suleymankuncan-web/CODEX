@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { ArrowRight, DatabaseZap, Layers3, ShieldCheck } from 'lucide-react'
+import { ArrowRight, DatabaseZap, Layers3, RefreshCw, ShieldCheck } from 'lucide-react'
 import {
   AdminOperationalBadge as AdminSurfaceBadge,
   AdminOperationalEmpty as AdminSurfaceEmpty,
@@ -13,6 +13,7 @@ import {
   AdminOperationalState as AdminStatePanel,
   type AdminOperationalTone as AdminSurfaceTone,
 } from './admin-operational-primitives'
+import { Button } from '../components/ui/button'
 import {
   AuthLinkRow,
   AuthList,
@@ -31,7 +32,7 @@ import { getNeedsAction, type NeedsActionItem } from '../features/integrations/a
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getSnapshotNeedsAction, type SnapshotNeedsActionItem } from '../features/snapshots/api'
-import { formatDateTime, formatState, getErrorMessage, mapHealthTone } from '../lib/format'
+import { formatDateTime, formatState, mapHealthTone } from '../lib/format'
 
 type TraceItem = {
   id: string
@@ -62,13 +63,13 @@ export function AuditCenterPage() {
     queryFn: () => getSnapshotNeedsAction({ limit: 6, offset: 0 }),
   })
 
-  const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items])
+  const users = useMemo(() => usersQuery.isError ? [] : usersQuery.data?.items ?? [], [usersQuery.isError, usersQuery.data?.items])
   const assignments = useMemo(
-    () => assignmentsQuery.data?.items ?? [],
-    [assignmentsQuery.data?.items],
+    () => assignmentsQuery.isError ? [] : assignmentsQuery.data?.items ?? [],
+    [assignmentsQuery.isError, assignmentsQuery.data?.items],
   )
-  const batches = useMemo(() => importQuery.data?.items ?? [], [importQuery.data?.items])
-  const runs = useMemo(() => snapshotQuery.data?.items ?? [], [snapshotQuery.data?.items])
+  const batches = useMemo(() => importQuery.isError ? [] : importQuery.data?.items ?? [], [importQuery.isError, importQuery.data?.items])
+  const runs = useMemo(() => snapshotQuery.isError ? [] : snapshotQuery.data?.items ?? [], [snapshotQuery.isError, snapshotQuery.data?.items])
 
   const userAuditQueries = useQueries({
     queries: users.slice(0, 2).map((user) => ({
@@ -89,7 +90,7 @@ export function AuditCenterPage() {
 
     for (let index = 0; index < userAuditQueries.length; index += 1) {
       const query = userAuditQueries[index]
-      if (!query) {
+      if (!query || query.isError) {
         continue
       }
       const user = users[index]
@@ -113,7 +114,7 @@ export function AuditCenterPage() {
 
     for (let index = 0; index < assignmentAuditQueries.length; index += 1) {
       const query = assignmentAuditQueries[index]
-      if (!query) {
+      if (!query || query.isError) {
         continue
       }
       const assignment = assignments[index]
@@ -188,20 +189,21 @@ export function AuditCenterPage() {
     )
   }
 
-  const firstError = [usersQuery, assignmentsQuery, importQuery, snapshotQuery].find((query) => query.isError)
-  if (firstError?.isError) {
-    return (
-      <AdminSurfacePage>
-        <AdminStatePanel
-          title={t('adminAudit.errorTitle')}
-          description={getErrorMessage(firstError.error)}
-          tone="danger"
-        />
-      </AdminSurfacePage>
-    )
+  const primaryQueries = [usersQuery, assignmentsQuery, importQuery, snapshotQuery]
+  const hasPrimaryError = primaryQueries.some((query) => query.isError)
+  const isPrimaryRetrying = primaryQueries.some((query) => query.isError && query.isFetching)
+  const traceLoading = [...userAuditQueries, ...assignmentAuditQueries].some((query) => query.isLoading)
+  const traceQueries = [...userAuditQueries, ...assignmentAuditQueries]
+  const hasTraceError = traceQueries.some((query) => query.isError)
+  const isTraceRetrying = traceQueries.some((query) => query.isError && query.isFetching)
+
+  function retryPrimaryQueries() {
+    void Promise.all(primaryQueries.filter((query) => query.isError).map((query) => query.refetch()))
   }
 
-  const traceLoading = [...userAuditQueries, ...assignmentAuditQueries].some((query) => query.isLoading)
+  function retryTraceQueries() {
+    void Promise.all(traceQueries.filter((query) => query.isError).map((query) => query.refetch()))
+  }
 
   return (
     <AdminSurfacePage ariaLabel={t('adminAudit.heroEyebrow')}>
@@ -213,24 +215,43 @@ export function AuditCenterPage() {
         meta={
           <>
             <AdminSurfaceBadge tone="accent">
-              {t('adminAudit.users')}: {usersQuery.data?.meta.total ?? users.length}
+              {t('adminAudit.users')}: {usersQuery.isError ? '—' : (usersQuery.data?.meta.total ?? users.length)}
             </AdminSurfaceBadge>
             <AdminSurfaceBadge tone="cyan">
-              {t('adminAudit.assignments')}: {assignmentsQuery.data?.meta.total ?? assignments.length}
+              {t('adminAudit.assignments')}: {assignmentsQuery.isError ? '—' : (assignmentsQuery.data?.meta.total ?? assignments.length)}
             </AdminSurfaceBadge>
             <AdminSurfaceBadge tone="neutral">
-              {t('adminAudit.operationalTrails')}: {batches.length + runs.length}
+              {t('adminAudit.operationalTrails')}: {importQuery.isError || snapshotQuery.isError ? '—' : batches.length + runs.length}
             </AdminSurfaceBadge>
           </>
         }
       />
+
+      {hasPrimaryError ? (
+        <AdminStatePanel
+          title={t('adminAudit.partialDataTitle')}
+          description={t('adminAudit.partialDataCopy')}
+          tone="danger"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPrimaryRetrying}
+              onClick={retryPrimaryQueries}
+            >
+              <RefreshCw aria-hidden="true" size={16} />
+              {isPrimaryRetrying ? t('adminAudit.retryingAction') : t('adminAudit.retryAction')}
+            </Button>
+          }
+        />
+      ) : null}
 
       <AdminMetricStrip
         items={[
           {
             id: 'audit-users',
             label: t('adminAudit.userAudit'),
-            value: users.length,
+            value: usersQuery.isError ? '—' : users.length,
             description: t('adminAudit.userAuditNote'),
             icon: <ShieldCheck size={18} />,
             tone: 'success',
@@ -238,7 +259,7 @@ export function AuditCenterPage() {
           {
             id: 'audit-assignments',
             label: t('adminAudit.assignmentAudit'),
-            value: assignments.length,
+            value: assignmentsQuery.isError ? '—' : assignments.length,
             description: t('adminAudit.assignmentAuditNote'),
             icon: <ShieldCheck size={18} />,
             tone: 'accent',
@@ -246,7 +267,7 @@ export function AuditCenterPage() {
           {
             id: 'audit-imports',
             label: t('adminAudit.importTraces'),
-            value: batches.length,
+            value: importQuery.isError ? '—' : batches.length,
             description: t('adminAudit.importTracesNote'),
             icon: <DatabaseZap size={18} />,
             tone: 'warning',
@@ -254,7 +275,7 @@ export function AuditCenterPage() {
           {
             id: 'audit-snapshots',
             label: t('adminAudit.snapshotTraces'),
-            value: runs.length,
+            value: snapshotQuery.isError ? '—' : runs.length,
             description: t('adminAudit.snapshotTracesNote'),
             icon: <Layers3 size={18} />,
             tone: 'danger',
@@ -262,14 +283,37 @@ export function AuditCenterPage() {
         ]}
       />
 
-      <AuditRecentTracePanel recentTrace={recentTrace} traceLoading={traceLoading} />
+      <AuditRecentTracePanel
+        recentTrace={recentTrace}
+        traceError={hasTraceError}
+        traceLoading={traceLoading}
+        traceRetrying={isTraceRetrying}
+        onRetry={retryTraceQueries}
+      />
 
-      <AuditSourceGrid users={users} assignments={assignments} batches={batches} runs={runs} />
+      <AuditSourceGrid
+        users={users}
+        assignments={assignments}
+        batches={batches}
+        runs={runs}
+        unavailable={{
+          assignments: assignmentsQuery.isError,
+          batches: importQuery.isError,
+          runs: snapshotQuery.isError,
+          users: usersQuery.isError,
+        }}
+      />
     </AdminSurfacePage>
   )
 }
 
-function AuditRecentTracePanel(input: { recentTrace: TraceItem[]; traceLoading: boolean }) {
+function AuditRecentTracePanel(input: {
+  recentTrace: TraceItem[]
+  traceError: boolean
+  traceLoading: boolean
+  traceRetrying: boolean
+  onRetry: () => void
+}) {
   const { locale, t } = useLocalization()
 
   return (
@@ -277,12 +321,34 @@ function AuditRecentTracePanel(input: { recentTrace: TraceItem[]; traceLoading: 
       eyebrow={t('adminAudit.recentTrace')}
       title={t('adminAudit.recentTraceTitle')}
       badge={
-        <AdminSurfaceBadge tone={input.traceLoading ? 'warning' : 'accent'}>
-          {input.traceLoading ? t('adminAudit.hydrating') : t('adminAudit.liveSlice')}
+        <AdminSurfaceBadge tone={input.traceError ? 'warning' : input.traceLoading ? 'warning' : 'accent'}>
+          {input.traceError
+            ? t('adminAudit.incomplete')
+            : input.traceLoading
+              ? t('adminAudit.hydrating')
+              : t('adminAudit.liveSlice')}
         </AdminSurfaceBadge>
       }
     >
-      {input.recentTrace.length === 0 ? (
+      {input.traceError ? (
+        <AdminStatePanel
+          title={t('adminAudit.partialTraceTitle')}
+          description={t('adminAudit.partialTraceCopy')}
+          tone="warning"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              disabled={input.traceRetrying}
+              onClick={input.onRetry}
+            >
+              <RefreshCw aria-hidden="true" size={16} />
+              {input.traceRetrying ? t('adminAudit.retryingAction') : t('adminAudit.retryAction')}
+            </Button>
+          }
+        />
+      ) : null}
+      {input.recentTrace.length === 0 && !input.traceError ? (
         <AdminSurfaceEmpty copy={t('adminAudit.noTraceItems')} />
       ) : (
         <AuthList>
@@ -315,18 +381,24 @@ function AuditSourceGrid(input: {
   assignments: RoleAssignment[]
   batches: NeedsActionItem[]
   runs: SnapshotNeedsActionItem[]
+  unavailable: {
+    users: boolean
+    assignments: boolean
+    batches: boolean
+    runs: boolean
+  }
 }) {
   return (
     <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
-      <AuditUsersPanel users={input.users} />
-      <AuditAssignmentsPanel assignments={input.assignments} />
-      <AuditImportBatchesPanel batches={input.batches} />
-      <AuditSnapshotRunsPanel runs={input.runs} />
+      <AuditUsersPanel users={input.users} unavailable={input.unavailable.users} />
+      <AuditAssignmentsPanel assignments={input.assignments} unavailable={input.unavailable.assignments} />
+      <AuditImportBatchesPanel batches={input.batches} unavailable={input.unavailable.batches} />
+      <AuditSnapshotRunsPanel runs={input.runs} unavailable={input.unavailable.runs} />
     </section>
   )
 }
 
-function AuditUsersPanel(input: { users: UserAccount[] }) {
+function AuditUsersPanel(input: { users: UserAccount[]; unavailable: boolean }) {
   const { locale, t } = useLocalization()
 
   return (
@@ -334,7 +406,9 @@ function AuditUsersPanel(input: { users: UserAccount[] }) {
       eyebrow={t('adminAudit.authUsers')}
       title={t('adminAudit.recentAccountAuditEntries')}
     >
-      {input.users.length === 0 ? (
+      {input.unavailable ? (
+        <AdminStatePanel title={t('adminAudit.sourceUnavailable')} tone="danger" />
+      ) : input.users.length === 0 ? (
         <AdminSurfaceEmpty copy={t('adminAudit.noUserAccounts')} />
       ) : (
         <AuthList>
@@ -361,7 +435,7 @@ function AuditUsersPanel(input: { users: UserAccount[] }) {
   )
 }
 
-function AuditAssignmentsPanel(input: { assignments: RoleAssignment[] }) {
+function AuditAssignmentsPanel(input: { assignments: RoleAssignment[]; unavailable: boolean }) {
   const { locale, t } = useLocalization()
 
   return (
@@ -369,7 +443,9 @@ function AuditAssignmentsPanel(input: { assignments: RoleAssignment[] }) {
       eyebrow={t('adminAudit.roleAssignments')}
       title={t('adminAudit.scopedAccessAuditTrails')}
     >
-      {input.assignments.length === 0 ? (
+      {input.unavailable ? (
+        <AdminStatePanel title={t('adminAudit.sourceUnavailable')} tone="danger" />
+      ) : input.assignments.length === 0 ? (
         <AdminSurfaceEmpty copy={t('adminAudit.noRoleAssignments')} />
       ) : (
         <AuthList>
@@ -400,7 +476,7 @@ function AuditAssignmentsPanel(input: { assignments: RoleAssignment[] }) {
   )
 }
 
-function AuditImportBatchesPanel(input: { batches: NeedsActionItem[] }) {
+function AuditImportBatchesPanel(input: { batches: NeedsActionItem[]; unavailable: boolean }) {
   const { t } = useLocalization()
 
   return (
@@ -408,7 +484,9 @@ function AuditImportBatchesPanel(input: { batches: NeedsActionItem[] }) {
       eyebrow={t('adminAudit.importBatches')}
       title={t('adminAudit.batchAuditJumpList')}
     >
-      {input.batches.length === 0 ? (
+      {input.unavailable ? (
+        <AdminStatePanel title={t('adminAudit.sourceUnavailable')} tone="danger" />
+      ) : input.batches.length === 0 ? (
         <AdminSurfaceEmpty copy={t('adminAudit.noImportBatches')} />
       ) : (
         <AuthList>
@@ -433,7 +511,7 @@ function AuditImportBatchesPanel(input: { batches: NeedsActionItem[] }) {
   )
 }
 
-function AuditSnapshotRunsPanel(input: { runs: SnapshotNeedsActionItem[] }) {
+function AuditSnapshotRunsPanel(input: { runs: SnapshotNeedsActionItem[]; unavailable: boolean }) {
   const { locale, t } = useLocalization()
 
   return (
@@ -441,7 +519,9 @@ function AuditSnapshotRunsPanel(input: { runs: SnapshotNeedsActionItem[] }) {
       eyebrow={t('adminAudit.snapshotRuns')}
       title={t('adminAudit.rerunDependencyTrace')}
     >
-      {input.runs.length === 0 ? (
+      {input.unavailable ? (
+        <AdminStatePanel title={t('adminAudit.sourceUnavailable')} tone="danger" />
+      ) : input.runs.length === 0 ? (
         <AdminSurfaceEmpty copy={t('adminAudit.noSnapshotRuns')} />
       ) : (
         <AuthList>

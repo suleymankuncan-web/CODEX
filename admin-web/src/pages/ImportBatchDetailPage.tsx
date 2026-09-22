@@ -209,6 +209,17 @@ export function ImportBatchDetailPage() {
           title={t('importBatchDetail.unavailableTitle')}
           description={getErrorMessage(detailQuery.error)}
           tone="danger"
+          action={
+            <Button
+              variant="outline"
+              onClick={() => void detailQuery.refetch()}
+              disabled={detailQuery.isFetching}
+              aria-busy={detailQuery.isFetching}
+            >
+              <RefreshCw aria-hidden="true" />
+              {t('adminIntegrations.observationsRetry')}
+            </Button>
+          }
         />
       </AdminSurfacePage>
     )
@@ -266,52 +277,85 @@ export function ImportBatchDetailPage() {
       />
 
       <LineagePanel detail={detail} t={t} />
-      <ReconciliationGrid detail={detail} reconciliation={reconciliation} t={t} />
+      <ReconciliationGrid
+        detail={detail}
+        error={reconciliationQuery.error}
+        reconciliation={reconciliation}
+        t={t}
+      />
 
       <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.8fr)]">
-        <ErrorRowsPanel
-          batchId={batchId}
-          candidateQueries={{
-            employee: employeeCandidatesQuery,
-            store: storeCandidatesQuery,
-          }}
-          errors={errors}
-          errorMeta={errorsQuery.data?.meta}
-          errorIsFetching={errorsQuery.isFetching}
-          errorOffset={errorOffset}
-          mappingInputs={mappingInputs}
-          mappingState={{
-            isPending: mappingMutation.isPending,
-            variables: mappingMutation.variables,
-          }}
-          searchInputs={mappingSearchInputs}
-          onApproveMapping={(input) => mappingMutation.mutate(input)}
-          onMappingInputChange={(rowId, value) =>
-            setMappingInputs((current) => ({
-              ...current,
-              [rowId]: value,
-            }))
-          }
-          onSearchInputChange={(entityType, value) =>
-            setMappingSearchInputs((current) => ({
-              ...current,
-              [entityType]: value,
-            }))
-          }
-          onErrorOffsetChange={setErrorOffset}
-          t={t}
-        />
+        {errorsQuery.isError ? (
+          <AdminStatePanel
+            title={t('importBatchDetail.unavailableTitle')}
+            description={getErrorMessage(errorsQuery.error)}
+            tone="danger"
+          />
+        ) : errorsQuery.isLoading ? (
+          <AdminStatePanel
+            isLoading
+            title={t('importBatchDetail.loadingTitle')}
+            description={t('importBatchDetail.loadingCopy')}
+          />
+        ) : (
+          <ErrorRowsPanel
+            batchId={batchId}
+            candidateQueries={{
+              employee: employeeCandidatesQuery,
+              store: storeCandidatesQuery,
+            }}
+            errors={errors}
+            errorMeta={errorsQuery.data?.meta}
+            errorIsFetching={errorsQuery.isFetching}
+            errorOffset={errorOffset}
+            mappingInputs={mappingInputs}
+            mappingState={{
+              isPending: mappingMutation.isPending,
+              variables: mappingMutation.variables,
+            }}
+            searchInputs={mappingSearchInputs}
+            onApproveMapping={(input) => mappingMutation.mutate(input)}
+            onMappingInputChange={(rowId, value) =>
+              setMappingInputs((current) => ({
+                ...current,
+                [rowId]: value,
+              }))
+            }
+            onSearchInputChange={(entityType, value) =>
+              setMappingSearchInputs((current) => ({
+                ...current,
+                [entityType]: value,
+              }))
+            }
+            onErrorOffsetChange={setErrorOffset}
+            t={t}
+          />
+        )}
 
-        <AuditTimelinePanel
-          auditIsFetching={auditQuery.isFetching}
-          auditMeta={auditQuery.data?.meta}
-          auditOffset={auditOffset}
-          auditItems={auditItems}
-          batchId={batchId}
-          locale={locale}
-          onAuditOffsetChange={setAuditOffset}
-          t={t}
-        />
+        {auditQuery.isError ? (
+          <AdminStatePanel
+            title={t('importBatchDetail.unavailableTitle')}
+            description={getErrorMessage(auditQuery.error)}
+            tone="danger"
+          />
+        ) : auditQuery.isLoading ? (
+          <AdminStatePanel
+            isLoading
+            title={t('importBatchDetail.loadingTitle')}
+            description={t('importBatchDetail.loadingCopy')}
+          />
+        ) : (
+          <AuditTimelinePanel
+            auditIsFetching={auditQuery.isFetching}
+            auditMeta={auditQuery.data?.meta}
+            auditOffset={auditOffset}
+            auditItems={auditItems}
+            batchId={batchId}
+            locale={locale}
+            onAuditOffsetChange={setAuditOffset}
+            t={t}
+          />
+        )}
       </div>
     </AdminOperationalPage>
   )
@@ -351,7 +395,8 @@ function ImportBatchHero(input: { detail: ImportBatchDetail; t: TranslateFunctio
         title={`${detail.batch.sourceCode} / ${detail.batch.entityType}`}
         description={
           <>
-            {t('importBatchDetail.batchPrefix')} <code>{detail.batch.batchId}</code>{' '}
+            {t('importBatchDetail.batchPrefix')}{' '}
+            <code className="tw:break-all">{detail.batch.batchId}</code>{' '}
             {t('importBatchDetail.currentHealthState')}{' '}
             <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(detail.healthState))}>
               {formatStateLabel(detail.healthState, t)}
@@ -696,10 +741,11 @@ function LineagePanel(input: { detail: ImportBatchDetail; t: TranslateFunction }
 
 function ReconciliationGrid(input: {
   detail: ImportBatchDetail
+  error: unknown
   reconciliation: ImportBatchReconciliation | undefined
   t: TranslateFunction
 }) {
-  const { detail, reconciliation, t } = input
+  const { detail, error, reconciliation, t } = input
 
   return (
     <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
@@ -708,7 +754,13 @@ function ReconciliationGrid(input: {
         title={t('importBatchDetail.batchAccounting')}
       >
 
-        {reconciliation ? (
+        {error ? (
+          <AdminStatePanel
+            title={t('importBatchDetail.unavailableTitle')}
+            description={getErrorMessage(error)}
+            tone="danger"
+          />
+        ) : reconciliation ? (
           <>
             <AdminKeyValueGrid className="tw:lg:grid-cols-3">
               <ReconciliationStat label={t('importBatchDetail.accountedRows')} value={String(reconciliation.totals.accountedRows)} />

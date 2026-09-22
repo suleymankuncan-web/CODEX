@@ -20,7 +20,7 @@ const REGION_PAGE_SIZE = 20
 
 export function ReportViewerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
-  onOpenResult: (checklistInstanceId: string) => void
+  onOpenResult: (checklistInstanceId: string, trigger: HTMLElement | null) => void
 }) {
   const { locale } = useLocalization()
   const copy = locale === 'tr' ? trCopy : enCopy

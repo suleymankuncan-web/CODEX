@@ -71,6 +71,25 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
 })
 
+test('competition selection cannot reset an in-flight stage operation', async ({ page }) => {
+  let release = () => {}
+  const gate = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/competitions/stages/*/recalculate', async route => {
+    await gate
+    await route.fulfill({ status: 503, json: { message: 'Temporary failure' } })
+  })
+  await page.goto('/admin/competitions')
+  const recalculate = page.getByRole('button', { name: /Yeniden hesapla QUALIFIER/ })
+  try {
+    await recalculate.click()
+    await expect(recalculate).toBeDisabled()
+    await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'İncele', exact: true }).first()).toBeDisabled()
+  } finally { release() }
+  await expect(page.getByText('Etap yeniden hesaplanamadı', { exact: true })).toBeVisible()
+  await expect(recalculate).toBeEnabled()
+})
+
 test('admin competitions lets operators retry after the list load fails', async ({ page }) => {
   let listAttempts = 0
   let allowCompetitionList = false

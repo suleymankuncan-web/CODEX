@@ -140,7 +140,7 @@ test('store self-performance does not treat raw net sales as HG percent when tar
 
   await page.goto('/store/me')
 
-  await expect(page.getByText(/Hedefin %0/)).toBeVisible()
+  await expect(page.getByText(/Hedefin %0/)).toHaveCount(0)
   await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Veri yok')
   await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Hedef Gerçekleştirme')
   await expect(page.getByText(/9\.200\.202%/)).toHaveCount(0)

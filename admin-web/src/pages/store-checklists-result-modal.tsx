@@ -55,6 +55,7 @@ export function ChecklistResultModal(input: {
   locale: AppLocale
   onAcknowledge: (acknowledgementNote: string) => void
   onClose: () => void
+  onCloseAutoFocus: (event: Event) => void
   onNoteChange: (note: string) => void
   t: TranslateFunction
 }) {
@@ -103,6 +104,7 @@ export function ChecklistResultModal(input: {
       <DialogContent
         className="store-checklist-modal store-checklist-result-modal tw:max-w-[min(960px,calc(100vw-1rem))] tw:sm:max-w-[min(960px,calc(100vw-1rem))]"
         showCloseButton={false}
+        onCloseAutoFocus={input.onCloseAutoFocus}
       >
         <section className="store-checklist-result-hero" aria-label={input.t('storeChecklists.summaryAria')}>
           <DialogHeader className="store-checklist-result-head">

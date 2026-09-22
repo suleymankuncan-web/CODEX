@@ -128,6 +128,7 @@ export function ReportsWorkforcePage() {
           title={t('reportsWorkforce.missingTitle')}
           description={t('reportsWorkforce.missingCopy')}
           tone="danger"
+          action={<Button asChild variant="outline" size="sm"><Link to="/admin/reports/snapshot-runs">{t('reportsWorkforce.chooseAnotherSnapshot')}</Link></Button>}
         />
       </AdminOperationalPage>
     )
@@ -152,6 +153,7 @@ export function ReportsWorkforcePage() {
           title={t('reportsWorkforce.errorTitle')}
           description={getErrorMessage(workforceQuery.error)}
           tone="danger"
+          action={<Button type="button" variant="outline" size="sm" onClick={() => void workforceQuery.refetch()}>{t('reportsSummary.retry')}</Button>}
         />
       </AdminOperationalPage>
     )

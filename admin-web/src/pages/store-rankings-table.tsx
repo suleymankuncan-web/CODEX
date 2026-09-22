@@ -52,18 +52,17 @@ export function RankingWorkspace(input: {
     input.activeList === 'stores'
       ? input.t('storeRankings.turkeyStoreRanking')
       : input.t('storeRankings.turkeyPersonnelRanking')
-  const caption =
-    input.activeList === 'stores'
-      ? input.t('storeRankings.storeResultCaption', {
-          start: input.forceEmpty || !meta.total ? 0 : input.offset + 1,
-          end: input.offset + rows.length,
-          total: input.forceEmpty ? 0 : meta.total,
-        })
-      : input.t('storeRankings.personnelResultCaption', {
-          start: input.forceEmpty || !meta.total ? 0 : input.offset + 1,
-          end: input.offset + rows.length,
-          total: input.forceEmpty ? 0 : meta.total,
-        })
+  const displayedOffset = input.loading ? meta.offset : input.offset
+  const hasRows = !input.forceEmpty && meta.total > 0 && rows.length > 0
+  const visibleWindow = {
+    start: hasRows ? displayedOffset + 1 : 0,
+    end: hasRows ? displayedOffset + rows.length : 0,
+    total: input.forceEmpty ? 0 : meta.total,
+  }
+  const caption = input.t(
+    input.activeList === 'stores' ? 'storeRankings.storeResultCaption' : 'storeRankings.personnelResultCaption',
+    visibleWindow,
+  )
 
   return (
     <Tabs value={input.activeList} onValueChange={value => { if (value === 'stores' || value === 'personnel') input.onActiveListChange(value) }} className="store-rankings-board">
@@ -115,11 +114,7 @@ export function RankingWorkspace(input: {
           aria-label={input.t('storeRankings.pagination')}
         >
           <span>
-            {input.t('storeRankings.pageInfo', {
-              start: input.forceEmpty || !meta.total ? 0 : input.offset + 1,
-              end: input.offset + rows.length,
-              total: input.forceEmpty ? 0 : meta.total,
-            })}
+            {input.t('storeRankings.pageInfo', visibleWindow)}
           </span>
           <div className="store-rankings-page-actions">
             <Button
@@ -128,7 +123,7 @@ export function RankingWorkspace(input: {
               variant="outline"
               className="store-rankings-page-button"
               onClick={() => input.onOffsetChange(Math.max(0, input.offset - input.limit))}
-              disabled={input.offset === 0}
+              disabled={input.loading || input.offset === 0}
               aria-label={input.t('storeRankings.previousPageLabel')}
             >
               <ChevronLeft data-icon="inline-start" aria-hidden="true" />
@@ -139,7 +134,7 @@ export function RankingWorkspace(input: {
               variant="outline"
               className="store-rankings-page-button"
               onClick={() => input.onOffsetChange(input.offset + input.limit)}
-              disabled={!input.hasNextPage}
+              disabled={input.loading || !input.hasNextPage}
               aria-label={input.t('storeRankings.nextPageLabel')}
             >
               <ChevronRight data-icon="inline-start" aria-hidden="true" />

@@ -84,6 +84,8 @@ export function ChecklistOperationalHistoryDrawer(input: {
     enabled: input.open && Boolean(input.storeId) && Boolean(input.onOpenResult),
   })
   const forbidden = historyQuery.error instanceof ApiError && historyQuery.error.status === 403
+  const resultsForbidden = checklistResultsQuery.error instanceof ApiError
+    && (checklistResultsQuery.error.status === 401 || checklistResultsQuery.error.status === 403)
   const summary = historyQuery.data?.pages[0]?.data.summary ?? null
   const events = useMemo(() => {
     const byId = new Map<string, HistoryEvent>()
@@ -149,6 +151,13 @@ export function ChecklistOperationalHistoryDrawer(input: {
             />
           ) : null}
           {!historyQuery.isLoading && !historyQuery.isError && events.length === 0 ? <HistoryState title={copy.empty} copy={copy.emptyCopy} /> : null}
+
+          {input.onOpenResult && checklistResultsQuery.isError ? (
+            <div role="alert" className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/25 tw:bg-destructive/5 tw:p-3 tw:text-xs tw:text-destructive">
+              <span>{resultsForbidden ? copy.resultsForbidden : copy.resultsError}</span>
+              {!resultsForbidden ? <Button disabled={checklistResultsQuery.isFetching} size="sm" type="button" variant="outline" onClick={() => void checklistResultsQuery.refetch()}><RefreshCw />{copy.retry}</Button> : null}
+            </div>
+          ) : null}
 
           {events.length > 0 ? (
             <section className="checklist-record-history-timeline" aria-label={copy.timeline}>
@@ -242,9 +251,11 @@ function formatScore(value: number, locale: 'tr' | 'en') {
 }
 
 const trCopy = {
+  resultsError: 'Checklist sonuçları yüklenemedi.', resultsForbidden: 'Checklist sonuçlarına erişilemiyor.',
   store: 'Mağaza', recordEyebrow: 'Mağaza kayıtları', recordSuffix: 'mağaza kaydı', description: 'Denetim, ziyaret ve görev hareketleri.', close: 'Mağaza kaydını kapat', summary: 'Mağaza faaliyet özeti', totalVisits: 'Toplam Ziyaret Sayısı', totalAudits: 'Toplam Denetim Sayısı', totalTasks: 'Toplam Görev Sayısı', resolvedTasks: 'Toplam Çözülen Görev Sayısı', openTasks: 'Açık Görev Sayısı', loading: 'Mağaza kaydı yükleniyor', error: 'Mağaza kaydı açılamadı', errorCopy: 'Kayıtlar okunamadı.', timeoutCopy: 'Mağaza kaydı zamanında yanıt vermedi. Tekrar deneyin.', forbidden: 'Bu mağaza kaydına erişilemiyor', forbiddenCopy: 'Mağaza yetkili okuma kapsamınızda değil.', retry: 'Tekrar dene', empty: 'Henüz kayıt yok', emptyCopy: 'Bu mağaza için tamamlanmış bir hareket bulunamadı.', timeline: 'Kayıt akışı', timelineCopy: 'En yeni hareketten geçmişe doğru sıralanır.', recordCount: (count: number) => `${count} kayıt`, loadMore: '20 kayıt daha yükle', loadingMore: 'Yükleniyor', partialError: 'Yeni kayıtlar yüklenemedi; mevcut kayıtlar korunuyor.', unknownActor: 'Bilinmeyen kullanıcı', scoreLoading: 'Puan yükleniyor', noScore: 'Puan yok', points: 'puan', scoreAria: (score: string) => `Checklist puanı: ${score} puan`, viewResult: 'Sonucu Gör',
 } as const
 const enCopy = {
+  resultsError: 'Checklist results could not load.', resultsForbidden: 'Checklist results are unavailable.',
   store: 'Store', recordEyebrow: 'Store records', recordSuffix: 'store record', description: 'Audit, visit and task activity.', close: 'Close store record', summary: 'Store activity summary', totalVisits: 'Total Visits', totalAudits: 'Total Audits', totalTasks: 'Total Tasks', resolvedTasks: 'Total Resolved Tasks', openTasks: 'Open Tasks', loading: 'Loading store record', error: 'Store record unavailable', errorCopy: 'Records could not be read.', timeoutCopy: 'The store record did not respond in time. Try again.', forbidden: 'This store record is unavailable', forbiddenCopy: 'The store is outside your authorized read scope.', retry: 'Retry', empty: 'No records yet', emptyCopy: 'No completed activity was found for this store.', timeline: 'Record activity', timelineCopy: 'Ordered from the newest activity to the oldest.', recordCount: (count: number) => `${count} records`, loadMore: 'Load 20 more', loadingMore: 'Loading', partialError: 'New records could not load; existing records are retained.', unknownActor: 'Unknown user', scoreLoading: 'Loading score', noScore: 'No score', points: 'points', scoreAria: (score: string) => `Checklist score: ${score} points`, viewResult: 'View result',
 } as const
 

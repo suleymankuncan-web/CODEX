@@ -101,6 +101,10 @@ export function AdminDataQualityCenterPage() {
     offboardingRequestsQuery.isError ||
     kpiConfigQuery.isError ||
     rankingsQuery.isError
+  const hasImportSignalError = importOverviewQuery.isError || importNeedsActionQuery.isError
+  const hasSnapshotSignalError = snapshotOverviewQuery.isError || snapshotNeedsActionQuery.isError
+  const hasWorkforceSignalError = sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError
+  const hasSourceTrustSignalError = kpiConfigQuery.isError || rankingsQuery.isError
   const isInitialLoading = [
     importOverviewQuery,
     importNeedsActionQuery,
@@ -163,7 +167,7 @@ export function AdminDataQualityCenterPage() {
           {
             id: 'totalPressure',
             label: t('dataQuality.totalPressure'),
-            value: formatNumber(summary.totalPressure, locale),
+            value: hasSignalError ? t('dataQuality.unavailable') : formatNumber(summary.totalPressure, locale),
             description: t(status.labelKey === 'dataQuality.ready' ? 'dataQuality.readyCopy' : 'dataQuality.attentionCopy'),
             icon: <ShieldCheck size={18} />,
             tone: toSurfaceTone(metricTone(hasSignalError, summary.totalPressure)),
@@ -171,7 +175,9 @@ export function AdminDataQualityCenterPage() {
           {
             id: 'import',
             label: t('dataQuality.importMetric'),
-            value: formatNumber(summary.importActionCount, locale),
+            value: hasImportSignalError
+              ? t('dataQuality.unavailable')
+              : formatNumber(summary.importActionCount, locale),
             description: t('dataQuality.importMetricNote'),
             icon: <DatabaseZap size={18} />,
             tone: toSurfaceTone(metricTone(hasSignalError, summary.importActionCount)),
@@ -179,7 +185,9 @@ export function AdminDataQualityCenterPage() {
           {
             id: 'snapshot',
             label: t('dataQuality.snapshotMetric'),
-            value: formatNumber(summary.snapshotActionCount, locale),
+            value: hasSnapshotSignalError
+              ? t('dataQuality.unavailable')
+              : formatNumber(summary.snapshotActionCount, locale),
             description: t('dataQuality.snapshotMetricNote'),
             icon: <Layers3 size={18} />,
             tone: toSurfaceTone(metricTone(hasSignalError, summary.snapshotActionCount)),
@@ -187,7 +195,9 @@ export function AdminDataQualityCenterPage() {
           {
             id: 'workforce',
             label: t('dataQuality.workforceMetric'),
-            value: formatNumber(summary.workforcePendingCount, locale),
+            value: hasWorkforceSignalError
+              ? t('dataQuality.unavailable')
+              : formatNumber(summary.workforcePendingCount, locale),
             description: t('dataQuality.workforceMetricNote'),
             icon: <Users size={18} />,
             tone: toSurfaceTone(metricTone(hasSignalError, summary.workforcePendingCount)),
@@ -195,7 +205,9 @@ export function AdminDataQualityCenterPage() {
           {
             id: 'sourceTrust',
             label: t('dataQuality.sourceTrustMetric'),
-            value: formatNumber(summary.sourceTrustGapCount, locale),
+            value: hasSourceTrustSignalError
+              ? t('dataQuality.unavailable')
+              : formatNumber(summary.sourceTrustGapCount, locale),
             description: t('dataQuality.sourceTrustMetricNote'),
             icon: <ShieldCheck size={18} />,
             tone: toSurfaceTone(metricTone(hasSignalError, summary.sourceTrustGapCount)),

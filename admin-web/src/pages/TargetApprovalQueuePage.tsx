@@ -98,6 +98,9 @@ export function TargetApprovalQueuePage(input: {
   }, [pendingApprovalsQuery.data?.meta.total, pendingOffset])
   const approveMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
+    onMutate: () => {
+      setApprovalNotice(null)
+    },
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-coverage'] })
@@ -137,6 +140,7 @@ export function TargetApprovalQueuePage(input: {
   const approvedCount = recentApprovalsQuery.data?.meta.total ?? 0
   const coverageRows = coverageQuery.data?.items ?? []
   const coverageSummary = coverageQuery.data?.summary ?? createEmptyCoverageSummary(currentRequestMonth)
+  const coverageAvailable = Boolean(coverageQuery.data)
   const attentionCoverageRows = coverageRows
     .filter((item) => item.targetStatus !== 'approved')
     .slice(0, 8)
@@ -187,15 +191,19 @@ export function TargetApprovalQueuePage(input: {
           {
             id: 'target-coverage-rate',
             label: t('adminTargets.coverageRate'),
-            value: formatCoverageRate(coverageSummary.coverageRate),
-            description: `${coverageSummary.coveredEmployees} / ${coverageSummary.totalEmployees}`,
+            value: coverageAvailable ? formatCoverageRate(coverageSummary.coverageRate) : '—',
+            description: coverageAvailable
+              ? `${coverageSummary.coveredEmployees} / ${coverageSummary.totalEmployees}`
+              : coverageQuery.isLoading
+                ? t('adminTargets.coverageLoading')
+                : t('adminTargets.errorTitle'),
             icon: <Target size={18} />,
-            tone: mapCoverageSummaryTone(coverageSummary),
+            tone: coverageAvailable ? mapCoverageSummaryTone(coverageSummary) : 'neutral',
           },
           {
             id: 'personnel-in-target-scope',
             label: t('adminTargets.personnelInScope'),
-            value: coverageSummary.totalEmployees,
+            value: coverageAvailable ? coverageSummary.totalEmployees : '—',
             description: t('adminTargets.coverageEyebrow'),
             icon: <UsersRound size={18} />,
             tone: 'cyan',
@@ -207,6 +215,7 @@ export function TargetApprovalQueuePage(input: {
         approvalReadyCount={approvalReadyCount}
         assignedStoreCount={assignedStoreScope.length}
         blockedApprovalCount={blockedApprovalCount}
+        coverageAvailable={coverageAvailable}
         coverageSummary={coverageSummary}
         firstPendingItem={firstPendingItem}
         locale={locale}
@@ -229,7 +238,20 @@ export function TargetApprovalQueuePage(input: {
         {coverageQuery.isLoading ? (
           <AdminStatePanel title={t('adminTargets.coverageLoading')} isLoading />
         ) : coverageQuery.isError ? (
-          <AdminStatePanel title={getErrorMessage(coverageQuery.error)} tone="danger" />
+          <AdminStatePanel
+            title={getErrorMessage(coverageQuery.error)}
+            tone="danger"
+            action={(
+              <Button
+                type="button"
+                variant="outline"
+                disabled={coverageQuery.isFetching}
+                onClick={() => void coverageQuery.refetch()}
+              >
+                {locale === 'tr' ? 'Tekrar dene' : 'Try again'}
+              </Button>
+            )}
+          />
         ) : (
           <>
             <AdminKeyValueGrid className="tw:lg:grid-cols-4">
@@ -309,6 +331,13 @@ export function TargetApprovalQueuePage(input: {
         )}
 
         {approvalNotice ? <AdminStatePanel title={approvalNotice} tone="success" /> : null}
+        {approveMutation.isError ? (
+          <AdminStatePanel
+            title={locale === 'tr' ? 'Hedef talebi onaylanamadı' : 'Target request could not be approved'}
+            description={getErrorMessage(approveMutation.error)}
+            tone="danger"
+          />
+        ) : null}
 
         {pendingCount > PENDING_PAGE_SIZE ? (
           <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3">
@@ -373,6 +402,7 @@ function TargetApprovalDecisionBrief(input: {
   approvalReadyCount: number
   assignedStoreCount: number
   blockedApprovalCount: number
+  coverageAvailable: boolean
   coverageSummary: ReturnType<typeof createEmptyCoverageSummary>
   firstPendingItem: TargetDistributionRequest | null
   locale: AppLocale
@@ -418,7 +448,9 @@ function TargetApprovalDecisionBrief(input: {
         />
         <AdminKeyValue
           label={input.t('adminTargets.coverageGaps')}
-          value={`${input.coverageSummary.uncoveredEmployees} / ${input.coverageSummary.totalEmployees}`}
+          value={input.coverageAvailable
+            ? `${input.coverageSummary.uncoveredEmployees} / ${input.coverageSummary.totalEmployees}`
+            : '—'}
         />
       </AdminKeyValueGrid>
       {input.firstPendingItem ? (

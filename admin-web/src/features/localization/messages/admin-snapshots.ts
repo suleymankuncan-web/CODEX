@@ -1,4 +1,6 @@
 export const adminSnapshotsTr = {
+  'adminSnapshots.tryAgain': 'Tekrar dene',
+  'adminSnapshots.actionFailed': 'İşlem tamamlanamadı. Tekrar deneyin.',
   'adminSnapshots.loadingTitle': 'Snapshot operasyonları yükleniyor',
   'adminSnapshots.loadingCopy': 'Çalışma özeti, günlük kapanış ve tekrar çalışma baskısı alınıyor.',
   'adminSnapshots.overviewUnavailableTitle': 'Snapshot özeti açılamadı',
@@ -202,6 +204,8 @@ export const adminSnapshotsTr = {
 } as const
 
 export const adminSnapshotsEn: Record<keyof typeof adminSnapshotsTr, string> = {
+  'adminSnapshots.tryAgain': 'Try again',
+  'adminSnapshots.actionFailed': 'The action could not be completed. Try again.',
   'adminSnapshots.loadingTitle': 'Loading snapshot operations',
   'adminSnapshots.loadingCopy': 'Pulling run overview and rerun pressure.',
   'adminSnapshots.overviewUnavailableTitle': 'Snapshot overview unavailable',

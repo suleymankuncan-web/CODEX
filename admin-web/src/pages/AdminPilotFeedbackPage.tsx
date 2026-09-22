@@ -309,6 +309,16 @@ function PilotFeedbackRow(input: {
     })
   }
 
+  function updateClassificationDraft(value: PilotFeedbackClassification) {
+    classifyMutation.reset()
+    setClassification(value)
+  }
+
+  function updateNoteDraft(value: string) {
+    classifyMutation.reset()
+    setNote(value)
+  }
+
   return (
     <article className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:p-4">
       <div className="tw:flex tw:flex-col tw:gap-2 tw:md:flex-row tw:md:items-start tw:md:justify-between">
@@ -350,8 +360,9 @@ function PilotFeedbackRow(input: {
           <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
             {input.t('pilotFeedback.admin.classificationFilter')}
             <Select
+              disabled={classifyMutation.isPending}
               value={classification}
-              onValueChange={(value) => setClassification(value as PilotFeedbackClassification)}
+              onValueChange={(value) => updateClassificationDraft(value as PilotFeedbackClassification)}
             >
               <SelectTrigger className="tw:h-8 tw:bg-background/70">
                 <SelectValue />
@@ -368,9 +379,10 @@ function PilotFeedbackRow(input: {
           <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
             {input.t('pilotFeedback.admin.noteLabel')}
             <Input
+              disabled={classifyMutation.isPending}
               value={currentNote}
               maxLength={2000}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => updateNoteDraft(event.target.value)}
             />
           </label>
         </div>

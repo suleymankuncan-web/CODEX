@@ -228,7 +228,10 @@ export function WorkforceRequestDialogs(input: {
               t={t}
             />
           ) : null}
-          {input.dialog === 'returned' ? (
+          {input.dialog === 'returned' && (sellerRequestsQuery.isPending || offboardingRequestsQuery.isPending)
+            && !sellerRequestsQuery.isError && !offboardingRequestsQuery.isError ? (
+            <p role="status">{locale === 'tr' ? 'İade edilen talepler yükleniyor…' : 'Loading returned requests…'}</p>
+          ) : input.dialog === 'returned' ? (
             <ReturnedRequestsPanel
               locale={locale}
               returnedOffboardingRequests={returnedOffboarding}

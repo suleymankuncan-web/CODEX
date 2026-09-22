@@ -51,4 +51,5 @@
 }
 @media (max-width: 360px) {
   .reports-summary-metrics, .reports-summary-context { grid-template-columns: minmax(0, 1fr); }
+  .reports-summary-run-links { grid-template-columns: minmax(0, 1fr); }
 }

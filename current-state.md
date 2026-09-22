@@ -2,12 +2,19 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-09-21
+Last verified: 2026-09-22
 Use when: recovering current scope, blockers and next action
 Do not use when: inferring live deployment or selecting a branch from old PR notes
 
 ## Now
 
+- Owner approved sequential PRs and merges for monthly Store KPI daily aggregation,
+  the redesigned viewer/manager Primler workflow, and bounded Store/Admin UI fixes.
+  Primler retains regional packages, existing permissions and one store correction
+  note; production routes use real API data. The labs entry stays dev-only.
+  Return decisions require the matching backend deployment. Refresh GitHub for
+  current merge status; local verification does not establish live deployment.
+  [Scope and verification](docs/ui/incentives-local-preview.md).
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.

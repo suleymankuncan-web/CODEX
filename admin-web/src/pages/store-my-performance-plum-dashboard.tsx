@@ -23,6 +23,7 @@ type TodayAction = {
 }
 
 type MetricCard = {
+  actionValueAvailable: boolean
   code: string
   contributionValue: number
   delta: string | null
@@ -200,10 +201,12 @@ function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallba
 
 function KpiProgress({
   displayValue,
+  isAvailable = true,
   label,
   value,
 }: {
   displayValue?: string
+  isAvailable?: boolean
   label: string
   value: number
 }) {
@@ -216,12 +219,12 @@ function KpiProgress({
   return (
     <div
       className="store-me-kpi-progress"
-      style={progressStyle(value)}
-      role="progressbar"
+      style={progressStyle(isAvailable ? value : 0)}
+      role={isAvailable ? 'progressbar' : 'status'}
       aria-label={label}
-      aria-valuenow={ariaValue}
-      aria-valuemin={0}
-      aria-valuemax={hasCustomDisplay ? Math.max(100, ariaValue) : 100}
+      aria-valuenow={isAvailable ? ariaValue : undefined}
+      aria-valuemin={isAvailable ? 0 : undefined}
+      aria-valuemax={isAvailable ? hasCustomDisplay ? Math.max(100, ariaValue) : 100 : undefined}
     >
       <div className="store-me-progress-track" aria-hidden="true">
         <span />
@@ -304,8 +307,9 @@ function MetricKpiCard({
   t: TranslateFunction
 }) {
   const Icon = metricIconByCode[metric.code] ?? ChartNoAxesColumnIncreasing
-  const progressDisplay =
-    metric.progressPercent > 100
+  const progressDisplay = !metric.actionValueAvailable
+    ? metric.displayValue
+    : metric.progressPercent > 100
       ? t('storeMe.progressOverTarget')
       : metric.progressPercent >= 100
         ? t('storeMe.progressFullContribution')
@@ -328,6 +332,7 @@ function MetricKpiCard({
       </div>
       <KpiProgress
         {...(progressDisplay ? { displayValue: progressDisplay } : {})}
+        isAvailable={metric.actionValueAvailable}
         label={metric.label}
         value={metric.progressPercent}
       />
@@ -370,6 +375,9 @@ export function StoreMyPerformancePlumDashboard({
   const displayMetrics = ['UPT', 'ATV']
     .map((code) => getMetric(metricCards, code))
     .filter((metric): metric is MetricCard => metric !== null)
+  const targetMetric = getMetric(metricCards, 'TARGET_ACHIEVEMENT')
+  const hasTargetProgress = targetMetric?.actionValueAvailable === true
+  const unavailableTargetLabel = targetMetric?.displayValue ?? t('storeMe.noData')
   const chart = buildTrendChart(monthlyDetailRows, scoreValue, t('storeMe.currentPeriod'))
   const breakdownRows = metricCards.map((metric) => ({
     ...metric,
@@ -406,15 +414,18 @@ export function StoreMyPerformancePlumDashboard({
             <KpiCardHead
               Icon={Target}
               label={t('storeMe.targetProgress')}
-              value={`%${formatWholePercent(targetProgressPercent)}`}
+              value={hasTargetProgress ? `%${formatWholePercent(targetProgressPercent)}` : unavailableTargetLabel}
             />
             <div className="store-me-kpi-body store-me-kpi-copy">
               <p>
-                {t('storeMe.targetProgressPercent', { value: formatWholePercent(targetProgressPercent) })}
+                {hasTargetProgress
+                  ? t('storeMe.targetProgressPercent', { value: formatWholePercent(targetProgressPercent) })
+                  : targetStatusLabel}
               </p>
             </div>
             <KpiProgress
-              displayValue={`${formatWholePercent(targetProgressPercent)}%`}
+              displayValue={hasTargetProgress ? `${formatWholePercent(targetProgressPercent)}%` : unavailableTargetLabel}
+              isAvailable={hasTargetProgress}
               label={t('storeMe.targetProgress')}
               value={targetProgressPercent}
             />

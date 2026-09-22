@@ -29,8 +29,9 @@ function summaryMetric(summary: StoreKpiHighlightsSummary | undefined, code: str
 }
 
 export function StoreManagerScoreChart({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const year = model.livePeriodStart.slice(0, 4)
-  const months = Array.from({length: 12}, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}-01`)
+  const periodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart
+  const year = periodStart.slice(0, 4)
+  const months = year ? Array.from({length: 12}, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}-01`) : []
   const available = new Set((model.liveSummary?.availablePeriods ?? []).filter(p => p.periodType === 'monthly').map(p => p.periodStart.slice(0, 10)))
   const queries = useQueries({ queries: months.map(periodStart => ({
     queryKey: ['manager-kpi-month', model.effectiveStoreId, periodStart],
@@ -43,7 +44,7 @@ export function StoreManagerScoreChart({ model }: { model: StoreKpiHighlightsPag
     state: queries[index]?.isError ? 'Yüklenemedi' : available.has(periodStart) && queries[index]?.isPending ? 'Yükleniyor' : 'Veri yok',
   }))
   const errors = queries.filter(query => query.isError)
-  return <Card aria-label="Aylık mağaza skorları"><CardHeader><CardTitle>Aylık Mağaza Skoru</CardTitle><CardDescription>{year} · Ayların toplam KPI verileriyle hesaplanan puanlar</CardDescription></CardHeader><CardContent>
+  return <Card aria-label="Aylık mağaza skorları"><CardHeader><CardTitle>Aylık Mağaza Skoru</CardTitle><CardDescription>{year ? `${year} · ` : ''}Ayların toplam KPI verileriyle hesaplanan puanlar</CardDescription></CardHeader><CardContent>
     {errors.length ? <Alert variant="destructive"><AlertDescription>Skor geçmişinin bir bölümü yüklenemedi.<Button variant="outline" onClick={() => void Promise.all(errors.map(query => query.refetch()))}>Tekrar dene</Button></AlertDescription></Alert> : null}
     <KpiScoreChart data={data} locale={model.locale} label="Mağaza Skoru" />
     <div className="tw:sr-only"><Table><TableHeader><TableRow><TableHead>Ay</TableHead><TableHead>Skor</TableHead></TableRow></TableHeader><TableBody>{data.map(row => <TableRow key={row.month}><TableCell>{row.month}</TableCell><TableCell>{row.score === null ? row.state : row.score.toLocaleString(model.locale)}</TableCell></TableRow>)}</TableBody></Table></div>
@@ -51,12 +52,12 @@ export function StoreManagerScoreChart({ model }: { model: StoreKpiHighlightsPag
   </CardContent></Card>
 }
 
-export function StoreManagerMetricDialog({ model, code, onClose, rankings, rankingError, retryRankings }: {
-  model: StoreKpiHighlightsPageModel; code: string; onClose: () => void; rankings: RankingSummary | undefined; rankingError: boolean; retryRankings: () => void;
+export function StoreManagerMetricDialog({ model, code, onClose, rankings, rankingLoading, rankingError, retryRankings }: {
+  model: StoreKpiHighlightsPageModel; code: string; onClose: () => void; rankings: RankingSummary | undefined; rankingLoading: boolean; rankingError: boolean; retryRankings: () => void;
 }) {
-  const start = model.livePeriodStart
+  const start = (model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart).slice(0, 10)
   const end = model.kpiDateRangeEnd || (model.livePeriodType === 'daily' ? start : '')
-  const periods = [comparisonPeriod(start, end, -1), comparisonPeriod(start, end, -12)]
+  const periods = start ? [comparisonPeriod(start, end, -1), comparisonPeriod(start, end, -12)] : []
   const queries = useQueries({ queries: periods.map(period => ({
     queryKey: ['manager-kpi-comparison', model.effectiveStoreId, period.start, period.end],
     queryFn: () => getStoreKpiHighlights({ storeId: model.effectiveStoreId!, periodType: period.end ? 'daily' : 'monthly', periodStart: period.start, ...(period.end ? { periodEnd: period.end } : {}) }),
@@ -73,8 +74,8 @@ export function StoreManagerMetricDialog({ model, code, onClose, rankings, ranki
     if (code === 'score') return new Intl.NumberFormat(model.locale, {maximumFractionDigits:1}).format(value)
     return formatMetricValue(model.locale,model.t,String(value),code)
   }
-  const rankText = (value: {rank: number | null; population: number} | undefined) => rankingError ? 'Yüklenemedi' : value?.rank ? `${value.rank}. / ${value.population} mağaza` : 'Sıralama verisi yok'
-  const dateLabel = (from: string, to: string) => new Intl.DateTimeFormat(model.locale,{ ...(to ? {day:'numeric' as const} : {}), month:'long',year:'numeric' }).format(new Date(`${from}T12:00:00`)) + (to && to !== from ? ` – ${new Intl.DateTimeFormat(model.locale,{day:'numeric',month:'long',year:'numeric'}).format(new Date(`${to}T12:00:00`))}` : '')
+  const rankText = (value: {rank: number | null; population: number} | undefined) => rankingLoading ? 'Yükleniyor' : rankingError ? 'Yüklenemedi' : value?.rank ? `${value.rank}. / ${value.population} mağaza` : 'Sıralama verisi yok'
+  const dateLabel = (from: string, to: string) => from ? new Intl.DateTimeFormat(model.locale,{ ...(to ? {day:'numeric' as const} : {}), month:'long',year:'numeric' }).format(new Date(`${from}T12:00:00`)) + (to && to !== from ? ` – ${new Intl.DateTimeFormat(model.locale,{day:'numeric',month:'long',year:'numeric'}).format(new Date(`${to}T12:00:00`))}` : '') : model.t('storeKpis.noData')
   return <Dialog open onOpenChange={open => { if (!open) onClose() }}><DialogContent closeLabel="Kapat" className="manager-kpi-dialog tw:sm:max-w-2xl tw:max-h-[90dvh] tw:overflow-y-auto"><DialogHeader><DialogTitle>{names[code]} · Detay</DialogTitle><DialogDescription>{model.activeStoreName} · {dateLabel(start, end)}</DialogDescription></DialogHeader>
     <div className="manager-kpi-summary tw:grid tw:grid-cols-2 tw:gap-3">
       {[['Gerçekleşen', formatted(actual)], [code === 'score' ? 'Hesaba katılan KPI' : reference?.sourceLabel ?? 'Hedef / Referans', code === 'score' ? String(model.liveSummary?.score.matchedMetrics ?? 0) : reference?.value == null ? 'Veri yok' : code === 'TARGET_ACHIEVEMENT' ? new Intl.NumberFormat(model.locale,{style:'currency',currency:'TRY',maximumFractionDigits:0}).format(Number(reference.value)) : formatted(Number(reference.value))], ['Bölge sıralaması', rankText(rank?.region)], ['Türkiye sıralaması', rankText(rank?.turkey)]].map(([label,value]) => <Card key={label} size="sm"><CardHeader><CardDescription>{label}</CardDescription><CardTitle>{value}</CardTitle></CardHeader></Card>)}

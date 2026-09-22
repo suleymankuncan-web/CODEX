@@ -40,7 +40,7 @@ const PAGE_SIZE = 30
 export function RegionManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
   onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
-  onOpenResult: (checklistInstanceId: string) => void
+  onOpenResult: (checklistInstanceId: string, trigger: HTMLElement | null) => void
 }) {
   const { locale, t } = useLocalization()
   const [period, setPeriod] = useState(() => getBusinessMonthInputValue())
@@ -303,7 +303,7 @@ export function RegionManagerChecklistCommandPage(input: {
         onClose={() => setSelectedRecordStore(null)}
         onOpenResult={(checklistInstanceId) => {
           setSelectedRecordStore(null)
-          input.onOpenResult(checklistInstanceId)
+          input.onOpenResult(checklistInstanceId, historyTriggerRef.current)
         }}
       />
     </StoreSurfacePage>

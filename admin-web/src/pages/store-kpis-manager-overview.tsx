@@ -78,7 +78,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   const storeMetricLabels: Record<string, string> = tr
     ? { TARGET_ACHIEVEMENT: 'Hedef Gerçekleşme', ATV: 'Ortalama Fiş Tutarı', UPT: 'Fiş Başına Ürün', CR: 'Dönüşüm Oranı', gsm_approval: 'GSM Onayı', BM_CHECKLIST: 'Bölge Müdürü Checklist', VM_CHECKLIST: 'VM Checklist' }
     : { TARGET_ACHIEVEMENT: 'Target Achievement', ATV: 'Average Ticket Value', UPT: 'Units Per Ticket', CR: 'Conversion Rate', gsm_approval: 'GSM Approval', BM_CHECKLIST: 'Region Manager Checklist', VM_CHECKLIST: 'VM Checklist' }
-  const periodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart
+  const periodStart = (model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart).slice(0, 10)
   const scope = `${model.effectiveStoreId}|${periodStart}|${model.kpiDateRangeEnd}|${model.viewMode}`
   const people = useMemo(() => personnel.rows.filter(row => !search.trim() || (row.displayName ?? '').toLocaleLowerCase(model.locale).includes(search.trim().toLocaleLowerCase(model.locale))).sort((a, b) => {
     const left = personMetric(a, sort.key, model.effectiveStoreId, displayedStoreScore)
@@ -113,7 +113,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
         <p>{showPeople ? (tr ? 'Personel Performansı' : 'Personnel Performance') : (tr ? 'Mağaza Performansı' : 'Store Performance')}</p><h1 id="manager-kpi-title">{model.activeStoreName}</h1>
         <p>{model.isRegionManagerStoreDetail ? (tr ? 'Mağazanın ve ekibinin KPI değerlerini inceleyin.' : 'Review KPI results for this store and its team.') : (tr ? 'Mağazanızın ve ekibinizin KPI değerlerini inceleyin.' : 'Review KPI results for your store and team.')}</p>
       </div></div>
-      <div className="manager-performance-period"><Button variant="outline" className="manager-performance-view-button" onClick={switchView}>{showPeople ? <BarChart3 aria-hidden="true" /> : <UsersRound aria-hidden="true" />}<span>{showPeople ? (tr ? 'Mağaza Performansı' : 'Store Performance') : (tr ? 'Personel Performansı' : 'Personnel Performance')}</span><ArrowRight aria-hidden="true" /></Button><StoreKpisPeriodPicker locale={model.locale} periodType={model.livePeriodType} periodStart={model.livePeriodStart} onPeriodStartChange={model.setLivePeriodStart} onRangeChange={model.setKpiDateRange} ariaLabel={tr ? 'Dönem seç' : 'Select period'} /></div>
+      <div className="manager-performance-period"><Button variant="outline" className="manager-performance-view-button" onClick={switchView}>{showPeople ? <BarChart3 aria-hidden="true" /> : <UsersRound aria-hidden="true" />}<span>{showPeople ? (tr ? 'Mağaza Performansı' : 'Store Performance') : (tr ? 'Personel Performansı' : 'Personnel Performance')}</span><ArrowRight aria-hidden="true" /></Button><StoreKpisPeriodPicker locale={model.locale} periodType={model.livePeriodType} periodStart={periodStart} onPeriodStartChange={model.setLivePeriodStart} onRangeChange={model.setKpiDateRange} ariaLabel={tr ? 'Dönem seç' : 'Select period'} /></div>
     </header>
     {backgroundError}
     {!showPeople ? <>
@@ -144,7 +144,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     </section>
     <Alert className="manager-performance-checklist-note"><Info aria-hidden="true" /><AlertTitle>{tr ? 'Mağaza Skor Etkisi nasıl hesaplanır?' : 'How is store score impact allocated?'}</AlertTitle><AlertDescription><span>{tr ? `Mağaza skoru (${score} puan), net satış × personel KPI skoru oranında satış ekibine paylaştırılır. Ortak GSM ve checklist sonuçları da bu toplamın içindedir; kişisel olarak ölçülmüş başarı anlamına gelmez. Eksik veriyle hesap yapılmaz. Negatif net satışın payı sıfırdır; yuvarlama nedeniyle toplamda küçük farklar olabilir.` : `The store score (${score} points) is allocated across the sales team in proportion to net sales × personnel KPI score. Shared GSM and checklist outcomes are included in that total; this is not individually measured or causal impact. Missing inputs remain unavailable. Negative net sales receive zero share; rounding can cause small total differences.`}</span></AlertDescription></Alert>
     </>}
-    {selectedKpi ? <StoreManagerMetricDialog model={model} code={selectedKpi} onClose={() => setSelectedKpi(null)} rankings={personnel.query.data} rankingError={personnel.query.isError} retryRankings={() => void personnel.query.refetch()} /> : null}
+    {selectedKpi ? <StoreManagerMetricDialog model={model} code={selectedKpi} onClose={() => setSelectedKpi(null)} rankings={personnel.query.data} rankingLoading={personnel.query.isLoading} rankingError={personnel.query.isError} retryRankings={() => void personnel.query.refetch()} /> : null}
   </CommandCanvasPage>
 }
 

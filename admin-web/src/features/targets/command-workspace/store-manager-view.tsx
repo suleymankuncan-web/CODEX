@@ -129,15 +129,6 @@ export function StoreManagerTargetCommand(input: {
     entryStore?.status === 'returned' ||
     entryStore?.status === 'approved' ||
     entryStore?.status === 'adjusted_approved'
-  const formLocked =
-    pending ||
-    !statusAllowsSubmission ||
-    entryQuery.isError ||
-    entryQuery.isFetching ||
-    entryQuery.isPlaceholderData ||
-    entrySectionsUnavailable ||
-    !basisReady
-  const canSubmit = !ambiguousStoreScope && draftSummary.valid && hasCompleteDistributionDays(draft, editableStore?.personnel ?? []) && !formLocked && basisReady && revisionReady
   const mutation = useMutation({
     mutationFn: createTargetDistributionRequest,
     onSuccess: async (result) => {
@@ -151,6 +142,16 @@ export function StoreManagerTargetCommand(input: {
     },
     onError: (error) => actionToast.error(error, copy.failed),
   })
+  const formLocked =
+    mutation.isPending ||
+    pending ||
+    !statusAllowsSubmission ||
+    entryQuery.isError ||
+    entryQuery.isFetching ||
+    entryQuery.isPlaceholderData ||
+    entrySectionsUnavailable ||
+    !basisReady
+  const canSubmit = !ambiguousStoreScope && draftSummary.valid && hasCompleteDistributionDays(draft, editableStore?.personnel ?? []) && !formLocked && basisReady && revisionReady
   const submit = () => {
     if (!editableStore || !canSubmit) return
     const allocations: TargetDistributionAllocation[] = editableStore.personnel
@@ -203,7 +204,7 @@ export function StoreManagerTargetCommand(input: {
         title={editableStore?.storeName ?? copy.title}
         description={copy.description}
         actions={
-          <div className="target-command-period">
+          <fieldset disabled={mutation.isPending} aria-label={copy.viewedPeriod} className="target-command-period tw:m-0 tw:min-w-0 tw:border-0 tw:p-0">
             {editableStore && <StoreTargetHistory storeId={editableStore.storeId} storeName={editableStore.storeName} period={entryPeriod} locale={locale} onSelect={period => { input.onPeriodChange(period); setEntryPeriod(period); setPreviewYear(Number(period.slice(0, 4))) }} />}
             <span className={`target-store-state is-${entryStore?.status ?? 'unknown'}`}>
               {entryStore?.status === 'approved' || entryStore?.status === 'adjusted_approved' ? <><Check size={13} aria-hidden="true" />{getTargetStatusMeta(locale)[entryStore.status].label}</> : storeStatusLabel(entryStore?.status, copy)}
@@ -221,7 +222,7 @@ export function StoreManagerTargetCommand(input: {
               onValueChange={(period) => { input.onPeriodChange(period); setEntryPeriod(period); setPreviewYear(Number(period.slice(0, 4))) }}
               value={input.period}
             />
-          </div>
+          </fieldset>
         }
       />
       <div className="operations-metrics" role="group" aria-label={copy.summary}>
@@ -305,17 +306,19 @@ export function StoreManagerTargetCommand(input: {
                 </div>
                 <div
                   data-tone={
-                    draftSummary.balanceUnits === 0 ? 'good' : draftSummary.balanceUnits < 0 ? 'danger' : 'warning'
+                    draftSummary.totalUnits > 0 && draftSummary.balanceUnits === 0 ? 'good' : draftSummary.balanceUnits < 0 ? 'danger' : 'warning'
                   }
                 >
                   <small>{copy.balance}</small>
                   <strong>{formatMoney(draftSummary.balanceUnits / 10_000, locale)}</strong>
                   <span>
-                    {draftSummary.balanceUnits === 0
-                      ? copy.complete
-                      : draftSummary.balanceUnits < 0
-                        ? copy.exceeded
-                        : copy.mustDistribute}
+                    {draftSummary.totalUnits <= 0
+                      ? copy.balanceRequired
+                      : draftSummary.balanceUnits === 0
+                        ? copy.complete
+                        : draftSummary.balanceUnits < 0
+                          ? copy.exceeded
+                          : copy.mustDistribute}
                   </span>
                 </div>
               </div>
@@ -347,7 +350,9 @@ export function StoreManagerTargetCommand(input: {
                           ) : null}
                         </span>
                         <span className="target-store-person-position">{person.positionLabel ?? '—'}</span>
-                        <label className="target-store-money-input">
+                        <div>
+                          <small className="target-mobile-heading">{locale === 'tr' ? 'Hedef dağıtım günü' : 'Target allocation days'}</small>
+                          <label className="target-store-money-input">
                           <Input
                             aria-label={`${person.displayName} hedef dağıtım günü`}
                             type="number" min={0} step={1}
@@ -365,11 +370,12 @@ export function StoreManagerTargetCommand(input: {
                             }
                           />
                           <b>gün</b>
-                        </label>
-                        <strong>{person.actualSales == null ? '—' : formatMoney(person.actualSales, locale)}</strong>
+                          </label>
+                        </div>
+                        <span><small className="target-mobile-heading">{locale === 'tr' ? 'Gerçekleşen satış' : 'Actual sales'}</small><strong>{person.actualSales == null ? '—' : formatMoney(person.actualSales, locale)}</strong></span>
                         {revision && <span className="target-previous-value"><small className="target-mobile-heading">Önceki hedef</small><strong>{formatMoney(previousTarget, locale)}</strong></span>}
                         <span className="target-next-value">
-                          {revision && <small className="target-mobile-heading">Yeni hedef</small>}
+                          <small className="target-mobile-heading">{revision ? 'Yeni hedef' : copy.monthlyTarget}</small>
                           <strong>{formatMoney(value, locale)}</strong>
                           {revision && <small className={`target-difference ${difference > 0 ? 'is-positive' : difference < 0 ? 'is-negative' : ''}`}>
                             {difference === 0 ? 'Değişmedi' : `${difference > 0 ? '+' : '−'}${formatMoney(Math.abs(difference), locale)}`}
@@ -377,6 +383,7 @@ export function StoreManagerTargetCommand(input: {
                           {person.employeeId in (draft.fixedSales ?? {}) && <small>Satış tutarına sabitlendi</small>}
                         </span>
                         <span>
+                          <small className="target-mobile-heading">{copy.share}</small>
                           <strong>
                             {draftSummary.totalUnits > 0
                               ? `%${Math.round((targetPrecisionUnits(value) / draftSummary.totalUnits) * 100)}`
@@ -416,15 +423,17 @@ export function StoreManagerTargetCommand(input: {
               <footer>
                 <div>
                   <strong>
-                    {pending
-                      ? copy.pending
-                      : canSubmit
-                        ? revision
-                          ? copy.revisionReady
-                          : copy.ready
-                        : copy.balanceRequired}
+                    {mutation.isPending
+                      ? copy.saving
+                      : pending
+                        ? copy.pending
+                        : canSubmit
+                          ? revision
+                            ? copy.revisionReady
+                            : copy.ready
+                          : copy.balanceRequired}
                   </strong>
-                  <span>{pending ? copy.pendingHelp : canSubmit ? copy.readyHelp : copy.balanceHelp}</span>
+                  <span>{pending ? copy.pendingHelp : canSubmit || mutation.isPending ? copy.readyHelp : copy.balanceHelp}</span>
                 </div>
                 <Button disabled={!canSubmit || mutation.isPending} onClick={submit}>
                   <Send />
@@ -580,10 +589,10 @@ const en: Record<keyof typeof tr, string> = {
   revisionRequired: 'A reason is required for an approved target revision.',
   ready: 'Ready for approval',
   revisionReady: 'Revision ready for approval',
-  balanceRequired: 'Balance must be zero',
+  balanceRequired: 'Enter the target amount and distribution days',
   pendingHelp: 'Awaiting the Region Manager decision.',
   readyHelp: 'The store target matches personnel targets.',
-  balanceHelp: 'Enter a positive target for every person and clear the balance.',
+  balanceHelp: 'Enter distribution days for every person. At least one person must have more than zero days.',
   send: 'Submit for approval',
   sendRevision: 'Submit revision',
   saving: 'Submitting',

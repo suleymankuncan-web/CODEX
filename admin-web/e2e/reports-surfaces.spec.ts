@@ -93,6 +93,31 @@ test('reports hub preserves empty counts and does not offer a missing snapshot',
   await expect(surface.getByRole('link', { name: 'All report periods' })).toBeVisible()
 })
 
+test('snapshot chooser recovers a failed read without navigating away', async ({ page }) => {
+  let failRead = true
+  await page.route('**/api/reports/snapshot-runs?**', route => failRead
+    ? route.fulfill({ status: 503, json: { message: 'Unavailable' } })
+    : route.fallback())
+  await page.goto('/admin/reports/snapshot-runs')
+  const main = page.getByRole('main')
+  await expect(main.getByRole('alert')).toBeVisible()
+  failRead = false
+  await main.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(main.getByRole('link', { name: 'Open workforce for snapshot-versioned' })).toBeVisible()
+  await expect(main.getByRole('alert')).toHaveCount(0)
+})
+
+test('report history actions remain reachable on a 320px phone', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 })
+  await page.goto('/admin/reports')
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Recent reporting runs' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  const link = main.getByRole('link', { name: 'Open workforce report for snapshot-versioned' })
+  await link.scrollIntoViewIfNeeded()
+  await expect(link).toBeInViewport()
+})
+
 test('reports hub keeps navigation during loading and announces a failed read with retry', async ({ page }) => {
   let releaseSummary: (() => void) | undefined
   const pendingSummary = new Promise<void>((resolve) => { releaseSummary = resolve })

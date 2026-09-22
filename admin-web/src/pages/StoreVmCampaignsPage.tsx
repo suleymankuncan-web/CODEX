@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarClock, CheckCircle2, Image, Layers3, Plus, ShieldCheck } from 'lucide-react'
+import { CalendarClock, CheckCircle2, Image, Layers3, Plus, RefreshCcw, ShieldCheck } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   CommandCanvasMetric,
@@ -14,6 +14,7 @@ import { Textarea } from '../components/ui/textarea'
 import { Checkbox } from '../components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { actionToast } from '../lib/action-toast'
+import { getUserFacingErrorMessage } from '../lib/format'
 import {
   createVmReference,
   configureAndPublishVmReference,
@@ -56,15 +57,17 @@ function ReviewerWorkspace(input: { companyId: string }) {
   const query = useQuery({ queryKey: ['vm-reviewer-campaigns', input.companyId],
     queryFn: () => getVmReviewerCampaigns(input.companyId) })
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items])
+  const metricsUnavailable = query.isPending || query.isError
   return <CommandCanvasPage ariaLabelledBy="vm-review-title" className="vm-campaign-page">
     <CommandCanvasPageHeader titleId="vm-review-title" eyebrow="Salt okunur"
       title="VM kampanya kapsamı" description="Mağazaların teslim ve süre durumlarını inceleyin." />
     <CommandCanvasMetricRail ariaLabel="VM kampanya kapsam özeti">
-      <CommandCanvasMetric label="Mağaza" value={String(items.length)} icon={<Layers3 />} tone="plum" />
-      <CommandCanvasMetric label="Bekleyen" value={String(items.filter((item) => ['scheduled', 'open'].includes(item.deadlineStatus)).length)} icon={<CalendarClock />} tone="amber" />
-      <CommandCanvasMetric label="Zamanında" value={String(items.filter((item) => item.deadlineStatus === 'on_time').length)} icon={<ShieldCheck />} tone="mint" />
+      <CommandCanvasMetric label="Mağaza" value={metricsUnavailable ? '—' : String(items.length)} icon={<Layers3 />} tone="plum" />
+      <CommandCanvasMetric label="Bekleyen" value={metricsUnavailable ? '—' : String(items.filter((item) => ['scheduled', 'open'].includes(item.deadlineStatus)).length)} icon={<CalendarClock />} tone="amber" />
+      <CommandCanvasMetric label="Zamanında" value={metricsUnavailable ? '—' : String(items.filter((item) => item.deadlineStatus === 'on_time').length)} icon={<ShieldCheck />} tone="mint" />
     </CommandCanvasMetricRail>
-    <SurfaceState loading={query.isPending} error={query.error} empty={items.length === 0} emptyCopy="İncelenecek kampanya yok." />
+    <SurfaceState loading={query.isPending} error={query.error} empty={items.length === 0} emptyCopy="İncelenecek kampanya yok."
+      onRetry={() => void query.refetch()} retrying={query.isFetching} />
     <div className="vm-campaign-list">{items.map((assignment) => <article key={assignment.assignmentId}>
       <header><div><span>{assignment.storeName}</span><h2>{assignment.referenceName}</h2></div>
         <strong data-status={assignment.deadlineStatus}>{statusLabel(assignment.deadlineStatus)}</strong></header>
@@ -90,15 +93,16 @@ function PublisherWorkspace(input: { companyId: string; windowAuthority: boolean
     onError: (error) => actionToast.error(error, 'Referans oluşturulamadı.'),
   })
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items])
+  const metricsUnavailable = query.isPending || query.isError
   return (
     <CommandCanvasPage ariaLabelledBy="vm-reference-title" className="vm-campaign-page">
       <CommandCanvasPageHeader titleId="vm-reference-title" eyebrow="Görsel standart yönetimi"
         title="VM referansları" description="Yayınlanmadan önce referansları, kapsamı ve kampanya penceresini hazırlayın."
         actions={<Button onClick={() => setOpen((value) => !value)}><Plus /> Yeni referans</Button>} />
       <CommandCanvasMetricRail ariaLabel="VM referans özeti">
-        <CommandCanvasMetric label="Toplam" value={String(items.length)} icon={<Layers3 />} tone="plum" />
-        <CommandCanvasMetric label="Taslak" value={String(items.filter((item) => item.status === 'draft').length)} icon={<Image />} tone="amber" />
-        <CommandCanvasMetric label="Aktif" value={String(items.filter((item) => item.status === 'open').length)} icon={<CheckCircle2 />} tone="mint" />
+        <CommandCanvasMetric label="Toplam" value={metricsUnavailable ? '—' : String(items.length)} icon={<Layers3 />} tone="plum" />
+        <CommandCanvasMetric label="Taslak" value={metricsUnavailable ? '—' : String(items.filter((item) => item.status === 'draft').length)} icon={<Image />} tone="amber" />
+        <CommandCanvasMetric label="Aktif" value={metricsUnavailable ? '—' : String(items.filter((item) => item.status === 'open').length)} icon={<CheckCircle2 />} tone="mint" />
       </CommandCanvasMetricRail>
       {open ? <form className="vm-reference-composer" onSubmit={(event) => { event.preventDefault(); create.mutate() }}>
         <Input aria-label="Referans kodu" placeholder="Referans kodu" value={draft.referenceCode} onChange={(event) => setDraft({ ...draft, referenceCode: event.target.value })} required />
@@ -106,7 +110,8 @@ function PublisherWorkspace(input: { companyId: string; windowAuthority: boolean
         <Textarea aria-label="Uygulama talimatı" placeholder="Uygulama talimatı" value={draft.instructions} onChange={(event) => setDraft({ ...draft, instructions: event.target.value })} required />
         <div><Button type="button" variant="outline" onClick={() => setOpen(false)}>Vazgeç</Button><Button disabled={create.isPending} type="submit">Taslağı oluştur</Button></div>
       </form> : null}
-      <SurfaceState loading={query.isPending} error={query.error} empty={items.length === 0} emptyCopy="Henüz VM referansı yok." />
+      <SurfaceState loading={query.isPending} error={query.error} empty={items.length === 0} emptyCopy="Henüz VM referansı yok."
+        onRetry={() => void query.refetch()} retrying={query.isFetching} />
       {items.length > 0 ? <div className="vm-reference-list">{items.map((item) => <article key={item.referenceSetId}>
         <div><span>{item.referenceCode}</span><h2>{item.referenceName}</h2><p>{item.instructions}</p></div>
         <div className="vm-reference-actions"><strong data-status={item.status}>{statusLabel(item.status)}</strong>
@@ -166,11 +171,17 @@ function PublisherOperations(input: { companyId: string; windowAuthority: boolea
       <div className="vm-window-fields"><label><span>Referans</span><Select value={referenceSetId} onValueChange={setReferenceSetId}><SelectTrigger><SelectValue placeholder="Referans seçin" /></SelectTrigger><SelectContent>{input.references.filter((item) => item.status !== 'draft' && item.status !== 'retired').map((item) => <SelectItem key={item.referenceSetId} value={item.referenceSetId}>{item.referenceName}</SelectItem>)}</SelectContent></Select></label>
         <label><span>İşlem</span><Select value={command} onValueChange={(value) => setCommand(value as typeof command)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{input.windowAuthority ? <><SelectItem value="extend">Süreyi uzat</SelectItem><SelectItem value="reopen">Yeniden aç</SelectItem></> : null}{input.scopeAuthority ? <SelectItem value="scope_add">Mağaza ekle</SelectItem> : null}{input.emergencyAuthority ? <SelectItem value="retire">Arşivle</SelectItem> : null}</SelectContent></Select></label></div>
       {command !== 'retire' ? <div className="vm-window-fields"><label><span>Başlangıç</span><Input type="date" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} /></label><label><span>Bitiş</span><Input type="date" value={endsOn} onChange={(event) => setEndsOn(event.target.value)} /></label></div> : null}
-      {command === 'scope_add' ? <fieldset><legend>Eklenecek mağazalar</legend><div className="vm-store-options">{(options.data?.stores ?? []).map((store) => <label key={store.storeId} className="vm-option-row"><Checkbox checked={storeIds.includes(store.storeId)} onCheckedChange={(checked) => setStoreIds((current) => checked ? [...current, store.storeId] : current.filter((id) => id !== store.storeId))} /><span>{store.storeName}</span></label>)}</div></fieldset> : null}
+      {command === 'scope_add' ? <>
+        <SurfaceState loading={options.isPending} error={options.error}
+          empty={!options.isPending && !options.isError && (options.data?.stores.length ?? 0) === 0}
+          emptyCopy="Eklenecek mağaza bulunamadı." onRetry={() => void options.refetch()} retrying={options.isFetching} />
+        {!options.isPending && !options.isError && (options.data?.stores.length ?? 0) > 0 ? <fieldset><legend>Eklenecek mağazalar</legend><div className="vm-store-options">{(options.data?.stores ?? []).map((store) => <label key={store.storeId} className="vm-option-row"><Checkbox checked={storeIds.includes(store.storeId)} onCheckedChange={(checked) => setStoreIds((current) => checked ? [...current, store.storeId] : current.filter((id) => id !== store.storeId))} /><span>{store.storeName}</span></label>)}</div></fieldset> : null}
+      </> : null}
       <label><span>İşlem gerekçesi</span><Textarea value={reason} onChange={(event) => setReason(event.target.value)} /></label>
       <footer><Button disabled={!selectedReference || !reason.trim() || (command !== 'retire' && (!startsOn || !endsOn)) || (command === 'scope_add' && storeIds.length === 0) || revise.isPending} type="submit">İşlemi uygula</Button></footer>
     </form>
-    <SurfaceState loading={campaigns.isPending} error={campaigns.error} empty={!campaigns.isPending && managed.length === 0} emptyCopy="Yönetilecek mağaza ataması yok." />
+    <SurfaceState loading={campaigns.isPending} error={campaigns.error} empty={!campaigns.isPending && managed.length === 0} emptyCopy="Yönetilecek mağaza ataması yok."
+      onRetry={() => void campaigns.refetch()} retrying={campaigns.isFetching} />
     <div className="vm-campaign-list">{managed.map((item) => <article key={item.assignmentId}><header><div><span>{item.storeName}</span><h2>{item.referenceName}</h2></div><strong data-status={item.deadlineStatus}>{statusLabel(item.deadlineStatus)}</strong></header>
       <Input aria-label={`${item.storeName} işlem gerekçesi`} placeholder="İşlem gerekçesi" value={assignmentReasons[item.assignmentId] ?? ''} onChange={(event) => setAssignmentReasons((current) => ({ ...current, [item.assignmentId]: event.target.value }))} />
       <div className="vm-assignment-actions">{item.deadlineStatus === 'operational_hold' && input.emergencyAuthority ? <Button size="sm" variant="outline" disabled={!assignmentReasons[item.assignmentId]?.trim() || assignment.isPending} onClick={() => assignment.mutate({ item, command: 'reconcile' })}>Mutabakatı tamamla</Button> : ['scheduled', 'open'].includes(item.deadlineStatus) ? <>{input.emergencyAuthority ? <Button size="sm" variant="outline" disabled={!assignmentReasons[item.assignmentId]?.trim() || assignment.isPending} onClick={() => assignment.mutate({ item, command: 'hold' })}>Beklemeye al</Button> : null}{input.scopeAuthority ? <><Button size="sm" variant="outline" disabled={!assignmentReasons[item.assignmentId]?.trim() || assignment.isPending} onClick={() => assignment.mutate({ item, command: 'exempt' })}>Muaf tut</Button><Button size="sm" variant="destructive" disabled={!assignmentReasons[item.assignmentId]?.trim() || assignment.isPending} onClick={() => assignment.mutate({ item, command: 'withdraw' })}>Kapsamdan çıkar</Button></> : null}</> : null}</div>
@@ -200,13 +211,14 @@ function PublisherConfiguration(input: { companyId: string; reference: { referen
         rubricVersion: 'vm-reference-v1', file: files[item.templateItemId]!,
       })) }),
     onSuccess: async () => { await input.onPublished(); actionToast.success('VM referansı yayınlandı.') },
-    onError: async (error) => { await input.onPublished(); actionToast.error(error, 'VM referansı yayınlanamadı.') },
+    onError: (error) => { actionToast.error(error, 'VM referansı yayınlanamadı.') },
   })
   const chosenItems = (template?.items ?? []).filter((item) => selectedItems.includes(item.templateItemId))
   const complete = Boolean(templateId && startsOn && endsOn && reason.trim() && selectedStores.length && chosenItems.length && chosenItems.every((item) => files[item.templateItemId]))
   return <section className="vm-publish-workbench" aria-label={`${input.reference.referenceName} yayın hazırlığı`}>
     <header><div><span>Yayın hazırlığı</span><h2>{input.reference.referenceName}</h2></div><Button variant="ghost" onClick={input.onClose}>Kapat</Button></header>
-    <SurfaceState loading={optionsQuery.isPending} error={optionsQuery.error} empty={!optionsQuery.isPending && templates.length === 0} emptyCopy="Yayında VM checklist şablonu bulunamadı." />
+    <SurfaceState loading={optionsQuery.isPending} error={optionsQuery.error} empty={!optionsQuery.isPending && templates.length === 0} emptyCopy="Yayında VM checklist şablonu bulunamadı."
+      onRetry={() => void optionsQuery.refetch()} retrying={optionsQuery.isFetching} />
     {templates.length ? <form onSubmit={(event) => { event.preventDefault(); publish.mutate() }}>
       <label><span>VM checklist şablonu</span><Select value={templateId} onValueChange={(value) => { setTemplateId(value); setSelectedItems([]); setFiles({}) }}><SelectTrigger><SelectValue placeholder="Şablon seçin" /></SelectTrigger><SelectContent>{templates.map((item) => <SelectItem key={item.templateId} value={item.templateId}>{item.templateName}</SelectItem>)}</SelectContent></Select></label>
       {template ? <fieldset><legend>Kontrol maddeleri ve referans görselleri</legend>{template.items.map((item) => <label key={item.templateItemId} className="vm-option-row"><Checkbox checked={selectedItems.includes(item.templateItemId)} onCheckedChange={(checked) => setSelectedItems((current) => checked ? [...current, item.templateItemId] : current.filter((id) => id !== item.templateItemId))} /><span>{item.itemNo}. {item.itemText}</span>{selectedItems.includes(item.templateItemId) ? <Input type="file" accept="image/jpeg,image/png,image/webp" aria-label={`${item.itemText} referans görseli`} onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) setFiles((current) => ({ ...current, [item.templateItemId]: file })) }} /> : null}</label>)}</fieldset> : null}
@@ -260,17 +272,20 @@ function StoreManagerWorkspace(input: { allowed: boolean }) {
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items])
   const counts = useMemo(() => ({ open: items.filter((item) => item.deadlineStatus === 'open').length,
     done: items.filter((item) => item.deadlineStatus === 'on_time').length }), [items])
+  const metricsUnavailable = input.allowed && (query.isPending || query.isError)
   return (
     <CommandCanvasPage ariaLabelledBy="vm-campaign-title" className="vm-campaign-page">
       <CommandCanvasPageHeader titleId="vm-campaign-title" eyebrow="VM denetimleri" title="Görsel kampanyalar"
         description="Mağazanıza atanan görsel standardı inceleyin ve süre içinde mağaza kanıtını gönderin." />
       <CommandCanvasMetricRail ariaLabel="VM kampanya özeti">
-        <CommandCanvasMetric label="Atanan" value={String(items.length)} icon={<Layers3 />} tone="plum" />
-        <CommandCanvasMetric label="Açık" value={String(counts.open)} icon={<CalendarClock />} tone="amber" />
-        <CommandCanvasMetric label="Zamanında" value={String(counts.done)} icon={<ShieldCheck />} tone="mint" />
+        <CommandCanvasMetric label="Atanan" value={metricsUnavailable ? '—' : String(items.length)} icon={<Layers3 />} tone="plum" />
+        <CommandCanvasMetric label="Açık" value={metricsUnavailable ? '—' : String(counts.open)} icon={<CalendarClock />} tone="amber" />
+        <CommandCanvasMetric label="Zamanında" value={metricsUnavailable ? '—' : String(counts.done)} icon={<ShieldCheck />} tone="mint" />
       </CommandCanvasMetricRail>
       {!input.allowed ? <SurfaceState empty emptyCopy="Bu yüzey yalnız Mağaza Müdürü içindir." /> : null}
-      <SurfaceState loading={query.isPending} error={query.error} empty={input.allowed && items.length === 0} emptyCopy="Atanmış görsel kampanya yok." />
+      <SurfaceState loading={input.allowed && query.isPending} error={input.allowed ? query.error : undefined}
+        empty={input.allowed && items.length === 0} emptyCopy="Atanmış görsel kampanya yok."
+        onRetry={() => void query.refetch()} retrying={query.isFetching} />
       <div className="vm-campaign-list">{items.map((assignment) => <article key={assignment.assignmentId}>
         <header><div><span>{assignment.storeName}</span><h2>{assignment.referenceName}</h2></div><strong data-status={assignment.deadlineStatus}>{statusLabel(assignment.deadlineStatus)}</strong></header>
         <p>{formatWindow(assignment.startsAt, assignment.submissionClosesAt)}</p>
@@ -299,12 +314,23 @@ function StoreManagerWorkspace(input: { allowed: boolean }) {
   )
 }
 
-function SurfaceState(input: { loading?: boolean; error?: unknown; empty?: boolean; emptyCopy: string }) {
+function SurfaceState(input: { loading?: boolean; error?: unknown; empty?: boolean; emptyCopy: string; onRetry?: () => void; retrying?: boolean }) {
   if (input.loading) return <div className="vm-surface-state" role="status">Veriler hazırlanıyor…</div>
-  if (input.error) return <div className="vm-surface-state vm-surface-error" role="alert">{input.error instanceof Error ? input.error.message : 'Veri alınamadı.'}</div>
+  if (input.error) return <div className="vm-surface-state vm-surface-error" role="alert">
+    <span>{getUserFacingErrorMessage(input.error, 'Veri alınamadı.')}</span>
+    {input.onRetry ? <Button type="button" size="sm" variant="outline" disabled={input.retrying} onClick={input.onRetry}>
+      <RefreshCcw data-icon="inline-start" />{input.retrying ? 'Yeniden deneniyor…' : 'Yeniden dene'}
+    </Button> : null}
+  </div>
   if (input.empty) return <div className="vm-surface-state">{input.emptyCopy}</div>
   return null
 }
 
-function statusLabel(status: string) { return status.replaceAll('_', ' ') }
+function statusLabel(status: string) {
+  return ({
+    draft: 'Taslak', scheduled: 'Planlandı', open: 'Açık', closed: 'Kapandı', on_time: 'Zamanında',
+    late: 'Gecikmeli', missed: 'Süresi geçti', operational_hold: 'Beklemede', exempt: 'Muaf',
+    withdrawn: 'Kapsamdan çıkarıldı', retired: 'Arşivlendi',
+  } as Record<string, string>)[status] ?? status.replaceAll('_', ' ')
+}
 function formatWindow(start: string, end: string) { return `${new Date(start).toLocaleString('tr-TR')} – ${new Date(end).toLocaleString('tr-TR')}` }
