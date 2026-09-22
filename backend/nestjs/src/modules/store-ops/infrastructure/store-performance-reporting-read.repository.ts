@@ -92,37 +92,54 @@ export class StorePerformanceReportingReadRepository {
     periodStart?: string;
   }) {
     const params: unknown[] = [input.storeId, input.metricCodes];
+    const monthly = input.periodType === "monthly";
+    const periodTypeProjection = monthly ? "'monthly'" : ["ka", "period_type"].join(".");
+    const periodStartProjection = monthly
+      ? "DATE_TRUNC('month', ka.period_start)::date"
+      : ["ka", "period_start"].join(".");
+    const periodEndProjection = monthly
+      ? "(DATE_TRUNC('month', ka.period_start) + INTERVAL '1 month - 1 day')::date"
+      : ["ka", "period_end"].join(".");
     const clauses = [
       `ka.store_id = $1::uuid`,
       `ka.scope_type = 'store'`,
-      `kd.kpi_code = ANY($2::text[])`,
+      monthly
+        ? `((ka.period_type = 'daily' AND kd.kpi_code IN ('NET_SALES','ITEM_COUNT','TICKET_COUNT','FF')) OR (ka.period_type = 'monthly' AND kd.kpi_code = ANY($2::text[])))`
+        : `kd.kpi_code = ANY($2::text[])`,
+      `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
     if (input.periodType) {
       params.push(input.periodType);
-      clauses.push(`ka.period_type = $${params.length}`);
+      clauses.push(monthly
+        ? `(ka.period_type = $${params.length} OR (ka.period_type = 'daily' AND ka.period_start = ka.period_end))`
+        : `ka.period_type = $${params.length}`);
     }
 
     if (input.periodStart) {
       params.push(input.periodStart);
-      clauses.push(`ka.period_start = $${params.length}::date`);
+      clauses.push(monthly
+        ? `DATE_TRUNC('month', ka.period_start)::date = $${params.length}::date`
+        : `ka.period_start = $${params.length}::date`);
     }
 
     const result = await this.databaseService.query<{
       period_type: string;
       period_start: string;
       period_end: string;
+      uses_daily_components: boolean;
     }>(
       `
         SELECT
-          ka.period_type,
-          ka.period_start,
-          ka.period_end
+          ${periodTypeProjection} AS period_type,
+          ${periodStartProjection}::text AS period_start,
+          ${periodEndProjection}::text AS period_end,
+          ${monthly ? "(ka.period_type = 'daily')" : "FALSE"} AS uses_daily_components
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
         WHERE ${clauses.join(" AND ")}
-        ORDER BY ka.period_end DESC, ka.period_start DESC
+        ORDER BY period_end DESC, uses_daily_components DESC, period_start DESC
         LIMIT 1
       `,
       params,
@@ -142,15 +159,24 @@ export class StorePerformanceReportingReadRepository {
     }>(
       `
         SELECT DISTINCT
-          ka.period_type,
-          ka.period_start,
-          ka.period_end
+          period.period_type,
+          period.period_start::text AS period_start,
+          period.period_end::text AS period_end
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
+        CROSS JOIN LATERAL (
+          SELECT ka.period_type, ka.period_start, ka.period_end
+          WHERE kd.kpi_code = ANY($2::text[])
+          UNION ALL
+          SELECT 'monthly', DATE_TRUNC('month', ka.period_start)::date,
+            (DATE_TRUNC('month', ka.period_start) + INTERVAL '1 month - 1 day')::date
+          WHERE ka.period_type = 'daily' AND ka.period_start = ka.period_end
+            AND kd.kpi_code IN ('NET_SALES','ITEM_COUNT','TICKET_COUNT','FF')
+        ) period
         WHERE ka.store_id = $1::uuid
           AND ka.scope_type = 'store'
-          AND kd.kpi_code = ANY($2::text[])
+          AND COALESCE(ka.source_type, '') <> 'demo_seed'
         ORDER BY 3 DESC, 2 DESC
       `,
       [input.storeId, input.metricCodes],
