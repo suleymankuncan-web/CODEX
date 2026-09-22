@@ -193,7 +193,7 @@ test('Report Viewer forbidden routes make no protected request and no action req
   await gotoReportViewerRoute(page, '/store/me')
   await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toBeVisible()
   await gotoReportViewerRoute(page, '/store/incentives')
-  await expect(page.getByRole('heading', { name: 'LUFIAN Mağaza Primleri', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Primler', level: 1 })).toBeVisible()
 
   expect(protectedRequests.length).toBe(beforeForbiddenRoutes)
   expect(protectedRequests).toEqual([])
