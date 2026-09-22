@@ -251,7 +251,7 @@ export function validateOnpremKeycloakContract(input) {
       && /user_action_store_assignment_id = '91000000-0000-0000-0000-000000000015'::uuid[\s\S]*?user_id <> '80000000-0000-0000-0000-000000000016'::uuid/.test(collisionPreflight)
       && (collisionPreflight.match(/RAISE EXCEPTION/g) ?? []).length >= 4,
     'persona seed must preflight all fixed photo-proof identity collisions before mutation')
-    const accountRows = [...accountValues.matchAll(/\(\s*'[^']+'\s*,\s*NULL\s*,\s*'(onprem\.[a-z-]+)'\s*,\s*'[^']+@onprem\.invalid'\s*,\s*NULL\s*,\s*'local'\s*,\s*NULL\s*,\s*(TRUE|FALSE)\s*\)/g)].map((match) => match[1])
+    const accountRows = [...accountValues.matchAll(/\(\s*'[^']+'\s*,\s*(?:NULL|'[0-9a-f-]+')\s*,\s*'(onprem\.[a-z-]+)'\s*,\s*'[^']+@onprem\.invalid'\s*,\s*NULL\s*,\s*'local'\s*,\s*NULL\s*,\s*(TRUE|FALSE)\s*\)/g)].map((match) => match[1])
     for (const [username, role] of personas) {
       fail(accountRows.includes(username) && personaSeed.includes(`'${role}'`), `persona seed must contain the exact ${role} synthetic account`)
     }
@@ -260,6 +260,9 @@ export function validateOnpremKeycloakContract(input) {
     fail((accountValues.match(/'onprem\.(?:store-manager|region-manager|report-viewer|store-personnel|visual-merchandiser)'[^\n]*NULL\s*,\s*TRUE\s*\)/g) ?? []).length === 5, 'the exact five approved personas must remain active in the seed')
     fail((accountValues.match(/NULL\s*,\s*'local'\s*,\s*NULL/g) ?? []).length === 6, 'persona seed must use local provider rows with NULL subjects before binding')
     fail(accountRows.length === 6 && (accountValues.match(/@onprem\.invalid/g) ?? []).length === 6, 'persona seed must never contain password hashes or real e-mail domains')
+    fail(/'80000000-0000-0000-0000-000000000011',\s*'00000000-0000-0000-0000-000000000201',\s*'onprem\.store-manager'/.test(accountValues), 'store manager persona must resolve to the seeded manager employee')
+    fail(/'80000000-0000-0000-0000-000000000014',\s*'00000000-0000-0000-0000-000000000202',\s*'onprem\.store-personnel'/.test(accountValues), 'store personnel persona must resolve to the seeded personnel employee')
+    fail(/employee_id\s*=\s*CASE[\s\S]*?EXCLUDED\.username IN \('onprem\.store-manager', 'onprem\.store-personnel'\)[\s\S]*?THEN EXCLUDED\.employee_id[\s\S]*?ELSE ops\.user_account\.employee_id[\s\S]*?END/.test(personaSeed), 'persona seed reruns must repair the two self-performance employee bindings without clearing other accounts')
     fail(/'onprem\.photo-proof-admin',\s*'SUPER_ADMIN',\s*'company',\s*'00000000-0000-0000-0000-000000000001'::uuid,\s*NULL::uuid,\s*NULL::uuid/.test(personaSeed), 'photo-proof account must have the exact company-scoped SUPER_ADMIN assignment')
     fail(/onprem\.photo-proof-admin/.test(personaSeed) && /90000000-0000-0000-0000-000000000016/.test(personaSeed), 'photo-proof account role assignment must use its dedicated deterministic identity')
     fail(!/clerk/i.test(personaSeed), 'persona seed must not contain Clerk references')
