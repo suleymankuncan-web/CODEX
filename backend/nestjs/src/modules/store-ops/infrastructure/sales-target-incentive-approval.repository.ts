@@ -613,10 +613,11 @@ export class SalesTargetIncentiveApprovalRepository {
       if (input.finalApproval) {
         await client.query(`
           INSERT INTO audit.event_log (actor_user_id, event_type, entity_name, entity_id, scope_type, company_id, region_id, metadata_json)
-          VALUES ($1::uuid, 'incentive_package.final_approved', 'ops.sales_target_incentive_region_package', $2::uuid, 'company', $3::uuid, $4::uuid, $5::jsonb)`, [
+          VALUES ($1::uuid, $6, 'ops.sales_target_incentive_region_package', $2::uuid, 'company', $3::uuid, $4::uuid, $5::jsonb)`, [
           input.actorUserId, reviewedPackage.sales_target_incentive_region_package_id,
           reviewedPackage.company_id, reviewedPackage.region_id,
           JSON.stringify({ period: input.periodKey, submittedAt: packageRow.submitted_at, submittedByUserId: packageRow.submitted_by_user_id, permissionCode: "INCENTIVE_FINAL_APPROVAL", correlationId: RequestContextStore.getCorrelationId() }),
+          input.packageStatus === "admin_returned" ? "incentive_package.final_returned" : "incentive_package.final_approved",
         ]);
       }
       return reviewedPackage;

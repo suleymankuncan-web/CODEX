@@ -237,7 +237,7 @@ function row(input: {
   calculated: string
   final: string
   correction?: boolean
-  correctionStatus?: 'draft' | 'admin_approved'
+  correctionStatus?: 'draft' | 'admin_approved' | 'admin_returned'
   positionCode?: string
   target?: string
   actual?: string

@@ -1,4 +1,4 @@
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { buildAuthenticatedUser } from "../../auth/auth-context.service";
 import { incentiveFinalApprovalCompanyIds } from "./incentive-final-approval-scope";
 import { SalesTargetIncentiveAdminPackageWorkflowService } from "./sales-target-incentive-admin-package-workflow.service";
@@ -10,6 +10,24 @@ const viewer = (roles = ["REPORT_VIEWER"], grants = ["a"], companies = ["a"]) =>
 });
 
 describe("individual incentive approval", () => {
+  it("returns the exact submitted package with the existing permission and trimmed note", async () => {
+    const approval = { reviewRegionPackage: jest.fn().mockResolvedValue({ sales_target_incentive_region_package_id: "package", package_status: "admin_returned", reviewed_at: "2026-09-01" }) };
+    const service = new SalesTargetIncentiveAdminPackageWorkflowService({} as never, approval as never);
+    await service.approveFinalPackage({ actor: viewer(), periodKey: "2026-09", regionId: "region", regionPackageId: "package", submittedAt: "2026-09-01T00:00:00Z", decision: "return", reviewNote: "  Kontrol gerekli  " });
+    expect(approval.reviewRegionPackage).toHaveBeenCalledWith({ periodKey: "2026-09", regionId: "region", actorUserId: "viewer", packageStatus: "admin_returned", reviewNote: "Kontrol gerekli", finalApproval: { companyIds: ["a"], regionPackageId: "package", submittedAt: "2026-09-01T00:00:00Z" } });
+  });
+  it("rejects a return without a meaningful note before any write", async () => {
+    const approval = { reviewRegionPackage: jest.fn() };
+    const service = new SalesTargetIncentiveAdminPackageWorkflowService({} as never, approval as never);
+    await expect(service.approveFinalPackage({ actor: viewer(), periodKey: "2026-09", regionId: "region", regionPackageId: "package", submittedAt: "2026-09-01T00:00:00Z", decision: "return", reviewNote: "   " })).rejects.toThrow(BadRequestException);
+    expect(approval.reviewRegionPackage).not.toHaveBeenCalled();
+  });
+  it("omitting the decision preserves existing approval clients", async () => {
+    const approval = { reviewRegionPackage: jest.fn().mockResolvedValue({}) };
+    const service = new SalesTargetIncentiveAdminPackageWorkflowService({} as never, approval as never);
+    await service.approveFinalPackage({ actor: viewer(), periodKey: "2026-09", regionId: "region", regionPackageId: "package", submittedAt: "2026-09-01T00:00:00Z" });
+    expect(approval.reviewRegionPackage).toHaveBeenCalledWith(expect.objectContaining({ packageStatus: "admin_approved", reviewNote: null }));
+  });
   it.each([
     ["plain viewer", ["REPORT_VIEWER"], [], ["a"]],
     ["admin without viewer", ["SUPER_ADMIN"], ["a"], ["a"]],

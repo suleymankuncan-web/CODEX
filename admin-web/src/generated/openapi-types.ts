@@ -12,6 +12,8 @@ export type components = {
       "regionId": string
       "regionPackageId": string
       "submittedAt": string
+      "decision"?: "approve" | "return"
+      "reviewNote"?: string
     }
     "ApproveTargetDistributionRequestDto": {
       "approvalNote"?: string
@@ -1377,7 +1379,7 @@ export type components = {
     "IncentiveFinalApprovalResult": {
       "data": {
         "regionPackageId": string
-        "status": "admin_approved"
+        "status": "admin_approved" | "admin_returned"
         "reviewedAt": string | null
       }
     }

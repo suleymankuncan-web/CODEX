@@ -101,7 +101,7 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
         managerDirectoryLoading={managerDirectoryQuery.isLoading}
         onRetryManagerDirectory={() => void managerDirectoryQuery.refetch()}
       />
-    : <RegionManagerIncentivesOwner key={`${JSON.stringify(identity)}:${shared.period}`} {...shared} />
+    : <RegionManagerIncentivesOwner authSummary={input.authSummary} key={`${JSON.stringify(identity)}:${shared.period}`} {...shared} />
 }
 
 function IncentiveRouteLoading(input: { title: string; description: string }) {
