@@ -144,7 +144,12 @@ export function ReportsKpisPage() {
   if (!snapshotRunId) {
     return (
       <AdminOperationalPage>
-        <AdminStatePanel title={t('reportsKpis.missingTitle')} description={t('reportsKpis.missingCopy')} tone="danger" />
+        <AdminStatePanel
+          title={t('reportsKpis.missingTitle')}
+          description={t('reportsKpis.missingCopy')}
+          tone="danger"
+          action={<Button asChild variant="outline" size="sm"><Link to="/admin/reports/snapshot-runs">{t('reportsKpis.chooseAnotherSnapshot')}</Link></Button>}
+        />
       </AdminOperationalPage>
     )
   }
@@ -160,7 +165,12 @@ export function ReportsKpisPage() {
   if (kpiQuery.isError) {
     return (
       <AdminOperationalPage>
-        <AdminStatePanel title={t('reportsKpis.errorTitle')} description={getErrorMessage(kpiQuery.error)} tone="danger" />
+        <AdminStatePanel
+          title={t('reportsKpis.errorTitle')}
+          description={getErrorMessage(kpiQuery.error)}
+          tone="danger"
+          action={<Button type="button" variant="outline" size="sm" onClick={() => void kpiQuery.refetch()}>{t('reportsSummary.retry')}</Button>}
+        />
       </AdminOperationalPage>
     )
   }

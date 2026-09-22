@@ -53,8 +53,8 @@ export function StoreChecklistsPage(input: {
       <>
         <ReportViewerChecklistCommandPage
           authSummary={input.authSummary}
-          onOpenResult={(checklistInstanceId) => {
-            overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          onOpenResult={(checklistInstanceId, trigger) => {
+            overlayTriggerRef.current = trigger
             navigate({
               pathname: location.pathname,
               search: buildChecklistWorkflowOverlaySearch(location.search, {
@@ -98,8 +98,8 @@ export function StoreChecklistsPage(input: {
               }),
             })
           }}
-          onOpenResult={(checklistInstanceId) => {
-            overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          onOpenResult={(checklistInstanceId, trigger) => {
+            overlayTriggerRef.current = trigger
             navigate({
               pathname: location.pathname,
               search: buildChecklistWorkflowOverlaySearch(location.search, {

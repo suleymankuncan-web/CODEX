@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Megaphone, Pin, Send, ShieldCheck, Trophy } from 'lucide-react'
 import {
   AdminOperationalBadge as StatusPill,
@@ -99,10 +99,12 @@ function formatTargetRouteLabel(route: string, t: TranslateFunction) {
 }
 
 function ScreenState({
+  action,
   copy,
   title,
   tone = 'neutral',
 }: {
+  action?: ReactNode | undefined
   copy?: ReactNode | undefined
   title: ReactNode
   tone?: Tone | 'error' | undefined
@@ -111,7 +113,7 @@ function ScreenState({
 
   return (
     <AdminOperationalPage ariaLabel={typeof title === 'string' ? title : undefined}>
-      <AdminOperationalState description={copy} title={title} tone={normalizedTone} />
+      <AdminOperationalState action={action} description={copy} title={title} tone={normalizedTone} />
     </AdminOperationalPage>
   )
 }
@@ -126,6 +128,11 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const [form, setForm] = useState<FeedFormState>(() => createInitialForm(isRegionManagerOnly, defaultRegionId))
   const adminFeedQueryKey = getAdminFeedQueryKey(input.authSummary)
   const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
+  const feedCommandKey = [...adminFeedQueryKey, 'command']
+  const pendingPostIds = useMutationState({
+    filters: { mutationKey: feedCommandKey, exact: true, status: 'pending' },
+    select: mutation => mutation.state.variables,
+  })
 
   const feedQuery = useQuery({
     queryKey: adminFeedQueryKey,
@@ -161,6 +168,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     },
   })
   const publishMutation = useMutation({
+    mutationKey: feedCommandKey,
     mutationFn: publishFeedPost,
     onSuccess: async (response) => {
       actionToast.success(response.command.message)
@@ -174,6 +182,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onError: (error) => actionToast.error(error, 'Gönderi yayınlanamadı.'),
   })
   const pinMutation = useMutation({
+    mutationKey: feedCommandKey,
     mutationFn: pinFeedPost,
     onSuccess: async (response) => {
       actionToast.success(response.command.message)
@@ -187,6 +196,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onError: (error) => actionToast.error(error, 'Gönderi sabitlenemedi.'),
   })
   const unpinMutation = useMutation({
+    mutationKey: feedCommandKey,
     mutationFn: unpinFeedPost,
     onSuccess: async (response) => {
       actionToast.info(response.command.message)
@@ -200,6 +210,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     onError: (error) => actionToast.error(error, 'Gönderi sabitlemeden kaldırılamadı.'),
   })
   const archiveMutation = useMutation({
+    mutationKey: feedCommandKey,
     mutationFn: archiveFeedPost,
     onSuccess: async (response) => {
       actionToast.info(response.command.message)
@@ -240,6 +251,16 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   if (feedQuery.isError) {
     return (
       <ScreenState
+        action={(
+          <Button
+            type="button"
+            variant="outline"
+            disabled={feedQuery.isFetching}
+            onClick={() => void feedQuery.refetch()}
+          >
+            {locale === 'tr' ? 'Tekrar dene' : 'Try again'}
+          </Button>
+        )}
         title={t('adminFeed.errorTitle')}
         copy={getErrorMessage(feedQuery.error)}
         tone="error"
@@ -372,6 +393,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
           <div className="tw:grid tw:gap-3">
             {posts.map((post) => (
               <FeedAdminRow
+                actionPending={pendingPostIds.includes(post.feedPostId)}
                 key={post.feedPostId}
                 post={post}
                 locale={locale}
@@ -611,6 +633,7 @@ function AdminFeedComposerPanel(input: {
 }
 
 function FeedAdminRow(input: {
+  actionPending: boolean
   post: FeedPost
   locale: AppLocale
   t: TranslateFunction
@@ -620,7 +643,10 @@ function FeedAdminRow(input: {
   onArchive: () => void
 }) {
   return (
-    <article className="tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/65 tw:p-4 tw:shadow-xs">
+    <article
+      aria-busy={input.actionPending}
+      className="tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/65 tw:p-4 tw:shadow-xs"
+    >
       <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
         <div className="tw:min-w-0">
           <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{input.post.title}</strong>
@@ -664,22 +690,22 @@ function FeedAdminRow(input: {
 
       <div className="tw:mt-3 tw:flex tw:flex-wrap tw:justify-end tw:gap-2">
         {input.post.publishStatus === 'draft' ? (
-          <Button variant="secondary" type="button" onClick={input.onPublish}>
+          <Button variant="secondary" type="button" disabled={input.actionPending} onClick={input.onPublish}>
             {input.t('adminFeed.publish')}
           </Button>
         ) : null}
         {input.post.publishStatus !== 'archived' && !input.post.isPinned ? (
-          <Button variant="secondary" type="button" onClick={input.onPin}>
+          <Button variant="secondary" type="button" disabled={input.actionPending} onClick={input.onPin}>
             {input.t('adminFeed.pin')}
           </Button>
         ) : null}
         {input.post.publishStatus !== 'archived' && input.post.isPinned ? (
-          <Button variant="secondary" type="button" onClick={input.onUnpin}>
+          <Button variant="secondary" type="button" disabled={input.actionPending} onClick={input.onUnpin}>
             {input.t('adminFeed.unpin')}
           </Button>
         ) : null}
         {input.post.publishStatus !== 'archived' ? (
-          <Button variant="outline" type="button" onClick={input.onArchive}>
+          <Button variant="outline" type="button" disabled={input.actionPending} onClick={input.onArchive}>
             {input.t('adminFeed.archive')}
           </Button>
         ) : null}

@@ -20,7 +20,7 @@ export function ReportViewerManagerWorkspace(input: {
   locale: 'tr' | 'en'
   managerName: string
   managerUserId: string
-  onOpenResult: (checklistInstanceId: string) => void
+  onOpenResult: (checklistInstanceId: string, trigger: HTMLElement | null) => void
   period: string
 }) {
   const workspaceKey = `${input.managerUserId}:${input.period}`
@@ -98,7 +98,7 @@ export function ReportViewerManagerWorkspace(input: {
 
       {data ? <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-3 tw:py-2 tw:sm:px-4"><span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{data.page.total} {copy.storeCount}</span><div className="tw:flex tw:items-center tw:gap-1"><Button size="icon-xs" variant="ghost" aria-label={copy.previous} disabled={offset === 0 || storesQuery.isFetching} onClick={() => setFilterState({ workspaceKey, search, offset: Math.max(0, offset - STORE_PAGE_SIZE), sort })}><ChevronLeft /></Button><span className="tw:min-w-9 tw:text-center tw:text-[11px] tw:font-semibold">{pageNumber} / {pageCount}</span><Button size="icon-xs" variant="ghost" aria-label={copy.next} disabled={!data.page.hasMore || storesQuery.isFetching} onClick={() => setFilterState({ workspaceKey, search, offset: offset + STORE_PAGE_SIZE, sort })}><ChevronRight /></Button></div></footer> : null}
 
-      <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.storeId ?? null} storeName={selectedStore?.storeName ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStore(null)} onOpenResult={(checklistInstanceId) => { setSelectedStore(null); input.onOpenResult(checklistInstanceId) }} />
+      <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.storeId ?? null} storeName={selectedStore?.storeName ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStore(null)} onOpenResult={(checklistInstanceId) => { setSelectedStore(null); input.onOpenResult(checklistInstanceId, historyTriggerRef.current) }} />
     </section>
   )
 }

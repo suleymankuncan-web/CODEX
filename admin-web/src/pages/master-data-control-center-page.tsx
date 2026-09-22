@@ -625,6 +625,7 @@ export function MasterDataControlCenterPage() {
             auditRows={auditRows}
             importRows={importRows}
             issueRows={issueRows}
+            isError={isTabError(activeTab, issuesQuery.isError, storesQuery.isError, personnelQuery.isError, importsQuery.isError, auditQuery.isError)}
             isLoading={isTabLoading(activeTab, issuesQuery.isLoading, storesQuery.isLoading, personnelQuery.isLoading, importsQuery.isLoading, auditQuery.isLoading)}
             personnelRows={personnelRows}
             selectedAuditId={selectedAudit?.id ?? null}
@@ -645,6 +646,7 @@ export function MasterDataControlCenterPage() {
             audit={selectedAudit}
             conflictMessage={feedback?.tone === 'warning' ? feedback.message : null}
             importDetail={importDetailQuery.data ?? null}
+            importError={importDetailQuery.isError || importReadinessQuery.isError}
             importReadiness={importReadinessQuery.data ?? null}
             importRow={selectedImport}
             isImportProcessing={validateMutation.isPending || promoteMutation.isPending}
@@ -663,6 +665,7 @@ export function MasterDataControlCenterPage() {
                 promoteMutation.mutate({ batchId: selectedImport.id, entity: selectedImport.record.bootstrapEntity })
               }
             }}
+            onRetryImport={() => void Promise.all([importDetailQuery.refetch(), importReadinessQuery.refetch()])}
             onSave={() => void saveAllDrafts()}
             onUpdatePersonnelDraft={updatePersonnelDraft}
             onUpdateStoreDraft={updateStoreDraft}
@@ -883,6 +886,21 @@ function getTabCount(
 }
 
 function isTabLoading(
+  activeTab: MasterDataWorkbenchTab,
+  issues: boolean,
+  stores: boolean,
+  personnel: boolean,
+  imports: boolean,
+  history: boolean,
+) {
+  if (activeTab === 'issues') return issues
+  if (activeTab === 'stores') return stores
+  if (activeTab === 'personnel') return personnel
+  if (activeTab === 'imports') return imports
+  return history
+}
+
+function isTabError(
   activeTab: MasterDataWorkbenchTab,
   issues: boolean,
   stores: boolean,

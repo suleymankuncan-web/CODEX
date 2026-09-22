@@ -82,6 +82,8 @@ export function AuthManagementPage() {
   const usersQuery = useQuery({
     queryKey: ['auth-management', 'users', deferredQuery, userPage],
     queryFn: () => getUserAccounts({ ...(deferredQuery ? { q: deferredQuery } : {}), limit: 10, offset: userPage * 10 }),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2] === deferredQuery ? previousData : undefined,
   })
   const lookupsQuery = useQuery({ queryKey: ['auth-management', 'lookups'], queryFn: getAuthLookups })
   const rolesQuery = useQuery({ queryKey: ['auth-management', 'roles'], queryFn: getRoles })
@@ -96,9 +98,11 @@ export function AuthManagementPage() {
     return roles.find((role) => role.roleId === selectedRoleId) ?? roles[0] ?? null
   }, [rolesQuery.data?.items, selectedRoleId])
   const userTotal = usersQuery.data?.meta.total ?? 0
+  const visibleUserOffset = usersQuery.data?.meta.offset ?? userPage * 10
+  const visibleUserPage = Math.floor(visibleUserOffset / 10)
   const userPageCount = Math.max(1, Math.ceil(userTotal / 10))
-  const userRangeStart = userTotal === 0 ? 0 : userPage * 10 + 1
-  const userRangeEnd = Math.min(userPage * 10 + (usersQuery.data?.items.length ?? 0), userTotal)
+  const userRangeStart = userTotal === 0 ? 0 : visibleUserOffset + 1
+  const userRangeEnd = Math.min(visibleUserOffset + (usersQuery.data?.items.length ?? 0), userTotal)
 
   const roleAssignmentsQuery = useQuery({
     queryKey: ['auth-management', 'role-assignments', selectedUser?.userId],
@@ -190,8 +194,8 @@ export function AuthManagementPage() {
               <div className="tw:relative"><Search className="tw:absolute tw:top-1/2 tw:left-3 tw:size-4 tw:-translate-y-1/2 tw:text-muted-foreground" aria-hidden="true" /><Input aria-label="Kullanıcı ara" className="tw:h-11 tw:rounded-xl tw:border-border tw:bg-muted/40 tw:pl-9 tw:shadow-none" onChange={(event) => { setQuery(event.target.value); setUserPage(0) }} placeholder="Ad, kullanıcı adı veya e-posta" value={query} /></div>
             </header>
             {usersQuery.isLoading ? <AdminStatePanel isLoading title="Kullanıcılar yükleniyor" /> : null}
-            {usersQuery.error ? <AdminStatePanel tone="danger" title="Kullanıcılar alınamadı" /> : null}
-            <div aria-label="Kullanıcı listesi" className="tw:max-h-[640px] tw:overflow-y-auto tw:px-3 tw:py-2">
+            {usersQuery.error ? <AdminStatePanel action={<Button onClick={() => void usersQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} description="Bağlantınızı kontrol edip yeniden deneyin." tone="danger" title="Kullanıcılar alınamadı" /> : null}
+            {!usersQuery.isLoading && !usersQuery.error ? <div aria-busy={usersQuery.isFetching} aria-label="Kullanıcı listesi" className="tw:max-h-[640px] tw:overflow-y-auto tw:px-3 tw:py-2">
               {(usersQuery.data?.items ?? []).map((user) => (
                 <button
                   aria-current={selectedUser?.userId === user.userId ? 'true' : undefined}
@@ -205,15 +209,15 @@ export function AuthManagementPage() {
                   <AccountStatusBadge user={user} compact />
                 </button>
               ))}
-            </div>
-            <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-4 tw:py-3">
+            </div> : null}
+            {!usersQuery.isLoading && !usersQuery.error ? <footer className="tw:flex tw:items-center tw:justify-between tw:border-t tw:border-border tw:px-4 tw:py-3">
               <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{userRangeStart}-{userRangeEnd} / {userTotal}</span>
               <div className="tw:flex tw:items-center tw:gap-1.5">
-                <Button aria-label="Önceki kullanıcı sayfası" className="tw:size-8" disabled={userPage === 0} onClick={() => setUserPage((page) => Math.max(0, page - 1))} size="icon" variant="outline"><ChevronLeft aria-hidden="true" /></Button>
-                <span className="tw:min-w-10 tw:text-center tw:text-xs tw:font-semibold tw:text-foreground">{userPage + 1}/{userPageCount}</span>
-                <Button aria-label="Sonraki kullanıcı sayfası" className="tw:size-8" disabled={userPage + 1 >= userPageCount} onClick={() => setUserPage((page) => Math.min(userPageCount - 1, page + 1))} size="icon" variant="outline"><ChevronRight aria-hidden="true" /></Button>
+                <Button aria-label="Önceki kullanıcı sayfası" className="tw:size-8" disabled={usersQuery.isFetching || userPage === 0} onClick={() => setUserPage((page) => Math.max(0, page - 1))} size="icon" variant="outline"><ChevronLeft aria-hidden="true" /></Button>
+                <span className="tw:min-w-10 tw:text-center tw:text-xs tw:font-semibold tw:text-foreground">{visibleUserPage + 1}/{userPageCount}</span>
+                <Button aria-label="Sonraki kullanıcı sayfası" className="tw:size-8" disabled={usersQuery.isFetching || userPage + 1 >= userPageCount} onClick={() => setUserPage((page) => Math.min(userPageCount - 1, page + 1))} size="icon" variant="outline"><ChevronRight aria-hidden="true" /></Button>
               </div>
-            </footer>
+            </footer> : null}
           </section>
 
           {selectedUser ? (
@@ -233,8 +237,9 @@ export function AuthManagementPage() {
                 </div>
               </header>
               <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-5 tw:xl:grid-cols-2">
+                {lookupsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void lookupsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} className="tw:xl:col-span-2" description="Rol ve mağaza seçenekleri alınamadığı için yeni atamalar geçici olarak kapalı." tone="danger" title="Atama seçenekleri alınamadı" /> : null}
                 <AccessBlock icon={<Shield aria-hidden="true" />} title="Roller" action={<Button disabled={roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setRoleOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Rol ekle</Button>}>
-                  {roleAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Roller yükleniyor" /> : roleAssignmentsQuery.isError ? <AdminStatePanel tone="danger" title="Roller alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (roleAssignmentsQuery.data?.items ?? []).length ? roleAssignmentsQuery.data?.items.map((assignment) => (
+                  {roleAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Roller yükleniyor" /> : roleAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void roleAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Roller alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (roleAssignmentsQuery.data?.items ?? []).length ? roleAssignmentsQuery.data?.items.map((assignment) => (
                     <div key={assignment.assignmentId}>
                       <AccessRow label={roleDisplayName(assignment)} meta={scopeLabel(assignment)} onRemove={() => removeRoleMutation.mutate(assignment.assignmentId)} />
                       {assignment.roleCode === 'REPORT_VIEWER' && assignment.scopeType === 'company' ? <div className="tw:px-3 tw:pb-4"><p className="tw:text-xs tw:font-semibold tw:text-muted-foreground">Rol yetkileri</p><IncentiveApprovalCheckbox checked={assignment.incentiveApproval ?? false} disabled={incentiveApprovalMutation.isPending || roleAssignmentsUnavailable || removeRoleMutation.isPending} onChange={(enabled) => incentiveApprovalMutation.mutate({ assignmentId: assignment.assignmentId, enabled })} /></div> : null}
@@ -242,7 +247,7 @@ export function AuthManagementPage() {
                   )) : <EmptyAccess copy="Rol ataması yok" />}
                 </AccessBlock>
                 <AccessBlock icon={<Building2 aria-hidden="true" />} title="Mağaza erişimi" action={<Button disabled={storeAssignmentsUnavailable || lookupsUnavailable} onClick={() => setStoreOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Mağaza ekle</Button>}>
-                  {storeAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Mağaza erişimi yükleniyor" /> : storeAssignmentsQuery.isError ? <AdminStatePanel tone="danger" title="Mağaza erişimi alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (storeAssignmentsQuery.data?.items ?? []).length ? storeAssignmentsQuery.data?.items.map((assignment) => (
+                  {storeAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Mağaza erişimi yükleniyor" /> : storeAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void storeAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Mağaza erişimi alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (storeAssignmentsQuery.data?.items ?? []).length ? storeAssignmentsQuery.data?.items.map((assignment) => (
                     <AccessRow key={assignment.assignmentId} label={assignment.storeName} meta={assignment.storeCode} onRemove={() => removeStoreMutation.mutate(assignment.assignmentId)} />
                   )) : <EmptyAccess copy="Doğrudan mağaza erişimi yok" />}
                 </AccessBlock>
@@ -251,16 +256,27 @@ export function AuthManagementPage() {
           ) : <AdminStatePanel title="Kullanıcı seçin" description="Yetkileri düzenlemek için soldan bir kullanıcı seçin." />}
         </div>
       ) : (
-        <PermissionWorkspace
-          permissions={permissionsQuery.data?.items ?? []}
-          role={selectedRole}
-          roles={rolesQuery.data?.items ?? []}
-          onRoleChange={setSelectedRoleId}
-          onToggle={setPermissionAction}
-        />
+        rolesQuery.isLoading || permissionsQuery.isLoading ? (
+          <AdminStatePanel isLoading title="Rol yetkileri yükleniyor" />
+        ) : rolesQuery.isError || permissionsQuery.isError ? (
+          <AdminStatePanel
+            action={<Button onClick={() => void Promise.all([rolesQuery.refetch(), permissionsQuery.refetch()])} size="sm" variant="outline">Yeniden dene</Button>}
+            description="Rol ve yetki kataloğu alınamadı. Bağlantınızı kontrol edip yeniden deneyin."
+            tone="danger"
+            title="Rol yetkileri alınamadı"
+          />
+        ) : (
+          <PermissionWorkspace
+            permissions={permissionsQuery.data?.items ?? []}
+            role={selectedRole}
+            roles={rolesQuery.data?.items ?? []}
+            onRoleChange={setSelectedRoleId}
+            onToggle={setPermissionAction}
+          />
+        )
       )}
 
-      <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} onSave={(draft) => createUserMutation.mutate(draft)} pending={createUserMutation.isPending} />
+      <CreateUserDialog key={createOpen ? 'open' : 'closed'} open={createOpen} onOpenChange={setCreateOpen} onSave={(draft) => createUserMutation.mutate(draft)} pending={createUserMutation.isPending} />
       <RoleAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${roleOpen ? 'open' : 'closed'}`} open={roleOpen} onOpenChange={setRoleOpen} roles={lookupsQuery.data?.roles ?? []} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createRoleMutation.mutate(draft)} pending={createRoleMutation.isPending} unavailable={roleAssignmentsUnavailable || lookupsUnavailable} unavailableByError={roleAssignmentsQuery.isError || lookupsQuery.isError} />
       <StoreAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${storeOpen ? 'open' : 'closed'}`} assignedStoreIds={(storeAssignmentsQuery.data?.items ?? []).map((item) => item.storeId)} open={storeOpen} onOpenChange={setStoreOpen} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createStoreMutation.mutate(draft)} pending={createStoreMutation.isPending} unavailable={storeAssignmentsUnavailable || lookupsUnavailable} unavailableByError={storeAssignmentsQuery.isError || lookupsQuery.isError} />
       <ConfirmDialog open={Boolean(accountAction)} title={accountAction?.isActive ? 'Hesap devre dışı bırakılsın mı?' : 'Hesap yeniden etkinleştirilsin mi?'} copy={accountAction?.isActive ? 'Aktif rol, mağaza erişimi ve mobil oturumlar kapatılır.' : 'Hesap açılır; eski rol ve mağaza atamaları otomatik geri gelmez.'} confirmLabel={accountAction?.isActive ? 'Devre dışı bırak' : 'Etkinleştir'} onOpenChange={(open) => !open && setAccountAction(null)} onConfirm={() => accountAction && accountMutation.mutate(accountAction)} pending={accountMutation.isPending} />

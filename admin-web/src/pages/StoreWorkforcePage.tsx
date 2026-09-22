@@ -243,7 +243,7 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
         <section className="operations-board" aria-label="Kadro çalışma alanı" aria-busy={workspaceQuery.isFetching}>
           {workspaceQuery.isPlaceholderData ? <span className="workforce-refresh-status" role="status">Liste güncelleniyor…</span> : null}
           {!isStoreManager ? <div className="operations-board-toolbar"><div className="operations-board-title"><h2>{selectedManager?.displayName ?? 'Mağaza kadro dengesi'}</h2><Badge variant="secondary">{workspace.stores.total} mağaza</Badge></div></div> : null}
-      {workspace.stores.items.length === 0 ? (
+      {workspace.stores.items.length === 0 && query.length === 0 ? (
         <WorkforceInlineEmpty title={managerUserId !== 'all' ? 'Bu seçimde mağaza yok' : 'Kapsamda mağaza yok'} description={managerUserId !== 'all' ? 'Seçilen bölge müdürü ve filtrelerle eşleşen mağaza bulunamadı.' : 'Bu rol için görüntülenebilir aktif mağaza bulunamadı.'} />
       ) : isStoreManager && directStore ? (
         <div data-testid="store-workforce-personnel-list">

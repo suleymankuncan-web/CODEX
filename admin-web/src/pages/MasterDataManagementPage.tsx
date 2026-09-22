@@ -94,6 +94,8 @@ export function MasterDataManagementPage() {
       limit: pageSize,
       offset: storePage * pageSize,
     }),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2] === deferredSearch ? previousData : undefined,
   })
   const storeLookupsQuery = useQuery({
     queryKey: ['admin-management', 'store-lookups'],
@@ -107,6 +109,10 @@ export function MasterDataManagementPage() {
       limit: pageSize,
       offset: personnelPage * pageSize,
     }),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2] === deferredSearch && previousQuery.queryKey[4] === personnelStatus
+        ? previousData
+        : undefined,
   })
   const personnelLookupsQuery = useQuery({
     queryKey: ['admin-management', 'personnel-lookups'],
@@ -280,8 +286,8 @@ export function MasterDataManagementPage() {
             ) : null}
           </div>
 
-          <TabsContent value="stores">
-            <RecordArea loading={storesQuery.isLoading} error={storesQuery.error}>
+          <TabsContent aria-busy={storesQuery.isFetching} value="stores">
+            <RecordArea loading={storesQuery.isLoading} error={storesQuery.error} onRetry={() => void storesQuery.refetch()}>
               <>
                 <StoreList
                   items={storesQuery.data?.items ?? []}
@@ -290,16 +296,17 @@ export function MasterDataManagementPage() {
                 />
                 <PaginationFooter
                   label="mağaza"
-                  offset={storePage * pageSize}
+                  offset={storesQuery.data?.meta.offset ?? storePage * pageSize}
                   onPageChange={setStorePage}
                   page={storePage}
+                  pending={storesQuery.isFetching}
                   total={storeTotal}
                 />
               </>
             </RecordArea>
           </TabsContent>
-          <TabsContent value="personnel">
-            <RecordArea loading={personnelQuery.isLoading} error={personnelQuery.error}>
+          <TabsContent aria-busy={personnelQuery.isFetching} value="personnel">
+            <RecordArea loading={personnelQuery.isLoading} error={personnelQuery.error} onRetry={() => void personnelQuery.refetch()}>
               <>
                 <PersonnelList
                   items={personnelQuery.data?.items ?? []}
@@ -308,9 +315,10 @@ export function MasterDataManagementPage() {
                 />
                 <PaginationFooter
                   label="personel"
-                  offset={personnelPage * pageSize}
+                  offset={personnelQuery.data?.meta.offset ?? personnelPage * pageSize}
                   onPageChange={setPersonnelPage}
                   page={personnelPage}
+                  pending={personnelQuery.isFetching}
                   total={personnelTotal}
                 />
               </>
@@ -356,7 +364,7 @@ export function MasterDataManagementPage() {
   )
 }
 
-function RecordArea({ children, error, loading }: { children: React.ReactNode; error: unknown; loading: boolean }) {
+function RecordArea({ children, error, loading, onRetry }: { children: React.ReactNode; error: unknown; loading: boolean; onRetry: () => void }) {
   if (loading) {
     return <div className="tw:p-4 tw:sm:p-5"><AdminStatePanel isLoading title="Kayıtlar yükleniyor" /></div>
   }
@@ -367,6 +375,7 @@ function RecordArea({ children, error, loading }: { children: React.ReactNode; e
           tone="danger"
           title="Kayıtlar alınamadı"
           description="Bağlantınızı kontrol edip yeniden deneyin."
+          action={<Button onClick={onRetry} size="sm" variant="outline">Yeniden dene</Button>}
         />
       </div>
     )
@@ -374,27 +383,29 @@ function RecordArea({ children, error, loading }: { children: React.ReactNode; e
   return children
 }
 
-function PaginationFooter({ label, offset, onPageChange, page, total }: {
+function PaginationFooter({ label, offset, onPageChange, page, pending, total }: {
   label: string
   offset: number
   onPageChange: (page: number) => void
   page: number
+  pending: boolean
   total: number
 }) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const visiblePage = Math.floor(offset / pageSize)
   const from = total === 0 ? 0 : offset + 1
   const to = Math.min(offset + pageSize, total)
 
   return (
-    <footer className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border tw:bg-muted/25 tw:px-4 tw:py-3 tw:sm:px-5">
+    <footer aria-busy={pending} className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border tw:bg-muted/25 tw:px-4 tw:py-3 tw:sm:px-5">
       <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
         {from}-{to} / {total} {label}
       </span>
       <div className="tw:flex tw:items-center tw:gap-2">
-        <span className="tw:min-w-10 tw:text-center tw:text-xs tw:text-muted-foreground">{page + 1} / {pageCount}</span>
+        <span className="tw:min-w-10 tw:text-center tw:text-xs tw:text-muted-foreground">{visiblePage + 1} / {pageCount}</span>
         <Button
           aria-label={`Önceki ${label} sayfası`}
-          disabled={page === 0}
+          disabled={pending || page === 0}
           onClick={() => onPageChange(Math.max(0, page - 1))}
           size="icon-sm"
           variant="outline"
@@ -403,7 +414,7 @@ function PaginationFooter({ label, offset, onPageChange, page, total }: {
         </Button>
         <Button
           aria-label={`Sonraki ${label} sayfası`}
-          disabled={page + 1 >= pageCount}
+          disabled={pending || page + 1 >= pageCount}
           onClick={() => onPageChange(Math.min(pageCount - 1, page + 1))}
           size="icon-sm"
           variant="outline"

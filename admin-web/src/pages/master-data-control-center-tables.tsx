@@ -16,6 +16,7 @@ export function MasterDataWorkbenchTable(input: {
   auditRows: MasterDataAuditRow[]
   importRows: MasterDataImportWorkbenchRow[]
   issueRows: MasterDataIssueRow[]
+  isError: boolean
   isLoading: boolean
   personnelRows: MasterDataPersonnelWorkbenchRow[]
   selectedAuditId: string | null
@@ -36,6 +37,16 @@ export function MasterDataWorkbenchTable(input: {
     return (
       <div className="master-data-control-center__table-wrap">
         <div className="master-data-control-center__empty">Kayıtlar yükleniyor.</div>
+      </div>
+    )
+  }
+
+  if (input.isError) {
+    return (
+      <div className="master-data-control-center__table-wrap">
+        <div className="master-data-control-center__empty" role="alert">
+          Kayıtlar alınamadı. Yenile düğmesiyle yeniden deneyin.
+        </div>
       </div>
     )
   }

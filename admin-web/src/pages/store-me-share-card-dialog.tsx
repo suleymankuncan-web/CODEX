@@ -117,28 +117,40 @@ export function StoreMeShareCardDialog({
   t,
 }: StoreMeShareCardDialogProps) {
   const cardRef = useRef<HTMLElement | null>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+  const downloadAttemptRef = useRef(0)
   const [downloadState, setDownloadState] = useState<'idle' | 'working' | 'success' | 'error'>('idle')
 
+  function closeDialog() {
+    downloadAttemptRef.current += 1
+    setDownloadState('idle')
+    onClose()
+  }
+
   async function downloadPng() {
-    if (!cardRef.current || !card.isAvailable) {
+    if (!cardRef.current || !card.isAvailable || downloadState === 'working') {
       return
     }
 
+    const cardElement = cardRef.current
+    const attempt = ++downloadAttemptRef.current
     setDownloadState('working')
     try {
       const { toPng } = await import('html-to-image')
-      const dataUrl = await toPng(cardRef.current, {
+      if (attempt !== downloadAttemptRef.current) return
+      const dataUrl = await toPng(cardElement, {
         cacheBust: true,
         pixelRatio: 3,
         backgroundColor: '#050711',
       })
+      if (attempt !== downloadAttemptRef.current) return
       const link = document.createElement('a')
       link.download = buildShareCardFileName(card)
       link.href = dataUrl
       link.click()
       setDownloadState('success')
     } catch {
-      setDownloadState('error')
+      if (attempt === downloadAttemptRef.current) setDownloadState('error')
     }
   }
 
@@ -147,15 +159,25 @@ export function StoreMeShareCardDialog({
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          onClose()
-          setDownloadState('idle')
+          closeDialog()
         }
       }}
     >
-      <DialogContent className="store-me-share-dialog tw:max-w-[440px] tw:gap-4 tw:p-4 sm:tw:max-w-[480px]">
+      <DialogContent
+        aria-describedby={undefined}
+        className="store-me-share-dialog tw:max-w-[440px] tw:gap-4 tw:p-4 sm:tw:max-w-[480px]"
+        showCloseButton={false}
+        onOpenAutoFocus={() => {
+          returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          returnFocusRef.current?.focus()
+        }}
+      >
         <DialogHeader className="tw:flex-row tw:items-center tw:justify-between tw:space-y-0">
           <DialogTitle>{t('storeMe.shareCardTitle')}</DialogTitle>
-          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label={t('storeMe.shareCardClose')}>
+          <Button type="button" variant="ghost" size="icon" onClick={closeDialog} aria-label={t('storeMe.shareCardClose')}>
             <X />
           </Button>
         </DialogHeader>
@@ -176,7 +198,7 @@ export function StoreMeShareCardDialog({
             {downloadState === 'success' ? t('storeMe.shareCardDownloadSuccess') : null}
             {downloadState === 'error' ? t('storeMe.shareCardDownloadError') : null}
           </span>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={closeDialog}>
             {t('storeMe.shareCardClose')}
           </Button>
           <Button

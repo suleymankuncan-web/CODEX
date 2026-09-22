@@ -104,6 +104,7 @@ export function AdminRegionPackageReviewSection(input: {
           const returnNote = input.returnNotes[packageSummary.regionId] ?? ''
           const isMutatingThis =
             input.mutation.isPending && input.mutation.variables?.regionId === packageSummary.regionId
+          const detailId = `admin-incentive-region-package-${packageSummary.regionId}`
 
           return (
             <article
@@ -112,13 +113,15 @@ export function AdminRegionPackageReviewSection(input: {
               key={packageSummary.regionId}
             >
               <button
+                aria-controls={detailId}
+                aria-expanded={isExpanded}
                 className="tw:grid tw:w-full tw:gap-3 tw:text-left tw:md:grid-cols-[minmax(0,1.25fr)_auto]"
                 onClick={() => input.onToggleRegion(packageSummary.regionId)}
                 type="button"
               >
                 <span className="tw:flex tw:min-w-0 tw:items-start tw:gap-3">
                   <span className="tw:flex tw:size-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
-                    <ClipboardCheck size={18} />
+                    <ClipboardCheck aria-hidden="true" size={18} />
                   </span>
                   <span className="tw:min-w-0">
                     <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
@@ -145,7 +148,7 @@ export function AdminRegionPackageReviewSection(input: {
               </button>
 
               {isExpanded ? (
-                <div className="tw:mt-4 tw:grid tw:gap-4">
+                <div className="tw:mt-4 tw:grid tw:gap-4" id={detailId}>
                   <div className="tw:grid tw:gap-2 tw:md:grid-cols-4">
                     <PackageStat label={input.t('adminIncentives.packages.review')} value={`${packageSummary.reviewedStoreCount}/${packageSummary.storeCount}`} />
                     <PackageStat label={input.t('adminIncentives.packages.submittedStores')} value={packageSummary.submittedStoreCount} />

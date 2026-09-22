@@ -170,7 +170,12 @@ export function ReportsTurnoverPage() {
   if (!snapshotRunId) {
     return (
       <AdminOperationalPage>
-        <AdminStatePanel title={t('reportsTurnover.missingTitle')} description={t('reportsTurnover.missingCopy')} tone="danger" />
+        <AdminStatePanel
+          title={t('reportsTurnover.missingTitle')}
+          description={t('reportsTurnover.missingCopy')}
+          tone="danger"
+          action={<Button asChild variant="outline" size="sm"><Link to="/admin/reports/snapshot-runs">{t('reportsTurnover.chooseAnotherSnapshot')}</Link></Button>}
+        />
       </AdminOperationalPage>
     )
   }
@@ -186,7 +191,12 @@ export function ReportsTurnoverPage() {
   if (turnoverQuery.isError) {
     return (
       <AdminOperationalPage>
-        <AdminStatePanel title={t('reportsTurnover.errorTitle')} description={getErrorMessage(turnoverQuery.error)} tone="danger" />
+        <AdminStatePanel
+          title={t('reportsTurnover.errorTitle')}
+          description={getErrorMessage(turnoverQuery.error)}
+          tone="danger"
+          action={<Button type="button" variant="outline" size="sm" onClick={() => void turnoverQuery.refetch()}>{t('reportsSummary.retry')}</Button>}
+        />
       </AdminOperationalPage>
     )
   }

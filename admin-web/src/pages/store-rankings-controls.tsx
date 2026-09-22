@@ -52,7 +52,7 @@ export function RankingFilters(input: {
   return <div className="store-rankings-filters" role="group" aria-label={input.t('storeRankings.filtersEyebrow')}>
       <InputGroup className="store-rankings-search-field">
         <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
-        <InputGroupInput type="search" aria-label={input.t('storeRankings.searchLabel')} placeholder={placeholder} value={input.search} onChange={event => input.onSearchChange(event.target.value)} />
+        <InputGroupInput type="search" aria-label={input.activeList === 'stores' ? placeholder : input.t('storeRankings.searchLabel')} placeholder={placeholder} value={input.search} onChange={event => input.onSearchChange(event.target.value)} />
         <InputGroupAddon align="inline-end"><Badge variant="secondary">{meta.total}</Badge></InputGroupAddon>
       </InputGroup>
       {input.isPrivileged ? <Select value={input.regionManagerUserId || 'all'} onValueChange={value => input.onManagerChange(value === 'all' ? '' : value)}>

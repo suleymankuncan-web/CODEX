@@ -71,7 +71,7 @@ export function AuthCatalogPage() {
     [permissionsQuery.data?.items],
   )
   const filteredRoles = useMemo(() => {
-    const input = deferredSearch.trim().toLowerCase()
+    const input = deferredSearch.trim().toLocaleLowerCase('tr-TR')
     if (!input) {
       return roles
     }
@@ -85,7 +85,7 @@ export function AuthCatalogPage() {
         role.permissions.map((permission) => permission.permissionCode).join(' '),
       ]
         .join(' ')
-        .toLowerCase()
+        .toLocaleLowerCase('tr-TR')
       .includes(input),
     )
   }, [deferredSearch, roles])
@@ -105,6 +105,7 @@ export function AuthCatalogPage() {
           title={t('authCatalog.roleErrorTitle')}
           description={getErrorMessage(rolesQuery.error)}
           tone="danger"
+          action={<AuthButton onClick={() => void rolesQuery.refetch()}>Yeniden dene</AuthButton>}
         />
       </AdminSurfacePage>
     )
@@ -117,6 +118,7 @@ export function AuthCatalogPage() {
           title={t('authCatalog.permissionErrorTitle')}
           description={getErrorMessage(permissionsQuery.error)}
           tone="danger"
+          action={<AuthButton onClick={() => void permissionsQuery.refetch()}>Yeniden dene</AuthButton>}
         />
       </AdminSurfacePage>
     )

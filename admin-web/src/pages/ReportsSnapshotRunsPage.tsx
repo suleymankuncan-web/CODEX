@@ -81,6 +81,11 @@ export function ReportsSnapshotRunsPage() {
           title={t('reportsSnapshotRuns.errorTitle')}
           description={getErrorMessage(runsQuery.error)}
           tone="danger"
+          action={
+            <Button type="button" variant="outline" size="sm" onClick={() => void runsQuery.refetch()}>
+              {t('reportsSummary.retry')}
+            </Button>
+          }
         />
       </AdminOperationalPage>
     )

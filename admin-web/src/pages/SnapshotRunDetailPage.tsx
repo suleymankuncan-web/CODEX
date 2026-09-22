@@ -113,6 +113,7 @@ export function SnapshotRunDetailPage() {
         queryClient.invalidateQueries({ queryKey: ['snapshot-overview'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, t('adminSnapshots.actionFailed')),
   })
 
   if (!snapshotRunId) {
@@ -145,6 +146,17 @@ export function SnapshotRunDetailPage() {
           title={t('adminSnapshots.detailUnavailableTitle')}
           description={getErrorMessage(detailQuery.error)}
           tone="danger"
+          action={
+            <Button
+              variant="outline"
+              onClick={() => void detailQuery.refetch()}
+              disabled={detailQuery.isFetching}
+              aria-busy={detailQuery.isFetching}
+            >
+              <RefreshCcw aria-hidden="true" />
+              {t('adminSnapshots.tryAgain')}
+            </Button>
+          }
         />
       </AdminOperationalPage>
     )
@@ -213,10 +225,14 @@ export function SnapshotRunDetailPage() {
       <AdminOperationalHeader
         eyebrow={t('adminSnapshots.detailEyebrow')}
         title={t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}
-        description={t('adminSnapshots.detailCopy', {
-          runId: detail.snapshotRun.snapshotRunId,
-          state: formatSnapshotState(detail.snapshotRun.healthState, t),
-        })}
+        description={
+          <span className="tw:break-words">
+            {t('adminSnapshots.detailCopy', {
+              runId: detail.snapshotRun.snapshotRunId,
+              state: formatSnapshotState(detail.snapshotRun.healthState, t),
+            })}
+          </span>
+        }
         icon={<Sparkles size={18} />}
         meta={
           <>
@@ -274,6 +290,7 @@ export function SnapshotRunDetailPage() {
         <SnapshotDependenciesPanel
           canRerun={detail.canRerun}
           dependencies={dependencies}
+          error={dependenciesQuery.error}
           isRerunPending={rerunMutation.isPending}
           onRerun={() => rerunMutation.mutate(snapshotRunId)}
           snapshotRunId={snapshotRunId}
@@ -287,7 +304,13 @@ export function SnapshotRunDetailPage() {
           eyebrow={t('adminSnapshots.lineageEyebrow')}
           title={t('adminSnapshots.lineageTitle')}
         >
-          {lineage ? (
+          {lineageQuery.isError ? (
+            <AdminStatePanel
+              title={t('adminSnapshots.detailUnavailableTitle')}
+              description={getErrorMessage(lineageQuery.error)}
+              tone="danger"
+            />
+          ) : lineage ? (
             <div className="tw:grid tw:gap-3">
               <div className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
                 <div className="tw:flex tw:items-center tw:justify-between tw:gap-2">
@@ -308,7 +331,7 @@ export function SnapshotRunDetailPage() {
                 {lineage.children.length ? (
                   <div className="tw:mt-2 tw:flex tw:flex-col tw:gap-1 tw:text-sm tw:text-muted-foreground">
                     {lineage.children.map((child) => (
-                      <span key={child.snapshotRunId}>
+                      <span className="tw:break-all" key={child.snapshotRunId}>
                         {formatSnapshotType(child.snapshotType, t)} · {formatSnapshotState(child.runStatus, t)} · {child.snapshotRunId}
                       </span>
                     ))}
@@ -361,7 +384,15 @@ export function SnapshotRunDetailPage() {
             </Button>
           }
         >
-          {auditItems.length === 0 ? (
+          {auditQuery.isError ? (
+            <AdminStatePanel
+              title={t('adminSnapshots.detailUnavailableTitle')}
+              description={getErrorMessage(auditQuery.error)}
+              tone="danger"
+            />
+          ) : auditQuery.isLoading ? (
+            <AdminSurfaceEmpty copy={t('adminSnapshots.dependencyLoading')} />
+          ) : auditItems.length === 0 ? (
             <AdminSurfaceEmpty copy={t('adminSnapshots.noAuditEntries')} />
           ) : (
             <div className="tw:grid tw:gap-3">
@@ -371,7 +402,7 @@ export function SnapshotRunDetailPage() {
                     <strong className="tw:text-sm tw:font-medium">{event.eventType}</strong>
                     <span className="tw:text-xs tw:text-muted-foreground">{formatDateTime(event.occurredAt, locale)}</span>
                   </div>
-                  <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">
+                  <p className="tw:mt-2 tw:break-all tw:text-sm tw:text-muted-foreground">
                     {t('adminSnapshots.actor', { actor: event.actorUserId ?? t('adminSnapshots.system') })} ·{' '}
                     {t('adminSnapshots.correlation', { correlation: event.correlationId ?? t('adminSnapshots.notAvailable') })}
                   </p>
@@ -421,6 +452,7 @@ function SnapshotRunSummaryPanel(input: { detail: SnapshotRunDetail }) {
 function SnapshotDependenciesPanel(input: {
   canRerun: boolean
   dependencies: SnapshotRunDependencies | undefined
+  error: unknown
   isRerunPending: boolean
   onRerun: () => void
   snapshotRunId: string
@@ -463,7 +495,13 @@ function SnapshotDependenciesPanel(input: {
         </>
       }
     >
-      {input.dependencies ? (
+      {input.error ? (
+        <AdminStatePanel
+          title={t('adminSnapshots.detailUnavailableTitle')}
+          description={getErrorMessage(input.error)}
+          tone="danger"
+        />
+      ) : input.dependencies ? (
         <div className="tw:grid tw:gap-3">
           {input.dependencies.checks.map((check) => (
             <div className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3" key={check.code}>

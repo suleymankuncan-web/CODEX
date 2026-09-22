@@ -55,6 +55,7 @@ export function MasterDataDetailPanel(input: {
   audit: MasterDataAuditRow | null
   conflictMessage: string | null
   importDetail: MasterDataBootstrapBatchDetail | null
+  importError: boolean
   importReadiness: MasterDataBootstrapPromotionReadinessResponse | null
   importRow: MasterDataImportWorkbenchRow | null
   isImportProcessing: boolean
@@ -69,6 +70,7 @@ export function MasterDataDetailPanel(input: {
   unsavedCount: number
   onIssueEdit: () => void
   onProcessImport: () => void
+  onRetryImport: () => void
   onSave: () => void
   onUpdatePersonnelDraft: (employeeId: string, patch: PersonnelMasterPatch) => void
   onUpdateStoreDraft: (storeId: string, patch: StoreMasterPatch) => void
@@ -108,10 +110,12 @@ export function MasterDataDetailPanel(input: {
     return (
       <ImportDetail
         detail={input.importDetail}
+        error={input.importError}
         isProcessing={input.isImportProcessing}
         readiness={input.importReadiness}
         row={input.importRow}
         onProcess={input.onProcessImport}
+        onRetry={input.onRetryImport}
         onValidate={input.onValidateImport}
       />
     )
@@ -412,14 +416,33 @@ function PersonnelDetail(input: {
 
 function ImportDetail(input: {
   detail: MasterDataBootstrapBatchDetail | null
+  error: boolean
   isProcessing: boolean
   readiness: MasterDataBootstrapPromotionReadinessResponse | null
   row: MasterDataImportWorkbenchRow | null
   onProcess: () => void
+  onRetry: () => void
   onValidate: () => void
 }) {
   if (!input.row) {
     return <EmptyDetail title="Aktarım partisi seçilmedi" />
+  }
+
+  if (input.error) {
+    return (
+      <DetailFrame
+        icon={<DatabaseZap aria-hidden="true" />}
+        status={<Status tone="danger">Alınamadı</Status>}
+        subtitle={input.row.entityLabel}
+        title={input.row.title}
+      >
+        <div className="master-data-control-center__alert-block master-data-control-center__alert-block--neutral" role="alert">
+          <strong>Aktarım ayrıntıları alınamadı.</strong>
+          <span>Bağlantınızı kontrol edip yeniden deneyin.</span>
+        </div>
+        <Button onClick={input.onRetry} variant="outline">Yeniden dene</Button>
+      </DetailFrame>
+    )
   }
 
   const blocked = input.readiness?.summary.blockedCount ?? input.row.record.invalidCount

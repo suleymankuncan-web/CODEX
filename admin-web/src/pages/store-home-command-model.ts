@@ -153,12 +153,12 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
       id: 'checklists',
       source: 'Checklist',
       title: state === 'unavailable' ? 'Checklist özeti açılamadı' : input.checklistTitle ?? 'Checklist durumunu kontrol et',
-      detail: state === 'unavailable' ? 'Bu bilgi şu anda görüntülenemiyor.' : input.checklistCopy ?? 'Bekleyen checklist işlerini inceleyin.',
+      detail: state === 'unavailable' ? 'Bu bilgi şu anda görüntülenemiyor.' : state === 'loading' ? 'Checklist özeti yükleniyor.' : input.checklistCopy ?? 'Bekleyen checklist işlerini inceleyin.',
       meta: value,
       status: state === 'loading' ? 'Yükleniyor' : state === 'unavailable' ? 'Açılamadı' : needsAttention ? 'Bekliyor' : 'Tamam',
       cta: input.checklistActionLabel ?? 'Checklistleri aç',
       href: '/store/checklists',
-      tone: state === 'unavailable' ? 'neutral' : needsAttention ? 'amber' : 'mint',
+      tone: state !== 'ready' ? 'neutral' : needsAttention ? 'amber' : 'mint',
       icon: input.icons.checklist,
       category: 'checklist',
       needsAttention,
@@ -170,7 +170,7 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
       label: 'Checklist',
       value,
       note: state === 'loading' ? 'Yükleniyor' : state === 'unavailable' ? 'Bilgi alınamadı' : needsAttention ? 'İşlem bekliyor' : 'Bekleyen yok',
-      tone: state === 'unavailable' ? 'neutral' : needsAttention ? 'amber' : 'mint',
+      tone: state !== 'ready' ? 'neutral' : needsAttention ? 'amber' : 'mint',
       icon: input.icons.checklist,
       filter: 'checklist',
     })
@@ -185,13 +185,13 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
     priorities.push({
       id: 'requests',
       source: 'Talep Merkezi',
-      title: state === 'unavailable' ? 'Talep özeti açılamadı' : needsAttention ? 'Karar bekleyen talepler var' : 'Bekleyen talep yok',
-      detail: state === 'unavailable' ? 'Bu bilgi şu anda görüntülenemiyor.' : needsAttention ? `${count} talep inceleme bekliyor.` : 'Talep akışında bekleyen işlem bulunmuyor.',
+      title: state === 'unavailable' ? 'Talep özeti açılamadı' : state === 'loading' ? 'Talep özeti yükleniyor' : needsAttention ? 'Karar bekleyen talepler var' : 'Bekleyen talep yok',
+      detail: state === 'unavailable' ? 'Bu bilgi şu anda görüntülenemiyor.' : state === 'loading' ? 'Bekleyen talepler kontrol ediliyor.' : needsAttention ? `${count} talep inceleme bekliyor.` : 'Talep akışında bekleyen işlem bulunmuyor.',
       meta: value,
       status: state === 'loading' ? 'Yükleniyor' : state === 'unavailable' ? 'Açılamadı' : needsAttention ? 'Karar bekliyor' : 'Tamam',
       cta: 'Talepleri aç',
       href: '/store/approvals',
-      tone: state === 'unavailable' ? 'neutral' : needsAttention ? 'rose' : 'mint',
+      tone: state !== 'ready' ? 'neutral' : needsAttention ? 'rose' : 'mint',
       icon: input.icons.shield,
       category: 'request',
       needsAttention,
@@ -202,7 +202,7 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
       label: 'Bekleyen talepler',
       value,
       note: state === 'loading' ? 'Yükleniyor' : state === 'unavailable' ? 'Bilgi alınamadı' : needsAttention ? 'Karar bekliyor' : 'Bekleyen yok',
-      tone: state === 'unavailable' ? 'neutral' : needsAttention ? 'rose' : 'mint',
+      tone: state !== 'ready' ? 'neutral' : needsAttention ? 'rose' : 'mint',
       icon: input.icons.shield,
       filter: 'request',
     })
@@ -223,7 +223,7 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
       status: state === 'loading' ? 'Yükleniyor' : state === 'unavailable' ? 'Açılamadı' : needsAttention ? 'Planlama gerekli' : 'Tamam',
       cta: input.visitPriorityActionLabel ?? 'Ziyaret planını aç',
       href: '/store/checklists?canvasView=plan',
-      tone: state === 'unavailable' ? 'neutral' : needsAttention ? 'amber' : 'mint',
+      tone: state !== 'ready' ? 'neutral' : needsAttention ? 'amber' : 'mint',
       icon: input.icons.store,
       category: 'visit',
       needsAttention,
@@ -235,19 +235,21 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
       label: 'Öncelikli mağaza',
       value,
       note: state === 'loading' ? 'Yükleniyor' : state === 'unavailable' ? 'Bilgi alınamadı' : needsAttention ? 'Planlama gerekli' : 'Öncelik yok',
-      tone: state === 'unavailable' ? 'neutral' : needsAttention ? 'amber' : 'mint',
+      tone: state !== 'ready' ? 'neutral' : needsAttention ? 'amber' : 'mint',
       icon: input.icons.store,
       filter: 'visit',
     })
   }
 
   const attentionCount = priorities.filter((item) => item.needsAttention).length
+  const hasPartialData = priorities.some((item) => item.state === 'unavailable')
+  const hasLoadingData = priorities.some((item) => item.state === 'loading')
   metrics.unshift({
     id: 'attention',
     label: 'Dikkat bekleyen',
-    value: String(attentionCount),
-    note: attentionCount > 0 ? 'Bugünün gündemi' : 'Gündem temiz',
-    tone: attentionCount > 0 ? 'rose' : 'mint',
+    value: hasPartialData ? '—' : hasLoadingData ? input.pendingValue : String(attentionCount),
+    note: hasPartialData ? 'Bilgi eksik' : hasLoadingData ? 'Yükleniyor' : attentionCount > 0 ? 'Bugünün gündemi' : 'Gündem temiz',
+    tone: hasPartialData || hasLoadingData ? 'neutral' : attentionCount > 0 ? 'rose' : 'mint',
     icon: input.icons.alert,
     filter: 'attention',
   })
@@ -269,7 +271,7 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
     metrics: metrics.slice(0, 4),
     priorities,
     quickLinks,
-    hasPartialData: priorities.some((item) => item.state === 'unavailable'),
+    hasPartialData,
     scopeValue: input.storeScopeValue,
   }
 }

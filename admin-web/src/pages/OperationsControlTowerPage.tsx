@@ -186,7 +186,7 @@ export function OperationsControlTowerPage() {
     workflowInboxQuery,
     kpiConfigQuery,
     rankingsQuery,
-  ].every((query) => query.isLoading)
+  ].some((query) => query.isLoading)
 
   const importActionCount = countImportActions(importOverviewQuery.data)
   const snapshotActionCount = countSnapshotActions(snapshotOverviewQuery.data)

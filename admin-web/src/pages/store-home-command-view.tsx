@@ -9,7 +9,11 @@ export function StoreHomeCommandView(input: { model: StoreHomeCommandModel }) {
   const [activeFilter, setActiveFilter] = useState<StoreHomeCommandFilter>('all')
   const visiblePriorities = useMemo(() => {
     if (activeFilter === 'all') return input.model.priorities
-    if (activeFilter === 'attention') return input.model.priorities.filter((item) => item.needsAttention)
+    if (activeFilter === 'attention') {
+      return input.model.priorities.filter((item) =>
+        item.needsAttention || item.state === 'loading' || item.state === 'unavailable',
+      )
+    }
     return input.model.priorities.filter((item) => item.category === activeFilter)
   }, [activeFilter, input.model.priorities])
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -19,6 +19,7 @@ type Props = {
 }
 
 export function StoreMyPerformanceKpiDetails({ performance, profileEmployeeId, locale, onClose }: Props) {
+  const returnFocusRef = useRef<HTMLElement | null>(null)
   const tr = locale === 'tr'
   const currentYear = performance.period?.periodStart.slice(0, 4) ?? String(new Date().getFullYear())
   const [year, setYear] = useState(currentYear)
@@ -55,7 +56,9 @@ export function StoreMyPerformanceKpiDetails({ performance, profileEmployeeId, l
   const labels = tr ? ['KPI', 'Değer', 'Önceki aya göre', 'Geçen yıla göre', 'Mağaza', 'Bölge', 'Türkiye']
     : ['KPI', 'Value', 'Previous month', 'Previous year', 'Store', 'Region', 'Türkiye']
   return <Dialog open onOpenChange={open => { if (!open) onClose() }}>
-    <DialogContent closeLabel={tr ? 'KPI detaylarını kapat' : 'Close KPI details'} className="personnel-kpi-details tw:sm:max-w-6xl" data-testid="store-me-kpi-dialog">
+    <DialogContent closeLabel={tr ? 'KPI detaylarını kapat' : 'Close KPI details'} className="personnel-kpi-details tw:sm:max-w-6xl" data-testid="store-me-kpi-dialog"
+      onOpenAutoFocus={() => { returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null }}
+      onCloseAutoFocus={event => { event.preventDefault(); returnFocusRef.current?.focus() }}>
       <DialogHeader><DialogTitle>{tr ? 'KPI Detayları' : 'KPI Details'} · {performance.employee?.displayName}</DialogTitle>
         <DialogDescription>{tr ? 'Her ayın KPI değerleri, değişimi ve personeller arasındaki sıralamanız. Sıralama: sıra / toplam kişi.' : 'Monthly KPI values, changes and your personnel rankings. Rank: position / total people.'}</DialogDescription>
       </DialogHeader>

@@ -493,7 +493,7 @@ function StoreMyPerformancePageExperience({
               onToggleDateFilter={onToggleDateFilter}
               scopedAvailableDailyPeriods={liveDayFilterOptions}
               selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
-              selectedLivePeriodStart={selectedLivePeriodStart}
+              selectedLivePeriodStart={selectedLivePeriodStart || performance.period?.periodStart || ''}
               selectedLivePeriodType={selectedLivePeriodType}
               selectedPeriodLabel={selectedPeriodLabel}
               sourceMode={sourceMode}

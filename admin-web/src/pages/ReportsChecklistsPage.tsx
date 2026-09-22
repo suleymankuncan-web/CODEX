@@ -133,7 +133,12 @@ export function ReportsChecklistsPage() {
   if (!snapshotRunId) {
     return (
       <AdminOperationalPage>
-        <AdminStatePanel title={t('reportsChecklists.missingTitle')} description={t('reportsChecklists.missingCopy')} tone="danger" />
+        <AdminStatePanel
+          title={t('reportsChecklists.missingTitle')}
+          description={t('reportsChecklists.missingCopy')}
+          tone="danger"
+          action={<Button asChild variant="outline" size="sm"><Link to="/admin/reports/snapshot-runs">{t('reportsChecklists.chooseAnotherSnapshot')}</Link></Button>}
+        />
       </AdminOperationalPage>
     )
   }
@@ -149,7 +154,12 @@ export function ReportsChecklistsPage() {
   if (checklistQuery.isError) {
     return (
       <AdminOperationalPage>
-        <AdminStatePanel title={t('reportsChecklists.errorTitle')} description={getErrorMessage(checklistQuery.error)} tone="danger" />
+        <AdminStatePanel
+          title={t('reportsChecklists.errorTitle')}
+          description={getErrorMessage(checklistQuery.error)}
+          tone="danger"
+          action={<Button type="button" variant="outline" size="sm" onClick={() => void checklistQuery.refetch()}>{t('reportsSummary.retry')}</Button>}
+        />
       </AdminOperationalPage>
     )
   }

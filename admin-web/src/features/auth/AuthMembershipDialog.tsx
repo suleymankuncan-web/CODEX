@@ -149,6 +149,8 @@ export function AuthMembershipDialog({
                   <EmptyLine>Aramak için en az 2 karakter yazın.</EmptyLine>
                 ) : personnel.isFetching && !personnel.data ? (
                   <EmptyLine>Personeller aranıyor.</EmptyLine>
+                ) : personnel.isError ? (
+                  <EmptyLine>Personel araması tamamlanamadı. Yeniden deneyin.</EmptyLine>
                 ) : personnel.data?.items.length ? (
                   personnel.data.items.map((person) => (
                     <Button
@@ -270,6 +272,8 @@ export function AuthMembershipDialog({
                     ) : (
                       <EmptyLine>Önce aktif mağazası bulunan bir personel seçin.</EmptyLine>
                     )
+                  ) : stores.isError && normalizedStoreQuery.length >= 2 ? (
+                    <EmptyLine>Mağaza araması tamamlanamadı. Yeniden deneyin.</EmptyLine>
                   ) : visibleStores.length ? (
                     visibleStores.map((store) => (
                       <StoreChoice

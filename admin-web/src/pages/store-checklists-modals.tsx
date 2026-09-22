@@ -71,6 +71,7 @@ export function StoreChecklistsModals(input: {
     starting: boolean
   }
   onAcknowledgeResult: (acknowledgementNote: string) => void
+  onCloseAutoFocus: (event: Event) => void
   onCloseResult: () => void
   onCloseSession: () => void
   onCommentChange: (templateItemId: string, comment: string) => void
@@ -95,6 +96,7 @@ export function StoreChecklistsModals(input: {
           isStarting={input.visitState.starting}
           locale={input.locale}
           onClose={input.onCloseSession}
+          onCloseAutoFocus={input.onCloseAutoFocus}
           onComplete={input.onCompleteVisit}
           onScoreChange={input.onScoreChange}
           onCommentChange={input.onCommentChange}
@@ -116,6 +118,7 @@ export function StoreChecklistsModals(input: {
           locale={input.locale}
           onAcknowledge={input.onAcknowledgeResult}
           onClose={input.onCloseResult}
+          onCloseAutoFocus={input.onCloseAutoFocus}
           onNoteChange={input.onNoteChange}
           t={input.t}
         />
@@ -132,6 +135,7 @@ function ChecklistVisitModal(input: {
   isStarting: boolean
   locale: AppLocale
   onClose: () => void
+  onCloseAutoFocus: (event: Event) => void
   onCommentChange: (templateItemId: string, comment: string) => void
   onSaveComment: (templateItemId: string, comment: string) => Promise<void>
   onComplete: (checklistInstanceId: string) => void
@@ -224,6 +228,7 @@ function ChecklistVisitModal(input: {
         className="store-checklist-session-dialog tw:max-w-[min(760px,calc(100vw-1rem))] tw:sm:max-w-[min(760px,calc(100vw-1rem))]"
         closeLabel={input.t('storeChecklists.closeSession')}
         onInteractOutside={(event) => event.preventDefault()}
+        onCloseAutoFocus={input.onCloseAutoFocus}
         showCloseButton={false}
       >
         <div className="store-checklist-session-shell">

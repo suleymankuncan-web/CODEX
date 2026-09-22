@@ -21,6 +21,7 @@ const monthLabels: Record<string, string> = {
 const mockMetricCards = [
   {
     code: 'TARGET_ACHIEVEMENT',
+    actionValueAvailable: true,
     contributionValue: 30.4,
     delta: 'Hedef %100 · Önceki aya göre +8,4',
     displayValue: '%136',
@@ -38,6 +39,7 @@ const mockMetricCards = [
   },
   {
     code: 'UPT',
+    actionValueAvailable: true,
     contributionValue: 14.2,
     delta: 'TR ort. 2,90 · Önceki aya göre -0,18',
     displayValue: '3,42',
@@ -55,6 +57,7 @@ const mockMetricCards = [
   },
   {
     code: 'ATV',
+    actionValueAvailable: true,
     contributionValue: 18.6,
     delta: 'TR ort. 3.000 TL · Önceki aya göre -5,4',
     displayValue: '5.400 TL',

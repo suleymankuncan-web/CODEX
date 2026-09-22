@@ -28,6 +28,12 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
   const period = model.reportViewerActivePeriodStart || ranking?.source.periodStart || ''
   const managers = [...(ranking?.regionManagerLeaderboard.items ?? [])].sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? '', model.locale))
   const managerTotal = ranking?.regionManagerLeaderboard.meta.total ?? 0
+  const managerPage = Math.floor((ranking?.regionManagerLeaderboard.meta.offset ?? model.reportViewerPage * model.reportViewerPageSize) / model.reportViewerPageSize)
+  const changeManagerPage = (page: number) => {
+    if (page === model.reportViewerPage) void model.reportViewerOverviewQuery.refetch()
+    else model.setReportViewerPage(page)
+    setManagerSearch('')
+  }
   const periodLabel = model.kpiDateRangeEnd ? `${period} – ${model.kpiDateRangeEnd}` : period ? new Intl.DateTimeFormat(model.locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${period.slice(0, 10)}T00:00:00Z`)) : ''
 
   return <CommandCanvasPage ariaLabelledBy="company-kpi-title" className="region-performance company-performance" testId="store-kpis-company-overview">
@@ -72,9 +78,9 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
           {managerSearch && !managers.some(manager => (manager.displayName ?? '').toLocaleLowerCase(model.locale).includes(managerSearch.trim().toLocaleLowerCase(model.locale))) ? <p className="company-performance-manager-empty">Eşleşen bölge müdürü yok.</p> : null}
         </nav>
         <footer className="company-performance-manager-pager">
-          <span>{model.reportViewerPage + 1} / {Math.max(1, Math.ceil(managerTotal / model.reportViewerPageSize))}</span>
-          <div><Button variant="ghost" size="icon-xs" aria-label="Önceki bölge müdürleri" disabled={model.reportViewerPage === 0} onClick={() => { model.setReportViewerPage(model.reportViewerPage - 1); setManagerSearch('') }}><ChevronLeft /></Button>
-          <Button variant="ghost" size="icon-xs" aria-label="Sonraki bölge müdürleri" disabled={(model.reportViewerPage + 1) * model.reportViewerPageSize >= managerTotal} onClick={() => { model.setReportViewerPage(model.reportViewerPage + 1); setManagerSearch('') }}><ChevronRight /></Button></div>
+          <span>{managerPage + 1} / {Math.max(1, Math.ceil(managerTotal / model.reportViewerPageSize))}</span>
+          <div><Button variant="ghost" size="icon-xs" aria-label="Önceki bölge müdürleri" disabled={managerPage === 0 || model.reportViewerOverviewQuery.isFetching} onClick={() => changeManagerPage(managerPage - 1)}><ChevronLeft /></Button>
+          <Button variant="ghost" size="icon-xs" aria-label="Sonraki bölge müdürleri" disabled={(managerPage + 1) * model.reportViewerPageSize >= managerTotal || model.reportViewerOverviewQuery.isFetching} onClick={() => changeManagerPage(managerPage + 1)}><ChevronRight /></Button></div>
         </footer>
       </aside>
       <CompanyStores key={`${period}:${model.kpiDateRangeEnd}:${selected?.key ?? 'all'}`} model={model} period={period} selected={selected} />
@@ -97,6 +103,7 @@ function CompanyStores({ model, period, selected }: { model: StoreKpiHighlightsP
   const protectedError = query.error instanceof ApiError && (query.error.status === 401 || query.error.status === 403)
   const data = protectedError ? undefined : query.data
   const total = data?.storeLeaderboard.meta.total ?? 0
+  const pageOffset = data?.storeLeaderboard.meta.offset ?? page * limit
   const pageScoped = total > (data?.storeLeaderboard.items.length ?? 0)
   const rows = sortKpiStoreRows(data?.storeLeaderboard.items ?? [], sort.key, sort.direction).filter(row => !search.trim() || (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(search.trim().toLocaleLowerCase(model.locale)))
   const changeSort = (key: StoreKpisRegionSortKey, direction?: 'asc' | 'desc') => setSort(current => ({ key, direction: direction ?? (current.key === key && current.direction === 'desc' ? 'asc' : 'desc') }))
@@ -110,6 +117,6 @@ function CompanyStores({ model, period, selected }: { model: StoreKpiHighlightsP
       {query.isError && data ? <Alert variant="destructive"><AlertDescription>{model.t('storeKpis.backgroundError')}<Button variant="outline" onClick={() => void query.refetch()}>{model.t('storeKpis.retry')}</Button></AlertDescription></Alert> : null}
       {rows.length > 0 ? <CompanyKpiStoreList rows={rows} model={model} sort={sort} onSort={changeSort} /> : total === 0 ? <StoreKpisPeriodEmpty locale={model.locale} start={period} end={model.kpiDateRangeEnd} /> : <StoreEmptyState title="Mağaza bulunamadı" description="Aramanızı değiştirerek tekrar deneyin." />}
     </>}
-    {total > limit ? <nav className="region-performance-pager" aria-label="Mağaza sayfaları"><span>{page * limit + 1}–{Math.min((page + 1) * limit, total)} / {total}</span><Button variant="outline" disabled={page === 0 || query.isFetching} onClick={() => { setPage(page - 1); setSearch('') }}>Önceki</Button><Button variant="outline" disabled={(page + 1) * limit >= total || query.isFetching} onClick={() => { setPage(page + 1); setSearch('') }}>Sonraki</Button></nav> : null}
+    {total > limit ? <nav className="region-performance-pager" aria-label="Mağaza sayfaları"><span>{pageOffset + 1}–{Math.min(pageOffset + limit, total)} / {total}</span><Button variant="outline" disabled={page === 0 || query.isFetching} onClick={() => { setPage(page - 1); setSearch('') }}>Önceki</Button><Button variant="outline" disabled={(page + 1) * limit >= total || query.isFetching} onClick={() => { setPage(page + 1); setSearch('') }}>Sonraki</Button></nav> : null}
   </section>
 }

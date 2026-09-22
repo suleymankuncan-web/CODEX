@@ -157,6 +157,11 @@ export function AdminKpiConfigPage() {
           title={t('adminKpiConfig.errorTitle')}
           description={getErrorMessage(configQuery.error)}
           tone="danger"
+          action={
+            <Button type="button" variant="outline" size="sm" onClick={() => void configQuery.refetch()}>
+              {t('reportsSummary.retry')}
+            </Button>
+          }
         />
       </AdminOperationalPage>
     )
@@ -820,13 +825,15 @@ function KpiConfigPersistPanel(input: {
       title={input.t('adminKpiConfig.persistTitle')}
       badge={
         <AdminSurfaceBadge
-          tone={input.status.savePending || !input.status.weightTotalsValid ? 'warning' : 'success'}
+          tone={input.status.savePending || input.status.publishPending || !input.status.weightTotalsValid ? 'warning' : 'success'}
         >
           {input.status.savePending
             ? input.t('adminKpiConfig.saving')
-            : input.status.weightTotalsValid
-              ? input.t('adminKpiConfig.ready')
-              : input.t('adminKpiConfig.needsWeightBalance')}
+            : input.status.publishPending
+              ? input.t('adminKpiConfig.publishPending')
+              : input.status.weightTotalsValid
+                ? input.t('adminKpiConfig.ready')
+                : input.t('adminKpiConfig.needsWeightBalance')}
         </AdminSurfaceBadge>
       }
     >
@@ -855,6 +862,7 @@ function KpiConfigPersistPanel(input: {
         <Button
           type="button"
           variant="outline"
+          aria-busy={input.status.savePending}
           disabled={
             input.status.savePending ||
             input.status.publishPending ||
@@ -868,6 +876,7 @@ function KpiConfigPersistPanel(input: {
         </Button>
         <Button
           type="button"
+          aria-busy={input.status.publishPending}
           disabled={
             input.status.publishPending ||
             input.status.savePending ||
@@ -907,7 +916,9 @@ function KpiConfigAuditPanel(input: {
         </AdminSurfaceBadge>
       }
     >
-      {input.auditState.showError ? (
+      {input.auditState.loading ? (
+        <KpiConfigMutedText>{input.t('adminKpiConfig.loading')}</KpiConfigMutedText>
+      ) : input.auditState.showError ? (
         <KpiConfigMutedText>{getErrorMessage(input.auditState.error)}</KpiConfigMutedText>
       ) : input.auditState.items.length > 0 ? (
         <KpiConfigRowList>

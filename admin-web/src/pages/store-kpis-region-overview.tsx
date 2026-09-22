@@ -34,6 +34,12 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase(model.locale))
   const summary = buildRegionSummary(model)
   const total = model.regionOverviewQuery.data?.storeLeaderboard.meta.total ?? 0
+  const pageOffset = model.regionOverviewQuery.data?.storeLeaderboard.meta.offset ?? model.regionOverviewPage * model.regionOverviewPageSize
+  const displayedPage = Math.floor(pageOffset / model.regionOverviewPageSize)
+  const changePage = (page: number) => {
+    if (page === model.regionOverviewPage) void model.regionOverviewQuery.refetch()
+    else model.setRegionOverviewPage(page)
+  }
   const pageScoped = total > model.regionOverviewRows.length
   const visibleRows = useMemo(() => model.regionOverviewRows.filter(row =>
     !deferredQuery || (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(deferredQuery),
@@ -123,9 +129,9 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             : <Empty><EmptyHeader><EmptyTitle>Sonuç bulunamadı</EmptyTitle><EmptyDescription>{pageScoped ? 'Aramanızı değiştirin veya diğer mağaza sayfasına geçin.' : 'Aramanızı değiştirerek tekrar deneyin.'}</EmptyDescription></EmptyHeader></Empty>
         ) : null}
         {total > model.regionOverviewPageSize ? <div className="region-performance-pager">
-          <span>{model.regionOverviewPage * model.regionOverviewPageSize + 1}–{Math.min((model.regionOverviewPage + 1) * model.regionOverviewPageSize, total)} / {total}</span>
-          <Button variant="outline" disabled={model.regionOverviewPage === 0} onClick={() => model.setRegionOverviewPage(model.regionOverviewPage - 1)}>{model.t('storeKpis.companyPrevious')}</Button>
-          <Button variant="outline" data-testid="store-kpis-region-next-page" disabled={(model.regionOverviewPage + 1) * model.regionOverviewPageSize >= total} onClick={() => model.setRegionOverviewPage(model.regionOverviewPage + 1)}>{model.t('storeKpis.companyNext')}</Button>
+          <span>{pageOffset + 1}–{Math.min(pageOffset + model.regionOverviewPageSize, total)} / {total}</span>
+          <Button variant="outline" disabled={displayedPage === 0 || model.regionOverviewQuery.isFetching} onClick={() => changePage(displayedPage - 1)}>{model.t('storeKpis.companyPrevious')}</Button>
+          <Button variant="outline" data-testid="store-kpis-region-next-page" disabled={(displayedPage + 1) * model.regionOverviewPageSize >= total || model.regionOverviewQuery.isFetching} onClick={() => changePage(displayedPage + 1)}>{model.t('storeKpis.companyNext')}</Button>
         </div> : null}
       </section>
     </CommandCanvasPage>

@@ -37,6 +37,7 @@
 .tasks-command-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--border);font-size:12px}
 .tasks-command-pager>div{display:flex;gap:8px}
 .store-command-app .tasks-command-drawer{width:min(560px,100vw);max-width:560px;background:var(--card);padding:20px}
+.tasks-command-drawer{overflow-wrap:anywhere}
 .tasks-command-drawer [data-slot=sheet-header]{background:var(--primary);border-radius:12px;color:var(--primary-foreground);padding:20px;margin:20px 0 16px}
 .tasks-command-drawer [data-slot=sheet-header] h2{margin:0;font-size:20px;line-height:1.35;color:inherit}
 .tasks-command-drawer [data-slot=sheet-description]{color:var(--primary-foreground);font-size:13px;line-height:1.5}

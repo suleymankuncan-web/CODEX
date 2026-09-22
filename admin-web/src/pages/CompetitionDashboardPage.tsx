@@ -202,8 +202,15 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
         competitions={competitions}
         createError={createMutation.error}
         createPending={createMutation.isPending}
+        selectionPending={recalcMutation.isPending || finalizeMutation.isPending || createMutation.isPending}
         onCreate={() => createMutation.mutate()}
-        onSelect={setSelectedCompetitionId}
+        onSelect={(competitionId) => {
+          if (recalcMutation.isPending || finalizeMutation.isPending || createMutation.isPending || competitionId === selectedCompetition?.competitionId) return
+          recalcMutation.reset()
+          finalizeMutation.reset()
+          setOverrideJustification('')
+          setSelectedCompetitionId(competitionId)
+        }}
         selectedCompetitionId={selectedCompetition?.competitionId ?? null}
       />
 
@@ -284,20 +291,29 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
               )}
 
               {canManage ? (
-                <CompetitionActionRow>
-                  {detailQuery.data.stages.map((stage) => (
-                    <CompetitionButton
-                      key={`recalc-${stage.competitionStageId}`}
-                      type="button"
-                      variant="outline"
-                      disabled={recalcMutation.isPending}
-                      onClick={() => recalcMutation.mutate(stage.competitionStageId)}
-                    >
-                      <RefreshCw data-icon="inline-start" />
-                      {t('competition.admin.recalculateStage', { stageCode: stage.stageCode })}
-                    </CompetitionButton>
-                  ))}
-                </CompetitionActionRow>
+                <>
+                  <CompetitionActionRow>
+                    {detailQuery.data.stages.map((stage) => (
+                      <CompetitionButton
+                        key={`recalc-${stage.competitionStageId}`}
+                        type="button"
+                        variant="outline"
+                        disabled={recalcMutation.isPending || finalizeMutation.isPending}
+                        onClick={() => recalcMutation.mutate(stage.competitionStageId)}
+                      >
+                        <RefreshCw data-icon="inline-start" />
+                        {t('competition.admin.recalculateStage', { stageCode: stage.stageCode })}
+                      </CompetitionButton>
+                    ))}
+                  </CompetitionActionRow>
+                  {recalcMutation.isError ? (
+                    <CompetitionStatePanel
+                      title={locale === 'tr' ? 'Etap yeniden hesaplanamadı' : 'Stage could not be recalculated'}
+                      copy={getErrorMessage(recalcMutation.error)}
+                      tone="error"
+                    />
+                  ) : null}
+                </>
               ) : null}
 
               {canManage ? (
@@ -339,7 +355,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                     <CompetitionButton
                       className="tw:self-end"
                       type="button"
-                      disabled={finalizeMutation.isPending}
+                      disabled={finalizeMutation.isPending || recalcMutation.isPending}
                       onClick={() => finalizeMutation.mutate(activeStage.competitionStageId)}
                     >
                       <CheckCircle2 data-icon="inline-start" />
@@ -368,6 +384,7 @@ function CompetitionListPanel(input: {
   competitions: CompetitionSummary[]
   createError: Error | null
   createPending: boolean
+  selectionPending: boolean
   onCreate: () => void
   onSelect: (competitionId: string) => void
   selectedCompetitionId: string | null
@@ -382,7 +399,7 @@ function CompetitionListPanel(input: {
         input.canManage ? (
           <CompetitionButton
             type="button"
-            disabled={input.createPending}
+            disabled={input.createPending || input.selectionPending}
             onClick={input.onCreate}
           >
             <Trophy data-icon="inline-start" />
@@ -425,6 +442,7 @@ function CompetitionListPanel(input: {
                       size="sm"
                       type="button"
                       variant="outline"
+                      disabled={input.selectionPending}
                       onClick={() => input.onSelect(competition.competitionId)}
                     >
                       {t('competition.admin.review')}
