@@ -145,18 +145,19 @@ export class ReportingStoreKpiReadService {
       };
     }
 
+    const aggregateDaily = Boolean(dateRange || ("uses_daily_components" in latestPeriod && latestPeriod.uses_daily_components));
     const shouldReadChecklistRows = metricCodes.some((code) =>
       storeChecklistMetricCodes.has(code),
     );
     const [storePerformanceRows, checklistRows] = await Promise.all([
-      dateRange
+      aggregateDaily
         ? this.rankingReportingReadRepository.listRankingStoreKpiRows({
             isRange: true,
             companyIds: input.companyIds,
             metricCodes,
             periodType: "daily",
-            periodStart: dateRange.period_start,
-            periodEnd: dateRange.period_end,
+            periodStart: latestPeriod.period_start,
+            periodEnd: latestPeriod.period_end,
           }).then(rows => rows.filter(row => row.store_id === storeId))
         : this.storePerformanceReportingReadRepository.getStorePerformanceRows({
             storeId,
@@ -178,7 +179,7 @@ export class ReportingStoreKpiReadService {
       ...checklistRows.filter((row) => row.store_id === storeId),
     ];
     let benchmarkRows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
-      isRange: Boolean(dateRange),
+      isRange: aggregateDaily,
       companyId: input.companyIds[0] ?? undefined,
       periodType: latestPeriod.period_type,
       periodStart: latestPeriod.period_start,
@@ -187,7 +188,7 @@ export class ReportingStoreKpiReadService {
 
     if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
-        isRange: Boolean(dateRange),
+        isRange: aggregateDaily,
         companyId: undefined,
         periodType: latestPeriod.period_type,
         periodStart: latestPeriod.period_start,
