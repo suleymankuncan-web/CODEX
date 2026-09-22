@@ -206,11 +206,13 @@ environment file for every command below. The sequence is intentionally
 ordered: prerequisites first, one explicit migration, then activation and
 smoke verification.
 
-The signed deployment closure includes `deployment/compose.yaml`, then the
-opt-in `deployment/compose.photo-proof.yaml`, then
-`deployment/photo-compose.yaml` in that exact order. This synthetic rehearsal
-also passes the signed `deployment/proof.compose.yaml` through each operation's
-`--proof-compose` option so no service publishes a host port. The external environment
+The signed deployment closure includes `deployment/compose.yaml`, the explicit
+company-mode overlay `deployment/compose.company-data.yaml`, the opt-in
+`deployment/compose.photo-proof.yaml`, and `deployment/photo-compose.yaml`.
+The synthetic rehearsal applies the base, photo-proof and photo-storage files in
+that exact order; it never applies the company-mode overlay. It also passes the
+signed `deployment/proof.compose.yaml` through each operation's `--proof-compose`
+option so no service publishes a host port. The external environment
 must explicitly set both `KEYCLOAK_SYNTHETIC_ACCOUNTS_ENABLED=true` and
 `KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED=true`, and the separate root-owned
 photo-proof account file must exist below `HR_AXIS_SECRET_ROOT`. Omitting the

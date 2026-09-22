@@ -8,7 +8,9 @@ the demo dataset and enable real store master data on the private server.
 The base Compose and synthetic proof paths retain their synthetic defaults.
 Company runtime requires the explicit combination `HR_AXIS_STRICT_LOCAL=true`,
 `HR_AXIS_DATA_CLASS=company`, and `HR_AXIS_COMPANY_DATA_ENABLED=true`.
-Use `infra/onprem/core/compose.company-data.yaml` as the final overlay.
+Use `infra/onprem/core/compose.company-data.yaml` as the final overlay from the
+repository, or the signed `deployment/compose.company-data.yaml` copy from the
+offline bundle.
 All services, networks and volumes carry the company data-class label. Deploy
 into a distinct project with fresh company-labeled volumes and non-overlapping
 networks; existing synthetic volume labels are immutable and must not be reused.
