@@ -256,6 +256,7 @@ test('ONP-3B SMTP credential reader accepts password punctuation without allowin
   try {
     for (const [value, accepted] of [
       ['Synthetic+!2026@*', true],
+      ['synthetic-secret-with-hyphens', true],
       ['a'.repeat(256), true],
       ['a'.repeat(257), false],
       ['bad"value', false],
