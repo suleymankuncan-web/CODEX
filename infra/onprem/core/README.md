@@ -84,12 +84,21 @@ additional one-shot capacity and are not part of the 4.0-vCPU steady budget.
   SMTP host/port/from/starttls/auth values are operator inputs; CI proves only
   secret wiring and makes no outbound SMTP call.
 
+For company mode, `compose.company-data.yaml` adds the bounded `smtp-egress`
+TCP forwarder and an internal Keycloak hostname mapping for
+`smtp.office365.com:587`. The forwarder has no SMTP credential and publishes no
+host port. Preserve the approved host firewall rule for its edge address before
+activating real mail. A successful signed image proof does not establish SMTP
+AUTH or delivery; test those against the company mailbox separately.
+
 The steady resource ceilings are API `0.75` vCPU / `1536m`, worker `0.75` /
 `1536m`, PostgreSQL `1.0` / `2048m`, Keycloak `0.5` / `2048m`, Caddy `0.25` /
 `128m`, frontend `0.25` / `128m`, and Redis `0.5` / `768m`: exactly 4.0 vCPU
 and 8 GiB container memory. The 2 GiB Keycloak cap is a rehearsal ceiling,
 not a production-capacity claim; host overhead, JVM sizing, disk latency, and
 failure-recovery load must be measured by IT before any activation decision.
+The optional company SMTP forwarder adds a `0.1` vCPU / `128m` ceiling beyond
+that synthetic baseline; include it in the company host capacity check.
 
 The stopped-server `keycloak-bootstrap` one-shot is separate from the steady
 budget. It is capped at `1.5` vCPU, `1g` memory, and 128 processes because it

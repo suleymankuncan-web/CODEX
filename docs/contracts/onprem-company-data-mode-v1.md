@@ -30,6 +30,19 @@ network restrictions still apply. Migrators require their existing DB-only
 credential/TLS contract. This change does not add a provider HTTP client,
 automatic daily pull, scoring projection or external telemetry.
 
+The company overlay has one explicit mail exception: an unprivileged
+`smtp-egress` process from the signed backend image forwards TCP between
+Keycloak's internal proxy network and `smtp.office365.com:587`. It listens only
+on `172.30.10.40:587`, has no host-published port and receives no SMTP secret.
+Only this process joins the outbound edge network (`172.30.0.40`); Keycloak
+continues to use its internal networks. Keycloak resolves the SMTP hostname to
+the internal proxy address so STARTTLS still verifies the Office 365 hostname.
+The host firewall must permit this exact edge identity to reach the approved
+SMTP destination on TCP 587 and continue to deny other unapproved egress.
+Mail activation requires an IT-approved mailbox with working SMTP AUTH and a
+successful real delivery test. Credentials stay in the existing Keycloak secret
+files outside Git; an authentication error is not a successful mail setup.
+
 Synthetic seed and identity-binder processes reject company mode. The overlay
 also sets the Keycloak synthetic bootstrap's data class to company so its
 existing synthetic-only guard rejects accidental execution. Synthetic media
