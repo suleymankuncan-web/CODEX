@@ -202,6 +202,7 @@ export async function getRankings(input?: {
   periodStart?: string
   periodEnd?: string
   regionManagerUserId?: string
+  regionManagerSearch?: string
   regionId?: string
   storeId?: string
   search?: string
@@ -224,6 +225,9 @@ export async function getRankings(input?: {
   }
   if (input?.regionManagerUserId) {
     params.set('regionManagerUserId', input.regionManagerUserId)
+  }
+  if (input?.regionManagerSearch) {
+    params.set('regionManagerSearch', input.regionManagerSearch)
   }
   if (input?.regionId) {
     params.set('regionId', input.regionId)

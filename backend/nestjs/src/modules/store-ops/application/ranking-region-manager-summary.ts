@@ -10,7 +10,7 @@ export type RegionManagerSummaryRow = {
 
 export function buildRegionManagerSummary(
   rows: StoreRankingRow[],
-  page: { limit: number; offset: number; riskOffset?: number },
+  page: { limit: number; offset: number; riskOffset?: number; search?: string },
   managers: Array<{ id: string; label: string; storeIds?: string[] }> = [],
 ) {
   const groups = new Map<string, {
@@ -88,13 +88,17 @@ export function buildRegionManagerSummary(
         (left.userId ?? '').localeCompare(right.userId ?? '')
     })
 
-  const riskItems = allItems.filter((item) => item.riskStoreCount > 0)
+  const search = page.search?.trim().toLocaleLowerCase('tr-TR') ?? ''
+  const matchingItems = search
+    ? allItems.filter((item) => item.displayName?.toLocaleLowerCase('tr-TR').includes(search))
+    : allItems
+  const riskItems = matchingItems.filter((item) => item.riskStoreCount > 0)
   const riskOffset = page.riskOffset ?? 0
   return {
-    items: allItems.slice(page.offset, page.offset + page.limit),
-    meta: { total: allItems.length, limit: page.limit, offset: page.offset },
+    items: matchingItems.slice(page.offset, page.offset + page.limit),
+    meta: { total: matchingItems.length, limit: page.limit, offset: page.offset },
     riskItems: riskItems.slice(riskOffset, riskOffset + page.limit),
     riskMeta: { total: riskItems.length, limit: page.limit, offset: riskOffset },
-    riskStoreCount: allItems.reduce((sum, item) => sum + item.riskStoreCount, 0),
+    riskStoreCount: matchingItems.reduce((sum, item) => sum + item.riskStoreCount, 0),
   }
 }

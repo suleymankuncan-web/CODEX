@@ -23,7 +23,7 @@ type ManagerSelection = { key: string; name: string; userId: string | null }
 
 export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
   const [selected, setSelected] = useState<ManagerSelection | null>(null)
-  const [managerSearch, setManagerSearch] = useState('')
+  const managerSearch = model.reportViewerManagerSearch
   const ranking = model.reportViewerOverviewQuery.data
   const period = model.reportViewerActivePeriodStart || ranking?.source.periodStart || ''
   const managers = [...(ranking?.regionManagerLeaderboard.items ?? [])].sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? '', model.locale))
@@ -32,7 +32,6 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
   const changeManagerPage = (page: number) => {
     if (page === model.reportViewerPage) void model.reportViewerOverviewQuery.refetch()
     else model.setReportViewerPage(page)
-    setManagerSearch('')
   }
   const periodLabel = model.kpiDateRangeEnd ? `${period} – ${model.kpiDateRangeEnd}` : period ? new Intl.DateTimeFormat(model.locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${period.slice(0, 10)}T00:00:00Z`)) : ''
 
@@ -48,7 +47,7 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
             <p className="tw:mt-1 tw:text-xs tw:text-primary-foreground/75">Mağaza KPI değerlerini bölge müdürüne göre inceleyin.</p>
           </div>
         </div>
-        <StoreKpisPeriodPicker onRangeChange={(start, end) => { model.setKpiDateRange(start, end); setSelected(null); setManagerSearch('') }} ariaLabel={model.t('storeKpis.companyPeriodSelect')} availablePeriodStarts={ranking?.availablePeriods.filter(p => p.periodType === 'monthly').map(p => p.periodStart) ?? []} locale={model.locale} onPeriodStartChange={value => { model.setReportViewerPeriodStart(value); setSelected(null); setManagerSearch('') }} periodStart={period} triggerClassName="region-performance-period" />
+        <StoreKpisPeriodPicker onRangeChange={(start, end) => { model.setKpiDateRange(start, end); setSelected(null) }} ariaLabel={model.t('storeKpis.companyPeriodSelect')} availablePeriodStarts={ranking?.availablePeriods.filter(p => p.periodType === 'monthly').map(p => p.periodStart) ?? []} locale={model.locale} onPeriodStartChange={value => { model.setReportViewerPeriodStart(value); setSelected(null) }} periodStart={period} triggerClassName="region-performance-period" />
       </div>
     </header>
     {model.reportViewerOverviewQuery.isError && ranking ? <Alert variant="destructive"><AlertDescription>{model.t('storeKpis.backgroundError')}<Button variant="outline" onClick={() => void model.reportViewerOverviewQuery.refetch()}>{model.t('storeKpis.retry')}</Button></AlertDescription></Alert> : null}
@@ -56,14 +55,14 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
       <aside className="company-performance-managers" aria-label="Bölge müdürü seçimi">
         <header className="company-performance-directory-header">
           <div><div><p>DİZİN</p><h2>Bölge müdürleri</h2></div><span>{managerTotal}</span></div>
-          <InputGroup><InputGroupInput aria-label={managerTotal > managers.length ? 'Bu sayfada bölge müdürü ara' : 'Bölge müdürü ara'} placeholder={managerTotal > managers.length ? 'Bu sayfada ad ile ara' : 'Ad ile ara'} value={managerSearch} onChange={event => setManagerSearch(event.target.value)} /><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon></InputGroup>
+          <InputGroup><InputGroupInput aria-label="Bölge müdürü ara" placeholder="Ad ile ara" value={managerSearch} onChange={event => { setSelected(null); model.setReportViewerManagerSearch(event.target.value) }} /><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon></InputGroup>
         </header>
         <nav aria-label="Mağaza görünümü">
           <Button variant="ghost" className="company-performance-manager-row" aria-label="Tüm Mağazalar" aria-current={selected === null ? 'true' : undefined} aria-pressed={selected === null} onClick={() => setSelected(null)}>
             <Avatar className="company-performance-manager-avatar"><AvatarFallback><Store aria-hidden="true" /></AvatarFallback></Avatar>
             <span className="company-performance-manager-name"><strong>Tüm Mağazalar</strong><small>Tüm bölge müdürleri</small></span>
           </Button>
-          {managers.filter(manager => !managerSearch.trim() || (manager.displayName ?? '').toLocaleLowerCase(model.locale).includes(managerSearch.trim().toLocaleLowerCase(model.locale))).map(manager => {
+          {managers.map(manager => {
             const key = manager.userId ?? 'unassigned'
             const name = manager.displayName ?? model.t('storeKpis.companyManagerUnavailable')
             const score = manager.averageScore === null || !Number.isFinite(manager.averageScore) ? model.t('common.noData') : new Intl.NumberFormat(model.locale, { maximumFractionDigits: 1 }).format(manager.averageScore)
@@ -75,7 +74,7 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
               <strong className="company-performance-manager-score">{score}</strong>
             </Button>
           })}
-          {managerSearch && !managers.some(manager => (manager.displayName ?? '').toLocaleLowerCase(model.locale).includes(managerSearch.trim().toLocaleLowerCase(model.locale))) ? <p className="company-performance-manager-empty">Eşleşen bölge müdürü yok.</p> : null}
+          {managerSearch && managerTotal === 0 ? <p className="company-performance-manager-empty">Eşleşen bölge müdürü yok.</p> : null}
         </nav>
         <footer className="company-performance-manager-pager">
           <span>{managerPage + 1} / {Math.max(1, Math.ceil(managerTotal / model.reportViewerPageSize))}</span>
@@ -94,29 +93,28 @@ function CompanyStores({ model, period, selected }: { model: StoreKpiHighlightsP
   const [sort, setSort] = useState<{ key: StoreKpisRegionSortKey; direction: 'asc' | 'desc' }>({ key: 'score', direction: 'desc' })
   const limit = 50
   const query = useQuery({
-    queryKey: ['store-kpis-company-store-list', period, model.kpiDateRangeEnd, selected?.key ?? 'all', page],
-    queryFn: () => getRankings({ periodType: model.kpiDateRangeEnd ? 'daily' : 'monthly', ...(model.kpiDateRangeEnd ? { periodEnd: model.kpiDateRangeEnd } : {}), periodStart: period, ...(selected ? selected.userId ? { regionManagerUserId: selected.userId } : { regionManagerUnassigned: true } : {}), limit, offset: page * limit }),
+    queryKey: ['store-kpis-company-store-list', period, model.kpiDateRangeEnd, selected?.key ?? 'all', search.trim(), page],
+    queryFn: () => getRankings({ periodType: model.kpiDateRangeEnd ? 'daily' : 'monthly', ...(model.kpiDateRangeEnd ? { periodEnd: model.kpiDateRangeEnd } : {}), periodStart: period, ...(selected ? selected.userId ? { regionManagerUserId: selected.userId } : { regionManagerUnassigned: true } : {}), ...(search.trim() ? { search: search.trim() } : {}), limit, offset: page * limit }),
     enabled: Boolean(period),
     ...transientQueryRetryOptions,
-    placeholderData: previous => previous,
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[4] === search.trim() ? previous : undefined,
   })
   const protectedError = query.error instanceof ApiError && (query.error.status === 401 || query.error.status === 403)
   const data = protectedError ? undefined : query.data
   const total = data?.storeLeaderboard.meta.total ?? 0
   const pageOffset = data?.storeLeaderboard.meta.offset ?? page * limit
-  const pageScoped = total > (data?.storeLeaderboard.items.length ?? 0)
-  const rows = sortKpiStoreRows(data?.storeLeaderboard.items ?? [], sort.key, sort.direction).filter(row => !search.trim() || (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(search.trim().toLocaleLowerCase(model.locale)))
+  const rows = sortKpiStoreRows(data?.storeLeaderboard.items ?? [], sort.key, sort.direction)
   const changeSort = (key: StoreKpisRegionSortKey, direction?: 'asc' | 'desc') => setSort(current => ({ key, direction: direction ?? (current.key === key && current.direction === 'desc' ? 'asc' : 'desc') }))
 
   return <section className="region-performance-stores" aria-label={selected?.name ?? 'Tüm Mağazalar'} aria-busy={query.isFetching}>
     <div className="region-performance-toolbar">
-      <div className="region-performance-list-heading"><h2>{selected?.name ?? 'Tüm Mağazalar'}</h2>{data ? <Badge variant="secondary">{search ? rows.length : total}</Badge> : null}</div>
-      <InputGroup className="region-performance-search"><InputGroupInput aria-label={pageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} placeholder={pageScoped ? 'Bu sayfada mağaza ara…' : 'Mağaza ara…'} value={search} onChange={event => setSearch(event.target.value)} /><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon></InputGroup>
+      <div className="region-performance-list-heading"><h2>{selected?.name ?? 'Tüm Mağazalar'}</h2>{data ? <Badge variant="secondary">{total}</Badge> : null}</div>
+      <InputGroup className="region-performance-search"><InputGroupInput aria-label="Mağaza ara" placeholder="Mağaza ara…" value={search} onChange={event => { setPage(0); setSearch(event.target.value) }} /><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon></InputGroup>
     </div>
     {!data && query.isLoading ? <StoreLoadingState title={model.t('storeKpis.loadingTitle')} description={model.t('storeKpis.loadingCopy')} /> : !data && query.isError ? <StoreErrorState title={model.t('storeKpis.rowsErrorTitle')} description={model.t('storeKpis.companyManagerStoresError')} action={{ label: model.t('storeKpis.retry'), onClick: () => void query.refetch() }} /> : <>
       {query.isError && data ? <Alert variant="destructive"><AlertDescription>{model.t('storeKpis.backgroundError')}<Button variant="outline" onClick={() => void query.refetch()}>{model.t('storeKpis.retry')}</Button></AlertDescription></Alert> : null}
-      {rows.length > 0 ? <CompanyKpiStoreList rows={rows} model={model} sort={sort} onSort={changeSort} /> : total === 0 ? <StoreKpisPeriodEmpty locale={model.locale} start={period} end={model.kpiDateRangeEnd} /> : <StoreEmptyState title="Mağaza bulunamadı" description="Aramanızı değiştirerek tekrar deneyin." />}
+      {rows.length > 0 ? <CompanyKpiStoreList rows={rows} model={model} sort={sort} onSort={changeSort} /> : total === 0 && !search.trim() ? <StoreKpisPeriodEmpty locale={model.locale} start={period} end={model.kpiDateRangeEnd} /> : <StoreEmptyState title="Mağaza bulunamadı" description="Aramanızı değiştirerek tekrar deneyin." />}
     </>}
-    {total > limit ? <nav className="region-performance-pager" aria-label="Mağaza sayfaları"><span>{pageOffset + 1}–{Math.min(pageOffset + limit, total)} / {total}</span><Button variant="outline" disabled={page === 0 || query.isFetching} onClick={() => { setPage(page - 1); setSearch('') }}>Önceki</Button><Button variant="outline" disabled={(page + 1) * limit >= total || query.isFetching} onClick={() => { setPage(page + 1); setSearch('') }}>Sonraki</Button></nav> : null}
+    {total > limit ? <nav className="region-performance-pager" aria-label="Mağaza sayfaları"><span>{pageOffset + 1}–{Math.min(pageOffset + limit, total)} / {total}</span><Button variant="outline" disabled={page === 0 || query.isFetching} onClick={() => setPage(page - 1)}>Önceki</Button><Button variant="outline" disabled={(page + 1) * limit >= total || query.isFetching} onClick={() => setPage(page + 1)}>Sonraki</Button></nav> : null}
   </section>
 }

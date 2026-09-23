@@ -108,6 +108,7 @@ export type GetRankingsInput = RankingFilters & {
   limit?: number;
   offset?: number;
   regionManagerLimit?: number;
+  regionManagerSearch?: string;
   regionManagerOffset?: number;
   regionManagerRiskOffset?: number;
   regionManagerUnassigned?: boolean;
@@ -356,12 +357,12 @@ export class RankingService {
     const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
     const managedStorePersonnelRows =
       access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
-        ? personnelRows.filter(
+        ? applyPersonnelFilters(personnelRows.filter(
             (row) => {
               const activeStoreId = assignmentByEmployeeId.get(row.employeeId)?.store_id ?? null;
               return activeStoreId !== null && managedStoreIds.includes(activeStoreId);
             },
-          )
+          ), { search: input.search })
         : [];
     const managedPersonnelLimit = Math.min(Math.max(input.managedPersonnelLimit ?? 50, 1), 100);
     const managedPersonnelOffset = Math.max(input.managedPersonnelOffset ?? 0, 0);
@@ -408,6 +409,7 @@ export class RankingService {
           limit: regionManagerLimit,
           offset: regionManagerOffset,
           riskOffset: regionManagerRiskOffset,
+          search: input.regionManagerSearch,
         }, companyFilterOptions?.regionManagers)
       : {
           items: [],

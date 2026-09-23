@@ -378,6 +378,7 @@ export class ReportingController {
       regionId: query.regionId,
       storeId: query.storeId,
       search: query.search,
+      regionManagerSearch: query.regionManagerSearch,
       sortKey: query.sortKey,
       sortDirection: query.sortDirection,
       limit: query.limit,

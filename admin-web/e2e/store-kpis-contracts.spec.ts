@@ -430,6 +430,93 @@ test('SH-FR-008 Region Manager can reach the next bounded store page', async ({ 
   await expect.poll(() => offsets).toContain('50')
 })
 
+test('Region Manager store search finds a store beyond the current page and resets pagination', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeKpiContractApi(page)
+  const reads: Array<{ search: string; offset: string }> = []
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    const search = url.searchParams.get('search') ?? ''
+    const offset = url.searchParams.get('offset') ?? '0'
+    reads.push({ search, offset })
+    const fixture = createCompanyRankingsFixture()
+    await route.fulfill({ json: { ...fixture, storeLeaderboard: {
+      ...fixture.storeLeaderboard,
+      items: search ? [fixture.storeLeaderboard.items[1]] : [fixture.storeLeaderboard.items[0]],
+      meta: { limit: 50, offset: Number(offset), total: search ? 1 : 51 },
+    } } })
+  })
+
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const overview = page.getByTestId('store-kpis-region-overview')
+  await page.getByTestId('store-kpis-region-next-page').click()
+  await expect.poll(() => reads.some(read => read.offset === '50')).toBe(true)
+  await overview.getByRole('textbox', { name: 'Mağaza ara' }).fill('Bursa')
+  await expect.poll(() => reads.some(read => read.search === 'Bursa' && read.offset === '0')).toBe(true)
+  await expect(overview.getByRole('row', { name: /Bursa Marka Park/ })).toBeVisible()
+})
+
+test('Report Viewer store search reaches other pages without manually paging', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await installGenericStoreApiFallbacks(page)
+  await routeKpiContractApi(page)
+  const reads: Array<{ search: string; offset: string }> = []
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    const fixture = createCompanyRankingsFixture()
+    if (url.searchParams.has('regionManagerLimit')) {
+      await route.fulfill({ json: fixture })
+      return
+    }
+    const search = url.searchParams.get('search') ?? ''
+    const offset = url.searchParams.get('offset') ?? '0'
+    reads.push({ search, offset })
+    await route.fulfill({ json: { ...fixture, storeLeaderboard: {
+      ...fixture.storeLeaderboard,
+      items: search ? [fixture.storeLeaderboard.items[1]] : [fixture.storeLeaderboard.items[0]],
+      meta: { limit: 50, offset: Number(offset), total: search ? 1 : 51 },
+    } } })
+  })
+
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const company = page.getByTestId('store-kpis-company-overview')
+  await company.getByRole('textbox', { name: 'Mağaza ara' }).fill('Bursa')
+  await expect.poll(() => reads.some(read => read.search === 'Bursa' && read.offset === '0')).toBe(true)
+  await expect(company.getByRole('link', { name: /Bursa Marka Park/ })).toBeVisible()
+})
+
+test('Report Viewer manager search finds a manager beyond the current directory page', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await installGenericStoreApiFallbacks(page)
+  await routeKpiContractApi(page)
+  const reads: string[] = []
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    const fixture = createCompanyRankingsFixture()
+    if (!url.searchParams.has('regionManagerLimit')) {
+      await route.fulfill({ json: fixture })
+      return
+    }
+    const search = url.searchParams.get('regionManagerSearch') ?? ''
+    reads.push(search)
+    const manager = search
+      ? { ...fixture.regionManagerLeaderboard.items[0], userId: 'rm-2', displayName: 'Zeynep Ak' }
+      : fixture.regionManagerLeaderboard.items[0]
+    await route.fulfill({ json: { ...fixture, regionManagerLeaderboard: {
+      ...fixture.regionManagerLeaderboard,
+      items: [manager],
+      meta: { limit: 20, offset: 0, total: search ? 1 : 21 },
+    } } })
+  })
+
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const company = page.getByTestId('store-kpis-company-overview')
+  await company.getByRole('textbox', { name: 'Bölge müdürü ara' }).fill('Zeynep')
+  await expect.poll(() => reads).toContain('Zeynep')
+  await expect(company.getByRole('button', { name: /Zeynep Ak Bölge puanı/ })).toBeVisible()
+})
+
 test('SH-FR-006/007 mobile Region Manager sort is local and uses the desktop sort contract', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installStoreContractSession(page, 'regionManager')

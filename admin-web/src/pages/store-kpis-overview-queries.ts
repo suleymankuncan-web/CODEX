@@ -23,9 +23,11 @@ export function useStoreKpisOverviewQueries(input: {
     .filter(([, data]) => Boolean(data))
     .sort(([left], [right]) => (queryClient.getQueryState(right)?.dataUpdatedAt ?? 0) - (queryClient.getQueryState(left)?.dataUpdatedAt ?? 0))[0]?.[1]
   const [reportViewerPage, setReportViewerPage] = useState(0)
+  const [reportViewerManagerSearch, setReportViewerManagerSearchState] = useState('')
   const [reportViewerRiskPage, setReportViewerRiskPage] = useState(0)
   const [reportViewerRiskOnly, setReportViewerRiskOnlyState] = useState(false)
   const [regionOverviewPage, setRegionOverviewPage] = useState(0)
+  const [regionOverviewSearch, setRegionOverviewSearchState] = useState('')
   const [regionOverviewSort, setRegionOverviewSortState] = useState<{
     sortKey: StoreKpisRegionSortKey
     sortDirection: StoreKpisRegionSortDirection
@@ -38,6 +40,7 @@ export function useStoreKpisOverviewQueries(input: {
   const setReportViewerPeriodStart = (value: string) => {
     setReportViewerPage(0)
     setReportViewerRiskPage(0)
+    setReportViewerManagerSearchState('')
     const nextParams = new URLSearchParams(input.searchParams)
     if (value) nextParams.set('periodStart', value)
     else nextParams.delete('periodStart')
@@ -48,6 +51,7 @@ export function useStoreKpisOverviewQueries(input: {
   }
   const setKpiDateRange = (start: string, end: string) => {
     setRegionOverviewPage(0); setReportViewerPage(0); setReportViewerRiskPage(0)
+    setReportViewerManagerSearchState('')
     const next = new URLSearchParams(input.searchParams)
     next.set('periodStart', start); next.set('periodEnd', end); next.set('periodType', 'daily')
     input.setSearchParams(next, { replace: true })
@@ -55,9 +59,18 @@ export function useStoreKpisOverviewQueries(input: {
   const setReportViewerRiskOnly = (value: boolean) => {
     setReportViewerRiskOnlyState(value)
   }
+  const setReportViewerManagerSearch = (value: string) => {
+    setReportViewerPage(0)
+    setReportViewerRiskPage(0)
+    setReportViewerManagerSearchState(value)
+  }
   const setRegionOverviewPeriodStart = (value: string) => {
     setRegionOverviewPage(0)
     input.regionPeriodModel.setPeriodStart(value)
+  }
+  const setRegionOverviewSearch = (value: string) => {
+    setRegionOverviewPage(0)
+    setRegionOverviewSearchState(value)
   }
   const setRegionOverviewSort = (
     sortKey: StoreKpisRegionSortKey,
@@ -73,12 +86,13 @@ export function useStoreKpisOverviewQueries(input: {
   }
 
   const regionOverviewQuery = useQuery({
-    queryKey: ['store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart, input.regionManagerUserId, regionOverviewPage, regionOverviewPageSize],
+    queryKey: ['store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart, input.regionManagerUserId, regionOverviewSearch.trim(), regionOverviewPage, regionOverviewPageSize],
     queryFn: () => getRankings({
       periodType: kpiDateRangeEnd ? 'daily' : 'monthly',
       ...(kpiDateRangeEnd ? { periodEnd: kpiDateRangeEnd } : {}),
       ...(activeRegionOverviewPeriodStart ? { periodStart: activeRegionOverviewPeriodStart } : {}),
       ...(input.regionManagerUserId ? { regionManagerUserId: input.regionManagerUserId } : {}),
+      ...(regionOverviewSearch.trim() ? { search: regionOverviewSearch.trim() } : {}),
       sortKey: 'score', sortDirection: 'desc', limit: regionOverviewPageSize,
       offset: regionOverviewPage * regionOverviewPageSize,
     }),
@@ -86,15 +100,29 @@ export function useStoreKpisOverviewQueries(input: {
     ...transientQueryRetryOptions,
     initialData: () => getPreviousOverview([
       'store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart, input.regionManagerUserId,
+      regionOverviewSearch.trim(),
     ]),
     initialDataUpdatedAt: 0,
   })
+  const regionOverviewSummaryQuery = useQuery({
+    queryKey: ['store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart, input.regionManagerUserId, '', 0, regionOverviewPageSize],
+    queryFn: () => getRankings({
+      periodType: kpiDateRangeEnd ? 'daily' : 'monthly',
+      ...(kpiDateRangeEnd ? { periodEnd: kpiDateRangeEnd } : {}),
+      ...(activeRegionOverviewPeriodStart ? { periodStart: activeRegionOverviewPeriodStart } : {}),
+      ...(input.regionManagerUserId ? { regionManagerUserId: input.regionManagerUserId } : {}),
+      sortKey: 'score', sortDirection: 'desc', limit: regionOverviewPageSize, offset: 0,
+    }),
+    enabled: input.reportingAllowed && input.isRegionManagerOverview && Boolean(input.regionManagerUserId) && Boolean(activeRegionOverviewPeriodStart),
+    ...transientQueryRetryOptions,
+  })
   const reportViewerOverviewQuery = useQuery({
-    queryKey: ['store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', input.regionManagerUserId, reportViewerPage, reportViewerRiskPage, reportViewerPageSize],
+    queryKey: ['store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', input.regionManagerUserId, reportViewerManagerSearch.trim(), reportViewerPage, reportViewerRiskPage, reportViewerPageSize],
     queryFn: () => getRankings({
       periodType: kpiDateRangeEnd ? 'daily' : 'monthly',
       ...(kpiDateRangeEnd ? { periodEnd: kpiDateRangeEnd } : {}),
       ...(activeReportViewerPeriodStart ? { periodStart: activeReportViewerPeriodStart } : {}),
+      ...(reportViewerManagerSearch.trim() ? { regionManagerSearch: reportViewerManagerSearch.trim() } : {}),
       sortKey: 'score', sortDirection: 'desc', limit: 1, offset: 0,
       regionManagerLimit: reportViewerPageSize,
       regionManagerOffset: reportViewerPage * reportViewerPageSize,
@@ -104,6 +132,7 @@ export function useStoreKpisOverviewQueries(input: {
     ...transientQueryRetryOptions,
     initialData: () => getPreviousOverview([
       'store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', input.regionManagerUserId,
+      reportViewerManagerSearch.trim(),
     ]),
     initialDataUpdatedAt: 0,
   })
@@ -113,9 +142,10 @@ export function useStoreKpisOverviewQueries(input: {
     activeReportViewerPeriodStart,
     effectiveRegionOverviewQuery: activeRegionOverviewPeriodStart ? regionOverviewQuery : input.regionPeriodModel.seedQuery,
     kpiDateRangeEnd, setKpiDateRange,
-    regionOverviewPage, regionOverviewPageSize, regionOverviewSort,
-    reportViewerOverviewQuery, reportViewerPage, reportViewerPageSize, reportViewerRiskOnly, reportViewerRiskPage,
-    setRegionOverviewPage, setRegionOverviewPeriodStart, setRegionOverviewSort,
-    setReportViewerPage, setReportViewerPeriodStart, setReportViewerRiskOnly, setReportViewerRiskPage,
+    regionOverviewPage, regionOverviewPageSize, regionOverviewSearch, regionOverviewSort,
+    regionOverviewSummaryQuery,
+    reportViewerOverviewQuery, reportViewerPage, reportViewerPageSize, reportViewerManagerSearch, reportViewerRiskOnly, reportViewerRiskPage,
+    setRegionOverviewPage, setRegionOverviewPeriodStart, setRegionOverviewSearch, setRegionOverviewSort,
+    setReportViewerPage, setReportViewerPeriodStart, setReportViewerManagerSearch, setReportViewerRiskOnly, setReportViewerRiskPage,
   }
 }

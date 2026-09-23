@@ -28,6 +28,8 @@ type PersonnelData = {
   total: number
   page: number
   pageSize: number
+  search: string
+  onSearchChange: (value: string) => void
   onPageChange: (page: number) => void
   query: UseQueryResult<Awaited<ReturnType<typeof getRankings>>, unknown>
 }
@@ -51,7 +53,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   overviewParams.delete('view')
   if (!overviewParams.has('periodStart') && model.livePeriodStart) overviewParams.set('periodStart', model.livePeriodStart)
   const switchView = () => { const next = new URLSearchParams(params); if (showPeople) next.delete('view'); else next.set('view', 'personnel'); setParams(next) }
-  const [search, setSearch] = useState('')
+  const { search } = personnel
   const [selectedKpi, setSelectedKpi] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: PeopleSort; ascending: boolean }>({ key: 'score', ascending: false })
   const noData = model.t('storeKpis.noData')
@@ -104,7 +106,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     if (model.kpiDateRangeEnd) params.set('periodEnd', model.kpiDateRangeEnd)
     return <Button asChild size="xs" className="region-performance-detail"><Link to={`/store/personnel/${encodeURIComponent(row.employeeId)}?${params}`} aria-label={`${row.displayName} — ${tr ? 'Detay' : 'Details'}`}><ClipboardCheck aria-hidden="true" /><span>{tr ? 'Detay' : 'Details'}</span></Link></Button>
   }
-  const personnelSearch = <InputGroup className="region-performance-header-search"><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label={tr ? 'Personel ara' : 'Search personnel'} placeholder={personnel.total > personnel.rows.length ? (tr ? 'Bu sayfada personel ara' : 'Search this page') : (tr ? 'Personel Ara' : 'Search personnel')} value={search} onChange={event => setSearch(event.target.value)} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{protectedPersonnelError ? 0 : search ? people.length : personnel.total}</Badge></InputGroupAddon></InputGroup>
+  const personnelSearch = <InputGroup className="region-performance-header-search"><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label={tr ? 'Personel ara' : 'Search personnel'} placeholder={tr ? 'Personel Ara' : 'Search personnel'} value={search} onChange={event => personnel.onSearchChange(event.target.value)} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{protectedPersonnelError ? 0 : personnel.total}</Badge></InputGroupAddon></InputGroup>
 
   return <CommandCanvasPage ariaLabelledBy="manager-kpi-title" className="region-performance manager-performance" testId="store-kpis-manager-overview">
     {model.isRegionManagerStoreDetail || model.isReportViewerStoreDetail ? <Button asChild variant="ghost" size="sm" className="tw:self-start"><Link to={`/store/kpis?${overviewParams}`}><ArrowLeft aria-hidden="true" />{tr ? 'Mağaza listesine dön' : 'Back to store list'}</Link></Button> : null}

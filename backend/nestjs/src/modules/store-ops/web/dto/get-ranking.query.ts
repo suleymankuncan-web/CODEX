@@ -43,6 +43,10 @@ export class GetRankingQueryDto {
   search?: string;
 
   @IsOptional()
+  @IsString()
+  regionManagerSearch?: string;
+
+  @IsOptional()
   @IsIn([
     "score",
     "UPT",
