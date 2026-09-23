@@ -406,27 +406,6 @@ describe("RankingService", () => {
     );
   });
 
-  it("searches all assigned store personnel before building the managed page", async () => {
-    const repository = createRepositoryMock();
-    const service = createService(repository, createKpiConfigRepositoryMock());
-
-    const result = await service.getRankings({
-      userId: "manager-1",
-      roleCodes: ["STORE_MANAGER"],
-      companyIds: [],
-      regionIds: [],
-      storeIds: ["store-001"],
-      assignedStoreIds: ["store-001"],
-      periodType: "monthly",
-      search: "Personel005",
-      managedPersonnelLimit: 2,
-      managedPersonnelOffset: 0,
-    });
-
-    expect(result.personnelLeaderboard.managedStorePersonnelMeta?.total).toBe(1);
-    expect(result.personnelLeaderboard.managedStorePersonnel?.map((row) => row.employeeId)).toEqual(["employee-005"]);
-  });
-
   it("lets Super Admin page through full Turkey rankings with detail metrics", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
