@@ -25,5 +25,8 @@ describe('KPI managed personnel page', () => {
     const page = buildSearchedManagedPersonnelPage([...rows, outside], assignments, ['store-1'], 'Personel 50', { limit: 50, offset: 0 })
     expect(page.meta.total).toBe(1)
     expect(page.items.map(row => row.employeeId)).toEqual(['employee-50'])
+
+    const storeNameMatch = buildSearchedManagedPersonnelPage([...rows, outside], assignments, ['store-1'], 'Store 1', { limit: 50, offset: 0 })
+    expect(storeNameMatch.meta.total).toBe(0)
   })
 })

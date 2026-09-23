@@ -82,13 +82,13 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     : { TARGET_ACHIEVEMENT: 'Target Achievement', ATV: 'Average Ticket Value', UPT: 'Units Per Ticket', CR: 'Conversion Rate', gsm_approval: 'GSM Approval', BM_CHECKLIST: 'Region Manager Checklist', VM_CHECKLIST: 'VM Checklist' }
   const periodStart = (model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart).slice(0, 10)
   const scope = `${model.effectiveStoreId}|${periodStart}|${model.kpiDateRangeEnd}|${model.viewMode}`
-  const people = useMemo(() => personnel.rows.filter(row => !search.trim() || (row.displayName ?? '').toLocaleLowerCase(model.locale).includes(search.trim().toLocaleLowerCase(model.locale))).sort((a, b) => {
+  const people = useMemo(() => [...personnel.rows].sort((a, b) => {
     const left = personMetric(a, sort.key, model.effectiveStoreId, displayedStoreScore)
     const right = personMetric(b, sort.key, model.effectiveStoreId, displayedStoreScore)
     if (left === null) return right === null ? 0 : 1
     if (right === null) return -1
     return (left - right) * (sort.ascending ? 1 : -1)
-  }), [personnel.rows, search, sort, model.locale, model.effectiveStoreId, displayedStoreScore])
+  }), [personnel.rows, sort, model.effectiveStoreId, displayedStoreScore])
   const SortIcon = sort.ascending ? ArrowUp : ArrowDown
   const protectedPersonnelError = personnel.query.error instanceof ApiError && (personnel.query.error.status === 401 || personnel.query.error.status === 403)
   const personValue = (row: PersonnelRankingRow, code: PeopleSort) => {

@@ -1,4 +1,4 @@
-import { applyPersonnelFilters, type RankedPersonnelRankingRow } from './ranking-list.helpers'
+import type { RankedPersonnelRankingRow } from './ranking-list.helpers'
 
 export function buildBoundedManagedPersonnelPage<Row>(
   rows: Row[],
@@ -21,5 +21,9 @@ export function buildSearchedManagedPersonnelPage(
     const activeStoreId = assignmentByEmployeeId.get(row.employeeId)?.store_id ?? null
     return activeStoreId !== null && managedStoreIds.includes(activeStoreId)
   })
-  return buildBoundedManagedPersonnelPage(applyPersonnelFilters(assignedRows, { search }), page)
+  const normalizedSearch = search?.trim().toLocaleLowerCase('tr-TR') ?? ''
+  const matchingRows = normalizedSearch
+    ? assignedRows.filter(row => row.displayName?.toLocaleLowerCase('tr-TR').includes(normalizedSearch))
+    : assignedRows
+  return buildBoundedManagedPersonnelPage(matchingRows, page)
 }
