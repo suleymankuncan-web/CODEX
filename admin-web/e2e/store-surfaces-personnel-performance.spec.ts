@@ -343,6 +343,44 @@ test('store personnel profile keeps an explicitly selected month when it has no 
   )).toBe(false)
 })
 
+test('store personnel profile opens a selected month backed only by daily KPI facts', async ({ page }) => {
+  const requests: URL[] = []
+  const dailyPeriods = [{ periodType: 'daily', periodStart: '2026-09-13', periodEnd: '2026-09-13' }]
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async route => route.fulfill({
+    json: { ...authSessionFixture, user: { ...authSessionFixture.user, userId: 'region-ranking-user', roleCodes: ['REGION_MANAGER'] } },
+  }))
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async route => {
+    const url = new URL(route.request().url())
+    requests.push(url)
+    const septemberRange = url.searchParams.get('periodType') === 'daily'
+      && url.searchParams.get('periodStart') === '2026-09-01'
+      && url.searchParams.get('periodEnd') === '2026-09-30'
+    const august = url.searchParams.get('periodStart') === '2026-08-01'
+    await route.fulfill({ json: {
+      ...myPerformanceFixture,
+      employee: { ...myPerformanceFixture.employee, employeeId: demoEmployeeId },
+      availablePeriods: dailyPeriods,
+      period: septemberRange ? { periodStart: '2026-09-01', periodEnd: '2026-09-30' }
+        : august ? { periodStart: '2026-08-01', periodEnd: '2026-08-31' } : null,
+      metrics: septemberRange || august ? myPerformanceFixture.metrics
+        : myPerformanceFixture.metrics.map(metric => ({ ...metric, actualValue: null })),
+    } })
+  })
+
+  await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-08-01`)
+  await page.getByRole('button', { name: /Tarih filtresi/i }).click()
+  await page.getByRole('combobox', { name: 'Ay seç' }).selectOption({ index: 8 })
+  await page.getByRole('button', { name: 'Uygula' }).click()
+
+  await expect.poll(() => requests.some(url => url.searchParams.get('periodType') === 'daily'
+    && url.searchParams.get('periodStart') === '2026-09-01'
+    && url.searchParams.get('periodEnd') === '2026-09-30')).toBe(true)
+  await expect(page.getByText('Seçilen tarih için veri bulunamadı')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Tarih filtresi' })).toContainText('Eylül 2026')
+})
+
 test('store personnel profile uses employee periods instead of global closed snapshots', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const snapshotRunRequests: URL[] = []
@@ -609,7 +647,7 @@ test('store rankings page switches to English copy and persists locale', async (
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rankings', exact: true })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Personnel list' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('table', { name: /Showing personnel results/i })).toBeVisible()
   await expect

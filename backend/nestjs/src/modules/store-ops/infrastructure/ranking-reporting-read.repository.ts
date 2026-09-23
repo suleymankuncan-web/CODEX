@@ -491,31 +491,19 @@ export class RankingReportingReadRepository {
         INNER JOIN ops.user_account ua
           ON ua.user_id = ura.user_id
          AND ua.is_active = TRUE
-        LEFT JOIN ops.employee employee
-          ON employee.employee_id = ua.employee_id
-        LEFT JOIN ops.region region
-          ON region.region_id = ura.region_id
-        LEFT JOIN ops.store role_store
-          ON role_store.store_id = ura.store_id
-        LEFT JOIN ops.user_action_store_assignment manager_store
+        INNER JOIN ops.user_action_store_assignment manager_store
           ON manager_store.user_id = ura.user_id
          AND manager_store.start_at <= NOW()
          AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
-        LEFT JOIN ops.store assigned_store
+        INNER JOIN ops.store assigned_store
           ON assigned_store.store_id = manager_store.store_id
+         AND assigned_store.store_type = 'company'
+         AND assigned_store.status = 'active'
          ${input.companyIds.length > 0 ? `AND assigned_store.company_id = ANY($1::uuid[])` : ""}
+        LEFT JOIN ops.employee employee
+          ON employee.employee_id = ua.employee_id
         WHERE ura.start_at <= NOW()
           AND (ura.end_at IS NULL OR ura.end_at >= NOW())
-          ${
-            input.companyIds.length > 0
-              ? `AND (
-                  ura.company_id = ANY($1::uuid[])
-                  OR region.company_id = ANY($1::uuid[])
-                  OR role_store.company_id = ANY($1::uuid[])
-                  OR assigned_store.company_id = ANY($1::uuid[])
-                )`
-              : ""
-          }
         GROUP BY
           ua.user_id,
           employee.first_name,

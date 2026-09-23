@@ -10,12 +10,11 @@ function setup() {
   return { repository, service: new RegionManagerDirectoryService(repository as never) };
 }
 describe("RegionManagerDirectoryService", () => {
-  it("includes managers without stores and uses only the viewer company role", async () => {
+  it("lists only managers with direct store assignments in the viewer company", async () => {
     const { service, repository } = setup();
     const actor = buildAuthenticatedUser({ userId: "viewer", roleCodes: ["REPORT_VIEWER", "REGION_MANAGER"], readScope: scope(["other"]), roleScopes: { REPORT_VIEWER: scope(["company-a"]), REGION_MANAGER: scope(["other"]) } });
     expect(await service.list(actor)).toEqual({ items: [
       { userId: "manager-a", displayName: "Manager A", storeIds: ["store-a"] },
-      { userId: "manager-empty", displayName: "Manager Empty", storeIds: [] },
     ] });
     expect(repository.listCompanyRegionManagerDirectory).toHaveBeenCalledWith({ companyIds: ["company-a"] });
   });

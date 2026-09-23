@@ -38,7 +38,7 @@ test('store surface regressions stay split into bounded domain specs without los
     }
   }
 
-  assert.equal(titles.length, 94, 'the split must preserve all 94 Store surface regressions')
+  assert.equal(titles.length, 95, 'the split must preserve all 95 Store surface regressions')
   assert.equal(new Set(titles).size, titles.length, 'Store surface regression titles must remain unique')
 })
 

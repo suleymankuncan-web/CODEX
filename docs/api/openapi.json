@@ -2599,6 +2599,15 @@
               "type": "integer",
               "minimum": 0
             }
+          },
+          {
+            "name": "regionManagerSearch",
+            "in": "query",
+            "required": false,
+            "description": "Search Region Managers by name before pagination.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {

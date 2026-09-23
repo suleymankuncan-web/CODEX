@@ -89,6 +89,17 @@ describe('KPI Region Manager summary', () => {
       expect.objectContaining({ userId: 'manager-2', storeCount: 1, averageScore: 76 }),
     ])
   })
+
+  it('finds a manager on a later page before applying the manager page limit', () => {
+    const result = buildRegionManagerSummary([
+      row({ storeId: 'store-1', regionManagerUserId: 'manager-1', regionManagerName: 'Ayşe Ak', scoreValue: 88 }),
+      row({ storeId: 'store-2', regionManagerUserId: 'manager-2', regionManagerName: 'Zeynep Ak', scoreValue: 42 }),
+    ], { limit: 1, offset: 0, search: 'ZEYNEP' })
+
+    expect(result.items.map(item => item.userId)).toEqual(['manager-2'])
+    expect(result.meta.total).toBe(1)
+    expect(result.riskItems.map(item => item.userId)).toEqual(['manager-2'])
+  })
 })
 
 function row(input: {

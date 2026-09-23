@@ -191,13 +191,22 @@ export class SalesTargetIncentiveAdminPackageReadRepository {
             INNER JOIN ops.role role
               ON role.role_id = role_assignment.role_id
               AND role.role_code = 'REGION_MANAGER'
+            INNER JOIN ops.user_action_store_assignment manager_store
+              ON manager_store.user_id = role_assignment.user_id
+              AND manager_store.start_at <= NOW()
+              AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
+            INNER JOIN ops.store assigned_store
+              ON assigned_store.store_id = manager_store.store_id
+              AND assigned_store.company_id = base_region.company_id
+              AND assigned_store.region_id = base_region.region_id
+              AND assigned_store.store_type = 'company'
+              AND assigned_store.status = 'active'
             INNER JOIN ops.user_account user_account
               ON user_account.user_id = role_assignment.user_id
               AND user_account.is_active = TRUE
             LEFT JOIN ops.employee employee
               ON employee.employee_id = user_account.employee_id
-            WHERE role_assignment.region_id = base_region.region_id
-              AND role_assignment.start_at <= NOW()
+            WHERE role_assignment.start_at <= NOW()
               AND (role_assignment.end_at IS NULL OR role_assignment.end_at >= NOW())
             ORDER BY user_account.username ASC, user_account.user_id ASC
             LIMIT 1

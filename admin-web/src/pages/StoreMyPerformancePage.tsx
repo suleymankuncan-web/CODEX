@@ -38,6 +38,7 @@ import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { StoreMyPerformanceKpiDetails } from './store-my-performance-kpi-details'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
 import { StoreMeShareCardDialog } from './store-me-share-card-dialog'
+import { fetchPerformanceWithDailyMonthFallback } from './store-my-performance-monthly-fallback'
 import {
   StoreErrorState,
   StoreLoadingState,
@@ -141,9 +142,10 @@ export function StoreMyPerformancePage(input: {
     ? ['personnel-performance', targetEmployeeId] as const
     : ['my-performance'] as const
   const fetchPerformance = (queryInput: MyPerformanceQueryInput) =>
-    profileMode === 'personnel'
-      ? getPersonnelPerformance(targetEmployeeId, queryInput)
-      : getMyPerformance(queryInput)
+    fetchPerformanceWithDailyMonthFallback(queryInput, (request) =>
+      profileMode === 'personnel'
+        ? getPersonnelPerformance(targetEmployeeId, request)
+        : getMyPerformance(request))
 
   const configQuery = useQuery({
     queryKey: ['store-me-kpi-config'],

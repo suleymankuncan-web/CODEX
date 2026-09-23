@@ -28,6 +28,8 @@ type PersonnelData = {
   total: number
   page: number
   pageSize: number
+  search: string
+  onSearchChange: (value: string) => void
   onPageChange: (page: number) => void
   query: UseQueryResult<Awaited<ReturnType<typeof getRankings>>, unknown>
 }
@@ -51,7 +53,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   overviewParams.delete('view')
   if (!overviewParams.has('periodStart') && model.livePeriodStart) overviewParams.set('periodStart', model.livePeriodStart)
   const switchView = () => { const next = new URLSearchParams(params); if (showPeople) next.delete('view'); else next.set('view', 'personnel'); setParams(next) }
-  const [search, setSearch] = useState('')
+  const { search } = personnel
   const [selectedKpi, setSelectedKpi] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: PeopleSort; ascending: boolean }>({ key: 'score', ascending: false })
   const noData = model.t('storeKpis.noData')
@@ -80,13 +82,13 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     : { TARGET_ACHIEVEMENT: 'Target Achievement', ATV: 'Average Ticket Value', UPT: 'Units Per Ticket', CR: 'Conversion Rate', gsm_approval: 'GSM Approval', BM_CHECKLIST: 'Region Manager Checklist', VM_CHECKLIST: 'VM Checklist' }
   const periodStart = (model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart).slice(0, 10)
   const scope = `${model.effectiveStoreId}|${periodStart}|${model.kpiDateRangeEnd}|${model.viewMode}`
-  const people = useMemo(() => personnel.rows.filter(row => !search.trim() || (row.displayName ?? '').toLocaleLowerCase(model.locale).includes(search.trim().toLocaleLowerCase(model.locale))).sort((a, b) => {
+  const people = useMemo(() => [...personnel.rows].sort((a, b) => {
     const left = personMetric(a, sort.key, model.effectiveStoreId, displayedStoreScore)
     const right = personMetric(b, sort.key, model.effectiveStoreId, displayedStoreScore)
     if (left === null) return right === null ? 0 : 1
     if (right === null) return -1
     return (left - right) * (sort.ascending ? 1 : -1)
-  }), [personnel.rows, search, sort, model.locale, model.effectiveStoreId, displayedStoreScore])
+  }), [personnel.rows, sort, model.effectiveStoreId, displayedStoreScore])
   const SortIcon = sort.ascending ? ArrowUp : ArrowDown
   const protectedPersonnelError = personnel.query.error instanceof ApiError && (personnel.query.error.status === 401 || personnel.query.error.status === 403)
   const personValue = (row: PersonnelRankingRow, code: PeopleSort) => {
@@ -104,7 +106,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     if (model.kpiDateRangeEnd) params.set('periodEnd', model.kpiDateRangeEnd)
     return <Button asChild size="xs" className="region-performance-detail"><Link to={`/store/personnel/${encodeURIComponent(row.employeeId)}?${params}`} aria-label={`${row.displayName} — ${tr ? 'Detay' : 'Details'}`}><ClipboardCheck aria-hidden="true" /><span>{tr ? 'Detay' : 'Details'}</span></Link></Button>
   }
-  const personnelSearch = <InputGroup className="region-performance-header-search"><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label={tr ? 'Personel ara' : 'Search personnel'} placeholder={personnel.total > personnel.rows.length ? (tr ? 'Bu sayfada personel ara' : 'Search this page') : (tr ? 'Personel Ara' : 'Search personnel')} value={search} onChange={event => setSearch(event.target.value)} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{protectedPersonnelError ? 0 : search ? people.length : personnel.total}</Badge></InputGroupAddon></InputGroup>
+  const personnelSearch = <InputGroup className="region-performance-header-search"><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon><InputGroupInput aria-label={tr ? 'Personel ara' : 'Search personnel'} placeholder={tr ? 'Personel Ara' : 'Search personnel'} value={search} onChange={event => personnel.onSearchChange(event.target.value)} /><InputGroupAddon align="inline-end"><Badge variant="secondary">{protectedPersonnelError ? 0 : personnel.total}</Badge></InputGroupAddon></InputGroup>
 
   return <CommandCanvasPage ariaLabelledBy="manager-kpi-title" className="region-performance manager-performance" testId="store-kpis-manager-overview">
     {model.isRegionManagerStoreDetail || model.isReportViewerStoreDetail ? <Button asChild variant="ghost" size="sm" className="tw:self-start"><Link to={`/store/kpis?${overviewParams}`}><ArrowLeft aria-hidden="true" />{tr ? 'Mağaza listesine dön' : 'Back to store list'}</Link></Button> : null}

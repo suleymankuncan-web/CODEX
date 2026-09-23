@@ -46,7 +46,7 @@ import {
   type PersonnelRankingEligibilityResult,
 } from "./personnel-ranking-eligibility.contract";
 import { buildRegionManagerSummary } from "./ranking-region-manager-summary";
-import { buildBoundedManagedPersonnelPage } from "./ranking-managed-personnel-page";
+import { buildSearchedManagedPersonnelPage } from "./ranking-managed-personnel-page";
 import { personnelStoreScoreShares } from "./personnel-store-score-share";
 import {
   buildScopedRankingFilterOptions,
@@ -108,6 +108,7 @@ export type GetRankingsInput = RankingFilters & {
   limit?: number;
   offset?: number;
   regionManagerLimit?: number;
+  regionManagerSearch?: string;
   regionManagerOffset?: number;
   regionManagerRiskOffset?: number;
   regionManagerUnassigned?: boolean;
@@ -354,19 +355,13 @@ export class RankingService {
     );
     replaceManagerFilterOptions(filters, companyFilterOptions?.regionManagers);
     const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
-    const managedStorePersonnelRows =
-      access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
-        ? personnelRows.filter(
-            (row) => {
-              const activeStoreId = assignmentByEmployeeId.get(row.employeeId)?.store_id ?? null;
-              return activeStoreId !== null && managedStoreIds.includes(activeStoreId);
-            },
-          )
-        : [];
     const managedPersonnelLimit = Math.min(Math.max(input.managedPersonnelLimit ?? 50, 1), 100);
     const managedPersonnelOffset = Math.max(input.managedPersonnelOffset ?? 0, 0);
-    const managedPersonnelPage = buildBoundedManagedPersonnelPage(
-      managedStorePersonnelRows,
+    const managedPersonnelPage = buildSearchedManagedPersonnelPage(
+      personnelRows,
+      assignmentByEmployeeId,
+      access.canSeeManagedStorePersonnelDetails ? managedStoreIds : [],
+      input.search,
       { limit: managedPersonnelLimit, offset: managedPersonnelOffset },
     );
     const personnelProfileAccess = await this.resolvePersonnelProfileAccess({
@@ -408,6 +403,7 @@ export class RankingService {
           limit: regionManagerLimit,
           offset: regionManagerOffset,
           riskOffset: regionManagerRiskOffset,
+          search: input.regionManagerSearch,
         }, companyFilterOptions?.regionManagers)
       : {
           items: [],

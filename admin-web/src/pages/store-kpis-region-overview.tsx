@@ -1,4 +1,3 @@
-import { useDeferredValue, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { ArrowDown, ArrowUp, BarChart3, ClipboardCheck, ReceiptText, ShoppingBag, RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -30,8 +29,6 @@ const columns: Array<{ key: StoreKpisRegionSortKey; label: string }> = [
 ]
 
 export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const [query, setQuery] = useState('')
-  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase(model.locale))
   const summary = buildRegionSummary(model)
   const total = model.regionOverviewQuery.data?.storeLeaderboard.meta.total ?? 0
   const pageOffset = model.regionOverviewQuery.data?.storeLeaderboard.meta.offset ?? model.regionOverviewPage * model.regionOverviewPageSize
@@ -40,10 +37,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
     if (page === model.regionOverviewPage) void model.regionOverviewQuery.refetch()
     else model.setRegionOverviewPage(page)
   }
-  const pageScoped = total > model.regionOverviewRows.length
-  const visibleRows = useMemo(() => model.regionOverviewRows.filter(row =>
-    !deferredQuery || (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(deferredQuery),
-  ), [deferredQuery, model.locale, model.regionOverviewRows])
+  const visibleRows = model.regionOverviewRows
   const metrics = [
     { label: 'Bölge Skoru', value: summary.averageScoreLabel, icon: BarChart3 },
     { label: 'Bölge ATV', value: summary.metricAverages.ATV, icon: ReceiptText },
@@ -52,8 +46,8 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
   ]
   const storeSearch = <InputGroup className="region-performance-header-search">
     <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
-    <InputGroupInput aria-label={pageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} placeholder="Mağaza Ara" value={query} onChange={event => setQuery(event.target.value)} />
-    <InputGroupAddon align="inline-end"><Badge variant="secondary" aria-label={`${visibleRows.length} mağaza`}>{visibleRows.length}</Badge></InputGroupAddon>
+    <InputGroupInput aria-label="Mağaza ara" placeholder="Mağaza Ara" value={model.regionOverviewSearch} onChange={event => model.setRegionOverviewSearch(event.target.value)} />
+    <InputGroupAddon align="inline-end"><Badge variant="secondary" aria-label={`${total} mağaza`}>{total}</Badge></InputGroupAddon>
   </InputGroup>
 
   return (
@@ -80,7 +74,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             </Card>
           ))}
         </div>
-        {pageScoped ? <p className="region-performance-coverage">{summary.averageScoreCopy}</p> : null}
+        {total > visibleRows.length ? <p className="region-performance-coverage">{summary.averageScoreCopy}</p> : null}
 
       {(model.regionOverviewQuery.isError || model.regionOverviewQuery.failureCount > 0) && model.regionOverviewQuery.data ? (
         <Alert variant="destructive"><AlertDescription>
@@ -124,9 +118,9 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             </article>)}
           </div>
         {visibleRows.length === 0 ? (
-          model.regionOverviewRows.length === 0
-            ? <StoreKpisPeriodEmpty locale={model.locale} start={model.regionOverviewActivePeriodStart} end={model.kpiDateRangeEnd} />
-            : <Empty><EmptyHeader><EmptyTitle>Sonuç bulunamadı</EmptyTitle><EmptyDescription>{pageScoped ? 'Aramanızı değiştirin veya diğer mağaza sayfasına geçin.' : 'Aramanızı değiştirerek tekrar deneyin.'}</EmptyDescription></EmptyHeader></Empty>
+          model.regionOverviewSearch.trim()
+            ? <Empty><EmptyHeader><EmptyTitle>Sonuç bulunamadı</EmptyTitle><EmptyDescription>Aramanızı değiştirerek tekrar deneyin.</EmptyDescription></EmptyHeader></Empty>
+            : <StoreKpisPeriodEmpty locale={model.locale} start={model.regionOverviewActivePeriodStart} end={model.kpiDateRangeEnd} />
         ) : null}
         {total > model.regionOverviewPageSize ? <div className="region-performance-pager">
           <span>{pageOffset + 1}–{Math.min(pageOffset + model.regionOverviewPageSize, total)} / {total}</span>
@@ -169,8 +163,8 @@ function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
   return <StoreKpisPeriodPicker onRangeChange={model.setKpiDateRange} ariaLabel={model.t('storeKpis.regionPeriodSelect')} availablePeriodStarts={periods.map(period => period.periodStart)} locale={model.locale} onPeriodStartChange={model.setRegionOverviewPeriodStart} periodStart={model.regionOverviewActivePeriodStart ?? model.regionOverviewQuery.data?.source.periodStart ?? ''} triggerClassName="region-performance-period" />
 }
 function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
-  const ranking = model.regionOverviewQuery.data
-  const rows = model.regionOverviewRows
+  const ranking = model.regionOverviewSummaryQuery.data
+  const rows = ranking?.storeLeaderboard.items ?? []
   const noData = model.t('common.noData')
   const rankingStoreCount = ranking?.storeLeaderboard.meta.total ?? rows.length
   const scopeStoreCount = ranking?.scopeSummary?.storeCount ?? rankingStoreCount

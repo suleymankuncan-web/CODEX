@@ -786,7 +786,7 @@ test('region manager store KPI overview waits for selected store before loading 
   await page.setViewportSize({ width: 1440, height: 900 })
   storeLeaderboardTotal = 120
   await page.reload()
-  await expect(page.getByRole('textbox', { name: 'Bu sayfada mağaza ara' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Mağaza ara' })).toBeVisible()
   await expect(page.getByRole('table', { name: 'Mağaza KPI değerleri' })).toBeVisible()
   storeLeaderboardTotal = regionStoreRows.length
   await page.reload()
