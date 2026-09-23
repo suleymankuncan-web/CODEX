@@ -32,12 +32,17 @@ export async function fetchPerformanceWithDailyMonthFallback(
 
   const periodStart = `${candidateMonth}-01`
   const periodEnd = monthEnd(candidateMonth)
-  const daily = await fetchPerformance({
-    ...input,
-    periodType: 'daily',
-    periodStart,
-    periodEnd,
-  })
+  let daily: MyPerformanceSummary
+  try {
+    daily = await fetchPerformance({
+      ...input,
+      periodType: 'daily',
+      periodStart,
+      periodEnd,
+    })
+  } catch {
+    return primary
+  }
   if (
     daily.period?.periodStart.slice(0, 10) !== periodStart ||
     daily.period?.periodEnd.slice(0, 10) !== periodEnd ||

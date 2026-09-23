@@ -50,6 +50,13 @@ describe('live monthly performance from daily facts', () => {
     await expect(fetchPerformanceWithDailyMonthFallback({ mode: 'live', periodType: 'monthly', periodStart: '2026-09-01' }, fetch)).resolves.toBe(recorded)
   })
 
+  test('keeps the monthly response when the optional daily aggregate request fails', async () => {
+    const recorded = summary({ period: { periodStart: '2026-09-01', periodEnd: '2026-09-30' }, dailyDates: ['2026-09-13'], actualValue: 100 })
+    const fetch = vi.fn().mockResolvedValueOnce(recorded).mockRejectedValueOnce(new Error('temporary daily read failure'))
+
+    await expect(fetchPerformanceWithDailyMonthFallback({ mode: 'live', periodType: 'monthly', periodStart: '2026-09-01' }, fetch)).resolves.toBe(recorded)
+  })
+
   test('leaves closed snapshots and exact daily periods unchanged', async () => {
     const result = summary({ period: { periodStart: '2026-09-13', periodEnd: '2026-09-13' }, dailyDates: ['2026-09-13'] })
     const fetch = vi.fn().mockResolvedValue(result)
