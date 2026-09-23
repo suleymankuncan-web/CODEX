@@ -72,7 +72,7 @@ read_secret() {
   [ -n "$value" ] || die 'required secret file is empty'
   [ "${#value}" -le 256 ] || die 'secret value exceeds the bounded length'
   case "$value" in
-    *[!A-Za-z0-9._@+:/=-]*) die 'secret value contains unsupported characters' ;;
+    *[!A-Za-z0-9._@+:/=!*]*) die 'secret value contains unsupported characters' ;;
   esac
   printf '%s' "$value"
 }

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
 
 import {
@@ -244,6 +246,31 @@ test('ONP-3B SMTP sender accepts the committed address and bypasses generic read
   assert.match(baseline.bootstrapScript, /read_config \"\$\{KEYCLOAK_SMTP_HOST:-\}\" KEYCLOAK_SMTP_HOST\)/)
   assert.match(baseline.bootstrapScript, /smtp_from=\"\$\(read_smtp_sender \"\$\{KEYCLOAK_SMTP_FROM:-\}\"\)\"/)
   assert.doesNotMatch(baseline.bootstrapScript, /smtp_from=\"\$\(read_config /)
+})
+
+test('ONP-3B SMTP credential reader accepts password punctuation without allowing JSON-unsafe bytes', () => {
+  const reader = input().bootstrapScript.match(/^read_secret\(\) \{[\s\S]*?^\}/m)?.[0]
+  assert.ok(reader, 'secret reader must exist')
+  const root = mkdtempSync(join(tmpdir(), 'onprem-smtp-secret-'))
+  const file = join(root, 'credential')
+  try {
+    for (const [value, accepted] of [
+      ['Synthetic+!2026@*', true],
+      ['a'.repeat(256), true],
+      ['a'.repeat(257), false],
+      ['bad"value', false],
+      ['bad\\value', false],
+      ['bad value', false],
+      ['bad$value', false],
+    ]) {
+      writeFileSync(file, value, { mode: 0o600 })
+      const result = spawnSync('sh', ['-c', `die() { exit 42; }\n${reader}\nread_secret "$1"`, 'sh', file], { encoding: 'utf8' })
+      assert.equal(result.status === 0, accepted, `credential acceptance mismatch for ${JSON.stringify(value)}`)
+      if (accepted) assert.equal(result.stdout, value)
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('ONP-3B SMTP sender validator fails closed for malformed or unsafe mutations', () => {

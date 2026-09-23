@@ -12,10 +12,25 @@ test('company overlay is explicit and base runtime remains synthetic', () => {
   assert.match(overlay, /HR_AXIS_DATA_CLASS: company/)
   assert.match(overlay, /HR_AXIS_COMPANY_DATA_ENABLED: "true"/)
   assert.deepEqual([...overlay.split('\nnetworks:')[0].matchAll(/^  ([a-z-]+):$/gm)].map(match => match[1]),
-    ['api', 'worker', 'migrator', 'synthetic-seed', 'identity-binder', 'keycloak-bootstrap', 'caddy', 'frontend', 'keycloak', 'redis', 'postgres'])
+    ['api', 'worker', 'migrator', 'synthetic-seed', 'identity-binder', 'keycloak-bootstrap', 'caddy', 'frontend', 'keycloak', 'smtp-egress', 'redis', 'postgres'])
   assert.match(overlay, /com\.hr-axis\.data-class: company/)
   assert.equal((overlay.match(/labels: \*company-labels/g) ?? []).length, 18)
-  assert.doesNotMatch(overlay, /\b(?:ports|secrets|privileged|cap_add|command|entrypoint):/)
+  const relay = overlay.match(/^  smtp-egress:\n[\s\S]*?(?=^  redis:\n)/m)?.[0]
+  assert.ok(relay)
+  assert.doesNotMatch(overlay.replace(relay, ''), /\b(?:ports|secrets|privileged|cap_add|command|entrypoint):/)
+  assert.match(overlay, /smtp\.office365\.com=172\.30\.10\.40/)
+  assert.match(overlay, /smtp-egress:\n        condition: service_healthy/)
+  assert.match(relay, /image: \$\{HR_AXIS_BACKEND_IMAGE:\?/)
+  assert.match(relay, /command: \["dist\/src\/onprem\/smtp-egress-proxy\.js"\]/)
+  assert.match(relay, /ipv4_address: 172\.30\.0\.40/)
+  assert.match(relay, /ipv4_address: 172\.30\.10\.40/)
+  assert.match(relay, /read_only: true/)
+  assert.match(relay, /cap_drop: \[ALL\]/)
+  assert.match(relay, /security_opt: \[no-new-privileges:true\]/)
+  assert.doesNotMatch(relay, /\b(?:ports|secrets|privileged|cap_add):/)
+  const proxy = read('backend/nestjs/src/onprem/smtp-egress-proxy.ts')
+  assert.match(proxy, /const OFFICE365_HOST = "smtp\.office365\.com"/)
+  assert.match(proxy, /const OFFICE365_PORT = 587/)
 })
 
 test('company mode keeps synthetic initialization closed at process and database boundaries', () => {

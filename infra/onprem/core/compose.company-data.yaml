@@ -32,6 +32,49 @@ services:
     labels: *company-labels
   keycloak:
     labels: *company-labels
+    extra_hosts:
+      - "smtp.office365.com=172.30.10.40"
+    depends_on:
+      smtp-egress:
+        condition: service_healthy
+  smtp-egress:
+    image: ${HR_AXIS_BACKEND_IMAGE:?set an immutable backend image reference}
+    profiles: [runtime]
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command: ["dist/src/onprem/smtp-egress-proxy.js"]
+    networks:
+      edge:
+        ipv4_address: 172.30.0.40
+      proxy:
+        ipv4_address: 172.30.10.40
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: "0"
+    expose:
+      - "587"
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: [CMD, /nodejs/bin/node, -e, "require('node:http').get('http://127.0.0.1:1588/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    cpus: 0.1
+    mem_limit: 128m
+    pids_limit: 32
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+    labels:
+      com.hr-axis.project: ${HR_AXIS_PROJECT_ID:-hr-axis-onprem-core}
+      com.hr-axis.data-class: company
+      com.hr-axis.release-id: ${HR_AXIS_RELEASE_ID:?set the signed release identity}
   redis:
     labels: *company-labels
   postgres:
