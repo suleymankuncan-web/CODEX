@@ -28,6 +28,9 @@ describe("SalesTargetIncentiveAdminPackageReadRepository", () => {
     expect(text).toContain("WHERE store.store_type = 'company'");
     expect(text).toContain("AND store.status = 'active'");
     expect(text).toContain("AND store.region_id IS NOT NULL");
+    expect(text).toContain("INNER JOIN ops.user_action_store_assignment manager_store");
+    expect(text).toContain("assigned_store.region_id = base_region.region_id");
+    expect(text).not.toContain("role_assignment.region_id = base_region.region_id");
     expect(params).toEqual([
       "2026-05",
       ["00000000-0000-4000-8000-000000000001"],

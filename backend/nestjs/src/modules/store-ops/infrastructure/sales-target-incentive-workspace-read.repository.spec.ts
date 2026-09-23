@@ -14,6 +14,10 @@ describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
     const [sql, params] = query.mock.calls[0];
     expect(String(sql)).toContain("store.store_id = ANY($1::uuid[])");
     expect(String(sql)).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(String(sql)).toContain("INNER JOIN ops.user_action_store_assignment manager_store");
+    expect(String(sql)).toContain("manager_store.store_id = store.store_id");
+    expect(String(sql)).toContain("user_account.is_active = TRUE");
+    expect(String(sql)).not.toContain("role_assignment.region_id = store.region_id");
     expect(String(sql)).toContain("AT TIME ZONE 'Europe/Istanbul'");
     expect(String(sql)).toContain("INTERVAL '1 microsecond'");
     expect(params).toEqual([

@@ -164,7 +164,7 @@ describe("RankingReportingReadRepository source filters", () => {
     }
   });
 
-  it("lists every active company Region Manager, including managers reached through direct stores", async () => {
+  it("lists active Region Managers only through direct active company store assignments", async () => {
     const { query, repository } = createRepository();
 
     await repository.listRankingFilterOptions({
@@ -177,10 +177,16 @@ describe("RankingReportingReadRepository source filters", () => {
     const managerSql = String(query.mock.calls[0][0]);
     expect(managerSql).toContain("role.role_code = 'REGION_MANAGER'");
     expect(managerSql).toContain("ops.user_action_store_assignment manager_store");
+    expect(managerSql).toContain("INNER JOIN ops.user_action_store_assignment manager_store");
+    expect(managerSql).toContain("INNER JOIN ops.store assigned_store");
+    expect(managerSql).toContain("assigned_store.store_type = 'company'");
+    expect(managerSql).toContain("assigned_store.status = 'active'");
     expect(managerSql).toContain("assigned_store.company_id = ANY($1::uuid[])");
     expect(managerSql).toContain("ARRAY_AGG(DISTINCT assigned_store.store_id::text)");
     expect(managerSql).toContain("ua.is_active = TRUE");
     expect(managerSql).not.toContain("employee.employment_status = 'active'");
+    expect(managerSql).not.toContain("ura.region_id =");
+    expect(managerSql).not.toContain("role_store.company_id");
   });
 
   it("joins approved personnel target references for ranking personnel NET_SALES rows", async () => {
