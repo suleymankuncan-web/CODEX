@@ -30,6 +30,7 @@ export function applyRankingOpenApi(paths: Record<string, unknown>) {
     stringQuery("periodType", "Ranking period type.", { enum: ["daily", "monthly"] }),
     stringQuery("periodStart", "ISO date identifying the requested period.", { format: "date" }),
     stringQuery("regionManagerUserId", "Optional Region Manager drill filter.", { format: "uuid" }),
+    stringQuery("regionManagerSearch", "Search Region Managers by name before pagination."),
     stringQuery("regionId", "Optional region filter.", { format: "uuid" }),
     stringQuery("storeId", "Optional store filter.", { format: "uuid" }),
     stringQuery("search", "Optional store or personnel search text."),

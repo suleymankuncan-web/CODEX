@@ -44,6 +44,7 @@ export class GetRankingQueryDto {
 
   @IsOptional()
   @IsString()
+  @ApiPropertyOptional()
   regionManagerSearch?: string;
 
   @IsOptional()
