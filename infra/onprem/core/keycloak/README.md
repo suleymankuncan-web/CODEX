@@ -21,3 +21,10 @@ SMTP values are a wiring contract. CI uses an invalid synthetic relay host and
 does not make a network call. The company SMTP relay, sender, TLS policy, and
 credential rotation remain external IT gates. Hosted Clerk is not changed and
 no user migration or e-mail auto-linking is attempted.
+
+The company operator may set both `KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS` and
+`KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS` to `604800` for the approved seven-day
+Remember Me policy. Both default to `0`, which leaves the normal realm SSO
+limits unchanged; bootstrap rejects partial, nonnumeric, or out-of-range
+settings. `BROWSER_SESSION_TTL_SECONDS=3600` reduces app-session redirects but
+does not store a password or grant access after the Keycloak SSO session ends.

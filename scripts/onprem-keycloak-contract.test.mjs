@@ -42,6 +42,34 @@ test('ONP-3B Keycloak contract accepts the committed optimized runtime shape', (
   assert.equal(result.errors.length, 0)
 })
 
+test('on-prem Remember Me uses separate bounded SSO limits without changing normal sessions', () => {
+  const { bootstrapScript, compose, envTemplate } = input()
+  assert.match(compose, /BROWSER_SESSION_TTL_SECONDS: \$\{BROWSER_SESSION_TTL_SECONDS:-900\}/)
+  assert.match(compose, /KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS: \$\{KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS:-0\}/)
+  assert.match(compose, /KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS: \$\{KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS:-0\}/)
+  assert.match(envTemplate, /^KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS=0$/m)
+  assert.match(envTemplate, /^KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS=0$/m)
+  assert.match(bootstrapScript, /-s rememberMe=true \\\n  -s ssoSessionIdleTimeoutRememberMe="\$remember_idle" \\\n  -s ssoSessionMaxLifespanRememberMe="\$remember_max"/)
+  assert.doesNotMatch(bootstrapScript, /-s ssoSessionIdleTimeout=(?!RememberMe)/)
+  assert.doesNotMatch(bootstrapScript, /-s ssoSessionMaxLifespan=(?!RememberMe)/)
+  assert.match(bootstrapScript, /ssoSessionIdleTimeoutRememberMe.*remember_idle.*remember-me parity mismatch/)
+  assert.match(bootstrapScript, /ssoSessionMaxLifespanRememberMe.*remember_max.*remember-me parity mismatch/)
+
+  const policy = bootstrapScript.match(/^case "\$remember_idle:\$remember_max" in[\s\S]*?^esac/m)?.[0]
+  assert.ok(policy, 'bounded Remember Me policy must be present')
+  const check = (idle, max) => spawnSync('sh', ['-ec',
+    `die() { exit 64; }; remember_idle="$1"; remember_max="$2"; ${policy}`,
+    'remember-me-policy', idle, max,
+  ], { encoding: 'utf8' }).status
+
+  for (const [idle, max] of [['0', '0'], ['1800', '1800'], ['604800', '604800'], ['604800', '2592000']]) {
+    assert.equal(check(idle, max), 0, `${idle}/${max} should be accepted`)
+  }
+  for (const [idle, max] of [['0', '604800'], ['1799', '1800'], ['604800', '604799'], ['604800', '2592001'], ['bad', '604800']]) {
+    assert.notEqual(check(idle, max), 0, `${idle}/${max} should fail closed`)
+  }
+})
+
 test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with checksum-pinned 4.1.137 artifacts', () => {
   const dockerfile = input().keycloakDockerfile
   const expectedIds = [
