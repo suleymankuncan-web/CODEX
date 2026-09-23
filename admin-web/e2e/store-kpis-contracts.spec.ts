@@ -75,10 +75,13 @@ test('personnel store score allocation uses server shares, survives filtering an
   })
   await page.route('**/api/reports/rankings**', async route => {
     const fixture = createPersonnelRankingsFixture()
-    const daily = new URL(route.request().url()).searchParams.get('periodType') === 'daily'
+    const params = new URL(route.request().url()).searchParams
+    const daily = params.get('periodType') === 'daily'
     const first = { ...fixture.personnelLeaderboard.items[0], storeScoreShare: daily ? 0.25 : 43 / 95 }
     const rows = [first, { ...first, employeeId: 'employee-2', displayName: 'Ece Demo', storeScoreShare: daily ? 0.75 : 52 / 95 }]
-    await route.fulfill({ json: { ...fixture, personnelLeaderboard: { ...fixture.personnelLeaderboard, items: rows, managedStorePersonnel: rows, managedStorePersonnelMeta: { limit: 50, offset: 0, total: 2 } } } })
+    const search = params.get('search')?.trim().toLocaleLowerCase('tr-TR') ?? ''
+    const matchingRows = search ? rows.filter(row => row.displayName.toLocaleLowerCase('tr-TR').includes(search)) : rows
+    await route.fulfill({ json: { ...fixture, personnelLeaderboard: { ...fixture.personnelLeaderboard, items: matchingRows, managedStorePersonnel: matchingRows, managedStorePersonnelMeta: { limit: 50, offset: 0, total: matchingRows.length } } } })
   })
   await page.goto('/store/kpis?periodStart=2026-07-01&view=personnel')
   const people = page.getByRole('region', { name: 'Personel KPI', exact: true })
@@ -164,9 +167,13 @@ test('store manager overview keeps scoped personnel, accurate ratios and recover
   await routeKpiContractApi(page)
   await page.route('**/api/reports/rankings**', async route => {
     const fixture = createPersonnelRankingsFixture()
+    const search = new URL(route.request().url()).searchParams.get('search')?.trim().toLocaleLowerCase('tr-TR') ?? ''
+    const managedRows = fixture.personnelLeaderboard.managedStorePersonnel.filter(row => !search || row.displayName.toLocaleLowerCase('tr-TR').includes(search))
     await route.fulfill({ json: { ...fixture, personnelLeaderboard: {
       ...fixture.personnelLeaderboard,
       items: [{ ...fixture.personnelLeaderboard.items[0], employeeId: 'outside-store', displayName: 'Başka Mağaza Personeli' }],
+      managedStorePersonnel: managedRows,
+      managedStorePersonnelMeta: { limit: 50, offset: 0, total: managedRows.length },
     } } })
   })
   await page.goto('/store/kpis?periodStart=2026-07-01')
