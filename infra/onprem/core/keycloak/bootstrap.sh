@@ -317,8 +317,19 @@ server="${KEYCLOAK_SERVER:-http://keycloak:8080}"
 realm="${KEYCLOAK_REALM:-store-ops}"
 client_id="${KEYCLOAK_CLIENT_ID:-store-ops-admin-web}"
 public_origin="${KEYCLOAK_PUBLIC_ORIGIN:-}"
+remember_idle="${KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS:-0}"
+remember_max="${KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS:-0}"
 [ "$realm" = 'store-ops' ] || die 'only the approved store-ops realm is supported'
 [ "$client_id" = 'store-ops-admin-web' ] || die 'only the approved browser client is supported'
+case "$remember_idle:$remember_max" in
+  *[!0-9:]*|:*|*:) die 'remember-me session timeouts must be numeric' ;;
+  0:0) ;;
+  *)
+    [ "$remember_idle" -ge 1800 ] &&
+      [ "$remember_max" -ge "$remember_idle" ] &&
+      [ "$remember_max" -le 2592000 ] || die 'remember-me session timeouts must be between 30 minutes and 30 days with max >= idle'
+    ;;
+esac
 validate_public_origin "$public_origin"
 realm_config_file="${KEYCLOAK_REALM_CONFIG_FILE:-/opt/keycloak/realm-config.json}"
 [ -r "$realm_config_file" ] || die 'sanitized realm configuration fixture is unavailable'
@@ -518,7 +529,9 @@ kcadm_quiet update "realms/$realm" \
   -s duplicateEmailsAllowed=false \
   -s resetPasswordAllowed=true \
   -s verifyEmail=true \
-  -s rememberMe=true >/dev/null 2>&1 || die 'realm settings reconciliation failed'
+  -s rememberMe=true \
+  -s ssoSessionIdleTimeoutRememberMe="$remember_idle" \
+  -s ssoSessionMaxLifespanRememberMe="$remember_max" >/dev/null 2>&1 || die 'realm settings reconciliation failed'
 
 for role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
   if ! kcadm_query get "roles/$role" -r "$realm" >/dev/null 2>&1; then
@@ -668,6 +681,9 @@ printf '%s' "$realm_compact" | grep -Fq '"registrationAllowed":false' || die 're
 printf '%s' "$realm_compact" | grep -Fq '"loginWithEmailAllowed":true' || die 'realm parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"resetPasswordAllowed":true' || die 'realm parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"verifyEmail":true' || die 'realm parity mismatch'
+printf '%s' "$realm_compact" | grep -Fq '"rememberMe":true' || die 'remember-me parity mismatch'
+printf '%s' "$realm_compact" | grep -Fq '"ssoSessionIdleTimeoutRememberMe":'"$remember_idle" || die 'remember-me parity mismatch'
+printf '%s' "$realm_compact" | grep -Fq '"ssoSessionMaxLifespanRememberMe":'"$remember_max" || die 'remember-me parity mismatch'
 for expected_smtp_field in '"host":"'"$smtp_host"'"' '"port":"'"$smtp_port"'"' '"from":"'"$smtp_from"'"' '"starttls":"'"$smtp_starttls"'"' '"auth":"true"' '"user":"'"$smtp_auth_user"'"'; do
   printf '%s' "$realm_compact" | grep -Fq "$expected_smtp_field" || die 'SMTP parity mismatch'
 done
