@@ -158,7 +158,7 @@ test('proof archive temp root is disjoint from workspace while nested/equal root
   assert.equal(pathsAreDisjoint('C:/workspace', 'C:/workspace-other'), true)
 })
 
-test('git archive is sealed private before its content is accepted', { skip: process.platform === 'win32' }, () => {
+test('git archive is read-only inside a private root before its content is accepted', { skip: process.platform === 'win32' }, () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-proof-archive-'))
   try {
     const archive = archiveWorkspace('/synthetic-workspace', root, {
@@ -170,7 +170,9 @@ test('git archive is sealed private before its content is accepted', { skip: pro
         return { status: 0, stdout: '' }
       },
     })
-    assert.equal(statSync(archive.archivePath).mode & 0o777, 0o600)
+    assert.equal(statSync(root).mode & 0o777, 0o700)
+    assert.equal(statSync(archive.archivePath).mode & 0o777, 0o644)
+    assert.equal(isPrivateModeAcceptable(statSync(archive.archivePath).mode), true)
     assert.match(archive.archiveSha256, /^[a-f0-9]{64}$/)
   } finally {
     rmSync(root, { recursive: true, force: true })

@@ -502,7 +502,9 @@ export function archiveWorkspace(
   runChecked('git', ['archive', '--format=tar', '--output', archivePath, 'HEAD'], { cwd: workspaceRoot, commandRunner, env })
   const archiveStat = lstatSync(archivePath)
   if (!archiveStat.isFile() || archiveStat.isSymbolicLink()) fail('proof archive is not a regular file')
-  if (process.platform !== 'win32') chmodSync(archivePath, 0o600)
+  // The private 0700 temp root protects the archive on the host. Its bind mount
+  // must remain readable by the isolated root container after all DAC caps drop.
+  if (process.platform !== 'win32') chmodSync(archivePath, 0o644)
   validateSafePath(archivePath, { root: temporaryRoot, kind: 'file' })
   return { archivePath, archiveSha256: sha256(readFileSync(archivePath)) }
 }
