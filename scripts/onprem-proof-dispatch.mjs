@@ -500,6 +500,9 @@ export function archiveWorkspace(
 ) {
   const archivePath = join(temporaryRoot, 'source.tar')
   runChecked('git', ['archive', '--format=tar', '--output', archivePath, 'HEAD'], { cwd: workspaceRoot, commandRunner, env })
+  const archiveStat = lstatSync(archivePath)
+  if (!archiveStat.isFile() || archiveStat.isSymbolicLink()) fail('proof archive is not a regular file')
+  if (process.platform !== 'win32') chmodSync(archivePath, 0o600)
   validateSafePath(archivePath, { root: temporaryRoot, kind: 'file' })
   return { archivePath, archiveSha256: sha256(readFileSync(archivePath)) }
 }

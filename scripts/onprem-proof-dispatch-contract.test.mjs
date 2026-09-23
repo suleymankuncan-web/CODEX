@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,6 +9,7 @@ import {
   LOCAL_PROOF_RECEIPT_PATH,
   LOCAL_STATUS_CONTEXT,
   PINNED_NODE_IMAGE,
+  archiveWorkspace,
   buildDispatchInputs,
   buildCanonicalProofInvocation,
   buildLinuxProofDockerArgs,
@@ -155,6 +156,43 @@ test('proof archive temp root is disjoint from workspace while nested/equal root
   assert.equal(pathsAreDisjoint('C:/workspace', 'C:/workspace/tmp'), false)
   assert.equal(pathsAreDisjoint('C:/workspace', 'C:/workspace'), false)
   assert.equal(pathsAreDisjoint('C:/workspace', 'C:/workspace-other'), true)
+})
+
+test('git archive is sealed private before its content is accepted', { skip: process.platform === 'win32' }, () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-proof-archive-'))
+  try {
+    const archive = archiveWorkspace('/synthetic-workspace', root, {
+      commandRunner: (command, args) => {
+        assert.equal(command, 'git')
+        const archivePath = args[args.indexOf('--output') + 1]
+        writeFileSync(archivePath, 'synthetic source archive')
+        chmodSync(archivePath, 0o664)
+        return { status: 0, stdout: '' }
+      },
+    })
+    assert.equal(statSync(archive.archivePath).mode & 0o777, 0o600)
+    assert.match(archive.archiveSha256, /^[a-f0-9]{64}$/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('git archive refuses a symlink output before changing its target permissions', { skip: process.platform === 'win32' }, () => {
+  const root = mkdtempSync(join(tmpdir(), 'onprem-proof-archive-link-'))
+  try {
+    const target = join(root, 'target')
+    writeFileSync(target, 'untouched')
+    chmodSync(target, 0o644)
+    assert.throws(() => archiveWorkspace('/synthetic-workspace', root, {
+      commandRunner: (_command, args) => {
+        symlinkSync(target, args[args.indexOf('--output') + 1])
+        return { status: 0, stdout: '' }
+      },
+    }), /regular file/i)
+    assert.equal(statSync(target).mode & 0o777, 0o644)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('long proof commands stream output while identity probes retain bounded capture', () => {
