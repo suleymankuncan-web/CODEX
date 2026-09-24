@@ -14,6 +14,15 @@ export type SalesTargetIncentiveReadScopeInput = {
   periodEnd: string;
   assignmentAsOfDate: string;
   closeCutoffAt?: string;
+  salesSource?: "monthly" | "daily";
+};
+
+export type SalesTargetIncentiveDailySalesRow = {
+  scope_type: "store" | "employee";
+  store_id: string;
+  employee_id: string | null;
+  actual_amount: string;
+  last_day: string;
 };
 
 export type SalesTargetIncentiveStoreSourceRow = {
@@ -184,6 +193,9 @@ export class SalesTargetIncentiveReadRepository {
     ];
     const closeCutoffClause = this.appendCloseCutoffClause(input, params, "ib");
     const clauses = this.buildStoreScopeClauses(input, params);
+    const storeSalesJoin = input.salesSource === "daily"
+      ? dailyStoreSalesJoin(closeCutoffClause)
+      : monthlyStoreSalesJoin(closeCutoffClause);
 
     const result =
       await this.databaseService.query<SalesTargetIncentiveStoreSourceRow>(
@@ -288,33 +300,7 @@ export class SalesTargetIncentiveReadRepository {
             ORDER BY ua.created_at DESC, ua.user_id DESC
             LIMIT 1
           ) manager_user ON TRUE
-          LEFT JOIN LATERAL (
-            SELECT
-              ka.actual_value,
-              ka.source_batch_id,
-              ib.import_batch_id::text AS import_batch_id,
-              ka.source_payload_hash,
-              ka.last_synced_at
-            FROM ops.kpi_actual ka
-            INNER JOIN ops.kpi_definition kd
-              ON kd.kpi_id = ka.kpi_id
-             AND kd.kpi_code = 'NET_SALES'
-             AND kd.is_active = TRUE
-            INNER JOIN stg.import_batch ib
-              ON ib.source_batch_id = ka.source_batch_id
-             AND ib.entity_type = 'kpi'
-             ${closeCutoffClause}
-            WHERE ka.store_id = s.store_id
-              AND ka.scope_type = 'store'
-              AND ka.period_type = 'monthly'
-              AND ka.period_start = $1::date
-              AND ka.period_end = $2::date
-              AND ka.source_type = 'integration'
-              AND COALESCE(ka.source_type, '') <> 'demo_seed'
-              AND ka.source_batch_id IS NOT NULL
-            ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
-            LIMIT 1
-          ) store_sales ON TRUE
+          ${storeSalesJoin}
           ORDER BY s.store_name ASC, s.store_id ASC
         `,
         params,
@@ -331,6 +317,12 @@ export class SalesTargetIncentiveReadRepository {
     ];
     const closeCutoffClause = this.appendCloseCutoffClause(input, params, "ib");
     const clauses = this.buildStoreScopeClauses(input, params);
+    const storeSalesJoin = input.salesSource === "daily"
+      ? dailyStoreSalesJoin(closeCutoffClause)
+      : monthlyStoreSalesJoin(closeCutoffClause);
+    const personnelSalesJoin = input.salesSource === "daily"
+      ? dailyPersonnelSalesJoin(closeCutoffClause)
+      : monthlyPersonnelSalesJoin(closeCutoffClause);
 
     const result =
       await this.databaseService.query<SalesTargetIncentivePersonnelSourceRow>(
@@ -442,31 +434,7 @@ export class SalesTargetIncentiveReadRepository {
             ORDER BY kt.kpi_target_id DESC
             LIMIT 1
           ) imported_store_target ON TRUE
-          LEFT JOIN LATERAL (
-            SELECT
-              ka.actual_value,
-              ka.source_batch_id,
-              ib.import_batch_id::text AS import_batch_id
-            FROM ops.kpi_actual ka
-            INNER JOIN ops.kpi_definition kd
-              ON kd.kpi_id = ka.kpi_id
-             AND kd.kpi_code = 'NET_SALES'
-             AND kd.is_active = TRUE
-            INNER JOIN stg.import_batch ib
-              ON ib.source_batch_id = ka.source_batch_id
-             AND ib.entity_type = 'kpi'
-             ${closeCutoffClause}
-            WHERE ka.store_id = s.store_id
-              AND ka.scope_type = 'store'
-              AND ka.period_type = 'monthly'
-              AND ka.period_start = $1::date
-              AND ka.period_end = $2::date
-              AND ka.source_type = 'integration'
-              AND COALESCE(ka.source_type, '') <> 'demo_seed'
-              AND ka.source_batch_id IS NOT NULL
-            ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
-            LIMIT 1
-          ) store_sales ON TRUE
+          ${storeSalesJoin}
           LEFT JOIN ops.personnel_target_reference ptr
             ON ptr.employee_id = assignment.employee_id
            AND ptr.store_id = assignment.store_id
@@ -475,59 +443,7 @@ export class SalesTargetIncentiveReadRepository {
            AND ptr.period_end = $2::date
            AND ptr.target_type = 'monthly_sales_target'
            AND ptr.status = 'approved'
-          LEFT JOIN LATERAL (
-            SELECT
-              ka.actual_value,
-              ka.source_batch_id,
-              ib.import_batch_id::text AS import_batch_id,
-              ka.source_payload_hash,
-              ka.last_synced_at
-            FROM ops.kpi_actual ka
-            INNER JOIN ops.kpi_definition kd
-              ON kd.kpi_id = ka.kpi_id
-             AND kd.kpi_code = 'NET_SALES'
-             AND kd.is_active = TRUE
-            INNER JOIN stg.import_batch ib
-              ON ib.source_batch_id = ka.source_batch_id
-             AND ib.entity_type = 'kpi'
-             ${closeCutoffClause}
-            WHERE ka.store_id = assignment.store_id
-              AND ka.employee_id = assignment.employee_id
-              AND ka.scope_type = 'employee'
-              AND ka.period_type = 'monthly'
-              AND ka.period_start = $1::date
-              AND ka.period_end = $2::date
-              AND ka.source_type = 'integration'
-              AND COALESCE(ka.source_type, '') <> 'demo_seed'
-              AND ka.source_batch_id IS NOT NULL
-              AND (
-                ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'
-                OR EXISTS (
-                  SELECT 1
-                  FROM stg.kpi_raw kr
-                  INNER JOIN stg.external_id_map employee_map
-                    ON employee_map.integration_source_id = ib.integration_source_id
-                   AND employee_map.entity_type = 'employee'
-                   AND employee_map.external_id = kr.employee_external_ref
-                   AND employee_map.internal_id = assignment.employee_id
-                   AND employee_map.is_active = TRUE
-                  INNER JOIN stg.external_id_map store_map
-                    ON store_map.integration_source_id = ib.integration_source_id
-                   AND store_map.entity_type = 'store'
-                   AND store_map.external_id = kr.store_external_ref
-                   AND store_map.internal_id = assignment.store_id
-                   AND store_map.is_active = TRUE
-                  WHERE kr.import_batch_id = ib.import_batch_id
-                    AND kr.source_metric_id = 'NET_SALES'
-                    AND kr.period_start = ka.period_start
-                    AND kr.period_end = ka.period_end
-                    AND kr.payload_json ->> 'scopeType' = 'employee'
-                    AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
-                )
-              )
-            ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
-            LIMIT 1
-          ) personnel_sales ON TRUE
+          ${personnelSalesJoin}
           LEFT JOIN LATERAL (
             SELECT ua.user_id
             FROM ops.user_account ua
@@ -541,6 +457,38 @@ export class SalesTargetIncentiveReadRepository {
         params,
       );
 
+    return result.rows;
+  }
+
+  /** Daily NET_SALES tracking; automatic close reuses these facts as a monthly sum. */
+  async listDailySalesTracking(input: { storeIds: string[]; periodStart: string; throughDate: string }) {
+    if (input.storeIds.length === 0) return [];
+    const result = await this.databaseService.query<SalesTargetIncentiveDailySalesRow>(`
+      WITH daily AS (
+        SELECT ka.scope_type, ka.store_id,
+          CASE WHEN ka.scope_type = 'employee' THEN ka.employee_id ELSE NULL END AS employee_id,
+          ka.period_start AS day,
+          MAX(ka.actual_value) AS actual_amount
+        FROM ops.kpi_actual ka
+        INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id AND kd.kpi_code = 'NET_SALES'
+        INNER JOIN ops.store s ON s.store_id = ka.store_id AND s.kpi_import_enabled = TRUE
+        WHERE ka.store_id = ANY($1::uuid[])
+          AND ka.scope_type IN ('store', 'employee')
+          AND (ka.scope_type = 'store' OR ka.employee_id IS NOT NULL)
+          AND ka.period_type = 'daily'
+          AND ka.period_start = ka.period_end
+          AND ka.period_start BETWEEN $2::date AND $3::date
+          AND COALESCE(ka.source_type, '') <> 'demo_seed'
+          AND ka.actual_value IS NOT NULL
+        GROUP BY ka.scope_type, ka.store_id,
+          CASE WHEN ka.scope_type = 'employee' THEN ka.employee_id ELSE NULL END,
+          ka.period_start
+      )
+      SELECT scope_type, store_id::text AS store_id, employee_id::text AS employee_id,
+        SUM(actual_amount)::text AS actual_amount, MAX(day)::text AS last_day
+      FROM daily
+      GROUP BY scope_type, store_id, employee_id
+    `, [input.storeIds, input.periodStart, input.throughDate]);
     return result.rows;
   }
 
@@ -686,4 +634,141 @@ export class SalesTargetIncentiveReadRepository {
     params.push(input.closeCutoffAt);
     return `AND COALESCE(${importAlias}.finished_at, ${importAlias}.started_at) <= $${params.length}::timestamptz`;
   }
+}
+
+function monthlyStoreSalesJoin(closeCutoffClause: string) {
+  return `LEFT JOIN LATERAL (
+    SELECT ka.actual_value, ka.source_batch_id,
+      ib.import_batch_id::text AS import_batch_id,
+      ka.source_payload_hash, ka.last_synced_at
+    FROM ops.kpi_actual ka
+    INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
+      AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
+    INNER JOIN stg.import_batch ib ON ib.source_batch_id = ka.source_batch_id
+      AND ib.entity_type = 'kpi' ${closeCutoffClause}
+    WHERE ka.store_id = s.store_id AND ka.scope_type = 'store'
+      AND ka.period_type = 'monthly' AND ka.period_start = $1::date
+      AND ka.period_end = $2::date AND ka.source_type = 'integration'
+      AND ka.source_batch_id IS NOT NULL
+    ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
+    LIMIT 1
+  ) store_sales ON TRUE`;
+}
+
+// The daily facts are additive. The latest source row supplies display lineage;
+// close-run lineage separately records every contributing import batch.
+function dailyStoreSalesJoin(closeCutoffClause: string) {
+  return `LEFT JOIN LATERAL (
+    SELECT SUM(ka.actual_value) AS actual_value,
+      (ARRAY_AGG(ka.source_batch_id ORDER BY ka.period_start DESC))[1] AS source_batch_id,
+      (ARRAY_AGG(ib.import_batch_id::text ORDER BY ka.period_start DESC))[1] AS import_batch_id,
+      (ARRAY_AGG(ka.source_payload_hash ORDER BY ka.period_start DESC))[1] AS source_payload_hash,
+      MAX(ka.last_synced_at) AS last_synced_at
+    FROM ops.kpi_actual ka
+    INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
+      AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
+    INNER JOIN LATERAL (
+      SELECT ib.import_batch_id, ib.finished_at, ib.started_at
+      FROM stg.import_batch ib
+      WHERE ib.source_batch_id = ka.source_batch_id AND ib.entity_type = 'kpi'
+        AND ib.status = 'completed' AND ib.error_count = 0
+        AND s.company_id = ANY(ib.company_ids) ${closeCutoffClause}
+      ORDER BY ib.finished_at DESC NULLS LAST, ib.import_batch_id DESC
+      LIMIT 1
+    ) ib ON TRUE
+    WHERE ka.store_id = s.store_id AND ka.scope_type = 'store'
+      AND ka.period_type = 'daily' AND ka.period_start = ka.period_end
+      AND ka.period_start BETWEEN $1::date AND $2::date
+      AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
+  ) store_sales ON TRUE`;
+}
+
+function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
+  return `LEFT JOIN LATERAL (
+    SELECT ka.actual_value, ka.source_batch_id,
+      ib.import_batch_id::text AS import_batch_id,
+      ka.source_payload_hash, ka.last_synced_at
+    FROM ops.kpi_actual ka
+    INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
+      AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
+    INNER JOIN stg.import_batch ib ON ib.source_batch_id = ka.source_batch_id
+      AND ib.entity_type = 'kpi' ${closeCutoffClause}
+    WHERE ka.store_id = assignment.store_id
+      AND ka.employee_id = assignment.employee_id
+      AND ka.scope_type = 'employee' AND ka.period_type = 'monthly'
+      AND ka.period_start = $1::date AND ka.period_end = $2::date
+      AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
+      AND (
+        ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'
+        OR EXISTS (
+          SELECT 1 FROM stg.kpi_raw kr
+          INNER JOIN stg.external_id_map employee_map
+            ON employee_map.integration_source_id = ib.integration_source_id
+           AND employee_map.entity_type = 'employee'
+           AND employee_map.external_id = kr.employee_external_ref
+           AND employee_map.internal_id = assignment.employee_id
+           AND employee_map.is_active = TRUE
+          INNER JOIN stg.external_id_map store_map
+            ON store_map.integration_source_id = ib.integration_source_id
+           AND store_map.entity_type = 'store'
+           AND store_map.external_id = kr.store_external_ref
+           AND store_map.internal_id = assignment.store_id
+           AND store_map.is_active = TRUE
+          WHERE kr.import_batch_id = ib.import_batch_id
+            AND kr.source_metric_id = 'NET_SALES'
+            AND kr.period_start = ka.period_start AND kr.period_end = ka.period_end
+            AND kr.payload_json ->> 'scopeType' = 'employee'
+            AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
+        )
+      )
+    ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
+    LIMIT 1
+  ) personnel_sales ON TRUE`;
+}
+
+function dailyPersonnelSalesJoin(closeCutoffClause: string) {
+  return `LEFT JOIN LATERAL (
+    SELECT SUM(ka.actual_value) AS actual_value,
+      (ARRAY_AGG(ka.source_batch_id ORDER BY ka.period_start DESC))[1] AS source_batch_id,
+      (ARRAY_AGG(ib.import_batch_id::text ORDER BY ka.period_start DESC))[1] AS import_batch_id,
+      (ARRAY_AGG(ka.source_payload_hash ORDER BY ka.period_start DESC))[1] AS source_payload_hash,
+      MAX(ka.last_synced_at) AS last_synced_at
+    FROM ops.kpi_actual ka
+    INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
+      AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
+    INNER JOIN LATERAL (
+      SELECT ib.import_batch_id, ib.integration_source_id, ib.finished_at, ib.started_at
+      FROM stg.import_batch ib
+      WHERE ib.source_batch_id = ka.source_batch_id AND ib.entity_type = 'kpi'
+        AND ib.status = 'completed' AND ib.error_count = 0
+        AND s.company_id = ANY(ib.company_ids) ${closeCutoffClause}
+      ORDER BY ib.finished_at DESC NULLS LAST, ib.import_batch_id DESC
+      LIMIT 1
+    ) ib ON TRUE
+    WHERE ka.store_id = assignment.store_id
+      AND ka.employee_id = assignment.employee_id AND ka.scope_type = 'employee'
+      AND ka.period_type = 'daily' AND ka.period_start = ka.period_end
+      AND ka.period_start BETWEEN $1::date AND $2::date
+      AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM stg.kpi_raw kr
+        INNER JOIN stg.external_id_map employee_map
+          ON employee_map.integration_source_id = ib.integration_source_id
+         AND employee_map.entity_type = 'employee'
+         AND employee_map.external_id = kr.employee_external_ref
+         AND employee_map.internal_id = assignment.employee_id
+         AND employee_map.is_active = TRUE
+        INNER JOIN stg.external_id_map store_map
+          ON store_map.integration_source_id = ib.integration_source_id
+         AND store_map.entity_type = 'store'
+         AND store_map.external_id = kr.store_external_ref
+         AND store_map.internal_id = assignment.store_id
+         AND store_map.is_active = TRUE
+        WHERE kr.import_batch_id = ib.import_batch_id
+          AND kr.source_metric_id = 'NET_SALES'
+          AND kr.period_start = ka.period_start AND kr.period_end = ka.period_end
+          AND kr.payload_json ->> 'scopeType' = 'employee'
+          AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
+      )
+  ) personnel_sales ON TRUE`;
 }

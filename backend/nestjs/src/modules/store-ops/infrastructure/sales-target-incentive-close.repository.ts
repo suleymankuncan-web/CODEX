@@ -71,6 +71,40 @@ export type SalesTargetIncentiveCloseRunSummary = {
 export class SalesTargetIncentiveCloseRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  async listAutomaticCloseCompanyIds(input: { periodKey: string; finalDay: string }) {
+    const result = await this.databaseService.query<{ company_id: string }>(`
+      SELECT DISTINCT store.company_id::text AS company_id
+      FROM ops.store store
+      INNER JOIN ops.kpi_definition definition
+        ON definition.kpi_code = 'NET_SALES'
+       AND definition.is_active = TRUE
+      INNER JOIN ops.kpi_actual actual
+        ON actual.kpi_id = definition.kpi_id
+       AND actual.store_id = store.store_id
+       AND actual.scope_type = 'store'
+       AND actual.period_type = 'daily'
+       AND actual.period_start = $2::date
+       AND actual.period_end = $2::date
+       AND actual.source_type = 'integration'
+      INNER JOIN stg.import_batch batch
+        ON batch.source_batch_id = actual.source_batch_id
+       AND batch.entity_type = 'kpi'
+       AND store.company_id = ANY(batch.company_ids)
+      WHERE store.store_type = 'company'
+        AND store.kpi_import_enabled = TRUE
+        AND batch.status = 'completed'
+        AND batch.error_count = 0
+        AND NOT EXISTS (
+          SELECT 1 FROM ops.sales_target_incentive_close_run closed
+          WHERE closed.company_id = store.company_id
+            AND closed.period_key = $1
+            AND closed.status = 'succeeded'
+        )
+      ORDER BY store.company_id::text
+    `, [input.periodKey, input.finalDay]);
+    return result.rows.map(row => row.company_id);
+  }
+
   async listCloseRuns(input: {
     periodKey: string;
     companyIds: string[];
@@ -121,7 +155,8 @@ export class SalesTargetIncentiveCloseRepository {
     periodStart: string;
     periodEnd: string;
     closeCutoffAt: string;
-    actorUserId: string;
+    actorUserId: string | null;
+    sourceType?: "admin_period_close" | "automatic_period_close";
     stores: SalesTargetIncentiveProjectionStore[];
   }): Promise<SalesTargetIncentiveCloseRunSummary> {
     return this.databaseService.withTransaction(async (client) => {
@@ -143,9 +178,12 @@ export class SalesTargetIncentiveCloseRepository {
 
       const ruleVersion = await this.resolveRuleVersion(client);
       const rateBrackets = await this.listRateBrackets(client, ruleVersion.rule_version_id);
-      const sourceImportBatchIds = uniqueStrings(
-        input.stores.flatMap((store) => collectStoreSourceImportBatchIds(store)),
-      );
+      const sourceImportBatchIds = uniqueStrings([
+        ...input.stores.flatMap((store) => collectStoreSourceImportBatchIds(store)),
+        ...(input.sourceType === "automatic_period_close"
+          ? await this.listDailyCloseImportBatchIds(client, input)
+          : []),
+      ]);
 
       const closeRunId = await this.insertCloseRun(client, {
         ...input,
@@ -257,6 +295,36 @@ export class SalesTargetIncentiveCloseRepository {
     return result.rows;
   }
 
+  private async listDailyCloseImportBatchIds(
+    client: CloseClient,
+    input: {
+      companyId: string;
+      periodStart: string;
+      periodEnd: string;
+      closeCutoffAt: string;
+      stores: SalesTargetIncentiveProjectionStore[];
+    },
+  ) {
+    const storeIds = input.stores.map((store) => store.storeId);
+    const result = await client.query<{ import_batch_id: string }>(`
+      SELECT DISTINCT ib.import_batch_id::text AS import_batch_id
+      FROM ops.kpi_actual ka
+      INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
+        AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
+      INNER JOIN stg.import_batch ib ON ib.source_batch_id = ka.source_batch_id
+        AND ib.entity_type = 'kpi' AND ib.status = 'completed'
+        AND ib.error_count = 0 AND $1::uuid = ANY(ib.company_ids)
+      WHERE ka.store_id = ANY($2::uuid[])
+        AND ka.scope_type IN ('store', 'employee')
+        AND ka.period_type = 'daily' AND ka.period_start = ka.period_end
+        AND ka.period_start BETWEEN $3::date AND $4::date
+        AND ka.source_type = 'integration'
+        AND COALESCE(ib.finished_at, ib.started_at) <= $5::timestamptz
+      ORDER BY ib.import_batch_id::text
+    `, [input.companyId, storeIds, input.periodStart, input.periodEnd, input.closeCutoffAt]);
+    return result.rows.map((row) => row.import_batch_id);
+  }
+
   private async lockCloseRun(
     client: CloseClient,
     input: { companyId: string; periodKey: string },
@@ -283,7 +351,8 @@ export class SalesTargetIncentiveCloseRepository {
       periodStart: string;
       periodEnd: string;
       closeCutoffAt: string;
-      actorUserId: string;
+      actorUserId: string | null;
+      sourceType?: "admin_period_close" | "automatic_period_close";
       ruleVersionId: string;
       sourceImportBatchIds: string[];
       canonicalStoreIds: string[];
@@ -333,8 +402,10 @@ export class SalesTargetIncentiveCloseRepository {
         input.actorUserId,
         input.sourceImportBatchIds,
         toJson({
-          sourceType: "admin_period_close",
-          sourceMode: "historical_imported_backfill",
+          sourceType: input.sourceType ?? "admin_period_close",
+          sourceMode: input.sourceType === "automatic_period_close"
+            ? "daily_composite"
+            : "historical_imported_backfill",
           actorUserId: input.actorUserId,
           periodKey: input.periodKey,
           affectedStoreCount: input.canonicalStoreIds.length,

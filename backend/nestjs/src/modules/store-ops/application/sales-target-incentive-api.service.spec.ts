@@ -15,6 +15,11 @@ const otherStoreId = "00000000-0000-4000-8000-000000000202";
 const employeeId = "00000000-0000-4000-8000-000000000501";
 const finalOnlyEmployeeId = "00000000-0000-4000-8000-000000000599";
 const correctionId = "00000000-0000-4000-8000-000000000951";
+const createAdminActor = () => buildAuthenticatedUser({
+  userId: "admin-user",
+  roleCodes: ["SUPER_ADMIN"],
+  readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+});
 
 const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
   periodKey: "2026-05",
@@ -414,11 +419,7 @@ describe("SalesTargetIncentiveApiService", () => {
       service,
     } = createService();
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -464,11 +465,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminCloseStatus({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
     });
@@ -476,7 +473,7 @@ describe("SalesTargetIncentiveApiService", () => {
     expect(readModelService.getCloseReadiness).toHaveBeenCalledWith({
       periodKey: "2026-05",
       companyIds: [companyId],
-      nowIso: "2026-06-01T02:00:00.000+03:00",
+      nowIso: expect.any(String),
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
     });
     expect(closeRepository.listCloseRuns).toHaveBeenCalledWith({
@@ -507,7 +504,7 @@ describe("SalesTargetIncentiveApiService", () => {
     expect(readModelService.getCloseReadiness).toHaveBeenCalledWith({
       periodKey: "2026-05",
       companyIds: [companyId],
-      nowIso: "2026-06-01T02:00:00.000+03:00",
+      nowIso: expect.any(String),
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
     });
     expect(readModelService.buildCurrentProjection).toHaveBeenCalledWith({
@@ -525,12 +522,38 @@ describe("SalesTargetIncentiveApiService", () => {
       periodEnd: "2026-05-31",
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
       actorUserId: "00000000-0000-4000-8000-000000000901",
+      sourceType: "admin_period_close",
       stores: eligibleProjection.stores,
     });
     expect(result.data).toMatchObject({
       finalSnapshotCount: 1,
       finalRowCount: 2,
     });
+  });
+
+  it("closes an eligible company automatically with a system source", async () => {
+    const { closeRepository, readModelService, service } = createService();
+    const result = await service.runAutomaticClose({ periodKey: "2026-05", companyId });
+    expect(result).toEqual({ closed: true, status: "closed" });
+    expect(readModelService.getCloseReadiness).toHaveBeenCalledWith(expect.objectContaining({ salesSource: "daily" }));
+    expect(readModelService.buildCurrentProjection).toHaveBeenCalledWith(expect.objectContaining({ salesSource: "daily" }));
+    expect(closeRepository.createSucceededCloseRun).toHaveBeenCalledWith(expect.objectContaining({
+      companyId, periodKey: "2026-05", actorUserId: null,
+      sourceType: "automatic_period_close", stores: eligibleProjection.stores,
+    }));
+  });
+
+  it("does not write an automatic close when readiness is blocked", async () => {
+    const { closeRepository, readModelService, service } = createService();
+    readModelService.getCloseReadiness.mockResolvedValueOnce({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31",
+      canClose: false, status: "blocked_by_imports",
+      blockingImports: [], blockingTargetRevisions: [],
+    });
+    await expect(service.runAutomaticClose({ periodKey: "2026-05", companyId })).resolves.toEqual({
+      closed: false, status: "blocked_by_imports",
+    });
+    expect(closeRepository.createSucceededCloseRun).not.toHaveBeenCalled();
   });
 
   it("blocks admin close before final snapshot persistence when readiness is not ready", async () => {
@@ -547,17 +570,23 @@ describe("SalesTargetIncentiveApiService", () => {
 
     await expect(
       service.runAdminClose({
-        actor: buildAuthenticatedUser({
-          userId: "admin-user",
-          roleCodes: ["SUPER_ADMIN"],
-          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-        }),
+        actor: createAdminActor(),
         periodKey: "2026-05",
         closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
       }),
     ).rejects.toThrow("Incentive close is blocked_by_imports");
 
     expect(readModelService.buildCurrentProjection).not.toHaveBeenCalled();
+    expect(closeRepository.createSucceededCloseRun).not.toHaveBeenCalled();
+  });
+
+  it("does not let a future cutoff make an unfinished month eligible", async () => {
+    const { closeRepository, readModelService, service } = createService();
+    await expect(service.runAdminClose({
+      actor: createAdminActor(),
+      periodKey: "2099-12", closeCutoffAt: "2100-01-01T02:00:00.000+03:00",
+    })).rejects.toThrow("Incentive close cutoff cannot be in the future");
+    expect(readModelService.getCloseReadiness).not.toHaveBeenCalled();
     expect(closeRepository.createSucceededCloseRun).not.toHaveBeenCalled();
   });
 
@@ -630,11 +659,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -681,11 +706,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -724,11 +745,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -770,11 +787,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -816,11 +829,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -880,11 +889,7 @@ describe("SalesTargetIncentiveApiService", () => {
     ]);
 
     const result = await service.getAdminProjection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
     });
 
@@ -978,11 +983,7 @@ describe("SalesTargetIncentiveApiService", () => {
 
   it("applies admin corrections only for eligible visible incentive rows", async () => {
     const { correctionRepository, readModelService, service } = createService();
-    const actor = buildAuthenticatedUser({
-      userId: "admin-user",
-      roleCodes: ["SUPER_ADMIN"],
-      readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-    });
+    const actor = createAdminActor();
 
     const result = await service.applyAdminCorrection({
       actor,
@@ -1031,11 +1032,7 @@ describe("SalesTargetIncentiveApiService", () => {
 
     await expect(
       service.applyAdminCorrection({
-        actor: buildAuthenticatedUser({
-          userId: "admin-user",
-          roleCodes: ["SUPER_ADMIN"],
-          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-        }),
+        actor: createAdminActor(),
         periodKey: "2026-05",
         storeId,
         employeeId,
@@ -1084,11 +1081,7 @@ describe("SalesTargetIncentiveApiService", () => {
     });
 
     const result = await service.applyAdminCorrection({
-      actor: buildAuthenticatedUser({
-        userId: "admin-user",
-        roleCodes: ["SUPER_ADMIN"],
-        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-      }),
+      actor: createAdminActor(),
       periodKey: "2026-05",
       storeId,
       employeeId,
@@ -1129,11 +1122,7 @@ describe("SalesTargetIncentiveApiService", () => {
 
     await expect(
       service.applyAdminCorrection({
-        actor: buildAuthenticatedUser({
-          userId: "admin-user",
-          roleCodes: ["SUPER_ADMIN"],
-          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-        }),
+        actor: createAdminActor(),
         periodKey: "2026-05",
         storeId,
         employeeId,
@@ -1146,11 +1135,7 @@ describe("SalesTargetIncentiveApiService", () => {
 
     await expect(
       service.applyAdminCorrection({
-        actor: buildAuthenticatedUser({
-          userId: "admin-user",
-          roleCodes: ["SUPER_ADMIN"],
-          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-        }),
+        actor: createAdminActor(),
         periodKey: "2026-05",
         storeId,
         employeeId,
@@ -1169,11 +1154,7 @@ describe("SalesTargetIncentiveApiService", () => {
 
     await expect(
       service.applyAdminCorrection({
-        actor: buildAuthenticatedUser({
-          userId: "admin-user",
-          roleCodes: ["SUPER_ADMIN"],
-          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
-        }),
+        actor: createAdminActor(),
         periodKey: "2026-05",
         storeId,
         employeeId,

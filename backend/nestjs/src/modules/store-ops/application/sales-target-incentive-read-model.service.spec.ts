@@ -529,4 +529,41 @@ describe("SalesTargetIncentiveReadModelService", () => {
       }),
     );
   });
+
+  it("uses the daily composite projection for automatic close readiness", async () => {
+    const { repository, service } = createService();
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05", companyIds: ["company-1"],
+      nowIso: "2026-06-01T00:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T00:05:00.000+03:00",
+      salesSource: "daily",
+    });
+    expect(result).toEqual(expect.objectContaining({ canClose: true, status: "ready" }));
+    expect(repository.listStoreProjectionSources).toHaveBeenCalledWith(
+      expect.objectContaining({ salesSource: "daily", assignmentAsOfDate: "2026-05-31" }),
+    );
+    expect(repository.listPersonnelProjectionSources).toHaveBeenCalledWith(
+      expect.objectContaining({ salesSource: "daily" }),
+    );
+  });
+
+  it("does not auto-close a selling store before personnel sales have a daily source", async () => {
+    const { service } = createService({
+      personnelRows: [{
+        ...personnelSource,
+        personnel_positive_sales_amount: null,
+        personnel_sales_source_batch_id: null,
+        personnel_sales_import_batch_id: null,
+      }],
+    });
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05", companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      salesSource: "daily",
+    });
+    expect(result).toEqual(expect.objectContaining({
+      canClose: false, status: "blocked_by_calculation",
+    }));
+  });
 });

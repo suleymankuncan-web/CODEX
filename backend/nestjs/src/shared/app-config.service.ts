@@ -776,10 +776,9 @@ export class AppConfigService {
     return this.readString("QUEUE_SNAPSHOT_NAME", "store-ops-snapshot");
   }
 
-  get dailyClosureAutomationEnabled(): boolean {
-    return this.readString("DAILY_CLOSURE_AUTOMATION_ENABLED", "false") === "true";
-  }
+  get dailyClosureAutomationEnabled(): boolean { return this.readString("DAILY_CLOSURE_AUTOMATION_ENABLED", "false") === "true"; }
 
+  get incentiveAutoCloseEnabled(): boolean { return this.readString("INCENTIVE_AUTO_CLOSE_ENABLED", "false") === "true"; }
   get dailyClosurePollMinutes(): number {
     return this.readPositiveInteger("DAILY_CLOSURE_POLL_MINUTES", "15");
   }
