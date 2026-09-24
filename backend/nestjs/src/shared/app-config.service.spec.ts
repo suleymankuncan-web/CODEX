@@ -7,6 +7,10 @@ function createConfig(values: Record<string, string | undefined>) {
 }
 
 describe("AppConfigService", () => {
+  it("enables automatic incentive close by default and supports an explicit pause", () => {
+    expect(createConfig({}).incentiveAutoCloseEnabled).toBe(false);
+    expect(createConfig({ INCENTIVE_AUTO_CLOSE_ENABLED: "true" }).incentiveAutoCloseEnabled).toBe(true);
+  });
   it.each([
     ["DB_POOL_MAX", "0"],
     ["DB_POOL_MAX", "1.5"],

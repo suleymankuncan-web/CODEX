@@ -119,6 +119,20 @@ function createHarness() {
 }
 
 describe("SalesTargetIncentiveCloseRepository", () => {
+  it("finds only companies with materialized final-day daily sales and no completed close", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [{ company_id: companyId }] });
+    await expect(repository.listAutomaticCloseCompanyIds({
+      periodKey: "2026-05", finalDay: "2026-05-31",
+    })).resolves.toEqual([companyId]);
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("actual.period_type = 'daily'");
+    expect(sql).toContain("actual.period_start = $2::date");
+    expect(sql).toContain("actual.source_type = 'integration'");
+    expect(sql).toContain("store.company_id = ANY(batch.company_ids)");
+    expect(sql).toContain("closed.status = 'succeeded'");
+    expect(query.mock.calls[0][1]).toEqual(["2026-05", "2026-05-31"]);
+  });
   it("lists close run status with final snapshot counts", async () => {
     const { query, repository } = createHarness();
     query.mockResolvedValueOnce({

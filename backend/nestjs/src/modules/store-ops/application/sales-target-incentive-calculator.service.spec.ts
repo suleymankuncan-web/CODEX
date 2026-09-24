@@ -346,13 +346,18 @@ describe("SalesTargetIncentiveCalculatorService", () => {
       });
     });
 
-    it("uses the locked automatic close cutoff for Europe/Istanbul", () => {
+    it("preserves the manual close cutoff for Europe/Istanbul", () => {
       expect(
         canCloseSalesTargetIncentivePeriod("2026-04", "2026-04-30T22:59:59.999Z"),
       ).toBe(false);
       expect(
         canCloseSalesTargetIncentivePeriod("2026-04", "2026-04-30T23:00:00.000Z"),
       ).toBe(true);
+    });
+
+    it("allows the daily-data close when the Istanbul calendar month has ended", () => {
+      expect(canCloseSalesTargetIncentivePeriod("2026-04", "2026-04-30T20:59:59.999Z", 0)).toBe(false);
+      expect(canCloseSalesTargetIncentivePeriod("2026-04", "2026-04-30T21:00:00.000Z", 0)).toBe(true);
     });
 
     it("excludes accepted imports after the final close cutoff", () => {

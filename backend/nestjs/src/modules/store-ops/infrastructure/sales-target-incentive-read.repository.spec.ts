@@ -20,6 +20,21 @@ describe("SalesTargetIncentiveReadRepository", () => {
     assignmentAsOfDate: "2026-05-10",
   };
 
+  it("sums distinct daily NET_SALES facts within scoped stores for tracking only", async () => {
+    const { query, repository } = createRepository();
+    await repository.listDailySalesTracking({ storeIds: ["00000000-0000-4000-8000-000000000011"], periodStart: "2026-05-01", throughDate: "2026-05-08" });
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain("ka.period_type = 'daily'");
+    expect(sql).toContain("ka.period_start BETWEEN $2::date AND $3::date");
+    expect(sql).toContain("MAX(ka.actual_value)");
+    expect(sql).toContain("SUM(actual_amount)");
+    expect(sql).toContain("s.kpi_import_enabled = TRUE");
+    expect(sql).toContain("ka.actual_value IS NOT NULL");
+    expect(sql).toContain("ka.store_id = ANY($1::uuid[])");
+    expect(sql).not.toContain("period_type = 'monthly'");
+    expect(params).toEqual([["00000000-0000-4000-8000-000000000011"], "2026-05-01", "2026-05-08"]);
+  });
+
   it("binds store manager projection sources to approved store target and store NET_SALES period", async () => {
     const { query, repository } = createRepository();
 
@@ -60,6 +75,29 @@ describe("SalesTargetIncentiveReadRepository", () => {
       "2026-05-31",
       "2026-05-10",
       ["00000000-0000-4000-8000-000000000001"],
+    ]);
+  });
+
+  it("sums daily store and personnel sales for automatic close without adding monthly facts", async () => {
+    const { query, repository } = createRepository();
+    const input = { ...scopeInput, salesSource: "daily" as const, closeCutoffAt: "2026-06-01T02:00:00Z" };
+    await repository.listStoreProjectionSources(input);
+    await repository.listPersonnelProjectionSources(input);
+    const storeSql = String(query.mock.calls[0][0]);
+    const personnelSql = String(query.mock.calls[1][0]);
+    for (const sql of [storeSql, personnelSql]) {
+      expect(sql).toContain("SUM(ka.actual_value) AS actual_value");
+      expect(sql).toContain("ka.period_type = 'daily'");
+      expect(sql).toContain("ka.period_start = ka.period_end");
+      expect(sql).toContain("ka.period_start BETWEEN $1::date AND $2::date");
+      expect(sql).toContain("ib.status = 'completed'");
+      expect(sql).toContain("s.company_id = ANY(ib.company_ids)");
+      expect(sql).not.toContain("ka.period_type = 'monthly'");
+    }
+    expect(personnelSql).toContain("'personnel_gross_sales'");
+    expect(query.mock.calls[0][1]).toEqual([
+      "2026-05-01", "2026-05-31", "2026-05-10",
+      "2026-06-01T02:00:00Z", scopeInput.companyIds,
     ]);
   });
 

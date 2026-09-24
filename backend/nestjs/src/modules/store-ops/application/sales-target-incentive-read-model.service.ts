@@ -23,6 +23,7 @@ export type SalesTargetIncentiveReadModelScope = {
   allowGlobalScope?: boolean;
   assignmentAsOfDate?: string;
   closeCutoffAt?: string;
+  salesSource?: "monthly" | "daily";
 };
 
 export type SalesTargetIncentiveReadModelPeriodScope = {
@@ -123,6 +124,10 @@ export class SalesTargetIncentiveReadModelService {
     return latestPeriodKey ?? resolveCurrentSalesTargetIncentivePeriodKey();
   }
 
+  async listDailySalesTracking(input: { storeIds: string[]; periodStart: string; throughDate: string }) {
+    return this.repository.listDailySalesTracking(input);
+  }
+
   async buildCurrentProjection(
     input: SalesTargetIncentiveReadModelScope,
   ): Promise<SalesTargetIncentiveProjectionReadModel> {
@@ -142,6 +147,9 @@ export class SalesTargetIncentiveReadModelService {
     };
     if (input.closeCutoffAt) {
       Object.assign(repositoryInput, { closeCutoffAt: input.closeCutoffAt });
+    }
+    if (input.salesSource === "daily") {
+      Object.assign(repositoryInput, { salesSource: "daily" });
     }
     const [storeRows, personnelRows] = await Promise.all([
       this.repository.listStoreProjectionSources(repositoryInput),
@@ -186,11 +194,13 @@ export class SalesTargetIncentiveReadModelService {
     companyIds: string[];
     nowIso: string;
     closeCutoffAt: string;
+    salesSource?: "monthly" | "daily";
   }): Promise<SalesTargetIncentiveCloseReadiness> {
     const period = resolveSalesTargetIncentiveMonthlyBounds(input.periodKey);
     const isDue = canCloseSalesTargetIncentivePeriod(
       input.periodKey,
       input.nowIso,
+      input.salesSource === "daily" ? 0 : 2,
     );
     const blockingImports = await this.repository.listCloseBlockingKpiImports({
       companyIds: input.companyIds,
@@ -248,11 +258,17 @@ export class SalesTargetIncentiveReadModelService {
       storeIds: [],
       assignmentAsOfDate: period.periodEnd,
       closeCutoffAt: input.closeCutoffAt,
+      ...(input.salesSource === "daily" ? { salesSource: "daily" as const } : {}),
     });
 
     const closeCandidateStores = projection.stores.filter(isCloseReadinessStoreCandidate);
     if (
       closeCandidateStores.length === 0 ||
+      (input.salesSource === "daily" && closeCandidateStores.some((store) =>
+        Number(store.storeNetSalesAmount ?? 0) > 0 &&
+        store.personnel.length > 0 &&
+        store.personnel.every((person) => person.source.personnelSalesImportBatchId === null)
+      )) ||
       hasIncompleteCloseCalculation({ ...projection, stores: closeCandidateStores })
     ) {
       return {

@@ -42,6 +42,7 @@ services:
       QUEUE_BACKEND: ${QUEUE_BACKEND:-in-memory}
       REDIS_URL: ${REDIS_URL:-}
       DAILY_CLOSURE_AUTOMATION_ENABLED: ${DAILY_CLOSURE_AUTOMATION_ENABLED:-false}
+      INCENTIVE_AUTO_CLOSE_ENABLED: ${INCENTIVE_AUTO_CLOSE_ENABLED:-true}
     expose:
       - "3000"
     healthcheck:

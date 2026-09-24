@@ -35,6 +35,7 @@ import {
   resolveSalesTargetIncentivePeriodKey,
   type SalesTargetIncentiveAdminRegionPackageSummary,
 } from "./sales-target-incentive-admin-package-workflow.service";
+import { formatMoney2, isZeroMoney, resolveFinalAmount } from "./sales-target-incentive-money";
 
 export type SalesTargetIncentiveRoleScope =
   | "own"
@@ -249,13 +250,14 @@ export class SalesTargetIncentiveApiService {
     }
 
     const periodKey = this.resolvePeriodKey(input.periodKey);
-    const closeCutoffAt = input.closeCutoffAt ?? new Date().toISOString();
+    const nowIso = new Date().toISOString();
+    const closeCutoffAt = this.resolveCloseCutoffAt(input.closeCutoffAt, nowIso);
     const companyIds = this.resolveCloseCompanyIds(input.actor);
     const [readiness, closeRuns] = await Promise.all([
       this.readModelService.getCloseReadiness({
         periodKey,
         companyIds,
-        nowIso: closeCutoffAt,
+        nowIso,
         closeCutoffAt,
       }),
       this.closeRepository.listCloseRuns({
@@ -287,12 +289,13 @@ export class SalesTargetIncentiveApiService {
     }
 
     const periodKey = this.resolvePeriodKey(input.periodKey);
-    const closeCutoffAt = input.closeCutoffAt ?? new Date().toISOString();
+    const nowIso = new Date().toISOString();
+    const closeCutoffAt = this.resolveCloseCutoffAt(input.closeCutoffAt, nowIso);
     const companyIds = this.resolveCloseCompanyIds(input.actor);
     const readiness = await this.readModelService.getCloseReadiness({
       periodKey,
       companyIds,
-      nowIso: closeCutoffAt,
+      nowIso,
       closeCutoffAt,
     });
 
@@ -300,37 +303,10 @@ export class SalesTargetIncentiveApiService {
       throw new BadRequestException(`Incentive close is ${readiness.status}`);
     }
 
-    const projection = await this.readModelService.buildCurrentProjection({
-      periodKey,
-      companyIds,
-      regionIds: [],
-      storeIds: [],
-      assignmentAsOfDate: readiness.periodEnd,
-      closeCutoffAt,
+    const { projection, closeRuns } = await this.persistCloseRuns({
+      periodKey, companyIds, closeCutoffAt, periodEnd: readiness.periodEnd,
+      actorUserId: input.actor.userId, sourceType: "admin_period_close",
     });
-    const finalizableStores = projection.stores.filter(
-      (store) => store.storeTargetAmount && store.storeNetSalesImportBatchId,
-    );
-    const storesByCompany = groupStoresByCompany(finalizableStores);
-
-    if (storesByCompany.size === 0) {
-      throw new BadRequestException("No company-store incentive projections are available to close");
-    }
-
-    const closeRuns: SalesTargetIncentiveCloseRunSummary[] = [];
-    for (const [companyId, stores] of storesByCompany) {
-      closeRuns.push(
-        await this.closeRepository.createSucceededCloseRun({
-          companyId,
-          periodKey: projection.periodKey,
-          periodStart: projection.periodStart,
-          periodEnd: projection.periodEnd,
-          closeCutoffAt,
-          actorUserId: input.actor.userId,
-          stores,
-        }),
-      );
-    }
 
     return {
       data: {
@@ -811,6 +787,69 @@ export class SalesTargetIncentiveApiService {
     return adminScope.companyIds;
   }
 
+  async runAutomaticClose(input: { periodKey: string; companyId: string }) {
+    const periodKey = this.resolvePeriodKey(input.periodKey);
+    const closeCutoffAt = new Date().toISOString();
+    const companyIds = [input.companyId];
+    const readiness = await this.readModelService.getCloseReadiness({
+      periodKey, companyIds, nowIso: closeCutoffAt, closeCutoffAt, salesSource: "daily",
+    });
+    if (!readiness.canClose) return { closed: false, status: readiness.status };
+    const { closeRuns } = await this.persistCloseRuns({
+      periodKey, companyIds, closeCutoffAt, periodEnd: readiness.periodEnd,
+      actorUserId: null, sourceType: "automatic_period_close", salesSource: "daily",
+    });
+    return { closed: closeRuns.length > 0, status: "closed" as const };
+  }
+
+  private async persistCloseRuns(input: {
+    periodKey: string;
+    companyIds: string[];
+    closeCutoffAt: string;
+    periodEnd: string;
+    actorUserId: string | null;
+    sourceType: "admin_period_close" | "automatic_period_close";
+    salesSource?: "monthly" | "daily";
+  }) {
+    const projection = await this.readModelService.buildCurrentProjection({
+      periodKey: input.periodKey,
+      companyIds: input.companyIds,
+      regionIds: [],
+      storeIds: [],
+      assignmentAsOfDate: input.periodEnd,
+      closeCutoffAt: input.closeCutoffAt,
+      ...(input.salesSource === "daily" ? { salesSource: "daily" as const } : {}),
+    });
+    const finalizableStores = projection.stores.filter(
+      (store) => store.storeTargetAmount && store.storeNetSalesImportBatchId,
+    );
+    const storesByCompany = groupStoresByCompany(finalizableStores);
+    if (storesByCompany.size === 0) {
+      throw new BadRequestException("No company-store incentive projections are available to close");
+    }
+    const closeRuns: SalesTargetIncentiveCloseRunSummary[] = [];
+    for (const [companyId, stores] of storesByCompany) {
+      closeRuns.push(await this.closeRepository.createSucceededCloseRun({
+        companyId,
+        periodKey: input.periodKey,
+        periodStart: projection.periodStart,
+        periodEnd: projection.periodEnd,
+        closeCutoffAt: input.closeCutoffAt,
+        actorUserId: input.actorUserId,
+        sourceType: input.sourceType,
+        stores,
+      }));
+    }
+    return { projection, closeRuns };
+  }
+
+  private resolveCloseCutoffAt(requested: string | undefined, nowIso: string) {
+    if (requested && new Date(requested).getTime() > new Date(nowIso).getTime()) {
+      throw new BadRequestException("Incentive close cutoff cannot be in the future");
+    }
+    return requested ?? nowIso;
+  }
+
   private resolvePeriodKey(periodKey?: string) {
     return resolveSalesTargetIncentivePeriodKey(periodKey);
   }
@@ -822,10 +861,6 @@ function groupStoresByCompany(stores: SalesTargetIncentiveProjectionStore[]) {
     grouped.set(store.companyId, [...(grouped.get(store.companyId) ?? []), store]);
   }
   return grouped;
-}
-
-function isZeroMoney(value: string) {
-  return parseMoneyCents(value) === 0n;
 }
 
 function resolveApiPositionCode(
@@ -844,55 +879,4 @@ function resolveFinalSnapshotApiStatus(
   status: string | null | undefined,
 ): Exclude<SalesTargetIncentiveCalculationStatus, "excluded"> {
   return status === "blocked" || status === "no_source" ? status : "projected";
-}
-
-function resolveFinalAmount(input: {
-  payableAmount: string | null;
-  correctionAmount: string | null;
-  adjustmentAmount: string | null;
-  persistedFinalAmount: string | null;
-}) {
-  if (input.persistedFinalAmount !== null) {
-    const adjusted = input.adjustmentAmount
-      ? parseMoneyCents(input.persistedFinalAmount) + parseMoneyCents(input.adjustmentAmount)
-      : parseMoneyCents(input.persistedFinalAmount);
-    return formatCents(adjusted);
-  }
-
-  if (!input.correctionAmount && !input.adjustmentAmount) {
-    return null;
-  }
-
-  if (input.payableAmount === null) {
-    return null;
-  }
-
-  const base = parseMoneyCents(input.payableAmount);
-  const correction = input.correctionAmount ? parseMoneyCents(input.correctionAmount) : 0n;
-  const adjustment = input.adjustmentAmount ? parseMoneyCents(input.adjustmentAmount) : 0n;
-  return formatCents(base + correction + adjustment);
-}
-function formatMoney2(value: string) {
-  return formatCents(parseMoneyCents(value));
-}
-
-function parseMoneyCents(value: string) {
-  const trimmed = value.trim();
-  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(trimmed);
-
-  if (!match) {
-    throw new Error("Invalid money value");
-  }
-
-  const [, sign, whole, fraction = ""] = match;
-  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
-  return sign === "-" ? -cents : cents;
-}
-
-function formatCents(cents: bigint) {
-  const sign = cents < 0n ? "-" : "";
-  const absolute = cents < 0n ? -cents : cents;
-  const whole = absolute / 100n;
-  const fraction = absolute % 100n;
-  return `${sign}${whole.toString()}.${fraction.toString().padStart(2, "0")}`;
 }

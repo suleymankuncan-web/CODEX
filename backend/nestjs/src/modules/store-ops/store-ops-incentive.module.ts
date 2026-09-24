@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { SalesTargetIncentiveApiService } from "./application/sales-target-incentive-api.service";
+import { SalesTargetIncentiveAutoCloseWorkerService } from "./application/sales-target-incentive-auto-close-worker.service";
 import { SalesTargetIncentiveCloseRepository } from "./infrastructure/sales-target-incentive-close.repository";
 import { SalesTargetIncentiveCorrectionRepository } from "./infrastructure/sales-target-incentive-correction.repository";
 import { StoreOpsIncentiveAdminPackageWorkflowModule } from "./store-ops-incentive-admin-package-workflow.module";
@@ -26,6 +27,7 @@ import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-in
   ],
   providers: [
     SalesTargetIncentiveApiService,
+    SalesTargetIncentiveAutoCloseWorkerService,
     SalesTargetIncentiveCorrectionRepository,
     SalesTargetIncentiveCloseRepository,
   ],

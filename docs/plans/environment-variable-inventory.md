@@ -243,6 +243,7 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `QUEUE_IMPORT_NAME` | P1 | Stable import queue name. | Defaults to `store-ops-import`. |
 | `QUEUE_SNAPSHOT_NAME` | P1 | Stable snapshot queue name. | Defaults to `store-ops-snapshot`. |
 | `DAILY_CLOSURE_AUTOMATION_ENABLED` | P1 | Keep `false` until closure schedule is approved. | Enables automated closure polling. |
+| `INCENTIVE_AUTO_CLOSE_ENABLED` | P1 | Defaults to `false`; enabled explicitly in staging. Private company mode requires a separate activation decision. | The API checks the prior month's processed final-day daily sales every 15 minutes and closes against the sum of that month's eligible daily sales facts. Synthetic on-prem proof does not close periods. |
 | `DAILY_CLOSURE_POLL_MINUTES` | P1 | Approved polling interval. | Defaults to `15`. |
 | `DAILY_CLOSURE_ACTOR_USER_ID` | P0 conditional | Required if daily closure automation is enabled. | Must be a real service/operator actor id. |
 

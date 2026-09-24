@@ -450,6 +450,7 @@ export function resolveSalesTargetIncentivePeriod(input: {
 export function canCloseSalesTargetIncentivePeriod(
   periodKey: string,
   nowIso: string,
+  eligibleHour = 2,
 ): boolean {
   const { year, month } = parsePeriodKey(periodKey);
   const nextMonth = month === 12 ? 1 : month + 1;
@@ -458,7 +459,7 @@ export function canCloseSalesTargetIncentivePeriod(
     year: nextMonthYear,
     month: nextMonth,
     day: 1,
-    hour: 2,
+    hour: eligibleHour,
     minute: 0,
     second: 0,
     millisecond: 0,
