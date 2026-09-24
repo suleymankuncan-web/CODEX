@@ -14,6 +14,7 @@ import {
   type SalesTargetIncentiveStoreReviewRow,
   type SalesTargetIncentiveStoreReviewStatus,
 } from "../infrastructure/sales-target-incentive-approval.repository";
+import { SalesTargetIncentiveManagerPackageRepository } from "../infrastructure/sales-target-incentive-manager-package.repository";
 import {
   SalesTargetIncentiveReadModelService,
   type SalesTargetIncentiveProjectionStore,
@@ -26,7 +27,7 @@ export type SalesTargetIncentiveRegionWorkflowStatus =
   | "admin_returned";
 
 export type SalesTargetIncentiveRegionWorkflowApiState = {
-  regionId: string;
+  managerUserId: string;
   regionPackageStatus: SalesTargetIncentiveRegionWorkflowStatus;
   regionPackageId: string | null;
   submittedAt: string | null;
@@ -70,12 +71,14 @@ export class SalesTargetIncentiveRegionWorkflowService {
   constructor(
     private readonly readModelService: SalesTargetIncentiveReadModelService,
     private readonly approvalRepository: SalesTargetIncentiveApprovalRepository,
+    private readonly managerPackageRepository: SalesTargetIncentiveManagerPackageRepository,
   ) {}
 
   async getWorkflowContext(input: {
     periodKey: string;
     stores: SalesTargetIncentiveProjectionStore[];
     roleScope: "own" | "store" | "region" | "admin";
+    managerUserId?: string;
   }): Promise<SalesTargetIncentiveRegionWorkflowContext> {
     if (
       (input.roleScope !== "region" && input.roleScope !== "admin") ||
@@ -95,7 +98,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
         storeIds,
       }),
     ]);
-    const regionIds = unique(input.stores.map((store) => store.regionId));
+    const companyIds = unique(input.stores.map((store) => store.companyId));
     const corrections = input.roleScope === "admin"
       ? workflow.corrections.filter((correction) =>
           correction.correction_status === "submitted" ||
@@ -112,11 +115,15 @@ export class SalesTargetIncentiveRegionWorkflowService {
       };
     }
 
-    const packageRow = regionIds.length === 1
-      ? workflow.packages.find((candidate) => candidate.region_id === regionIds[0]) ?? null
+    const packageRow = companyIds.length === 1 && input.managerUserId
+      ? workflow.packages.find((candidate) =>
+          candidate.company_id === companyIds[0] &&
+          (candidate.manager_user_id === input.managerUserId ||
+            (candidate.package_scope === "legacy_region" && candidate.submitted_by_user_id === input.managerUserId)),
+        ) ?? null
       : null;
-    const regionWorkflow = regionIds.length === 1
-      ? this.toRegionWorkflow(regionIds[0], packageRow)
+    const regionWorkflow = companyIds.length === 1 && input.managerUserId
+      ? this.toRegionWorkflow(input.managerUserId, packageRow)
       : null;
     const lockedReason = regionWorkflow?.workflowLockedReason ?? null;
     const closedSnapshotsByStoreId = new Map(
@@ -226,15 +233,15 @@ export class SalesTargetIncentiveRegionWorkflowService {
   async submitRegionPackage(input: {
     actor: AuthenticatedUser;
     periodKey: string;
-    regionId: string;
+    companyId?: string;
     submissionNote?: string | null;
   }) {
     this.assertRegionManager(input.actor);
-    const stores = await this.resolveAssignedStores({
+    const assignedStores = await this.resolveAssignedStores({
       actor: input.actor,
       periodKey: input.periodKey,
-      regionId: input.regionId,
     });
+    const stores = input.companyId ? assignedStores.filter((store) => store.companyId === input.companyId) : assignedStores;
     if (stores.length === 0) {
       throw new BadRequestException("No company stores are available for submission");
     }
@@ -244,13 +251,10 @@ export class SalesTargetIncentiveRegionWorkflowService {
       throw new BadRequestException("A package can include one company only");
     }
 
-    const existingPackage = (
-      await this.approvalRepository.listRegionPackagesForAdmin({
-        periodKey: input.periodKey,
-        companyIds,
-        regionIds: [input.regionId],
-      })
-    )[0] ?? null;
+    const existingPackage = await this.managerPackageRepository.findOwnerPackage({
+      companyId: companyIds[0], periodKey: input.periodKey,
+      managerUserId: input.actor.userId,
+    });
     if (existingPackage?.package_status === "submitted") {
       return { data: this.toPackageCommand(existingPackage) };
     }
@@ -262,12 +266,11 @@ export class SalesTargetIncentiveRegionWorkflowService {
       periodKey: input.periodKey,
       stores,
     });
-    const packageRow = await this.approvalRepository.submitRegionPackage({
+    const packageRow = await this.managerPackageRepository.submit({
       companyId: companyIds[0],
-      regionId: input.regionId,
       periodKey: input.periodKey,
       storeIds: stores.map((store) => store.storeId),
-      actorUserId: input.actor.userId,
+      managerUserId: input.actor.userId,
       submissionNote: input.submissionNote?.trim() || null,
     });
     return { data: this.toPackageCommand(packageRow) };
@@ -293,7 +296,6 @@ export class SalesTargetIncentiveRegionWorkflowService {
   private async resolveAssignedStores(input: {
     actor: AuthenticatedUser;
     periodKey: string;
-    regionId?: string;
   }) {
     if (input.actor.assignedStoreIds.length === 0) {
       return [];
@@ -305,9 +307,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
       regionIds: [],
       storeIds: input.actor.assignedStoreIds,
     });
-    return projection.stores.filter(
-      (store) => !input.regionId || store.regionId === input.regionId,
-    );
+    return projection.stores;
   }
 
   private async ensureSubmitReady(input: {
@@ -379,12 +379,12 @@ export class SalesTargetIncentiveRegionWorkflowService {
   }
 
   private toRegionWorkflow(
-    regionId: string,
+    managerUserId: string,
     row: SalesTargetIncentiveRegionPackageRow | null,
   ): SalesTargetIncentiveRegionWorkflowApiState {
     const status = row?.package_status ?? "not_submitted";
     return {
-      regionId,
+      managerUserId,
       regionPackageStatus: status,
       regionPackageId: row?.sales_target_incentive_region_package_id ?? null,
       submittedAt: row?.submitted_at ?? null,
@@ -457,7 +457,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
   private toPackageCommand(row: SalesTargetIncentiveRegionPackageRow) {
     return {
       period: row.period_key,
-      regionId: row.region_id,
+      managerUserId: row.manager_user_id ?? row.submitted_by_user_id,
       regionPackageId: row.sales_target_incentive_region_package_id,
       regionPackageStatus: row.package_status,
       submittedAt: row.submitted_at,

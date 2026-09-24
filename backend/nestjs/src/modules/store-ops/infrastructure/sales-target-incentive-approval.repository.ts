@@ -119,7 +119,7 @@ export class SalesTargetIncentiveApprovalRepository {
       });
       await this.ensureStorePeriodEditable(client, {
         periodKey: input.periodKey,
-        regionId: input.store.regionId,
+        storeId: input.store.storeId,
       });
 
       const result = await client.query<SalesTargetIncentiveStoreReviewRow>(
@@ -202,7 +202,7 @@ export class SalesTargetIncentiveApprovalRepository {
     return this.databaseService.withTransaction(async (client) => {
       await this.ensureStorePeriodEditable(client, {
         periodKey: input.periodKey,
-        regionId: input.store.regionId,
+        storeId: input.store.storeId,
       });
       await this.lockCorrectionTarget(client, {
         periodKey: input.periodKey,
@@ -727,19 +727,22 @@ export class SalesTargetIncentiveApprovalRepository {
 
   private async ensureStorePeriodEditable(
     client: ApprovalClient,
-    input: { periodKey: string; regionId: string },
+    input: { periodKey: string; storeId: string },
   ): Promise<void> {
-    await this.lockRegionPackage(client, input);
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", [
+      `incentive-store-package:${input.periodKey}:${input.storeId}`,
+    ]);
     const result = await client.query<{ package_status: string }>(
       `
-        SELECT package_status
-        FROM ops.sales_target_incentive_region_package
-        WHERE period_key = $1
-          AND region_id = $2
-          AND package_status IN ('submitted', 'admin_approved')
-        FOR UPDATE
+        SELECT package.package_status
+        FROM ops.sales_target_incentive_region_package package
+        JOIN ops.sales_target_incentive_region_package_store package_store
+          ON package_store.region_package_id = package.sales_target_incentive_region_package_id
+        WHERE package.period_key = $1 AND package_store.store_id = $2::uuid
+          AND package.package_status IN ('submitted', 'admin_approved')
+        FOR UPDATE OF package
       `,
-      [input.periodKey, input.regionId],
+      [input.periodKey, input.storeId],
     );
 
     if (result.rows.length > 0) {

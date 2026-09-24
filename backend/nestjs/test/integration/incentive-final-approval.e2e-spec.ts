@@ -28,6 +28,16 @@ describe("individual final approval HTTP boundary", () => {
   });
   afterAll(async () => { await app.close(); });
   beforeEach(() => query.mockClear());
+  it.each(["REPORT_VIEWER", "REGION_MANAGER", "SUPER_ADMIN"])("protects HR export from %s without the individual grant", async role => {
+    expect((await request(app.getHttpServer()).get("/api/store/incentives/hr-handoff?period=2026-09").set("x-test-role", role)).status).toBe(403);
+    expect((await request(app.getHttpServer()).post("/api/store/incentives/hr-handoff").set("x-test-role", role).send({ period: "2026-09", version: "a".repeat(64) })).status).toBe(403);
+    expect(query).not.toHaveBeenCalled();
+  });
+  it("validates the HR preview period and digest before any read or send", async () => {
+    expect((await request(app.getHttpServer()).get("/api/store/incentives/hr-handoff?period=2026-13").set("x-test-grant", "true")).status).toBe(400);
+    expect((await request(app.getHttpServer()).post("/api/store/incentives/hr-handoff").set("x-test-grant", "true").send({ period: "2026-09", version: "bad", recipients: ["attacker@example.test"] })).status).toBe(400);
+    expect(query).not.toHaveBeenCalled();
+  });
   it.each(["REPORT_VIEWER", "REGION_MANAGER", "SUPER_ADMIN"])("does not allow %s to use the opt-in endpoint without the individual grant", async (role) => {
     expect((await request(app.getHttpServer()).post("/api/store/incentives/final-approval").set("x-test-role", role).send(body)).status).toBe(403);
     expect(query).not.toHaveBeenCalled();

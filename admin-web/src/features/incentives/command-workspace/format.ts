@@ -47,6 +47,13 @@ export function formatIncentivePeriod(period: string, locale: AppLocale) {
   }).format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)))
 }
 
+export function formatIncentiveDay(date: string, locale: AppLocale) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return date
+  return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Istanbul',
+  }).format(new Date(`${date}T12:00:00Z`))
+}
+
 export function formatSignedIncentiveMoney(value: string | null | undefined, locale: AppLocale) {
   if (value === null || value === undefined || Number(value) === 0) return '—'
   return `${Number(value) > 0 ? '+' : ''}${formatIncentiveMoney(value, locale)}`

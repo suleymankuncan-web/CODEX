@@ -9,7 +9,7 @@ import { CommandCanvasConfirmationContent } from '@/features/store-command-canva
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { formatIncentiveMoney, formatIncentivePeriod } from './format'
-import { getSubmitRegionOptions, isIncentiveRegionSubmitReady, sumMoney } from './model'
+import { getSubmitManagerOptions, isIncentiveManagerGroupSubmitReady, sumMoney } from './model'
 import type { IncentiveWorkspace } from './types'
 
 type Translate = ReturnType<typeof useLocalization>['t']
@@ -18,27 +18,26 @@ export function IncentiveSubmitDialog(input: {
   open: boolean
   onOpenChange: (open: boolean) => void
   workspace: IncentiveWorkspace
-  onSubmit: (input: { regionId: string; submissionNote?: string }) => void
+  onSubmit: (input: { companyId: string; submissionNote?: string }) => void
   pending: boolean
   disabled?: boolean
   locale: AppLocale
   t: Translate
 }) {
-  const fallbackRegionLabel = input.t('storeIncentives.command.unassignedRegion')
-  const options = useMemo(() => getSubmitRegionOptions(input.workspace, fallbackRegionLabel), [fallbackRegionLabel, input.workspace])
-  const [regionId, setRegionId] = useState(() => options.length === 1 ? options[0]?.regionId ?? '' : '')
+  const options = useMemo(() => getSubmitManagerOptions(input.workspace), [input.workspace])
+  const [companyId, setCompanyId] = useState(() => options.length === 1 ? options[0]?.companyId ?? '' : '')
   const [note, setNote] = useState('')
-  const region = input.workspace.regions.find((item) => item.regionId === regionId)
+  const region = input.workspace.managerGroups.find((item) => item.companyId === companyId && item.managerUserId === options.find(option => option.companyId === companyId)?.managerUserId)
   const regionStores = region?.stores ?? []
-  const ready = isIncentiveRegionSubmitReady(region)
+  const ready = isIncentiveManagerGroupSubmitReady(region)
   const regionRows = regionStores.flatMap((store) => store.rows)
   const total = sumMoney(regionRows.map((row) => row.finalAmount))
   const correctionCount = regionRows.filter((row) => row.correction !== null).length
   const reviewedCount = regionStores.filter((store) => store.review.status === 'reviewed').length
 
   const submit = () => {
-    if (!regionId || !ready || input.pending || input.disabled) return
-    input.onSubmit({ regionId, ...(note.trim() ? { submissionNote: note.trim() } : {}) })
+    if (!companyId || !ready || input.pending || input.disabled) return
+    input.onSubmit({ companyId, ...(note.trim() ? { submissionNote: note.trim() } : {}) })
   }
 
   return (
@@ -62,10 +61,10 @@ export function IncentiveSubmitDialog(input: {
           <div className="incentive-submit-form">
             {options.length > 1 ? (
               <div className="incentive-form-field">
-                <Label htmlFor="incentive-submit-region">{input.t('storeIncentives.command.regionChoice')}</Label>
-                <Select value={regionId} onValueChange={setRegionId}>
-                  <SelectTrigger id="incentive-submit-region"><SelectValue placeholder={input.t('storeIncentives.command.regionChoice')} /></SelectTrigger>
-                  <SelectContent>{options.map((option) => <SelectItem key={option.regionId} value={option.regionId}>{option.label}</SelectItem>)}</SelectContent>
+                <Label htmlFor="incentive-submit-region">{input.locale === 'tr' ? 'Şirket paketi' : 'Company package'}</Label>
+                <Select value={companyId} onValueChange={setCompanyId}>
+                  <SelectTrigger id="incentive-submit-region"><SelectValue placeholder={input.locale === 'tr' ? 'Şirket seçin' : 'Select company'} /></SelectTrigger>
+                  <SelectContent>{options.map((option) => <SelectItem key={option.companyId} value={option.companyId}>{option.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             ) : null}
@@ -78,7 +77,7 @@ export function IncentiveSubmitDialog(input: {
         </div>
         <DialogFooter className="incentive-confirm-footer">
           <Button disabled={input.pending} onClick={() => input.onOpenChange(false)} variant="outline">{input.t('storeIncentives.command.cancel')}</Button>
-          <Button disabled={!regionId || !ready || input.pending || input.disabled} onClick={submit}>
+          <Button disabled={!companyId || !ready || input.pending || input.disabled} onClick={submit}>
             <Send aria-hidden="true" data-icon="inline-start" />
             {input.t('storeIncentives.command.submitConfirm')}
           </Button>

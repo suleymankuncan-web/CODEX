@@ -5,8 +5,9 @@ export class SubmitSalesTargetIncentiveRegionPackageDto {
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
   period!: string;
 
+  @IsOptional()
   @IsPostgresUuid()
-  regionId!: string;
+  companyId?: string;
 
   @IsOptional()
   @IsString()

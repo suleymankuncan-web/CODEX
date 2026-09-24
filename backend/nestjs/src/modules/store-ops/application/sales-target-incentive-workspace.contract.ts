@@ -62,6 +62,8 @@ export type SalesTargetIncentiveWorkspaceRow = {
   positionCode: string;
   target: string | null;
   actual: string | null;
+  dailyActualNetSales: string | null;
+  dailyAchievementPct: string | null;
   achievementPct: string | null;
   rate: string | null;
   calculatedAmount: string | null;
@@ -80,6 +82,8 @@ export type SalesTargetIncentiveWorkspaceStore = {
   storeTarget: string | null;
   storeActualNetSales: string | null;
   storeAchievementPct: string | null;
+  dailyActualNetSales: string | null;
+  dailyAchievementPct: string | null;
   capabilities: {
     canMarkStoreReview: boolean;
     canCreateCorrection: boolean;
@@ -93,10 +97,10 @@ export type SalesTargetIncentiveWorkspaceStore = {
   rows: SalesTargetIncentiveWorkspaceRow[];
 };
 
-export type SalesTargetIncentiveWorkspaceRegion = {
-  regionId: string;
-  regionName: string | null;
-  regionManager: { displayName: string | null };
+export type SalesTargetIncentiveWorkspaceManagerGroup = {
+  companyId: string;
+  managerUserId: string | null;
+  managerName: string | null;
   capabilities: { canSubmitPackage: boolean };
   package: {
     status: "not_submitted" | "submitted" | "admin_approved" | "admin_returned";
@@ -112,9 +116,10 @@ export type SalesTargetIncentiveWorkspaceResult = {
   periodStart: string;
   periodEnd: string;
   periodTimezone: string;
+  salesTracking: { throughDate: string; lastLoadedDate: string | null; status: "complete" | "unavailable" };
   view: SalesTargetIncentiveWorkspaceView;
   capabilities: SalesTargetIncentiveWorkspaceCapabilities;
   sections: SalesTargetIncentiveWorkspaceSections;
   rateMetadata: SalesTargetIncentiveWorkspaceRateMetadata;
-  regions: SalesTargetIncentiveWorkspaceRegion[];
+  managerGroups: SalesTargetIncentiveWorkspaceManagerGroup[];
 };

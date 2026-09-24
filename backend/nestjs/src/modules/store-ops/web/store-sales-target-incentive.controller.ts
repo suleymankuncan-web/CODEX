@@ -102,7 +102,7 @@ export class StoreSalesTargetIncentiveController {
     return this.salesTargetIncentiveApiService.submitRegionPackage({
       actor: request.user,
       periodKey: body.period,
-      regionId: body.regionId,
+      companyId: body.companyId,
       submissionNote: body.submissionNote,
     });
   }

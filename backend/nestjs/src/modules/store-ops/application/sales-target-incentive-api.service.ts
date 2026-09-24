@@ -194,6 +194,7 @@ export class SalesTargetIncentiveApiService {
       projection,
       stores: projection.stores,
       roleScope,
+      managerUserId: roleScope === "region" ? input.actor.userId : undefined,
     });
   }
 
@@ -472,7 +473,7 @@ export class SalesTargetIncentiveApiService {
   async submitRegionPackage(input: {
     actor: AuthenticatedUser;
     periodKey: string;
-    regionId: string;
+    companyId?: string;
     submissionNote?: string | null;
   }) {
     return this.regionWorkflowService.submitRegionPackage({
@@ -485,6 +486,7 @@ export class SalesTargetIncentiveApiService {
     projection: SalesTargetIncentiveProjectionReadModel;
     stores: SalesTargetIncentiveProjectionStore[];
     roleScope: SalesTargetIncentiveRoleScope;
+    managerUserId?: string;
     regionPackages?: SalesTargetIncentiveAdminRegionPackageSummary[];
   }): Promise<SalesTargetIncentiveApiResponse> {
     const [adjustmentSummaries, workflowContext] = await Promise.all([
@@ -497,6 +499,7 @@ export class SalesTargetIncentiveApiService {
         periodKey: input.projection.periodKey,
         stores: input.stores,
         roleScope: input.roleScope,
+        managerUserId: input.managerUserId,
       }),
     ]);
 

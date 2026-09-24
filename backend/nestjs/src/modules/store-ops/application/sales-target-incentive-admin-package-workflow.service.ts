@@ -6,6 +6,8 @@ import {
   type SalesTargetIncentiveAdminRegionPackageSummaryRow,
 } from "../infrastructure/sales-target-incentive-admin-package-read.repository";
 import { SalesTargetIncentiveApprovalRepository } from "../infrastructure/sales-target-incentive-approval.repository";
+import { SalesTargetIncentiveManagerPackageRepository } from "../infrastructure/sales-target-incentive-manager-package.repository";
+import { SalesTargetIncentiveManagerPackageReadRepository } from "../infrastructure/sales-target-incentive-manager-package-read.repository";
 import { SALES_TARGET_INCENTIVE_TIMEZONE } from "./sales-target-incentive-calculator.service";
 
 export type SalesTargetIncentiveAdminRegionPackageSummary = {
@@ -33,6 +35,8 @@ export class SalesTargetIncentiveAdminPackageWorkflowService {
   constructor(
     private readonly adminPackageReadRepository: SalesTargetIncentiveAdminPackageReadRepository,
     private readonly approvalRepository: SalesTargetIncentiveApprovalRepository,
+    private readonly managerPackageRepository: SalesTargetIncentiveManagerPackageRepository,
+    private readonly managerPackageReadRepository: SalesTargetIncentiveManagerPackageReadRepository,
   ) {}
 
   async listRegionPackages(input: {
@@ -95,23 +99,37 @@ export class SalesTargetIncentiveAdminPackageWorkflowService {
 
   async listFinalApprovalPackages(input: { actor: AuthenticatedUser; periodKey: string }) {
     const companyIds = incentiveFinalApprovalCompanyIds(input.actor);
-    const rows = await this.adminPackageReadRepository.listRegionPackageSummaries({
-      periodKey: input.periodKey, companyIds, regionIds: [], storeIds: [], allowGlobalScope: false,
-    });
-    return rows.filter((row) => companyIds.includes(row.company_id)).map((row) => ({
-      ...toAdminRegionPackageSummary(row), regionPackageId: row.region_package_id,
+    const rows = await this.managerPackageReadRepository.list({ periodKey: input.periodKey, companyIds });
+    return rows.map((row) => ({
+      companyId: row.company_id,
+      managerUserId: row.manager_user_id,
+      managerName: row.manager_name,
+      regionPackageId: row.package_id,
+      submittedByUserId: row.submitted_by_user_id,
+      submittedByName: row.submitted_by_name,
+      submittedAt: row.submitted_at,
+      reviewedByUserId: row.reviewed_by_user_id,
+      reviewedByName: row.reviewed_by_name,
+      reviewedAt: row.reviewed_at,
+      reviewNote: row.review_note,
+      status: row.package_status ?? "not_submitted",
+      storeCount: Number(row.store_count),
+      reviewedStoreCount: Number(row.reviewed_store_count),
+      submittedStoreCount: Number(row.submitted_store_count),
+      draftCorrectionCount: Number(row.draft_correction_count),
+      submittedCorrectionCount: Number(row.submitted_correction_count),
     }));
   }
 
-  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionId: string; regionPackageId: string; submittedAt: string; decision?: "approve" | "return"; reviewNote?: string }) {
+  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionPackageId: string; submittedAt: string; decision?: "approve" | "return"; reviewNote?: string }) {
     const companyIds = incentiveFinalApprovalCompanyIds(input.actor);
     const reviewNote = input.reviewNote?.trim() || null;
     if (input.decision === "return" && !reviewNote) throw new BadRequestException("Return note is required");
-    const row = await this.approvalRepository.reviewRegionPackage({
-      periodKey: input.periodKey, regionId: input.regionId, actorUserId: input.actor.userId,
-      packageStatus: input.decision === "return" ? "admin_returned" : "admin_approved", reviewNote, finalApproval: {
-        companyIds, regionPackageId: input.regionPackageId, submittedAt: input.submittedAt,
-      },
+    const row = await this.managerPackageRepository.review({
+      periodKey: input.periodKey, packageId: input.regionPackageId,
+      submittedAt: input.submittedAt, actorUserId: input.actor.userId,
+      companyIds, decision: input.decision === "return" ? "admin_returned" : "admin_approved",
+      reviewNote,
     });
     return { data: { regionPackageId: row.sales_target_incentive_region_package_id, status: row.package_status, reviewedAt: row.reviewed_at } };
   }

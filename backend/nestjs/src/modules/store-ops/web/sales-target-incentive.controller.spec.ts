@@ -277,7 +277,7 @@ describe("SalesTargetIncentive controllers", () => {
     });
     const submitBody = Object.assign(new SubmitSalesTargetIncentiveRegionPackageDto(), {
       period: "2026-05",
-      regionId: "00000000-0000-0000-0000-000000000101",
+      companyId: "00000000-0000-0000-0000-000000000001",
       submissionNote: "Kontrol tamamlandi",
     });
 

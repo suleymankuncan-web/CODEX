@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
   MANAGER_RATE_TABLE_VERSION,
@@ -18,11 +18,12 @@ import {
 import { SalesTargetIncentiveWorkspaceReadRepository } from "../infrastructure/sales-target-incentive-workspace-read.repository";
 import type {
   SalesTargetIncentiveWorkspaceCorrection,
-  SalesTargetIncentiveWorkspaceRegion,
+  SalesTargetIncentiveWorkspaceManagerGroup,
   SalesTargetIncentiveWorkspaceResult,
   SalesTargetIncentiveWorkspaceRow,
 } from "./sales-target-incentive-workspace.contract";
 import type { SalesTargetIncentiveRegionCorrectionRow } from "../infrastructure/sales-target-incentive-approval.repository";
+import type { SalesTargetIncentiveDailySalesRow } from "../infrastructure/sales-target-incentive-read.repository";
 import { resolveSalesTargetIncentiveRateMetadata } from "./sales-target-incentive-rate-metadata";
 import { resolveSalesTargetIncentiveWorkspaceScope } from "./sales-target-incentive-workspace-scope";
 
@@ -39,6 +40,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
   async getWorkspace(input: {
     actor: AuthenticatedUser;
     periodKey?: string;
+    throughDate?: string;
   }): Promise<SalesTargetIncentiveWorkspaceResult> {
     const scope = resolveSalesTargetIncentiveWorkspaceScope({
       actorRoleCodes: input.actor.roleCodes,
@@ -48,17 +50,24 @@ export class SalesTargetIncentiveWorkspaceReadService {
     if (!scope) {
       throw new ForbiddenException("Incentive workspace is not available for this role");
     }
+    const projectionScope = scope.view === "region_manager"
+      ? { companyIds: [], regionIds: [], storeIds: input.actor.actionScope.assignedStoreIds }
+      : scope;
 
     const period = monthlyBounds(input.periodKey ?? currentPeriod());
-    if (scope.companyIds.length + scope.regionIds.length + scope.storeIds.length === 0) {
-      return emptyWorkspace(period, scope.view, scope.capabilities);
+    const throughDate = input.throughDate ?? clampDate(currentBusinessDate(), period.periodStart, period.periodEnd);
+    if (!isValidBusinessDate(throughDate) || throughDate < period.periodStart || throughDate > period.periodEnd) {
+      throw new BadRequestException("throughDate must be a day in the selected incentive period");
+    }
+    if (projectionScope.companyIds.length + projectionScope.regionIds.length + projectionScope.storeIds.length === 0) {
+      return emptyWorkspace(period, scope.view, scope.capabilities, throughDate);
     }
 
     const projection = await this.readModelService.buildCurrentProjection({
       periodKey: period.period,
-      companyIds: scope.companyIds,
-      regionIds: scope.regionIds,
-      storeIds: scope.storeIds,
+      companyIds: projectionScope.companyIds,
+      regionIds: projectionScope.regionIds,
+      storeIds: projectionScope.storeIds,
       allowGlobalScope: false,
     });
     const storeIds = projection.stores.map((store) => store.storeId);
@@ -67,9 +76,10 @@ export class SalesTargetIncentiveWorkspaceReadService {
         { period: projection.periodKey, periodStart: projection.periodStart, periodEnd: projection.periodEnd },
         scope.view,
         scope.capabilities,
+        throughDate,
       );
     }
-    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries] = await Promise.all([
+    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult] = await Promise.all([
       optionalSection(this.repository.listStoreMetadata({ storeIds, periodEnd: projection.periodEnd }), [], "store_metadata", this.logger),
       this.repository.listClosedRateSnapshots({ periodKey: projection.periodKey, storeIds }),
       this.repository.listWorkflowAudit({ periodKey: projection.periodKey, storeIds }),
@@ -78,7 +88,10 @@ export class SalesTargetIncentiveWorkspaceReadService {
         storeIds,
         includeFinalRows: true,
       }),
+      optionalSection(this.readModelService.listDailySalesTracking({ storeIds, periodStart: period.periodStart, throughDate }), [], "daily_sales", this.logger),
     ]);
+    const dailyStoreById = new Map(dailyResult.value.filter(row => row.scope_type === "store").map(row => [row.store_id, row]));
+    const dailyEmployeeByKey = new Map(dailyResult.value.filter(row => row.scope_type === "employee" && row.employee_id).map(row => [`${row.store_id}:${row.employee_id}`, row]));
     const exactRateRowsResult = closedSnapshots.length === 0
       ? await optionalSection(this.repository.listExactRateTables({
           ruleVersionCode: SALES_TARGET_INCENTIVE_RULE_VERSION,
@@ -114,7 +127,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
     );
     const correctionRowsByStore = groupBy(workflow.corrections, (row) => row.store_id);
     const adjustmentsByStore = groupBy(adjustmentSummaries, (row) => row.store_id);
-    const regions = new Map<string, SalesTargetIncentiveWorkspaceRegion>();
+    const managerGroups = new Map<string, SalesTargetIncentiveWorkspaceManagerGroup>();
     const visibleStoreIds = new Set(storeIds);
     const actionableStoreIds = new Set(
       scope.view === "region_manager"
@@ -125,20 +138,30 @@ export class SalesTargetIncentiveWorkspaceReadService {
 
     for (const store of projection.stores) {
       const storeMetadata = metadataByStoreId.get(store.storeId);
-      const packageState = toPackage(
-        workflow.packages.find((item) => item.region_id === store.regionId) ?? null,
-      );
-      const region = regions.get(store.regionId) ?? {
-        regionId: store.regionId,
-        regionName: storeMetadata?.region_name ?? null,
-        regionManager: { displayName: storeMetadata?.region_manager_name ?? null },
+      const managerUserId = storeMetadata?.region_manager_user_id ?? null;
+      const groupKey = `${store.companyId}:${managerUserId ?? "unassigned"}`;
+      const ownerPackage = workflow.packages.find((item) =>
+        item.package_scope === "manager_assignment" &&
+        item.company_id === store.companyId && item.manager_user_id === managerUserId,
+      ) ?? null;
+      const legacyPackage = workflow.packages.find((item) =>
+        item.package_scope === "legacy_region" && item.company_id === store.companyId &&
+        item.store_ids?.includes(store.storeId),
+      ) ?? null;
+      const packageState = toPackage(ownerPackage ?? legacyPackage);
+      const managerGroup = managerGroups.get(groupKey) ?? {
+        companyId: store.companyId,
+        managerUserId,
+        managerName: storeMetadata?.region_manager_name ?? null,
         capabilities: { canSubmitPackage: false },
-        package: packageState,
+        package: toPackage(ownerPackage),
         stores: [],
       };
       const canAct = actionableStoreIds.has(store.storeId);
       const workspaceStore = toWorkspaceStore({
         store,
+        dailyStore: dailyStoreById.get(store.storeId) ?? null,
+        dailyEmployees: dailyEmployeeByKey,
         canAct,
         storeCode: storeMetadata?.store_code ?? null,
         finalSnapshotId: closedSnapshotByStoreId.get(store.storeId) ?? null,
@@ -148,33 +171,34 @@ export class SalesTargetIncentiveWorkspaceReadService {
         actorByCorrectionId,
         packageStatus: packageState.status,
       });
-      region.stores.push(workspaceStore);
+      managerGroup.stores.push(workspaceStore);
       capabilities.canMarkStoreReview ||= workspaceStore.capabilities.canMarkStoreReview;
       capabilities.canCreateCorrection ||= workspaceStore.capabilities.canCreateCorrection;
       capabilities.canVoidCorrection ||= workspaceStore.capabilities.canVoidCorrection;
-      regions.set(store.regionId, region);
+      managerGroups.set(groupKey, managerGroup);
     }
 
-    const resolvedRegions = [...regions.values()].map((region) => {
-      const actionableStores = region.stores.filter((store) => actionableStoreIds.has(store.storeId));
-      const packageEditable = region.package.status !== "submitted" && region.package.status !== "admin_approved";
+    const resolvedGroups = [...managerGroups.values()].map((group) => {
+      const packageEditable = group.package.status !== "submitted" && group.package.status !== "admin_approved";
       return {
-        ...region,
+        ...group,
         capabilities: {
           canSubmitPackage: packageEditable
-            && actionableStores.length > 0
-            && actionableStores.every((store) => store.capabilities.canMarkStoreReview),
+            && group.managerUserId === input.actor.userId
+            && group.stores.length > 0
+            && group.stores.every((store) => actionableStoreIds.has(store.storeId) && store.capabilities.canMarkStoreReview),
         },
-        stores: region.stores.sort((left, right) => left.storeName.localeCompare(right.storeName, "tr")),
+        stores: group.stores.sort((left, right) => left.storeName.localeCompare(right.storeName, "tr")),
       };
     });
-    capabilities.canSubmitPackage = resolvedRegions.some((region) => region.capabilities.canSubmitPackage);
+    capabilities.canSubmitPackage = resolvedGroups.some((group) => group.capabilities.canSubmitPackage);
 
     return {
       period: projection.periodKey,
       periodStart: projection.periodStart,
       periodEnd: projection.periodEnd,
       periodTimezone: projection.timezone,
+      salesTracking: { throughDate, lastLoadedDate: dailyResult.value.reduce<string | null>((latest, row) => latest === null || row.last_day > latest ? row.last_day : latest, null), status: dailyResult.status },
       view: scope.view,
       capabilities,
       sections: {
@@ -184,14 +208,16 @@ export class SalesTargetIncentiveWorkspaceReadService {
         correctionActors: { status: actorRowsResult.status },
       },
       rateMetadata,
-      regions: resolvedRegions
-        .sort((left, right) => (left.regionName ?? "").localeCompare(right.regionName ?? "", "tr")),
+      managerGroups: resolvedGroups
+        .sort((left, right) => (left.managerName ?? "").localeCompare(right.managerName ?? "", "tr")),
     };
   }
 }
 
 function toWorkspaceStore(input: {
   store: SalesTargetIncentiveProjectionStore;
+  dailyStore: SalesTargetIncentiveDailySalesRow | null;
+  dailyEmployees: Map<string, SalesTargetIncentiveDailySalesRow>;
   canAct: boolean;
   storeCode: string | null;
   finalSnapshotId: string | null;
@@ -220,6 +246,13 @@ function toWorkspaceStore(input: {
       rows.push(toFinalOnlyWorkspaceRow(summary, input.corrections, input.actorByCorrectionId));
     }
   }
+  for (const row of rows) {
+    const dailyAmount = row.participantType === "store_manager"
+      ? input.dailyStore?.actual_amount ?? null
+      : input.dailyEmployees.get(`${input.store.storeId}:${row.employeeId}`)?.actual_amount ?? null;
+    row.dailyActualNetSales = dailyAmount;
+    row.dailyAchievementPct = dailyAchievement(dailyAmount, row.target);
+  }
   const primary = input.store.manager?.calculation ?? input.store.personnel[0]?.calculation;
   const periodClosed = input.finalSnapshotId !== null;
   const packageEditable = input.packageStatus !== "submitted" && input.packageStatus !== "admin_approved";
@@ -235,6 +268,8 @@ function toWorkspaceStore(input: {
     storeTarget: input.store.storeTargetAmount,
     storeActualNetSales: input.store.storeNetSalesAmount,
     storeAchievementPct: primary?.storeAchievementPct ?? primary?.achievementPct ?? null,
+    dailyActualNetSales: input.dailyStore?.actual_amount ?? null,
+    dailyAchievementPct: dailyAchievement(input.dailyStore?.actual_amount ?? null, input.store.storeTargetAmount),
     capabilities: {
       canMarkStoreReview: canEdit,
       canCreateCorrection: canEdit,
@@ -292,6 +327,8 @@ function toWorkspaceRow(input: {
     positionCode: input.participant.positionCode,
     target: input.adjustmentSummary?.target_amount ?? input.participant.targetAmount,
     actual: input.adjustmentSummary?.actual_sales_amount ?? input.participant.actualAmount,
+    dailyActualNetSales: null,
+    dailyAchievementPct: null,
     achievementPct: input.adjustmentSummary?.achievement_pct ?? input.participant.calculation.achievementPct,
     rate: input.adjustmentSummary?.applied_rate ?? input.participant.calculation.rate,
     calculatedAmount,
@@ -336,6 +373,8 @@ function toFinalOnlyWorkspaceRow(
     positionCode: summary.position_code ?? (summary.participant_type === "store_manager" ? "STORE_MANAGER" : "SALES_ASSOCIATE"),
     target: summary.target_amount ?? null,
     actual: summary.actual_sales_amount ?? null,
+    dailyActualNetSales: null,
+    dailyAchievementPct: null,
     achievementPct: summary.achievement_pct ?? null,
     rate: summary.applied_rate ?? null,
     calculatedAmount,
@@ -465,10 +504,12 @@ function emptyWorkspace(
   period: { period: string; periodStart: string; periodEnd: string },
   view: "report_viewer" | "region_manager",
   capabilities: SalesTargetIncentiveWorkspaceResult["capabilities"],
+  throughDate: string,
 ): SalesTargetIncentiveWorkspaceResult {
   return {
     ...period,
     periodTimezone: SALES_TARGET_INCENTIVE_TIMEZONE,
+    salesTracking: { throughDate, lastLoadedDate: null, status: "complete" },
     view,
     capabilities,
     sections: completeWorkspaceSections(),
@@ -480,7 +521,7 @@ function emptyWorkspace(
       bracketBoundaryPolicy: null,
       tables: [],
     },
-    regions: [],
+    managerGroups: [],
   };
 }
 
@@ -523,4 +564,29 @@ function currentPeriod() {
     month: "2-digit",
   }).formatToParts(new Date());
   return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}`;
+}
+
+function currentBusinessDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SALES_TARGET_INCENTIVE_TIMEZONE,
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  return `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}-${parts.find((part) => part.type === "day")?.value}`;
+}
+
+function clampDate(value: string, start: string, end: string) {
+  return value < start ? start : value > end ? end : value;
+}
+
+function isValidBusinessDate(value: string) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)) return false;
+  return new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+}
+
+function dailyAchievement(actual: string | null, target: string | null) {
+  if (actual === null || target === null) return null;
+  const numerator = Number(actual);
+  const denominator = Number(target);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null;
+  return (numerator / denominator * 100).toFixed(2);
 }

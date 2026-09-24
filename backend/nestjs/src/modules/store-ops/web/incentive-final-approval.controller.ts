@@ -19,6 +19,6 @@ export class IncentiveFinalApprovalController {
 
   @Post()
   async approve(@Req() request: { user: AuthenticatedUser }, @Body() body: ApproveFinalIncentivePackageDto) {
-    return this.service.approveFinalPackage({ actor: request.user, periodKey: body.period, regionId: body.regionId, regionPackageId: body.regionPackageId, submittedAt: body.submittedAt, decision: body.decision, reviewNote: body.reviewNote });
+    return this.service.approveFinalPackage({ actor: request.user, periodKey: body.period, regionPackageId: body.regionPackageId, submittedAt: body.submittedAt, decision: body.decision, reviewNote: body.reviewNote });
   }
 }

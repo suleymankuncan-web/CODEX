@@ -1,5 +1,6 @@
 import type {
-  IncentiveRegion,
+  IncentiveManagerGroup,
+  IncentiveRow,
   IncentiveStatusFilter,
   IncentiveStore,
   IncentiveWorkspace,
@@ -7,7 +8,7 @@ import type {
 import type { RegionManagerDirectoryItem } from '@/features/org/region-manager-directory'
 
 export function buildIncentiveMetrics(workspace: IncentiveWorkspace) {
-  const stores = workspace.regions.flatMap((region) => region.stores)
+  const stores = workspace.managerGroups.flatMap((region) => region.stores)
   const rows = stores.flatMap((store) => store.rows)
   return {
     finalTotal: sumMoney(rows.map((row) => row.finalAmount)),
@@ -15,7 +16,7 @@ export function buildIncentiveMetrics(workspace: IncentiveWorkspace) {
     correctionCount: rows.filter((row) => row.status === 'corrected' || row.status === 'adjusted').length,
     reviewedStoreCount: stores.filter((store) => store.review.status === 'reviewed').length,
     storeCount: stores.length,
-    regionCount: workspace.regions.length,
+    managerCount: workspace.managerGroups.length,
   }
 }
 
@@ -24,16 +25,10 @@ export function scopeIncentiveWorkspaceToManager(
   manager: RegionManagerDirectoryItem | null,
 ): IncentiveWorkspace {
   if (!manager) return workspace
-  const storeIds = new Set(manager.storeIds)
   return {
     ...workspace,
-    regions: workspace.regions
-      .map((region) => ({
-        ...region,
-        regionManager: { displayName: manager.displayName },
-        stores: region.stores.filter((store) => storeIds.has(store.storeId)),
-      }))
-      .filter((region) => region.stores.length > 0),
+    managerGroups: workspace.managerGroups
+      .filter((group) => group.managerUserId === manager.userId),
   }
 }
 
@@ -42,22 +37,23 @@ export function filterIncentiveWorkspace(
   input: { search: string; status: IncentiveStatusFilter },
 ): IncentiveWorkspace {
   const search = normalize(input.search)
-  const regions = workspace.regions
-    .map((region) => filterRegion(region, search, input.status))
-    .filter((region): region is IncentiveRegion => region !== null)
-  return { ...workspace, regions }
+  const managerGroups = workspace.managerGroups
+    .map((group) => filterManagerGroup(group, search, input.status))
+    .filter((group): group is IncentiveManagerGroup => group !== null)
+  return { ...workspace, managerGroups }
 }
 
-export function getSubmitRegionOptions(workspace: IncentiveWorkspace, fallbackLabel = 'Unassigned region') {
-  return workspace.regions
-    .filter((region) => region.package.status === 'not_submitted' || region.package.status === 'admin_returned')
-    .map((region) => ({
-      regionId: region.regionId,
-      label: region.regionName?.trim() || region.regionManager.displayName?.trim() || fallbackLabel,
+export function getSubmitManagerOptions(workspace: IncentiveWorkspace, fallbackLabel = 'Unassigned manager') {
+  return workspace.managerGroups
+    .filter((group) => group.managerUserId && (group.package.status === 'not_submitted' || group.package.status === 'admin_returned'))
+    .map((group) => ({
+      companyId: group.companyId,
+      managerUserId: group.managerUserId!,
+      label: group.managerName?.trim() || fallbackLabel,
     }))
 }
 
-export function isIncentiveRegionSubmitReady(region: IncentiveRegion | undefined) {
+export function isIncentiveManagerGroupSubmitReady(region: IncentiveManagerGroup | undefined) {
   return Boolean(
     region
     && region.capabilities.canSubmitPackage
@@ -90,17 +86,37 @@ export function sumMoney(values: Array<string | null | undefined>) {
   return validValueCount === 0 ? null : formatScaled(total, 2)
 }
 
-function filterRegion(
-  region: IncentiveRegion,
+export function hasIncentiveAmountChange(calculated: string | null, final: string | null) {
+  if (calculated === null || final === null) return false
+  const baseline = parseDecimal(calculated), current = parseDecimal(final)
+  return Boolean(baseline && current && scaleUnits(baseline.units, baseline.scale, 2) !== scaleUnits(current.units, current.scale, 2))
+}
+
+export function countAdjustedIncentivePersonnel(rows: IncentiveRow[]) {
+  return new Set(rows.filter(row => hasIncentiveAmountChange(row.calculatedAmount, row.finalAmount)).map(row => row.employeeId)).size
+}
+
+export function isBelowIncentiveThreshold(achievementPct: string | null) {
+  if (!achievementPct?.trim()) return false
+  const achievement = Number(achievementPct)
+  return Number.isFinite(achievement) && achievement < 80
+}
+
+export function isEarnedAtIncentiveThreshold(finalAmount: string | null, achievementPct: string | null) {
+  if (finalAmount === null || achievementPct === null) return false
+  const amount = Number(finalAmount), achievement = Number(achievementPct)
+  return Number.isFinite(amount) && Number.isFinite(achievement) && amount > 0 && achievement >= 80
+}
+
+function filterManagerGroup(
+  group: IncentiveManagerGroup,
   search: string,
   status: IncentiveStatusFilter,
-): IncentiveRegion | null {
-  const stores = region.stores.filter((store) => matchesStore(store, search, status))
-  const regionMatchesSearch = Boolean(search) && (
-    normalize(region.regionName).includes(search) || normalize(region.regionManager.displayName).includes(search)
-  )
-  if (stores.length > 0) return { ...region, stores }
-  if (status === 'all' && regionMatchesSearch) return { ...region, stores: region.stores }
+): IncentiveManagerGroup | null {
+  const stores = group.stores.filter((store) => matchesStore(store, search, status))
+  const managerMatchesSearch = Boolean(search) && normalize(group.managerName).includes(search)
+  if (stores.length > 0) return { ...group, stores }
+  if (status === 'all' && managerMatchesSearch) return group
   return null
 }
 

@@ -34,7 +34,9 @@ export type SalesTargetIncentiveStoreReviewRow = {
 export type SalesTargetIncentiveRegionPackageRow = {
   sales_target_incentive_region_package_id: string;
   company_id: string;
-  region_id: string;
+  region_id: string | null;
+  package_scope: "legacy_region" | "manager_assignment";
+  manager_user_id: string | null;
   period_key: string;
   package_status: SalesTargetIncentiveRegionPackageStatus;
   submitted_by_user_id: string;

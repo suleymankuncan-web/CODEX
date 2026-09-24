@@ -23,7 +23,7 @@ test('partial optional sections retain the valid incentive hierarchy', async ({ 
 test('empty server dataset and empty local filter use distinct honest states', async ({ page }) => {
   await prepareRegionManager(page)
   const empty = createIncentiveWorkspace('region_manager')
-  empty.data.regions = []
+  empty.data.managerGroups = []
   await routeIncentiveWorkspace(page, empty)
   await page.goto('/store/incentives')
   await expect(page.getByRole('heading', { name: 'Bu dönem için prim sonucu yok' })).toBeVisible()

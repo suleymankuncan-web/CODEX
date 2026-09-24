@@ -20,6 +20,7 @@ export class SalesTargetIncentiveWorkspaceController {
       data: await this.service.getWorkspace({
         actor: request.user,
         periodKey: query.period,
+        throughDate: query.throughDate,
       }),
     };
   }

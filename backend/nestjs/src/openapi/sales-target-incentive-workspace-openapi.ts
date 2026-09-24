@@ -83,11 +83,11 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspaceRow: objectSchema(
-      ["employeeId", "displayName", "participantType", "positionCode", "target", "actual", "achievementPct", "rate", "calculatedAmount", "finalAmount", "signedDifferenceAmount", "status", "correction", "correctionRecords"],
+      ["employeeId", "displayName", "participantType", "positionCode", "target", "actual", "dailyActualNetSales", "dailyAchievementPct", "achievementPct", "rate", "calculatedAmount", "finalAmount", "signedDifferenceAmount", "status", "correction", "correctionRecords"],
       {
         employeeId: { type: "string", format: "uuid" }, displayName: { type: "string" },
         participantType: { type: "string", enum: ["store_manager", "personnel"] }, positionCode: { type: "string" },
-        target: decimal, actual: decimal, achievementPct: decimal, rate: decimal,
+        target: decimal, actual: decimal, dailyActualNetSales: decimal, dailyAchievementPct: decimal, achievementPct: decimal, rate: decimal,
         calculatedAmount: money, finalAmount: money, signedDifferenceAmount: money,
         status: { type: "string", enum: ["projected", "blocked", "no_source", "corrected", "adjusted"] },
         correction: { ...ref("SalesTargetIncentiveWorkspaceCorrection"), nullable: true },
@@ -95,10 +95,10 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspaceStore: objectSchema(
-      ["storeId", "storeCode", "storeName", "city", "storeTarget", "storeActualNetSales", "storeAchievementPct", "capabilities", "review", "rows"],
+      ["storeId", "storeCode", "storeName", "city", "storeTarget", "storeActualNetSales", "storeAchievementPct", "dailyActualNetSales", "dailyAchievementPct", "capabilities", "review", "rows"],
       {
         storeId: { type: "string", format: "uuid" }, storeCode: nullableString, storeName: { type: "string" }, city: nullableString,
-        storeTarget: decimal, storeActualNetSales: decimal, storeAchievementPct: decimal,
+        storeTarget: decimal, storeActualNetSales: decimal, storeAchievementPct: decimal, dailyActualNetSales: decimal, dailyAchievementPct: decimal,
         capabilities: objectSchema(["canMarkStoreReview", "canCreateCorrection", "canVoidCorrection"], {
           canMarkStoreReview: { type: "boolean" }, canCreateCorrection: { type: "boolean" }, canVoidCorrection: { type: "boolean" },
         }),
@@ -110,11 +110,12 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
         rows: arrayRef("SalesTargetIncentiveWorkspaceRow"),
       },
     ),
-    SalesTargetIncentiveWorkspaceRegion: objectSchema(
-      ["regionId", "regionName", "regionManager", "capabilities", "package", "stores"],
+    SalesTargetIncentiveWorkspaceManagerGroup: objectSchema(
+      ["companyId", "managerUserId", "managerName", "capabilities", "package", "stores"],
       {
-        regionId: { type: "string", format: "uuid" }, regionName: nullableString,
-        regionManager: objectSchema(["displayName"], { displayName: nullableString }),
+        companyId: { type: "string", format: "uuid" },
+        managerUserId: { type: "string", format: "uuid", nullable: true },
+        managerName: nullableString,
         capabilities: objectSchema(["canSubmitPackage"], { canSubmitPackage: { type: "boolean" } }),
         package: objectSchema(["status", "submittedAt", "reviewedAt", "reviewNote"], {
           status: { type: "string", enum: ["not_submitted", "submitted", "admin_approved", "admin_returned"] },
@@ -125,14 +126,18 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspace: objectSchema(
-      ["period", "periodStart", "periodEnd", "periodTimezone", "view", "capabilities", "sections", "rateMetadata", "regions"],
+      ["period", "periodStart", "periodEnd", "periodTimezone", "salesTracking", "view", "capabilities", "sections", "rateMetadata", "managerGroups"],
       {
         period: { type: "string" }, periodStart: { type: "string", format: "date" }, periodEnd: { type: "string", format: "date" },
         periodTimezone: { type: "string" }, view: { type: "string", enum: ["report_viewer", "region_manager"] },
+        salesTracking: objectSchema(["throughDate", "lastLoadedDate", "status"], {
+          throughDate: { type: "string", format: "date" }, lastLoadedDate: { type: "string", format: "date", nullable: true },
+          status: { type: "string", enum: ["complete", "unavailable"] },
+        }),
         capabilities: ref("SalesTargetIncentiveWorkspaceCapabilities"),
         sections: ref("SalesTargetIncentiveWorkspaceSections"),
         rateMetadata: ref("SalesTargetIncentiveWorkspaceRateMetadata"),
-        regions: arrayRef("SalesTargetIncentiveWorkspaceRegion"),
+        managerGroups: arrayRef("SalesTargetIncentiveWorkspaceManagerGroup"),
       },
     ),
     SalesTargetIncentiveWorkspaceResponse: objectSchema(["data"], { data: ref("SalesTargetIncentiveWorkspace") }),
@@ -140,7 +145,10 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
 
   const path = "/api/store/incentives/workspace";
   setJsonResponseSchema(document.paths, path, "get", "Role-scoped Incentives command workspace.", "SalesTargetIncentiveWorkspaceResponse");
-  setQueryParameters(document.paths, path, "get", [{ name: "period", in: "query", required: false, schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } }]);
+  setQueryParameters(document.paths, path, "get", [
+    { name: "period", in: "query", required: false, schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } },
+    { name: "throughDate", in: "query", required: false, schema: { type: "string", format: "date" } },
+  ]);
 }
 
 function objectSchema(required: string[], properties: Record<string, unknown>) {
