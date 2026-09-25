@@ -149,6 +149,12 @@ export function validateOnpremKeycloakContract(input) {
       && /\/patch\/bouncycastle\/bcutil-jdk18on\.jar \/opt\/keycloak\/lib\/lib\/main\/org\.bouncycastle\.bcutil-jdk18on-1\.84\.jar/.test(input.keycloakDockerfile),
     'Keycloak image must replace the complete vulnerable Bouncy Castle 1.84 provider family with checksum-pinned 1.85 artifacts',
   )
+  fail(
+    /COPY scripts\/onprem-keycloak-freemarker-patch\.mjs \/patch\/download-freemarker\.mjs/.test(input.keycloakDockerfile)
+      && /node \/patch\/download-freemarker\.mjs/.test(input.keycloakDockerfile)
+      && /\/patch\/freemarker\/freemarker\.jar \/opt\/keycloak\/lib\/lib\/main\/org\.freemarker\.freemarker-2\.3\.32\.jar/.test(input.keycloakDockerfile),
+    'Keycloak image must replace vulnerable FreeMarker 2.3.32 with the checksum-pinned 2.3.35 JAR',
+  )
   fail(!/start-dev/i.test(input.compose) && !/start-dev/i.test(input.bootstrap), 'production Compose and bootstrap must never use start-dev')
   fail(!/KEYCLOAK_ADMIN(?:_PASSWORD)?\s*:/i.test(input.compose) && !/admin\s*[:=]\s*admin/i.test(input.compose), 'default Keycloak admin credentials must be absent')
   fail(/start\s+--optimized/.test(keycloak), 'Keycloak must use optimized production startup')
