@@ -80,6 +80,75 @@ describe("KeycloakAdminClient", () => {
       .rejects.toThrow("keycloak_identity_owner_conflict");
   });
 
+  it("identifies a rejected user creation without persisting the Keycloak error body", async () => {
+    const responses = [
+      jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse([]),
+      badRequest({ errorMessage: "User exists with same email", email: "private@example.test", token: "private-token" }),
+    ];
+    jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+
+    const error = await new KeycloakAdminClient(config).provision(user).catch((value: unknown) => value);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("keycloak_http_400_create_user_email_duplicate");
+    expect((error as Error).message).not.toContain("private");
+  });
+
+  it("identifies a rejected setup email without logging its redirect URI", async () => {
+    const responses = [
+      jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse([]),
+      new Response(null, { status: 201, headers: { location: "http://keycloak/admin/realms/store-ops/users/subject-1" } }),
+      new Response(null, { status: 204 }),
+      jsonResponse([]),
+      jsonResponse({ id: "role-1", name: "STORE_PERSONNEL" }),
+      new Response(null, { status: 204 }),
+      badRequest({ errorMessage: "Invalid redirect_uri: https://private.example.test/auth/callback" }),
+    ];
+    jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+
+    const error = await new KeycloakAdminClient(config).provision(user).catch((value: unknown) => value);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("keycloak_http_400_send_setup_email_invalid_redirect");
+    expect((error as Error).message).not.toContain("private.example.test");
+  });
+
+  it("reports only approved profile field names and hides unknown error text", async () => {
+    const responses = [
+      jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse([]),
+      badRequest([{ field: "firstName", errorMessage: "private user value" }]),
+    ];
+    jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+
+    await expect(new KeycloakAdminClient(config).provision(user))
+      .rejects.toThrow("keycloak_http_400_create_user_profile_first_name");
+
+    const unknownResponses = [
+      jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse([]),
+      badRequest({ errorMessage: "password=private-secret" }),
+    ];
+    jest.spyOn(global, "fetch").mockImplementation(async () => unknownResponses.shift()!);
+
+    await expect(new KeycloakAdminClient(config).provision(user))
+      .rejects.toThrow("keycloak_http_400_create_user_unknown");
+  });
+
+  it("preserves existing error codes for non-400 Keycloak responses", async () => {
+    const responses = [
+      jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse([]),
+      new Response(JSON.stringify({ errorMessage: "private user value" }), { status: 403 }),
+    ];
+    jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+
+    await expect(new KeycloakAdminClient(config).provision(user))
+      .rejects.toThrow("keycloak_http_403");
+  });
+
   it("removes stale managed roles when enabling an identity", async () => {
     const responses = [
       jsonResponse({ access_token: "token", expires_in: 60 }),
@@ -118,6 +187,13 @@ describe("KeycloakAdminClient", () => {
 function jsonResponse(value: unknown) {
   return new Response(JSON.stringify(value), {
     status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+function badRequest(value: unknown) {
+  return new Response(JSON.stringify(value), {
+    status: 400,
     headers: { "content-type": "application/json" },
   });
 }
