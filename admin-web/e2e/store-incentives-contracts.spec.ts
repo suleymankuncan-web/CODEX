@@ -111,7 +111,7 @@ test('unsaved values survive Escape until explicit discard; closing restores foc
   await expect(page.getByLabel('Derya Uslu: Final prim tutarı')).toHaveValue('25000')
   await page.getByRole('button', { name: 'Mağaza detayını kapat' }).click()
   await page.getByRole('button', { name: 'Değişiklikleri bırak' }).click()
-  await expect(page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true })).toBeFocused()
+  await expect(page.locator('button.incentive-store-name').filter({ hasText: 'Mall of İstanbul' })).toBeFocused()
 })
 
 test('one manager submits one package covering stores across geographic regions', async ({ page }) => {
