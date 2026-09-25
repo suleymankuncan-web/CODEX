@@ -236,26 +236,31 @@ test('photo secret leaf identity permits backend-owner and root-group reads whil
   }
   const root = mkdtempSync(join('/var/lib', 'onprem-photo-secret-identity-'))
   const secret = join(root, 'primary-secret-access-key')
+  const originalUmask = process.umask(0o077)
   try {
     chmodSync(root, 0o755)
     writeFileSync(secret, 'synthetic-photo-secret\n', { mode: 0o440 })
     chownSync(secret, 65532, 0)
-    const readAs = (uid, gid) => spawnSync(process.execPath, ['-e', 'process.stdout.write(require("node:fs").readFileSync(process.argv[1], "utf8"))', secret], {
-      encoding: 'utf8', uid, gid,
+    chmodSync(secret, 0o440)
+    const readAs = (uid, gid) => spawnSync('/usr/bin/cat', [secret], {
+      encoding: 'utf8', uid, gid, env: { ...process.env, LC_ALL: 'C' },
     })
+    const childFailure = (result) => `error=${result.error?.message ?? 'none'} signal=${result.signal ?? 'none'} stderr=${result.stderr ?? ''}`
     const metadata = statSync(secret)
     assert.equal(metadata.uid, 65532)
     assert.equal(metadata.gid, 0)
     assert.equal(metadata.mode & 0o777, 0o440)
     const rootRead = readAs(0, 0)
-    assert.equal(rootRead.status, 0, rootRead.stderr)
+    assert.equal(rootRead.status, 0, childFailure(rootRead))
     assert.equal(rootRead.stdout, 'synthetic-photo-secret\n')
     const backendRead = readAs(65532, 65532)
-    assert.equal(backendRead.status, 0, backendRead.stderr)
+    assert.equal(backendRead.status, 0, childFailure(backendRead))
     assert.equal(backendRead.stdout, 'synthetic-photo-secret\n')
     const unrelatedRead = readAs(65531, 65531)
-    assert.notEqual(unrelatedRead.status, 0, 'unrelated UID/GID must not read photo secret')
+    assert.ok(Number.isInteger(unrelatedRead.status) && unrelatedRead.status !== 0, `unrelated UID/GID must not read photo secret: ${childFailure(unrelatedRead)}`)
+    assert.match(unrelatedRead.stderr, /EACCES|Permission denied/i, 'unrelated UID/GID must fail on secret access')
   } finally {
+    process.umask(originalUmask)
     rmSync(root, { recursive: true, force: true })
   }
 })

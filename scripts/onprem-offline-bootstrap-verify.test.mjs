@@ -46,8 +46,14 @@ function fixture({ files = { 'docs/proof.txt': { content: 'synthetic\n', mode: 0
     images: {},
   }
   manifestPatch(manifest)
-  writeFileSync(join(bundle, 'bundle-manifest.json'), JSON.stringify(manifest))
-  writeFileSync(join(bundle, 'bundle-signature.json'), JSON.stringify({ algorithm: 'Ed25519', encoding: 'base64url', keyFingerprintSha256: fingerprint, value: sign(null, Buffer.from(JSON.stringify(canonical(manifest))), privateKey).toString('base64url') }))
+  const generatedManifest = join(bundle, 'bundle-manifest.json')
+  const generatedSignature = join(bundle, 'bundle-signature.json')
+  writeFileSync(generatedManifest, JSON.stringify(manifest))
+  writeFileSync(generatedSignature, JSON.stringify({ algorithm: 'Ed25519', encoding: 'base64url', keyFingerprintSha256: fingerprint, value: sign(null, Buffer.from(JSON.stringify(canonical(manifest))), privateKey).toString('base64url') }))
+  if (process.platform !== 'win32') {
+    chmodSync(generatedManifest, 0o644)
+    chmodSync(generatedSignature, 0o644)
+  }
   bundlePatch({ bundle, root, publicPath })
   return { root, bundle, publicPath, fingerprint, options: { bundleDir: bundle, releaseId: 'release-test', publicKey: publicPath, trustedFingerprint: fingerprint } }
 }
@@ -64,11 +70,16 @@ test('bootstrap verifier has no pre-verification local import or producer surfac
 
 test('external pinned bootstrap verifies exact closure and rejects tampering', (t) => {
   if (cannotCreateRootPrivateFixture) return t.skip('requires a root-owned fixture tree')
-  withFixture({}, ({ options, bundle }) => {
-    assert.equal(verifyBootstrap(options), true)
-    writeFileSync(join(bundle, 'docs', 'proof.txt'), 'substitute\n')
-    assert.throws(() => verifyBootstrap(options), /identity mismatch/)
-  })
+  const originalUmask = process.umask(0o077)
+  try {
+    withFixture({}, ({ options, bundle }) => {
+      assert.equal(verifyBootstrap(options), true)
+      writeFileSync(join(bundle, 'docs', 'proof.txt'), 'substitute\n')
+      assert.throws(() => verifyBootstrap(options), /identity mismatch/)
+    })
+  } finally {
+    process.umask(originalUmask)
+  }
 })
 
 test('bootstrap verifier rejects unsigned files and empty directories', (t) => {

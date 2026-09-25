@@ -70,6 +70,7 @@ test('AC-002/003: filters and sorts locally without blanking or extra workspace 
   const api = await routeTargetWorkspace(page, 'region_manager')
   await page.goto('/store/targets')
   await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+  await expect(page.getByText('İstinyePark').first()).toBeVisible()
   const reads = api.reads
   await page.getByRole('button', { name: /Hedef bekleniyor/ }).first().click()
   await expect(page.getByText('Edirne Novada').first()).toBeVisible()
