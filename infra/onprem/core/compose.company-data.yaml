@@ -4,12 +4,14 @@ services:
   api:
     labels: &company-labels
       com.hr-axis.data-class: company
-    environment: &company-data
-      HR_AXIS_STRICT_LOCAL: "true"
-      HR_AXIS_DATA_CLASS: company
-      HR_AXIS_COMPANY_DATA_ENABLED: "true"
-      PHOTO_MEDIA_STORAGE_ENABLED: "false"
-      KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "false"
+    environment:
+      <<: &company-data
+        HR_AXIS_STRICT_LOCAL: "true"
+        HR_AXIS_DATA_CLASS: company
+        HR_AXIS_COMPANY_DATA_ENABLED: "true"
+        PHOTO_MEDIA_STORAGE_ENABLED: "false"
+        KEYCLOAK_SYNTHETIC_PHOTO_PROOF_ENABLED: "false"
+      INCENTIVE_AUTO_CLOSE_ENABLED: "true"
   worker:
     labels: *company-labels
     environment: *company-data

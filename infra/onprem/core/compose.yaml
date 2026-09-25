@@ -154,6 +154,7 @@ services:
       VISUAL_COMPARISON_ADVISORY_ENQUEUE_ENABLED: "false"
       VISUAL_COMPARISON_ADVISORY_REVIEW_ENABLED: "false"
       VISUAL_COMPARISON_WORKER_ENABLED: "false"
+      INCENTIVE_AUTO_CLOSE_ENABLED: "false"
     secrets:
       - source: api_database_url
         target: api_database_url
