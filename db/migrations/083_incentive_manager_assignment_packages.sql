@@ -17,15 +17,15 @@ ALTER TABLE ops.sales_target_incentive_region_package
 
 DROP INDEX IF EXISTS ops.idx_sti_region_package_region_period;
 
-CREATE UNIQUE INDEX idx_sti_legacy_region_package_period
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_legacy_region_package_period
     ON ops.sales_target_incentive_region_package (region_id, period_key)
     WHERE package_scope = 'legacy_region';
 
-CREATE UNIQUE INDEX idx_sti_manager_package_company_period
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_manager_package_company_period
     ON ops.sales_target_incentive_region_package (company_id, period_key, manager_user_id)
     WHERE package_scope = 'manager_assignment';
 
-CREATE INDEX idx_sti_manager_package_owner_period
+CREATE INDEX IF NOT EXISTS idx_sti_manager_package_owner_period
     ON ops.sales_target_incentive_region_package (manager_user_id, period_key)
     WHERE package_scope = 'manager_assignment';
 
