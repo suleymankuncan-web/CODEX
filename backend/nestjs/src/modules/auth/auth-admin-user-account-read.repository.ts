@@ -5,6 +5,8 @@ export type AuthAdminUserAccountRow = {
   user_id: string;
   employee_id: string | null;
   username: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   auth_provider: string;
   provider_subject: string | null;
@@ -55,6 +57,8 @@ export class AuthAdminUserAccountReadRepository {
         OR COALESCE(e.external_employee_ref, '') ILIKE $${params.length}
         OR COALESCE(e.first_name, '') ILIKE $${params.length}
         OR COALESCE(e.last_name, '') ILIKE $${params.length}
+        OR COALESCE(ua.first_name, '') ILIKE $${params.length}
+        OR COALESCE(ua.last_name, '') ILIKE $${params.length}
       )`);
     }
 
@@ -77,6 +81,8 @@ export class AuthAdminUserAccountReadRepository {
           ua.user_id,
           ua.employee_id,
           ua.username,
+          COALESCE(e.first_name, ua.first_name) AS first_name,
+          COALESCE(e.last_name, ua.last_name) AS last_name,
           ua.email,
           ua.auth_provider,
           ua.provider_subject,
@@ -120,6 +126,8 @@ export class AuthAdminUserAccountReadRepository {
           ua.user_id,
           ua.employee_id,
           ua.username,
+          COALESCE(e.first_name, ua.first_name) AS first_name,
+          COALESCE(e.last_name, ua.last_name) AS last_name,
           ua.email,
           ua.auth_provider,
           ua.provider_subject,

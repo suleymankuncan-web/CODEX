@@ -32,6 +32,8 @@ describe("Auth user accounts", () => {
               user_id: createdUserId,
               employee_id: null,
               username: "new.admin",
+              first_name: "Yeni",
+              last_name: "Yönetici",
               email: "new.admin@example.com",
               auth_provider: "oidc",
               is_active: false,
@@ -63,6 +65,8 @@ describe("Auth user accounts", () => {
       .set("x-role-codes", "SUPER_ADMIN")
       .send({
         username: "new.admin",
+        firstName: "Yeni",
+        lastName: "Yönetici",
         email: "new.admin@example.com",
         authProvider: "oidc",
       });
@@ -76,6 +80,8 @@ describe("Auth user accounts", () => {
       userId: createdUserId,
       employeeId: null,
       username: "new.admin",
+      firstName: "Yeni",
+      lastName: "Yönetici",
       email: "new.admin@example.com",
       authProvider: "oidc",
       providerSubject: null,
@@ -84,6 +90,28 @@ describe("Auth user accounts", () => {
       createdAt: "2026-04-17T22:15:00.000Z",
     });
 
+    await app.close();
+  });
+
+  it("rejects a full name as login name and requires names for Keycloak", async () => {
+    const query = jest.fn(async () => ({ rowCount: 0, rows: [] }));
+    const app = await createIntegrationApp({ databaseService: { query } });
+    const baseRequest = request(app.getHttpServer())
+      .post("/api/auth/users")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+    const invalidLogin = await baseRequest.send({
+      username: "Yeni Yönetici", firstName: "Yeni", lastName: "Yönetici",
+      email: "new.admin@example.com", authProvider: "oidc",
+    });
+    expect(invalidLogin.status).toBe(400);
+    const missingNames = await request(app.getHttpServer())
+      .post("/api/auth/users")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({ username: "new.admin", email: "new.admin@example.com", authProvider: "oidc" });
+    expect(missingNames.status).toBe(422);
+    expect(query).not.toHaveBeenCalledWith(expect.stringContaining("INSERT INTO ops.user_account"), expect.anything());
     await app.close();
   });
 
@@ -110,6 +138,8 @@ describe("Auth user accounts", () => {
               user_id: createdUserId,
               employee_id: null,
               username: "new.admin",
+              first_name: "Yeni",
+              last_name: "Yönetici",
               email: "new.admin@example.com",
               auth_provider: "oidc",
               is_active: true,
@@ -138,6 +168,8 @@ describe("Auth user accounts", () => {
         userId: createdUserId,
         employeeId: null,
         username: "new.admin",
+        firstName: "Yeni",
+        lastName: "Yönetici",
         email: "new.admin@example.com",
         authProvider: "oidc",
         providerSubject: null,
@@ -298,10 +330,14 @@ describe("Auth user accounts", () => {
       }
 
       if (sql.includes("/* auth_update_user_account */")) {
-        expect(sql).toContain("username = $1");
-        expect(sql).toContain("email = $2");
+        expect(sql).toContain("username = LOWER(BTRIM($1))");
+        expect(sql).toContain("first_name = $2");
+        expect(sql).toContain("last_name = $3");
+        expect(sql).toContain("email = LOWER(BTRIM($4))");
         expect(params).toEqual([
           "updated.admin",
+          "Güncel",
+          "Yönetici",
           "updated.admin@example.com",
           createdUserId,
         ]);
@@ -312,6 +348,8 @@ describe("Auth user accounts", () => {
               user_id: createdUserId,
               employee_id: null,
               username: "updated.admin",
+              first_name: "Güncel",
+              last_name: "Yönetici",
               email: "updated.admin@example.com",
               auth_provider: "oidc",
               provider_subject: null,
@@ -330,9 +368,11 @@ describe("Auth user accounts", () => {
         expect(params?.[0]).toBe(adminUserId);
         expect(params?.[1]).toBe(createdUserId);
         const metadata = JSON.parse(String(params?.[2]));
-        expect(metadata.changedFields).toEqual(["username", "email"]);
+        expect(metadata.changedFields).toEqual(["username", "firstName", "lastName", "email"]);
         expect(metadata.details).toMatchObject({
           username: "updated.admin",
+          firstName: "Güncel",
+          lastName: "Yönetici",
           email: "updated.admin@example.com",
         });
         return { rowCount: 1, rows: [] };
@@ -355,6 +395,8 @@ describe("Auth user accounts", () => {
       .set("x-role-codes", "SUPER_ADMIN")
       .send({
         username: " updated.admin ",
+        firstName: "Güncel",
+        lastName: "Yönetici",
         email: "updated.admin@example.com",
       });
 
@@ -367,6 +409,8 @@ describe("Auth user accounts", () => {
       userId: createdUserId,
       employeeId: null,
       username: "updated.admin",
+      firstName: "Güncel",
+      lastName: "Yönetici",
       email: "updated.admin@example.com",
       authProvider: "oidc",
       providerSubject: null,
@@ -531,6 +575,8 @@ describe("Auth user accounts", () => {
       userId: createdUserId,
       employeeId: null,
       username: "new.admin",
+      firstName: null,
+      lastName: null,
       email: "new.admin@example.com",
       authProvider: "oidc",
       providerSubject: null,
@@ -743,6 +789,8 @@ describe("Auth user accounts", () => {
       userId: createdUserId,
       employeeId: null,
       username: "new.admin",
+      firstName: null,
+      lastName: null,
       email: "new.admin@example.com",
       authProvider: "oidc",
       providerSubject: null,

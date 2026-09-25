@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-25T00:53:34.017Z",
+  "generatedAt": "2026-09-25T21:13:09.373Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 216,
     "openApiEndpointCount": 271,
-    "routeApiEdgeCount": 263,
+    "routeApiEdgeCount": 264,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -4759,7 +4759,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 336
+        "line": 338
       }
     },
     {
@@ -4773,7 +4773,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 349
+        "line": 351
       }
     },
     {
@@ -4787,7 +4787,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 341
+        "line": 343
       }
     },
     {
@@ -4801,7 +4801,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 331
+        "line": 333
       }
     },
     {
@@ -4899,7 +4899,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 326
+        "line": 328
       }
     },
     {
@@ -4913,7 +4913,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 357
+        "line": 359
       }
     },
     {
@@ -4927,7 +4927,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 375
+        "line": 377
       }
     },
     {
@@ -5011,7 +5011,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 292
+        "line": 294
       }
     },
     {
@@ -5025,7 +5025,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-admin.controller.ts",
-        "line": 310
+        "line": 312
       }
     },
     {
@@ -9869,6 +9869,11 @@
         "id": "edge:route:admin:/admin/auth:api:14",
         "routeId": "route:admin:/admin/auth",
         "apiCallId": "api:14"
+      },
+      {
+        "id": "edge:route:admin:/admin/auth:api:15",
+        "routeId": "route:admin:/admin/auth",
+        "apiCallId": "api:15"
       },
       {
         "id": "edge:route:admin:/admin/auth:api:16",

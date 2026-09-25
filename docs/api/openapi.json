@@ -3444,7 +3444,7 @@
         "parameters": [
           {
             "name": "limit",
-            "required": false,
+            "required": true,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3452,7 +3452,7 @@
           },
           {
             "name": "offset",
-            "required": false,
+            "required": true,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3475,7 +3475,7 @@
         "parameters": [
           {
             "name": "limit",
-            "required": false,
+            "required": true,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3483,7 +3483,7 @@
           },
           {
             "name": "offset",
-            "required": false,
+            "required": true,
             "in": "query",
             "schema": {
               "type": "string"
@@ -7861,10 +7861,6 @@
             "required": true,
             "in": "path",
             "schema": {
-              "enum": [
-                "canonical",
-                "thumbnail"
-              ],
               "type": "string"
             }
           }
@@ -8091,10 +8087,6 @@
             "required": true,
             "in": "path",
             "schema": {
-              "enum": [
-                "canonical",
-                "thumbnail"
-              ],
               "type": "string"
             }
           }
@@ -8908,10 +8900,6 @@
             "required": true,
             "in": "path",
             "schema": {
-              "enum": [
-                "canonical",
-                "thumbnail"
-              ],
               "type": "string"
             }
           }
@@ -9960,10 +9948,6 @@
             "required": true,
             "in": "path",
             "schema": {
-              "enum": [
-                "evidence",
-                "reference"
-              ],
               "type": "string"
             }
           }
@@ -10057,10 +10041,6 @@
             "required": true,
             "in": "path",
             "schema": {
-              "enum": [
-                "canonical",
-                "thumbnail"
-              ],
               "type": "string"
             }
           }
@@ -10765,7 +10745,17 @@
           },
           "username": {
             "type": "string",
-            "minLength": 3
+            "pattern": "^[a-z0-9][a-z0-9._-]{2,119}$"
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
           },
           "email": {
             "type": "string",
@@ -20292,6 +20282,8 @@
                   "userId",
                   "employeeId",
                   "username",
+                  "firstName",
+                  "lastName",
                   "email",
                   "authProvider",
                   "providerSubject",
@@ -20309,6 +20301,14 @@
                   },
                   "username": {
                     "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "nullable": true
                   },
                   "email": {
                     "type": "string"
@@ -20399,6 +20399,8 @@
                   "userId",
                   "employeeId",
                   "username",
+                  "firstName",
+                  "lastName",
                   "email",
                   "authProvider",
                   "providerSubject",
@@ -20416,6 +20418,14 @@
                   },
                   "username": {
                     "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "nullable": true
                   },
                   "email": {
                     "type": "string"
@@ -20508,6 +20518,8 @@
                 "userId",
                 "employeeId",
                 "username",
+                "firstName",
+                "lastName",
                 "email",
                 "authProvider",
                 "providerSubject",
@@ -20525,6 +20537,14 @@
                 },
                 "username": {
                   "type": "string"
+                },
+                "firstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastName": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "email": {
                   "type": "string"
@@ -21067,6 +21087,8 @@
                       "userId",
                       "employeeId",
                       "username",
+                      "firstName",
+                      "lastName",
                       "email",
                       "authProvider",
                       "providerSubject",
@@ -21084,6 +21106,14 @@
                       },
                       "username": {
                         "type": "string"
+                      },
+                      "firstName": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "lastName": {
+                        "type": "string",
+                        "nullable": true
                       },
                       "email": {
                         "type": "string"
@@ -25794,7 +25824,16 @@
           },
           "username": {
             "type": "string",
-            "minLength": 3,
+            "pattern": "^[a-z0-9][a-z0-9._-]{2,119}$"
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
             "maxLength": 120
           },
           "email": {
@@ -29934,8 +29973,8 @@
           "limit": {
             "type": "number",
             "default": 25,
-            "minimum": 1,
-            "maximum": 100
+            "maximum": 100,
+            "minimum": 1
           }
         },
         "required": [
@@ -31057,8 +31096,8 @@
           "limit": {
             "type": "number",
             "default": 25,
-            "minimum": 1,
-            "maximum": 100
+            "maximum": 100,
+            "minimum": 1
           },
           "reason": {
             "type": "string",

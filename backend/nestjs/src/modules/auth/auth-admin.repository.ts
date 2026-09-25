@@ -485,6 +485,8 @@ export class AuthAdminRepository {
   async createUserAccount(input: {
     employeeId?: string | null;
     username: string;
+    firstName?: string | null;
+    lastName?: string | null;
     email: string;
     authProvider: string;
     providerSubject?: string | null;
@@ -497,6 +499,8 @@ export class AuthAdminRepository {
     userId: string;
     employeeId?: string | null;
     username?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     actorUserId: string;
   }) {

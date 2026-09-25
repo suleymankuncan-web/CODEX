@@ -287,14 +287,26 @@ export class AuthAdminService {
   async createUserAccount(input: {
     employeeId?: string;
     username: string;
+    firstName?: string;
+    lastName?: string;
     email: string;
     authProvider: "local" | "oidc" | "sso" | "clerk";
     providerSubject?: string;
     actorUserId: string;
   }) {
+    const firstName = input.firstName?.trim();
+    const lastName = input.lastName?.trim();
+    if (Boolean(firstName) !== Boolean(lastName) || (input.employeeId && (firstName || lastName))) {
+      throw semanticValidation("First and last name must be supplied together for an unlinked account");
+    }
+    if (input.authProvider === "oidc" && !input.employeeId && (!firstName || !lastName)) {
+      throw semanticValidation("First and last name are required for a Keycloak account");
+    }
     const user = await this.authAdminRepository.createUserAccount({
       employeeId: input.employeeId ?? null,
       username: input.username,
+      firstName: firstName ?? null,
+      lastName: lastName ?? null,
       email: input.email,
       authProvider: input.authProvider,
       providerSubject: input.providerSubject?.trim() || null,

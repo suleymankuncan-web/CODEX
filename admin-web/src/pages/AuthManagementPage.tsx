@@ -9,6 +9,7 @@ import {
   KeyRound,
   LockKeyhole,
   Mail,
+  Pencil,
   Plus,
   Search,
   Shield,
@@ -54,7 +55,10 @@ import {
   grantRolePermission,
   reactivateUserAccount,
   revokeRolePermission,
+  updateUserAccount,
+  type CreateUserAccountInput,
   type RoleCatalogItem,
+  type UpdateUserAccountInput,
   type UserAccount,
 } from '../features/auth/api'
 import { actionToast } from '../lib/action-toast'
@@ -72,6 +76,7 @@ export function AuthManagementPage() {
   const [userPage, setUserPage] = useState(0)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [storeOpen, setStoreOpen] = useState(false)
   const [accountAction, setAccountAction] = useState<UserAccount | null>(null)
@@ -123,6 +128,11 @@ export function AuthManagementPage() {
     mutationFn: createUserAccount,
     onSuccess: async (response) => { await invalidate(); setCreateOpen(false); setSelectedUserId(response.data.user.userId); actionToast.success('Kullanıcı hesabı oluşturuldu.') },
     onError: (error) => actionToast.error(error, 'Kullanıcı hesabı oluşturulamadı.'),
+  })
+  const updateUserMutation = useMutation({
+    mutationFn: ({ userId, changes }: { userId: string; changes: UpdateUserAccountInput }) => updateUserAccount(userId, changes),
+    onSuccess: async () => { await invalidate(); setEditOpen(false); actionToast.success('Kullanıcı bilgileri kaydedildi.') },
+    onError: (error) => actionToast.error(error, 'Kullanıcı bilgileri kaydedilemedi.'),
   })
   const accountMutation = useMutation({
     mutationFn: (user: UserAccount) => user.isActive ? deactivateUserAccount({ userId: user.userId, reason: 'Admin yönetim ekranından devre dışı bırakıldı' }) : reactivateUserAccount(user.userId),
@@ -204,8 +214,8 @@ export function AuthManagementPage() {
                   onClick={() => setSelectedUserId(user.userId)}
                   type="button"
                 >
-                  <span className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-[11px] tw:font-bold tw:text-primary tw:group-aria-current:bg-primary tw:group-aria-current:text-primary-foreground">{initials(user.username)}</span>
-                  <span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:truncate tw:text-sm tw:font-semibold">{user.username}</span><span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{user.email}</span></span>
+                  <span className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-[11px] tw:font-bold tw:text-primary tw:group-aria-current:bg-primary tw:group-aria-current:text-primary-foreground">{initials(userDisplayName(user))}</span>
+                  <span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:truncate tw:text-sm tw:font-semibold">{userDisplayName(user)}</span><span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{user.email}</span></span>
                   <AccountStatusBadge user={user} compact />
                 </button>
               ))}
@@ -225,10 +235,13 @@ export function AuthManagementPage() {
               <header className="tw:bg-white tw:px-5 tw:py-5 tw:sm:px-7 tw:sm:py-6">
                 <div className="tw:flex tw:flex-col tw:gap-5 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
                   <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-4">
-                    <span className="tw:grid tw:size-14 tw:shrink-0 tw:place-items-center tw:rounded-2xl tw:bg-primary tw:text-base tw:font-bold tw:text-primary-foreground">{initials(selectedUser.username)}</span>
-                    <div className="tw:min-w-0"><div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2"><h2 className="tw:m-0 tw:truncate tw:text-xl tw:font-semibold tw:tracking-[-0.025em]">{selectedUser.username}</h2><AccountStatusBadge user={selectedUser} /></div><p className="tw:mt-1 tw:mb-0 tw:flex tw:items-center tw:gap-1.5 tw:truncate tw:text-sm tw:text-muted-foreground"><Mail className="tw:size-3.5" aria-hidden="true" />{selectedUser.email}</p></div>
+                    <span className="tw:grid tw:size-14 tw:shrink-0 tw:place-items-center tw:rounded-2xl tw:bg-primary tw:text-base tw:font-bold tw:text-primary-foreground">{initials(userDisplayName(selectedUser))}</span>
+                    <div className="tw:min-w-0"><div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2"><h2 className="tw:m-0 tw:truncate tw:text-xl tw:font-semibold tw:tracking-[-0.025em]">{userDisplayName(selectedUser)}</h2><AccountStatusBadge user={selectedUser} /></div><p className="tw:mt-1 tw:mb-0 tw:flex tw:items-center tw:gap-1.5 tw:truncate tw:text-sm tw:text-muted-foreground"><Mail className="tw:size-3.5" aria-hidden="true" />{selectedUser.email}</p></div>
                   </div>
-                  <Button className="tw:self-start" disabled={identityJobPending(selectedUser)} onClick={() => setAccountAction(selectedUser)} size="sm" variant="outline">{selectedUser.isActive ? 'Devre dışı bırak' : selectedUser.identityStatus === 'failed' ? 'Yeniden dene' : identityJobPending(selectedUser) ? 'İşleniyor' : 'Yeniden etkinleştir'}</Button>
+                  <div className="tw:flex tw:flex-wrap tw:gap-2 tw:self-start">
+                    <Button onClick={() => setEditOpen(true)} size="sm" variant="outline"><Pencil aria-hidden="true" /> Bilgileri düzenle</Button>
+                    <Button disabled={identityJobPending(selectedUser)} onClick={() => setAccountAction(selectedUser)} size="sm" variant="outline">{selectedUser.isActive ? 'Devre dışı bırak' : selectedUser.identityStatus === 'failed' ? 'Yeniden dene' : identityJobPending(selectedUser) ? 'İşleniyor' : 'Yeniden etkinleştir'}</Button>
+                  </div>
                 </div>
                 <div className="tw:mt-6 tw:flex tw:flex-wrap tw:gap-x-7 tw:gap-y-2 tw:border-t tw:border-border tw:pt-4 tw:text-xs tw:text-muted-foreground">
                   <span><strong className="tw:mr-1 tw:text-foreground">{roleAssignmentsUnavailable ? '—' : roleAssignmentsQuery.data?.items.length ?? 0}</strong> aktif rol</span>
@@ -277,6 +290,7 @@ export function AuthManagementPage() {
       )}
 
       <CreateUserDialog key={createOpen ? 'open' : 'closed'} open={createOpen} onOpenChange={setCreateOpen} onSave={(draft) => createUserMutation.mutate(draft)} pending={createUserMutation.isPending} />
+      {selectedUser ? <EditUserDialog key={`${selectedUser.userId}-${editOpen ? 'open' : 'closed'}`} user={selectedUser} open={editOpen} onOpenChange={setEditOpen} onSave={(changes) => updateUserMutation.mutate({ userId: selectedUser.userId, changes })} pending={updateUserMutation.isPending} /> : null}
       <RoleAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${roleOpen ? 'open' : 'closed'}`} open={roleOpen} onOpenChange={setRoleOpen} roles={lookupsQuery.data?.roles ?? []} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createRoleMutation.mutate(draft)} pending={createRoleMutation.isPending} unavailable={roleAssignmentsUnavailable || lookupsUnavailable} unavailableByError={roleAssignmentsQuery.isError || lookupsQuery.isError} />
       <StoreAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${storeOpen ? 'open' : 'closed'}`} assignedStoreIds={(storeAssignmentsQuery.data?.items ?? []).map((item) => item.storeId)} open={storeOpen} onOpenChange={setStoreOpen} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createStoreMutation.mutate(draft)} pending={createStoreMutation.isPending} unavailable={storeAssignmentsUnavailable || lookupsUnavailable} unavailableByError={storeAssignmentsQuery.isError || lookupsQuery.isError} />
       <ConfirmDialog open={Boolean(accountAction)} title={accountAction?.isActive ? 'Hesap devre dışı bırakılsın mı?' : 'Hesap yeniden etkinleştirilsin mi?'} copy={accountAction?.isActive ? 'Aktif rol, mağaza erişimi ve mobil oturumlar kapatılır.' : 'Hesap açılır; eski rol ve mağaza atamaları otomatik geri gelmez.'} confirmLabel={accountAction?.isActive ? 'Devre dışı bırak' : 'Etkinleştir'} onOpenChange={(open) => !open && setAccountAction(null)} onConfirm={() => accountAction && accountMutation.mutate(accountAction)} pending={accountMutation.isPending} />
@@ -363,9 +377,102 @@ function AccountStatusBadge({ user, compact = false }: { user: UserAccount; comp
   return <Badge className={user.isActive ? 'tw:border-emerald-200 tw:bg-emerald-50 tw:text-emerald-800' : 'tw:border-slate-200 tw:bg-slate-100 tw:text-slate-600'} variant="outline">{compact ? (user.isActive ? 'Aktif' : 'Pasif') : (user.isActive ? 'Aktif hesap' : 'Pasif hesap')}</Badge>
 }
 
-function CreateUserDialog({ open, onOpenChange, onSave, pending }: { open: boolean; onOpenChange: (open: boolean) => void; onSave: (draft: { username: string; email: string; authProvider: 'local' | 'oidc' | 'sso' | 'clerk'; providerSubject?: string }) => void; pending: boolean }) {
-  const [draft, setDraft] = useState({ username: '', email: '', authProvider: 'oidc' as const, providerSubject: '' })
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Kullanıcı ekle</DialogTitle><DialogDescription>OIDC seçildiğinde Keycloak hesabı otomatik oluşturulur ve kullanıcıya şifre belirleme bağlantısı gönderilir.</DialogDescription></DialogHeader><div className="tw:grid tw:gap-3"><Field label="Kullanıcı adı"><Input aria-label="Kullanıcı adı" value={draft.username} onChange={(e) => setDraft({ ...draft, username: e.target.value.toLowerCase() })} /></Field><Field label="E-posta"><Input aria-label="E-posta" type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value.toLowerCase() })} /></Field><Field label="Kimlik sağlayıcı"><Select value={draft.authProvider} onValueChange={(value) => setDraft({ ...draft, authProvider: value as typeof draft.authProvider, providerSubject: '' })}><SelectTrigger aria-label="Kimlik sağlayıcı" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="oidc">Keycloak / OIDC</SelectItem><SelectItem value="clerk">Clerk</SelectItem><SelectItem value="sso">SSO</SelectItem><SelectItem value="local">Yerel</SelectItem></SelectContent></Select></Field>{draft.authProvider !== 'oidc' ? <Field label="Sağlayıcı kullanıcı kimliği"><Input aria-label="Sağlayıcı kullanıcı kimliği" value={draft.providerSubject} onChange={(e) => setDraft({ ...draft, providerSubject: e.target.value })} placeholder="Örn. user_..." /></Field> : null}</div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={draft.username.trim().length < 3 || !draft.email.includes('@') || pending} onClick={() => onSave({ username: draft.username, email: draft.email, authProvider: draft.authProvider, ...(draft.providerSubject.trim() ? { providerSubject: draft.providerSubject.trim() } : {}) })}><Plus aria-hidden="true" /> Oluştur</Button></DialogFooter></DialogContent></Dialog>
+const loginNamePattern = /^[a-z0-9][a-z0-9._-]{2,119}$/i
+
+function validLoginName(value: string) { return loginNamePattern.test(value.trim()) }
+function validPersonName(value: string) { return value.trim().length > 0 && value.trim().length <= 120 }
+function userDisplayName(user: UserAccount) {
+  return user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username
+}
+
+function CreateUserDialog({ open, onOpenChange, onSave, pending }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (draft: CreateUserAccountInput) => void
+  pending: boolean
+}) {
+  const [draft, setDraft] = useState({
+    username: '', firstName: '', lastName: '', email: '',
+    authProvider: 'oidc' as CreateUserAccountInput['authProvider'], providerSubject: '',
+  })
+  const canSave = validLoginName(draft.username) && validPersonName(draft.firstName)
+    && validPersonName(draft.lastName) && draft.email.includes('@') && !pending
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent closeLabel="Kapat">
+      <DialogHeader>
+        <DialogTitle>Kullanıcı ekle</DialogTitle>
+        <DialogDescription>Ad ve soyadı ayrı girin. Keycloak hesabı otomatik oluşturulur; davet bağlantısı e-posta adresine gönderilir.</DialogDescription>
+      </DialogHeader>
+      <div className="tw:grid tw:gap-3">
+        <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2">
+          <Field label="Ad"><Input aria-label="Ad" autoComplete="given-name" maxLength={120} value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
+          <Field label="Soyad"><Input aria-label="Soyad" autoComplete="family-name" maxLength={120} value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
+        </div>
+        <Field label="Kullanıcı adı"><Input aria-label="Kullanıcı adı" autoComplete="off" maxLength={120} value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} /></Field>
+        <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Giriş adı boşluk içermez; harf, rakam, nokta, kısa çizgi ve alt çizgi kullanın.</p>
+        <Field label="E-posta"><Input aria-label="E-posta" autoComplete="email" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></Field>
+        <Field label="Kimlik sağlayıcı"><Select value={draft.authProvider} onValueChange={(value) => setDraft({ ...draft, authProvider: value as CreateUserAccountInput['authProvider'], providerSubject: '' })}><SelectTrigger aria-label="Kimlik sağlayıcı" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="oidc">Keycloak / OIDC</SelectItem><SelectItem value="clerk">Clerk</SelectItem><SelectItem value="sso">SSO</SelectItem><SelectItem value="local">Yerel</SelectItem></SelectContent></Select></Field>
+        {draft.authProvider !== 'oidc' ? <Field label="Sağlayıcı kullanıcı kimliği"><Input aria-label="Sağlayıcı kullanıcı kimliği" value={draft.providerSubject} onChange={(event) => setDraft({ ...draft, providerSubject: event.target.value })} placeholder="Örn. user_..." /></Field> : null}
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button>
+        <Button disabled={!canSave} onClick={() => onSave({
+          username: draft.username.trim(), firstName: draft.firstName.trim(), lastName: draft.lastName.trim(),
+          email: draft.email.trim(), authProvider: draft.authProvider,
+          ...(draft.providerSubject.trim() ? { providerSubject: draft.providerSubject.trim() } : {}),
+        })}><Plus aria-hidden="true" /> Oluştur</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+}
+
+function EditUserDialog({ user, open, onOpenChange, onSave, pending }: {
+  user: UserAccount
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (changes: UpdateUserAccountInput) => void
+  pending: boolean
+}) {
+  const [draft, setDraft] = useState({
+    username: user.username, firstName: user.firstName ?? '', lastName: user.lastName ?? '', email: user.email,
+  })
+  const nameEditable = !user.employeeId
+  const username = draft.username.trim()
+  const email = draft.email.trim()
+  const firstName = draft.firstName.trim()
+  const lastName = draft.lastName.trim()
+  const changed = username.toLowerCase() !== user.username || email.toLowerCase() !== user.email
+    || (nameEditable && (firstName !== (user.firstName ?? '') || lastName !== (user.lastName ?? '')))
+  const canSave = changed && validLoginName(username) && email.includes('@')
+    && (!nameEditable || (validPersonName(firstName) && validPersonName(lastName))) && !pending
+
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent closeLabel="Kapat">
+      <DialogHeader>
+        <DialogTitle>Kullanıcı bilgilerini düzenle</DialogTitle>
+        <DialogDescription>Giriş adı, ad soyad ve e-posta bilgilerini güncelleyin.</DialogDescription>
+      </DialogHeader>
+      <div className="tw:grid tw:gap-3">
+        <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2">
+          <Field label="Ad"><Input aria-label="Ad" autoComplete="given-name" disabled={!nameEditable} maxLength={120} value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
+          <Field label="Soyad"><Input aria-label="Soyad" autoComplete="family-name" disabled={!nameEditable} maxLength={120} value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
+        </div>
+        {!nameEditable ? <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Ad ve soyad personel sicilinden güncellenir.</p> : null}
+        <Field label="Kullanıcı adı"><Input aria-label="Kullanıcı adı" autoComplete="off" maxLength={120} value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} /></Field>
+        <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Giriş adı boşluk içermez; harf, rakam, nokta, kısa çizgi ve alt çizgi kullanın.</p>
+        <Field label="E-posta"><Input aria-label="E-posta" autoComplete="email" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></Field>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button>
+        <Button disabled={!canSave} onClick={() => onSave({
+          ...(username.toLowerCase() !== user.username ? { username } : {}),
+          ...(email.toLowerCase() !== user.email ? { email } : {}),
+          ...(nameEditable && (firstName !== (user.firstName ?? '') || lastName !== (user.lastName ?? '')) ? { firstName, lastName } : {}),
+        })}>{pending ? 'Kaydediliyor' : 'Kaydet'}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 }
 
 function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave, pending, unavailable, unavailableByError }: { open: boolean; onOpenChange: (open: boolean) => void; roles: Array<{ roleCode: string; roleName: string; scopeType: string }>; stores: Array<{ storeId: string; storeName: string; companyId: string; regionId: string; regionName: string }>; user: UserAccount | null; onSave: (draft: { userId: string; roleCode: 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER' | 'SUPER_ADMIN' | 'HR_ADMIN' | 'INTEGRATION_ADMIN' | 'SNAPSHOT_OPERATOR' | 'REPORT_VIEWER' | 'AUDITOR' | 'STORE_PERSONNEL'; scopeType: 'company' | 'region' | 'store'; incentiveApproval?: boolean; companyId?: string; regionId?: string; storeId?: string }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {

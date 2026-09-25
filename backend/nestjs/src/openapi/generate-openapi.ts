@@ -1289,7 +1289,7 @@ const authUserAccountSchema = {
   required: [
     "userId",
     "employeeId",
-    "username",
+    "username", "firstName", "lastName",
     "email",
     "authProvider",
     "providerSubject",
@@ -1300,7 +1300,7 @@ const authUserAccountSchema = {
   properties: {
     userId: { type: "string" },
     employeeId: { type: "string", nullable: true },
-    username: { type: "string" },
+    username: { type: "string" }, firstName: { type: "string", nullable: true }, lastName: { type: "string", nullable: true },
     email: { type: "string" },
     authProvider: { type: "string" },
     providerSubject: { type: "string", nullable: true },

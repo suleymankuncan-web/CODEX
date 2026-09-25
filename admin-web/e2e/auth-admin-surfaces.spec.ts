@@ -47,6 +47,7 @@ test('HR admin creates a management user with one request', async ({ page }) => 
         data: {
           user: {
             userId: 'user-created', employeeId: null, username: 'report.viewer',
+            firstName: 'Zeliha', lastName: 'Durmaz',
             email: 'report.viewer@example.com', authProvider: 'oidc',
             providerSubject: null, isActive: false, identityLifecycleStatus: 'pending',
             lastLoginAt: null, createdAt: '2026-08-29T09:00:00.000Z',
@@ -60,15 +61,48 @@ test('HR admin creates a management user with one request', async ({ page }) => 
   await page.getByRole('button', { name: 'Kullanıcı ekle' }).click()
   const dialog = page.getByRole('dialog', { name: 'Kullanıcı ekle' })
   await expect(dialog).toContainText('Keycloak hesabı otomatik oluşturulur')
+  await dialog.getByLabel('Ad', { exact: true }).fill('Zeliha')
+  await dialog.getByLabel('Soyad').fill('Durmaz')
   await dialog.getByLabel('Kullanıcı adı').fill('report.viewer')
+  await expect(dialog.getByLabel('Ad', { exact: true })).toHaveValue('Zeliha')
+  await expect(dialog.getByLabel('Soyad')).toHaveValue('Durmaz')
   await dialog.getByLabel('E-posta').fill('report.viewer@example.com')
   await dialog.getByRole('button', { name: 'Oluştur' }).click()
 
   await expect(dialog).toBeHidden()
   expect(requestBody).toEqual({
     username: 'report.viewer',
+    firstName: 'Zeliha',
+    lastName: 'Durmaz',
     email: 'report.viewer@example.com',
     authProvider: 'oidc',
+  })
+})
+
+test('HR admin edits profile fields without losing uppercase names', async ({ page }) => {
+  let requestBody: Record<string, unknown> | null = null
+  await page.route('**/api/auth/users/user-active', async (route) => {
+    if (route.request().method() !== 'PATCH') return route.fallback()
+    requestBody = route.request().postDataJSON()
+    await route.fulfill({ json: {
+      command: { status: 'updated', message: 'Updated' },
+      data: { user: { ...usersFixture.items[0], ...requestBody } },
+    } })
+  })
+
+  await page.goto('/admin/auth')
+  await page.getByRole('button', { name: 'Bilgileri düzenle' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Kullanıcı bilgilerini düzenle' })
+  await dialog.getByLabel('Ad', { exact: true }).fill('SÜLEYMAN')
+  await dialog.getByLabel('Soyad').fill('KUNCAN')
+  await dialog.getByLabel('Kullanıcı adı').fill('suleyman.kuncan')
+  await expect(dialog.getByLabel('Ad', { exact: true })).toHaveValue('SÜLEYMAN')
+  await expect(dialog.getByLabel('Soyad')).toHaveValue('KUNCAN')
+  await dialog.getByRole('button', { name: 'Kaydet' }).click()
+
+  await expect(dialog).toBeHidden()
+  expect(requestBody).toEqual({
+    username: 'suleyman.kuncan', firstName: 'SÜLEYMAN', lastName: 'KUNCAN',
   })
 })
 

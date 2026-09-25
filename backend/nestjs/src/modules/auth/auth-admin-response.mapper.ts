@@ -75,6 +75,8 @@ export function mapAuthUser(item: {
   user_id: string;
   employee_id: string | null;
   username: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email: string;
   auth_provider: string;
   provider_subject?: string | null;
@@ -93,6 +95,8 @@ export function mapAuthUser(item: {
     userId: item.user_id,
     employeeId: item.employee_id,
     username: item.username,
+    firstName: item.first_name ?? null,
+    lastName: item.last_name ?? null,
     email: item.email,
     authProvider: item.auth_provider,
     providerSubject: item.provider_subject ?? null,

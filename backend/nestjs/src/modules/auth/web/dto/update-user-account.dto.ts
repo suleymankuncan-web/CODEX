@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsEmail, IsOptional, IsString, Length, MinLength } from "class-validator";
+import { IsEmail, IsOptional, IsString, Length, Matches, ValidateIf } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class UpdateUserAccountDto {
@@ -11,9 +11,20 @@ export class UpdateUserAccountDto {
   @IsOptional()
   @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))
   @IsString()
-  @MinLength(3)
-  @Length(3, 120)
+  @Matches(/^[a-z0-9][a-z0-9._-]{2,119}$/i)
   username?: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))
+  @IsString()
+  @Length(1, 120)
+  firstName?: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))
+  @IsString()
+  @Length(1, 120)
+  lastName?: string;
 
   @IsOptional()
   @Transform(({ value }) => (typeof value === "string" ? value.trim() : value))

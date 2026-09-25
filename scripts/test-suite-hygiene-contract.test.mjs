@@ -49,6 +49,7 @@ const authExpectedTestNames = [
   'deactivates an active role assignment',
   'rejects deactivation when the role assignment is already inactive',
   'creates a user account',
+  'rejects a full name as login name and requires names for Keycloak',
   'lists user accounts with filters and pagination metadata',
   'keeps user account total count independent from pagination offset',
   'deactivates a user account',
@@ -321,7 +322,7 @@ test('auth admin integration tests are split without dropping test cases', () =>
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 46)
+  assert.equal(totalTests, 47)
   for (const testName of authExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
     assert.equal(exactOccurrences, 1, `${testName} must appear exactly once`)

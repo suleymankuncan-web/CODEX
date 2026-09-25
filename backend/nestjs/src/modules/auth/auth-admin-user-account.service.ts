@@ -15,6 +15,8 @@ export class AuthAdminUserAccountService {
     userId: string;
     employeeId?: string | null;
     username?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     actorUserId: string;
   }) {
@@ -28,16 +30,33 @@ export class AuthAdminUserAccountService {
 
     const hasEmployeeId = input.employeeId !== undefined;
     const hasUsername = input.username !== undefined;
+    const hasFirstName = input.firstName !== undefined;
+    const hasLastName = input.lastName !== undefined;
     const hasEmail = input.email !== undefined;
 
-    if (!hasEmployeeId && !hasUsername && !hasEmail) {
+    if (!hasEmployeeId && !hasUsername && !hasFirstName && !hasLastName && !hasEmail) {
       throw semanticValidation("At least one user account field must be provided");
+    }
+    if (hasFirstName !== hasLastName) {
+      throw semanticValidation("First and last name must be updated together");
+    }
+    if (hasFirstName && (!input.firstName?.trim() || !input.lastName?.trim())) {
+      throw semanticValidation("First and last name cannot be empty");
+    }
+    const linkedEmployeeId = hasEmployeeId ? input.employeeId : existingUser.employee_id;
+    if (linkedEmployeeId && hasFirstName) {
+      throw semanticValidation("Linked personnel names must be edited in the personnel record");
+    }
+    if (existingUser.auth_provider === "oidc" && !linkedEmployeeId && hasEmployeeId && !hasFirstName
+      && (!existingUser.first_name || !existingUser.last_name)) {
+      throw semanticValidation("First and last name are required before unlinking personnel");
     }
 
     const user = await this.authAdminRepository.updateUserAccount({
       userId: input.userId,
       ...(hasEmployeeId ? { employeeId: input.employeeId ?? null } : {}),
       ...(hasUsername ? { username: input.username?.trim() } : {}),
+      ...(hasFirstName ? { firstName: input.firstName?.trim(), lastName: input.lastName?.trim() } : {}),
       ...(hasEmail ? { email: input.email?.trim() } : {}),
       actorUserId: input.actorUserId,
     });
@@ -60,6 +79,8 @@ function mapUser(item: {
   user_id: string;
   employee_id: string | null;
   username: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email: string;
   auth_provider: string;
   provider_subject?: string | null;
@@ -75,6 +96,8 @@ function mapUser(item: {
     userId: item.user_id,
     employeeId: item.employee_id,
     username: item.username,
+    firstName: item.first_name ?? null,
+    lastName: item.last_name ?? null,
     email: item.email,
     authProvider: item.auth_provider,
     providerSubject: item.provider_subject ?? null,
