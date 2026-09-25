@@ -252,6 +252,14 @@ function secretContentReason(content, options = {}) {
   for (const match of content.matchAll(assignment)) {
     const value = String(match[2] ?? '').trim()
     if (!value || PLACEHOLDER_VALUE.test(value)) continue
+    if (options.programFile && value.startsWith('(process.env.')) {
+      const lineStart = content.lastIndexOf('\n', match.index) + 1
+      const lineEnd = content.indexOf('\n', match.index)
+      const line = content.slice(lineStart, lineEnd < 0 ? undefined : lineEnd).trim()
+      // An empty env fallback is runtime configuration, not an embedded credential.
+      // Match the entire statement so a concrete fallback still fails closed.
+      if (/^(?:const|let|var)\s+([A-Z][A-Z0-9_]*)\s*=\s*\(process\.env\.\1\s*\|\|\s*''\)\.replace\(\/\\s\*\/g,\s*''\)\s*\|\|\s*null;?$/.test(line)) continue
+    }
     if (options.programFile && /^(?:process\.env|import\.meta\.env|env\.|config\.|options\.)/i.test(value)) continue
     if (options.programFile && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value)) continue
     if (options.programFile && /^(?:[A-Za-z_$][A-Za-z0-9_$]*)(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+(?:\([^\r\n]*\))?$/.test(value)) continue
