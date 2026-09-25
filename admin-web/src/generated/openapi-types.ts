@@ -9,7 +9,6 @@ export type components = {
     }
     "ApproveFinalIncentivePackageDto": {
       "period": string
-      "regionId": string
       "regionPackageId": string
       "submittedAt": string
       "decision"?: "approve" | "return"
@@ -1356,11 +1355,10 @@ export type components = {
     }
     "IncentiveFinalApprovalPackages": {
       "items": Array<{
-          "regionId": string
-          "regionName": string | null
+          "companyId": string
+          "managerUserId": string
+          "managerName": string
           "regionPackageId": string | null
-          "regionManagerUserId": string | null
-          "regionManagerName": string | null
           "submittedByUserId": string | null
           "submittedByName": string | null
           "submittedAt": string | null
@@ -1382,6 +1380,25 @@ export type components = {
         "status": "admin_approved" | "admin_returned"
         "reviewedAt": string | null
       }
+    }
+    "IncentiveHrHandoff": {
+      "period": string
+      "version": string
+      "allApproved": boolean
+      "mailConfigured": boolean
+      "canSend": boolean
+      "companies": Array<{
+          "companyId": string
+          "companyName": string
+          "recipients": string[]
+          "managerPackageCount": number
+          "approvedPackageCount": number
+          "storeCount": number
+          "personnelCount": number
+          "totalAmount": string
+          "status": "not_sent" | "sending" | "sent" | "uncertain"
+          "sentAt": string | null
+        }>
     }
     "IntegrationLookups": {
       "entityTypes": string[]
@@ -2878,10 +2895,15 @@ export type components = {
       "periodEnd": string
       "periodTimezone": string
       "view": "report_viewer" | "region_manager"
+      "salesTracking": {
+        "throughDate": string
+        "lastLoadedDate": string | null
+        "status": "complete" | "unavailable"
+      }
       "capabilities": components['schemas']["SalesTargetIncentiveWorkspaceCapabilities"]
       "sections": components['schemas']["SalesTargetIncentiveWorkspaceSections"]
       "rateMetadata": components['schemas']["SalesTargetIncentiveWorkspaceRateMetadata"]
-      "regions": components['schemas']["SalesTargetIncentiveWorkspaceRegion"][]
+      "managerGroups": components['schemas']["SalesTargetIncentiveWorkspaceManagerGroup"][]
     }
     "SalesTargetIncentiveWorkspaceCapabilities": {
       "canMarkStoreReview": boolean
@@ -2907,6 +2929,21 @@ export type components = {
       "roleCode": "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null
       "identityStatus": "resolved" | "unavailable"
     }
+    "SalesTargetIncentiveWorkspaceManagerGroup": {
+      "companyId": string
+      "managerUserId": string | null
+      "managerName": string | null
+      "capabilities": {
+        "canSubmitPackage": boolean
+      }
+      "package": {
+        "status": "not_submitted" | "submitted" | "admin_approved" | "admin_returned"
+        "submittedAt": string | null
+        "reviewedAt": string | null
+        "reviewNote": string | null
+      }
+      "stores": components['schemas']["SalesTargetIncentiveWorkspaceStore"][]
+    }
     "SalesTargetIncentiveWorkspaceRateBracket": {
       "minAchievementPct": string | null
       "maxAchievementPct": string | null
@@ -2926,23 +2963,6 @@ export type components = {
       "version": string
       "brackets": components['schemas']["SalesTargetIncentiveWorkspaceRateBracket"][]
     }
-    "SalesTargetIncentiveWorkspaceRegion": {
-      "regionId": string
-      "regionName": string | null
-      "regionManager": {
-        "displayName": string | null
-      }
-      "capabilities": {
-        "canSubmitPackage": boolean
-      }
-      "package": {
-        "status": "not_submitted" | "submitted" | "admin_approved" | "admin_returned"
-        "submittedAt": string | null
-        "reviewedAt": string | null
-        "reviewNote": string | null
-      }
-      "stores": components['schemas']["SalesTargetIncentiveWorkspaceStore"][]
-    }
     "SalesTargetIncentiveWorkspaceResponse": {
       "data": components['schemas']["SalesTargetIncentiveWorkspace"]
     }
@@ -2953,6 +2973,8 @@ export type components = {
       "positionCode": string
       "target": string | null
       "actual": string | null
+      "dailyActualNetSales": string | null
+      "dailyAchievementPct": string | null
       "achievementPct": string | null
       "rate": string | null
       "calculatedAmount": string | null
@@ -2979,6 +3001,8 @@ export type components = {
       "storeTarget": string | null
       "storeActualNetSales": string | null
       "storeAchievementPct": string | null
+      "dailyActualNetSales": string | null
+      "dailyAchievementPct": string | null
       "capabilities": {
         "canMarkStoreReview": boolean
         "canCreateCorrection": boolean
@@ -2999,6 +3023,10 @@ export type components = {
           "plannedDate": string
           "displayOrder": number
         }>
+    }
+    "SendIncentiveHrDto": {
+      "period": string
+      "version": string
     }
     "SnapshotNeedsActionResponse": {
       "items": Array<{
@@ -3344,7 +3372,7 @@ export type components = {
     }
     "SubmitSalesTargetIncentiveRegionPackageDto": {
       "period": string
-      "regionId": string
+      "companyId"?: string
       "submissionNote"?: string
     }
     "SubmitStoreActionSolutionRequest": {
@@ -4137,6 +4165,31 @@ export type paths = {
         "201": {
           content: {
             'application/json': components['schemas']["IncentiveFinalApprovalResult"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/hr-handoff": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["IncentiveHrHandoff"]
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SendIncentiveHrDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["IncentiveHrHandoff"]
           }
         }
       }

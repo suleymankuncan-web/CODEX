@@ -39,7 +39,7 @@ describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
     expect(String(sql)).toContain("WITH scoped_store AS");
     expect(String(sql)).toContain("rpt.sales_target_incentive_rule_snapshot");
     expect(String(sql)).toContain("snapshot.company_id = scoped_store.company_id");
-    expect(String(sql)).toContain("snapshot.region_id = scoped_store.region_id");
+    expect(String(sql)).not.toContain("snapshot.region_id = scoped_store.region_id");
     expect(String(sql)).not.toContain("ops.sales_target_incentive_rule_version");
     expect(String(sql)).not.toContain("rule.effective_from");
     expect(params).toEqual([
@@ -70,7 +70,7 @@ describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
     ]);
   });
 
-  it("includes every correction audit status and scopes workflow rows by company, region and store", async () => {
+  it("includes every correction audit status and scopes workflow rows by company and store", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new SalesTargetIncentiveWorkspaceReadRepository({ query } as never);
 
@@ -82,10 +82,13 @@ describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
     expect(query).toHaveBeenCalledTimes(3);
     const correctionSql = String(query.mock.calls[1][0]);
     expect(correctionSql).toContain("correction.company_id = scoped_store.company_id");
-    expect(correctionSql).toContain("correction.region_id = scoped_store.region_id");
+    expect(correctionSql).not.toContain("correction.region_id = scoped_store.region_id");
     expect(correctionSql).toContain("correction.store_id = scoped_store.store_id");
     expect(correctionSql).not.toContain("correction_status <>");
     expect(correctionSql).not.toContain("correction_status !=");
+    const packageSql = String(query.mock.calls[2][0]);
+    expect(packageSql).toContain("ARRAY_AGG(DISTINCT package_store.store_id::text) AS store_ids");
+    expect(packageSql).not.toContain("package_store.region_id = scoped_store.region_id");
   });
 
   it("looks up correction actors at the event timestamp without selecting username or email", async () => {

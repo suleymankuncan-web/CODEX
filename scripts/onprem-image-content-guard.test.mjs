@@ -151,6 +151,30 @@ test('content guard accepts dependency program references without weakening lite
   }
 })
 
+test('content guard accepts an empty env fallback but rejects a concrete credential fallback', () => {
+  const root = fixture()
+  try {
+    const dependencyRoot = join(root, 'app', 'node_modules', 'mailer')
+    mkdirSync(dependencyRoot, { recursive: true })
+    const runtime = join(dependencyRoot, 'runtime.js')
+    const dynamic = "const ETHEREAL_API_KEY = (process.env.ETHEREAL_API_KEY || '').replace(/\\s*/g, '') || null;\n"
+    writeFileSync(runtime, dynamic)
+    assert.equal(inspectImageContent(root, { kind: 'backend' }).ok, true)
+
+    writeFileSync(runtime, dynamic.replace("|| ''", "|| 'embedded-credential-123'"))
+    const concreteFallback = inspectImageContent(root, { kind: 'backend' })
+    assert.equal(concreteFallback.ok, false)
+    assert.ok(concreteFallback.violations.some((item) => item.code === 'secret-content'))
+
+    writeFileSync(runtime, dynamic + "const DATABASE_PASSWORD = 'embedded-credential-123';\n")
+    const adjacentSecret = inspectImageContent(root, { kind: 'backend' })
+    assert.equal(adjacentSecret.ok, false)
+    assert.ok(adjacentSecret.violations.some((item) => item.code === 'secret-content'))
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 test('content guard rejects high-signal tokens embedded in dependency binaries', () => {
   const root = fixture()
   try {

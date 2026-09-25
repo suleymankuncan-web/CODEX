@@ -69,7 +69,7 @@ export type SalesTargetIncentiveStoreReview = {
 }
 
 export type SalesTargetIncentiveRegionWorkflow = {
-  regionId: string
+  managerUserId: string
   regionPackageStatus: 'not_submitted' | 'submitted' | 'admin_approved' | 'admin_returned'
   regionPackageId: string | null
   submittedAt: string | null
@@ -199,7 +199,7 @@ export type StoreSalesTargetIncentiveVoidCorrectionInput = {
 
 export type StoreSalesTargetIncentiveSubmitPackageInput = {
   period: string
-  regionId: string
+  companyId?: string
   submissionNote?: string
 }
 
@@ -220,7 +220,7 @@ export type StoreSalesTargetIncentiveCorrectionResponse = {
 export type StoreSalesTargetIncentivePackageResponse = {
   data: {
     period: string
-    regionId: string
+    managerUserId: string
     regionPackageId: string
     regionPackageStatus: 'submitted' | 'admin_approved' | 'admin_returned'
     submittedAt: string
@@ -301,11 +301,13 @@ export async function getStoreSalesTargetIncentives(input?: { period?: string })
   ) as Promise<SalesTargetIncentiveResponse>
 }
 
-export async function getStoreSalesTargetIncentiveWorkspace(input?: { period?: string }) {
-  const query = buildPeriodQuery(input?.period)
+export async function getStoreSalesTargetIncentiveWorkspace(input?: { period?: string | undefined; throughDate?: string | undefined }) {
+  const query = new URLSearchParams()
+  if (input?.period) query.set('period', input.period)
+  if (input?.throughDate) query.set('throughDate', input.throughDate)
   return fetchOpenApiJson(
     '/api/store/incentives/workspace',
-    query ? { query } : undefined,
+    query.size ? { query } : undefined,
   )
 }
 

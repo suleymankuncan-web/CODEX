@@ -41,10 +41,10 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
   )
   const query = useQuery({
     queryKey,
-    queryFn: () => getStoreSalesTargetIncentiveWorkspace(period ? { period } : undefined),
+    queryFn: () => getStoreSalesTargetIncentiveWorkspace({ period }),
     enabled,
     placeholderData: (previous) => previous,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     staleTime: 30_000,
     ...transientQueryRetryOptions,
   })

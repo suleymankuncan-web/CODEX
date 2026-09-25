@@ -51,6 +51,8 @@ function createService() {
   const service = new SalesTargetIncentiveAdminPackageWorkflowService(
     adminPackageReadRepository as never,
     approvalRepository as never,
+    {} as never,
+    {} as never,
   );
   return { adminPackageReadRepository, approvalRepository, service };
 }

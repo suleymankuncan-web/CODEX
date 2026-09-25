@@ -69,7 +69,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
       `sales-target-incentive-store-review:2026-05:${storeId}`,
     );
     expect(query.mock.calls[1][1][0]).toContain(
-      `sales-target-incentive-region-package:2026-05:${regionId}`,
+      `incentive-store-package:2026-05:${storeId}`,
     );
     expect(String(query.mock.calls[2][0])).toContain(
       "package_status IN ('submitted', 'admin_approved')",

@@ -10,6 +10,7 @@ export type SalesTargetIncentiveWorkspaceStoreMetadataRow = {
   company_id: string;
   region_id: string;
   region_name: string | null;
+  region_manager_user_id: string | null;
   region_manager_name: string | null;
   store_id: string;
   store_code: string;
@@ -60,6 +61,7 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
           store.company_id::text AS company_id,
           store.region_id::text AS region_id,
           region.region_name,
+          region_manager.user_id AS region_manager_user_id,
           region_manager.display_name AS region_manager_name,
           store.store_id::text AS store_id,
           store.store_code
@@ -67,12 +69,13 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
         LEFT JOIN ops.region region
           ON region.region_id = store.region_id
         LEFT JOIN LATERAL (
-          SELECT COALESCE(
+          SELECT MIN(user_account.user_id::text) AS user_id,
+            MIN(COALESCE(
             NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
             user_account.username,
             user_account.email,
             user_account.user_id::text
-          ) AS display_name
+          )) AS display_name
           FROM ops.user_role_assignment role_assignment
           INNER JOIN ops.role role
             ON role.role_id = role_assignment.role_id
@@ -80,13 +83,12 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
           INNER JOIN ops.user_action_store_assignment manager_store
             ON manager_store.user_id = role_assignment.user_id
             AND manager_store.store_id = store.store_id
-            AND manager_store.start_at <= (
+            AND manager_store.start_at <= LEAST(clock_timestamp(),
               (($2::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul')
-              - INTERVAL '1 microsecond'
-            )
+              - INTERVAL '1 microsecond')
             AND (
               manager_store.end_at IS NULL
-              OR manager_store.end_at > (
+              OR manager_store.end_at > LEAST(clock_timestamp(),
                 (($2::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul')
                 - INTERVAL '1 microsecond'
               )
@@ -96,19 +98,18 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
             AND user_account.is_active = TRUE
           LEFT JOIN ops.employee employee
             ON employee.employee_id = user_account.employee_id
-          WHERE role_assignment.start_at <= (
+          WHERE role_assignment.start_at <= LEAST(clock_timestamp(),
               (($2::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul')
               - INTERVAL '1 microsecond'
             )
             AND (
               role_assignment.end_at IS NULL
-              OR role_assignment.end_at >= (
+              OR role_assignment.end_at > LEAST(clock_timestamp(),
                 (($2::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul')
                 - INTERVAL '1 microsecond'
               )
             )
-          ORDER BY display_name ASC NULLS LAST, role_assignment.start_at DESC
-          LIMIT 1
+          HAVING COUNT(DISTINCT user_account.user_id) = 1
         ) region_manager ON TRUE
         WHERE store.store_id = ANY($1::uuid[])
         ORDER BY region.region_name ASC NULLS LAST, store.store_name ASC, store.store_id ASC
@@ -128,7 +129,7 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
     const result = await this.databaseService.query<SalesTargetIncentiveWorkspaceClosedRateSnapshotRow>(
       `
         WITH scoped_store AS (
-          SELECT store_id, company_id, region_id
+          SELECT store_id, company_id
           FROM ops.store
           WHERE store_id = ANY($2::uuid[])
         ),
@@ -141,7 +142,6 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
           FROM rpt.sales_target_incentive_final_snapshot snapshot
           INNER JOIN scoped_store
             ON snapshot.company_id = scoped_store.company_id
-            AND snapshot.region_id = scoped_store.region_id
             AND snapshot.store_id = scoped_store.store_id
           WHERE snapshot.period_key = $1
           ORDER BY snapshot.store_id, snapshot.close_cutoff_at DESC,
@@ -206,7 +206,7 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
   }): Promise<{
     reviews: SalesTargetIncentiveStoreReviewRow[];
     corrections: SalesTargetIncentiveRegionCorrectionRow[];
-    packages: SalesTargetIncentiveRegionPackageRow[];
+    packages: Array<SalesTargetIncentiveRegionPackageRow & { store_ids: string[] }>;
   }> {
     if (input.storeIds.length === 0) {
       return { reviews: [], corrections: [], packages: [] };
@@ -214,7 +214,7 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
 
     const scopedStoreCte = `
       WITH scoped_store AS (
-        SELECT store_id, company_id, region_id
+        SELECT store_id, company_id
         FROM ops.store
         WHERE store_id = ANY($2::uuid[])
       )
@@ -226,7 +226,6 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
         FROM ops.sales_target_incentive_store_review review
         INNER JOIN scoped_store
           ON review.company_id = scoped_store.company_id
-          AND review.region_id = scoped_store.region_id
           AND review.store_id = scoped_store.store_id
         WHERE review.period_key = $1`,
         [input.periodKey, input.storeIds],
@@ -237,24 +236,23 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
         FROM ops.sales_target_incentive_region_correction correction
         INNER JOIN scoped_store
           ON correction.company_id = scoped_store.company_id
-          AND correction.region_id = scoped_store.region_id
           AND correction.store_id = scoped_store.store_id
         WHERE correction.period_key = $1
         ORDER BY correction.created_at ASC,
           correction.sales_target_incentive_region_correction_id ASC`,
         [input.periodKey, input.storeIds],
       ),
-      this.databaseService.query<SalesTargetIncentiveRegionPackageRow>(
+      this.databaseService.query<SalesTargetIncentiveRegionPackageRow & { store_ids: string[] }>(
         `${scopedStoreCte}
-        SELECT DISTINCT package.*
+        SELECT package.*, ARRAY_AGG(DISTINCT package_store.store_id::text) AS store_ids
         FROM ops.sales_target_incentive_region_package package
         INNER JOIN ops.sales_target_incentive_region_package_store package_store
           ON package_store.region_package_id = package.sales_target_incentive_region_package_id
         INNER JOIN scoped_store
           ON package.company_id = scoped_store.company_id
-          AND package.region_id = scoped_store.region_id
           AND package_store.store_id = scoped_store.store_id
-        WHERE package.period_key = $1`,
+        WHERE package.period_key = $1
+        GROUP BY package.sales_target_incentive_region_package_id`,
         [input.periodKey, input.storeIds],
       ),
     ]);

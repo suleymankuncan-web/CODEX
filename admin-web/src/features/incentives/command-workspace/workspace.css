@@ -10,8 +10,9 @@
 .incentive-performance-heading p { margin: 7px 0 0; font-size: 12px; line-height: 1.5; color: var(--primary-foreground); opacity: .85; }
 .incentive-performance-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .store-command-app .incentive-performance-hero [data-slot='button'] { min-height: 40px; border-radius: 10px; border-color: color-mix(in srgb,var(--primary-foreground) 35%,transparent); color: var(--primary-foreground); background: color-mix(in srgb,var(--primary-foreground) 10%,transparent); box-shadow: none; }
-.store-command-app .incentive-performance-hero .incentive-submit-cluster > [data-slot='button'] { background: var(--card); color: var(--primary); border-color: transparent; }
-.incentive-submit-cluster > small { display: none; }
+.store-command-app .incentive-performance-hero .incentive-primary-action { background: var(--primary-foreground); color: var(--primary); border-color: var(--primary-foreground); box-shadow: 0 5px 14px color-mix(in srgb,var(--foreground) 20%,transparent); font-weight: 650; }
+.store-command-app .incentive-performance-hero .incentive-primary-action:hover { background: color-mix(in srgb,var(--primary-foreground) 90%,var(--primary)); color: var(--primary); }
+.store-command-app .incentive-primary-action:disabled { opacity: .72; }
 .incentive-performance-metrics { display: grid; grid-template-columns: 1.3fr repeat(3,minmax(0,1fr)); overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
 .store-command-app .incentive-performance-metrics > [data-slot='button'] { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; min-width: 0; height: auto; min-height: 92px; padding: 18px 22px; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; box-shadow: none; color: var(--foreground); text-align: left; white-space: normal; }
 .store-command-app .incentive-performance-metrics > [data-slot='button']:last-child { border-right: 0; }
@@ -20,6 +21,7 @@
 .incentive-performance-metrics svg { width: 15px; height: 15px; color: var(--primary); }
 .incentive-performance-metrics strong { color: var(--primary); font-size: 25px; line-height: 1.1; font-weight: 550; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
 .incentive-performance-layout { display: grid; grid-template-columns: 248px minmax(0,1fr); gap: 16px; align-items: start; min-width: 0; }
+.incentive-performance-layout.incentive-performance-layout--single { grid-template-columns: minmax(0,1fr); }
 .incentive-performance-main { display: grid; gap: 12px; min-width: 0; }
 .incentive-manager-directory { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--card); box-shadow: 0 2px 5px color-mix(in srgb,var(--primary) 3%,transparent); }
 .incentive-manager-directory > header { display: grid; gap: 14px; padding: 16px; border-bottom: 1px solid var(--border); }
@@ -42,14 +44,14 @@
 .incentive-manager-directory > footer { display: flex; align-items: center; gap: 7px; padding: 14px 16px; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 10px; }
 .incentive-manager-directory > footer svg { width: 14px; height: 14px; flex-shrink: 0; }
 .incentive-directory-state { padding: 16px 10px; color: var(--muted-foreground); font-size: 12px; line-height: 1.6; }
-.incentive-workspace-navigation { display: flex; align-items: center; justify-content: space-between; min-width: 0; }
-.store-command-app .incentive-workspace-navigation [role='tablist'] { display: flex; align-items: center; justify-content: start; flex-wrap: wrap; gap: 22px; height: auto; padding: 0 4px; border: 0; background: transparent; }
-.store-command-app .incentive-workspace-navigation [role='tab'] { display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 40px; height: auto; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; border-radius: 0; box-shadow: none; background: transparent; color: var(--muted-foreground); font-size: 12px; }
-.store-command-app .incentive-workspace-navigation [role='tab'][data-state='active'] { color: var(--primary); border-bottom-color: var(--primary); }
-.incentive-workspace-navigation [role='tab'] svg { width: 16px; height: 16px; }
-.incentive-tab-count { min-width: 22px; padding: 2px 6px; border-radius: 6px; background: var(--accent); color: var(--primary); font-size: 10px; }
 .incentive-performance-content { min-width: 0; container-type: inline-size; }
 .incentive-performance-list, .incentive-approval { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--card); box-shadow: 0 2px 5px color-mix(in srgb,var(--primary) 3%,transparent); }
+.incentive-daily-tracking-note { margin:0; padding:11px 17px; border:1px solid color-mix(in srgb,var(--primary) 12%,var(--border)); border-radius:10px; background:color-mix(in srgb,var(--primary) 4%,var(--card)); color:var(--muted-foreground); font-size:11px; line-height:1.55; }
+.incentive-list-heading + .incentive-daily-tracking-note { margin:0 16px 12px; }
+.incentive-approval--embedded { border: 0; border-block: 1px solid var(--border); border-radius: 0; background: color-mix(in srgb,var(--primary) 2%,var(--card)); box-shadow: none; }
+.incentive-approval--embedded .incentive-approval-heading { padding-block: 16px 12px; }
+.incentive-approval--embedded .incentive-package { min-height: 64px; padding-block: 12px; }
+.incentive-approval--embedded .incentive-approval-hint { padding-block: 11px; }
 .incentive-list-heading { padding: 18px 20px 14px; }
 .incentive-list-heading h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
 .incentive-list-heading p { margin: 6px 0 0; color: var(--muted-foreground); font-size: 11px; }
@@ -63,13 +65,17 @@
 .incentive-performance th button svg { width: 12px; height: 12px; }
 .store-command-app .incentive-performance.command-canvas-page table td, .incentive-store-sheet table td { height: 74px; padding: 12px; border: 0; border-bottom: 1px solid var(--border); background: transparent; text-align: right; font-size: 12px; color: var(--foreground); font-variant-numeric: tabular-nums; white-space: normal; overflow-wrap: anywhere; }
 .store-command-app .incentive-performance.command-canvas-page table tr:hover td { background: color-mix(in srgb,var(--primary) 2%,var(--card)); }
-.store-command-app .incentive-performance.command-canvas-page table th:first-child, .store-command-app .incentive-performance.command-canvas-page table td:first-child, .incentive-store-sheet table th:first-child, .incentive-store-sheet table td:first-child { width: 26%; text-align: left; padding-left: 20px; }
+.store-command-app .incentive-performance.command-canvas-page table th:first-child, .store-command-app .incentive-performance.command-canvas-page table td:first-child, .incentive-store-sheet table th:first-child, .incentive-store-sheet table td:first-child { width: 21%; text-align: left; padding-left: 20px; }
+.incentive-store-sheet table th:first-child, .incentive-store-sheet table td:first-child { width: 26%; }
 .store-command-app .incentive-performance.command-canvas-page table th:first-child button { justify-content: start; }
-.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(2) { width: 9%; }
-.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(3) { width: 10%; }
-.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger td:nth-child(3) { padding-inline: 6px; white-space: nowrap; overflow-wrap: normal; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(2) { width: 14%; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(3) { width: 14%; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(4) { width: 8%; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(5) { width: 13%; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:nth-child(6) { width: 14%; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:last-child { width: 16%; }
+.store-command-app .incentive-performance.command-canvas-page .incentive-store-money { padding-inline: 6px; white-space: nowrap; overflow-wrap: normal; }
 .store-command-app .incentive-performance.command-canvas-page table th:last-child, .store-command-app .incentive-performance.command-canvas-page table td:last-child, .incentive-store-sheet table th:last-child, .incentive-store-sheet table td:last-child { padding-right: 20px; }
-.store-command-app .incentive-performance.command-canvas-page .incentive-store-ledger th:last-child { width: 19%; }
 .store-command-app .incentive-performance.command-canvas-page .incentive-store-name, .incentive-store-sheet .incentive-person-name { display: inline-flex; justify-content: start; height: auto; min-height: 36px; gap: 8px; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--foreground); font-size: 13px; font-weight: 550; text-decoration: none; text-align: left; white-space: normal; box-shadow: none; }
 .incentive-store-name svg { flex-shrink: 0; width: 14px; height: 14px; color: var(--primary); opacity: .7; }
 .incentive-store-manager-name { display: block; margin-top: 3px; font-size: 10px; color: var(--muted-foreground); }
@@ -82,6 +88,10 @@
 .incentive-final-amount > small { font-size: 10px; }
 .incentive-final-amount > .is-increase { color: var(--success-foreground); }
 .incentive-final-amount > .is-decrease { color: var(--destructive); }
+.incentive-value-tone { display: inline-grid; align-items: center; max-width: 100%; min-height: 28px; padding: 4px 6px; border-radius: 8px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.incentive-value-tone.is-below-threshold { color: var(--destructive); background: color-mix(in srgb,var(--destructive) 9%,var(--card)); }
+.incentive-value-tone.is-earned { color: var(--success-foreground); background: var(--success-soft); }
+.incentive-value-tone.is-earned .incentive-final-amount > strong { color: var(--success-foreground); }
 .incentive-list-footer { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 16px 20px; font-size: 10px; color: var(--muted-foreground); }
 .incentive-list-footer strong { margin-left: 8px; font-size: 12px; color: var(--primary); font-weight: 600; }
 .incentive-command-empty, .incentive-command-empty-state { display: grid; min-height: 150px; align-content: center; justify-items: center; gap: 10px; padding: 24px; font-size: 13px; color: var(--muted-foreground); text-align: center; }
@@ -94,7 +104,10 @@
 .incentive-store-mobile dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; margin: 16px 0 0; }
 .incentive-store-mobile dt { font-size: 11px; color: var(--muted-foreground); }
 .incentive-store-mobile dd { margin: 6px 0 0; font-size: 13px; font-variant-numeric: tabular-nums; }
-.incentive-store-sheet.command-canvas-operational-drawer[data-slot='sheet-content'] { inset: 0 0 0 auto; width: min(960px,100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; display: flex; flex-direction: column; padding: 0; gap: 0; border-radius: 0; overflow: hidden; background: var(--card); font-family: var(--font-sans); transition-property: opacity, transform; }
+.incentive-store-sheet.command-canvas-operational-drawer[data-slot='sheet-content'] { inset: 0 0 0 auto; box-sizing: border-box; min-width: 0; width: min(960px,100dvw); max-width: 100dvw; height: 100dvh; max-height: 100dvh; display: flex; flex-direction: column; padding: 0; gap: 0; border-radius: 0; overflow: hidden; background: var(--card); font-family: var(--font-sans); transition-property: opacity, transform; }
+@media (min-width: 850px) {
+  .incentive-store-sheet.command-canvas-operational-drawer[data-slot='sheet-content'] { right: clamp(0px, calc(1200px - 100dvw), 56px); width: min(960px, calc(100dvw - 72px)); max-width: calc(100dvw - 72px); }
+}
 .incentive-store-sheet-header { display: flex; flex-direction: row; align-items: center; gap: 14px; padding: 24px; flex-shrink: 0; color: var(--primary-foreground); background: var(--primary); }
 .incentive-store-sheet-header > div { flex: 1; min-width: 0; }
 .incentive-store-sheet-header [data-slot='sheet-title'] { margin: 5px 0 0; font-size: 23px; letter-spacing: -.03em; font-weight: 600; color: inherit; outline: none; }
@@ -102,6 +115,7 @@
 .incentive-store-sheet-header > button { align-self: start; flex-shrink: 0; min-width: 44px; min-height: 44px; border: 1px solid color-mix(in srgb,var(--primary-foreground) 30%,transparent); color: inherit; background: color-mix(in srgb,var(--primary-foreground) 10%,transparent); }
 .incentive-store-sheet-body { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; container-type: inline-size; padding-top: 24px; }
 .incentive-detail-totals { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; margin: 0 24px 28px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb,var(--primary) 3%,var(--card)); }
+.incentive-store-sheet--editable .incentive-detail-totals { margin-bottom: 16px; }
 .incentive-detail-totals dt { font-size: 11px; color: var(--muted-foreground); }
 .incentive-detail-totals dd { margin: 10px 0 0; font-size: 16px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .incentive-personnel-panel h3 { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0 24px 16px; font-size: 14px; font-weight: 600; }
@@ -140,6 +154,7 @@
 .incentive-confirm-packages small { display: block; margin-top: 5px; color: var(--muted-foreground); }
 .incentive-confirm-copy { font-size: 12px; line-height: 1.6; color: var(--muted-foreground); }
 .incentive-package-confirmation { grid-template-columns: minmax(0, 1fr); max-height: calc(100dvh - 32px); overflow-y: auto; overflow-wrap: anywhere; }
+.incentive-package-confirmation [data-slot='dialog-footer'] > [data-slot='button'] { min-height:44px; }
 .store-command-app .incentive-performance-main [data-slot='button'][data-variant='default'] { background: var(--primary); color: var(--primary-foreground); border-color: transparent; border-radius: 10px; }
 .incentive-performance [data-slot='checkbox'], .incentive-store-sheet [data-slot='checkbox'] { min-height: 17px; width: 17px; height: 17px; padding: 0; flex-shrink: 0; }
 @container (max-width: 620px) {
@@ -295,29 +310,31 @@
 
 @media (max-width: 600px) { .incentive-rate-table-grid { grid-template-columns: minmax(0,1fr); } .incentive-drawer-footer, .incentive-confirm-total { flex-wrap: wrap; } }
 /* A single store review: inline amounts, one shared note, existing package decision. */
-.incentive-store-editor > header { padding: 0 24px 20px; }
-.incentive-store-editor h3, .incentive-package-decision h3 { margin: 0; font-size: 15px; font-weight: 600; }
-.incentive-store-editor h3 small { margin-left: 6px; font-size: 11px; color: var(--muted-foreground); }
-.incentive-store-editor header p, .incentive-package-decision p { font-size: 12px; line-height: 1.7; color: var(--muted-foreground); }
-.incentive-edit-columns, .incentive-edit-row { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,.95fr) minmax(0,1fr) minmax(0,1.2fr); align-items: center; gap: 16px; padding: 16px 24px; }
+.incentive-personnel-review-tools { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 16px; min-height:52px; padding:8px 24px; border-top:1px solid var(--border); color:var(--muted-foreground); font-size:12px; }
+.incentive-personnel-review-tools strong { color:var(--primary); }
+.incentive-personnel-review-tools label { display:inline-flex; align-items:center; gap:9px; min-height:36px; color:var(--foreground); cursor:pointer; }
+.incentive-adjustments-empty { display:grid; justify-items:center; gap:12px; padding:28px 16px; color:var(--muted-foreground); font-size:13px; text-align:center; }
+.incentive-adjustments-empty p { margin:0; }
+.incentive-package-decision h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.incentive-package-decision p { font-size: 12px; line-height: 1.7; color: var(--muted-foreground); }
+.incentive-edit-columns, .incentive-edit-row { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(0,.95fr) minmax(0,.95fr) minmax(0,.62fr) minmax(0,1fr) minmax(0,.9fr) minmax(0,1.15fr); align-items: center; gap: 12px; padding: 16px 24px; }
 .incentive-edit-columns { background: var(--muted); color: var(--muted-foreground); font-size: 11px; border-block: 1px solid var(--border); }
-.incentive-edit-row { border-bottom: 1px solid var(--border); font-size: 12px; min-height: 98px; }
-.incentive-edit-row > div { min-width: 0; overflow-wrap: anywhere; display: grid; gap: 7px; font-variant-numeric: tabular-nums; }
-.incentive-edit-row[data-editable='true'] { align-items: start; }
-.incentive-edit-row[data-editable='true'] .incentive-edit-person strong, .incentive-edit-row[data-editable='true'] > div > span:first-child { display: flex; align-items: center; min-height: 38px; }
-.incentive-edit-row small { font-size: 10px; color: var(--muted-foreground); line-height: 1.5; }
+.incentive-edit-row { border-bottom: 1px solid var(--border); font-size: 12px; min-height: 66px; padding-block: 8px; }
+.incentive-edit-row > div { min-width: 0; overflow-wrap: anywhere; display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.incentive-edit-row .incentive-edit-person { gap: 2px; }
+.incentive-edit-row[data-editable='true'] .incentive-edit-final { grid-template-rows: 34px 13px; gap: 2px; }
+.incentive-edit-row small { font-size: 10px; color: var(--muted-foreground); line-height: 1.3; }
 .incentive-edit-person strong { font-size: 13px; font-weight: 550; }
-.incentive-edit-row input, .incentive-edit-row [data-slot='select-trigger'] { width: 100%; min-width: 0; border-color: var(--border); font-size: 12px; height: 38px; background: var(--card); }
+.incentive-edit-row input, .incentive-edit-row [data-slot='select-trigger'] { width: 100%; min-width: 0; border-color: var(--border); font-size: 12px; height: 34px; background: var(--card); }
 .incentive-edit-row input { text-align: right; }
 .incentive-edit-money { position: relative; }
 .incentive-edit-money > span { position: absolute; inset: 0 auto 0 12px; display: grid; align-items: center; color: var(--muted-foreground); pointer-events: none; font-size: 12px; }
 .incentive-edit-money input { padding-left: 28px; font-variant-numeric: tabular-nums; }
-.incentive-edit-row .incentive-edit-difference { min-height: 15px; white-space: nowrap; text-align: right; }
+.incentive-edit-row .incentive-edit-difference { min-height: 13px; white-space: nowrap; text-align: right; }
 .incentive-edit-row .incentive-edit-difference[data-direction='increase'] { color: var(--success-foreground); }
 .incentive-edit-row .incentive-edit-difference[data-direction='decrease'] { color: var(--destructive); }
 .incentive-edit-row[data-changed='true'] { background: color-mix(in srgb,var(--primary) 3%,var(--card)); }
-.incentive-store-editor-total { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); font-size: 13px; }
-.incentive-store-editor-total .incentive-final-amount { grid-template-rows: auto 15px; white-space: nowrap; text-align: right; }
+.incentive-edit-row .incentive-edit-final.is-earned input { color: var(--success-foreground); background: var(--success-soft); border-color: color-mix(in srgb,var(--success-foreground) 24%,var(--border)); }
 .incentive-store-notes { margin: 20px 24px; padding: 16px 18px; border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0; background: var(--muted); }
 .incentive-store-notes h4 { margin: 0; font-size: 12px; font-weight: 600; color: var(--primary); }
 .incentive-store-notes p { margin: 8px 0 0; font-size: 12px; color: var(--foreground); line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -337,15 +354,18 @@
 .incentive-package-decision textarea { margin-top: 8px; }
 .incentive-package-decision > footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 .incentive-package-decision .incentive-store-notes { margin-inline: 0; }
-@container (max-width: 620px) {
+@container (max-width: 820px) {
+  .incentive-personnel-review-tools { padding-inline:16px; }
+  .incentive-personnel-review-tools label { min-height:44px; }
   .incentive-edit-columns { display: none; }
-  .incentive-edit-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr); padding: 20px 16px; gap: 18px; }
+  .incentive-edit-row { grid-template-columns: minmax(0,1fr) minmax(0,1fr); min-height: 0; padding: 16px; gap: 14px; }
   .incentive-edit-person { grid-column: 1 / -1; }
   .incentive-edit-row [data-label]::before { content: attr(data-label); color: var(--muted-foreground); font-size: 10px; }
   .incentive-edit-row input, .incentive-edit-row [data-slot='select-trigger'] { font-size: 16px; min-height: 44px; }
+  .incentive-edit-row[data-editable='true'] .incentive-edit-final { grid-template-rows: 44px 13px; }
   .incentive-edit-row[data-editable='true'] > div > span:first-child { min-height: 44px; }
   .incentive-store-note-input textarea, .incentive-package-decision textarea { font-size: 16px; }
-  .incentive-store-editor > header, .incentive-store-note-input, .incentive-store-completion, .incentive-package-decision { padding-inline: 16px; }
+  .incentive-store-note-input, .incentive-store-completion, .incentive-package-decision { padding-inline: 16px; }
   .incentive-store-notes { margin-inline: 16px; }
 }
 .incentive-completion-slot { flex: 1; min-width: 0; }
@@ -359,4 +379,3 @@
   .incentive-store-sheet-footer > span { align-self: flex-start; }
 }
 .incentive-store-period-notice { margin: 0 24px 20px; color: var(--muted-foreground); font-size: 12px; }
-.incentive-workspace-navigation:empty { display: none; }

@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-09-23T12:11:39.318Z",
+  "generatedAt": "2026-09-25T00:53:34.017Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 269,
+    "backendEndpointCount": 271,
     "backendEndpointsWithoutFrontendCallCount": 56,
-    "controllerCount": 40,
+    "controllerCount": 41,
     "frontendApiCallCount": 216,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 216,
-    "openApiEndpointCount": 269,
+    "openApiEndpointCount": 271,
     "routeApiEdgeCount": 263,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0,
@@ -2354,7 +2354,7 @@
       "exportedFunction": "getStoreSalesTargetIncentiveWorkspace",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 306
+        "line": 308
       }
     },
     {
@@ -2369,7 +2369,7 @@
       "exportedFunction": "getAdminSalesTargetIncentives",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 314
+        "line": 316
       }
     },
     {
@@ -2384,7 +2384,7 @@
       "exportedFunction": "createAdminSalesTargetIncentiveCorrection",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 323
+        "line": 325
       }
     },
     {
@@ -2399,7 +2399,7 @@
       "exportedFunction": "reviewAdminSalesTargetIncentiveRegionPackage",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 332
+        "line": 334
       }
     },
     {
@@ -2414,7 +2414,7 @@
       "exportedFunction": "markStoreSalesTargetIncentiveReview",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 341
+        "line": 343
       }
     },
     {
@@ -2429,7 +2429,7 @@
       "exportedFunction": "createStoreSalesTargetIncentiveRegionCorrection",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 350
+        "line": 352
       }
     },
     {
@@ -2444,7 +2444,7 @@
       "exportedFunction": "voidStoreSalesTargetIncentiveRegionCorrection",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 359
+        "line": 361
       }
     },
     {
@@ -2459,7 +2459,7 @@
       "exportedFunction": "submitStoreSalesTargetIncentiveRegionPackage",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 368
+        "line": 370
       }
     },
     {
@@ -2474,7 +2474,7 @@
       "exportedFunction": "FinalIncentiveApproval",
       "source": {
         "file": "admin-web/src/features/incentives/command-workspace/final-incentive-approval.tsx",
-        "line": 40
+        "line": 65
       }
     },
     {
@@ -2489,7 +2489,7 @@
       "exportedFunction": "FinalIncentiveApproval",
       "source": {
         "file": "admin-web/src/features/incentives/command-workspace/final-incentive-approval.tsx",
-        "line": 57
+        "line": 80
       }
     },
     {
@@ -2497,14 +2497,14 @@
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
-      "rawPath": "/api/store/incentives/final-approval",
-      "path": "/api/store/incentives/final-approval",
-      "backendEndpointId": "endpoint:GET:/api/store/incentives/final-approval",
+      "rawPath": "/api/store/incentives/hr-handoff",
+      "path": "/api/store/incentives/hr-handoff",
+      "backendEndpointId": "endpoint:GET:/api/store/incentives/hr-handoff",
       "openApiCovered": true,
-      "exportedFunction": "StorePackageDecision",
+      "exportedFunction": "IncentiveHrHandoff",
       "source": {
-        "file": "admin-web/src/features/incentives/command-workspace/store-package-decision.tsx",
-        "line": 24
+        "file": "admin-web/src/features/incentives/command-workspace/hr-handoff.tsx",
+        "line": 25
       }
     },
     {
@@ -2512,14 +2512,14 @@
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "POST",
-      "rawPath": "/api/store/incentives/final-approval",
-      "path": "/api/store/incentives/final-approval",
-      "backendEndpointId": "endpoint:POST:/api/store/incentives/final-approval",
+      "rawPath": "/api/store/incentives/hr-handoff",
+      "path": "/api/store/incentives/hr-handoff",
+      "backendEndpointId": "endpoint:POST:/api/store/incentives/hr-handoff",
       "openApiCovered": true,
-      "exportedFunction": "StorePackageDecision",
+      "exportedFunction": "IncentiveHrHandoff",
       "source": {
-        "file": "admin-web/src/features/incentives/command-workspace/store-package-decision.tsx",
-        "line": 37
+        "file": "admin-web/src/features/incentives/command-workspace/hr-handoff.tsx",
+        "line": 27
       }
     },
     {
@@ -7437,6 +7437,34 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/store/incentives/hr-handoff",
+      "method": "GET",
+      "path": "/api/store/incentives/hr-handoff",
+      "rawControllerPath": "store/incentives/hr-handoff",
+      "rawMethodPath": "",
+      "controller": "incentive-hr-handoff",
+      "domain": "store",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/incentive-hr-handoff.controller.ts",
+        "line": 16
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/store/incentives/hr-handoff",
+      "method": "POST",
+      "path": "/api/store/incentives/hr-handoff",
+      "rawControllerPath": "store/incentives/hr-handoff",
+      "rawMethodPath": "",
+      "controller": "incentive-hr-handoff",
+      "domain": "store",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/incentive-hr-handoff.controller.ts",
+        "line": 21
+      }
+    },
+    {
       "id": "endpoint:POST:/api/store/incentives/store-reviews",
       "method": "POST",
       "path": "/api/store/incentives/store-reviews",
@@ -9450,6 +9478,18 @@
       "id": "openapi:POST:/api/store/incentives/final-approval",
       "method": "POST",
       "path": "/api/store/incentives/final-approval",
+      "domain": "store"
+    },
+    {
+      "id": "openapi:GET:/api/store/incentives/hr-handoff",
+      "method": "GET",
+      "path": "/api/store/incentives/hr-handoff",
+      "domain": "store"
+    },
+    {
+      "id": "openapi:POST:/api/store/incentives/hr-handoff",
+      "method": "POST",
+      "path": "/api/store/incentives/hr-handoff",
       "domain": "store"
     },
     {
@@ -12113,14 +12153,14 @@
         "backendEndpointId": "endpoint:POST:/api/store/incentives/final-approval"
       },
       {
-        "id": "edge:api:92:endpoint:GET:/api/store/incentives/final-approval",
+        "id": "edge:api:92:endpoint:GET:/api/store/incentives/hr-handoff",
         "apiCallId": "api:92",
-        "backendEndpointId": "endpoint:GET:/api/store/incentives/final-approval"
+        "backendEndpointId": "endpoint:GET:/api/store/incentives/hr-handoff"
       },
       {
-        "id": "edge:api:93:endpoint:POST:/api/store/incentives/final-approval",
+        "id": "edge:api:93:endpoint:POST:/api/store/incentives/hr-handoff",
         "apiCallId": "api:93",
-        "backendEndpointId": "endpoint:POST:/api/store/incentives/final-approval"
+        "backendEndpointId": "endpoint:POST:/api/store/incentives/hr-handoff"
       },
       {
         "id": "edge:api:94:endpoint:GET:/api/integrations/import-batches/overview",
@@ -12162,22 +12202,6 @@
         "path": "/api/integrations/personnel-master",
         "controller": "integration-personnel-master",
         "domain": "integrations",
-        "frontendCallCount": 2
-      },
-      {
-        "endpointId": "endpoint:GET:/api/store/incentives/final-approval",
-        "method": "GET",
-        "path": "/api/store/incentives/final-approval",
-        "controller": "incentive-final-approval",
-        "domain": "store",
-        "frontendCallCount": 2
-      },
-      {
-        "endpointId": "endpoint:POST:/api/store/incentives/final-approval",
-        "method": "POST",
-        "path": "/api/store/incentives/final-approval",
-        "controller": "incentive-final-approval",
-        "domain": "store",
         "frontendCallCount": 2
       },
       {
@@ -12315,6 +12339,22 @@
         "controller": "auth-admin",
         "domain": "auth",
         "frontendCallCount": 1
+      },
+      {
+        "endpointId": "endpoint:GET:/api/auth/users/{userId}/audit",
+        "method": "GET",
+        "path": "/api/auth/users/{userId}/audit",
+        "controller": "auth-admin",
+        "domain": "auth",
+        "frontendCallCount": 1
+      },
+      {
+        "endpointId": "endpoint:GET:/api/checklists/command-canvas",
+        "method": "GET",
+        "path": "/api/checklists/command-canvas",
+        "controller": "checklist-command",
+        "domain": "checklists",
+        "frontendCallCount": 1
       }
     ],
     "controllersByEndpointCount": [
@@ -12431,13 +12471,6 @@
         "frontendCallCount": 4
       },
       {
-        "id": "controller:incentive-final-approval",
-        "controller": "incentive-final-approval",
-        "domain": "store",
-        "endpointCount": 2,
-        "frontendCallCount": 4
-      },
-      {
         "id": "controller:admin-sales-target-incentive",
         "controller": "admin-sales-target-incentive",
         "domain": "admin",
@@ -12483,6 +12516,20 @@
         "id": "controller:checklist-command",
         "controller": "checklist-command",
         "domain": "checklists",
+        "endpointCount": 2,
+        "frontendCallCount": 2
+      },
+      {
+        "id": "controller:incentive-final-approval",
+        "controller": "incentive-final-approval",
+        "domain": "store",
+        "endpointCount": 2,
+        "frontendCallCount": 2
+      },
+      {
+        "id": "controller:incentive-hr-handoff",
+        "controller": "incentive-hr-handoff",
+        "domain": "store",
         "endpointCount": 2,
         "frontendCallCount": 2
       },

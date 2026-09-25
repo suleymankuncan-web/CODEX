@@ -11,7 +11,7 @@ export type IncentiveWorkspace = GeneratedWorkspace & {
   }
 }
 
-export type IncentiveRegion = IncentiveWorkspace['regions'][number]
-export type IncentiveStore = IncentiveRegion['stores'][number]
+export type IncentiveManagerGroup = IncentiveWorkspace['managerGroups'][number]
+export type IncentiveStore = IncentiveManagerGroup['stores'][number]
 export type IncentiveRow = IncentiveStore['rows'][number]
 export type IncentiveStatusFilter = 'all' | 'pending_review' | 'reviewed' | 'corrected' | 'earning'

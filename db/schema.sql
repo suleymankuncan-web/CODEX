@@ -1232,7 +1232,9 @@ CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_store_review (
 CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_region_package (
     sales_target_incentive_region_package_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
-    region_id UUID NOT NULL REFERENCES ops.region(region_id),
+    region_id UUID REFERENCES ops.region(region_id),
+    package_scope TEXT NOT NULL DEFAULT 'legacy_region',
+    manager_user_id UUID REFERENCES ops.user_account(user_id),
     period_key CHAR(7) NOT NULL,
     period_timezone TEXT NOT NULL DEFAULT 'Europe/Istanbul',
     package_status TEXT NOT NULL DEFAULT 'submitted',
@@ -1246,6 +1248,10 @@ CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_region_package (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (period_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
     CHECK (period_timezone = 'Europe/Istanbul'),
+    CHECK (
+        (package_scope = 'legacy_region' AND region_id IS NOT NULL AND manager_user_id IS NULL)
+        OR (package_scope = 'manager_assignment' AND region_id IS NULL AND manager_user_id IS NOT NULL)
+    ),
     CHECK (package_status IN ('submitted', 'admin_approved', 'admin_returned')),
     CHECK (package_status <> 'admin_approved' OR (reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)),
     CHECK (package_status <> 'admin_returned' OR (reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND NULLIF(BTRIM(review_note), '') IS NOT NULL))
@@ -2032,8 +2038,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_store_review_store_period
 CREATE INDEX IF NOT EXISTS idx_sti_store_review_region_period_status
     ON ops.sales_target_incentive_store_review (region_id, period_key, review_status);
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_region_package_region_period
-    ON ops.sales_target_incentive_region_package (region_id, period_key);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_legacy_region_package_period
+    ON ops.sales_target_incentive_region_package (region_id, period_key)
+    WHERE package_scope = 'legacy_region';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_manager_package_company_period
+    ON ops.sales_target_incentive_region_package (company_id, period_key, manager_user_id)
+    WHERE package_scope = 'manager_assignment';
+
+CREATE INDEX IF NOT EXISTS idx_sti_manager_package_owner_period
+    ON ops.sales_target_incentive_region_package (manager_user_id, period_key)
+    WHERE package_scope = 'manager_assignment';
 
 CREATE INDEX IF NOT EXISTS idx_sti_region_package_company_period_status
     ON ops.sales_target_incentive_region_package (company_id, period_key, package_status);
@@ -4380,3 +4395,20 @@ CREATE INDEX IF NOT EXISTS personnel_correction_company_status
     ON ops.personnel_correction_request(company_id, request_status, created_at DESC);
 CREATE INDEX IF NOT EXISTS personnel_correction_store_status
     ON ops.personnel_correction_request(store_id, request_status, created_at DESC);
+CREATE TABLE IF NOT EXISTS ops.incentive_hr_delivery (
+    delivery_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES ops.company(company_id),
+    period_key CHAR(7) NOT NULL CHECK (period_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
+    created_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    preview_version TEXT NOT NULL CHECK (preview_version ~ '^[a-f0-9]{64}$'),
+    recipients TEXT[] NOT NULL CHECK (cardinality(recipients) BETWEEN 1 AND 20),
+    attachment_sha256 TEXT NOT NULL CHECK (attachment_sha256 ~ '^[a-f0-9]{64}$'),
+    status TEXT NOT NULL DEFAULT 'sending' CHECK (status IN ('sending', 'sent', 'uncertain')),
+    smtp_message_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    sent_at TIMESTAMPTZ,
+    UNIQUE (company_id, period_key),
+    CHECK (status <> 'sent' OR (sent_at IS NOT NULL AND smtp_message_id IS NOT NULL))
+);
+COMMENT ON TABLE ops.incentive_hr_delivery IS 'One guarded HR email handoff per company and incentive period. Uncertain SMTP outcomes require operator reconciliation, never automatic replay.';

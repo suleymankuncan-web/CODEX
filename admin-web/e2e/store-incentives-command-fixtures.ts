@@ -1,7 +1,10 @@
 import type { Page } from './test-fixtures'
+import { companyId } from './store-page-contract-fixtures'
 
 export const incentiveRegionA = '10000000-0000-4000-8000-000000000001'
 export const incentiveRegionB = '10000000-0000-4000-8000-000000000002'
+export const incentiveManagerA = '60000000-0000-4000-8000-000000000001'
+export const incentiveManagerB = '60000000-0000-4000-8000-000000000002'
 export const incentiveStoreA = '20000000-0000-4000-8000-000000000001'
 export const incentiveStoreB = '20000000-0000-4000-8000-000000000002'
 export const incentiveStoreC = '20000000-0000-4000-8000-000000000003'
@@ -14,9 +17,9 @@ export async function routeIncentiveManagerDirectory(
 ) {
   await page.route('**/api/org/region-managers', route => route.fulfill({
     json: {
-      items: workspace.data.regions.map((region) => ({
-        userId: `manager-${region.regionId}`,
-        displayName: region.regionManager.displayName ?? 'Yetkili Bölge Müdürü',
+      items: workspace.data.managerGroups.map((region) => ({
+        userId: region.managerUserId,
+        displayName: region.managerName ?? 'Yetkili Bölge Müdürü',
         storeIds: region.stores.map(store => store.storeId),
       })),
     },
@@ -30,8 +33,7 @@ export function createIncentiveWorkspace(
   const canAct = view === 'region_manager'
   const prototypeStores = options.prototypeParity ? createPrototypeParityStores(canAct, options) : null
   const firstRegion = region({
-    regionId: incentiveRegionA,
-    regionName: 'İstanbul Avrupa',
+    managerUserId: incentiveManagerA,
     managerName: 'Süleyman Öztürk',
     canAct,
     stores: prototypeStores ? (view === 'report_viewer' ? prototypeStores.slice(0, 2) : prototypeStores) : [
@@ -46,30 +48,24 @@ export function createIncentiveWorkspace(
       store({ storeId: incentiveStoreB, storeName: 'Marmara Forum', storeCode: 'MRM', canAct, reviewed: options.allReviewed ?? false, periodCloseStatus: options.mixedClosure ? 'projection_only' : 'closed', rows: [row({ employeeId: '30000000-0000-4000-8000-000000000003', displayName: 'Can Erdem', participantType: 'personnel', rate: '0.0065', calculated: '7092.80', final: '7092.80' })] }),
     ],
   })
-  const regions = [firstRegion]
+  const managerGroups = [firstRegion]
   if (options.prototypeParity && view === 'report_viewer' && prototypeStores) {
-    regions.push(region({
-      regionId: incentiveRegionB,
-      regionName: 'İstanbul Kuzey',
+    managerGroups.push(region({
+      managerUserId: incentiveManagerB,
       managerName: 'Deniz Akar',
       canAct,
       stores: prototypeStores.slice(2, 4),
     }))
-    regions.push(region({
-      regionId: '10000000-0000-4000-8000-000000000003',
-      regionName: 'İstanbul Merkez',
+    managerGroups.push(region({
+      managerUserId: '60000000-0000-4000-8000-000000000003',
       managerName: 'Burak Yılmaz',
       canAct,
       stores: prototypeStores.slice(4, 6),
     }))
   } else if (options.multipleRegions) {
-    regions.push(region({
-      regionId: incentiveRegionB,
-      regionName: 'İstanbul Anadolu',
-      managerName: 'Ayşe Kaya',
-      canAct,
-      stores: [store({ storeId: incentiveStoreC, storeName: 'Akasya AVM', storeCode: 'AKS', canAct, reviewed: true, rows: [] })],
-    }))
+    const additionalStore = store({ storeId: incentiveStoreC, storeName: 'Akasya AVM', storeCode: 'AKS', canAct, reviewed: true, rows: [] })
+    if (view === 'region_manager') firstRegion.stores.push(additionalStore)
+    else managerGroups.push(region({ managerUserId: incentiveManagerB, managerName: 'Ayşe Kaya', canAct, stores: [additionalStore] }))
   }
   return {
     data: {
@@ -78,7 +74,7 @@ export function createIncentiveWorkspace(
         canMarkStoreReview: canAct,
         canCreateCorrection: canAct,
         canVoidCorrection: canAct,
-        canSubmitPackage: regions.some((region) => region.capabilities.canSubmitPackage),
+        canSubmitPackage: managerGroups.some((region) => region.capabilities.canSubmitPackage),
       },
       sections: {
         core: { status: 'complete' },
@@ -107,7 +103,7 @@ export function createIncentiveWorkspace(
           ] },
         ],
       },
-      regions,
+      managerGroups,
     },
   }
 }
@@ -200,13 +196,13 @@ export async function routeIncentiveCommands(
       await route.fulfill({ json: { data: { correctionId: '40000000-0000-4000-8000-000000000002', status: 'draft' } } })
       return
     }
-    await route.fulfill({ json: { data: { period: '2026-06', regionId: incentiveRegionA, regionPackageId: '50000000-0000-4000-8000-000000000001', regionPackageStatus: 'submitted', submittedAt: '2026-07-01T10:00:00.000Z', reviewedAt: null, reviewNote: null } } })
+    await route.fulfill({ json: { data: { period: '2026-06', managerUserId: incentiveManagerA, regionPackageId: '50000000-0000-4000-8000-000000000001', regionPackageStatus: 'submitted', submittedAt: '2026-07-01T10:00:00.000Z', reviewedAt: null, reviewNote: null } } })
   })
 }
 
-function region(input: { regionId: string; regionName: string; managerName: string; canAct: boolean; stores: ReturnType<typeof store>[] }) {
+function region(input: { managerUserId: string; managerName: string; canAct: boolean; stores: ReturnType<typeof store>[] }) {
   return {
-    regionId: input.regionId, regionName: input.regionName, regionManager: { displayName: input.managerName },
+    companyId, managerUserId: input.managerUserId, managerName: input.managerName,
     capabilities: { canSubmitPackage: input.canAct && input.stores.length > 0 && input.stores.every((store) => store.review.periodCloseStatus === 'closed') },
     package: { status: 'not_submitted', submittedAt: null, reviewedAt: null, reviewNote: null },
     stores: input.stores,

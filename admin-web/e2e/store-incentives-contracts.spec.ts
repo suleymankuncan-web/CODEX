@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './test-fixtures'
-import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
-import { createIncentiveWorkspace, incentiveRegionB, incentiveStoreA, incentiveStoreB, incentiveStoreC, routeIncentiveCommands, routeIncentiveManagerDirectory, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
+import { companyId, installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
+import { createIncentiveWorkspace, incentiveStoreA, incentiveStoreB, incentiveStoreC, routeIncentiveCommands, routeIncentiveManagerDirectory, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
 
 test('region manager list has status only; completion is inside the store drawer', async ({ page }) => {
   const requests: Array<{ path: string; body: unknown }> = []
@@ -71,9 +71,9 @@ test('saved amounts come from refreshed workspace; a failed completion is retrya
   let reviewAttempts = 0
   await page.route('**/api/store/incentives/corrections', route => {
     requests.push('correction')
-    const row = fixture.data.regions[0]!.stores[0]!.rows[1]!
+    const row = fixture.data.managerGroups[0]!.stores[0]!.rows[1]!
     row.finalAmount = '25000.00'; row.status = 'corrected'
-    fixture.data.regions[0]!.stores[0]!.review.status = 'pending_review'
+    fixture.data.managerGroups[0]!.stores[0]!.review.status = 'pending_review'
     return route.fulfill({ json: { data: {} } })
   })
   await page.route('**/api/store/incentives/store-reviews', route => {
@@ -111,39 +111,34 @@ test('unsaved values survive Escape until explicit discard; closing restores foc
   await expect(page.getByLabel('Derya Uslu: Final prim tutarı')).toHaveValue('25000')
   await page.getByRole('button', { name: 'Mağaza detayını kapat' }).click()
   await page.getByRole('button', { name: 'Değişiklikleri bırak' }).click()
-  await expect(page.getByRole('button', { name: 'Mall of İstanbul', exact: true }).filter({ visible: true })).toBeFocused()
+  await expect(page.locator('button.incentive-store-name').filter({ hasText: 'Mall of İstanbul' })).toBeFocused()
 })
 
-test('multiple regions still require explicit package selection before submission', async ({ page }) => {
+test('one manager submits one package covering stores across geographic regions', async ({ page }) => {
   const requests: Array<{ path: string; body: unknown }> = []
   await prepare(page, { allReviewed: true, multipleRegions: true, requests })
   await page.goto('/store/incentives')
   await page.getByRole('button', { name: 'Onaya gönder', exact: true }).click()
   const dialog = page.getByRole('dialog')
-  await expect(dialog.getByRole('button', { name: 'Onaya gönder', exact: true })).toBeDisabled()
-  await dialog.getByLabel('Gönderilecek bölge').click()
-  await page.getByRole('option', { name: 'İstanbul Anadolu' }).click()
+  await expect(dialog.getByRole('button', { name: 'Onaya gönder', exact: true })).toBeEnabled()
+  await expect(dialog.getByLabel('Gönderilecek bölge')).toHaveCount(0)
   await dialog.getByLabel('Gönderim notu').fill('Bölge paketi kontrol edildi')
   await dialog.getByRole('button', { name: 'Onaya gönder', exact: true }).click()
-  await expect.poll(() => requests).toContainEqual({ path: '/api/store/incentives/submissions', body: { period: '2026-06', regionId: incentiveRegionB, submissionNote: 'Bölge paketi kontrol edildi' } })
+  await expect.poll(() => requests).toContainEqual({ path: '/api/store/incentives/submissions', body: { period: '2026-06', companyId, submissionNote: 'Bölge paketi kontrol edildi' } })
 })
 
 test('mixed closed and projection-only stores keep submission disabled', async ({ page }) => {
   await prepare(page, { allReviewed: true, mixedClosure: true, multipleRegions: true })
   await page.goto('/store/incentives')
-  await page.getByRole('button', { name: 'Onaya gönder', exact: true }).click()
-  const dialog = page.getByRole('dialog')
-  await dialog.getByLabel('Gönderilecek bölge').click()
-  await page.getByRole('option', { name: 'İstanbul Avrupa' }).click()
-  await expect(dialog.getByRole('button', { name: 'Onaya gönder', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Onaya gönder', exact: true })).toBeDisabled()
 })
 
 test('ungranted viewer reads changes and deduplicated notes without any mutation or approval read', async ({ page }) => {
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
   const fixture = createIncentiveWorkspace('report_viewer')
-  const row = fixture.data.regions[0]!.stores[0]!.rows[0]!
-  fixture.data.regions[0]!.stores[0]!.rows[1]!.correction = structuredClone(row.correction)
+  const row = fixture.data.managerGroups[0]!.stores[0]!.rows[0]!
+  fixture.data.managerGroups[0]!.stores[0]!.rows[1]!.correction = structuredClone(row.correction)
   await routeIncentiveWorkspace(page, fixture)
   await routeIncentiveManagerDirectory(page, fixture)
   const forbidden: string[] = []
@@ -181,7 +176,7 @@ for (const adjustment of [
 ]) test(`store total includes adjustment ${adjustment.difference}`, async ({ page }) => {
   await prepare(page)
   const fixture = createIncentiveWorkspace('region_manager')
-  fixture.data.regions[0]!.stores[0]!.rows[0]!.finalAmount = adjustment.final
+  fixture.data.managerGroups[0]!.stores[0]!.rows[0]!.finalAmount = adjustment.final
   await routeIncentiveWorkspace(page, fixture); await page.goto('/store/incentives')
   const store = page.locator('.incentive-store-summary-row').filter({ hasText: 'Mall of İstanbul' })
   await expect(store.locator('.incentive-final-amount > strong')).toHaveText(adjustment.total)
@@ -194,4 +189,9 @@ async function prepare(page: Page, options: { allReviewed?: boolean; multipleReg
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('region_manager', options))
   await routeIncentiveCommands(page, options.requests ?? [], options.delayMs, new Set(options.commandFailurePaths ?? []))
 }
-async function expandStore(page: Page, name = 'Mall of İstanbul') { await page.getByRole('button', { name, exact: true }).filter({ visible: true }).click() }
+async function expandStore(page: Page, name = 'Mall of İstanbul') {
+  await page.locator('.incentive-region-package-toggle, .incentive-store-summary-row:visible, .incentive-store-mobile-row:visible').first().waitFor({ state: 'visible' })
+  const packageToggle = page.locator('.incentive-region-package-toggle').first()
+  if (await packageToggle.count() && await packageToggle.getAttribute('aria-expanded') !== 'true') await packageToggle.click()
+  await page.getByLabel(`${name}: Prim ayrıntılarını aç`).filter({ visible: true }).click()
+}

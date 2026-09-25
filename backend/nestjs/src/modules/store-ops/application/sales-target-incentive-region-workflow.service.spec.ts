@@ -131,25 +131,6 @@ function createService(input?: {
       corrections: input?.workflowCorrections ?? [draftCorrection],
       packages: [],
     })),
-    listRegionPackagesForAdmin: jest.fn(async () =>
-      input?.packageStatus
-        ? [
-            {
-              sales_target_incentive_region_package_id: packageId,
-              company_id: companyId,
-              region_id: regionId,
-              period_key: "2026-05",
-              package_status: input.packageStatus,
-              submitted_by_user_id: "region-user",
-              submitted_at: "2026-06-01T08:10:00.000Z",
-              submission_note: null,
-              reviewed_by_user_id: null,
-              reviewed_at: null,
-              review_note: null,
-            },
-          ]
-        : [],
-    ),
     markStoreReview: jest.fn(async () => ({
       sales_target_incentive_store_review_id: "review-1",
       company_id: companyId,
@@ -167,25 +148,32 @@ function createService(input?: {
       ...draftCorrection,
       correction_status: "voided",
     })),
-    submitRegionPackage: jest.fn(async () => ({
+  };
+  const packageRow = {
       sales_target_incentive_region_package_id: packageId,
       company_id: companyId,
-      region_id: regionId,
+      region_id: null,
+      package_scope: "manager_assignment",
+      manager_user_id: "region-user",
       period_key: "2026-05",
-      package_status: "submitted",
+      package_status: input?.packageStatus ?? "submitted",
       submitted_by_user_id: "region-user",
       submitted_at: "2026-06-01T08:10:00.000Z",
       submission_note: null,
       reviewed_by_user_id: null,
       reviewed_at: null,
       review_note: null,
-    })),
+  };
+  const managerPackageRepository = {
+    findOwnerPackage: jest.fn(async () => input?.packageStatus ? packageRow : null),
+    submit: jest.fn(async () => packageRow),
   };
   const service = new SalesTargetIncentiveRegionWorkflowService(
     readModelService as never,
     approvalRepository as never,
+    managerPackageRepository as never,
   );
-  return { approvalRepository, readModelService, service };
+  return { approvalRepository, managerPackageRepository, readModelService, service };
 }
 
 describe("SalesTargetIncentiveRegionWorkflowService", () => {
@@ -248,7 +236,7 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
   });
 
   it("rejects package submission with missing reviewed stores and reports store ids", async () => {
-    const { approvalRepository, service } = createService({
+    const { managerPackageRepository, service } = createService({
       closedStoreIds: [storeId],
       reviewStatus: "pending_review",
     });
@@ -257,7 +245,6 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
       service.submitRegionPackage({
         actor: actor(),
         periodKey: "2026-05",
-        regionId,
       }),
     ).rejects.toMatchObject({
       response: expect.objectContaining({
@@ -265,7 +252,7 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
         missingStoreIds: [storeId],
       }),
     });
-    expect(approvalRepository.submitRegionPackage).not.toHaveBeenCalled();
+    expect(managerPackageRepository.submit).not.toHaveBeenCalled();
   });
 
   it("voids the requested correction id rather than any current row correction", async () => {
@@ -289,7 +276,7 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
   });
 
   it("keeps submitted package retries idempotent", async () => {
-    const { approvalRepository, service } = createService({
+    const { managerPackageRepository, service } = createService({
       closedStoreIds: [storeId],
       reviewStatus: "reviewed",
       packageStatus: "submitted",
@@ -298,7 +285,6 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
     const result = await service.submitRegionPackage({
       actor: actor(),
       periodKey: "2026-05",
-      regionId,
       submissionNote: "Tekrar gonderim",
     });
 
@@ -306,7 +292,7 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
       regionPackageId: packageId,
       regionPackageStatus: "submitted",
     });
-    expect(approvalRepository.submitRegionPackage).not.toHaveBeenCalled();
+    expect(managerPackageRepository.submit).not.toHaveBeenCalled();
   });
 
   it("requires a Region Manager role for workflow commands", async () => {
@@ -320,7 +306,6 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
           actionScope: { assignedStoreIds: [storeId] },
         }),
         periodKey: "2026-05",
-        regionId,
       }),
     ).rejects.toThrow(ForbiddenException);
   });
@@ -335,10 +320,11 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
       periodKey: "2026-05",
       stores: projection.stores,
       roleScope: "region",
+      managerUserId: "region-user",
     });
 
     expect(context.regionWorkflow).toMatchObject({
-      regionId,
+      managerUserId: "region-user",
       regionPackageStatus: "not_submitted",
     });
     expect(context.reviewsByStoreId.get(storeId)).toMatchObject({

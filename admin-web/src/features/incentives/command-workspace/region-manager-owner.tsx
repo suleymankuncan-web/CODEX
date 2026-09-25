@@ -59,8 +59,7 @@ export function RegionManagerIncentivesOwner(input: {
   })
   return <>
     <IncentiveWorkspaceScaffold {...input}
-      managerDirectory={input.authSummary ? [{ userId: input.authSummary.user.userId, displayName: input.authSummary.user.displayName?.trim() || input.workspace.regions[0]?.regionManager.displayName || input.t('storeIncentives.command.roleRegionManager'), storeIds: input.workspace.regions.flatMap(region => region.stores.map(store => store.storeId)) }] : []}
-      actions={<Button disabled={!writesReady || Boolean(savingStore) || submission.isPending || !input.workspace.capabilities.canSubmitPackage} onClick={() => setSubmitOpen(true)}><Send aria-hidden="true" />{input.t('storeIncentives.regionManagerSubmit')}</Button>}
+      actions={<Button className="incentive-primary-action" disabled={!writesReady || Boolean(savingStore) || submission.isPending || !input.workspace.capabilities.canSubmitPackage} onClick={() => setSubmitOpen(true)}><Send aria-hidden="true" />{input.t('storeIncentives.regionManagerSubmit')}</Button>}
       renderContent={workspace => <IncentiveWorkspaceHierarchy workspace={workspace} locale={input.locale} t={input.t} readOnly={false} interactionLocked={!writesReady || Boolean(savingStore)} onCompleteStore={complete} />}
     />
     {submitOpen ? <IncentiveSubmitDialog locale={input.locale} onOpenChange={setSubmitOpen} onSubmit={value => { if (writesReady && !running.current) submission.mutate({ period: input.workspace.period, ...value }) }} open pending={submission.isPending} disabled={!writesReady || Boolean(savingStore)} t={input.t} workspace={input.workspace} /> : null}

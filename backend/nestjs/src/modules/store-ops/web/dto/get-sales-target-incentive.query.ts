@@ -6,6 +6,10 @@ export class GetSalesTargetIncentiveQueryDto {
   period?: string;
 
   @IsOptional()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+  throughDate?: string;
+
+  @IsOptional()
   @IsISO8601()
   closeCutoffAt?: string;
 }

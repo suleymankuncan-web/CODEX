@@ -6692,6 +6692,15 @@
               "type": "string",
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
             }
+          },
+          {
+            "name": "throughDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
           }
         ],
         "responses": {
@@ -10592,6 +10601,66 @@
         },
         "tags": [
           "IncentiveFinalApproval"
+        ]
+      }
+    },
+    "/api/store/incentives/hr-handoff": {
+      "get": {
+        "operationId": "IncentiveHrHandoffController_preview",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full authorized company-period HR email preview; UI filters do not limit this scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveHrHandoff"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveHrHandoff"
+        ]
+      },
+      "post": {
+        "operationId": "IncentiveHrHandoffController_send",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendIncentiveHrDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Send approved packages as company-separated Excel attachments to server-configured HR recipients exactly once per period.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveHrHandoff"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveHrHandoff"
         ]
       }
     }
@@ -25668,24 +25737,24 @@
       },
       "SubmitSalesTargetIncentiveRegionPackageDto": {
         "type": "object",
+        "required": [
+          "period"
+        ],
         "properties": {
           "period": {
             "type": "string",
             "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
           },
-          "regionId": {
-            "type": "string"
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
           },
           "submissionNote": {
             "type": "string",
             "minLength": 1,
             "maxLength": 1000
           }
-        },
-        "required": [
-          "period",
-          "regionId"
-        ]
+        }
       },
       "ReviewSalesTargetIncentiveRegionPackageDto": {
         "type": "object",
@@ -28121,6 +28190,8 @@
           "positionCode",
           "target",
           "actual",
+          "dailyActualNetSales",
+          "dailyAchievementPct",
           "achievementPct",
           "rate",
           "calculatedAmount",
@@ -28154,6 +28225,16 @@
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
           },
           "actual": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "dailyActualNetSales": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "dailyAchievementPct": {
             "type": "string",
             "nullable": true,
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
@@ -28215,6 +28296,8 @@
           "storeTarget",
           "storeActualNetSales",
           "storeAchievementPct",
+          "dailyActualNetSales",
+          "dailyAchievementPct",
           "capabilities",
           "review",
           "rows"
@@ -28246,6 +28329,16 @@
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
           },
           "storeAchievementPct": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "dailyActualNetSales": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "dailyAchievementPct": {
             "type": "string",
             "nullable": true,
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
@@ -28397,11 +28490,12 @@
           "periodStart",
           "periodEnd",
           "periodTimezone",
+          "salesTracking",
           "view",
           "capabilities",
           "sections",
           "rateMetadata",
-          "regions"
+          "managerGroups"
         ],
         "properties": {
           "period": {
@@ -28425,6 +28519,32 @@
               "region_manager"
             ]
           },
+          "salesTracking": {
+            "type": "object",
+            "required": [
+              "throughDate",
+              "lastLoadedDate",
+              "status"
+            ],
+            "properties": {
+              "throughDate": {
+                "type": "string",
+                "format": "date"
+              },
+              "lastLoadedDate": {
+                "type": "string",
+                "format": "date",
+                "nullable": true
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "unavailable"
+                ]
+              }
+            }
+          },
           "capabilities": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCapabilities"
           },
@@ -28434,10 +28554,10 @@
           "rateMetadata": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRateMetadata"
           },
-          "regions": {
+          "managerGroups": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRegion"
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceManagerGroup"
             }
           }
         }
@@ -32027,38 +32147,36 @@
       },
       "ApproveFinalIncentivePackageDto": {
         "type": "object",
+        "required": [
+          "period",
+          "regionPackageId",
+          "submittedAt"
+        ],
         "properties": {
           "period": {
             "type": "string",
             "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
           },
-          "regionId": {
-            "type": "string"
-          },
           "regionPackageId": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid"
           },
           "submittedAt": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "decision": {
+            "type": "string",
             "enum": [
               "approve",
               "return"
-            ],
-            "type": "string"
+            ]
           },
           "reviewNote": {
             "type": "string",
             "maxLength": 1000
           }
-        },
-        "required": [
-          "period",
-          "regionId",
-          "regionPackageId",
-          "submittedAt"
-        ]
+        }
       },
       "IncentiveFinalApprovalPackages": {
         "type": "object",
@@ -32071,11 +32189,10 @@
             "items": {
               "type": "object",
               "required": [
-                "regionId",
-                "regionName",
+                "companyId",
+                "managerUserId",
+                "managerName",
                 "regionPackageId",
-                "regionManagerUserId",
-                "regionManagerName",
                 "submittedByUserId",
                 "submittedByName",
                 "submittedAt",
@@ -32091,25 +32208,20 @@
                 "submittedCorrectionCount"
               ],
               "properties": {
-                "regionId": {
+                "companyId": {
                   "type": "string",
                   "format": "uuid"
                 },
-                "regionName": {
+                "managerUserId": {
                   "type": "string",
-                  "nullable": true
+                  "format": "uuid"
+                },
+                "managerName": {
+                  "type": "string"
                 },
                 "regionPackageId": {
                   "type": "string",
                   "format": "uuid",
-                  "nullable": true
-                },
-                "regionManagerUserId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "regionManagerName": {
-                  "type": "string",
                   "nullable": true
                 },
                 "submittedByUserId": {
@@ -32205,6 +32317,191 @@
                 "type": "string",
                 "format": "date-time",
                 "nullable": true
+              }
+            }
+          }
+        }
+      },
+      "SendIncentiveHrDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "period",
+          "version"
+        ]
+      },
+      "SalesTargetIncentiveWorkspaceManagerGroup": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "managerUserId",
+          "managerName",
+          "capabilities",
+          "package",
+          "stores"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "managerUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "managerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "capabilities": {
+            "type": "object",
+            "required": [
+              "canSubmitPackage"
+            ],
+            "properties": {
+              "canSubmitPackage": {
+                "type": "boolean"
+              }
+            }
+          },
+          "package": {
+            "type": "object",
+            "required": [
+              "status",
+              "submittedAt",
+              "reviewedAt",
+              "reviewNote"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "not_submitted",
+                  "submitted",
+                  "admin_approved",
+                  "admin_returned"
+                ]
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "reviewedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "reviewNote": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "stores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceStore"
+            }
+          }
+        }
+      },
+      "IncentiveHrHandoff": {
+        "type": "object",
+        "required": [
+          "period",
+          "version",
+          "allApproved",
+          "mailConfigured",
+          "canSend",
+          "companies"
+        ],
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "allApproved": {
+            "type": "boolean"
+          },
+          "mailConfigured": {
+            "type": "boolean"
+          },
+          "canSend": {
+            "type": "boolean"
+          },
+          "companies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "companyId",
+                "companyName",
+                "recipients",
+                "managerPackageCount",
+                "approvedPackageCount",
+                "storeCount",
+                "personnelCount",
+                "totalAmount",
+                "status",
+                "sentAt"
+              ],
+              "properties": {
+                "companyId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "companyName": {
+                  "type": "string"
+                },
+                "recipients": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                },
+                "managerPackageCount": {
+                  "type": "integer"
+                },
+                "approvedPackageCount": {
+                  "type": "integer"
+                },
+                "storeCount": {
+                  "type": "integer"
+                },
+                "personnelCount": {
+                  "type": "integer"
+                },
+                "totalAmount": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "not_sent",
+                    "sending",
+                    "sent",
+                    "uncertain"
+                  ]
+                },
+                "sentAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "date-time"
+                }
               }
             }
           }

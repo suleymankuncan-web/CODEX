@@ -55,7 +55,7 @@ function databaseHarness() {
     }
     if (sql.includes("personnel_positive_sales_amount")) return { rowCount: 0, rows: [] };
     if (sql.includes("region_manager.display_name AS region_manager_name")) {
-      return { rowCount: 1, rows: [{ company_id: companyId, region_id: regionId, region_name: "Marmara", region_manager_name: "Eda Kaya", store_id: storeId, store_code: "MP" }] };
+      return { rowCount: 1, rows: [{ company_id: companyId, region_id: regionId, region_name: "Marmara", region_manager_user_id: "00000000-0000-4000-8000-000000000902", region_manager_name: "Eda Kaya", store_id: storeId, store_code: "MP" }] };
     }
     if (sql.includes("rpt.sales_target_incentive_rule_snapshot")) {
       return { rowCount: 1, rows: [{
@@ -85,7 +85,7 @@ describe("Sales Target Incentive workspace HTTP authorization", () => {
         .query({ period: "2026-05" });
       expect(response.status).toBe(200);
       expect(response.body.data.view).toBe("report_viewer");
-      expect(response.body.data.regions[0].stores[0].storeId).toBe(storeId);
+      expect(response.body.data.managerGroups[0].stores[0].storeId).toBe(storeId);
       expect(JSON.stringify(calls.map((call) => call.params))).not.toContain(otherCompanyId);
 
       for (const override of [
@@ -114,8 +114,8 @@ describe("Sales Target Incentive workspace HTTP authorization", () => {
       expect(response.status).toBe(200);
       expect(response.body.data.view).toBe("report_viewer");
       expect(Object.values(response.body.data.capabilities).every((value) => value === false)).toBe(true);
-      expect(response.body.data.regions[0].capabilities.canSubmitPackage).toBe(false);
-      expect(Object.values(response.body.data.regions[0].stores[0].capabilities).every((value) => value === false)).toBe(true);
+      expect(response.body.data.managerGroups[0].capabilities.canSubmitPackage).toBe(false);
+      expect(Object.values(response.body.data.managerGroups[0].stores[0].capabilities).every((value) => value === false)).toBe(true);
     } finally {
       await app.close();
     }
@@ -129,7 +129,7 @@ describe("Sales Target Incentive workspace HTTP authorization", () => {
         ["/api/store/incentives/store-reviews", { period: "2026-05", storeId, reviewStatus: "reviewed" }],
         ["/api/store/incentives/corrections", { period: "2026-05", storeId, employeeId: managerEmployeeId, participantType: "store_manager", finalAmount: "1.00", reasonNote: "test" }],
         ["/api/store/incentives/corrections/void", { period: "2026-05", correctionId: "00000000-0000-4000-8000-000000000951" }],
-        ["/api/store/incentives/submissions", { period: "2026-05", regionId }],
+        ["/api/store/incentives/submissions", { period: "2026-05", companyId }],
       ] as const;
       for (const [path, body] of cases) {
         await request(app.getHttpServer()).post(path).send(body).expect(403);

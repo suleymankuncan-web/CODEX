@@ -5,7 +5,7 @@ import type { SalesTargetIncentiveRegionCorrectionRow } from "../infrastructure/
 // Traceability: INC-FR-001..004/009, NFR-005..007, AC-INC-005..008, EC-001/002/012/013/014/017/022.
 
 function harness() {
-  const readModel = { buildCurrentProjection: jest.fn() };
+  const readModel = { buildCurrentProjection: jest.fn(), listDailySalesTracking: jest.fn().mockResolvedValue([]) };
   const corrections = { listApprovedAdjustmentSummaries: jest.fn() };
   const repository = {
     listStoreMetadata: jest.fn().mockResolvedValue([]),
@@ -25,8 +25,8 @@ function harness() {
     ),
   };
 }
-
 const actor = (roles: string[], roleScopes: Record<string, any>, assignedStoreIds: string[] = []) => ({
+  userId: "region-user",
   roleCodes: roles,
   readScope: { companyIds: ["aggregate-company"], regionIds: ["aggregate-region"], storeIds: ["aggregate-store"] },
   roleScopes,
@@ -35,6 +35,35 @@ const actor = (roles: string[], roleScopes: Record<string, any>, assignedStoreId
 });
 
 describe("SalesTargetIncentiveWorkspaceReadService", () => {
+  it("shows daily tracking separately from the closed monthly incentive values", async () => {
+    const { service, readModel, corrections } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [{ ...projectionStore("store-a", "region-a"), storeTargetAmount: "1000.00", storeNetSalesAmount: "1200.00" }],
+    });
+    readModel.listDailySalesTracking.mockResolvedValue([{ scope_type: "store", store_id: "store-a", employee_id: null, actual_amount: "230.00", last_day: "2026-05-08" }]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], { REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] } }) as never,
+      periodKey: "2026-05", throughDate: "2026-05-09",
+    });
+    const store = result.managerGroups[0].stores[0];
+    expect(store.storeActualNetSales).toBe("1200.00");
+    expect(store.dailyActualNetSales).toBe("230.00");
+    expect(store.dailyAchievementPct).toBe("23.00");
+    expect(result.salesTracking).toEqual({ throughDate: "2026-05-09", lastLoadedDate: "2026-05-08", status: "complete" });
+    expect(readModel.listDailySalesTracking).toHaveBeenCalledWith({ storeIds: ["store-a"], periodStart: "2026-05-01", throughDate: "2026-05-09" });
+  });
+
+  it("rejects a daily tracking date outside the selected month", async () => {
+    const { service, readModel } = harness();
+    await expect(service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], { REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] } }) as never,
+      periodKey: "2026-05", throughDate: "2026-06-01",
+    })).rejects.toThrow("throughDate must be a day in the selected incentive period");
+    expect(readModel.buildCurrentProjection).not.toHaveBeenCalled();
+  });
+
   it("keeps the core workspace visible when optional store metadata is unavailable", async () => {
     const { service, readModel, corrections, repository } = harness();
     readModel.buildCurrentProjection.mockResolvedValue({
@@ -53,7 +82,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result.regions[0]?.stores[0]?.storeName).toBe("store-a");
+    expect(result.managerGroups[0]?.stores[0]?.storeName).toBe("store-a");
     expect(result.sections.storeMetadata).toEqual({ status: "unavailable" });
     expect(result.sections.core).toEqual({ status: "complete" });
     expect(warn).toHaveBeenCalledWith(JSON.stringify({
@@ -98,8 +127,8 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result.regions[0]?.stores[0]?.rows[0]?.correction?.correctionId).toBe("correction-a");
-    expect(result.regions[0]?.stores[0]?.rows[0]?.correction?.actor.identityStatus).toBe("unavailable");
+    expect(result.managerGroups[0]?.stores[0]?.rows[0]?.correction?.correctionId).toBe("correction-a");
+    expect(result.managerGroups[0]?.stores[0]?.rows[0]?.correction?.actor.identityStatus).toBe("unavailable");
     expect(result.sections.correctionActors).toEqual({ status: "unavailable" });
     expect(JSON.stringify(result)).not.toContain("private-user");
   });
@@ -120,7 +149,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result.regions).toHaveLength(1);
+    expect(result.managerGroups).toHaveLength(1);
     expect(result.rateMetadata.status).toBe("unresolved");
     expect(result.sections.rateMetadata).toEqual({ status: "unavailable" });
   });
@@ -133,7 +162,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result).toEqual(expect.objectContaining({ view: "report_viewer", regions: [] }));
+    expect(result).toEqual(expect.objectContaining({ view: "report_viewer", managerGroups: [] }));
     expect(result.capabilities).toEqual({
       canMarkStoreReview: false,
       canCreateCorrection: false,
@@ -174,6 +203,43 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(Object.values(result.capabilities).every((value) => value === false)).toBe(true);
   });
 
+  it("keeps two assigned managers in one region as separate packages", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-a", "same-region"), projectionStore("store-b", "same-region")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([
+      storeMetadata("store-a", "same-region"),
+      { ...storeMetadata("store-b", "same-region"), region_manager_user_id: "other-manager", region_manager_name: "Other Manager" },
+    ]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], { REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] } }) as never,
+      periodKey: "2026-05",
+    });
+    expect(result.managerGroups.map(group => [group.managerUserId, group.stores.map(store => store.storeId)])).toEqual([
+      ["other-manager", ["store-b"]], ["region-user", ["store-a"]],
+    ]);
+  });
+
+  it("keeps one manager's stores together across different geographic regions", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-a", "region-a"), projectionStore("store-b", "region-b")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a"), storeMetadata("store-b", "region-b")]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], { REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] } }) as never,
+      periodKey: "2026-05",
+    });
+    expect(result.managerGroups).toHaveLength(1);
+    expect(result.managerGroups[0].managerUserId).toBe("region-user");
+    expect(result.managerGroups[0].stores.map(store => store.storeId)).toEqual(["store-a", "store-b"]);
+  });
+
   it("rejects personas outside the workspace", async () => {
     const { service } = harness();
     await expect(service.getWorkspace({
@@ -209,10 +275,10 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       canMarkStoreReview: true,
       canCreateCorrection: true,
       canVoidCorrection: false,
-      canSubmitPackage: true,
+      canSubmitPackage: false,
     });
-    expect(result.regions[0].capabilities).toEqual({ canSubmitPackage: true });
-    expect(result.regions[0].stores.map((store) => [store.storeId, store.capabilities])).toEqual([
+    expect(result.managerGroups[0].capabilities).toEqual({ canSubmitPackage: false });
+    expect(result.managerGroups[0].stores.map((store) => [store.storeId, store.capabilities])).toEqual([
       ["store-actionable", { canMarkStoreReview: true, canCreateCorrection: true, canVoidCorrection: false }],
       ["store-read-only", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
     ]);
@@ -224,8 +290,8 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
     expect(Object.values(unrelated.capabilities).every((value) => value === false)).toBe(true);
-    expect(unrelated.regions[0].capabilities).toEqual({ canSubmitPackage: false });
-    expect(unrelated.regions[0].stores.every((store) => Object.values(store.capabilities).every((value) => value === false))).toBe(true);
+    expect(unrelated.managerGroups[0].capabilities).toEqual({ canSubmitPackage: false });
+    expect(unrelated.managerGroups[0].stores.every((store) => Object.values(store.capabilities).every((value) => value === false))).toBe(true);
   });
 
   it("keeps projection-only and submitted-package stores read-only", async () => {
@@ -241,7 +307,9 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-locked")]);
     repository.listWorkflowAudit.mockResolvedValue({
       reviews: [], corrections: [], packages: [{
-        region_id: "region-b", package_status: "submitted", submitted_at: "2026-06-01T10:00:00.000Z",
+        company_id: "company-a", region_id: null, package_scope: "manager_assignment",
+        manager_user_id: "region-user", submitted_by_user_id: "region-user",
+        package_status: "submitted", submitted_at: "2026-06-01T10:00:00.000Z",
         reviewed_at: null, review_note: null,
       }],
     });
@@ -254,13 +322,12 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result.regions.flatMap((region) => region.stores).map((store) => [store.storeId, store.capabilities])).toEqual([
-      ["store-open", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
+    expect(result.managerGroups.flatMap((region) => region.stores).map((store) => [store.storeId, store.capabilities])).toEqual([
       ["store-locked", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
+      ["store-open", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
     ]);
-    expect(result.regions.map((region) => [region.regionId, region.capabilities.canSubmitPackage])).toEqual([
-      ["region-a", false],
-      ["region-b", false],
+    expect(result.managerGroups.map((group) => [group.managerUserId, group.capabilities.canSubmitPackage])).toEqual([
+      ["region-user", false],
     ]);
     expect(result.capabilities).toEqual({
       canMarkStoreReview: false,
@@ -268,6 +335,33 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       canVoidCorrection: false,
       canSubmitPackage: false,
     });
+  });
+
+  it("finds a historical package by its store membership after a geographic region changes", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-moved", "region-new")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-moved", "region-new")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-moved")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], corrections: [], packages: [{
+        company_id: "company-a", region_id: "region-old", package_scope: "legacy_region",
+        manager_user_id: null, submitted_by_user_id: "former-manager", store_ids: ["store-moved"],
+        package_status: "submitted", submitted_at: "2026-06-01T10:00:00.000Z",
+        reviewed_at: null, review_note: null,
+      }],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REGION_MANAGER"], {
+        REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-moved"] },
+      }, ["store-moved"]) as never,
+      periodKey: "2026-05",
+    });
+    expect(result.managerGroups[0]?.stores[0]?.capabilities.canMarkStoreReview).toBe(false);
   });
 
   it("does not advertise submission when assigned stores mix closed and projection-only periods", async () => {
@@ -291,14 +385,14 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result.regions[0]?.capabilities).toEqual({ canSubmitPackage: false });
+    expect(result.managerGroups[0]?.capabilities).toEqual({ canSubmitPackage: false });
     expect(result.capabilities.canSubmitPackage).toBe(false);
-    expect(result.regions[0]?.stores.map((store) => [store.storeId, store.review.periodCloseStatus])).toEqual([
+    expect(result.managerGroups[0]?.stores.map((store) => [store.storeId, store.review.periodCloseStatus])).toEqual([
       ["store-closed", "closed"],
       ["store-open", "projection_only"],
     ]);
-    expect(result.regions[0]?.stores.find((store) => store.storeId === "store-closed")?.capabilities.canMarkStoreReview).toBe(true);
-    expect(result.regions[0]?.stores.find((store) => store.storeId === "store-open")?.capabilities.canMarkStoreReview).toBe(false);
+    expect(result.managerGroups[0]?.stores.find((store) => store.storeId === "store-closed")?.capabilities.canMarkStoreReview).toBe(true);
+    expect(result.managerGroups[0]?.stores.find((store) => store.storeId === "store-open")?.capabilities.canMarkStoreReview).toBe(false);
   });
 
   it("keeps an active Region Manager correction after a closed row is refetched", async () => {
@@ -314,7 +408,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     ]);
 
     const result = await service.getWorkspace(regionManagerWorkspaceInput());
-    const row = result.regions[0]?.stores[0]?.rows[0];
+    const row = result.managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/002/004/005, AC-INC-001, EC-014/015.
     expect(row?.finalAmount).toBe("12.00");
@@ -345,7 +439,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     ]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/002, AC-INC-001, EC-014.
     expect(row?.finalAmount).toBe("13.00");
@@ -371,7 +465,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       ]);
 
       const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-        .regions[0]?.stores[0]?.rows[0];
+        .managerGroups[0]?.stores[0]?.rows[0];
 
       // Traceability: INC-FR-001/002, AC-INC-001, EC-014.
       expect(row?.finalAmount).toBe("12.00");
@@ -392,7 +486,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     ]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/005, AC-INC-003, EC-014.
     expect(row?.finalAmount).toBe("10.07");
@@ -418,7 +512,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     })]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/002/005, AC-INC-001/003, EC-014.
     expect(row?.finalAmount).toBe("12.00");
@@ -443,7 +537,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     })]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/005, AC-INC-003, EC-014.
     expect(row?.finalAmount).toBe("10.07");
@@ -468,7 +562,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     })]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/005, AC-INC-003, EC-014.
     expect(row?.finalAmount).toBe("9.07");
@@ -487,7 +581,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     ]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/005, AC-INC-002, EC-014.
     expect(row?.finalAmount).toBe("9.07");
@@ -510,7 +604,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     ]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/002, AC-INC-001, EC-014.
     expect(row?.finalAmount).toBe("12.00");
@@ -549,7 +643,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     corrections.listApprovedAdjustmentSummaries.mockResolvedValue([summary]);
 
     const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
-      .regions[0]?.stores[0]?.rows[0];
+      .managerGroups[0]?.stores[0]?.rows[0];
 
     // Traceability: INC-FR-001/002/005, AC-INC-001..003, EC-014.
     expect(row?.finalAmount).toBe(expectedFinal);
@@ -612,6 +706,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     });
     repository.listStoreMetadata.mockResolvedValue([{
       company_id: "company-a", region_id: "region-a", region_name: "Istanbul Avrupa",
+      region_manager_user_id: "region-user",
       region_manager_name: "Suleyman Ozturk", store_id: "store-a", store_code: "MOI",
     }]);
     repository.listWorkflowAudit.mockResolvedValue({
@@ -662,17 +757,17 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
 
-    expect(result.regions[0]).toEqual(expect.objectContaining({
-      regionId: "region-a",
-      regionName: "Istanbul Avrupa",
-      regionManager: { displayName: "Suleyman Ozturk" },
+    expect(result.managerGroups[0]).toEqual(expect.objectContaining({
+      companyId: "company-a",
+      managerUserId: "region-user",
+      managerName: "Suleyman Ozturk",
     }));
-    expect(result.regions[0].stores[0]).toEqual(expect.objectContaining({
+    expect(result.managerGroups[0].stores[0]).toEqual(expect.objectContaining({
       storeCode: "MOI",
       storeName: "Mall of Istanbul",
       city: null,
     }));
-    const row = result.regions[0].stores[0].rows[0];
+    const row = result.managerGroups[0].stores[0].rows[0];
     expect(row.finalAmount).toBe("12.00");
     expect(row.signedDifferenceAmount).toBe("2.93");
     expect(row.correction?.actor).toEqual({
@@ -689,7 +784,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       }) as never,
       periodKey: "2026-05",
     });
-    expect(unresolvedActorResult.regions[0].stores[0].rows[0].correction?.actor).toEqual({
+    expect(unresolvedActorResult.managerGroups[0].stores[0].rows[0].correction?.actor).toEqual({
       displayName: null,
       roleCode: null,
       identityStatus: "unavailable",
@@ -714,7 +809,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       }) as never,
       periodKey: "2026-05",
     });
-    const voidedOnlyRow = voidedOnlyResult.regions[0].stores[0].rows[0];
+    const voidedOnlyRow = voidedOnlyResult.managerGroups[0].stores[0].rows[0];
     expect(voidedOnlyRow.correction).toBeNull();
     expect(voidedOnlyRow.finalAmount).toBe("9.07");
     expect(voidedOnlyRow.signedDifferenceAmount).toBe("0.00");
@@ -736,6 +831,7 @@ function projectionStore(storeId: string, regionId: string) {
 function storeMetadata(storeId: string, regionId: string) {
   return {
     company_id: "company-a", region_id: regionId, region_name: "Region A",
+    region_manager_user_id: "region-user",
     region_manager_name: "Region Manager", store_id: storeId, store_code: storeId,
   };
 }

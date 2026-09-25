@@ -21,6 +21,8 @@
   font-family: inherit;
 }
 
+.axis-calendar.axis-calendar-month { width:252px; max-width:100%; box-sizing:border-box; }
+
 /* The app omits Tailwind preflight; reset native gray button fills locally. */
 .axis-calendar :is(.rdp-day button, .rdp-nav button) {
   background: transparent;

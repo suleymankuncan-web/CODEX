@@ -9,6 +9,8 @@ import { getBusinessDateInputValue } from '@/lib/business-date'
 import { cn } from '@/lib/utils'
 import { formatCalendarDate, parseCalendarDate } from './calendar-date'
 
+const monthOnlyComponents = { MonthGrid: () => <></> }
+
 export type CalendarPanelProps = {
   mode: 'single' | 'range' | 'month'
   value: string
@@ -52,10 +54,12 @@ export function CalendarPanel(input: CalendarPanelProps) {
     : input.mode === 'month' ? label(month, false) : day ? label(day) : ''
   return <>
     <PopoverHeader><PopoverTitle>{input.title ?? copy.title}</PopoverTitle></PopoverHeader>
-    {input.mode === 'range' ? <Calendar {...common} mode="range" selected={range}
+    {input.mode === 'month' ? <Calendar {...common} className="axis-calendar-month" components={monthOnlyComponents}
+      formatters={{ formatMonthDropdown: date => new Intl.DateTimeFormat(locale, { month: 'long' }).format(date) }} />
+      : input.mode === 'range' ? <Calendar {...common} mode="range" selected={range}
       onSelect={(next, clicked) => setRange(range?.from && !range.to ? next : { from: clicked })}
       {...(input.maxRangeDays ? { max: input.maxRangeDays - 1 } : {})} />
-      : <Calendar {...common} mode="single" selected={input.mode === 'single' ? day : undefined}
+      : <Calendar {...common} mode="single" selected={day}
         onSelect={(next) => { setDay(next); if (next) changeMonth(next) }} />}
     <p className="tw:m-0 tw:text-xs tw:text-muted-foreground" aria-live="polite">{selection}</p>
     {input.monthDescription?.(month)}

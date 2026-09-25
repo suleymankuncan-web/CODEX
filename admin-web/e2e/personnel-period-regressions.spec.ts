@@ -25,7 +25,7 @@ test('daily personnel comparison uses the previous calendar month and month/empt
   await expect.poll(() => reads.some(r => r.start === '2026-08-05' && r.type === 'daily')).toBe(true)
   await expect(page.locator('.store-me-kpi-card').filter({ hasText: 'UPT' }).first()).toContainText('+25')
   await page.getByRole('button', { name: 'Tarih filtresi', exact: true }).click()
-  await page.getByRole('combobox', { name: 'Ay seç', exact: true }).selectOption({ label: 'Ağu' })
+  await page.getByRole('combobox', { name: 'Ay seç', exact: true }).selectOption({ label: 'Ağustos' })
   await page.getByRole('button', { name: 'Uygula', exact: true }).click()
   await expect.poll(() => reads.some(r => r.start === '2026-08-01' && r.type === 'monthly')).toBe(true)
   await expect(page.getByRole('button', { name: 'Tarih filtresi', exact: true })).toContainText('Ağustos 2026')

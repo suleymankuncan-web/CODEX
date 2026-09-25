@@ -18,7 +18,7 @@ describe("SalesTargetIncentiveWorkspaceController", () => {
 
     await controller.getWorkspace({ user }, { period: "2026-05" });
 
-    expect(service.getWorkspace).toHaveBeenCalledWith({ actor: user, periodKey: "2026-05" });
+    expect(service.getWorkspace).toHaveBeenCalledWith({ actor: user, periodKey: "2026-05", throughDate: undefined });
   });
 
   it("allows only Report Viewer and Region Manager on the new read path", () => {

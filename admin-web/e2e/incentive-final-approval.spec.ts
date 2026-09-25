@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './test-fixtures'
 import { createStoreContractSession, installStoreContractSession, installGenericStoreApiFallbacks, companyId } from './store-page-contract-fixtures'
-import { createIncentiveWorkspace, routeIncentiveManagerDirectory, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
+import { createIncentiveWorkspace, routeIncentiveManagerDirectory, routeIncentiveWorkspace, incentiveManagerA } from './store-incentives-command-fixtures'
 
 async function prepare(page: Page, granted: boolean) {
   await installStoreContractSession(page, 'reportViewer')
@@ -10,11 +10,13 @@ async function prepare(page: Page, granted: boolean) {
   const workspace = createIncentiveWorkspace('report_viewer')
   await routeIncentiveWorkspace(page, workspace)
   await routeIncentiveManagerDirectory(page, workspace)
+  await page.route('**/api/store/incentives/hr-handoff**', route => route.fulfill({ json: { period: '2026-06', version: 'a'.repeat(64), allApproved: true, mailConfigured: false, canSend: false, companies: [] } }))
 }
 const item = {
-  regionId: 'region-1', regionName: 'Marmara', regionManagerName: 'Ayşe Demir', submittedByName: 'Ayşe Demir', submittedByUserId: 'region-manager',
-  regionPackageId: 'package-1', submittedAt: '2026-07-01T10:00:00.000Z', status: 'submitted', storeCount: 10, submittedStoreCount: 10,
+  companyId, managerUserId: incentiveManagerA, managerName: 'Süleyman Öztürk', submittedByName: 'Süleyman Öztürk', submittedByUserId: 'region-manager',
+  regionPackageId: 'package-1', submittedAt: '2026-07-01T10:00:00.000Z', status: 'submitted', storeCount: 2, submittedStoreCount: 2,
 }
+
 for (const width of [1440, 390]) {
   test(`authorized viewer confirms exact package at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 })
@@ -29,47 +31,94 @@ for (const width of [1440, 390]) {
       await route.fulfill({ json: { items: [{ ...item, status: approved ? 'admin_approved' : 'submitted' }] } })
     })
     await page.goto('/store/incentives')
-    await page.getByRole('tab', { name: 'Final onay', exact: true }).click()
-    const approval = page.getByText('Prim Onayı', { exact: true })
+    const approval = page.getByRole('heading', { name: 'Primler', exact: true })
     await expect(approval).toBeVisible()
-    await expect(page.locator('.incentive-performance-list')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Final onay ver', exact: true }).click()
+    await expect(page.getByRole('tab', { name: 'Final onay', exact: true })).toHaveCount(0)
+    await expect(page.locator('.incentive-performance-list')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Paketi onayla' })).toBeVisible()
+    await page.locator('.incentive-region-package-toggle').first().click()
+    await expect(page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true })).toBeVisible()
+    await page.screenshot({ path: testInfo.outputPath(`prim-main-list-${width}.png`), fullPage: true })
+    await page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true }).click()
+    const drawer = page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true })
+    await expect(drawer.getByRole('region', { name: 'Bölge paketi kararı' })).toHaveCount(0)
+    await expect(drawer.getByRole('button', { name: /^(Tamamla|Kabul et|Reddet)$/ })).toHaveCount(0)
+    await expect(drawer.locator('[data-slot="sheet-footer"]')).toHaveCount(0)
+    await drawer.getByRole('button', { name: 'Mağaza detayını kapat' }).click()
+    await page.getByRole('button', { name: 'Paketi onayla', exact: true }).click()
     const dialog = page.getByRole('dialog', { name: 'Prim final onayı' })
-    await expect(dialog).toContainText('Marmara')
+    await expect(dialog).toContainText('2 mağaza')
     expect(bodies).toHaveLength(0)
     await page.screenshot({ path: testInfo.outputPath(`prim-final-${width}.png`) })
     await dialog.getByRole('button', { name: 'Final onayı ver', exact: true }).click()
-    await expect(page.getByText('Final onaylandı', { exact: true })).toBeVisible()
-    expect(bodies).toEqual([{ period: '2026-06', regionId: item.regionId, regionPackageId: item.regionPackageId, submittedAt: item.submittedAt }])
-    await expect(page.getByRole('button', { name: 'Final onay ver', exact: true })).toHaveCount(0)
+    await expect(page.locator('.incentive-region-package-status.is-admin_approved')).toHaveText('Onaylandı')
+    await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
+    expect(bodies).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision: 'approve' }])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 }
-test('directory selection shows only the selected regions approval package', async ({ page }) => {
+test('viewer groups stores by manager package without an extra manager column', async ({ page }) => {
   await prepare(page, true)
   const workspace = createIncentiveWorkspace('report_viewer', { multipleRegions: true })
   await routeIncentiveWorkspace(page, workspace)
   await routeIncentiveManagerDirectory(page, workspace)
-  await page.route('**/api/store/incentives/final-approval**', route => route.fulfill({ json: { items: workspace.data.regions.map(region => ({ ...item, regionId: region.regionId, regionName: region.regionName })) } }))
+  await page.route('**/api/store/incentives/final-approval**', route => route.fulfill({ json: { items: workspace.data.managerGroups.map(region => ({ ...item, companyId, managerUserId: region.managerUserId, managerName: region.managerName })) } }))
   await page.goto('/store/incentives')
-  await page.getByRole('tab', { name: 'Final onay', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Final onay ver', exact: true })).toHaveCount(2)
-  await page.getByRole('complementary', { name: 'Bölge müdürleri' }).getByRole('button', { name: /Ayşe Kaya/ }).click()
-  await expect(page.getByRole('button', { name: 'Final onay ver', exact: true })).toHaveCount(1)
-  await page.getByRole('button', { name: 'Final onay ver', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Bölge müdürleri' })).toHaveCount(0)
+  await expect(page.getByRole('columnheader', { name: /Bölge Müdürü/ })).toHaveCount(0)
+  await expect(page.locator('.incentive-region-package-toggle')).toHaveCount(2)
+  await page.locator('.incentive-region-package-toggle').first().click()
+  await expect(page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true })).toBeVisible()
+  await page.locator('.incentive-region-package-toggle').last().click()
+  await expect(page.getByLabel('Akasya AVM: Prim ayrıntılarını aç').filter({ visible: true })).toBeVisible()
+  await expect(page.locator('.incentive-region-manager-cell, .incentive-store-manager-name')).toHaveCount(0)
+})
+
+test('authorized viewer can approve the visible submitted packages in one confirmed batch', async ({ page }) => {
+  await prepare(page, true)
+  const workspace = createIncentiveWorkspace('report_viewer', { multipleRegions: true })
+  await routeIncentiveWorkspace(page, workspace)
+  await routeIncentiveManagerDirectory(page, workspace)
+  const items = workspace.data.managerGroups.map((region, index) => ({
+    ...item, companyId, managerUserId: region.managerUserId, managerName: region.managerName,
+    regionPackageId: `package-${index + 1}`,
+    submittedStoreCount: region.stores.length,
+  }))
+  const requests: Array<{ regionPackageId: string }> = []
+  await page.route('**/api/store/incentives/final-approval**', route => {
+    if (route.request().method() === 'POST') {
+      requests.push(route.request().postDataJSON())
+      return route.fulfill({ status: 201, json: { data: { status: 'admin_approved' } } })
+    }
+    return route.fulfill({ json: { items: items.map(packageItem => ({
+      ...packageItem,
+      status: requests.some(request => request.regionPackageId === packageItem.regionPackageId) ? 'admin_approved' : 'submitted',
+    })) } })
+  })
+  await page.goto('/store/incentives')
+  await page.getByRole('button', { name: '2 paketi toplu onayla' }).click()
   const dialog = page.getByRole('dialog', { name: 'Prim final onayı' })
-  await expect(dialog).toContainText('İstanbul Anadolu')
-  await expect(dialog).not.toContainText('İstanbul Avrupa')
+  await expect(dialog).toContainText('2 bölge paketi')
+  expect(requests).toHaveLength(0)
+  await dialog.getByRole('button', { name: 'Final onayı ver' }).click()
+  await expect.poll(() => requests.map(request => request.regionPackageId)).toEqual(items.map(packageItem => packageItem.regionPackageId))
+  await expect(page.locator('.incentive-region-package-status.is-admin_approved')).toHaveCount(2)
 })
 
 test('plain viewer has no approval control and never calls its endpoints', async ({ page }) => {
   await prepare(page, false)
+  const workspace = createIncentiveWorkspace('report_viewer')
+  workspace.data.managerGroups[0]!.package.status = 'submitted'
+  await routeIncentiveWorkspace(page, workspace)
   const calls: string[] = []
   page.on('request', r => { if (r.url().includes('/final-approval')) calls.push(r.url()) })
   await page.goto('/store/incentives')
   await expect(page.getByRole('heading', { name: 'Primler', exact: true })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Final onay', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Final onay ver', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Prim Onayı' })).toHaveCount(0)
+  await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
+  await page.locator('.incentive-region-package-toggle').first().click()
+  await page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true }).click()
+  await expect(page.getByRole('region', { name: 'Bölge paketi kararı' })).toHaveCount(0)
   expect(calls).toEqual([])
 })
 test('revoked permission fails visibly and offers no stale approval action', async ({ page }) => {
@@ -80,114 +129,123 @@ test('revoked permission fails visibly and offers no stale approval action', asy
     await route.fulfill(revoked ? { status: 403, json: { message: 'Permission revoked' } } : { json: { items: [item] } })
   })
   await page.goto('/store/incentives')
-  await page.getByRole('tab', { name: 'Final onay', exact: true }).click()
-  await page.getByRole('button', { name: 'Final onay ver', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Final onayı ver', exact: true }).click()
-  await expect(page.getByText('Onay paketleri alınamadı veya yetkiniz kaldırıldı.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Final onay ver', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Paketi onayla', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Prim final onayı' }).getByRole('button', { name: 'Final onayı ver' }).click()
+  await expect(page.locator('.incentive-approval-notice')).toContainText('Onay paketleri alınamadı veya yetkiniz kaldırıldı.')
+  await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
 })
 
-test('bulk approval confirms only eligible exact package versions and never self-approves', async ({ page }) => {
+test('package header approves only its submitted region after confirmation', async ({ page }) => {
   await prepare(page, true)
-  const packages = [{ ...item }, { ...item, regionId: 'region-2', regionName: 'Ege', regionPackageId: 'package-2' },
-    { ...item, regionId: 'own', regionName: 'Kendi paketi', regionPackageId: 'own', submittedByUserId: createStoreContractSession('reportViewer').user.userId },
-    { ...item, regionId: 'approved', regionName: 'Onaylı paket', regionPackageId: 'approved', status: 'admin_approved' }]
-  const requests: typeof item[] = []
+  const requests: unknown[] = []
+  let status = 'submitted'
   await page.route('**/api/store/incentives/final-approval**', route => {
     if (route.request().method() === 'POST') {
-      const body = route.request().postDataJSON(); requests.push(body)
-      packages.find(row => row.regionId === body.regionId)!.status = 'admin_approved'
-      return route.fulfill({ json: { data: { status: 'admin_approved' } } })
+      requests.push(route.request().postDataJSON())
+      status = 'admin_approved'
+      return route.fulfill({ status: 201, json: { data: { status } } })
     }
-    return route.fulfill({ json: { items: packages } })
+    return route.fulfill({ json: { items: [{ ...item, status }] } })
   })
   await page.goto('/store/incentives')
-  await page.getByRole('tab', { name: 'Final onay', exact: true }).click()
-  await expect(page.getByRole('checkbox', { name: 'Kendi paketi: Paketi seç', exact: true })).toBeDisabled()
-  await page.getByRole('checkbox', { name: 'Onaylanabilir paketlerin tümünü seç' }).check()
-  await page.getByRole('button', { name: 'Seçilenleri onayla (2)', exact: true }).click()
+  await page.getByRole('button', { name: 'Paketi onayla', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Prim final onayı' })
-  await expect(dialog).toContainText('Marmara')
-  await expect(dialog).toContainText('Ege')
-  await expect(dialog).not.toContainText('Kendi paketi')
+  await expect(dialog).toContainText('2 mağaza')
   expect(requests).toHaveLength(0)
-  await dialog.getByRole('button', { name: 'Final onayı ver', exact: true }).click()
-  await expect(page.getByText('2 paket onaylandı.', { exact: true })).toBeVisible()
-  expect(requests).toEqual(packages.slice(0, 2).map(row => ({ period: '2026-06', regionId: row.regionId, regionPackageId: row.regionPackageId, submittedAt: row.submittedAt })))
-  await expect(page.getByRole('button', { name: 'Seçilenleri onayla', exact: true })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Final onayı ver' }).click()
+  await expect.poll(() => requests).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision: 'approve' }])
 })
 
-for (const status of [403, 409, 500]) {
-  test(`bulk approval stops on ${status} and retains successful approvals without retrying`, async ({ page }) => {
+for (const width of [1440, 390]) {
+  test(`package header requires a rejection reason and returns the exact package at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
     await prepare(page, true)
-    const packages = [item, { ...item, regionId: 'region-2', regionName: 'Ege', regionPackageId: 'package-2' }, { ...item, regionId: 'region-3', regionName: 'Akdeniz', regionPackageId: 'package-3' }].map(row => ({ ...row }))
-    const requests: string[] = []
-    await page.route('**/api/store/incentives/final-approval**', route => {
-      if (route.request().method() === 'POST') {
-        const body = route.request().postDataJSON(); requests.push(body.regionId)
-        if (body.regionId === 'region-2') return route.fulfill({ status, json: { message: 'Package approval rejected' } })
-        packages.find(row => row.regionId === body.regionId)!.status = 'admin_approved'
-        return route.fulfill({ json: { data: { status: 'admin_approved' } } })
-      }
-      return route.fulfill({ json: { items: packages } })
-    })
-    await page.goto('/store/incentives')
-    await page.getByRole('tab', { name: 'Final onay', exact: true }).click()
-    await page.getByRole('checkbox', { name: 'Onaylanabilir paketlerin tümünü seç' }).check()
-    await page.getByRole('button', { name: 'Seçilenleri onayla (3)', exact: true }).click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Final onayı ver', exact: true }).click()
-    await expect(page.getByRole('alert').filter({ hasText: '1 paket onaylandı.' })).toContainText('Ege için onay doğrulanamadı')
-    await expect(page.getByRole('alert').filter({ hasText: '1 paket onaylandı.' })).toContainText('1 pakete işlem yapılmadı')
-    await expect(page.getByText('Final onaylandı', { exact: true })).toBeVisible()
-    expect(requests).toEqual(['region-1', 'region-2'])
-    await expect(page.getByRole('checkbox', { name: 'Marmara: Paketi seç', exact: true })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Seçilenleri onayla', exact: true })).toHaveCount(0)
-  })
-}
-
-test('manager filter clears bulk selection instead of approving hidden packages', async ({ page }) => {
-  await prepare(page, true)
-  const workspace = createIncentiveWorkspace('report_viewer', { multipleRegions: true })
-  await routeIncentiveWorkspace(page, workspace)
-  await routeIncentiveManagerDirectory(page, workspace)
-  await page.route('**/api/store/incentives/final-approval**', route => route.fulfill({ json: { items: workspace.data.regions.map(region => ({ ...item, regionId: region.regionId, regionName: region.regionName })) } }))
-  await page.goto('/store/incentives')
-  await page.getByRole('tab', { name: 'Final onay', exact: true }).click()
-  await page.getByRole('checkbox', { name: 'Onaylanabilir paketlerin tümünü seç' }).check()
-  await expect(page.getByRole('button', { name: 'Seçilenleri onayla (2)', exact: true })).toBeEnabled()
-  await page.getByRole('complementary', { name: 'Bölge müdürleri' }).getByRole('button', { name: /Ayşe Kaya/ }).click()
-  await expect(page.getByRole('button', { name: 'Seçilenleri onayla', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('checkbox', { name: 'İstanbul Anadolu: Paketi seç', exact: true })).not.toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'İstanbul Avrupa: Paketi seç', exact: true })).toHaveCount(0)
-})
-
-for (const decision of ['approve', 'return'] as const) {
-  test(`store drawer ${decision} applies to the exact entire regional package with a note`, async ({ page }) => {
-    await prepare(page, true)
-    const fixture = createIncentiveWorkspace('report_viewer')
-    const region = fixture.data.regions[0]!
     const requests: unknown[] = []
     let status = 'submitted'
     await page.route('**/api/store/incentives/final-approval**', route => {
       if (route.request().method() === 'POST') {
         requests.push(route.request().postDataJSON())
-        status = decision === 'return' ? 'admin_returned' : 'admin_approved'
-        return route.fulfill({ json: { data: { status } } })
+        status = 'admin_returned'
+        return route.fulfill({ status: 201, json: { data: { status } } })
       }
-      return route.fulfill({ json: { items: [{ ...item, regionId: region.regionId, status, submittedStoreCount: 2 }] } })
+      return route.fulfill({ json: { items: [{ ...item, status }] } })
     })
     await page.goto('/store/incentives')
-    await page.getByRole('button', { name: 'Mall of İstanbul', exact: true }).filter({ visible: true }).click()
-    const panel = page.getByRole('region', { name: 'Bölge paketi kararı' })
-    await expect(panel).toContainText('bölge paketinin tamamına')
-    await expect(panel.getByRole('button', { name: 'Reddet', exact: true })).toBeDisabled()
-    await panel.getByLabel('Karar notu').fill('Paket inceleme notu')
-    await panel.getByRole('button', { name: decision === 'return' ? 'Reddet' : 'Kabul et', exact: true }).click()
-    const dialog = page.getByRole('dialog', { name: decision === 'return' ? 'Bölge paketini reddet' : 'Bölge paketini kabul et', exact: true })
-    await expect(dialog).toContainText('2 mağazanın tamamı')
+    await page.getByRole('button', { name: 'Reddet', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Bölge paketini reddet', exact: true })
+    const submit = dialog.getByRole('button', { name: 'Paketi reddet', exact: true })
+    await expect(dialog).toContainText('2 mağaza')
+    await expect(submit).toBeDisabled()
+    await dialog.getByLabel('Ret gerekçesi').fill('   ')
+    await expect(submit).toBeDisabled()
+    await dialog.getByLabel('Ret gerekçesi').fill('  Mağaza prim oranlarını yeniden kontrol edin.  ')
+    await expect(submit).toBeEnabled()
     expect(requests).toHaveLength(0)
-    await dialog.getByRole('button', { name: decision === 'return' ? 'Paketi reddet' : 'Paketi kabul et', exact: true }).click()
-    await expect.poll(() => requests).toEqual([{ period: '2026-06', regionId: region.regionId, regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision, reviewNote: 'Paket inceleme notu' }])
-    await expect(panel.getByRole('button', { name: /^(Kabul et|Reddet)$/ })).toHaveCount(0)
+    await page.screenshot({ path: testInfo.outputPath(`package-rejection-${width}.png`) })
+    await submit.click()
+    await expect(dialog).toHaveCount(0)
+    await expect(page.locator('.incentive-region-package-status.is-admin_returned')).toHaveText('Reddedildi')
+    await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
+    expect(requests).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision: 'return', reviewNote: 'Mağaza prim oranlarını yeniden kontrol edin.' }])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+}
+
+test('viewer cannot approve or reject their own submission from the package header', async ({ page }) => {
+  await prepare(page, true)
+  const userId = createStoreContractSession('reportViewer').user.userId
+  await page.route('**/api/store/incentives/final-approval**', route => route.fulfill({ json: { items: [{ ...item, submittedByUserId: userId }] } }))
+  await page.goto('/store/incentives')
+  await expect(page.getByRole('button', { name: 'Reddet', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Paketi onayla', exact: true })).toBeDisabled()
+})
+
+test('failed package rejection reports uncertainty and does not retry the write', async ({ page }) => {
+  await prepare(page, true)
+  let writes = 0
+  await page.route('**/api/store/incentives/final-approval**', route => {
+    if (route.request().method() === 'POST') {
+      writes += 1
+      return route.fulfill({ status: 409, json: { message: 'Package version changed' } })
+    }
+    return route.fulfill({ json: { items: [{ ...item, status: writes ? 'admin_returned' : 'submitted' }] } })
+  })
+  await page.goto('/store/incentives')
+  await page.getByRole('button', { name: 'Reddet', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Bölge paketini reddet', exact: true })
+  await dialog.getByLabel('Ret gerekçesi').fill('Prim tutarları kontrol edilmeli.')
+  await dialog.getByRole('button', { name: 'Paketi reddet', exact: true }).click()
+  await expect(page.getByText(/Karar doğrulanamadı/)).toBeVisible()
+  await expect(dialog).toHaveCount(0)
+  await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
+  expect(writes).toBe(1)
+})
+
+for (const status of ['admin_approved', 'admin_returned'] as const) {
+  test(`store drawer keeps the ${status} decision note without offering another decision`, async ({ page }) => {
+    await prepare(page, true)
+    const fixture = createIncentiveWorkspace('report_viewer')
+    const region = fixture.data.managerGroups[0]!
+    region.package.status = status
+    region.package.reviewNote = 'Paket inceleme notu'
+    await routeIncentiveWorkspace(page, fixture)
+    const requests: unknown[] = []
+    await page.route('**/api/store/incentives/final-approval**', route => {
+      if (route.request().method() === 'POST') {
+        requests.push(route.request().postDataJSON())
+        return route.fulfill({ json: { data: { status } } })
+      }
+      return route.fulfill({ json: { items: [{ ...item, managerUserId: region.managerUserId, status, submittedStoreCount: 2 }] } })
+    })
+    await page.goto('/store/incentives')
+    await page.locator('.incentive-region-package-toggle').first().click()
+    await page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true }).click()
+    const drawer = page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true })
+    await expect(drawer.getByText('Paket inceleme notu', { exact: true })).toBeVisible()
+    await expect(drawer.getByRole('heading', { name: 'Paket karar notu' })).toBeVisible()
+    await expect(drawer.getByRole('region', { name: 'Bölge paketi kararı' })).toHaveCount(0)
+    await expect(drawer.getByRole('button', { name: /^(Tamamla|Kabul et|Reddet)$/ })).toHaveCount(0)
+    await expect(drawer.locator('[data-slot="sheet-footer"]')).toHaveCount(0)
+    expect(requests).toHaveLength(0)
   })
 }
