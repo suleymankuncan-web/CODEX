@@ -235,6 +235,8 @@ CREATE TABLE ops.user_account (
     employee_id UUID REFERENCES ops.employee(employee_id),
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
+    first_name TEXT,
+    last_name TEXT,
     password_hash TEXT,
     auth_provider TEXT NOT NULL DEFAULT 'local',
     provider_subject TEXT,
@@ -244,7 +246,11 @@ CREATE TABLE ops.user_account (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deactivation_reason TEXT,
     deactivated_by_user_id UUID REFERENCES ops.user_account(user_id),
-    deactivated_at TIMESTAMPTZ
+    deactivated_at TIMESTAMPTZ,
+    CONSTRAINT user_account_profile_names_pair_check CHECK (
+        (first_name IS NULL AND last_name IS NULL)
+        OR (NULLIF(BTRIM(first_name), '') IS NOT NULL AND NULLIF(BTRIM(last_name), '') IS NOT NULL)
+    )
 );
 
 CREATE TABLE ops.user_role_assignment (

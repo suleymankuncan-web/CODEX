@@ -213,6 +213,8 @@ export type components = {
             "userId": string
             "employeeId": string | null
             "username": string
+            "firstName": string | null
+            "lastName": string | null
             "email": string
             "authProvider": string
             "providerSubject": string | null
@@ -424,6 +426,8 @@ export type components = {
           "userId": string
           "employeeId": string | null
           "username": string
+          "firstName": string | null
+          "lastName": string | null
           "email": string
           "authProvider": string
           "providerSubject": string | null
@@ -445,6 +449,8 @@ export type components = {
           "userId": string
           "employeeId": string | null
           "username": string
+          "firstName": string | null
+          "lastName": string | null
           "email": string
           "authProvider": string
           "providerSubject": string | null
@@ -476,6 +482,8 @@ export type components = {
           "userId": string
           "employeeId": string | null
           "username": string
+          "firstName": string | null
+          "lastName": string | null
           "email": string
           "authProvider": string
           "providerSubject": string | null
@@ -1070,6 +1078,8 @@ export type components = {
     "CreateUserAccountDto": {
       "employeeId"?: string
       "username": string
+      "firstName"?: string
+      "lastName"?: string
       "email": string
       "authProvider": "local" | "oidc" | "sso" | "clerk"
       "providerSubject"?: string
@@ -3712,6 +3722,8 @@ export type components = {
     "UpdateUserAccountDto": {
       "employeeId"?: string | null
       "username"?: string
+      "firstName"?: string
+      "lastName"?: string
       "email"?: string
     }
     "UpsertVmReferenceItemDto": {

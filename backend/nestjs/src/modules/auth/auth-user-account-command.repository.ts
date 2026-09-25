@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { buildRequestAuditMetadata } from "../../shared/audit/audit-metadata.factory";
 import { DatabaseService } from "../../shared/database/database.service";
 import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
@@ -60,6 +60,8 @@ type UserAccountCommandRow = {
   user_id: string;
   employee_id: string | null;
   username: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   auth_provider: string;
   provider_subject: string | null;
@@ -74,6 +76,8 @@ type UserAccountCommandRow = {
 export type CreateUserAccountCommandInput = {
   employeeId?: string | null;
   username: string;
+  firstName?: string | null;
+  lastName?: string | null;
   email: string;
   authProvider: string;
   providerSubject?: string | null;
@@ -106,6 +110,8 @@ export type UpdateUserAccountCommandInput = {
   userId: string;
   employeeId?: string | null;
   username?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   actorUserId: string;
 };
@@ -118,22 +124,27 @@ export class AuthUserAccountCommandRepository {
   ) {}
 
   async createUserAccount(input: CreateUserAccountCommandInput) {
-    return this.databaseService.withTransaction(async (client) => {
+    try {
+      return await this.databaseService.withTransaction(async (client) => {
       const result = await client.query<UserAccountCommandRow>(
         `
           INSERT INTO ops.user_account (
             employee_id,
             username,
+            first_name,
+            last_name,
             email,
             auth_provider,
             provider_subject,
             is_active
           )
-          VALUES ($1::uuid, LOWER(BTRIM($2)), LOWER(BTRIM($3)), $4, $5, $6)
+          VALUES ($1::uuid, LOWER(BTRIM($2)), $3, $4, LOWER(BTRIM($5)), $6, $7, $8)
           RETURNING
             user_id,
             employee_id,
             username,
+            first_name,
+            last_name,
             email,
             auth_provider,
             provider_subject,
@@ -144,6 +155,8 @@ export class AuthUserAccountCommandRepository {
         [
           input.employeeId ?? null,
           input.username,
+          input.firstName ?? null,
+          input.lastName ?? null,
           input.email,
           input.authProvider,
           input.providerSubject ?? null,
@@ -186,6 +199,8 @@ export class AuthUserAccountCommandRepository {
               changedFields: [
                 "employeeId",
                 "username",
+                "firstName",
+                "lastName",
                 "email",
                 "authProvider",
                 "providerSubject",
@@ -194,6 +209,8 @@ export class AuthUserAccountCommandRepository {
               details: {
                 employeeId: user.employee_id,
                 username: user.username,
+                firstName: user.first_name,
+                lastName: user.last_name,
                 email: user.email,
                 authProvider: user.auth_provider,
                 providerSubject: user.provider_subject,
@@ -205,7 +222,10 @@ export class AuthUserAccountCommandRepository {
       );
 
       return user;
-    });
+      });
+    } catch (error) {
+      throw mapUserAccountUniqueError(error);
+    }
   }
 
   async updateUserAccount(input: UpdateUserAccountCommandInput) {
@@ -223,14 +243,22 @@ export class AuthUserAccountCommandRepository {
 
     if (input.username !== undefined) {
       params.push(input.username);
-      setClauses.push(`username = $${params.length}`);
+      setClauses.push(`username = LOWER(BTRIM($${params.length}))`);
       changedFields.push("username");
       details.username = input.username;
     }
 
+    if (input.firstName !== undefined) {
+      params.push(input.firstName, input.lastName);
+      setClauses.push(`first_name = $${params.length - 1}`, `last_name = $${params.length}`);
+      changedFields.push("firstName", "lastName");
+      details.firstName = input.firstName;
+      details.lastName = input.lastName;
+    }
+
     if (input.email !== undefined) {
       params.push(input.email);
-      setClauses.push(`email = $${params.length}`);
+      setClauses.push(`email = LOWER(BTRIM($${params.length}))`);
       changedFields.push("email");
       details.email = input.email;
     }
@@ -239,7 +267,8 @@ export class AuthUserAccountCommandRepository {
       return null;
     }
 
-    return this.databaseService.withTransaction(async (client) => {
+    try {
+      return await this.databaseService.withTransaction(async (client) => {
       params.push(input.userId);
       const userResult = await client.query<UserAccountCommandRow>(
         `
@@ -252,6 +281,8 @@ export class AuthUserAccountCommandRepository {
             user_id,
             employee_id,
             username,
+            first_name,
+            last_name,
             email,
             auth_provider,
             provider_subject,
@@ -268,6 +299,14 @@ export class AuthUserAccountCommandRepository {
       const user = userResult.rows[0] ?? null;
       if (!user) {
         return null;
+      }
+
+      if (user.auth_provider === "oidc" && user.provider_subject) {
+        await this.identityLifecycleRepository?.enqueueInTransaction(client, {
+          userId: user.user_id,
+          operation: "update_profile",
+          actorUserId: input.actorUserId,
+        });
       }
 
       await client.query(
@@ -299,7 +338,10 @@ export class AuthUserAccountCommandRepository {
       );
 
       return user;
-    });
+      });
+    } catch (error) {
+      throw mapUserAccountUniqueError(error);
+    }
   }
 
   async createPilotUserBinding(input: CreatePilotUserBindingCommandInput) {
@@ -568,4 +610,17 @@ export class AuthUserAccountCommandRepository {
       return user;
     });
   }
+}
+
+function mapUserAccountUniqueError(error: unknown): unknown {
+  const constraint = (error as { code?: string; constraint?: string })?.constraint;
+  if ((error as { code?: string })?.code === "23505") {
+    if (constraint === "user_account_username_key") {
+      return new ConflictException("Username is already in use");
+    }
+    if (constraint === "user_account_email_key") {
+      return new ConflictException("Email is already in use");
+    }
+  }
+  return error;
 }

@@ -143,7 +143,9 @@ export class IdentityLifecycleRepository {
       `
         SELECT
           ua.user_id::text, ua.employee_id::text, ua.username, ua.email,
-          ua.provider_subject, ua.is_active, e.first_name, e.last_name,
+          ua.provider_subject, ua.is_active,
+          COALESCE(e.first_name, ua.first_name) AS first_name,
+          COALESCE(e.last_name, ua.last_name) AS last_name,
           COALESCE(array_agg(DISTINCT r.role_code) FILTER (WHERE r.role_code IS NOT NULL), ARRAY[]::text[]) AS role_codes,
           COALESCE(array_agg(DISTINCT ura.company_id::text) FILTER (WHERE ura.company_id IS NOT NULL), ARRAY[]::text[]) AS company_ids,
           COALESCE(array_agg(DISTINCT ura.region_id::text) FILTER (WHERE ura.region_id IS NOT NULL), ARRAY[]::text[]) AS region_ids,

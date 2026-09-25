@@ -284,6 +284,8 @@ export class AuthAdminController {
       userId,
       employeeId: body.employeeId,
       username: body.username,
+      firstName: body.firstName,
+      lastName: body.lastName,
       email: body.email,
       actorUserId: request.user.userId,
     });
