@@ -996,16 +996,21 @@ test('Docker 29 identity fallback cleans its temporary archive on TERM', async (
     writeFileSync(fixture.idMode, 'docker-29-manifest-id\n')
     writeFileSync(fixture.reexportMode, 'signal\n')
     child = spawn(POSIX_SHELL, installArgs(fixture), { env: shellEnv(fixture), detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
-    const tempCreated = await new Promise((resolveCreated) => {
+    const imageSaveStarted = await new Promise((resolveStarted) => {
       const started = Date.now()
       const poll = () => {
-        if (existsSync(fixture.reexportTempDir)) return resolveCreated(true)
-        if (Date.now() - started > 5_000) return resolveCreated(false)
+        // The directory can appear before mktemp returns and the parent shell
+        // assigns IMAGE_SAVE_TEMP_DIR. Wait until the next command starts so
+        // TERM actually exercises the registered cleanup path.
+        if (existsSync(fixture.reexportTempDir) && commandLog(fixture).includes('image save --output')) {
+          return resolveStarted(true)
+        }
+        if (Date.now() - started > 5_000) return resolveStarted(false)
         setTimeout(poll, 25)
       }
       poll()
     })
-    assert.equal(tempCreated, true, 'TERM proof reaches the temporary archive phase')
+    assert.equal(imageSaveStarted, true, 'TERM proof reaches image save after the temporary path is assigned')
     try { process.kill(-child.pid, 'SIGTERM') } catch (error) { if (error?.code !== 'ESRCH') throw error }
     const outcome = await new Promise((resolveOutcome) => {
       child.once('close', (code, signal) => resolveOutcome({ code, signal }))
