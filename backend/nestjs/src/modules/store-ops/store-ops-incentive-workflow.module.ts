@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
 import { SalesTargetIncentiveRegionWorkflowService } from "./application/sales-target-incentive-region-workflow.service";
-import { StoreOpsIncentiveApprovalModule } from "./store-ops-incentive-approval.module";
+import { StoreOpsIncentivePackageDataModule } from "./store-ops-incentive-package-data.module";
 import { StoreOpsIncentiveProjectionModule } from "./store-ops-incentive-projection.module";
 
 @Module({
   imports: [
-    StoreOpsIncentiveApprovalModule,
+    StoreOpsIncentivePackageDataModule,
     StoreOpsIncentiveProjectionModule,
   ],
   providers: [SalesTargetIncentiveRegionWorkflowService],

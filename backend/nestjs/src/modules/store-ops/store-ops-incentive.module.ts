@@ -9,6 +9,7 @@ import { StoreOpsIncentiveProjectionModule } from "./store-ops-incentive-project
 import { StoreOpsIncentiveWorkflowModule } from "./store-ops-incentive-workflow.module";
 import { StoreOpsIncentiveWorkspaceModule } from "./store-ops-incentive-workspace.module";
 import { StoreOpsIncentiveFinalApprovalModule } from "./store-ops-incentive-final-approval.module";
+import { StoreOpsIncentiveHrHandoffModule } from "./store-ops-incentive-hr-handoff.module";
 import { AdminSalesTargetIncentiveController } from "./web/admin-sales-target-incentive.controller";
 import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-incentive.controller";
 
@@ -20,6 +21,7 @@ import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-in
     StoreOpsIncentiveWorkflowModule,
     StoreOpsIncentiveWorkspaceModule,
     StoreOpsIncentiveFinalApprovalModule,
+    StoreOpsIncentiveHrHandoffModule,
   ],
   controllers: [
     StoreSalesTargetIncentiveController,
