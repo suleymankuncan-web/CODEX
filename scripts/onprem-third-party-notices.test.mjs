@@ -76,6 +76,22 @@ function pdfDependencyFixture({ name = 'pako', version = '1.0.11', license = '(M
   return fixture
 }
 
+function smtpDependencyFixture({ name = 'nodemailer', version = '10.0.10', license = 'MIT-0', missingLicense = false } = {}) {
+  const fixture = packageFixture()
+  const packageDir = join(fixture.modules, name)
+  mkdirSync(packageDir, { recursive: true })
+  writeFileSync(join(packageDir, 'package.json'), JSON.stringify({ name, version, license }))
+  if (!missingLicense) writeFileSync(join(packageDir, 'LICENSE'), 'MIT No Attribution license text\n')
+  const application = JSON.parse(readFileSync(fixture.packagePath, 'utf8'))
+  const lockfile = JSON.parse(readFileSync(fixture.lockPath, 'utf8'))
+  application.dependencies[name] = version
+  lockfile.packages[''].dependencies[name] = version
+  lockfile.packages[`node_modules/${name}`] = { version, license }
+  writeFileSync(fixture.packagePath, JSON.stringify(application))
+  writeFileSync(fixture.lockPath, JSON.stringify(lockfile))
+  return fixture
+}
+
 function inventoryFor(fixture) {
   return generateLicenseInventory({ packageJsonPath: fixture.packagePath, lockfilePath: fixture.lockPath, nodeModulesPath: fixture.modules })
 }
@@ -92,6 +108,35 @@ test('approved PDF dependency preserves both upstream license notices', () => {
     assert.match(notices, /Zlib notice: Jean-loup Gailly and Mark Adler/)
   } finally {
     rmSync(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('SMTP dependency disposition accepts only Nodemailer 10.0.10 MIT-0 with its notice', () => {
+  const approved = smtpDependencyFixture()
+  try {
+    const inventory = inventoryFor(approved)
+    const dependency = inventory.packages.find((entry) => entry.name === 'nodemailer')
+    assert.equal(dependency.license, 'MIT-0')
+    assert.deepEqual(dependency.licenseFiles.map((file) => file.name), ['LICENSE'])
+    assert.match(renderThirdPartyNotices(inventory), /MIT No Attribution license text/)
+  } finally {
+    rmSync(approved.root, { recursive: true, force: true })
+  }
+
+  for (const change of [{ name: 'other-mailer' }, { version: '10.0.11' }, { license: 'MIT-0 OR AGPL-3.0-only' }]) {
+    const fixture = smtpDependencyFixture(change)
+    try {
+      assert.throws(() => inventoryFor(fixture), /license policy review required/)
+    } finally {
+      rmSync(fixture.root, { recursive: true, force: true })
+    }
+  }
+
+  const missingNotice = smtpDependencyFixture({ missingLicense: true })
+  try {
+    assert.throws(() => inventoryFor(missingNotice), /required license notice/)
+  } finally {
+    rmSync(missingNotice.root, { recursive: true, force: true })
   }
 })
 

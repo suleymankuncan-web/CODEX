@@ -19,10 +19,12 @@ const ONP1_LICENSE_ALLOWLIST = new Set([
   'OFL-1.1',
   'Python-2.0',
 ])
-// Owner-directed PR #1164 closeout, 2026-09-16: the PDF dependency is
-// approved only at this identity/expression, with both upstream notices.
+// Package-specific reviews do not extend the general license allowlist.
+// PR #1164 approved the PDF dependency only with both upstream notices.
 const PACKAGE_LICENSE_DISPOSITIONS = new Map([
   ['pako@1.0.11', { license: '(MIT AND Zlib)', files: ['LICENSE', 'lib/zlib/README'] }],
+  // Nodemailer 10.0.10 declares SPDX MIT-0 and packages its upstream LICENSE.
+  ['nodemailer@10.0.10', { license: 'MIT-0', files: ['LICENSE'] }],
 ])
 
 function readJson(pathname, label) {
