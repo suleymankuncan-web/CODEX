@@ -16,6 +16,7 @@ import {
 } from './onprem-keycloak-contract.mjs'
 import { NETTY_PATCHES } from './onprem-keycloak-netty-patch.mjs'
 import { BOUNCY_CASTLE_PATCHES } from './onprem-keycloak-bouncycastle-patch.mjs'
+import { FREEMARKER_PATCH } from './onprem-keycloak-freemarker-patch.mjs'
 
 const read = (path) => readFileSync(path, 'utf8')
 
@@ -128,6 +129,24 @@ test('ONP-3B Keycloak image replaces the vulnerable Bouncy Castle 1.84 family wi
   assert.match(dockerfile, /COPY scripts\/onprem-keycloak-bouncycastle-patch\.mjs \/patch\/download-bouncycastle\.mjs/)
   assert.match(dockerfile, /node \/patch\/download-bouncycastle\.mjs/)
   for (const copy of expectedCopies) assert.ok(dockerfile.includes(copy), copy)
+})
+
+test('ONP-3B Keycloak image replaces vulnerable FreeMarker without losing its Quarkus path', () => {
+  const baseline = input()
+  assert.deepEqual(FREEMARKER_PATCH, {
+    version: '2.3.35',
+    sha256: '0fac87dddd78f1223139e8ef88e819c7f483c0a3835cdf5982ad5e4576d1d896',
+    url: 'https://repo.maven.apache.org/maven2/org/freemarker/freemarker/2.3.35/freemarker-2.3.35.jar',
+  })
+  assert.match(baseline.keycloakDockerfile, /node \/patch\/download-freemarker\.mjs/)
+  const copy = 'COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/freemarker/freemarker.jar /opt/keycloak/lib/lib/main/org.freemarker.freemarker-2.3.32.jar'
+  assert.ok(baseline.keycloakDockerfile.includes(copy))
+  const missingPatch = validateOnpremKeycloakContract({
+    ...baseline,
+    keycloakDockerfile: baseline.keycloakDockerfile.replace(copy, ''),
+  })
+  assert.equal(missingPatch.ok, false)
+  assert.match(missingPatch.errors.join('; '), /FreeMarker/)
 })
 
 test('identity lifecycle service account can read realm roles before mapping them', () => {

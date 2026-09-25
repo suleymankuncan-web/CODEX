@@ -10,8 +10,10 @@ FROM ${NODE_BUILD_IMAGE} AS netty-downloader
 WORKDIR /patch
 COPY scripts/onprem-keycloak-netty-patch.mjs /patch/download.mjs
 COPY scripts/onprem-keycloak-bouncycastle-patch.mjs /patch/download-bouncycastle.mjs
+COPY scripts/onprem-keycloak-freemarker-patch.mjs /patch/download-freemarker.mjs
 RUN node /patch/download.mjs \
-    && node /patch/download-bouncycastle.mjs
+    && node /patch/download-bouncycastle.mjs \
+    && node /patch/download-freemarker.mjs
 
 FROM ${KEYCLOAK_BASE_IMAGE} AS patched-base
 USER root
@@ -40,6 +42,10 @@ COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcprov-jdk18on.jar /opt/keycloak/bin/client/lib/bcprov-jdk18on-1.84.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcpkix-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcpkix-jdk18on-1.84.jar
 COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/bouncycastle/bcutil-jdk18on.jar /opt/keycloak/lib/lib/main/org.bouncycastle.bcutil-jdk18on-1.84.jar
+
+# Keycloak 26.7.3 still contains FreeMarker 2.3.32. Preserve the recorded
+# Quarkus path while installing checksum-pinned 2.3.35 before augmentation.
+COPY --from=netty-downloader --chown=0:0 --chmod=0644 /patch/freemarker/freemarker.jar /opt/keycloak/lib/lib/main/org.freemarker.freemarker-2.3.32.jar
 USER 1000
 
 FROM patched-base AS builder

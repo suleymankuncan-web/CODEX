@@ -69,6 +69,10 @@ additional one-shot capacity and are not part of the 4.0-vCPU steady budget.
   `kc.sh build --db=postgres --health-enabled=true --metrics-enabled=true`;
   the approved env file must contain the owner-signed digest of that final
   image, not a mutable proof tag or raw upstream image.
+- Before augmentation, the image replaces the base's FreeMarker 2.3.32 JAR
+  with checksum-pinned 2.3.35 at the same Quarkus path (CVE-2026-84939).
+  The build and critical-vulnerability scan must both pass; the base image
+  digest and Keycloak server version stay unchanged.
 - Startup is `start --optimized`; `start-dev`, default admin credentials, and
   realm imports containing demo users are forbidden.
 - PostgreSQL uses a dedicated `keycloak` database and role. Both credentials
