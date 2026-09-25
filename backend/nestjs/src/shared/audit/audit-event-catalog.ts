@@ -12,6 +12,7 @@ export const AUDIT_EVENT_CATALOG = [
   auditEvent("user_role_assignment.incentive_approval_updated", "ops.user_role_assignment", "auth", "Individual Report Viewer incentive approval permission changed."),
   auditEvent("incentive_package.final_approved", "ops.sales_target_incentive_region_package", "store_ops", "Authorized Report Viewer gave final incentive approval.", "feature_audit"),
   auditEvent("incentive_package.final_returned", "ops.sales_target_incentive_region_package", "store_ops", "Authorized Report Viewer returned the incentive package for correction.", "feature_audit"),
+  auditEvent("incentive_hr.delivery_started", "ops.incentive_hr_delivery", "store_ops", "An approved incentive workbook delivery was claimed for HR email.", "feature_audit"),
   auditEvent("user_role_assignment.created", "ops.user_role_assignment", "auth", "User role assignment was granted."),
   auditEvent("user_role_assignment.deactivated", "ops.user_role_assignment", "auth", "User role assignment was deactivated."),
   auditEvent(

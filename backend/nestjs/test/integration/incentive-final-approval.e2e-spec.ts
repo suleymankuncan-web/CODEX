@@ -3,17 +3,18 @@ import { buildAuthenticatedUser } from "../../src/modules/auth/auth-context.serv
 import { createIntegrationApp } from "./test-app";
 
 const companyId = "00000000-0000-4000-8000-000000000001";
-const regionId = "00000000-0000-4000-8000-000000000002";
+const managerUserId = "00000000-0000-4000-8000-000000000002";
 const packageId = "00000000-0000-4000-8000-000000000003";
 const submittedAt = "2026-09-01T10:00:00.000Z";
-const body = { period: "2026-09", regionId, regionPackageId: packageId, submittedAt };
+const body = { period: "2026-09", regionPackageId: packageId, submittedAt };
 
 describe("individual final approval HTTP boundary", () => {
   let app: Awaited<ReturnType<typeof createIntegrationApp>>;
   const query = jest.fn(async (sql: string) => {
-    if (sql.includes("FOR SHARE OF ura")) return { rows: [{ user_role_assignment_id: packageId }] };
-    if (sql.includes("package_status = 'submitted'") && sql.includes("FOR UPDATE")) return { rows: [{ sales_target_incentive_region_package_id: packageId, company_id: companyId, region_id: regionId, submitted_by_user_id: "manager", submitted_at: submittedAt }] };
-    if (sql.includes("UPDATE ops.sales_target_incentive_region_package")) return { rows: [{ sales_target_incentive_region_package_id: packageId, company_id: companyId, region_id: regionId, package_status: "admin_approved", reviewed_at: submittedAt }] };
+    if (sql.includes("FOR SHARE OF role_assignment")) return { rows: [{ user_role_assignment_id: packageId }] };
+    if (sql.includes("package_status = 'submitted'") && sql.includes("FOR UPDATE")) return { rows: [{ sales_target_incentive_region_package_id: packageId, company_id: companyId, region_id: null, manager_user_id: managerUserId, package_scope: "manager_assignment", submitted_by_user_id: managerUserId, submitted_at: submittedAt }] };
+    if (sql.includes("WITH package_stores")) return { rows: [{ stale: false }] };
+    if (sql.includes("UPDATE ops.sales_target_incentive_region_package")) return { rows: [{ sales_target_incentive_region_package_id: packageId, company_id: companyId, region_id: null, manager_user_id: managerUserId, package_status: "admin_approved", reviewed_at: submittedAt }] };
     return { rows: [] };
   });
   beforeAll(async () => {

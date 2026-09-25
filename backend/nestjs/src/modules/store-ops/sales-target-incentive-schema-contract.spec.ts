@@ -112,7 +112,7 @@ function expectSalesTargetIncentiveCloseTables(sql: string): void {
   expect(sql).toContain("final_amount NUMERIC(18,2) NOT NULL DEFAULT 0");
 }
 
-function expectSalesTargetIncentiveApprovalFlowTables(sql: string): void {
+function expectSalesTargetIncentiveApprovalFlowTables(sql: string, managerAssignmentPackages: boolean): void {
   expect(sql).toContain(
     "CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_store_review",
   );
@@ -145,9 +145,12 @@ function expectSalesTargetIncentiveApprovalFlowTables(sql: string): void {
   expect(sql).toContain(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_store_review_store_period",
   );
-  expect(sql).toContain(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_region_package_region_period",
-  );
+  if (managerAssignmentPackages) {
+    expect(sql).toContain("CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_legacy_region_package_period");
+    expect(sql).toContain("CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_manager_package_company_period");
+  } else {
+    expect(sql).toContain("CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_region_package_region_period");
+  }
   expect(sql).toContain(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_region_correction_open_unique",
   );
@@ -222,9 +225,8 @@ describe("sales target incentive schema contract", () => {
   });
 
   it("separates region manager review, correction, package submit, and admin review state", () => {
-    for (const sql of [schemaSql, approvalFlowMigrationSql]) {
-      expectSalesTargetIncentiveApprovalFlowTables(sql);
-    }
+    expectSalesTargetIncentiveApprovalFlowTables(schemaSql, true);
+    expectSalesTargetIncentiveApprovalFlowTables(approvalFlowMigrationSql, false);
     expect(approvalFlowMigrationSql).toContain(
       "COMMENT ON TABLE ops.sales_target_incentive_region_correction IS 'Region manager draft/submitted incentive corrections, converted to payable adjustments only after admin approval.'",
     );

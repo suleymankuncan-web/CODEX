@@ -6,11 +6,11 @@ describe("HR incentive Excel", () => {
   it("exports approved totals, names, original rates and notes without formula execution", () => {
     const snapshot = hrTestSnapshot();
     const workbook = XLSX.read(buildIncentiveHrWorkbook("2026-09", snapshot.packages, snapshot.rows), { type: "buffer" });
-    expect(workbook.SheetNames).toEqual(["Bölge Özeti", "Personel Primleri"]);
-    const summary = workbook.Sheets["Bölge Özeti"];
+    expect(workbook.SheetNames).toEqual(["Müdür Özeti", "Personel Primleri"]);
+    const summary = workbook.Sheets["Müdür Özeti"];
     const detail = workbook.Sheets["Personel Primleri"];
-    expect(summary.D3.v).toBe(2); // Includes the submitted store with no personnel.
-    expect(summary.F3.v).toBe(1800.25);
+    expect(summary.C3.v).toBe(2); // Includes the submitted store with no personnel.
+    expect(summary.E3.v).toBe(1800.25);
     expect(detail.B2.v).toBe("Ayşe Demir");
     expect(detail.J2.v).toBe(0.015);
     expect(detail.K2.v).toBe(1650);

@@ -391,6 +391,7 @@ describe("SalesTargetIncentiveApiService", () => {
       periodKey: "2026-05",
       stores: eligibleProjection.stores,
       roleScope: "region",
+      managerUserId: "region-user",
     });
     expect(result.data.regionWorkflow).toEqual(
       expect.objectContaining({ regionPackageStatus: "not_submitted" }),

@@ -220,7 +220,7 @@ describe("SalesTargetIncentive controllers", () => {
     const { apiService, storeController } = createHarness();
     const body = {
       period: "2026-05",
-      regionId: "00000000-0000-4000-8000-000000000101",
+      companyId: "00000000-0000-4000-8000-000000000001",
       submissionNote: "Kontrol tamamlandi",
     };
 
@@ -229,7 +229,7 @@ describe("SalesTargetIncentive controllers", () => {
     expect(apiService.submitRegionPackage).toHaveBeenCalledWith({
       actor: request.user,
       periodKey: body.period,
-      regionId: body.regionId,
+      companyId: body.companyId,
       submissionNote: body.submissionNote,
     });
   });
