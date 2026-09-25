@@ -22,9 +22,9 @@ export function IncentiveHrHandoff(input: {
   const tr = input.locale === 'tr'
   const allApproved = input.packages.length > 0 && input.packages.every(item => item.status === 'admin_approved')
   const queryKey = ['incentive-hr-handoff', input.auth?.user.userId, input.auth?.user.authorizationContextVersion, input.period]
-  const query = useQuery({ queryKey, queryFn: () => fetchOpenApiJson('/api/store/incentives/hr-handoff', { query: new URLSearchParams({ period: input.period }) }), enabled: allApproved && canApproveIncentives(input.auth), refetchOnWindowFocus: false, retry: false })
+  const query = useQuery({ queryKey, queryFn: () => fetchOpenApiJson('/api/store/incentives/hr-handoff', { query: new URLSearchParams({ period: input.period }) }), enabled: allApproved && canApproveIncentives(input.auth), refetchOnWindowFocus: false })
   const mutation = useMutation({
-    mutationFn: (version: string) => sendOpenApiJson('/api/store/incentives/hr-handoff', { method: 'POST', body: { period: input.period, version } }), retry: false,
+    mutationFn: (version: string) => sendOpenApiJson('/api/store/incentives/hr-handoff', { method: 'POST', body: { period: input.period, version } }), retry: 0,
     onSuccess: data => { client.setQueryData(queryKey, data); actionToast.success(tr ? 'Excel dosyası e-posta sunucusuna teslim edildi.' : 'The Excel attachment was accepted by the mail server.') },
     onError: error => actionToast.error(error, tr ? 'E-posta gönderimi doğrulanamadı. Gönderim durumunu kontrol edin.' : 'Email delivery could not be confirmed. Check its status.'),
     onSettled: async () => { try { await query.refetch() } finally { running.current = false } },
