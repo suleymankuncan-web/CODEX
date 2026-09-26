@@ -240,7 +240,7 @@ export class StoreMonthlyReportPackageService {
 
   private async resolveSelectedManagerStores(input: StoreMonthlyReportPackageInput): Promise<string[]> {
     if (!input.companyIds.length || !this.managerDirectoryRepository) return [];
-    const managers = await this.managerDirectoryRepository.listCompanyRegionManagerDirectory({ companyIds: input.companyIds });
+    const managers = await this.managerDirectoryRepository.listRegionManagerDirectory({ companyIds: input.companyIds });
     return managers.find(manager => manager.id === input.requestedRegionManagerUserId)?.storeIds ?? [];
   }
 

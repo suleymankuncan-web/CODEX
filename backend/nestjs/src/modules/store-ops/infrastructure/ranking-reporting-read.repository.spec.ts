@@ -164,7 +164,7 @@ describe("RankingReportingReadRepository source filters", () => {
     }
   });
 
-  it("lists active Region Managers only through direct active company store assignments", async () => {
+  it("lists active Region Managers through direct assignments for every active store type", async () => {
     const { query, repository } = createRepository();
 
     await repository.listRankingFilterOptions({
@@ -179,7 +179,7 @@ describe("RankingReportingReadRepository source filters", () => {
     expect(managerSql).toContain("ops.user_action_store_assignment manager_store");
     expect(managerSql).toContain("INNER JOIN ops.user_action_store_assignment manager_store");
     expect(managerSql).toContain("INNER JOIN ops.store assigned_store");
-    expect(managerSql).toContain("assigned_store.store_type = 'company'");
+    expect(managerSql).not.toContain("assigned_store.store_type = 'company'");
     expect(managerSql).toContain("assigned_store.status = 'active'");
     expect(managerSql).toContain("assigned_store.company_id = ANY($1::uuid[])");
     expect(managerSql).toContain("ARRAY_AGG(DISTINCT assigned_store.store_id::text)");

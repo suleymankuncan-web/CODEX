@@ -461,7 +461,7 @@ export class RankingReportingReadRepository {
     return result.rows;
   }
 
-  async listCompanyRegionManagerDirectory(input: { companyIds: string[] }) {
+  async listRegionManagerDirectory(input: { companyIds: string[] }) {
     const regionManagerParams =
       input.companyIds.length > 0 ? [input.companyIds] : [];
 
@@ -497,7 +497,6 @@ export class RankingReportingReadRepository {
          AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
         INNER JOIN ops.store assigned_store
           ON assigned_store.store_id = manager_store.store_id
-         AND assigned_store.store_type = 'company'
          AND assigned_store.status = 'active'
          ${input.companyIds.length > 0 ? `AND assigned_store.company_id = ANY($1::uuid[])` : ""}
         LEFT JOIN ops.employee employee
@@ -540,7 +539,7 @@ export class RankingReportingReadRepository {
             return `AND store.company_id = ANY($${params.length}::uuid[])`;
           })()
         : "";
-    const regionManagers = await this.listCompanyRegionManagerDirectory(input);
+    const regionManagers = await this.listRegionManagerDirectory({ companyIds: input.companyIds });
 
     const regions = await this.databaseService.query<{ id: string; label: string }>(
       `

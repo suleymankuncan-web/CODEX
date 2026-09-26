@@ -15,5 +15,5 @@ export function applyRegionManagerDirectoryOpenApi(document: {
       } },
     },
   };
-  setJsonResponseSchema(document.paths, "/api/org/region-managers", "get", "Company-scoped active Region Manager directory.", "RegionManagerDirectoryResponse");
+  setJsonResponseSchema(document.paths, "/api/org/region-managers", "get", "Active Region Managers assigned to any store type within the company scope.", "RegionManagerDirectoryResponse");
 }

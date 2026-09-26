@@ -26,7 +26,7 @@ export class RegionManagerDirectoryService {
       role,
     );
     if (!companyIds.length) return { items: [] };
-    const entries = await this.repository.listCompanyRegionManagerDirectory({ companyIds });
+    const entries = await this.repository.listRegionManagerDirectory({ companyIds });
     return {
       items: entries.filter((entry) => entry.storeIds.length > 0).map((entry) => ({
         userId: entry.id,
