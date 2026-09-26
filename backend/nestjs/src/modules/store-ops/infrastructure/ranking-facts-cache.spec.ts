@@ -102,6 +102,7 @@ it("fails open and backs off for unavailable Redis or an unavailable revision re
   expect(await cache.get("store", input)).toBeUndefined();
   expect(await cache.get("store", input)).toBeUndefined();
   expect(database.query).toHaveBeenCalledTimes(1);
+  expect(cache.metrics().unavailable).toBe(1);
   const missing = fixture();
   missing.database.query.mockRejectedValue(new Error("database unavailable"));
   expect(await missing.cache.get("store", input)).toBeUndefined();

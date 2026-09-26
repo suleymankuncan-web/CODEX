@@ -146,6 +146,7 @@ services:
       DATABASE_URL_FILE: /run/secrets/api_database_url
       DB_SSL_CA_FILE: /run/secrets/postgres_tls_ca
       REDIS_URL_FILE: /run/secrets/redis_api_url
+      RANKING_FACTS_CACHE_ENABLED: ${RANKING_FACTS_CACHE_ENABLED:-false}
       ERROR_TRACKING_ENABLED: "false"
       PHOTO_MEDIA_STORAGE_ENABLED: "false"
       PHOTO_MEDIA_SYNTHETIC_ONLY: "true"
@@ -198,6 +199,7 @@ services:
     networks: [app, data]
     environment:
       <<: *strict-local-environment
+      RANKING_FACTS_CACHE_ENABLED: "false"
       MIGRATIONS_HTTP_ENABLED: "false"
       DATABASE_URL_FILE: /run/secrets/worker_database_url
       REDIS_URL_FILE: /run/secrets/redis_worker_url

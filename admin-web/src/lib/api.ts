@@ -296,6 +296,9 @@ async function performFetchAttempt(
       requestAttempt,
     }
   } catch (error) {
+    if (request.signal?.aborted && error instanceof Error && error.name === 'AbortError') {
+      throw error
+    }
     emitApiFailureDiagnostic({
       path,
       method: request.method,

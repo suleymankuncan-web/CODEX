@@ -216,7 +216,7 @@ export async function getRankings(input?: {
   regionManagerUnassigned?: boolean
   managedPersonnelLimit?: number
   managedPersonnelOffset?: number
-}) {
+}, options?: { signal?: AbortSignal }) {
   const params = new URLSearchParams()
   params.set('periodType', input?.periodType ?? 'monthly')
   if (input?.periodEnd) params.set('periodEnd', input.periodEnd)
@@ -267,7 +267,7 @@ export async function getRankings(input?: {
     params.set('managedPersonnelOffset', String(input.managedPersonnelOffset))
   }
 
-  return fetchOpenApiJson('/api/reports/rankings', { query: params })
+  return fetchOpenApiJson('/api/reports/rankings', { query: params, ...(options?.signal ? { signal: options.signal } : {}) })
 }
 
 export async function getChecklistReport(input: {

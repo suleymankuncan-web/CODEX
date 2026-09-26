@@ -832,7 +832,7 @@ jobs:
           cat > "$secret_root/backend/worker-database-url" <<EOF
           postgresql://hr_axis_worker:$worker_password@postgres:5432/hr_axis?sslmode=verify-full
           EOF
-          printf 'user default off resetpass ~* &* +@all\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
+          printf 'user default off resetpass ~* &* +@all\nuser health on >%s ~* +ping\nuser api on >%s ~hr-axis:rate-limit:* ~hr-axis:ranking-facts:v2:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate\nuser worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"
           cat > "$secret_root/redis/health-url" <<EOF
           redis://health:$redis_health_password@redis:6379
           EOF

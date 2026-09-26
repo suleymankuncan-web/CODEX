@@ -66,7 +66,7 @@ between cache lookup and current company/store metadata reads. The final change
 has no migration, business-write hook or HG/scoring change.
 
 Activation: default-off `RANKING_FACTS_CACHE_ENABLED=true` enables only the ranking
-module. Existing Redis must allow the private `hr-axis:ranking-facts:v1:*`
+module. Existing Redis must allow the private `hr-axis:ranking-facts:v2:*`
 namespace and GET/SET/DEL/EXPIRE plus EVAL/ZADD/ZCARD/ZRANGE/ZREM/ZREMRANGEBYSCORE.
 Keep queue eviction settings unchanged. Cache payloads are bounded near 32 MiB
 per database namespace plus Redis overhead. Minute-spaced `ranking.facts-cache`
