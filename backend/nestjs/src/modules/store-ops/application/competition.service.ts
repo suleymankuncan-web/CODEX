@@ -597,8 +597,12 @@ function resolveCompetitionReadScope(input: {
   };
   actorRoleCodes?: string[];
 }): CompetitionScope {
+  if (input.actorRoleCodes?.includes("REGION_MANAGER") &&
+      !input.actorRoleCodes.some((roleCode) => ["HR_ADMIN", "REPORT_VIEWER", "SUPER_ADMIN"].includes(roleCode))) {
+    return { companyIds: [], regionIds: [], storeIds: input.actorActionScope?.assignedStoreIds ?? [] };
+  }
   const canUseBroadReadScope = (input.actorRoleCodes ?? []).some((roleCode) =>
-    ["HR_ADMIN", "REGION_MANAGER", "REPORT_VIEWER", "SUPER_ADMIN"].includes(roleCode),
+    ["HR_ADMIN", "REPORT_VIEWER", "SUPER_ADMIN"].includes(roleCode),
   );
   const storeIds = input.actorActionScope?.assignedStoreIds.length
     ? input.actorActionScope.assignedStoreIds

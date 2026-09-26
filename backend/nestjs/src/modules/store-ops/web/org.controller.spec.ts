@@ -34,7 +34,7 @@ describe("OrgController", () => {
     });
   });
 
-  it("preserves broad org scope for company and region roles", async () => {
+  it("lists only directly assigned stores for a Region Manager, not an entire region", async () => {
     const orgService = {
       listStoresByScope: jest.fn(async () => ({ items: [] })),
     };
@@ -44,13 +44,14 @@ describe("OrgController", () => {
       {
         user: {
           roleCodes: ["REGION_MANAGER"],
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-1"] } },
           scope: {
             companyIds: [],
             regionIds: ["region-1"],
             storeIds: [],
           },
           actionScope: {
-            assignedStoreIds: ["store-1"],
+            assignedStoreIds: ["store-1", "other-role-store"],
           },
         },
       },
@@ -61,8 +62,8 @@ describe("OrgController", () => {
 
     expect(orgService.listStoresByScope).toHaveBeenCalledWith({
       companyIds: [],
-      regionIds: ["region-1"],
-      storeIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
       companyId: undefined,
       regionId: "region-1",
       storeId: undefined,

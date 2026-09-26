@@ -37,16 +37,16 @@ export class MockAuthProvider implements AuthProvider {
       ? readCompanyIds
       : ["00000000-0000-0000-0000-000000000001"];
 
-    // Mock sessions intentionally carry their scope in explicit headers. Mirror
-    // that scope into each declared role's roleScopes entry so role-scoped read
-    // services (for example Region Manager visit-plan options) exercise the same
-    // authorization shape as a mapped JWT session in local development.
+    // Mirror production authorization: a Region Manager's role scope is made
+    // from assigned stores, while other mock roles retain explicit read scope.
     const roleScopes = Object.fromEntries(
-      roleCodes.map((roleCode) => [roleCode, {
-        companyIds: scopedCompanyIds,
-        regionIds: readRegionIds,
-        storeIds: readStoreIds,
-      }]),
+      roleCodes.map((roleCode) => [roleCode, roleCode === "REGION_MANAGER"
+        ? { companyIds: [], regionIds: [], storeIds: assignedStoreIds }
+        : {
+          companyIds: scopedCompanyIds,
+          regionIds: readRegionIds,
+          storeIds: readStoreIds,
+        }]),
     );
 
     return buildAuthenticatedUser({

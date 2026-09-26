@@ -59,7 +59,7 @@ describe("StorePerformanceReportingReadRepository benchmark queries", () => {
     ]);
   });
 
-  it("checks active region-manager assignment before selected store access", async () => {
+  it("checks active manager profile store assignment before selected store access", async () => {
     const { query, repository } = createRepository();
 
     await repository.canRegionManagerReadStore({
@@ -72,12 +72,13 @@ describe("StorePerformanceReportingReadRepository benchmark queries", () => {
     expect(sql).toContain("region.status = 'active'");
     expect(sql).toContain("store.status = 'active'");
     expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
-    expect(sql).toContain("ura.company_id = store.company_id");
-    expect(sql).toContain("ura.scope_type = 'region'");
-    expect(sql).toContain("ura.region_id = store.region_id");
-    expect(sql).toContain("ura.scope_type = 'store'");
-    expect(sql).toContain("ura.store_id = store.store_id");
-    expect(sql).toContain("ura.user_id = $1::uuid");
+    expect(sql).toContain("manager_store.store_id = store.store_id");
+    expect(sql).toContain("manager_store.user_id = $1::uuid");
+    expect(sql).toContain("manager_account.is_active = TRUE");
+    expect(sql).toContain("manager_store.start_at <= NOW()");
+    expect(sql).toContain("manager_store.end_at > NOW()");
+    expect(sql).not.toContain("ura.region_id = store.region_id");
+    expect(sql).not.toContain("ura.scope_type = 'region'");
     expect(sql).toContain("store.store_id = $2::uuid");
     expect(sql).toContain("ura.start_at <= NOW()");
     expect(query).toHaveBeenCalledWith(expect.any(String), [

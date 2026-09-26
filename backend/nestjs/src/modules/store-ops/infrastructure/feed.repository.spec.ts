@@ -215,6 +215,19 @@ describe("FeedRepository", () => {
     expect(params).toEqual([[companyId], 50, 0]);
   });
 
+  it("limits manager-editable posts to store targets wholly within assigned stores", async () => {
+    const { repository, databaseQueryMock } = createRepositoryHarness();
+    await repository.listManageableFeedPosts({
+      actorRoles: ["REGION_MANAGER"],
+      actorScope: { companyIds: [], regionIds: ["legacy-region"], storeIds: [storeId] },
+      limit: 50, offset: 0,
+    });
+    const sql = String(databaseQueryMock.mock.calls[0][0]);
+    expect(sql).toContain("visibility_scope_type = 'store'");
+    expect(sql).toContain("visibility_scope_ids <@ $1::uuid[]");
+    expect(databaseQueryMock.mock.calls[0][1]).toEqual([[storeId], 50, 0]);
+  });
+
   it("includes region posts for store-scoped users whose store belongs to that region", async () => {
     const { repository, databaseQueryMock } = createRepositoryHarness();
 

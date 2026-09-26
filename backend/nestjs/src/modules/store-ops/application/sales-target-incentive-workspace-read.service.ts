@@ -51,7 +51,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
       throw new ForbiddenException("Incentive workspace is not available for this role");
     }
     const projectionScope = scope.view === "region_manager"
-      ? { companyIds: [], regionIds: [], storeIds: input.actor.actionScope.assignedStoreIds }
+      ? { companyIds: [], regionIds: [], storeIds: scope.storeIds.filter((storeId) => input.actor.actionScope.assignedStoreIds.includes(storeId)) }
       : scope;
 
     const period = monthlyBounds(input.periodKey ?? currentPeriod());

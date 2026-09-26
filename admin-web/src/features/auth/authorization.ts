@@ -61,7 +61,7 @@ function canActOnStore(authSummary: AuthSessionSummary | null, storeId: string |
     return false
   }
 
-  return getAssignedStoreIds(authSummary).includes(storeId)
+  return getActionStoreIds(authSummary).includes(storeId)
 }
 
 export function canListTargetDistributionRequests(authSummary: AuthSessionSummary | null) {
@@ -99,7 +99,7 @@ export function canOpenStoreWorkforce(authSummary: AuthSessionSummary | null) {
     hasAnyRole(authSummary, ['STORE_MANAGER']) && getActionStoreIds(authSummary).length > 0
   const canOpenAsRegionManager =
     hasAnyRole(authSummary, ['REGION_MANAGER']) &&
-    (getReadStoreIds(authSummary).length > 0 || getReadRegionIds(authSummary).length > 0)
+    getActionStoreIds(authSummary).length > 0
   const canOpenAsReportViewer =
     usesStoreReportViewerView(authSummary) && getReadCompanyIds(authSummary).length > 0
 

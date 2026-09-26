@@ -32,23 +32,22 @@ export function resolveChecklistOperationalHistoryScope(
     };
   }
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
-    return scoped("region_manager", input.roleScopes?.REGION_MANAGER, "region_store");
+    return scoped("region_manager", input.roleScopes?.REGION_MANAGER);
   }
   if (input.actorRoleCodes.includes("STORE_MANAGER")) {
-    return scoped("store_manager", input.roleScopes?.STORE_MANAGER, "store");
+    return scoped("store_manager", input.roleScopes?.STORE_MANAGER);
   }
   return null;
 }
 function scoped(
   view: ChecklistOperationalHistoryView,
   scope: AuthReadScope | undefined,
-  mode: "region_store" | "store",
 ): ChecklistOperationalHistoryScope {
   return {
     view,
     companyIds: [],
-    regionIds: mode === "region_store" ? unique(scope?.regionIds ?? []) : [],
-    storeIds: mode === "region_store" || mode === "store" ? unique(scope?.storeIds ?? []) : [],
+    regionIds: [],
+    storeIds: unique(scope?.storeIds ?? []),
   };
 }
 

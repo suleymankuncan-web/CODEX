@@ -5,6 +5,7 @@ import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { StoreMonthlyReportPackageService } from "../application/store-monthly-report-package.service";
 import { GetStoreMonthlyReportPackageQueryDto } from "./dto/get-store-monthly-report-package.query";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds, resolveReportingReadScope } from "../application/region-manager-assigned-stores";
 
 type HeaderResponse = {
   setHeader(name: string, value: string): unknown;
@@ -196,11 +197,7 @@ export class StoreMonthlyReportPackageController {
   }
 
   private resolveRankingContext(user: ReportPackageRequest["user"]) {
-    const scope = resolveReportViewerCompanyScope({
-      actorRoleCodes: user.roleCodes,
-      actorScope: user.scope,
-      roleScopes: user.roleScopes,
-    });
+    const scope = resolveReportingReadScope(user);
 
     return {
       userId: user.userId,
@@ -209,7 +206,11 @@ export class StoreMonthlyReportPackageController {
       companyIds: scope.companyIds,
       regionIds: scope.regionIds,
       storeIds: scope.storeIds,
-      assignedStoreIds: user.actionScope?.assignedStoreIds ?? [],
+      assignedStoreIds: resolveRegionManagerAssignedStoreIds({
+        roleCodes: user.roleCodes,
+        roleScopes: user.roleScopes,
+        assignedStoreIds: user.actionScope?.assignedStoreIds ?? [],
+      }),
     };
   }
 
@@ -236,6 +237,18 @@ export class StoreMonthlyReportPackageController {
         actorScope: input.actorScope,
         roleScopes: input.roleScopes,
       });
+    }
+
+    if (input.actorRoleCodes.includes("REGION_MANAGER") && !input.actorRoleCodes.includes("SUPER_ADMIN")) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds: resolveRegionManagerAssignedStoreIds({
+          roleCodes: input.actorRoleCodes,
+          roleScopes: input.roleScopes,
+          assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [],
+        }),
+      };
     }
 
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>

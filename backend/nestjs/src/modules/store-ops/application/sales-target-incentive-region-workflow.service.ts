@@ -297,7 +297,10 @@ export class SalesTargetIncentiveRegionWorkflowService {
     actor: AuthenticatedUser;
     periodKey: string;
   }) {
-    if (input.actor.assignedStoreIds.length === 0) {
+    const actionStoreIds = new Set(input.actor.actionScope.assignedStoreIds);
+    const storeIds = [...new Set((input.actor.roleScopes?.REGION_MANAGER?.storeIds ?? [])
+      .filter((storeId) => actionStoreIds.has(storeId)))];
+    if (storeIds.length === 0) {
       return [];
     }
 
@@ -305,7 +308,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
       periodKey: input.periodKey,
       companyIds: [],
       regionIds: [],
-      storeIds: input.actor.assignedStoreIds,
+      storeIds,
     });
     return projection.stores;
   }

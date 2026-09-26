@@ -47,6 +47,16 @@ test('store personnel cannot open region-manager-only incentives route', async (
   await expect(page.getByText(/Prim Kontrol Sayfası|Bölge hakediş kontrolü/i)).toHaveCount(0)
 })
 
+test('region manager without assigned stores cannot open workforce', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager', { actionStoreIds: [] })
+  await installGenericStoreApiFallbacks(page)
+
+  await page.goto('/store/workforce')
+
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+  await expect(page.getByText(/Norm Kadro/i)).toHaveCount(0)
+})
+
 async function expectNoHorizontalOverflow(page: Page) {
   const overflow = await page.evaluate(() => ({
     body: document.body.scrollWidth,

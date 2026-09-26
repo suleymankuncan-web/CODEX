@@ -54,27 +54,23 @@ export class StorePerformanceReportingReadRepository {
           INNER JOIN ops.region region
             ON region.region_id = store.region_id
            AND region.company_id = store.company_id
-          INNER JOIN ops.user_role_assignment ura ON (
-            (
-              ura.scope_type = 'region'
-              AND ura.company_id = store.company_id
-              AND ura.region_id = store.region_id
-            )
-            OR (
-              ura.scope_type = 'store'
-              AND ura.company_id = store.company_id
-              AND ura.region_id = store.region_id
-              AND ura.store_id = store.store_id
-            )
-          )
+          INNER JOIN ops.user_action_store_assignment manager_store
+            ON manager_store.store_id = store.store_id
+           AND manager_store.user_id = $1::uuid
+          INNER JOIN ops.user_account manager_account
+            ON manager_account.user_id = manager_store.user_id
+           AND manager_account.is_active = TRUE
+          INNER JOIN ops.user_role_assignment ura
+            ON ura.user_id = manager_store.user_id
           INNER JOIN ops.role role
             ON role.role_id = ura.role_id
            AND role.role_code = 'REGION_MANAGER'
-          WHERE ura.user_id = $1::uuid
-            AND store.store_id = $2::uuid
+          WHERE store.store_id = $2::uuid
             AND company.status = 'active'
             AND region.status = 'active'
             AND store.status = 'active'
+            AND manager_store.start_at <= NOW()
+            AND (manager_store.end_at IS NULL OR manager_store.end_at > NOW())
             AND ura.start_at <= NOW()
             AND (ura.end_at IS NULL OR ura.end_at >= NOW())
         ) AS can_read

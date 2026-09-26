@@ -258,14 +258,14 @@ describe("WorkflowInboxService", () => {
         storeIds: [],
       },
       actorActionScope: {
-        assignedStoreIds: [],
+        assignedStoreIds: ["store-1"],
       },
     });
 
     expect(storeActionPlanRepository.listWorkflowInboxPlans).toHaveBeenCalledWith({
       companyIds: [],
-      regionIds: ["region-1"],
-      storeIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
       statuses: ["open", "in_progress", "blocked", "closed"],
       sourceTypes: ["checklist_remediation"],
       limit: 20,

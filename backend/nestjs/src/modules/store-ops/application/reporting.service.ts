@@ -412,8 +412,8 @@ export class ReportingService {
 
     if (
       input.roleCodes.includes("REGION_MANAGER") &&
-      assignment.region_id &&
-      input.regionIds.includes(assignment.region_id)
+      assignment.store_id &&
+      input.assignedStoreIds.includes(assignment.store_id)
     ) {
       return;
     }

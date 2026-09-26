@@ -37,6 +37,8 @@ export type FeedActor = {
   actorUserId: string;
   actorRoles: string[];
   actorScope: FeedScope;
+  actorActionScope?: { assignedStoreIds: string[] };
+  actorRegionManagerStoreIds?: string[];
 };
 
 export type CreateFeedPostInput = FeedActor & {

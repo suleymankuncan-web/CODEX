@@ -110,7 +110,7 @@ describe("WorkflowInboxService request center", () => {
     });
   });
 
-  it("uses region read scope without falling back to assigned action stores", async () => {
+  it("uses only the manager's active store assignments, not the legacy region scope", async () => {
     const requestCenterReadRepository = {
       listRequests: jest.fn(async () => ({
         items: [],
@@ -140,8 +140,8 @@ describe("WorkflowInboxService request center", () => {
     expect(requestCenterReadRepository.listRequests).toHaveBeenCalledWith(
       expect.objectContaining({
         companyIds: [],
-        regionIds: ["region-1"],
-        storeIds: [],
+        regionIds: [],
+        storeIds: ["action-store-1"],
       }),
     );
   });

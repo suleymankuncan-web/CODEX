@@ -78,7 +78,7 @@ describe("resolveSalesTargetIncentiveWorkspaceScope", () => {
     ).toEqual({
       view: "region_manager",
       companyIds: [],
-      regionIds: ["manager-region"],
+      regionIds: [],
       storeIds: ["manager-store"],
       capabilities: {
         canMarkStoreReview: false,

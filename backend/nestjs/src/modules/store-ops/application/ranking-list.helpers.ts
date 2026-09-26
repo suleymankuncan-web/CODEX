@@ -323,29 +323,17 @@ function isOutsideScopedStoreRead(
   row: Pick<StoreRankingRow | PersonnelRankingRow, "regionId" | "regionManagerUserId" | "storeId">,
   filters: RankingFilters,
 ) {
-  const scopedStoreIds = uniqueStrings([
-    ...(filters.storeIds ?? []),
-    ...(filters.assignedStoreIds ?? []),
-  ]);
-  const scopedRegionIds = filters.regionIds ?? [];
   const shouldUseReadScope = filters.enforceAssignedReadScope === true;
 
-  if (shouldUseReadScope && scopedStoreIds.length > 0) {
-    return row.storeId === null || !scopedStoreIds.includes(row.storeId);
-  }
-
-  if (shouldUseReadScope && scopedRegionIds.length > 0) {
-    return row.regionId === null || !scopedRegionIds.includes(row.regionId);
+  if (shouldUseReadScope) {
+    const assignedStoreIds = filters.assignedStoreIds ?? [];
+    return row.storeId === null || !assignedStoreIds.includes(row.storeId);
   }
 
   return Boolean(
     filters.regionManagerUserId &&
       row.regionManagerUserId !== filters.regionManagerUserId,
   );
-}
-
-function uniqueStrings(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean)));
 }
 
 export function selectGlobalRows<Row>(

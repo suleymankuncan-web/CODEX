@@ -73,7 +73,15 @@ export class TargetWorkspaceReadService {
     });
     const storeIds = page.items.map((row) => row.store_id);
     const [hierarchyResult, summaryResult, personnelResult, monthResult] = await Promise.allSettled([
-      this.repository.listHierarchy({ scope: scope.readScope, periodEnd: period.periodEnd }),
+      this.repository.listHierarchy({
+        scope: scope.readScope,
+        periodEnd: period.periodEnd,
+        ...(scope.view === "region_manager"
+          ? { managerUserId: input.actor.userId }
+          : input.regionManagerUserId
+            ? { managerUserId: input.regionManagerUserId }
+            : {}),
+      }),
       this.repository.summarizeScope({ scope: scope.readScope, periodStart: period.periodStart }),
       this.repository.listPersonnel({ storeIds, periodEnd: period.periodEnd }),
       this.repository.listMonthStatuses({

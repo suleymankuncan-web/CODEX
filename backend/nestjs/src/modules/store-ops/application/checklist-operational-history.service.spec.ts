@@ -3,7 +3,7 @@ import { ChecklistOperationalHistoryService } from "./checklist-operational-hist
 
 const storeId = "11111111-1111-4111-8111-111111111111";
 const roleScopes = {
-  REGION_MANAGER: { companyIds: [], regionIds: ["33333333-3333-4333-8333-333333333333"], storeIds: [] },
+  REGION_MANAGER: { companyIds: [], regionIds: ["33333333-3333-4333-8333-333333333333"], storeIds: [storeId] },
 };
 const actorReadScope = { companyIds: [], regionIds: roleScopes.REGION_MANAGER.regionIds, storeIds: [] };
 
@@ -55,7 +55,7 @@ describe("ChecklistOperationalHistoryService", () => {
     expect(result.page).toEqual({ hasMore: true, nextCursor: expect.any(String) });
     expect(repository.read).toHaveBeenCalledWith(expect.objectContaining({
       storeId, range: "6m", kinds: ["task_assigned"], cursor: null, limit: 21,
-      companyIds: [], regionIds: roleScopes.REGION_MANAGER.regionIds, storeIds: [],
+      companyIds: [], regionIds: [], storeIds: [storeId],
     }));
 
     await service.read({

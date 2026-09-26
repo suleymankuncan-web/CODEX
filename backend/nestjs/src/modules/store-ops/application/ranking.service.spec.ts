@@ -284,7 +284,7 @@ describe("RankingService", () => {
       companyIds: ["company-1"],
       regionIds: ["region-1"],
       storeIds: [],
-      assignedStoreIds: [],
+      assignedStoreIds: ["store-105"],
       periodType: "daily",
       periodStart: "2026-05-15",
     });
@@ -517,7 +517,7 @@ describe("RankingService", () => {
       companyIds: ["company-1"],
       regionIds: ["region-1"],
       storeIds: [],
-      assignedStoreIds: [],
+      assignedStoreIds: ["store-001"],
       periodType: "monthly",
     });
 

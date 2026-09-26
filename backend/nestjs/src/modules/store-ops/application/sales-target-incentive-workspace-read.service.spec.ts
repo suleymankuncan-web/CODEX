@@ -290,8 +290,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       periodKey: "2026-05",
     });
     expect(Object.values(unrelated.capabilities).every((value) => value === false)).toBe(true);
-    expect(unrelated.managerGroups[0].capabilities).toEqual({ canSubmitPackage: false });
-    expect(unrelated.managerGroups[0].stores.every((store) => Object.values(store.capabilities).every((value) => value === false))).toBe(true);
+    expect(unrelated.managerGroups).toEqual([]);
   });
 
   it("keeps projection-only and submitted-package stores read-only", async () => {

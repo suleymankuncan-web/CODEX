@@ -66,4 +66,16 @@ describe("KPI review regressions", () => {
     expect(repository.listRankingPersonnelKpiRows).toHaveBeenCalledWith(expect.objectContaining({isRange: true, periodEnd: input.periodEnd}));
     await expect(reporting.getPersonnelPerformance({...input, targetEmployeeId: employeeId, storeIds: ["other"], assignedStoreIds: ["other"]})).rejects.toThrow();
   });
+  it("authorizes manager profiles by active store assignment, not by region", async () => {
+    const { reporting } = fixture();
+    await expect(reporting.getPersonnelPerformance({
+      ...scope, roleCodes: ["REGION_MANAGER"], companyIds: [], regionIds: [], storeIds: ["store-1"],
+      targetEmployeeId: employeeId, periodType: "daily", periodStart: "2026-09-05", periodEnd: "2026-09-10",
+    })).resolves.toMatchObject({ source: { mode: "live" } });
+    await expect(reporting.getPersonnelPerformance({
+      ...scope, roleCodes: ["REGION_MANAGER"], companyIds: [], regionIds: ["region-1"],
+      storeIds: [], assignedStoreIds: ["other-store"], targetEmployeeId: employeeId,
+      periodType: "daily", periodStart: "2026-09-05", periodEnd: "2026-09-10",
+    })).rejects.toThrow();
+  });
 });

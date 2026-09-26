@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from './test-fixtures'
-import { installGenericStoreApiFallbacks, installStoreContractSession, regionId } from './store-page-contract-fixtures'
+import { installGenericStoreApiFallbacks, installStoreContractSession, regionId, storeIds } from './store-page-contract-fixtures'
 import { storeFeedFixture } from './store-surfaces-profile-fixtures'
 
 const pinnedBody = 'Haftalık mağaza duyurusu yayınlandı.'
@@ -15,9 +15,12 @@ for (const persona of ['regionManager', 'storeManager', 'reportViewer'] as const
     test(`Azure announcements ${persona} renders and filters accessibly at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 })
       await page.clock.setFixedTime(new Date('2026-09-12T12:00:00.000Z'))
-      await installStoreContractSession(page, persona)
+      await installStoreContractSession(page, persona, persona === 'regionManager' ? { actionStoreIds: [storeIds[0]] } : undefined)
       await installGenericStoreApiFallbacks(page)
-      await page.route('**/api/feed?**', route => route.fulfill({ json: { items: posts, meta: { count: posts.length, total: posts.length, limit: 50, offset: 0 } } }))
+      const visiblePosts = persona === 'regionManager'
+        ? [{ ...posts[0], visibilityScopeType: 'store', visibilityScopeIds: [storeIds[0]] }, posts[1]]
+        : posts
+      await page.route('**/api/feed?**', route => route.fulfill({ json: { items: visiblePosts, meta: { count: visiblePosts.length, total: visiblePosts.length, limit: 50, offset: 0 } } }))
       await page.goto('/store/feed')
       const surface = page.locator('.store-feed-azure')
       const rows = surface.getByTestId('store-feed-post-row')
@@ -36,7 +39,7 @@ for (const persona of ['regionManager', 'storeManager', 'reportViewer'] as const
         await expect(publish).toBeDisabled()
         await composer.fill('Mağaza ekibine yeni duyuru.')
         await expect(publish).toBeEnabled()
-        await expect(options).toHaveCount(2)
+        await expect(options).toHaveCount(1)
         await options.first().focus()
         await page.keyboard.press('Enter')
         await expect(page.getByRole('menuitem', { name: 'Düzenle', exact: true })).toBeVisible()

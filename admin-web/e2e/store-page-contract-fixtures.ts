@@ -41,7 +41,7 @@ export function createStoreContractSession(
   const roleCode = roleByPersona[persona]
   const isRegionManager = persona === 'regionManager'
   const isStoreScoped = persona !== 'regionManager' && persona !== 'reportViewer'
-  const assignedStoreIds = options?.actionStoreIds ?? (persona === 'storeManager' ? [storeIds[0]] : [])
+  const assignedStoreIds = options?.actionStoreIds ?? (persona === 'storeManager' ? [storeIds[0]] : isRegionManager ? [...storeIds] : [])
   const readStoreIds = isRegionManager ? [...storeIds] : isStoreScoped ? [storeIds[0]] : []
   const actionStoreIds = assignedStoreIds
 

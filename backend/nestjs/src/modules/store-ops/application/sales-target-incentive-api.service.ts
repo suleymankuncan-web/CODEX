@@ -181,7 +181,8 @@ export class SalesTargetIncentiveApiService {
       ? "region"
       : "store";
     const storeIds = input.actor.roleCodes.includes("REGION_MANAGER")
-      ? input.actor.assignedStoreIds
+      ? (input.actor.roleScopes?.REGION_MANAGER?.storeIds ?? [])
+        .filter((storeId) => input.actor.actionScope.assignedStoreIds.includes(storeId))
       : this.resolveAssignedOrReadStores(input.actor);
     const projection = await this.readModelService.buildCurrentProjection({
       periodKey: input.periodKey,

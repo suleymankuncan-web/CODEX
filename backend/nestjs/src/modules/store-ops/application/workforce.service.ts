@@ -731,8 +731,12 @@ export class WorkforceService {
 
     const assignedStoreIds = input.actorActionScope?.assignedStoreIds ?? [];
     const hasActionStore = assignedStoreIds.includes(storeId);
+    if (actorRoleCodes.includes("REGION_MANAGER") &&
+        !actorRoleCodes.some((roleCode) => ["HR_ADMIN", "SUPER_ADMIN"].includes(roleCode))) {
+      return hasActionStore;
+    }
     const canUseReadScope = (input.actorRoleCodes ?? []).some((roleCode) =>
-      ["REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN"].includes(roleCode),
+      ["HR_ADMIN", "SUPER_ADMIN"].includes(roleCode),
     );
     const canUseStoreManagerActionScope =
       actorRoleCodes.includes("STORE_MANAGER") && hasActionStore;
@@ -763,10 +767,6 @@ export class WorkforceService {
         (input.actorScope.companyIds ?? []).includes(store.company_id) ||
         regionIds.includes(store.region_id)
       );
-    }
-
-    if (actorRoleCodes.includes("REGION_MANAGER")) {
-      return regionIds.includes(store.region_id);
     }
 
     return false;

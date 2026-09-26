@@ -2,9 +2,9 @@ export const adminFeedTr = {
   'adminFeed.unavailableTitle': 'Duyurular kullanılamıyor',
   'adminFeed.unavailableCopy':
     'Bu yüzey HR admin, süper admin veya bölge yöneticisi rolü gerektirir.',
-  'adminFeed.regionMissingTitle': 'Bölge kapsamı eksik',
+  'adminFeed.regionMissingTitle': 'Mağaza ataması eksik',
   'adminFeed.regionMissingCopy':
-    'Bölge yöneticisi duyuru yayınlamak için token/read scope içinde en az bir bölge id taşımalı.',
+    'Bölge müdürünün duyuru yayınlayabilmesi için profilinde en az bir aktif mağaza ataması olmalı.',
   'adminFeed.loadingTitle': 'Duyurular yükleniyor',
   'adminFeed.loadingCopy': 'Duyuru kütüphanesi hazırlanıyor.',
   'adminFeed.errorTitle': 'Duyurular açılamadı',
@@ -31,8 +31,9 @@ export const adminFeedTr = {
   'adminFeed.title': 'Başlık',
   'adminFeed.body': 'Gövde',
   'adminFeed.scope': 'Kapsam',
-  'adminFeed.scopeId': '{scope} id',
+  'adminFeed.scopeId': '{scope}',
   'adminFeed.selectScope': 'Kapsam seç',
+  'adminFeed.assignedStores': 'Atanan {count} mağazanın tamamı',
   'adminFeed.linkLabel': 'Link etiketi',
   'adminFeed.linkUrl': 'Link URL',
   'adminFeed.startsAt': 'Başlangıç zamanı',
@@ -53,7 +54,7 @@ export const adminFeedTr = {
   'adminFeed.competitionStages': 'Yarışma etapları',
   'adminFeed.competitionStagesValue': 'Feed üzerinden mutasyon yok',
   'adminFeed.regionManager': 'Bölge yöneticisi',
-  'adminFeed.regionManagerValue': 'Sadece kendi bölgesi',
+  'adminFeed.regionManagerValue': 'Yalnızca atanan mağazalar',
 
   'adminFeed.libraryEyebrow': 'Post kütüphanesi',
   'adminFeed.libraryTitle': 'Yönetilen feed postları',
@@ -80,9 +81,9 @@ export const adminFeedEn: Record<keyof typeof adminFeedTr, string> = {
   'adminFeed.unavailableTitle': 'Announcements unavailable',
   'adminFeed.unavailableCopy':
     'This surface requires an HR admin, super admin, or region manager role.',
-  'adminFeed.regionMissingTitle': 'Region scope missing',
+  'adminFeed.regionMissingTitle': 'Store assignment missing',
   'adminFeed.regionMissingCopy':
-    'A region manager must carry at least one region scope in token/read access to publish announcements.',
+    'A region manager needs at least one active store assignment on their profile to publish announcements.',
   'adminFeed.loadingTitle': 'Loading feed',
   'adminFeed.loadingCopy': 'Preparing the announcement library.',
   'adminFeed.errorTitle': 'Announcements could not be opened',
@@ -109,8 +110,9 @@ export const adminFeedEn: Record<keyof typeof adminFeedTr, string> = {
   'adminFeed.title': 'Title',
   'adminFeed.body': 'Body',
   'adminFeed.scope': 'Scope',
-  'adminFeed.scopeId': '{scope} id',
+  'adminFeed.scopeId': '{scope}',
   'adminFeed.selectScope': 'Select scope',
+  'adminFeed.assignedStores': 'All {count} assigned stores',
   'adminFeed.linkLabel': 'Link label',
   'adminFeed.linkUrl': 'Link URL',
   'adminFeed.startsAt': 'Starts at',
@@ -131,7 +133,7 @@ export const adminFeedEn: Record<keyof typeof adminFeedTr, string> = {
   'adminFeed.competitionStages': 'Competition stages',
   'adminFeed.competitionStagesValue': 'No mutation from feed',
   'adminFeed.regionManager': 'Region manager',
-  'adminFeed.regionManagerValue': 'Own region only',
+  'adminFeed.regionManagerValue': 'Assigned stores only',
 
   'adminFeed.libraryEyebrow': 'Post library',
   'adminFeed.libraryTitle': 'Managed feed posts',

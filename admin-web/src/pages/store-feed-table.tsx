@@ -15,7 +15,7 @@ type StoreFeedTableProps = {
   posts: FeedPost[]
   locale: AppLocale
   t: TranslateFunction
-  canManage: boolean
+  canManagePost: (post: FeedPost) => boolean
   editingPostId: string | null
   editingBody: string
   isMutationPending: boolean
@@ -30,12 +30,13 @@ type StoreFeedTableProps = {
 export function StoreFeedTable(input: StoreFeedTableProps) {
   const { t } = input
   const tr = input.locale === 'tr'
+  const hasManageablePosts = input.posts.some(input.canManagePost)
   return <Table className="store-feed-table" aria-label={t('storeFeed.heroEyebrow')}>
     <TableHeader><TableRow>
       <TableHead scope="col">{tr ? 'Duyuru' : 'Announcement'}</TableHead>
       <TableHead scope="col">{tr ? 'Paylaşım tarihi' : 'Published'}</TableHead>
       <TableHead scope="col">{tr ? 'Durum' : 'Status'}</TableHead>
-      {input.canManage ? <TableHead scope="col"><span className="tw:sr-only">{t('storeFeed.postOptionsAria')}</span></TableHead> : null}
+      {hasManageablePosts ? <TableHead scope="col"><span className="tw:sr-only">{t('storeFeed.postOptionsAria')}</span></TableHead> : null}
     </TableRow></TableHeader>
     <TableBody>{input.posts.map(post => {
       const destination = post.targetRoute ?? post.linkUrl
@@ -48,14 +49,14 @@ export function StoreFeedTable(input: StoreFeedTableProps) {
         </TableCell>
         <TableCell className="store-feed-date"><time dateTime={post.publishedAt ?? post.createdAt}>{formatPostTimestamp(post.publishedAt ?? post.createdAt, input.locale, t)}</time></TableCell>
         <TableCell className="store-feed-status"><Badge variant={post.isPinned ? 'secondary' : 'outline'}>{post.isPinned ? <><Pin data-icon="inline-start" />{t('storeFeed.pinned')}</> : t('storeFeed.published')}</Badge></TableCell>
-        {input.canManage ? <TableCell className="store-feed-actions"><DropdownMenu>
+        {hasManageablePosts ? <TableCell className="store-feed-actions">{input.canManagePost(post) ? <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" disabled={input.isMutationPending} aria-label={t('storeFeed.postOptionsAria')}><MoreVertical /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end"><DropdownMenuGroup>
             <DropdownMenuItem onSelect={() => input.onStartEdit(post)}><Pencil />{t('storeFeed.editAction')}</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => input.onTogglePin(post)}><Pin />{post.isPinned ? t('storeFeed.unpinAction') : t('storeFeed.pinAction')}</DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => input.onRemove(post)}><Trash2 />{t('storeFeed.archiveAction')}</DropdownMenuItem>
           </DropdownMenuGroup></DropdownMenuContent>
-        </DropdownMenu></TableCell> : null}
+        </DropdownMenu> : null}</TableCell> : null}
       </TableRow>
     })}</TableBody>
   </Table>

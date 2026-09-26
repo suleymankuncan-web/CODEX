@@ -62,19 +62,16 @@ export function resolveTaskCommandWorkspaceScope(input: {
   }
 
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
-    const scope = roleScope(input, "REGION_MANAGER");
+    const scope = input.roleScopes?.REGION_MANAGER;
     if (!scope) return null;
-    const regionIds = unique(scope.regionIds);
     const actionStores = unique(input.actorActionScope.assignedStoreIds);
-    const scopedStores = unique(scope.storeIds);
-    const storeIds = scopedStores.length === 0
-      ? actionStores
-      : actionStores.filter((storeId) => scopedStores.includes(storeId));
-    if (storeIds.length === 0 || (regionIds.length === 0 && scopedStores.length === 0)) return null;
+    const scopedStores = new Set(unique(scope.storeIds));
+    const storeIds = actionStores.filter((storeId) => scopedStores.has(storeId));
+    if (storeIds.length === 0) return null;
     return {
       view: "region_manager",
       companyIds: [],
-      regionIds,
+      regionIds: [],
       storeIds,
       capabilities: { ...readOnlyCapabilities, canReview: true },
     };

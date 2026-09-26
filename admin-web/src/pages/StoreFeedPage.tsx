@@ -39,25 +39,21 @@ function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
   const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
   const adminFeedQueryKey = getAdminFeedQueryKey(input.authSummary)
   const roleCodes = input.authSummary?.user.roleCodes ?? []
-  const regionIds = useMemo(() => {
-    return [
-      ...new Set([
-        ...(input.authSummary?.user.readScope.regionIds ?? []),
-        ...(input.authSummary?.user.scope.regionIds ?? []),
-      ]),
-    ]
-  }, [input.authSummary])
+  const isRegionManagerRead = roleCodes.includes('REGION_MANAGER') && !roleCodes.includes('REPORT_VIEWER')
+  const assignedStoreIds = useMemo(() => [
+    ...new Set(input.authSummary?.user.actionScope.assignedStoreIds ?? []),
+  ].sort(), [input.authSummary])
   const storeCount = useMemo(() => {
+    if (isRegionManagerRead) return assignedStoreIds.length
     return new Set([
       ...(input.authSummary?.user.readScope.storeIds ?? []),
       ...(input.authSummary?.user.scope.storeIds ?? []),
       ...(input.authSummary?.user.assignedStoreIds ?? []),
     ]).size
-  }, [input.authSummary])
-  const activeRegionId = regionIds[0] ?? ''
-  const canComposeRegionFeed = roleCodes.includes('REGION_MANAGER') && activeRegionId.length > 0
+  }, [assignedStoreIds, input.authSummary, isRegionManagerRead])
+  const canComposeStoreFeed = isRegionManagerRead && assignedStoreIds.length > 0
   const roleLabel = roleCodes.includes('REPORT_VIEWER') ? t('storeFeed.role.reportViewer') : formatRoleLabel(roleCodes, t)
-  const contextLabel = canComposeRegionFeed ? t('storeFeed.context.regionStores') : roleLabel
+  const contextLabel = canComposeStoreFeed ? t('storeFeed.context.regionStores') : roleLabel
   const [notice, setNotice] = useState<TranslationKey | null>(null)
   const [body, setBody] = useState('')
   const [pinNextPost, setPinNextPost] = useState(false)
@@ -84,7 +80,7 @@ function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
   }, [hiddenPostIds, rawPosts])
   const pinnedPosts = visiblePosts.filter((post) => post.isPinned)
   const todayPosts = visiblePosts.filter((post) => isToday(post.publishedAt ?? post.createdAt))
-  const canPublish = body.trim().length > 0 && canComposeRegionFeed
+  const canPublish = body.trim().length > 0 && canComposeStoreFeed
 
   const filteredPosts = filterStoreFeedPosts(visiblePosts, query, filter, locale)
   const createMutation = useMutation({
@@ -169,14 +165,14 @@ function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
   function publishPost() {
     const nextBody = body.trim()
 
-    if (!nextBody || !canComposeRegionFeed) return
+    if (!nextBody || !canComposeStoreFeed) return
 
     createMutation.mutate({
       postType: 'announcement',
       title: derivePostTitle(nextBody),
       body: nextBody,
-      visibilityScopeType: 'region',
-      visibilityScopeIds: [activeRegionId],
+      visibilityScopeType: 'store',
+      visibilityScopeIds: assignedStoreIds,
       isPinned: pinNextPost,
       publishStatus: 'published',
     })
@@ -273,7 +269,7 @@ function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
         ].map((item, index) => <Card key={item.label} size="sm"><CardHeader><CardTitle><item.icon aria-hidden="true" />{item.label}</CardTitle></CardHeader><CardContent>{index < 3 && (feedQuery.isLoading || feedQuery.isError) ? <span aria-label={t('storeFeed.unavailable')}>—</span> : item.value}</CardContent></Card>)}
       </div>
 
-      {canComposeRegionFeed ? <Card size="sm" className="store-feed-composer" aria-label={t('storeFeed.composerAria')}>
+      {canComposeStoreFeed ? <Card size="sm" className="store-feed-composer" aria-label={t('storeFeed.composerAria')}>
         <CardHeader><CardTitle>{t('storeFeed.composerAria')}</CardTitle><CardDescription>{contextLabel}</CardDescription></CardHeader>
         <CardContent><FieldGroup><Field><FieldLabel htmlFor="store-feed-body">{t('storeFeed.composerBodyAria')}</FieldLabel><Textarea id="store-feed-body" placeholder={t('storeFeed.composerPlaceholder')} rows={2} value={body} disabled={createMutation.isPending} onChange={event => setBody(event.target.value)} /></Field></FieldGroup></CardContent>
         <CardFooter><Button variant="outline" size="sm" aria-pressed={pinNextPost} disabled={createMutation.isPending} onClick={() => setPinNextPost(current => !current)}><Pin data-icon="inline-start" />{t('storeFeed.pinAction')}</Button><Button size="sm" disabled={!canPublish || createMutation.isPending} onClick={publishPost}><Send data-icon="inline-start" />{t('storeFeed.shareAction')}</Button></CardFooter>
@@ -295,7 +291,7 @@ function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
           {feedQuery.isLoading ? <div role="status" className="store-feed-loading"><span>{t('storeFeed.loadingTitle')}</span>{[0, 1, 2].map(item => <Skeleton key={item} className="tw:h-16 tw:w-full" />)}</div> : null}
           {feedQuery.isError ? <Alert variant="destructive"><AlertTitle>{t('storeFeed.errorTitle')}</AlertTitle><AlertDescription>{getUserFacingErrorMessage(feedQuery.error, t('storeFeed.loadError'))}<Button variant="outline" size="sm" disabled={feedQuery.isFetching} onClick={() => void feedQuery.refetch()}>{t('storeFeed.retryAction')}</Button></AlertDescription></Alert> : null}
           {!feedQuery.isLoading && !feedQuery.isError && !filteredPosts.length ? <Empty><EmptyHeader><EmptyTitle>{visiblePosts.length ? t('storeFeed.noMatchTitle') : t('storeFeed.emptyTitle')}</EmptyTitle><EmptyDescription>{visiblePosts.length ? t('storeFeed.noMatchCopy') : t('storeFeed.productionEmptyCopy')}</EmptyDescription></EmptyHeader>{query || filter !== 'all' ? <Button variant="outline" size="sm" onClick={() => { setQuery(''); setFilter('all') }}>{t('storeFeed.clearFilters')}</Button> : null}</Empty> : null}
-          {!feedQuery.isLoading && !feedQuery.isError && filteredPosts.length ? <StoreFeedTable posts={filteredPosts} locale={locale} t={t} canManage={canComposeRegionFeed} editingPostId={editingPostId} editingBody={editingBody} onEditBodyChange={setEditingBody} onStartEdit={startEditingPost} onCancelEdit={cancelEditingPost} onSaveEdit={saveEditingPost} onTogglePin={togglePostPin} onRemove={removePost} isMutationPending={updateMutation.isPending || pinMutation.isPending || unpinMutation.isPending || archiveMutation.isPending} /> : null}
+          {!feedQuery.isLoading && !feedQuery.isError && filteredPosts.length ? <StoreFeedTable posts={filteredPosts} locale={locale} t={t} canManagePost={post => canComposeStoreFeed && post.visibilityScopeType === 'store' && post.visibilityScopeIds.length > 0 && post.visibilityScopeIds.every(storeId => assignedStoreIds.includes(storeId))} editingPostId={editingPostId} editingBody={editingBody} onEditBodyChange={setEditingBody} onStartEdit={startEditingPost} onCancelEdit={cancelEditingPost} onSaveEdit={saveEditingPost} onTogglePin={togglePostPin} onRemove={removePost} isMutationPending={updateMutation.isPending || pinMutation.isPending || unpinMutation.isPending || archiveMutation.isPending} /> : null}
         </CardContent>
       </Card>
     </CommandCanvasPage>

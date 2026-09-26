@@ -77,7 +77,7 @@ function regionManagerActor(storeIds: string[]) {
   return buildAuthenticatedUser({
     userId: "u", roleCodes: ["REGION_MANAGER"], actionScope: { assignedStoreIds: storeIds },
     roleScopes: {
-      REGION_MANAGER: { companyIds: [companyId], regionIds: [regionId], storeIds: [] },
+      REGION_MANAGER: { companyIds: [], regionIds: [], storeIds },
     },
   });
 }
@@ -340,6 +340,7 @@ describe("Targets manager selection", () => {
     expect(repo.listStorePage).toHaveBeenCalledWith(expect.objectContaining({ scope, offset: 50 }));
     expect(repo.summarizeScope).toHaveBeenCalledWith(expect.objectContaining({ scope }));
     expect(repo.listHierarchy).toHaveBeenCalledWith(expect.objectContaining({ scope }));
+    expect(repo.listHierarchy).toHaveBeenCalledWith(expect.objectContaining({ managerUserId: "manager" }));
   });
   it.each(["unknown", "empty"])("returns no stores for %s without broadening scope", async regionManagerUserId => {
     const repo = repository();

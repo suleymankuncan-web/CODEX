@@ -12,6 +12,7 @@ import { GetTurnoverReportQueryDto } from "./dto/get-turnover-report.query";
 import { GetWorkforceReportQueryDto } from "./dto/get-workforce-report.query";
 import { ListSnapshotRunsQueryDto } from "./dto/list-snapshot-runs.query";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds, resolveReportingReadScope } from "../application/region-manager-assigned-stores";
 
 type StoreReadScope = {
   companyIds: string[];
@@ -246,7 +247,7 @@ export class ReportingController {
       companyIds: personnelProfileReadScope.companyIds,
       regionIds: personnelProfileReadScope.regionIds,
       storeIds: personnelProfileReadScope.storeIds,
-      assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
+      assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [] }),
       mode: query.mode,
       snapshotDate: query.snapshotDate,
       periodType: query.periodType,
@@ -274,9 +275,7 @@ export class ReportingController {
   ) {
     const reportViewerScope = this.resolveReadScope(request.user);
     const isReportViewer = request.user.roleCodes.includes("REPORT_VIEWER");
-    const assignedStoreIds = request.user.actionScope?.assignedStoreIds.length
-      ? request.user.actionScope.assignedStoreIds
-      : request.user.scope.storeIds;
+    const assignedStoreIds = resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope?.assignedStoreIds.length ? request.user.actionScope.assignedStoreIds : request.user.scope.storeIds });
     const isRegionManagerRead =
       request.user.roleCodes.includes("REGION_MANAGER") &&
       !request.user.roleCodes.includes("SUPER_ADMIN");
@@ -371,7 +370,7 @@ export class ReportingController {
       employeeId: request.user.employeeId,
       roleCodes: request.user.roleCodes,
       ...this.resolveReadScope(request.user),
-      assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
+      assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [] }),
       periodType: query.periodType ?? "monthly",
       periodStart: query.periodStart, periodEnd: query.periodEnd,
       regionManagerUserId: query.regionManagerUserId,
@@ -412,7 +411,7 @@ export class ReportingController {
       employeeId: request.user.employeeId,
       ...this.resolveReadScope(request.user),
       roleCodes: request.user.roleCodes,
-      assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
+      assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [] }),
       periodType: query.periodType,
       periodStart: query.periodStart,
       snapshotDate: query.snapshotDate,
@@ -471,8 +470,8 @@ export class ReportingController {
     });
   }
 
-  private resolveReadScope(user: { roleCodes: string[]; scope: StoreReadScope; roleScopes?: ReportViewerRoleScopes }) {
-    return resolveReportViewerCompanyScope({ actorRoleCodes: user.roleCodes, actorScope: user.scope, roleScopes: user.roleScopes });
+  private resolveReadScope(user: { roleCodes: string[]; scope: StoreReadScope; roleScopes?: ReportViewerRoleScopes; actionScope?: { assignedStoreIds: string[] } }) {
+    return resolveReportingReadScope(user);
   }
 
   private resolvePersonnelProfileReadScope(input: {
@@ -524,11 +523,7 @@ export class ReportingController {
     }
 
     if (input.actorRoleCodes.includes("REGION_MANAGER")) {
-      return {
-        companyIds: [],
-        regionIds: input.actorScope.regionIds,
-        storeIds: [],
-      };
+      return { companyIds: [], regionIds: [], storeIds: resolveRegionManagerAssignedStoreIds({ roleCodes: input.actorRoleCodes, roleScopes: input.roleScopes, assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [] }) };
     }
 
     return {
@@ -557,6 +552,10 @@ export class ReportingController {
         actorScope: input.actorScope,
         roleScopes: input.roleScopes,
       });
+    }
+
+    if (input.actorRoleCodes.includes("REGION_MANAGER") && !input.actorRoleCodes.includes("SUPER_ADMIN")) {
+      return { companyIds: [], regionIds: [], storeIds: resolveRegionManagerAssignedStoreIds({ roleCodes: input.actorRoleCodes, roleScopes: input.roleScopes, assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [] }) };
     }
 
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>

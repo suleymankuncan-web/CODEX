@@ -12,6 +12,7 @@ describe("WorkflowInboxController request center", () => {
       user: buildAuthenticatedUser({
         userId: "00000000-0000-4000-8000-000000000901",
         roleCodes: ["REGION_MANAGER"],
+        roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["00000000-0000-4000-8000-000000000201"] } },
         readScope: {
           companyIds: [],
           regionIds: ["00000000-0000-4000-8000-000000000010"],

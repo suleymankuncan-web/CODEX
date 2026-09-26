@@ -153,7 +153,7 @@ export class StoreActionPhotoReviewRepository {
 
   async review(input: {
     actionPlanId: string; solutionAttemptId: string; actorUserId: string;
-    actorRegionIds: readonly string[]; actorStoreIds: readonly string[];
+    actorStoreIds: readonly string[];
     decision: "approve" | "reject"; reason?: string; expectedVersion: number;
     idempotencyKey: string; actor: ActorSnapshot;
   }): Promise<StoreActionPhotoReviewProjection> {
@@ -161,7 +161,7 @@ export class StoreActionPhotoReviewRepository {
       const planResult = await client.query<any>(`SELECT * FROM ops.store_action_plan WHERE store_action_plan_id = $1::uuid FOR UPDATE`, [input.actionPlanId]);
       const plan = planResult.rows[0];
       if (!plan) throw new NotFoundException("Store action plan was not found");
-      if (!input.actorRegionIds.includes(plan.region_id) || !input.actorStoreIds.includes(plan.store_id)) {
+      if (!input.actorStoreIds.includes(plan.store_id)) {
         throw new ForbiddenException("Solution review is outside assigned Region Manager scope");
       }
       const duplicate = await client.query<any>(`

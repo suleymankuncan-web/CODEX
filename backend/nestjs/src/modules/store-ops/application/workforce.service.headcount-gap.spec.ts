@@ -40,17 +40,17 @@ describe("WorkforceService headcount gap access", () => {
     };
   }
 
-  it("allows a region manager to read headcount gap for a store in their region", async () => {
+  it("allows a Region Manager to read headcount gap for a directly assigned store", async () => {
     const { service, storeOpsRepository } = createService();
 
     await expect(service.getStoreHeadcountGap({
       actorScope: {
         companyIds: [],
-        regionIds: [regionId],
+        regionIds: [],
         storeIds: [],
       },
       actorActionScope: {
-        assignedStoreIds: [],
+        assignedStoreIds: [storeId],
       },
       actorRoleCodes: ["REGION_MANAGER"],
       storeId,
@@ -70,10 +70,8 @@ describe("WorkforceService headcount gap access", () => {
     );
   });
 
-  it("blocks a region manager from reading headcount gap outside their region", async () => {
-    const { service, storeOpsRepository } = createService({
-      storeRegionId: "00000000-0000-0000-0000-000000000099",
-    });
+  it("blocks same-region headcount access without an active store assignment", async () => {
+    const { service, storeOpsRepository } = createService();
 
     await expect(service.getStoreHeadcountGap({
       actorScope: {

@@ -27,6 +27,7 @@ describe("Request center read API", () => {
     app.use((req: { user?: unknown }, _res: unknown, next: () => void) => {
       req.user = {
         roleCodes: ["REGION_MANAGER"],
+        roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-1"] } },
         scope: { companyIds: [], regionIds: ["region-1"], storeIds: [] },
         actionScope: { assignedStoreIds: ["store-1"] },
       };

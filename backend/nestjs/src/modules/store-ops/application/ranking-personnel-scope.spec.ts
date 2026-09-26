@@ -10,7 +10,7 @@ describe("ranking personnel active-assignment scope", () => {
       companyIds: ["company-1"],
       regionIds: ["region-1"],
       storeIds: [],
-      assignedStoreIds: [],
+      assignedStoreIds: ["store-1"],
       assignmentByEmployeeId: new Map([
         ["inside-history", assignment("inside-history", "company-1", "region-1", "store-1")],
         ["outside-history", assignment("outside-history", "company-1", "region-2", "store-2")],
