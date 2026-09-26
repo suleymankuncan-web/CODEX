@@ -55,6 +55,27 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(readModel.listDailySalesTracking).toHaveBeenCalledWith({ storeIds: ["store-a"], periodStart: "2026-05-01", throughDate: "2026-05-09" });
   });
 
+  it("maps each employee's daily sales to their own incentive row without changing the monthly actual", async () => {
+    const { service, readModel, corrections } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    readModel.listDailySalesTracking.mockResolvedValue([
+      { scope_type: "store", store_id: "store-a", employee_id: null, actual_amount: "230.00", last_day: "2026-05-08" },
+      { scope_type: "employee", store_id: "store-a", employee_id: "employee-a", actual_amount: "75.00", last_day: "2026-05-08" },
+      { scope_type: "employee", store_id: "store-a", employee_id: "other-employee", actual_amount: "150.00", last_day: "2026-05-08" },
+    ]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], { REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] } }) as never,
+      periodKey: "2026-05", throughDate: "2026-05-09",
+    });
+
+    const person = result.managerGroups[0].stores[0].rows.find(row => row.employeeId === "employee-a");
+    expect(person?.actual).toBe("550.00");
+    expect(person?.dailyActualNetSales).toBe("75.00");
+    expect(person?.dailyAchievementPct).toBe("15.00");
+  });
+
   it("rejects a daily tracking date outside the selected month", async () => {
     const { service, readModel } = harness();
     await expect(service.getWorkspace({
