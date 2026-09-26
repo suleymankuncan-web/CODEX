@@ -54,7 +54,7 @@ const CADDY_BOOTSTRAP_PREFIX = [
 const EXPECTED_REDIS_ACL_RULES = [
   'user default off resetpass ~* &* +@all',
   'user health on >%s ~* +ping',
-  'user api on >%s ~hr-axis:rate-limit:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate',
+  'user api on >%s ~hr-axis:rate-limit:* ~hr-axis:ranking-facts:v2:* ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* +@all -@admin -flushall -flushdb -swapdb -migrate',
   'user worker on >%s ~bull:store-ops-import:* ~bull:store-ops-snapshot:* ~bull:store-ops-visual-comparison-shadow:* ~bull:hr-axis-onprem-synthetic-recovery-v1:* ~hr-axis:onprem:synthetic-recovery-v1:* +@all -@admin -flushall -flushdb -swapdb -migrate',
 ]
 const EXPECTED_REDIS_ACL_WRITE_COMMAND = `printf '${EXPECTED_REDIS_ACL_RULES.join('\\n')}\\n' "$redis_health_password" "$redis_api_password" "$redis_worker_password" > "$secret_root/redis/users.acl"`
@@ -276,6 +276,8 @@ export function validateOnpremCoreContract(input) {
   fail(/DATABASE_URL_FILE: \/run\/secrets\/api_database_url/.test(blocks.get('synthetic-seed') ?? ''), 'synthetic seed must use the DML-only API database role')
   fail(/dist\/src\/onprem\/worker-health\.js/.test(blocks.get('worker') ?? ''), 'worker must expose its compiled health entry')
   fail(/fetch\('http:\/\/127\.0\.0\.1:3000\/api\/health'\)/.test(blocks.get('api') ?? ''), 'API container health must use dependency-aware readiness')
+  fail(/RANKING_FACTS_CACHE_ENABLED: \$\{RANKING_FACTS_CACHE_ENABLED:-false\}/.test(blocks.get('api') ?? ''), 'ranking facts cache must remain opt-in on the API')
+  fail(/RANKING_FACTS_CACHE_ENABLED: ["']false["']/.test(blocks.get('worker') ?? ''), 'ranking facts cache must stay disabled on the worker')
 
   fail(/postgres:16\.[0-9]+-alpine@sha256:[0-9a-f]{64}/i.test(input.compose), 'PostgreSQL 16 image must be pinned')
   const redisImageLines = activeShellLines(blocks.get('redis') ?? '').filter((line) => line.startsWith('image:'))

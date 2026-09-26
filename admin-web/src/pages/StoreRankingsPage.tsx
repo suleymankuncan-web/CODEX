@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,8 @@ import {
   StoreSurfacePage,
 } from './store-surface-primitives'
 
+const rankingSearchDebounceMs = 300
+
 export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -58,9 +60,16 @@ export function StoreRankingsPage(input: {
     sortKey,
     sortDirection,
   } = pageState
+  const [debouncedSearch, setDebouncedSearch] = useState(search)
   const limit = rankingPageSize
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
   const requestedPeriod = getRequestedRankingPeriod(periodStart, dayOfMonth, rangeStart, rangeEnd)
+
+  useEffect(() => {
+    if (search === debouncedSearch) return
+    const timeoutId = window.setTimeout(() => setDebouncedSearch(search), rankingSearchDebounceMs)
+    return () => window.clearTimeout(timeoutId)
+  }, [search, debouncedSearch])
 
   useEffect(() => {
     const nextParams = buildStoreRankingsSearchParams(pageState)
@@ -89,7 +98,7 @@ export function StoreRankingsPage(input: {
       privilegedSession ? regionManagerUserId : '',
       privilegedSession ? regionId : '',
       privilegedSession ? storeId : '',
-      privilegedSession ? search : '',
+      privilegedSession ? debouncedSearch : '',
       requestedPeriod.periodType,
       requestedPeriod.periodStart || 'latest',
       requestedPeriod.periodEnd ?? '',
@@ -97,7 +106,7 @@ export function StoreRankingsPage(input: {
       sortDirection,
       privilegedSession ? offset : 0,
     ],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       getRankings({
         periodType: requestedPeriod.periodType,
         ...(requestedPeriod.periodStart ? { periodStart: requestedPeriod.periodStart } : {}),
@@ -105,13 +114,13 @@ export function StoreRankingsPage(input: {
         ...(privilegedSession && regionManagerUserId ? { regionManagerUserId } : {}),
         ...(privilegedSession && regionId ? { regionId } : {}),
         ...(privilegedSession && storeId ? { storeId } : {}),
-        ...(privilegedSession && search ? { search } : {}),
+        ...(privilegedSession && debouncedSearch ? { search: debouncedSearch } : {}),
         ...(hasNonDefaultSort
           ? { sortKey, sortDirection }
           : {}),
         limit,
         offset: privilegedSession ? offset : 0,
-      }),
+      }, { signal }),
     enabled,
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === input.authSummary?.user.userId &&

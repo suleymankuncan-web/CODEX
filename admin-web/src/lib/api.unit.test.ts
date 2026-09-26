@@ -464,6 +464,19 @@ describe('API CSRF recovery', () => {
     expect(refreshHandlerCleanup).toBeDefined()
   })
 
+  it('does not report an intentionally aborted GET as a network failure', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    vi.mocked(fetch).mockRejectedValueOnce(new DOMException('Aborted', 'AbortError'))
+
+    await expect(fetchJson('/reports/rankings', { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' })
+
+    expect(testWindow.__STORE_OPS_API_FAILURES__).toBeUndefined()
+    expect(testWindow.dispatchEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'store-ops-api-failure' }),
+    )
+  })
+
   it('does not replay a canonical CSRF response for bearer-header sessions', async () => {
     persistBearerSession()
     writeBrowserSessionCsrfToken(staleCsrfToken)

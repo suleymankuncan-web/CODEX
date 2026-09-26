@@ -446,6 +446,29 @@ test('ONP-2 private core contract accepts the committed fail-closed stack', () =
   ])
 })
 
+test('ranking facts cache stays default-off and requires the versioned API ACL namespace', () => {
+  const input = contractInput()
+  assert.equal(validateOnpremCoreContract(input).ok, true)
+
+  const enabledByDefault = {
+    ...input,
+    compose: input.compose.replace('RANKING_FACTS_CACHE_ENABLED: ${RANKING_FACTS_CACHE_ENABLED:-false}', 'RANKING_FACTS_CACHE_ENABLED: "true"'),
+  }
+  assert.ok(validateOnpremCoreContract(enabledByDefault).errors.some(error => /ranking facts cache must remain opt-in/i.test(error)))
+
+  const workerEnabled = {
+    ...input,
+    compose: input.compose.replace('RANKING_FACTS_CACHE_ENABLED: "false"', 'RANKING_FACTS_CACHE_ENABLED: "true"'),
+  }
+  assert.ok(validateOnpremCoreContract(workerEnabled).errors.some(error => /ranking facts cache must stay disabled on the worker/i.test(error)))
+
+  const missingAcl = {
+    ...input,
+    workflow: input.workflow.replace(' ~hr-axis:ranking-facts:v2:*', ''),
+  }
+  assert.ok(validateOnpremCoreContract(missingAcl).errors.some(error => /Redis 7 AOF replay requires one exact/i.test(error)))
+})
+
 test('ONP-2 contract rejects a private service host-port bypass', () => {
   const input = contractInput()
   input.compose = input.compose.replace(

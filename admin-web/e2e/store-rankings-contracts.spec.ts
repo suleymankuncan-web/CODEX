@@ -36,6 +36,59 @@ test('official personnel ranking surface does not render store-manager rows', as
   await expect(page.getByText('Mağaza Müdürü Mehmet')).toHaveCount(0)
 })
 
+test('ranking search waits for typing to stop and cancels the previous request without an error', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window)
+    window.fetch = (...args) => {
+      const [resource, options] = args
+      const path = typeof resource === 'string' ? resource : resource instanceof Request ? resource.url : String(resource)
+      const search = new URL(path, window.location.href).searchParams.get('search')
+      if (path.includes('/reports/rankings') && search && options?.signal) {
+        options.signal.addEventListener('abort', () => {
+          const state = window as Window & { rankingSearchAborts?: string[] }
+          state.rankingSearchAborts ??= []
+          state.rankingSearchAborts.push(search)
+        }, { once: true })
+      }
+      return originalFetch(...args)
+    }
+  })
+
+  const requests: string[] = []
+  let releaseFirstSearch: (() => void) | undefined
+  await page.route('**/api/reports/rankings**', async (route) => {
+    const search = new URL(route.request().url()).searchParams.get('search') ?? ''
+    requests.push(search)
+    if (search === 'Ali') await new Promise<void>(resolve => { releaseFirstSearch = resolve })
+    await route.fulfill({ json: createRankingsContractFixture() }).catch(() => undefined)
+  })
+
+  await page.goto('/store/rankings?period=2026-07-01')
+  await expect(page.getByRole('heading', { name: 'Türkiye mağaza sıralaması' })).toBeVisible()
+  requests.length = 0
+  await page.clock.install()
+
+  const search = page.getByRole('searchbox', { name: 'Mağaza Ara' })
+  await search.pressSequentially('Ali')
+  await page.clock.runFor(299)
+  expect(requests).toHaveLength(0)
+  await page.clock.runFor(1)
+  await expect.poll(() => requests).toEqual(['Ali'])
+
+  await search.fill('Fatih')
+  await page.clock.runFor(300)
+  await expect.poll(() => requests).toEqual(['Ali', 'Fatih'])
+  await expect.poll(() => page.evaluate(() => (window as Window & { rankingSearchAborts?: string[] }).rankingSearchAborts ?? []))
+    .toContain('Ali')
+  releaseFirstSearch?.()
+  await expect(page.getByText('Liste güncellenemedi.')).toHaveCount(0)
+  await expect(page.getByText('Sıralama verisi alınamadı.')).toHaveCount(0)
+  expect(await page.evaluate(() => (window as Window & { __STORE_OPS_API_FAILURES__?: { path: string }[] })
+    .__STORE_OPS_API_FAILURES__?.filter(event => event.path === '/reports/rankings').length ?? 0)).toBe(0)
+})
+
 async function routeRankingsContractApi(page: Page) {
   await page.route('**/api/reports/rankings**', async (route) => {
     await route.fulfill({ json: createRankingsContractFixture() })
