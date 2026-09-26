@@ -32,6 +32,7 @@ export function StoreReviewEditor(input: {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [onlyChanges, setOnlyChanges] = useState(false)
+  const useDailyTracking = input.workspace.salesTracking?.status === 'complete' && Boolean(input.workspace.salesTracking.lastLoadedDate)
   const editable = !input.readOnly && store.capabilities.canCreateCorrection && store.review.periodCloseStatus === 'closed'
   const canComplete = !input.readOnly && store.capabilities.canMarkStoreReview && store.review.periodCloseStatus === 'closed' && Boolean(input.onComplete)
   const values = store.rows.map(row => {
@@ -70,19 +71,21 @@ export function StoreReviewEditor(input: {
       {!input.readOnly ? <label htmlFor="incentive-only-changes"><Switch id="incentive-only-changes" checked={onlyChanges} onCheckedChange={setOnlyChanges} disabled={saving} /><span>{tr ? 'Sadece değişiklikleri göster' : 'Show adjustments only'}</span></label> : null}
     </div>
     <div role="table" aria-label={tr ? 'Personel prim dağılımı' : 'Personnel incentive breakdown'}>
-    <div className="incentive-edit-columns" role="row"><span role="columnheader">{tr ? 'Personel' : 'Personnel'}</span><span role="columnheader">{tr ? 'Hedef' : 'Target'}</span><span role="columnheader">{tr ? 'Gerçekleşen' : 'Actual'}</span><span role="columnheader">HG%</span><span role="columnheader">{tr ? 'Prim oranı' : 'Incentive rate'}</span><span role="columnheader">{tr ? 'Hesaplanan' : 'Calculated'}</span><span role="columnheader">{tr ? 'Final prim' : 'Final incentive'}</span></div>
+    <div className="incentive-edit-columns" role="row"><span role="columnheader">{tr ? 'Personel' : 'Personnel'}</span><span role="columnheader">{tr ? 'Hedef' : 'Target'}</span><span role="columnheader">{useDailyTracking ? (tr ? 'Ay içi net satış' : 'Month-to-date net sales') : (tr ? 'Gerçekleşen' : 'Actual')}</span><span role="columnheader">{useDailyTracking ? (tr ? 'Ay içi HG%' : 'Month-to-date target %') : 'HG%'}</span><span role="columnheader">{tr ? 'Prim oranı' : 'Incentive rate'}</span><span role="columnheader">{tr ? 'Hesaplanan' : 'Calculated'}</span><span role="columnheader">{tr ? 'Final prim' : 'Final incentive'}</span></div>
     {visibleValues.map(({ row, key, amount, showChange }) => {
       const table = input.workspace.rateMetadata.tables.find(item => item.audience === (row.participantType === 'store_manager' ? 'manager' : 'personnel'))
       const rates = input.workspace.rateMetadata.status === 'resolved' ? [...new Set([...(table?.brackets.map(bracket => bracket.rate) ?? []), ...(row.rate !== null ? [row.rate] : [])])] : []
       const selectedRate = amount !== null && amount === row.calculatedAmount && row.rate !== null ? row.rate : (Number(row.actual) > 0 ? rates.find(rate => calculateRateProposal(row.actual, rate) === amount) : null) ?? 'manual'
       const difference = amount !== null && row.calculatedAmount !== null ? sumMoney([amount, `-${row.calculatedAmount}`]) : null
-      const achievementPct = row.actual !== null && Number(row.target) > 0 ? (Number(row.actual) / Number(row.target) * 100).toFixed(2) : null
-      const earned = isEarnedAtIncentiveThreshold(amount, achievementPct)
+      const snapshotAchievementPct = row.actual !== null && Number(row.target) > 0 ? (Number(row.actual) / Number(row.target) * 100).toFixed(2) : null
+      const actualDisplay = useDailyTracking ? row.dailyActualNetSales : row.actual
+      const achievementDisplay = useDailyTracking ? row.dailyAchievementPct : snapshotAchievementPct
+      const earned = isEarnedAtIncentiveThreshold(amount, snapshotAchievementPct)
       return <div role="row" className="incentive-edit-row" data-editable={editable} data-changed={showChange} key={key}>
         <div role="cell" className="incentive-edit-person"><strong>{row.displayName}</strong><small>{formatIncentivePosition(row.positionCode, locale)}</small></div>
         <div role="cell" data-label={tr ? 'Hedef' : 'Target'}><span>{formatIncentiveMoney(row.target, locale)}</span></div>
-        <div role="cell" data-label={tr ? 'Gerçekleşen' : 'Actual'}><span>{formatIncentiveMoney(row.actual, locale)}</span></div>
-        <div role="cell" data-label="HG%"><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementPct) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementPct, locale)}</span></div>
+        <div role="cell" data-label={useDailyTracking ? (tr ? 'Ay içi net satış' : 'Month-to-date net sales') : (tr ? 'Gerçekleşen' : 'Actual')}><span>{formatIncentiveMoney(actualDisplay, locale)}</span></div>
+        <div role="cell" data-label={useDailyTracking ? (tr ? 'Ay içi HG%' : 'Month-to-date target %') : 'HG%'}><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementDisplay) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementDisplay, locale)}</span></div>
         <div role="cell" data-label={tr ? 'Prim oranı' : 'Incentive rate'}>{editable && rates.length > 0 ? <Select value={selectedRate} disabled={input.locked || saving || row.actual === null || row.finalAmount === null || row.calculatedAmount === null} onValueChange={rate => { if (rate !== 'manual') { const value = calculateRateProposal(row.actual, rate); if (value !== null) setAmount(key, toMoneyInputBuffer(value)) } }}>
           <SelectTrigger aria-label={`${row.displayName}: ${tr ? 'Prim oranı' : 'Incentive rate'}`}><SelectValue /></SelectTrigger>
           <SelectContent position="popper" align="start"><SelectItem value="manual">{tr ? 'Özel tutar' : 'Custom amount'}</SelectItem>{rates.map(rate => <SelectItem value={rate} key={rate}>{formatIncentiveRate(rate, locale)}</SelectItem>)}</SelectContent>
