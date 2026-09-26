@@ -5,7 +5,6 @@ import { CalendarPicker } from '@/components/ui/calendar-picker'
 import { CommandCanvasPage, CommandCanvasPartialDataNotice } from '@/features/store-command-canvas/primitives'
 import { StoreOperationsHeader } from '@/pages/store-operations-layout'
 import type { AuthSessionSummary } from '@/features/auth/api'
-import type { RegionManagerDirectoryItem } from '@/features/org/region-manager-directory'
 import type { useLocalization } from '@/features/localization/useLocalization'
 import type { AppLocale } from '@/lib/i18n'
 import { FinalIncentiveApproval, type IncentiveApprovalControls } from './final-incentive-approval'
@@ -27,17 +26,13 @@ export function ReportViewerIncentivesView(input: {
   backgroundError: Error | null
   locale: AppLocale
   t: ReturnType<typeof useLocalization>['t']
-  managerDirectory: RegionManagerDirectoryItem[]
-  managerDirectoryError: boolean
-  managerDirectoryLoading: boolean
-  onRetryManagerDirectory: () => void
 }) {
   const [status, setStatus] = useState<'all' | IncentiveManagerGroup['package']['status']>('all')
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const tr = input.locale === 'tr'
   const metrics = buildIncentiveMetrics(input.workspace)
-  const partial = Boolean(input.backgroundError) || input.managerDirectoryError || Object.values(input.workspace.sections).some(section => section.status === 'unavailable')
+  const partial = Boolean(input.backgroundError) || Object.values(input.workspace.sections).some(section => section.status === 'unavailable')
   const disabled = input.isUpdating || Boolean(input.backgroundError) || input.workspace.sections.core.status === 'unavailable' || input.period !== input.workspace.period || sending
 
   return <FinalIncentiveApproval authSummary={input.authSummary ?? null} workspace={input.workspace} period={input.period} locale={input.locale} managerGroupKeys={input.workspace.managerGroups.map(incentiveManagerGroupKey)} statusFilter={status} disabled={disabled}>

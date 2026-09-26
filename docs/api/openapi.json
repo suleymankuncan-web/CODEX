@@ -10469,7 +10469,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Company-scoped active Region Manager directory.",
+            "description": "Active Region Managers assigned to any store type within the company scope.",
             "content": {
               "application/json": {
                 "schema": {

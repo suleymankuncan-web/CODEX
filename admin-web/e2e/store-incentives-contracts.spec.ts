@@ -142,7 +142,9 @@ test('ungranted viewer reads changes and deduplicated notes without any mutation
   await routeIncentiveWorkspace(page, fixture)
   await routeIncentiveManagerDirectory(page, fixture)
   const forbidden: string[] = []
+  const directoryReads: string[] = []
   page.on('request', request => { if (request.url().includes('/api/store/incentives') && (request.method() !== 'GET' || request.url().includes('final-approval'))) forbidden.push(request.url()) })
+  page.on('request', request => { if (new URL(request.url()).pathname === '/api/org/region-managers') directoryReads.push(request.url()) })
   await page.goto('/store/incentives'); await expandStore(page)
   const drawer = page.getByRole('dialog')
   await expect(drawer.getByText('Dönem içi mağaza desteği doğrulandı.', { exact: true })).toHaveCount(1)
@@ -150,6 +152,7 @@ test('ungranted viewer reads changes and deduplicated notes without any mutation
   await expect(drawer.locator('input, textarea')).toHaveCount(0)
   await expect(drawer.getByRole('button', { name: /Tamamla|Kabul et|Reddet/ })).toHaveCount(0)
   expect(forbidden).toEqual([])
+  expect(directoryReads).toEqual([])
 })
 
 test('store manager never requests the protected workspace', async ({ page }) => {
