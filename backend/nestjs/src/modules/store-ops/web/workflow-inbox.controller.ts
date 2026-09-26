@@ -4,6 +4,7 @@ import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { WorkflowInboxService } from "../application/workflow-inbox.service";
 import { ListRequestCenterQueryDto } from "./dto/list-request-center.query";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds } from "../application/region-manager-assigned-stores";
 
 @Controller("workflow")
 export class WorkflowInboxController {
@@ -44,7 +45,7 @@ export class WorkflowInboxController {
     return this.workflowInboxService.listInbox({
       actorRoles: request.user.roleCodes,
       actorScope: request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       ...(actorReadScope ? { actorReadScope } : {}),
     });
   }
@@ -85,7 +86,7 @@ export class WorkflowInboxController {
     return this.workflowInboxService.listRequestCenter({
       actorRoles: request.user.roleCodes,
       actorScope: request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       ...(actorReadScope ? { actorReadScope } : {}),
       bucket: query.bucket ?? "open",
       type: query.type ?? "all",

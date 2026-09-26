@@ -62,13 +62,14 @@ describe("ReportingController", () => {
         user: {
           userId: "dual-role-user",
           roleCodes: ["REGION_MANAGER", "STORE_MANAGER"],
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["assigned-store-1"] } },
           scope: {
             companyIds: ["company-1"],
             regionIds: ["region-1"],
             storeIds: ["store-from-role-union"],
           },
           actionScope: {
-            assignedStoreIds: ["assigned-store-1"],
+            assignedStoreIds: ["assigned-store-1", "store-from-role-union"],
           },
         },
       },
@@ -89,7 +90,7 @@ describe("ReportingController", () => {
     });
   });
 
-  it("passes selected store KPI highlights through region scope for region managers", async () => {
+  it("passes selected store KPI highlights through the manager profile assignment", async () => {
     const { controller, reportingService } = createController();
 
     await controller.getStoreKpiHighlights(
@@ -97,13 +98,14 @@ describe("ReportingController", () => {
         user: {
           userId: "region-manager-user",
           roleCodes: ["REGION_MANAGER"],
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-1"] } },
           scope: {
             companyIds: ["company-1"],
             regionIds: ["region-1"],
             storeIds: [],
           },
           actionScope: {
-            assignedStoreIds: [],
+            assignedStoreIds: ["store-1"],
           },
         },
       },
@@ -133,6 +135,7 @@ describe("ReportingController", () => {
         user: {
           userId: "region-manager-user",
           roleCodes: ["REGION_MANAGER"],
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-1"] } },
           scope: {
             companyIds: ["company-1"],
             regionIds: ["region-1"],
@@ -190,7 +193,7 @@ describe("ReportingController", () => {
     });
   });
 
-  it("preserves region scope for region manager personnel profile reads", async () => {
+  it("uses manager profile stores for personnel profile reads", async () => {
     const { controller, reportingService } = createController();
 
     await controller.getPersonnelPerformance(
@@ -199,6 +202,7 @@ describe("ReportingController", () => {
           userId: "region-manager-user",
           employeeId: "manager-employee",
           roleCodes: ["REGION_MANAGER"],
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-1"] } },
           scope: {
             companyIds: ["company-1"],
             regionIds: ["region-1"],
@@ -220,10 +224,10 @@ describe("ReportingController", () => {
     expect(reportingService.getPersonnelPerformance).toHaveBeenCalledWith(
       expect.objectContaining({
         roleCodes: ["REGION_MANAGER"],
-        identityCompanyIds: ["company-1"],
+        identityCompanyIds: [],
         companyIds: [],
-        regionIds: ["region-1"],
-        storeIds: [],
+        regionIds: [],
+        storeIds: ["store-1"],
         assignedStoreIds: ["store-1"],
         targetEmployeeId: "employee-in-region",
       }),

@@ -45,7 +45,7 @@ export function resolveSalesTargetIncentiveWorkspaceScope(
     return {
       view: "region_manager",
       companyIds: [],
-      regionIds: unique(roleScope?.regionIds ?? []),
+      regionIds: [],
       storeIds: unique(roleScope?.storeIds ?? []),
       capabilities: readOnlyCapabilities(),
     };

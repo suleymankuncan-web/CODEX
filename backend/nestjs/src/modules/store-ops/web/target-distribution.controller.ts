@@ -11,6 +11,7 @@ import {
 import { ListTargetDistributionRequestsQueryDto } from "./dto/list-target-distribution-requests.query";
 import { ListTargetCoverageQueryDto } from "./dto/list-target-coverage.query";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds } from "../application/region-manager-assigned-stores";
 import { GetTargetRevisionBasisQueryDto } from "./dto/get-target-revision-basis.query";
 
 @ApiExtraModels(ApprovedTargetDistributionAllocationDto)
@@ -28,13 +29,15 @@ export class TargetDistributionController {
       user: {
         scope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
         actionScope: { assignedStoreIds: string[] };
+        roleCodes?: string[];
+        roleScopes?: Record<string, { storeIds: string[] }>;
       };
     },
     @Query() query: GetTargetRevisionBasisQueryDto,
   ) {
     return this.targetDistributionService.getRevisionBasis({
       actorScope: request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes ?? [], roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       storeId: query.storeId,
       requestMonth: query.requestMonth,
     });
@@ -98,7 +101,7 @@ export class TargetDistributionController {
             roleScopes: request.user.roleScopes,
           })
         : request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       actorRoleCodes: request.user.roleCodes,
       statuses: query.status ? [query.status] : undefined,
       requestMonth: query.requestMonth,
@@ -140,7 +143,7 @@ export class TargetDistributionController {
             roleScopes: request.user.roleScopes,
           })
         : request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       actorRoleCodes: request.user.roleCodes,
       requestMonth: query.requestMonth,
       storeId: query.storeId,
@@ -185,6 +188,8 @@ export class TargetDistributionController {
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleCodes?: string[];
+        roleScopes?: Record<string, { storeIds: string[] }>;
       };
       params: {
         requestId: string;
@@ -194,7 +199,7 @@ export class TargetDistributionController {
   ) {
     return this.targetDistributionService.approveRequest({
       actorUserId: request.user.userId,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes ?? [], roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       requestId: request.params.requestId,
       approvalNote: body.approvalNote,
       approvedTotalTargetValue: body.approvedTotalTargetValue,

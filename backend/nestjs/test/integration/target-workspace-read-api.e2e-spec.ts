@@ -21,7 +21,7 @@ function authContext() {
           userId: "00000000-0000-4000-8000-000000000902", roleCodes: ["REGION_MANAGER"],
           readScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [storeId, supportStoreId] },
           actionScope: { assignedStoreIds: [storeId] },
-          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [regionId], storeIds: [] } },
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [regionId], storeIds: [storeId] } },
         });
       }
       if (persona === "store-manager") {

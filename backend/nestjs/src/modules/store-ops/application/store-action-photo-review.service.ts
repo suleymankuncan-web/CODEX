@@ -83,7 +83,6 @@ export class StoreActionPhotoReviewService {
     const regionScope = input.actorRoleScopes?.REGION_MANAGER;
     return this.repository.review({
       ...input, reason: input.reason?.trim(),
-      actorRegionIds: regionScope?.regionIds ?? [],
       actorStoreIds: constrainActionStores(regionScope?.storeIds ?? [], input.actorActionScope.assignedStoreIds),
       actor: { displayName: input.actorDisplayName, roleLabel: input.actorRoleLabel },
     });
@@ -145,15 +144,13 @@ export class StoreActionPhotoReviewService {
       plan.ownerUserId === input.actorUserId &&
       Boolean(storeManagerScope?.storeIds.includes(plan.storeId)) && actionStoreAllowed;
     const canReadAsRegionManager = input.actorRoleCodes.includes("REGION_MANAGER") &&
-      Boolean(regionManagerScope?.regionIds.includes(plan.regionId)) &&
-      (regionManagerScope?.storeIds.length === 0 || Boolean(regionManagerScope?.storeIds.includes(plan.storeId))) &&
+      Boolean(regionManagerScope?.storeIds.includes(plan.storeId)) &&
       actionStoreAllowed;
     return canReadAsStoreManager || canReadAsRegionManager;
   }
 }
 
 function constrainActionStores(roleStores: readonly string[], actionStores: readonly string[]) {
-  if (roleStores.length === 0) return [...new Set(actionStores)];
   const allowed = new Set(roleStores);
   return [...new Set(actionStores.filter((value) => allowed.has(value)))];
 }

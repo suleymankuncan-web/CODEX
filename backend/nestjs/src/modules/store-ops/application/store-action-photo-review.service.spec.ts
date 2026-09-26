@@ -15,7 +15,7 @@ const actor = {
   actorActionScope: { assignedStoreIds: [plan.storeId] },
   actorRoleScopes: {
     STORE_MANAGER: { companyIds: [], regionIds: [], storeIds: [plan.storeId] },
-    REGION_MANAGER: { companyIds: [], regionIds: [plan.regionId], storeIds: [] },
+    REGION_MANAGER: { companyIds: [], regionIds: [plan.regionId], storeIds: [plan.storeId] },
   },
 };
 
@@ -70,7 +70,7 @@ describe("StoreActionPhotoReviewService", () => {
       solutionAttemptId: "00000000-0000-4000-8000-000000000008", decision: "approve",
       expectedVersion: 1, idempotencyKey: "00000000-0000-4000-8000-000000000009",
     });
-    expect(repository.review).toHaveBeenCalledWith(expect.objectContaining({ actorRegionIds: [plan.regionId], decision: "approve" }));
+    expect(repository.review).toHaveBeenCalledWith(expect.objectContaining({ actorStoreIds: [plan.storeId], decision: "approve" }));
     await expect(service.review({ ...actor, actionPlanId: plan.actionPlanId,
       solutionAttemptId: "00000000-0000-4000-8000-000000000008", decision: "approve",
       expectedVersion: 1, idempotencyKey: "00000000-0000-4000-8000-000000000010",
@@ -101,7 +101,7 @@ describe("StoreActionPhotoReviewService", () => {
       expectedVersion: 1, idempotencyKey: "00000000-0000-4000-8000-000000000009",
     });
     expect(repository.review).toHaveBeenCalledWith(expect.objectContaining({
-      actorRegionIds: ["00000000-0000-4000-8000-000000000099"],
+      actorStoreIds: [],
     }));
   });
 
@@ -112,7 +112,7 @@ describe("StoreActionPhotoReviewService", () => {
       actorRoleCodes: ["STORE_MANAGER", "REGION_MANAGER"],
       actorRoleScopes: {
         STORE_MANAGER: { companyIds: [], regionIds: [], storeIds: [plan.storeId] },
-        REGION_MANAGER: { companyIds: [], regionIds: ["00000000-0000-4000-8000-000000000099"], storeIds: [] },
+        REGION_MANAGER: { companyIds: [], regionIds: [plan.regionId], storeIds: [] },
       },
       actionPlanId: plan.actionPlanId,
     })).rejects.toBeInstanceOf(ForbiddenException);

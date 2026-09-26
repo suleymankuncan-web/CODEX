@@ -100,7 +100,7 @@ describe("TargetWorkspaceReadRepository", () => {
     expect(sql).not.toContain("role_assignment.region_id = region.region_id");
     expect(sql).toContain("LEFT JOIN ops.employee employee");
     expect(sql).toContain("company.company_id = ANY($1::uuid[])");
-    expect(query.mock.calls[0][1]).toEqual([["company"], "2026-07-31"]);
+    expect(query.mock.calls[0][1]).toEqual([["company"], "2026-07-31", null]);
   });
 
   it("derives Region Manager hierarchy only from the fully intersected store scope", async () => {
@@ -114,7 +114,20 @@ describe("TargetWorkspaceReadRepository", () => {
     expect(sql).toContain("store.store_id = ANY($1::uuid[])");
     expect(sql).toContain("store.region_id = ANY($2::uuid[])");
     expect(sql).toContain("store.company_id = ANY($3::uuid[])");
-    expect(query.mock.calls[0][1]).toEqual([["store"], ["region"], ["company"], "2026-07-31"]);
+    expect(query.mock.calls[0][1]).toEqual([["store"], ["region"], ["company"], "2026-07-31", null]);
+  });
+
+  it("binds the hierarchy manager label to the selected assigned profile", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const repository = new TargetWorkspaceReadRepository({ query } as never);
+    await repository.listHierarchy({
+      scope: { companyIds: ["company"], regionIds: [], storeIds: ["store"] },
+      periodEnd: "2026-07-31",
+      managerUserId: "manager",
+    });
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("manager_store.user_id = $4::uuid");
+    expect(query.mock.calls[0][1]).toEqual([["store"], ["company"], "2026-07-31", "manager"]);
   });
 
   it("summarizes the complete scoped store universe instead of the current page", async () => {

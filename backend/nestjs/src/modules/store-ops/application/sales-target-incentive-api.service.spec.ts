@@ -316,6 +316,7 @@ describe("SalesTargetIncentiveApiService", () => {
         roleCodes: ["REGION_MANAGER"],
         readScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [otherStoreId] },
         actionScope: { assignedStoreIds: [storeId] },
+        roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: [storeId] } },
       }),
       periodKey: "2026-05",
     });
@@ -378,6 +379,7 @@ describe("SalesTargetIncentiveApiService", () => {
         roleCodes: ["REGION_MANAGER"],
         readScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [otherStoreId] },
         actionScope: { assignedStoreIds: [storeId] },
+        roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: [storeId] } },
       }),
       periodKey: "2026-05",
     });

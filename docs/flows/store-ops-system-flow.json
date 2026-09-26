@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-25T21:13:09.373Z",
+  "generatedAt": "2026-09-26T15:50:54.369Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -732,7 +732,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 367
+        "line": 366
       }
     },
     {
@@ -782,7 +782,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 350
+        "line": 349
       }
     },
     {
@@ -813,7 +813,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 332
+        "line": 331
       }
     },
     {
@@ -866,7 +866,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 384
+        "line": 383
       }
     },
     {
@@ -891,7 +891,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 267
+        "line": 266
       }
     },
     {
@@ -914,7 +914,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 284
+        "line": 283
       }
     },
     {
@@ -940,7 +940,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 301
+        "line": 300
       }
     },
     {
@@ -966,7 +966,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 315
+        "line": 314
       }
     },
     {
@@ -992,7 +992,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 455
+        "line": 454
       }
     },
     {
@@ -1023,7 +1023,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 401
+        "line": 400
       }
     },
     {
@@ -1048,7 +1048,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 419
+        "line": 418
       }
     },
     {
@@ -1073,7 +1073,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 250
+        "line": 249
       }
     },
     {
@@ -1122,7 +1122,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 438
+        "line": 437
       }
     }
   ],
@@ -4409,7 +4409,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 49
+        "line": 50
       }
     },
     {
@@ -4423,7 +4423,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 64
+        "line": 65
       }
     },
     {
@@ -4437,7 +4437,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 74
+        "line": 75
       }
     },
     {
@@ -4451,7 +4451,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 119
+        "line": 120
       }
     },
     {
@@ -4465,7 +4465,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 99
+        "line": 100
       }
     },
     {
@@ -4479,7 +4479,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 89
+        "line": 90
       }
     },
     {
@@ -4493,7 +4493,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 109
+        "line": 110
       }
     },
     {
@@ -5235,7 +5235,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 42
+        "line": 43
       }
     },
     {
@@ -5249,7 +5249,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 112
+        "line": 113
       }
     },
     {
@@ -5263,7 +5263,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 83
+        "line": 84
       }
     },
     {
@@ -5277,7 +5277,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 211
+        "line": 212
       }
     },
     {
@@ -5291,7 +5291,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 224
+        "line": 225
       }
     },
     {
@@ -5305,7 +5305,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 196
+        "line": 197
       }
     },
     {
@@ -5319,7 +5319,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 181
+        "line": 182
       }
     },
     {
@@ -5333,7 +5333,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 239
+        "line": 240
       }
     },
     {
@@ -5347,7 +5347,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 280
+        "line": 281
       }
     },
     {
@@ -5361,7 +5361,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 336
+        "line": 337
       }
     },
     {
@@ -5375,7 +5375,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 323
+        "line": 324
       }
     },
     {
@@ -5389,7 +5389,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 310
+        "line": 311
       }
     },
     {
@@ -5403,7 +5403,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 254
+        "line": 255
       }
     },
     {
@@ -5417,7 +5417,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 295
+        "line": 296
       }
     },
     {
@@ -5431,7 +5431,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 267
+        "line": 268
       }
     },
     {
@@ -5445,7 +5445,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 362
+        "line": 363
       }
     },
     {
@@ -5459,7 +5459,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 349
+        "line": 350
       }
     },
     {
@@ -5473,7 +5473,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 71
+        "line": 72
       }
     },
     {
@@ -5487,7 +5487,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 125
+        "line": 126
       }
     },
     {
@@ -5501,7 +5501,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 151
+        "line": 152
       }
     },
     {
@@ -5515,7 +5515,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 166
+        "line": 167
       }
     },
     {
@@ -5529,7 +5529,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
-        "line": 138
+        "line": 139
       }
     },
     {
@@ -5543,7 +5543,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/feed.controller.ts",
-        "line": 35
+        "line": 36
       }
     },
     {
@@ -6733,7 +6733,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/org.controller.ts",
-        "line": 11
+        "line": 12
       }
     },
     {
@@ -6761,7 +6761,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 424
+        "line": 423
       }
     },
     {
@@ -6775,7 +6775,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 58
+        "line": 59
       }
     },
     {
@@ -6789,7 +6789,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 78
+        "line": 79
       }
     },
     {
@@ -6803,7 +6803,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 71
+        "line": 72
       }
     },
     {
@@ -6817,7 +6817,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 64
+        "line": 65
       }
     },
     {
@@ -6831,7 +6831,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 102
+        "line": 103
       }
     },
     {
@@ -6845,7 +6845,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 142
+        "line": 143
       }
     },
     {
@@ -6859,7 +6859,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 391
+        "line": 390
       }
     },
     {
@@ -6873,7 +6873,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 186
+        "line": 187
       }
     },
     {
@@ -6887,7 +6887,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 213
+        "line": 214
       }
     },
     {
@@ -6901,7 +6901,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 350
+        "line": 349
       }
     },
     {
@@ -6915,7 +6915,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 31
+        "line": 32
       }
     },
     {
@@ -6929,7 +6929,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 257
+        "line": 258
       }
     },
     {
@@ -6943,7 +6943,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-monthly-report-package.controller.ts",
-        "line": 113
+        "line": 114
       }
     },
     {
@@ -6957,7 +6957,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-monthly-report-package.controller.ts",
-        "line": 133
+        "line": 134
       }
     },
     {
@@ -6971,7 +6971,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 311
+        "line": 310
       }
     },
     {
@@ -6985,7 +6985,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 51
+        "line": 52
       }
     },
     {
@@ -6999,7 +6999,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 448
+        "line": 447
       }
     },
     {
@@ -7013,7 +7013,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 116
+        "line": 117
       }
     },
     {
@@ -7587,7 +7587,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 111
+        "line": 114
       }
     },
     {
@@ -7601,7 +7601,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 69
+        "line": 72
       }
     },
     {
@@ -7615,7 +7615,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 150
+        "line": 153
       }
     },
     {
@@ -7629,7 +7629,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 178
+        "line": 181
       }
     },
     {
@@ -7643,7 +7643,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 21
+        "line": 22
       }
     },
     {
@@ -7657,7 +7657,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 43
+        "line": 46
       }
     },
     {
@@ -7895,7 +7895,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workflow-inbox.controller.ts",
-        "line": 12
+        "line": 13
       }
     },
     {
@@ -7909,7 +7909,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workflow-inbox.controller.ts",
-        "line": 52
+        "line": 53
       }
     },
     {
@@ -7923,7 +7923,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 36
+        "line": 37
       }
     },
     {
@@ -7937,7 +7937,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 208
+        "line": 209
       }
     },
     {
@@ -7951,7 +7951,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 238
+        "line": 239
       }
     },
     {
@@ -7965,7 +7965,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 330
+        "line": 331
       }
     },
     {
@@ -7979,7 +7979,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 347
+        "line": 348
       }
     },
     {
@@ -7993,7 +7993,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 364
+        "line": 365
       }
     },
     {
@@ -8063,7 +8063,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 115
+        "line": 116
       }
     },
     {
@@ -8077,7 +8077,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 79
+        "line": 80
       }
     },
     {
@@ -8091,7 +8091,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 85
+        "line": 86
       }
     },
     {
@@ -8105,7 +8105,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 180
+        "line": 181
       }
     },
     {
@@ -8119,7 +8119,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 266
+        "line": 267
       }
     },
     {
@@ -8133,7 +8133,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 284
+        "line": 285
       }
     },
     {
@@ -8147,7 +8147,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 301
+        "line": 302
       }
     },
     {
@@ -8161,7 +8161,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 139
+        "line": 140
       }
     }
   ],

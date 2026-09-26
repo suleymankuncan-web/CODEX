@@ -92,9 +92,12 @@ test('admin feed retries transient feed and lookup failures without leaving the 
   await expect(page.getByText(/Duyurular a..lamad./i)).toHaveCount(0)
 })
 
-test('region manager feed composer defaults to own region and hides company scope', async ({ page }) => {
+test('region manager feed composer targets assigned stores without a region selector', async ({ page }) => {
+  let createdPayload: Record<string, unknown> | null = null
   await seedMockSession(page, 'REGION_MANAGER', 'region-feed-smoke-user')
-  await routeFeedApi(page, regionManagerSessionFixture)
+  await routeFeedApi(page, regionManagerSessionFixture, {
+    onCreateFeedPost: (payload) => { createdPayload = payload as Record<string, unknown> },
+  })
 
   await page.goto('/admin/feed')
 
@@ -103,10 +106,15 @@ test('region manager feed composer defaults to own region and hides company scop
     has: page.getByRole('heading', { name: 'Feed postu oluştur' }),
   })
   const scopeSelect = composer.locator('label').filter({ hasText: 'Kapsam' }).locator('select').first()
-  const regionSelect = composer.locator('label').filter({ hasText: 'Bölge müdürü id' }).locator('select').first()
-  await expect(scopeSelect).toHaveValue('region')
+  const storeSelect = composer.getByRole('combobox', { name: 'Mağaza', exact: true })
+  await expect(scopeSelect).toHaveValue('store')
   await expect(scopeSelect).not.toContainText('Şirket')
-  await expect(regionSelect).toHaveValue(regionId)
+  await expect(storeSelect).toHaveValue('')
+  await expect(storeSelect).toContainText('Atanan 1 mağazanın tamamı')
+  await page.getByLabel('Başlık').fill('Atanan mağaza duyurusu')
+  await page.getByLabel('Gövde').fill('Günlük operasyon notu')
+  await page.getByRole('button', { name: 'Postu yayınla' }).click()
+  expect(createdPayload).toMatchObject({ visibilityScopeType: 'store', visibilityScopeIds: [storeId] })
 })
 
 test('admin feed switches chrome to English copy and persists locale', async ({ page }) => {
@@ -199,6 +207,10 @@ test('region manager store feed supports composer, edit, pin menu, archive undo,
 
   await seedMockSession(page, 'REGION_MANAGER', 'region-store-feed-user')
   await routeFeedApi(page, regionManagerSessionFixture, {
+    feedPosts: [
+      { ...secondaryFeedPostFixture, visibilityScopeType: 'store', visibilityScopeIds: [storeId] },
+      { ...feedPostFixture, visibilityScopeType: 'store', visibilityScopeIds: [storeId] },
+    ],
     onArchiveFeedPost: (feedPostId) => {
       archivedPostId = feedPostId
     },
@@ -224,8 +236,8 @@ test('region manager store feed supports composer, edit, pin menu, archive undo,
     postType: 'announcement',
     title: 'Bölge toplantısı bugün 15:00',
     body: 'Bölge toplantısı bugün 15:00',
-    visibilityScopeType: 'region',
-    visibilityScopeIds: [regionId],
+    visibilityScopeType: 'store',
+    visibilityScopeIds: [storeId],
     isPinned: true,
     publishStatus: 'published',
   })
@@ -299,6 +311,7 @@ async function routeFeedApi(
   page: Page,
   authSession: unknown,
   options?: {
+    feedPosts?: Array<typeof feedPostFixture>
     onArchiveFeedPost?: (feedPostId: string) => void
     onCreateFeedPost?: (payload: unknown) => void
     onUpdateFeedPost?: (feedPostId: string, payload: unknown) => void
@@ -321,7 +334,7 @@ async function routeFeedApi(
     if (request.method() === 'GET' && pathname.endsWith('/api/admin/feed')) {
       await route.fulfill({
         json: {
-          items: [secondaryFeedPostFixture, feedPostFixture],
+          items: options?.feedPosts ?? [secondaryFeedPostFixture, feedPostFixture],
           meta: { count: 2, total: 2, limit: 50, offset: 0 },
         },
       })
@@ -331,7 +344,7 @@ async function routeFeedApi(
     if (request.method() === 'GET' && pathname.endsWith('/api/feed')) {
       await route.fulfill({
         json: {
-          items: [secondaryFeedPostFixture, feedPostFixture],
+          items: options?.feedPosts ?? [secondaryFeedPostFixture, feedPostFixture],
           meta: { count: 2, total: 2, limit: 50, offset: 0 },
         },
       })
@@ -367,7 +380,7 @@ async function routeFeedApi(
           command: { status: 'updated', message: 'Feed post updated' },
           data: {
             feedPost: {
-              ...feedPostFixture,
+              ...(options?.feedPosts?.find(post => post.feedPostId === feedPostId) ?? feedPostFixture),
               ...(payload as Record<string, unknown>),
               updatedAt: '2026-04-26T11:00:00.000Z',
             },
@@ -387,7 +400,7 @@ async function routeFeedApi(
       await route.fulfill({
         json: {
           command: { status: 'ok', message: 'Feed post updated' },
-          data: { feedPost: feedPostFixture },
+          data: { feedPost: options?.feedPosts?.find(post => post.feedPostId === feedPostId) ?? feedPostFixture },
         },
       })
       return
@@ -487,12 +500,14 @@ const regionManagerSessionFixture = {
       regionIds: [regionId],
       storeIds: [],
     },
+    actionScope: { assignedStoreIds: [storeId] },
+    assignedStoreIds: [storeId],
   },
   scopeSummary: {
     companyCount: 0,
     regionCount: 1,
     storeCount: 0,
-    assignedStoreCount: 0,
+    assignedStoreCount: 1,
   },
 }
 

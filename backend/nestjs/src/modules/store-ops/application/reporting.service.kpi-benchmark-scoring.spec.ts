@@ -826,10 +826,10 @@ describe("ReportingService KPI benchmark scoring", () => {
       targetEmployeeId,
       roleCodes: ["REGION_MANAGER"],
       identityCompanyIds: [],
-      companyIds: ["company-1"],
-      regionIds: ["region-1"],
-      storeIds: [],
-      assignedStoreIds: [],
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      assignedStoreIds: ["store-1"],
       periodType: "monthly",
       periodStart: "2026-03-01",
     });
@@ -1049,8 +1049,8 @@ describe("ReportingService personnel performance profile access", () => {
     );
   });
 
-  it("allows region managers to open profiles inside their region", async () => {
-    const repository = createRepositoryMock({ targetRegionId: "region-1" });
+  it("allows Region Managers to open profiles in assigned stores across region boundaries", async () => {
+    const repository = createRepositoryMock({ targetRegionId: "region-2" });
     const service = createService(repository);
 
     const result = await service.getPersonnelPerformance({
@@ -1058,18 +1058,18 @@ describe("ReportingService personnel performance profile access", () => {
       employeeId: "region-manager-employee",
       targetEmployeeId,
       roleCodes: ["REGION_MANAGER"],
-      companyIds: ["company-1"],
-      regionIds: ["region-1"],
-      storeIds: [],
-      assignedStoreIds: [],
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      assignedStoreIds: ["store-1"],
       periodType: "monthly",
     });
 
     expect(result.employee?.displayName).toBe("Ada Lovelace");
   });
 
-  it("blocks region managers from opening profiles outside their region", async () => {
-    const repository = createRepositoryMock({ targetRegionId: "region-2" });
+  it("blocks same-region profiles when the store is not assigned", async () => {
+    const repository = createRepositoryMock({ targetRegionId: "region-1", targetStoreId: "store-2" });
     const service = createService(repository);
 
     await expect(
@@ -1080,8 +1080,8 @@ describe("ReportingService personnel performance profile access", () => {
         roleCodes: ["REGION_MANAGER"],
         companyIds: [],
         regionIds: ["region-1"],
-        storeIds: [],
-        assignedStoreIds: [],
+        storeIds: ["store-1"],
+        assignedStoreIds: ["store-1"],
         periodType: "monthly",
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
@@ -1101,10 +1101,10 @@ describe("ReportingService personnel performance profile access", () => {
       employeeId: "region-manager-employee",
       targetEmployeeId,
       roleCodes: ["REGION_MANAGER"],
-      companyIds: ["company-1"],
-      regionIds: ["region-1"],
-      storeIds: [],
-      assignedStoreIds: [],
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      assignedStoreIds: ["store-1"],
       periodType: "monthly",
       periodStart: "2026-05-01",
     });

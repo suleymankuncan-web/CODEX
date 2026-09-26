@@ -42,6 +42,7 @@ function actor() {
     userId: "region-user",
     roleCodes: ["REGION_MANAGER"],
     actionScope: { assignedStoreIds: [storeId] },
+    roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: [storeId] } },
   });
 }
 
@@ -304,6 +305,7 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
           userId: "manager-user",
           roleCodes: ["STORE_MANAGER"],
           actionScope: { assignedStoreIds: [storeId] },
+          roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: [storeId] } },
         }),
         periodKey: "2026-05",
       }),

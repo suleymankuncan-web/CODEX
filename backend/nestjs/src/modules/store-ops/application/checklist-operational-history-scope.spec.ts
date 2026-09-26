@@ -33,12 +33,12 @@ describe("resolveChecklistOperationalHistoryScope", () => {
     });
   });
 
-  it("uses only Region Manager region and store scope", () => {
+  it("uses only Region Manager assigned stores, never the legacy region scope", () => {
     expect(resolveChecklistOperationalHistoryScope({
       actorRoleCodes: ["REGION_MANAGER"],
       actorReadScope,
       roleScopes: { REGION_MANAGER: { companyIds: ["ignored"], regionIds: ["region-a"], storeIds: ["store-a"] } },
-    })).toEqual({ view: "region_manager", companyIds: [], regionIds: ["region-a"], storeIds: ["store-a"] });
+    })).toEqual({ view: "region_manager", companyIds: [], regionIds: [], storeIds: ["store-a"] });
   });
 
   it("uses only Store Manager stores and rejects unsupported personas", () => {

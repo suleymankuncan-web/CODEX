@@ -73,7 +73,7 @@ describe("StoreActionPhotoReviewRepository", () => {
       return { rows: [{ solution_attempt_id: ids.attempt, decision: "approve", expected_version: 1 }] };
     });
     await expect(repository.review({ actionPlanId: ids.plan, solutionAttemptId: ids.attempt,
-      actorUserId: ids.actor, actorRegionIds: [], actorStoreIds: [], decision: "approve",
+      actorUserId: ids.actor, actorStoreIds: [], decision: "approve",
       expectedVersion: 1, idempotencyKey: ids.key, actor: {} })).rejects.toBeInstanceOf(ForbiddenException);
     expect(query).toHaveBeenCalledTimes(1);
   });
@@ -87,7 +87,7 @@ describe("StoreActionPhotoReviewRepository", () => {
       return { rows: [] };
     });
     await expect(repository.review({ actionPlanId: ids.plan, solutionAttemptId: ids.attempt,
-      actorUserId: ids.actor, actorRegionIds: [ids.region], actorStoreIds: [ids.store],
+      actorUserId: ids.actor, actorStoreIds: [ids.store],
       decision: "approve", expectedVersion: 1, idempotencyKey: ids.key, actor: {} }))
       .rejects.toBeInstanceOf(ConflictException);
     expect(query.mock.calls.some((call) => String(call[0]).includes("INSERT INTO ops.store_action_solution_review"))).toBe(false);
@@ -105,7 +105,7 @@ describe("StoreActionPhotoReviewRepository", () => {
       return { rows: [] };
     });
     await expect(repository.review({ actionPlanId: ids.plan, solutionAttemptId: ids.attempt,
-      actorUserId: ids.actor, actorRegionIds: [ids.region], actorStoreIds: [ids.store],
+      actorUserId: ids.actor, actorStoreIds: [ids.store],
       decision: "approve", expectedVersion: 1, idempotencyKey: ids.key,
       actor: { displayName: "Region Manager" } })).resolves.toMatchObject({ status: "closed" });
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");

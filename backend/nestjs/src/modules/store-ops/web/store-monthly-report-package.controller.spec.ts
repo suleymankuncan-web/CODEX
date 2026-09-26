@@ -43,7 +43,7 @@ describe("StoreMonthlyReportPackageController", () => {
     return { controller, service };
   }
 
-  it("delegates region manager package reads with action scope and user assignment fallback", async () => {
+  it("delegates region manager package reads with assigned profile stores", async () => {
     const { controller, service } = createController();
 
     await controller.getStoreMonthlyReportPackage(
@@ -57,7 +57,10 @@ describe("StoreMonthlyReportPackageController", () => {
             storeIds: [],
           },
           actionScope: {
-            assignedStoreIds: ["store-1"],
+            assignedStoreIds: ["store-1", "unassigned-store"],
+          },
+          roleScopes: {
+            REGION_MANAGER: { companyIds: ["company-1"], regionIds: ["region-1"], storeIds: ["store-1"] },
           },
         },
       },
@@ -74,12 +77,27 @@ describe("StoreMonthlyReportPackageController", () => {
         userId: "region-manager-1",
         employeeId: undefined,
         roleCodes: ["REGION_MANAGER"],
-        companyIds: ["company-1"],
-        regionIds: ["region-1"],
-        storeIds: [],
+        companyIds: [],
+        regionIds: [],
+        storeIds: ["store-1"],
         assignedStoreIds: ["store-1"],
       },
     });
+  });
+
+  it("returns no stores to an unassigned region manager even when a broad read scope exists", async () => {
+    const { controller, service } = createController();
+    await controller.getStoreMonthlyReportPackage({ user: {
+      userId: "region-manager-1",
+      roleCodes: ["REGION_MANAGER"],
+      scope: { companyIds: ["company-1"], regionIds: ["region-1"], storeIds: ["read-store"] },
+      roleScopes: { REGION_MANAGER: { companyIds: ["company-1"], regionIds: ["region-1"], storeIds: ["read-store"] } },
+      actionScope: { assignedStoreIds: [] },
+    } }, { period: "2026-06" });
+    expect(service.getSummary).toHaveBeenCalledWith(expect.objectContaining({
+      companyIds: [], regionIds: [], storeIds: [], regionManagerUserId: "region-manager-1",
+      rankingContext: expect.objectContaining({ companyIds: [], regionIds: [], storeIds: [], assignedStoreIds: [] }),
+    }));
   });
 
   it("sets download headers and returns the workbook as a raw streamable file", async () => {

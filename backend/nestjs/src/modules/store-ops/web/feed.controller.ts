@@ -25,6 +25,7 @@ type FeedRequest = {
       regionIds: string[];
       storeIds: string[];
     }>;
+    actionScope?: { assignedStoreIds: string[] };
   };
 };
 
@@ -130,6 +131,8 @@ export class FeedController {
     return {
       actorUserId: request.user.userId,
       actorRoles: request.user.roleCodes,
+      actorActionScope: request.user.actionScope,
+      actorRegionManagerStoreIds: request.user.roleScopes?.REGION_MANAGER?.storeIds ?? [],
       actorScope: resolveReportViewerCompanyScope({
         actorRoleCodes: request.user.roleCodes,
         actorScope: request.user.readScope ?? request.user.scope,

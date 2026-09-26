@@ -119,13 +119,17 @@ function ScreenState({
 }
 
 export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null }) {
+  return <AdminFeedSurface key={getAdminFeedQueryKey(input.authSummary)[1]} {...input} />
+}
+
+function AdminFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
   const roles = input.authSummary?.user.roleCodes ?? []
   const isGlobalWriter = roles.includes('SUPER_ADMIN') || roles.includes('HR_ADMIN')
   const isRegionManagerOnly = !isGlobalWriter && roles.includes('REGION_MANAGER')
-  const defaultRegionId = input.authSummary?.user.readScope.regionIds[0] ?? ''
+  const assignedStoreIds = input.authSummary?.user.actionScope.assignedStoreIds ?? []
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<FeedFormState>(() => createInitialForm(isRegionManagerOnly, defaultRegionId))
+  const [form, setForm] = useState<FeedFormState>(() => createInitialForm(isRegionManagerOnly))
   const adminFeedQueryKey = getAdminFeedQueryKey(input.authSummary)
   const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
   const feedCommandKey = [...adminFeedQueryKey, 'command']
@@ -155,7 +159,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     mutationFn: createFeedPost,
     onSuccess: async (response) => {
       actionToast.success(response.command.message)
-      setForm(createInitialForm(isRegionManagerOnly, defaultRegionId))
+      setForm(createInitialForm(isRegionManagerOnly))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
@@ -234,7 +238,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
     )
   }
 
-  if (isRegionManagerOnly && !defaultRegionId) {
+  if (isRegionManagerOnly && assignedStoreIds.length === 0) {
     return (
       <ScreenState
         title={t('adminFeed.regionMissingTitle')}
@@ -281,7 +285,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       ...(form.linkLabel ? { linkLabel: form.linkLabel } : {}),
       ...(form.linkUrl ? { linkUrl: form.linkUrl } : {}),
       visibilityScopeType: form.visibilityScopeType,
-      visibilityScopeIds: form.visibilityScopeType === 'company' ? [] : [form.scopeId],
+      visibilityScopeIds: isRegionManagerOnly ? assignedStoreIds : form.visibilityScopeType === 'company' ? [] : [form.scopeId],
       isPinned: form.isPinned,
       publishStatus,
       ...(form.startsAt ? { startsAt: form.startsAt } : {}),
@@ -362,6 +366,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
           form={form}
           isGlobalWriter={isGlobalWriter}
           isRegionManagerOnly={isRegionManagerOnly}
+          assignedStoreCount={assignedStoreIds.length}
           onSubmit={submitPost}
           regionOptions={regionOptions}
           setForm={setForm}
@@ -412,6 +417,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
 }
 
 function AdminFeedComposerPanel(input: {
+  assignedStoreCount: number
   createPending: boolean
   form: FeedFormState
   isGlobalWriter: boolean
@@ -485,7 +491,8 @@ function AdminFeedComposerPanel(input: {
             }
           >
             {input.isGlobalWriter ? <option value="company">{formatFeedScopeLabel('company', t)}</option> : null}
-            <option value="region">{formatFeedScopeLabel('region', t)}</option>
+            {input.isGlobalWriter ? <option value="region">{formatFeedScopeLabel('region', t)}</option> : null}
+            {input.isRegionManagerOnly ? <option value="store">{formatFeedScopeLabel('store', t)}</option> : null}
             {input.isGlobalWriter ? <option value="store">{formatFeedScopeLabel('store', t)}</option> : null}
           </select>
         </label>
@@ -498,7 +505,9 @@ function AdminFeedComposerPanel(input: {
               disabled={input.isRegionManagerOnly}
               onChange={(event) => input.setForm((current) => ({ ...current, scopeId: event.target.value }))}
             >
-              <option value="">{t('adminFeed.selectScope')}</option>
+              <option value="">{input.isRegionManagerOnly
+                ? t('adminFeed.assignedStores', { count: input.assignedStoreCount })
+                : t('adminFeed.selectScope')}</option>
               {input.form.visibilityScopeType === 'region'
                 ? input.regionOptions.map((option) => (
                   <option key={option.regionId} value={option.regionId}>
@@ -714,15 +723,15 @@ function FeedAdminRow(input: {
   )
 }
 
-function createInitialForm(isRegionManagerOnly: boolean, defaultRegionId: string): FeedFormState {
+function createInitialForm(isRegionManagerOnly: boolean): FeedFormState {
   return {
     postType: 'announcement',
     title: '',
     body: '',
     linkLabel: '',
     linkUrl: '',
-    visibilityScopeType: isRegionManagerOnly ? 'region' : 'company',
-    scopeId: isRegionManagerOnly ? defaultRegionId : '',
+    visibilityScopeType: isRegionManagerOnly ? 'store' : 'company',
+    scopeId: '',
     isPinned: false,
     startsAt: '',
     endsAt: '',

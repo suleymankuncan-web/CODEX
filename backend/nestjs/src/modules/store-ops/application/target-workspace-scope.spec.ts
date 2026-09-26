@@ -27,10 +27,10 @@ describe("resolveTargetWorkspaceScope", () => {
       actorRoleCodes: ["REGION_MANAGER"],
       actorReadScope: { companyIds: ["company"], regionIds: ["broad-region"], storeIds: [] },
       actorActionScope: { assignedStoreIds: ["store-b", "store-a", "store-a"] },
-      roleScopes: { REGION_MANAGER: { companyIds: ["company"], regionIds: ["broad-region"], storeIds: [] } },
+      roleScopes: { REGION_MANAGER: { companyIds: ["company"], regionIds: ["broad-region"], storeIds: ["store-a", "store-b"] } },
     })).toEqual({
       view: "region_manager",
-      readScope: { companyIds: ["company"], regionIds: ["broad-region"], storeIds: ["store-a", "store-b"] },
+      readScope: { companyIds: [], regionIds: [], storeIds: ["store-a", "store-b"] },
       actionableStoreIds: ["store-a", "store-b"],
       capabilities: { canCreateRequest: false, canApproveRequest: true },
     });

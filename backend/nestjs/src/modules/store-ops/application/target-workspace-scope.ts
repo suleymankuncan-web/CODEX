@@ -41,15 +41,13 @@ export function resolveTargetWorkspaceScope(input: {
     if (!roleScope) return emptyTargetScope("region_manager");
     const actionStoreIds = unique(input.actorActionScope.assignedStoreIds);
     const explicitRoleStores = new Set(unique(roleScope.storeIds));
-    const storeIds = explicitRoleStores.size > 0
-      ? actionStoreIds.filter((storeId) => explicitRoleStores.has(storeId))
-      : actionStoreIds;
+    const storeIds = actionStoreIds.filter((storeId) => explicitRoleStores.has(storeId));
     if (storeIds.length === 0) return emptyTargetScope("region_manager");
     return {
       view: "region_manager",
       readScope: {
-        companyIds: unique(roleScope.companyIds),
-        regionIds: unique(roleScope.regionIds),
+        companyIds: [],
+        regionIds: [],
         storeIds,
       },
       actionableStoreIds: storeIds,

@@ -1,6 +1,20 @@
 import { TargetDistributionService } from "./target-distribution.service";
 
 describe("TargetDistributionService", () => {
+  it("lists Region Manager target requests by direct store assignment only", async () => {
+    const targetDistributionRepository = {
+      listRequests: jest.fn(async () => ({ items: [], total: 0, limit: 50, offset: 0 })),
+    };
+    const service = new TargetDistributionService(targetDistributionRepository as never, {} as never);
+    await service.listRequests({
+      actorScope: { companyIds: ["legacy-company"], regionIds: ["legacy-region"], storeIds: [] },
+      actorActionScope: { assignedStoreIds: ["assigned-store"] },
+      actorRoleCodes: ["REGION_MANAGER"],
+    });
+    expect(targetDistributionRepository.listRequests).toHaveBeenCalledWith(expect.objectContaining({
+      companyIds: [], regionIds: [], storeIds: ["assigned-store"],
+    }));
+  });
   it("keeps store manager request lists limited to assigned stores even when company scope is present", async () => {
     const targetDistributionRepository = {
       listRequests: jest.fn(async () => ({

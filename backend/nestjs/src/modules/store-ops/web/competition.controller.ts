@@ -14,6 +14,7 @@ import { ReviewCompetitionStagePackagePlanDto } from "./dto/review-competition-s
 import { UpdateCompetitionStagePackagePlanDto } from "./dto/update-competition-stage-package-plan.dto";
 import { UpdateCompetitionTeamTemplateDto } from "./dto/update-competition-team-template.dto";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds } from "../application/region-manager-assigned-stores";
 
 type CompetitionRequest = {
   user: {
@@ -61,7 +62,7 @@ export class CompetitionController {
             roleScopes: request.user.roleScopes,
           })
         : request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: competitionReadActionScope(request),
       actorRoleCodes: request.user.roleCodes,
       limit: query.limit,
       offset: query.offset,
@@ -103,7 +104,7 @@ export class CompetitionController {
             roleScopes: request.user.roleScopes,
           })
         : request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: competitionReadActionScope(request),
       actorRoleCodes: request.user.roleCodes,
       includeStoreDetails: true,
     });
@@ -382,4 +383,12 @@ function competitionActorAccess(request: CompetitionRequest) {
     actorScope: request.user.scope,
     actorActionScope: request.user.actionScope,
   };
+}
+
+function competitionReadActionScope(request: CompetitionRequest) {
+  const actionScope = request.user.actionScope;
+  return actionScope ? { assignedStoreIds: resolveRegionManagerAssignedStoreIds({
+    roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes,
+    assignedStoreIds: actionScope.assignedStoreIds,
+  }) } : undefined;
 }

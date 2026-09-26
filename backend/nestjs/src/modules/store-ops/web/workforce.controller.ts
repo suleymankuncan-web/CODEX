@@ -16,6 +16,7 @@ import { RejectWorkforceRequestDto } from "./dto/reject-workforce-request.dto";
 import { ResubmitSellerCodeRequestDto } from "./dto/resubmit-seller-code-request.dto";
 import { ResubmitOffboardingRequestDto } from "./dto/resubmit-offboarding-request.dto";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds } from "../application/region-manager-assigned-stores";
 
 type WorkforceActorRequest = {
   user: {
@@ -67,7 +68,7 @@ export class WorkforceController {
 
     return this.workforceService.getStoreHeadcountGap({
       actorScope: request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       actorRoleCodes: request.user.roleCodes,
       ...(actorReadScope ? { actorReadScope } : {}),
       storeId: query.storeId,
@@ -170,7 +171,7 @@ export class WorkforceController {
 
     return this.workforceService.listActiveStoreEmployees({
       actorScope: request.user.scope,
-      actorActionScope: request.user.actionScope,
+      actorActionScope: { assignedStoreIds: resolveRegionManagerAssignedStoreIds({ roleCodes: request.user.roleCodes, roleScopes: request.user.roleScopes, assignedStoreIds: request.user.actionScope.assignedStoreIds }) },
       actorRoleCodes: request.user.roleCodes,
       ...(actorReadScope ? { actorReadScope } : {}),
       storeId: query.storeId,

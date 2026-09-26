@@ -218,18 +218,19 @@ export class FeedRepository {
     }
 
     if (input.actorRoles.includes("REGION_MANAGER")) {
+      if (input.actorScope.storeIds.length === 0) return [];
       const result = await this.databaseService.query<FeedPostRow>(
         `
           SELECT
             ${feedPostColumns}
           FROM ops.feed_post
-          WHERE visibility_scope_type = 'region'
-            AND visibility_scope_ids && $1::uuid[]
+          WHERE visibility_scope_type = 'store'
+            AND visibility_scope_ids <@ $1::uuid[]
           ORDER BY is_pinned DESC, updated_at DESC
           LIMIT $2::int
           OFFSET $3::int
         `,
-        [input.actorScope.regionIds, input.limit, input.offset],
+        [input.actorScope.storeIds, input.limit, input.offset],
       );
 
       return result.rows.map((row) => this.mapFeedPost(row));

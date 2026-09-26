@@ -28,16 +28,15 @@ describe("VisualComparisonAdvisoryService", () => {
     readScope: { companyIds: [], regionIds: [], storeIds: [] },
     actionScope: { assignedStoreIds: ["33333333-3333-4333-8333-333333333333"] },
     assignedStoreIds: ["33333333-3333-4333-8333-333333333333"],
-    roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: ["22222222-2222-4222-8222-222222222222"], storeIds: [] } },
+    roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["33333333-3333-4333-8333-333333333333"] } },
   };
 
   beforeEach(() => jest.clearAllMocks());
 
-  it("[FR-7][AC-7] intersects Region Manager role and action-store scopes", async () => {
+  it("[FR-7][AC-7] intersects Region Manager role and action-store assignments", async () => {
     const service = new VisualComparisonAdvisoryService(repository as never, media as never, config as never);
     await service.list(user as never, { limit: 25, offset: 0 });
     expect(repository.list).toHaveBeenCalledWith(expect.objectContaining({
-      regionIds: user.roleScopes.REGION_MANAGER.regionIds,
       storeIds: user.actionScope.assignedStoreIds,
       companyId: config.visualComparisonCompanyId,
       referenceSetId: config.visualComparisonReferenceSetId,
@@ -63,6 +62,9 @@ describe("VisualComparisonAdvisoryService", () => {
     await expect(new VisualComparisonAdvisoryService(repository as never, media as never, config as never)
       .list({ ...user, actionScope: { assignedStoreIds: [] } } as never, { limit: 25, offset: 0 }))
       .rejects.toBeInstanceOf(ForbiddenException);
+    await expect(new VisualComparisonAdvisoryService(repository as never, media as never, config as never)
+      .list({ ...user, roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: [] } } } as never,
+        { limit: 25, offset: 0 })).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("[FR-10][AC-10] validates the typed final review command", async () => {

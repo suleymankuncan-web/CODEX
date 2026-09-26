@@ -20,7 +20,7 @@ export function filterPersonnelByActiveAssignmentScope<Row extends PersonnelRank
     assignmentByEmployeeId: Map<string, RankingActiveAssignment>;
   },
 ) {
-  const managerStoreIds = unique([...input.assignedStoreIds, ...input.storeIds]);
+  const managerStoreIds = unique(input.assignedStoreIds);
 
   return rows.filter((row) => {
     const assignment = input.assignmentByEmployeeId.get(row.employeeId);
@@ -32,9 +32,7 @@ export function filterPersonnelByActiveAssignmentScope<Row extends PersonnelRank
         return false;
       }
     } else if (!isSuperAdmin && input.roleCodes.includes("REGION_MANAGER")) {
-      const insideAssignedScope = managerStoreIds.length > 0
-        ? assignment.store_id !== null && managerStoreIds.includes(assignment.store_id)
-        : assignment.region_id !== null && input.regionIds.includes(assignment.region_id);
+      const insideAssignedScope = assignment.store_id !== null && managerStoreIds.includes(assignment.store_id);
       if (!insideAssignedScope) return false;
     }
 

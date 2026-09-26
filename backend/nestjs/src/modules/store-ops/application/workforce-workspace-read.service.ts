@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
+import { RegionManagerDirectoryService } from "./region-manager-directory.service";
 import { WorkforceWorkspaceReadRepository } from "../infrastructure/workforce-workspace-read.repository";
 import type {
   WorkforceSortDirection,
@@ -16,7 +17,10 @@ import { resolveWorkforceWorkspaceScope } from "./workforce-workspace-scope";
 
 @Injectable()
 export class WorkforceWorkspaceReadService {
-  constructor(private readonly repository: WorkforceWorkspaceReadRepository) {}
+  constructor(
+    private readonly repository: WorkforceWorkspaceReadRepository,
+    private readonly managerDirectory: RegionManagerDirectoryService,
+  ) {}
 
   async getWorkspace(input: {
     actor: AuthenticatedUser;
@@ -52,9 +56,17 @@ export class WorkforceWorkspaceReadService {
     const status = input.status ?? "all";
     const sort = input.sort ?? "store";
     const direction = input.direction ?? "ascending";
-    const hasScope = scope.readScope.companyIds.length
-      + scope.readScope.regionIds.length
-      + scope.readScope.storeIds.length > 0;
+    let readScope = scope.readScope;
+    if (scope.view === "report_viewer" && input.regionManagerUserId) {
+      const directory = await this.managerDirectory.list(input.actor);
+      const selectedStoreIds = directory.items.find(
+        (manager) => manager.userId === input.regionManagerUserId,
+      )?.storeIds ?? [];
+      readScope = { companyIds: [], regionIds: [], storeIds: selectedStoreIds };
+    }
+    const hasScope = readScope.companyIds.length
+      + readScope.regionIds.length
+      + readScope.storeIds.length > 0;
 
     if (!hasScope) {
       return emptyWorkspace(scope.view, scope.capabilities, limit, offset);
@@ -64,12 +76,12 @@ export class WorkforceWorkspaceReadService {
       ? { regionManagerUserId: input.regionManagerUserId }
       : {};
     const [page, summaryRow] = await Promise.all([
-      this.repository.listStorePage({ scope: scope.readScope, limit, offset, query, status, sort, direction, ...managerFilter }),
-      this.repository.summarizeScope({ scope: scope.readScope, ...managerFilter }),
+      this.repository.listStorePage({ scope: readScope, limit, offset, query, status, sort, direction, ...managerFilter }),
+      this.repository.summarizeScope({ scope: readScope, ...managerFilter }),
     ]);
     const personnelStoreId = input.personnelStoreId
       ?? (scope.view === "store_manager" ? page.items[0]?.store_id : undefined);
-    if (personnelStoreId && !(await this.repository.isStoreInScope({ scope: scope.readScope, storeId: personnelStoreId }))) {
+    if (personnelStoreId && !(await this.repository.isStoreInScope({ scope: readScope, storeId: personnelStoreId }))) {
       throw new ForbiddenException("Requested personnel store is outside workforce read scope");
     }
     const personnelSummary = personnelStoreId
@@ -77,7 +89,7 @@ export class WorkforceWorkspaceReadService {
       : null;
     const personnelPage = personnelStoreId
       ? await this.repository.listActivePersonnel({
-          scope: scope.readScope,
+          scope: readScope,
           storeId: personnelStoreId,
           limit: personnelLimit,
           offset: personnelOffset,
@@ -125,12 +137,12 @@ export class WorkforceWorkspaceReadService {
     let history: WorkforceCommandWorkspace["history"] = null;
     if (input.historyStoreId) {
       const allowed = await this.repository.isStoreInScope({
-        scope: scope.readScope,
+        scope: readScope,
         storeId: input.historyStoreId,
       });
       if (!allowed) throw new ForbiddenException("Requested history store is outside workforce read scope");
       const historyPage = await this.repository.listHistory({
-        scope: scope.readScope,
+        scope: readScope,
         storeId: input.historyStoreId,
         limit: historyLimit,
         offset: historyOffset,

@@ -48,7 +48,7 @@ describe('store feed read and manage surfaces', () => {
   function render(canManage: boolean) {
     return renderToStaticMarkup(createElement(MemoryRouter, null, createElement(StoreFeedTable, {
       posts: [post({ linkLabel: 'Sıralamaları aç', targetRoute: '/store/rankings' })], locale: 'tr', t: (key, params) => translate('tr', key, params),
-      canManage, editingPostId: null, editingBody: '', isMutationPending: false,
+      canManagePost: () => canManage, editingPostId: null, editingBody: '', isMutationPending: false,
       onEditBodyChange: vi.fn(), onStartEdit: vi.fn(), onCancelEdit: vi.fn(), onSaveEdit: vi.fn(), onTogglePin: vi.fn(), onRemove: vi.fn(),
     })))
   }

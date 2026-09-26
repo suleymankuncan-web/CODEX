@@ -70,14 +70,13 @@ export class VisualComparisonAdvisoryService {
     if (!user.roleCodes.includes("REGION_MANAGER") || !roleScope) {
       throw new ForbiddenException("Visual advisory review requires Region Manager scope");
     }
-    const regionIds = [...new Set(roleScope.regionIds)];
-    const storeIds = [...new Set(user.actionScope.assignedStoreIds)];
-    if (regionIds.length === 0 || storeIds.length === 0) {
-      throw new ForbiddenException("Visual advisory review requires assigned region and store scope");
+    const actionStoreIds = new Set(user.actionScope.assignedStoreIds);
+    const storeIds = [...new Set(roleScope.storeIds.filter((storeId) => actionStoreIds.has(storeId)))];
+    if (storeIds.length === 0) {
+      throw new ForbiddenException("Visual advisory review requires assigned stores");
     }
     return {
       actorUserId: user.userId,
-      regionIds,
       storeIds,
       companyId: this.config.visualComparisonCompanyId,
       referenceSetId: this.config.visualComparisonReferenceSetId,

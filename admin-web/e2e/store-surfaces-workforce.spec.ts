@@ -115,14 +115,14 @@ test('store workforce route is visible read-only for reporting users with compan
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
 })
 
-test('store workforce route is visible for region manager read scope', async ({ page }) => {
+test('store workforce route is visible for region manager assigned stores', async ({ page }) => {
   await routeAuthSession(page, createStoreAuthSession({
     roleCodes: ['REGION_MANAGER'],
     readStoreIds: [],
     readRegionIds: [demoRegionId],
     scopeStoreIds: [],
     scopeRegionIds: [demoRegionId],
-    actionStoreIds: [],
+    actionStoreIds: [demoStoreId],
     legacyAssignedStoreIds: [],
   }))
 
@@ -137,7 +137,7 @@ test('store workforce route is visible for region manager read scope', async ({ 
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
 })
 
-test('store workforce page shows only region manager read-scope rows and opens detail in page', async ({ page }) => {
+test('store workforce page shows only region manager assigned-store rows and opens detail in page', async ({ page }) => {
   const workforceCalls: string[] = []
   await routeAuthSession(page, createStoreAuthSession({
     roleCodes: ['REGION_MANAGER'],
@@ -145,7 +145,7 @@ test('store workforce page shows only region manager read-scope rows and opens d
     readRegionIds: [demoRegionId],
     scopeStoreIds: [],
     scopeRegionIds: [demoRegionId],
-    actionStoreIds: [],
+    actionStoreIds: [demoStoreId, regionSecondStoreId],
     legacyAssignedStoreIds: [],
   }))
   await routeRegionWorkforceReadCalls(page, workforceCalls)
@@ -180,7 +180,7 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
     readRegionIds: [demoRegionId],
     scopeStoreIds: [],
     scopeRegionIds: [demoRegionId],
-    actionStoreIds: [],
+    actionStoreIds: [demoStoreId],
     legacyAssignedStoreIds: [],
   }))
   await routeRegionWorkforceReadCalls(page, workforceCalls)
@@ -208,7 +208,7 @@ test('store workforce region command layout stays aligned on compact desktop', a
     readRegionIds: [demoRegionId],
     scopeStoreIds: [],
     scopeRegionIds: [demoRegionId],
-    actionStoreIds: [],
+    actionStoreIds: [demoStoreId, regionSecondStoreId],
     legacyAssignedStoreIds: [],
   }))
   await routeRegionWorkforceReadCalls(page, workforceCalls)

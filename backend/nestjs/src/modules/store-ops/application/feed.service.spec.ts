@@ -7,6 +7,8 @@ const companyId = "00000000-0000-4000-8000-000000000100";
 const otherCompanyId = "00000000-0000-4000-8000-000000000200";
 const marmaraRegionId = "11111111-1111-4111-8111-111111111111";
 const egeRegionId = "22222222-2222-4222-8222-222222222222";
+const assignedStoreId = "44444444-4444-4444-8444-444444444444";
+const otherStoreId = "55555555-5555-4555-8555-555555555555";
 
 function createRepositoryMock() {
   return {
@@ -108,12 +110,12 @@ describe("FeedService", () => {
     expect(repository.createFeedPost).not.toHaveBeenCalled();
   });
 
-  it("allows region manager to create only an own-region post", async () => {
+  it("allows a Region Manager to publish only to directly assigned stores", async () => {
     const repository = createRepositoryMock();
     repository.createFeedPost.mockResolvedValue(
       createFeedPost({
-        visibilityScopeType: "region",
-        visibilityScopeIds: [marmaraRegionId],
+        visibilityScopeType: "store",
+        visibilityScopeIds: [assignedStoreId],
       }),
     );
     const service = new FeedService(repository as never);
@@ -126,17 +128,19 @@ describe("FeedService", () => {
         regionIds: [marmaraRegionId],
         storeIds: [],
       },
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actorRegionManagerStoreIds: [assignedStoreId],
       postType: "announcement",
       title: "Marmara focus",
       body: "Regional announcement",
-      visibilityScopeType: "region",
-      visibilityScopeIds: [marmaraRegionId],
+      visibilityScopeType: "store",
+      visibilityScopeIds: [assignedStoreId],
     });
 
     expect(repository.createFeedPost).toHaveBeenCalledWith(
       expect.objectContaining({
-        visibilityScopeType: "region",
-        visibilityScopeIds: [marmaraRegionId],
+        visibilityScopeType: "store",
+        visibilityScopeIds: [assignedStoreId],
       }),
     );
   });
@@ -163,7 +167,7 @@ describe("FeedService", () => {
     expect(repository.createFeedPost).not.toHaveBeenCalled();
   });
 
-  it("rejects region manager posts for another region", async () => {
+  it("rejects region-scoped posts even when the manager has a legacy region id", async () => {
     const repository = createRepositoryMock();
     const service = new FeedService(repository as never);
 
@@ -176,13 +180,58 @@ describe("FeedService", () => {
           regionIds: [marmaraRegionId],
           storeIds: [],
         },
+        actorActionScope: { assignedStoreIds: [assignedStoreId] },
+        actorRegionManagerStoreIds: [assignedStoreId],
         postType: "announcement",
         title: "Ege focus",
         body: "Wrong region",
         visibilityScopeType: "region",
-        visibilityScopeIds: [egeRegionId],
+        visibilityScopeIds: [marmaraRegionId],
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.createFeedPost).not.toHaveBeenCalled();
+  });
+
+  it("rejects a store post outside direct assignments despite matching read scope", async () => {
+    const repository = createRepositoryMock();
+    const service = new FeedService(repository as never);
+    await expect(service.createFeedPost({
+      actorUserId, actorRoles: ["REGION_MANAGER"],
+      actorScope: { companyIds: [], regionIds: [egeRegionId], storeIds: [otherStoreId] },
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actorRegionManagerStoreIds: [assignedStoreId],
+      postType: "announcement", title: "Outside", body: "Outside assignment",
+      visibilityScopeType: "store", visibilityScopeIds: [otherStoreId],
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.createFeedPost).not.toHaveBeenCalled();
+  });
+
+  it("lists manager feed posts through direct stores and not legacy regions", async () => {
+    const repository = createRepositoryMock();
+    repository.listManageableFeedPosts.mockResolvedValue([]);
+    const service = new FeedService(repository as never);
+    await service.listManageableFeedPosts({
+      actorUserId, actorRoles: ["REGION_MANAGER"],
+      actorScope: { companyIds: [companyId], regionIds: [marmaraRegionId], storeIds: [otherStoreId] },
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actorRegionManagerStoreIds: [assignedStoreId],
+    });
+    expect(repository.listManageableFeedPosts).toHaveBeenCalledWith(expect.objectContaining({
+      actorScope: { companyIds: [], regionIds: [], storeIds: [assignedStoreId] },
+    }));
+  });
+
+  it("does not treat a different role's action store as a Region Manager store", async () => {
+    const repository = createRepositoryMock();
+    const service = new FeedService(repository as never);
+    await expect(service.createFeedPost({
+      actorUserId, actorRoles: ["REGION_MANAGER", "STORE_MANAGER"],
+      actorScope: { companyIds: [], regionIds: [], storeIds: [otherStoreId] },
+      actorActionScope: { assignedStoreIds: [assignedStoreId, otherStoreId] },
+      actorRegionManagerStoreIds: [assignedStoreId],
+      postType: "announcement", title: "Outside", body: "Outside assignment",
+      visibilityScopeType: "store", visibilityScopeIds: [otherStoreId],
+    })).rejects.toBeInstanceOf(ForbiddenException);
     expect(repository.createFeedPost).not.toHaveBeenCalled();
   });
 
@@ -253,6 +302,25 @@ describe("FeedService", () => {
         title: "Cannot change",
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.updateFeedPost).not.toHaveBeenCalled();
+  });
+
+  it("does not let a Region Manager take over an out-of-scope post by changing its target", async () => {
+    const repository = createRepositoryMock();
+    repository.getFeedPost.mockResolvedValue(createFeedPost({
+      visibilityScopeType: "store", visibilityScopeIds: [otherStoreId],
+    }));
+    const service = new FeedService(repository as never);
+
+    await expect(service.updateFeedPost({
+      actorUserId, actorRoles: ["REGION_MANAGER"],
+      actorScope: { companyIds: [], regionIds: [marmaraRegionId], storeIds: [assignedStoreId] },
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actorRegionManagerStoreIds: [assignedStoreId],
+      feedPostId: "33333333-3333-4333-8333-333333333333",
+      visibilityScopeType: "store", visibilityScopeIds: [assignedStoreId],
+      title: "Take over post",
+    })).rejects.toBeInstanceOf(ForbiddenException);
     expect(repository.updateFeedPost).not.toHaveBeenCalled();
   });
 });

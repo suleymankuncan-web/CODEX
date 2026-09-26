@@ -48,13 +48,13 @@ describe("resolveWorkforceWorkspaceScope", () => {
       actorReadScope: { companyIds: ["company-a"], regionIds: ["region-a"], storeIds: [] },
       actorActionScope: { assignedStoreIds: ["store-a"] },
       roleScopes: {
-        REGION_MANAGER: { companyIds: ["company-a"], regionIds: ["region-a"], storeIds: [] },
+        REGION_MANAGER: { companyIds: ["company-a"], regionIds: ["region-a"], storeIds: ["store-a"] },
       },
     });
 
     expect(result?.readScope).toEqual({
       companyIds: [],
-      regionIds: ["region-a"],
+      regionIds: [],
       storeIds: ["store-a"],
     });
   });

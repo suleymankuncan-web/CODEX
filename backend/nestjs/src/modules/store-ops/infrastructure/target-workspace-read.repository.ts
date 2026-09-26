@@ -66,7 +66,7 @@ export type TargetWorkspaceHierarchyRow = {
 export class TargetWorkspaceReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async listHierarchy(input: { scope: AuthReadScope; periodEnd: string }) {
+  async listHierarchy(input: { scope: AuthReadScope; periodEnd: string; managerUserId?: string }) {
     const scoped = scopeClause(input.scope, "store");
     const periodEndIndex = scoped.params.length + 1;
     const usesScopedStores = input.scope.storeIds.length > 0 || input.scope.regionIds.length > 0;
@@ -102,8 +102,11 @@ export class TargetWorkspaceReadRepository {
     const companyFilter = usesScopedStores
       ? ""
       : `WHERE company.company_id = ANY($1::uuid[])`;
-    const params = usesScopedStores ? [...scoped.params, input.periodEnd] : [input.scope.companyIds, input.periodEnd];
+    const params = usesScopedStores
+      ? [...scoped.params, input.periodEnd, input.managerUserId ?? null]
+      : [input.scope.companyIds, input.periodEnd, input.managerUserId ?? null];
     const managerPeriodIndex = usesScopedStores ? periodEndIndex : 2;
+    const managerUserIndex = managerPeriodIndex + 1;
     const result = await this.databaseService.query<TargetWorkspaceHierarchyRow>(
       `
         ${hierarchySource}
@@ -127,6 +130,7 @@ export class TargetWorkspaceReadRepository {
             AND account.is_active = TRUE
           LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id
           WHERE manager_assigned_store.region_id = region.region_id
+            AND ($${managerUserIndex}::uuid IS NULL OR manager_store.user_id = $${managerUserIndex}::uuid)
             AND manager_store.start_at <= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond')
             AND (manager_store.end_at IS NULL OR manager_store.end_at >= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond'))
             AND role_assignment.start_at <= ((($${managerPeriodIndex}::date + INTERVAL '1 day') AT TIME ZONE 'Europe/Istanbul') - INTERVAL '1 microsecond')

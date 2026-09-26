@@ -341,7 +341,10 @@ export class RankingService {
       employeeId !== null
         ? personnelRows.find((row) => row.employeeId === employeeId) ?? null
         : null;
-    const currentStoreId = resolveCurrentStoreId(input, currentEmployee);
+    const currentStoreId = resolveCurrentStoreId(
+      { ...input, storeIds: scopePolicy.enforceAssignedReadScope ? input.assignedStoreIds : input.storeIds },
+      currentEmployee,
+    );
     const currentStore =
       currentStoreId !== null
         ? storeRows.find((row) => row.storeId === currentStoreId) ?? null
@@ -354,7 +357,9 @@ export class RankingService {
           : authorizedStoreRows,
     );
     replaceManagerFilterOptions(filters, companyFilterOptions?.regionManagers);
-    const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
+    const managedStoreIds = scopePolicy.enforceAssignedReadScope
+      ? uniqueIds(input.assignedStoreIds)
+      : uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
     const managedPersonnelLimit = Math.min(Math.max(input.managedPersonnelLimit ?? 50, 1), 100);
     const managedPersonnelOffset = Math.max(input.managedPersonnelOffset ?? 0, 0);
     const managedPersonnelPage = buildSearchedManagedPersonnelPage(
@@ -491,9 +496,10 @@ export class RankingService {
   }) {
     const employeeIds = uniqueIds(input.rows.map((row) => row.employeeId));
     const result = new Map<string, boolean>();
-    const managerStoreIds = input.assignedStoreIds.length > 0
+    const managerStoreIds = input.roleCodes.includes("REGION_MANAGER") &&
+      !input.roleCodes.some((role) => ["REPORT_VIEWER", "SUPER_ADMIN"].includes(role))
       ? input.assignedStoreIds
-      : input.storeIds;
+      : input.assignedStoreIds.length > 0 ? input.assignedStoreIds : input.storeIds;
     const scopedEmployeeIds = employeeIds.filter((employeeId) => {
       if (input.currentEmployeeId && input.currentEmployeeId === employeeId) {
         result.set(employeeId, true);
@@ -549,9 +555,7 @@ export class RankingService {
     }
 
     if (input.roleCodes.includes("REGION_MANAGER")) {
-      return input.storeIds.length > 0
-        ? input.assignment.store_id !== null && input.storeIds.includes(input.assignment.store_id)
-        : input.assignment.region_id !== null && input.regionIds.includes(input.assignment.region_id);
+      return input.assignment.store_id !== null && input.storeIds.includes(input.assignment.store_id);
     }
 
     return input.roleCodes.includes("STORE_MANAGER") && input.assignment.store_id !== null && input.storeIds.includes(input.assignment.store_id);
@@ -647,6 +651,10 @@ export class RankingService {
   }
 
   private resolveActiveScopeSummaryInput(input: GetRankingsInput) {
+    if (input.roleCodes.includes("REGION_MANAGER") && !input.roleCodes.some((role) => ["REPORT_VIEWER", "SUPER_ADMIN"].includes(role))) {
+      return { companyIds: [], regionIds: [], storeIds: input.assignedStoreIds };
+    }
+
     if (input.assignedStoreIds.length > 0) {
       return {
         companyIds: [],

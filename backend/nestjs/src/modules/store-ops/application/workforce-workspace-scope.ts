@@ -33,12 +33,10 @@ export function resolveWorkforceWorkspaceScope(input: {
     if (!roleScope) return scope("region_manager", emptyReadScope(), []);
     const assigned = unique(input.actorActionScope.assignedStoreIds);
     const explicitStores = new Set(unique(roleScope.storeIds));
-    const storeIds = explicitStores.size > 0
-      ? assigned.filter((storeId) => explicitStores.has(storeId))
-      : assigned;
+    const storeIds = assigned.filter((storeId) => explicitStores.has(storeId));
     return scope("region_manager", {
       companyIds: [],
-      regionIds: unique(roleScope.regionIds),
+      regionIds: [],
       storeIds,
     }, []);
   }

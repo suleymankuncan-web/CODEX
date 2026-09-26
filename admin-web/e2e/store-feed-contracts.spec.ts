@@ -1,11 +1,12 @@
 import { expect, test } from './test-fixtures'
+import { storeIds } from './store-page-contract-fixtures'
 import {
   installGenericStoreApiFallbacks,
   installStoreContractSession,
 } from './store-page-contract-fixtures'
 
-test('region manager can compose a plain feed post', async ({ page }) => {
-  await installStoreContractSession(page, 'regionManager')
+test('region manager can compose a plain feed post for assigned stores', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager', { actionStoreIds: [storeIds[0]] })
   await installGenericStoreApiFallbacks(page)
 
   await page.goto('/store/feed')

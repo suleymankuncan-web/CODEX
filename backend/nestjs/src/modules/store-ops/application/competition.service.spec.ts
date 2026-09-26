@@ -845,6 +845,7 @@ describe("CompetitionService", () => {
         storeIds: [],
       },
       actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["visible-store"] },
       includeStoreDetails: true,
     });
 
@@ -869,8 +870,8 @@ describe("CompetitionService", () => {
     expect(repo.listStoreContributionsForCompetition).toHaveBeenCalledWith({
       competitionId: "competition-1",
       companyIds: [],
-      regionIds: ["visible-region"],
-      storeIds: [],
+      regionIds: [],
+      storeIds: ["visible-store"],
     });
   });
 
@@ -1000,7 +1001,7 @@ describe("CompetitionService", () => {
         regionIds: [],
         storeIds: [],
       },
-      actorRoleCodes: ["REGION_MANAGER"],
+      actorRoleCodes: ["REPORT_VIEWER"],
       includeStoreDetails: true,
     });
 

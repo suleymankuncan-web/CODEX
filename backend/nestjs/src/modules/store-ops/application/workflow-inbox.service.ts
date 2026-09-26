@@ -355,6 +355,11 @@ export class WorkflowInboxService {
       };
     }
 
+    if (input.actorRoles.includes("REGION_MANAGER") &&
+        !input.actorRoles.some((roleCode) => ["HR_ADMIN", "SUPER_ADMIN"].includes(roleCode))) {
+      return { companyIds: [], regionIds: [], storeIds: this.resolveAssignedActionStoreIds(input) };
+    }
+
     const canUseBroadReadScope = input.actorRoles.some((roleCode) =>
       broadReadRoles.includes(roleCode),
     );
@@ -394,14 +399,12 @@ export class WorkflowInboxService {
       regionIds: string[];
       storeIds: string[];
     };
+    actorActionScope?: { assignedStoreIds: string[] };
   }) {
     return {
-      companyIds: input.actorScope.companyIds,
-      regionIds: input.actorScope.regionIds,
-      storeIds:
-        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
-          ? []
-          : input.actorScope.storeIds,
+      companyIds: [],
+      regionIds: [],
+      storeIds: this.resolveAssignedActionStoreIds(input),
     };
   }
 

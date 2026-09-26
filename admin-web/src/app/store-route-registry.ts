@@ -235,8 +235,7 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     modulePreload: () => import('../pages/StoreVmCampaignsPage'),
     access: (authSummary) => {
       if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
-        return (authSummary?.user.readScope.regionIds.length ?? 0) > 0 &&
-          (authSummary?.user.actionScope.assignedStoreIds.length ?? 0) > 0
+        return (authSummary?.user.actionScope.assignedStoreIds.length ?? 0) > 0
       }
       if (hasAnyRole(authSummary, ['STORE_MANAGER'])) return true
       const permissions = authSummary?.user.permissionScopes ?? {}

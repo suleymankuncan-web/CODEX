@@ -4,7 +4,6 @@ import { DatabaseService } from "../../../shared/database/database.service";
 
 type Scope = {
   actorUserId: string;
-  regionIds: readonly string[];
   storeIds: readonly string[];
   companyId: string;
   referenceSetId: string;
@@ -17,12 +16,11 @@ type Scope = {
 type ReviewDecision = "accept" | "override" | "reject" | "recapture";
 
 const FRESH_SCOPE = `
-  run.region_id = ANY($2::uuid[])
-  AND run.store_id = ANY($3::uuid[])
+  run.store_id = ANY($2::uuid[])
   AND EXISTS (
     SELECT 1 FROM ops.user_role_assignment ura
     INNER JOIN ops.role role ON role.role_id = ura.role_id AND role.role_code = 'REGION_MANAGER'
-    WHERE ura.user_id = $1::uuid AND ura.region_id = run.region_id
+    WHERE ura.user_id = $1::uuid
       AND ura.start_at <= CURRENT_TIMESTAMP
       AND (ura.end_at IS NULL OR ura.end_at >= CURRENT_TIMESTAMP)
   )
@@ -35,17 +33,17 @@ const FRESH_SCOPE = `
 `;
 
 const EXACT_COHORT = `
-  run.company_id = $4::uuid
-  AND run.visual_reference_set_id = $5::uuid
-  AND run.created_at >= $6::timestamptz
-  AND run.provider_model_id = $7
-  AND run.prompt_version = $8
-  AND run.rubric_version = $9
-  AND run.comparison_policy_version = $10
+  run.company_id = $3::uuid
+  AND run.visual_reference_set_id = $4::uuid
+  AND run.created_at >= $5::timestamptz
+  AND run.provider_model_id = $6
+  AND run.prompt_version = $7
+  AND run.rubric_version = $8
+  AND run.comparison_policy_version = $9
 `;
 
 function scopeParams(input: Scope): unknown[] {
-  return [input.actorUserId, input.regionIds, input.storeIds, input.companyId,
+  return [input.actorUserId, input.storeIds, input.companyId,
     input.referenceSetId, input.notBefore, input.modelId, input.promptVersion,
     input.rubricVersion, input.policyVersion];
 }
@@ -71,7 +69,7 @@ export class VisualComparisonAdvisoryRepository {
         AND ${FRESH_SCOPE}
         AND ${EXACT_COHORT}
       ORDER BY COALESCE(run.finished_at, run.updated_at) DESC, run.comparison_run_id
-      LIMIT $11 OFFSET $12
+      LIMIT $10 OFFSET $11
     `, [...scopeParams(input), input.limit, input.offset]);
     return {
       items: result.rows.map((row) => projectAdvisory(row)),
@@ -96,7 +94,7 @@ export class VisualComparisonAdvisoryRepository {
         ON item.visual_reference_item_id = run.visual_reference_item_id
       LEFT JOIN ops.visual_comparison_review review
         ON review.comparison_run_id = run.comparison_run_id AND review.review_no = 1
-      WHERE run.comparison_run_id = $11::uuid
+      WHERE run.comparison_run_id = $10::uuid
         AND run.isolation_class = 'advisory'
         AND run.status IN ('completed','abstained','failed_terminal','human_reviewed')
         AND ${FRESH_SCOPE}
@@ -108,7 +106,7 @@ export class VisualComparisonAdvisoryRepository {
 
   async resolveMedia(input: Scope & { comparisonRunId: string; kind: "reference" | "evidence" }) {
     const result = await this.database.query<{ media_asset_id: string; company_id: string; region_id: string; store_id: string }>(`
-      SELECT CASE WHEN $12 = 'reference' THEN reference_asset.media_asset_id
+      SELECT CASE WHEN $11 = 'reference' THEN reference_asset.media_asset_id
                   ELSE run.evidence_media_asset_id END AS media_asset_id,
         run.company_id, run.region_id, run.store_id
       FROM ops.visual_comparison_run run
@@ -122,7 +120,7 @@ export class VisualComparisonAdvisoryRepository {
         ON evidence_media.media_asset_id = run.evidence_media_asset_id
        AND evidence_media.company_id = run.company_id
        AND evidence_media.store_id = run.store_id
-      WHERE run.comparison_run_id = $11::uuid
+      WHERE run.comparison_run_id = $10::uuid
         AND run.isolation_class = 'advisory'
         AND run.status IN ('completed','abstained','failed_terminal','human_reviewed')
         AND ${FRESH_SCOPE}
@@ -143,7 +141,7 @@ export class VisualComparisonAdvisoryRepository {
     return this.database.withTransaction(async (client) => {
       const result = await client.query<any>(`
         SELECT run.* FROM ops.visual_comparison_run run
-        WHERE run.comparison_run_id = $11::uuid
+        WHERE run.comparison_run_id = $10::uuid
           AND run.isolation_class = 'advisory'
           AND ${FRESH_SCOPE}
           AND ${EXACT_COHORT}

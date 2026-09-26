@@ -22,7 +22,7 @@ export class FeedService {
     const limit = this.normalizeLimit(input.limit);
     const offset = this.normalizeOffset(input.offset);
     const items = await this.feedRepository.listVisibleFeedPosts({
-      actorScope: input.actorScope,
+      actorScope: this.resolveReadScope(input),
       limit,
       offset,
     });
@@ -39,7 +39,7 @@ export class FeedService {
     const offset = this.normalizeOffset(input.offset);
     const items = await this.feedRepository.listManageableFeedPosts({
       actorRoles: input.actorRoles,
-      actorScope: input.actorScope,
+      actorScope: this.resolveReadScope(input),
       limit,
       offset,
     });
@@ -64,6 +64,8 @@ export class FeedService {
     await this.assertWritableScope({
       actorRoles: input.actorRoles,
       actorScope: input.actorScope,
+      actorActionScope: input.actorActionScope,
+      actorRegionManagerStoreIds: input.actorRegionManagerStoreIds,
       visibilityScopeType: input.visibilityScopeType,
       visibilityScopeIds,
     });
@@ -102,6 +104,15 @@ export class FeedService {
       throw new BadRequestException("Archived feed posts cannot be edited");
     }
 
+    await this.assertWritableScope({
+      actorRoles: input.actorRoles,
+      actorScope: input.actorScope,
+      actorActionScope: input.actorActionScope,
+      actorRegionManagerStoreIds: input.actorRegionManagerStoreIds,
+      visibilityScopeType: existing.visibilityScopeType,
+      visibilityScopeIds: existing.visibilityScopeIds,
+    });
+
     const visibilityScopeType = input.visibilityScopeType ?? existing.visibilityScopeType;
     const visibilityScopeIds = this.normalizeScopeIds({
       actorRoles: input.actorRoles,
@@ -118,6 +129,8 @@ export class FeedService {
     await this.assertWritableScope({
       actorRoles: input.actorRoles,
       actorScope: input.actorScope,
+      actorActionScope: input.actorActionScope,
+      actorRegionManagerStoreIds: input.actorRegionManagerStoreIds,
       visibilityScopeType,
       visibilityScopeIds,
     });
@@ -202,6 +215,8 @@ export class FeedService {
     await this.assertWritableScope({
       actorRoles: input.actorRoles,
       actorScope: input.actorScope,
+      actorActionScope: input.actorActionScope,
+      actorRegionManagerStoreIds: input.actorRegionManagerStoreIds,
       visibilityScopeType: existing.visibilityScopeType,
       visibilityScopeIds: existing.visibilityScopeIds,
     });
@@ -220,6 +235,8 @@ export class FeedService {
   private async assertWritableScope(input: {
     actorRoles: string[];
     actorScope: FeedActor["actorScope"];
+    actorActionScope?: FeedActor["actorActionScope"];
+    actorRegionManagerStoreIds?: FeedActor["actorRegionManagerStoreIds"];
     visibilityScopeType: FeedVisibilityScopeType;
     visibilityScopeIds: string[];
   }) {
@@ -262,17 +279,26 @@ export class FeedService {
       throw new ForbiddenException("Missing feed writer role");
     }
 
-    if (input.visibilityScopeType !== "region") {
-      throw new ForbiddenException("Region managers can publish only to their own region");
+    if (input.visibilityScopeType !== "store") {
+      throw new ForbiddenException("Region managers can publish only to assigned stores");
     }
+    const assignedStoreIds = new Set(this.regionManagerStoreIds(input));
+    if (input.visibilityScopeIds.some((storeId) => !assignedStoreIds.has(storeId))) {
+      throw new ForbiddenException("Region manager cannot publish outside assigned stores");
+    }
+  }
 
-    if (input.visibilityScopeIds.length !== 1) {
-      throw new ForbiddenException("Region manager feed posts must target one region");
+  private resolveReadScope(input: FeedActor): FeedActor["actorScope"] {
+    if (input.actorRoles.includes("REGION_MANAGER") &&
+        !input.actorRoles.some((role) => ["SUPER_ADMIN", "HR_ADMIN", "REPORT_VIEWER"].includes(role))) {
+      return { companyIds: [], regionIds: [], storeIds: this.regionManagerStoreIds(input) };
     }
+    return input.actorScope;
+  }
 
-    if (!input.actorScope.regionIds.includes(input.visibilityScopeIds[0])) {
-      throw new ForbiddenException("Region manager cannot publish outside their region");
-    }
+  private regionManagerStoreIds(input: Pick<FeedActor, "actorActionScope" | "actorRegionManagerStoreIds">) {
+    const actionStoreIds = new Set(input.actorActionScope?.assignedStoreIds ?? []);
+    return [...new Set((input.actorRegionManagerStoreIds ?? []).filter((storeId) => actionStoreIds.has(storeId)))];
   }
 
   private normalizeScopeIds(input: {

@@ -20,9 +20,11 @@ describe("VisualComparisonAdvisoryRepository contract", () => {
     expect(source).toContain("role.role_code = 'REGION_MANAGER'");
     expect(source).toContain("ops.user_action_store_assignment");
     expect(source).toContain("FOR UPDATE");
-    expect(source).toContain("run.company_id = $4::uuid");
-    expect(source).toContain("run.visual_reference_set_id = $5::uuid");
-    expect(source).toContain("run.provider_model_id = $7");
+    expect(source).not.toContain("ura.region_id = run.region_id");
+    expect(source).not.toContain("run.region_id = ANY");
+    expect(source).toContain("run.company_id = $3::uuid");
+    expect(source).toContain("run.visual_reference_set_id = $4::uuid");
+    expect(source).toContain("run.provider_model_id = $6");
   });
 
   it("[NFR-4][AC-11] mutates only experimental review, run status and typed audit sinks", () => {
@@ -46,7 +48,6 @@ describe("VisualComparisonAdvisoryRepository contract", () => {
 
     await expect(repository.review({
       actorUserId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      regionIds: ["22222222-2222-4222-8222-222222222222"],
       storeIds: ["33333333-3333-4333-8333-333333333333"],
       ...cohort,
       comparisonRunId: "55555555-5555-4555-8555-555555555555",
@@ -70,7 +71,6 @@ describe("VisualComparisonAdvisoryRepository contract", () => {
 
     await expect(repository.review({
       actorUserId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      regionIds: ["22222222-2222-4222-8222-222222222222"],
       storeIds: ["33333333-3333-4333-8333-333333333333"],
       ...cohort,
       comparisonRunId: "55555555-5555-4555-8555-555555555555",
@@ -99,7 +99,6 @@ describe("VisualComparisonAdvisoryRepository contract", () => {
     const repository = new VisualComparisonAdvisoryRepository(database as never);
     const response = await repository.list({
       actorUserId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      regionIds: ["22222222-2222-4222-8222-222222222222"],
       storeIds: ["33333333-3333-4333-8333-333333333333"],
       ...cohort,
       limit: 25, offset: 0,
@@ -111,7 +110,7 @@ describe("VisualComparisonAdvisoryRepository contract", () => {
     }));
     expect(response.items[0]).not.toHaveProperty("usage");
     expect(response.items[0]).not.toHaveProperty("provider");
-    expect(database.query).toHaveBeenCalledWith(expect.stringContaining("run.comparison_policy_version = $10"),
+    expect(database.query).toHaveBeenCalledWith(expect.stringContaining("run.comparison_policy_version = $9"),
       expect.arrayContaining([cohort.companyId, cohort.referenceSetId, cohort.modelId, cohort.policyVersion]));
   });
 
@@ -130,7 +129,6 @@ describe("VisualComparisonAdvisoryRepository contract", () => {
 
     await expect(repository.review({
       actorUserId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      regionIds: ["22222222-2222-4222-8222-222222222222"],
       storeIds: ["33333333-3333-4333-8333-333333333333"], ...cohort,
       comparisonRunId: "55555555-5555-4555-8555-555555555555",
       decision: "recapture", reason: "Yeni ve doğrudan bir çekim gerekli.", minimumConfidence: 0.6,

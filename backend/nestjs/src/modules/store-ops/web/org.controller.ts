@@ -3,6 +3,7 @@ import { OrgService } from "../application/org.service";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { ListStoresQueryDto } from "./dto/list-stores.query";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { resolveRegionManagerAssignedStoreIds } from "../application/region-manager-assigned-stores";
 
 @Controller("org")
 export class OrgController {
@@ -73,12 +74,16 @@ export class OrgController {
       });
     }
 
+    if (input.actorRoleCodes.includes("REGION_MANAGER") &&
+        !input.actorRoleCodes.some((roleCode) => ["AUDITOR", "HR_ADMIN", "INTEGRATION_ADMIN", "SNAPSHOT_OPERATOR", "SUPER_ADMIN"].includes(roleCode))) {
+      return { companyIds: [], regionIds: [], storeIds: resolveRegionManagerAssignedStoreIds({ roleCodes: input.actorRoleCodes, roleScopes: input.roleScopes, assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [] }) };
+    }
+
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
       [
         "AUDITOR",
         "HR_ADMIN",
         "INTEGRATION_ADMIN",
-        "REGION_MANAGER",
         "REPORT_VIEWER",
         "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN",

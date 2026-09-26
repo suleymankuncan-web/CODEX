@@ -55,7 +55,7 @@ describe("resolveTaskCommandWorkspaceScope", () => {
     ).toEqual({
       view: "region_manager",
       companyIds: [],
-      regionIds: [regionId],
+      regionIds: [],
       storeIds: [storeId],
       capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false, canReview: true },
     });

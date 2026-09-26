@@ -33,8 +33,8 @@ const protectedEvidence = [
     file: 'backend/nestjs/src/modules/store-ops/application/workforce.service.headcount-gap.spec.ts',
     phrases: [
       'keeps workforce request lists limited to assigned stores even when read scope is broader',
-      'allows a region manager to read headcount gap for a store in their region',
-      'blocks a region manager from reading headcount gap outside their region',
+      'allows a Region Manager to read headcount gap for a directly assigned store',
+      'blocks same-region headcount access without an active store assignment',
     ],
   },
 ]
