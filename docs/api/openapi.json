@@ -10683,7 +10683,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SaveChecklistVisitPlanRequest"
+                "$ref": "#/components/schemas/SaveAssignedChecklistVisitPlanRequest"
               }
             }
           }
@@ -32727,6 +32727,55 @@
             "type": "string",
             "nullable": true,
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          }
+        }
+      },
+      "SaveAssignedChecklistVisitPlanRequest": {
+        "type": "object",
+        "required": [
+          "expectedRevision",
+          "idempotencyKey",
+          "items",
+          "expectedScopeRevision"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedScopeRevision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "plannedDate",
+                "displayOrder"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "plannedDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "displayOrder": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              }
+            }
           }
         }
       }

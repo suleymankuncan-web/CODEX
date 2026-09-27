@@ -3044,6 +3044,16 @@ export type components = {
       "rows": components['schemas']["SalesTargetIncentiveWorkspaceRow"][]
       "outOfRosterReturns": components['schemas']["SalesTargetIncentiveOutOfRosterReturn"][]
     }
+    "SaveAssignedChecklistVisitPlanRequest": {
+      "expectedRevision": number
+      "expectedScopeRevision": string
+      "idempotencyKey": string
+      "items": Array<{
+          "storeId": string
+          "plannedDate": string
+          "displayOrder": number
+        }>
+    }
     "SaveChecklistVisitPlanRequest": {
       "expectedRevision": number
       "expectedScopeRevision"?: string
@@ -5396,7 +5406,7 @@ export type paths = {
     put: {
       requestBody: {
         content: {
-          'application/json': components['schemas']["SaveChecklistVisitPlanRequest"]
+          'application/json': components['schemas']["SaveAssignedChecklistVisitPlanRequest"]
         }
       }
       responses: {

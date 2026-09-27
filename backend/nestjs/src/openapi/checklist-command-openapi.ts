@@ -321,6 +321,11 @@ const saveChecklistVisitPlanRequestSchema = {
   },
 };
 
+const saveAssignedChecklistVisitPlanRequestSchema = {
+  ...saveChecklistVisitPlanRequestSchema,
+  required: [...saveChecklistVisitPlanRequestSchema.required, "expectedScopeRevision"],
+};
+
 const checklistVisitPlanPeriodItemSchema = {
   allOf: [
     { $ref: "#/components/schemas/ChecklistVisitPlanItem" },
@@ -448,6 +453,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     ChecklistVisitPlan: checklistVisitPlanSchema,
     ChecklistVisitPlanResponse: checklistVisitPlanResponseSchema,
     SaveChecklistVisitPlanRequest: saveChecklistVisitPlanRequestSchema,
+    SaveAssignedChecklistVisitPlanRequest: saveAssignedChecklistVisitPlanRequestSchema,
     CompleteChecklistVisitPlanItemRequest: completeChecklistVisitPlanItemRequestSchema,
     ChecklistVisitPlanVisitCompletionResponse: checklistVisitPlanVisitCompletionResponseSchema,
     ChecklistVisitPlanPeriodItem: checklistVisitPlanPeriodItemSchema,

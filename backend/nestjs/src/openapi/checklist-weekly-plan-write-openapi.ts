@@ -1,14 +1,16 @@
 import { setJsonRequestSchema, setJsonResponseSchema, type MutablePathItem } from "./openapi-schema-helpers";
 
 export function applyChecklistWeeklyPlanWriteOpenApi(paths: Record<string, unknown>) {
-  for (const [path, description] of [
+  for (const [path, description, requestSchema] of [
     ["/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}",
-      "Replace one Region Manager weekly BM visit plan using optimistic concurrency and idempotency."],
+      "Replace one Region Manager weekly BM visit plan using optimistic concurrency and idempotency.",
+      "SaveChecklistVisitPlanRequest"],
     ["/api/checklists/command-canvas/visit-plans/assigned/{weekStart}",
-      "Atomically replace the authenticated Region Manager's directly assigned store plans."],
+      "Atomically replace the authenticated Region Manager's directly assigned store plans.",
+      "SaveAssignedChecklistVisitPlanRequest"],
   ]) {
     setJsonResponseSchema(paths, path, "put", description, "ChecklistVisitPlanResponse");
-    setJsonRequestSchema(paths, path, "put", "SaveChecklistVisitPlanRequest");
+    setJsonRequestSchema(paths, path, "put", requestSchema);
     const operation = (paths[path] as MutablePathItem | undefined)?.put;
     if (!operation) continue;
     operation.parameters = (operation.parameters ?? []).map((parameter) => {
