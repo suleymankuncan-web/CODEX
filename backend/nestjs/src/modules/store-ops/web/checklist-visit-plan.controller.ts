@@ -108,6 +108,29 @@ export class ChecklistVisitPlanController {
     };
   }
 
+  @Put('assigned/:weekStart')
+  @RequireScope('authenticated')
+  @RequireRoles('REGION_MANAGER')
+  async saveAssignedWeeklyPlan(
+    @Req() request: { user: AuthenticatedUser },
+    @Param('weekStart') weekStart: string,
+    @Body() body: SaveChecklistVisitPlanDto,
+  ) {
+    return {
+      data: await this.service.saveWeeklyPlan({
+        actorUserId: request.user.userId,
+        actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
+        roleScopes: request.user.roleScopes,
+        weekStart,
+        expectedRevision: body.expectedRevision,
+        expectedScopeRevision: body.expectedScopeRevision,
+        idempotencyKey: body.idempotencyKey,
+        items: body.items,
+      }),
+    };
+  }
+
   @Put(':regionId/:weekStart')
   @RequireScope('authenticated')
   @RequireRoles('REGION_MANAGER')

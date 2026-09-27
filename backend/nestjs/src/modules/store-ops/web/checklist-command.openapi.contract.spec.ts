@@ -101,6 +101,7 @@ describe("Checklist Command OpenAPI", () => {
     ) as OpenApiDocument;
     const read = document.paths["/api/checklists/command-canvas/visit-plans"].get;
     const write = document.paths["/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}"].put;
+    const assignedWrite = document.paths["/api/checklists/command-canvas/visit-plans/assigned/{weekStart}"].put;
 
     expect(read.parameters).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "regionId", in: "query", required: false }),
@@ -113,6 +114,9 @@ describe("Checklist Command OpenAPI", () => {
     expect(write.requestBody.content["application/json"].schema).toEqual({
       $ref: "#/components/schemas/SaveChecklistVisitPlanRequest",
     });
+    expect(assignedWrite.requestBody.content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/SaveAssignedChecklistVisitPlanRequest",
+    });
     expect(write.responses["200"].content["application/json"].schema).toEqual({
       $ref: "#/components/schemas/ChecklistVisitPlanResponse",
     });
@@ -122,6 +126,9 @@ describe("Checklist Command OpenAPI", () => {
     ]));
     const request = document.components?.schemas?.SaveChecklistVisitPlanRequest as any;
     expect(request.properties.items).not.toHaveProperty("maxItems");
+    expect(request.required).not.toContain("expectedScopeRevision");
+    const assignedRequest = document.components?.schemas?.SaveAssignedChecklistVisitPlanRequest as any;
+    expect(assignedRequest.required).toContain("expectedScopeRevision");
     const item = document.components?.schemas?.ChecklistVisitPlanItem as any;
     expect(item.properties.status.enum).toEqual(["planned", "waiting", "missed", "completed"]);
     expect(item.properties).not.toHaveProperty("assigneeId");
@@ -151,7 +158,7 @@ describe("Checklist Command OpenAPI", () => {
       $ref: "#/components/schemas/ChecklistVisitPlanPeriodResponse",
     });
     expect(period.parameters).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "regionId", required: true }),
+      expect.objectContaining({ name: "regionId", required: false }),
       expect.objectContaining({ name: "period", required: true }),
       expect.objectContaining({ name: "risk" }),
       expect.objectContaining({ name: "reason" }),
@@ -174,7 +181,7 @@ describe("Checklist Command OpenAPI", () => {
       $ref: "#/components/schemas/ChecklistVisitPlanCandidateResponse",
     });
     expect(candidates.parameters).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "regionId", required: true }),
+      expect.objectContaining({ name: "regionId", required: false }),
       expect.objectContaining({ name: "query" }),
       expect.objectContaining({ name: "limit", schema: expect.objectContaining({ maximum: 50 }) }),
       expect.objectContaining({ name: "offset" }),

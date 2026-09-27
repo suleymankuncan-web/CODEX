@@ -24,13 +24,14 @@ type ReadActor = {
 type Actor = ReadActor & { actorUserId: string };
 
 type WeeklyPlanInput = Actor & { regionId?: string; managerUserId?: string; weekStart: string };
-type SaveWeeklyPlanInput = Actor & { regionId: string; weekStart: string } & {
+type SaveWeeklyPlanInput = Actor & { regionId?: string; weekStart: string } & {
   expectedRevision: number;
+  expectedScopeRevision?: string;
   idempotencyKey: string;
   items: SaveChecklistVisitPlanItem[];
 };
 type ListPeriodInput = ReadActor & {
-  regionId: string;
+  regionId?: string;
   period: string;
   query?: string;
   risk?: ChecklistVisitPlanRisk | "all";
@@ -41,7 +42,7 @@ type ListPeriodInput = ReadActor & {
   offset?: number;
 };
 type ListCandidatesInput = ReadActor & {
-  regionId: string;
+  regionId?: string;
   query?: string;
   limit?: number;
   offset?: number;
@@ -58,7 +59,7 @@ export class ChecklistVisitPlanService {
     const limit = input.limit ?? 30;
     const offset = input.offset ?? 0;
     const result = await this.repository.listPeriod({
-      regionId: input.regionId,
+      regionId: input.regionId ?? null,
       storeIds: scope.storeIds,
       period: input.period,
       query: input.query?.trim() || null,
@@ -71,7 +72,7 @@ export class ChecklistVisitPlanService {
     });
     return {
       period: input.period,
-      regionId: input.regionId,
+      regionId: input.regionId ?? null,
       regionName: result.regionName,
       view: "region_manager",
       capabilities: { canMaintainWeeklyVisitPlan: true },
@@ -91,14 +92,14 @@ export class ChecklistVisitPlanService {
     const limit = input.limit ?? 20;
     const offset = input.offset ?? 0;
     const result = await this.repository.listCandidates({
-      regionId: input.regionId,
+      regionId: input.regionId ?? null,
       storeIds: scope.storeIds,
       query: input.query?.trim() || null,
       limit,
       offset,
     });
     return {
-      regionId: input.regionId,
+      regionId: input.regionId ?? null,
       view: "region_manager",
       items: result.items,
       page: {
@@ -143,14 +144,18 @@ export class ChecklistVisitPlanService {
         capabilities: { canMaintainWeeklyVisitPlan: false },
       };
     }
-    if (!input.regionId) {
+    if (!input.regionId && scope.view !== "region_manager") {
       throw new ForbiddenException("Weekly visit plans require an assigned region scope");
     }
     if (scope.view === "region_manager" && scope.storeIds.length === 0) {
       throw new ForbiddenException("Weekly visit plan requires a direct assigned store scope");
     }
-    const result = await this.repository.getWeeklyPlan({
+    const result = input.regionId ? await this.repository.getWeeklyPlan({
       regionId: input.regionId,
+      weekStart: input.weekStart,
+      storeIds: scope.storeIds,
+    }) : await this.repository.getAssignedWeeklyPlan({
+      actorUserId: input.actorUserId,
       weekStart: input.weekStart,
       storeIds: scope.storeIds,
     });
@@ -185,10 +190,11 @@ export class ChecklistVisitPlanService {
       left.storeId.localeCompare(right.storeId),
     );
     const requestSha256 = createHash("sha256")
-      .update(JSON.stringify({ regionId: input.regionId, weekStart: input.weekStart, items: canonicalItems }))
+      .update(JSON.stringify(input.regionId
+        ? { regionId: input.regionId, weekStart: input.weekStart, items: canonicalItems }
+        : { actorUserId: input.actorUserId, weekStart: input.weekStart, items: canonicalItems }))
       .digest("hex");
-    const result = await this.repository.saveWeeklyPlan({
-      regionId: input.regionId,
+    const writeInput = {
       weekStart: input.weekStart,
       actorUserId: input.actorUserId,
       expectedRevision: input.expectedRevision,
@@ -196,7 +202,13 @@ export class ChecklistVisitPlanService {
       requestSha256,
       authorizedStoreIds: scope.storeIds,
       items: canonicalItems,
-    });
+    };
+    if (!input.regionId && !input.expectedScopeRevision) {
+      throw new ConflictException("Weekly visit plan revision is stale; reload the assigned stores");
+    }
+    const result = input.regionId
+      ? await this.repository.saveWeeklyPlan({ ...writeInput, regionId: input.regionId })
+      : await this.repository.saveAssignedWeeklyPlan({ ...writeInput, expectedScopeRevision: input.expectedScopeRevision ?? "" });
     return {
       ...result,
       view: scope.view,

@@ -6380,7 +6380,7 @@
           {
             "name": "regionId",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -6515,7 +6515,7 @@
           {
             "name": "regionId",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -10661,6 +10661,47 @@
         },
         "tags": [
           "IncentiveHrHandoff"
+        ]
+      }
+    },
+    "/api/checklists/command-canvas/visit-plans/assigned/{weekStart}": {
+      "put": {
+        "operationId": "ChecklistVisitPlanController_saveAssignedWeeklyPlan",
+        "parameters": [
+          {
+            "name": "weekStart",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAssignedChecklistVisitPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Atomically replace the authenticated Region Manager's directly assigned store plans.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
         ]
       }
     }
@@ -27295,7 +27336,8 @@
           },
           "regionId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "regionName": {
             "type": "string"
@@ -27307,6 +27349,10 @@
           "revision": {
             "type": "integer",
             "minimum": 0
+          },
+          "scopeRevision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           },
           "revisedAt": {
             "type": "string",
@@ -27362,6 +27408,10 @@
           "expectedRevision": {
             "type": "integer",
             "minimum": 0
+          },
+          "expectedScopeRevision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           },
           "idempotencyKey": {
             "type": "string",
@@ -27545,7 +27595,8 @@
               },
               "regionId": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "nullable": true
               },
               "regionName": {
                 "type": "string"
@@ -27675,7 +27726,8 @@
             "properties": {
               "regionId": {
                 "type": "string",
-                "format": "uuid"
+                "format": "uuid",
+                "nullable": true
               },
               "view": {
                 "type": "string",
@@ -32675,6 +32727,55 @@
             "type": "string",
             "nullable": true,
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          }
+        }
+      },
+      "SaveAssignedChecklistVisitPlanRequest": {
+        "type": "object",
+        "required": [
+          "expectedRevision",
+          "idempotencyKey",
+          "items",
+          "expectedScopeRevision"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedScopeRevision": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "plannedDate",
+                "displayOrder"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "plannedDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "displayOrder": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              }
+            }
           }
         }
       }

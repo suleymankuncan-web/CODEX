@@ -3,8 +3,9 @@ import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validato
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class ListChecklistVisitPlanCandidatesQueryDto {
+  @IsOptional()
   @IsPostgresUuid()
-  regionId!: string;
+  regionId?: string;
 
   @IsOptional()
   @IsString()

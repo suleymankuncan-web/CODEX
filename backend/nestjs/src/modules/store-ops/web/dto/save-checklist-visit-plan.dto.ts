@@ -2,6 +2,7 @@ import { Type } from "class-transformer";
 import {
   IsArray,
   IsInt,
+  IsOptional,
   Matches,
   Max,
   Min,
@@ -23,6 +24,10 @@ export class ChecklistVisitPlanItemDto {
 }
 
 export class SaveChecklistVisitPlanDto {
+  @IsOptional()
+  @Matches(/^[a-f0-9]{64}$/)
+  expectedScopeRevision?: string;
+
   @IsInt()
   @Min(0)
   expectedRevision!: number;

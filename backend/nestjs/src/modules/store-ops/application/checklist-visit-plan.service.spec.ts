@@ -6,7 +6,9 @@ describe("ChecklistVisitPlanService", () => {
   const repository = {
     getWeeklyPlan: jest.fn(),
     getManagerWeeklyPlan: jest.fn(),
+    getAssignedWeeklyPlan: jest.fn(),
     saveWeeklyPlan: jest.fn(),
+    saveAssignedWeeklyPlan: jest.fn(),
     listPeriod: jest.fn(),
     listCandidates: jest.fn(),
     listRegionOptions: jest.fn(),
@@ -15,6 +17,49 @@ describe("ChecklistVisitPlanService", () => {
   const service = new ChecklistVisitPlanService(repository as never);
 
   beforeEach(() => jest.clearAllMocks());
+
+  const assignedActor = {
+    actorUserId: "11111111-1111-4111-8111-111111111111",
+    actorRoleCodes: ["REGION_MANAGER"],
+    actorReadScope: { ...empty, regionIds: ["legacy-region"] },
+    roleScopes: { REGION_MANAGER: { ...empty, storeIds: ["55555555-5555-4555-8555-555555555555"] } },
+  };
+
+  it("opens the current manager's assigned stores without region selection or another manager's identity", async () => {
+    repository.getAssignedWeeklyPlan.mockResolvedValue({ regionId: null, scopeRevision: "a".repeat(64), items: [] });
+    const result = await service.getWeeklyPlan({ ...assignedActor, managerUserId: "someone-else", weekStart: "2026-09-21" });
+    expect(repository.getAssignedWeeklyPlan).toHaveBeenCalledWith({
+      actorUserId: assignedActor.actorUserId, storeIds: assignedActor.roleScopes.REGION_MANAGER.storeIds, weekStart: "2026-09-21",
+    });
+    expect(result.capabilities.canMaintainWeeklyVisitPlan).toBe(true);
+    expect(repository.getManagerWeeklyPlan).not.toHaveBeenCalled();
+    expect(repository.getWeeklyPlan).not.toHaveBeenCalled();
+  });
+
+  it("requires a portfolio revision for atomic assigned-store writes", async () => {
+    const input = { ...assignedActor, weekStart: "2026-09-21", expectedRevision: 0,
+      idempotencyKey: "44444444-4444-4444-8444-444444444444", items: [] };
+    await expect(service.saveWeeklyPlan(input)).rejects.toThrow("revision is stale");
+    expect(repository.saveAssignedWeeklyPlan).not.toHaveBeenCalled();
+    repository.saveAssignedWeeklyPlan.mockResolvedValue({ regionId: null, items: [], revision: 1 });
+    await service.saveWeeklyPlan({ ...input, expectedScopeRevision: "a".repeat(64) });
+    expect(repository.saveAssignedWeeklyPlan).toHaveBeenCalledWith(expect.objectContaining({
+      actorUserId: assignedActor.actorUserId,
+      authorizedStoreIds: assignedActor.roleScopes.REGION_MANAGER.storeIds,
+      expectedScopeRevision: "a".repeat(64),
+    }));
+    expect(repository.saveWeeklyPlan).not.toHaveBeenCalled();
+  });
+
+  it("searches candidates and annual history across only direct assignments when no region is supplied", async () => {
+    repository.listCandidates.mockResolvedValue({ items: [], total: 0 });
+    repository.listPeriod.mockResolvedValue({ items: [], total: 0, metrics: {}, regionName: "" });
+    await service.listCandidates(assignedActor);
+    await service.listPeriod({ ...assignedActor, period: "2026-09" });
+    for (const method of [repository.listCandidates, repository.listPeriod]) {
+      expect(method).toHaveBeenCalledWith(expect.objectContaining({ regionId: null, storeIds: assignedActor.roleScopes.REGION_MANAGER.storeIds }));
+    }
+  });
 
   it("reads Report Viewer weekly plans through the selected manager identity and company scope", async () => {
     const managerUserId = "77777777-7777-4777-8777-777777777777";

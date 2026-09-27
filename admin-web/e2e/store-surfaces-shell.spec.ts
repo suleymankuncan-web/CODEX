@@ -140,6 +140,7 @@ test('store home keeps the command surface pending when workflow inbox fails', a
 test('region manager home surfaces checklist field queue summary', async ({ page }) => {
   let acknowledgementRequests = 0
   let mobileTodayRequests = 0
+  let visitPlanRequests = 0
 
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/checklists/acknowledgements/list')
@@ -172,7 +173,23 @@ test('region manager home surfaces checklist field queue summary', async ({ page
     mobileTodayRequests += 1
     await route.fulfill({ json: mobileChecklistTodayFixture })
   })
-  await page.route('**/api/checklists/command-canvas**', async (route) => {
+  await page.route('**/api/checklists/command-canvas/visit-plans?**', async (route) => {
+    visitPlanRequests += 1
+    const weekStart = new URL(route.request().url()).searchParams.get('weekStart') ?? '2026-09-28'
+    await route.fulfill({ json: { data: {
+      planId: null,
+      regionId: null,
+      regionName: 'Sorumlu mağazalar',
+      weekStart,
+      revision: 0,
+      scopeRevision: '0'.repeat(64),
+      revisedAt: null,
+      view: 'region_manager',
+      capabilities: { canMaintainWeeklyVisitPlan: true },
+      items: [],
+    } } })
+  })
+  await page.route(/\/api\/checklists\/command-canvas(?:\?.*)?$/, async (route) => {
     await route.fulfill({
       json: {
         data: {
@@ -238,6 +255,8 @@ test('region manager home surfaces checklist field queue summary', async ({ page
 
   await expect(page).toHaveURL(/\/store\/checklists$/)
   await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
+  await expect(page.getByLabel('Haftalık ziyaret planı')).toBeVisible()
+  await expect.poll(() => visitPlanRequests).toBe(1)
   await expect.poll(() => acknowledgementRequests, { timeout: 1000 }).toBe(prefetchedAcknowledgementRequests)
   await expect.poll(() => mobileTodayRequests, { timeout: 1000 }).toBe(prefetchedMobileTodayRequests)
 })

@@ -17,6 +17,7 @@ import {
   checklistVisitPlanRegionOptionSchema,
 } from "./checklist-visit-plan-region-option-openapi";
 import { applyChecklistOperationalHistoryOpenApi } from "./checklist-operational-history-openapi";
+import { applyChecklistWeeklyPlanWriteOpenApi } from "./checklist-weekly-plan-write-openapi";
 type MutableOpenApiDocument = {
   components?: { schemas?: Record<string, unknown> };
   paths: Record<string, unknown>;
@@ -276,10 +277,11 @@ const checklistVisitPlanSchema = {
   required: ["planId", "regionId", "regionName", "weekStart", "revision", "revisedAt", "view", "capabilities", "items"],
   properties: {
     planId: { type: "string", format: "uuid", nullable: true },
-    regionId: { type: "string", format: "uuid" },
+    regionId: { type: "string", format: "uuid", nullable: true },
     regionName: { type: "string" },
     weekStart: { type: "string", format: "date" },
     revision: { type: "integer", minimum: 0 },
+    scopeRevision: { type: "string", pattern: "^[a-f0-9]{64}$" },
     revisedAt: { type: "string", format: "date-time", nullable: true },
     view: { type: "string", enum: ["report_viewer", "region_manager", "store_manager"] },
     capabilities: {
@@ -302,6 +304,7 @@ const saveChecklistVisitPlanRequestSchema = {
   required: ["expectedRevision", "idempotencyKey", "items"],
   properties: {
     expectedRevision: { type: "integer", minimum: 0 },
+    expectedScopeRevision: { type: "string", pattern: "^[a-f0-9]{64}$" },
     idempotencyKey: { type: "string", format: "uuid" },
     items: {
       type: "array",
@@ -316,6 +319,11 @@ const saveChecklistVisitPlanRequestSchema = {
       },
     },
   },
+};
+
+const saveAssignedChecklistVisitPlanRequestSchema = {
+  ...saveChecklistVisitPlanRequestSchema,
+  required: [...saveChecklistVisitPlanRequestSchema.required, "expectedScopeRevision"],
 };
 
 const checklistVisitPlanPeriodItemSchema = {
@@ -379,7 +387,7 @@ const checklistVisitPlanPeriodResponseSchema = {
       required: ["period", "regionId", "regionName", "view", "capabilities", "metrics", "items", "page"],
       properties: {
         period: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
-        regionId: { type: "string", format: "uuid" },
+        regionId: { type: "string", format: "uuid", nullable: true },
         regionName: { type: "string" },
         view: { type: "string", enum: ["region_manager"] },
         capabilities: {
@@ -410,7 +418,7 @@ const checklistVisitPlanCandidateResponseSchema = {
       type: "object",
       required: ["regionId", "view", "items", "page"],
       properties: {
-        regionId: { type: "string", format: "uuid" },
+        regionId: { type: "string", format: "uuid", nullable: true },
         view: { type: "string", enum: ["region_manager"] },
         items: {
           type: "array",
@@ -445,6 +453,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     ChecklistVisitPlan: checklistVisitPlanSchema,
     ChecklistVisitPlanResponse: checklistVisitPlanResponseSchema,
     SaveChecklistVisitPlanRequest: saveChecklistVisitPlanRequestSchema,
+    SaveAssignedChecklistVisitPlanRequest: saveAssignedChecklistVisitPlanRequestSchema,
     CompleteChecklistVisitPlanItemRequest: completeChecklistVisitPlanItemRequestSchema,
     ChecklistVisitPlanVisitCompletionResponse: checklistVisitPlanVisitCompletionResponseSchema,
     ChecklistVisitPlanPeriodItem: checklistVisitPlanPeriodItemSchema,
@@ -519,30 +528,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     queryParameter("offset", { type: "integer", minimum: 0 }),
   ]);
 
-  const saveVisitPlanPath = "/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}";
-  setJsonResponseSchema(
-    document.paths,
-    saveVisitPlanPath,
-    "put",
-    "Replace one Region Manager weekly BM visit plan using optimistic concurrency and idempotency.",
-    "ChecklistVisitPlanResponse",
-  );
-  const saveOperation = (document.paths[saveVisitPlanPath] as MutablePathItem | undefined)?.put;
-  if (saveOperation) {
-    saveOperation.parameters = (saveOperation.parameters ?? []).map((parameter) => {
-      if (parameter.name === "regionId") {
-        return { ...parameter, schema: { type: "string", format: "uuid" } };
-      }
-      if (parameter.name === "weekStart") {
-        return { ...parameter, schema: { type: "string", format: "date" } };
-      }
-      return parameter;
-    });
-    saveOperation.requestBody = {
-      required: true,
-      content: { "application/json": { schema: { $ref: "#/components/schemas/SaveChecklistVisitPlanRequest" } } },
-    };
-  }
+  applyChecklistWeeklyPlanWriteOpenApi(document.paths);
 
   const completeVisitPath = "/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete";
   setJsonRequestSchema(document.paths, completeVisitPath, "post", "CompleteChecklistVisitPlanItemRequest");
@@ -572,7 +558,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     "ChecklistVisitPlanPeriodResponse",
   );
   setQueryParameters(document.paths, periodPlanPath, "get", [
-    requiredQueryParameter("regionId", { type: "string", format: "uuid" }),
+    queryParameter("regionId", { type: "string", format: "uuid" }),
     requiredQueryParameter("period", { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }),
     queryParameter("query", { type: "string", maxLength: 120 }),
     queryParameter("risk", { type: "string", enum: checklistVisitPlanRisks }),
@@ -592,7 +578,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     "ChecklistVisitPlanCandidateResponse",
   );
   setQueryParameters(document.paths, candidatesPath, "get", [
-    requiredQueryParameter("regionId", { type: "string", format: "uuid" }),
+    queryParameter("regionId", { type: "string", format: "uuid" }),
     queryParameter("query", { type: "string", maxLength: 120 }),
     queryParameter("limit", { type: "integer", minimum: 1, maximum: 50 }),
     queryParameter("offset", { type: "integer", minimum: 0 }),
