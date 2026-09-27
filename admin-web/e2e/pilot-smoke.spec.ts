@@ -103,7 +103,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
   await monitor.expectClean()
 })
 
-test('core store routes open without unavailable states', async ({ page }) => {
+test('core Store routes open and parked competition access fails closed', async ({ page }) => {
   const monitor = watchPilotFailures(page)
   const routes = [
     {
@@ -144,7 +144,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/competitions',
       urlPattern: /\/store\/competitions$/,
-      heading: page.getByRole('heading', { name: /Mağaza yarışmaları/i }),
+      heading: page.getByRole('heading', { name: /Bu rol için rota kullanılamaz|Route not available/i }),
     },
     {
       path: '/store/incentives',
