@@ -1634,6 +1634,9 @@ CREATE TABLE IF NOT EXISTS ops.company_daily_kpi_unmapped_personnel_sales (
 CREATE INDEX IF NOT EXISTS idx_company_daily_kpi_unmapped_personnel_sales_store_day
     ON ops.company_daily_kpi_unmapped_personnel_sales (store_id, business_date);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_store_company_identity
+    ON ops.store (store_id, company_id);
+
 CREATE TABLE IF NOT EXISTS ops.no_positive_sales_alert_delivery (
     delivery_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     business_date DATE NOT NULL,
@@ -1649,6 +1652,8 @@ CREATE TABLE IF NOT EXISTS ops.no_positive_sales_alert_delivery (
     smtp_message_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_no_positive_sales_alert_store_company
+        FOREIGN KEY (store_id, company_id) REFERENCES ops.store(store_id, company_id),
     CONSTRAINT uq_no_positive_sales_alert_period_recipient
         UNIQUE (employee_id, assignment_id, period_anchor, recipient_email),
     CONSTRAINT ck_no_positive_sales_alert_status
