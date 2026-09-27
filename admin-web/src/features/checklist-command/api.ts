@@ -38,6 +38,10 @@ export type SaveChecklistVisitPlanBody = ApiMutationBody<
   '/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}',
   'PUT'
 >
+export type SaveAssignedChecklistVisitPlanBody = ApiMutationBody<
+  '/api/checklists/command-canvas/visit-plans/assigned/{weekStart}',
+  'PUT'
+>
 export type CompleteChecklistVisitPlanItemBody = ApiMutationBody<
   '/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete',
   'POST'
@@ -111,6 +115,9 @@ export function saveChecklistVisitPlan(input: {
   body: SaveChecklistVisitPlanBody
 }) {
   if (!input.regionId) {
+    if (!isAssignedChecklistVisitPlanBody(input.body)) {
+      throw new Error('Assigned visit plan requires a current scope revision')
+    }
     return sendOpenApiJson('/api/checklists/command-canvas/visit-plans/assigned/{weekStart}', {
       method: 'PUT',
       params: { weekStart: input.weekStart },
@@ -122,6 +129,12 @@ export function saveChecklistVisitPlan(input: {
     params: { regionId: input.regionId, weekStart: input.weekStart },
     body: input.body,
   })
+}
+
+function isAssignedChecklistVisitPlanBody(
+  body: SaveChecklistVisitPlanBody,
+): body is SaveAssignedChecklistVisitPlanBody {
+  return typeof body.expectedScopeRevision === 'string' && /^[a-f0-9]{64}$/.test(body.expectedScopeRevision)
 }
 
 export function completeChecklistVisitPlanItem(input: {
