@@ -20,6 +20,9 @@ WITH scope_rows AS (
     SELECT 'ops.workforce_norm_plan', norm_plan_id::text, company_id, region_id, store_id
     FROM ops.workforce_norm_plan
     UNION ALL
+    SELECT 'ops.no_positive_sales_alert_delivery', delivery_id::text, company_id, NULL::uuid, store_id
+    FROM ops.no_positive_sales_alert_delivery
+    UNION ALL
     SELECT 'ops.turnover_event', turnover_event_id::text, company_id, region_id, store_id
     FROM ops.turnover_event
     UNION ALL
