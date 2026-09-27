@@ -34,21 +34,23 @@
   border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); background: var(--card);
 }
 .store-rankings-list-toolbar {
-  display: grid; grid-template-columns: 320px minmax(0, 1fr); align-items: center; gap: 12px;
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 12px;
   padding: 12px 16px; background: color-mix(in srgb, var(--primary) 4%, var(--card));
 }
-.store-rankings-list-toolbar [data-slot='tabs-list'] { width: 100%; height: 40px; }
-.store-rankings-list-toolbar [data-slot='tabs-trigger'] { flex: 1; gap: 8px; padding-inline: 12px; }
-.store-rankings-list-toolbar [data-slot='tabs-trigger'] [data-slot='badge'] { min-width: 2.5em; justify-content: center; }
+.store-rankings-list-toolbar [data-slot='tabs-list'] { width: max-content; max-width: 100%; height: 44px; gap: 8px; padding-inline: 0; }
+.store-rankings-list-toolbar [data-slot='tabs-trigger'] { flex: 0 0 auto; height: 44px; min-width: 0; gap: 6px; padding-inline: 8px; font-size: 13px; }
+.store-rankings-list-toolbar [data-slot='tabs-trigger'] svg { width: 18px; height: 18px; flex-shrink: 0; }
+.store-rankings-tab-label { min-width: 0; }
+.store-rankings-list-toolbar [data-slot='tabs-trigger'] [data-slot='badge'] { flex-shrink: 0; min-width: 36px; padding-inline: 6px; font-size: 12px; justify-content: center; }
 .store-rankings-filters { display: flex; flex-wrap: nowrap; align-items: center; justify-self: end; gap: 8px; min-width: 0; }
-.store-command-app .store-rankings-surface .store-rankings-search-field { background: var(--card); width: 260px; min-height: 36px; border-color: var(--border); }
+.store-command-app .store-rankings-surface .store-rankings-search-field { background: var(--card); width: clamp(160px, 14vw, 260px); min-height: 36px; border-color: var(--border); }
 .store-rankings-search-field input { min-width: 0; font-size: 13px; }
 .store-rankings-search-field input::placeholder { color: var(--foreground); opacity: 1; }
-.store-rankings-filters [data-slot='select-trigger'] { width: 210px; min-height: 36px; font-size: 12px; }
+.store-rankings-filters [data-slot='select-trigger'] { width: clamp(160px, 14vw, 210px); min-height: 36px; font-size: 12px; }
 .store-rankings-loading-reference { min-height: 88px; }
-.store-rankings-loading-tabs { width: 320px; }
-.store-rankings-loading-search { width: 260px; }
-.store-rankings-loading-manager { width: 210px; }
+.store-rankings-loading-tabs { width: 340px; max-width: 100%; }
+.store-rankings-loading-search { width: clamp(160px, 14vw, 260px); }
+.store-rankings-loading-manager { width: clamp(160px, 14vw, 210px); }
 .store-rankings-loading-clear { width: 88px; }
 .store-rankings-loading-body { display: grid; gap: 8px; min-height: 230px; padding: 16px; }
 .store-rankings-reference-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; min-height: 88px; padding: 16px 20px; border: 1px solid var(--border); border-radius: calc(var(--radius) + 4px); background: var(--card); }

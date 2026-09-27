@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { getRankings } from '../features/reports/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import { useDebouncedSearchPage } from '../lib/use-debounced-search-page'
 import { ApiError } from '../lib/api'
 import { CommandCanvasPage } from '../features/store-command-canvas/primitives'
 import type { StoreKpiHighlightsPageModel, StoreKpisRegionSortKey } from './store-kpi-highlights-model'
@@ -88,16 +89,15 @@ export function StoreKpisCompanyOverview({ model }: { model: StoreKpiHighlightsP
 }
 
 function CompanyStores({ model, period, selected }: { model: StoreKpiHighlightsPageModel; period: string; selected: ManagerSelection | null }) {
-  const [page, setPage] = useState(0)
-  const [search, setSearch] = useState('')
+  const { page, setPage, search, setSearch, querySearch } = useDebouncedSearchPage()
   const [sort, setSort] = useState<{ key: StoreKpisRegionSortKey; direction: 'asc' | 'desc' }>({ key: 'score', direction: 'desc' })
   const limit = 50
   const query = useQuery({
-    queryKey: ['store-kpis-company-store-list', period, model.kpiDateRangeEnd, selected?.key ?? 'all', search.trim(), page],
-    queryFn: () => getRankings({ periodType: model.kpiDateRangeEnd ? 'daily' : 'monthly', ...(model.kpiDateRangeEnd ? { periodEnd: model.kpiDateRangeEnd } : {}), periodStart: period, ...(selected ? selected.userId ? { regionManagerUserId: selected.userId } : { regionManagerUnassigned: true } : {}), ...(search.trim() ? { search: search.trim() } : {}), limit, offset: page * limit }),
+    queryKey: ['store-kpis-company-store-list', period, model.kpiDateRangeEnd, selected?.key ?? 'all', querySearch, page],
+    queryFn: ({ signal }) => getRankings({ periodType: model.kpiDateRangeEnd ? 'daily' : 'monthly', ...(model.kpiDateRangeEnd ? { periodEnd: model.kpiDateRangeEnd } : {}), periodStart: period, ...(selected ? selected.userId ? { regionManagerUserId: selected.userId } : { regionManagerUnassigned: true } : {}), ...(querySearch ? { search: querySearch } : {}), limit, offset: page * limit }, { signal }),
     enabled: Boolean(period),
     ...transientQueryRetryOptions,
-    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[4] === search.trim() ? previous : undefined,
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === period && previousQuery.queryKey[2] === model.kpiDateRangeEnd && previousQuery.queryKey[3] === (selected?.key ?? 'all') ? previous : undefined,
   })
   const protectedError = query.error instanceof ApiError && (query.error.status === 401 || query.error.status === 403)
   const data = protectedError ? undefined : query.data
@@ -109,7 +109,7 @@ function CompanyStores({ model, period, selected }: { model: StoreKpiHighlightsP
   return <section className="region-performance-stores" aria-label={selected?.name ?? 'Tüm Mağazalar'} aria-busy={query.isFetching}>
     <div className="region-performance-toolbar">
       <div className="region-performance-list-heading"><h2>{selected?.name ?? 'Tüm Mağazalar'}</h2>{data ? <Badge variant="secondary">{total}</Badge> : null}</div>
-      <InputGroup className="region-performance-search"><InputGroupInput aria-label="Mağaza ara" placeholder="Mağaza ara…" value={search} onChange={event => { setPage(0); setSearch(event.target.value) }} /><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon></InputGroup>
+      <InputGroup className="region-performance-search"><InputGroupInput aria-label="Mağaza ara" placeholder="Mağaza ara…" value={search} onChange={event => setSearch(event.target.value)} /><InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon></InputGroup>
     </div>
     {!data && query.isLoading ? <StoreLoadingState title={model.t('storeKpis.loadingTitle')} description={model.t('storeKpis.loadingCopy')} /> : !data && query.isError ? <StoreErrorState title={model.t('storeKpis.rowsErrorTitle')} description={model.t('storeKpis.companyManagerStoresError')} action={{ label: model.t('storeKpis.retry'), onClick: () => void query.refetch() }} /> : <>
       {query.isError && data ? <Alert variant="destructive"><AlertDescription>{model.t('storeKpis.backgroundError')}<Button variant="outline" onClick={() => void query.refetch()}>{model.t('storeKpis.retry')}</Button></AlertDescription></Alert> : null}

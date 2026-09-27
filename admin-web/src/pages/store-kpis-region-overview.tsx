@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { ArrowDown, ArrowUp, BarChart3, ClipboardCheck, ReceiptText, ShoppingBag, RefreshCw, Search } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, ClipboardCheck, ReceiptText, ShoppingBag, RefreshCw, Search, Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -43,6 +43,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
     { label: 'Bölge ATV', value: summary.metricAverages.ATV, icon: ReceiptText },
     { label: 'Bölge UPT', value: summary.metricAverages.UPT, icon: ShoppingBag },
     { label: 'Bölge CR', value: summary.metricAverages.CR, icon: RefreshCw },
+    { label: 'Bölge GSM', value: summary.metricAverages.gsm_approval, icon: Smartphone },
   ]
   const storeSearch = <InputGroup className="region-performance-header-search">
     <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>

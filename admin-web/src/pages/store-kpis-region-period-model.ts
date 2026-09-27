@@ -28,13 +28,13 @@ export function useRegionOverviewPeriodModel(input: {
       input.regionManagerUserId,
       0,
     ],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       getRankings({
         periodType: 'monthly',
         ...(input.regionManagerUserId ? { regionManagerUserId: input.regionManagerUserId } : {}),
         limit: 100,
         offset: 0,
-      }),
+      }, { signal }),
     enabled:
       input.reportingAllowed &&
       input.isRegionManagerOverview &&
@@ -43,7 +43,11 @@ export function useRegionOverviewPeriodModel(input: {
     ...transientQueryRetryOptions,
   })
   const latestMonthlyPeriodStart = getLatestMonthlyPeriodStart(seedQuery.data?.availablePeriods)
-  const activePeriodStart = input.routePeriodStart || latestMonthlyPeriodStart
+  // Daily imports can produce a valid monthly aggregate without a persisted
+  // monthly availablePeriods entry. Use the returned window, not today's month.
+  const resolvedMonthlyStart = seedQuery.data?.source.periodType === 'monthly'
+    ? seedQuery.data.source.periodStart ?? '' : ''
+  const activePeriodStart = input.routePeriodStart || latestMonthlyPeriodStart || resolvedMonthlyStart
 
   const setPeriodStart = (value: string) => {
     const nextParams = new URLSearchParams(input.searchParams)
