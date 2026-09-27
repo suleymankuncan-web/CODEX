@@ -25,6 +25,17 @@ resource, backup/restore, and observation gates are separately accepted.
 
 ## Required order
 
+The company overlay pins the approved Remember Me SSO idle and maximum limits
+to seven days (`604800` seconds). The synthetic base retains its `0`/inherit
+defaults. Normal SSO limits, access-token lifetime and the short-lived application
+browser cookie are not extended. Applying new images alone does not reconcile
+an existing realm: an authorized operator must back up its configuration, apply
+only the two reviewed `keycloak-bootstrap` environment values, and run the
+bootstrap reconciliation. Do not replace a live company overlay wholesale:
+unrelated settings, especially incentive auto-close, must remain unchanged.
+Verify both realm Remember Me values after reconciliation; `rememberMe=true`
+alone is insufficient. See [Keycloak session timeouts](https://www.keycloak.org/docs/latest/server_admin/index.html#_timeouts).
+
 Use exact signed image and release identities in a private env file derived
 from `env.template`. Never use the all-zero application image placeholders for
 execution. Prepare every file-backed secret before starting Compose.
