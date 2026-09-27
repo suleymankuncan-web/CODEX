@@ -71,6 +71,15 @@ test('on-prem Remember Me uses separate bounded SSO limits without changing norm
   }
 })
 
+test('company overlay persists the approved seven-day Remember Me policy without extending browser tokens', () => {
+  const overlay = read('infra/onprem/core/compose.company-data.yaml')
+  const bootstrap = overlay.match(/^  keycloak-bootstrap:\n[\s\S]*?(?=^  [a-z][\w-]*:)/m)?.[0]
+  assert.ok(bootstrap)
+  assert.match(bootstrap, /KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS: "604800"/)
+  assert.match(bootstrap, /KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS: "604800"/)
+  assert.doesNotMatch(bootstrap, /BROWSER_SESSION_TTL|accessTokenLifespan|ssoSessionIdleTimeout:/)
+})
+
 test('ONP-3B Keycloak image replaces the complete Netty 4.1.136 family with checksum-pinned 4.1.137 artifacts', () => {
   const dockerfile = input().keycloakDockerfile
   const expectedIds = [

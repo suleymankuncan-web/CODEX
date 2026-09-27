@@ -27,7 +27,13 @@ services:
     environment: *company-data
   keycloak-bootstrap:
     labels: *company-labels
-    environment: *company-data
+    environment:
+      <<: *company-data
+      # Company-approved Remember Me policy: seven days, separate from normal SSO.
+      # Explicit values prevent the base template's 0/inherit defaults restoring
+      # a shorter policy during a later bootstrap reconciliation.
+      KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS: "604800"
+      KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS: "604800"
   caddy:
     labels: *company-labels
   frontend:
