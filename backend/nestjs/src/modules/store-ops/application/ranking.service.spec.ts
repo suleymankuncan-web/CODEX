@@ -121,8 +121,8 @@ describe("RankingService", () => {
       getEmployeeTurkeyBenchmarkValues: jest.fn(async () => input?.personnelBenchmarkRows ?? []),
       listRankingFilterOptions: jest.fn(async () => ({
         regionManagers: [
-          { id: "region-manager-1", label: "Region Manager 1" },
-          { id: "region-manager-2", label: "Region Manager 2" },
+          { id: "region-manager-1", label: "Region Manager 1", storeIds: createStoreRows(105).filter((_, index) => index % 2 === 0).map((row) => row.store_id) },
+          { id: "region-manager-2", label: "Region Manager 2", storeIds: createStoreRows(105).filter((_, index) => index % 2 === 1).map((row) => row.store_id) },
         ],
         regions: [
           { id: "region-1", label: "Region 1" },
@@ -445,7 +445,7 @@ describe("RankingService", () => {
     expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
   });
 
-  it("limits region manager rankings to assigned action stores before user-id fallback", async () => {
+  it("limits region manager rankings to assigned action stores despite stale manager labels", async () => {
     const repository = createRepositoryMock({
       storeRows: createStoreRows(12).map((row) => ({
         ...row,
@@ -463,7 +463,6 @@ describe("RankingService", () => {
       storeIds: [],
       assignedStoreIds: ["store-002", "store-005", "store-009"],
       periodType: "monthly",
-      regionManagerUserId: "regional-1",
       limit: 100,
       offset: 0,
     });

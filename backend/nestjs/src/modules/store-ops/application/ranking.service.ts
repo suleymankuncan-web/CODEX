@@ -52,7 +52,7 @@ import {
   buildScopedRankingFilterOptions,
   selectScopedRankingFilterRows,
 } from "./ranking-filter-options";
-import { buildCompanyManagerStoreView, replaceManagerFilterOptions } from "./ranking-company-manager-directory";
+import { buildCompanyManagerStoreView, replaceManagerFilterOptions, scopeManagerDirectory, withoutStoreAndRegionFilters } from "./ranking-company-manager-directory";
 
 type RawStoreRankingKpiRow = {
   store_id: string;
@@ -230,12 +230,13 @@ export class RankingService {
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      canReadCompanyHierarchy
+      canReadCompanyHierarchy || input.roleCodes.includes("REGION_MANAGER")
         ? this.rankingReportingReadRepository.listRankingFilterOptions({
             companyIds: input.companyIds,
             periodType: latestPeriod.period_type,
             periodStart: latestPeriod.period_start,
             periodEnd: latestPeriod.period_end,
+            managerOnly: !canReadCompanyHierarchy,
           })
         : Promise.resolve(null),
     ]);
@@ -271,8 +272,12 @@ export class RankingService {
     const assignmentByEmployeeId = new Map(
       activePersonnelAssignments.map((assignment) => [assignment.employee_id, assignment]),
     );
-    const { companyFilters, filteredStoreRows } = buildCompanyManagerStoreView({
-      rows: storeRows, filters: input, directory: companyFilterOptions?.regionManagers,
+    const managerDirectory = scopeManagerDirectory({
+      directory: companyFilterOptions?.regionManagers, canReadCompanyHierarchy,
+      assignedStoreIds: input.assignedStoreIds,
+    });
+    const { companyFilters, filteredStoreRows, managerStoreIds } = buildCompanyManagerStoreView({
+      rows: storeRows, filters: input, directory: managerDirectory,
       canReadCompanyHierarchy, isPrivileged: access.isPrivileged,
       enforceAssignedReadScope: scopePolicy.enforceAssignedReadScope,
     });
@@ -296,17 +301,11 @@ export class RankingService {
           assignmentByEmployeeId,
         })
       : personnelRows;
-    const personnelDisplayFilters = {
-      ...companyFilters,
-      enforceAssignedReadScope: false,
-      regionId: undefined,
-      regionIds: [],
-      storeId: undefined,
-      storeIds: [],
-      assignedStoreIds: [],
-    };
+    const personnelDisplayFilters = withoutStoreAndRegionFilters(companyFilters);
+    const managerStoreIdSet = managerStoreIds === null ? null : new Set(managerStoreIds);
     const filteredPersonnelRows = access.isPrivileged
       ? applyPersonnelFilters(activeScopedPersonnelRows, personnelDisplayFilters)
+          .filter((row) => managerStoreIdSet === null || (row.storeId !== null && managerStoreIdSet.has(row.storeId)))
       : personnelRows;
     const reference = {
       store: buildRankingReferenceGroup({
@@ -356,7 +355,7 @@ export class RankingService {
           ? [currentStore]
           : authorizedStoreRows,
     );
-    replaceManagerFilterOptions(filters, companyFilterOptions?.regionManagers);
+    replaceManagerFilterOptions(filters, managerDirectory);
     const managedStoreIds = scopePolicy.enforceAssignedReadScope
       ? uniqueIds(input.assignedStoreIds)
       : uniqueIds([...input.assignedStoreIds, ...input.storeIds]);

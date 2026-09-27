@@ -522,6 +522,7 @@ export class RankingReportingReadRepository {
     periodType: string;
     periodStart: string;
     periodEnd: string;
+    managerOnly?: boolean;
   }): Promise<{
     regionManagers: Array<{ id: string; label: string; storeIds: string[] }>;
     regions: Array<{ id: string; label: string }>;
@@ -540,6 +541,9 @@ export class RankingReportingReadRepository {
           })()
         : "";
     const regionManagers = await this.listRegionManagerDirectory({ companyIds: input.companyIds });
+    if (input.managerOnly) {
+      return { regionManagers, regions: [], stores: [] };
+    }
 
     const regions = await this.databaseService.query<{ id: string; label: string }>(
       `

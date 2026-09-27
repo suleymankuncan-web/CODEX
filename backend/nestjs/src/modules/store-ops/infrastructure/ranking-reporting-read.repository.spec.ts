@@ -189,6 +189,22 @@ describe("RankingReportingReadRepository source filters", () => {
     expect(managerSql).not.toContain("role_store.company_id");
   });
 
+  it("reads only the assigned manager directory for Region Manager filter options", async () => {
+    const { query, repository } = createRepository();
+
+    const options = await repository.listRankingFilterOptions({
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+      managerOnly: true,
+    });
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(String(query.mock.calls[0][0])).toContain("ops.user_action_store_assignment manager_store");
+    expect(options).toEqual({ regionManagers: [], regions: [], stores: [] });
+  });
+
   it("joins approved personnel target references for ranking personnel NET_SALES rows", async () => {
     const { query, repository } = createRepository();
 

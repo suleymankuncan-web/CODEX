@@ -7,6 +7,33 @@ export type RegionManagerDirectoryEntry = {
   storeIds: string[];
 };
 
+export function scopeManagerDirectory(input: {
+  directory: RegionManagerDirectoryEntry[] | undefined;
+  canReadCompanyHierarchy: boolean;
+  assignedStoreIds: readonly string[];
+}) {
+  if (input.canReadCompanyHierarchy) return input.directory;
+  const assignedStoreIds = new Set(input.assignedStoreIds);
+  return input.directory
+    ?.map((manager) => ({
+      ...manager,
+      storeIds: manager.storeIds.filter((storeId) => assignedStoreIds.has(storeId)),
+    }))
+    .filter((manager) => manager.storeIds.length > 0);
+}
+
+export function withoutStoreAndRegionFilters(filters: RankingFilters): RankingFilters {
+  return {
+    ...filters,
+    enforceAssignedReadScope: false,
+    regionId: undefined,
+    regionIds: [],
+    storeId: undefined,
+    storeIds: [],
+    assignedStoreIds: [],
+  };
+}
+
 export function buildCompanyManagerStoreView(input: {
   rows: RankedStoreRankingRow[];
   filters: RankingFilters;
@@ -18,12 +45,15 @@ export function buildCompanyManagerStoreView(input: {
   const selectedManager = input.directory?.find(
     (manager) => manager.id === input.filters.regionManagerUserId,
   );
+  const managerStoreIds = input.isPrivileged && input.filters.regionManagerUserId
+    ? selectedManager?.storeIds ?? []
+    : null;
   const companyFilters = input.canReadCompanyHierarchy
     ? {
         ...input.filters,
-        regionManagerUserId: selectedManager ? undefined : input.filters.regionManagerUserId,
+        regionManagerUserId: undefined,
       }
-    : { ...input.filters, regionManagerUnassigned: false };
+    : { ...input.filters, regionManagerUserId: undefined, regionManagerUnassigned: false };
   companyFilters.enforceAssignedReadScope = input.enforceAssignedReadScope;
   const displayRows = input.isPrivileged
     ? applyStoreFilters(input.rows, companyFilters)
@@ -31,8 +61,9 @@ export function buildCompanyManagerStoreView(input: {
 
   return {
     companyFilters,
-    filteredStoreRows: selectedManager
-      ? displayRows.filter((row) => selectedManager.storeIds.includes(row.storeId))
+    managerStoreIds,
+    filteredStoreRows: managerStoreIds
+      ? displayRows.filter((row) => managerStoreIds.includes(row.storeId))
       : displayRows,
   };
 }

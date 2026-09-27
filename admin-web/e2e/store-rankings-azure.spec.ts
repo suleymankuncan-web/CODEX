@@ -33,6 +33,13 @@ for (const width of [1440, 1024, 390, 320]) {
     const accessibility = await new AxeBuilder({ page }).include('[data-testid="store-rankings-page"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(accessibility.violations).toEqual([])
     await page.screenshot({ path: testInfo.outputPath(`rankings-${width}.png`), fullPage: true })
+    if (width === 1024) {
+      const tabs = page.getByRole('tablist', { name: /liste/i })
+      const filters = page.getByRole('group', { name: 'Filtreler' })
+      const tabBox = (await tabs.boundingBox())!
+      const filterBox = (await filters.boundingBox())!
+      expect(filterBox.y).toBeGreaterThanOrEqual(tabBox.y + tabBox.height)
+    }
     await page.getByRole('tab', { name: /Personel listesi/ }).click()
     await expect(page.getByTestId('personnel-ranking-row').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
@@ -58,6 +65,59 @@ test('search and manager selection send the existing server filters', async ({ p
   await page.getByRole('option', { name: 'Region Manager', exact: true }).click()
   await expect.poll(() => queries.at(-1)?.get('regionManagerUserId')).toBe('region-manager-1')
   await expect(page).toHaveURL(/regionManager=region-manager-1/)
+})
+
+test('desktop tabs and filters keep their positions from loading through search and clear', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  let releaseInitial: () => void = () => undefined
+  const initialRequest = new Promise<void>(resolve => { releaseInitial = resolve })
+  let firstRequest = true
+  await page.route('**/api/reports/rankings**', async route => {
+    if (firstRequest) {
+      firstRequest = false
+      await initialRequest
+    }
+    await route.fulfill({ json: fixture })
+  })
+
+  try {
+    await page.goto('/store/rankings')
+    const toolbar = page.locator('.store-rankings-list-toolbar')
+    await expect(page.locator('.store-rankings-loading-tabs')).toBeVisible()
+    const initialY = (await toolbar.boundingBox())!.y
+    releaseInitial()
+    const tabs = toolbar.getByRole('tablist')
+    const search = toolbar.getByRole('searchbox')
+    await expect(tabs).toBeVisible()
+    await expect(search).toBeVisible()
+
+    const positions = async () => {
+      const tabBox = (await tabs.boundingBox())!
+      const searchBox = (await search.boundingBox())!
+      const managerBox = (await toolbar.getByRole('combobox').boundingBox())!
+      const clearBox = (await toolbar.getByRole('button', { name: 'Temizle' }).boundingBox())!
+      expect(tabBox.x + tabBox.width).toBeLessThan(searchBox.x)
+      expect(searchBox.x + searchBox.width).toBeLessThan(managerBox.x)
+      expect(managerBox.x + managerBox.width).toBeLessThan(clearBox.x)
+      expect(Math.abs(tabBox.y - searchBox.y)).toBeLessThanOrEqual(4)
+      return { tabX: tabBox.x, searchX: searchBox.x, toolbarY: (await toolbar.boundingBox())!.y }
+    }
+
+    const loaded = await positions()
+    expect(Math.abs(loaded.toolbarY - initialY)).toBeLessThanOrEqual(8)
+    await search.fill('İstinye')
+    await expect(search).toHaveValue('İstinye')
+    const searched = await positions()
+    expect(searched.tabX).toBe(loaded.tabX)
+    expect(searched.searchX).toBe(loaded.searchX)
+    await toolbar.getByRole('button', { name: 'Temizle' }).click()
+    await expect(search).toHaveValue('')
+    const cleared = await positions()
+    expect(cleared.tabX).toBe(loaded.tabX)
+    expect(cleared.searchX).toBe(loaded.searchX)
+  } finally {
+    releaseInitial()
+  }
 })
 
 test('switching lists resets pagination and uses the selected lists total', async ({ page }) => {
