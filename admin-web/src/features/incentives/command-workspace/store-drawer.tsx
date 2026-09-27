@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CommandCanvasOperationalDrawerContent } from '@/features/store-command-canvas/primitives'
 import type { AppLocale } from '@/lib/i18n'
 import { formatIncentiveMoney, formatIncentivePercent } from './format'
+import { storeSalesDisplay } from './sales-display'
 import { isBelowIncentiveThreshold, isEarnedAtIncentiveThreshold, sumMoney } from './model'
 import { StoreReviewEditor, type CompleteStoreIncentiveReview } from './store-review-editor'
 import type { IncentiveStore, IncentiveWorkspace } from './types'
@@ -25,10 +26,8 @@ export function IncentiveStoreDrawer(input: {
   const close = () => { if (saving) return; if (dirty) setDiscardOpen(true); else input.onClose() }
   const tr = input.locale === 'tr'
   const store = input.store
-  const outOfRosterReturns = store?.outOfRosterReturns ?? []
-  const useDailyTracking = input.workspace.salesTracking?.status === 'complete' && Boolean(input.workspace.salesTracking.lastLoadedDate)
-  const actualDisplay = store ? (useDailyTracking ? store.dailyActualNetSales : store.storeActualNetSales) : null
-  const achievementDisplay = store ? (useDailyTracking ? store.dailyAchievementPct : store.storeAchievementPct) : null
+  const sales = store ? storeSalesDisplay(store, input.workspace) : null
+  const achievementDisplay = sales?.achievement ?? null
   const finalAmount = store && previewTotal?.storeId === store.storeId
     ? previewTotal.total
     : store ? sumMoney(store.rows.map(row => row.finalAmount)) : null
@@ -45,24 +44,16 @@ export function IncentiveStoreDrawer(input: {
       </SheetHeader>
       {store ? <div className="incentive-store-sheet-body">
         <dl className="incentive-detail-totals">
-          <div><dt>{tr ? 'Mağaza hedefi' : 'Store target'}</dt><dd>{formatIncentiveMoney(store.storeTarget, input.locale)}</dd></div>
-          <div><dt>{tr ? (useDailyTracking ? 'Ay içi net satış' : 'Net satış') : (useDailyTracking ? 'Month-to-date net sales' : 'Net sales')}</dt><dd>{formatIncentiveMoney(actualDisplay, input.locale)}</dd></div>
-          <div><dt>{useDailyTracking ? (tr ? 'Ay içi HG%' : 'Month-to-date target %') : 'HG%'}</dt><dd><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementDisplay) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementDisplay, input.locale)}</span></dd></div>
-          <div><dt>{tr ? 'Mağaza toplamı' : 'Store total'}</dt><dd><span className={`incentive-value-tone${isEarnedAtIncentiveThreshold(finalAmount, store.storeAchievementPct) ? ' is-earned' : ''}`}>{formatIncentiveMoney(finalAmount, input.locale)}</span></dd></div>
+          <div><dt>{tr ? 'Hedef' : 'Target'}</dt><dd>{formatIncentiveMoney(store.storeTarget, input.locale)}</dd></div>
+          <div><dt>{tr ? 'Toplam Satış' : 'Total sales'}</dt><dd>{formatIncentiveMoney(sales?.sale, input.locale)}</dd></div>
+          <div><dt>{tr ? 'Toplam İade' : 'Total returns'}</dt><dd>{formatIncentiveMoney(sales?.returns, input.locale)}</dd></div>
+          <div><dt>{tr ? 'Net Satış' : 'Net sales'}</dt><dd>{formatIncentiveMoney(sales?.net, input.locale)}</dd></div>
+          <div><dt>HG%</dt><dd><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementDisplay) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementDisplay, input.locale)}</span></dd></div>
+          <div><dt>{tr ? 'Final Prim' : 'Final incentive'}</dt><dd><span className={`incentive-value-tone${isEarnedAtIncentiveThreshold(finalAmount, store.storeAchievementPct) ? ' is-earned' : ''}`}>{formatIncentiveMoney(finalAmount, input.locale)}</span></dd></div>
         </dl>
-        {store.trackedNetAmount !== null && store.trackedNetAmount !== undefined ? <dl className="incentive-detail-totals incentive-movement-totals" aria-label={tr ? 'Satış ve iade dökümü' : 'Sales and returns breakdown'}>
-          <div><dt>{tr ? 'Satış' : 'Sales'}</dt><dd>{formatIncentiveMoney(store.trackedSaleAmount, input.locale)}</dd></div>
-          <div><dt>{tr ? 'İade' : 'Returns'}</dt><dd>{formatIncentiveMoney(store.trackedReturnAmount, input.locale)}</dd></div>
-          <div><dt>Net</dt><dd>{formatIncentiveMoney(store.trackedNetAmount, input.locale)}</dd></div>
-        </dl> : null}
         {packageNote ? <section className="incentive-store-notes"><h4>{tr ? 'Paket karar notu' : 'Package decision note'}</h4><p>{packageNote}</p></section> : null}
         {store.review.periodCloseStatus !== 'closed' ? <p className="incentive-store-period-notice">{tr ? 'Dönem henüz kapanmadı. Kontrol ve düzeltme dönem kapandığında açılır.' : 'Review and corrections become available after period close.'}</p> : null}
         <StoreReviewEditor store={store} workspace={input.workspace} locale={input.locale} readOnly={input.readOnly} locked={input.interactionLocked} onComplete={input.onComplete} onPendingChange={setSaving} onDirtyChange={setDirty} onPreviewTotalChange={setPreviewTotal} footerTarget={footerTarget} />
-        {outOfRosterReturns.length > 0 ? <section className="incentive-out-of-roster-returns" aria-label={tr ? 'Kadro dışı iadeler' : 'Returns outside the roster'}>
-          <h3>{tr ? 'Kadro dışı iadeler' : 'Returns outside the roster'}</h3>
-          <p>{tr ? 'Bu iadeler mağaza netine zaten dahildir; personel prim satırı oluşturmaz.' : 'These returns are already included in store net sales and do not create incentive rows.'}</p>
-          <ul>{outOfRosterReturns.map((item, index) => <li key={`${item.employeeId ?? item.personnelCode ?? index}:${index}`}><strong>{item.displayName}</strong><span>{tr ? 'Satış' : 'Sales'} {formatIncentiveMoney(item.saleAmount, input.locale)} · {tr ? 'İade' : 'Returns'} {formatIncentiveMoney(item.returnAmount, input.locale)} · Net {formatIncentiveMoney(item.netAmount, input.locale)}</span></li>)}</ul>
-        </section> : null}
       </div> : null}
       {!input.readOnly ? <SheetFooter className="incentive-store-sheet-footer"><div ref={setFooterTarget} className="incentive-completion-slot" />{input.review}</SheetFooter> : null}
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}><DialogContent><DialogHeader><DialogTitle>{tr ? 'Kaydedilmemiş değişiklikler var' : 'Unsaved changes'}</DialogTitle><DialogDescription>{tr ? 'Tutar düzenlemelerini bırakıp mağaza listesini açmak istiyor musunuz?' : 'Discard the amount edits and return to the store list?'}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setDiscardOpen(false)}>{tr ? 'Düzenlemeye dön' : 'Keep editing'}</Button><Button onClick={() => { setDiscardOpen(false); input.onClose() }}>{tr ? 'Değişiklikleri bırak' : 'Discard changes'}</Button></DialogFooter></DialogContent></Dialog>

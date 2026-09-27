@@ -33,6 +33,9 @@ export type SalesTargetIncentiveWorkspaceRateRow = {
 export type SalesTargetIncentiveWorkspaceClosedRateSnapshotRow = {
   store_id: string;
   final_snapshot_id: string;
+  store_target_amount: string | null;
+  store_net_sales_amount: string | null;
+  store_achievement_pct: string | null;
   rule_version_code: string;
   period_timezone: string;
   rate_table_versions: string[];
@@ -138,7 +141,10 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
             snapshot.store_id,
             snapshot.sales_target_incentive_final_snapshot_id,
             snapshot.close_run_id,
-            snapshot.close_cutoff_at
+            snapshot.close_cutoff_at,
+            snapshot.store_target_amount,
+            snapshot.store_net_sales_amount,
+            snapshot.store_achievement_pct
           FROM rpt.sales_target_incentive_final_snapshot snapshot
           INNER JOIN scoped_store
             ON snapshot.company_id = scoped_store.company_id
@@ -150,6 +156,9 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
         SELECT
           latest_snapshot.store_id::text AS store_id,
           latest_snapshot.sales_target_incentive_final_snapshot_id::text AS final_snapshot_id,
+          latest_snapshot.store_target_amount::text AS store_target_amount,
+          latest_snapshot.store_net_sales_amount::text AS store_net_sales_amount,
+          latest_snapshot.store_achievement_pct::text AS store_achievement_pct,
           rule_snapshot.rule_version_code,
           rule_snapshot.period_timezone,
           rule_snapshot.rate_table_versions,

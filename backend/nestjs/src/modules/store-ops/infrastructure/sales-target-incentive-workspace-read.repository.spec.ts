@@ -39,6 +39,9 @@ describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
     expect(String(sql)).toContain("WITH scoped_store AS");
     expect(String(sql)).toContain("rpt.sales_target_incentive_rule_snapshot");
     expect(String(sql)).toContain("snapshot.company_id = scoped_store.company_id");
+    expect(String(sql)).toContain("snapshot.store_target_amount");
+    expect(String(sql)).toContain("snapshot.store_net_sales_amount");
+    expect(String(sql)).toContain("snapshot.store_achievement_pct");
     expect(String(sql)).not.toContain("snapshot.region_id = scoped_store.region_id");
     expect(String(sql)).not.toContain("ops.sales_target_incentive_rule_version");
     expect(String(sql)).not.toContain("rule.effective_from");

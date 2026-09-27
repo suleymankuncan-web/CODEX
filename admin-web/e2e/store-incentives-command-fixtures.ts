@@ -81,6 +81,7 @@ export function createIncentiveWorkspace(
         storeMetadata: { status: options.partial ? 'unavailable' : 'complete' },
         rateMetadata: { status: 'complete' },
         correctionActors: { status: 'complete' },
+        movementTracking: { status: 'complete' },
       },
       rateMetadata: {
         status: 'resolved', ruleVersionCode: 'sales-target-incentive-v1.0.0', effectiveFrom: '2026-01-01',
@@ -215,6 +216,9 @@ function store(input: { storeId: string; storeName: string; storeCode: string; c
   return {
     storeId: input.storeId, storeCode: input.storeCode, storeName: input.storeName, city: input.city ?? null,
     storeTarget: target, storeActualNetSales: actual, storeAchievementPct: target === '0.00' ? null : ((Number(actual) / Number(target)) * 100).toFixed(4),
+    dailyActualNetSales: null, dailyAchievementPct: null,
+    trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null,
+    outOfRosterReturns: [],
     capabilities: {
       canMarkStoreReview: input.canAct,
       canCreateCorrection: input.canAct,
@@ -248,8 +252,11 @@ function row(input: {
   return {
     employeeId: input.employeeId, displayName: input.displayName, participantType: input.participantType,
     positionCode: input.positionCode ?? (input.participantType === 'store_manager' ? 'STORE_MANAGER' : 'SALES_ASSOCIATE'),
+    currentEmploymentStatus: null, terminationDate: null,
     target: input.target ?? (input.participantType === 'store_manager' ? '8200000.00' : '1450000.00'),
     actual: input.actual ?? (input.participantType === 'store_manager' ? '8721540.00' : '1593440.00'), achievementPct: '109.8900',
+    dailyActualNetSales: null, dailyAchievementPct: null,
+    trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null,
     rate: input.rate, calculatedAmount: input.calculated, finalAmount: input.final, signedDifferenceAmount: delta,
     status: input.correction ? 'corrected' : 'projected', correction, correctionRecords: correction ? [correction] : [],
   }

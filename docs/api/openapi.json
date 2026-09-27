@@ -28247,6 +28247,8 @@
           "displayName",
           "participantType",
           "positionCode",
+          "currentEmploymentStatus",
+          "terminationDate",
           "target",
           "actual",
           "dailyActualNetSales",
@@ -28280,6 +28282,20 @@
           },
           "positionCode": {
             "type": "string"
+          },
+          "currentEmploymentStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "active",
+              "inactive",
+              "terminated"
+            ]
+          },
+          "terminationDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
           },
           "target": {
             "type": "string",

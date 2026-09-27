@@ -76,14 +76,17 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(person?.dailyAchievementPct).toBe("15.00");
   });
 
-  it("keeps negative returns outside the roster separate and never adds them again to store net", async () => {
+  it("keeps only no-sale negative returns outside the roster separate and never adds them again to store net", async () => {
     const { service, readModel, corrections } = harness();
     readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
     readModel.listMovementTracking.mockResolvedValue([
-      { scope_type: "store", store_id: "store-a", employee_id: null, personnel_code: null, display_name: null, sale_amount: "1000", return_amount: "-1200", net_amount: "-200" },
-      { scope_type: "employee", store_id: "store-a", employee_id: "employee-a", personnel_code: "17", display_name: "Derya Uslu", sale_amount: "300", return_amount: "-400", net_amount: "-100" },
-      { scope_type: "employee", store_id: "store-a", employee_id: "former-a", personnel_code: "18", display_name: "Eski Çalışan", sale_amount: "0", return_amount: "-500", net_amount: "-500" },
-      { scope_type: "unmapped", store_id: "store-a", employee_id: null, personnel_code: "19", display_name: null, sale_amount: "0", return_amount: "-300", net_amount: "-300" },
+      { scope_type: "store", store_id: "store-a", employee_id: null, personnel_code: null, display_name: null, sale_amount: "1000", return_amount: "-1200", net_amount: "-200", is_active_roster: false },
+      { scope_type: "employee", store_id: "store-a", employee_id: "employee-a", personnel_code: "17", display_name: "Derya Uslu", sale_amount: "300", return_amount: "-400", net_amount: "-100", is_active_roster: true },
+      { scope_type: "employee", store_id: "store-a", employee_id: "former-a", personnel_code: "18", display_name: "Eski Çalışan", sale_amount: "0", return_amount: "-500", net_amount: "-500", is_active_roster: false },
+      { scope_type: "unmapped", store_id: "store-a", employee_id: null, personnel_code: "19", display_name: null, sale_amount: "0", return_amount: "-300", net_amount: "-300", is_active_roster: false },
+      { scope_type: "employee", store_id: "store-a", employee_id: "current-cashier", personnel_code: "20", display_name: "Aktif Kasiyer", sale_amount: "0", return_amount: "-20", net_amount: "-20", is_active_roster: true },
+      { scope_type: "employee", store_id: "store-a", employee_id: "former-positive", personnel_code: "21", display_name: "Net Pozitif", sale_amount: "200", return_amount: "-20", net_amount: "180", is_active_roster: false },
+      { scope_type: "employee", store_id: "store-a", employee_id: "former-seller", personnel_code: "22", display_name: "Satışlı İade", sale_amount: "10", return_amount: "-50", net_amount: "-40", is_active_roster: false },
     ]);
     corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
 
@@ -653,6 +656,82 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(row?.correction?.finalAmount).toBe("12.00");
   });
 
+  it("uses only frozen final rows for a closed store without falling back to current targets", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    const current = projectionWithPersonnel();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      ...current,
+      stores: current.stores.map((store) => ({
+        ...store,
+        storeTargetAmount: "777.00",
+        storeNetSalesAmount: "888.00",
+      })),
+    });
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+      {
+        ...adjustmentSummary({ finalAmount: "0.00", adjustmentAmount: "0.00" }),
+        target_amount: null,
+        current_employment_status: "inactive",
+        termination_date: "2026-05-20",
+      },
+      {
+        ...adjustmentSummary({ finalAmount: "8.00", adjustmentAmount: "0.00" }),
+        final_row_id: "final-departed",
+        employee_id: "departed-b",
+        employee_display_name: "Departed Person",
+        target_amount: "300.00",
+        current_employment_status: "terminated",
+        termination_date: "2026-09-01",
+      },
+      {
+        ...adjustmentSummary({ finalAmount: "7.00", adjustmentAmount: "0.00" }),
+        final_row_id: null,
+        employee_id: "projection-only-c",
+        target_amount: "700.00",
+      },
+    ]);
+
+    const store = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .managerGroups[0]?.stores[0];
+
+    expect(store?.storeTarget).toBeNull();
+    expect(store?.storeActualNetSales).toBeNull();
+    expect(store?.storeAchievementPct).toBeNull();
+    expect(store?.rows.map((row) => row.employeeId)).toEqual(["employee-a", "departed-b"]);
+    expect(store?.rows[0]).toEqual(expect.objectContaining({
+      target: null,
+      finalAmount: "0.00",
+      currentEmploymentStatus: "inactive",
+      terminationDate: "2026-05-20",
+    }));
+    expect(store?.rows[1]).toEqual(expect.objectContaining({
+      target: "300.00",
+      finalAmount: "8.00",
+      currentEmploymentStatus: "terminated",
+      terminationDate: "2026-09-01",
+    }));
+  });
+
+  it("uses the frozen snapshot store target even when there is no manager final row", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a", {
+      store_target_amount: "900.00",
+      store_net_sales_amount: "880.00",
+      store_achievement_pct: "97.7778",
+    })]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const store = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .managerGroups[0]?.stores[0];
+
+    expect(store?.storeTarget).toBe("900.00");
+    expect(store?.storeActualNetSales).toBe("880.00");
+    expect(store?.storeAchievementPct).toBe("97.7778");
+    expect(store?.rows).toEqual([]);
+  });
+
   it.each([
     {
       label: "voided history",
@@ -878,10 +957,17 @@ function storeMetadata(storeId: string, regionId: string) {
   };
 }
 
-function closedSnapshot(storeId: string) {
+function closedSnapshot(storeId: string, frozen: {
+  store_target_amount?: string | null;
+  store_net_sales_amount?: string | null;
+  store_achievement_pct?: string | null;
+} = {}) {
   return {
     store_id: storeId,
     final_snapshot_id: `final-${storeId}`,
+    store_target_amount: frozen.store_target_amount ?? null,
+    store_net_sales_amount: frozen.store_net_sales_amount ?? null,
+    store_achievement_pct: frozen.store_achievement_pct ?? null,
     rule_version_code: "sales-target-incentive-v1.0.0",
     period_timezone: "Europe/Istanbul",
     rate_table_versions: [],
@@ -984,6 +1070,7 @@ function adjustmentSummary(input: {
     store_id: "store-a",
     employee_id: "employee-a",
     participant_type: "personnel" as const,
+    final_row_id: "final-employee-a",
     employee_display_name: "Derya Uslu",
     position_code: "SALES_ASSOCIATE",
     target_amount: "500.00",

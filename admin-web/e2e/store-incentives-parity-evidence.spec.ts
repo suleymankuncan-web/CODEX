@@ -25,12 +25,12 @@ for (const view of ['region_manager', 'report_viewer'] as const) {
       }
       if (await page.locator('.incentive-store-desktop').isVisible()) {
         await expect(page.getByRole('columnheader', { name: 'Hedef', exact: true })).toBeVisible()
-        await expect(page.getByRole('columnheader', { name: 'Gerçekleşen', exact: true })).toBeVisible()
+        await expect(page.getByRole('columnheader', { name: 'Net Satış', exact: true })).toBeVisible()
         await expect(page.getByRole('columnheader', { name: 'Personel', exact: true })).toHaveCount(0)
         if (view === 'report_viewer') await expectLedgerColumnsAligned(page)
       } else {
         await expect(page.locator('.incentive-store-mobile dt').filter({ hasText: /^Hedef$/ }).first()).toBeVisible()
-        await expect(page.locator('.incentive-store-mobile dt').filter({ hasText: /^Gerçekleşen$/ }).first()).toBeVisible()
+        await expect(page.locator('.incentive-store-mobile dt').filter({ hasText: /^Net Satış$/ }).first()).toBeVisible()
       }
       await expect(page.locator('.incentive-store-summary, .incentive-region-trigger')).toHaveCount(0)
       await expectFits(page, page.locator('.incentive-performance'))
@@ -48,17 +48,17 @@ for (const view of ['region_manager', 'report_viewer'] as const) {
       await expect(panel.getByRole('heading', { name: /Personel primleri/ })).toHaveCount(0)
       await expect(panel).not.toContainText('Hesaplanan tutarlar ve bölge müdürünün düzenlemeleri.')
       await expect(panel).not.toContainText('Oran seçin veya tutarı düzenleyin.')
-      if (width >= 1024) {
+      if (width >= 1280) {
         await expect(panel.getByRole('columnheader', { name: 'Hedef', exact: true })).toBeVisible()
-        await expect(panel.getByRole('columnheader', { name: 'Gerçekleşen', exact: true })).toBeVisible()
+        await expect(panel.getByRole('columnheader', { name: 'Net Satış', exact: true })).toBeVisible()
       } else {
         await expect(panel.locator('[data-label="Hedef"]').first()).toBeVisible()
-        await expect(panel.locator('[data-label="Gerçekleşen"]').first()).toBeVisible()
+        await expect(panel.locator('[data-label="Net Satış"]').first()).toBeVisible()
       }
       await expect(panel.getByText('₺8.200.000,00', { exact: true }).first()).toBeVisible()
       await expect(panel.getByText('₺8.721.540,00', { exact: true }).first()).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath(`store-drawer-${view}-${width}.png`) })
-      await expect(page.getByRole('button', { name: /: Detay/ })).toHaveCount(0)
+      await expect(panel.getByRole('button', { name: 'Mağazalar Arası İade: Detay', exact: true })).toBeVisible()
       await expect(panel.getByText('Mağaza Müdürü', { exact: true })).toBeVisible()
       await expect(panel.getByText('Satış Danışmanı', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Mağaza detayını kapat', exact: true }).click()
@@ -115,7 +115,7 @@ test('monthly view shows cumulative daily sales without changing closed incentiv
   Object.assign(fixture.data, { salesTracking: { throughDate: '2026-06-08', lastLoadedDate: '2026-06-08', status: 'complete' } })
   Object.assign(fixture.data.managerGroups[0]!.stores[0]!, { dailyActualNetSales: '500000.00', dailyAchievementPct: '6.10' })
   Object.assign(fixture.data.managerGroups[0]!.stores[0]!.rows[0]!, { dailyActualNetSales: '500000.00', dailyAchievementPct: '6.10' })
-  Object.assign(fixture.data.managerGroups[0]!.stores[0]!.rows[1]!, { dailyActualNetSales: '90000.00', dailyAchievementPct: '6.21' })
+  Object.assign(fixture.data.managerGroups[0]!.stores[0]!.rows[1]!, { dailyActualNetSales: '90000.00', dailyAchievementPct: '6.21', trackedSaleAmount: '100000.00', trackedReturnAmount: '-10000.00', trackedNetAmount: '90000.00' })
   await routeIncentiveWorkspace(page, fixture)
   await page.goto('/store/incentives')
   await expect(page.getByText(/Günlük net satış ve HG%/)).toBeVisible()
@@ -126,12 +126,12 @@ test('monthly view shows cumulative daily sales without changing closed incentiv
   await expect(row).toContainText('₺86.901,60')
   await row.click()
   const drawer = page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true })
-  await expect(drawer.locator('.incentive-detail-totals dt').filter({ hasText: 'Ay içi net satış' })).toBeVisible()
-  await expect(drawer.getByRole('columnheader', { name: 'Ay içi net satış' })).toBeVisible()
+  await expect(drawer.locator('.incentive-detail-totals dt').filter({ hasText: 'Net Satış' })).toBeVisible()
+  await expect(drawer.getByRole('columnheader', { name: 'Net Satış' })).toBeVisible()
   await expect(drawer.getByText('₺500.000,00').first()).toBeVisible()
   const personnel = drawer.getByRole('row').filter({ hasText: 'Derya Uslu' })
-  await expect(personnel.locator('[data-label="Ay içi net satış"]')).toHaveText('₺90.000,00')
-  await expect(personnel.locator('[data-label="Ay içi HG%"]')).toHaveText('%6,21')
+  await expect(personnel.locator('[data-label="Net Satış"]')).toHaveText('₺90.000,00')
+  await expect(personnel.locator('[data-label="HG%"] > span')).toHaveText('%6,21')
   await expect(personnel.locator('[data-label="Hesaplanan"]')).toHaveText('₺23.901,60')
   await expect(personnel.locator('[data-label="Final prim"]')).toHaveText('₺23.901,60')
   await expect(drawer.getByText('₺86.901,60')).toBeVisible()
@@ -154,8 +154,8 @@ test('missing personnel daily sales do not fall back to a closed-period amount',
   await page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true }).click()
 
   const personnel = page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true }).getByRole('row').filter({ hasText: 'Derya Uslu' })
-  await expect(personnel.locator('[data-label="Ay içi net satış"]')).toHaveText('—')
-  await expect(personnel.locator('[data-label="Ay içi HG%"]')).toHaveText('—')
+  await expect(personnel.locator('[data-label="Net Satış"]')).toHaveText('—')
+  await expect(personnel.locator('[data-label="HG%"] > span')).toHaveText('—')
   await expect(personnel.locator('[data-label="Hesaplanan"]')).toHaveText('₺23.901,60')
 })
 
@@ -218,7 +218,7 @@ for (const width of [1280, 390, 320]) {
     const amount = drawer.getByLabel('Derya Uslu: Final prim tutarı')
     const summary = drawer.locator('.incentive-detail-totals > div').last()
     const reset = drawer.getByRole('button', { name: 'Vazgeç', exact: true })
-    await expect(summary).toContainText('Mağaza toplamı')
+    await expect(summary).toContainText('Final Prim')
     await expect(drawer.locator('.incentive-store-editor-total')).toHaveCount(0)
     await expect(drawer.locator('.incentive-edit-row [data-label="Hesaplanan"] small')).toHaveCount(0)
     await expect(drawer).not.toContainText('Hesaplananla aynı')
@@ -282,6 +282,11 @@ async function prepare(page: Page, view: 'region_manager' | 'report_viewer', opt
   await installStoreContractSession(page, view === 'region_manager' ? 'regionManager' : 'reportViewer', view === 'region_manager' ? { actionStoreIds: [incentiveStoreA, incentiveStoreB] } : undefined)
   await installGenericStoreApiFallbacks(page)
   const workspace = createIncentiveWorkspace(view, options)
+  // Layout fixtures explicitly provide own movements; missing-movement cases
+  // below install a separate response and must continue to render unknown.
+  for (const group of workspace.data.managerGroups) for (const store of group.stores) for (const row of store.rows) {
+    Object.assign(row, { trackedSaleAmount: row.actual, trackedReturnAmount: '0.00', trackedNetAmount: row.actual })
+  }
   await routeIncentiveWorkspace(page, workspace)
   if (view === 'report_viewer') await routeIncentiveManagerDirectory(page, workspace)
   if (view === 'region_manager') await routeIncentiveCommands(page, [])
@@ -411,7 +416,7 @@ async function expectLedgerColumnsAligned(page: Page) {
   const aligned = await page.locator('.incentive-store-ledger').evaluate(table => {
     const headers = Array.from(table.querySelectorAll('thead th'))
     const cells = Array.from(table.querySelectorAll('tbody tr:first-child td'))
-    return headers.length === 7 && cells.length === 7 && headers.every((header, index) => {
+    return headers.length === 8 && cells.length === 8 && headers.every((header, index) => {
       const head = header.getBoundingClientRect(), cell = cells[index]!.getBoundingClientRect()
       return Math.abs(head.left - cell.left) <= 1 && Math.abs(head.right - cell.right) <= 1
     })
