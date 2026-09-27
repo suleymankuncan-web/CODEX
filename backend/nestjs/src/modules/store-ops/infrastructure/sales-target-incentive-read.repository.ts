@@ -34,6 +34,7 @@ export type SalesTargetIncentiveMovementRow = {
   sale_amount: string;
   return_amount: string;
   net_amount: string;
+  is_active_roster: boolean;
 };
 
 export type SalesTargetIncentiveStoreSourceRow = {
@@ -506,7 +507,18 @@ export class SalesTargetIncentiveReadRepository {
         personnel_code, display_name,
         SUM(sale_amount_try)::text AS sale_amount,
         SUM(signed_return_amount_try)::text AS return_amount,
-        SUM(net_amount_try)::text AS net_amount
+        SUM(net_amount_try)::text AS net_amount,
+        EXISTS (
+          SELECT 1 FROM ops.employee_assignment_history assignment
+          INNER JOIN ops.employee current_employee ON current_employee.employee_id = assignment.employee_id
+          WHERE assignment.employee_id = movements.employee_id
+            AND assignment.store_id = movements.store_id
+            AND assignment.assignment_status = 'active'
+            AND assignment.is_primary_assignment = TRUE
+            AND current_employee.employment_status = 'active'
+            AND assignment.start_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+            AND (assignment.end_date IS NULL OR assignment.end_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date)
+        ) AS is_active_roster
       FROM movements
       GROUP BY scope_type, store_id, employee_id, personnel_code, display_name
     `, [input.storeIds, input.periodStart, input.throughDate]);

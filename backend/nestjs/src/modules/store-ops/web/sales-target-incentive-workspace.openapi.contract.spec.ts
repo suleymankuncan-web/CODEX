@@ -25,6 +25,9 @@ describe("Sales Target Incentive Workspace OpenAPI", () => {
       "draft", "submitted", "admin_approved", "admin_returned", "voided",
     ]);
     const row = document.components.schemas.SalesTargetIncentiveWorkspaceRow;
+    expect(row.required).toEqual(expect.arrayContaining(["currentEmploymentStatus", "terminationDate"]));
+    expect(row.properties.currentEmploymentStatus.enum).toEqual(["active", "inactive", "terminated"]);
+    expect(row.properties.terminationDate).toEqual({ type: "string", format: "date", nullable: true });
     expect(row.properties.target.pattern).toBe("^-?\\d+(?:\\.\\d+)?$");
     expect(row.properties.actual.pattern).toBe("^-?\\d+(?:\\.\\d+)?$");
     expect(row.properties.calculatedAmount.pattern).toBe("^-?\\d+(?:\\.\\d{2})?$");

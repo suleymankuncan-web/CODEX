@@ -57,7 +57,8 @@ const workspace: IncentiveWorkspace = {
           outOfRosterReturns: [],
           rows: [{
             employeeId: 'employee-a', displayName: 'Derya Uslu', participantType: 'personnel',
-            positionCode: 'SALES_ASSOCIATE', target: '500.00', actual: '550.00', dailyActualNetSales: null, trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null, dailyAchievementPct: null, achievementPct: '110.0000',
+            positionCode: 'SALES_ASSOCIATE', currentEmploymentStatus: null, terminationDate: null,
+            target: '500.00', actual: '550.00', dailyActualNetSales: null, trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null, dailyAchievementPct: null, achievementPct: '110.0000',
             rate: '0.0150', calculatedAmount: '8.25', finalAmount: '10.25', signedDifferenceAmount: '2.00',
             status: 'corrected', correction: null, correctionRecords: [],
           }],

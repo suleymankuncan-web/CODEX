@@ -44,6 +44,9 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(sql).toContain("company_daily_kpi_unmapped_personnel_sales");
     expect(sql).toContain("SUM(signed_return_amount_try)");
     expect(sql).toContain("SUM(net_amount_try)");
+    expect(sql).toContain("assignment.assignment_status = 'active'");
+    expect(sql).toContain("current_employee.employment_status = 'active'");
+    expect(sql).toContain("AS is_active_roster");
     expect(sql).not.toContain("region_id =");
     expect(params).toEqual([["00000000-0000-4000-8000-000000000011"], "2026-05-01", "2026-05-08"]);
   });
@@ -76,6 +79,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("eah.start_date <= $3::date");
     expect(text).toContain("eah.end_date >= $3::date");
     expect(text).not.toContain("eah.assignment_status = 'active'");
+    // Retain dated historical assignments; exclude voided, open-ended imports.
     expect(text).toContain("INNER JOIN stg.import_batch ib");
     expect(text).toContain("ib.import_batch_id::text AS import_batch_id");
     expect(text).toContain("ka.source_batch_id IS NOT NULL");

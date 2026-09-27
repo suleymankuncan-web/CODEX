@@ -45,14 +45,12 @@
 .incentive-region-package-content { border-top:1px solid var(--border); background:var(--card); }
 .incentive-region-package-content .incentive-list-footer { background:color-mix(in srgb,var(--primary) 2%,var(--card)); }
 .store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:first-child { width:20%; }
-.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:nth-child(4) { width:9%; }
-.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:nth-child(6) { width:13%; }
-.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:last-child { width:17%; }
+.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:last-child { width:9%; }
 .store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:not(:first-child),
-.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger td:not(:first-child) { padding-inline:6px; white-space:nowrap; overflow-wrap:normal; }
+.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger td:not(:first-child) { padding-inline:6px; white-space:normal; overflow-wrap:anywhere; }
 .store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger th:last-child,
 .store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger td:last-child { padding-right:10px; }
-.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger [data-slot='badge'] { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.store-command-app .incentive-viewer-workspace.command-canvas-page .incentive-store-ledger [data-slot='badge'] { display:inline-flex; align-items:center; gap:4px; white-space:normal; }
 .incentive-list-pagination { display:flex; align-items:center; gap:8px; margin-left:auto; }
 .incentive-list-pagination > span { min-width:42px; text-align:center; font-variant-numeric:tabular-nums; }
 .store-command-app .incentive-list-pagination [data-slot='button'] { min-height:32px; }

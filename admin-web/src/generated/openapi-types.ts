@@ -2989,6 +2989,8 @@ export type components = {
       "displayName": string
       "participantType": "store_manager" | "personnel"
       "positionCode": string
+      "currentEmploymentStatus": "active" | "inactive" | "terminated" | null
+      "terminationDate": string | null
       "target": string | null
       "actual": string | null
       "dailyActualNetSales": string | null

@@ -84,10 +84,12 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspaceRow: objectSchema(
-      ["employeeId", "displayName", "participantType", "positionCode", "target", "actual", "dailyActualNetSales", "trackedSaleAmount", "trackedReturnAmount", "trackedNetAmount", "dailyAchievementPct", "achievementPct", "rate", "calculatedAmount", "finalAmount", "signedDifferenceAmount", "status", "correction", "correctionRecords"],
+      ["employeeId", "displayName", "participantType", "positionCode", "currentEmploymentStatus", "terminationDate", "target", "actual", "dailyActualNetSales", "trackedSaleAmount", "trackedReturnAmount", "trackedNetAmount", "dailyAchievementPct", "achievementPct", "rate", "calculatedAmount", "finalAmount", "signedDifferenceAmount", "status", "correction", "correctionRecords"],
       {
         employeeId: { type: "string", format: "uuid" }, displayName: { type: "string" },
         participantType: { type: "string", enum: ["store_manager", "personnel"] }, positionCode: { type: "string" },
+        currentEmploymentStatus: { type: "string", nullable: true, enum: ["active", "inactive", "terminated"] },
+        terminationDate: { type: "string", format: "date", nullable: true },
         target: decimal, actual: decimal, dailyActualNetSales: decimal, trackedSaleAmount: decimal, trackedReturnAmount: decimal, trackedNetAmount: decimal, dailyAchievementPct: decimal, achievementPct: decimal, rate: decimal,
         calculatedAmount: money, finalAmount: money, signedDifferenceAmount: money,
         status: { type: "string", enum: ["projected", "blocked", "no_source", "corrected", "adjusted"] },

@@ -22,6 +22,11 @@ const openRows = closedBrackets.map((bracket) => ({
   display_label: "band",
   sort_order: bracket.sort_order,
 }));
+const frozenStoreAmounts = {
+  store_target_amount: null,
+  store_net_sales_amount: null,
+  store_achievement_pct: null,
+};
 
 describe("resolveSalesTargetIncentiveRateMetadata", () => {
   it("uses one consistent immutable snapshot for a fully closed store set", () => {
@@ -29,6 +34,7 @@ describe("resolveSalesTargetIncentiveRateMetadata", () => {
       periodTimezone: "Europe/Istanbul",
       scopedStoreCount: 2,
       closedSnapshots: ["store-a", "store-b"].map((storeId) => ({
+        ...frozenStoreAmounts,
         store_id: storeId,
         final_snapshot_id: `snapshot-${storeId}`,
         rule_version_code: "rule-v1",
@@ -52,6 +58,7 @@ describe("resolveSalesTargetIncentiveRateMetadata", () => {
         periodTimezone: "Europe/Istanbul",
         scopedStoreCount: 2,
         closedSnapshots: [{
+          ...frozenStoreAmounts,
           store_id: "store-a",
           final_snapshot_id: "snapshot-a",
           rule_version_code: "rule-v1",
@@ -67,6 +74,7 @@ describe("resolveSalesTargetIncentiveRateMetadata", () => {
 
   it("rejects duplicate closed-store snapshots and malformed declared versions", () => {
     const snapshot = {
+      ...frozenStoreAmounts,
       store_id: "store-a", final_snapshot_id: "snapshot-a", rule_version_code: "rule-v1",
       period_timezone: "Europe/Istanbul", rate_table_versions: ["manager-v1", "personnel-v1"],
       rate_brackets_json: closedBrackets,
@@ -121,6 +129,7 @@ describe("resolveSalesTargetIncentiveRateMetadata", () => {
       periodTimezone: "Europe/Istanbul",
       scopedStoreCount: 1,
       closedSnapshots: [{
+        ...frozenStoreAmounts,
         store_id: "store-a",
         final_snapshot_id: "snapshot-a",
         rule_version_code: "rule-v1",

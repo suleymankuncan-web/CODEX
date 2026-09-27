@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,9 @@ import { calculateRateProposal, hasIncentiveAmountChange, isBelowIncentiveThresh
 import { formatIncentiveMoney, formatIncentivePercent, formatIncentivePosition, formatIncentiveRate, formatSignedIncentiveMoney } from './format'
 import { IncentiveFinalAmount } from './final-amount'
 import type { IncentiveRow, IncentiveStore, IncentiveWorkspace } from './types'
+import { personnelSalesDisplay } from './sales-display'
+import { isDepartedIncentiveRow, personnelMovementDisplay } from './personnel-movement-display'
+import { OutOfRosterReturnsDialog } from './out-of-roster-returns'
 
 export type StoreIncentiveChange = { row: IncentiveRow; finalAmount: string }
 export type CompleteStoreIncentiveReview = (store: IncentiveStore, changes: StoreIncentiveChange[], note: string) => Promise<void>
@@ -32,7 +35,10 @@ export function StoreReviewEditor(input: {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [onlyChanges, setOnlyChanges] = useState(false)
-  const useDailyTracking = input.workspace.salesTracking?.status === 'complete' && Boolean(input.workspace.salesTracking.lastLoadedDate)
+  const [returnsOpen, setReturnsOpen] = useState(false)
+  const returnsTrigger = useRef<HTMLButtonElement>(null)
+  const movementAvailable = input.workspace.sections.movementTracking?.status === 'complete'
+  const movements = personnelMovementDisplay(store, movementAvailable)
   const editable = !input.readOnly && store.capabilities.canCreateCorrection && store.review.periodCloseStatus === 'closed'
   const canComplete = !input.readOnly && store.capabilities.canMarkStoreReview && store.review.periodCloseStatus === 'closed' && Boolean(input.onComplete)
   const values = store.rows.map(row => {
@@ -44,7 +50,8 @@ export function StoreReviewEditor(input: {
     return { row, key, amount, changed, adjusted, showChange: adjusted || changed || (drafts[key] !== undefined && amount === null) }
   })
   const adjustedPersonnel = new Set(values.filter(item => item.showChange).map(item => item.row.employeeId)).size
-  const visibleValues = onlyChanges ? values.filter(item => item.showChange) : values
+  const displayedRows = new Set(movements.visibleRows)
+  const visibleValues = values.filter(item => (displayedRows.has(item.row) || drafts[item.key] !== undefined) && (!onlyChanges || item.showChange))
   const changes = values.filter(item => item.changed).map(item => ({ row: item.row, finalAmount: item.amount! }))
   const invalid = values.some(item => drafts[item.key] !== undefined && item.amount === null)
   const dirty = invalid || changes.length > 0
@@ -68,28 +75,36 @@ export function StoreReviewEditor(input: {
   return <section className="incentive-store-editor" aria-label={`${store.storeName}: ${tr ? 'Personel primleri' : 'Personnel incentives'}`}>
     <div className="incentive-personnel-review-tools">
       <span aria-live="polite">{adjustedPersonnel > 0 ? <><strong>{adjustedPersonnel}</strong> {tr ? 'personelde düzenleme var' : 'people with adjustments'}</> : (tr ? 'Personel tutarlarında düzenleme yok' : 'No personnel amount adjustments')}</span>
-      {!input.readOnly ? <label htmlFor="incentive-only-changes"><Switch id="incentive-only-changes" checked={onlyChanges} onCheckedChange={setOnlyChanges} disabled={saving} /><span>{tr ? 'Sadece değişiklikleri göster' : 'Show adjustments only'}</span></label> : null}
+      <div className="incentive-personnel-review-actions"><div className="incentive-returns-summary" aria-label={tr ? 'Mağazalar Arası İade' : 'Inter-store returns'}><span>{tr ? 'Mağazalar Arası İade' : 'Inter-store returns'}<strong>{formatIncentiveMoney(movements.returnsTotal, locale)}</strong></span><Button ref={returnsTrigger} variant="outline" disabled={saving} aria-label={tr ? 'Mağazalar Arası İade: Detay' : 'Inter-store returns: Details'} onClick={() => setReturnsOpen(true)}>{tr ? 'Detay' : 'Details'}</Button></div>
+        {!input.readOnly ? <label htmlFor="incentive-only-changes"><Switch id="incentive-only-changes" checked={onlyChanges} onCheckedChange={setOnlyChanges} disabled={saving} /><span>{tr ? 'Sadece değişiklikleri göster' : 'Show adjustments only'}</span></label> : null}
+      </div>
     </div>
+    <p className="incentive-sales-basis-note">{tr ? 'Listede seçili ay için hedef atanmış personel gösterilir. Kapanmış dönemin prim kayıtları, düzeltmeleri ve mağaza toplamları bu görünüm filtresiyle değişmez.' : 'The list shows people assigned a target for the selected month. Closed-period incentive records, corrections, and store totals are unchanged by this display filter.'}</p>
+    <p className="incentive-sales-basis-note">{tr ? 'HG% net satıştan hesaplanır. Prime esas HG% ve prim matrahı mevcut pozitif satış kuralını korur; mağaza müdürünün prim matrahı mağaza bazındadır. Eksik hareket dökümü — ile gösterilir.' : 'Target achievement uses net sales. Incentive target achievement and the incentive base retain the positive-sales rule; the store manager’s base is store-wide. Missing movement details are shown as —.'}</p>
+    {!movementAvailable ? <p className="incentive-sales-basis-note" role="status">{tr ? 'Satış ve iade dökümü alınamadı. Hedefi olan personel kayıtları korunuyor; eksik hareketler — ile gösteriliyor.' : 'Sales and return details are unavailable. Target-bearing personnel records remain visible; missing movements are shown as —.'}</p> : null}
+    {movements.excludedTargetlessCount > 0 ? <p className="incentive-sales-basis-note" role="status">{tr ? `${movements.excludedTargetlessCount} hedefsiz kayıt personel listesinde gösterilmiyor; prim kayıtları ve toplamlar korunuyor.` : `${movements.excludedTargetlessCount} targetless records are not shown in the personnel list; incentive records and totals are preserved.`}</p> : null}
     <div role="table" aria-label={tr ? 'Personel prim dağılımı' : 'Personnel incentive breakdown'}>
-    <div className="incentive-edit-columns" role="row"><span role="columnheader">{tr ? 'Personel' : 'Personnel'}</span><span role="columnheader">{tr ? 'Hedef' : 'Target'}</span><span role="columnheader">{useDailyTracking ? (tr ? 'Ay içi net satış' : 'Month-to-date net sales') : (tr ? 'Gerçekleşen' : 'Actual')}</span><span role="columnheader">{useDailyTracking ? (tr ? 'Ay içi HG%' : 'Month-to-date target %') : 'HG%'}</span><span role="columnheader">{tr ? 'Prim oranı' : 'Incentive rate'}</span><span role="columnheader">{tr ? 'Hesaplanan' : 'Calculated'}</span><span role="columnheader">{tr ? 'Final prim' : 'Final incentive'}</span></div>
+    <div className="incentive-edit-columns" role="row">{(tr ? ['Personel', 'Hedef', 'Toplam Satış', 'Toplam İade', 'Net Satış', 'HG%', 'Prim Oranı', 'Hesaplanan', 'Final Prim'] : ['Personnel', 'Target', 'Total sales', 'Total returns', 'Net sales', 'Target %', 'Incentive rate', 'Calculated', 'Final incentive']).map(label => <span role="columnheader" key={label}>{label}</span>)}</div>
     {visibleValues.map(({ row, key, amount, showChange }) => {
       const table = input.workspace.rateMetadata.tables.find(item => item.audience === (row.participantType === 'store_manager' ? 'manager' : 'personnel'))
       const rates = input.workspace.rateMetadata.status === 'resolved' ? [...new Set([...(table?.brackets.map(bracket => bracket.rate) ?? []), ...(row.rate !== null ? [row.rate] : [])])] : []
       const selectedRate = amount !== null && amount === row.calculatedAmount && row.rate !== null ? row.rate : (Number(row.actual) > 0 ? rates.find(rate => calculateRateProposal(row.actual, rate) === amount) : null) ?? 'manual'
       const difference = amount !== null && row.calculatedAmount !== null ? sumMoney([amount, `-${row.calculatedAmount}`]) : null
       const snapshotAchievementPct = row.actual !== null && Number(row.target) > 0 ? (Number(row.actual) / Number(row.target) * 100).toFixed(2) : null
-      const actualDisplay = useDailyTracking ? row.dailyActualNetSales : row.actual
-      const achievementDisplay = useDailyTracking ? row.dailyAchievementPct : snapshotAchievementPct
+      const sales = personnelSalesDisplay(row)
+      const achievementDisplay = sales.achievement
       const earned = isEarnedAtIncentiveThreshold(amount, snapshotAchievementPct)
       return <div role="row" className="incentive-edit-row" data-editable={editable} data-changed={showChange} key={key}>
-        <div role="cell" className="incentive-edit-person"><strong>{row.displayName}</strong><small>{formatIncentivePosition(row.positionCode, locale)}</small></div>
+        <div role="cell" className="incentive-edit-person"><strong>{row.displayName}</strong>{isDepartedIncentiveRow(row) ? <small className="incentive-person-departed">{tr ? 'İşten ayrıldı' : 'Left employment'}</small> : null}<small>{formatIncentivePosition(row.positionCode, locale)}</small></div>
         <div role="cell" data-label={tr ? 'Hedef' : 'Target'}><span>{formatIncentiveMoney(row.target, locale)}</span></div>
-        <div role="cell" data-label={useDailyTracking ? (tr ? 'Ay içi net satış' : 'Month-to-date net sales') : (tr ? 'Gerçekleşen' : 'Actual')}><span>{formatIncentiveMoney(actualDisplay, locale)}</span></div>
-        <div role="cell" data-label={useDailyTracking ? (tr ? 'Ay içi HG%' : 'Month-to-date target %') : 'HG%'}><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementDisplay) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementDisplay, locale)}</span></div>
+        <div role="cell" data-label={tr ? 'Toplam Satış' : 'Total sales'}><span>{formatIncentiveMoney(sales.sale, locale)}</span></div>
+        <div role="cell" data-label={tr ? 'Toplam İade' : 'Total returns'}><span>{formatIncentiveMoney(sales.returns, locale)}</span></div>
+        <div role="cell" data-label={tr ? 'Net Satış' : 'Net sales'}><span>{formatIncentiveMoney(sales.net, locale)}</span></div>
+        <div role="cell" data-label="HG%"><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementDisplay) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementDisplay, locale)}</span><small>{tr ? 'Prime esas HG%' : 'Incentive target %'}: {formatIncentivePercent(sales.incentiveAchievement, locale)}</small></div>
         <div role="cell" data-label={tr ? 'Prim oranı' : 'Incentive rate'}>{editable && rates.length > 0 ? <Select value={selectedRate} disabled={input.locked || saving || row.actual === null || row.finalAmount === null || row.calculatedAmount === null} onValueChange={rate => { if (rate !== 'manual') { const value = calculateRateProposal(row.actual, rate); if (value !== null) setAmount(key, toMoneyInputBuffer(value)) } }}>
           <SelectTrigger aria-label={`${row.displayName}: ${tr ? 'Prim oranı' : 'Incentive rate'}`}><SelectValue /></SelectTrigger>
           <SelectContent position="popper" align="start"><SelectItem value="manual">{tr ? 'Özel tutar' : 'Custom amount'}</SelectItem>{rates.map(rate => <SelectItem value={rate} key={rate}>{formatIncentiveRate(rate, locale)}</SelectItem>)}</SelectContent>
-        </Select> : <span>{selectedRate === 'manual' ? (tr ? 'Özel tutar' : 'Custom amount') : formatIncentiveRate(selectedRate, locale)}</span>}</div>
+        </Select> : <span>{row.finalAmount === null ? formatIncentiveRate(row.rate, locale) : selectedRate === 'manual' ? (tr ? 'Özel tutar' : 'Custom amount') : formatIncentiveRate(selectedRate, locale)}</span>}</div>
         <div role="cell" data-label={tr ? 'Hesaplanan' : 'Calculated'}><span>{formatIncentiveMoney(row.calculatedAmount, locale)}</span></div>
         <div role="cell" className={`incentive-edit-final${earned ? ' is-earned' : ''}`} data-label={tr ? 'Final prim' : 'Final incentive'}>{editable ? <>
           <div className="incentive-edit-money"><span aria-hidden="true">₺</span><Input inputMode="decimal" aria-label={`${row.displayName}: ${tr ? 'Final prim tutarı' : 'Final incentive amount'}`} disabled={input.locked || saving || row.finalAmount === null || row.calculatedAmount === null} value={drafts[key] ?? toMoneyInputBuffer(row.finalAmount ?? '')} onChange={event => setAmount(key, event.target.value)} aria-invalid={drafts[key] !== undefined && amount === null} /></div>
@@ -97,6 +112,8 @@ export function StoreReviewEditor(input: {
         </> : <span className={`incentive-value-tone${earned ? ' is-earned' : ''}`}><IncentiveFinalAmount final={amount} calculated={row.calculatedAmount} locale={locale} /></span>}</div>
       </div>
     })}</div>
+    <OutOfRosterReturnsDialog storeName={store.storeName} items={movements.returns} total={movements.returnsTotal} locale={locale} open={returnsOpen} onOpenChange={setReturnsOpen} restoreFocus={() => returnsTrigger.current?.focus()} available={movementAvailable} />
+    {!onlyChanges && visibleValues.length === 0 ? <p className="incentive-sales-basis-note" role="status">{tr ? 'Bu ay için hedef atanmış personel yok.' : 'No personnel were assigned a target for this month.'}</p> : null}
     {onlyChanges && visibleValues.length === 0 ? <div className="incentive-adjustments-empty" role="status"><p>{tr ? 'Bu mağazada gösterilecek tutar değişikliği yok.' : 'There are no amount adjustments to show for this store.'}</p><Button variant="outline" onClick={() => setOnlyChanges(false)}>{tr ? 'Tüm personeli göster' : 'Show all personnel'}</Button></div> : null}
     {notes.length ? <section className="incentive-store-notes" aria-label={tr ? 'Mağaza notu' : 'Store note'}><h4>{tr ? 'Bölge müdürü notu' : 'Regional manager note'}</h4>{notes.map(text => <p key={text}>{text}</p>)}</section> : null}
     {editable ? <div className="incentive-store-note-input"><label htmlFor="incentive-store-note">{tr ? 'Mağaza değişiklik notu' : 'Store change note'}</label><Textarea id="incentive-store-note" aria-describedby="incentive-store-note-hint" required={changes.length > 0} minLength={3} maxLength={1000} rows={3} disabled={saving || input.locked || changes.length === 0} value={note} onChange={event => setNote(event.target.value)} placeholder={tr ? 'Bu mağaza için yapılan düzenlemelerin gerekçesini yazın…' : 'Explain the store adjustments…'} /><small id="incentive-store-note-hint">{tr ? 'Oran veya tutar değiştiğinde zorunlu · Mağaza için tek not · En az 3 karakter' : 'Required for rate or amount changes · One store note · At least 3 characters'}</small></div> : null}

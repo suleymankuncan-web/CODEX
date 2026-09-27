@@ -15,7 +15,10 @@ import {
   SalesTargetIncentiveCorrectionRepository,
   type SalesTargetIncentiveAdjustmentSummaryRow,
 } from "../infrastructure/sales-target-incentive-correction.repository";
-import { SalesTargetIncentiveWorkspaceReadRepository } from "../infrastructure/sales-target-incentive-workspace-read.repository";
+import {
+  SalesTargetIncentiveWorkspaceReadRepository,
+  type SalesTargetIncentiveWorkspaceClosedRateSnapshotRow,
+} from "../infrastructure/sales-target-incentive-workspace-read.repository";
 import type {
   SalesTargetIncentiveWorkspaceCorrection,
   SalesTargetIncentiveWorkspaceManagerGroup,
@@ -125,9 +128,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
     const actorRows = actorRowsResult.value;
     const actorByCorrectionId = new Map(actorRows.map((row) => [row.correction_id, row]));
     const metadataByStoreId = new Map(metadata.map((row) => [row.store_id, row]));
-    const closedSnapshotByStoreId = new Map(
-      closedSnapshots.map((row) => [row.store_id, row.final_snapshot_id]),
-    );
+    const closedSnapshotByStoreId = new Map(closedSnapshots.map((row) => [row.store_id, row]));
     const correctionRowsByStore = groupBy(workflow.corrections, (row) => row.store_id);
     const adjustmentsByStore = groupBy(adjustmentSummaries, (row) => row.store_id);
     const managerGroups = new Map<string, SalesTargetIncentiveWorkspaceManagerGroup>();
@@ -169,7 +170,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         personnelMovements: movementsByStore.get(store.storeId) ?? [],
         canAct,
         storeCode: storeMetadata?.store_code ?? null,
-        finalSnapshotId: closedSnapshotByStoreId.get(store.storeId) ?? null,
+        finalSnapshot: closedSnapshotByStoreId.get(store.storeId) ?? null,
         reviews: workflow.reviews,
         corrections: correctionRowsByStore.get(store.storeId) ?? [],
         adjustmentSummaries: adjustmentsByStore.get(store.storeId) ?? [],
@@ -228,30 +229,38 @@ function toWorkspaceStore(input: {
   personnelMovements: SalesTargetIncentiveMovementRow[];
   canAct: boolean;
   storeCode: string | null;
-  finalSnapshotId: string | null;
+  finalSnapshot: SalesTargetIncentiveWorkspaceClosedRateSnapshotRow | null;
   reviews: Array<{ store_id: string; final_snapshot_id: string; review_status: "pending_review" | "reviewed"; reviewed_at: string | null }>;
   corrections: SalesTargetIncentiveRegionCorrectionRow[];
   adjustmentSummaries: SalesTargetIncentiveAdjustmentSummaryRow[];
   actorByCorrectionId: Map<string, { display_name: string | null; role_code: "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null }>;
   packageStatus: "not_submitted" | "submitted" | "admin_approved" | "admin_returned";
 }) {
-  const review = input.finalSnapshotId
-    ? input.reviews.find((row) => row.store_id === input.store.storeId && row.final_snapshot_id === input.finalSnapshotId)
+  const finalSnapshotId = input.finalSnapshot?.final_snapshot_id ?? null;
+  const review = finalSnapshotId
+    ? input.reviews.find((row) => row.store_id === input.store.storeId && row.final_snapshot_id === finalSnapshotId)
     : null;
   const participants = [
     ...(input.store.manager ? [input.store.manager] : []),
     ...input.store.personnel,
   ];
   const participantKeys = new Set(participants.map(participantKey));
-  const rows = participants.map((participant) => toWorkspaceRow({
-    participant,
-    correctionRows: input.corrections.filter((row) => row.employee_id === participant.employeeId && row.participant_type === participant.participantType),
-    adjustmentSummary: input.adjustmentSummaries.find((row) => row.employee_id === participant.employeeId && row.participant_type === participant.participantType) ?? null,
-    actorByCorrectionId: input.actorByCorrectionId,
-  }));
-  for (const summary of input.adjustmentSummaries) {
-    if (!participantKeys.has(`${summary.employee_id}:${summary.participant_type}`)) {
-      rows.push(toFinalOnlyWorkspaceRow(summary, input.corrections, input.actorByCorrectionId));
+  const periodClosed = input.finalSnapshot !== null;
+  const rows = periodClosed
+    ? input.adjustmentSummaries
+        .filter((summary) => summary.final_row_id !== null && summary.final_row_id !== undefined)
+        .map((summary) => toFinalOnlyWorkspaceRow(summary, input.corrections, input.actorByCorrectionId))
+    : participants.map((participant) => toWorkspaceRow({
+        participant,
+        correctionRows: input.corrections.filter((row) => row.employee_id === participant.employeeId && row.participant_type === participant.participantType),
+        adjustmentSummary: input.adjustmentSummaries.find((row) => row.employee_id === participant.employeeId && row.participant_type === participant.participantType) ?? null,
+        actorByCorrectionId: input.actorByCorrectionId,
+      }));
+  if (!periodClosed) {
+    for (const summary of input.adjustmentSummaries) {
+      if (!participantKeys.has(`${summary.employee_id}:${summary.participant_type}`)) {
+        rows.push(toFinalOnlyWorkspaceRow(summary, input.corrections, input.actorByCorrectionId));
+      }
     }
   }
   for (const row of rows) {
@@ -266,8 +275,8 @@ function toWorkspaceStore(input: {
     row.trackedNetAmount = movement?.net_amount ?? null;
   }
   const outOfRosterReturns = input.personnelMovements
-    .filter(item => Number(item.return_amount) < 0 &&
-      (item.scope_type === "unmapped" || !participants.some(participant => participant.employeeId === item.employee_id)))
+    .filter(item => item.scope_type !== "store" && Number(item.net_amount) < 0 &&
+      item.is_active_roster === false)
     .map(item => ({
       employeeId: item.employee_id,
       personnelCode: item.personnel_code,
@@ -277,7 +286,9 @@ function toWorkspaceStore(input: {
       netAmount: item.net_amount,
     }));
   const primary = input.store.manager?.calculation ?? input.store.personnel[0]?.calculation;
-  const periodClosed = input.finalSnapshotId !== null;
+  const storeTarget = input.finalSnapshot?.store_target_amount ?? (periodClosed ? null : input.store.storeTargetAmount);
+  const storeActualNetSales = input.finalSnapshot?.store_net_sales_amount ?? (periodClosed ? null : input.store.storeNetSalesAmount);
+  const storeAchievementPct = input.finalSnapshot?.store_achievement_pct ?? (periodClosed ? null : primary?.storeAchievementPct ?? primary?.achievementPct ?? null);
   const packageEditable = input.packageStatus !== "submitted" && input.packageStatus !== "admin_approved";
   const canEdit = input.canAct && periodClosed && packageEditable;
   const hasVoidableCorrection = rows.some(
@@ -288,14 +299,14 @@ function toWorkspaceStore(input: {
     storeCode: input.storeCode,
     storeName: input.store.storeName,
     city: null as null,
-    storeTarget: input.store.storeTargetAmount,
-    storeActualNetSales: input.store.storeNetSalesAmount,
-    storeAchievementPct: primary?.storeAchievementPct ?? primary?.achievementPct ?? null,
+    storeTarget,
+    storeActualNetSales,
+    storeAchievementPct,
     dailyActualNetSales: input.dailyStore?.actual_amount ?? null,
     trackedSaleAmount: input.movementStore?.sale_amount ?? null,
     trackedReturnAmount: input.movementStore?.return_amount ?? null,
     trackedNetAmount: input.movementStore?.net_amount ?? null,
-    dailyAchievementPct: dailyAchievement(input.dailyStore?.actual_amount ?? null, input.store.storeTargetAmount),
+    dailyAchievementPct: dailyAchievement(input.dailyStore?.actual_amount ?? null, storeTarget),
     capabilities: {
       canMarkStoreReview: canEdit,
       canCreateCorrection: canEdit,
@@ -304,7 +315,7 @@ function toWorkspaceStore(input: {
     review: {
       status: review?.review_status ?? "pending_review",
       reviewedAt: review?.reviewed_at ?? null,
-      periodCloseStatus: input.finalSnapshotId ? "closed" as const : "projection_only" as const,
+      periodCloseStatus: periodClosed ? "closed" as const : "projection_only" as const,
     },
     rows,
     outOfRosterReturns,
@@ -352,6 +363,8 @@ function toWorkspaceRow(input: {
     displayName: input.participant.displayName,
     participantType: input.participant.participantType,
     positionCode: input.participant.positionCode,
+    currentEmploymentStatus: null,
+    terminationDate: null,
     target: input.adjustmentSummary?.target_amount ?? input.participant.targetAmount,
     actual: input.adjustmentSummary?.actual_sales_amount ?? input.participant.actualAmount,
     dailyActualNetSales: null,
@@ -401,6 +414,8 @@ function toFinalOnlyWorkspaceRow(
     displayName: summary.employee_display_name ?? "Kayıt sahibi bilgisi yok",
     participantType: summary.participant_type,
     positionCode: summary.position_code ?? (summary.participant_type === "store_manager" ? "STORE_MANAGER" : "SALES_ASSOCIATE"),
+    currentEmploymentStatus: summary.current_employment_status ?? null,
+    terminationDate: summary.termination_date ?? null,
     target: summary.target_amount ?? null,
     actual: summary.actual_sales_amount ?? null,
     dailyActualNetSales: null,

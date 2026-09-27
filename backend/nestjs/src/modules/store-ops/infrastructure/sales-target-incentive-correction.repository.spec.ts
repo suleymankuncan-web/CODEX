@@ -439,6 +439,11 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     expect(sql).toContain("LEFT JOIN adjustment_summary");
     expect(sql).toContain("UNION ALL");
     expect(sql).toContain("FROM rpt.sales_target_incentive_final_row final_row");
+    expect(sql).toContain("MAX(final_row.sales_target_incentive_final_row_id::text) AS final_row_id");
+    expect(sql).toContain("WHEN employee.employment_status IN ('active', 'inactive', 'terminated') THEN employee.employment_status");
+    expect(sql).toContain("ELSE NULL");
+    expect(sql).toContain("END AS current_employment_status");
+    expect(sql).toContain("employee.termination_date::text AS termination_date");
     expect(sql).toContain("NOT EXISTS");
     expect(sql).toContain("approved_adjustment_count");
     expect(sql).toContain("latest_approved_adjustment_at");

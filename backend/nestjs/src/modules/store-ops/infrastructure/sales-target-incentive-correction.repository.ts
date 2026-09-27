@@ -38,7 +38,10 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
   store_id: string;
   employee_id: string;
   participant_type: "store_manager" | "personnel";
+  final_row_id?: string | null;
   employee_display_name?: string | null;
+  current_employment_status?: "active" | "inactive" | "terminated" | null;
+  termination_date?: string | null;
   position_code?: string | null;
   normalized_from_position_code?: string | null;
   rate_table_version?: string | null;
@@ -308,7 +311,13 @@ export class SalesTargetIncentiveCorrectionRepository {
             adjustment.store_id::text AS store_id,
             adjustment.employee_id::text AS employee_id,
             COALESCE(projection_row.participant_type, final_row.participant_type) AS participant_type,
+            MAX(final_row.sales_target_incentive_final_row_id::text) AS final_row_id,
             MAX(NULLIF(TRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '')) AS employee_display_name,
+            MAX(CASE
+              WHEN employee.employment_status IN ('active', 'inactive', 'terminated') THEN employee.employment_status
+              ELSE NULL
+            END)::text AS current_employment_status,
+            MAX(employee.termination_date)::text AS termination_date,
             MAX(final_row.position_code)::text AS position_code,
             MAX(final_row.normalized_from_position_code)::text AS normalized_from_position_code,
             MAX(final_row.rate_table_version)::text AS rate_table_version,
@@ -374,7 +383,13 @@ export class SalesTargetIncentiveCorrectionRepository {
             snapshot.store_id::text AS store_id,
             final_row.employee_id::text AS employee_id,
             final_row.participant_type,
+            final_row.sales_target_incentive_final_row_id::text AS final_row_id,
             NULLIF(TRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '') AS employee_display_name,
+            CASE
+              WHEN employee.employment_status IN ('active', 'inactive', 'terminated') THEN employee.employment_status::text
+              ELSE NULL
+            END AS current_employment_status,
+            employee.termination_date::text AS termination_date,
             final_row.position_code::text AS position_code,
             final_row.normalized_from_position_code::text AS normalized_from_position_code,
             final_row.rate_table_version::text AS rate_table_version,
