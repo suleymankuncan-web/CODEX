@@ -33,6 +33,13 @@ for (const width of [1440, 1024, 390, 320]) {
     const accessibility = await new AxeBuilder({ page }).include('[data-testid="store-rankings-page"]').withTags(['wcag2a', 'wcag2aa']).analyze()
     expect(accessibility.violations).toEqual([])
     await page.screenshot({ path: testInfo.outputPath(`rankings-${width}.png`), fullPage: true })
+    if (width === 1024) {
+      const tabs = page.getByRole('tablist', { name: /liste/i })
+      const filters = page.getByRole('group', { name: 'Filtreler' })
+      const tabBox = (await tabs.boundingBox())!
+      const filterBox = (await filters.boundingBox())!
+      expect(filterBox.y).toBeGreaterThanOrEqual(tabBox.y + tabBox.height)
+    }
     await page.getByRole('tab', { name: /Personel listesi/ }).click()
     await expect(page.getByTestId('personnel-ranking-row').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)

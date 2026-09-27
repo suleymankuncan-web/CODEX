@@ -1,4 +1,4 @@
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .store-rankings-list-toolbar { grid-template-columns: minmax(0, 1fr); }
   .store-rankings-list-toolbar [data-slot='tabs-list'], .store-rankings-loading-tabs { width: 320px; max-width: 100%; }
   .store-rankings-filters { justify-self: end; }
