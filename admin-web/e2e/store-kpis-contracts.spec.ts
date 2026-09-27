@@ -824,7 +824,8 @@ for (const viewport of [
 
 async function expectStableKpiMetricGeometry(page: Page) {
   const metrics = page.locator('.region-performance-metrics [data-slot=card]')
-  await expect(metrics).toHaveCount(4)
+  await expect(metrics).toHaveCount(5)
+  await expect(metrics.last()).toContainText('Bölge GSM')
   const initial = await metrics.evaluateAll((elements) =>
     elements.map((element) => {
       const rect = element.getBoundingClientRect()
@@ -832,7 +833,7 @@ async function expectStableKpiMetricGeometry(page: Page) {
     }),
   )
 
-  for (let index = 0; index < 4; index += 1) {
+  for (let index = 0; index < 5; index += 1) {
     await metrics.nth(index).click()
     const current = await metrics.evaluateAll((elements) =>
       elements.map((element) => {

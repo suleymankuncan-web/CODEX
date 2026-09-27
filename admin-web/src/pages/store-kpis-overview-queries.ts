@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SetURLSearchParams } from 'react-router'
 import { getRankings, type RankingSummary } from '../features/reports/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import { useDebouncedSearchPage } from '../lib/use-debounced-search-page'
+import { ApiError } from '../lib/api'
 import type { useRegionOverviewPeriodModel } from './store-kpis-region-period-model'
 import type { StoreKpisRegionSortDirection, StoreKpisRegionSortKey } from './store-kpi-highlights-model'
 
@@ -18,6 +19,11 @@ export function useStoreKpisOverviewQueries(input: {
   setSearchParams: SetURLSearchParams
 }) {
   const kpiDateRangeEnd = input.searchParams.get('periodEnd') || ''
+  const queryClient = useQueryClient()
+  const getPreviousOverview = (queryKey: readonly unknown[]) => queryClient
+    .getQueriesData<RankingSummary>({ queryKey })
+    .filter(([, data]) => Boolean(data))
+    .sort(([left], [right]) => (queryClient.getQueryState(right)?.dataUpdatedAt ?? 0) - (queryClient.getQueryState(left)?.dataUpdatedAt ?? 0))[0]?.[1]
   const { page: reportViewerPage, setPage: setReportViewerPage, search: reportViewerManagerSearch, setSearch: setReportViewerManagerSearchState, querySearch: managerQuerySearch } = useDebouncedSearchPage()
   const [reportViewerRiskPage, setReportViewerRiskPage] = useState(0)
   const [reportViewerRiskOnly, setReportViewerRiskOnlyState] = useState(false)
@@ -90,6 +96,11 @@ export function useStoreKpisOverviewQueries(input: {
     }, { signal }),
     enabled: input.reportingAllowed && input.isRegionManagerOverview && Boolean(input.regionManagerUserId) && Boolean(activeRegionOverviewPeriodStart),
     ...transientQueryRetryOptions,
+    initialData: () => getPreviousOverview([
+      'store-kpis-region-overview', kpiDateRangeEnd || 'monthly', activeRegionOverviewPeriodStart, input.regionManagerUserId,
+      regionQuerySearch,
+    ]),
+    initialDataUpdatedAt: 0,
     placeholderData: (previous: RankingSummary | undefined, query) =>
       query?.queryKey[1] === (kpiDateRangeEnd || 'monthly') && query.queryKey[2] === activeRegionOverviewPeriodStart && query.queryKey[3] === input.regionManagerUserId ? previous : undefined,
   })
@@ -119,19 +130,32 @@ export function useStoreKpisOverviewQueries(input: {
     }, { signal }),
     enabled: input.reportingAllowed && input.isReportViewerOverview,
     ...transientQueryRetryOptions,
+    initialData: () => getPreviousOverview([
+      'store-kpis-company-overview', kpiDateRangeEnd || 'monthly', activeReportViewerPeriodStart || 'latest', input.regionManagerUserId,
+      managerQuerySearch,
+    ]),
+    initialDataUpdatedAt: 0,
     placeholderData: (previous: RankingSummary | undefined, query) =>
       query?.queryKey[1] === (kpiDateRangeEnd || 'monthly') && query.queryKey[2] === (activeReportViewerPeriodStart || 'latest') && query.queryKey[3] === input.regionManagerUserId ? previous : undefined,
   })
+  const visibleRegionOverviewQuery = hideProtectedCachedData(regionOverviewQuery)
+  const visibleReportViewerOverviewQuery = hideProtectedCachedData(reportViewerOverviewQuery)
 
   return {
     activeRegionOverviewPeriodStart,
     activeReportViewerPeriodStart,
-    effectiveRegionOverviewQuery: activeRegionOverviewPeriodStart ? regionOverviewQuery : input.regionPeriodModel.seedQuery,
+    effectiveRegionOverviewQuery: activeRegionOverviewPeriodStart ? visibleRegionOverviewQuery : input.regionPeriodModel.seedQuery,
     kpiDateRangeEnd, setKpiDateRange,
     regionOverviewPage, regionOverviewPageSize, regionOverviewSearch, regionOverviewSort,
     regionOverviewSummaryQuery,
-    reportViewerOverviewQuery, reportViewerPage, reportViewerPageSize, reportViewerManagerSearch, reportViewerRiskOnly, reportViewerRiskPage,
+    reportViewerOverviewQuery: visibleReportViewerOverviewQuery, reportViewerPage, reportViewerPageSize, reportViewerManagerSearch, reportViewerRiskOnly, reportViewerRiskPage,
     setRegionOverviewPage, setRegionOverviewPeriodStart, setRegionOverviewSearch, setRegionOverviewSort,
     setReportViewerPage, setReportViewerPeriodStart, setReportViewerManagerSearch, setReportViewerRiskOnly, setReportViewerRiskPage,
   }
+}
+
+function hideProtectedCachedData<T extends { error: unknown; data: unknown }>(query: T): T {
+  return query.error instanceof ApiError && (query.error.status === 401 || query.error.status === 403)
+    ? { ...query, data: undefined }
+    : query
 }

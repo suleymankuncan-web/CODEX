@@ -25,5 +25,9 @@ Status: local verification for PR; not deployment evidence.
 - Changed TS/TSX ESLint: passed.
 - Frontend Playwright build (`npm run build:e2e`): passed; the existing large-chunk warning remains.
 - Affected Playwright specs: 28/28 passed. Debounce timing uses a paused Playwright clock before the 299+1 ms boundary, so real wall-clock progress cannot weaken the assertion.
+- CI failure regression subset: 13/13 passed after retaining same-search paging data, aligning the desktop ranking controls, and updating report and five-card KPI expectations to the approved UI contract.
+- All directly affected existing KPI, ranking, report, and Store shell specs: 91/91 passed.
+- KPI, ranking, and report contract specs: 29/29 passed, including the regression that a 401/403 response cannot retain cached authorized KPI rows.
+- Store Manager and Report Viewer persona specs that reference these surfaces: 8/8 passed.
 
 Full local E2E, `check:release`, on-prem proof, deployment, and live-provider claims are intentionally not made; mandatory GitHub CI remains unchanged.

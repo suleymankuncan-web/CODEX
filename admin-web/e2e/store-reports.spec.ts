@@ -36,7 +36,7 @@ test('store reports product page renders the package contract for region manager
   await expect(page.getByRole('button', { name: /Excel indir/i })).toBeVisible()
 
   const packageSections = page.getByLabel('Paket içeriği')
-  await packageSections.locator('summary').click()
+  await expect(packageSections).toHaveAttribute('open', '')
   for (const section of [
     'KPI kolonları',
     'Onay skorları',
@@ -51,6 +51,7 @@ test('store reports product page renders the package contract for region manager
 
   await expect(page.getByText('Raporları aç')).toHaveCount(0)
   await expect(page.getByText('/admin/reports')).toHaveCount(0)
+  await expect(page.locator('.store-reports-command table')).toHaveCount(0)
 })
 
 test('store managers can read their store report without a manager directory', async ({ page }) => {
@@ -90,18 +91,18 @@ test('report viewers select manager user IDs for the report and Excel, including
   await page.getByRole('button', { name: 'Excel indir', exact: true }).click()
   await exportRequest
   await page.getByRole('radio', { name: /Ece Yılmaz/ }).click()
-  await expect(page.getByText('Bu seçimde rapor kaydı yok.')).toBeVisible()
+  await expect(page.locator('.src-metric').filter({ hasText: 'Kapsam' }).locator('strong')).toHaveText('0')
+  await expect(page.getByLabel('Paket içeriği')).toHaveAttribute('open', '')
   await expect(page.getByRole('radio', { name: /Ece Yılmaz/ })).toBeVisible()
 })
 
-test('store report search and tabs expose recorded data without changing export scope', async ({ page }) => {
+test('store report package exposes recorded section metadata without duplicating the Excel table', async ({ page }) => {
   await page.goto('/store/reports')
-  const report = page.getByRole('region', { name: 'Mağaza raporu' })
-  await expect(report.getByRole('cell', { name: '87,20', exact: true })).toBeVisible()
-  await page.getByRole('tab', { name: 'Operasyon', exact: true }).click()
-  await expect(report.getByRole('cell', { name: 'Devam ediyor', exact: true })).toBeVisible()
-  await page.getByRole('textbox', { name: 'Mağaza veya bölge ara' }).fill('olmayan mağaza')
-  await expect(page.getByText('Eşleşen mağaza bulunamadı.')).toBeVisible()
+  const contents = page.getByLabel('Paket içeriği')
+  await expect(contents).toHaveAttribute('open', '')
+  await expect(contents.getByText('Skor, UPT, ATV, CR, HG%', { exact: true })).toBeVisible()
+  await expect(contents.getByText('Bitirildi, devam ediyor, bekliyor', { exact: true })).toBeVisible()
+  await expect(page.locator('.store-reports-command table')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Excel indir', exact: true })).toBeEnabled()
 })
 
@@ -176,24 +177,17 @@ test('store reports page stays within desktop and mobile viewport width', async 
   await expect(page.locator('.src-package')).toBeVisible()
 })
 
-test('report columns remain reachable and row separators survive desktop and mobile layouts', async ({ page }) => {
+test('package sections remain reachable and separated across desktop and mobile layouts', async ({ page }) => {
   await page.goto('/store/reports')
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: 900 })
-    await expect(page.getByRole('table', { name: 'Mağaza raporu' })).toBeVisible()
-    for (const tab of ['KPI ve skorlar', 'Operasyon']) {
-      await page.getByRole('tab', { name: tab, exact: true }).click()
-      const table = page.getByRole('table', { name: 'Mağaza raporu' })
-      await expect(table.getByRole('cell').last()).toBeVisible()
-      await expect(table.locator('tbody tr').first()).toHaveCSS('border-bottom-width', '1px')
-      const geometry = await table.evaluate(element => {
-        const board = element.closest('.src-records')!.getBoundingClientRect()
-        const cells = Array.from(element.querySelectorAll('tbody td')).map(cell => cell.getBoundingClientRect())
-        return cells.every(cell => cell.left >= board.left && cell.right <= board.right)
-      })
-      expect(geometry).toBe(true)
-      await expectNoHorizontalOverflow(page)
-    }
+    const contents = page.getByLabel('Paket içeriği')
+    await expect(contents).toHaveAttribute('open', '')
+    await expect(contents.locator('.src-section-item')).toHaveCount(7)
+    await expect(contents.locator('.src-section-item').last()).toBeVisible()
+    await expect(contents.locator('.src-section-item').first()).toHaveCSS('border-top-width', '1px')
+    await expect(page.locator('.store-reports-command table')).toHaveCount(0)
+    await expectNoHorizontalOverflow(page)
     await expect(page.getByRole('button', { name: 'Excel indir', exact: true })).toHaveCSS('background-image', 'none')
   }
 })

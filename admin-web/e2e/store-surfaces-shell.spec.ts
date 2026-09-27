@@ -908,7 +908,7 @@ test('store reports package is visible for region managers and stays mobile-safe
       return window.getComputedStyle(nav).position !== 'fixed'
     }),
   ).toBe(true)
-  await page.getByLabel('Paket içeriği').locator('summary').click()
+  await expect(page.getByLabel('Paket içeriği')).toHaveAttribute('open', '')
   await expect(page.getByText('KPI kolonları')).toBeVisible()
 })
 
@@ -929,13 +929,13 @@ test('store reports switches owned package copy to English', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Download Excel/i })).toBeVisible()
   await expect(page.getByLabel('Package contents')).toBeVisible()
-  await page.getByLabel('Package contents').locator('summary').click()
+  await expect(page.getByLabel('Package contents')).toHaveAttribute('open', '')
   await expect(page.getByText('KPI kolonları')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toHaveCount(0)
 
   await setStoredLocale(page, 'tr')
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
-  await page.getByLabel('Paket içeriği').locator('summary').click()
+  await expect(page.getByLabel('Paket içeriği')).toHaveAttribute('open', '')
   await expect(page.getByText('KPI kolonları')).toBeVisible()
 })
 

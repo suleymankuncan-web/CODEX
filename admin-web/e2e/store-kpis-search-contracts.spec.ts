@@ -135,3 +135,24 @@ test('initial KPI view with daily-only imports resolves the returned month, card
   await page.getByRole('textbox', { name: 'Mağaza ara' }).filter({ visible: true }).fill('Bursa')
   await expect.poll(() => reads.some(url => url.searchParams.get('search') === 'Bursa' && url.searchParams.get('periodStart') === '2026-07-01')).toBe(true)
 })
+
+test('a denied KPI search never retains cached authorized rows', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('search') === 'Denied') {
+      await route.fulfill({ status: 403, json: { message: 'Forbidden' } })
+      return
+    }
+    await route.fulfill({ json: rankings(url) })
+  })
+
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const overview = page.getByTestId('store-kpis-region-overview')
+  await expect(overview.getByText('İstanbul MOI AVM').first()).toBeVisible()
+  await overview.getByRole('textbox', { name: 'Mağaza ara' }).fill('Denied')
+  await expect(page.getByTestId('store-kpis-region-overview')).toHaveCount(0)
+  await expect(page.getByText('İstanbul MOI AVM')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Tekrar dene' })).toBeVisible()
+})
