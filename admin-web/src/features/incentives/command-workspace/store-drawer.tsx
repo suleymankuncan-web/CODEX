@@ -25,6 +25,7 @@ export function IncentiveStoreDrawer(input: {
   const close = () => { if (saving) return; if (dirty) setDiscardOpen(true); else input.onClose() }
   const tr = input.locale === 'tr'
   const store = input.store
+  const outOfRosterReturns = store?.outOfRosterReturns ?? []
   const useDailyTracking = input.workspace.salesTracking?.status === 'complete' && Boolean(input.workspace.salesTracking.lastLoadedDate)
   const actualDisplay = store ? (useDailyTracking ? store.dailyActualNetSales : store.storeActualNetSales) : null
   const achievementDisplay = store ? (useDailyTracking ? store.dailyAchievementPct : store.storeAchievementPct) : null
@@ -49,7 +50,7 @@ export function IncentiveStoreDrawer(input: {
           <div><dt>{useDailyTracking ? (tr ? 'Ay içi HG%' : 'Month-to-date target %') : 'HG%'}</dt><dd><span className={`incentive-value-tone${isBelowIncentiveThreshold(achievementDisplay) ? ' is-below-threshold' : ''}`}>{formatIncentivePercent(achievementDisplay, input.locale)}</span></dd></div>
           <div><dt>{tr ? 'Mağaza toplamı' : 'Store total'}</dt><dd><span className={`incentive-value-tone${isEarnedAtIncentiveThreshold(finalAmount, store.storeAchievementPct) ? ' is-earned' : ''}`}>{formatIncentiveMoney(finalAmount, input.locale)}</span></dd></div>
         </dl>
-        {store.trackedNetAmount !== null ? <dl className="incentive-detail-totals incentive-movement-totals" aria-label={tr ? 'Satış ve iade dökümü' : 'Sales and returns breakdown'}>
+        {store.trackedNetAmount !== null && store.trackedNetAmount !== undefined ? <dl className="incentive-detail-totals incentive-movement-totals" aria-label={tr ? 'Satış ve iade dökümü' : 'Sales and returns breakdown'}>
           <div><dt>{tr ? 'Satış' : 'Sales'}</dt><dd>{formatIncentiveMoney(store.trackedSaleAmount, input.locale)}</dd></div>
           <div><dt>{tr ? 'İade' : 'Returns'}</dt><dd>{formatIncentiveMoney(store.trackedReturnAmount, input.locale)}</dd></div>
           <div><dt>Net</dt><dd>{formatIncentiveMoney(store.trackedNetAmount, input.locale)}</dd></div>
@@ -57,10 +58,10 @@ export function IncentiveStoreDrawer(input: {
         {packageNote ? <section className="incentive-store-notes"><h4>{tr ? 'Paket karar notu' : 'Package decision note'}</h4><p>{packageNote}</p></section> : null}
         {store.review.periodCloseStatus !== 'closed' ? <p className="incentive-store-period-notice">{tr ? 'Dönem henüz kapanmadı. Kontrol ve düzeltme dönem kapandığında açılır.' : 'Review and corrections become available after period close.'}</p> : null}
         <StoreReviewEditor store={store} workspace={input.workspace} locale={input.locale} readOnly={input.readOnly} locked={input.interactionLocked} onComplete={input.onComplete} onPendingChange={setSaving} onDirtyChange={setDirty} onPreviewTotalChange={setPreviewTotal} footerTarget={footerTarget} />
-        {store.outOfRosterReturns.length > 0 ? <section className="incentive-out-of-roster-returns" aria-label={tr ? 'Kadro dışı iadeler' : 'Returns outside the roster'}>
+        {outOfRosterReturns.length > 0 ? <section className="incentive-out-of-roster-returns" aria-label={tr ? 'Kadro dışı iadeler' : 'Returns outside the roster'}>
           <h3>{tr ? 'Kadro dışı iadeler' : 'Returns outside the roster'}</h3>
           <p>{tr ? 'Bu iadeler mağaza netine zaten dahildir; personel prim satırı oluşturmaz.' : 'These returns are already included in store net sales and do not create incentive rows.'}</p>
-          <ul>{store.outOfRosterReturns.map((item, index) => <li key={`${item.employeeId ?? item.personnelCode ?? index}:${index}`}><strong>{item.displayName}</strong><span>{tr ? 'Satış' : 'Sales'} {formatIncentiveMoney(item.saleAmount, input.locale)} · {tr ? 'İade' : 'Returns'} {formatIncentiveMoney(item.returnAmount, input.locale)} · Net {formatIncentiveMoney(item.netAmount, input.locale)}</span></li>)}</ul>
+          <ul>{outOfRosterReturns.map((item, index) => <li key={`${item.employeeId ?? item.personnelCode ?? index}:${index}`}><strong>{item.displayName}</strong><span>{tr ? 'Satış' : 'Sales'} {formatIncentiveMoney(item.saleAmount, input.locale)} · {tr ? 'İade' : 'Returns'} {formatIncentiveMoney(item.returnAmount, input.locale)} · Net {formatIncentiveMoney(item.netAmount, input.locale)}</span></li>)}</ul>
         </section> : null}
       </div> : null}
       {!input.readOnly ? <SheetFooter className="incentive-store-sheet-footer"><div ref={setFooterTarget} className="incentive-completion-slot" />{input.review}</SheetFooter> : null}
