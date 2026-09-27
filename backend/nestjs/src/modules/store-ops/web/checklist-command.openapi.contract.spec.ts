@@ -151,7 +151,7 @@ describe("Checklist Command OpenAPI", () => {
       $ref: "#/components/schemas/ChecklistVisitPlanPeriodResponse",
     });
     expect(period.parameters).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "regionId", required: true }),
+      expect.objectContaining({ name: "regionId", required: false }),
       expect.objectContaining({ name: "period", required: true }),
       expect.objectContaining({ name: "risk" }),
       expect.objectContaining({ name: "reason" }),
@@ -174,7 +174,7 @@ describe("Checklist Command OpenAPI", () => {
       $ref: "#/components/schemas/ChecklistVisitPlanCandidateResponse",
     });
     expect(candidates.parameters).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "regionId", required: true }),
+      expect.objectContaining({ name: "regionId", required: false }),
       expect.objectContaining({ name: "query" }),
       expect.objectContaining({ name: "limit", schema: expect.objectContaining({ maximum: 50 }) }),
       expect.objectContaining({ name: "offset" }),

@@ -21,6 +21,14 @@ import {
 } from './model'
 
 describe('checklist command canvas model', () => {
+  it('omits legacy region selection for assigned-store planning and history', () => {
+    const candidates = buildChecklistVisitPlanCandidateQuery({ query: '', limit: 20, offset: 0 })
+    const history = buildChecklistVisitPlanPeriodQuery({ period: '2026-09', query: '', risk: 'all', planStatus: 'all', sort: 'store_asc', limit: 100, offset: 0 })
+    expect(candidates.has('regionId')).toBe(false)
+    expect(history.has('regionId')).toBe(false)
+    expect(history.get('period')).toBe('2026-09')
+  })
+
   it('serializes one bounded server page without blank filters', () => {
     expect(
       buildChecklistCommandQuery({

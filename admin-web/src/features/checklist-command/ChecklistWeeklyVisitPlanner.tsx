@@ -52,7 +52,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
   idPrefix?: string
   locale: 'tr' | 'en'
   period: string
-  regionId: string
+  regionId?: string
   regionName: string
   weekStart: string
   onOpenWorkflow: (storeId: string) => void
@@ -70,29 +70,32 @@ export function ChecklistWeeklyVisitPlanner(input: {
   const planningOpen = manualPlanningOpen || input.planningRequest !== undefined
   const copy = { ...getCopy(input.locale), ...getVisitActionCopy(input.locale) }
   const titleId = input.idPrefix ? `${input.idPrefix}-week-planner-title` : 'week-planner-title'
-  const planKey = storeChecklistVisitPlanQueryKey(input.authSummary, input.regionId, input.weekStart)
+  const planKey = storeChecklistVisitPlanQueryKey(input.authSummary, input.regionId ?? 'assigned', input.weekStart)
   const planQuery = useQuery({
     queryKey: planKey,
-    queryFn: () => getChecklistVisitPlan({ regionId: input.regionId, weekStart: input.weekStart }),
+    queryFn: () => getChecklistVisitPlan({ ...(input.regionId ? { regionId: input.regionId } : {}), weekStart: input.weekStart }),
     ...transientQueryRetryOptions,
   })
   const saveMutation = useMutation({
     mutationFn: (items: VisitPlanDraftItem[]) => {
       const normalizedItems = normalizeDraft(items)
       const expectedRevision = planQuery.data?.data.revision ?? 0
+      const expectedScopeRevision = planQuery.data?.data.scopeRevision
       const fingerprint = JSON.stringify({
         regionId: input.regionId,
         weekStart: input.weekStart,
         expectedRevision,
+        expectedScopeRevision,
         items: normalizedItems,
       })
       const submission = getStableVisitPlanSubmission(submissionRef.current, fingerprint)
       submissionRef.current = submission
       return saveChecklistVisitPlan({
-        regionId: input.regionId,
+        ...(input.regionId ? { regionId: input.regionId } : {}),
         weekStart: input.weekStart,
         body: {
           expectedRevision,
+          ...(expectedScopeRevision ? { expectedScopeRevision } : {}),
           idempotencyKey: submission.idempotencyKey,
           items: normalizedItems,
         },
@@ -113,6 +116,10 @@ export function ChecklistWeeklyVisitPlanner(input: {
       // another editor changed the plan.
       if (isVisitPlanRevisionConflict(error)) {
         setConflict(true)
+        return
+      }
+      if (isVisitPlanScopeConflict(error)) {
+        actionToast.error(new Error(copy.scopeChanged), copy.scopeChanged)
         return
       }
       actionToast.error(error, copy.saveFailed)
@@ -224,9 +231,9 @@ export function ChecklistWeeklyVisitPlanner(input: {
           initialPlan={plan}
           initialRequest={input.planningRequest}
           locale={input.locale}
-          saveError={saveMutation.isError ? getUserFacingErrorMessage(saveMutation.error, copy.saveFailed) : null}
+          saveError={saveMutation.isError ? getVisitPlanSaveError(saveMutation.error, copy) : null}
           saving={saveMutation.isPending}
-          regionId={input.regionId}
+          {...(input.regionId ? { regionId: input.regionId } : {})}
           onClose={closePlanning}
           onWeekStartChange={input.onWeekStartChange}
           onResolveConflict={async () => {
@@ -335,7 +342,7 @@ function WeeklyPlanDialog(input: {
   locale: 'tr' | 'en'
   saveError: string | null
   saving: boolean
-  regionId: string
+  regionId?: string
   onClose: () => void
   onResolveConflict: () => Promise<ChecklistVisitPlan | null>
   onSave: (items: VisitPlanDraftItem[]) => Promise<void>
@@ -365,13 +372,11 @@ function WeeklyPlanDialog(input: {
     local: VisitPlanDraftItem[]
     reconciled: VisitPlanDraftItem[]
   } | null>(null)
-  const [candidateCache, setCandidateCache] = useState<Record<string, ChecklistVisitPlanCandidate>>(() =>
+  const [candidateCache, setCandidateCache] = useState<Record<string, Pick<ChecklistVisitPlanCandidate, 'storeId' | 'storeCode' | 'storeName'>>>(() =>
     Object.fromEntries(input.initialPlan.items.map((item) => [item.storeId, {
       storeId: item.storeId,
       storeCode: item.storeCode,
       storeName: item.storeName,
-      regionId: input.initialPlan.regionId,
-      regionName: input.initialPlan.regionName,
     }])),
   )
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null)
@@ -394,7 +399,7 @@ function WeeklyPlanDialog(input: {
     }, 250)
     return () => window.clearTimeout(timer)
   }, [query, searchDraft])
-  const candidateFilters = useMemo(() => ({ regionId: input.regionId, query, limit: 20, offset: candidateOffset }), [candidateOffset, input.regionId, query])
+  const candidateFilters = useMemo(() => ({ ...(input.regionId ? { regionId: input.regionId } : {}), query, limit: 20, offset: candidateOffset }), [candidateOffset, input.regionId, query])
   const candidatesQuery = useQuery({
     queryKey: storeChecklistVisitPlanCandidatesQueryKey(input.authSummary, candidateFilters),
     queryFn: () => getChecklistVisitPlanCandidates(candidateFilters),
@@ -556,14 +561,24 @@ function formatActionDate(value: string, locale: 'tr' | 'en') {
 function normalizeDraft(items: VisitPlanDraftItem[]) { return [...items].sort((a, b) => a.plannedDate.localeCompare(b.plannedDate) || a.displayOrder - b.displayOrder).map((item, index) => ({ ...item, displayOrder: index })) }
 
 function isVisitPlanRevisionConflict(error: unknown) {
-  return error instanceof ApiError && error.status === 409 && /revision/i.test(error.message)
+  if (!(error instanceof ApiError) || error.status !== 409) return false
+  const message = error.message.trim().toLowerCase()
+  return message === 'weekly visit plan revision is stale' || message === 'revision conflict'
+}
+
+function isVisitPlanScopeConflict(error: unknown) {
+  return error instanceof ApiError && error.status === 409 && /outside the direct active portfolio/i.test(error.message)
+}
+
+function getVisitPlanSaveError(error: unknown, copy: Copy) {
+  return isVisitPlanScopeConflict(error) ? copy.scopeChanged : getUserFacingErrorMessage(error, copy.saveFailed)
 }
 
 function getCopy(locale: 'tr' | 'en') {
   return locale === 'tr' ? {
-    add: 'Takvime ekle', added: 'Bu güne eklendi', addDay: 'Takvime eklenecek gün', addStoreLabel: (name: string, day: string) => `${name} mağazasını ${day} gününe ekle`, cancel: 'Vazgeç', checklistMissed: 'Checklist yapılmadı', chooseDay: 'Gün seçin', chooseStore: 'Eklemek için mağazayı seçin', close: 'Kapat', collisionCopy: (count: number) => `${count} mağaza hem siz hem başka bir kullanıcı tarafından değiştirildi. Kaydetmeden önce hangi sürümün korunacağını seçin.`, collisionTitle: 'Aynı mağazada çakışan değişiklik var', compareReapply: 'Güncel planı al ve taslağı yeniden uygula', completed: 'Tamamlanan', completedVisit: 'Ziyaret Tamamlandı', conflictCopy: 'Plan siz düzenlerken değişti. Taslağınız korunuyor; güncel sürümü alın ve yeniden uygulayın.', conflictTitle: 'Planın daha yeni bir sürümü var', createPlan: 'Ziyaret planını oluşturun', current: 'Plan güncel', day: 'Gün', discard: 'Taslağı sil', discardCopy: 'Haftalık taslak henüz kaydedilmedi.', discardTitle: 'Değişiklikler kaybolsun mu?', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', loadingStores: 'Mağazalar yükleniyor', missed: 'Checklist yapılmadı', next: 'Sonraki', nextWeek: 'Sonraki hafta', noDraft: 'Henüz ziyaret yok', noStores: 'Mağaza bulunamadı', noVisit: 'Planlanan ziyaret yok', notApplied: 'Kaydetmeden plana yansımaz', placeVisits: 'Saha ziyaretlerini günlere yerleştirin', planOwner: 'Plan kapsamı', planWeek: 'Haftayı Planla', plannedVisit: 'Ziyaret Planlandı', previous: 'Önceki', previousWeek: 'Önceki hafta', refreshing: 'Mağazalar güncelleniyor…', refreshFailed: 'Yeni mağaza sayfası alınamadı · tekrar dene', remove: 'Plandan çıkar', removeStore: (name: string) => `${name} ziyaretini taslaktan kaldır`, retry: 'Tekrar dene', returnToPlan: 'Planlamaya dön', save: 'Ziyaret Planını Kaydet', saveFailed: 'Ziyaret planı kaydedilemedi.', saved: 'Ziyaret planı kaydedildi', saving: 'Kaydediliyor', searchStore: 'Mağaza ara', storeAddedLabel: (name: string, day: string) => `${name} mağazası ${day} planında`, storeLoadFailed: 'Mağazalar yüklenemedi', stores: 'Mağazalar', suitableStores: (count: number) => `${count} uygun mağaza`, summary: 'Haftalık ziyaret planı özeti', unsaved: 'Kaydedilmemiş değişiklik var', useLatest: 'Güncel planı koru', useLocal: 'Benim taslağımı koru', visitCount: (count: number) => `${count} ziyaret · Pazar plan dışı`, visitDay: 'Ziyaret günü', visitTotal: (count: number) => `${count} ziyaret`, waiting: 'Bekleyen', waitingVisit: 'Ziyaret Bekleniyor', weeklyDraft: 'Haftalık taslak', weeklyPlan: 'HAFTALIK PLAN', weeklyPlanning: 'HAFTALIK PLANLAMA',
+    add: 'Takvime ekle', added: 'Bu güne eklendi', addDay: 'Takvime eklenecek gün', addStoreLabel: (name: string, day: string) => `${name} mağazasını ${day} gününe ekle`, cancel: 'Vazgeç', checklistMissed: 'Checklist yapılmadı', chooseDay: 'Gün seçin', chooseStore: 'Eklemek için mağazayı seçin', close: 'Kapat', collisionCopy: (count: number) => `${count} mağaza hem siz hem başka bir kullanıcı tarafından değiştirildi. Kaydetmeden önce hangi sürümün korunacağını seçin.`, collisionTitle: 'Aynı mağazada çakışan değişiklik var', compareReapply: 'Güncel planı al ve taslağı yeniden uygula', completed: 'Tamamlanan', completedVisit: 'Ziyaret Tamamlandı', conflictCopy: 'Plan siz düzenlerken değişti. Taslağınız korunuyor; güncel sürümü alın ve yeniden uygulayın.', conflictTitle: 'Planın daha yeni bir sürümü var', createPlan: 'Ziyaret planını oluşturun', current: 'Plan güncel', day: 'Gün', discard: 'Taslağı sil', discardCopy: 'Haftalık taslak henüz kaydedilmedi.', discardTitle: 'Değişiklikler kaybolsun mu?', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', loadingStores: 'Mağazalar yükleniyor', missed: 'Checklist yapılmadı', next: 'Sonraki', nextWeek: 'Sonraki hafta', noDraft: 'Henüz ziyaret yok', noStores: 'Mağaza bulunamadı', noVisit: 'Planlanan ziyaret yok', notApplied: 'Kaydetmeden plana yansımaz', placeVisits: 'Saha ziyaretlerini günlere yerleştirin', planOwner: 'Plan kapsamı', planWeek: 'Haftayı Planla', plannedVisit: 'Ziyaret Planlandı', previous: 'Önceki', previousWeek: 'Önceki hafta', refreshing: 'Mağazalar güncelleniyor…', refreshFailed: 'Yeni mağaza sayfası alınamadı · tekrar dene', remove: 'Plandan çıkar', removeStore: (name: string) => `${name} ziyaretini taslaktan kaldır`, retry: 'Tekrar dene', returnToPlan: 'Planlamaya dön', save: 'Ziyaret Planını Kaydet', saveFailed: 'Ziyaret planı kaydedilemedi.', saved: 'Ziyaret planı kaydedildi', saving: 'Kaydediliyor', scopeChanged: 'Mağaza sorumluluk kapsamınız değişti. Planı yeniden yükleyip tekrar deneyin.', searchStore: 'Mağaza ara', storeAddedLabel: (name: string, day: string) => `${name} mağazası ${day} planında`, storeLoadFailed: 'Mağazalar yüklenemedi', stores: 'Mağazalar', suitableStores: (count: number) => `${count} uygun mağaza`, summary: 'Haftalık ziyaret planı özeti', unsaved: 'Kaydedilmemiş değişiklik var', useLatest: 'Güncel planı koru', useLocal: 'Benim taslağımı koru', visitCount: (count: number) => `${count} ziyaret · Pazar plan dışı`, visitDay: 'Ziyaret günü', visitTotal: (count: number) => `${count} ziyaret`, waiting: 'Bekleyen', waitingVisit: 'Ziyaret Bekleniyor', weeklyDraft: 'Haftalık taslak', weeklyPlan: 'HAFTALIK PLAN', weeklyPlanning: 'HAFTALIK PLANLAMA',
   } : {
-    add: 'Add to calendar', added: 'Added to this day', addDay: 'Day to add', addStoreLabel: (name: string, day: string) => `Add ${name} to ${day}`, cancel: 'Cancel', checklistMissed: 'Checklist not completed', chooseDay: 'Choose a day', chooseStore: 'Choose a store to add', close: 'Close', collisionCopy: (count: number) => `${count} store was changed by both you and another user. Choose which version to preserve before saving.`, collisionTitle: 'Conflicting changes for the same store', compareReapply: 'Load latest plan and reapply draft', completed: 'Completed', completedVisit: 'Visit Completed', conflictCopy: 'The plan changed while you were editing. Your draft is preserved; load the latest revision and reapply it.', conflictTitle: 'A newer plan revision exists', createPlan: 'Create the visit plan', current: 'Plan is current', day: 'Day', discard: 'Discard draft', discardCopy: 'The weekly draft has not been saved.', discardTitle: 'Discard changes?', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', loadingStores: 'Loading stores', missed: 'Checklist not completed', next: 'Next', nextWeek: 'Next week', noDraft: 'No visits yet', noStores: 'No stores found', noVisit: 'No planned visit', notApplied: 'Changes apply only after saving', placeVisits: 'Place field visits on days', planOwner: 'Plan scope', planWeek: 'Plan the Week', plannedVisit: 'Visit Planned', previous: 'Previous', previousWeek: 'Previous week', refreshing: 'Refreshing stores…', refreshFailed: 'Could not refresh stores · try again', remove: 'Remove', removeStore: (name: string) => `Remove ${name} from draft`, retry: 'Try again', returnToPlan: 'Return to planning', save: 'Save Visit Plan', saveFailed: 'Visit plan could not be saved.', saved: 'Visit plan saved', saving: 'Saving', searchStore: 'Search stores', storeAddedLabel: (name: string, day: string) => `${name} is planned for ${day}`, storeLoadFailed: 'Stores could not be loaded', stores: 'Stores', suitableStores: (count: number) => `${count} eligible stores`, summary: 'Weekly visit plan summary', unsaved: 'There are unsaved changes', useLatest: 'Keep latest plan', useLocal: 'Keep my draft', visitCount: (count: number) => `${count} visits · Sunday excluded`, visitDay: 'Visit day', visitTotal: (count: number) => `${count} visits`, waiting: 'Waiting', waitingVisit: 'Visit Waiting', weeklyDraft: 'Weekly draft', weeklyPlan: 'WEEKLY PLAN', weeklyPlanning: 'WEEKLY PLANNING',
+    add: 'Add to calendar', added: 'Added to this day', addDay: 'Day to add', addStoreLabel: (name: string, day: string) => `Add ${name} to ${day}`, cancel: 'Cancel', checklistMissed: 'Checklist not completed', chooseDay: 'Choose a day', chooseStore: 'Choose a store to add', close: 'Close', collisionCopy: (count: number) => `${count} store was changed by both you and another user. Choose which version to preserve before saving.`, collisionTitle: 'Conflicting changes for the same store', compareReapply: 'Load latest plan and reapply draft', completed: 'Completed', completedVisit: 'Visit Completed', conflictCopy: 'The plan changed while you were editing. Your draft is preserved; load the latest revision and reapply it.', conflictTitle: 'A newer plan revision exists', createPlan: 'Create the visit plan', current: 'Plan is current', day: 'Day', discard: 'Discard draft', discardCopy: 'The weekly draft has not been saved.', discardTitle: 'Discard changes?', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', loadingStores: 'Loading stores', missed: 'Checklist not completed', next: 'Next', nextWeek: 'Next week', noDraft: 'No visits yet', noStores: 'No stores found', noVisit: 'No planned visit', notApplied: 'Changes apply only after saving', placeVisits: 'Place field visits on days', planOwner: 'Plan scope', planWeek: 'Plan the Week', plannedVisit: 'Visit Planned', previous: 'Previous', previousWeek: 'Previous week', refreshing: 'Refreshing stores…', refreshFailed: 'Could not refresh stores · try again', remove: 'Remove', removeStore: (name: string) => `Remove ${name} from draft`, retry: 'Try again', returnToPlan: 'Return to planning', save: 'Save Visit Plan', saveFailed: 'Visit plan could not be saved.', saved: 'Visit plan saved', saving: 'Saving', scopeChanged: 'Your assigned-store scope changed. Reload the plan and try again.', searchStore: 'Search stores', storeAddedLabel: (name: string, day: string) => `${name} is planned for ${day}`, storeLoadFailed: 'Stores could not be loaded', stores: 'Stores', suitableStores: (count: number) => `${count} eligible stores`, summary: 'Weekly visit plan summary', unsaved: 'There are unsaved changes', useLatest: 'Keep latest plan', useLocal: 'Keep my draft', visitCount: (count: number) => `${count} visits · Sunday excluded`, visitDay: 'Visit day', visitTotal: (count: number) => `${count} visits`, waiting: 'Waiting', waitingVisit: 'Visit Waiting', weeklyDraft: 'Weekly draft', weeklyPlan: 'WEEKLY PLAN', weeklyPlanning: 'WEEKLY PLANNING',
   }
 }
 

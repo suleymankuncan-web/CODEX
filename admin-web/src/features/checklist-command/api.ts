@@ -85,7 +85,7 @@ export function getChecklistVisitPlanPeriod(input: ChecklistVisitPlanPeriodQuery
 }
 
 export function getChecklistVisitPlanCandidates(input: {
-  regionId: string
+  regionId?: string
   query: string
   limit: number
   offset: number
@@ -106,10 +106,17 @@ export function getChecklistVisitPlanRegionOptions(input: {
 }
 
 export function saveChecklistVisitPlan(input: {
-  regionId: string
+  regionId?: string
   weekStart: string
   body: SaveChecklistVisitPlanBody
 }) {
+  if (!input.regionId) {
+    return sendOpenApiJson('/api/checklists/command-canvas/visit-plans/assigned/{weekStart}', {
+      method: 'PUT',
+      params: { weekStart: input.weekStart },
+      body: input.body,
+    })
+  }
   return sendOpenApiJson('/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}', {
     method: 'PUT',
     params: { regionId: input.regionId, weekStart: input.weekStart },

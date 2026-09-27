@@ -115,6 +115,7 @@ const selectedOperations = [
   { path: '/api/checklists/command-canvas/visit-plans/period', method: 'get' },
   { path: '/api/checklists/command-canvas/visit-plans/candidates', method: 'get' },
   { path: '/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}', method: 'put' },
+  { path: '/api/checklists/command-canvas/visit-plans/assigned/{weekStart}', method: 'put' },
   { path: '/api/checklists/command-canvas/visit-plans/items/{planItemId}/complete', method: 'post' },
   { path: '/api/pilot-feedback', method: 'post' },
   { path: '/api/admin/pilot-feedback', method: 'get' },

@@ -41,7 +41,7 @@ export function ChecklistAnnualVisitHistoryLauncher(input: {
   authSummary: AuthSessionSummary | null
   locale: 'tr' | 'en'
   period: string
-  regionId: string
+  regionId?: string
   regionName: string
 }) {
   const [open, setOpen] = useState(false)
@@ -61,7 +61,7 @@ function AnnualVisitHistoryDialog(input: {
   authSummary: AuthSessionSummary | null
   locale: 'tr' | 'en'
   period: string
-  regionId: string
+  regionId?: string
   regionName: string
   onClose: () => void
   onCloseAutoFocus: (event: Event) => void
@@ -74,7 +74,7 @@ function AnnualVisitHistoryDialog(input: {
   const monthNames = useMemo(() => buildMonthNames(selectedYear, input.locale), [input.locale, selectedYear])
   const yearPeriods = useMemo(() => buildYearPeriods(selectedYear), [selectedYear])
   const annualScopeKey = storeChecklistVisitPlanPeriodQueryKey(input.authSummary, {
-    regionId: input.regionId,
+    ...(input.regionId ? { regionId: input.regionId } : {}),
     period: yearPeriods[0]!,
     query: '',
     risk: 'all',
@@ -225,12 +225,12 @@ function HistoryState(input: { action?: ReactNode; error?: boolean; icon: ReactN
   return <div className={`annual-visit-history-state${input.error ? ' is-error' : ''}`} role={input.error ? 'alert' : 'status'}>{input.icon}<strong>{input.label}</strong>{input.action}</div>
 }
 
-async function loadAnnualVisitStores(regionId: string, periods: string[]): Promise<AnnualVisitStore[]> {
+async function loadAnnualVisitStores(regionId: string | undefined, periods: string[]): Promise<AnnualVisitStore[]> {
   const periodRows = await Promise.all(periods.map(async (period) => {
     const rows: ChecklistVisitPlanPeriodRow[] = []
     let offset = 0
     while (true) {
-      const response = await getChecklistVisitPlanPeriod({ regionId, period, query: '', risk: 'all', planStatus: 'all', sort: 'store_asc', limit: 100, offset })
+      const response = await getChecklistVisitPlanPeriod({ ...(regionId ? { regionId } : {}), period, query: '', risk: 'all', planStatus: 'all', sort: 'store_asc', limit: 100, offset })
       rows.push(...response.data.items)
       if (!response.data.page.hasMore) break
       offset += Math.max(1, response.data.page.limit)

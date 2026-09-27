@@ -124,7 +124,7 @@ export type ChecklistVisitPlanStatus = 'all' | 'unplanned' | 'planned' | 'waitin
 export type ChecklistVisitPlanSort = 'risk_desc' | 'store_asc' | 'store_desc' | 'last_visit_asc' | 'last_visit_desc' | 'next_plan_asc' | 'next_plan_desc'
 
 export type ChecklistVisitPlanPeriodQueryInput = {
-  regionId: string
+  regionId?: string
   period: string
   query: string
   risk: ChecklistVisitPlanRisk
@@ -135,7 +135,9 @@ export type ChecklistVisitPlanPeriodQueryInput = {
 }
 
 export function buildChecklistVisitPlanPeriodQuery(input: ChecklistVisitPlanPeriodQueryInput) {
-  const query = new URLSearchParams({ regionId: input.regionId, period: input.period })
+  const query = new URLSearchParams()
+  if (input.regionId) query.set('regionId', input.regionId)
+  query.set('period', input.period)
   if (input.query.trim()) query.set('query', input.query.trim())
   if (input.risk !== 'all') query.set('risk', input.risk)
   if (input.planStatus !== 'all') query.set('planStatus', input.planStatus)
@@ -146,12 +148,13 @@ export function buildChecklistVisitPlanPeriodQuery(input: ChecklistVisitPlanPeri
 }
 
 export function buildChecklistVisitPlanCandidateQuery(input: {
-  regionId: string
+  regionId?: string
   query: string
   limit: number
   offset: number
 }) {
-  const query = new URLSearchParams({ regionId: input.regionId })
+  const query = new URLSearchParams()
+  if (input.regionId) query.set('regionId', input.regionId)
   if (input.query.trim()) query.set('query', input.query.trim())
   query.set('limit', String(input.limit))
   query.set('offset', String(input.offset))

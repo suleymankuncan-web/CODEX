@@ -16,7 +16,15 @@ test('BM and VM checklist contracts stay available in the selected-store command
 })
 
 async function routeChecklistContractApi(page: Page) {
-  await page.route('**/api/checklists/command-canvas**', async (route) => {
+  await page.route('**/api/checklists/command-canvas/visit-plans?**', async (route) => {
+    const weekStart = new URL(route.request().url()).searchParams.get('weekStart') ?? '2026-09-28'
+    await route.fulfill({ json: { data: {
+      planId: null, regionId: null, regionName: 'Sorumlu mağazalar', weekStart,
+      revision: 0, scopeRevision: '0'.repeat(64), revisedAt: null, view: 'region_manager',
+      capabilities: { canMaintainWeeklyVisitPlan: true }, items: [],
+    } } })
+  })
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
     await route.fulfill({
       json: {
         data: {

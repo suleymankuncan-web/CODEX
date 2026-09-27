@@ -384,13 +384,24 @@ test('Region Manager opens store history from the persistent Results action', as
   await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/region-manager-records-desktop.png'), fullPage: true })
 })
 
-test('Region Manager opens the current workspace immediately when planning regions are empty', async ({ page }) => {
+test('Region Manager opens assigned-store planning without loading legacy planning regions', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager', { actionStoreIds: [storeIds[0]] })
   let commandRequests = 0
+  let regionRequests = 0
 
   await page.route('**/api/checklists/command-canvas/visit-plans/regions**', async (route) => {
+    regionRequests += 1
     await route.fulfill({
       json: { data: { items: [], page: { total: 0, limit: 20, offset: 0, hasMore: false } } },
+    })
+  })
+  await page.route('**/api/checklists/command-canvas/visit-plans?**', async (route) => {
+    await route.fulfill({
+      json: { data: {
+        planId: null, regionId: null, regionName: 'Sorumlu mağazalar', weekStart: '2026-08-31',
+        revision: 0, scopeRevision: '0'.repeat(64), revisedAt: null, view: 'region_manager',
+        capabilities: { canMaintainWeeklyVisitPlan: true }, items: [],
+      } },
     })
   })
   await page.route('**/api/checklists/command-canvas?**', async (route) => {
@@ -414,9 +425,11 @@ test('Region Manager opens the current workspace immediately when planning regio
   await expect(page.getByTestId('checklist-command-row').getByText('İstanbul MOI AVM')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Tekrar dene' })).toHaveCount(0)
   await expect(page.getByTestId('checklist-command-metrics')).toHaveCount(0)
-  await expect(page.getByLabel('Haftalık ziyaret planı')).toHaveCount(0)
+  await expect(page.getByLabel('Haftalık ziyaret planı')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Haftayı Planla' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Başlat' })).toBeVisible()
   await expect.poll(() => commandRequests).toBe(1)
+  expect(regionRequests).toBe(0)
 
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByRole('button', { name: 'Başlat' })).toBeVisible()

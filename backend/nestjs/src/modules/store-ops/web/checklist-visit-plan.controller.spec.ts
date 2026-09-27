@@ -13,6 +13,9 @@ describe("ChecklistVisitPlanController authorization metadata", () => {
     ]);
     expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, write)).toBe("authenticated");
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, write)).toEqual(["REGION_MANAGER"]);
+    const assignedWrite = ChecklistVisitPlanController.prototype.saveAssignedWeeklyPlan;
+    expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, assignedWrite)).toBe("authenticated");
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, assignedWrite)).toEqual(["REGION_MANAGER"]);
   });
 
   it("keeps full-period planning and candidate search Region Manager-only", () => {

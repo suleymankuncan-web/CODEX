@@ -60,10 +60,11 @@ export type ChecklistVisitPlanVisitCompletion = {
 
 export type ChecklistVisitPlanResult = {
   planId: string | null;
-  regionId: string;
+  regionId: string | null;
   regionName: string;
   weekStart: string;
   revision: number;
+  scopeRevision?: string;
   revisedAt: string | null;
   view?: ChecklistVisitPlanView;
   capabilities?: { canMaintainWeeklyVisitPlan: boolean };
@@ -100,7 +101,7 @@ export type ChecklistVisitPlanPeriodRow = {
 
 export type ChecklistVisitPlanPeriodResult = {
   period: string;
-  regionId: string;
+  regionId: string | null;
   regionName: string;
   view: "region_manager";
   capabilities: { canMaintainWeeklyVisitPlan: true };
@@ -128,7 +129,7 @@ export type ChecklistVisitPlanCandidate = {
 };
 
 export type ChecklistVisitPlanCandidateResult = {
-  regionId: string;
+  regionId: string | null;
   view: "region_manager";
   items: ChecklistVisitPlanCandidate[];
   page: { total: number; limit: number; offset: number; hasMore: boolean };

@@ -332,11 +332,13 @@ test('region manager plans a full Monday-Saturday week and saves one real API sn
   await expect.poll(() => savedBodies.length).toBe(1)
   expect(savedBodies[0]).toMatchObject({
     expectedRevision: 3,
+    expectedScopeRevision: '3'.padStart(64, '0'),
     items: expect.arrayContaining([
       expect.objectContaining({ storeId: '11111111-1111-4111-8111-111111111111', plannedDate: '2026-07-13' }),
       expect.objectContaining({ storeId: '11111111-1111-4111-8111-111111111111', plannedDate: '2026-07-15' }),
     ]),
   })
+  expect(requests.some((url) => url.pathname.endsWith('/visit-plans/assigned/2026-07-13'))).toBe(true)
 })
 
 test('weekly calendar store opens visit actions and records an attendance-only visit', async ({ page }) => {
@@ -637,7 +639,7 @@ async function assertMobileWeeklyPlannerReachability(
   expect(pageOverflow).toBeLessThanOrEqual(1)
 }
 
-test('explicit region context survives a zero-row command filter', async ({ page }) => {
+test('assigned-store planning survives a zero-row command filter without legacy region selection', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
   const requests: URL[] = []
@@ -647,9 +649,9 @@ test('explicit region context survives a zero-row command filter', async ({ page
   ])
 
   await page.goto('/store/checklists')
-  await page.locator('.checklist-region-trigger').click()
-  await page.getByRole('button', { name: 'Ege' }).click()
-  await expect.poll(() => requests.some((url) => url.pathname.endsWith('/command-canvas') && url.searchParams.get('regionId') === 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')).toBe(true)
+  await expect(page.getByText('Marmara Park').first()).toBeVisible()
+  await expect(page.locator('.checklist-region-trigger')).toHaveCount(0)
+  await expect.poll(() => requests.some((url) => url.pathname.endsWith('/command-canvas') && !url.searchParams.has('regionId'))).toBe(true)
 
   await page.getByTestId('checklist-command-search').filter({ visible: true }).getByRole('textbox').fill('bulunmaz')
   await expect(page.getByText('Bu filtrelerde mağaza yok')).toBeVisible()
@@ -657,7 +659,7 @@ test('explicit region context survives a zero-row command filter', async ({ page
   await expect(page.getByRole('region', { name: 'Saha ziyaretlerini günlere yerleştirin' })).toBeVisible()
 })
 
-test('switching regions never exposes the previous region rows under a pending or failed request', async ({ page }) => {
+test('losing assignment access never retains the previously visible store rows', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
   const marmaraId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -665,18 +667,14 @@ test('switching regions never exposes the previous region rows under a pending o
   await routeChecklistCommand(page, [], [], [
     { regionId: marmaraId, regionName: 'Marmara' },
     { regionId: egeId, regionName: 'Ege' },
-  ], 0, {
-    commandRegionDelays: { [egeId]: 500 },
-    commandRegionStatuses: { [egeId]: 400 },
-  })
+  ])
 
   await page.goto('/store/checklists')
-  await page.locator('.checklist-region-trigger').click()
-  await page.getByRole('button', { name: 'Marmara' }).click()
   await expect(page.getByText('Marmara Park').first()).toBeVisible()
-
-  await page.locator('.checklist-region-trigger').click()
-  await page.getByRole('button', { name: 'Ege' }).click()
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
+    await route.fulfill({ status: 403, json: { message: 'Assigned store access revoked' } })
+  })
+  await page.getByRole('textbox', { name: 'Mağaza veya durum ara' }).fill('yetki')
   await expect(page.getByText('Marmara Park')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Tekrar dene/ })).toBeVisible()
   await expect(page.getByText('Marmara Park')).toHaveCount(0)
@@ -774,15 +772,21 @@ for (const viewport of [
   { width: 390, height: 844 },
   { width: 320, height: 720 },
 ] as const) {
-  test(`region manager no-selection period picker stays within the viewport at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`multi-group assigned stores open without a region gate at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await installStoreContractSession(page, 'regionManager')
-    await routeChecklistCommand(page, [], [], [
+    const requests: URL[] = []
+    await routeChecklistCommand(page, requests, [], [
       { regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', regionName: 'Marmara' },
       { regionId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', regionName: 'Ege' },
     ])
     await page.goto('/store/checklists')
-    await expect(page.getByText('Mağaza sorumluluğunu seçin')).toBeVisible()
+    await expect(page.getByText('Mağaza sorumluluğunu seçin')).toHaveCount(0)
+    await expect(page.locator('.checklist-region-trigger')).toHaveCount(0)
+    await expect(page.locator('[data-testid="checklist-command-row"]')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Haftayı Planla' })).toBeVisible()
+    expect(requests.some((url) => url.pathname.endsWith('/visit-plans/regions'))).toBe(false)
+    expect(requests.filter((url) => url.pathname.endsWith('/command-canvas')).every((url) => !url.searchParams.has('regionId'))).toBe(true)
 
     await assertPeriodPickerGeometry(page, viewport)
   })
@@ -941,6 +945,26 @@ test('weekly planner preserves the draft across 409 reconciliation and saves aga
       expect.objectContaining({ storeId: '77777777-7777-4777-8777-777777777777', plannedDate: '2026-07-17' }),
     ]),
   })
+})
+
+test('weekly planner reports a changed assigned-store scope without offering stale-revision reconciliation', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await installStoreContractSession(page, 'regionManager')
+  const savedBodies: unknown[] = []
+  await routeChecklistCommand(page, [], savedBodies, undefined, 0, { saveResponses: ['scope'] })
+
+  await page.goto('/store/checklists')
+  await page.getByRole('button', { name: 'Haftayı Planla' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ziyaret planını oluşturun' })
+  await dialog.getByRole('button', { name: 'Pazartesi, 13 Tem' }).click()
+  await dialog.getByRole('button', { name: /Marmara Park mağazasını/ }).click()
+  await dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' }).click()
+
+  await expect(dialog.getByRole('alert')).toContainText('Mağaza sorumluluk kapsamınız değişti')
+  await expect(dialog.getByText('Planın daha yeni bir sürümü var')).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: 'Güncel planı al ve taslağı yeniden uygula' })).toHaveCount(0)
+  await expect(dialog.getByText('5 ziyaret', { exact: true })).toBeVisible()
+  expect(savedBodies).toHaveLength(1)
 })
 
 test('weekly planner requires an explicit choice for same-store concurrent changes', async ({ page }) => {
@@ -1184,7 +1208,7 @@ async function routeChecklistCommand(
     annualPlanItems?: Array<{ storeId: string; plannedDate: string; displayOrder: number; status?: 'waiting' | 'missed' | 'completed' | 'planned'; checklistInstanceId?: string | null; visitCompletedAt?: string | null }>
     planGetItems?: Array<Array<{ storeId: string; plannedDate: string; displayOrder: number; status?: 'waiting' | 'missed' | 'completed' }>>
     planGetRevisions?: number[]
-    saveResponses?: Array<'conflict' | 'error' | 'success'>
+    saveResponses?: Array<'conflict' | 'scope' | 'error' | 'success'>
   } = {},
 ) {
   let planGetCount = 0
@@ -1240,6 +1264,10 @@ async function routeChecklistCommand(
       saveCount += 1
       if (response === 'conflict') {
         await route.fulfill({ status: 409, json: { message: 'revision conflict' } })
+        return
+      }
+      if (response === 'scope') {
+        await route.fulfill({ status: 409, json: { message: 'Weekly visit plan current revision is outside the direct active portfolio' } })
         return
       }
       if (response === 'error') {
@@ -1332,8 +1360,8 @@ async function routeChecklistCommand(
               storeId: '22222222-2222-4222-8222-222222222222',
               storeCode: 'ST-002',
               storeName: 'Mall of İstanbul',
-              regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-              regionName: 'Marmara',
+              regionId: regionOptions[1]?.regionId ?? 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+              regionName: regionOptions[1]?.regionName ?? 'Marmara',
               regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
               bmScore: 88,
               vmScore: 84,
@@ -1567,6 +1595,7 @@ function buildVisitPlanResponse(
       regionName: 'Marmara',
       weekStart: '2026-07-13',
       revision,
+      scopeRevision: String(revision).padStart(64, '0'),
       revisedAt: '2026-07-13T08:00:00.000Z',
       view: 'region_manager',
       capabilities: { canMaintainWeeklyVisitPlan: true },
