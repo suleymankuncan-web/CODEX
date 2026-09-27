@@ -230,12 +230,13 @@ export class RankingService {
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      canReadCompanyHierarchy
+      canReadCompanyHierarchy || input.roleCodes.includes("REGION_MANAGER")
         ? this.rankingReportingReadRepository.listRankingFilterOptions({
             companyIds: input.companyIds,
             periodType: latestPeriod.period_type,
             periodStart: latestPeriod.period_start,
             periodEnd: latestPeriod.period_end,
+            managerOnly: !canReadCompanyHierarchy,
           })
         : Promise.resolve(null),
     ]);
@@ -271,8 +272,17 @@ export class RankingService {
     const assignmentByEmployeeId = new Map(
       activePersonnelAssignments.map((assignment) => [assignment.employee_id, assignment]),
     );
-    const { companyFilters, filteredStoreRows } = buildCompanyManagerStoreView({
-      rows: storeRows, filters: input, directory: companyFilterOptions?.regionManagers,
+    const assignedStoreIdSet = new Set(input.assignedStoreIds);
+    const managerDirectory = canReadCompanyHierarchy
+      ? companyFilterOptions?.regionManagers
+      : companyFilterOptions?.regionManagers
+          .map((manager) => ({
+            ...manager,
+            storeIds: manager.storeIds.filter((storeId) => assignedStoreIdSet.has(storeId)),
+          }))
+          .filter((manager) => manager.storeIds.length > 0);
+    const { companyFilters, filteredStoreRows, managerStoreIds } = buildCompanyManagerStoreView({
+      rows: storeRows, filters: input, directory: managerDirectory,
       canReadCompanyHierarchy, isPrivileged: access.isPrivileged,
       enforceAssignedReadScope: scopePolicy.enforceAssignedReadScope,
     });
@@ -305,8 +315,10 @@ export class RankingService {
       storeIds: [],
       assignedStoreIds: [],
     };
+    const managerStoreIdSet = managerStoreIds === null ? null : new Set(managerStoreIds);
     const filteredPersonnelRows = access.isPrivileged
       ? applyPersonnelFilters(activeScopedPersonnelRows, personnelDisplayFilters)
+          .filter((row) => managerStoreIdSet === null || (row.storeId !== null && managerStoreIdSet.has(row.storeId)))
       : personnelRows;
     const reference = {
       store: buildRankingReferenceGroup({
@@ -356,7 +368,7 @@ export class RankingService {
           ? [currentStore]
           : authorizedStoreRows,
     );
-    replaceManagerFilterOptions(filters, companyFilterOptions?.regionManagers);
+    replaceManagerFilterOptions(filters, managerDirectory);
     const managedStoreIds = scopePolicy.enforceAssignedReadScope
       ? uniqueIds(input.assignedStoreIds)
       : uniqueIds([...input.assignedStoreIds, ...input.storeIds]);

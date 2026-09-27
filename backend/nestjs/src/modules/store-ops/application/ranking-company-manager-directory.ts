@@ -18,12 +18,15 @@ export function buildCompanyManagerStoreView(input: {
   const selectedManager = input.directory?.find(
     (manager) => manager.id === input.filters.regionManagerUserId,
   );
+  const managerStoreIds = input.isPrivileged && input.filters.regionManagerUserId
+    ? selectedManager?.storeIds ?? []
+    : null;
   const companyFilters = input.canReadCompanyHierarchy
     ? {
         ...input.filters,
-        regionManagerUserId: selectedManager ? undefined : input.filters.regionManagerUserId,
+        regionManagerUserId: undefined,
       }
-    : { ...input.filters, regionManagerUnassigned: false };
+    : { ...input.filters, regionManagerUserId: undefined, regionManagerUnassigned: false };
   companyFilters.enforceAssignedReadScope = input.enforceAssignedReadScope;
   const displayRows = input.isPrivileged
     ? applyStoreFilters(input.rows, companyFilters)
@@ -31,8 +34,9 @@ export function buildCompanyManagerStoreView(input: {
 
   return {
     companyFilters,
-    filteredStoreRows: selectedManager
-      ? displayRows.filter((row) => selectedManager.storeIds.includes(row.storeId))
+    managerStoreIds,
+    filteredStoreRows: managerStoreIds
+      ? displayRows.filter((row) => managerStoreIds.includes(row.storeId))
       : displayRows,
   };
 }

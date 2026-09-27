@@ -22,12 +22,12 @@ import {
   storeRankingsPageReducer,
 } from './store-rankings-page-model'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '../lib/api'
 import { RankingHeader, RankingFilters, RankingReference } from './store-rankings-controls'
 import { RankingWorkspace } from './store-rankings-table'
 import {
   StoreErrorState,
-  StoreLoadingState,
   StoreSurfacePage,
 } from './store-surface-primitives'
 
@@ -157,7 +157,28 @@ export function StoreRankingsPage(input: {
   const clearFilters = () => { dispatchPageState({ type: 'clearFilters' }); setFilter('periodStart')(currentRankingPeriod()) }
   if (!ranking) return <StoreSurfacePage ariaLabel={t('storeRankings.pageTitle')} className="store-rankings-surface" testId="store-rankings-page">
     {header}
-    {rankingsQuery.isPending ? <StoreLoadingState title={t('storeRankings.loadingTitle')} description={t('storeRankings.loadingCopy')} /> : <>
+    {rankingsQuery.isPending ? <>
+      <div className="store-rankings-reference-strip store-rankings-loading-reference" aria-hidden="true">
+        <Skeleton className="tw:h-12 tw:w-40" />
+        <Skeleton className="tw:h-12 tw:flex-1" />
+      </div>
+      <div className="store-rankings-board" aria-busy="true">
+        <div className="store-rankings-list-toolbar" aria-hidden="true">
+          <Skeleton className="store-rankings-loading-tabs tw:h-10" />
+          <div className="store-rankings-filters">
+            <Skeleton className="store-rankings-loading-search tw:h-9" />
+            {privilegedSession ? <Skeleton className="store-rankings-loading-manager tw:h-9" /> : null}
+            <Skeleton className="store-rankings-loading-clear tw:h-9" />
+          </div>
+        </div>
+        <div className="store-rankings-loading-body" aria-hidden="true">
+          <Skeleton className="tw:h-12 tw:w-full" />
+          <Skeleton className="tw:h-14 tw:w-full" />
+          <Skeleton className="tw:h-14 tw:w-full" />
+        </div>
+      </div>
+      <p className="tw:sr-only" role="status">{t('storeRankings.loadingTitle')}</p>
+    </> : <>
       <StoreErrorState title={t('storeRankings.errorTitle')} description={getUserFacingErrorMessage(rankingsQuery.error, 'Sıralama verisi alınamadı. Dönemi kontrol edip tekrar deneyin.')} />
       <Button variant="outline" onClick={() => void rankingsQuery.refetch()}>{locale === 'tr' ? 'Yeniden dene' : 'Retry'}</Button>
     </>}

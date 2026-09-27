@@ -23,6 +23,9 @@ function fixture() {
     listRankingPersonnelKpiRows: jest.fn(async () => [] as Array<Record<string, unknown>>),
     getStoreTurkeyBenchmarkValues: jest.fn(async () => storeRows.map(row => ({kpi_code: row.kpi_code, benchmark_value: "100"}))),
     getEmployeeTurkeyBenchmarkValues: jest.fn(async () => [{kpi_code: "ATV", benchmark_value: "300"}, {kpi_code: "UPT", benchmark_value: "3"}]),
+    listRankingFilterOptions: jest.fn(async () => ({
+      regionManagers: [{id: "manager", label: "Manager", storeIds: ["store-1"]}], regions: [], stores: [],
+    })),
     listEmployeeKpiPeriods: jest.fn(async () => [period]),
   };
   const config = {getKpiConfigRows: jest.fn(async () => []), getLatestPublishedKpiConfigVersion: jest.fn(async () => null)};
