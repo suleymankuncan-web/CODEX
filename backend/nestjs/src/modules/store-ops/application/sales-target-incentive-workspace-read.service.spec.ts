@@ -76,7 +76,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(person?.dailyAchievementPct).toBe("15.00");
   });
 
-  it("keeps negative returns outside the roster separate and never adds them again to store net", async () => {
+  it("keeps only no-sale negative returns outside the roster separate and never adds them again to store net", async () => {
     const { service, readModel, corrections } = harness();
     readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
     readModel.listMovementTracking.mockResolvedValue([
@@ -86,6 +86,7 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       { scope_type: "unmapped", store_id: "store-a", employee_id: null, personnel_code: "19", display_name: null, sale_amount: "0", return_amount: "-300", net_amount: "-300", is_active_roster: false },
       { scope_type: "employee", store_id: "store-a", employee_id: "current-cashier", personnel_code: "20", display_name: "Aktif Kasiyer", sale_amount: "0", return_amount: "-20", net_amount: "-20", is_active_roster: true },
       { scope_type: "employee", store_id: "store-a", employee_id: "former-positive", personnel_code: "21", display_name: "Net Pozitif", sale_amount: "200", return_amount: "-20", net_amount: "180", is_active_roster: false },
+      { scope_type: "employee", store_id: "store-a", employee_id: "former-seller", personnel_code: "22", display_name: "Satışlı İade", sale_amount: "10", return_amount: "-50", net_amount: "-40", is_active_roster: false },
     ]);
     corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
 

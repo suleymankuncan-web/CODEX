@@ -275,7 +275,7 @@ function toWorkspaceStore(input: {
     row.trackedNetAmount = movement?.net_amount ?? null;
   }
   const outOfRosterReturns = input.personnelMovements
-    .filter(item => item.scope_type !== "store" && Number(item.net_amount) < 0 &&
+    .filter(item => item.scope_type !== "store" && Number(item.sale_amount) <= 0 && Number(item.net_amount) < 0 &&
       item.is_active_roster === false)
     .map(item => ({
       employeeId: item.employee_id,
