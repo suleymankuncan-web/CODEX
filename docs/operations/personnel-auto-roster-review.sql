@@ -17,12 +17,14 @@ WITH provisional AS (
     totals.first_observed_on,
     COALESCE(first_day.sale_amount, 0) AS first_day_sale_amount,
     COALESCE(first_day.return_amount, 0) AS first_day_return_amount,
-    COALESCE(totals.all_sale_amount, 0) AS all_recorded_sale_amount
+    COALESCE(totals.all_sale_amount, 0) AS all_recorded_sale_amount,
+    COALESCE(totals.all_return_amount, 0) AS all_recorded_return_amount
   FROM provisional
   INNER JOIN ops.employee employee ON employee.employee_id = provisional.employee_id
   LEFT JOIN LATERAL (
     SELECT MIN(sales.business_date) AS first_observed_on,
-      SUM(sales.sale_amount_try) AS all_sale_amount
+      SUM(sales.sale_amount_try) AS all_sale_amount,
+      SUM(sales.signed_return_amount_try) AS all_return_amount
     FROM ops.company_daily_kpi_employee_sales sales
     WHERE sales.employee_id = provisional.employee_id
   ) totals ON TRUE
@@ -48,12 +50,14 @@ SELECT evidence.personnel_code, evidence.employee_id, evidence.import_batch_id,
   evidence.source_batch_id, evidence.imported_on, evidence.first_observed_on, evidence.employment_status,
   evidence.termination_date, evidence.first_day_sale_amount,
   evidence.first_day_return_amount, evidence.all_recorded_sale_amount,
+  evidence.all_recorded_return_amount,
   COALESCE(active_assignment.primary_count, 0) AS active_primary_count,
   COALESCE(active_assignment.active_store_codes, ARRAY[]::text[]) AS active_store_codes,
   CASE
-    WHEN evidence.first_day_sale_amount <= 0 AND evidence.first_day_return_amount < 0
+    WHEN evidence.all_recorded_sale_amount <= 0 AND evidence.all_recorded_return_amount < 0
       THEN 'return_only_bootstrap_review'
-    WHEN evidence.first_day_sale_amount <= 0 THEN 'no_positive_sale_bootstrap_review'
+    WHEN evidence.all_recorded_sale_amount <= 0 THEN 'no_recorded_positive_sale_review'
+    WHEN evidence.first_day_sale_amount <= 0 THEN 'later_positive_sale_review'
     WHEN COALESCE(active_assignment.primary_count, 0) > 1 THEN 'multiple_active_primary_assignments_review'
     WHEN evidence.employment_status <> 'active' AND COALESCE(active_assignment.primary_count, 0) > 0
       THEN 'inactive_employee_active_assignment_review'
