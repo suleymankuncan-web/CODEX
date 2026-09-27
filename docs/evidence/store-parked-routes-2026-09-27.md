@@ -7,6 +7,7 @@ Status: local PR evidence; not deployment evidence.
 - `/store/visual-campaigns` and `/store/competitions` are temporarily unavailable from Store navigation and direct Store-route access for every persona, including publisher-capable and super-admin sessions.
 - This is an intentional frontend access narrowing. It does not remove backend capabilities, change provider configuration, or change `/admin/competitions`.
 - Existing route definitions remain in the catalog so later reactivation is an explicit, reviewable change.
+- The generated authorization inventory derives `runtimeRoles` from those retained catalog roles; it does not evaluate the temporary `access: () => false` predicate. The route-role matrix and fail-closed browser contracts are the current denial evidence.
 - Visual Merchandiser-only sessions continue to land on Checklist and retain Store feed/settings access.
 
 ## Risk, rollback, and verification
