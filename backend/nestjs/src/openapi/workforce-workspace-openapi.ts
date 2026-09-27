@@ -17,11 +17,12 @@ export function applyWorkforceWorkspaceOpenApi(document: MutableOpenApiDocument)
       canCreateOffboardingRequest: { type: "boolean" },
     }),
     WorkforceWorkspacePerson: objectSchema(
-      ["employeeId", "displayName", "positionId", "positionCode", "positionName", "assignmentStartDate", "employmentStatus"],
+      ["employeeId", "displayName", "positionId", "positionCode", "positionName", "assignmentStartDate", "employmentStatus", "positiveSalesCoverageDays", "noPositiveSales15Days"],
       {
         employeeId: uuid(), displayName: { type: "string" }, positionId: uuid(),
         positionCode: { type: "string" }, positionName: { type: "string" },
         assignmentStartDate: { type: "string", format: "date", nullable: true }, employmentStatus: { type: "string" },
+        positiveSalesCoverageDays: integer(), noPositiveSales15Days: { type: "boolean" },
       },
     ),
     WorkforceWorkspaceStore: objectSchema(

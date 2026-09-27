@@ -23,7 +23,7 @@ import type {
   SalesTargetIncentiveWorkspaceRow,
 } from "./sales-target-incentive-workspace.contract";
 import type { SalesTargetIncentiveRegionCorrectionRow } from "../infrastructure/sales-target-incentive-approval.repository";
-import type { SalesTargetIncentiveDailySalesRow } from "../infrastructure/sales-target-incentive-read.repository";
+import type { SalesTargetIncentiveDailySalesRow, SalesTargetIncentiveMovementRow } from "../infrastructure/sales-target-incentive-read.repository";
 import { resolveSalesTargetIncentiveRateMetadata } from "./sales-target-incentive-rate-metadata";
 import { resolveSalesTargetIncentiveWorkspaceScope } from "./sales-target-incentive-workspace-scope";
 
@@ -79,7 +79,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         throughDate,
       );
     }
-    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult] = await Promise.all([
+    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult, movementResult] = await Promise.all([
       optionalSection(this.repository.listStoreMetadata({ storeIds, periodEnd: projection.periodEnd }), [], "store_metadata", this.logger),
       this.repository.listClosedRateSnapshots({ periodKey: projection.periodKey, storeIds }),
       this.repository.listWorkflowAudit({ periodKey: projection.periodKey, storeIds }),
@@ -89,9 +89,12 @@ export class SalesTargetIncentiveWorkspaceReadService {
         includeFinalRows: true,
       }),
       optionalSection(this.readModelService.listDailySalesTracking({ storeIds, periodStart: period.periodStart, throughDate }), [], "daily_sales", this.logger),
+      optionalSection(this.readModelService.listMovementTracking({ storeIds, periodStart: period.periodStart, throughDate }), [], "sale_return_movements", this.logger),
     ]);
     const dailyStoreById = new Map(dailyResult.value.filter(row => row.scope_type === "store").map(row => [row.store_id, row]));
     const dailyEmployeeByKey = new Map(dailyResult.value.filter(row => row.scope_type === "employee" && row.employee_id).map(row => [`${row.store_id}:${row.employee_id}`, row]));
+    const movementStoreById = new Map(movementResult.value.filter(row => row.scope_type === "store").map(row => [row.store_id, row]));
+    const movementsByStore = groupBy(movementResult.value.filter(row => row.scope_type !== "store"), row => row.store_id);
     const exactRateRowsResult = closedSnapshots.length === 0
       ? await optionalSection(this.repository.listExactRateTables({
           ruleVersionCode: SALES_TARGET_INCENTIVE_RULE_VERSION,
@@ -162,6 +165,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
         store,
         dailyStore: dailyStoreById.get(store.storeId) ?? null,
         dailyEmployees: dailyEmployeeByKey,
+        movementStore: movementStoreById.get(store.storeId) ?? null,
+        personnelMovements: movementsByStore.get(store.storeId) ?? [],
         canAct,
         storeCode: storeMetadata?.store_code ?? null,
         finalSnapshotId: closedSnapshotByStoreId.get(store.storeId) ?? null,
@@ -206,6 +211,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         storeMetadata: { status: metadataResult.status },
         rateMetadata: { status: exactRateRowsResult.status },
         correctionActors: { status: actorRowsResult.status },
+        movementTracking: { status: movementResult.status },
       },
       rateMetadata,
       managerGroups: resolvedGroups
@@ -218,6 +224,8 @@ function toWorkspaceStore(input: {
   store: SalesTargetIncentiveProjectionStore;
   dailyStore: SalesTargetIncentiveDailySalesRow | null;
   dailyEmployees: Map<string, SalesTargetIncentiveDailySalesRow>;
+  movementStore: SalesTargetIncentiveMovementRow | null;
+  personnelMovements: SalesTargetIncentiveMovementRow[];
   canAct: boolean;
   storeCode: string | null;
   finalSnapshotId: string | null;
@@ -252,7 +260,22 @@ function toWorkspaceStore(input: {
       : input.dailyEmployees.get(`${input.store.storeId}:${row.employeeId}`)?.actual_amount ?? null;
     row.dailyActualNetSales = dailyAmount;
     row.dailyAchievementPct = dailyAchievement(dailyAmount, row.target);
+    const movement = input.personnelMovements.find(item => item.scope_type === "employee" && item.employee_id === row.employeeId);
+    row.trackedSaleAmount = movement?.sale_amount ?? null;
+    row.trackedReturnAmount = movement?.return_amount ?? null;
+    row.trackedNetAmount = movement?.net_amount ?? null;
   }
+  const outOfRosterReturns = input.personnelMovements
+    .filter(item => Number(item.return_amount) < 0 &&
+      (item.scope_type === "unmapped" || !participants.some(participant => participant.employeeId === item.employee_id)))
+    .map(item => ({
+      employeeId: item.employee_id,
+      personnelCode: item.personnel_code,
+      displayName: item.display_name || item.personnel_code || "Bilinmeyen personel",
+      saleAmount: item.sale_amount,
+      returnAmount: item.return_amount,
+      netAmount: item.net_amount,
+    }));
   const primary = input.store.manager?.calculation ?? input.store.personnel[0]?.calculation;
   const periodClosed = input.finalSnapshotId !== null;
   const packageEditable = input.packageStatus !== "submitted" && input.packageStatus !== "admin_approved";
@@ -269,6 +292,9 @@ function toWorkspaceStore(input: {
     storeActualNetSales: input.store.storeNetSalesAmount,
     storeAchievementPct: primary?.storeAchievementPct ?? primary?.achievementPct ?? null,
     dailyActualNetSales: input.dailyStore?.actual_amount ?? null,
+    trackedSaleAmount: input.movementStore?.sale_amount ?? null,
+    trackedReturnAmount: input.movementStore?.return_amount ?? null,
+    trackedNetAmount: input.movementStore?.net_amount ?? null,
     dailyAchievementPct: dailyAchievement(input.dailyStore?.actual_amount ?? null, input.store.storeTargetAmount),
     capabilities: {
       canMarkStoreReview: canEdit,
@@ -281,6 +307,7 @@ function toWorkspaceStore(input: {
       periodCloseStatus: input.finalSnapshotId ? "closed" as const : "projection_only" as const,
     },
     rows,
+    outOfRosterReturns,
   };
 }
 
@@ -328,6 +355,9 @@ function toWorkspaceRow(input: {
     target: input.adjustmentSummary?.target_amount ?? input.participant.targetAmount,
     actual: input.adjustmentSummary?.actual_sales_amount ?? input.participant.actualAmount,
     dailyActualNetSales: null,
+    trackedSaleAmount: null,
+    trackedReturnAmount: null,
+    trackedNetAmount: null,
     dailyAchievementPct: null,
     achievementPct: input.adjustmentSummary?.achievement_pct ?? input.participant.calculation.achievementPct,
     rate: input.adjustmentSummary?.applied_rate ?? input.participant.calculation.rate,
@@ -374,6 +404,9 @@ function toFinalOnlyWorkspaceRow(
     target: summary.target_amount ?? null,
     actual: summary.actual_sales_amount ?? null,
     dailyActualNetSales: null,
+    trackedSaleAmount: null,
+    trackedReturnAmount: null,
+    trackedNetAmount: null,
     dailyAchievementPct: null,
     achievementPct: summary.achievement_pct ?? null,
     rate: summary.applied_rate ?? null,
@@ -531,6 +564,7 @@ function completeWorkspaceSections() {
     storeMetadata: { status: "complete" as const },
     rateMetadata: { status: "complete" as const },
     correctionActors: { status: "complete" as const },
+    movementTracking: { status: "complete" as const },
   };
 }
 

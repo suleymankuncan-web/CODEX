@@ -42,7 +42,11 @@ export function ReadOnlyCorrectionDrawer(input: {
               </div>
               <div className="incentive-stat-grid">
                 <DrawerStat label={input.t('storeIncentives.command.targetColumn')} value={formatIncentiveMoney(row.target, input.locale)} />
-                <DrawerStat label={input.t('storeIncentives.command.actualColumn')} value={formatIncentiveMoney(row.actual, input.locale)} />
+                <DrawerStat label={row.participantType === 'personnel' ? (tr ? 'Prime esas satış' : 'Incentive sales base') : (tr ? 'Gerçekleşen' : 'Actual')} value={formatIncentiveMoney(row.actual, input.locale)} />
+                <DrawerStat label={row.participantType === 'personnel' ? (tr ? 'Prime esas HG%' : 'Incentive target %') : 'HG%'} value={row.achievementPct === null ? '—' : `${Number(row.achievementPct).toLocaleString(tr ? 'tr-TR' : 'en-GB', { maximumFractionDigits: 2 })}%`} />
+                <DrawerStat label={tr ? 'Satış' : 'Sales'} value={formatIncentiveMoney(row.trackedSaleAmount, input.locale)} />
+                <DrawerStat label={tr ? 'İade' : 'Returns'} value={formatIncentiveMoney(row.trackedReturnAmount, input.locale)} />
+                <DrawerStat label="Net" value={formatIncentiveMoney(row.trackedNetAmount, input.locale)} />
                 <DrawerStat label={tr ? 'Hesaplanan prim' : 'Calculated incentive'} value={formatIncentiveMoney(row.calculatedAmount, input.locale)} />
                 <DrawerStat label={tr ? 'Final Prim' : 'Final incentive'} value={formatIncentiveMoney(row.finalAmount, input.locale)} />
                 <DrawerStat label={input.t('storeIncentives.command.signedDifference')} value={formatSignedIncentiveMoney(row.signedDifferenceAmount, input.locale)} />

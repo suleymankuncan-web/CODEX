@@ -35,6 +35,19 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(params).toEqual([["00000000-0000-4000-8000-000000000011"], "2026-05-01", "2026-05-08"]);
   });
 
+  it("reads signed movement components separately from authoritative store totals", async () => {
+    const { query, repository } = createRepository();
+    await repository.listMovementTracking({ storeIds: ["00000000-0000-4000-8000-000000000011"], periodStart: "2026-05-01", throughDate: "2026-05-08" });
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain("company_daily_kpi_store_sales");
+    expect(sql).toContain("company_daily_kpi_employee_sales");
+    expect(sql).toContain("company_daily_kpi_unmapped_personnel_sales");
+    expect(sql).toContain("SUM(signed_return_amount_try)");
+    expect(sql).toContain("SUM(net_amount_try)");
+    expect(sql).not.toContain("region_id =");
+    expect(params).toEqual([["00000000-0000-4000-8000-000000000011"], "2026-05-01", "2026-05-08"]);
+  });
+
   it("binds store manager projection sources to approved store target and store NET_SALES period", async () => {
     const { query, repository } = createRepository();
 

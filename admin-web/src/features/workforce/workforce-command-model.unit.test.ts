@@ -29,8 +29,8 @@ describe('workforce command model', () => {
 
   it('sorts missing employment dates last in both directions', () => {
     const personnel = [
-      { employeeId: 'missing', displayName: 'B', positionId: 'p', positionCode: 'P', positionName: 'P', assignmentStartDate: null, employmentStatus: 'active' },
-      { employeeId: 'known', displayName: 'A', positionId: 'p', positionCode: 'P', positionName: 'P', assignmentStartDate: '2025-01-01', employmentStatus: 'active' },
+      { employeeId: 'missing', displayName: 'B', positionId: 'p', positionCode: 'P', positionName: 'P', assignmentStartDate: null, employmentStatus: 'active', positiveSalesCoverageDays: 0, noPositiveSales15Days: false },
+      { employeeId: 'known', displayName: 'A', positionId: 'p', positionCode: 'P', positionName: 'P', assignmentStartDate: '2025-01-01', employmentStatus: 'active', positiveSalesCoverageDays: 15, noPositiveSales15Days: true },
     ]
     expect(filterAndSortPersonnel({ personnel, query: '', position: 'all', sort: 'start', direction: 'descending', now: new Date('2026-01-01') }).map((item) => item.employeeId)).toEqual(['known', 'missing'])
   })

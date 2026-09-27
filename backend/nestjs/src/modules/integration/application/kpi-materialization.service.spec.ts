@@ -195,6 +195,38 @@ describe("KpiMaterializationService", () => {
     );
   });
 
+  it("persists negative employee NET_SALES without changing the payout rules", async () => {
+    const { databaseService, service } = createService(async (sql) => {
+      if (sql.includes("FROM stg.kpi_raw")) {
+        return { rowCount: 1, rows: [{
+          stg_kpi_raw_id: "00000000-0000-0000-0000-000000000356",
+          payload_json: {
+            kpiCode: "NET_SALES", scopeType: "employee",
+            sourceStoreId: "STORE-1", employeeExternalRef: "EMP-4",
+            periodStart: "2026-09-13", periodEnd: "2026-09-13", actualValue: -6239.95,
+          },
+        }] };
+      }
+      if (sql.includes("FROM ops.kpi_definition")) {
+        return { rowCount: 1, rows: [{ kpi_id: "00000000-0000-0000-0000-000000000357" }] };
+      }
+      if (sql.includes("SELECT company_id, region_id") && sql.includes("FROM ops.store")) {
+        return { rowCount: 1, rows: [{
+          company_id: "00000000-0000-0000-0000-000000000360",
+          region_id: "00000000-0000-0000-0000-000000000361",
+        }] };
+      }
+      return { rowCount: 1, rows: [] };
+    });
+
+    const stats = await service.materializeKpis({ batchId, integrationSourceId, batchEnvelope });
+    expect(stats).toEqual({ processedCount: 1, errorCount: 0, hasRetryableFailure: false });
+    expect(databaseService.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO ops.kpi_actual"),
+      expect.arrayContaining([-6239.95]),
+    );
+  });
+
   it("materializes gsm_approval actuals with achievement rate", async () => {
     const { databaseService, service } = createService(async (sql, params) => {
       if (sql.includes("FROM stg.kpi_raw")) {

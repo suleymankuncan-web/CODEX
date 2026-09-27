@@ -125,6 +125,8 @@ export class WorkforceWorkspaceReadService {
           positionName: person.position_name,
           assignmentStartDate: person.assignment_start_date,
           employmentStatus: person.employment_status,
+          positiveSalesCoverageDays: person.positive_sales_coverage_days,
+          noPositiveSales15Days: person.no_positive_sales_15_days,
         })),
         personnelTotal: row.store_id === personnelStoreId ? personnelPage.total : 0,
         personnelLimit,

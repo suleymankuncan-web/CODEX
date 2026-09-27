@@ -19,7 +19,8 @@ describe("WorkforceWorkspaceReadService", () => {
       }),
       listActivePersonnel: jest.fn().mockResolvedValue({ items: [{ store_id: storeId, employee_id: "employee",
         display_name: "Person", position_id: "position", position_code: "SALES", position_name: "Satış",
-        assignment_start_date: "2025-01-01", employment_status: "active" }], total: 1 }),
+        assignment_start_date: "2025-01-01", employment_status: "active",
+        positive_sales_coverage_days: 15, no_positive_sales_15_days: true }], total: 1 }),
       isStoreInScope: jest.fn().mockResolvedValue(true),
       listHistory: jest.fn(),
     };
@@ -36,6 +37,9 @@ describe("WorkforceWorkspaceReadService", () => {
 
     expect(result.view).toBe("store_manager");
     expect(result.stores.items[0]).toMatchObject({ norm: 5, active: 1, gap: 4, personnelTotal: 1 });
+    expect(result.stores.items[0].personnel[0]).toMatchObject({
+      positiveSalesCoverageDays: 15, noPositiveSales15Days: true,
+    });
     expect(result.capabilities).toEqual({ canCreateSellerCodeRequest: true, canCreateOffboardingRequest: true });
     expect(repository.listStorePage).toHaveBeenCalledWith({
       scope: { companyIds: [], regionIds: [], storeIds: [storeId] },

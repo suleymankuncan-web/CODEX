@@ -8,6 +8,7 @@ export type IncentiveWorkspace = GeneratedWorkspace & {
     storeMetadata: { status: 'complete' | 'unavailable' }
     rateMetadata: { status: 'complete' | 'unavailable' }
     correctionActors: { status: 'complete' | 'unavailable' }
+    movementTracking: { status: 'complete' | 'unavailable' }
   }
 }
 
