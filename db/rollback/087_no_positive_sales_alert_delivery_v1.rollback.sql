@@ -5,3 +5,4 @@ BEGIN
     END IF;
 END $$;
 DROP TABLE IF EXISTS ops.no_positive_sales_alert_delivery;
+DROP INDEX IF EXISTS ops.idx_store_company_identity;
