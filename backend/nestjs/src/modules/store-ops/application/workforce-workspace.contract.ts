@@ -8,6 +8,8 @@ export type WorkforceWorkspacePerson = {
   positionName: string;
   assignmentStartDate: string | null;
   employmentStatus: string;
+  positiveSalesCoverageDays: number;
+  noPositiveSales15Days: boolean;
 };
 
 export type WorkforceWorkspaceStore = {

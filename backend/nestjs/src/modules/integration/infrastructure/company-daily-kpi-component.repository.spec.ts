@@ -156,6 +156,52 @@ describe("CompanyDailyKpiComponentRepository", () => {
     expect(String(employeeInsert?.[1]?.[2])).not.toContain("person-");
   });
 
+  it("stores an unknown return without creating an employee and preserves its negative net", async () => {
+    const query = jest.fn(async (sql: string, _params?: unknown[]) => {
+      if (sql.includes("FROM stg.integration_source")) return { rowCount: 1, rows: [{ integration_source_id: SOURCE_ID }] };
+      if (sql.includes("FROM ops.store")) return { rowCount: 2, rows: [{ store_id: STORE_A_ID }, { store_id: STORE_B_ID }] };
+      if (sql.includes("FROM ops.employee")) return { rowCount: 1, rows: [{ employee_id: EMPLOYEE_A_ID }] };
+      if (sql.includes("RETURNING component_outcome_id")) return { rowCount: 1, rows: [{ component_outcome_id: COMPONENT_ID }] };
+      return { rowCount: 1, rows: [] };
+    });
+    const { repository } = createRepository(query);
+    const input = successfulSalesInput();
+    input.aggregateCount += 1;
+    const unmappedPersonnelSales = [{
+      storeId: STORE_A_ID, personnelCode: "FORMER-17", saleInvoiceCount: 0, returnInvoiceCount: 1,
+      saleQuantity: "0", signedReturnQuantity: "-1", netQuantity: "-1",
+      saleAmountTry: "0", signedReturnAmountTry: "-125.50", netAmountTry: "-125.50",
+    }];
+    await expect(repository.replaceSuccessfulComponentSet({ ...input, unmappedPersonnelSales })).resolves.toEqual({ componentOutcomeId: COMPONENT_ID, replaced: true });
+    const insert = query.mock.calls.find(([sql]) => String(sql).includes("INSERT INTO ops.company_daily_kpi_unmapped_personnel_sales"));
+    expect(insert).toBeDefined();
+    expect(JSON.parse(String(insert?.[1]?.[2]))).toEqual(expect.arrayContaining([expect.objectContaining({ personnel_code: "FORMER-17", net_amount_try: "-125.50" })]));
+    expect(query.mock.calls.filter(([sql]) => String(sql).includes("INSERT INTO ops.company_daily_kpi_employee_sales"))).toHaveLength(1);
+  });
+
+  it("keeps the same employee's movements at two stores as separate facts", async () => {
+    const query = jest.fn(async (sql: string, _params?: unknown[]) => {
+      if (sql.includes("FROM stg.integration_source")) return { rowCount: 1, rows: [{ integration_source_id: SOURCE_ID }] };
+      if (sql.includes("FROM ops.store")) return { rowCount: 2, rows: [{ store_id: STORE_A_ID }, { store_id: STORE_B_ID }] };
+      if (sql.includes("FROM ops.employee")) return { rowCount: 1, rows: [{ employee_id: EMPLOYEE_A_ID }] };
+      if (sql.includes("RETURNING component_outcome_id")) return { rowCount: 1, rows: [{ component_outcome_id: COMPONENT_ID }] };
+      return { rowCount: 1, rows: [] };
+    });
+    const { repository } = createRepository(query);
+    const input = successfulSalesInput();
+    input.employeeSales.push({ ...input.employeeSales[0], storeId: STORE_B_ID, saleAmountTry: "0", signedReturnAmountTry: "-25", netAmountTry: "-25", saleInvoiceCount: 0, returnInvoiceCount: 1, saleQuantity: "0", signedReturnQuantity: "-1", netQuantity: "-1" });
+    input.aggregateCount += 1;
+
+    await expect(repository.replaceSuccessfulComponentSet(input)).resolves.toEqual({ componentOutcomeId: COMPONENT_ID, replaced: true });
+    const employeeInsert = query.mock.calls.find(([sql]) => String(sql).includes("INSERT INTO ops.company_daily_kpi_employee_sales"));
+    const facts = JSON.parse(String(employeeInsert?.[1]?.[2])) as Array<{ store_id: string; employee_id: string; net_amount_try: string }>;
+    expect(facts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ store_id: STORE_A_ID, employee_id: EMPLOYEE_A_ID, net_amount_try: "1000.30" }),
+      expect.objectContaining({ store_id: STORE_B_ID, employee_id: EMPLOYEE_A_ID, net_amount_try: "-25" }),
+    ]));
+    expect(query.mock.calls.map(([sql]) => String(sql)).join("\n")).not.toContain("employee_assignment_history");
+  });
+
   it("does not open a replacement when one mapped store is not enabled", async () => {
     const query = jest.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes("FROM stg.integration_source")) {

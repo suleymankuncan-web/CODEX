@@ -2899,6 +2899,14 @@ export type components = {
       "endsOn": string
       "storeIds": string[]
     }
+    "SalesTargetIncentiveOutOfRosterReturn": {
+      "employeeId": string | null
+      "personnelCode": string | null
+      "displayName": string
+      "saleAmount": string | null
+      "returnAmount": string | null
+      "netAmount": string | null
+    }
     "SalesTargetIncentiveWorkspace": {
       "period": string
       "periodStart": string
@@ -2984,6 +2992,9 @@ export type components = {
       "target": string | null
       "actual": string | null
       "dailyActualNetSales": string | null
+      "trackedSaleAmount": string | null
+      "trackedReturnAmount": string | null
+      "trackedNetAmount": string | null
       "dailyAchievementPct": string | null
       "achievementPct": string | null
       "rate": string | null
@@ -3002,6 +3013,7 @@ export type components = {
       "storeMetadata": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
       "rateMetadata": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
       "correctionActors": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
+      "movementTracking": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
     }
     "SalesTargetIncentiveWorkspaceStore": {
       "storeId": string
@@ -3012,6 +3024,9 @@ export type components = {
       "storeActualNetSales": string | null
       "storeAchievementPct": string | null
       "dailyActualNetSales": string | null
+      "trackedSaleAmount": string | null
+      "trackedReturnAmount": string | null
+      "trackedNetAmount": string | null
       "dailyAchievementPct": string | null
       "capabilities": {
         "canMarkStoreReview": boolean
@@ -3024,6 +3039,7 @@ export type components = {
         "periodCloseStatus": "projection_only" | "closed"
       }
       "rows": components['schemas']["SalesTargetIncentiveWorkspaceRow"][]
+      "outOfRosterReturns": components['schemas']["SalesTargetIncentiveOutOfRosterReturn"][]
     }
     "SaveChecklistVisitPlanRequest": {
       "expectedRevision": number
@@ -4096,6 +4112,8 @@ export type components = {
       "positionName": string
       "assignmentStartDate": string | null
       "employmentStatus": string
+      "positiveSalesCoverageDays": number
+      "noPositiveSales15Days": boolean
     }
     "WorkforceWorkspaceResponse": {
       "data": components['schemas']["WorkforceWorkspace"]

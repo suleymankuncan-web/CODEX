@@ -17,6 +17,10 @@ describe("Workforce Workspace OpenAPI", () => {
       canCreateOffboardingRequest: { type: "boolean" },
     });
     expect(document.components.schemas.WorkforceWorkspacePerson.properties).not.toHaveProperty("score");
+    expect(document.components.schemas.WorkforceWorkspacePerson.properties).toEqual(expect.objectContaining({
+      positiveSalesCoverageDays: { type: "integer", minimum: 0 },
+      noPositiveSales15Days: { type: "boolean" },
+    }));
     expect(document.components.schemas.WorkforceWorkspaceStore.properties.norm).toEqual({ type: "number", nullable: true });
     expect(document.components.schemas.WorkforceWorkspaceStore.properties.averageTenureDays).toEqual({ type: "number", nullable: true });
     expect(document.components.schemas.WorkforceWorkspaceHistoryRow.properties).toEqual(expect.objectContaining({

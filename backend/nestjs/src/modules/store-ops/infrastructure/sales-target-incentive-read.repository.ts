@@ -25,6 +25,17 @@ export type SalesTargetIncentiveDailySalesRow = {
   last_day: string;
 };
 
+export type SalesTargetIncentiveMovementRow = {
+  scope_type: "store" | "employee" | "unmapped";
+  store_id: string;
+  employee_id: string | null;
+  personnel_code: string | null;
+  display_name: string | null;
+  sale_amount: string;
+  return_amount: string;
+  net_amount: string;
+};
+
 export type SalesTargetIncentiveStoreSourceRow = {
   company_id: string;
   region_id: string;
@@ -457,6 +468,48 @@ export class SalesTargetIncentiveReadRepository {
         params,
       );
 
+    return result.rows;
+  }
+
+  /** Read-only sale/return components; store facts are totals, not personnel sums. */
+  async listMovementTracking(input: { storeIds: string[]; periodStart: string; throughDate: string }) {
+    if (input.storeIds.length === 0) return [];
+    const result = await this.databaseService.query<SalesTargetIncentiveMovementRow>(`
+      WITH accepted AS (
+        SELECT component_outcome_id
+        FROM ops.company_daily_kpi_component_outcome
+        WHERE operation = 'sales' AND status = 'succeeded'
+          AND business_date BETWEEN $2::date AND $3::date
+      ), movements AS (
+        SELECT 'store'::text AS scope_type, sales.store_id, NULL::uuid AS employee_id,
+          NULL::text AS personnel_code, NULL::text AS display_name,
+          sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
+        FROM ops.company_daily_kpi_store_sales sales
+        INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
+        WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
+        UNION ALL
+        SELECT 'employee', sales.store_id, sales.employee_id, employee.external_employee_ref,
+          concat_ws(' ', employee.first_name, employee.last_name),
+          sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
+        FROM ops.company_daily_kpi_employee_sales sales
+        INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
+        INNER JOIN ops.employee employee ON employee.employee_id = sales.employee_id
+        WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
+        UNION ALL
+        SELECT 'unmapped', sales.store_id, NULL::uuid, sales.personnel_code,
+          NULL::text, sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
+        FROM ops.company_daily_kpi_unmapped_personnel_sales sales
+        INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
+        WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
+      )
+      SELECT scope_type, store_id::text AS store_id, employee_id::text AS employee_id,
+        personnel_code, display_name,
+        SUM(sale_amount_try)::text AS sale_amount,
+        SUM(signed_return_amount_try)::text AS return_amount,
+        SUM(net_amount_try)::text AS net_amount
+      FROM movements
+      GROUP BY scope_type, store_id, employee_id, personnel_code, display_name
+    `, [input.storeIds, input.periodStart, input.throughDate]);
     return result.rows;
   }
 

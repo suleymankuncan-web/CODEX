@@ -3444,7 +3444,7 @@
         "parameters": [
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3452,7 +3452,7 @@
           },
           {
             "name": "offset",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3475,7 +3475,7 @@
         "parameters": [
           {
             "name": "limit",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -3483,7 +3483,7 @@
           },
           {
             "name": "offset",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -7861,6 +7861,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -8087,6 +8091,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -8900,6 +8908,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -9948,6 +9960,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "evidence",
+                "reference"
+              ],
               "type": "string"
             }
           }
@@ -10041,6 +10057,10 @@
             "required": true,
             "in": "path",
             "schema": {
+              "enum": [
+                "canonical",
+                "thumbnail"
+              ],
               "type": "string"
             }
           }
@@ -28230,6 +28250,9 @@
           "target",
           "actual",
           "dailyActualNetSales",
+          "trackedSaleAmount",
+          "trackedReturnAmount",
+          "trackedNetAmount",
           "dailyAchievementPct",
           "achievementPct",
           "rate",
@@ -28269,6 +28292,21 @@
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
           },
           "dailyActualNetSales": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "trackedSaleAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "trackedReturnAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "trackedNetAmount": {
             "type": "string",
             "nullable": true,
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
@@ -28336,10 +28374,14 @@
           "storeActualNetSales",
           "storeAchievementPct",
           "dailyActualNetSales",
+          "trackedSaleAmount",
+          "trackedReturnAmount",
+          "trackedNetAmount",
           "dailyAchievementPct",
           "capabilities",
           "review",
-          "rows"
+          "rows",
+          "outOfRosterReturns"
         ],
         "properties": {
           "storeId": {
@@ -28373,6 +28415,21 @@
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
           },
           "dailyActualNetSales": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "trackedSaleAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "trackedReturnAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "trackedNetAmount": {
             "type": "string",
             "nullable": true,
             "pattern": "^-?\\d+(?:\\.\\d+)?$"
@@ -28434,6 +28491,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRow"
+            }
+          },
+          "outOfRosterReturns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveOutOfRosterReturn"
             }
           }
         }
@@ -29183,7 +29246,8 @@
           "core",
           "storeMetadata",
           "rateMetadata",
-          "correctionActors"
+          "correctionActors",
+          "movementTracking"
         ],
         "properties": {
           "core": {
@@ -29196,6 +29260,9 @@
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
           },
           "correctionActors": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          },
+          "movementTracking": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
           }
         }
@@ -29224,7 +29291,9 @@
           "positionCode",
           "positionName",
           "assignmentStartDate",
-          "employmentStatus"
+          "employmentStatus",
+          "positiveSalesCoverageDays",
+          "noPositiveSales15Days"
         ],
         "properties": {
           "employeeId": {
@@ -29251,6 +29320,13 @@
           },
           "employmentStatus": {
             "type": "string"
+          },
+          "positiveSalesCoverageDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "noPositiveSales15Days": {
+            "type": "boolean"
           }
         }
       },
@@ -29973,8 +30049,8 @@
           "limit": {
             "type": "number",
             "default": 25,
-            "maximum": 100,
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 100
           }
         },
         "required": [
@@ -31096,8 +31172,8 @@
           "limit": {
             "type": "number",
             "default": 25,
-            "maximum": 100,
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 100
           },
           "reason": {
             "type": "string",
@@ -32543,6 +32619,46 @@
                 }
               }
             }
+          }
+        }
+      },
+      "SalesTargetIncentiveOutOfRosterReturn": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "personnelCode",
+          "displayName",
+          "saleAmount",
+          "returnAmount",
+          "netAmount"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "personnelCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "saleAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "returnAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "netAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
           }
         }
       }

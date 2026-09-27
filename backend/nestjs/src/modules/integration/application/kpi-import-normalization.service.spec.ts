@@ -31,6 +31,26 @@ describe("KpiImportNormalizationService", () => {
     ]);
   });
 
+  it("preserves signed negative NET_SALES instead of clipping a return-only day", () => {
+    const rows = service.normalize({
+      sourceSystem: "manual",
+      sourceCapturedAt: "2026-09-13T10:30:00.000Z",
+      rows: [{
+        kpiCode: "NET_SALES",
+        actualValue: -6239.95,
+        sourceEmployeeId: "SELLER-1",
+        sourceStoreId: "STORE-1",
+      }],
+    });
+
+    expect(rows).toEqual([expect.objectContaining({
+      kpiCode: "NET_SALES",
+      actualValue: -6239.95,
+      scopeType: "employee",
+      employeeExternalRef: "SELLER-1",
+    })]);
+  });
+
   it("adds deterministic source lineage to canonical KPI rows", () => {
     const firstRows = service.normalize({
       sourceSystem: "other",
