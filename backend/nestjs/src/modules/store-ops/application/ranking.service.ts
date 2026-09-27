@@ -52,7 +52,7 @@ import {
   buildScopedRankingFilterOptions,
   selectScopedRankingFilterRows,
 } from "./ranking-filter-options";
-import { buildCompanyManagerStoreView, replaceManagerFilterOptions } from "./ranking-company-manager-directory";
+import { buildCompanyManagerStoreView, replaceManagerFilterOptions, scopeManagerDirectory, withoutStoreAndRegionFilters } from "./ranking-company-manager-directory";
 
 type RawStoreRankingKpiRow = {
   store_id: string;
@@ -272,15 +272,10 @@ export class RankingService {
     const assignmentByEmployeeId = new Map(
       activePersonnelAssignments.map((assignment) => [assignment.employee_id, assignment]),
     );
-    const assignedStoreIdSet = new Set(input.assignedStoreIds);
-    const managerDirectory = canReadCompanyHierarchy
-      ? companyFilterOptions?.regionManagers
-      : companyFilterOptions?.regionManagers
-          .map((manager) => ({
-            ...manager,
-            storeIds: manager.storeIds.filter((storeId) => assignedStoreIdSet.has(storeId)),
-          }))
-          .filter((manager) => manager.storeIds.length > 0);
+    const managerDirectory = scopeManagerDirectory({
+      directory: companyFilterOptions?.regionManagers, canReadCompanyHierarchy,
+      assignedStoreIds: input.assignedStoreIds,
+    });
     const { companyFilters, filteredStoreRows, managerStoreIds } = buildCompanyManagerStoreView({
       rows: storeRows, filters: input, directory: managerDirectory,
       canReadCompanyHierarchy, isPrivileged: access.isPrivileged,
@@ -306,15 +301,7 @@ export class RankingService {
           assignmentByEmployeeId,
         })
       : personnelRows;
-    const personnelDisplayFilters = {
-      ...companyFilters,
-      enforceAssignedReadScope: false,
-      regionId: undefined,
-      regionIds: [],
-      storeId: undefined,
-      storeIds: [],
-      assignedStoreIds: [],
-    };
+    const personnelDisplayFilters = withoutStoreAndRegionFilters(companyFilters);
     const managerStoreIdSet = managerStoreIds === null ? null : new Set(managerStoreIds);
     const filteredPersonnelRows = access.isPrivileged
       ? applyPersonnelFilters(activeScopedPersonnelRows, personnelDisplayFilters)

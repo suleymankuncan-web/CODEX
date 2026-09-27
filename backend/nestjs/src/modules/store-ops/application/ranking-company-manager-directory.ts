@@ -7,6 +7,33 @@ export type RegionManagerDirectoryEntry = {
   storeIds: string[];
 };
 
+export function scopeManagerDirectory(input: {
+  directory: RegionManagerDirectoryEntry[] | undefined;
+  canReadCompanyHierarchy: boolean;
+  assignedStoreIds: readonly string[];
+}) {
+  if (input.canReadCompanyHierarchy) return input.directory;
+  const assignedStoreIds = new Set(input.assignedStoreIds);
+  return input.directory
+    ?.map((manager) => ({
+      ...manager,
+      storeIds: manager.storeIds.filter((storeId) => assignedStoreIds.has(storeId)),
+    }))
+    .filter((manager) => manager.storeIds.length > 0);
+}
+
+export function withoutStoreAndRegionFilters(filters: RankingFilters): RankingFilters {
+  return {
+    ...filters,
+    enforceAssignedReadScope: false,
+    regionId: undefined,
+    regionIds: [],
+    storeId: undefined,
+    storeIds: [],
+    assignedStoreIds: [],
+  };
+}
+
 export function buildCompanyManagerStoreView(input: {
   rows: RankedStoreRankingRow[];
   filters: RankingFilters;
