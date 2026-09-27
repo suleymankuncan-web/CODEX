@@ -67,9 +67,9 @@ export function RankingWorkspace(input: {
   return (
     <Tabs value={input.activeList} onValueChange={value => { if (value === 'stores' || value === 'personnel') input.onActiveListChange(value) }} className="store-rankings-board">
       <div className="store-rankings-list-toolbar">
-        <TabsList aria-label={input.t('storeRankings.listSwitchLabel')}>
-          <TabsTrigger value="stores"><StoreIcon aria-hidden="true" />{input.t('storeRankings.storeList')}<Badge variant="secondary">{input.ranking.storeLeaderboard.meta.total}</Badge></TabsTrigger>
-          <TabsTrigger value="personnel"><UsersRound aria-hidden="true" />{input.t('storeRankings.personnelList')}<Badge variant="secondary">{input.ranking.personnelLeaderboard.meta.total}</Badge></TabsTrigger>
+        <TabsList className="tw:h-auto! tw:min-h-11 tw:md:h-11!" aria-label={input.t('storeRankings.listSwitchLabel')}>
+          <TabsTrigger className="tw:h-auto! tw:min-h-11 tw:md:h-11!" value="stores"><StoreIcon aria-hidden="true" /><span className="store-rankings-tab-label">{input.t('storeRankings.storeList')}</span><Badge variant="secondary">{input.ranking.storeLeaderboard.meta.total}</Badge></TabsTrigger>
+          <TabsTrigger className="tw:h-auto! tw:min-h-11 tw:md:h-11!" value="personnel"><UsersRound aria-hidden="true" /><span className="store-rankings-tab-label">{input.t('storeRankings.personnelList')}</span><Badge variant="secondary">{input.ranking.personnelLeaderboard.meta.total}</Badge></TabsTrigger>
         </TabsList>
         {input.toolbar}
       </div>

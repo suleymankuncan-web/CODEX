@@ -1,6 +1,6 @@
 @media (max-width: 1279px) {
   .store-rankings-list-toolbar { grid-template-columns: minmax(0, 1fr); }
-  .store-rankings-list-toolbar [data-slot='tabs-list'], .store-rankings-loading-tabs { width: 320px; max-width: 100%; }
+  .store-rankings-list-toolbar [data-slot='tabs-list'] { width: max-content; max-width: 100%; }
   .store-rankings-filters { justify-self: end; }
 }
 
@@ -10,8 +10,9 @@
   .store-rankings-title-block h1 { font-size: 20px; }
   .store-command-app .store-rankings-surface .store-rankings-period { min-height: 44px; margin-left: auto; }
   .store-rankings-list-toolbar { padding: 12px; }
-  .store-rankings-list-toolbar [data-slot='tabs-list'] { width: 100%; height: 44px; }
-  .store-rankings-list-toolbar [data-slot='tabs-trigger'] { flex: 1; padding-inline: 6px; font-size: 12px; }
+  .store-rankings-list-toolbar [data-slot='tabs-list'] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; height: auto; gap: 8px; }
+  .store-rankings-list-toolbar [data-slot='tabs-trigger'] { width: 100%; min-height: 44px; height: auto; padding: 8px 4px; gap: 4px; font-size: 12px; }
+  .store-rankings-tab-label { white-space: normal; overflow-wrap: anywhere; text-align: center; }
   .store-rankings-list-toolbar [data-slot='tabs-trigger'] svg { display: none; }
   .store-rankings-filters { width: 100%; flex-wrap: wrap; justify-self: stretch; }
   .store-rankings-loading-tabs { width: 100%; }

@@ -164,11 +164,11 @@ export function StoreRankingsPage(input: {
       </div>
       <div className="store-rankings-board" aria-busy="true">
         <div className="store-rankings-list-toolbar" aria-hidden="true">
-          <Skeleton className="store-rankings-loading-tabs tw:h-10" />
+          <Skeleton className="store-rankings-loading-tabs tw:h-11" />
           <div className="store-rankings-filters">
-            <Skeleton className="store-rankings-loading-search tw:h-9" />
-            {privilegedSession ? <Skeleton className="store-rankings-loading-manager tw:h-9" /> : null}
-            <Skeleton className="store-rankings-loading-clear tw:h-9" />
+            <Skeleton className="store-rankings-loading-search tw:h-11" />
+            {privilegedSession ? <Skeleton className="store-rankings-loading-manager tw:h-11" /> : null}
+            <Skeleton className="store-rankings-loading-clear tw:h-11" />
           </div>
         </div>
         <div className="store-rankings-loading-body" aria-hidden="true">

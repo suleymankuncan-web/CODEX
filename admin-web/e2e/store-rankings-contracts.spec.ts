@@ -5,7 +5,45 @@ import {
   installStoreContractSession,
   regionId,
   storeIds,
+  type StoreContractPersona,
 } from './store-page-contract-fixtures'
+
+for (const persona of ['reportViewer', 'regionManager', 'storeManager', 'storePersonnel'] satisfies StoreContractPersona[]) {
+  test(`ranking tabs and real-sized counts never overlap for ${persona}`, async ({ page }) => {
+    await installStoreContractSession(page, persona)
+    await installGenericStoreApiFallbacks(page)
+    await page.route('**/api/reports/rankings**', async (route) => {
+      const fixture = createRankingsContractFixture()
+      fixture.storeLeaderboard.meta.total = 153
+      fixture.personnelLeaderboard.meta.total = 974
+      await route.fulfill({ json: fixture })
+    })
+    await page.goto('/store/rankings?period=2026-07-01')
+    await expect(page.getByRole('tab', { name: 'Mağaza listesi 153' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Personel listesi 974' })).toBeVisible()
+    for (const width of [1280, 1440, 360, 320]) {
+      await page.setViewportSize({ width, height: 900 })
+      await expect.poll(async () => page.locator('.store-rankings-list-toolbar').evaluate((toolbar) => {
+        const tabs = [...toolbar.querySelectorAll<HTMLElement>('[data-slot="tabs-trigger"]')]
+        const filters = toolbar.querySelector('.store-rankings-filters')?.getBoundingClientRect()
+        if (tabs.length !== 2 || !filters) return false
+        const [left, right] = tabs.map((tab) => tab.getBoundingClientRect())
+        return left.right <= right.left
+          && tabs.every((tab) => tab.scrollWidth <= tab.getBoundingClientRect().width + 1)
+          && left.left >= 0 && right.right <= innerWidth
+          && (innerWidth < 1280 || (right.right + 8 <= filters.left && Math.abs(right.y - filters.y) < 10))
+          && document.documentElement.scrollWidth <= innerWidth
+      })).toBe(true)
+    }
+    await page.setViewportSize({ width: 1280, height: 900 })
+    const before = await page.getByRole('tablist').boundingBox()
+    await page.getByRole('searchbox', { name: 'Mağaza Ara' }).fill('Marmara')
+    await expect(page.getByRole('searchbox', { name: 'Mağaza Ara' })).toHaveValue('Marmara')
+    await page.getByRole('button', { name: 'Temizle', exact: true }).click()
+    await expect(page.getByRole('searchbox', { name: 'Mağaza Ara' })).toHaveValue('')
+    await expect.poll(async () => (await page.getByRole('tablist').boundingBox())?.y).toBe(before?.y)
+  })
+}
 
 test('personnel ranking keeps tab state and exposes no profile navigation', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
@@ -69,6 +107,7 @@ test('ranking search waits for typing to stop and cancels the previous request w
   await expect(page.getByRole('heading', { name: 'Türkiye mağaza sıralaması' })).toBeVisible()
   requests.length = 0
   await page.clock.install()
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
 
   const search = page.getByRole('searchbox', { name: 'Mağaza Ara' })
   await search.pressSequentially('Ali')

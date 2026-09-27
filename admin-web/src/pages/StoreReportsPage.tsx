@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils'
 import { transientQueryRetryOptions } from '@/lib/query-retry'
 import { OperationsDirectory, StoreOperationsHeader } from './store-operations-layout'
 import { buildStoreReportsViewModel } from './store-reports-model'
-import { StoreReportsTable } from './store-reports-table'
 import { formatReportPeriodLabel, formatSourceReportCoverageLabel, getCurrentReportPeriod } from './store-reports-period'
 
 type StoreReportsPageProps = { authSummary?: AuthSessionSummary | null }
@@ -90,13 +89,12 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
           </div>
           {packageQuery.isLoading ? <div className="src-state" role="status"><Skeleton className="tw:h-5 tw:w-48" /><p>{t('storeReports.loading')}</p></div> : packageQuery.isError ? <Alert variant="destructive" className="src-error"><AlertTitle>{t('storeReports.errorTitle')}</AlertTitle><AlertDescription>{t('storeReports.errorCopy')}<Button type="button" variant="outline" onClick={() => packageQuery.refetch()}>{t('storeReports.retry')}</Button></AlertDescription></Alert> : <>
             <div className="src-package-meta"><Badge variant="secondary">{model.coverageLabel}</Badge><Badge variant="outline">{packageQuery.data?.isCurrentPeriod ? t('storeReports.currentPeriodCoverage') : t('storeReports.fullPeriodCoverage')}</Badge><span>{t('storeReports.exportScope')}</span></div>
-            <details className="src-sections" aria-label={t('storeReports.packageContentsAria')}>
+            <details className="src-sections" open aria-label={t('storeReports.packageContentsAria')}>
               <summary>{t('storeReports.packageContentsAria')}<span>{t('storeReports.sectionCount', { count: model.sections.length })}</span></summary>
               <div className="src-section-list">{model.sections.map(section => <div className="src-section-item" key={section.code}><div><strong>{section.label}</strong><small>{section.value}</small></div><Badge variant={section.status === 'ready' ? 'secondary' : 'outline'}>{t(section.status === 'ready' ? 'storeReports.state.ready' : 'storeReports.state.waiting')}</Badge></div>)}</div>
             </details>
           </>}
         </section>
-        {!packageQuery.isLoading && !packageQuery.isError && packageQuery.data ? <StoreReportsTable key={`${period}:${managerId}`} items={packageQuery.data.items} /> : null}
       </div>
     </div>
   </section>

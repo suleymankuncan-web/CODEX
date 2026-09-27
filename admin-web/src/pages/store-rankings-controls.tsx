@@ -50,19 +50,19 @@ export function RankingFilters(input: {
     ? (input.locale === 'tr' ? 'Mağaza Ara' : 'Search stores')
     : (input.locale === 'tr' ? 'Personel Ara' : 'Search personnel')
   return <div className="store-rankings-filters" role="group" aria-label={input.t('storeRankings.filtersEyebrow')}>
-      <InputGroup className="store-rankings-search-field">
+      <InputGroup className="store-rankings-search-field tw:h-11!">
         <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
-        <InputGroupInput type="search" aria-label={input.activeList === 'stores' ? placeholder : input.t('storeRankings.searchLabel')} placeholder={placeholder} value={input.search} onChange={event => input.onSearchChange(event.target.value)} />
+        <InputGroupInput className="tw:h-11!" type="search" aria-label={input.activeList === 'stores' ? placeholder : input.t('storeRankings.searchLabel')} placeholder={placeholder} value={input.search} onChange={event => input.onSearchChange(event.target.value)} />
         <InputGroupAddon align="inline-end"><Badge variant="secondary">{meta.total}</Badge></InputGroupAddon>
       </InputGroup>
       {input.isPrivileged ? <Select value={input.regionManagerUserId || 'all'} onValueChange={value => input.onManagerChange(value === 'all' ? '' : value)}>
-        <SelectTrigger aria-label={input.t('storeRankings.regionManagerFilterLabel')}><SelectValue placeholder={input.t('storeRankings.allRegions')} /></SelectTrigger>
+        <SelectTrigger className="tw:h-11!" aria-label={input.t('storeRankings.regionManagerFilterLabel')}><SelectValue placeholder={input.t('storeRankings.allRegions')} /></SelectTrigger>
         <SelectContent><SelectGroup>
           <SelectItem value="all">{input.t('storeRankings.allRegions')}</SelectItem>
           {input.ranking.filters.regionManagers.map(manager => <SelectItem key={manager.id} value={manager.id}>{normalizeDisplayLabel(manager.label, input.t('storeRankings.regionManager'))}</SelectItem>)}
         </SelectGroup></SelectContent>
       </Select> : <Badge variant="secondary">{input.t('storeRankings.top100Scope')}</Badge>}
-    <Button variant="ghost" size="sm" onClick={input.onClear}><X data-icon="inline-start" aria-hidden="true" />{input.t('storeRankings.clearFilters')}</Button>
+    <Button className="tw:h-11!" variant="ghost" size="sm" onClick={input.onClear}><X data-icon="inline-start" aria-hidden="true" />{input.t('storeRankings.clearFilters')}</Button>
   </div>
 }
 

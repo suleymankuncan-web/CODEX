@@ -77,3 +77,82 @@ test('Report Viewer manager search finds a manager beyond the current directory 
   await expect.poll(() => reads.some(url => url.searchParams.get('regionManagerSearch') === 'Zeynep' && (url.searchParams.get('regionManagerOffset') ?? '0') === '0')).toBe(true)
   await expect(company.getByRole('button', { name: /Zeynep Ak Bölge puanı/ })).toBeVisible()
 })
+
+test('KPI typing is debounced, retains focus and cancels superseded reads', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  const searches: string[] = []
+  const cancelled: string[] = []
+  page.on('requestfailed', request => {
+    const url = new URL(request.url())
+    if (url.pathname.endsWith('/rankings')) cancelled.push(url.searchParams.get('search') ?? '')
+  })
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    const search = url.searchParams.get('search')
+    if (search) searches.push(search)
+    if (search === 'Bursa') await new Promise(resolve => setTimeout(resolve, 1800))
+    await route.fulfill({ json: rankings(url) }).catch(() => undefined)
+  })
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const overview = page.getByTestId('store-kpis-region-overview')
+  const search = overview.getByRole('textbox', { name: 'Mağaza ara' }).filter({ visible: true })
+  await expect(search).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Bölge KPI özeti' }).getByText('Bölge GSM', { exact: true })).toBeVisible()
+  await page.clock.install()
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+  await search.pressSequentially('Bursa')
+  await page.clock.runFor(299)
+  expect(searches).toEqual([])
+  await page.clock.runFor(1)
+  await expect.poll(() => searches).toEqual(['Bursa'])
+  await expect(search).toBeFocused()
+  await search.fill('İstanbul')
+  await page.clock.runFor(300)
+  await expect.poll(() => searches).toEqual(['Bursa', 'İstanbul'])
+  await expect.poll(() => cancelled).toContain('Bursa')
+  await expect(search).toBeFocused()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})
+
+test('initial KPI view with daily-only imports resolves the returned month, cards and search', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  const reads: URL[] = []
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    reads.push(url)
+    const response = rankings(url)
+    response.availablePeriods = [{ periodType: 'daily', periodStart: '2026-07-26', periodEnd: '2026-07-26' }]
+    response.storeLeaderboard.meta.total = 1
+    Object.assign(response.storeLeaderboard.items[0]!, { metrics: [{ code: 'gsm_approval', actualValue: 75, targetValue: null, benchmarkValue: null }] })
+    await route.fulfill({ json: response })
+  })
+  await page.goto('/store/kpis')
+  const cards = page.getByRole('group', { name: 'Bölge KPI özeti' })
+  await expect(cards.getByText('%75', { exact: true })).toBeVisible()
+  await expect.poll(() => reads.some(url => url.searchParams.get('periodStart') === '2026-07-01')).toBe(true)
+  await page.getByRole('textbox', { name: 'Mağaza ara' }).filter({ visible: true }).fill('Bursa')
+  await expect.poll(() => reads.some(url => url.searchParams.get('search') === 'Bursa' && url.searchParams.get('periodStart') === '2026-07-01')).toBe(true)
+})
+
+test('a denied KPI search never retains cached authorized rows', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/reports/rankings**', async route => {
+    const url = new URL(route.request().url())
+    if (url.searchParams.get('search') === 'Denied') {
+      await route.fulfill({ status: 403, json: { message: 'Forbidden' } })
+      return
+    }
+    await route.fulfill({ json: rankings(url) })
+  })
+
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const overview = page.getByTestId('store-kpis-region-overview')
+  await expect(overview.getByText('İstanbul MOI AVM').first()).toBeVisible()
+  await overview.getByRole('textbox', { name: 'Mağaza ara' }).fill('Denied')
+  await expect(page.getByTestId('store-kpis-region-overview')).toHaveCount(0)
+  await expect(page.getByText('İstanbul MOI AVM')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Tekrar dene' })).toBeVisible()
+})
