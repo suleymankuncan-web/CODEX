@@ -3,7 +3,8 @@ import { setStoredLocale } from './locale-test-utils'
 import { demoStoreId, checklistCommandInstanceId, demoRegionId, regionSecondStoreId, outsideStoreId } from './store-surfaces-identities'
 import { routeRequestCenter, createStoreAuthSession, routeAuthSession, createTaskWorkspaceFixture, routeStoreSurfaceApi } from './store-surfaces-api-fixtures'
 import { authSessionFixture, checklistAcknowledgementsFixture } from './store-surfaces-profile-fixtures'
-import { competitionFixture, targetDistributionRequestsFixture, pendingTargetDistributionRequestsFixture, sellerCodeRequestFixture, offboardingRequestFixture, rejectedSellerCodeRequestFixture, rejectedOffboardingRequestFixture, competitionDetailFixture } from './store-surfaces-operations-fixtures'
+import { targetDistributionRequestsFixture, pendingTargetDistributionRequestsFixture, sellerCodeRequestFixture, offboardingRequestFixture, rejectedSellerCodeRequestFixture, rejectedOffboardingRequestFixture } from './store-surfaces-operations-fixtures'
+import { createStoreContractSession, installStoreContractSession } from './store-page-contract-fixtures'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -404,179 +405,86 @@ test('store incentives unavailable state switches to English copy and persists l
   await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
 })
 
-test('store competitions page renders visible contribution details', async ({ page }) => {
-  await page.goto('/store/competitions')
-
-  await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'April Region Challenge' }).first()).toBeVisible()
-  const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
-  const contributionRows = page.getByLabel('Yetkili mağaza yarışma katkıları')
-  await expect(readSummary.getByText('Okuma özeti')).toBeVisible()
-  await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
-  await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
-  await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
-  await expect(contributionRows.getByText('BM checklist', { exact: true })).toBeVisible()
-  await expect(page.getByText('Mağaza katkıları')).toBeVisible()
-  await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
-  await expect(page.getByText('93.50')).toBeVisible()
-  await expect(page.getByText('Outside Region Store')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /Recalculate/ })).toHaveCount(0)
-})
-
-test('store competitions lets store users retry after the detail load fails', async ({ page }) => {
-  let detailAttempts = 0
-  let allowCompetitionDetail = false
-
-  await page.unroute('**/api/competitions**')
-  await page.route('**/api/competitions**', async (route) => {
-    const request = route.request()
-    const pathname = new URL(request.url()).pathname
-
-    if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
-      await route.fulfill({
-        json: {
-          items: [competitionFixture],
-          meta: { count: 1, total: 1, limit: 50, offset: 0 },
-        },
-      })
-      return
-    }
-
-    if (
-      request.method() === 'GET' &&
-      pathname.endsWith(`/api/competitions/${competitionFixture.competitionId}`)
-    ) {
-      detailAttempts += 1
-
-      if (!allowCompetitionDetail) {
-        await route.fulfill({
-          status: 503,
-          json: { message: 'Temporary competition detail outage' },
-        })
-        return
-      }
-
-      await route.fulfill({ json: competitionDetailFixture })
-      return
-    }
-
-    await route.fulfill({
-      status: 403,
-      json: { message: 'Store competition surface is read-only' },
-    })
+test('parked competitions denies publisher contribution and never calls feature APIs', async ({ page }) => {
+  await installStoreContractSession(page, 'visualMerchandiser')
+  const session = createStoreContractSession('visualMerchandiser')
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', route => route.fulfill({ json: {
+    ...session,
+    user: { ...session.user, permissionScopes: { VM_REFERENCE_PUBLISHER: { companyIds: session.user.scope.companyIds } } },
+  } }))
+  const requests: string[] = []
+  page.on('request', request => {
+    if (/\/api\/(competitions|visual-merchandising|visual-comparisons)/.test(new URL(request.url()).pathname)) requests.push(request.url())
   })
 
   await page.goto('/store/competitions')
 
-  await expect(page.getByRole('heading', { name: 'Sıralama açılamadı' })).toBeVisible()
-  const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
-  await expect(retryButton).toBeVisible()
-
-  allowCompetitionDetail = true
-  await retryButton.click()
-
-  await expect(page.getByLabel('Mağaza yarışma okuma özeti').getByText('Okuma özeti')).toBeVisible()
-  await expect.poll(() => detailAttempts).toBeGreaterThan(1)
-  await expect(page.getByRole('heading', { name: 'Sıralama açılamadı' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /Bu rol için rota kullanılamaz|Route not available/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /katıl|gönder|contribute|submit/i })).toHaveCount(0)
+  await expect(page.locator('.store-command-nav a[href="/store/competitions"]')).toHaveCount(0)
+  expect(requests).toEqual([])
 })
 
-test('store competitions page localizes lifecycle states and competition types', async ({ page }) => {
-  const competitionSummaries = [
-    competitionFixture,
-    {
-      ...competitionFixture,
-      competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa02',
-      competitionCode: 'MAY_REGION_LEAGUE',
-      competitionName: 'May Region League',
-      competitionType: 'region_league',
-      lifecycleState: 'published',
-    },
-    {
-      ...competitionFixture,
-      competitionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03',
-      competitionCode: 'SUMMER_CAMPAIGN',
-      competitionName: 'Summer Campaign',
-      competitionType: 'campaign',
-      lifecycleState: 'completed',
-    },
-  ]
-
-  await page.unroute('**/api/competitions**')
-  await page.route('**/api/competitions**', async (route) => {
-    const request = route.request()
-    const pathname = new URL(request.url()).pathname
-
-    if (request.method() === 'GET' && pathname.endsWith('/api/competitions')) {
-      await route.fulfill({
-        json: {
-          items: competitionSummaries,
-          meta: {
-            count: competitionSummaries.length,
-            total: competitionSummaries.length,
-            limit: 50,
-            offset: 0,
-          },
-        },
-      })
-      return
-    }
-
-    if (
-      request.method() === 'GET' &&
-      pathname.endsWith(`/api/competitions/${competitionFixture.competitionId}`)
-    ) {
-      await route.fulfill({ json: competitionDetailFixture })
-      return
-    }
-
-    await route.fulfill({
-      status: 403,
-      json: { message: 'Store competition surface is read-only' },
-    })
+test('parked competitions has no unavailable-endpoint fetch or retry lifecycle', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.startsWith('/api/competitions')) requests.push(request.url())
   })
 
   await page.goto('/store/competitions')
 
-  const leagueRow = page.locator('article').filter({ hasText: 'May Region League' })
-  const campaignRow = page.locator('article').filter({ hasText: 'Summer Campaign' })
-  await expect(leagueRow.getByText('yayında', { exact: true })).toBeVisible()
-  await expect(leagueRow.getByText('bölge ligi', { exact: true })).toBeVisible()
-  await expect(campaignRow.getByText('tamamlandı', { exact: true })).toBeVisible()
-  await expect(campaignRow.getByText('kampanya', { exact: true })).toBeVisible()
-  await expect(page.locator('body')).not.toContainText('published')
-  await expect(page.locator('body')).not.toContainText('completed')
-  await expect(page.locator('body')).not.toContainText('region_league')
+  await expect(page.getByRole('heading', { name: /Bu rol için rota kullanılamaz|Route not available/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Yeniden dene|Retry/i })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: /Bu rol için rota kullanılamaz|Route not available/i })).toBeVisible()
+  expect(requests).toEqual([])
 })
 
-test('store competitions page switches chrome to English copy and persists locale', async ({
-  page,
-}) => {
+test('parked competitions does not leak feature state across allowed route navigation', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.startsWith('/api/competitions')) requests.push(request.url())
+  })
+
+  await page.goto('/store/tasks')
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
   await page.goto('/store/competitions')
+  await expect(page.getByRole('heading', { name: /Bu rol için rota kullanılamaz|Route not available/i })).toBeVisible()
+  await expect(page.getByText(/yarışma liderliği|competition leaderboard/i)).toHaveCount(0)
+  await page.goto('/store/tasks')
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
+  expect(requests).toEqual([])
+})
 
-  await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
-  await expect(page.getByText('Görünür yarışmalar')).toBeVisible()
-  await expect(page.getByText('Sadece okuma')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'İncele' }).first()).toBeVisible()
-  await expect(page.getByText('Store competitions')).toHaveCount(0)
-  await expect(page.locator('body')).not.toContainText('Ã')
-  await expect(page.locator('body')).not.toContainText('Ä')
-  await expect(page.locator('body')).not.toContainText('Å')
-
+test('parked competitions English denial persists across reload without feature calls', async ({ page }) => {
+  const requests: string[] = []
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.startsWith('/api/competitions')) requests.push(request.url())
+  })
+  await page.goto('/store/competitions')
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
-  await expect(page.getByText('Visible challenges')).toBeVisible()
-  await expect(page.getByText('Read only')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Review' }).first()).toBeVisible()
-  await expect(page.getByText('Team standing', { exact: true })).toBeVisible()
-  await expect(page.getByText('Contribution rows').first()).toBeVisible()
-  await expect(page.getByText('Mağaza yarışmaları')).toHaveCount(0)
-
+  await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
   await page.reload()
-
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store competitions/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
+  expect(requests).toEqual([])
+})
+
+test('parked competitions keeps locale and navigation boundary after leaving denial', async ({ page }) => {
+  await page.goto('/store/competitions')
+  await setStoredLocale(page, 'en')
+  await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
+  await expect(page.locator('.store-command-nav a[href="/store/competitions"]')).toHaveCount(0)
+
+  await page.goto('/store/tasks')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
+  await expect(page.locator('.store-command-nav a[href="/store/competitions"]')).toHaveCount(0)
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
 })
 
 test('store approvals page renders request center without creation forms', async ({ page }) => {
@@ -1010,32 +918,4 @@ test('store approvals page switches to English request center copy and persists 
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Request Center/i })).toBeVisible()
-})
-test('language toggle localizes competition read labels and persists preference', async ({ page }) => {
-  await page.goto('/store/competitions')
-
-  const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
-  const contributionRows = page.getByLabel('Yetkili mağaza yarışma katkıları')
-
-  await expect(readSummary.getByRole('heading', { name: 'Okuma özeti' })).toBeVisible()
-  await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
-  await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
-  await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
-
-  await setStoredLocale(page, 'en')
-
-  const readSummaryEn = page.getByLabel('Store competition read summary')
-  const contributionRowsEn = page.getByLabel('Authorized store competition contributions')
-
-  await expect(readSummaryEn.getByRole('heading', { name: 'Read summary' })).toBeVisible()
-  await expect(readSummaryEn.getByText('95% contribution coverage')).toBeVisible()
-  await expect(contributionRowsEn.getByText('Contribution health')).toBeVisible()
-  await expect(contributionRowsEn.getByText('Partial contribution').first()).toBeVisible()
-
-  await page.reload()
-
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(readSummaryEn.getByRole('heading', { name: 'Read summary' })).toBeVisible()
-  await expect(contributionRowsEn.getByText('Contribution health')).toBeVisible()
-  await expect(page.locator('.language-toggle-button')).toHaveCount(0)
 })

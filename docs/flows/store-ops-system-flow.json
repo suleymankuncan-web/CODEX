@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T09:23:08.798Z",
+  "generatedAt": "2026-09-27T20:49:46.468Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -732,7 +732,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 366
+        "line": 359
       }
     },
     {
@@ -782,7 +782,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 349
+        "line": 342
       }
     },
     {
@@ -813,7 +813,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 331
+        "line": 324
       }
     },
     {
@@ -866,7 +866,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 383
+        "line": 376
       }
     },
     {
@@ -891,7 +891,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 266
+        "line": 259
       }
     },
     {
@@ -914,7 +914,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 283
+        "line": 276
       }
     },
     {
@@ -940,7 +940,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 300
+        "line": 293
       }
     },
     {
@@ -966,7 +966,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 314
+        "line": 307
       }
     },
     {
@@ -992,7 +992,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 454
+        "line": 447
       }
     },
     {
@@ -1023,7 +1023,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 400
+        "line": 393
       }
     },
     {
@@ -1048,7 +1048,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 418
+        "line": 411
       }
     },
     {
@@ -1073,7 +1073,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 249
+        "line": 242
       }
     },
     {
@@ -1122,7 +1122,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 437
+        "line": 430
       }
     }
   ],

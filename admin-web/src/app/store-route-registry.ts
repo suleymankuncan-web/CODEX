@@ -233,15 +233,8 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       actionScope: 'assigned_store',
     },
     modulePreload: () => import('../pages/StoreVmCampaignsPage'),
-    access: (authSummary) => {
-      if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
-        return (authSummary?.user.actionScope.assignedStoreIds.length ?? 0) > 0
-      }
-      if (hasAnyRole(authSummary, ['STORE_MANAGER'])) return true
-      const permissions = authSummary?.user.permissionScopes ?? {}
-      return (permissions.VM_REFERENCE_PUBLISHER?.companyIds.length ?? 0) > 0 ||
-        (permissions.VM_VISUAL_REVIEWER?.companyIds.length ?? 0) > 0
-    },
+    // Temporarily retired in the Store workspace, including direct links and VM-only users.
+    access: () => false,
   },
   {
     id: 'tasks',
@@ -358,7 +351,7 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       actionScope: 'none',
     },
     modulePreload: () => import('../pages/StoreCompetitionsPage'),
-    access: (authSummary) => hasAnyRole(authSummary, storeCompetitionRoles),
+    access: () => false,
   },
   {
     id: 'approvals',
