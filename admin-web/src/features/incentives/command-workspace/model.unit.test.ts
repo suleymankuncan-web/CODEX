@@ -32,6 +32,7 @@ const workspace: IncentiveWorkspace = {
     storeMetadata: { status: 'complete' },
     rateMetadata: { status: 'complete' },
     correctionActors: { status: 'complete' },
+    movementTracking: { status: 'complete' },
   },
   rateMetadata: {
     status: 'resolved',
@@ -50,12 +51,13 @@ const workspace: IncentiveWorkspace = {
       stores: [
         {
           storeId: 'store-a', storeCode: 'MOI', storeName: 'Mall of İstanbul', city: null,
-          storeTarget: '1000.00', storeActualNetSales: '1100.00', storeAchievementPct: '110.0000', dailyActualNetSales: null, dailyAchievementPct: null,
+          storeTarget: '1000.00', storeActualNetSales: '1100.00', storeAchievementPct: '110.0000', dailyActualNetSales: null, trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null, dailyAchievementPct: null,
           capabilities: { canMarkStoreReview: true, canCreateCorrection: true, canVoidCorrection: true },
           review: { status: 'reviewed', reviewedAt: '2026-07-01T10:00:00.000Z', periodCloseStatus: 'closed' },
+          outOfRosterReturns: [],
           rows: [{
             employeeId: 'employee-a', displayName: 'Derya Uslu', participantType: 'personnel',
-            positionCode: 'SALES_ASSOCIATE', target: '500.00', actual: '550.00', dailyActualNetSales: null, dailyAchievementPct: null, achievementPct: '110.0000',
+            positionCode: 'SALES_ASSOCIATE', target: '500.00', actual: '550.00', dailyActualNetSales: null, trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null, dailyAchievementPct: null, achievementPct: '110.0000',
             rate: '0.0150', calculatedAmount: '8.25', finalAmount: '10.25', signedDifferenceAmount: '2.00',
             status: 'corrected', correction: null, correctionRecords: [],
           }],
@@ -68,9 +70,9 @@ const workspace: IncentiveWorkspace = {
       package: { status: 'not_submitted', submittedAt: null, reviewedAt: null, reviewNote: null },
       stores: [{
         storeId: 'store-b', storeCode: null, storeName: 'Capacity AVM', city: null,
-        storeTarget: null, storeActualNetSales: null, storeAchievementPct: null, dailyActualNetSales: null, dailyAchievementPct: null,
+        storeTarget: null, storeActualNetSales: null, storeAchievementPct: null, dailyActualNetSales: null, trackedSaleAmount: null, trackedReturnAmount: null, trackedNetAmount: null, dailyAchievementPct: null,
         capabilities: { canMarkStoreReview: true, canCreateCorrection: true, canVoidCorrection: true },
-        review: { status: 'pending_review', reviewedAt: null, periodCloseStatus: 'projection_only' }, rows: [],
+        review: { status: 'pending_review', reviewedAt: null, periodCloseStatus: 'projection_only' }, rows: [], outOfRosterReturns: [],
       }],
     },
   ],

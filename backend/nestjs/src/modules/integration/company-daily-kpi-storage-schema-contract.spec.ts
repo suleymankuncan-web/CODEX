@@ -30,6 +30,14 @@ const storeTotalsMigrationSql = readFileSync(
   ),
   "utf8",
 );
+const unmappedPersonnelMigrationSql = readFileSync(
+  join(projectRoot, "db", "migrations", "086_unmapped_daily_personnel_sales_v1.sql"),
+  "utf8",
+);
+const unmappedPersonnelRollbackSql = readFileSync(
+  join(projectRoot, "db", "rollback", "086_unmapped_daily_personnel_sales_v1.rollback.sql"),
+  "utf8",
+);
 
 describe("company daily KPI component storage schema contract", () => {
   it.each([schemaSql, migrationSql])(
@@ -95,6 +103,17 @@ describe("company daily KPI component storage schema contract", () => {
         "net_amount_try = sale_amount_try + signed_return_amount_try",
       );
     }
+  });
+
+  it("keeps return-only unknown personnel facts without creating employee assignments", () => {
+    for (const sql of [schemaSql, unmappedPersonnelMigrationSql]) {
+      expect(sql).toContain("CREATE TABLE IF NOT EXISTS ops.company_daily_kpi_unmapped_personnel_sales");
+      expect(sql).toContain("net_amount_try = sale_amount_try + signed_return_amount_try");
+      expect(sql).toContain("REFERENCES ops.company_daily_kpi_component_outcome");
+    }
+    expect(unmappedPersonnelMigrationSql).not.toContain("ops.employee_assignment_history");
+    expect(unmappedPersonnelMigrationSql).not.toContain("ops.kpi_actual");
+    expect(unmappedPersonnelRollbackSql).toContain("Preserve unmapped personnel return facts");
   });
 
   it("provides a fail-closed rollback before dropping typed facts", () => {

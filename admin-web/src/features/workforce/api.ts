@@ -127,6 +127,8 @@ export type WorkforceCommandStore = {
     positionName: string
     assignmentStartDate: string | null
     employmentStatus: string
+    positiveSalesCoverageDays: number
+    noPositiveSales15Days: boolean
   }>
   personnelTotal: number
   personnelLimit: number

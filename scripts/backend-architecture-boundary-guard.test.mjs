@@ -259,6 +259,7 @@ const storeOpsModuleGraphLimits = new Map([
     'backend/nestjs/src/modules/store-ops/store-ops-workforce.module.ts',
     { controllers: 1, providers: 3, exports: 1 },
   ],
+  ['backend/nestjs/src/modules/store-ops/store-ops-no-positive-sales-alert.module.ts', { controllers: 0, providers: 3, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-workforce-workspace-read.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-snapshot.module.ts',

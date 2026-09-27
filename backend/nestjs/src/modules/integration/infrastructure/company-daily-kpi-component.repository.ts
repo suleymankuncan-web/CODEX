@@ -24,6 +24,10 @@ type EmployeeSalesFact = {
   netAmountTry: string;
 };
 
+type UnmappedPersonnelSalesFact = Omit<EmployeeSalesFact, "employeeId"> & {
+  personnelCode: string;
+};
+
 type StoreSalesFact = {
   storeId: string;
   saleInvoiceCount: number;
@@ -52,6 +56,7 @@ export type CompanyDailyKpiComponentReplacement =
       operation: "sales";
       employeeSales: EmployeeSalesFact[];
       storeSales: StoreSalesFact[];
+      unmappedPersonnelSales?: UnmappedPersonnelSalesFact[];
     })
   | (CommonReplacement & {
       operation: "footfall";
@@ -290,6 +295,41 @@ export class CompanyDailyKpiComponentRepository {
           ],
         );
       }
+      if (input.unmappedPersonnelSales?.length) {
+        await client.query(
+          `
+            INSERT INTO ops.company_daily_kpi_unmapped_personnel_sales (
+              component_outcome_id, business_date, store_id, personnel_code,
+              sale_invoice_count, return_invoice_count,
+              sale_quantity, signed_return_quantity, net_quantity,
+              sale_amount_try, signed_return_amount_try, net_amount_try
+            )
+            SELECT $1::uuid, $2::date, fact.store_id, fact.personnel_code,
+                   fact.sale_invoice_count, fact.return_invoice_count,
+                   fact.sale_quantity, fact.signed_return_quantity, fact.net_quantity,
+                   fact.sale_amount_try, fact.signed_return_amount_try, fact.net_amount_try
+            FROM jsonb_to_recordset($3::jsonb) AS fact(
+              store_id uuid, personnel_code text,
+              sale_invoice_count integer, return_invoice_count integer,
+              sale_quantity numeric(38,12), signed_return_quantity numeric(38,12),
+              net_quantity numeric(38,12), sale_amount_try numeric(38,12),
+              signed_return_amount_try numeric(38,12), net_amount_try numeric(38,12)
+            )
+          `,
+          [componentOutcomeId, input.businessDate, JSON.stringify(input.unmappedPersonnelSales.map((fact) => ({
+            store_id: fact.storeId,
+            personnel_code: fact.personnelCode,
+            sale_invoice_count: fact.saleInvoiceCount,
+            return_invoice_count: fact.returnInvoiceCount,
+            sale_quantity: fact.saleQuantity,
+            signed_return_quantity: fact.signedReturnQuantity,
+            net_quantity: fact.netQuantity,
+            sale_amount_try: fact.saleAmountTry,
+            signed_return_amount_try: fact.signedReturnAmountTry,
+            net_amount_try: fact.netAmountTry,
+          })))],
+        );
+      }
       return;
     }
 
@@ -366,10 +406,10 @@ export class CompanyDailyKpiComponentRepository {
     }
 
     if (input.operation === "sales") {
-      this.assertSalesFacts(input.employeeSales, input.storeSales);
+      this.assertSalesFacts(input.employeeSales, input.storeSales, input.unmappedPersonnelSales ?? []);
       if (
         input.aggregateCount !==
-        input.employeeSales.length + input.storeSales.length
+        input.employeeSales.length + input.storeSales.length + (input.unmappedPersonnelSales?.length ?? 0)
       ) {
         throw new BadRequestException(
           "company_daily_kpi_aggregate_count_mismatch",
@@ -405,6 +445,7 @@ export class CompanyDailyKpiComponentRepository {
   private assertSalesFacts(
     employeeFacts: EmployeeSalesFact[],
     storeFacts: StoreSalesFact[],
+    unmappedFacts: UnmappedPersonnelSalesFact[],
   ) {
     this.assertUniqueStoreFacts(storeFacts);
     const storeIds = new Set(storeFacts.map((fact) => fact.storeId));
@@ -435,6 +476,23 @@ export class CompanyDailyKpiComponentRepository {
       }
       employeeGrains.add(grain);
 
+      this.assertSalesTotals(fact);
+    }
+    const unmappedGrains = new Set<string>();
+    for (const fact of unmappedFacts) {
+      this.assertUuid(fact.storeId);
+      this.assertCount(fact.saleInvoiceCount);
+      this.assertCount(fact.returnInvoiceCount);
+      if (!storeIds.has(fact.storeId) || fact.personnelCode.length < 1 || fact.personnelCode.length > 80 ||
+        fact.personnelCode.trim() !== fact.personnelCode ||
+        [...fact.personnelCode].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) {
+        throw new BadRequestException("company_daily_kpi_invalid_unmapped_personnel");
+      }
+      const grain = `${fact.storeId}:${fact.personnelCode}`;
+      if (unmappedGrains.has(grain)) {
+        throw new BadRequestException("company_daily_kpi_duplicate_unmapped_personnel_grain");
+      }
+      unmappedGrains.add(grain);
       this.assertSalesTotals(fact);
     }
   }
@@ -500,6 +558,7 @@ export class CompanyDailyKpiComponentRepository {
         ? [
             ...input.storeSales.map((fact) => fact.storeId),
             ...input.employeeSales.map((fact) => fact.storeId),
+            ...(input.unmappedPersonnelSales ?? []).map((fact) => fact.storeId),
           ]
         : input.operation === "footfall"
           ? input.storeFootfall.map((fact) => fact.storeId)

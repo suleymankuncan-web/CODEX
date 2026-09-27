@@ -5,7 +5,7 @@ import type { SalesTargetIncentiveRegionCorrectionRow } from "../infrastructure/
 // Traceability: INC-FR-001..004/009, NFR-005..007, AC-INC-005..008, EC-001/002/012/013/014/017/022.
 
 function harness() {
-  const readModel = { buildCurrentProjection: jest.fn(), listDailySalesTracking: jest.fn().mockResolvedValue([]) };
+  const readModel = { buildCurrentProjection: jest.fn(), listDailySalesTracking: jest.fn().mockResolvedValue([]), listMovementTracking: jest.fn().mockResolvedValue([]) };
   const corrections = { listApprovedAdjustmentSummaries: jest.fn() };
   const repository = {
     listStoreMetadata: jest.fn().mockResolvedValue([]),
@@ -74,6 +74,28 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(person?.actual).toBe("550.00");
     expect(person?.dailyActualNetSales).toBe("75.00");
     expect(person?.dailyAchievementPct).toBe("15.00");
+  });
+
+  it("keeps negative returns outside the roster separate and never adds them again to store net", async () => {
+    const { service, readModel, corrections } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    readModel.listMovementTracking.mockResolvedValue([
+      { scope_type: "store", store_id: "store-a", employee_id: null, personnel_code: null, display_name: null, sale_amount: "1000", return_amount: "-1200", net_amount: "-200" },
+      { scope_type: "employee", store_id: "store-a", employee_id: "employee-a", personnel_code: "17", display_name: "Derya Uslu", sale_amount: "300", return_amount: "-400", net_amount: "-100" },
+      { scope_type: "employee", store_id: "store-a", employee_id: "former-a", personnel_code: "18", display_name: "Eski Çalışan", sale_amount: "0", return_amount: "-500", net_amount: "-500" },
+      { scope_type: "unmapped", store_id: "store-a", employee_id: null, personnel_code: "19", display_name: null, sale_amount: "0", return_amount: "-300", net_amount: "-300" },
+    ]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], { REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] } }) as never,
+      periodKey: "2026-05", throughDate: "2026-05-09",
+    });
+    const store = result.managerGroups[0].stores[0];
+    expect([store.trackedSaleAmount, store.trackedReturnAmount, store.trackedNetAmount]).toEqual(["1000", "-1200", "-200"]);
+    expect(store.rows[0].actual).toBe("550.00");
+    expect([store.rows[0].trackedSaleAmount, store.rows[0].trackedReturnAmount, store.rows[0].trackedNetAmount]).toEqual(["300", "-400", "-100"]);
+    expect(store.outOfRosterReturns.map(item => [item.displayName, item.returnAmount])).toEqual([["Eski Çalışan", "-500"], ["19", "-300"]]);
   });
 
   it("rejects a daily tracking date outside the selected month", async () => {

@@ -32,7 +32,7 @@ describe("Sales Target Incentive Workspace OpenAPI", () => {
     expect(document.components.schemas.SalesTargetIncentiveWorkspaceRegion.required).toContain("capabilities");
     expect(document.components.schemas.SalesTargetIncentiveWorkspace.required).toContain("sections");
     expect(document.components.schemas.SalesTargetIncentiveWorkspaceSections.required).toEqual([
-      "core", "storeMetadata", "rateMetadata", "correctionActors",
+      "core", "storeMetadata", "rateMetadata", "correctionActors", "movementTracking",
     ]);
   });
 });

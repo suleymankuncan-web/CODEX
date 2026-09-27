@@ -85,6 +85,9 @@ test('database invariant preflight SQL is read only and covers every required ch
     // Correction scope is checked by personnel-correction-invariants-v1.sql
     // and the disposable PostgreSQL negative/rollback proof.
     'ops.personnel_correction_request',
+    // Migration 087 binds alert deliveries to their company/store by a
+    // composite FK; the V1 diagnostic query is digest-locked and immutable.
+    'ops.no_positive_sales_alert_delivery',
     'ops.media_asset',
     'ops.checklist_response_media',
     'ops.store_action_solution_attempt',
@@ -129,6 +132,15 @@ test('database invariant preflight SQL is read only and covers every required ch
   assert.match(sql, /resolved_company_id/)
   assert.match(sql, /resolved_region_id/)
   assert.match(sql, /resolved_store_id/)
+})
+
+test('no-sales alert company/store scope is enforced without changing immutable V1 diagnostics', () => {
+  const migration = readFileSync('db/migrations/087_no_positive_sales_alert_delivery_v1.sql', 'utf8')
+  const schema = readFileSync('db/schema.sql', 'utf8')
+  for (const ddl of [migration, schema]) {
+    assert.match(ddl, /CREATE UNIQUE INDEX IF NOT EXISTS idx_store_company_identity\s+ON ops\.store \(store_id, company_id\)/)
+    assert.match(ddl, /CONSTRAINT fk_no_positive_sales_alert_store_company\s+FOREIGN KEY \(store_id, company_id\) REFERENCES ops\.store\(store_id, company_id\)/)
+  }
 })
 
 test('database invariant runner proves read-only mode and keeps output sanitized', () => {

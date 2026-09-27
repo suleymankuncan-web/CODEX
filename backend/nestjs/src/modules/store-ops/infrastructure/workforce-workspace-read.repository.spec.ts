@@ -35,6 +35,13 @@ describe("WorkforceWorkspaceReadRepository", () => {
     expect(activeSql).toContain("assignment.end_date >= clock.business_today");
     expect(activeSql).toContain("INNER JOIN scoped_store");
     expect(activeSql).toContain("LIMIT $3 OFFSET $4");
+    expect(activeSql).toContain("coverage.covered_days = 15");
+    expect(activeSql).toContain("page.assignment_start_date::date <= clock.business_today - 15");
+    expect(activeSql).toContain("employee_sales.sale_invoice_count > 0");
+    expect(activeSql).toContain("employee_sales.sale_amount_try > 0");
+    expect(activeSql).toContain("employee_sales.employee_id = page.employee_id");
+    expect(activeSql).not.toContain("employee_sales.net_amount_try > 0");
+    expect(activeSql).toContain("outcome.status = 'succeeded'");
     expect(historySql).toContain("SUM(new_period)");
     expect(historySql).toContain("BOOL_OR(exit_date IS NULL)");
     expect(historySql).toContain("INNER JOIN scoped_store");

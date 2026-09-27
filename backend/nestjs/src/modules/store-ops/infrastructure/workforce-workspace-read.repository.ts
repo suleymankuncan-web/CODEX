@@ -32,6 +32,8 @@ export type WorkforceWorkspacePersonRow = {
   position_name: string;
   assignment_start_date: string | null;
   employment_status: string;
+  positive_sales_coverage_days: number;
+  no_positive_sales_15_days: boolean;
 };
 
 export type WorkforceWorkspaceHistoryRow = {
@@ -262,10 +264,37 @@ export class WorkforceWorkspaceReadRepository {
         page AS (
           SELECT * FROM active_personnel ORDER BY display_name ASC NULLS LAST, employee_id ASC
           LIMIT $${limitIndex} OFFSET $${offsetIndex}
+        ),
+        sales_coverage AS (
+          SELECT COUNT(DISTINCT store_sales.business_date)::integer AS covered_days
+          FROM ops.company_daily_kpi_store_sales store_sales
+          INNER JOIN ops.company_daily_kpi_component_outcome outcome
+            ON outcome.component_outcome_id = store_sales.component_outcome_id
+           AND outcome.status = 'succeeded' AND outcome.operation = 'sales'
+          CROSS JOIN business_clock clock
+          WHERE store_sales.store_id = $${storeIndex}::uuid
+            AND store_sales.business_date BETWEEN clock.business_today - 15 AND clock.business_today - 1
+        ),
+        evaluated AS (
+          SELECT page.*, coverage.covered_days AS positive_sales_coverage_days,
+            (page.position_code IN ('ASSISTANT_MANAGER', 'SENIOR_SALES_CONSULTANT', 'SALES_ASSOCIATE', 'SHIFT_LEAD')
+              AND page.assignment_start_date::date <= clock.business_today - 15
+              AND coverage.covered_days = 15
+              AND NOT EXISTS (
+                SELECT 1 FROM ops.company_daily_kpi_employee_sales employee_sales
+                INNER JOIN ops.company_daily_kpi_component_outcome outcome
+                  ON outcome.component_outcome_id = employee_sales.component_outcome_id
+                 AND outcome.status = 'succeeded' AND outcome.operation = 'sales'
+                WHERE employee_sales.employee_id = page.employee_id
+                  AND employee_sales.business_date BETWEEN clock.business_today - 15 AND clock.business_today - 1
+                  AND employee_sales.sale_invoice_count > 0
+                  AND employee_sales.sale_amount_try > 0
+              )) AS no_positive_sales_15_days
+          FROM page CROSS JOIN business_clock clock CROSS JOIN sales_coverage coverage
         )
-        SELECT COALESCE(jsonb_agg(to_jsonb(page) ORDER BY page.display_name ASC NULLS LAST, page.employee_id ASC), '[]'::jsonb) AS items,
+        SELECT COALESCE(jsonb_agg(to_jsonb(evaluated) ORDER BY evaluated.display_name ASC NULLS LAST, evaluated.employee_id ASC), '[]'::jsonb) AS items,
           (SELECT COUNT(*)::text FROM active_personnel) AS total_count
-        FROM page
+        FROM evaluated
       `,
       [...scoped.params, input.storeId, input.limit, input.offset],
     );

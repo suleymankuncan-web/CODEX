@@ -18,12 +18,13 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       { status: { type: "string", enum: ["complete", "unavailable"] } },
     ),
     SalesTargetIncentiveWorkspaceSections: objectSchema(
-      ["core", "storeMetadata", "rateMetadata", "correctionActors"],
+      ["core", "storeMetadata", "rateMetadata", "correctionActors", "movementTracking"],
       {
         core: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
         storeMetadata: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
         rateMetadata: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
         correctionActors: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+        movementTracking: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
       },
     ),
     SalesTargetIncentiveWorkspaceCapabilities: objectSchema(
@@ -83,22 +84,30 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspaceRow: objectSchema(
-      ["employeeId", "displayName", "participantType", "positionCode", "target", "actual", "dailyActualNetSales", "dailyAchievementPct", "achievementPct", "rate", "calculatedAmount", "finalAmount", "signedDifferenceAmount", "status", "correction", "correctionRecords"],
+      ["employeeId", "displayName", "participantType", "positionCode", "target", "actual", "dailyActualNetSales", "trackedSaleAmount", "trackedReturnAmount", "trackedNetAmount", "dailyAchievementPct", "achievementPct", "rate", "calculatedAmount", "finalAmount", "signedDifferenceAmount", "status", "correction", "correctionRecords"],
       {
         employeeId: { type: "string", format: "uuid" }, displayName: { type: "string" },
         participantType: { type: "string", enum: ["store_manager", "personnel"] }, positionCode: { type: "string" },
-        target: decimal, actual: decimal, dailyActualNetSales: decimal, dailyAchievementPct: decimal, achievementPct: decimal, rate: decimal,
+        target: decimal, actual: decimal, dailyActualNetSales: decimal, trackedSaleAmount: decimal, trackedReturnAmount: decimal, trackedNetAmount: decimal, dailyAchievementPct: decimal, achievementPct: decimal, rate: decimal,
         calculatedAmount: money, finalAmount: money, signedDifferenceAmount: money,
         status: { type: "string", enum: ["projected", "blocked", "no_source", "corrected", "adjusted"] },
         correction: { ...ref("SalesTargetIncentiveWorkspaceCorrection"), nullable: true },
         correctionRecords: arrayRef("SalesTargetIncentiveWorkspaceCorrection"),
       },
     ),
+    SalesTargetIncentiveOutOfRosterReturn: objectSchema(
+      ["employeeId", "personnelCode", "displayName", "saleAmount", "returnAmount", "netAmount"],
+      {
+        employeeId: { type: "string", format: "uuid", nullable: true },
+        personnelCode: nullableString, displayName: { type: "string" },
+        saleAmount: decimal, returnAmount: decimal, netAmount: decimal,
+      },
+    ),
     SalesTargetIncentiveWorkspaceStore: objectSchema(
-      ["storeId", "storeCode", "storeName", "city", "storeTarget", "storeActualNetSales", "storeAchievementPct", "dailyActualNetSales", "dailyAchievementPct", "capabilities", "review", "rows"],
+      ["storeId", "storeCode", "storeName", "city", "storeTarget", "storeActualNetSales", "storeAchievementPct", "dailyActualNetSales", "trackedSaleAmount", "trackedReturnAmount", "trackedNetAmount", "dailyAchievementPct", "capabilities", "review", "rows", "outOfRosterReturns"],
       {
         storeId: { type: "string", format: "uuid" }, storeCode: nullableString, storeName: { type: "string" }, city: nullableString,
-        storeTarget: decimal, storeActualNetSales: decimal, storeAchievementPct: decimal, dailyActualNetSales: decimal, dailyAchievementPct: decimal,
+        storeTarget: decimal, storeActualNetSales: decimal, storeAchievementPct: decimal, dailyActualNetSales: decimal, trackedSaleAmount: decimal, trackedReturnAmount: decimal, trackedNetAmount: decimal, dailyAchievementPct: decimal,
         capabilities: objectSchema(["canMarkStoreReview", "canCreateCorrection", "canVoidCorrection"], {
           canMarkStoreReview: { type: "boolean" }, canCreateCorrection: { type: "boolean" }, canVoidCorrection: { type: "boolean" },
         }),
@@ -108,6 +117,7 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
           periodCloseStatus: { type: "string", enum: ["projection_only", "closed"] },
         }),
         rows: arrayRef("SalesTargetIncentiveWorkspaceRow"),
+        outOfRosterReturns: arrayRef("SalesTargetIncentiveOutOfRosterReturn"),
       },
     ),
     SalesTargetIncentiveWorkspaceManagerGroup: objectSchema(

@@ -11,6 +11,7 @@ export type SalesTargetIncentiveWorkspaceSections = {
   storeMetadata: SalesTargetIncentiveWorkspaceSectionStatus;
   rateMetadata: SalesTargetIncentiveWorkspaceSectionStatus;
   correctionActors: SalesTargetIncentiveWorkspaceSectionStatus;
+  movementTracking: SalesTargetIncentiveWorkspaceSectionStatus;
 };
 
 export type SalesTargetIncentiveWorkspaceRateBracket = {
@@ -63,6 +64,9 @@ export type SalesTargetIncentiveWorkspaceRow = {
   target: string | null;
   actual: string | null;
   dailyActualNetSales: string | null;
+  trackedSaleAmount: string | null;
+  trackedReturnAmount: string | null;
+  trackedNetAmount: string | null;
   dailyAchievementPct: string | null;
   achievementPct: string | null;
   rate: string | null;
@@ -74,6 +78,15 @@ export type SalesTargetIncentiveWorkspaceRow = {
   correctionRecords: SalesTargetIncentiveWorkspaceCorrection[];
 };
 
+export type SalesTargetIncentiveOutOfRosterReturn = {
+  employeeId: string | null;
+  personnelCode: string | null;
+  displayName: string;
+  saleAmount: string;
+  returnAmount: string;
+  netAmount: string;
+};
+
 export type SalesTargetIncentiveWorkspaceStore = {
   storeId: string;
   storeCode: string | null;
@@ -83,6 +96,9 @@ export type SalesTargetIncentiveWorkspaceStore = {
   storeActualNetSales: string | null;
   storeAchievementPct: string | null;
   dailyActualNetSales: string | null;
+  trackedSaleAmount: string | null;
+  trackedReturnAmount: string | null;
+  trackedNetAmount: string | null;
   dailyAchievementPct: string | null;
   capabilities: {
     canMarkStoreReview: boolean;
@@ -95,6 +111,7 @@ export type SalesTargetIncentiveWorkspaceStore = {
     periodCloseStatus: "projection_only" | "closed";
   };
   rows: SalesTargetIncentiveWorkspaceRow[];
+  outOfRosterReturns: SalesTargetIncentiveOutOfRosterReturn[];
 };
 
 export type SalesTargetIncentiveWorkspaceManagerGroup = {

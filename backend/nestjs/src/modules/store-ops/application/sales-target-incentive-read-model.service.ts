@@ -128,6 +128,10 @@ export class SalesTargetIncentiveReadModelService {
     return this.repository.listDailySalesTracking(input);
   }
 
+  async listMovementTracking(input: { storeIds: string[]; periodStart: string; throughDate: string }) {
+    return this.repository.listMovementTracking(input);
+  }
+
   async buildCurrentProjection(
     input: SalesTargetIncentiveReadModelScope,
   ): Promise<SalesTargetIncentiveProjectionReadModel> {

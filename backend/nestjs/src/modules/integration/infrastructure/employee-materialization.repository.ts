@@ -60,6 +60,10 @@ export class EmployeeMaterializationRepository {
           last_name = EXCLUDED.last_name,
           employment_status = EXCLUDED.employment_status,
           employment_type = EXCLUDED.employment_type
+        WHERE NOT (
+          (ops.employee.employment_status <> 'active' OR ops.employee.termination_date IS NOT NULL)
+          AND EXCLUDED.employment_status = 'active'
+        )
       `,
       [
         input.employeeId,
