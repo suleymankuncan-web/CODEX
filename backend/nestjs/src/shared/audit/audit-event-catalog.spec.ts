@@ -6,7 +6,9 @@ import { AUDIT_EVENT_CATALOG, getAuditEventCatalogEntry } from "./audit-event-ca
 const MODULE_SOURCE_DIR = join(process.cwd(), "src", "modules");
 const EVENT_LITERAL_PATTERN = /["'`]([a-z][a-z0-9_]+\.[a-z][a-z0-9_]+(?:_[a-z0-9]+)*)["'`]/g;
 const ENTITY_NAME_PREFIXES = ["ops.", "stg.", "rpt.", "audit."];
-const NON_AUDIT_EVENT_PREFIXES = ["power_bi_export_upload."];
+// Operational log events do not enter audit.event_log; delivery history lives
+// in the dedicated no-positive-sales alert ledger instead.
+const NON_AUDIT_EVENT_PREFIXES = ["power_bi_export_upload.", "no_sales_alert."];
 
 describe("AUDIT_EVENT_CATALOG", () => {
   it("catalogs every backend audit event literal emitted by modules", () => {
