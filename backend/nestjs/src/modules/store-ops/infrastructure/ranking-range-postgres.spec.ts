@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readRankingStoreRange, readRankingRangeBenchmarks } from "./ranking-range-read";
 import { readRankingPersonnelRange } from "./ranking-personnel-range-read";
+import { rankingFactsSelectSql } from "./ranking-facts-cache-sql";
 import { readEmployeeTurkeyBenchmarks } from "./personnel-benchmark-read";
 import { RankingReportingReadRepository } from "./ranking-reporting-read.repository";
 import { KpiBenchmarkScoringService } from "../application/kpi-benchmark-scoring.service";
@@ -99,6 +100,24 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
     const missing = await readRankingStoreRange(database as never, { ...range, periodStart: "2026-09-03", periodEnd: "2026-09-03" });
     expect(missing.find(row => row.kpi_code === "ATV")?.actual_value).toBeNull();
     expect(missing.find(row => row.kpi_code === "CR")?.actual_value).toBeNull();
+  });
+  it("keeps cached and uncached multi-store personnel rows in the same stable order", async () => {
+    const secondStore = "00000000-0000-4000-8000-000000000004";
+    psql(`INSERT INTO ops.store VALUES ('${secondStore}','${company}',NULL,'Second Fixture',true);
+      INSERT INTO ops.kpi_actual VALUES
+        (1,'${secondStore}','${employee}','${company}','employee','daily','2026-09-01','2026-09-01',500,'company'),
+        (2,'${secondStore}','${employee}','${company}','employee','daily','2026-09-01','2026-09-01',5,'company'),
+        (3,'${secondStore}','${employee}','${company}','employee','daily','2026-09-01','2026-09-01',1,'company'),
+        (4,'${secondStore}','${employee}','${company}','employee','daily','2026-09-01','2026-09-01',20,'company');`);
+    const request = { ...input, metricCodes: ["NET_SALES", "ATV", "UPT", "CR", "TARGET_ACHIEVEMENT"] };
+    const facts = (await database.query(rankingFactsSelectSql("employee"), [request.periodStart, request.periodEnd, request.companyIds])).rows;
+    const snapshot = psql("SELECT pg_current_snapshot()::text");
+    const cachedFacts = { get: async () => JSON.stringify({ snapshot, rows: facts }) };
+
+    const uncached = await readRankingPersonnelRange(database as never, request);
+    const cached = await readRankingPersonnelRange(database as never, request, cachedFacts as never);
+    expect(cached).toEqual(uncached);
+    expect(uncached.filter(row => row.kpi_code === "NET_SALES").map(row => row.store_id)).toEqual([store, secondStore]);
   });
   const readers = [readRankingStoreRange, readRankingPersonnelRange];
   const hg = (rows: Array<{ kpi_code: string; actual_value: string | null; target_value: string | null }>) =>

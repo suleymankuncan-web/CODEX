@@ -50,6 +50,6 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
     ) manager ON TRUE
     CROSS JOIN ops.kpi_definition kd
     WHERE kd.kpi_code=ANY($4::text[])
-    ORDER BY e.last_name,e.first_name,e.employee_id,kd.kpi_code
+    ORDER BY e.last_name,e.first_name,e.employee_id,kd.kpi_code,s.store_id
   `, [input.periodStart,input.periodEnd,input.companyIds,input.metricCodes, ...(facts === undefined ? [] : [facts])])).rows;
 }
