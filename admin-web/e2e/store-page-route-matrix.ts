@@ -6,17 +6,19 @@ export type StoreRouteContractExpectation = {
   path: string
   persona: StoreContractPersona
   visibleText: RegExp | string
+  availability?: 'parked'
 }
 
 type RouteContract = {
   persona: StoreContractPersona
   visibleText: RegExp | string
+  availability?: 'parked'
 }
 
 const routeContractById = {
   approvals: { persona: 'regionManager', visibleText: /Talep Merkezi|Onay/i },
   checklists: { persona: 'regionManager', visibleText: /Checklistler/i },
-  competitions: { persona: 'storeManager', visibleText: /Turnuva|Yarışma|Competition/i },
+  competitions: { persona: 'storeManager', visibleText: /Bu rol için rota kullanılamaz|Route not available/i, availability: 'parked' },
   feed: { persona: 'regionManager', visibleText: /Duyurular|Paylaş/i },
   home: { persona: 'regionManager', visibleText: /Ana Sayfa|Günlük Operasyon/i },
   incentives: { persona: 'regionManager', visibleText: /Prim Kontrol Sayfası|Primler/i },
@@ -28,7 +30,7 @@ const routeContractById = {
   settings: { persona: 'storeManager', visibleText: /Ayarlar|Profil/i },
   targets: { persona: 'regionManager', visibleText: /Hedefler/i },
   tasks: { persona: 'regionManager', visibleText: /Görevler/i },
-  visualCampaigns: { persona: 'storeManager', visibleText: /kampanyalar/i },
+  visualCampaigns: { persona: 'storeManager', visibleText: /Bu rol için rota kullanılamaz|Route not available/i, availability: 'parked' },
   workforce: { persona: 'regionManager', visibleText: /Norm Kadro/i },
 } satisfies Record<StoreRouteId, RouteContract>
 

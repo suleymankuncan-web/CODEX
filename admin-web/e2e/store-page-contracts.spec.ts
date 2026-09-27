@@ -6,7 +6,8 @@ import {
 import { storeRouteContractExpectations } from './store-page-route-matrix'
 
 for (const item of storeRouteContractExpectations) {
-  test(`${item.path} has basic page health for ${item.persona}`, async ({ page }) => {
+  const expectation = item.availability === 'parked' ? 'fails closed' : 'has basic page health'
+  test(`${item.path} ${expectation} for ${item.persona}`, async ({ page }) => {
     const pageErrors: string[] = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
 
