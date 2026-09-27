@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T22:13:20.846Z",
+  "generatedAt": "2026-09-27T22:35:09.019Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -1544,7 +1544,7 @@
       "exportedFunction": "getChecklistCommandCanvas",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 51
+        "line": 55
       }
     },
     {
@@ -1559,7 +1559,7 @@
       "exportedFunction": "getChecklistCommandRegions",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 57
+        "line": 61
       }
     },
     {
@@ -1574,7 +1574,7 @@
       "exportedFunction": "getChecklistOperationalHistory",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 67
+        "line": 71
       }
     },
     {
@@ -1589,7 +1589,7 @@
       "exportedFunction": "getChecklistVisitPlan",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 78
+        "line": 82
       }
     },
     {
@@ -1604,7 +1604,7 @@
       "exportedFunction": "getChecklistVisitPlanPeriod",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 82
+        "line": 86
       }
     },
     {
@@ -1619,7 +1619,7 @@
       "exportedFunction": "getChecklistVisitPlanCandidates",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 93
+        "line": 97
       }
     },
     {
@@ -1634,7 +1634,7 @@
       "exportedFunction": "getChecklistVisitPlanRegionOptions",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 103
+        "line": 107
       }
     },
     {
@@ -1649,7 +1649,7 @@
       "exportedFunction": "saveChecklistVisitPlan",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 114
+        "line": 121
       }
     },
     {
@@ -1664,7 +1664,7 @@
       "exportedFunction": "saveChecklistVisitPlan",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 120
+        "line": 127
       }
     },
     {
@@ -1679,7 +1679,7 @@
       "exportedFunction": "completeChecklistVisitPlanItem",
       "source": {
         "file": "admin-web/src/features/checklist-command/api.ts",
-        "line": 131
+        "line": 144
       }
     },
     {
