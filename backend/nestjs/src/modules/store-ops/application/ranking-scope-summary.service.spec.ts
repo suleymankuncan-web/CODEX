@@ -80,7 +80,7 @@ describe("RankingService scope summary", () => {
       listRankingStoreChecklistRows: jest.fn(async () => []),
       listRankingPersonnelKpiRows: jest.fn(async () => personnelRows(126, assignedStoreIds)),
       listRankingFilterOptions: jest.fn(async () => ({
-        regionManagers: [],
+        regionManagers: [{ id: "regional-1", label: "Region Manager", storeIds: assignedStoreIds }],
         regions: [],
         stores: [],
       })),
