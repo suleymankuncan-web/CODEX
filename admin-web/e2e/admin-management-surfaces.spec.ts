@@ -111,6 +111,12 @@ test('master data uses region-manager identities and exposes direct personnel en
     .click()
   const editDialog = page.getByRole('dialog', { name: 'Mağazayı düzenle' })
   await expect(editDialog.getByRole('combobox', { name: 'Bölge müdürü' })).toHaveText(/Eda Doğanay/)
+  await editDialog.getByRole('textbox', { name: 'Mağaza kodu' }).fill('fm702')
+  await expect(editDialog.getByRole('textbox', { name: 'Mağaza kodu' })).toHaveValue('FM702')
+  await editDialog.getByRole('combobox', { name: 'Mağaza türü' }).click()
+  await page.getByRole('option', { name: 'Franchise' }).click()
+  await expect(editDialog.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
+  await editDialog.getByRole('textbox', { name: 'Mağaza tipi geçiş tarihi' }).fill('2026-09-15')
   await editDialog.getByRole('combobox', { name: 'Mağaza durumu' }).click()
   await page.getByRole('option', { name: 'Pasif' }).click()
   await expect(editDialog.getByRole('button', { name: 'Kaydet' })).toBeEnabled()
@@ -118,6 +124,9 @@ test('master data uses region-manager identities and exposes direct personnel en
   await page.getByRole('option', { name: /Can Yılmaz/ }).click()
   await editDialog.getByRole('button', { name: 'Kaydet' }).click()
   expect(updateStoreBody).toEqual(expect.objectContaining({
+    storeCode: 'FM702',
+    storeType: 'franchise',
+    storeTypeEffectiveOn: '2026-09-15',
     regionId: '00000000-0000-0000-0000-000000000010',
     regionManagerUserId: '00000000-0000-0000-0000-000000000512',
     status: 'inactive',

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -326,6 +327,8 @@ export class IntegrationService {
   async updateStoreMaster(input: {
     actorCompanyIds: string[];
     storeId: string;
+    storeCode?: string;
+    storeTypeEffectiveOn?: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
     regionManagerUserId?: string;
@@ -334,8 +337,12 @@ export class IntegrationService {
     actorUserId: string;
     expectedUpdatedAt?: string;
   }) {
+    const storeCode = input.storeCode?.trim().toUpperCase();
+    if (storeCode !== undefined && !/^[A-Z][A-Z0-9_-]{1,79}$/.test(storeCode)) {
+      throw new BadRequestException("Invalid store code");
+    }
     const storeScope =
-      await this.integrationRepository.updateKpiImportStoreScope(input);
+      await this.integrationRepository.updateKpiImportStoreScope({ ...input, storeCode });
 
     if (!storeScope) {
       throw new NotFoundException(
@@ -346,6 +353,7 @@ export class IntegrationService {
     logStructuredMessage(this.logger, "store_master_data.updated", {
       actorUserId: input.actorUserId,
       storeId: input.storeId,
+      storeCode: storeScope.store_code,
       storeType: input.storeType,
       regionId: input.regionId,
       regionManagerUserId: input.regionManagerUserId,

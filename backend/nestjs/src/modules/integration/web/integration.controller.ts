@@ -41,6 +41,7 @@ import { ListMasterDataBootstrapBatchesQueryDto } from "./dto/list-master-data-b
 import { ListMasterDataBootstrapRowsQueryDto } from "./dto/list-master-data-bootstrap-rows.query";
 import { UpdateIntegrationSourceScheduleDto } from "./dto/update-integration-source-schedule.dto";
 import { UpdateKpiImportStoreScopeDto } from "./dto/update-kpi-import-store-scope.dto";
+import { UpdateStoreMasterDto } from "./dto/update-store-master.dto";
 import { UploadPowerBiExportDto } from "./dto/upload-power-bi-export.dto";
 import type {
   IntegrationCompanyScopedRequest,
@@ -281,14 +282,13 @@ export class IntegrationController {
   @RequireRoles("INTEGRATION_ADMIN")
   async updateStoreMaster(
     @Param("storeId", new ParseUUIDPipe({ version: "4" })) storeId: string,
-    @Body() body: UpdateKpiImportStoreScopeDto,
+    @Body() body: UpdateStoreMasterDto,
     @Req()
     request: IntegrationUserCompanyScopedRequest,
   ) {
     return this.integrationService.updateStoreMaster({
       actorCompanyIds: request.user.scope.companyIds,
-      storeId,
-      storeType: body.storeType,
+      storeId, storeCode: body.storeCode, storeTypeEffectiveOn: body.storeTypeEffectiveOn, storeType: body.storeType,
       regionId: body.regionId, regionManagerUserId: body.regionManagerUserId,
       status: body.status,
       kpiImportEnabled: body.kpiImportEnabled,

@@ -187,6 +187,17 @@ function StoreDetail(input: {
       </div>
       <div className="master-data-control-center__form">
         <SectionTitle icon={<ArrowRightLeft aria-hidden="true" />} title="İlişki düzeltme" />
+        <label>
+          Mağaza kodu
+          <Input
+            aria-label="Mağaza kodu"
+            autoCapitalize="characters"
+            maxLength={80}
+            spellCheck={false}
+            value={effective.storeCode}
+            onChange={(event) => input.onUpdate(input.store!.id, { storeCode: event.target.value.toUpperCase() })}
+          />
+        </label>
         <Select
           value={normalizeStoreType(effective.storeType)}
           onValueChange={(value) => input.onUpdate(input.store!.id, { storeType: normalizeStoreType(value) })}
@@ -206,6 +217,26 @@ function StoreDetail(input: {
             ))}
           </SelectContent>
         </Select>
+        {normalizeStoreType(effective.storeType) !== normalizeStoreType(input.store.record.storeType) ? (
+          <label>
+            Mağaza tipi geçiş tarihi
+            <Input
+              aria-label="Mağaza tipi geçiş tarihi"
+              type="date"
+              max={new Intl.DateTimeFormat('sv-SE', {
+                timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
+              }).format(new Date())}
+              value={input.draft.storeTypeEffectiveOn ?? ''}
+              onChange={(event) => input.onUpdate(input.store!.id, { storeTypeEffectiveOn: event.target.value })}
+            />
+          </label>
+        ) : null}
+        {input.draft.storeTypeEffectiveOn?.slice(8) !== '01' &&
+          normalizeStoreType(effective.storeType) !== normalizeStoreType(input.store.record.storeType) ? (
+            <p className="text-sm text-amber-700">
+              Ay ortası geçişte prim hedefi otomatik bölünmez; geçiş ayının primi ayrıca doğrulanmalıdır.
+            </p>
+          ) : null}
         <Select
           value={effective.regionId ?? EMPTY_VALUE}
           onValueChange={(value) =>

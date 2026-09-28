@@ -90,7 +90,8 @@ export class SalesTargetIncentiveCloseRepository {
         ON batch.source_batch_id = actual.source_batch_id
        AND batch.entity_type = 'kpi'
        AND store.company_id = ANY(batch.company_ids)
-      WHERE store.store_type = 'company'
+      WHERE ops.store_was_company_during(store.store_id, ($1::text || '-01')::date,
+        ((($1::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
         AND store.kpi_import_enabled = TRUE
         AND batch.status = 'completed'
         AND batch.error_count = 0

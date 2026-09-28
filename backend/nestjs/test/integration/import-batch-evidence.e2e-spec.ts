@@ -729,14 +729,14 @@ describe("Import batch evidence", () => {
         expect(params).toEqual([storeId, nextRegionId, [actorCompanyId], null]);
         return {
           rowCount: 1,
-          rows: [{ store_id: storeId, is_current: true }],
+          rows: [{ store_id: storeId, store_code: "MP001", store_type: "company", is_current: true }],
         };
       }
 
       if (sql.includes("UPDATE ops.store")) {
         expect(sql).toContain("s.company_id = ANY($6::uuid[])");
         expect(sql).toContain("r.company_id = s.company_id");
-        expect(params).toEqual([storeId, "franchise", nextRegionId, "inactive", false, [actorCompanyId]]);
+        expect(params).toEqual([storeId, "franchise", nextRegionId, "inactive", false, [actorCompanyId], null]);
         return {
           rowCount: 1,
           rows: [
@@ -837,6 +837,7 @@ describe("Import batch evidence", () => {
       .set("x-company-ids", actorCompanyId)
       .send({
         storeType: "franchise",
+        storeTypeEffectiveOn: "2026-09-15",
         regionId: nextRegionId,
         status: "inactive",
         kpiImportEnabled: false,

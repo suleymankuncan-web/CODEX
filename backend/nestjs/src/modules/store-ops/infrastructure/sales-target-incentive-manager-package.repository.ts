@@ -46,13 +46,15 @@ export class SalesTargetIncentiveManagerPackageRepository {
         JOIN ops.user_action_store_assignment assigned ON assigned.user_id = account.user_id
         JOIN ops.store store ON store.store_id = assigned.store_id
         WHERE account.user_id = $1::uuid AND store.company_id = $2::uuid
-          AND store.store_type = 'company' AND store.status = 'active'
+          AND ops.store_was_company_during(store.store_id, ($3::text || '-01')::date,
+            ((($3::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
+          AND store.status = 'active'
           AND role_assignment.start_at <= clock_timestamp()
           AND (role_assignment.end_at IS NULL OR role_assignment.end_at > clock_timestamp())
           AND assigned.start_at <= clock_timestamp()
           AND (assigned.end_at IS NULL OR assigned.end_at > clock_timestamp())
         FOR SHARE OF role_assignment, assigned
-      `, [input.managerUserId, input.companyId]);
+      `, [input.managerUserId, input.companyId, input.periodKey]);
       const assigned = new Set(assignments.rows.map((row) => row.store_id));
       if (storeIds.some((storeId) => !assigned.has(storeId)) || assigned.size !== storeIds.length) {
         throw new ForbiddenException("The package must contain exactly the manager's currently assigned company stores");
@@ -211,7 +213,10 @@ export class SalesTargetIncentiveManagerPackageRepository {
             SELECT DISTINCT store.store_id
             FROM ops.user_action_store_assignment assignment
             JOIN ops.store store ON store.store_id = assignment.store_id
-              AND store.company_id = $3::uuid AND store.store_type = 'company' AND store.status = 'active'
+              AND store.company_id = $3::uuid
+              AND ops.store_was_company_during(store.store_id, ($4::text || '-01')::date,
+                ((($4::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
+              AND store.status = 'active'
             JOIN ops.user_account account ON account.user_id = assignment.user_id AND account.is_active = TRUE
             JOIN ops.user_role_assignment role_assignment ON role_assignment.user_id = account.user_id
             JOIN ops.role role ON role.role_id = role_assignment.role_id AND role.role_code = 'REGION_MANAGER'
@@ -235,7 +240,7 @@ export class SalesTargetIncentiveManagerPackageRepository {
           SELECT EXISTS(SELECT store_id FROM package_stores EXCEPT SELECT store_id FROM assigned_stores)
             OR EXISTS(SELECT store_id FROM assigned_stores EXCEPT SELECT store_id FROM package_stores)
             OR EXISTS(SELECT 1 FROM ambiguous) AS stale
-        `, [input.packageId, row.manager_user_id, row.company_id]);
+        `, [input.packageId, row.manager_user_id, row.company_id, input.periodKey]);
         if (assignment.rows[0]?.stale) throw new ConflictException("Manager assignments changed after submission; return and resubmit the package");
       }
       if (input.decision === "admin_returned") {

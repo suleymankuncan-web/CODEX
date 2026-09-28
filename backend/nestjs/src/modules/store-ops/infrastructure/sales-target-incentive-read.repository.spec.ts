@@ -59,7 +59,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     const [sql, params] = query.mock.calls[0];
     const text = String(sql);
 
-    expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("ops.store_was_company_during(s.store_id, $1::date, $2::date)");
     expect(text).toContain("tdr.request_status = 'approved'");
     expect(text).toContain("tdr.request_month = $1::date");
     expect(text).toContain(
@@ -86,7 +86,8 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
-    expect(text).not.toContain("ib.started_at");
+    expect(text).toContain("transition_store_sales");
+    expect(text).toContain("ops.store_type_as_of(s.store_id, ka.period_start) = 'company'");
     expect(params).toEqual([
       "2026-05-01",
       "2026-05-31",
@@ -132,7 +133,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     const [sql, params] = query.mock.calls[0];
     const text = String(sql);
 
-    expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("ops.store_was_company_during(s.store_id, tdr.request_month::date");
     expect(text).toContain("INNER JOIN ops.target_distribution_request tdr");
     expect(text).toContain("tdr.request_status = 'approved'");
     expect(text).toContain("FALSE AS has_sales");
@@ -190,7 +191,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     const [sql, params] = query.mock.calls[0];
     const text = String(sql);
 
-    expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("ops.store_was_company_during(s.store_id, $1::date, $2::date)");
     expect(text).toContain("s.store_id = ANY($4::uuid[])");
     expect(text).toContain("s.company_id = ANY($5::uuid[])");
     expect(text).toContain("p.position_code IN");
@@ -235,11 +236,11 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).not.toContain("eah.assignment_status = 'active'");
     expect(text).toContain("INNER JOIN stg.import_batch ib");
     expect(text.match(/ib\.import_batch_id::text AS import_batch_id/g)).toHaveLength(2);
-    expect(text.match(/ka\.source_batch_id IS NOT NULL/g)).toHaveLength(2);
+    expect(text.match(/ka\.source_batch_id IS NOT NULL/g)).toHaveLength(4);
     expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
-    expect(text).not.toContain("ib.started_at");
+    expect(text).toContain("transition_personnel_sales");
     expect(params).toEqual([
       "2026-05-01",
       "2026-05-31",
@@ -264,7 +265,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("personnel_user.user_id::text AS user_id");
     expect(text).toContain("assignment.assignment_id::text AS assignment_id");
     expect(text).toContain("assignment.start_date::text AS assignment_started_on");
-    expect(text.match(/COALESCE\(ib\.finished_at, ib\.started_at\) <= \$4::timestamptz/g)).toHaveLength(2);
+    expect(text.match(/COALESCE\(ib\.finished_at, ib\.started_at\) <= \$4::timestamptz/g)).toHaveLength(4);
     expect(text).toContain("s.store_id = ANY($5::uuid[])");
     expect(text).toContain("s.company_id = ANY($6::uuid[])");
     expect(params).toEqual([
@@ -343,7 +344,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
 
     expect(text).toContain("FROM ops.target_distribution_request tdr");
     expect(text).toContain("INNER JOIN ops.store s");
-    expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("ops.store_was_company_during(s.store_id, $1::date");
     expect(text).toContain("tdr.request_status = 'pending_region_approval'");
     expect(text).toContain("tdr.request_month = $1::date");
     expect(text).toContain("tdr.company_id = ANY($2::uuid[])");

@@ -32,7 +32,9 @@ type PersonnelEmploymentType = 'full_time' | 'part_time' | 'temporary'
 export type PersonnelStatusFilter = 'all' | PersonnelStatus
 
 export type StoreMasterPatch = {
+  storeCode?: string
   storeType?: StoreMasterType
+  storeTypeEffectiveOn?: string
   regionId?: string
   status?: StoreMasterStatus
   kpiImportEnabled?: boolean
@@ -281,6 +283,7 @@ export function mergeStoreMasterPatch(
 
   return {
     ...store,
+    storeCode: patch.storeCode ?? store.storeCode,
     storeType: patch.storeType ?? normalizeStoreType(store.storeType),
     regionId,
     regionName: patch.regionId === undefined ? store.regionName : resolveRegionName(lookups, regionId, store.regionName),

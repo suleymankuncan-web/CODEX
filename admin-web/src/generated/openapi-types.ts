@@ -3724,14 +3724,6 @@ export type components = {
     "UpdateIncentiveApprovalDto": {
       "enabled": boolean
     }
-    "UpdateKpiImportStoreScopeDto": {
-      "storeType": "company" | "franchise" | "operator"
-      "regionId": string
-      "regionManagerUserId"?: string
-      "status": "active" | "inactive" | "closed"
-      "kpiImportEnabled": boolean
-      "expectedUpdatedAt"?: string
-    }
     "UpdatePersonnelMasterDto": {
       "firstName": string
       "lastName": string
@@ -3748,6 +3740,16 @@ export type components = {
     "UpdateStoreActionPlanStatusRequest": {
       "status": "open" | "in_progress" | "blocked"
       "note"?: string
+    }
+    "UpdateStoreMasterDto": {
+      "storeCode"?: string
+      "storeTypeEffectiveOn"?: string
+      "storeType": "company" | "franchise" | "operator"
+      "regionId": string
+      "regionManagerUserId"?: string
+      "status": "active" | "inactive" | "closed"
+      "kpiImportEnabled": boolean
+      "expectedUpdatedAt"?: string
     }
     "UpdateUserAccountDto": {
       "employeeId"?: string | null
@@ -4908,7 +4910,7 @@ export type paths = {
     patch: {
       requestBody: {
         content: {
-          'application/json': components['schemas']["UpdateKpiImportStoreScopeDto"]
+          'application/json': components['schemas']["UpdateStoreMasterDto"]
         }
       }
       responses: {

@@ -4368,7 +4368,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateKpiImportStoreScopeDto"
+                "$ref": "#/components/schemas/UpdateStoreMasterDto"
               }
             }
           }
@@ -32778,6 +32778,53 @@
             }
           }
         }
+      },
+      "UpdateStoreMasterDto": {
+        "type": "object",
+        "properties": {
+          "storeCode": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_-]{1,79}$"
+          },
+          "storeTypeEffectiveOn": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "storeType": {
+            "enum": [
+              "company",
+              "franchise",
+              "operator"
+            ],
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "regionManagerUserId": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "inactive",
+              "closed"
+            ],
+            "type": "string"
+          },
+          "kpiImportEnabled": {
+            "type": "boolean"
+          },
+          "expectedUpdatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "storeType",
+          "regionId",
+          "status",
+          "kpiImportEnabled"
+        ]
       }
     }
   },

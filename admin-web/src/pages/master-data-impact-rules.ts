@@ -9,6 +9,13 @@ export type MasterDataImpactModule = {
 }
 
 const storeImpactRules: Record<string, MasterDataImpactModule[]> = {
+  storeCode: [
+    {
+      module: 'Satış aktarımı',
+      effect: 'Yeni satışlar güncel mağaza koduyla aynı mağazaya bağlanır; geçmiş kayıtlar korunur.',
+      tone: 'warning',
+    },
+  ],
   regionId: [
     {
       module: 'KPI',

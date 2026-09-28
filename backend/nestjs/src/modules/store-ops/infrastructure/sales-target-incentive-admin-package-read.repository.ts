@@ -44,7 +44,8 @@ export class SalesTargetIncentiveAdminPackageReadRepository {
               store.region_id,
               store.store_id
             FROM ops.store store
-            WHERE store.store_type = 'company'
+            WHERE ops.store_was_company_during(store.store_id, ($1::text || '-01')::date,
+              ((($1::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
               AND store.status = 'active'
               AND store.region_id IS NOT NULL
               AND (
@@ -199,7 +200,8 @@ export class SalesTargetIncentiveAdminPackageReadRepository {
               ON assigned_store.store_id = manager_store.store_id
               AND assigned_store.company_id = base_region.company_id
               AND assigned_store.region_id = base_region.region_id
-              AND assigned_store.store_type = 'company'
+              AND ops.store_was_company_during(assigned_store.store_id, ($1::text || '-01')::date,
+                ((($1::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
               AND assigned_store.status = 'active'
             INNER JOIN ops.user_account user_account
               ON user_account.user_id = role_assignment.user_id
