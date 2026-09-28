@@ -1,6 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
+import {
+  salesTargetIncentiveCloseLockKey,
+  salesTargetIncentiveOwnershipLockKey,
+} from "../../../shared/database/advisory-lock-keys";
+import { storeOwnershipRevisionSql } from "../../../shared/database/store-ownership-concurrency.sql";
 import type {
   SalesTargetIncentiveParticipantProjection,
   SalesTargetIncentiveProjectionStore,
@@ -70,6 +75,15 @@ export type SalesTargetIncentiveCloseRunSummary = {
 @Injectable()
 export class SalesTargetIncentiveCloseRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async getOwnershipRevision(companyId: string): Promise<string> {
+    const result = await this.databaseService.query<{ revision: string }>(
+      storeOwnershipRevisionSql,
+      [companyId],
+    );
+
+    return result.rows[0]?.revision ?? "";
+  }
 
   async listAutomaticCloseCompanyIds(input: { periodKey: string; finalDay: string }) {
     const result = await this.databaseService.query<{ company_id: string }>(`
@@ -157,6 +171,7 @@ export class SalesTargetIncentiveCloseRepository {
     periodEnd: string;
     closeCutoffAt: string;
     actorUserId: string | null;
+    expectedOwnershipRevision: string;
     sourceType?: "admin_period_close" | "automatic_period_close";
     stores: SalesTargetIncentiveProjectionStore[];
   }): Promise<SalesTargetIncentiveCloseRunSummary> {
@@ -175,6 +190,16 @@ export class SalesTargetIncentiveCloseRepository {
       });
       if (existingCloseRun) {
         return existingCloseRun;
+      }
+
+      const ownershipRevision = await client.query<{ revision: string }>(
+        storeOwnershipRevisionSql,
+        [input.companyId],
+      );
+      if ((ownershipRevision.rows[0]?.revision ?? "") !== input.expectedOwnershipRevision) {
+        throw new ConflictException(
+          "Store ownership changed while the incentive close projection was being prepared",
+        );
       }
 
       const ruleVersion = await this.resolveRuleVersion(client);
@@ -331,16 +356,12 @@ export class SalesTargetIncentiveCloseRepository {
     input: { companyId: string; periodKey: string },
   ) {
     await client.query(
-      `
-        SELECT pg_advisory_xact_lock(hashtext($1)::bigint)
-      `,
-      [
-        [
-          "sales_target_incentive_close",
-          input.companyId,
-          input.periodKey,
-        ].join(":"),
-      ],
+      `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
+      [salesTargetIncentiveOwnershipLockKey(input.companyId)],
+    );
+    await client.query(
+      `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
+      [salesTargetIncentiveCloseLockKey(input.companyId, input.periodKey)],
     );
   }
 
@@ -353,6 +374,7 @@ export class SalesTargetIncentiveCloseRepository {
       periodEnd: string;
       closeCutoffAt: string;
       actorUserId: string | null;
+      expectedOwnershipRevision: string;
       sourceType?: "admin_period_close" | "automatic_period_close";
       ruleVersionId: string;
       sourceImportBatchIds: string[];
@@ -408,6 +430,7 @@ export class SalesTargetIncentiveCloseRepository {
             ? "daily_composite"
             : "historical_imported_backfill",
           actorUserId: input.actorUserId,
+          ownershipRevision: input.expectedOwnershipRevision,
           periodKey: input.periodKey,
           affectedStoreCount: input.canonicalStoreIds.length,
           closedAt: new Date().toISOString(),

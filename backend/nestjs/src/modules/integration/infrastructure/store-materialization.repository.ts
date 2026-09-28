@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 export type PendingStoreRawRow = {
@@ -39,8 +39,8 @@ export class StoreMaterializationRepository {
     storeType: string;
     status: string;
     timezone: string;
-  }): Promise<void> {
-    await this.databaseService.query(
+  }): Promise<string> {
+    const result = await this.databaseService.query<{ store_id: string }>(
       `
         INSERT INTO ops.store (
           store_id,
@@ -56,9 +56,11 @@ export class StoreMaterializationRepository {
         ON CONFLICT (store_code) DO UPDATE
         SET
           store_name = EXCLUDED.store_name,
-          store_type = EXCLUDED.store_type,
           status = EXCLUDED.status,
           timezone = EXCLUDED.timezone
+        WHERE ops.store.company_id = EXCLUDED.company_id
+          AND ops.store.store_type = EXCLUDED.store_type
+        RETURNING store_id::text AS store_id
       `,
       [
         input.storeId,
@@ -71,5 +73,12 @@ export class StoreMaterializationRepository {
         input.timezone,
       ],
     );
+    const persistedStoreId = result.rows[0]?.store_id;
+    if (!persistedStoreId) {
+      throw new ConflictException(
+        "Store code belongs to another company or ownership differs; record an explicit master-data transition first",
+      );
+    }
+    return persistedStoreId;
   }
 }

@@ -815,6 +815,12 @@ export class SalesTargetIncentiveApiService {
     sourceType: "admin_period_close" | "automatic_period_close";
     salesSource?: "monthly" | "daily";
   }) {
+    const ownershipRevisions = new Map(
+      await Promise.all(input.companyIds.map(async (companyId) => [
+        companyId,
+        await this.closeRepository.getOwnershipRevision(companyId),
+      ] as const)),
+    );
     const projection = await this.readModelService.buildCurrentProjection({
       periodKey: input.periodKey,
       companyIds: input.companyIds,
@@ -840,6 +846,7 @@ export class SalesTargetIncentiveApiService {
         periodEnd: projection.periodEnd,
         closeCutoffAt: input.closeCutoffAt,
         actorUserId: input.actorUserId,
+        expectedOwnershipRevision: ownershipRevisions.get(companyId) ?? "",
         sourceType: input.sourceType,
         stores,
       }));

@@ -66,7 +66,7 @@ export class StoreMaterializationService {
         const storeId =
           String(payload["storeId"] ?? payload["internalStoreId"] ?? randomUUID());
 
-        await this.storeMaterializationRepository.upsertStore({
+        const persistedStoreId = await this.storeMaterializationRepository.upsertStore({
           storeId,
           companyId,
           regionId,
@@ -81,7 +81,7 @@ export class StoreMaterializationService {
           integrationSourceId: input.integrationSourceId,
           entityType: "store",
           externalId: String(payload["sourceStoreId"] ?? payload["storeCode"] ?? storeId),
-          internalId: storeId,
+          internalId: persistedStoreId,
           internalTableName: "ops.store",
         });
 

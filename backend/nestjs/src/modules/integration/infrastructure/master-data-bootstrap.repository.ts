@@ -1,4 +1,4 @@
-﻿import { Injectable } from "@nestjs/common";
+﻿import { ConflictException, Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import {
   auditBootstrapBatchCreated,
@@ -714,10 +714,10 @@ export class MasterDataBootstrapRepository {
             SET
               region_id = EXCLUDED.region_id,
               store_name = EXCLUDED.store_name,
-              store_type = EXCLUDED.store_type,
               status = EXCLUDED.status,
               kpi_import_enabled = EXCLUDED.kpi_import_enabled
             WHERE ops.store.company_id = EXCLUDED.company_id
+              AND ops.store.store_type = EXCLUDED.store_type
             RETURNING store_id::text AS store_id
           `,
           [
@@ -732,8 +732,8 @@ export class MasterDataBootstrapRepository {
         );
         const promotedEntityId = storeResult.rows[0]?.store_id;
         if (!promotedEntityId) {
-          throw new Error(
-            `Store code conflict belongs to another company: ${row.storeCode}`,
+          throw new ConflictException(
+            `Store code or ownership conflict requires an explicit master-data transition: ${row.storeCode}`,
           );
         }
 
