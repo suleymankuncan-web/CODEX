@@ -20,8 +20,9 @@ describe("StoreMaterializationRepository", () => {
     })).resolves.toBe("00000000-0000-4000-8000-000000000001");
 
     const sql = String(query.mock.calls[0][0]);
+    const updateClause = sql.split("WHERE ops.store.company_id")[0];
     expect(sql).toContain("ON CONFLICT (store_code) DO UPDATE");
-    expect(sql).not.toContain("store_type = EXCLUDED.store_type");
+    expect(updateClause).not.toContain("store_type = EXCLUDED.store_type");
     expect(sql).toContain("ops.store.company_id = EXCLUDED.company_id");
     expect(sql).toContain("ops.store.store_type = EXCLUDED.store_type");
     expect(query.mock.calls[0][1]).toEqual(expect.arrayContaining(["company"]));
