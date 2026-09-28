@@ -38,7 +38,7 @@ export class ExternalIdMappingCommandRepository {
         FROM stg.external_id_map
         WHERE integration_source_id = $1::uuid
           AND entity_type = $2
-          AND UPPER(REGEXP_REPLACE(COALESCE(external_id, ''), '[\\s-]', '', 'g')) = $3
+          AND ops.normalize_master_external_code_v1(external_id) = $3
           AND is_active = TRUE
         LIMIT 2
       `,

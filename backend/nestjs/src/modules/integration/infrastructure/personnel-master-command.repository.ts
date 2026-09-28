@@ -4,6 +4,7 @@ import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
 import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
+import { rethrowMasterIdentityCodeConflict } from "../../../shared/database/master-identity-code-error";
 
 @Injectable()
 export class PersonnelMasterCommandRepository {
@@ -344,7 +345,7 @@ export class PersonnelMasterCommandRepository {
       );
 
       return updated.rows[0] ?? null;
-    });
+    }).catch(rethrowMasterIdentityCodeConflict);
   }
 
   async createPersonnelMaster(input: {
@@ -553,7 +554,7 @@ export class PersonnelMasterCommandRepository {
       if (constraint === "uq_employee_company_national_id_hash") {
         throw new ConflictException("Personnel national identity is already in use");
       }
-      throw error;
+      return rethrowMasterIdentityCodeConflict(error);
     }
   }
 

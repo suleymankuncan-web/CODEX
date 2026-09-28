@@ -4,10 +4,8 @@
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import {
-  buildCommandResponse,
-  buildListResponse,
-} from "../../../shared/http/response-builders";
+import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
+import { rethrowMasterIdentityCodeConflict } from "../../../shared/database/master-identity-code-error";
 import {
   type BootstrapBatch,
   type BootstrapEntity,
@@ -330,7 +328,7 @@ export class MasterDataBootstrapService {
           : {}),
         batchId: input.batchId,
         rows: promotionRows,
-      });
+      }).catch(rethrowMasterIdentityCodeConflict);
     return buildCommandResponse({
       status: "promoted",
       message: "Store bootstrap rows promoted",
@@ -387,7 +385,7 @@ export class MasterDataBootstrapService {
           : {}),
         batchId: input.batchId,
         rows: promotionRows,
-      });
+      }).catch(rethrowMasterIdentityCodeConflict);
 
     return buildCommandResponse({
       status: "promoted",

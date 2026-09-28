@@ -11,6 +11,7 @@ import {
 } from "./import-batch-raw-writer.repository";
 import { PersonnelMasterCommandRepository } from "./personnel-master-command.repository";
 import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
+import { rethrowMasterIdentityCodeConflict } from "../../../shared/database/master-identity-code-error";
 
 const ACTION_STORE_ASSIGNMENT_CONFLICT_MESSAGE = "Active action store assignment already exists";
 const ACTION_STORE_ASSIGNMENT_OVERLAP_CONSTRAINT =
@@ -567,7 +568,7 @@ export class IntegrationRepository {
         if (candidate.code === "23505" && candidate.constraint === "store_store_code_key") {
           throw new ConflictException("Store code is already in use");
         }
-        throw error;
+        return rethrowMasterIdentityCodeConflict(error);
       });
 
       const store = result.rows[0] ?? null;
@@ -715,7 +716,7 @@ export class IntegrationRepository {
           input.kpiImportEnabled,
           input.regionManagerUserId,
         ],
-      );
+      ).catch(rethrowMasterIdentityCodeConflict);
       const store = storeResult.rows[0];
       if (!store) return null;
 

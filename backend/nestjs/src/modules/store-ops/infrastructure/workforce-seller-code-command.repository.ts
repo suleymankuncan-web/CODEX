@@ -6,6 +6,7 @@ import { type SellerCodeRequestRow } from "./workforce-seller-code-read.reposito
 import { WorkforceRequestAuditRepository } from "./workforce-request-audit.repository";
 import { sellerCodeRequestReturnProjection } from "./workforce-request-write-sql";
 import { IdentityLifecycleRepository } from "../../auth/identity-lifecycle.repository";
+import { rethrowMasterIdentityCodeConflict } from "../../../shared/database/master-identity-code-error";
 
 export class WorkforceSellerCodeCommandRepository {
   private readonly auditRepository = new WorkforceRequestAuditRepository();
@@ -158,6 +159,6 @@ export class WorkforceSellerCodeCommandRepository {
       });
 
       return request;
-    });
+    }).catch(rethrowMasterIdentityCodeConflict);
   }
 }

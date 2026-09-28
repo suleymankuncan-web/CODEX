@@ -43,7 +43,7 @@ describe("ExternalIdMappingCommandRepository", () => {
       { internalId: "00000000-0000-4000-8000-000000000141" },
     ]);
     expect(query).toHaveBeenCalledWith(
-      expect.stringContaining("UPPER(REGEXP_REPLACE"),
+      expect.stringContaining("ops.normalize_master_external_code_v1"),
       [
         "00000000-0000-4000-8000-000000000001",
         "store",
