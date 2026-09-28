@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { salesTargetIncentiveOwnershipLockKey } from "../../../shared/database/advisory-lock-keys";
+import { closedIncentivePeriodAfterOwnershipDateSql } from "../../../shared/database/store-ownership-concurrency.sql";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
 import {
   ImportBatchRawWriterRepository,
@@ -498,15 +500,13 @@ export class IntegrationRepository {
           (latestTransition.rows[0].effective_on >= effectiveOn || latestTransition.rows[0].new_type !== currentStore.store_type)) {
           throw new ConflictException("Store type history must be changed in chronological order");
         }
+        await client.query(
+          `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`,
+          [salesTargetIncentiveOwnershipLockKey(currentStore.company_id)],
+        );
         const protectedPeriods = await client.query<{ period_key: string }>(`
-          SELECT snapshot.period_key
-          FROM rpt.sales_target_incentive_final_snapshot snapshot
-          INNER JOIN ops.sales_target_incentive_close_run run
-            ON run.sales_target_incentive_close_run_id = snapshot.close_run_id
-          WHERE snapshot.store_id = $1::uuid AND snapshot.period_end >= $2::date
-            AND run.status = 'succeeded'
-          LIMIT 1
-        `, [input.storeId, effectiveOn]);
+          ${closedIncentivePeriodAfterOwnershipDateSql}
+        `, [currentStore.company_id, effectiveOn]);
         if (protectedPeriods.rows.length) {
           throw new ConflictException("A closed incentive period overlaps the ownership change");
         }

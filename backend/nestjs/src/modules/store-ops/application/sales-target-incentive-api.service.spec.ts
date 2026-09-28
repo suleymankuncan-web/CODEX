@@ -158,6 +158,7 @@ function createService(projection: SalesTargetIncentiveProjectionReadModel = eli
   };
   const closeRepository = {
     listCloseRuns: jest.fn(async (): Promise<unknown[]> => []),
+    getOwnershipRevision: jest.fn(async (): Promise<string> => "ownership-revision-1"),
     createSucceededCloseRun: jest.fn(async (): Promise<unknown> => ({
       closeRunId: "00000000-0000-4000-8000-000000000901",
       companyId,
@@ -472,7 +473,6 @@ describe("SalesTargetIncentiveApiService", () => {
       periodKey: "2026-05",
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
     });
-
     expect(readModelService.getCloseReadiness).toHaveBeenCalledWith({
       periodKey: "2026-05",
       companyIds: [companyId],
@@ -518,6 +518,10 @@ describe("SalesTargetIncentiveApiService", () => {
       assignmentAsOfDate: "2026-05-31",
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
     });
+    expect(closeRepository.getOwnershipRevision).toHaveBeenCalledWith(companyId);
+    expect(closeRepository.getOwnershipRevision.mock.invocationCallOrder[0]).toBeLessThan(
+      readModelService.buildCurrentProjection.mock.invocationCallOrder[0],
+    );
     expect(closeRepository.createSucceededCloseRun).toHaveBeenCalledWith({
       companyId,
       periodKey: "2026-05",
@@ -525,6 +529,7 @@ describe("SalesTargetIncentiveApiService", () => {
       periodEnd: "2026-05-31",
       closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
       actorUserId: "00000000-0000-4000-8000-000000000901",
+      expectedOwnershipRevision: "ownership-revision-1",
       sourceType: "admin_period_close",
       stores: eligibleProjection.stores,
     });

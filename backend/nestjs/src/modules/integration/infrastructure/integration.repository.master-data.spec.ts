@@ -137,6 +137,7 @@ describe("IntegrationRepository master data writes", () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ store_id: "store-1", store_code: "FM702", store_type: "franchise" }] })
       .mockResolvedValueOnce({ rows: [] });
     const { repository } = createRepository(query);
@@ -153,6 +154,13 @@ describe("IntegrationRepository master data writes", () => {
     expect(transition?.[1].slice(0, 4)).toEqual([
       "store-1", "2026-09-15", "company", "franchise",
     ]);
+    const closeLock = query.mock.calls.find(([statement]) => String(statement).includes("pg_advisory_xact_lock"));
+    expect(closeLock?.[1]).toEqual(["sales_target_incentive_ownership:company-1"]);
+    const lockIndex = query.mock.calls.findIndex(([statement]) => String(statement).includes("pg_advisory_xact_lock"));
+    const closeGuardIndex = query.mock.calls.findIndex(([statement]) =>
+      String(statement).includes("FROM ops.sales_target_incentive_close_run run"));
+    expect(lockIndex).toBeGreaterThanOrEqual(0);
+    expect(closeGuardIndex).toBeGreaterThan(lockIndex);
     expect(query.mock.calls.find(([statement]) => String(statement).includes("UPDATE ops.store s"))?.[1][6]).toBe("FM702");
   });
 
@@ -173,13 +181,14 @@ describe("IntegrationRepository master data writes", () => {
     expect(query.mock.calls.some(([statement]) => String(statement).includes("UPDATE ops.store"))).toBe(false);
   });
 
-  it("rejects a backdated type change that overlaps a closed incentive snapshot", async () => {
+  it("rejects a backdated type change when the company period closed without a store snapshot", async () => {
     const query = jest.fn()
       .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
       .mockResolvedValueOnce({ rows: [{
         store_id: "store-1", company_id: "company-1", store_code: "SM150",
         store_type: "company", is_current: true,
       }] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ period_key: "2026-09" }] });
     const { repository } = createRepository(query);
@@ -190,6 +199,10 @@ describe("IntegrationRepository master data writes", () => {
       regionId: "region-1", status: "active", kpiImportEnabled: true,
       actorUserId: "actor-1",
     })).rejects.toThrow("closed incentive period overlaps");
+    const protectedPeriodSql = query.mock.calls.map(([statement]) => String(statement))
+      .find((statement) => statement.includes("FROM ops.sales_target_incentive_close_run run"));
+    expect(protectedPeriodSql).toContain("run.company_id = $1::uuid");
+    expect(protectedPeriodSql).not.toContain("sales_target_incentive_final_snapshot");
     expect(query.mock.calls.some(([statement]) =>
       String(statement).includes("INSERT INTO ops.store_ownership_transition") ||
       String(statement).includes("UPDATE ops.store s"))).toBe(false);

@@ -24,6 +24,12 @@ const approvalFlowMigrationSql = existsSync(approvalFlowMigrationPath)
 const ownershipMigrationSql = readFileSync(
   join(root, "db/migrations/088_store_ownership_history_v1.sql"), "utf8",
 );
+const ownershipConcurrencyMigrationSql = readFileSync(
+  join(root, "db/migrations/089_store_ownership_close_concurrency_v1.sql"), "utf8",
+);
+const ownershipConcurrencyRollbackSql = readFileSync(
+  join(root, "db/rollback/089_store_ownership_close_concurrency_v1.rollback.sql"), "utf8",
+);
 
 function expectSalesTargetIncentiveCoreTables(sql: string): void {
   expect(sql).toContain(
@@ -243,6 +249,27 @@ describe("sales target incentive schema contract", () => {
       "COMMENT ON TABLE ops.sales_target_incentive_region_correction IS 'Region manager draft/submitted incentive corrections, converted to payable adjustments only after admin approval.'",
     );
     expect(approvalFlowMigrationSql).not.toContain("ops.sales_target_incentive_projection_row");
+  });
+
+  it("fails closed across mixed-version ownership transitions and incentive closes", () => {
+    for (const sql of [schemaSql, ownershipConcurrencyMigrationSql]) {
+      expect(sql).toContain("CREATE OR REPLACE FUNCTION ops.store_ownership_revision_v1");
+      expect(sql).toContain("trg_store_ownership_transition_close_guard");
+      expect(sql).toContain("trg_store_ownership_transition_immutable");
+      expect(sql).toContain("trg_store_ownership_transition_truncate_guard");
+      expect(sql).toContain("trg_store_ownership_transition_commit_guard");
+      expect(sql).toContain("trg_store_type_direct_update_guard");
+      expect(sql).toContain("trg_incentive_close_ownership_revision_guard");
+      expect(sql).toContain("sales_target_incentive_ownership:");
+      expect(sql).toContain("sales_target_incentive_close:");
+      expect(sql).toContain("ownershipRevision");
+    }
+    expect(ownershipConcurrencyMigrationSql).toContain("SET LOCAL lock_timeout = '5000ms'");
+    expect(ownershipConcurrencyMigrationSql).toContain("SET LOCAL statement_timeout = '30000ms'");
+    expect(ownershipConcurrencyMigrationSql).toContain("IN SHARE ROW EXCLUSIVE MODE");
+    expect(ownershipConcurrencyMigrationSql).toContain("Existing ownership history contains a broken type chain");
+    expect(ownershipConcurrencyRollbackSql).toContain("IN ACCESS EXCLUSIVE MODE");
+    expect(ownershipConcurrencyRollbackSql).toContain("trg_incentive_close_ownership_revision_guard");
   });
 
   it("seeds the same V1 rule and bracket references for schema reset paths", () => {

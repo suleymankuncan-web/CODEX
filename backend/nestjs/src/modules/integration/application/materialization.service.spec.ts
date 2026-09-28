@@ -266,6 +266,13 @@ describe("MaterializationService", () => {
         };
       }
 
+      if (sql.includes("INSERT INTO ops.store")) {
+        return {
+          rowCount: 1,
+          rows: [{ store_id: "00000000-0000-0000-0000-000000000153" }],
+        };
+      }
+
       return { rowCount: 1, rows: [] };
     });
 
@@ -283,6 +290,20 @@ describe("MaterializationService", () => {
         "active",
         "Europe/Istanbul",
       ],
+    );
+    expect(databaseService.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO stg.external_id_map"),
+      [
+        integrationSourceId,
+        "store",
+        "STORE-1",
+        "00000000-0000-0000-0000-000000000153",
+        "ops.store",
+      ],
+    );
+    expect(databaseService.query).toHaveBeenCalledWith(
+      expect.stringContaining("UPDATE stg.store_raw"),
+      expect.arrayContaining([expect.any(String)]),
     );
   });
 

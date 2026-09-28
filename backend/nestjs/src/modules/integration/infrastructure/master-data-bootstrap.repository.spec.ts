@@ -391,6 +391,8 @@ describe("MasterDataBootstrapRepository", () => {
     const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
     expect(sql).toContain("INSERT INTO ops.store");
     expect(sql).toContain("ON CONFLICT (store_code) DO UPDATE");
+    expect(sql).not.toContain("store_type = EXCLUDED.store_type");
+    expect(sql).toContain("ops.store.store_type = EXCLUDED.store_type");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_row");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_batch");
     expect(sql).toContain("INSERT INTO audit.event_log");
