@@ -124,20 +124,20 @@ $master_mapping_preflight$;
 CREATE OR REPLACE FUNCTION ops.guard_external_id_master_code_v1()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
-    normalized_code TEXT;
+    candidate_normalized_code TEXT;
 BEGIN
     IF NEW.entity_type NOT IN ('store', 'employee') THEN
         RETURN NEW;
     END IF;
-    normalized_code := ops.normalize_master_external_code_v1(NEW.external_id);
-    IF normalized_code <> '' THEN
-        IF NOT pg_try_advisory_xact_lock(hashtext('master_identity_code:' || NEW.entity_type || ':' || normalized_code)::bigint) THEN
+    candidate_normalized_code := ops.normalize_master_external_code_v1(NEW.external_id);
+    IF candidate_normalized_code <> '' THEN
+        IF NOT pg_try_advisory_xact_lock(hashtext('master_identity_code:' || NEW.entity_type || ':' || candidate_normalized_code)::bigint) THEN
             RAISE EXCEPTION 'Master identity code mapping is being changed concurrently' USING ERRCODE = '40001';
         END IF;
         IF EXISTS (
             SELECT 1 FROM ops.master_identity_code_reservation reservation
             WHERE reservation.entity_type = NEW.entity_type
-              AND reservation.normalized_code = normalized_code
+              AND reservation.normalized_code = candidate_normalized_code
               AND reservation.internal_id <> NEW.internal_id
         ) THEN
             RAISE EXCEPTION 'External mapping conflicts with a reserved master identity code'
