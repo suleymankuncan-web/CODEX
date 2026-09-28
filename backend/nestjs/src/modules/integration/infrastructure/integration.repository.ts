@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
@@ -421,6 +421,8 @@ export class IntegrationRepository {
   async updateKpiImportStoreScope(input: {
     actorCompanyIds: string[];
     storeId: string;
+    storeCode?: string;
+    storeTypeEffectiveOn?: string;
     storeType: "company" | "franchise" | "operator";
     regionId: string;
     regionManagerUserId?: string;
@@ -434,12 +436,16 @@ export class IntegrationRepository {
       const currentResult = await client.query<{
         store_id: string;
         company_id: string;
+        store_code: string;
+        store_type: string;
         is_current: boolean;
       }>(
         `
           SELECT
             s.store_id::text AS store_id,
             s.company_id::text AS company_id,
+            s.store_code,
+            s.store_type,
             ($4::timestamptz IS NULL OR s.updated_at = $4::timestamptz) AS is_current
           FROM ops.store s
           INNER JOIN ops.region r
@@ -464,6 +470,52 @@ export class IntegrationRepository {
       if (!currentStore.is_current) {
         throw new ConflictException("Store master data changed after it was loaded");
       }
+      if (input.storeCode && input.storeCode !== currentStore.store_code) {
+        const duplicate = await client.query<{ store_id: string }>(
+          `SELECT store_id::text AS store_id FROM ops.store WHERE UPPER(store_code) = UPPER($1) AND store_id <> $2::uuid LIMIT 1`,
+          [input.storeCode, input.storeId],
+        );
+        if (duplicate.rows.length > 0) {
+          throw new ConflictException("Store code is already in use");
+        }
+      }
+
+      if (input.storeType !== currentStore.store_type) {
+        const effectiveOn = input.storeTypeEffectiveOn;
+        if (!effectiveOn || !/^\d{4}-\d{2}-\d{2}$/.test(effectiveOn) ||
+          Number.isNaN(Date.parse(`${effectiveOn}T00:00:00Z`)) ||
+          new Date(`${effectiveOn}T00:00:00Z`).toISOString().slice(0, 10) !== effectiveOn ||
+          effectiveOn > new Intl.DateTimeFormat("sv-SE", {
+            timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit",
+          }).format(new Date())) {
+          throw new BadRequestException("A valid past or current effective date is required for store type changes");
+        }
+        const latestTransition = await client.query<{ effective_on: string; new_type: string }>(`
+          SELECT effective_on::text, new_type FROM ops.store_ownership_transition
+          WHERE store_id = $1::uuid ORDER BY effective_on DESC LIMIT 1 FOR UPDATE
+        `, [input.storeId]);
+        if (latestTransition.rows[0] &&
+          (latestTransition.rows[0].effective_on >= effectiveOn || latestTransition.rows[0].new_type !== currentStore.store_type)) {
+          throw new ConflictException("Store type history must be changed in chronological order");
+        }
+        const protectedPeriods = await client.query<{ period_key: string }>(`
+          SELECT snapshot.period_key
+          FROM rpt.sales_target_incentive_final_snapshot snapshot
+          INNER JOIN ops.sales_target_incentive_close_run run
+            ON run.sales_target_incentive_close_run_id = snapshot.close_run_id
+          WHERE snapshot.store_id = $1::uuid AND snapshot.period_end >= $2::date
+            AND run.status = 'succeeded'
+          LIMIT 1
+        `, [input.storeId, effectiveOn]);
+        if (protectedPeriods.rows.length) {
+          throw new ConflictException("A closed incentive period overlaps the ownership change");
+        }
+        await client.query(`
+          INSERT INTO ops.store_ownership_transition
+            (store_id, effective_on, previous_type, new_type, changed_by_user_id)
+          VALUES ($1::uuid, $2::date, $3, $4, $5::uuid)
+        `, [input.storeId, effectiveOn, currentStore.store_type, input.storeType, auditActorUserId]);
+      }
 
       const result = await client.query<{
         store_id: string;
@@ -479,6 +531,7 @@ export class IntegrationRepository {
         `
           UPDATE ops.store s
           SET
+            store_code = COALESCE($7::text, s.store_code),
             store_type = $2,
             region_id = $3::uuid,
             status = $4,
@@ -507,8 +560,15 @@ export class IntegrationRepository {
           input.status,
           input.kpiImportEnabled,
           input.actorCompanyIds,
+          input.storeCode ?? null,
         ],
-      );
+      ).catch((error: unknown) => {
+        const candidate = error as { code?: string; constraint?: string };
+        if (candidate.code === "23505" && candidate.constraint === "store_store_code_key") {
+          throw new ConflictException("Store code is already in use");
+        }
+        throw error;
+      });
 
       const store = result.rows[0] ?? null;
       if (!store) {
@@ -541,7 +601,11 @@ export class IntegrationRepository {
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
             requestedActorUserId: input.actorUserId,
+            previousStoreCode: currentStore.store_code,
+            previousStoreType: currentStore.store_type,
+            storeCode: store.store_code,
             storeType: input.storeType,
+            storeTypeEffectiveOn: input.storeTypeEffectiveOn,
             regionId: input.regionId,
             regionManagerUserId: input.regionManagerUserId,
             status: input.status,

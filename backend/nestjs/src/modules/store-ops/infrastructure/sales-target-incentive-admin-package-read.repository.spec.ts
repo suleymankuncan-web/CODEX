@@ -25,7 +25,7 @@ describe("SalesTargetIncentiveAdminPackageReadRepository", () => {
     const [sql, params] = query.mock.calls[0];
     const text = String(sql);
 
-    expect(text).toContain("WHERE store.store_type = 'company'");
+    expect(text).toContain("WHERE ops.store_was_company_during(store.store_id");
     expect(text).toContain("AND store.status = 'active'");
     expect(text).toContain("AND store.region_id IS NOT NULL");
     expect(text).toContain("INNER JOIN ops.user_action_store_assignment manager_store");

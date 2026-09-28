@@ -43,7 +43,9 @@ export class SalesTargetIncentiveManagerPackageReadRepository {
         JOIN ops.role role ON role.role_id = role_assignment.role_id AND role.role_code = 'REGION_MANAGER'
         JOIN ops.user_account account ON account.user_id = role_assignment.user_id AND account.is_active = TRUE
         JOIN ops.user_action_store_assignment assignment ON assignment.user_id = account.user_id
-        JOIN ops.store store ON store.store_id = assignment.store_id AND store.store_type = 'company'
+        JOIN ops.store store ON store.store_id = assignment.store_id
+          AND ops.store_was_company_during(store.store_id, ($1::text || '-01')::date,
+            ((($1::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
           AND store.status = 'active' AND store.company_id = ANY($2::uuid[])
         CROSS JOIN cutoff
         LEFT JOIN ops.sales_target_incentive_store_review review

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T22:35:09.019Z",
+  "generatedAt": "2026-09-28T09:14:10.090Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2774,7 +2774,7 @@
       "exportedFunction": "updateStoreMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 406
+        "line": 408
       }
     },
     {
@@ -2789,7 +2789,7 @@
       "exportedFunction": "getPersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 442
+        "line": 446
       }
     },
     {
@@ -2804,7 +2804,7 @@
       "exportedFunction": "getPersonnelMasterLookups",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 446
+        "line": 450
       }
     },
     {
@@ -2819,7 +2819,7 @@
       "exportedFunction": "createPersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 452
+        "line": 456
       }
     },
     {
@@ -2834,7 +2834,7 @@
       "exportedFunction": "terminatePersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 462
+        "line": 466
       }
     },
     {
@@ -2849,7 +2849,7 @@
       "exportedFunction": "updatePersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 483
+        "line": 487
       }
     },
     {
@@ -2864,7 +2864,7 @@
       "exportedFunction": "getMasterDataBootstrapBatches",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 528
+        "line": 532
       }
     },
     {
@@ -2879,7 +2879,7 @@
       "exportedFunction": "getMasterDataBootstrapBatchDetail",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 532
+        "line": 536
       }
     },
     {
@@ -2894,7 +2894,7 @@
       "exportedFunction": "getMasterDataBootstrapPromotionReadiness",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 538
+        "line": 542
       }
     },
     {
@@ -2909,7 +2909,7 @@
       "exportedFunction": "validateMasterDataBootstrapBatch",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 545
+        "line": 549
       }
     },
     {
@@ -2924,7 +2924,7 @@
       "exportedFunction": "promoteMasterDataBootstrapStores",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 552
+        "line": 556
       }
     },
     {
@@ -2939,7 +2939,7 @@
       "exportedFunction": "promoteMasterDataBootstrapPersonnel",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 559
+        "line": 563
       }
     },
     {
@@ -2954,7 +2954,7 @@
       "exportedFunction": "getPersonnelObservations",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 582
+        "line": 586
       }
     },
     {
@@ -5614,7 +5614,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 134
+        "line": 135
       }
     },
     {
@@ -5628,7 +5628,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 150
+        "line": 151
       }
     },
     {
@@ -5810,7 +5810,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 168
+        "line": 169
       }
     },
     {
@@ -5824,7 +5824,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 257
+        "line": 258
       }
     },
     {
@@ -5838,7 +5838,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 127
+        "line": 128
       }
     },
     {
@@ -5852,7 +5852,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 236
+        "line": 237
       }
     },
     {
@@ -6104,7 +6104,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 59
+        "line": 60
       }
     },
     {
@@ -6118,7 +6118,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 72
+        "line": 73
       }
     },
     {
@@ -6146,7 +6146,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 103
+        "line": 104
       }
     },
     {
@@ -6160,7 +6160,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 115
+        "line": 116
       }
     },
     {
@@ -6174,7 +6174,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 86
+        "line": 87
       }
     },
     {
@@ -6202,7 +6202,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 224
+        "line": 225
       }
     },
     {
@@ -6216,7 +6216,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 186
+        "line": 187
       }
     },
     {
@@ -6230,7 +6230,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 204
+        "line": 205
       }
     },
     {
@@ -6244,7 +6244,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 278
+        "line": 279
       }
     },
     {

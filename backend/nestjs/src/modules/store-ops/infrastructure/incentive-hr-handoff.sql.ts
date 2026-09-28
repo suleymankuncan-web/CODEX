@@ -30,7 +30,9 @@ const hrScopeSql = `
       HAVING COUNT(DISTINCT account.user_id) = 1
     ) manager ON TRUE
     WHERE store.company_id = ANY($2::uuid[])
-      AND store.store_type = 'company' AND store.status = 'active'
+      AND ops.store_was_company_during(store.store_id, ($1::text || '-01')::date,
+        ((($1::text || '-01')::date + INTERVAL '1 month - 1 day')::date))
+      AND store.status = 'active'
   )
 `;
 

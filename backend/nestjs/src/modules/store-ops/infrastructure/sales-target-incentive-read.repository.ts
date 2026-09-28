@@ -138,7 +138,6 @@ export class SalesTargetIncentiveReadRepository {
               s.store_type
             FROM ops.store s
             WHERE s.status = 'active'
-              AND s.store_type = 'company'
               AND ${clauses.join(" AND ")}
           ),
           available_periods AS (
@@ -151,6 +150,8 @@ export class SalesTargetIncentiveReadRepository {
              AND tdr.region_id = s.region_id
              AND tdr.store_id = s.store_id
              AND tdr.request_status = 'approved'
+             AND ops.store_was_company_during(s.store_id, tdr.request_month::date,
+               (tdr.request_month::date + INTERVAL '1 month - 1 day')::date)
             UNION ALL
             SELECT
               kt.period_start::date AS period_start,
@@ -160,6 +161,7 @@ export class SalesTargetIncentiveReadRepository {
               ON kt.store_id = s.store_id
              AND kt.scope_type = 'store'
              AND kt.period_type = 'monthly'
+             AND ops.store_was_company_during(s.store_id, kt.period_start::date, kt.period_end::date)
             INNER JOIN ops.kpi_definition kd_target
               ON kd_target.kpi_id = kt.kpi_id
              AND kd_target.kpi_code = 'TARGET_ACHIEVEMENT'
@@ -176,6 +178,7 @@ export class SalesTargetIncentiveReadRepository {
              AND ka.source_type = 'integration'
              AND COALESCE(ka.source_type, '') <> 'demo_seed'
              AND ka.source_batch_id IS NOT NULL
+             AND ops.store_was_company_during(s.store_id, ka.period_start::date, ka.period_end::date)
             INNER JOIN ops.kpi_definition kd
               ON kd.kpi_id = ka.kpi_id
              AND kd.kpi_code = 'NET_SALES'
@@ -218,10 +221,10 @@ export class SalesTargetIncentiveReadRepository {
               s.region_id,
               s.store_id,
               s.store_name,
-              s.store_type
+              'company'::text AS store_type
             FROM ops.store s
             WHERE s.status = 'active'
-              AND s.store_type = 'company'
+              AND ops.store_was_company_during(s.store_id, $1::date, $2::date)
               AND ${clauses.join(" AND ")}
           )
           SELECT
@@ -257,6 +260,9 @@ export class SalesTargetIncentiveReadRepository {
               AND tdr.store_id = s.store_id
               AND tdr.request_status = 'approved'
               AND tdr.request_month = $1::date
+              AND NOT EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+                WHERE ownership.store_id = s.store_id
+                  AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
             ORDER BY
               tdr.approved_at DESC NULLS LAST,
               tdr.updated_at DESC,
@@ -277,6 +283,9 @@ export class SalesTargetIncentiveReadRepository {
               AND kt.period_type = 'monthly'
               AND kt.period_start = $1::date
               AND kt.period_end = $2::date
+              AND NOT EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+                WHERE ownership.store_id = s.store_id
+                  AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
             ORDER BY kt.kpi_target_id DESC
             LIMIT 1
           ) imported_store_target ON TRUE
@@ -345,10 +354,10 @@ export class SalesTargetIncentiveReadRepository {
               s.region_id,
               s.store_id,
               s.store_name,
-              s.store_type
+              'company'::text AS store_type
             FROM ops.store s
             WHERE s.status = 'active'
-              AND s.store_type = 'company'
+              AND ops.store_was_company_during(s.store_id, $1::date, $2::date)
               AND ${clauses.join(" AND ")}
           ),
           assignment AS (
@@ -423,6 +432,9 @@ export class SalesTargetIncentiveReadRepository {
               AND tdr.store_id = s.store_id
               AND tdr.request_status = 'approved'
               AND tdr.request_month = $1::date
+              AND NOT EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+                WHERE ownership.store_id = s.store_id
+                  AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
             ORDER BY
               tdr.approved_at DESC NULLS LAST,
               tdr.updated_at DESC,
@@ -443,6 +455,9 @@ export class SalesTargetIncentiveReadRepository {
               AND kt.period_type = 'monthly'
               AND kt.period_start = $1::date
               AND kt.period_end = $2::date
+              AND NOT EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+                WHERE ownership.store_id = s.store_id
+                  AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
             ORDER BY kt.kpi_target_id DESC
             LIMIT 1
           ) imported_store_target ON TRUE
@@ -488,6 +503,7 @@ export class SalesTargetIncentiveReadRepository {
         FROM ops.company_daily_kpi_store_sales sales
         INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
         WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
+          AND ops.store_type_as_of(sales.store_id, sales.business_date) = 'company'
         UNION ALL
         SELECT 'employee', sales.store_id, sales.employee_id, employee.external_employee_ref,
           concat_ws(' ', employee.first_name, employee.last_name),
@@ -496,12 +512,14 @@ export class SalesTargetIncentiveReadRepository {
         INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
         INNER JOIN ops.employee employee ON employee.employee_id = sales.employee_id
         WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
+          AND ops.store_type_as_of(sales.store_id, sales.business_date) = 'company'
         UNION ALL
         SELECT 'unmapped', sales.store_id, NULL::uuid, sales.personnel_code,
           NULL::text, sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
         FROM ops.company_daily_kpi_unmapped_personnel_sales sales
         INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
         WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
+          AND ops.store_type_as_of(sales.store_id, sales.business_date) = 'company'
       )
       SELECT scope_type, store_id::text AS store_id, employee_id::text AS employee_id,
         personnel_code, display_name,
@@ -543,6 +561,7 @@ export class SalesTargetIncentiveReadRepository {
           AND ka.period_type = 'daily'
           AND ka.period_start = ka.period_end
           AND ka.period_start BETWEEN $2::date AND $3::date
+          AND ops.store_type_as_of(ka.store_id, ka.period_start) = 'company'
           AND COALESCE(ka.source_type, '') <> 'demo_seed'
           AND ka.actual_value IS NOT NULL
         GROUP BY ka.scope_type, ka.store_id,
@@ -642,7 +661,8 @@ export class SalesTargetIncentiveReadRepository {
           INNER JOIN ops.store s
             ON s.store_id = tdr.store_id
            AND s.status = 'active'
-           AND s.store_type = 'company'
+           AND ops.store_was_company_during(s.store_id, $1::date,
+             ($1::date + INTERVAL '1 month - 1 day')::date)
           WHERE tdr.request_status = 'pending_region_approval'
             AND tdr.request_month = $1::date
             AND tdr.company_id = ANY($2::uuid[])
@@ -715,14 +735,25 @@ function monthlyStoreSalesJoin(closeCutoffClause: string) {
       AND ka.period_type = 'monthly' AND ka.period_start = $1::date
       AND ka.period_end = $2::date AND ka.source_type = 'integration'
       AND ka.source_batch_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+        WHERE ownership.store_id = s.store_id
+          AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
     ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
     LIMIT 1
+  ) monthly_store_sales ON TRUE
+  ${dailyStoreSalesJoin(closeCutoffClause, "transition_store_sales", true)}
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(transition_store_sales.actual_value, monthly_store_sales.actual_value) AS actual_value,
+      COALESCE(transition_store_sales.source_batch_id, monthly_store_sales.source_batch_id) AS source_batch_id,
+      COALESCE(transition_store_sales.import_batch_id, monthly_store_sales.import_batch_id) AS import_batch_id,
+      COALESCE(transition_store_sales.source_payload_hash, monthly_store_sales.source_payload_hash) AS source_payload_hash,
+      COALESCE(transition_store_sales.last_synced_at, monthly_store_sales.last_synced_at) AS last_synced_at
   ) store_sales ON TRUE`;
 }
 
 // The daily facts are additive. The latest source row supplies display lineage;
 // close-run lineage separately records every contributing import batch.
-function dailyStoreSalesJoin(closeCutoffClause: string) {
+function dailyStoreSalesJoin(closeCutoffClause: string, alias = "store_sales", transitionOnly = false) {
   return `LEFT JOIN LATERAL (
     SELECT SUM(ka.actual_value) AS actual_value,
       (ARRAY_AGG(ka.source_batch_id ORDER BY ka.period_start DESC))[1] AS source_batch_id,
@@ -745,7 +776,11 @@ function dailyStoreSalesJoin(closeCutoffClause: string) {
       AND ka.period_type = 'daily' AND ka.period_start = ka.period_end
       AND ka.period_start BETWEEN $1::date AND $2::date
       AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
-  ) store_sales ON TRUE`;
+      AND ops.store_type_as_of(s.store_id, ka.period_start) = 'company'
+      ${transitionOnly ? `AND EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+        WHERE ownership.store_id = s.store_id
+          AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)` : ""}
+  ) ${alias} ON TRUE`;
 }
 
 function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
@@ -763,6 +798,9 @@ function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
       AND ka.scope_type = 'employee' AND ka.period_type = 'monthly'
       AND ka.period_start = $1::date AND ka.period_end = $2::date
       AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+        WHERE ownership.store_id = s.store_id
+          AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
       AND (
         ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'
         OR EXISTS (
@@ -788,10 +826,18 @@ function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
       )
     ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
     LIMIT 1
+  ) monthly_personnel_sales ON TRUE
+  ${dailyPersonnelSalesJoin(closeCutoffClause, "transition_personnel_sales", true)}
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(transition_personnel_sales.actual_value, monthly_personnel_sales.actual_value) AS actual_value,
+      COALESCE(transition_personnel_sales.source_batch_id, monthly_personnel_sales.source_batch_id) AS source_batch_id,
+      COALESCE(transition_personnel_sales.import_batch_id, monthly_personnel_sales.import_batch_id) AS import_batch_id,
+      COALESCE(transition_personnel_sales.source_payload_hash, monthly_personnel_sales.source_payload_hash) AS source_payload_hash,
+      COALESCE(transition_personnel_sales.last_synced_at, monthly_personnel_sales.last_synced_at) AS last_synced_at
   ) personnel_sales ON TRUE`;
 }
 
-function dailyPersonnelSalesJoin(closeCutoffClause: string) {
+function dailyPersonnelSalesJoin(closeCutoffClause: string, alias = "personnel_sales", transitionOnly = false) {
   return `LEFT JOIN LATERAL (
     SELECT SUM(ka.actual_value) AS actual_value,
       (ARRAY_AGG(ka.source_batch_id ORDER BY ka.period_start DESC))[1] AS source_batch_id,
@@ -815,6 +861,10 @@ function dailyPersonnelSalesJoin(closeCutoffClause: string) {
       AND ka.period_type = 'daily' AND ka.period_start = ka.period_end
       AND ka.period_start BETWEEN $1::date AND $2::date
       AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
+      AND ops.store_type_as_of(s.store_id, ka.period_start) = 'company'
+      ${transitionOnly ? `AND EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
+        WHERE ownership.store_id = s.store_id
+          AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)` : ""}
       AND EXISTS (
         SELECT 1 FROM stg.kpi_raw kr
         INNER JOIN stg.external_id_map employee_map
@@ -835,5 +885,5 @@ function dailyPersonnelSalesJoin(closeCutoffClause: string) {
           AND kr.payload_json ->> 'scopeType' = 'employee'
           AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
       )
-  ) personnel_sales ON TRUE`;
+  ) ${alias} ON TRUE`;
 }

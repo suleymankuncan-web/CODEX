@@ -65,6 +65,7 @@ import { actionToast } from '../lib/action-toast'
 import { AdminStatePanel, AdminSurfaceHeader, AdminSurfacePage } from './admin-surface-primitives'
 import { resolveStoreRegionManager, type RegionManagerOption } from './master-data-region-manager'
 import { MasterDataStoreCombobox } from './master-data-store-combobox'
+import { validateStoreMasterDrafts } from './master-data-store-transition'
 import { PaginationFooter, RecordArea } from './master-data-management-list-support'
 
 type Workspace = 'stores' | 'personnel'
@@ -142,6 +143,9 @@ export function MasterDataManagementPage() {
       if (!storeEditor) throw new Error('Mağaza seçilemedi.')
       return updateStoreMasterData({
         storeId: storeEditor.storeId,
+        ...(draft.storeCode !== storeEditor.storeCode ? { storeCode: draft.storeCode } : {}),
+        ...(draft.storeType !== storeEditor.storeType
+          ? { storeTypeEffectiveOn: draft.storeTypeEffectiveOn } : {}),
         storeType: draft.storeType,
         regionId: storeEditor.regionId ?? manager.regionId,
         regionManagerUserId: manager.userId,
@@ -552,6 +556,7 @@ type StoreDraft = {
   storeCode: string
   storeName: string
   storeType: 'company' | 'franchise' | 'operator'
+  storeTypeEffectiveOn: string
   regionManagerUserId: string
   status: 'active' | 'inactive' | 'closed'
   kpiImportEnabled: boolean
@@ -572,18 +577,31 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
     storeCode: item && item !== 'new' ? item.storeCode : '',
     storeName: item && item !== 'new' ? item.storeName : '',
     storeType: item && item !== 'new' ? item.storeType as StoreDraft['storeType'] : 'company',
+    storeTypeEffectiveOn: '',
     regionManagerUserId: initialManager,
     status: item && item !== 'new' ? item.status as StoreDraft['status'] : 'active',
     kpiImportEnabled: item && item !== 'new' ? item.kpiImportEnabled : true,
   })
-  const valid = draft.storeCode.trim() && draft.storeName.trim() && draft.regionManagerUserId
+  const managerRegionId = managers.find((manager) => manager.userId === draft.regionManagerUserId)?.regionId
+  const validationError = item && item !== 'new' ? validateStoreMasterDrafts(
+    [[item.storeId, {
+      storeCode: draft.storeCode,
+      storeType: draft.storeType,
+      ...(draft.storeTypeEffectiveOn ? { storeTypeEffectiveOn: draft.storeTypeEffectiveOn } : {}),
+      ...(managerRegionId ? { regionId: managerRegionId } : {}),
+    }]],
+    new Map([[item.storeId, item]]),
+    undefined,
+  ) : null
+  const valid = Boolean(draft.storeName.trim() && managerRegionId &&
+    /^[A-Z][A-Z0-9_-]{1,79}$/.test(draft.storeCode) && !validationError)
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent className="tw:gap-0 tw:overflow-hidden tw:p-0 tw:sm:max-w-xl" closeLabel="Kapat">
         <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4 tw:pr-14"><DialogTitle>{item === 'new' ? 'Mağaza ekle' : 'Mağazayı düzenle'}</DialogTitle><DialogDescription>Mağaza bilgilerini ve sorumlu bölge müdürünü yönetin.</DialogDescription></DialogHeader>
         <div className="tw:grid tw:gap-4 tw:p-5 tw:sm:grid-cols-2">
           <Field label="Mağaza adı"><Input aria-label="Mağaza adı" disabled={item !== 'new'} value={draft.storeName} onChange={(e) => setDraft({ ...draft, storeName: e.target.value })} /></Field>
-          <Field label="Mağaza kodu"><Input aria-label="Mağaza kodu" disabled={item !== 'new'} value={draft.storeCode} onChange={(e) => setDraft({ ...draft, storeCode: e.target.value })} /></Field>
+          <Field label="Mağaza kodu"><Input aria-label="Mağaza kodu" autoCapitalize="characters" maxLength={80} spellCheck={false} value={draft.storeCode} onChange={(e) => setDraft({ ...draft, storeCode: e.target.value.toUpperCase() })} /></Field>
           <Field className="tw:sm:col-span-2" label="Bölge müdürü">
             <Select value={draft.regionManagerUserId} onValueChange={(value) => setDraft({ ...draft, regionManagerUserId: value })}>
               <SelectTrigger aria-label="Bölge müdürü" className="tw:w-full"><SelectValue placeholder="Bölge müdürü seçin" /></SelectTrigger>
@@ -592,6 +610,8 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
           </Field>
           <Field label="Mağaza türü"><Select value={draft.storeType} onValueChange={(value) => setDraft({ ...draft, storeType: value as StoreDraft['storeType'] })}><SelectTrigger aria-label="Mağaza türü" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">Şirket mağazası</SelectItem><SelectItem value="franchise">Franchise</SelectItem><SelectItem value="operator">Operatör</SelectItem></SelectContent></Select></Field>
           <Field label="Durum"><Select value={draft.status} onValueChange={(value) => setDraft({ ...draft, status: value as StoreDraft['status'] })}><SelectTrigger aria-label="Mağaza durumu" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Aktif</SelectItem><SelectItem value="inactive">Pasif</SelectItem><SelectItem value="closed">Kapalı</SelectItem></SelectContent></Select></Field>
+          {item && item !== 'new' && draft.storeType !== item.storeType ? <Field className="tw:sm:col-span-2" label="Mağaza tipi geçiş tarihi"><Input aria-label="Mağaza tipi geçiş tarihi" type="date" max={today} value={draft.storeTypeEffectiveOn} onChange={(e) => setDraft({ ...draft, storeTypeEffectiveOn: e.target.value })} /></Field> : null}
+          {validationError ? <p className="tw:sm:col-span-2 tw:text-sm tw:text-destructive" role="alert">{validationError}</p> : null}
         </div>
         <DialogFooter className="tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4"><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => onSave(draft)}><BadgePlus aria-hidden="true" /> {pending ? 'Kaydediliyor' : 'Kaydet'}</Button></DialogFooter>
       </DialogContent>

@@ -396,6 +396,8 @@ export async function getMasterDataQualityAudit(input?: {
 
 export async function updateStoreMasterData(input: {
   storeId: string
+  storeCode?: string
+  storeTypeEffectiveOn?: string
   storeType: 'company' | 'franchise' | 'operator'
   regionId: string
   regionManagerUserId?: string
@@ -407,6 +409,8 @@ export async function updateStoreMasterData(input: {
     method: 'PATCH',
     params: { storeId: input.storeId },
     body: {
+      ...(input.storeCode !== undefined ? { storeCode: input.storeCode } : {}),
+      ...(input.storeTypeEffectiveOn ? { storeTypeEffectiveOn: input.storeTypeEffectiveOn } : {}),
       storeType: input.storeType,
       regionId: input.regionId,
       ...(input.regionManagerUserId ? { regionManagerUserId: input.regionManagerUserId } : {}),

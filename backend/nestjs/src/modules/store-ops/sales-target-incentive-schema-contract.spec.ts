@@ -21,6 +21,9 @@ const approvalFlowMigrationPath = join(
 const approvalFlowMigrationSql = existsSync(approvalFlowMigrationPath)
   ? readFileSync(approvalFlowMigrationPath, "utf8")
   : "";
+const ownershipMigrationSql = readFileSync(
+  join(root, "db/migrations/088_store_ownership_history_v1.sql"), "utf8",
+);
 
 function expectSalesTargetIncentiveCoreTables(sql: string): void {
   expect(sql).toContain(
@@ -163,6 +166,15 @@ function expectSalesTargetIncentiveApprovalFlowTables(sql: string, managerAssign
 }
 
 describe("sales target incentive schema contract", () => {
+  it("keeps dated store ownership in both schema paths without changing store identity", () => {
+    for (const sql of [schemaSql, ownershipMigrationSql]) {
+      expect(sql).toContain("ops.store_ownership_transition");
+      expect(sql).toContain("UNIQUE (store_id, effective_on)");
+      expect(sql).toContain("FUNCTION ops.store_type_as_of(");
+      expect(sql).toContain("FUNCTION ops.store_was_company_during(");
+      expect(sql).toContain("t.effective_on <= p_date");
+    }
+  });
   it("adds the dedicated migration file for PR-3", () => {
     expect(migrationSql).not.toBe("");
   });

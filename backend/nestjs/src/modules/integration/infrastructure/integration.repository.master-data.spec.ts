@@ -52,7 +52,7 @@ describe("IntegrationRepository master data writes", () => {
       .fn()
       .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
       .mockResolvedValueOnce({
-        rows: [{ store_id: "store-1", is_current: true }],
+        rows: [{ store_id: "store-1", store_type: "company", is_current: true }],
       })
       .mockResolvedValueOnce({
         rows: [
@@ -102,6 +102,154 @@ describe("IntegrationRepository master data writes", () => {
     expect(sql).toContain("store_master_data.updated");
   });
 
+  it("changes only the external code while retaining the store identity and auditing the old code", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{ store_id: "store-1", company_id: "company-1", store_code: "SM150", store_type: "company", is_current: true }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ store_id: "store-1", store_code: "FM702", store_type: "company", updated_at: "2026-09-28T08:00:00Z" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const { repository } = createRepository(query);
+
+    const result = await repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1", storeCode: "FM702",
+      storeType: "company", regionId: "region-1", status: "active",
+      kpiImportEnabled: true, actorUserId: "actor-1",
+    });
+
+    expect(result).toEqual(expect.objectContaining({ store_id: "store-1", store_code: "FM702" }));
+    const update = query.mock.calls.find(([statement]) => String(statement).includes("UPDATE ops.store s"));
+    expect(String(update?.[0])).toContain("store_code = COALESCE($7::text, s.store_code)");
+    expect(update?.[1][0]).toBe("store-1");
+    expect(update?.[1][6]).toBe("FM702");
+    const audit = query.mock.calls.find(([statement]) => String(statement).includes("store_master_data.updated"));
+    expect(JSON.parse(audit?.[1][2])).toEqual(expect.objectContaining({ previousStoreCode: "SM150", storeCode: "FM702" }));
+  });
+
+  it("records a dated ownership change with the stable store identity", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{
+        store_id: "store-1", company_id: "company-1", store_code: "SM150",
+        store_type: "company", is_current: true,
+      }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ store_id: "store-1", store_code: "FM702", store_type: "franchise" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const { repository } = createRepository(query);
+
+    await repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1", storeCode: "FM702",
+      storeType: "franchise", storeTypeEffectiveOn: "2026-09-15",
+      regionId: "region-1", status: "active", kpiImportEnabled: true,
+      actorUserId: "actor-1",
+    });
+
+    const transition = query.mock.calls.find(([statement]) =>
+      String(statement).includes("INSERT INTO ops.store_ownership_transition"));
+    expect(transition?.[1].slice(0, 4)).toEqual([
+      "store-1", "2026-09-15", "company", "franchise",
+    ]);
+    expect(query.mock.calls.find(([statement]) => String(statement).includes("UPDATE ops.store s"))?.[1][6]).toBe("FM702");
+  });
+
+  it("rejects a type change without an effective date before writing", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{
+        store_id: "store-1", company_id: "company-1", store_code: "SM150",
+        store_type: "company", is_current: true,
+      }] });
+    const { repository } = createRepository(query);
+
+    await expect(repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1",
+      storeType: "franchise", regionId: "region-1", status: "active",
+      kpiImportEnabled: true, actorUserId: "actor-1",
+    })).rejects.toThrow("effective date is required");
+    expect(query.mock.calls.some(([statement]) => String(statement).includes("UPDATE ops.store"))).toBe(false);
+  });
+
+  it("rejects a backdated type change that overlaps a closed incentive snapshot", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{
+        store_id: "store-1", company_id: "company-1", store_code: "SM150",
+        store_type: "company", is_current: true,
+      }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ period_key: "2026-09" }] });
+    const { repository } = createRepository(query);
+
+    await expect(repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1",
+      storeType: "franchise", storeTypeEffectiveOn: "2026-09-15",
+      regionId: "region-1", status: "active", kpiImportEnabled: true,
+      actorUserId: "actor-1",
+    })).rejects.toThrow("closed incentive period overlaps");
+    expect(query.mock.calls.some(([statement]) =>
+      String(statement).includes("INSERT INTO ops.store_ownership_transition") ||
+      String(statement).includes("UPDATE ops.store s"))).toBe(false);
+  });
+
+  it("rejects an out-of-order ownership transition before writing", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{
+        store_id: "store-1", company_id: "company-1", store_code: "FM702",
+        store_type: "franchise", is_current: true,
+      }] })
+      .mockResolvedValueOnce({ rows: [{ effective_on: "2026-09-15", new_type: "franchise" }] });
+    const { repository } = createRepository(query);
+
+    await expect(repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1",
+      storeType: "company", storeTypeEffectiveOn: "2026-09-14",
+      regionId: "region-1", status: "active", kpiImportEnabled: true,
+      actorUserId: "actor-1",
+    })).rejects.toThrow("chronological order");
+    expect(query.mock.calls.some(([statement]) =>
+      String(statement).includes("INSERT INTO ops.store_ownership_transition") ||
+      String(statement).includes("UPDATE ops.store s"))).toBe(false);
+  });
+
+  it("rejects a code already used by another store before any update", async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{ store_id: "store-1", company_id: "company-1", store_code: "SM150", store_type: "company", is_current: true }] })
+      .mockResolvedValueOnce({ rows: [{ store_id: "store-2" }] });
+    const { repository } = createRepository(query);
+
+    await expect(repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1", storeCode: "FM702",
+      storeType: "company", regionId: "region-1", status: "active",
+      kpiImportEnabled: true, actorUserId: "actor-1",
+    })).rejects.toThrow("Store code is already in use");
+    expect(query.mock.calls.some(([statement]) => String(statement).includes("UPDATE ops.store"))).toBe(false);
+  });
+
+  it("maps a concurrent store-code uniqueness race to a conflict without an audit", async () => {
+    const conflict = Object.assign(new Error("duplicate store code"), {
+      code: "23505", constraint: "store_store_code_key",
+    });
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
+      .mockResolvedValueOnce({ rows: [{ store_id: "store-1", company_id: "company-1", store_code: "SM150", store_type: "company", is_current: true }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockRejectedValueOnce(conflict);
+    const { repository } = createRepository(query);
+
+    await expect(repository.updateKpiImportStoreScope({
+      actorCompanyIds: ["company-1"], storeId: "store-1", storeCode: "FM702",
+      storeType: "company", regionId: "region-1", status: "active",
+      kpiImportEnabled: true, actorUserId: "actor-1",
+    })).rejects.toThrow("Store code is already in use");
+    expect(query.mock.calls.some(([statement]) => String(statement).includes("store_master_data.updated"))).toBe(false);
+  });
+
   it.each([
     ["exclusion", "23P01", "ex_user_action_store_assignment_no_overlap_v1"],
     ["legacy unique", "23505", "uq_user_action_store_assignment_active"],
@@ -117,7 +265,7 @@ describe("IntegrationRepository master data writes", () => {
         .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
         .mockResolvedValueOnce({
           rows: [
-            { store_id: "store-1", company_id: "company-1", is_current: true },
+            { store_id: "store-1", company_id: "company-1", store_type: "company", is_current: true },
           ],
         })
         .mockResolvedValueOnce({
@@ -186,7 +334,7 @@ describe("IntegrationRepository master data writes", () => {
       .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
       .mockResolvedValueOnce({
         rows: [
-          { store_id: "store-1", company_id: "company-1", is_current: true },
+          { store_id: "store-1", company_id: "company-1", store_type: "company", is_current: true },
         ],
       })
       .mockResolvedValueOnce({

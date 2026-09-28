@@ -49,10 +49,8 @@ import {
 import {
   dateInputValue,
   mergePersonnelPatch,
-  mergeStoreMasterPatch,
   normalizeEmploymentType,
   normalizePersonnelStatus,
-  normalizeStoreStatus,
   normalizeStoreType,
   type PersonnelMasterPatch,
   type StoreMasterPatch,
@@ -73,6 +71,7 @@ import {
   type MasterDataWorkbenchTab,
 } from './master-data-control-center-model'
 import { MasterDataDetailPanel } from './master-data-control-center-detail'
+import { buildStoreMasterUpdateInput, validateStoreMasterDrafts } from './master-data-store-transition'
 import { MasterDataWorkbenchTable } from './master-data-control-center-tables'
 
 const PAGE_SIZE = 50
@@ -393,7 +392,6 @@ export function MasterDataControlCenterPage() {
     }
 
     if (
-      storeEntries.some(([storeId, patch]) => !mergeStoreMasterPatch(storesById.get(storeId)!, patch, storeLookupsQuery.data).regionId) ||
       personnelEntries.some(([employeeId, patch]) => {
         const merged = mergePersonnelPatch(personnelById.get(employeeId)!, patch)
         return !merged.storeId || !merged.positionId || !merged.hireDate
@@ -403,22 +401,19 @@ export function MasterDataControlCenterPage() {
       return
     }
 
+    const storeValidationError = validateStoreMasterDrafts(storeEntries, storesById, storeLookupsQuery.data)
+    if (storeValidationError) {
+      setFeedback({ tone: 'warning', message: storeValidationError })
+      return
+    }
+
     setIsSaving(true)
     setFeedback(null)
     try {
       const storeResults = await Promise.allSettled(
-        storeEntries.map(([storeId, patch]) => {
-          const record = storesById.get(storeId)!
-          const effective = mergeStoreMasterPatch(record, patch, storeLookupsQuery.data)
-          return updateStoreMasterData({
-            storeId,
-            storeType: normalizeStoreType(effective.storeType),
-            regionId: effective.regionId!,
-            status: normalizeStoreStatus(effective.status),
-            kpiImportEnabled: effective.kpiImportEnabled,
-            ...(record.updatedAt ? { expectedUpdatedAt: record.updatedAt } : {}),
-          })
-        }),
+        storeEntries.map(([storeId, patch]) => updateStoreMasterData(
+          buildStoreMasterUpdateInput(storesById.get(storeId)!, patch, storeLookupsQuery.data),
+        )),
       )
       const personnelResults = await Promise.allSettled(
         personnelEntries.map(([employeeId, patch]) => {
