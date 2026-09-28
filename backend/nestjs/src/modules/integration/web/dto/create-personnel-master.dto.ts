@@ -20,6 +20,7 @@ export class CreatePersonnelMasterDto {
   @IsOptional()
   @IsString()
   @Length(1, 80)
+  @Matches(/^(?=.*[A-Za-z0-9_]).+$/)
   externalEmployeeRef?: string;
 
   @IsString()

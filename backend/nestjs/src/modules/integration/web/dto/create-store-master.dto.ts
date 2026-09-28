@@ -1,9 +1,10 @@
-import { IsBoolean, IsIn, IsString, Length } from "class-validator";
+import { IsBoolean, IsIn, IsString, Length, Matches } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class CreateStoreMasterDto {
   @IsString()
   @Length(1, 80)
+  @Matches(/^[A-Z][A-Z0-9_-]{1,79}$/)
   storeCode!: string;
 
   @IsString()

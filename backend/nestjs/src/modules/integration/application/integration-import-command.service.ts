@@ -10,6 +10,7 @@ import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
 import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
 import { buildCommandResponse } from "../../../shared/http/response-builders";
 import { logStructuredMessage } from "../../../shared/structured-log";
+import { rethrowMasterIdentityCodeConflict } from "../../../shared/database/master-identity-code-error";
 import {
   getBlockedByEntityTypes,
   getDetailHealthState,
@@ -182,7 +183,7 @@ export class IntegrationImportCommandService {
       externalId: input.externalId,
       internalId: input.internalId,
       internalTableName,
-    });
+    }).catch(rethrowMasterIdentityCodeConflict);
     await this.integrationRepository.recordExternalIdMappingApproved({
       actorUserId: input.actorUserId,
       integrationSourceId: input.integrationSourceId,
