@@ -4,10 +4,7 @@
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import {
-  buildCommandResponse,
-  buildListResponse,
-} from "../../../shared/http/response-builders";
+import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { rethrowMasterIdentityCodeConflict } from "../../../shared/database/master-identity-code-error";
 import {
   type BootstrapBatch,
