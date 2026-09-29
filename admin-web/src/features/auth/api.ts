@@ -54,6 +54,9 @@ export type CreateActionStoreAssignmentsBatchInput = ApiMutationBody<
   '/api/auth/action-store-assignments/batch',
   'POST'
 >
+type AuthUserPermissionAssignmentsResponse = ApiGetResponse<'/api/auth/user-permission-assignments'>
+export type UserPermissionAssignment = AuthUserPermissionAssignmentsResponse['items'][number]
+export type GrantUserPermissionInput = ApiMutationBody<'/api/auth/user-permission-assignments', 'POST'>
 type AuthAuditResponse = ApiGetResponse<'/api/auth/users/{userId}/audit'>
 export type AuditEvent = AuthAuditResponse['items'][number]
 export type AuthBootstrap = ApiGetResponse<'/api/auth/bootstrap'>
@@ -212,6 +215,23 @@ export async function getActionStoreAssignments(input?: {
   return fetchOpenApiJson('/api/auth/action-store-assignments', { query: params })
 }
 
+export async function getUserPermissionAssignments(input?: {
+  userId?: string
+  roleAssignmentId?: string
+  active?: boolean
+  limit?: number
+  offset?: number
+}) {
+  const params = new URLSearchParams({
+    limit: String(normalizeAuthAdminListLimit(input?.limit, 100)),
+    offset: String(input?.offset ?? 0),
+  })
+  if (input?.userId) params.set('userId', input.userId)
+  if (input?.roleAssignmentId) params.set('roleAssignmentId', input.roleAssignmentId)
+  if (input?.active !== undefined) params.set('active', String(input.active))
+  return fetchOpenApiJson('/api/auth/user-permission-assignments', { query: params })
+}
+
 export async function getRoles() {
   return fetchOpenApiJson('/api/auth/roles')
 }
@@ -302,6 +322,16 @@ export async function createActionStoreAssignmentsBatch(input: CreateActionStore
   return sendOpenApiJson('/api/auth/action-store-assignments/batch', {
     method: 'POST',
     body: input,
+  })
+}
+
+export async function grantUserPermission(input: GrantUserPermissionInput) {
+  return sendOpenApiJson('/api/auth/user-permission-assignments', { method: 'POST', body: input })
+}
+
+export async function revokeUserPermission(input: { assignmentId: string; reason: string }) {
+  return sendOpenApiJson('/api/auth/user-permission-assignments/{assignmentId}/revoke', {
+    method: 'PATCH', params: { assignmentId: input.assignmentId }, body: { reason: input.reason },
   })
 }
 

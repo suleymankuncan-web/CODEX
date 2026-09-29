@@ -375,8 +375,8 @@ const permissionsFixture = {
 const emptyList = { items: [], meta: { count: 0, total: 0, limit: 200, offset: 0 } }
 
 
-test('Prim Onayı is individual, persists across reload and can be revoked', async ({ page }) => {
-  let enabled = false
+test('legacy Prim Onayı remains visible only for revocation', async ({ page }) => {
+  let enabled = true
   const changes: boolean[] = []
   await page.route('**/api/auth/role-assignments?**', (route) => route.fulfill({ json: {
     items: [{ assignmentId: 'viewer-assignment', userId: 'user-active', roleCode: 'REPORT_VIEWER', roleName: 'Viewer', scopeType: 'company', companyId: 'company-1', regionId: null, storeId: null, active: true, incentiveApproval: enabled }], meta: { total: 1, count: 1, limit: 100, offset: 0 },
@@ -389,37 +389,50 @@ test('Prim Onayı is individual, persists across reload and can be revoked', asy
   })
   await page.goto('/admin/auth')
   const checkbox = page.getByRole('checkbox', { name: 'Prim Onayı' })
-  await expect(checkbox).not.toBeChecked()
-  await checkbox.click()
-  await expect(checkbox).toBeChecked()
-  await page.reload()
   await expect(checkbox).toBeChecked()
   await checkbox.click()
-  await expect(checkbox).not.toBeChecked()
-  expect(changes).toEqual([true, false])
+  await expect(checkbox).toHaveCount(0)
+  expect(changes).toEqual([false])
 })
 
-test('new Report Viewer assignment includes opt-in Prim Onayı and resets it on role change', async ({ page }) => {
+test('Report Viewer receives and revokes a person-specific Sales Director capability', async ({ page }) => {
   await page.route('**/api/auth/lookups', (route) => route.fulfill({ json: { ...lookupsFixture, roles: [...lookupsFixture.roles, { roleCode: 'REPORT_VIEWER', roleName: 'Viewer', scopeType: 'company' }] } }))
-  let payload: unknown
-  await page.route('**/api/auth/role-assignments', async (route) => {
-    payload = route.request().postDataJSON()
-    await route.fulfill({ status: 201, json: { command: { status: 'created' }, data: { assignment: {} } } })
+  await page.route('**/api/auth/role-assignments?**', (route) => route.fulfill({ json: {
+    items: [{ assignmentId: 'viewer-assignment', userId: 'user-active', roleCode: 'REPORT_VIEWER', roleName: 'Viewer', scopeType: 'company', companyId: 'company-1', regionId: null, storeId: null, active: true, incentiveApproval: false, effectiveFrom: null, effectiveTo: null }], meta: { total: 1, count: 1, limit: 100, offset: 0 },
+  } }))
+  await page.route('**/api/auth/permissions', (route) => route.fulfill({ json: { items: [{ permissionId: 'permission-sales-director', permissionCode: 'INCENTIVE_SALES_DIRECTOR_APPROVAL', resourceName: 'incentive', actionName: 'approve_sales_director', description: 'Sales Director approval' }], meta: { count: 1, total: 1, limit: 50, offset: 0 } } }))
+  let grantPayload: Record<string, unknown> | undefined
+  let revokePayload: Record<string, unknown> | undefined
+  let revokedAt: string | null = null
+  await page.route('**/api/auth/user-permission-assignments?**', (route) => route.fulfill({ json: {
+    items: grantPayload ? [{ assignmentId: 'grant-1', roleAssignmentId: 'viewer-assignment', userId: 'user-active', roleCode: 'REPORT_VIEWER', permissionCode: 'INCENTIVE_SALES_DIRECTOR_APPROVAL', resourceName: 'incentive', actionName: 'approve_sales_director', scopeType: 'company', companyId: 'company-1', regionId: null, storeId: null, startsAt: grantPayload.startsAt, endsAt: null, grantReason: grantPayload.reason, createdAt: '2026-09-29T00:00:00.000Z', revokedAt, revokeReason: revokedAt ? 'Responsibility changed' : null }] : [], meta: { total: grantPayload ? 1 : 0, limit: 200, offset: 0 },
+  } }))
+  await page.route('**/api/auth/user-permission-assignments', async (route) => {
+    grantPayload = route.request().postDataJSON()
+    await route.fulfill({ status: 201, json: { status: 'created', message: 'created', data: { assignment: {} } } })
+  })
+  await page.route('**/api/auth/user-permission-assignments/grant-1/revoke', async (route) => {
+    expect(route.request().method()).toBe('PATCH')
+    revokePayload = route.request().postDataJSON()
+    revokedAt = '2026-09-29T01:00:00.000Z'
+    await route.fulfill({ json: { status: 'updated', message: 'revoked', data: { assignment: {} } } })
   })
   await page.goto('/admin/auth')
-  await page.getByRole('button', { name: 'Rol ekle' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Rol ekle' })
-  await dialog.getByLabel('Rol', { exact: true }).click()
-  await page.getByRole('option', { name: 'Rapor görüntüleyici' }).click()
-  await expect(dialog.getByRole('checkbox', { name: 'Prim Onayı' })).not.toBeChecked()
-  await dialog.getByRole('checkbox', { name: 'Prim Onayı' }).check()
-  await dialog.getByLabel('Rol', { exact: true }).click()
-  await page.getByRole('option', { name: 'Sistem yöneticisi' }).click()
-  await expect(dialog.getByRole('checkbox', { name: 'Prim Onayı' })).toHaveCount(0)
-  await dialog.getByLabel('Rol', { exact: true }).click()
-  await page.getByRole('option', { name: 'Rapor görüntüleyici' }).click()
-  await expect(dialog.getByRole('checkbox', { name: 'Prim Onayı' })).not.toBeChecked()
-  await dialog.getByRole('checkbox', { name: 'Prim Onayı' }).check()
-  await dialog.getByRole('button', { name: 'Rolü ata' }).click()
-  await expect.poll(() => payload).toMatchObject({ userId: 'user-active', roleCode: 'REPORT_VIEWER', scopeType: 'company', companyId: 'company-1', incentiveApproval: true })
+  await page.getByRole('button', { name: 'Yetki ekle' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Kişisel yetki ekle' })
+  await dialog.getByLabel('Yetkinin bağlı olduğu rol').click()
+  await page.getByRole('option', { name: /Rapor görüntüleyici/ }).click()
+  await dialog.getByLabel('Kişisel yetki').click()
+  await page.getByRole('option', { name: /Bölge Müdürü prim paketlerini/ }).click()
+  await dialog.getByLabel('Yetki gerekçesi').fill('Sales director responsibility')
+  await dialog.getByRole('button', { name: 'Yetkiyi ekle' }).click()
+  await expect.poll(() => grantPayload).toMatchObject({ roleAssignmentId: 'viewer-assignment', permissionCode: 'INCENTIVE_SALES_DIRECTOR_APPROVAL', scopeType: 'company', companyId: 'company-1', reason: 'Sales director responsibility' })
+  const permissionRow = page.getByText(/Satış Direktörü aşamasında/).locator('..').locator('..')
+  await permissionRow.getByRole('button', { name: 'Kaldır' }).click()
+  const revokeDialog = page.getByRole('dialog', { name: 'Kişisel yetki kaldırılsın mı?' })
+  await revokeDialog.getByLabel('Yetki kaldırma gerekçesi').fill('Responsibility changed')
+  await revokeDialog.getByRole('button', { name: 'Yetkiyi kaldır' }).click()
+  await expect.poll(() => revokePayload).toEqual({ reason: 'Responsibility changed' })
+  await expect(permissionRow.getByText('Kaldırıldı')).toBeVisible()
+  await expect(permissionRow.getByRole('button', { name: 'Kaldır' })).toHaveCount(0)
 })

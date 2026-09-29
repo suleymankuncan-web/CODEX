@@ -40,6 +40,21 @@ export class AuthRoleAssignmentCommandRepository {
 
   async createRoleAssignment(input: CreateRoleAssignmentCommandInput) {
     return this.databaseService.withTransaction(async (client) => {
+      await client.query(`SELECT 1 FROM ops.user_account WHERE user_id = $1::uuid FOR UPDATE`, [input.userId]);
+      const role = await client.query<{ role_code: string }>(
+        `SELECT role_code FROM ops.role WHERE role_id = $1::uuid`,
+        [input.roleId],
+      );
+      const startsImmediately = !input.effectiveFrom || new Date(input.effectiveFrom).getTime() <= Date.now();
+      if (role.rows[0]?.role_code === "SUPER_ADMIN" && startsImmediately && !input.effectiveTo) {
+        await client.query(`
+          UPDATE ops.user_permission_assignment
+          SET revoked_at = NOW(), revoked_by_user_id = $2::uuid,
+              revoke_reason = 'Super Admin assignment activated'
+          WHERE user_id = $1::uuid AND revoked_at IS NULL
+            AND (ends_at IS NULL OR ends_at > NOW())
+        `, [input.userId, input.actorUserId]);
+      }
       const result = await client.query<RoleAssignmentCommandRow>(
         `
           INSERT INTO ops.user_role_assignment (
@@ -187,6 +202,13 @@ export class AuthRoleAssignmentCommandRepository {
 
   async deactivateRoleAssignment(input: DeactivateRoleAssignmentCommandInput) {
     return this.databaseService.withTransaction(async (client) => {
+      const target = await client.query<{ user_id: string }>(`
+        SELECT user_id::text FROM ops.user_role_assignment
+        WHERE user_role_assignment_id = $1::uuid
+      `, [input.assignmentId]);
+      if (target.rows[0]) {
+        await client.query(`SELECT 1 FROM ops.user_account WHERE user_id = $1::uuid FOR UPDATE`, [target.rows[0].user_id]);
+      }
       const result = await client.query<RoleAssignmentCommandRow>(
         `
           UPDATE ops.user_role_assignment
@@ -211,6 +233,13 @@ export class AuthRoleAssignmentCommandRepository {
       const assignment = result.rows[0] ?? null;
 
       if (assignment) {
+        await client.query(`
+          UPDATE ops.user_permission_assignment
+          SET revoked_at = NOW(), revoked_by_user_id = $2::uuid,
+              revoke_reason = 'Role assignment deactivated'
+          WHERE user_role_assignment_id = $1::uuid AND revoked_at IS NULL
+            AND (ends_at IS NULL OR ends_at > NOW())
+        `, [assignment.user_role_assignment_id, input.actorUserId]);
         await client.query(
           `
             INSERT INTO audit.event_log (

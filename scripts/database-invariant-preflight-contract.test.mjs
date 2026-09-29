@@ -116,6 +116,9 @@ test('database invariant preflight SQL is read only and covers every required ch
     'ops.checklist_instance_item_visual_reference',
     'ops.store',
     'ops.user_role_assignment',
+    // User capability scope is additive and checked by the versioned,
+    // read-only user-permission-assignment-invariants-v1.sql overlay.
+    'ops.user_permission_assignment',
   ])
   const scopeBearingTables = [...schema.matchAll(
     /CREATE TABLE(?: IF NOT EXISTS)?\s+([a-z_]+\.[a-z_]+)\s*\(([\s\S]*?)\n\);/g,
@@ -132,6 +135,17 @@ test('database invariant preflight SQL is read only and covers every required ch
   assert.match(sql, /resolved_company_id/)
   assert.match(sql, /resolved_region_id/)
   assert.match(sql, /resolved_store_id/)
+})
+
+test('user permission scope has an additive read-only invariant overlay', () => {
+  const sql = readFileSync('db/preflight/user-permission-assignment-invariants-v1.sql', 'utf8')
+  assert.match(sql, /ops\.user_permission_assignment/)
+  assert.match(sql, /ops\.user_role_assignment/)
+  assert.match(sql, /USER-PERM-01/)
+  assert.doesNotMatch(
+    stripSqlComments(sql),
+    /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i,
+  )
 })
 
 test('no-sales alert company/store scope is enforced without changing immutable V1 diagnostics', () => {

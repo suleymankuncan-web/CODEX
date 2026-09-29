@@ -816,6 +816,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/auth/user-permission-assignments')) {
+      await route.fulfill({ json: emptyListFixture })
+      return
+    }
+
     await route.fulfill({
       status: 501,
       json: {

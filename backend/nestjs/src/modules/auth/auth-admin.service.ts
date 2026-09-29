@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../shared/http/response-builders";
 import { mapAuditEvent } from "../../shared/audit/audit-event.mapper";
 import { semanticValidation } from "../../shared/http/api-errors";
@@ -13,11 +8,8 @@ import { AuthAdminLookupRepository } from "./auth-admin-lookup.repository";
 import { AuthAdminRepository } from "./auth-admin.repository";
 import { AuthAdminUserAccountReadRepository } from "./auth-admin-user-account-read.repository";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
-import {
-  mapAuthActionStoreAssignment,
-  mapAuthAssignment,
-  mapAuthUser,
-} from "./auth-admin-response.mapper";
+import { mapAuthActionStoreAssignment, mapAuthAssignment, mapAuthUser } from "./auth-admin-response.mapper";
+import { isIndividualCapabilityPermission } from "./individual-capability-permissions";
 
 @Injectable()
 export class AuthAdminService {
@@ -42,6 +34,9 @@ export class AuthAdminService {
     effectiveTo?: string;
     actorUserId: string;
   }) {
+    if (input.incentiveApproval) {
+      throw new ForbiddenException("Legacy incentive final approval can no longer be granted");
+    }
     if (input.incentiveApproval && (input.roleCode !== "REPORT_VIEWER" || input.scopeType !== "company")) {
       throw new ForbiddenException("Prim approval requires a company-scoped Report Viewer assignment");
     }
@@ -84,6 +79,11 @@ export class AuthAdminService {
       effectiveFrom: input.effectiveFrom ?? null,
       effectiveTo: input.effectiveTo ?? null,
       actorUserId: input.actorUserId,
+    }).catch((error: unknown) => {
+      if ((error as { code?: string }).code === "23514") {
+        throw new ConflictException("Role assignment conflicts with fixed or legacy capability rules");
+      }
+      throw error;
     });
 
     return buildCommandResponse({
@@ -113,6 +113,9 @@ export class AuthAdminService {
   }
 
   async updateIncentiveApproval(input: { assignmentId: string; enabled: boolean; actorUserId: string }) {
+    if (input.enabled) {
+      throw new ForbiddenException("Legacy incentive final approval can only be revoked");
+    }
     const assignment = await this.authAdminRepository.updateIncentiveApproval(input);
     if (!assignment) throw new ConflictException("An active company-scoped Report Viewer assignment is required");
     return buildCommandResponse({ status: "updated", message: "Incentive approval permission updated", data: { assignment: mapAuthAssignment(assignment) } });
@@ -712,6 +715,9 @@ export class AuthAdminService {
     if (!permission) {
       throw new NotFoundException(`Permission not found: ${input.permissionCode}`);
     }
+    if (isIndividualCapabilityPermission(permission.permission_code)) {
+      throw new ForbiddenException("This capability must be assigned to an individual user");
+    }
 
     const existing = await this.authAdminLookupRepository.getRolePermission({
       roleId: resolvedRole.role_id,
@@ -726,6 +732,11 @@ export class AuthAdminService {
       roleId: resolvedRole.role_id,
       permissionId: permission.permission_id,
       actorUserId: input.actorUserId,
+    }).catch((error: unknown) => {
+      if ((error as { code?: string }).code === "23514") {
+        throw new ConflictException("Role permission conflicts with individual capability grants");
+      }
+      throw error;
     });
 
     return buildCommandResponse({

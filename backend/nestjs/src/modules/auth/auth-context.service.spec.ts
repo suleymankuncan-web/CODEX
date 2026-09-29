@@ -173,6 +173,41 @@ describe("AuthContextService", () => {
     });
   });
 
+  it("uses the persisted personal capability scope instead of the catalog role scope", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({ roleAssignments: [{
+        role_code: "REPORT_VIEWER", role_scope_type: "company", scope_type: "store",
+        company_id: "company-1", region_id: "region-1", store_id: "store-1",
+        permission_codes: ["reports.read"], is_personal_permission: true,
+      }] }),
+      { resolveUser: jest.fn(async () => ({ userId: "user-1", roleCodes: [], scope: {} })) } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+    const user = await service.resolveUser({ headers: { "x-user-id": "user-1" } });
+    expect(user?.permissionScopes?.["reports.read"]).toEqual({
+      companyIds: [], regionIds: [], storeIds: ["store-1"],
+    });
+  });
+
+  it("does not expand a personal Region Manager capability to every action store", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({
+        roleAssignments: [{
+          role_code: "REGION_MANAGER", role_scope_type: "region", scope_type: "store",
+          company_id: "company-1", region_id: "region-1", store_id: "store-1",
+          permission_codes: ["reports.read"], is_personal_permission: true,
+        }],
+        actionStoreAssignments: [{ store_id: "store-1" }, { store_id: "store-2" }],
+      }),
+      { resolveUser: jest.fn(async () => ({ userId: "user-1", roleCodes: [], scope: {} })) } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+    const user = await service.resolveUser({ headers: { "x-user-id": "user-1" } });
+    expect(user?.permissionScopes?.["reports.read"]?.storeIds).toEqual(["store-1"]);
+  });
+
   it("ignores explicit permission grants on malformed role/assignment scope pairs", async () => {
     const service = new AuthContextService(
       { authMode: "mock", allowMockAuth: true } as never,

@@ -29,6 +29,7 @@ describe("AuthAuthorizationRepository", () => {
     expect(sql).toContain("region.status = 'active'");
     expect(sql).toContain("store.status = 'active'");
     expect(sql).toContain("ops.role_permission");
+    expect(sql).toContain("ops.user_permission_assignment");
     expect(sql).toContain("permission_codes");
   });
 
