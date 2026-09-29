@@ -61,7 +61,9 @@ test('ONP-1 workflow proves read-only API and worker startup from one image', ()
   assert.doesNotMatch(sameImageSmoke, /HR_AXIS_STRICT_LOCAL=true/)
   assert.equal(backendPackage.dependencies['@nestjs/swagger'], '^11.4.6')
   assert.equal(backendPackage.devDependencies['@nestjs/swagger'], undefined)
-  assert.equal(backendPackage.overrides['@nestjs/swagger']['js-yaml'], '5.2.3')
+  assert.equal(backendPackage.overrides['@nestjs/swagger']['js-yaml'], '5.4.2')
+  const backendLock = JSON.parse(readFileSync('backend/nestjs/package-lock.json', 'utf8'))
+  assert.equal(backendLock.packages['node_modules/@nestjs/swagger/node_modules/js-yaml'].version, '5.4.2')
 })
 
 test('ONP-1 proof is reusable by the fail-closed required gate and binds manifest bases to Dockerfile pins', () => {
