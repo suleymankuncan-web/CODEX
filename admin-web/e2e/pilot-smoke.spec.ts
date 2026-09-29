@@ -119,7 +119,7 @@ test('core Store routes open and parked competition access fails closed', async 
     {
       path: '/store/checklists',
       urlPattern: /\/store\/checklists$/,
-      heading: page.getByRole('heading', { name: 'Checklist Raporları' }),
+      heading: page.getByRole('heading', { name: 'Saha Kontrolleri' }),
     },
     {
       path: '/store/tasks',
@@ -646,6 +646,15 @@ async function routePilotSmokeApi(context: BrowserContext) {
           },
         },
       })
+      return
+    }
+
+    if (pathname.endsWith('/api/checklists/command-canvas/visit-plans')) {
+      await route.fulfill({ json: { data: {
+        planId: null, regionId: null, regionName: 'Sorumlu mağazalar', weekStart: new URL(request.url()).searchParams.get('weekStart'),
+        revision: 0, scopeRevision: '0'.repeat(64), revisedAt: null, view: 'region_manager',
+        capabilities: { canMaintainWeeklyVisitPlan: true }, items: [],
+      } } })
       return
     }
 

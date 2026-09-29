@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './test-fixtures'
 import { checklistEvidenceOutputPath } from './checklist-evidence-output'
-import { createStoreContractSession, installStoreContractSession, storeIds } from './store-page-contract-fixtures'
+import { installStoreContractSession, storeIds } from './store-page-contract-fixtures'
 
 const regionId = '11111111-1111-4111-8111-111111111111'
 const storeId = '22222222-2222-4222-8222-222222222222'
@@ -306,20 +306,34 @@ test('Report Viewer column headers request the selected store sorting', async ({
   await expect(scoreHeader).toHaveAttribute('aria-sort', 'ascending')
 })
 
-test('Report Viewer presentation wins for a mixed report-viewer and region-manager session', async ({ page }) => {
-  await installStoreContractSession(page, 'reportViewer')
-  const session = createStoreContractSession('reportViewer')
-  session.user.roleCodes = ['REPORT_VIEWER', 'REGION_MANAGER']
-  session.user.scope.regionIds = [regionId]
-  session.user.readScope.regionIds = [regionId]
-  await page.unroute('**/api/auth/session')
-  await page.route('**/api/auth/session', async (route) => route.fulfill({ json: session }))
+test('Region Manager presentation wins for a mixed session without loading company-wide managers', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager', { roleCodes: ['REPORT_VIEWER', 'REGION_MANAGER'], actionStoreIds: [storeIds[0]] })
+  let managerRequests = 0
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/checklists/command-canvas/regions') managerRequests += 1
+  })
   await routeReportViewerRecords(page)
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
+    const row = { ...commandRow(1), storeId: storeIds[0], storeName: 'Assigned store' }
+    await route.fulfill({ json: { data: { ...commandPage([row], 1, false, 0).data, view: 'region_manager' } } })
+  })
+  await page.route('**/api/checklists/command-canvas/visit-plans?**', async (route) => {
+    await route.fulfill({ json: { data: {
+      planId: null, regionId: null, regionName: 'Sorumlu mağazalar', weekStart: '2026-08-31',
+      revision: 0, scopeRevision: '0'.repeat(64), revisedAt: null, view: 'region_manager',
+      capabilities: { canMaintainWeeklyVisitPlan: true }, items: [],
+    } } })
+  })
 
   await page.goto('/store/checklists?view=workflow&tab=plan')
 
-  await expect(page.getByRole('heading', { name: 'Checklist Raporları' }).first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Checklist Raporları' })).toHaveCount(0)
+  await expect(page.getByTestId('checklist-command-row')).toHaveCount(1)
+  await expect(page.getByTestId('checklist-command-row').getByText('Assigned store')).toBeVisible()
+  await expect(page.getByLabel('Haftalık ziyaret planı')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Haftayı Planla' })).toBeEnabled()
+  expect(managerRequests).toBe(0)
 })
 
 test('Super Admin Report Viewer presentation opens the store timeline and checklist result', async ({ page }) => {
