@@ -5,9 +5,7 @@ import { normalizeDisplayLabel } from '../../lib/display-labels'
 export type CommandChainActorRole =
   | 'SUPER_ADMIN'
   | 'HR_ADMIN'
-  | 'INTEGRATION_ADMIN'
   | 'REGION_MANAGER'
-  | 'SNAPSHOT_OPERATOR'
   | 'STORE_MANAGER'
   | 'STORE_PERSONNEL'
   | 'REPORT_VIEWER'
@@ -343,9 +341,9 @@ function rolesForSignalSource(
 ): readonly CommandChainActorRole[] {
   switch (signal.family) {
     case 'import':
-      return ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
+      return ['SUPER_ADMIN']
     case 'snapshot':
-      return ['SUPER_ADMIN', 'SNAPSHOT_OPERATOR']
+      return ['SUPER_ADMIN']
     case 'workforce':
       return ['SUPER_ADMIN', 'HR_ADMIN']
     case 'workflow':

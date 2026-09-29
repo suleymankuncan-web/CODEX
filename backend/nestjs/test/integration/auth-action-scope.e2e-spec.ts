@@ -7,12 +7,13 @@ describe("Auth action scope integration", () => {
       authContextService: {
         resolveUser: jest.fn(async () => ({
           userId: "user-1",
-          roleCodes: ["AUDITOR"],
+          roleCodes: ["SUPER_ADMIN"],
           scope: {
-            companyIds: [],
+            companyIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
             regionIds: [],
             storeIds: [],
           },
+          actionScope: { assignedStoreIds: [] },
         })),
       },
     });

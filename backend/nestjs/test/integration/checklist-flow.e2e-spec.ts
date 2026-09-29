@@ -3,6 +3,7 @@ import { createIntegrationApp } from "./test-app";
 
 describe("Checklist flow integration", () => {
   const storeId = "11111111-1111-4111-8111-111111111111";
+  const companyId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const otherStoreId = "99999999-9999-4999-8999-999999999999";
   const checklistInstanceId = "33333333-3333-4333-8333-333333333333";
 
@@ -35,7 +36,10 @@ describe("Checklist flow integration", () => {
     const response = await request(app.getHttpServer())
       .post("/api/checklists/instances")
       .set("x-user-id", "user-1")
+      .set("x-role-codes", "SUPER_ADMIN")
+      .set("x-company-ids", companyId)
       .set("x-store-ids", storeId)
+      .set("x-assigned-store-ids", storeId)
       .send({
         templateId: "22222222-2222-4222-8222-222222222222",
         storeId,
@@ -89,7 +93,7 @@ describe("Checklist flow integration", () => {
     const response = await request(app.getHttpServer())
       .post(`/api/checklists/instances/${checklistInstanceId}/responses`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "AUDITOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-assigned-store-ids", storeId)
       .send({
         templateItemId: "55555555-5555-4555-8555-555555555555",
@@ -132,7 +136,7 @@ describe("Checklist flow integration", () => {
     const response = await request(app.getHttpServer())
       .post(`/api/checklists/instances/${checklistInstanceId}/responses`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "AUDITOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-assigned-store-ids", storeId)
       .send({
         templateItemId: "55555555-5555-4555-8555-555555555555",
@@ -215,7 +219,7 @@ describe("Checklist flow integration", () => {
     const response = await request(app.getHttpServer())
       .post(`/api/checklists/instances/${checklistInstanceId}/complete`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "AUDITOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-assigned-store-ids", storeId)
       .send({
         auditorEmployeeId: "66666666-6666-4666-8666-666666666666",
@@ -277,7 +281,7 @@ describe("Checklist flow integration", () => {
     const response = await request(app.getHttpServer())
       .post(`/api/checklists/instances/${checklistInstanceId}/complete`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "AUDITOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-assigned-store-ids", storeId)
       .send({
         auditorEmployeeId: "66666666-6666-4666-8666-666666666666",

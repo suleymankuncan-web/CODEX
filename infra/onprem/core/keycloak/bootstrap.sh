@@ -533,9 +533,20 @@ kcadm_quiet update "realms/$realm" \
   -s ssoSessionIdleTimeoutRememberMe="$remember_idle" \
   -s ssoSessionMaxLifespanRememberMe="$remember_max" >/dev/null 2>&1 || die 'realm settings reconciliation failed'
 
-for role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+for role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER HR_ADMIN VISUAL_MERCHANDISER; do
   if ! kcadm_query get "roles/$role" -r "$realm" >/dev/null 2>&1; then
     kcadm_quiet create roles -r "$realm" -s "name=$role" || die 'realm role reconciliation failed'
+  fi
+done
+retired_roles_file="$tmp_dir/retired-realm-roles.json"
+kcadm_query get roles -r "$realm" > "$retired_roles_file" || die 'realm role listing failed before retired-role reconciliation'
+for retired_role in AUDITOR INTEGRATION_ADMIN SNAPSHOT_OPERATOR VM_REFERENCE_PUBLISHER VM_VISUAL_REVIEWER VM_CAMPAIGN_WINDOW_AUTHORITY VM_CAMPAIGN_SCOPE_AUTHORITY VM_CAMPAIGN_EMERGENCY_AUTHORITY; do
+  if grep -Eq '"name"[[:space:]]*:[[:space:]]*"'"$retired_role"'"' "$retired_roles_file"; then
+    kcadm_quiet delete "roles/$retired_role" -r "$realm" || die 'retired realm role deletion failed'
+  fi
+kcadm_query get roles -r "$realm" > "$retired_roles_file" || die 'realm role listing failed after retired-role reconciliation'
+  if grep -Eq '"name"[[:space:]]*:[[:space:]]*"'"$retired_role"'"' "$retired_roles_file"; then
+    die 'retired realm role remains after reconciliation'
   fi
 done
 
@@ -744,7 +755,7 @@ assert_mapper store-ops-api-audience oidc-audience-mapper
 for claim in employee_id company_ids region_ids store_ids read_company_ids read_region_ids read_store_ids assigned_store_ids; do
   assert_mapper "$claim" oidc-usermodel-attribute-mapper
 done
-for role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+for role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER HR_ADMIN VISUAL_MERCHANDISER; do
   role_state="$(kcadm_query get "roles/$role" -r "$realm" 2>/dev/null)" || die 'realm role parity mismatch'
   role_compact="$(printf '%s' "$role_state" | tr -d '[:space:]')"
   printf '%s' "$role_compact" | grep -Fq "\"name\":\"$role\"" || die 'realm role parity mismatch'
@@ -809,7 +820,7 @@ JSON
     kcadm_quiet update "users/$user_uuid" -r "$realm" -f "$user_json" || die 'synthetic account claim update failed'
     unset profile_email
     managed_role_names="$(kcadm_query get "users/$user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
-    for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+    for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER HR_ADMIN VISUAL_MERCHANDISER; do
       case ",$roles," in
         *,$managed_role,*) ;;
         *)
@@ -824,7 +835,7 @@ JSON
     set -- $roles
     IFS="$old_ifs"
     for role in "$@"; do
-      case "$role" in SUPER_ADMIN|REPORT_VIEWER|STORE_MANAGER|STORE_PERSONNEL|REGION_MANAGER|AUDITOR|HR_ADMIN|INTEGRATION_ADMIN|SNAPSHOT_OPERATOR|VISUAL_MERCHANDISER) ;; *) die 'synthetic account role is not approved' ;; esac
+      case "$role" in SUPER_ADMIN|REPORT_VIEWER|STORE_MANAGER|STORE_PERSONNEL|REGION_MANAGER|HR_ADMIN|VISUAL_MERCHANDISER) ;; *) die 'synthetic account role is not approved' ;; esac
       kcadm_quiet add-roles -r "$realm" --uusername "$username" --rolename "$role" || die 'synthetic account role assignment failed'
     done
     reconciled_role_names="$(kcadm_query get "users/$user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
@@ -896,7 +907,7 @@ JSON
   unset photo_profile_email
 
   photo_managed_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
-  for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+  for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER HR_ADMIN VISUAL_MERCHANDISER; do
     case ",$photo_proof_roles," in
       *,$managed_role,*) ;;
       *)
@@ -908,7 +919,7 @@ JSON
   done
   kcadm_quiet add-roles -r "$realm" --uusername "$photo_proof_username" --rolename SUPER_ADMIN || die 'synthetic photo proof account role assignment failed'
   photo_reconciled_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null || true)"
-  photo_reconciled_managed_role_names="$(printf '%s\n' "$photo_reconciled_role_names" | csv_first_fields | grep -E '^(SUPER_ADMIN|REPORT_VIEWER|STORE_MANAGER|STORE_PERSONNEL|REGION_MANAGER|AUDITOR|HR_ADMIN|INTEGRATION_ADMIN|SNAPSHOT_OPERATOR|VISUAL_MERCHANDISER)$' || true)"
+  photo_reconciled_managed_role_names="$(printf '%s\n' "$photo_reconciled_role_names" | csv_first_fields | grep -E '^(SUPER_ADMIN|REPORT_VIEWER|STORE_MANAGER|STORE_PERSONNEL|REGION_MANAGER|HR_ADMIN|VISUAL_MERCHANDISER)$' || true)"
   photo_reconciled_role_count="$(printf '%s\n' "$photo_reconciled_managed_role_names" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
   [ "$photo_reconciled_role_count" -eq 1 ] || die 'synthetic photo proof account role parity mismatch'
   printf '%s\n' "$photo_reconciled_managed_role_names" | grep -Fqx SUPER_ADMIN || die 'synthetic photo proof account role parity mismatch'
@@ -932,7 +943,7 @@ else
       printf '%s\n' '{"enabled":false}' > "$photo_disable_file"
       chmod 0600 "$photo_disable_file"
       kcadm_quiet update "users/$photo_user_uuid" -r "$realm" -f "$photo_disable_file" || die 'stale synthetic photo proof account disable failed'
-      for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+      for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER HR_ADMIN VISUAL_MERCHANDISER; do
         if printf '%s\n' "$photo_managed_role_names" | grep -Fqx "$managed_role"; then
           kcadm_quiet remove-roles -r "$realm" --uusername onprem.photo-proof-admin --rolename "$managed_role" || die 'stale synthetic photo proof role removal failed'
         fi
@@ -941,7 +952,7 @@ else
       photo_disabled_compact="$(printf '%s' "$photo_disabled_state" | tr -d '[:space:]')"
       printf '%s' "$photo_disabled_compact" | grep -Fq '"enabled":false' || die 'stale synthetic photo proof account remained enabled'
       photo_remaining_role_names="$(kcadm_query get "users/$photo_user_uuid/role-mappings/realm" -r "$realm" --fields name --format csv --noquotes 2>/dev/null)" || die 'stale synthetic photo proof role parity read failed'
-      for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER AUDITOR HR_ADMIN INTEGRATION_ADMIN SNAPSHOT_OPERATOR VISUAL_MERCHANDISER; do
+      for managed_role in SUPER_ADMIN REPORT_VIEWER STORE_MANAGER STORE_PERSONNEL REGION_MANAGER HR_ADMIN VISUAL_MERCHANDISER; do
         if printf '%s\n' "$photo_remaining_role_names" | grep -Fqx "$managed_role"; then
           die 'stale synthetic photo proof managed role remained assigned'
         fi

@@ -40,7 +40,7 @@ const superAdminSession = {
   user: {
     userId: 'admin-user',
     employeeId: 'admin-employee',
-    roleCodes: ['SUPER_ADMIN', 'INTEGRATION_ADMIN'],
+    roleCodes: ['SUPER_ADMIN'],
     scope: {
       companyIds: ['00000000-0000-0000-0000-000000000001'],
       regionIds: [],

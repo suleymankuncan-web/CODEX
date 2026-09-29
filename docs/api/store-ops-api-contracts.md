@@ -129,7 +129,7 @@
 
 ### `POST /integrations/import-batches`
 - Purpose: Register import batch and enqueue async materialization
-- Required role: `INTEGRATION_ADMIN`
+- Required role: `SUPER_ADMIN`
 - Governance:
   - fails clearly if source is missing
   - fails clearly if source exists but is inactive
@@ -174,7 +174,7 @@
 
 ### `POST /snapshots/runs`
 - Purpose: Enqueue immutable snapshot generation
-- Required role: `SNAPSHOT_OPERATOR`
+- Required role: `SUPER_ADMIN`
 
 ### `GET /snapshots/runs`
 - Purpose: List snapshot runs
@@ -210,7 +210,7 @@
 
 ### `GET /reports/summary`
 - Purpose: Return latest completed snapshot summary cards
-- Required roles: `REPORT_VIEWER` or `AUDITOR`
+- Required roles: `REPORT_VIEWER` or `SUPER_ADMIN`
 
 ### `GET /reports/snapshot-runs`
 - Purpose: List immutable snapshot runs for reporting selection

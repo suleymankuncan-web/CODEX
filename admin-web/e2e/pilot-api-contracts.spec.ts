@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'contract-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,REGION_MANAGER,STORE_MANAGER',
+        mockRoleCodes: 'SUPER_ADMIN,REGION_MANAGER,STORE_MANAGER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
@@ -170,7 +170,7 @@ const authSession = {
   user: {
     userId: 'contract-user',
     employeeId,
-    roleCodes: ['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER'],
+    roleCodes: ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER'],
     scope: { companyIds: [companyId], regionIds: [regionId], storeIds: [storeId] },
     readScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [storeId] },
     actionScope: { assignedStoreIds: [storeId] },

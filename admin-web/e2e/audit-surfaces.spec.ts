@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'audit-admin-user',
-        mockRoleCodes: 'SUPER_ADMIN,AUDITOR',
+        mockRoleCodes: 'SUPER_ADMIN',
         mockCompanyIds: '10000000-0000-4000-8000-000000000001',
         bearerToken: '',
       }),
@@ -218,7 +218,7 @@ const authSessionFixture = {
   user: {
     userId: 'audit-admin-user',
     employeeId: null,
-    roleCodes: ['SUPER_ADMIN', 'AUDITOR'],
+    roleCodes: ['SUPER_ADMIN'],
     scope: {
       companyIds: ['10000000-0000-4000-8000-000000000001'],
       regionIds: [],

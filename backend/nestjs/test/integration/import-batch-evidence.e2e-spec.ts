@@ -372,13 +372,13 @@ describe("Import batch evidence", () => {
     const detailResponse = await request(app.getHttpServer())
       .get("/api/integrations/import-batches/66666666-6666-4666-8666-666666666666")
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     const retryResponse = await request(app.getHttpServer())
       .post("/api/integrations/import-batches/66666666-6666-4666-8666-666666666666/retry")
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     expect(detailResponse.status).toBe(404);
@@ -469,7 +469,7 @@ describe("Import batch evidence", () => {
     const response = await request(app.getHttpServer())
       .post("/api/integrations/external-id-maps")
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId)
       .send({
         integrationSourceId: sourceId,
@@ -548,7 +548,7 @@ describe("Import batch evidence", () => {
     const response = await request(app.getHttpServer())
       .post("/api/integrations/external-id-maps")
       .set("x-user-id", "33333333-3333-4333-8333-333333333333")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId)
       .send({
         integrationSourceId: sourceId,
@@ -610,7 +610,7 @@ describe("Import batch evidence", () => {
     const storeResponse = await request(app.getHttpServer())
       .get("/api/integrations/external-id-map-candidates?entityType=store&q=Marmara&limit=5")
       .set("x-user-id", "33333333-3333-4333-8333-333333333333")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     expect(storeResponse.status).toBe(200);
@@ -635,7 +635,7 @@ describe("Import batch evidence", () => {
     const employeeResponse = await request(app.getHttpServer())
       .get("/api/integrations/external-id-map-candidates?entityType=employee&q=Ayse&limit=5")
       .set("x-user-id", "33333333-3333-4333-8333-333333333333")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     expect(employeeResponse.status).toBe(200);
@@ -769,7 +769,7 @@ describe("Import batch evidence", () => {
     const lookupsResponse = await request(app.getHttpServer())
       .get("/api/integrations/store-master-lookups")
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     expect(lookupsResponse.status).toBe(200);
@@ -802,7 +802,7 @@ describe("Import batch evidence", () => {
     const listResponse = await request(app.getHttpServer())
       .get("/api/integrations/store-master?q=Marmara&enabled=true&status=active&limit=10&offset=0")
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId);
 
     expect(listResponse.status).toBe(200);
@@ -833,7 +833,7 @@ describe("Import batch evidence", () => {
     const updateResponse = await request(app.getHttpServer())
       .patch(`/api/integrations/store-master/${storeId}`)
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId)
       .send({
         storeType: "franchise",
@@ -914,7 +914,7 @@ describe("Import batch evidence", () => {
     const response = await request(app.getHttpServer())
       .patch(`/api/integrations/store-master/${storeId}`)
       .set("x-user-id", actorUserId)
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", actorCompanyId)
       .send({
         storeType: "operator",

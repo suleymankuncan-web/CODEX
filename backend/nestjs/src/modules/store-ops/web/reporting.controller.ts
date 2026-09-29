@@ -33,11 +33,10 @@ export class ReportingController {
   @RequireScope("authenticated")
   @RequireRoles(
     "REPORT_VIEWER",
-    "AUDITOR",
+    "SUPER_ADMIN",
     "STORE_MANAGER",
     "STORE_PERSONNEL",
     "REGION_MANAGER",
-    "SUPER_ADMIN",
   )
   async listSnapshotRuns(@Query() query: ListSnapshotRunsQueryDto) {
     return this.reportingService.listSnapshotRuns({
@@ -51,7 +50,7 @@ export class ReportingController {
 
   @Get("summary")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "STORE_MANAGER")
+  @RequireRoles("REPORT_VIEWER", "SUPER_ADMIN", "STORE_MANAGER")
   async getReportingSummary() {
     return this.reportingService.getReportingSummary();
   }
@@ -116,7 +115,7 @@ export class ReportingController {
 
   @Get("workforce")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR")
+  @RequireRoles("REPORT_VIEWER", "SUPER_ADMIN")
   async getWorkforceReport(
     @Req()
     request: {
@@ -142,7 +141,7 @@ export class ReportingController {
 
   @Get("kpis")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "STORE_MANAGER")
+  @RequireRoles("REPORT_VIEWER", "SUPER_ADMIN", "STORE_MANAGER")
   async getKpiReport(
     @Req()
     request: {
@@ -169,7 +168,7 @@ export class ReportingController {
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
       roleScopes: request.user.roleScopes,
-      broadReadRoles: ["AUDITOR", "REPORT_VIEWER", "SUPER_ADMIN"],
+      broadReadRoles: ["SUPER_ADMIN", "REPORT_VIEWER"],
     });
 
     return this.reportingService.getKpiReport({
@@ -422,7 +421,7 @@ export class ReportingController {
 
   @Get("checklists")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR")
+  @RequireRoles("REPORT_VIEWER", "SUPER_ADMIN")
   async getChecklistReport(
     @Req()
     request: {
@@ -446,7 +445,7 @@ export class ReportingController {
 
   @Get("turnover")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR")
+  @RequireRoles("REPORT_VIEWER", "SUPER_ADMIN")
   async getTurnoverReport(
     @Req()
     request: {

@@ -155,6 +155,7 @@ describe("KeycloakAdminClient", () => {
       new Response(null, { status: 204 }),
       jsonResponse([
         { id: "stale-role", name: "HR_ADMIN" },
+        { id: "retired-role", name: "AUDITOR" },
         { id: "retained-role", name: "STORE_PERSONNEL" },
       ]),
       new Response(null, { status: 204 }),
@@ -165,7 +166,10 @@ describe("KeycloakAdminClient", () => {
 
     expect(fetchMock.mock.calls[3][1]).toMatchObject({
       method: "DELETE",
-      body: JSON.stringify([{ id: "stale-role", name: "HR_ADMIN" }]),
+      body: JSON.stringify([
+        { id: "stale-role", name: "HR_ADMIN" },
+        { id: "retired-role", name: "AUDITOR" },
+      ]),
     });
   });
 

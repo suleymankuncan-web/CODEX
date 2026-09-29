@@ -157,7 +157,7 @@ describe("Auth scope integration", () => {
       .post("/api/snapshots/runs")
       .set("x-user-id", "user-1")
       .set("x-company-ids", "00000000-0000-0000-0000-000000000001")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "HR_ADMIN")
       .send({
         snapshotType: "monthly",
         periodStart: "2026-04-01",
@@ -309,7 +309,7 @@ describe("Auth scope integration", () => {
       .set("x-company-ids", "company-1")
       .set("x-region-ids", "region-1")
       .set("x-store-ids", "store-1")
-      .set("x-role-codes", "REPORT_VIEWER,AUDITOR");
+      .set("x-role-codes", "REPORT_VIEWER,SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -317,7 +317,7 @@ describe("Auth scope integration", () => {
       authenticated: true,
       user: {
         userId: "user-1",
-        roleCodes: ["REPORT_VIEWER", "AUDITOR"],
+        roleCodes: ["REPORT_VIEWER", "SUPER_ADMIN"],
         scope: {
           companyIds: ["company-1"],
           regionIds: ["region-1"],

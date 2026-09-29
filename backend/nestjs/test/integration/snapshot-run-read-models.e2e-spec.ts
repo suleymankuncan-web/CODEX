@@ -85,7 +85,7 @@ describe("Snapshot run read models", () => {
     const response = await request(app.getHttpServer()).get(
       "/api/snapshots/runs?limit=20&offset=0&runStatus=failed&snapshotType=monthly",
     )
-      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", companyId);
 
     expect(response.status).toBe(200);
@@ -107,14 +107,7 @@ describe("Snapshot run read models", () => {
       limit: 20,
       offset: 0,
     });
-    expect(
-      query.mock.calls.some(
-        ([sql, params]) =>
-          sql.includes("rpt.snapshot_run.company_ids &&") &&
-          Array.isArray(params) &&
-          params.some((param: unknown) => Array.isArray(param) && param.includes(companyId)),
-      ),
-    ).toBe(true);
+    expect(query.mock.calls.some(([sql]) => sql.includes("rpt.snapshot_run.company_ids &&"))).toBe(false);
 
     await app.close();
   });
@@ -180,7 +173,7 @@ describe("Snapshot run read models", () => {
 
     const response = await request(app.getHttpServer())
       .get(`/api/snapshots/runs/${snapshotRunId2}`)
-      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", companyId);
 
     expect(response.status).toBe(200);
@@ -197,12 +190,9 @@ describe("Snapshot run read models", () => {
     expect(response.body.latestRerunSnapshotRunId).toBe(snapshotRunId3);
     expect(response.body.failureReason).toBe("db timeout");
     const detailLookup = query.mock.calls.find(
-      ([sql]) =>
-        sql.includes("FROM rpt.snapshot_run") &&
-        hasSnapshotRunIdPredicate(sql) &&
-        sql.includes("rpt.snapshot_run.company_ids &&"),
+      ([sql]) => sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql),
     );
-    expect(detailLookup?.[1]).toEqual([snapshotRunId2, [companyId]]);
+    expect(detailLookup?.[1]).toEqual([snapshotRunId2]);
 
     await app.close();
   });
@@ -697,7 +687,7 @@ describe("Snapshot run read models", () => {
     const response = await request(app.getHttpServer())
       .get("/api/snapshots/lookups")
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -776,7 +766,7 @@ describe("Snapshot run read models", () => {
     const response = await request(app.getHttpServer())
       .get(`/api/snapshots/runs/${dependenciesSnapshotRunId}/dependencies`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -892,7 +882,7 @@ describe("Snapshot run read models", () => {
     const response = await request(app.getHttpServer())
       .get(`/api/snapshots/runs/${lineageSnapshotRunId2}/lineage`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({

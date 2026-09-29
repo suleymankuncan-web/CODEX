@@ -12,7 +12,7 @@ describe("POST /api/integrations/import-batches", () => {
     const response = await request(app.getHttpServer())
       .get("/api/integrations/import-payload-templates?entityType=kpi&sourceSystem=other")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body).toMatchObject({
@@ -802,7 +802,7 @@ describe("POST /api/integrations/import-batches", () => {
     const response = await request(app.getHttpServer())
       .post("/api/integrations/import-batches")
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .send({
         sourceCode: "kpi-feed",
         entityType: "kpi",

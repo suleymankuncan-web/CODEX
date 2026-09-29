@@ -6,12 +6,8 @@
 
 ## Yetki Modeli
 - `SUPER_ADMIN`
-  - auth admin yüzeyini yönetir
-- `INTEGRATION_ADMIN`
-  - integration source ve import batch operasyonlarını yönetir
-- `SNAPSHOT_OPERATOR`
-  - snapshot run operasyonlarını yönetir
-- `REPORT_VIEWER` ve `AUDITOR`
+  - auth, integration, snapshot ve audit admin yüzeylerini yönetir
+- `REPORT_VIEWER`
   - read-only reporting yüzeyini kullanır
 
 ## Scope Modeli

@@ -12,7 +12,7 @@ describe("StoreOpsRepository", () => {
       checklistInstanceId: "00000000-0000-0000-0000-000000000001",
       auditorEmployeeId: "00000000-0000-0000-0000-000000000002",
       actorUserId: "00000000-0000-0000-0000-000000000003",
-      actorRoleCodes: ["AUDITOR"],
+      actorRoleCodes: ["SUPER_ADMIN"],
       actorActionScope: { assignedStoreIds: ["00000000-0000-0000-0000-000000000004"] },
     })).rejects.toThrow("Checklist instance cannot be completed");
 
@@ -22,9 +22,10 @@ describe("StoreOpsRepository", () => {
       [
         "00000000-0000-0000-0000-000000000001",
         ["00000000-0000-0000-0000-000000000004"],
-        ["AUDITOR"],
+        ["SUPER_ADMIN"],
       ],
     );
+    expect(String(client.query.mock.calls[0][0])).toContain("store_id = ANY($2::uuid[])");
   });
 
   it("returns the existing legacy completion state without duplicate audit writes", async () => {
@@ -47,7 +48,7 @@ describe("StoreOpsRepository", () => {
       checklistInstanceId: "00000000-0000-0000-0000-000000000001",
       auditorEmployeeId: "00000000-0000-0000-0000-000000000002",
       actorUserId: "00000000-0000-0000-0000-000000000003",
-      actorRoleCodes: ["AUDITOR"],
+      actorRoleCodes: ["SUPER_ADMIN"],
       actorActionScope: { assignedStoreIds: ["00000000-0000-0000-0000-000000000004"] },
     })).resolves.toMatchObject({ status: "completed", total_score: "91.00" });
     expect(client.query).toHaveBeenCalledTimes(1);
@@ -89,7 +90,7 @@ describe("StoreOpsRepository", () => {
       checklistInstanceId: "00000000-0000-4000-8000-000000000001",
       auditorEmployeeId: "00000000-0000-4000-8000-000000000002",
       actorUserId,
-      actorRoleCodes: ["AUDITOR"],
+      actorRoleCodes: ["SUPER_ADMIN"],
       actorActionScope: { assignedStoreIds: ["00000000-0000-4000-8000-000000000004"] },
     });
 

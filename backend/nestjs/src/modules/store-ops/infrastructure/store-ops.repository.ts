@@ -398,7 +398,7 @@ export class StoreOpsRepository {
          FROM ops.checklist_instance
          WHERE checklist_instance_id = $1::uuid
            AND store_id = ANY($2::uuid[])
-           AND 'AUDITOR' = ANY($3::text[])
+           AND 'SUPER_ADMIN' = ANY($3::text[])
          FOR UPDATE`,
         [input.checklistInstanceId, input.actorActionScope?.assignedStoreIds ?? [], input.actorRoleCodes],
       );

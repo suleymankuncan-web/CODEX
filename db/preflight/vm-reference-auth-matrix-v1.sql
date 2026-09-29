@@ -21,24 +21,6 @@ RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
     WHERE actor.user_id = 'a4000000-0000-4000-8000-000000000001'
       AND actor.is_active = TRUE
       AND EXISTS (
-        SELECT 1 FROM ops.user_role_assignment persona_assignment
-        INNER JOIN ops.role persona_role ON persona_role.role_id = persona_assignment.role_id
-         AND persona_role.role_scope_type = 'store'
-        INNER JOIN ops.store persona_store ON persona_store.store_id = persona_assignment.store_id
-         AND persona_store.region_id = persona_assignment.region_id
-         AND persona_store.company_id = persona_assignment.company_id
-         AND persona_store.status = 'active'
-        INNER JOIN ops.region persona_region ON persona_region.region_id = persona_store.region_id
-         AND persona_region.company_id = persona_store.company_id
-         AND persona_region.status = 'active'
-        WHERE persona_assignment.user_id = actor.user_id
-          AND persona_assignment.company_id = active_company.company_id
-          AND persona_assignment.scope_type = 'store'
-          AND persona_role.role_code = 'VISUAL_MERCHANDISER'
-          AND persona_assignment.start_at <= CURRENT_TIMESTAMP
-          AND (persona_assignment.end_at IS NULL OR persona_assignment.end_at >= CURRENT_TIMESTAMP)
-      )
-      AND EXISTS (
         SELECT 1 FROM ops.user_role_assignment capability_assignment
         INNER JOIN ops.role capability_role ON capability_role.role_id = capability_assignment.role_id
          AND capability_role.role_scope_type = 'company'
@@ -56,21 +38,15 @@ RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
   );
 $$;
 
-INSERT INTO ops.user_role_assignment (user_id, role_id, scope_type, company_id, region_id, store_id)
-SELECT 'a4000000-0000-4000-8000-000000000001', role_id, 'store',
-  'a1000000-0000-4000-8000-000000000001', 'a2000000-0000-4000-8000-000000000001',
-  'a3000000-0000-4000-8000-000000000001'
-FROM ops.role WHERE role_code = 'VISUAL_MERCHANDISER';
 INSERT INTO ops.user_role_assignment (user_id, role_id, scope_type, company_id)
 SELECT 'a4000000-0000-4000-8000-000000000001', role_id, 'company',
   'a1000000-0000-4000-8000-000000000001'
-FROM ops.role WHERE role_code = 'VM_REFERENCE_PUBLISHER';
+FROM ops.role WHERE role_code = 'SUPER_ADMIN';
 
 DO $$
-DECLARE persona_role_id UUID; capability_role_id UUID;
+DECLARE capability_role_id UUID;
 BEGIN
-  SELECT role_id INTO persona_role_id FROM ops.role WHERE role_code = 'VISUAL_MERCHANDISER';
-  SELECT role_id INTO capability_role_id FROM ops.role WHERE role_code = 'VM_REFERENCE_PUBLISHER';
+  SELECT role_id INTO capability_role_id FROM ops.role WHERE role_code = 'SUPER_ADMIN';
   IF NOT pg_temp.vm_reference_publisher_allowed() THEN RAISE EXCEPTION 'vm_auth_positive_matrix_failed'; END IF;
 
   UPDATE ops.user_account SET is_active = FALSE WHERE user_id = 'a4000000-0000-4000-8000-000000000001';
@@ -80,17 +56,6 @@ BEGIN
   UPDATE ops.company SET status = 'inactive' WHERE company_id = 'a1000000-0000-4000-8000-000000000001';
   IF pg_temp.vm_reference_publisher_allowed() THEN RAISE EXCEPTION 'vm_auth_inactive_company_failed'; END IF;
   UPDATE ops.company SET status = 'active' WHERE company_id = 'a1000000-0000-4000-8000-000000000001';
-
-  UPDATE ops.store SET status = 'inactive' WHERE store_id = 'a3000000-0000-4000-8000-000000000001';
-  IF pg_temp.vm_reference_publisher_allowed() THEN RAISE EXCEPTION 'vm_auth_inactive_store_failed'; END IF;
-  UPDATE ops.store SET status = 'active' WHERE store_id = 'a3000000-0000-4000-8000-000000000001';
-
-  DELETE FROM ops.user_role_assignment WHERE user_id = 'a4000000-0000-4000-8000-000000000001' AND role_id = persona_role_id;
-  IF pg_temp.vm_reference_publisher_allowed() THEN RAISE EXCEPTION 'vm_auth_missing_persona_failed'; END IF;
-  INSERT INTO ops.user_role_assignment (user_id, role_id, scope_type, company_id, region_id, store_id)
-  VALUES ('a4000000-0000-4000-8000-000000000001', persona_role_id, 'store',
-    'a1000000-0000-4000-8000-000000000001', 'a2000000-0000-4000-8000-000000000001',
-    'a3000000-0000-4000-8000-000000000001');
 
   DELETE FROM ops.user_role_assignment WHERE user_id = 'a4000000-0000-4000-8000-000000000001' AND role_id = capability_role_id;
   IF pg_temp.vm_reference_publisher_allowed() THEN RAISE EXCEPTION 'vm_auth_missing_capability_failed'; END IF;
@@ -108,5 +73,5 @@ BEGIN
 END;
 $$;
 
-SELECT '{"event":"vm_reference_auth_matrix.completed","positive":true,"inactive_actor_denied":true,"inactive_company_denied":true,"inactive_store_denied":true,"missing_persona_denied":true,"missing_capability_denied":true,"wrong_company_denied":true,"store_scoped_capability_denied":true,"rolled_back":true}';
+SELECT '{"event":"vm_reference_auth_matrix.completed","positive":true,"inactive_actor_denied":true,"inactive_company_denied":true,"missing_capability_denied":true,"wrong_company_denied":true,"store_scoped_capability_denied":true,"rolled_back":true}';
 ROLLBACK;

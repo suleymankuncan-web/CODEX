@@ -4201,20 +4201,7 @@ DROP TRIGGER IF EXISTS trg_store_action_solution_upload_intent_immutable
 CREATE TRIGGER trg_store_action_solution_upload_intent_immutable
     BEFORE UPDATE OR DELETE ON ops.store_action_solution_upload_intent
     FOR EACH ROW EXECUTE FUNCTION ops.guard_checklist_photo_evidence_immutable();
--- VM reference management V1 (migration 066).
-INSERT INTO ops.role (role_id, role_code, role_name, role_scope_type, description, is_system_role)
-VALUES
-    ('60000000-0000-0000-0000-000000000011', 'VM_REFERENCE_PUBLISHER', 'VM Reference Publisher', 'company', 'Explicit company-scoped VM reference publishing capability', TRUE),
-    ('60000000-0000-0000-0000-000000000012', 'VM_VISUAL_REVIEWER', 'VM Visual Reviewer', 'company', 'Explicit company-scoped VM visual coverage read capability', TRUE),
-    ('60000000-0000-0000-0000-000000000013', 'VM_CAMPAIGN_WINDOW_AUTHORITY', 'VM Campaign Window Authority', 'company', 'Explicit company-scoped VM campaign window authority', TRUE),
-    ('60000000-0000-0000-0000-000000000014', 'VM_CAMPAIGN_SCOPE_AUTHORITY', 'VM Campaign Scope Authority', 'company', 'Explicit company-scoped VM campaign scope authority', TRUE),
-    ('60000000-0000-0000-0000-000000000015', 'VM_CAMPAIGN_EMERGENCY_AUTHORITY', 'VM Campaign Emergency Authority', 'company', 'Explicit company-scoped VM campaign emergency authority', TRUE)
-ON CONFLICT (role_code) DO UPDATE SET
-    role_name = EXCLUDED.role_name,
-    role_scope_type = EXCLUDED.role_scope_type,
-    description = EXCLUDED.description,
-    is_system_role = EXCLUDED.is_system_role;
-
+-- VM reference management capabilities remain permissions; SUPER_ADMIN owns the admin actions.
 INSERT INTO ops.permission (permission_id, permission_code, resource_name, action_name, description)
 VALUES
     ('70000000-0000-0000-0000-000000000021', 'VM_REFERENCE_PUBLISHER', 'vm_reference', 'publish', 'Draft and publish company-scoped VM references'),
@@ -4229,11 +4216,11 @@ ON CONFLICT (permission_code) DO UPDATE SET
 
 WITH grants(role_code, permission_code) AS (
     VALUES
-        ('VM_REFERENCE_PUBLISHER', 'VM_REFERENCE_PUBLISHER'),
-        ('VM_VISUAL_REVIEWER', 'VM_VISUAL_REVIEWER'),
-        ('VM_CAMPAIGN_WINDOW_AUTHORITY', 'VM_CAMPAIGN_WINDOW_AUTHORITY'),
-        ('VM_CAMPAIGN_SCOPE_AUTHORITY', 'VM_CAMPAIGN_SCOPE_AUTHORITY'),
-        ('VM_CAMPAIGN_EMERGENCY_AUTHORITY', 'VM_CAMPAIGN_EMERGENCY_AUTHORITY')
+        ('SUPER_ADMIN', 'VM_REFERENCE_PUBLISHER'),
+        ('SUPER_ADMIN', 'VM_VISUAL_REVIEWER'),
+        ('SUPER_ADMIN', 'VM_CAMPAIGN_WINDOW_AUTHORITY'),
+        ('SUPER_ADMIN', 'VM_CAMPAIGN_SCOPE_AUTHORITY'),
+        ('SUPER_ADMIN', 'VM_CAMPAIGN_EMERGENCY_AUTHORITY')
 )
 INSERT INTO ops.role_permission (role_id, permission_id)
 SELECT role.role_id, permission.permission_id

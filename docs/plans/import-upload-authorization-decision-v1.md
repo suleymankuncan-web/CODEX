@@ -5,14 +5,12 @@
 Record the current product and authorization decision for pilot import/upload
 operations after the live Clerk evidence pass.
 
-This is a docs-only decision. It does not change backend guards, frontend route
-guards, API response shape, database schema, provider configuration, or user
-workflow behavior.
+This decision was superseded on 2026-09-28 by the approved seven-role catalog.
 
 ## Decision
 
-Dedicated `INTEGRATION_ADMIN` persona proof is not required for the current
-controlled pilot.
+The dedicated integration-admin persona is retired. `SUPER_ADMIN` owns
+integration and import administration.
 
 The current pilot can treat authenticated import/upload evidence as closed with
 the existing `SUPER_ADMIN` pilot session because:
@@ -24,8 +22,8 @@ the existing `SUPER_ADMIN` pilot session because:
 - creating a role assignment only to make evidence pass would add auth/data
   mutation risk without improving pilot confidence.
 
-`INTEGRATION_ADMIN` remains a future optional separation-of-duties role, not a
-pilot blocker.
+Reintroducing a separate integration operator requires a new product and
+authorization decision; it is not a parked catalog role.
 
 ## HR Admin Note
 
@@ -34,11 +32,8 @@ That is not claimed by this decision.
 
 Current repo evidence shows:
 
-- admin integration routes currently allow `SUPER_ADMIN` and
-  `INTEGRATION_ADMIN`,
-- backend integration upload/read endpoints currently require
-  `INTEGRATION_ADMIN`,
-- `SUPER_ADMIN` can satisfy those requirements through the existing role guard,
+- admin integration routes currently allow `SUPER_ADMIN`,
+- backend integration upload/read endpoints require `SUPER_ADMIN`,
 - granting `HR_ADMIN` access would be an explicit auth/permission behavior
   change and must be handled as a separate scoped PR with regression tests.
 
@@ -47,24 +42,20 @@ Current repo evidence shows:
 Controlled pilot import/upload evidence:
 
 - `Go` with the existing `SUPER_ADMIN` pilot session.
-- No dedicated `INTEGRATION_ADMIN` Clerk persona is needed before the current
-  pilot continues.
+- No retired integration-admin realm role or Clerk persona is used.
 
 Broad production:
 
-- still `No-Go`, but not because of missing dedicated `INTEGRATION_ADMIN`
-  evidence.
+- still `No-Go`, but not because of an integration-admin persona.
 - remaining blockers are Redis/BullMQ durability posture, Supabase restore
   drill, external alert delivery or accepted log-retention evidence, and any
   future role-specific performance budget that the owner requires.
 
 ## Guardrails
 
-- Do not create a staging `INTEGRATION_ADMIN` assignment just to satisfy old
-  evidence wording.
+- Do not recreate a retired integration-admin assignment to satisfy old evidence wording.
 - Do not widen `HR_ADMIN` integration permissions without a dedicated auth PR.
-- Do not remove the `INTEGRATION_ADMIN` role catalog entry in this docs-only
-  decision.
+- Keep integration operations on `SUPER_ADMIN` until a newer owner decision.
 - Do not treat broad production as approved by this decision.
 
 ## Verification

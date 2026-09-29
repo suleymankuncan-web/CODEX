@@ -16,9 +16,9 @@ export class ChecklistController {
   constructor(private readonly checklistService: ChecklistService) {}
 
   @Post("instances")
-  @RequireScope("store")
+  @RequireScope("company")
   @RequireActionScope("store")
-  @RequireRoles("AUDITOR")
+  @RequireRoles("SUPER_ADMIN")
   async createChecklistInstance(
     @Req()
     request: {
@@ -40,7 +40,7 @@ export class ChecklistController {
 
   @Post("instances/:checklistInstanceId/responses")
   @RequireScope("authenticated")
-  @RequireRoles("AUDITOR")
+  @RequireRoles("SUPER_ADMIN")
   async addChecklistResponse(
     @Req()
     request: {
@@ -67,7 +67,7 @@ export class ChecklistController {
 
   @Post("instances/:checklistInstanceId/complete")
   @RequireScope("authenticated")
-  @RequireRoles("AUDITOR")
+  @RequireRoles("SUPER_ADMIN")
   async completeChecklistInstance(
     @Req()
     request: {

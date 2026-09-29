@@ -106,7 +106,6 @@ function resolvePersonaLabel(authSummary: AuthSessionSummary | null, t: Translat
   if (roles.has('REPORT_VIEWER')) return t('storeReports.persona.reportViewer')
   if (roles.has('REGION_MANAGER')) return t('storeReports.persona.regionManager')
   if (roles.has('STORE_MANAGER')) return t('storeReports.persona.storeManager')
-  if (roles.has('AUDITOR')) return t('storeReports.persona.auditor')
   return t('storeReports.persona.authorized')
 }
 

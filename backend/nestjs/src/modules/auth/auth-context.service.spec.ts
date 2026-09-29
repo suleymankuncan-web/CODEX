@@ -57,7 +57,7 @@ describe("AuthContextService", () => {
       buildAuthorizationRepository({
         roleAssignments: [
           {
-            role_code: "INTEGRATION_ADMIN",
+            role_code: "SUPER_ADMIN",
             scope_type: "company",
             company_id: "company-1",
             region_id: null,
@@ -94,7 +94,7 @@ describe("AuthContextService", () => {
 
     expect(user).toEqual({
       userId: "user-1",
-      roleCodes: ["INTEGRATION_ADMIN", "REPORT_VIEWER"],
+      roleCodes: ["SUPER_ADMIN", "REPORT_VIEWER"],
       scope: {
         companyIds: ["company-1"],
         regionIds: ["region-1"],
@@ -106,7 +106,7 @@ describe("AuthContextService", () => {
         storeIds: [],
       },
       roleScopes: {
-        INTEGRATION_ADMIN: {
+        SUPER_ADMIN: {
           companyIds: ["company-1"],
           regionIds: [],
           storeIds: [],
@@ -129,7 +129,7 @@ describe("AuthContextService", () => {
       { authMode: "mock", allowMockAuth: true } as never,
       buildAuthorizationRepository({
         roleAssignments: [{
-          role_code: "VM_REFERENCE_PUBLISHER",
+          role_code: "SUPER_ADMIN",
           role_scope_type: "company",
           scope_type: "company",
           company_id: "company-1",
@@ -177,7 +177,7 @@ describe("AuthContextService", () => {
     const service = new AuthContextService(
       { authMode: "mock", allowMockAuth: true } as never,
       buildAuthorizationRepository({ roleAssignments: [{
-        role_code: "VM_REFERENCE_PUBLISHER", role_scope_type: "company", scope_type: "store",
+        role_code: "SUPER_ADMIN", role_scope_type: "company", scope_type: "store",
         company_id: "company-1", region_id: "region-1", store_id: "store-1",
         permission_codes: ["VM_REFERENCE_PUBLISHER"],
       }] }),
@@ -568,7 +568,7 @@ describe("AuthContextService", () => {
       {
         resolveUser: jest.fn(async () => ({
           userId: "user_unmappedClerkSubject",
-          roleCodes: ["INTEGRATION_ADMIN"],
+          roleCodes: ["SUPER_ADMIN"],
           readScope: {
             companyIds: ["00000000-0000-0000-0000-000000000001"],
             regionIds: [],
@@ -609,7 +609,7 @@ describe("AuthContextService", () => {
       {
         resolveUser: jest.fn(async () => ({
           userId: "user_claimOnly",
-          roleCodes: ["INTEGRATION_ADMIN"],
+          roleCodes: ["SUPER_ADMIN"],
           readScope: {
             companyIds: ["00000000-0000-0000-0000-000000000001"],
             regionIds: [],

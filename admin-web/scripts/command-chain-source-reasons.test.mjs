@@ -99,8 +99,8 @@ test('Command Chain signal sources follow existing admin route role guards', () 
       },
     ],
   })
-  const integrationAdminReasons = commandChain.buildCommandChainReasonsFromCurrentSources({
-    actorRole: 'INTEGRATION_ADMIN',
+  const superAdminImportReasons = commandChain.buildCommandChainReasonsFromCurrentSources({
+    actorRole: 'SUPER_ADMIN',
     signalSources: [
       {
         count: 1,
@@ -123,8 +123,8 @@ test('Command Chain signal sources follow existing admin route role guards', () 
       },
     ],
   })
-  const snapshotOperatorReasons = commandChain.buildCommandChainReasonsFromCurrentSources({
-    actorRole: 'SNAPSHOT_OPERATOR',
+  const superAdminSnapshotReasons = commandChain.buildCommandChainReasonsFromCurrentSources({
+    actorRole: 'SUPER_ADMIN',
     signalSources: [
       {
         count: 1,
@@ -137,9 +137,9 @@ test('Command Chain signal sources follow existing admin route role guards', () 
   })
 
   assert.deepEqual(blockedImportReasons, [])
-  assert.equal(integrationAdminReasons[0].sourceFamily, 'import')
+  assert.equal(superAdminImportReasons[0].sourceFamily, 'import')
   assert.deepEqual(blockedSnapshotReasons, [])
-  assert.equal(snapshotOperatorReasons[0].sourceFamily, 'snapshot')
+  assert.equal(superAdminSnapshotReasons[0].sourceFamily, 'snapshot')
 })
 
 test('Command Chain workflow reasons keep low urgency as low severity', () => {

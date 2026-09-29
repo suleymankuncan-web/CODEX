@@ -347,7 +347,7 @@ export class VmReferenceManagementService {
 
   private assertVmPermission(input: Actor, permission: string, companyId: string) {
     const scope = input.actorPermissionScopes?.[permission];
-    if (!input.actorRoleCodes.includes("VISUAL_MERCHANDISER") ||
+    if (!input.actorRoleCodes.some((role) => ["SUPER_ADMIN", "VISUAL_MERCHANDISER"].includes(role)) ||
         !scope?.companyIds.includes(companyId)) {
       throw new ForbiddenException("VM capability is outside actor permission scope");
     }

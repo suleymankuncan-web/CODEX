@@ -2,12 +2,9 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const expectedRoleScopes: Record<string, string> = {
-  AUDITOR: "region",
   HR_ADMIN: "company",
-  INTEGRATION_ADMIN: "company",
   REGION_MANAGER: "region",
   REPORT_VIEWER: "company",
-  SNAPSHOT_OPERATOR: "company",
   STORE_MANAGER: "store",
   STORE_PERSONNEL: "store",
   SUPER_ADMIN: "company",

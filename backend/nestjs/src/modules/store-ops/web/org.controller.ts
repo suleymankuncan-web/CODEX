@@ -75,18 +75,15 @@ export class OrgController {
     }
 
     if (input.actorRoleCodes.includes("REGION_MANAGER") &&
-        !input.actorRoleCodes.some((roleCode) => ["AUDITOR", "HR_ADMIN", "INTEGRATION_ADMIN", "SNAPSHOT_OPERATOR", "SUPER_ADMIN"].includes(roleCode))) {
+        !input.actorRoleCodes.some((roleCode) => ["SUPER_ADMIN", "HR_ADMIN"].includes(roleCode))) {
       return { companyIds: [], regionIds: [], storeIds: resolveRegionManagerAssignedStoreIds({ roleCodes: input.actorRoleCodes, roleScopes: input.roleScopes, assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [] }) };
     }
 
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
       [
-        "AUDITOR",
-        "HR_ADMIN",
-        "INTEGRATION_ADMIN",
-        "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN",
+        "HR_ADMIN",
+        "REPORT_VIEWER",
       ].includes(roleCode),
     );
     const storeIds = input.actorActionScope?.assignedStoreIds.length

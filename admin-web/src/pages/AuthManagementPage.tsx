@@ -475,7 +475,7 @@ function EditUserDialog({ user, open, onOpenChange, onSave, pending }: {
   </Dialog>
 }
 
-function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave, pending, unavailable, unavailableByError }: { open: boolean; onOpenChange: (open: boolean) => void; roles: Array<{ roleCode: string; roleName: string; scopeType: string }>; stores: Array<{ storeId: string; storeName: string; companyId: string; regionId: string; regionName: string }>; user: UserAccount | null; onSave: (draft: { userId: string; roleCode: 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER' | 'SUPER_ADMIN' | 'HR_ADMIN' | 'INTEGRATION_ADMIN' | 'SNAPSHOT_OPERATOR' | 'REPORT_VIEWER' | 'AUDITOR' | 'STORE_PERSONNEL'; scopeType: 'company' | 'region' | 'store'; incentiveApproval?: boolean; companyId?: string; regionId?: string; storeId?: string }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
+function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave, pending, unavailable, unavailableByError }: { open: boolean; onOpenChange: (open: boolean) => void; roles: Array<{ roleCode: string; roleName: string; scopeType: string }>; stores: Array<{ storeId: string; storeName: string; companyId: string; regionId: string; regionName: string }>; user: UserAccount | null; onSave: (draft: { userId: string; roleCode: 'SUPER_ADMIN' | 'HR_ADMIN' | 'REPORT_VIEWER' | 'REGION_MANAGER' | 'STORE_MANAGER' | 'STORE_PERSONNEL' | 'VISUAL_MERCHANDISER'; scopeType: 'company' | 'region' | 'store'; incentiveApproval?: boolean; companyId?: string; regionId?: string; storeId?: string }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
   const [roleCode, setRoleCode] = useState('')
   const [incentiveApproval, setIncentiveApproval] = useState(false)
   const selectedRole = roles.find((role) => role.roleCode === roleCode)
@@ -535,19 +535,11 @@ function Field({ children, label }: { children: React.ReactNode; label: string }
 const roleNames: Record<string, string> = {
   SUPER_ADMIN: 'Sistem yöneticisi',
   HR_ADMIN: 'İnsan kaynakları yöneticisi',
-  INTEGRATION_ADMIN: 'Entegrasyon yöneticisi',
   REGION_MANAGER: 'Bölge müdürü',
   STORE_MANAGER: 'Mağaza müdürü',
   VISUAL_MERCHANDISER: 'Görsel düzenleme sorumlusu',
   STORE_PERSONNEL: 'Mağaza personeli',
   REPORT_VIEWER: 'Rapor görüntüleyici',
-  AUDITOR: 'Denetçi',
-  SNAPSHOT_OPERATOR: 'Raporlama operatörü',
-  VM_REFERENCE_PUBLISHER: 'VM referans yayıncısı',
-  VM_VISUAL_REVIEWER: 'VM görsel denetçisi',
-  VM_CAMPAIGN_WINDOW_AUTHORITY: 'VM kampanya takvimi yöneticisi',
-  VM_CAMPAIGN_SCOPE_AUTHORITY: 'VM kampanya kapsamı yöneticisi',
-  VM_CAMPAIGN_EMERGENCY_AUTHORITY: 'VM kampanya acil durum yöneticisi',
 }
 const resourceNames: Record<string, string> = {
   auth: 'Kullanıcılar ve erişim',

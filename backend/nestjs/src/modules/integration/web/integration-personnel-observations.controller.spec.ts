@@ -10,7 +10,7 @@ import { IntegrationPersonnelObservationsController } from "./integration-person
 describe("personnel observation read controller", () => {
   it("keeps the exact personnel-master roles, company scope, and GET-only contract", () => {
     const handler = IntegrationPersonnelObservationsController.prototype.list;
-    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, handler)).toEqual(["HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN"]);
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, handler)).toEqual(["HR_ADMIN", "SUPER_ADMIN"]);
     expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, handler)).toBe("company");
     expect(Reflect.getMetadata(METHOD_METADATA, handler)).toBe(RequestMethod.GET);
   });

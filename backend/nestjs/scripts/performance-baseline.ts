@@ -337,10 +337,10 @@ function getDefaultRoleCodes(profile: string) {
   }
 
   if (profile === "all") {
-    return "SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR,STORE_MANAGER,STORE_PERSONNEL,REGION_MANAGER";
+    return "SUPER_ADMIN,REPORT_VIEWER,STORE_MANAGER,STORE_PERSONNEL,REGION_MANAGER";
   }
 
-  return "SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR";
+  return "SUPER_ADMIN,REPORT_VIEWER";
 }
 
 function asRecord(headers: HeadersInit): Record<string, string> {

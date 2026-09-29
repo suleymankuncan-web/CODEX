@@ -20,11 +20,11 @@ const activeNextActions = readText('docs/plans/active-next-actions.md')
 const liveEvidence = readText('docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md')
 const productionBlockers = readText('docs/evidence/readiness/2026-05-22-production-evidence-blockers-v2.md')
 
-test('import upload authorization decision keeps integration admin optional for pilot', () => {
+test('import upload authorization decision keeps integration administration on super admin', () => {
   for (const phrase of [
     '# Import Upload Authorization Decision V1',
-    'Dedicated `INTEGRATION_ADMIN` persona proof is not required for the current',
-    '`INTEGRATION_ADMIN` remains a future optional separation-of-duties role, not a',
+    'The dedicated integration-admin persona is retired.',
+    'Reintroducing a separate integration operator requires a new product and',
     'Controlled pilot import/upload evidence:',
     '`Go` with the existing `SUPER_ADMIN` pilot session.',
   ]) {
@@ -35,8 +35,7 @@ test('import upload authorization decision keeps integration admin optional for 
 test('import upload authorization decision does not silently widen HR admin behavior', () => {
   for (const phrase of [
     'That is not claimed by this decision.',
-    'backend integration upload/read endpoints currently require',
-    '`SUPER_ADMIN` can satisfy those requirements through the existing role guard',
+    'backend integration upload/read endpoints require `SUPER_ADMIN`',
     'granting `HR_ADMIN` access would be an explicit auth/permission behavior',
     'Do not widen `HR_ADMIN` integration permissions without a dedicated auth PR.',
   ]) {

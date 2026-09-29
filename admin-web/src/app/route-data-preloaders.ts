@@ -79,13 +79,13 @@ const adminFeedRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER']
 const adminInboxRoles = ['SUPER_ADMIN', 'HR_ADMIN']
 const adminInboxWorkforceRoles = ['SUPER_ADMIN', 'HR_ADMIN']
 const adminCompetitionRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER']
-const adminIntegrationRoles = ['SUPER_ADMIN', 'INTEGRATION_ADMIN']
-const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
+const adminIntegrationRoles = ['SUPER_ADMIN']
+const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN']
 const adminOperationsRoles = ['SUPER_ADMIN']
 const adminDataQualityRoles = ['SUPER_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWER']
-const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER']
+const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
 const routePrefetchStaleTimeMs = 30_000
@@ -253,13 +253,11 @@ function getStoreKpiPrefetchTasks(authSummary: AuthSessionSummary | null): Prefe
   const hasGlobalStoreDetailDefault = hasAnyRole(authSummary, [
     'SUPER_ADMIN',
     'REPORT_VIEWER',
-    'AUDITOR',
   ])
   const hasStoreDetailDefault =
     (!hasRegionManagerRole || hasGlobalStoreDetailDefault) && hasAnyRole(authSummary, [
       'SUPER_ADMIN',
       'REPORT_VIEWER',
-      'AUDITOR',
       'STORE_MANAGER',
     ])
 

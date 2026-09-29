@@ -65,10 +65,10 @@ backend authorization guarantee.
 | `/admin/session` | None, rendered through `SessionReadinessPage` | None | Session readiness should only depend on `GET /api/auth/session`. |
 | `/admin/operations` | `AdminRouteGuard` | `SUPER_ADMIN` | Operations surfaces may aggregate read-only health/readiness signals but should not add hidden write controls. |
 | `/admin/auth*` | `AdminRouteGuard` | `SUPER_ADMIN` | Auth admin endpoints remain high-risk; writes require existing auth-admin tests and negative coverage. |
-| `/admin/audit*` | `AdminRouteGuard` | `AUDITOR`, `SUPER_ADMIN` | Audit visibility is read evidence, not permission to mutate auth/admin records. |
-| `/admin/integrations*` | `AdminRouteGuard` | `INTEGRATION_ADMIN`, `SUPER_ADMIN` | Integration source/import endpoints require company scope and integration roles; source lifecycle UI remains parked. |
-| `/admin/master-data*` | `AdminRouteGuard` | `HR_ADMIN`, `INTEGRATION_ADMIN`, `SUPER_ADMIN` | Master-data bootstrap writes remain guarded by true baseline/evidence decisions. |
-| `/admin/snapshots*` | `AdminRouteGuard` | `SNAPSHOT_OPERATOR`, `SUPER_ADMIN` | Snapshot reads and commands require company scope and snapshot operator role. |
+| `/admin/audit*` | `AdminRouteGuard` | `SUPER_ADMIN` | Audit visibility is read evidence, not permission to mutate auth/admin records. |
+| `/admin/integrations*` | `AdminRouteGuard` | `SUPER_ADMIN` | Integration source/import endpoints require company scope and Super Admin authority; source lifecycle UI remains parked. |
+| `/admin/master-data*` | `AdminRouteGuard` | `HR_ADMIN`, `SUPER_ADMIN` | Master-data bootstrap writes remain guarded by true baseline/evidence decisions. |
+| `/admin/snapshots*` | `AdminRouteGuard` | `SUPER_ADMIN` | Snapshot reads and commands require company scope and Super Admin authority. |
 | `/admin/reports*` | `AdminRouteGuard` | `REPORT_VIEWER`, `SUPER_ADMIN` | Report routes are read surfaces; they do not grant scoring/config writes. |
 | `/admin/kpi-config` | `AdminRouteGuard` | `SUPER_ADMIN` | KPI config write/publish behavior stays separate from report read visibility. |
 | `/admin/targets` | `AdminRouteGuard` | `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN` | Target queue read visibility does not grant target creation or approval without action-store checks. |
@@ -89,9 +89,9 @@ backend authorization guarantee.
 | Health | `@Public()` on `GET /api/health` and `GET /api/health/live` | Public health response must remain sanitized. | Health/readiness contract tests and deployed readiness smoke. |
 | Auth session/bootstrap | Auth session controller, bootstrap public entry | DB assignments remain the app role/scope source of truth. | `auth-context.service.spec.ts`, `auth-scope.e2e-spec.ts`, staging auth runbook guards. |
 | Auth admin | `SUPER_ADMIN`, with limited `HR_ADMIN` lookup paths | Role/scope writes must not imply action-store rights. | Auth admin tests and `scope-auth-regression-matrix-v1.md`. |
-| Integration imports/source management | `@RequireScope("company")`, mostly `INTEGRATION_ADMIN` | Company scope gates import/source reads and writes. | Import batch e2e split, source boundary docs, source management parked classification. |
-| Master-data bootstrap | `@RequireScope("company")`, `HR_ADMIN`, `INTEGRATION_ADMIN`, `SUPER_ADMIN` | Live promotion remains guarded by baseline and dry-run evidence. | Master-data bootstrap service/e2e tests and pilot smoke runbook. |
-| Snapshots | `@RequireScope("company")`, `SNAPSHOT_OPERATOR` | Snapshot command/read surfaces are company-scoped operator surfaces. | Snapshot run e2e/read-model tests and operational monitoring docs. |
+| Integration imports/source management | `@RequireScope("company")`, `SUPER_ADMIN` | Company scope gates import/source reads and writes. | Import batch e2e split, source boundary docs, source management parked classification. |
+| Master-data bootstrap | `@RequireScope("company")`, `HR_ADMIN`, `SUPER_ADMIN` | Live promotion remains guarded by baseline and dry-run evidence. | Master-data bootstrap service/e2e tests and pilot smoke runbook. |
+| Snapshots | `@RequireScope("company")`, `SUPER_ADMIN` | Snapshot command/read surfaces are company-scoped operator surfaces. | Snapshot run e2e/read-model tests and operational monitoring docs. |
 | Reporting | `@RequireScope("authenticated")` with report/store roles per endpoint | Reporting read scope does not grant mutation or action rights. | Reporting repository specs and auth-scope e2e tests. |
 | Workforce | HR/Admin role paths plus store-manager action paths | Store-manager create/resubmit actions require assigned/action store scope. | Workforce seller-code/offboarding e2e suites. |
 | Target distributions | Read paths have role guards; create/approve use `@RequireActionScope("store")` | Target actions must check assigned store scope separately from read visibility. | Target distribution repository specs and auth-scope e2e tests. |

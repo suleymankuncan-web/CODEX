@@ -190,7 +190,7 @@ describe("JwtAuthProvider", () => {
     } as never);
 
     const token = await new SignJWT({
-      roles: ["SNAPSHOT_OPERATOR"],
+      roles: ["SUPER_ADMIN"],
       company_ids: "company-2,company-3",
     })
       .setProtectedHeader({ alg: "RS256", kid: "kid-1" })
@@ -208,7 +208,7 @@ describe("JwtAuthProvider", () => {
     expect(user).toEqual({
       userId: "user-2",
       employeeId: undefined,
-      roleCodes: ["SNAPSHOT_OPERATOR"],
+      roleCodes: ["SUPER_ADMIN"],
       scope: {
         companyIds: ["company-2", "company-3"],
         regionIds: [],
@@ -489,7 +489,7 @@ describe("JwtAuthProvider", () => {
 
     const token = await new SignJWT({
       preferred_username: "admin.operator",
-      roles: ["SUPER_ADMIN", "REPORT_VIEWER", "INTEGRATION_ADMIN", "SNAPSHOT_OPERATOR"],
+      roles: ["SUPER_ADMIN", "REPORT_VIEWER"],
       read_company_ids: ["company-1"],
       read_region_ids: ["region-1"],
       read_store_ids: ["store-1", "store-2"],
@@ -511,7 +511,7 @@ describe("JwtAuthProvider", () => {
       userId: "user-local-admin",
       username: "admin.operator",
       employeeId: undefined,
-      roleCodes: ["SUPER_ADMIN", "REPORT_VIEWER", "INTEGRATION_ADMIN", "SNAPSHOT_OPERATOR"],
+      roleCodes: ["SUPER_ADMIN", "REPORT_VIEWER"],
       scope: {
         companyIds: ["company-1"],
         regionIds: ["region-1"],

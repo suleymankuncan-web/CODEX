@@ -5,7 +5,6 @@ export function hasReportingAccess(authSummary: AuthSessionSummary | null) {
   return (
     roles.includes('SUPER_ADMIN') ||
     roles.includes('REPORT_VIEWER') ||
-    roles.includes('AUDITOR') ||
     roles.includes('STORE_MANAGER') ||
     roles.includes('REGION_MANAGER')
   )
@@ -22,13 +21,13 @@ export function hasStoreShellIntent(authSummary: AuthSessionSummary | null) {
 
 export function hasStoreDetailDefault(authSummary: AuthSessionSummary | null) {
   return authSummary?.user.roleCodes.some((role) =>
-    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'AUDITOR' || role === 'STORE_MANAGER',
+    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'STORE_MANAGER',
   ) ?? false
 }
 
 export function hasGlobalStoreDetailDefault(authSummary: AuthSessionSummary | null) {
   return authSummary?.user.roleCodes.some((role) =>
-    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'AUDITOR',
+    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER',
   ) ?? false
 }
 

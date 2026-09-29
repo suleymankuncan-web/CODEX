@@ -113,7 +113,7 @@ export class StoreMonthlyReportPackageController {
 
   @Get("store-monthly-package")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "REGION_MANAGER", "SUPER_ADMIN", "STORE_MANAGER")
+  @RequireRoles("REPORT_VIEWER", "REGION_MANAGER", "SUPER_ADMIN", "STORE_MANAGER")
   @ApiQuery(STORE_MONTHLY_REPORT_PERIOD_QUERY)
   @ApiQuery({ name: "regionManagerUserId", required: false, type: String, format: "uuid" })
   @ApiOkResponse({
@@ -133,7 +133,7 @@ export class StoreMonthlyReportPackageController {
 
   @Get("store-monthly-package.xlsx")
   @RequireScope("authenticated")
-  @RequireRoles("REPORT_VIEWER", "AUDITOR", "REGION_MANAGER", "SUPER_ADMIN", "STORE_MANAGER")
+  @RequireRoles("REPORT_VIEWER", "REGION_MANAGER", "SUPER_ADMIN", "STORE_MANAGER")
   @ApiQuery(STORE_MONTHLY_REPORT_PERIOD_QUERY)
   @ApiQuery({ name: "regionManagerUserId", required: false, type: String, format: "uuid" })
   @ApiProduces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -181,7 +181,7 @@ export class StoreMonthlyReportPackageController {
       actorScope: user.scope,
       actorActionScope: user.actionScope,
       roleScopes: user.roleScopes,
-      broadReadRoles: ["REPORT_VIEWER", "AUDITOR", "SUPER_ADMIN"],
+      broadReadRoles: ["REPORT_VIEWER", "SUPER_ADMIN"],
     });
     const isRegionManagerRead =
       user.roleCodes.includes("REGION_MANAGER") &&
