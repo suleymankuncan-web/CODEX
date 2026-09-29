@@ -1,9 +1,4 @@
 WITH scope_rows AS (
-    SELECT 'ops.user_permission_assignment' AS source_table,
-           user_permission_assignment_id::text AS record_id,
-           company_id, region_id, store_id
-    FROM ops.user_permission_assignment
-    UNION ALL
     SELECT 'ops.seller_code_request' AS source_table, seller_code_request_id::text AS record_id, company_id, region_id, store_id
     FROM ops.seller_code_request
     UNION ALL

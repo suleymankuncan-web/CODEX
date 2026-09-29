@@ -10,6 +10,9 @@ const integration = connectionString ? describe : describe.skip;
 const root = join(__dirname, "../../../../..");
 const migrationSql = readFileSync(join(root, "db/migrations/092_user_permission_assignment_v1.sql"), "utf8");
 const rollbackSql = readFileSync(join(root, "db/rollback/092_user_permission_assignment_v1.rollback.sql"), "utf8");
+const invariantSql = readFileSync(
+  join(root, "db/preflight/user-permission-assignment-invariants-v1.sql"), "utf8",
+);
 
 integration("user permission assignments (PostgreSQL)", () => {
   jest.setTimeout(30_000);
@@ -123,6 +126,33 @@ integration("user permission assignments (PostgreSQL)", () => {
     await expect(pool.query(rollbackSql)).resolves.toBeDefined();
     await pool.query(`BEGIN; ${migrationSql} COMMIT;`);
     await expect(pool.query(`BEGIN; ${migrationSql} COMMIT;`)).resolves.toBeDefined();
+  });
+
+  it("executes the additive scope invariant and detects a rolled-back cross-company row", async () => {
+    const clean = await pool.query<{ violation_count: string }>(invariantSql);
+    expect(clean.rows[0]?.violation_count).toBe("0");
+    const otherCompanyId = randomUUID();
+    await pool.query(`INSERT INTO ops.company VALUES ($1::uuid,'active')`, [otherCompanyId]);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`ALTER TABLE ops.user_permission_assignment DISABLE TRIGGER trg_user_permission_assignment_guard`);
+      await client.query(`
+        INSERT INTO ops.user_permission_assignment (
+          user_role_assignment_id,user_id,permission_id,scope_type,company_id,
+          granted_by_user_id,grant_reason
+        ) SELECT $1::uuid,$2::uuid,permission_id,'company',$3::uuid,$4::uuid,'fixture mismatch'
+          FROM ops.permission WHERE permission_code='INCENTIVE_SALES_DIRECTOR_APPROVAL'
+      `, [viewerAssignmentId, viewerId, otherCompanyId, actorId]);
+      const invalid = await client.query<{ violation_count: string }>(invariantSql);
+      expect(invalid.rows[0]?.violation_count).toBe("1");
+      await client.query("ROLLBACK");
+    } finally {
+      await rollback(client);
+      client.release();
+    }
+    const after = await pool.query<{ violation_count: string }>(invariantSql);
+    expect(after.rows[0]?.violation_count).toBe("0");
   });
 
   it("grants bounded capabilities and blocks overlap, self-grant, fixed Super Admin, and redundant defaults", async () => {
