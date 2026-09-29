@@ -83,7 +83,8 @@ integration("user permission assignments (PostgreSQL)", () => {
         user_role_assignment_id uuid PRIMARY KEY, user_id uuid NOT NULL, role_id uuid NOT NULL,
         scope_type text NOT NULL, company_id uuid, region_id uuid, store_id uuid,
         start_at timestamptz NOT NULL DEFAULT NOW(), end_at timestamptz,
-        incentive_approval boolean NOT NULL DEFAULT FALSE
+        incentive_approval boolean NOT NULL DEFAULT FALSE,
+        created_at timestamptz NOT NULL DEFAULT NOW()
       );
       CREATE TABLE audit.event_log (
         event_log_id uuid PRIMARY KEY DEFAULT gen_random_uuid(), occurred_at timestamptz NOT NULL DEFAULT NOW(),

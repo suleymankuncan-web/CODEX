@@ -15,6 +15,8 @@ export const AUDIT_EVENT_CATALOG = [
   auditEvent("incentive_hr.delivery_started", "ops.incentive_hr_delivery", "store_ops", "An approved incentive workbook delivery was claimed for HR email.", "feature_audit"),
   auditEvent("user_role_assignment.created", "ops.user_role_assignment", "auth", "User role assignment was granted."),
   auditEvent("user_role_assignment.deactivated", "ops.user_role_assignment", "auth", "User role assignment was deactivated."),
+  auditEvent("user_permission.granted", "ops.user_permission_assignment", "auth", "A role-bound user capability was granted."),
+  auditEvent("user_permission.revoked", "ops.user_permission_assignment", "auth", "A role-bound user capability was revoked."),
   auditEvent(
     "user_action_store_assignment.created",
     "ops.user_action_store_assignment",

@@ -1,9 +1,10 @@
 import { Transform } from "class-transformer";
-import { IsIn, IsISO8601, IsOptional, IsString, IsUUID, Length } from "class-validator";
+import { IsIn, IsISO8601, IsOptional, IsString, Length } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GrantUserPermissionDto {
-  @IsUUID()
+  @IsPostgresUuid()
   roleAssignmentId!: string;
 
   @IsString()
@@ -13,15 +14,15 @@ export class GrantUserPermissionDto {
   @IsIn(["company", "region", "store"])
   scopeType!: "company" | "region" | "store";
 
-  @IsUUID()
+  @IsPostgresUuid()
   companyId!: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   regionId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   storeId?: string;
 
   @IsOptional()

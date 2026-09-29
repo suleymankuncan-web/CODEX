@@ -1,13 +1,14 @@
 import { Transform } from "class-transformer";
-import { IsBoolean, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class ListUserPermissionAssignmentsQueryDto {
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   userId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsPostgresUuid()
   roleAssignmentId?: string;
 
   @IsOptional()
