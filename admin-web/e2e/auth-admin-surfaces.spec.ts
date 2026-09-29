@@ -405,7 +405,7 @@ test('Report Viewer receives and revokes a person-specific Sales Director capabi
   let revokePayload: Record<string, unknown> | undefined
   let revokedAt: string | null = null
   await page.route('**/api/auth/user-permission-assignments?**', (route) => route.fulfill({ json: {
-    items: grantPayload ? [{ assignmentId: 'grant-1', roleAssignmentId: 'viewer-assignment', userId: 'user-active', roleCode: 'REPORT_VIEWER', permissionCode: 'INCENTIVE_SALES_DIRECTOR_APPROVAL', resourceName: 'incentive', actionName: 'approve_sales_director', scopeType: 'company', companyId: 'company-1', regionId: null, storeId: null, startsAt: grantPayload.startsAt, endsAt: null, grantReason: grantPayload.reason, createdAt: '2026-09-29T00:00:00.000Z', revokedAt, revokeReason: revokedAt ? 'Responsibility changed' : null }], meta: { total: grantPayload ? 1 : 0, limit: 200, offset: 0 },
+    items: grantPayload ? [{ assignmentId: 'grant-1', roleAssignmentId: 'viewer-assignment', userId: 'user-active', roleCode: 'REPORT_VIEWER', permissionCode: 'INCENTIVE_SALES_DIRECTOR_APPROVAL', resourceName: 'incentive', actionName: 'approve_sales_director', scopeType: 'company', companyId: 'company-1', regionId: null, storeId: null, startsAt: grantPayload.startsAt, endsAt: null, grantReason: grantPayload.reason, createdAt: '2026-09-29T00:00:00.000Z', revokedAt, revokeReason: revokedAt ? 'Responsibility changed' : null }] : [], meta: { total: grantPayload ? 1 : 0, limit: 200, offset: 0 },
   } }))
   await page.route('**/api/auth/user-permission-assignments', async (route) => {
     grantPayload = route.request().postDataJSON()
