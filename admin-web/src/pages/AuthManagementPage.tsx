@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
@@ -85,6 +85,7 @@ export function AuthManagementPage() {
   const [storeOpen, setStoreOpen] = useState(false)
   const [capabilityOpen, setCapabilityOpen] = useState(false)
   const [capabilityRevoke, setCapabilityRevoke] = useState<{ assignmentId: string; permissionCode: string } | null>(null)
+  const renderedAt = useClock(60_000)
   const [accountAction, setAccountAction] = useState<UserAccount | null>(null)
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [permissionAction, setPermissionAction] = useState<PermissionAction | null>(null)
@@ -289,7 +290,7 @@ export function AuthManagementPage() {
                  </AccessBlock>
                  <AccessBlock icon={<KeyRound aria-hidden="true" />} title="Kişisel yetkiler" action={<Button disabled={capabilityAssignmentsUnavailable || roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setCapabilityOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Yetki ekle</Button>}>
                    {capabilityAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Yetkiler yükleniyor" /> : capabilityAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void capabilityAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Yetkiler alınamadı" /> : (capabilityAssignmentsQuery.data?.items ?? []).length ? capabilityAssignmentsQuery.data?.items.map((assignment) => (
-                     <AccessRow key={assignment.assignmentId} label={permissionDisplayName(assignment.permissionCode)} meta={`${roleNames[assignment.roleCode] ?? assignment.roleCode} · ${scopeLabel({ ...assignment, companyId: assignment.companyId ?? null, regionId: assignment.regionId ?? null, storeId: assignment.storeId ?? null })} · ${capabilityStatus(assignment)}`} {...(!assignment.revokedAt && (!assignment.endsAt || new Date(assignment.endsAt).getTime() > Date.now()) ? { onRemove: () => setCapabilityRevoke({ assignmentId: assignment.assignmentId, permissionCode: assignment.permissionCode }) } : {})} />
+                     <AccessRow key={assignment.assignmentId} label={permissionDisplayName(assignment.permissionCode)} meta={`${roleNames[assignment.roleCode] ?? assignment.roleCode} · ${scopeLabel({ ...assignment, companyId: assignment.companyId ?? null, regionId: assignment.regionId ?? null, storeId: assignment.storeId ?? null })} · ${capabilityStatus(assignment, renderedAt)}`} {...(!assignment.revokedAt && (!assignment.endsAt || new Date(assignment.endsAt).getTime() > renderedAt) ? { onRemove: () => setCapabilityRevoke({ assignmentId: assignment.assignmentId, permissionCode: assignment.permissionCode }) } : {})} />
                    )) : <EmptyAccess copy="Kişiye özel yetki yok" />}
                  </AccessBlock>
               </div>
@@ -568,6 +569,7 @@ function CapabilityAssignmentDialog({ open, onOpenChange, roleAssignments, roles
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [reason, setReason] = useState('')
+  const dialogNow = useClock(30_000)
   const assignment = eligibleAssignments.find((item) => item.assignmentId === roleAssignmentId)
   const role = roles.find((item) => item.roleCode === assignment?.roleCode)
   const defaults = new Set(role?.permissions.map((permission) => permission.permissionCode) ?? [])
@@ -577,7 +579,7 @@ function CapabilityAssignmentDialog({ open, onOpenChange, roleAssignments, roles
     if (permission.permissionCode === 'INCENTIVE_HR_APPROVAL' || permission.permissionCode === 'INCENTIVE_PAYROLL_DELIVERY') return assignment?.roleCode === 'HR_ADMIN' && assignment.scopeType === 'company'
     return true
   })
-  const effectiveStartTime = startsAt ? new Date(startsAt).getTime() : Date.now()
+  const effectiveStartTime = startsAt ? new Date(startsAt).getTime() : dialogNow
   const effectiveEndTime = endsAt ? new Date(endsAt).getTime() : Number.POSITIVE_INFINITY
   const roleStartTime = assignment?.effectiveFrom ? new Date(assignment.effectiveFrom).getTime() : Number.NEGATIVE_INFINITY
   const roleEndTime = assignment?.effectiveTo ? new Date(assignment.effectiveTo).getTime() : Number.POSITIVE_INFINITY
@@ -595,7 +597,7 @@ function CapabilityAssignmentDialog({ open, onOpenChange, roleAssignments, roles
         <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2"><Field label="Başlangıç (opsiyonel)"><Input aria-label="Yetki başlangıcı" min={toDateTimeLocal(assignment?.effectiveFrom)} max={toDateTimeLocal(assignment?.effectiveTo)} type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /></Field><Field label="Bitiş"><Input aria-label="Yetki bitişi" min={startsAt || toDateTimeLocal(assignment?.effectiveFrom)} max={toDateTimeLocal(assignment?.effectiveTo)} type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} /></Field></div>
         <Field label="Gerekçe"><Input aria-label="Yetki gerekçesi" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Bu yetkinin neden verildiğini yazın" /></Field>
       </div>
-      <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!canSave} onClick={() => assignment?.companyId && onSave({ roleAssignmentId: assignment.assignmentId, permissionCode, scopeType: assignment.scopeType as 'company' | 'region' | 'store', companyId: assignment.companyId, ...(assignment.regionId ? { regionId: assignment.regionId } : {}), ...(assignment.storeId ? { storeId: assignment.storeId } : {}), ...(startsAt ? { startsAt: new Date(startsAt).toISOString() } : {}), ...(endsAt ? { endsAt: new Date(endsAt).toISOString() } : {}), reason: reason.trim() })}>{pending ? 'Ekleniyor' : 'Yetkiyi ekle'}</Button></DialogFooter>
+      <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!canSave} onClick={() => assignment?.companyId && onSave({ roleAssignmentId: assignment.assignmentId, permissionCode, scopeType: assignment.scopeType as 'company' | 'region' | 'store', companyId: assignment.companyId, ...(assignment.regionId ? { regionId: assignment.regionId } : {}), ...(assignment.storeId ? { storeId: assignment.storeId } : {}), startsAt: startsAt ? new Date(startsAt).toISOString() : new Date(dialogNow).toISOString(), ...(endsAt ? { endsAt: new Date(endsAt).toISOString() } : {}), reason: reason.trim() })}>{pending ? 'Ekleniyor' : 'Yetkiyi ekle'}</Button></DialogFooter>
     </DialogContent>
   </Dialog>
 }
@@ -687,9 +689,8 @@ function permissionActionName(action: string) {
 }
 function permissionDescription(permission: { permissionCode: string; resourceName: string; actionName: string }) { return permissionDescriptions[permission.permissionCode] ?? `${resourceDisplayName(permission.resourceName)} alanında ${permissionActionName(permission.actionName).toLocaleLowerCase('tr-TR')} yetkisi verir.` }
 function permissionDisplayName(permissionCode: string) { return permissionDescriptions[permissionCode] ?? permissionCode.replaceAll('_', ' ') }
-function capabilityStatus(assignment: UserPermissionAssignment) {
+function capabilityStatus(assignment: UserPermissionAssignment, now: number) {
   if (assignment.revokedAt) return 'Kaldırıldı'
-  const now = Date.now()
   if (new Date(assignment.startsAt).getTime() > now) return 'Planlandı'
   if (assignment.endsAt && new Date(assignment.endsAt).getTime() <= now) return 'Süresi doldu'
   return assignment.endsAt ? `Aktif · ${new Date(assignment.endsAt).toLocaleDateString('tr-TR')} tarihine kadar` : 'Aktif'
@@ -699,6 +700,14 @@ function toDateTimeLocal(value?: string | null) {
   const date = new Date(value)
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
   return local.toISOString().slice(0, 16)
+}
+function useClock(intervalMs: number) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), intervalMs)
+    return () => window.clearInterval(timer)
+  }, [intervalMs])
+  return now
 }
 function initials(value: string) { return value.split(/[._\-\s]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U' }
 function scopeLabel(assignment: { roleCode?: string; scopeType: string; companyId: string | null; regionId: string | null; storeId: string | null }) { return assignment.roleCode === 'REGION_MANAGER' ? 'Sorumlu mağazalar Mağaza erişimi bölümünden yönetilir' : assignment.scopeType === 'store' ? 'Mağaza kapsamı' : assignment.scopeType === 'region' ? 'Bölge kapsamı' : 'Şirket kapsamı' }
