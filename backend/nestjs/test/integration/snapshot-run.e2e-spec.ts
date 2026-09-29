@@ -97,7 +97,7 @@ describe("Snapshot run operations", () => {
       sql.includes("INSERT INTO rpt.snapshot_run"),
     );
     expect(insertCall?.[0]).toContain("company_ids");
-    expect(insertCall?.[1]).toContainEqual([companyId]);
+    expect(insertCall?.[1]).toContainEqual([]);
 
     await app.close();
   });

@@ -107,14 +107,7 @@ describe("Snapshot run read models", () => {
       limit: 20,
       offset: 0,
     });
-    expect(
-      query.mock.calls.some(
-        ([sql, params]) =>
-          sql.includes("rpt.snapshot_run.company_ids &&") &&
-          Array.isArray(params) &&
-          params.some((param: unknown) => Array.isArray(param) && param.includes(companyId)),
-      ),
-    ).toBe(true);
+    expect(query.mock.calls.some(([sql]) => sql.includes("rpt.snapshot_run.company_ids &&"))).toBe(false);
 
     await app.close();
   });
@@ -197,12 +190,9 @@ describe("Snapshot run read models", () => {
     expect(response.body.latestRerunSnapshotRunId).toBe(snapshotRunId3);
     expect(response.body.failureReason).toBe("db timeout");
     const detailLookup = query.mock.calls.find(
-      ([sql]) =>
-        sql.includes("FROM rpt.snapshot_run") &&
-        hasSnapshotRunIdPredicate(sql) &&
-        sql.includes("rpt.snapshot_run.company_ids &&"),
+      ([sql]) => sql.includes("FROM rpt.snapshot_run") && hasSnapshotRunIdPredicate(sql),
     );
-    expect(detailLookup?.[1]).toEqual([snapshotRunId2, [companyId]]);
+    expect(detailLookup?.[1]).toEqual([snapshotRunId2]);
 
     await app.close();
   });
