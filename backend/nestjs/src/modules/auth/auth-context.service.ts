@@ -409,6 +409,16 @@ export class AuthContextService {
     const permissionScopes: Record<string, AuthReadScope> = {};
 
     for (const assignment of assignments) {
+      if (assignment.is_personal_permission) {
+        for (const permissionCode of assignment.permission_codes ?? []) {
+          const scope = permissionScopes[permissionCode] ?? { companyIds: [], regionIds: [], storeIds: [] };
+          if (assignment.scope_type === "company" && assignment.company_id) scope.companyIds.push(assignment.company_id);
+          if (assignment.scope_type === "region" && assignment.region_id) scope.regionIds.push(assignment.region_id);
+          if (assignment.scope_type === "store" && assignment.store_id) scope.storeIds.push(assignment.store_id);
+          permissionScopes[permissionCode] = scope;
+        }
+        continue;
+      }
       if (assignment.role_code === "REGION_MANAGER") {
         for (const permissionCode of assignment.permission_codes ?? []) {
           const scope = permissionScopes[permissionCode] ?? {

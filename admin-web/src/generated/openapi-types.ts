@@ -1129,6 +1129,17 @@ export type components = {
     "GrantRolePermissionDto": {
       "permissionCode": string
     }
+    "GrantUserPermissionDto": {
+      "startsAt"?: string
+      "endsAt"?: string
+      "roleAssignmentId": string
+      "permissionCode": string
+      "scopeType": "company" | "region" | "store"
+      "companyId": string
+      "regionId"?: string
+      "storeId"?: string
+      "reason": string
+    }
     "ImportBatchAuditResponse": {
       "items": Array<{
           "eventLogId": string
@@ -2900,6 +2911,9 @@ export type components = {
       "endsOn": string
       "storeIds": string[]
     }
+    "RevokeUserPermissionDto": {
+      "reason": string
+    }
     "SalesTargetIncentiveOutOfRosterReturn": {
       "employeeId": string | null
       "personnelCode": string | null
@@ -4186,6 +4200,120 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["AuthRoleAssignmentCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/user-permission-assignments": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': {
+              "items": Array<{
+                  "assignmentId": string
+                  "roleAssignmentId": string
+                  "userId": string
+                  "roleCode": string
+                  "permissionCode": string
+                  "resourceName": string
+                  "actionName": string
+                  "scopeType": "company" | "region" | "store"
+                  "companyId": string
+                  "regionId"?: string | null
+                  "storeId"?: string | null
+                  "startsAt": string
+                  "endsAt"?: string | null
+                  "grantReason": string
+                  "createdAt": string
+                  "revokedAt"?: string | null
+                  "revokeReason"?: string | null
+                }>
+              "meta": {
+                "total": number
+                "limit": number
+                "offset": number
+              }
+            }
+          }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["GrantUserPermissionDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': {
+              "status": string
+              "message": string
+              "data": {
+                "assignment": {
+                  "assignmentId": string
+                  "roleAssignmentId": string
+                  "userId": string
+                  "roleCode": string
+                  "permissionCode": string
+                  "resourceName": string
+                  "actionName": string
+                  "scopeType": "company" | "region" | "store"
+                  "companyId": string
+                  "regionId"?: string | null
+                  "storeId"?: string | null
+                  "startsAt": string
+                  "endsAt"?: string | null
+                  "grantReason": string
+                  "createdAt": string
+                  "revokedAt"?: string | null
+                  "revokeReason"?: string | null
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/user-permission-assignments/{assignmentId}/revoke": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["RevokeUserPermissionDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': {
+              "status": string
+              "message": string
+              "data": {
+                "assignment": {
+                  "assignmentId": string
+                  "roleAssignmentId": string
+                  "userId": string
+                  "roleCode": string
+                  "permissionCode": string
+                  "resourceName": string
+                  "actionName": string
+                  "scopeType": "company" | "region" | "store"
+                  "companyId": string
+                  "regionId"?: string | null
+                  "storeId"?: string | null
+                  "startsAt": string
+                  "endsAt"?: string | null
+                  "grantReason": string
+                  "createdAt": string
+                  "revokedAt"?: string | null
+                  "revokeReason"?: string | null
+                }
+              }
+            }
           }
         }
       }

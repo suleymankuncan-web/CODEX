@@ -72,6 +72,7 @@ export class AuthAuthorizationRepository {
       store_id: string | null;
       store_type?: string | null;
       permission_codes?: string[];
+      is_personal_permission?: boolean;
     }>(
       `
         SELECT
@@ -82,7 +83,7 @@ export class AuthAuthorizationRepository {
           ura.region_id,
           ura.store_id,
           store.store_type,
-          ARRAY(
+          (ARRAY(
             SELECT permission.permission_code
             FROM ops.role_permission role_permission
             INNER JOIN ops.permission permission
@@ -94,7 +95,8 @@ export class AuthAuthorizationRepository {
                      AND ura.scope_type = 'company' AND r.role_scope_type = 'company'
                      AND ura.company_id IS NOT NULL
                      AND (ura.end_at IS NULL OR ura.end_at > NOW())
-               THEN ARRAY['INCENTIVE_FINAL_APPROVAL']::text[] ELSE ARRAY[]::text[] END AS permission_codes
+               THEN ARRAY['INCENTIVE_FINAL_APPROVAL']::text[] ELSE ARRAY[]::text[] END) AS permission_codes,
+          FALSE AS is_personal_permission
         FROM ops.user_account ua
         INNER JOIN ops.user_role_assignment ura
           ON ura.user_id = ua.user_id
@@ -125,6 +127,57 @@ export class AuthAuthorizationRepository {
               AND c.status = 'active'
               AND region.status = 'active'
               AND store.status = 'active'
+            )
+          )
+        UNION ALL
+        SELECT
+          r.role_code,
+          r.role_scope_type,
+          permission_assignment.scope_type,
+          permission_assignment.company_id,
+          permission_assignment.region_id,
+          permission_assignment.store_id,
+          permission_store.store_type,
+          ARRAY[permission.permission_code]::text[] AS permission_codes,
+          TRUE AS is_personal_permission
+        FROM ops.user_account ua
+        INNER JOIN ops.user_role_assignment ura
+          ON ura.user_id = ua.user_id
+        INNER JOIN ops.role r
+          ON r.role_id = ura.role_id
+        INNER JOIN ops.user_permission_assignment permission_assignment
+          ON permission_assignment.user_role_assignment_id = ura.user_role_assignment_id
+         AND permission_assignment.user_id = ura.user_id
+        INNER JOIN ops.permission permission
+          ON permission.permission_id = permission_assignment.permission_id
+        LEFT JOIN ops.company permission_company
+          ON permission_company.company_id = permission_assignment.company_id
+        LEFT JOIN ops.region permission_region
+          ON permission_region.region_id = permission_assignment.region_id
+         AND permission_region.company_id = permission_assignment.company_id
+        LEFT JOIN ops.store permission_store
+          ON permission_store.store_id = permission_assignment.store_id
+         AND permission_store.region_id = permission_assignment.region_id
+         AND permission_store.company_id = permission_assignment.company_id
+        WHERE ua.user_id = $1::uuid
+          AND ua.is_active = TRUE
+          AND ura.start_at <= NOW()
+          AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+          AND permission_assignment.revoked_at IS NULL
+          AND permission_assignment.starts_at <= NOW()
+          AND (permission_assignment.ends_at IS NULL OR permission_assignment.ends_at > NOW())
+          AND (
+            (permission_assignment.scope_type = 'company' AND permission_company.status = 'active')
+            OR (
+              permission_assignment.scope_type = 'region'
+              AND permission_company.status = 'active'
+              AND permission_region.status = 'active'
+            )
+            OR (
+              permission_assignment.scope_type = 'store'
+              AND permission_company.status = 'active'
+              AND permission_region.status = 'active'
+              AND permission_store.status = 'active'
             )
           )
       `,

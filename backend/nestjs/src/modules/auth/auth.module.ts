@@ -11,6 +11,8 @@ import { AuthAdminUserAccountService } from "./auth-admin-user-account.service";
 import { AuthAdminUserAccountReadRepository } from "./auth-admin-user-account-read.repository";
 import { AuthRoleAssignmentCommandRepository } from "./auth-role-assignment-command.repository";
 import { AuthRolePermissionCommandRepository } from "./auth-role-permission-command.repository";
+import { UserPermissionAssignmentRepository } from "./user-permission-assignment.repository";
+import { AuthUserPermissionService } from "./auth-user-permission.service";
 import { AuthUserAccountCommandRepository } from "./auth-user-account-command.repository";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { BrowserSessionService } from "./browser-session.service";
@@ -42,6 +44,8 @@ import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
     AuthActionStoreAssignmentCommandRepository,
     AuthRoleAssignmentCommandRepository,
     AuthRolePermissionCommandRepository,
+    UserPermissionAssignmentRepository,
+    AuthUserPermissionService,
     AuthUserAccountCommandRepository,
     AuthAdminRepository,
     AuthAdminService,

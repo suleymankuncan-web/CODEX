@@ -145,6 +145,14 @@ export class AccessLifecycleRepository {
       return emptyAccessLifecycleResult();
     }
 
+    await client.query(`
+      UPDATE ops.user_permission_assignment
+      SET revoked_at = NOW(), revoked_by_user_id = $2::uuid,
+          revoke_reason = $3
+      WHERE user_id = $1::uuid AND revoked_at IS NULL
+        AND (ends_at IS NULL OR ends_at > NOW())
+    `, [input.userId, input.actorUserId, `Account deactivated: ${deactivationReason}`]);
+
     const roleAssignmentsResult = await client.query<{ user_role_assignment_id: string }>(
       `
         /* access_lifecycle_close_role_assignments */

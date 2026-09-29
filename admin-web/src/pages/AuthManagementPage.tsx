@@ -1,4 +1,3 @@
-import { IncentiveApprovalCheckbox } from '../features/auth/incentive-approval-checkbox'
 import { useDeferredValue, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -41,25 +40,30 @@ import {
 import {
   createActionStoreAssignmentsBatch,
   createRoleAssignment,
-  updateIncentiveApproval,
   createUserAccount,
   deactivateActionStoreAssignment,
   deactivateRoleAssignment,
   deactivateUserAccount,
   getActionStoreAssignments,
+  getUserPermissionAssignments,
   getAuthLookups,
   getPermissions,
   getRoleAssignments,
   getRoles,
   getUserAccounts,
   grantRolePermission,
+  grantUserPermission,
   reactivateUserAccount,
   revokeRolePermission,
+  revokeUserPermission,
   updateUserAccount,
+  updateIncentiveApproval,
   type CreateUserAccountInput,
+  type GrantUserPermissionInput,
   type RoleCatalogItem,
   type UpdateUserAccountInput,
   type UserAccount,
+  type UserPermissionAssignment,
 } from '../features/auth/api'
 import { actionToast } from '../lib/action-toast'
 import {
@@ -79,6 +83,8 @@ export function AuthManagementPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [storeOpen, setStoreOpen] = useState(false)
+  const [capabilityOpen, setCapabilityOpen] = useState(false)
+  const [capabilityRevoke, setCapabilityRevoke] = useState<{ assignmentId: string; permissionCode: string } | null>(null)
   const [accountAction, setAccountAction] = useState<UserAccount | null>(null)
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [permissionAction, setPermissionAction] = useState<PermissionAction | null>(null)
@@ -119,9 +125,15 @@ export function AuthManagementPage() {
     queryFn: () => getActionStoreAssignments({ userId: selectedUser!.userId, active: true, limit: 200 }),
     enabled: Boolean(selectedUser),
   })
+  const capabilityAssignmentsQuery = useQuery({
+    queryKey: ['auth-management', 'user-permission-assignments', selectedUser?.userId],
+    queryFn: () => getUserPermissionAssignments({ userId: selectedUser!.userId, limit: 200 }),
+    enabled: Boolean(selectedUser),
+  })
   const lookupsUnavailable = lookupsQuery.isLoading || lookupsQuery.isFetching || lookupsQuery.isError
   const roleAssignmentsUnavailable = roleAssignmentsQuery.isLoading || roleAssignmentsQuery.isFetching || roleAssignmentsQuery.isError
   const storeAssignmentsUnavailable = storeAssignmentsQuery.isLoading || storeAssignmentsQuery.isFetching || storeAssignmentsQuery.isError
+  const capabilityAssignmentsUnavailable = capabilityAssignmentsQuery.isLoading || capabilityAssignmentsQuery.isFetching || capabilityAssignmentsQuery.isError
 
   const invalidate = async () => queryClient.invalidateQueries({ queryKey: ['auth-management'] })
   const createUserMutation = useMutation({
@@ -144,10 +156,10 @@ export function AuthManagementPage() {
     onSuccess: async () => { await invalidate(); setRoleOpen(false); actionToast.success('Rol ataması eklendi.') },
     onError: (error) => actionToast.error(error, 'Rol ataması eklenemedi.'),
   })
-  const incentiveApprovalMutation = useMutation({
-    mutationFn: updateIncentiveApproval,
-    onSuccess: async () => { await invalidate(); await queryClient.invalidateQueries({ queryKey: ['shell-session'] }); actionToast.success('Prim onayı yetkisi güncellendi.') },
-    onError: (error) => actionToast.error(error, 'Prim onayı yetkisi güncellenemedi.'),
+  const legacyIncentiveApprovalMutation = useMutation({
+    mutationFn: (assignmentId: string) => updateIncentiveApproval({ assignmentId, enabled: false }),
+    onSuccess: async () => { await invalidate(); await queryClient.invalidateQueries({ queryKey: ['shell-session'] }); actionToast.success('Eski prim final onayı kaldırıldı.') },
+    onError: (error) => actionToast.error(error, 'Eski prim final onayı kaldırılamadı.'),
   })
   const removeRoleMutation = useMutation({
     mutationFn: deactivateRoleAssignment,
@@ -163,6 +175,16 @@ export function AuthManagementPage() {
     mutationFn: deactivateActionStoreAssignment,
     onSuccess: async () => { await invalidate(); actionToast.success('Mağaza erişimi kaldırıldı.') },
     onError: (error) => actionToast.error(error, 'Mağaza erişimi kaldırılamadı.'),
+  })
+  const grantCapabilityMutation = useMutation({
+    mutationFn: grantUserPermission,
+    onSuccess: async () => { await invalidate(); setCapabilityOpen(false); await queryClient.invalidateQueries({ queryKey: ['shell-session'] }); actionToast.success('Kullanıcı yetkisi eklendi.') },
+    onError: (error) => actionToast.error(error, 'Kullanıcı yetkisi eklenemedi.'),
+  })
+  const revokeCapabilityMutation = useMutation({
+    mutationFn: revokeUserPermission,
+    onSuccess: async () => { await invalidate(); setCapabilityRevoke(null); await queryClient.invalidateQueries({ queryKey: ['shell-session'] }); actionToast.success('Kullanıcı yetkisi kaldırıldı.') },
+    onError: (error) => actionToast.error(error, 'Kullanıcı yetkisi kaldırılamadı.'),
   })
   const permissionMutation = useMutation({
     mutationFn: (action: PermissionAction) => action.granted ? revokeRolePermission(action) : grantRolePermission(action),
@@ -245,7 +267,8 @@ export function AuthManagementPage() {
                 </div>
                 <div className="tw:mt-6 tw:flex tw:flex-wrap tw:gap-x-7 tw:gap-y-2 tw:border-t tw:border-border tw:pt-4 tw:text-xs tw:text-muted-foreground">
                   <span><strong className="tw:mr-1 tw:text-foreground">{roleAssignmentsUnavailable ? '—' : roleAssignmentsQuery.data?.items.length ?? 0}</strong> aktif rol</span>
-                  <span><strong className="tw:mr-1 tw:text-foreground">{storeAssignmentsUnavailable ? '—' : storeAssignmentsQuery.data?.items.length ?? 0}</strong> doğrudan mağaza</span>
+                   <span><strong className="tw:mr-1 tw:text-foreground">{storeAssignmentsUnavailable ? '—' : storeAssignmentsQuery.data?.items.length ?? 0}</strong> doğrudan mağaza</span>
+                   <span><strong className="tw:mr-1 tw:text-foreground">{capabilityAssignmentsUnavailable ? '—' : capabilityAssignmentsQuery.data?.items.length ?? 0}</strong> kişisel yetki</span>
                   <span>Sağlayıcı: <strong className="tw:text-foreground">{selectedUser.authProvider}</strong></span>
                 </div>
               </header>
@@ -254,16 +277,21 @@ export function AuthManagementPage() {
                 <AccessBlock icon={<Shield aria-hidden="true" />} title="Roller" action={<Button disabled={roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setRoleOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Rol ekle</Button>}>
                   {roleAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Roller yükleniyor" /> : roleAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void roleAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Roller alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (roleAssignmentsQuery.data?.items ?? []).length ? roleAssignmentsQuery.data?.items.map((assignment) => (
                     <div key={assignment.assignmentId}>
-                      <AccessRow label={roleDisplayName(assignment)} meta={scopeLabel(assignment)} onRemove={() => removeRoleMutation.mutate(assignment.assignmentId)} />
-                      {assignment.roleCode === 'REPORT_VIEWER' && assignment.scopeType === 'company' ? <div className="tw:px-3 tw:pb-4"><p className="tw:text-xs tw:font-semibold tw:text-muted-foreground">Rol yetkileri</p><IncentiveApprovalCheckbox checked={assignment.incentiveApproval ?? false} disabled={incentiveApprovalMutation.isPending || roleAssignmentsUnavailable || removeRoleMutation.isPending} onChange={(enabled) => incentiveApprovalMutation.mutate({ assignmentId: assignment.assignmentId, enabled })} /></div> : null}
+                       <AccessRow label={roleDisplayName(assignment)} meta={scopeLabel(assignment)} onRemove={() => removeRoleMutation.mutate(assignment.assignmentId)} />
+                       {assignment.incentiveApproval ? <div className="tw:px-3 tw:pb-4"><p className="tw:text-xs tw:font-semibold tw:text-amber-700">Eski prim final onayı · yalnız kaldırılabilir</p><IncentiveApprovalCheckbox checked disabled={legacyIncentiveApprovalMutation.isPending} onChange={(enabled) => !enabled && legacyIncentiveApprovalMutation.mutate(assignment.assignmentId)} /></div> : null}
                     </div>
                   )) : <EmptyAccess copy="Rol ataması yok" />}
                 </AccessBlock>
-                <AccessBlock icon={<Building2 aria-hidden="true" />} title="Mağaza erişimi" action={<Button disabled={storeAssignmentsUnavailable || lookupsUnavailable} onClick={() => setStoreOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Mağaza ekle</Button>}>
+                 <AccessBlock icon={<Building2 aria-hidden="true" />} title="Mağaza erişimi" action={<Button disabled={storeAssignmentsUnavailable || lookupsUnavailable} onClick={() => setStoreOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Mağaza ekle</Button>}>
                   {storeAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Mağaza erişimi yükleniyor" /> : storeAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void storeAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Mağaza erişimi alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (storeAssignmentsQuery.data?.items ?? []).length ? storeAssignmentsQuery.data?.items.map((assignment) => (
                     <AccessRow key={assignment.assignmentId} label={assignment.storeName} meta={assignment.storeCode} onRemove={() => removeStoreMutation.mutate(assignment.assignmentId)} />
                   )) : <EmptyAccess copy="Doğrudan mağaza erişimi yok" />}
-                </AccessBlock>
+                 </AccessBlock>
+                 <AccessBlock icon={<KeyRound aria-hidden="true" />} title="Kişisel yetkiler" action={<Button disabled={capabilityAssignmentsUnavailable || roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setCapabilityOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Yetki ekle</Button>}>
+                   {capabilityAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Yetkiler yükleniyor" /> : capabilityAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void capabilityAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Yetkiler alınamadı" /> : (capabilityAssignmentsQuery.data?.items ?? []).length ? capabilityAssignmentsQuery.data?.items.map((assignment) => (
+                     <AccessRow key={assignment.assignmentId} label={permissionDisplayName(assignment.permissionCode)} meta={`${roleNames[assignment.roleCode] ?? assignment.roleCode} · ${scopeLabel({ ...assignment, companyId: assignment.companyId ?? null, regionId: assignment.regionId ?? null, storeId: assignment.storeId ?? null })} · ${capabilityStatus(assignment)}`} {...(!assignment.revokedAt && (!assignment.endsAt || new Date(assignment.endsAt).getTime() > Date.now()) ? { onRemove: () => setCapabilityRevoke({ assignmentId: assignment.assignmentId, permissionCode: assignment.permissionCode }) } : {})} />
+                   )) : <EmptyAccess copy="Kişiye özel yetki yok" />}
+                 </AccessBlock>
               </div>
             </section>
           ) : <AdminStatePanel title="Kullanıcı seçin" description="Yetkileri düzenlemek için soldan bir kullanıcı seçin." />}
@@ -293,6 +321,8 @@ export function AuthManagementPage() {
       {selectedUser ? <EditUserDialog key={`${selectedUser.userId}-${editOpen ? 'open' : 'closed'}`} user={selectedUser} open={editOpen} onOpenChange={setEditOpen} onSave={(changes) => updateUserMutation.mutate({ userId: selectedUser.userId, changes })} pending={updateUserMutation.isPending} /> : null}
       <RoleAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${roleOpen ? 'open' : 'closed'}`} open={roleOpen} onOpenChange={setRoleOpen} roles={lookupsQuery.data?.roles ?? []} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createRoleMutation.mutate(draft)} pending={createRoleMutation.isPending} unavailable={roleAssignmentsUnavailable || lookupsUnavailable} unavailableByError={roleAssignmentsQuery.isError || lookupsQuery.isError} />
       <StoreAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${storeOpen ? 'open' : 'closed'}`} assignedStoreIds={(storeAssignmentsQuery.data?.items ?? []).map((item) => item.storeId)} open={storeOpen} onOpenChange={setStoreOpen} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createStoreMutation.mutate(draft)} pending={createStoreMutation.isPending} unavailable={storeAssignmentsUnavailable || lookupsUnavailable} unavailableByError={storeAssignmentsQuery.isError || lookupsQuery.isError} />
+      <CapabilityAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${capabilityOpen ? 'open' : 'closed'}`} open={capabilityOpen} onOpenChange={setCapabilityOpen} roleAssignments={roleAssignmentsQuery.data?.items ?? []} roles={rolesQuery.data?.items ?? []} permissions={permissionsQuery.data?.items ?? []} user={selectedUser} onSave={(draft) => grantCapabilityMutation.mutate(draft)} pending={grantCapabilityMutation.isPending} />
+      <CapabilityRevokeDialog assignment={capabilityRevoke} onOpenChange={(open) => !open && setCapabilityRevoke(null)} onConfirm={(reason) => capabilityRevoke && revokeCapabilityMutation.mutate({ assignmentId: capabilityRevoke.assignmentId, reason })} pending={revokeCapabilityMutation.isPending} />
       <ConfirmDialog open={Boolean(accountAction)} title={accountAction?.isActive ? 'Hesap devre dışı bırakılsın mı?' : 'Hesap yeniden etkinleştirilsin mi?'} copy={accountAction?.isActive ? 'Aktif rol, mağaza erişimi ve mobil oturumlar kapatılır.' : 'Hesap açılır; eski rol ve mağaza atamaları otomatik geri gelmez.'} confirmLabel={accountAction?.isActive ? 'Devre dışı bırak' : 'Etkinleştir'} onOpenChange={(open) => !open && setAccountAction(null)} onConfirm={() => accountAction && accountMutation.mutate(accountAction)} pending={accountMutation.isPending} />
       <ConfirmDialog open={Boolean(permissionAction)} title="Rol yetkisi değiştirilsin mi?" copy={permissionAction?.granted ? 'Bu izin role bağlı tüm kullanıcılar için kaldırılır.' : 'Bu izin role bağlı tüm kullanıcılar için etkinleşir.'} confirmLabel={permissionAction?.granted ? 'Yetkiyi kaldır' : 'Yetkiyi ver'} onOpenChange={(open) => !open && setPermissionAction(null)} onConfirm={() => permissionAction && permissionMutation.mutate(permissionAction)} pending={permissionMutation.isPending} />
     </AdminSurfacePage>
@@ -309,6 +339,7 @@ function PermissionWorkspace({ permissions, role, roles, onRoleChange, onToggle 
   const grouped = useMemo(() => {
     const entries = new Map<string, typeof permissions>()
     for (const permission of permissions) {
+      if (individualCapabilityPermissionCodes.has(permission.permissionCode)) continue
       entries.set(permission.resourceName, [...(entries.get(permission.resourceName) ?? []), permission])
     }
     return entries
@@ -356,8 +387,8 @@ function AccessBlock({ action, children, icon, title }: { action: React.ReactNod
   return <section className="tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-background"><header className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:border-b tw:border-border tw:p-3.5"><div className="tw:flex tw:items-center tw:gap-2 tw:font-semibold tw:text-foreground">{icon}{title}</div>{action}</header><div className="tw:divide-y tw:divide-border">{children}</div></section>
 }
 
-function AccessRow({ label, meta, onRemove }: { label: string; meta: string; onRemove: () => void }) {
-  return <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:p-3"><div><div className="tw:text-sm tw:font-medium">{label}</div><div className="tw:text-xs tw:text-muted-foreground">{meta}</div></div><Button onClick={onRemove} size="sm" variant="ghost">Kaldır</Button></div>
+function AccessRow({ label, meta, onRemove }: { label: string; meta: string; onRemove?: () => void }) {
+  return <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:p-3"><div><div className="tw:text-sm tw:font-medium">{label}</div><div className="tw:text-xs tw:text-muted-foreground">{meta}</div></div>{onRemove ? <Button onClick={onRemove} size="sm" variant="ghost">Kaldır</Button> : null}</div>
 }
 
 function EmptyAccess({ copy }: { copy: string }) { return <div className="tw:p-4 tw:text-sm tw:text-muted-foreground">{copy}</div> }
@@ -475,9 +506,8 @@ function EditUserDialog({ user, open, onOpenChange, onSave, pending }: {
   </Dialog>
 }
 
-function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave, pending, unavailable, unavailableByError }: { open: boolean; onOpenChange: (open: boolean) => void; roles: Array<{ roleCode: string; roleName: string; scopeType: string }>; stores: Array<{ storeId: string; storeName: string; companyId: string; regionId: string; regionName: string }>; user: UserAccount | null; onSave: (draft: { userId: string; roleCode: 'SUPER_ADMIN' | 'HR_ADMIN' | 'REPORT_VIEWER' | 'REGION_MANAGER' | 'STORE_MANAGER' | 'STORE_PERSONNEL' | 'VISUAL_MERCHANDISER'; scopeType: 'company' | 'region' | 'store'; incentiveApproval?: boolean; companyId?: string; regionId?: string; storeId?: string }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
+function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave, pending, unavailable, unavailableByError }: { open: boolean; onOpenChange: (open: boolean) => void; roles: Array<{ roleCode: string; roleName: string; scopeType: string }>; stores: Array<{ storeId: string; storeName: string; companyId: string; regionId: string; regionName: string }>; user: UserAccount | null; onSave: (draft: { userId: string; roleCode: 'SUPER_ADMIN' | 'HR_ADMIN' | 'REPORT_VIEWER' | 'REGION_MANAGER' | 'STORE_MANAGER' | 'STORE_PERSONNEL' | 'VISUAL_MERCHANDISER'; scopeType: 'company' | 'region' | 'store'; companyId?: string; regionId?: string; storeId?: string }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
   const [roleCode, setRoleCode] = useState('')
-  const [incentiveApproval, setIncentiveApproval] = useState(false)
   const selectedRole = roles.find((role) => role.roleCode === roleCode)
   const scopeType = (roleCode === 'REGION_MANAGER' ? 'company' : selectedRole?.scopeType ?? 'company') as 'company' | 'region' | 'store'
   const [scopeId, setScopeId] = useState('')
@@ -485,7 +515,7 @@ function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave,
   const selectedStore = stores.find((store) => store.storeId === scopeId)
   const selectedRegion = regions.find((region) => region.regionId === scopeId)
   const companyId = selectedStore?.companyId ?? selectedRegion?.companyId ?? stores[0]?.companyId
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Rol ekle</DialogTitle><DialogDescription>{roleCode === 'REGION_MANAGER' ? `${user?.username} Bölge Müdürü olarak tanımlanacak. Sorumlu mağazaları Mağaza erişimi bölümünden seçin.` : `${user?.username} için rol ve yetki alanı seçin.`}</DialogDescription></DialogHeader><div className="tw:grid tw:gap-3">{unavailable ? <AssignmentAvailabilityState kind="role" isError={unavailableByError} /> : null}<Field label="Rol"><Select value={roleCode} onValueChange={(value) => { setRoleCode(value); setScopeId(''); setIncentiveApproval(false) }}><SelectTrigger aria-label="Rol" className="tw:w-full"><SelectValue placeholder="Rol seçin" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.roleCode} value={role.roleCode}>{roleDisplayName(role)}</SelectItem>)}</SelectContent></Select></Field>{scopeType === 'region' ? <Field label="Bölge"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol bölgesi" className="tw:w-full"><SelectValue placeholder="Bölge seçin" /></SelectTrigger><SelectContent>{regions.map((region) => <SelectItem key={region.regionId} value={region.regionId}>{region.regionName}</SelectItem>)}</SelectContent></Select></Field> : null}{scopeType === 'store' ? <Field label="Mağaza"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol mağazası" className="tw:w-full"><SelectValue placeholder="Mağaza seçin" /></SelectTrigger><SelectContent>{stores.map((store) => <SelectItem key={store.storeId} value={store.storeId}>{store.storeName}</SelectItem>)}</SelectContent></Select></Field> : null}{roleCode === 'REPORT_VIEWER' ? <IncentiveApprovalCheckbox checked={incentiveApproval} disabled={pending || unavailable} onChange={setIncentiveApproval} /> : null}</div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || !roleCode || !companyId || (scopeType !== 'company' && !scopeId) || pending || unavailable} onClick={() => !unavailable && user && companyId && onSave({ userId: user.userId, roleCode: roleCode as Parameters<typeof onSave>[0]['roleCode'], scopeType, companyId, ...(roleCode === 'REPORT_VIEWER' ? { incentiveApproval } : {}), ...(scopeType === 'region' ? { regionId: scopeId } : {}), ...(scopeType === 'store' ? { storeId: scopeId } : {}) })}><ShieldCheck aria-hidden="true" /> Rolü ata</Button></DialogFooter></DialogContent></Dialog>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Rol ekle</DialogTitle><DialogDescription>{roleCode === 'REGION_MANAGER' ? `${user?.username} Bölge Müdürü olarak tanımlanacak. Sorumlu mağazaları Mağaza erişimi bölümünden seçin.` : `${user?.username} için rol ve yetki alanı seçin.`}</DialogDescription></DialogHeader><div className="tw:grid tw:gap-3">{unavailable ? <AssignmentAvailabilityState kind="role" isError={unavailableByError} /> : null}<Field label="Rol"><Select value={roleCode} onValueChange={(value) => { setRoleCode(value); setScopeId('') }}><SelectTrigger aria-label="Rol" className="tw:w-full"><SelectValue placeholder="Rol seçin" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.roleCode} value={role.roleCode}>{roleDisplayName(role)}</SelectItem>)}</SelectContent></Select></Field>{scopeType === 'region' ? <Field label="Bölge"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol bölgesi" className="tw:w-full"><SelectValue placeholder="Bölge seçin" /></SelectTrigger><SelectContent>{regions.map((region) => <SelectItem key={region.regionId} value={region.regionId}>{region.regionName}</SelectItem>)}</SelectContent></Select></Field> : null}{scopeType === 'store' ? <Field label="Mağaza"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol mağazası" className="tw:w-full"><SelectValue placeholder="Mağaza seçin" /></SelectTrigger><SelectContent>{stores.map((store) => <SelectItem key={store.storeId} value={store.storeId}>{store.storeName}</SelectItem>)}</SelectContent></Select></Field> : null}</div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || !roleCode || !companyId || (scopeType !== 'company' && !scopeId) || pending || unavailable} onClick={() => !unavailable && user && companyId && onSave({ userId: user.userId, roleCode: roleCode as Parameters<typeof onSave>[0]['roleCode'], scopeType, companyId, ...(scopeType === 'region' ? { regionId: scopeId } : {}), ...(scopeType === 'store' ? { storeId: scopeId } : {}) })}><ShieldCheck aria-hidden="true" /> Rolü ata</Button></DialogFooter></DialogContent></Dialog>
 }
 
 function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, user, onSave, pending, unavailable, unavailableByError }: { assignedStoreIds: string[]; open: boolean; onOpenChange: (open: boolean) => void; stores: Array<{ storeId: string; storeName: string; storeCode: string }>; user: UserAccount | null; onSave: (draft: { userId: string; storeIds: string[] }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
@@ -522,6 +552,64 @@ function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, u
   )
 }
 
+function CapabilityAssignmentDialog({ open, onOpenChange, roleAssignments, roles, permissions, user, onSave, pending }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  roleAssignments: Array<{ assignmentId: string; roleCode: string; scopeType: string; companyId: string | null; regionId: string | null; storeId: string | null; effectiveFrom: string | null; effectiveTo: string | null }>
+  roles: RoleCatalogItem[]
+  permissions: Array<{ permissionCode: string; resourceName: string; actionName: string }>
+  user: UserAccount | null
+  onSave: (input: GrantUserPermissionInput) => void
+  pending: boolean
+}) {
+  const eligibleAssignments = roleAssignments.filter((assignment) => assignment.roleCode !== 'SUPER_ADMIN')
+  const [roleAssignmentId, setRoleAssignmentId] = useState('')
+  const [permissionCode, setPermissionCode] = useState('')
+  const [startsAt, setStartsAt] = useState('')
+  const [endsAt, setEndsAt] = useState('')
+  const [reason, setReason] = useState('')
+  const assignment = eligibleAssignments.find((item) => item.assignmentId === roleAssignmentId)
+  const role = roles.find((item) => item.roleCode === assignment?.roleCode)
+  const defaults = new Set(role?.permissions.map((permission) => permission.permissionCode) ?? [])
+  const visiblePermissions = permissions.filter((permission) => {
+    if (defaults.has(permission.permissionCode) || permission.permissionCode === 'INCENTIVE_FINAL_APPROVAL') return false
+    if (permission.permissionCode === 'INCENTIVE_SALES_DIRECTOR_APPROVAL' || permission.permissionCode === 'INCENTIVE_GENERAL_MANAGER_APPROVAL') return assignment?.roleCode === 'REPORT_VIEWER' && assignment.scopeType === 'company'
+    if (permission.permissionCode === 'INCENTIVE_HR_APPROVAL' || permission.permissionCode === 'INCENTIVE_PAYROLL_DELIVERY') return assignment?.roleCode === 'HR_ADMIN' && assignment.scopeType === 'company'
+    return true
+  })
+  const effectiveStartTime = startsAt ? new Date(startsAt).getTime() : Date.now()
+  const effectiveEndTime = endsAt ? new Date(endsAt).getTime() : Number.POSITIVE_INFINITY
+  const roleStartTime = assignment?.effectiveFrom ? new Date(assignment.effectiveFrom).getTime() : Number.NEGATIVE_INFINITY
+  const roleEndTime = assignment?.effectiveTo ? new Date(assignment.effectiveTo).getTime() : Number.POSITIVE_INFINITY
+  const intervalIsValid = effectiveStartTime >= roleStartTime && effectiveEndTime > effectiveStartTime && effectiveEndTime <= roleEndTime
+  const canSave = Boolean(
+    user && assignment && permissionCode && assignment.companyId && reason.trim().length >= 3 &&
+    intervalIsValid && !pending,
+  )
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className="tw:sm:max-w-xl" closeLabel="Kapat">
+      <DialogHeader><DialogTitle>Kişisel yetki ekle</DialogTitle><DialogDescription>{user?.username} için rol kapsamını aşmayan, süreli veya süresiz bir capability seçin.</DialogDescription></DialogHeader>
+      <div className="tw:grid tw:gap-4">
+        <Field label="Bağlı rol"><Select value={roleAssignmentId} onValueChange={(value) => { const next = eligibleAssignments.find((item) => item.assignmentId === value); setRoleAssignmentId(value); setPermissionCode(''); setStartsAt(''); setEndsAt(toDateTimeLocal(next?.effectiveTo)) }}><SelectTrigger aria-label="Yetkinin bağlı olduğu rol" className="tw:w-full"><SelectValue placeholder="Rol ataması seçin" /></SelectTrigger><SelectContent>{eligibleAssignments.map((item) => <SelectItem key={item.assignmentId} value={item.assignmentId}>{roleNames[item.roleCode] ?? item.roleCode} · {scopeLabel(item)}{item.effectiveTo ? ` · ${new Date(item.effectiveTo).toLocaleDateString('tr-TR')} tarihine kadar` : ''}</SelectItem>)}</SelectContent></Select></Field>
+        <Field label="Yetki"><Select disabled={!assignment} value={permissionCode} onValueChange={setPermissionCode}><SelectTrigger aria-label="Kişisel yetki" className="tw:w-full"><SelectValue placeholder="Yetki seçin" /></SelectTrigger><SelectContent>{visiblePermissions.map((permission) => <SelectItem key={permission.permissionCode} value={permission.permissionCode}>{permissionDisplayName(permission.permissionCode)}</SelectItem>)}</SelectContent></Select></Field>
+        <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2"><Field label="Başlangıç (opsiyonel)"><Input aria-label="Yetki başlangıcı" min={toDateTimeLocal(assignment?.effectiveFrom)} max={toDateTimeLocal(assignment?.effectiveTo)} type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /></Field><Field label="Bitiş"><Input aria-label="Yetki bitişi" min={startsAt || toDateTimeLocal(assignment?.effectiveFrom)} max={toDateTimeLocal(assignment?.effectiveTo)} type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} /></Field></div>
+        <Field label="Gerekçe"><Input aria-label="Yetki gerekçesi" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Bu yetkinin neden verildiğini yazın" /></Field>
+      </div>
+      <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!canSave} onClick={() => assignment?.companyId && onSave({ roleAssignmentId: assignment.assignmentId, permissionCode, scopeType: assignment.scopeType as 'company' | 'region' | 'store', companyId: assignment.companyId, ...(assignment.regionId ? { regionId: assignment.regionId } : {}), ...(assignment.storeId ? { storeId: assignment.storeId } : {}), ...(startsAt ? { startsAt: new Date(startsAt).toISOString() } : {}), ...(endsAt ? { endsAt: new Date(endsAt).toISOString() } : {}), reason: reason.trim() })}>{pending ? 'Ekleniyor' : 'Yetkiyi ekle'}</Button></DialogFooter>
+    </DialogContent>
+  </Dialog>
+}
+
+function CapabilityRevokeDialog({ assignment, onOpenChange, onConfirm, pending }: {
+  assignment: { assignmentId: string; permissionCode: string } | null
+  onOpenChange: (open: boolean) => void
+  onConfirm: (reason: string) => void
+  pending: boolean
+}) {
+  const [reason, setReason] = useState('')
+  return <Dialog open={Boolean(assignment)} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Kişisel yetki kaldırılsın mı?</DialogTitle><DialogDescription>{assignment ? permissionDisplayName(assignment.permissionCode) : ''} yetkisi geçmiş kanıtı korunarak kapatılır.</DialogDescription></DialogHeader><Field label="Kaldırma gerekçesi"><Input aria-label="Yetki kaldırma gerekçesi" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={pending || reason.trim().length < 3} onClick={() => onConfirm(reason.trim())}>{pending ? 'Kaldırılıyor' : 'Yetkiyi kaldır'}</Button></DialogFooter></DialogContent></Dialog>
+}
+
 function AssignmentAvailabilityState({ kind, isError }: { kind: 'role' | 'store'; isError: boolean }) {
   const subject = kind === 'role' ? 'rol ve kapsam' : 'mağaza erişimi ve mağaza listesi'
   return <AdminStatePanel isLoading={!isError} title={isError ? `Güncel ${subject} alınamadı` : `Güncel ${subject} yenileniyor`} tone={isError ? 'danger' : 'warning'} description="Güncel bilgiler alınana kadar kaydetme devre dışı. Pencereyi kapatıp yeniden deneyin." />
@@ -547,6 +635,7 @@ const resourceNames: Record<string, string> = {
   competition: 'Yarışmalar',
   employee: 'Personel',
   integration: 'Entegrasyonlar',
+  incentive: 'Prim onayları',
   kpi: 'KPI verileri',
   kpi_config: 'KPI ayarları',
   reports: 'Raporlar',
@@ -579,7 +668,17 @@ const permissionDescriptions: Record<string, string> = {
   VM_CAMPAIGN_WINDOW_AUTHORITY: 'VM kampanya tarihlerini uzatabilir veya yeniden açabilir.',
   VM_CAMPAIGN_SCOPE_AUTHORITY: 'VM kampanya mağazalarını ekleyebilir, çıkarabilir veya muaf tutabilir.',
   VM_CAMPAIGN_EMERGENCY_AUTHORITY: 'VM kampanyasını beklemeye alabilir veya acil olarak sonlandırabilir.',
+  INCENTIVE_SALES_DIRECTOR_APPROVAL: 'Bölge Müdürü prim paketlerini Satış Direktörü aşamasında onaylayabilir.',
+  INCENTIVE_HR_APPROVAL: 'Mühürlü şirket prim paketini İK aşamasında onaylayabilir.',
+  INCENTIVE_GENERAL_MANAGER_APPROVAL: 'Şirket prim paketine nihai Genel Müdür onayı verebilir.',
+  INCENTIVE_PAYROLL_DELIVERY: 'Nihai prim paketinin bordro teslimini alabilir ve uzlaştırabilir.',
 }
+const individualCapabilityPermissionCodes = new Set([
+  'INCENTIVE_SALES_DIRECTOR_APPROVAL',
+  'INCENTIVE_HR_APPROVAL',
+  'INCENTIVE_GENERAL_MANAGER_APPROVAL',
+  'INCENTIVE_PAYROLL_DELIVERY',
+])
 function roleDisplayName(role: { roleCode?: string; roleName?: string }) { return (role.roleCode && roleNames[role.roleCode]) || role.roleName || role.roleCode || 'Rol' }
 function resourceDisplayName(resource: string) { return resourceNames[resource] ?? resource.replaceAll('_', ' ') }
 function permissionActionName(action: string) {
@@ -587,6 +686,21 @@ function permissionActionName(action: string) {
   return names[action] ?? action.replaceAll('_', ' ')
 }
 function permissionDescription(permission: { permissionCode: string; resourceName: string; actionName: string }) { return permissionDescriptions[permission.permissionCode] ?? `${resourceDisplayName(permission.resourceName)} alanında ${permissionActionName(permission.actionName).toLocaleLowerCase('tr-TR')} yetkisi verir.` }
+function permissionDisplayName(permissionCode: string) { return permissionDescriptions[permissionCode] ?? permissionCode.replaceAll('_', ' ') }
+function capabilityStatus(assignment: UserPermissionAssignment) {
+  if (assignment.revokedAt) return 'Kaldırıldı'
+  const now = Date.now()
+  if (new Date(assignment.startsAt).getTime() > now) return 'Planlandı'
+  if (assignment.endsAt && new Date(assignment.endsAt).getTime() <= now) return 'Süresi doldu'
+  return assignment.endsAt ? `Aktif · ${new Date(assignment.endsAt).toLocaleDateString('tr-TR')} tarihine kadar` : 'Aktif'
+}
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
 function initials(value: string) { return value.split(/[._\-\s]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'U' }
 function scopeLabel(assignment: { roleCode?: string; scopeType: string; companyId: string | null; regionId: string | null; storeId: string | null }) { return assignment.roleCode === 'REGION_MANAGER' ? 'Sorumlu mağazalar Mağaza erişimi bölümünden yönetilir' : assignment.scopeType === 'store' ? 'Mağaza kapsamı' : assignment.scopeType === 'region' ? 'Bölge kapsamı' : 'Şirket kapsamı' }
 function uniqueRegions(stores: Array<{ regionId: string; regionName: string; companyId: string }>) { return Array.from(new Map(stores.map((store) => [store.regionId, { regionId: store.regionId, regionName: store.regionName, companyId: store.companyId }])).values()) }
+import { IncentiveApprovalCheckbox } from '../features/auth/incentive-approval-checkbox'

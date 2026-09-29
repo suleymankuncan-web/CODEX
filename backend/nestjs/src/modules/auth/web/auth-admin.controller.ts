@@ -10,11 +10,13 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { RequireRoles } from '../decorators/roles.decorator';
 import { RequireScope } from '../decorators/scope.decorator';
 import { AuthAdminService } from '../auth-admin.service';
 import { AuthAdminUserAccountService } from '../auth-admin-user-account.service';
+import { AuthUserPermissionService } from '../auth-user-permission.service';
 import { CreateActionStoreAssignmentDto } from './dto/create-action-store-assignment.dto';
 import { CreateActionStoreAssignmentsBatchDto } from './dto/create-action-store-assignments-batch.dto';
 import { CreatePilotUserBindingDto } from './dto/create-pilot-user-binding.dto';
@@ -23,12 +25,37 @@ import { CreateRoleAssignmentDto } from './dto/create-role-assignment.dto';
 import { CreateUserAccountDto } from './dto/create-user-account.dto';
 import { DeactivateUserAccountDto } from './dto/deactivate-user-account.dto';
 import { GrantRolePermissionDto } from './dto/grant-role-permission.dto';
+import { GrantUserPermissionDto } from './dto/grant-user-permission.dto';
 import { ListActionStoreAssignmentsQueryDto } from './dto/list-action-store-assignments.query';
 import { ListRoleAssignmentAuditQueryDto } from './dto/list-role-assignment-audit.query';
 import { ListRoleAssignmentsQueryDto } from './dto/list-role-assignments.query';
 import { ListUserAccountsQueryDto } from './dto/list-user-accounts.query';
+import { ListUserPermissionAssignmentsQueryDto } from './dto/list-user-permission-assignments.query';
+import { RevokeUserPermissionDto } from './dto/revoke-user-permission.dto';
 import { SearchAuthLookupQueryDto } from './dto/search-auth-lookup.query';
 import { UpdateUserAccountDto } from './dto/update-user-account.dto';
+
+const userPermissionAssignmentSchema: SchemaObject = {
+  type: 'object',
+  required: ['assignmentId', 'roleAssignmentId', 'userId', 'roleCode', 'permissionCode', 'resourceName', 'actionName', 'scopeType', 'companyId', 'startsAt', 'grantReason', 'createdAt'],
+  properties: {
+    assignmentId: { type: 'string', format: 'uuid' }, roleAssignmentId: { type: 'string', format: 'uuid' },
+    userId: { type: 'string', format: 'uuid' }, roleCode: { type: 'string' }, permissionCode: { type: 'string' },
+    resourceName: { type: 'string' }, actionName: { type: 'string' }, scopeType: { type: 'string', enum: ['company', 'region', 'store'] },
+    companyId: { type: 'string', format: 'uuid' }, regionId: { type: 'string', format: 'uuid', nullable: true },
+    storeId: { type: 'string', format: 'uuid', nullable: true }, startsAt: { type: 'string', format: 'date-time' },
+    endsAt: { type: 'string', format: 'date-time', nullable: true }, grantReason: { type: 'string' },
+    createdAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true },
+    revokeReason: { type: 'string', nullable: true },
+  },
+};
+const userPermissionCommandSchema: SchemaObject = {
+  type: 'object', required: ['status', 'message', 'data'],
+  properties: {
+    status: { type: 'string' }, message: { type: 'string' },
+    data: { type: 'object', required: ['assignment'], properties: { assignment: userPermissionAssignmentSchema } },
+  },
+};
 
 @Controller('auth')
 @RequireRoles('SUPER_ADMIN')
@@ -36,6 +63,7 @@ export class AuthAdminController {
   constructor(
     private readonly authAdminService: AuthAdminService,
     private readonly authAdminUserAccountService: AuthAdminUserAccountService,
+    private readonly authUserPermissionService: AuthUserPermissionService,
   ) {}
 
   @Post('role-assignments')
@@ -333,6 +361,49 @@ export class AuthAdminController {
   @Get('permissions')
   async listPermissions() {
     return this.authAdminService.listPermissions();
+  }
+
+  @Get('user-permission-assignments')
+  @ApiQuery({ name: 'userId', required: false, type: String, format: 'uuid' })
+  @ApiQuery({ name: 'roleAssignmentId', required: false, type: String, format: 'uuid' })
+  @ApiQuery({ name: 'active', required: false, type: Boolean })
+  @ApiQuery({ name: 'limit', required: false, schema: { type: 'integer', minimum: 1, maximum: 200 } })
+  @ApiQuery({ name: 'offset', required: false, schema: { type: 'integer', minimum: 0 } })
+  @ApiOkResponse({ schema: {
+    type: 'object', required: ['items', 'meta'],
+    properties: {
+      items: { type: 'array', items: userPermissionAssignmentSchema },
+      meta: { type: 'object', required: ['total', 'limit', 'offset'], properties: {
+        total: { type: 'number' }, limit: { type: 'number' }, offset: { type: 'number' },
+      } },
+    },
+  } })
+  async listUserPermissionAssignments(@Query() query: ListUserPermissionAssignmentsQueryDto) {
+    return this.authUserPermissionService.list(query);
+  }
+
+  @Post('user-permission-assignments')
+  @ApiCreatedResponse({ schema: userPermissionCommandSchema })
+  async grantUserPermission(
+    @Req() request: { user: { userId: string } },
+    @Body() body: GrantUserPermissionDto,
+  ) {
+    return this.authUserPermissionService.grant({ ...body, actorUserId: request.user.userId });
+  }
+
+  @Patch('user-permission-assignments/:assignmentId/revoke')
+  @ApiParam({ name: 'assignmentId', format: 'uuid' })
+  @ApiOkResponse({ schema: userPermissionCommandSchema })
+  async revokeUserPermission(
+    @Param('assignmentId', new ParseUUIDPipe({ version: '4' })) assignmentId: string,
+    @Req() request: { user: { userId: string } },
+    @Body() body: RevokeUserPermissionDto,
+  ) {
+    return this.authUserPermissionService.revoke({
+      assignmentId,
+      actorUserId: request.user.userId,
+      reason: body.reason,
+    });
   }
 
   @Get('lookups')

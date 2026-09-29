@@ -4,15 +4,15 @@ import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { ForbiddenException } from "@nestjs/common";
 
 describe("individual prim grant assignment", () => {
-  it.each(["SUPER_ADMIN", "REGION_MANAGER", "STORE_MANAGER"])("rejects grants on %s at creation", async (roleCode) => {
+  it.each(["SUPER_ADMIN", "REGION_MANAGER", "STORE_MANAGER", "REPORT_VIEWER"])("rejects legacy grants on %s at creation", async (roleCode) => {
     const service = new AuthAdminService({} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
     await expect(service.createRoleAssignment({ userId: "user", roleCode, scopeType: "company", incentiveApproval: true, actorUserId: "admin" })).rejects.toThrow(ForbiddenException);
   });
-  it("updates only an active company viewer assignment under a row lock, with audit", async () => {
-    const before = { user_role_assignment_id: "assignment", role_code: "REPORT_VIEWER", incentive_approval: false, company_id: "company" };
-    const query = jest.fn().mockResolvedValueOnce({ rows: [before] }).mockResolvedValueOnce({ rows: [{ ...before, incentive_approval: true }] }).mockResolvedValue({ rows: [] });
+  it("revokes only an active legacy company viewer grant under a row lock, with audit", async () => {
+    const before = { user_role_assignment_id: "assignment", role_code: "REPORT_VIEWER", incentive_approval: true, company_id: "company" };
+    const query = jest.fn().mockResolvedValueOnce({ rows: [before] }).mockResolvedValueOnce({ rows: [{ ...before, incentive_approval: false }] }).mockResolvedValue({ rows: [] });
     const repo = new AuthRoleAssignmentCommandRepository({ withTransaction: async (fn: (client: { query: typeof query }) => Promise<unknown>) => fn({ query }) } as never);
-    await expect(repo.updateIncentiveApproval({ assignmentId: "assignment", enabled: true, actorUserId: "admin" })).resolves.toMatchObject({ incentive_approval: true });
+    await expect(repo.updateIncentiveApproval({ assignmentId: "assignment", enabled: false, actorUserId: "admin" })).resolves.toMatchObject({ incentive_approval: false });
     expect(query.mock.calls[0][0]).toContain("r.role_code = 'REPORT_VIEWER'");
     expect(query.mock.calls[0][0]).toContain("ura.end_at > NOW()");
     expect(query.mock.calls[0][0]).toContain("FOR UPDATE OF ura");
