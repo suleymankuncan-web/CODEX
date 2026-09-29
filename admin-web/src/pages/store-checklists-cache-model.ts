@@ -20,8 +20,13 @@ export function mergeCompletedInstanceIntoMobileToday(
     checklistTemplateId: input.checklistTemplateId,
     completedAt,
     storeId: input.storeId,
-    totalScore: input.totalScore ?? 0,
+    totalScore: input.totalScore,
   }
+  const completedThisMonth = existingCompleted
+    ? current.data.completedThisMonth.map((item) =>
+        item.checklistInstanceId === input.checklistInstanceId ? completedRow : item,
+      )
+    : [completedRow, ...current.data.completedThisMonth]
   const monthlySummaries = current.data.monthlySummaries.filter(
     (summary) =>
       !(
@@ -38,20 +43,19 @@ export function mergeCompletedInstanceIntoMobileToday(
   )
   const previousCount = existingSummary?.completedCount ?? 0
   const nextCount = existingCompleted ? Math.max(previousCount, 1) : previousCount + 1
-  const nextAverage =
-    input.totalScore === null
-      ? (existingSummary?.averageScore ?? null)
-      : existingSummary?.averageScore === null || existingSummary?.averageScore === undefined || existingCompleted
-        ? input.totalScore
-        : Math.round(
-            (((existingSummary.averageScore * previousCount) + input.totalScore) / Math.max(nextCount, 1)) * 100,
-          ) / 100
+  const scoredRows = completedThisMonth.filter((item) =>
+    item.storeId === input.storeId && item.checklistTemplateId === input.checklistTemplateId &&
+    getMonthKey(item.completedAt) === monthKey && item.totalScore !== null,
+  )
+  const nextAverage = scoredRows.length > 0
+    ? Math.round((scoredRows.reduce((sum, item) => sum + (item.totalScore ?? 0), 0) / scoredRows.length) * 100) / 100
+    : null
   const pendingRow = {
     checklistInstanceId: input.checklistInstanceId,
     checklistTemplateId: input.checklistTemplateId,
     completedAt,
     storeId: input.storeId,
-    totalScore: input.totalScore ?? 0,
+    totalScore: input.totalScore,
   }
 
   return {
@@ -61,11 +65,7 @@ export function mergeCompletedInstanceIntoMobileToday(
       activeInstances: current.data.activeInstances.filter(
         (instance) => instance.checklistInstanceId !== input.checklistInstanceId,
       ),
-      completedThisMonth: existingCompleted
-        ? current.data.completedThisMonth.map((item) =>
-            item.checklistInstanceId === input.checklistInstanceId ? completedRow : item,
-          )
-        : [completedRow, ...current.data.completedThisMonth],
+      completedThisMonth,
       monthlySummaries: [
         ...monthlySummaries,
         {

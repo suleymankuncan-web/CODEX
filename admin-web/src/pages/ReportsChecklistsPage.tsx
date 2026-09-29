@@ -25,7 +25,6 @@ import {
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  type AdminSurfaceTone,
 } from './admin-surface-primitives'
 import {
   AdminOperationalHeader,
@@ -33,13 +32,10 @@ import {
   AdminOperationalPage,
   AdminOperationalSection,
 } from './admin-operational-primitives'
+import { mapChecklistTone, summarizeChecklistMetrics, toNumber } from './reports-checklists-model'
 
-function toNumber(input: string | null) {
-  const parsed = Number(input)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function formatMetric(input: number, locale: AppLocale) {
+function formatMetric(input: number | null, locale: AppLocale) {
+  if (input === null) return '—'
   return formatNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
@@ -47,15 +43,8 @@ function formatMetric(input: number, locale: AppLocale) {
 }
 
 function formatPercent(input: string | null, locale: AppLocale) {
-  return `${formatMetric(toNumber(input) * 100, locale)}%`
-}
-
-function mapChecklistTone(complianceRate: string | null, criticalIssueCount: number): AdminSurfaceTone {
-  if (criticalIssueCount > 0) return 'danger'
-  const compliance = toNumber(complianceRate)
-  if (compliance >= 0.95) return 'success'
-  if (compliance >= 0.85) return 'warning'
-  return 'danger'
+  const value = toNumber(input)
+  return value === null ? '—' : `${formatMetric(value * 100, locale)}%`
 }
 
 export function ReportsChecklistsPage() {
@@ -97,7 +86,7 @@ export function ReportsChecklistsPage() {
   const sortedRows = useMemo(() => {
     const items = [...filteredRows]
     if (sortBy === 'compliance-desc') {
-      return items.sort((left, right) => toNumber(right.complianceRate) - toNumber(left.complianceRate))
+      return items.sort((left, right) => (toNumber(right.complianceRate) ?? -1) - (toNumber(left.complianceRate) ?? -1))
     }
     if (sortBy === 'store') {
       return items.sort((left, right) =>
@@ -107,28 +96,7 @@ export function ReportsChecklistsPage() {
     return items.sort((left, right) => right.criticalIssueCount - left.criticalIssueCount)
   }, [filteredRows, sortBy])
 
-  const totals = useMemo(() => {
-    return sortedRows.reduce(
-      (accumulator, row) => {
-        accumulator.auditCount += row.auditCount
-        accumulator.avgScore += toNumber(row.avgScore)
-        accumulator.complianceRate += toNumber(row.complianceRate)
-        accumulator.criticalIssues += row.criticalIssueCount
-        if (row.criticalIssueCount > 0) accumulator.rowsWithCriticalIssues += 1
-        return accumulator
-      },
-      {
-        auditCount: 0,
-        avgScore: 0,
-        complianceRate: 0,
-        criticalIssues: 0,
-        rowsWithCriticalIssues: 0,
-      },
-    )
-  }, [sortedRows])
-
-  const averageScore = sortedRows.length > 0 ? totals.avgScore / sortedRows.length : 0
-  const averageCompliance = sortedRows.length > 0 ? totals.complianceRate / sortedRows.length : 0
+  const { totals, averageScore, averageCompliance } = useMemo(() => summarizeChecklistMetrics(sortedRows), [sortedRows])
 
   if (!snapshotRunId) {
     return (
@@ -185,7 +153,7 @@ export function ReportsChecklistsPage() {
         items={[
           { id: 'snapshot-run', label: t('reportsChecklists.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
           { id: 'rows-in-view', label: t('reportsChecklists.rowsInView'), value: filteredRows.length, tone: 'cyan' },
-          { id: 'avg-compliance', label: t('reportsChecklists.avgCompliance'), value: formatPercent(String(averageCompliance), locale), tone: 'success' },
+          { id: 'avg-compliance', label: t('reportsChecklists.avgCompliance'), value: averageCompliance === null ? '—' : formatPercent(String(averageCompliance), locale), tone: averageCompliance === null ? 'neutral' : 'success' },
         ]}
       />
 
@@ -211,10 +179,10 @@ export function ReportsChecklistsPage() {
           {
             id: 'avg-score',
             label: t('reportsChecklists.avgScoreTitle'),
-            value: Math.round(averageScore),
-            description: t('reportsChecklists.avgScoreNote', { value: formatPercent(String(averageCompliance), locale) }),
+             value: averageScore === null ? '—' : Math.round(averageScore),
+             description: t('reportsChecklists.avgScoreNote', { value: averageCompliance === null ? '—' : formatPercent(String(averageCompliance), locale) }),
             icon: <ClipboardCheck size={18} />,
-            tone: 'success',
+             tone: averageScore === null ? 'neutral' : 'success',
           },
           {
             id: 'critical-issues',
@@ -299,12 +267,12 @@ export function ReportsChecklistsPage() {
                     <div className="tw:text-xs tw:text-muted-foreground">{row.checklistTemplateId}</div>
                   </TableCell>
                   <TableCell>{row.auditCount}</TableCell>
-                  <TableCell>{formatMetric(toNumber(row.avgScore), locale)}</TableCell>
+                   <TableCell>{formatMetric(toNumber(row.avgScore), locale)}</TableCell>
                   <TableCell>{formatPercent(row.complianceRate, locale)}</TableCell>
                   <TableCell>{row.criticalIssueCount}</TableCell>
                   <TableCell className="tw:text-right">
                     <AdminSurfaceBadge tone={mapChecklistTone(row.complianceRate, row.criticalIssueCount)}>
-                      {row.criticalIssueCount > 0 ? t('reportsChecklists.criticalFindings') : t('reportsChecklists.compliant')}
+                       {row.criticalIssueCount > 0 ? t('reportsChecklists.criticalFindings') : row.complianceRate === null ? (locale === 'tr' ? 'Puan yok' : 'No score') : t('reportsChecklists.compliant')}
                     </AdminSurfaceBadge>
                   </TableCell>
                 </TableRow>

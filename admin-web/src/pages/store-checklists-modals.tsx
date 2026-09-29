@@ -34,6 +34,7 @@ import {
   getChecklistScoreOptions,
   isChecklistLowScoreNoteMissing,
   isChecklistLowScoreSelection,
+  isChecklistNotApplicableReasonMissing,
   parseChecklistScoreInput,
 } from './store-checklists-score-policy'
 import { ChecklistBadge, ChecklistEmptyBlock } from './store-checklists-atoms'
@@ -177,6 +178,11 @@ function ChecklistVisitModal(input: {
     scores: input.scores,
   })
   const missingResponseCount = Math.max(input.session.template.items.length - answeredCount, 0)
+  const missingNotApplicableReasonCount = input.session.template.items.filter((item) =>
+    item.responseType === 'compliance' && isChecklistNotApplicableReasonMissing(
+      input.responseValues[item.templateItemId], input.comments[item.templateItemId],
+    ),
+  ).length
   const missingRequiredLowScoreNoteCount = input.session.template.items.filter(
     (item) =>
       input.responseValues[item.templateItemId] !== 'not_applicable' &&
@@ -192,12 +198,14 @@ function ChecklistVisitModal(input: {
       counts[evidence.templateItemId] = (counts[evidence.templateItemId] ?? 0) + 1
       return counts
     }, {}),
+    input.responseValues,
   )
   const canComplete =
     Boolean(input.active) &&
     !input.isCompleting &&
     hasItems &&
     missingResponseCount === 0 &&
+    missingNotApplicableReasonCount === 0 &&
     missingRequiredLowScoreNoteCount === 0 &&
     missingRequiredEvidenceCount === 0
   const sessionStatus = input.active
@@ -209,6 +217,8 @@ function ChecklistVisitModal(input: {
       ? input.t('storeChecklists.startPending')
       : missingResponseCount > 0
         ? input.t('storeChecklists.missingResponsesHint', { count: missingResponseCount })
+        : missingNotApplicableReasonCount > 0
+          ? getStaticCopy(input.locale, `${missingNotApplicableReasonCount} N/A maddesi için gerekçe gerekli.`, `A reason is required for ${missingNotApplicableReasonCount} N/A items.`)
         : missingRequiredLowScoreNoteCount > 0
           ? input.t('storeChecklists.missingLowScoreNotesHint', {
               count: missingRequiredLowScoreNoteCount,
@@ -322,8 +332,9 @@ function ChecklistVisitModal(input: {
                           const responseValue = input.responseValues[item.templateItemId]
                           const comment = input.comments[item.templateItemId] ?? ''
                           const isAnswered = Number.isFinite(score)
-                          const isLowScore = responseValue !== 'not_applicable'
-                            && isChecklistLowScoreSelection(item, score)
+                           const isLowScore = responseValue !== 'not_applicable'
+                             && isChecklistLowScoreSelection(item, score)
+                           const requiresNote = isLowScore || responseValue === 'not_applicable'
                           const noteSaveState = noteSaveStates[item.templateItemId] ?? 'idle'
 
                           return (
@@ -362,7 +373,7 @@ function ChecklistVisitModal(input: {
                               <div className="store-checklist-session-item-tools">
                                 <details
                                   className="store-checklist-session-disclosure store-checklist-session-note-field"
-                                  open={isLowScore || comment.trim().length > 0 || undefined}
+                                   open={requiresNote || comment.trim().length > 0 || undefined}
                                 >
                                   <summary>
                                     <MessageSquareText aria-hidden="true" />
@@ -372,7 +383,7 @@ function ChecklistVisitModal(input: {
                                         : getStaticCopy(input.locale, 'Not ekle', 'Add note')}
                                     </span>
                                     <small>
-                                      {isLowScore
+                                      {requiresNote
                                         ? getStaticCopy(input.locale, 'Zorunlu', 'Required')
                                         : getStaticCopy(input.locale, 'Opsiyonel', 'Optional')}
                                     </small>
@@ -409,7 +420,7 @@ function ChecklistVisitModal(input: {
                                             : ''}
                                     </span>
                                     <Button
-                                      disabled={!input.active || !isAnswered || noteSaveState === 'saving'}
+                                      disabled={!input.active || !isAnswered || noteSaveState === 'saving' || isChecklistNotApplicableReasonMissing(responseValue, comment)}
                                       size="sm"
                                       type="button"
                                       onClick={() => {

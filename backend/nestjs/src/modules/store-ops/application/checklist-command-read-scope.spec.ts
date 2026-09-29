@@ -1,7 +1,7 @@
 import { resolveChecklistCommandReadScope } from "./checklist-command-read-scope";
 
 describe("resolveChecklistCommandReadScope", () => {
-  it("keeps a mixed Report Viewer session inside the Report Viewer company role scope", () => {
+  it("keeps a mixed Report Viewer session inside the Region Manager store portfolio", () => {
     expect(
       resolveChecklistCommandReadScope({
         actorRoleCodes: ["REPORT_VIEWER", "REGION_MANAGER"],
@@ -24,12 +24,12 @@ describe("resolveChecklistCommandReadScope", () => {
         },
       }),
     ).toEqual({
-      view: "report_viewer",
-      companyIds: ["viewer-company"],
+      view: "region_manager",
+      companyIds: [],
       regionIds: [],
-      storeIds: [],
+      storeIds: ["manager-store"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
-      executionTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      executionTemplateTypes: ["BM_STORE_VISIT"],
     });
   });
 

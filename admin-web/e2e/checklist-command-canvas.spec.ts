@@ -1019,6 +1019,17 @@ test('region manager checklist rows do not expose the VM score column', async ({
   await expect(mobileCard.locator('.score-vm')).toHaveCount(0)
 })
 
+test('dual Report Viewer and Region Manager session keeps the operational planner', async ({ page }) => {
+  await installBaseStoreContractSession(page, 'regionManager', {
+    actionStoreIds: checklistActionStoreIds,
+    roleCodes: ['REPORT_VIEWER', 'REGION_MANAGER'],
+  })
+  await routeChecklistCommand(page, [])
+  await page.goto('/store/checklists')
+  await expect(page.getByRole('button', { name: 'Haftayı Planla' })).toBeVisible()
+  await expect(page.locator('.canvas-plan-surface')).toHaveCount(0)
+})
+
 test('annual visit history keeps multiple completed visits without showing planned entries', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
@@ -1033,6 +1044,20 @@ test('annual visit history keeps multiple completed visits without showing plann
   await expect(visits).toHaveCount(2)
   await expect(visits).toContainText(['Mall of İstanbul14 Temmuz 2026', 'Mall of İstanbul14 Temmuz 2026'])
   await expect(history.getByText('Planlandı', { exact: true })).toHaveCount(0)
+})
+
+test('zero-visit stores still open the annual calendar and fetch all periods', async ({ page }) => {
+  const requests: URL[] = []
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await installStoreContractSession(page, 'regionManager')
+  await routeChecklistCommand(page, requests, [], undefined, 0, { zeroPeriodPlanItems: true, annualPlanItems: [] })
+  await page.goto('/store/checklists')
+  await page.getByRole('button', { name: /Yıllık Ziyaretler/ }).click()
+  const history = page.getByRole('dialog', { name: /Ziyaret Takvimi/ })
+  await expect(history).toBeVisible()
+  await expect(history.getByText('Bu dönemde tamamlanmış ziyaret bulunmuyor.')).toBeVisible()
+  await expect(history.getByRole('group', { name: '12 aylık ziyaret takvimi' }).getByRole('button')).toHaveCount(12)
+  await expect.poll(() => new Set(requests.filter((url) => url.pathname.endsWith('/visit-plans/period')).map((url) => url.searchParams.get('period'))).size).toBe(12)
 })
 
 test('weekly planner keeps 200 scoped candidates bounded to server pages', async ({ page }) => {
@@ -1200,6 +1225,7 @@ async function routeChecklistCommand(
     commandRegionDelays?: Record<string, number>
     commandRegionStatuses?: Record<string, number>
     completedNullScore?: boolean
+    zeroPeriodPlanItems?: boolean
     multipleCompletedOccurrences?: boolean
     singleCompletedOccurrence?: boolean
     planStatus?: number
@@ -1240,7 +1266,7 @@ async function routeChecklistCommand(
         json: buildVisitPlanPeriodResponse(
           behavior.multipleCompletedOccurrences,
           '2026-07',
-          undefined,
+          behavior.zeroPeriodPlanItems ? [] : undefined,
           behavior.singleCompletedOccurrence,
         ),
       })

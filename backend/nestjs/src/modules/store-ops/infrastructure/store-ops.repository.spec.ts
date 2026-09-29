@@ -1,6 +1,57 @@
 import { StoreOpsRepository } from "./store-ops.repository";
 
 describe("StoreOpsRepository", () => {
+  it.each([undefined, "", " \t\n"])("rejects legacy N/A without a nonblank reason %p", async (commentText) => {
+    const client = { query: jest.fn().mockResolvedValueOnce({ rows: [{ response_type: "compliance", max_score: "2.00" }] }) };
+    const repository = new StoreOpsRepository({
+      withTransaction: async (work: (transaction: typeof client) => Promise<unknown>) => work(client),
+    } as never);
+    await expect(repository.addChecklistResponse({
+      checklistInstanceId: "instance-1", templateItemId: "item-1", actorUserId: "user-1",
+      responseValue: "not_applicable", scoreValue: 0, commentText,
+    })).rejects.toThrow("not_applicable_reason_required");
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([30, -1, undefined])("rejects historical boolean scores outside their allowed range: %p", async (scoreValue) => {
+    const client = { query: jest.fn().mockResolvedValueOnce({ rows: [{ response_type: "boolean", max_score: "3.00" }] }) };
+    const repository = new StoreOpsRepository({
+      withTransaction: async (work: (transaction: typeof client) => Promise<unknown>) => work(client),
+    } as never);
+    await expect(repository.addChecklistResponse({
+      checklistInstanceId: "instance-1", templateItemId: "item-1", actorUserId: "user-1", scoreValue,
+    })).rejects.toThrow("Checklist score is outside the item range");
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("blocks legacy completion with reasonless N/A drafts", async () => {
+    const client = { query: jest.fn().mockResolvedValueOnce({ rows: [{ status: "in_progress" }] })
+      .mockResolvedValueOnce({ rows: [{ total_score: null, compliance_rate: null, missing_mandatory_count: "1", missing_required_evidence_count: "0" }] }) };
+    const repository = new StoreOpsRepository({
+      withTransaction: async (work: (transaction: typeof client) => Promise<unknown>) => work(client),
+    } as never);
+    await expect(repository.completeChecklistInstance({
+      checklistInstanceId: "instance-1", auditorEmployeeId: "auditor-1", actorUserId: "user-1",
+      actorRoleCodes: ["SUPER_ADMIN"], actorActionScope: { assignedStoreIds: ["store-1"] },
+    })).rejects.toThrow("missing_mandatory_response");
+    expect(client.query).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects forged N/A values for legacy score items before persistence", async () => {
+    const client = { query: jest.fn().mockResolvedValueOnce({ rows: [{ response_type: "score", max_score: "5.00" }] }) };
+    const repository = new StoreOpsRepository({
+      withTransaction: async (work: (transactionClient: typeof client) => Promise<unknown>) => work(client),
+    } as never);
+    await expect(repository.addChecklistResponse({
+      checklistInstanceId: "00000000-0000-0000-0000-000000000001",
+      templateItemId: "00000000-0000-0000-0000-000000000002",
+      responseValue: "not_applicable",
+      scoreValue: 0,
+      actorUserId: "00000000-0000-0000-0000-000000000003",
+    })).rejects.toThrow("N/A is only valid for compliance checklist items");
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
   it("fails closed before legacy completion when the locked instance is cancelled or unauthorized", async () => {
     const client = { query: jest.fn().mockResolvedValueOnce({ rows: [{ status: "cancelled" }] }) };
     const databaseService = {
@@ -62,11 +113,11 @@ describe("StoreOpsRepository", () => {
         if (sql.includes("FOR UPDATE")) {
           return { rows: [{ checklist_instance_id: "instance-1", status: "in_progress" }] };
         }
-        if (sql.includes("missing_required_evidence_count")) {
-          return { rows: [{ missing_required_evidence_count: "0" }] };
-        }
-        if (sql.includes("COALESCE(SUM")) {
-          return { rows: [{ total_score: "92.00", compliance_rate: "0.9200" }] };
+        if (sql.includes("missing_mandatory_count")) {
+          return { rows: [{
+            total_score: "92.00", compliance_rate: "0.9200",
+            missing_mandatory_count: "0", missing_required_evidence_count: "0",
+          }] };
         }
         if (sql.includes("UPDATE ops.checklist_instance")) {
           return {

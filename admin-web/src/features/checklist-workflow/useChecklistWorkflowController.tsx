@@ -299,10 +299,10 @@ export function useChecklistWorkflowController(input: {
   const queueResponseAutoSave = (draft: ChecklistResponseDraft) => {
     const key = getChecklistResponseDraftKey(draft)
     const serialized = serializeChecklistResponseDraft(draft)
-    if (savedResponseDraftsRef.current[key] === serialized) return
-
     const existingTimer = autoSaveTimersRef.current[key]
     if (existingTimer) window.clearTimeout(existingTimer)
+    delete autoSaveTimersRef.current[key]
+    if (savedResponseDraftsRef.current[key] === serialized || (draft.responseValue === 'not_applicable' && !draft.commentText?.trim())) return
     autoSaveTimersRef.current[key] = window.setTimeout(() => {
       delete autoSaveTimersRef.current[key]
       saveResponseMutation.mutate(draft)
@@ -516,7 +516,7 @@ export function useChecklistWorkflowController(input: {
   const pendingVisitStoreCount = incompleteVisitStoreRows.length
   const heroScoreValues = (canManageVisits
     ? visitStoreRows.map(getStoreVisitScore)
-    : items.map((item) => item.totalScore ?? Math.round((item.complianceRate ?? 0) * 100))
+    : items.map((item) => item.totalScore ?? (item.complianceRate === null ? null : Math.round(item.complianceRate * 100)))
   ).filter((value): value is number => value !== null && Number.isFinite(value))
   const heroAverageScore =
     heroScoreValues.length > 0
