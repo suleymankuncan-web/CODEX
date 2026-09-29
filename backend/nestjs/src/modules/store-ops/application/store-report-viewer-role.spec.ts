@@ -18,7 +18,7 @@ const resolvers = {
   workforce: resolveWorkforceWorkspaceScope,
 };
 
-describe.each(Object.entries(resolvers))("Admin Store %s read presentation", (_name, resolve) => {
+describe.each(Object.entries(resolvers))("Admin Store %s read presentation", (name, resolve) => {
   it("uses the same view and company data as Report Viewer without adding a role", () => {
     const admin = resolve(input);
     const viewer = resolve({ ...input, actorRoleCodes: ["REPORT_VIEWER"], roleScopes: { REPORT_VIEWER: readScope } });
@@ -29,10 +29,14 @@ describe.each(Object.entries(resolvers))("Admin Store %s read presentation", (_n
   });
 
   it("keeps a mixed operational role out of the admin company boundary", () => {
-    expect(resolve({ ...input, actorRoleCodes: ["SUPER_ADMIN", "REGION_MANAGER"], roleScopes: {
+    const mixed = { ...input, actorRoleCodes: ["SUPER_ADMIN", "REGION_MANAGER"], roleScopes: {
       SUPER_ADMIN: readScope,
       REGION_MANAGER: { companyIds: ["other-company"], regionIds: ["other-region"], storeIds: ["assigned-store"] },
-    } })).toEqual(resolve(input));
+    } };
+    if (name === "checklist") {
+      expect(resolve(mixed)).toEqual(resolve({ ...mixed, actorRoleCodes: ["REGION_MANAGER"] }));
+      expect(resolve(mixed)).toMatchObject({ view: "region_manager", companyIds: [], regionIds: [], storeIds: ["assigned-store"] });
+    } else expect(resolve(mixed)).toEqual(resolve(input));
   });
 
   it("preserves the Report Viewer role scope when both roles exist", () => {

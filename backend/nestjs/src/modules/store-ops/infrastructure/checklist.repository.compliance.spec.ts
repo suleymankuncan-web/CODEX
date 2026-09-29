@@ -19,6 +19,7 @@ describe("ChecklistRepository compliance responses", () => {
     "persists compliance answer %s with server-derived score",
     async (responseValue, expectedScore, expectedNonCompliant) => {
       const { client, repository } = createHarness();
+      const commentText = responseValue === "not_applicable" ? "No display in this store" : undefined;
       client.query
         .mockResolvedValueOnce({
           rows: [{
@@ -40,13 +41,14 @@ describe("ChecklistRepository compliance responses", () => {
         templateItemId: "item-1",
         scoreValue: 99,
         responseValue,
+        commentText,
         actorUserId: "user-1",
       });
 
       expect(client.query).toHaveBeenNthCalledWith(
         2,
         expect.stringContaining("response_value"),
-        ["instance-1", "item-1", responseValue, expectedScore, null, expectedNonCompliant],
+        ["instance-1", "item-1", responseValue, expectedScore, commentText ?? null, expectedNonCompliant],
       );
     },
   );
