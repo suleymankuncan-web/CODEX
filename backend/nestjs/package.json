@@ -78,7 +78,7 @@
     "xlsx-js-style": "^1.2.0"
   },
   "overrides": {
-    "multer": "2.3.0",
+    "multer": "2.4.0",
     "qs": "6.16.0",
     "bullmq": {
       "uuid": "14.0.0"
