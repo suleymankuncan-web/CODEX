@@ -1,5 +1,8 @@
-import { IsBoolean, IsIn, IsString, Length, Matches } from "class-validator";
+import { Type } from "class-transformer";
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsOptional, IsString, Length, Matches, ValidateNested } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { StoreContactEmailDto } from "./store-contact-email.dto";
 
 export class CreateStoreMasterDto {
   @IsString()
@@ -25,4 +28,12 @@ export class CreateStoreMasterDto {
 
   @IsBoolean()
   kpiImportEnabled!: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ApiPropertyOptional({ type: () => [StoreContactEmailDto], maxItems: 10 })
+  @ValidateNested({ each: true })
+  @Type(() => StoreContactEmailDto)
+  contactEmails?: StoreContactEmailDto[];
 }

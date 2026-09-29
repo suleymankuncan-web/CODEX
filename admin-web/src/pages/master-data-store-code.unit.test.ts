@@ -14,6 +14,11 @@ const store = {
   regionName: 'Karadeniz',
   regionManagerUserId: null,
   regionManagerName: null,
+  contactEmails: [],
+  ingestStatus: 'ready',
+  matchedSourceCount: 1,
+  activeSourceCount: 1,
+  lastSuccessfulKpiDate: null,
   updatedAt: '2026-09-28T08:00:00Z',
 } satisfies StoreMasterItem
 
@@ -40,6 +45,17 @@ describe('store master code draft', () => {
     }, undefined)).toEqual(expect.objectContaining({
       storeId: 'store-1', storeCode: 'FM702', storeType: 'franchise',
       storeTypeEffectiveOn: '2026-09-15', expectedUpdatedAt: store.updatedAt,
+    }))
+  })
+
+  test('sends contact email changes while preserving KPI scope', () => {
+    expect(buildStoreMasterUpdateInput(store, {
+      kpiImportEnabled: false,
+      contactEmails: [{ emailAddress: 'store@example.com', label: null, isPrimary: true }],
+    }, undefined)).toEqual(expect.objectContaining({
+      storeId: 'store-1',
+      kpiImportEnabled: false,
+      contactEmails: [{ emailAddress: 'store@example.com', isPrimary: true }],
     }))
   })
 })

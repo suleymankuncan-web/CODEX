@@ -134,6 +134,11 @@ const storeMasterItems = [
       regionName: 'Pilot Bolgesi',
       regionManagerUserId: '00000000-0000-0000-0000-000000000502',
       regionManagerName: 'onprem.region-manager',
+      contactEmails: [{ emailAddress: 'pilot@example.com', label: 'Main', isPrimary: true }],
+      ingestStatus: 'ready',
+      matchedSourceCount: 1,
+      activeSourceCount: 1,
+      lastSuccessfulKpiDate: '2026-06-29',
       updatedAt: '2026-06-30T10:00:00.000Z',
   },
   ...Array.from({ length: 24 }, (_, index) => {
@@ -149,6 +154,11 @@ const storeMasterItems = [
       regionName: 'Pilot Bolgesi',
       regionManagerUserId: '00000000-0000-0000-0000-000000000502',
       regionManagerName: 'onprem.region-manager',
+      contactEmails: [],
+      ingestStatus: 'unmatched',
+      matchedSourceCount: 0,
+      activeSourceCount: 1,
+      lastSuccessfulKpiDate: null,
       updatedAt: '2026-06-30T10:00:00.000Z',
     }
   }),

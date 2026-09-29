@@ -1059,6 +1059,7 @@ export type components = {
       "dueOn": string
     }
     "CreateStoreMasterDto": {
+      "contactEmails"?: components['schemas']["StoreContactEmailDto"][]
       "storeCode": string
       "storeName": string
       "storeType": "company" | "franchise" | "operator"
@@ -3342,6 +3343,11 @@ export type components = {
         "offset": number
       }
     }
+    "StoreContactEmailDto": {
+      "emailAddress": string
+      "label"?: string
+      "isPrimary": boolean
+    }
     "StoreMasterCommandResponse": {
       "command": {
         "status": string
@@ -3355,6 +3361,15 @@ export type components = {
           "storeType": string
           "status": string
           "kpiImportEnabled": boolean
+          "contactEmails": Array<{
+              "emailAddress": string
+              "label": string | null
+              "isPrimary": boolean
+            }>
+          "ingestStatus": "disabled" | "inactive" | "no_source" | "ready" | "partial" | "unmatched"
+          "matchedSourceCount": number
+          "activeSourceCount": number
+          "lastSuccessfulKpiDate": string | null
           "regionId": string | null
           "regionName": string | null
           "regionManagerUserId": string | null
@@ -3371,6 +3386,15 @@ export type components = {
           "storeType": string
           "status": string
           "kpiImportEnabled": boolean
+          "contactEmails": Array<{
+              "emailAddress": string
+              "label": string | null
+              "isPrimary": boolean
+            }>
+          "ingestStatus": "disabled" | "inactive" | "no_source" | "ready" | "partial" | "unmatched"
+          "matchedSourceCount": number
+          "activeSourceCount": number
+          "lastSuccessfulKpiDate": string | null
           "regionId": string | null
           "regionName": string | null
           "regionManagerUserId": string | null
@@ -3756,6 +3780,7 @@ export type components = {
       "note"?: string
     }
     "UpdateStoreMasterDto": {
+      "contactEmails"?: components['schemas']["StoreContactEmailDto"][]
       "storeCode"?: string
       "storeTypeEffectiveOn"?: string
       "storeType": "company" | "franchise" | "operator"

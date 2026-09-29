@@ -431,6 +431,7 @@ export class IntegrationRepository {
     regionManagerUserId?: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
+    contactEmails?: Array<{ emailAddress: string; label?: string; isPrimary: boolean }>;
     actorUserId: string;
     expectedUpdatedAt?: string;
   }) {
@@ -576,6 +577,14 @@ export class IntegrationRepository {
         return null;
       }
 
+      if (input.contactEmails !== undefined) {
+        await this.syncStoreContactEmails(client, {
+          companyId: currentStore.company_id,
+          storeId: input.storeId,
+          emails: input.contactEmails,
+        });
+      }
+
       if (input.regionManagerUserId) {
         await this.syncRegionManagerStoreAssignment(client, {
           regionManagerUserId: input.regionManagerUserId,
@@ -611,11 +620,12 @@ export class IntegrationRepository {
             regionManagerUserId: input.regionManagerUserId,
             status: input.status,
             kpiImportEnabled: input.kpiImportEnabled,
+            contactEmailCount: input.contactEmails?.length,
           }),
         ],
       );
 
-      return store;
+      return this.enrichStoreCommandRow(client, store);
     });
   }
 
@@ -630,6 +640,7 @@ export class IntegrationRepository {
     regionManagerUserId: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
+    contactEmails: Array<{ emailAddress: string; label?: string; isPrimary: boolean }>;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
@@ -720,6 +731,12 @@ export class IntegrationRepository {
       const store = storeResult.rows[0];
       if (!store) return null;
 
+      await this.syncStoreContactEmails(client, {
+        companyId,
+        storeId: store.store_id,
+        emails: input.contactEmails,
+      });
+
       await this.syncRegionManagerStoreAssignment(client, {
         regionManagerUserId: input.regionManagerUserId,
         storeId: store.store_id,
@@ -742,14 +759,112 @@ export class IntegrationRepository {
             regionId: input.regionId,
             regionManagerUserId: input.regionManagerUserId,
             storeCode: store.store_code,
+            contactEmailCount: input.contactEmails.length,
           }),
         ],
       );
-      return store;
+      return this.enrichStoreCommandRow(client, store);
     });
   }
 
 
+
+  private async syncStoreContactEmails(client: PoolClient, input: {
+    companyId: string;
+    storeId: string;
+    emails: Array<{ emailAddress: string; label?: string; isPrimary: boolean }>;
+  }) {
+    await client.query(`
+      UPDATE ops.store_contact_email
+      SET is_active = FALSE, is_primary = FALSE, deactivated_at = COALESCE(deactivated_at, NOW())
+      WHERE store_id = $1::uuid AND is_active = TRUE
+    `, [input.storeId]);
+    for (const email of input.emails) {
+      await client.query(`
+        INSERT INTO ops.store_contact_email (
+          company_id, store_id, email_address, label, is_primary, is_active, deactivated_at
+        ) VALUES ($1::uuid,$2::uuid,$3,$4,$5,TRUE,NULL)
+        ON CONFLICT (store_id, normalized_email) DO UPDATE
+        SET email_address = EXCLUDED.email_address,
+            label = EXCLUDED.label,
+            is_primary = EXCLUDED.is_primary,
+            is_active = TRUE,
+            deactivated_at = NULL
+      `, [input.companyId, input.storeId, email.emailAddress, email.label ?? null, email.isPrimary]);
+    }
+  }
+
+  private async listStoreContactEmails(client: PoolClient, storeId: string) {
+    const result = await client.query<{
+      emailAddress: string; label: string | null; isPrimary: boolean;
+    }>(`
+      SELECT email_address AS "emailAddress", label, is_primary AS "isPrimary"
+      FROM ops.store_contact_email
+      WHERE store_id = $1::uuid AND is_active = TRUE
+      ORDER BY is_primary DESC, email_address
+    `, [storeId]);
+    return result.rows;
+  }
+
+  private async enrichStoreCommandRow<T extends { store_id: string; status: string; kpi_import_enabled: boolean }>(client: PoolClient, store: T) {
+    const ingest = await client.query<{
+      active_source_count: number; matched_source_count: number; last_successful_kpi_date: string | null;
+      region_manager_user_id: string | null; region_manager_name: string | null;
+    }>(`
+      WITH active_manager AS (
+        SELECT manager_store.user_id::text AS region_manager_user_id,
+               COALESCE(NULLIF(BTRIM(CONCAT(employee.first_name,' ',employee.last_name)),''),
+                        NULLIF(BTRIM(account.username),''),account.email) AS region_manager_name
+        FROM ops.user_action_store_assignment manager_store
+        JOIN ops.user_account account ON account.user_id=manager_store.user_id AND account.is_active=TRUE
+        LEFT JOIN ops.employee employee ON employee.employee_id=account.employee_id
+        WHERE manager_store.store_id=$1::uuid AND manager_store.start_at<=NOW()
+          AND (manager_store.end_at IS NULL OR manager_store.end_at>NOW())
+          AND EXISTS (
+            SELECT 1 FROM ops.user_role_assignment role_assignment
+            JOIN ops.role role ON role.role_id=role_assignment.role_id AND role.role_code='REGION_MANAGER'
+            WHERE role_assignment.user_id=manager_store.user_id AND role_assignment.start_at<=NOW()
+              AND (role_assignment.end_at IS NULL OR role_assignment.end_at>NOW())
+          )
+        ORDER BY manager_store.start_at DESC, manager_store.created_at DESC
+        LIMIT 1
+      )
+      SELECT
+        (SELECT COUNT(*)::int FROM stg.integration_source source
+         WHERE source.is_active=TRUE AND source.entity_type='kpi') AS active_source_count,
+        (SELECT COUNT(DISTINCT map.integration_source_id)::int
+         FROM stg.external_id_map map
+         JOIN stg.integration_source source ON source.integration_source_id=map.integration_source_id
+         WHERE map.internal_id=$1::uuid AND map.entity_type='store' AND map.is_active=TRUE
+           AND source.is_active=TRUE AND source.entity_type='kpi') AS matched_source_count,
+        (SELECT MAX(sales.business_date)::text
+         FROM ops.company_daily_kpi_store_sales sales
+         JOIN ops.company_daily_kpi_component_outcome outcome
+           ON outcome.component_outcome_id=sales.component_outcome_id
+         WHERE sales.store_id=$1::uuid AND outcome.status='succeeded') AS last_successful_kpi_date,
+        (SELECT region_manager_user_id FROM active_manager) AS region_manager_user_id,
+        (SELECT region_manager_name FROM active_manager) AS region_manager_name
+    `, [store.store_id]);
+    const evidence = ingest.rows[0] ?? {
+      active_source_count: 0, matched_source_count: 0, last_successful_kpi_date: null,
+      region_manager_user_id: null, region_manager_name: null,
+    };
+    const ingestStatus = !store.kpi_import_enabled ? "disabled"
+      : store.status !== "active" ? "inactive"
+        : evidence.active_source_count === 0 ? "no_source"
+          : evidence.matched_source_count === evidence.active_source_count ? "ready"
+            : evidence.matched_source_count > 0 ? "partial" : "unmatched";
+    return {
+      ...store,
+      contact_emails: await this.listStoreContactEmails(client, store.store_id),
+      ingest_status: ingestStatus,
+      matched_source_count: evidence.matched_source_count,
+      active_source_count: evidence.active_source_count,
+      last_successful_kpi_date: evidence.last_successful_kpi_date,
+      region_manager_user_id: evidence.region_manager_user_id,
+      region_manager_name: evidence.region_manager_name,
+    };
+  }
 
   async markImportBatchPending(input: { actorCompanyIds: string[]; batchId: string }) {
     await this.databaseService.query(

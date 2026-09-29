@@ -23920,6 +23920,11 @@
                 "regionName",
                 "regionManagerUserId",
                 "regionManagerName",
+                "contactEmails",
+                "ingestStatus",
+                "matchedSourceCount",
+                "activeSourceCount",
+                "lastSuccessfulKpiDate",
                 "updatedAt"
               ],
               "properties": {
@@ -23940,6 +23945,54 @@
                 },
                 "kpiImportEnabled": {
                   "type": "boolean"
+                },
+                "contactEmails": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "emailAddress",
+                      "label",
+                      "isPrimary"
+                    ],
+                    "properties": {
+                      "emailAddress": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "label": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "isPrimary": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                },
+                "ingestStatus": {
+                  "type": "string",
+                  "enum": [
+                    "disabled",
+                    "inactive",
+                    "no_source",
+                    "ready",
+                    "partial",
+                    "unmatched"
+                  ]
+                },
+                "matchedSourceCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "activeSourceCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "lastSuccessfulKpiDate": {
+                  "type": "string",
+                  "format": "date",
+                  "nullable": true
                 },
                 "regionId": {
                   "type": "string",
@@ -26624,6 +26677,11 @@
                   "regionName",
                   "regionManagerUserId",
                   "regionManagerName",
+                  "contactEmails",
+                  "ingestStatus",
+                  "matchedSourceCount",
+                  "activeSourceCount",
+                  "lastSuccessfulKpiDate",
                   "updatedAt"
                 ],
                 "properties": {
@@ -26644,6 +26702,54 @@
                   },
                   "kpiImportEnabled": {
                     "type": "boolean"
+                  },
+                  "contactEmails": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "emailAddress",
+                        "label",
+                        "isPrimary"
+                      ],
+                      "properties": {
+                        "emailAddress": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "label": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "isPrimary": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  },
+                  "ingestStatus": {
+                    "type": "string",
+                    "enum": [
+                      "disabled",
+                      "inactive",
+                      "no_source",
+                      "ready",
+                      "partial",
+                      "unmatched"
+                    ]
+                  },
+                  "matchedSourceCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "activeSourceCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "lastSuccessfulKpiDate": {
+                    "type": "string",
+                    "format": "date",
+                    "nullable": true
                   },
                   "regionId": {
                     "type": "string",
@@ -32140,6 +32246,13 @@
       "CreateStoreMasterDto": {
         "type": "object",
         "properties": {
+          "contactEmails": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoreContactEmailDto"
+            }
+          },
           "storeCode": {
             "type": "string",
             "minLength": 1,
@@ -33259,6 +33372,13 @@
       "UpdateStoreMasterDto": {
         "type": "object",
         "properties": {
+          "contactEmails": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoreContactEmailDto"
+            }
+          },
           "storeCode": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9_-]{1,79}$"
@@ -33364,6 +33484,29 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "StoreContactEmailDto": {
+        "type": "object",
+        "properties": {
+          "emailAddress": {
+            "type": "string",
+            "format": "email",
+            "minLength": 3,
+            "maxLength": 254
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "emailAddress",
+          "isPrimary"
         ]
       }
     }

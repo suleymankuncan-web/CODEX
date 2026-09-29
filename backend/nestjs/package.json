@@ -22,7 +22,7 @@
     "smoke:store-me": "ts-node scripts/store-me-smoke.ts",
     "pilot:roster-dry-run": "ts-node scripts/pilot-roster-reconciliation-dry-run.ts",
     "pilot:roster-apply": "ts-node scripts/pilot-roster-reconciliation-apply.ts",
-    "preflight:database:invariants": "ts-node scripts/database-invariant-preflight.ts",
+    "preflight:database:invariants": "ts-node scripts/database-invariant-preflight-v3.ts",
     "diagnose:staging:remediation": "ts-node scripts/staging-remediation-diagnostic.ts",
     "diagnose:staging:remediation:v2": "ts-node scripts/staging-remediation-invariant-v2.ts",
     "diagnose:staging:remediation:authority:v1": "ts-node scripts/staging-remediation-row-authority-classifier.ts",

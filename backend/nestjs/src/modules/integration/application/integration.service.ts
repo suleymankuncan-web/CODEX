@@ -334,6 +334,7 @@ export class IntegrationService {
     regionManagerUserId?: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
+    contactEmails?: Array<{ emailAddress: string; label?: string; isPrimary: boolean }>;
     actorUserId: string;
     expectedUpdatedAt?: string;
   }) {
@@ -341,8 +342,9 @@ export class IntegrationService {
     if (storeCode !== undefined && !/^[A-Z][A-Z0-9_-]{1,79}$/.test(storeCode)) {
       throw new BadRequestException("Invalid store code");
     }
+    const contactEmails = this.normalizeStoreContactEmails(input.contactEmails);
     const storeScope =
-      await this.integrationRepository.updateKpiImportStoreScope({ ...input, storeCode });
+      await this.integrationRepository.updateKpiImportStoreScope({ ...input, storeCode, contactEmails });
 
     if (!storeScope) {
       throw new NotFoundException(
@@ -380,14 +382,17 @@ export class IntegrationService {
     regionManagerUserId: string;
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
+    contactEmails?: Array<{ emailAddress: string; label?: string; isPrimary: boolean }>;
   }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
+    const contactEmails = this.normalizeStoreContactEmails(input.contactEmails) ?? [];
     const store = await this.integrationRepository.createStoreMaster({
       ...input,
       actorCompanyIds,
       storeCode: input.storeCode.trim(),
       storeName: input.storeName.trim(),
+      contactEmails,
     });
     if (!store) {
       throw new NotFoundException(`Region not found: ${input.regionId}`);
@@ -403,6 +408,25 @@ export class IntegrationService {
       message: "Store master data created",
       data: { storeMaster: mapStoreMaster(store) },
     });
+  }
+
+  private normalizeStoreContactEmails(
+    emails: Array<{ emailAddress: string; label?: string; isPrimary: boolean }> | undefined,
+  ) {
+    if (emails === undefined) return undefined;
+    if (emails.length > 10) throw new BadRequestException("A store can have at most 10 contact email addresses");
+    const normalized = emails.map((email) => ({
+      emailAddress: email.emailAddress.trim().toLowerCase(),
+      label: email.label?.trim() || undefined,
+      isPrimary: email.isPrimary,
+    }));
+    if (new Set(normalized.map((email) => email.emailAddress)).size !== normalized.length) {
+      throw new BadRequestException("Store contact email addresses must be unique");
+    }
+    if (normalized.length > 0 && normalized.filter((email) => email.isPrimary).length !== 1) {
+      throw new BadRequestException("Exactly one store contact email must be primary");
+    }
+    return normalized;
   }
 
   async listPersonnelMaster(input: {

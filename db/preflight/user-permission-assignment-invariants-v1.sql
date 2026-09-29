@@ -17,7 +17,8 @@ WITH violations AS (
 )
 SELECT
     'USER-PERM-01' AS check_id,
+    'authorization' AS category,
     COUNT(*)::bigint AS violation_count,
-    COALESCE(array_agg(substr(md5(user_permission_assignment_id::text), 1, 12))
-      FILTER (WHERE user_permission_assignment_id IS NOT NULL), ARRAY[]::text[]) AS sample_refs
+    COALESCE((array_agg(substr(md5(user_permission_assignment_id::text), 1, 12) ORDER BY user_permission_assignment_id)
+      FILTER (WHERE user_permission_assignment_id IS NOT NULL))[1:5], ARRAY[]::text[]) AS sample_refs
 FROM violations;

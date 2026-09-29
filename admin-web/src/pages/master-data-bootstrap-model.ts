@@ -38,6 +38,7 @@ export type StoreMasterPatch = {
   regionId?: string
   status?: StoreMasterStatus
   kpiImportEnabled?: boolean
+  contactEmails?: Array<{ clientId?: string; emailAddress: string; label: string | null; isPrimary: boolean }>
 }
 
 export type PersonnelMasterPatch = Partial<{
@@ -289,6 +290,7 @@ export function mergeStoreMasterPatch(
     regionName: patch.regionId === undefined ? store.regionName : resolveRegionName(lookups, regionId, store.regionName),
     status: patch.status ?? normalizeStoreStatus(store.status),
     kpiImportEnabled: patch.kpiImportEnabled ?? store.kpiImportEnabled,
+    contactEmails: patch.contactEmails ?? store.contactEmails,
   }
 }
 

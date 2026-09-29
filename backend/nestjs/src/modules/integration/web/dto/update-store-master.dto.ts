@@ -1,5 +1,8 @@
-import { IsBoolean, IsIn, IsISO8601, IsOptional, Matches } from "class-validator";
+import { Type } from "class-transformer";
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsISO8601, IsOptional, Matches, ValidateNested } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { StoreContactEmailDto } from "./store-contact-email.dto";
 
 export class UpdateStoreMasterDto {
   @IsOptional()
@@ -29,4 +32,12 @@ export class UpdateStoreMasterDto {
   @IsOptional()
   @IsISO8601({ strict: true })
   expectedUpdatedAt?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ApiPropertyOptional({ type: () => [StoreContactEmailDto], maxItems: 10 })
+  @ValidateNested({ each: true })
+  @Type(() => StoreContactEmailDto)
+  contactEmails?: StoreContactEmailDto[];
 }

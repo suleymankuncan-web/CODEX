@@ -126,7 +126,8 @@ if (
 
 const requiredCheckIds = [
   "ASSIGN-01", "AUTH-01", "AUTH-02", "KEY-01", "ORG-01", "ORG-02",
-  "ORG-03", "ORG-04", "TARGET-01", "TARGET-02", "TARGET-03",
+  "ORG-03", "ORG-04", "STORE-EMAIL-01", "TARGET-01", "TARGET-02", "TARGET-03",
+  "USER-PERM-01",
 ];
 if (cleanResult.decision !== "clean_local" || cleanResult.liveEvidence !== "blocked_live_evidence") {
   fail("Clean disposable result crossed the live-evidence boundary.");
@@ -144,6 +145,11 @@ if (cleanResult.results.some((result) => result.violationCount !== 0)) {
 const assignment = cleanResult.results.find((result) => result.checkId === "ASSIGN-01");
 if (assignment?.classification !== "requires_business_decision") {
   fail("Clean fixture incorrectly approved unresolved assignment temporal semantics.");
+}
+const storeEmailInvariant = cleanResult.results.find((result) => result.checkId === "STORE-EMAIL-01");
+const userPermissionInvariant = cleanResult.results.find((result) => result.checkId === "USER-PERM-01");
+if (storeEmailInvariant?.category !== "organization" || userPermissionInvariant?.category !== "authorization") {
+  fail("Additive invariant categories are missing from the operational receipt.");
 }
 
 const fixtureResult = parseJson(runNpmCapture("smoke:database:invariants:fixture", {
