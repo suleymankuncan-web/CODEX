@@ -22,7 +22,7 @@ test.beforeEach(async ({ page }) => {
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'reports-surface-user',
-        mockRoleCodes: 'SUPER_ADMIN,REPORT_VIEWER,AUDITOR,SNAPSHOT_OPERATOR',
+        mockRoleCodes: 'SUPER_ADMIN,REPORT_VIEWER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
@@ -284,7 +284,7 @@ const authSessionFixture = {
   authenticated: true,
   user: {
     userId: 'reports-surface-user',
-    roleCodes: ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'SNAPSHOT_OPERATOR'],
+    roleCodes: ['SUPER_ADMIN', 'REPORT_VIEWER'],
     scope: {
       companyIds: ['00000000-0000-0000-0000-000000000001'],
       regionIds: [],

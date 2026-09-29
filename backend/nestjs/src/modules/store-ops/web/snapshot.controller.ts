@@ -33,7 +33,7 @@ export class SnapshotController {
 
   @Post("runs")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async createSnapshotRun(
     @Req()
     request: {
@@ -50,7 +50,7 @@ export class SnapshotController {
 
   @Get("lookups")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotLookups(
     @Req()
     request: {
@@ -64,7 +64,7 @@ export class SnapshotController {
 
   @Get("runs")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async listSnapshotRuns(
     @Req()
     request: {
@@ -83,7 +83,7 @@ export class SnapshotController {
 
   @Get("runs/summary")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRunSummary(
     @Req()
     request: {
@@ -100,7 +100,7 @@ export class SnapshotController {
 
   @Get("runs/overview")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRunOverview(
     @Req()
     request: {
@@ -117,7 +117,7 @@ export class SnapshotController {
 
   @Get("runs/needs-action")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRunNeedsAction(
     @Req()
     request: {
@@ -147,7 +147,7 @@ export class SnapshotController {
     schema: { type: "integer", minimum: 0, default: 0 },
   })
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRunAudit(
     @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
@@ -169,7 +169,7 @@ export class SnapshotController {
   @Get("runs/:snapshotRunId/dependencies")
   @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRunDependencies(
     @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
@@ -186,7 +186,7 @@ export class SnapshotController {
   @Get("runs/:snapshotRunId/lineage")
   @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRunLineage(
     @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
@@ -203,7 +203,7 @@ export class SnapshotController {
   @Post("runs/:snapshotRunId/rerun")
   @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async rerunSnapshotRun(
     @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()
@@ -221,7 +221,7 @@ export class SnapshotController {
   @Get("runs/:snapshotRunId")
   @ApiParam({ name: "snapshotRunId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getSnapshotRun(
     @Param("snapshotRunId", new ParseUUIDPipe({ version: "4" })) snapshotRunId: string,
     @Req()

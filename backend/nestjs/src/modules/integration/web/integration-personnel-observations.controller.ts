@@ -12,7 +12,7 @@ export class IntegrationPersonnelObservationsController {
 
   @Get("personnel-observations")
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   @ApiOkResponse({ schema: personnelObservationResponseSchema })
   async list(
     @Query() query: ListPersonnelObservationsQueryDto,

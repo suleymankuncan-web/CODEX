@@ -6,12 +6,9 @@ import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.servi
 import { AuthProvider } from "../interfaces/auth-provider.interface";
 
 const APP_ROLE_CODES = new Set([
-  "AUDITOR",
   "HR_ADMIN",
-  "INTEGRATION_ADMIN",
   "REGION_MANAGER",
   "REPORT_VIEWER",
-  "SNAPSHOT_OPERATOR",
   "STORE_MANAGER",
   "STORE_PERSONNEL",
   "SUPER_ADMIN",

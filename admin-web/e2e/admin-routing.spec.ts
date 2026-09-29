@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'admin-routing-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockRoleCodes: 'SUPER_ADMIN,HR_ADMIN,REPORT_VIEWER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
@@ -298,7 +298,7 @@ test('admin command shell keeps navigation responsive across lazy routes', async
 test('admin shell fallback states switch chrome to English copy and persist locale', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({ json: auditorOnlySessionFixture })
+    await route.fulfill({ json: reportViewerOnlySessionFixture })
   })
 
   await page.goto('/admin/auth')
@@ -307,7 +307,7 @@ test('admin shell fallback states switch chrome to English copy and persist loca
   await expect(page.getByRole('navigation', { name: 'Birincil' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Bu rol için rota kullanılamaz' })).toBeVisible()
   await expect(
-    main.getByText('Bu oturum kimliği doğrulandı, ancak mevcut rol seti bu yüzeye izin vermiyor. Bunun yerine /admin/audit yoluna dön.'),
+    main.getByText('Bu oturum kimliği doğrulandı, ancak mevcut rol seti bu yüzeye izin vermiyor. Bunun yerine /store/home yoluna dön.'),
   ).toBeVisible()
   await expect(main.getByText('Route not available for this role')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
@@ -320,7 +320,7 @@ test('admin shell fallback states switch chrome to English copy and persist loca
   await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Route not available for this role' })).toBeVisible()
   await expect(
-    main.getByText('This session is authenticated, but the current role set does not permit this surface. Return to /admin/audit instead.'),
+    main.getByText('This session is authenticated, but the current role set does not permit this surface. Return to /store/home instead.'),
   ).toBeVisible()
   await expect(main.getByText('Bu rol için rota kullanılamaz')).toHaveCount(0)
 
@@ -776,7 +776,7 @@ const authSessionFixture = {
   user: {
     userId: 'admin-routing-user',
     employeeId: null,
-    roleCodes: ['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR'],
+    roleCodes: ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER'],
     scope: {
       companyIds: ['00000000-0000-0000-0000-000000000001'],
       regionIds: [],
@@ -800,11 +800,11 @@ const authSessionFixture = {
   },
 }
 
-const auditorOnlySessionFixture = {
+const reportViewerOnlySessionFixture = {
   ...authSessionFixture,
   user: {
     ...authSessionFixture.user,
-    roleCodes: ['AUDITOR'],
+    roleCodes: ['REPORT_VIEWER'],
   },
 }
 

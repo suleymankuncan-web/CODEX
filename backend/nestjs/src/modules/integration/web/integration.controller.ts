@@ -59,7 +59,7 @@ export class IntegrationController {
 
   @Get("sources")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async listIntegrationSources(@Query() query: ListIntegrationSourcesQueryDto) {
     return this.integrationService.listIntegrationSources({
       limit: query.limit,
@@ -72,7 +72,7 @@ export class IntegrationController {
 
   @Post("sources")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async createIntegrationSource(
     @Body() body: CreateIntegrationSourceDto,
     @Req()
@@ -87,7 +87,7 @@ export class IntegrationController {
   @Patch("sources/:sourceId/schedule")
   @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async updateIntegrationSourceSchedule(
     @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
     @Body() body: UpdateIntegrationSourceScheduleDto,
@@ -104,7 +104,7 @@ export class IntegrationController {
   @Patch("sources/:sourceId/deactivate")
   @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async deactivateIntegrationSource(
     @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
     @Req()
@@ -116,7 +116,7 @@ export class IntegrationController {
   @Patch("sources/:sourceId/reactivate")
   @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async reactivateIntegrationSource(
     @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
     @Req()
@@ -127,14 +127,14 @@ export class IntegrationController {
 
   @Get("lookups")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getIntegrationLookups() {
     return this.integrationService.getIntegrationLookups();
   }
 
   @Get("external-id-map-candidates")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async listExternalIdMapCandidates(
     @Query() query: ListExternalIdMapCandidatesQueryDto,
     @Req()
@@ -150,7 +150,7 @@ export class IntegrationController {
 
   @Post("external-id-maps")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async approveExternalIdMap(
     @Body() body: ApproveExternalIdMapDto,
     @Req()
@@ -168,7 +168,7 @@ export class IntegrationController {
 
   @Get("kpi-import-store-scope")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async listKpiImportStoreScope(
     @Query() query: ListKpiImportStoreScopeQueryDto,
     @Req()
@@ -186,7 +186,7 @@ export class IntegrationController {
 
   @Get("store-master")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async listStoreMaster(
     @Query() query: ListKpiImportStoreScopeQueryDto,
     @Req()
@@ -204,7 +204,7 @@ export class IntegrationController {
 
   @Post("store-master")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async createStoreMaster(
     @Body() body: CreateStoreMasterDto,
     @Req()
@@ -224,7 +224,7 @@ export class IntegrationController {
 
   @Get("store-master-lookups")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getStoreMasterLookups(
     @Req()
     request: IntegrationCompanyScopedRequest,
@@ -236,7 +236,7 @@ export class IntegrationController {
 
   @Get("master-data-bootstrap/batches")
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async listMasterDataBootstrapBatches(
     @Query() query: ListMasterDataBootstrapBatchesQueryDto,
     @Req()
@@ -258,7 +258,7 @@ export class IntegrationController {
   @Patch("kpi-import-store-scope/:storeId")
   @ApiParam({ name: "storeId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async updateKpiImportStoreScope(
     @Param("storeId", new ParseUUIDPipe({ version: "4" })) storeId: string,
     @Body() body: UpdateKpiImportStoreScopeDto,
@@ -279,7 +279,7 @@ export class IntegrationController {
   @Patch("store-master/:storeId")
   @ApiParam({ name: "storeId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async updateStoreMaster(
     @Param("storeId", new ParseUUIDPipe({ version: "4" })) storeId: string,
     @Body() body: UpdateStoreMasterDto,
@@ -298,7 +298,7 @@ export class IntegrationController {
 
   @Post("master-data-bootstrap/batches")
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async createMasterDataBootstrapBatch(
     @Req()
     request: IntegrationUserCompanyScopedRequest,
@@ -318,7 +318,7 @@ export class IntegrationController {
   @Post("master-data-bootstrap/batches/:batchId/validate")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async validateMasterDataBootstrapBatch(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -335,7 +335,7 @@ export class IntegrationController {
   @Get("master-data-bootstrap/batches/:batchId/rows")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async listMasterDataBootstrapRows(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Query() query: ListMasterDataBootstrapRowsQueryDto,
@@ -357,7 +357,7 @@ export class IntegrationController {
   @Get("master-data-bootstrap/batches/:batchId/promotion-readiness")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async getMasterDataBootstrapPromotionReadiness(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -373,7 +373,7 @@ export class IntegrationController {
   @Post("master-data-bootstrap/batches/:batchId/promote-stores")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async promoteMasterDataBootstrapStores(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -390,7 +390,7 @@ export class IntegrationController {
   @Post("master-data-bootstrap/batches/:batchId/promote-personnel")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async promoteMasterDataBootstrapPersonnel(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -407,7 +407,7 @@ export class IntegrationController {
   @Get("master-data-bootstrap/batches/:batchId")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async getMasterDataBootstrapBatch(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -423,14 +423,14 @@ export class IntegrationController {
 
   @Get("sources/due-schedule")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async listDueIntegrationSources(@Query() query: ListDueIntegrationSourcesQueryDto) {
     return this.integrationService.listDueIntegrationSources(query.referenceAt);
   }
 
   @Get("import-payload-templates")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportPayloadTemplate(@Query() query: GetImportPayloadTemplateQueryDto) {
     return this.integrationService.getImportPayloadTemplate({
       entityType: query.entityType,
@@ -440,7 +440,7 @@ export class IntegrationController {
 
   @Post("power-bi-export-upload")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: "personnelFile", maxCount: 1 },
@@ -491,7 +491,7 @@ export class IntegrationController {
   @Get("sources/:sourceId/audit")
   @ApiParam({ name: "sourceId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getIntegrationSourceAudit(
     @Param("sourceId", new ParseUUIDPipe({ version: "4" })) sourceId: string,
   ) {
@@ -500,7 +500,7 @@ export class IntegrationController {
 
   @Post("import-batches")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async createImportBatch(
     @Req()
     request: IntegrationUserCompanyScopedRequest,
@@ -515,7 +515,7 @@ export class IntegrationController {
 
   @Get("import-batches")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async listImportBatches(
     @Query() query: ListImportBatchesQueryDto,
     @Req()
@@ -535,7 +535,7 @@ export class IntegrationController {
 
   @Get("import-batches/summary")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchSummary(
     @Query() query: ListImportBatchesQueryDto,
     @Req()
@@ -553,7 +553,7 @@ export class IntegrationController {
 
   @Get("import-batches/overview")
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchOverview(
     @Query() query: ListImportBatchesQueryDto,
     @Req()
@@ -632,7 +632,7 @@ export class IntegrationController {
     schema: { type: "string", format: "date-time" },
   })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchNeedsAction(
     @Query() query: ListImportBatchNeedsActionQueryDto,
     @Req()
@@ -654,7 +654,7 @@ export class IntegrationController {
   @Get("import-batches/:batchId/errors")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchErrors(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Query() query: ListImportBatchErrorsQueryDto,
@@ -672,7 +672,7 @@ export class IntegrationController {
   @Get("import-batches/:batchId/reconciliation")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchReconciliation(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -697,7 +697,7 @@ export class IntegrationController {
     schema: { type: "integer", minimum: 0, default: 0 },
   })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchAudit(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Query() query: ListImportBatchAuditQueryDto,
@@ -725,7 +725,7 @@ export class IntegrationController {
     schema: { type: "integer", minimum: 0, default: 0 },
   })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatchAuditNested(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Query() query: ListImportBatchAuditQueryDto,
@@ -743,7 +743,7 @@ export class IntegrationController {
   @Post("import-batches/:batchId/retry")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async retryImportBatch(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()
@@ -759,7 +759,7 @@ export class IntegrationController {
   @Get("import-batches/:batchId")
   @ApiParam({ name: "batchId", schema: { type: "string", format: "uuid" } })
   @RequireScope("company")
-  @RequireRoles("INTEGRATION_ADMIN")
+  @RequireRoles("SUPER_ADMIN")
   async getImportBatch(
     @Param("batchId", new ParseUUIDPipe({ version: "4" })) batchId: string,
     @Req()

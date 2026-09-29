@@ -38,7 +38,7 @@ export const defaultSession: SessionState = {
   mockEmployeeId: import.meta.env.VITE_EMPLOYEE_ID ?? '',
   mockRoleCodes:
     import.meta.env.VITE_ROLE_CODES ??
-    'SUPER_ADMIN,INTEGRATION_ADMIN,SNAPSHOT_OPERATOR,REPORT_VIEWER,AUDITOR',
+    'SUPER_ADMIN',
   mockCompanyIds: import.meta.env.VITE_COMPANY_IDS ?? '00000000-0000-0000-0000-000000000001',
   mockStoreIds: import.meta.env.VITE_STORE_IDS ?? '',
   mockReadStoreIds: import.meta.env.VITE_READ_STORE_IDS ?? import.meta.env.VITE_STORE_IDS ?? '',

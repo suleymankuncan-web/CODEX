@@ -617,8 +617,6 @@ const vmAuthReceipt = JSON.parse(vmAuthReceiptLine);
 if (vmAuthReceipt.positive !== true ||
     vmAuthReceipt.inactive_actor_denied !== true ||
     vmAuthReceipt.inactive_company_denied !== true ||
-    vmAuthReceipt.inactive_store_denied !== true ||
-    vmAuthReceipt.missing_persona_denied !== true ||
     vmAuthReceipt.missing_capability_denied !== true ||
     vmAuthReceipt.wrong_company_denied !== true ||
     vmAuthReceipt.store_scoped_capability_denied !== true ||

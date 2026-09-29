@@ -63,7 +63,7 @@ describe("Snapshot run operations", () => {
     const response = await request(app.getHttpServer())
       .post("/api/snapshots/runs")
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", companyId)
       .send({
         snapshotType: "monthly",
@@ -270,7 +270,7 @@ describe("Snapshot run operations", () => {
     const detailResponse = await request(app.getHttpServer())
       .get(`/api/snapshots/runs/${guardedSnapshotRunId}`)
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(detailResponse.status).toBe(200);
     expect(detailResponse.body.rerunAllowed).toBe(false);
@@ -323,7 +323,7 @@ describe("Snapshot run operations", () => {
     const response = await request(app.getHttpServer())
       .post(`/api/snapshots/runs/${guardedSnapshotRunId}/rerun`)
       .set("x-user-id", "user-2")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(409);
     expect(response.body.message).toBe(`An active rerun already exists for snapshot run ${guardedSnapshotRunId}`);
@@ -348,7 +348,7 @@ describe("Snapshot run operations", () => {
       : request(app.getHttpServer()).get(path);
     const response = await requestBuilder
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "SNAPSHOT_OPERATOR")
+      .set("x-role-codes", "SUPER_ADMIN")
       .set("x-company-ids", "00000000-0000-4000-8000-000000000099");
 
     expect(response.status).toBe(400);

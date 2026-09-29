@@ -33,11 +33,11 @@ route. A separate Admin role may still grant its own Admin routes.
 
 | Route | Shell | Classification | Roles | Landing Behavior | Refresh/Return Expectation | Data Boundary | Primary Nav |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/admin/integrations` | admin | core | `SUPER_ADMIN`, `INTEGRATION_ADMIN` | first landing for super admin and integration admin | must return to same route after auth verification | company-scoped import state | yes |
+| `/admin/integrations` | admin | core | `SUPER_ADMIN` | first landing for super admin | must return to same route after auth verification | company-scoped import state | yes |
 | `/admin/operations` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped operational health and readiness signals | yes |
 | `/admin/data-quality` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped import, snapshot, workforce, and KPI quality signals | yes |
-| `/admin/master-data` | admin | core | `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped bootstrap batches | yes |
-| `/admin/snapshots` | admin | ops | `SUPER_ADMIN`, `SNAPSHOT_OPERATOR` | first landing for snapshot operator | must return to same route after auth verification | company-scoped snapshot state | yes |
+| `/admin/master-data` | admin | core | `SUPER_ADMIN`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped bootstrap batches | yes |
+| `/admin/snapshots` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped snapshot state | yes |
 | `/admin/inbox` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | current admin queue scope | yes |
 | `/admin/feed` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER` | direct navigation only | must return to same route after auth verification | announcement management scope | yes |
 | `/admin/checklists` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | checklist template governance | yes |
@@ -48,7 +48,7 @@ route. A separate Admin role may still grant its own Admin routes.
 | `/admin/kpi-config` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | global KPI governance | yes |
 | `/admin/pilot-feedback` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | controlled-pilot feedback register | yes |
 | `/admin/auth` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | auth admin catalog and assignment scope | yes |
-| `/admin/audit` | admin | core | `SUPER_ADMIN`, `AUDITOR` | first landing for auditor | must return to same route after auth verification | audit event read scope | yes |
+| `/admin/audit` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | audit event read scope | yes |
 | `/admin/session` | admin | ops | every catalog role except `REPORT_VIEWER` | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |
 | `/store` | store | core | authenticated store shell session | first landing family varies by role: visual merchandiser-only resolves to `/store/checklists`; `STORE_PERSONNEL` resolves to `/store/me`; `STORE_MANAGER`, `REGION_MANAGER`, and broad store sessions resolve to `/store/home` | must return to same route after auth verification | current store shell overview | yes |
 | `/store/home` | store | core | authenticated store shell session except visual-merchandiser-only sessions | landing route for store manager, region manager, and broad Store sessions | must return to same route after auth verification | role-aware Store command overview | yes |
@@ -66,20 +66,18 @@ route. A separate Admin role may still grant its own Admin routes.
 | `/store/competitions` | store | parked | none while disabled | direct navigation denied | refresh remains denied | no feature request from Store UI; `/admin/competitions` unchanged | no |
 | `/store/incentives` | store | secondary | frontend runtime: `REGION_MANAGER`; backend read compatibility also declares `STORE_MANAGER`; Auth Admin preview is broader; DG-1 owns the final alignment | direct navigation only | must return to same route after auth verification | region-scoped incentive command surface; personnel own projection remains under `/store/me` | no |
 | `/store/workforce` | store | secondary | `STORE_MANAGER` with assigned action store, `REGION_MANAGER` with read store or read region scope, `REPORT_VIEWER` with non-empty company read scope, `SUPER_ADMIN` with company read scope | direct navigation only | must return to same route after auth verification | read-only company portfolio for Report Viewer and Super Admin; request/forms and action-assisted lookups remain unavailable | yes |
-| `/store/reports` | store | secondary | `SUPER_ADMIN`, `REPORT_VIEWER`, `AUDITOR`, `REGION_MANAGER`, `STORE_MANAGER` | direct navigation only | must return to same route after auth verification | monthly store report package by read scope; Store Manager remains assigned-store scoped | yes |
+| `/store/reports` | store | secondary | `SUPER_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER`, `STORE_MANAGER` | direct navigation only | must return to same route after auth verification | monthly store report package by read scope; Store Manager remains assigned-store scoped | yes |
 
 ## Landing Order
 
 Current landing resolution:
 
 1. unauthenticated or unconfigured session: `/auth/login`
-2. `SUPER_ADMIN` or `INTEGRATION_ADMIN`: `/admin/integrations`
-3. `SNAPSHOT_OPERATOR`: `/admin/snapshots`
-4. `HR_ADMIN`: `/admin/competitions`
-5. `AUDITOR`: `/admin/audit`
-6. `VISUAL_MERCHANDISER`-only session: `/store/checklists`
-7. `STORE_PERSONNEL` without manager/region role: `/store/me`
-8. `REPORT_VIEWER`, `REGION_MANAGER`, `STORE_MANAGER`, or broad Store sessions: `/store/home`
+2. `SUPER_ADMIN`: `/admin/integrations`
+3. `HR_ADMIN`: `/admin/competitions`
+4. `VISUAL_MERCHANDISER`-only session: `/store/checklists`
+5. `STORE_PERSONNEL` without manager/region role: `/store/me`
+6. `REPORT_VIEWER`, `REGION_MANAGER`, `STORE_MANAGER`, or broad Store sessions: `/store/home`
 
 ## Review Notes
 

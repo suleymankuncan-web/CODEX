@@ -82,12 +82,9 @@ export type StoreRouteOperatingPolicy = {
 }
 
 const adminLandingRoles = new Set([
-  'AUDITOR',
-  'HR_ADMIN',
-  'INTEGRATION_ADMIN',
-  'REPORT_VIEWER',
-  'SNAPSHOT_OPERATOR',
   'SUPER_ADMIN',
+  'HR_ADMIN',
+  'REPORT_VIEWER',
 ])
 
 const vmBroadRoles = new Set([
@@ -102,16 +99,13 @@ const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUP
 const authenticatedStoreRoles = [
   'SUPER_ADMIN',
   'HR_ADMIN',
-  'INTEGRATION_ADMIN',
-  'SNAPSHOT_OPERATOR',
   'REPORT_VIEWER',
   'REGION_MANAGER',
-  'AUDITOR',
   'STORE_MANAGER',
   'STORE_PERSONNEL',
 ]
 const allAuthenticatedStoreRoles = [...authenticatedStoreRoles, 'VISUAL_MERCHANDISER']
-const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER', 'STORE_MANAGER']
+const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER', 'STORE_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']

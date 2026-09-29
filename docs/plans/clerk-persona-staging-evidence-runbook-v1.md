@@ -87,11 +87,11 @@ affected session or secret where applicable, and rerun the evidence path.
 | --- | --- | --- | --- |
 | Super admin | Staging-only admin user | `SUPER_ADMIN`, company scope | Can reach admin shell and auth/session returns admin role. |
 | HR admin | Staging-only HR user | `HR_ADMIN`, company scope | Can manage pilot bindings and workforce/admin surfaces without super-admin fallback. |
-| Integration admin | Staging-only integration user | `INTEGRATION_ADMIN`, company scope | Can access integration/import surfaces and run authenticated upload smoke when a safe file is available. |
 | Region manager | Staging-only region user | `REGION_MANAGER`, approved region/store scope | Can read regional/store operational surfaces without company-wide admin powers. |
 | Store manager | Staging-only store manager user | `STORE_MANAGER`, one store read scope plus matching action-store assignment | Assigned store succeeds and unassigned store returns `403`. |
 | Store personnel | Staging-only personnel user | `STORE_PERSONNEL`, own store/personnel scope | Can use store-facing surfaces and cannot reach admin-only surfaces. |
-| Report viewer or auditor | Staging-only read-only user | `REPORT_VIEWER` or `AUDITOR`, approved read scope | Can read allowed reports/audit views and cannot perform write actions. |
+| Report viewer | Staging-only read-only user | `REPORT_VIEWER`, approved read scope | Can read allowed reports and cannot perform write actions. |
+| Visual merchandiser | Staging-only VM user | `VISUAL_MERCHANDISER`, approved store scope | Can use assigned-store visual checklist surfaces without admin authority. |
 
 The exact roster can be smaller for the first smoke pass, but store-manager
 positive/negative action evidence is the minimum useful proof.

@@ -34,7 +34,7 @@ ephemeral-name/invoice protections and exact store allowlist remain in force.
 ## Read access
 
 `GET /api/integrations/personnel-observations` uses the same company scope and
-HR_ADMIN, SUPER_ADMIN, INTEGRATION_ADMIN roles as personnel master administration.
+HR_ADMIN and SUPER_ADMIN roles as personnel master administration.
 Required inclusive dates cover at most 366 days. Pagination is bounded at 200
 rows and offset 1,000,000; optional code/store search is at most 80 characters.
 The read-only personnel-page section defaults to the last 30 days and shows

@@ -58,7 +58,7 @@ async function seedMockSession(page: Page) {
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'entry-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,STORE_MANAGER,STORE_PERSONNEL',
+        mockRoleCodes: 'SUPER_ADMIN,STORE_MANAGER,STORE_PERSONNEL',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
@@ -128,7 +128,7 @@ const authSessionFixture = {
   user: {
     userId: 'entry-user',
     employeeId: null,
-    roleCodes: ['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'STORE_MANAGER', 'STORE_PERSONNEL'],
+    roleCodes: ['SUPER_ADMIN', 'STORE_MANAGER', 'STORE_PERSONNEL'],
     scope: {
       companyIds: ['00000000-0000-0000-0000-000000000001'],
       regionIds: [],

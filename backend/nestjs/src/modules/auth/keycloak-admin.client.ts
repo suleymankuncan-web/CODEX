@@ -28,11 +28,18 @@ const MANAGED_REALM_ROLES = [
   "STORE_MANAGER",
   "STORE_PERSONNEL",
   "REGION_MANAGER",
-  "AUDITOR",
   "HR_ADMIN",
+  "VISUAL_MERCHANDISER",
+];
+const RETIRED_MANAGED_REALM_ROLES = [
+  "AUDITOR",
   "INTEGRATION_ADMIN",
   "SNAPSHOT_OPERATOR",
-  "VISUAL_MERCHANDISER",
+  "VM_REFERENCE_PUBLISHER",
+  "VM_VISUAL_REVIEWER",
+  "VM_CAMPAIGN_WINDOW_AUTHORITY",
+  "VM_CAMPAIGN_SCOPE_AUTHORITY",
+  "VM_CAMPAIGN_EMERGENCY_AUTHORITY",
 ];
 
 @Injectable()
@@ -132,7 +139,9 @@ export class KeycloakAdminClient {
       `/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}/role-mappings/realm`,
       "list_role_mappings",
     );
-    const stale = current.filter((role) => MANAGED_REALM_ROLES.includes(role.name) && !roleCodes.includes(role.name));
+    const stale = current.filter((role) =>
+      RETIRED_MANAGED_REALM_ROLES.includes(role.name) ||
+      (MANAGED_REALM_ROLES.includes(role.name) && !roleCodes.includes(role.name)));
     if (stale.length > 0) {
       await this.request(
         `/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}/role-mappings/realm`,

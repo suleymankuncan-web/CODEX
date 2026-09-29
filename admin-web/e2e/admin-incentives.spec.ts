@@ -16,13 +16,13 @@ test('super admin reads incentive projections and submits an audited correction'
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'admin-incentive-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockRoleCodes: 'SUPER_ADMIN,HR_ADMIN,REPORT_VIEWER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
     )
   })
-  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER']))
   await routeAdminIncentives(page)
 
   let correctionBody: Record<string, unknown> | null = null
@@ -143,13 +143,13 @@ test('admin incentives switches owned product copy to English and preserves sour
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'admin-incentive-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockRoleCodes: 'SUPER_ADMIN,HR_ADMIN,REPORT_VIEWER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
     )
   })
-  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER']))
   await routeAdminIncentives(page)
   await page.goto('/admin/incentives')
   await setStoredLocale(page, 'en')
@@ -172,13 +172,13 @@ test('admin incentive period filter requests the selected year and month', async
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'admin-incentive-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockRoleCodes: 'SUPER_ADMIN,HR_ADMIN,REPORT_VIEWER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
     )
   })
-  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER']))
 
   const requestedUrls: string[] = []
   await page.route('**/api/admin/incentives**', async (route) => {
@@ -224,13 +224,13 @@ test('admin incentive default period follows Istanbul month boundary', async ({ 
       JSON.stringify({
         mode: 'mock',
         mockUserId: 'admin-incentive-user',
-        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockRoleCodes: 'SUPER_ADMIN,HR_ADMIN,REPORT_VIEWER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
     )
   })
-  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER']))
 
   const requestedUrls: string[] = []
   await page.route('**/api/admin/incentives**', async (route) => {

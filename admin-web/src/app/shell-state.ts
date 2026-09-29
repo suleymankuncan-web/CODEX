@@ -81,24 +81,12 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
 
   const roles = authSummary?.user.roleCodes ?? []
 
-  if (hasAnyRole(roles, ['SUPER_ADMIN', 'INTEGRATION_ADMIN'])) {
+  if (hasAnyRole(roles, ['SUPER_ADMIN'])) {
     return '/admin/integrations'
-  }
-
-  if (hasAnyRole(roles, ['SUPER_ADMIN', 'SNAPSHOT_OPERATOR'])) {
-    return '/admin/snapshots'
   }
 
   if (hasAnyRole(roles, ['HR_ADMIN'])) {
     return '/admin/competitions'
-  }
-
-  if (hasAnyRole(roles, ['SUPER_ADMIN', 'AUDITOR'])) {
-    return '/admin/audit'
-  }
-
-  if (hasAnyRole(roles, ['SUPER_ADMIN'])) {
-    return '/admin/auth'
   }
 
   if (isStoreVisualMerchandiserOnly(authSummary)) {

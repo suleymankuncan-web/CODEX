@@ -31,7 +31,7 @@ export class IntegrationPersonnelMasterController {
 
   @Get('personnel-master')
   @RequireScope('company')
-  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
+  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN')
   async listPersonnelMaster(
     @Query() query: ListPersonnelMasterQueryDto,
     @Req() request: RequestUser,
@@ -48,7 +48,7 @@ export class IntegrationPersonnelMasterController {
 
   @Get('personnel-master.xlsx')
   @RequireScope('company')
-  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
+  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN')
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
@@ -73,7 +73,7 @@ export class IntegrationPersonnelMasterController {
 
   @Post('personnel-master')
   @RequireScope('company')
-  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
+  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN')
   async createPersonnelMaster(
     @Body() body: CreatePersonnelMasterDto,
     @Req() request: RequestUser,
@@ -97,7 +97,7 @@ export class IntegrationPersonnelMasterController {
 
   @Get('personnel-master-lookups')
   @RequireScope('company')
-  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
+  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN')
   async getPersonnelMasterLookups(@Req() request: RequestUser) {
     return this.integrationService.getPersonnelMasterLookups({
       actorCompanyIds: request.user.scope.companyIds,
@@ -107,7 +107,7 @@ export class IntegrationPersonnelMasterController {
   @Patch('personnel-master/:employeeId')
   @ApiParam({ name: 'employeeId', schema: { type: 'string', format: 'uuid' } })
   @RequireScope('company')
-  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
+  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN')
   async updatePersonnelMaster(
     @Param('employeeId', new ParseUUIDPipe({ version: '4' })) employeeId: string,
     @Body() body: UpdatePersonnelMasterDto,
@@ -134,7 +134,7 @@ export class IntegrationPersonnelMasterController {
   @Patch('personnel-master/:employeeId/terminate')
   @ApiParam({ name: 'employeeId', schema: { type: 'string', format: 'uuid' } })
   @RequireScope('company')
-  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN', 'INTEGRATION_ADMIN')
+  @RequireRoles('HR_ADMIN', 'SUPER_ADMIN')
   async terminatePersonnelMaster(
     @Param('employeeId', new ParseUUIDPipe({ version: '4' })) employeeId: string,
     @Body() body: TerminatePersonnelMasterDto,

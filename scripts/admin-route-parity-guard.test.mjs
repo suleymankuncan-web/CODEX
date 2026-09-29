@@ -143,11 +143,8 @@ test('admin UI inventory JSON baseline is parseable and complete', () => {
   assert.deepEqual(baseline.rolesForParityMatrix, [
     'SUPER_ADMIN',
     'HR_ADMIN',
-    'INTEGRATION_ADMIN',
-    'SNAPSHOT_OPERATOR',
     'REPORT_VIEWER',
     'REGION_MANAGER',
-    'AUDITOR',
     'NO_SPECIAL_ADMIN_ROLE',
   ])
 })

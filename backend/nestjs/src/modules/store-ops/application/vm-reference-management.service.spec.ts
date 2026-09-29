@@ -63,7 +63,7 @@ describe("VmReferenceManagementService", () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it("[FR-08][AC-02] requires both VM persona and company-scoped publisher permission", async () => {
+  it("[FR-08][AC-02] requires an allowed VM admin role and company-scoped publisher permission", async () => {
     const service = new VmReferenceManagementService(repository as never, repository as never, media as never, config as never);
     await expect(service.createDraft({
       ...publisher,
@@ -74,6 +74,18 @@ describe("VmReferenceManagementService", () => {
       instructions: "Referans yerleşim",
     })).rejects.toBeInstanceOf(ForbiddenException);
     expect(repository.createDraft).not.toHaveBeenCalled();
+  });
+
+  it("allows super admin to use company-scoped VM publisher permission", async () => {
+    const service = new VmReferenceManagementService(repository as never, repository as never, media as never, config as never);
+    await expect(service.createDraft({
+      ...publisher,
+      actorRoleCodes: ["SUPER_ADMIN"],
+      companyId: "company-1",
+      referenceCode: "WINDOW-A",
+      referenceName: "Vitrin A",
+      instructions: "Referans yerleşim",
+    })).resolves.toBeDefined();
   });
 
   it("[FR-08][AC-07] publishes only empty variants and exactly one required asset", async () => {

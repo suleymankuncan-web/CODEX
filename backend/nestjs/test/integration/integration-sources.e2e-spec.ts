@@ -37,7 +37,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .get("/api/integrations/sources?limit=20&offset=0&entityType=employee&isActive=true")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body.items).toEqual([
@@ -121,7 +121,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .post("/api/integrations/sources")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .send({
         sourceCode: "HRIS_ASSIGN",
         sourceName: "Assignment HRIS",
@@ -220,7 +220,7 @@ describe("Integration sources", () => {
     const deactivateResponse = await request(app.getHttpServer())
       .patch("/api/integrations/sources/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/deactivate")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(deactivateResponse.status).toBe(200);
     expect(deactivateResponse.body.data.source.isActive).toBe(false);
@@ -228,7 +228,7 @@ describe("Integration sources", () => {
     const reactivateResponse = await request(app.getHttpServer())
       .patch("/api/integrations/sources/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/reactivate")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(reactivateResponse.status).toBe(200);
     expect(reactivateResponse.body.data.source.isActive).toBe(true);
@@ -276,7 +276,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .get("/api/integrations/lookups")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -417,7 +417,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .get("/api/integrations/sources/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/audit")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(200);
     expect(response.body.meta).toEqual({
@@ -510,7 +510,7 @@ describe("Integration sources", () => {
     const allowedResponse = await request(app.getHttpServer())
       .post("/api/integrations/sources")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .send({
         sourceCode: "HRIS_SHARED",
         sourceName: "Shared Assignment HRIS",
@@ -523,7 +523,7 @@ describe("Integration sources", () => {
     const duplicateResponse = await request(app.getHttpServer())
       .post("/api/integrations/sources")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .send({
         sourceCode: "HRIS_SHARED",
         sourceName: "Duplicate Employee HRIS",
@@ -584,7 +584,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .post("/api/integrations/import-batches")
       .set("x-user-id", "user-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN")
+      .set("x-role-codes", "SUPER_ADMIN")
       .send({
         sourceCode: "HRIS_INACTIVE",
         entityType: "employee",
@@ -644,7 +644,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .patch("/api/integrations/sources/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/deactivate")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(409);
     expect(response.body.message).toBe(
@@ -663,7 +663,7 @@ describe("Integration sources", () => {
       authContextService: {
         resolveUser: jest.fn(async () => ({
           userId: "admin-1",
-          roleCodes: ["INTEGRATION_ADMIN"],
+          roleCodes: ["SUPER_ADMIN"],
           scope: {
             companyIds: ["00000000-0000-0000-0000-000000000001"],
             regionIds: [],
@@ -676,7 +676,7 @@ describe("Integration sources", () => {
     const response = await request(app.getHttpServer())
       .patch("/api/integrations/sources/not-a-uuid/deactivate")
       .set("x-user-id", "admin-1")
-      .set("x-role-codes", "INTEGRATION_ADMIN");
+      .set("x-role-codes", "SUPER_ADMIN");
 
     expect(response.status).toBe(400);
     expect(deactivateIntegrationSource).not.toHaveBeenCalled();

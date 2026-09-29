@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-28T09:14:10.090Z",
+  "generatedAt": "2026-09-28T23:52:21.853Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -30,7 +30,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 237
+        "line": 234
       }
     },
     {
@@ -73,12 +73,11 @@
       "componentFile": "admin-web/src/pages/AuditCenterPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 233
+        "line": 230
       }
     },
     {
@@ -91,12 +90,11 @@
       "componentFile": "admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 229
+        "line": 226
       }
     },
     {
@@ -109,12 +107,11 @@
       "componentFile": "admin-web/src/pages/AuthAssignmentAuditPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 225
+        "line": 222
       }
     },
     {
@@ -127,12 +124,11 @@
       "componentFile": "admin-web/src/pages/AuthUserAuditPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 221
+        "line": 218
       }
     },
     {
@@ -149,7 +145,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 201
+        "line": 198
       }
     },
     {
@@ -166,7 +162,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 217
+        "line": 214
       }
     },
     {
@@ -183,7 +179,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 205
+        "line": 202
       }
     },
     {
@@ -200,7 +196,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 213
+        "line": 210
       }
     },
     {
@@ -217,7 +213,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 209
+        "line": 206
       }
     },
     {
@@ -235,7 +231,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 153
+        "line": 150
       }
     },
     {
@@ -254,7 +250,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 157
+        "line": 154
       }
     },
     {
@@ -271,7 +267,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 117
+        "line": 114
       }
     },
     {
@@ -290,7 +286,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 149
+        "line": 146
       }
     },
     {
@@ -308,7 +304,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 145
+        "line": 142
       }
     },
     {
@@ -325,7 +321,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 189
+        "line": 186
       }
     },
     {
@@ -338,12 +334,11 @@
       "componentFile": "admin-web/src/pages/IntegrationDashboardPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 121
+        "line": 118
       }
     },
     {
@@ -356,12 +351,11 @@
       "componentFile": "admin-web/src/pages/ImportBatchDetailPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 125
+        "line": 122
       }
     },
     {
@@ -378,7 +372,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 193
+        "line": 190
       }
     },
     {
@@ -392,12 +386,11 @@
       "guard": "AdminRouteGuard",
       "roles": [
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 129
+        "line": 126
       }
     },
     {
@@ -411,12 +404,11 @@
       "guard": "AdminRouteGuard",
       "roles": [
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 133
+        "line": 130
       }
     },
     {
@@ -433,7 +425,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 113
+        "line": 110
       }
     },
     {
@@ -450,7 +442,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 197
+        "line": 194
       }
     },
     {
@@ -467,7 +459,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 161
+        "line": 158
       }
     },
     {
@@ -484,7 +476,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 177
+        "line": 174
       }
     },
     {
@@ -501,7 +493,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 173
+        "line": 170
       }
     },
     {
@@ -518,7 +510,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 165
+        "line": 162
       }
     },
     {
@@ -535,7 +527,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 181
+        "line": 178
       }
     },
     {
@@ -552,7 +544,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 169
+        "line": 166
       }
     },
     {
@@ -565,11 +557,8 @@
       "componentFile": "admin-web/src/pages/SessionReadinessPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -590,12 +579,11 @@
       "componentFile": "admin-web/src/pages/SnapshotsDashboardPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 137
+        "line": 134
       }
     },
     {
@@ -608,12 +596,11 @@
       "componentFile": "admin-web/src/pages/SnapshotRunDetailPage.tsx",
       "guard": "AdminRouteGuard",
       "roles": [
-        "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN"
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 141
+        "line": 138
       }
     },
     {
@@ -631,7 +618,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 185
+        "line": 182
       }
     },
     {
@@ -689,12 +676,9 @@
       "componentFile": "admin-web/src/pages/StoreHomePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -707,7 +691,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 188
+        "line": 182
       }
     },
     {
@@ -732,7 +716,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 359
+        "line": 353
       }
     },
     {
@@ -758,7 +742,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 206
+        "line": 200
       }
     },
     {
@@ -782,7 +766,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 342
+        "line": 336
       }
     },
     {
@@ -795,12 +779,9 @@
       "componentFile": "admin-web/src/pages/StoreFeedPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -813,7 +794,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 324
+        "line": 318
       }
     },
     {
@@ -826,12 +807,9 @@
       "componentFile": "admin-web/src/pages/StoreHomePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
@@ -843,7 +821,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 187
+        "line": 181
       }
     },
     {
@@ -866,7 +844,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 376
+        "line": 370
       }
     },
     {
@@ -891,7 +869,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 259
+        "line": 253
       }
     },
     {
@@ -914,7 +892,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 276
+        "line": 270
       }
     },
     {
@@ -940,7 +918,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 293
+        "line": 287
       }
     },
     {
@@ -966,7 +944,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 307
+        "line": 301
       }
     },
     {
@@ -979,7 +957,6 @@
       "componentFile": "admin-web/src/pages/StoreReportsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "AUDITOR",
         "REGION_MANAGER",
         "REPORT_VIEWER",
         "STORE_MANAGER",
@@ -992,7 +969,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 447
+        "line": 441
       }
     },
     {
@@ -1005,12 +982,9 @@
       "componentFile": "admin-web/src/pages/StoreSettingsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -1023,7 +997,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 393
+        "line": 387
       }
     },
     {
@@ -1048,7 +1022,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 411
+        "line": 405
       }
     },
     {
@@ -1073,7 +1047,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 242
+        "line": 236
       }
     },
     {
@@ -1097,7 +1071,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 226
+        "line": 220
       }
     },
     {
@@ -1122,7 +1096,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 430
+        "line": 424
       }
     }
   ],
@@ -6790,7 +6764,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 423
+        "line": 422
       }
     },
     {
@@ -6804,7 +6778,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 59
+        "line": 58
       }
     },
     {
@@ -6818,7 +6792,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 79
+        "line": 78
       }
     },
     {
@@ -6832,7 +6806,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 72
+        "line": 71
       }
     },
     {
@@ -6846,7 +6820,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 65
+        "line": 64
       }
     },
     {
@@ -6860,7 +6834,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 103
+        "line": 102
       }
     },
     {
@@ -6874,7 +6848,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 143
+        "line": 142
       }
     },
     {
@@ -6888,7 +6862,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 390
+        "line": 389
       }
     },
     {
@@ -6902,7 +6876,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 187
+        "line": 186
       }
     },
     {
@@ -6916,7 +6890,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 214
+        "line": 213
       }
     },
     {
@@ -6930,7 +6904,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 349
+        "line": 348
       }
     },
     {
@@ -6958,7 +6932,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 258
+        "line": 257
       }
     },
     {
@@ -7000,7 +6974,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 310
+        "line": 309
       }
     },
     {
@@ -7014,7 +6988,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 52
+        "line": 51
       }
     },
     {
@@ -7028,7 +7002,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 447
+        "line": 446
       }
     },
     {
@@ -7042,7 +7016,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 117
+        "line": 116
       }
     },
     {

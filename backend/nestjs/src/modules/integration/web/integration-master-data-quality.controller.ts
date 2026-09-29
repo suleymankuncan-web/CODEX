@@ -55,7 +55,7 @@ export class IntegrationMasterDataQualityController {
   @ApiQuery({ name: "offset", required: false, type: Number })
   @ApiOkResponse({ type: MasterDataQualityIssuesResponseDto })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async listIssues(
     @Query() query: ListMasterDataQualityIssuesQueryDto,
     @Req() request: CompanyScopedRequest,
@@ -82,7 +82,7 @@ export class IntegrationMasterDataQualityController {
   @ApiQuery({ name: "offset", required: false, type: Number })
   @ApiOkResponse({ type: MasterDataQualityAuditResponseDto })
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("HR_ADMIN", "SUPER_ADMIN")
   async listAudit(
     @Query() query: ListMasterDataQualityAuditQueryDto,
     @Req() request: CompanyScopedRequest,

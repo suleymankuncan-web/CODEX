@@ -62,7 +62,7 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/master-data',
     icon: DatabaseZap,
     labelKey: 'adminShell.nav.masterData',
-    roles: ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'],
+    roles: ['SUPER_ADMIN', 'HR_ADMIN'],
     section: 'primary',
   },
   {
@@ -150,7 +150,7 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/integrations',
     icon: DatabaseZap,
     labelKey: 'adminShell.nav.integrations',
-    roles: ['SUPER_ADMIN', 'INTEGRATION_ADMIN'],
+    roles: ['SUPER_ADMIN'],
     section: 'secondary',
   },
   {
@@ -158,7 +158,7 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/snapshots',
     icon: Layers3,
     labelKey: 'adminShell.nav.snapshots',
-    roles: ['SUPER_ADMIN', 'SNAPSHOT_OPERATOR'],
+    roles: ['SUPER_ADMIN'],
     section: 'secondary',
   },
   {
@@ -174,7 +174,7 @@ export const adminNavDefinitions: NavDefinition[] = [
     to: '/admin/audit',
     icon: Fingerprint,
     labelKey: 'adminShell.nav.audit',
-    roles: ['SUPER_ADMIN', 'AUDITOR'],
+    roles: ['SUPER_ADMIN'],
     section: 'secondary',
   },
   {
@@ -184,11 +184,8 @@ export const adminNavDefinitions: NavDefinition[] = [
     labelKey: 'adminShell.nav.session',
     roles: [
       'SUPER_ADMIN',
-      'INTEGRATION_ADMIN',
       'HR_ADMIN',
-      'SNAPSHOT_OPERATOR',
       'REGION_MANAGER',
-      'AUDITOR',
       'STORE_MANAGER',
       'STORE_PERSONNEL',
       'VISUAL_MERCHANDISER',

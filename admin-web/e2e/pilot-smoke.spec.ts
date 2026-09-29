@@ -33,7 +33,7 @@ test.beforeEach(async ({ context, page }) => {
         mode: 'mock',
         mockUserId: 'pilot-smoke-user',
         mockRoleCodes:
-          'SUPER_ADMIN,INTEGRATION_ADMIN,REPORT_VIEWER,REGION_MANAGER,STORE_MANAGER',
+          'SUPER_ADMIN,REPORT_VIEWER,REGION_MANAGER,STORE_MANAGER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
@@ -833,7 +833,6 @@ const authSessionFixture = {
     employeeId,
     roleCodes: [
       'SUPER_ADMIN',
-      'INTEGRATION_ADMIN',
       'REPORT_VIEWER',
       'REGION_MANAGER',
       'STORE_MANAGER',

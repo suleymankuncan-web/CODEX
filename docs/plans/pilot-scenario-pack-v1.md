@@ -89,9 +89,6 @@ Stop rule:
 
 | Role | Current Use | Pilot Rule |
 | --- | --- | --- |
-| `INTEGRATION_ADMIN` | Import/integration separation-of-duties role. | Do not create a new persona just to satisfy old evidence wording; current pilot upload proof is accepted through `SUPER_ADMIN`. |
-| `AUDITOR` | Audit center visibility. | Treat as a support role unless an audit-specific pilot session is scoped. |
-| `SNAPSHOT_OPERATOR` | Snapshot operations. | Treat as a support role unless snapshot operations are part of the pilot script. |
 | `VISUAL_MERCHANDISER` | Checklist/task specialization. | Treat as a specialized store-facing role, not a default store pilot persona. |
 
 ## Pilot Day Scenario

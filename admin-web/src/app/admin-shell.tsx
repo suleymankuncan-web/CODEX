@@ -98,11 +98,8 @@ export function AdminShell(input: {
               path="/admin/session"
               element={adminRoute([
                 'SUPER_ADMIN',
-                'INTEGRATION_ADMIN',
                 'HR_ADMIN',
-                'SNAPSHOT_OPERATOR',
                 'REGION_MANAGER',
-                'AUDITOR',
                 'STORE_MANAGER',
                 'STORE_PERSONNEL',
                 'VISUAL_MERCHANDISER',
@@ -120,27 +117,27 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/integrations"
-              element={adminRoute(['SUPER_ADMIN', 'INTEGRATION_ADMIN'], <IntegrationDashboardPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <IntegrationDashboardPage />)}
             />
             <Route
               path="/admin/integrations/:batchId"
-              element={adminRoute(['SUPER_ADMIN', 'INTEGRATION_ADMIN'], <ImportBatchDetailPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <ImportBatchDetailPage />)}
             />
             <Route
               path="/admin/master-data"
-              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'], <MasterDataBootstrapPage />)}
+              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN'], <MasterDataBootstrapPage />)}
             />
             <Route
               path="/admin/master-data/:batchId"
-              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN'], <MasterDataBootstrapPage />)}
+              element={adminRoute(['SUPER_ADMIN', 'HR_ADMIN'], <MasterDataBootstrapPage />)}
             />
             <Route
               path="/admin/snapshots"
-              element={adminRoute(['SUPER_ADMIN', 'SNAPSHOT_OPERATOR'], <SnapshotsDashboardPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <SnapshotsDashboardPage />)}
             />
             <Route
               path="/admin/snapshots/:snapshotRunId"
-              element={adminRoute(['SUPER_ADMIN', 'SNAPSHOT_OPERATOR'], <SnapshotRunDetailPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <SnapshotRunDetailPage />)}
             />
             <Route
               path="/admin/inbox"
@@ -220,19 +217,19 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/audit/users/:userId/audit"
-              element={adminRoute(['SUPER_ADMIN', 'AUDITOR'], <AuthUserAuditPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <AuthUserAuditPage />)}
             />
             <Route
               path="/admin/audit/role-assignments/:assignmentId/audit"
-              element={adminRoute(['SUPER_ADMIN', 'AUDITOR'], <AuthAssignmentAuditPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <AuthAssignmentAuditPage />)}
             />
             <Route
               path="/admin/audit/action-store-assignments/:assignmentId/audit"
-              element={adminRoute(['SUPER_ADMIN', 'AUDITOR'], <AuthActionStoreAssignmentAuditPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <AuthActionStoreAssignmentAuditPage />)}
             />
             <Route
               path="/admin/audit"
-              element={adminRoute(['SUPER_ADMIN', 'AUDITOR'], <AuditCenterPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <AuditCenterPage />)}
             />
                 <Route path="*" element={<Navigate to={input.firstAllowedPath} replace />} />
               </Routes>

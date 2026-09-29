@@ -22,7 +22,7 @@ export class SnapshotSchedulerController {
 
   @Get("daily-closure")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async getDailyClosureStatus(
     @Req()
     request: {
@@ -38,7 +38,7 @@ export class SnapshotSchedulerController {
 
   @Post("daily-closure/run")
   @RequireScope("company")
-  @RequireRoles("SNAPSHOT_OPERATOR")
+  @RequireRoles("SUPER_ADMIN")
   async runDailyClosure(
     @Req()
     request: {

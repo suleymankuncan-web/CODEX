@@ -12,12 +12,9 @@
     ]
   },
   "roleCatalog": [
-    "AUDITOR",
     "HR_ADMIN",
-    "INTEGRATION_ADMIN",
     "REGION_MANAGER",
     "REPORT_VIEWER",
-    "SNAPSHOT_OPERATOR",
     "STORE_MANAGER",
     "STORE_PERSONNEL",
     "SUPER_ADMIN",
@@ -47,7 +44,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 237
+        "line": 234
       }
     },
     {
@@ -97,17 +94,15 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 233
+        "line": 230
       }
     },
     {
@@ -121,14 +116,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/audit",
       "runtimeRoles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 229
+        "line": 226
       }
     },
     {
@@ -142,14 +136,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/audit",
       "runtimeRoles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 225
+        "line": 222
       }
     },
     {
@@ -163,14 +156,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/audit",
       "runtimeRoles": [
-        "AUDITOR",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 221
+        "line": 218
       }
     },
     {
@@ -192,7 +184,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 201
+        "line": 198
       }
     },
     {
@@ -212,7 +204,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 217
+        "line": 214
       }
     },
     {
@@ -232,7 +224,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 205
+        "line": 202
       }
     },
     {
@@ -252,7 +244,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 213
+        "line": 210
       }
     },
     {
@@ -272,7 +264,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 209
+        "line": 206
       }
     },
     {
@@ -296,7 +288,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 153
+        "line": 150
       }
     },
     {
@@ -322,7 +314,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 157
+        "line": 154
       }
     },
     {
@@ -344,7 +336,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 117
+        "line": 114
       }
     },
     {
@@ -370,7 +362,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 149
+        "line": 146
       }
     },
     {
@@ -394,7 +386,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 145
+        "line": 142
       }
     },
     {
@@ -416,7 +408,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 189
+        "line": 186
       }
     },
     {
@@ -430,17 +422,15 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 121
+        "line": 118
       }
     },
     {
@@ -454,14 +444,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/integrations",
       "runtimeRoles": [
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 125
+        "line": 122
       }
     },
     {
@@ -483,7 +472,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 193
+        "line": 190
       }
     },
     {
@@ -498,18 +487,16 @@
       "previewOwnership": "direct",
       "runtimeRoles": [
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 129
+        "line": 126
       }
     },
     {
@@ -524,14 +511,13 @@
       "previewOwnership": "inherits:/admin/master-data",
       "runtimeRoles": [
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 133
+        "line": 130
       }
     },
     {
@@ -553,7 +539,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 113
+        "line": 110
       }
     },
     {
@@ -575,7 +561,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 197
+        "line": 194
       }
     },
     {
@@ -597,7 +583,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 161
+        "line": 158
       }
     },
     {
@@ -617,7 +603,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 177
+        "line": 174
       }
     },
     {
@@ -637,7 +623,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 173
+        "line": 170
       }
     },
     {
@@ -657,7 +643,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 165
+        "line": 162
       }
     },
     {
@@ -677,7 +663,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 181
+        "line": 178
       }
     },
     {
@@ -697,7 +683,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 169
+        "line": 166
       }
     },
     {
@@ -711,22 +697,16 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
       "previewRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -749,17 +729,15 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN"
       ],
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 137
+        "line": 134
       }
     },
     {
@@ -773,14 +751,13 @@
       "matrixOwnership": "inherited",
       "previewOwnership": "inherits:/admin/snapshots",
       "runtimeRoles": [
-        "SNAPSHOT_OPERATOR",
         "SUPER_ADMIN"
       ],
       "previewRoles": null,
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 141
+        "line": 138
       }
     },
     {
@@ -804,7 +781,7 @@
       "authorization": null,
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 185
+        "line": 182
       }
     },
     {
@@ -872,24 +849,18 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
       "previewRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -902,7 +873,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 188
+        "line": 182
       }
     },
     {
@@ -934,7 +905,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 359
+        "line": 353
       }
     },
     {
@@ -968,7 +939,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 206
+        "line": 200
       }
     },
     {
@@ -998,7 +969,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 342
+        "line": 336
       }
     },
     {
@@ -1012,24 +983,18 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
       "previewRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -1042,7 +1007,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 324
+        "line": 318
       }
     },
     {
@@ -1056,23 +1021,17 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
@@ -1084,7 +1043,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 187
+        "line": 181
       }
     },
     {
@@ -1102,12 +1061,9 @@
         "REPORT_VIEWER"
       ],
       "previewRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
@@ -1119,7 +1075,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 376
+        "line": 370
       }
     },
     {
@@ -1151,7 +1107,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 259
+        "line": 253
       }
     },
     {
@@ -1179,7 +1135,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 276
+        "line": 270
       }
     },
     {
@@ -1213,7 +1169,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 293
+        "line": 287
       }
     },
     {
@@ -1247,7 +1203,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 307
+        "line": 301
       }
     },
     {
@@ -1261,14 +1217,12 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "REGION_MANAGER",
         "REPORT_VIEWER",
         "STORE_MANAGER",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "AUDITOR",
         "REGION_MANAGER",
         "REPORT_VIEWER",
         "STORE_MANAGER",
@@ -1281,7 +1235,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 447
+        "line": 441
       }
     },
     {
@@ -1295,24 +1249,18 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
       "previewRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN",
@@ -1325,7 +1273,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 393
+        "line": 387
       }
     },
     {
@@ -1357,7 +1305,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 411
+        "line": 405
       }
     },
     {
@@ -1389,7 +1337,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 242
+        "line": 236
       }
     },
     {
@@ -1415,7 +1363,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 226
+        "line": 220
       }
     },
     {
@@ -1447,7 +1395,7 @@
       },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 430
+        "line": 424
       }
     }
   ],
@@ -1456,10 +1404,7 @@
       "id": "store-incentives-preview-extra-roles",
       "route": "/store/incentives",
       "previewExtraRoles": [
-        "AUDITOR",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"

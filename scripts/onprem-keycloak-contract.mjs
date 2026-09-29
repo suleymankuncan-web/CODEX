@@ -355,9 +355,16 @@ export function validateOnpremKeycloakContract(input) {
     }
   }
   fail(!/StoreOps123|admin\s*[:=]\s*admin|demo\.(?:user|manager|operator)/i.test(input.realmConfig), 'sanitized realm configuration must not contain demo credentials or users')
-  for (const role of ['STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER', 'STORE_PERSONNEL', 'VISUAL_MERCHANDISER']) {
+  for (const role of ['SUPER_ADMIN', 'HR_ADMIN', 'STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER', 'STORE_PERSONNEL', 'VISUAL_MERCHANDISER']) {
     fail(new RegExp(role).test(input.bootstrapScript) || new RegExp(role).test(input.realmConfig), `bootstrap must define the synthetic ${role} role contract`)
   }
+  for (const retiredRole of ['AUDITOR', 'INTEGRATION_ADMIN', 'SNAPSHOT_OPERATOR', 'VM_REFERENCE_PUBLISHER', 'VM_VISUAL_REVIEWER', 'VM_CAMPAIGN_WINDOW_AUTHORITY', 'VM_CAMPAIGN_SCOPE_AUTHORITY', 'VM_CAMPAIGN_EMERGENCY_AUTHORITY']) {
+    fail(!new RegExp(`"name"\\s*:\\s*"${retiredRole}"`).test(input.realmConfig), `sanitized realm configuration must omit retired role ${retiredRole}`)
+    fail(new RegExp(`for retired_role in[\\s\\S]*${retiredRole}`).test(input.bootstrapScript), `bootstrap must reconcile retired role ${retiredRole}`)
+  }
+  fail(/realm role listing failed before retired-role reconciliation/.test(input.bootstrapScript)
+    && /realm role listing failed after retired-role reconciliation/.test(input.bootstrapScript)
+    && /retired realm role remains after reconciliation/.test(input.bootstrapScript), 'retired role reconciliation must use successful realm listings and fail closed')
   for (const claim of ['roles', 'company_ids', 'region_ids', 'store_ids', 'read_company_ids', 'read_region_ids', 'read_store_ids', 'assigned_store_ids']) {
     fail(new RegExp(claim).test(input.bootstrapScript) || new RegExp(claim).test(input.realmConfig), `bootstrap must configure the ${claim} claim mapper`)
   }

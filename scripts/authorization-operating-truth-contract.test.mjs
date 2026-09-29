@@ -28,12 +28,9 @@ test('authorization operating truth is generated from every active frontend rout
   assert.equal(current.summary.routeCount, current.routes.length)
   assert.equal(current.previewOrphans.length, 0)
   assert.deepEqual(current.roleCatalog, [
-    'AUDITOR',
     'HR_ADMIN',
-    'INTEGRATION_ADMIN',
     'REGION_MANAGER',
     'REPORT_VIEWER',
-    'SNAPSHOT_OPERATOR',
     'STORE_MANAGER',
     'STORE_PERSONNEL',
     'SUPER_ADMIN',
