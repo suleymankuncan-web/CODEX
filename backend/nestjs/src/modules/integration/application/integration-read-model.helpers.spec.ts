@@ -70,6 +70,11 @@ describe("integration read model helpers", () => {
         kpi_import_enabled: true,
         region_id: "region-1",
         region_name: "Marmara",
+        contact_emails: [{ emailAddress: "store@example.com", label: "Main", isPrimary: true }],
+        ingest_status: "ready",
+        matched_source_count: 2,
+        active_source_count: 2,
+        last_successful_kpi_date: "2026-06-29",
         updated_at: "2026-06-30T10:00:00.000Z",
       }),
     ).toEqual({
@@ -83,6 +88,11 @@ describe("integration read model helpers", () => {
       regionName: "Marmara",
       regionManagerUserId: null,
       regionManagerName: null,
+      contactEmails: [{ emailAddress: "store@example.com", label: "Main", isPrimary: true }],
+      ingestStatus: "ready",
+      matchedSourceCount: 2,
+      activeSourceCount: 2,
+      lastSuccessfulKpiDate: "2026-06-29",
       updatedAt: "2026-06-30T10:00:00.000Z",
     });
   });

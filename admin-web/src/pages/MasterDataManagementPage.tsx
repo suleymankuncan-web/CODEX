@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
+import { Checkbox } from '../components/ui/checkbox'
 import { Label } from '../components/ui/label'
 import {
   Select,
@@ -65,7 +66,7 @@ import { actionToast } from '../lib/action-toast'
 import { AdminStatePanel, AdminSurfaceHeader, AdminSurfacePage } from './admin-surface-primitives'
 import { resolveStoreRegionManager, type RegionManagerOption } from './master-data-region-manager'
 import { MasterDataStoreCombobox } from './master-data-store-combobox'
-import { validateStoreMasterDrafts } from './master-data-store-transition'
+import { validateStoreContactEmails, validateStoreMasterDrafts } from './master-data-store-transition'
 import { PaginationFooter, RecordArea } from './master-data-management-list-support'
 
 type Workspace = 'stores' | 'personnel'
@@ -138,6 +139,7 @@ export function MasterDataManagementPage() {
           regionManagerUserId: manager.userId,
           status: draft.status,
           kpiImportEnabled: draft.kpiImportEnabled,
+          contactEmails: draft.contactEmails.map((email) => ({ emailAddress: email.emailAddress, isPrimary: email.isPrimary, ...(email.label ? { label: email.label } : {}) })),
         })
       }
       if (!storeEditor) throw new Error('Mağaza seçilemedi.')
@@ -151,6 +153,7 @@ export function MasterDataManagementPage() {
         regionManagerUserId: manager.userId,
         status: draft.status,
         kpiImportEnabled: draft.kpiImportEnabled,
+        contactEmails: draft.contactEmails.map((email) => ({ emailAddress: email.emailAddress, isPrimary: email.isPrimary, ...(email.label ? { label: email.label } : {}) })),
         ...(storeEditor.updatedAt ? { expectedUpdatedAt: storeEditor.updatedAt } : {}),
       })
     },
@@ -388,6 +391,7 @@ function StoreList({ items, managers, onEdit }: {
               <TableHead>Bölge müdürü</TableHead>
               <TableHead>Tür</TableHead>
               <TableHead>Durum</TableHead>
+              <TableHead>KPI aktarımı</TableHead>
               <TableHead className="tw:pr-5 tw:text-right"><span className="tw:sr-only">İşlem</span></TableHead>
             </TableRow>
           </TableHeader>
@@ -406,6 +410,7 @@ function StoreList({ items, managers, onEdit }: {
                   </TableCell>
                   <TableCell className="tw:text-muted-foreground">{storeTypeLabel(item.storeType)}</TableCell>
                   <TableCell><StatusBadge status={item.status} /></TableCell>
+                  <TableCell><div className="tw:text-sm tw:font-medium">{storeIngestStatusLabel(item.ingestStatus)} · {item.matchedSourceCount}/{item.activeSourceCount} kaynak</div><div className="tw:mt-0.5 tw:text-xs tw:text-muted-foreground">{item.contactEmails.find((email) => email.isPrimary)?.emailAddress ?? 'E-posta yok'}{item.lastSuccessfulKpiDate ? ` · Son veri ${item.lastSuccessfulKpiDate}` : ' · Henüz veri yok'}</div></TableCell>
                   <TableCell className="tw:pr-5 tw:text-right">
                     <Button aria-label={`${item.storeName} mağazasını düzenle`} onClick={() => onEdit(item)} size="sm" variant="ghost">
                       <PencilLine aria-hidden="true" /> Düzenle
@@ -433,7 +438,7 @@ function StoreList({ items, managers, onEdit }: {
               </span>
               <span className="tw:min-w-0 tw:flex-1">
                 <span className="tw:block tw:truncate tw:font-semibold">{item.storeName}</span>
-                <span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{item.storeCode} · {manager.displayName}</span>
+                <span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{item.storeCode} · {manager.displayName} · {storeIngestStatusLabel(item.ingestStatus)} {item.matchedSourceCount}/{item.activeSourceCount}{item.lastSuccessfulKpiDate ? ` · ${item.lastSuccessfulKpiDate}` : ''}</span>
               </span>
               <StatusBadge status={item.status} />
             </button>
@@ -560,6 +565,7 @@ type StoreDraft = {
   regionManagerUserId: string
   status: 'active' | 'inactive' | 'closed'
   kpiImportEnabled: boolean
+  contactEmails: Array<{ clientId: string; emailAddress: string; label: string | null; isPrimary: boolean }>
 }
 
 function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
@@ -581,6 +587,7 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
     regionManagerUserId: initialManager,
     status: item && item !== 'new' ? item.status as StoreDraft['status'] : 'active',
     kpiImportEnabled: item && item !== 'new' ? item.kpiImportEnabled : true,
+    contactEmails: item && item !== 'new' ? item.contactEmails.map((email, index) => ({ ...email, clientId: `existing-${index}-${email.emailAddress}` })) : [],
   })
   const managerRegionId = managers.find((manager) => manager.userId === draft.regionManagerUserId)?.regionId
   const validationError = item && item !== 'new' ? validateStoreMasterDrafts(
@@ -593,13 +600,14 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
     new Map([[item.storeId, item]]),
     undefined,
   ) : null
-  const valid = Boolean(draft.storeName.trim() && managerRegionId &&
+  const contactEmailError = validateStoreContactEmails(draft.contactEmails)
+  const valid = Boolean(draft.storeName.trim() && managerRegionId && !contactEmailError &&
     /^[A-Z][A-Z0-9_-]{1,79}$/.test(draft.storeCode) && !validationError)
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="tw:gap-0 tw:overflow-hidden tw:p-0 tw:sm:max-w-xl" closeLabel="Kapat">
-        <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4 tw:pr-14"><DialogTitle>{item === 'new' ? 'Mağaza ekle' : 'Mağazayı düzenle'}</DialogTitle><DialogDescription>Mağaza bilgilerini ve sorumlu bölge müdürünü yönetin.</DialogDescription></DialogHeader>
-        <div className="tw:grid tw:gap-4 tw:p-5 tw:sm:grid-cols-2">
+      <DialogContent className="tw:flex tw:max-h-[90vh] tw:flex-col tw:gap-0 tw:overflow-hidden tw:p-0 tw:sm:max-w-xl" closeLabel="Kapat">
+        <DialogHeader className="tw:shrink-0 tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4 tw:pr-14"><DialogTitle>{item === 'new' ? 'Mağaza ekle' : 'Mağazayı düzenle'}</DialogTitle><DialogDescription>Mağaza bilgilerini ve sorumlu bölge müdürünü yönetin.</DialogDescription></DialogHeader>
+        <div className="tw:grid tw:min-h-0 tw:flex-1 tw:gap-4 tw:overflow-y-auto tw:p-5 tw:sm:grid-cols-2">
           <Field label="Mağaza adı"><Input aria-label="Mağaza adı" disabled={item !== 'new'} value={draft.storeName} onChange={(e) => setDraft({ ...draft, storeName: e.target.value })} /></Field>
           <Field label="Mağaza kodu"><Input aria-label="Mağaza kodu" autoCapitalize="characters" maxLength={80} spellCheck={false} value={draft.storeCode} onChange={(e) => setDraft({ ...draft, storeCode: e.target.value.toUpperCase() })} /></Field>
           <Field className="tw:sm:col-span-2" label="Bölge müdürü">
@@ -610,10 +618,16 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
           </Field>
           <Field label="Mağaza türü"><Select value={draft.storeType} onValueChange={(value) => setDraft({ ...draft, storeType: value as StoreDraft['storeType'] })}><SelectTrigger aria-label="Mağaza türü" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="company">Şirket mağazası</SelectItem><SelectItem value="franchise">Franchise</SelectItem><SelectItem value="operator">Operatör</SelectItem></SelectContent></Select></Field>
           <Field label="Durum"><Select value={draft.status} onValueChange={(value) => setDraft({ ...draft, status: value as StoreDraft['status'] })}><SelectTrigger aria-label="Mağaza durumu" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Aktif</SelectItem><SelectItem value="inactive">Pasif</SelectItem><SelectItem value="closed">Kapalı</SelectItem></SelectContent></Select></Field>
+          <label className="tw:flex tw:items-start tw:gap-3 tw:rounded-lg tw:border tw:p-3 tw:sm:col-span-2"><Checkbox aria-label="KPI aktarımına dahil" checked={draft.kpiImportEnabled} onCheckedChange={(checked) => setDraft({ ...draft, kpiImportEnabled: checked === true })} /><span><span className="tw:block tw:text-sm tw:font-medium">KPI aktarımına dahil</span><span className="tw:block tw:text-xs tw:text-muted-foreground">Kapalı olduğunda mağaza günlük KPI aktarımına alınmaz.</span></span></label>
+          <div className="tw:grid tw:gap-3 tw:sm:col-span-2">
+            <div className="tw:flex tw:items-center tw:justify-between"><Label>Mağaza e-posta adresleri</Label><Button disabled={draft.contactEmails.length >= 10} type="button" size="sm" variant="outline" onClick={() => setDraft({ ...draft, contactEmails: [...draft.contactEmails, { clientId: crypto.randomUUID(), emailAddress: '', label: '', isPrimary: draft.contactEmails.length === 0 }] })}><Plus aria-hidden="true" /> E-posta ekle</Button></div>
+            {draft.contactEmails.map((email, index) => <div className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:p-3 tw:sm:grid-cols-[1fr_0.7fr_auto_auto]" key={email.clientId}><Input aria-label={`Mağaza e-posta adresi ${index + 1}`} type="email" value={email.emailAddress} onChange={(event) => setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, emailAddress: event.target.value } : item) })} placeholder="magaza@firma.com" /><Input aria-label={`E-posta etiketi ${index + 1}`} value={email.label ?? ''} onChange={(event) => setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} placeholder="Operasyon" /><label className="tw:flex tw:items-center tw:gap-2 tw:text-sm"><Checkbox aria-label={`Birincil e-posta ${index + 1}`} checked={email.isPrimary} onCheckedChange={(checked) => checked === true && setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index })) })} /> Birincil</label><Button aria-label={`E-posta ${index + 1} adresini kaldır`} type="button" size="sm" variant="ghost" onClick={() => { const next = draft.contactEmails.filter((_, itemIndex) => itemIndex !== index); setDraft({ ...draft, contactEmails: next.length > 0 && !next.some((item) => item.isPrimary) ? next.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === 0 })) : next }) }}>Kaldır</Button></div>)}
+            {contactEmailError ? <p className="tw:text-sm tw:text-destructive" role="alert">{contactEmailError}</p> : null}
+          </div>
           {item && item !== 'new' && draft.storeType !== item.storeType ? <Field className="tw:sm:col-span-2" label="Mağaza tipi geçiş tarihi"><Input aria-label="Mağaza tipi geçiş tarihi" type="date" max={today} value={draft.storeTypeEffectiveOn} onChange={(e) => setDraft({ ...draft, storeTypeEffectiveOn: e.target.value })} /></Field> : null}
           {validationError ? <p className="tw:sm:col-span-2 tw:text-sm tw:text-destructive" role="alert">{validationError}</p> : null}
         </div>
-        <DialogFooter className="tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4"><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => onSave(draft)}><BadgePlus aria-hidden="true" /> {pending ? 'Kaydediliyor' : 'Kaydet'}</Button></DialogFooter>
+        <DialogFooter className="tw:shrink-0 tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4"><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => onSave(draft)}><BadgePlus aria-hidden="true" /> {pending ? 'Kaydediliyor' : 'Kaydet'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -867,4 +881,8 @@ function storeTypeLabel(value: string) {
   if (value === 'franchise') return 'Franchise'
   if (value === 'operator') return 'Operatör'
   return 'Şirket mağazası'
+}
+
+function storeIngestStatusLabel(status: string) {
+  return ({ ready: 'Kaynak eşleşti', partial: 'Kısmi kaynak eşleşmesi', unmatched: 'Kaynak eşleşmedi', no_source: 'Aktif kaynak yok', disabled: 'KPI kapalı', inactive: 'Mağaza pasif' } as Record<string, string>)[status] ?? status
 }

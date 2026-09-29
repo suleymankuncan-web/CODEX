@@ -128,7 +128,6 @@ describe("OpenAPI baseline", () => {
         requestBody: expect.any(Object),
       }),
     );
-
     const needsActionResponse =
       document.paths["/api/integrations/import-batches/needs-action"].get
         .responses?.["200"];

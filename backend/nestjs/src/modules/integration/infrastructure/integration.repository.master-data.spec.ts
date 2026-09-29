@@ -72,6 +72,8 @@ describe("IntegrationRepository master data writes", () => {
       .mockResolvedValueOnce({ rows: [{ is_valid: true }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ active_source_count: 1, matched_source_count: 1, last_successful_kpi_date: "2026-06-30", region_manager_user_id: "manager-1", region_manager_name: "Manager One" }] })
       .mockResolvedValueOnce({ rows: [] });
     const { repository } = createRepository(query);
 
@@ -103,7 +105,7 @@ describe("IntegrationRepository master data writes", () => {
   });
 
   it("changes only the external code while retaining the store identity and auditing the old code", async () => {
-    const query = jest.fn()
+    const query = jest.fn().mockResolvedValue({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ user_id: "actor-1" }] })
       .mockResolvedValueOnce({ rows: [{ store_id: "store-1", company_id: "company-1", store_code: "SM150", store_type: "company", is_current: true }] })
       .mockResolvedValueOnce({ rows: [] })
@@ -139,6 +141,8 @@ describe("IntegrationRepository master data writes", () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ store_id: "store-1", store_code: "FM702", store_type: "franchise" }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ active_source_count: 1, matched_source_count: 1, last_successful_kpi_date: "2026-09-28", region_manager_user_id: null, region_manager_name: null }] })
       .mockResolvedValueOnce({ rows: [] });
     const { repository } = createRepository(query);
 

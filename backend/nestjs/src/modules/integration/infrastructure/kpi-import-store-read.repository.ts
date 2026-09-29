@@ -52,6 +52,7 @@ export class KpiImportStoreReadRepository {
 
   async listKpiImportStoreScope(input: {
     actorCompanyIds: string[];
+    storeId?: string;
     q?: string;
     enabled?: boolean;
     status?: "active" | "inactive" | "closed";
@@ -60,6 +61,10 @@ export class KpiImportStoreReadRepository {
   }) {
     const conditions: string[] = ["s.company_id = ANY($1::uuid[])"];
     const params: unknown[] = [input.actorCompanyIds];
+    if (input.storeId) {
+      params.push(input.storeId);
+      conditions.push(`s.store_id = $${params.length}::uuid`);
+    }
 
     const search = input.q?.trim();
     if (search) {
@@ -68,8 +73,31 @@ export class KpiImportStoreReadRepository {
         s.store_name ILIKE $${params.length}
         OR s.store_code ILIKE $${params.length}
         OR r.region_name ILIKE $${params.length}
-        OR region_manager.region_manager_name ILIKE $${params.length}
-        OR region_manager.region_manager_email ILIKE $${params.length}
+        OR EXISTS (
+          SELECT 1
+          FROM ops.user_action_store_assignment manager_store_search
+          JOIN ops.user_account manager_user_search
+            ON manager_user_search.user_id=manager_store_search.user_id
+           AND manager_user_search.is_active=TRUE
+          LEFT JOIN ops.employee manager_employee_search
+            ON manager_employee_search.employee_id=manager_user_search.employee_id
+          WHERE manager_store_search.store_id=s.store_id
+            AND manager_store_search.start_at<=NOW()
+            AND (manager_store_search.end_at IS NULL OR manager_store_search.end_at>NOW())
+            AND EXISTS (
+              SELECT 1 FROM ops.user_role_assignment manager_role_search
+              JOIN ops.role manager_role_catalog
+                ON manager_role_catalog.role_id=manager_role_search.role_id
+               AND manager_role_catalog.role_code='REGION_MANAGER'
+              WHERE manager_role_search.user_id=manager_store_search.user_id
+                AND manager_role_search.start_at<=NOW()
+                AND (manager_role_search.end_at IS NULL OR manager_role_search.end_at>NOW())
+            )
+            AND (
+              COALESCE(NULLIF(BTRIM(CONCAT(manager_employee_search.first_name,' ',manager_employee_search.last_name)),''),manager_user_search.username,manager_user_search.email) ILIKE $${params.length}
+              OR manager_user_search.email ILIKE $${params.length}
+            )
+        )
       )`);
     }
 
@@ -88,6 +116,8 @@ export class KpiImportStoreReadRepository {
       FROM ops.store s
       LEFT JOIN ops.region r
         ON r.region_id = s.region_id
+    `;
+    const managerClause = `
       LEFT JOIN LATERAL (
         SELECT
           manager_store.user_id::text AS region_manager_user_id,
@@ -120,6 +150,32 @@ export class KpiImportStoreReadRepository {
         LIMIT 1
       ) region_manager ON TRUE
     `;
+    const enrichmentClause = `
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(jsonb_agg(jsonb_build_object(
+          'emailAddress', contact.email_address,
+          'label', contact.label,
+          'isPrimary', contact.is_primary
+        ) ORDER BY contact.is_primary DESC, contact.email_address), '[]'::jsonb) AS contact_emails
+        FROM ops.store_contact_email contact
+        WHERE contact.store_id = s.store_id AND contact.is_active = TRUE
+      ) contacts ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT
+          (SELECT COUNT(*)::int FROM stg.integration_source source
+           WHERE source.is_active = TRUE AND source.entity_type = 'kpi') AS active_source_count,
+          (SELECT COUNT(DISTINCT map.integration_source_id)::int
+           FROM stg.external_id_map map
+           JOIN stg.integration_source source ON source.integration_source_id = map.integration_source_id
+           WHERE map.internal_id = s.store_id AND map.entity_type = 'store' AND map.is_active = TRUE
+             AND source.is_active = TRUE AND source.entity_type = 'kpi') AS matched_source_count,
+          (SELECT MAX(sales.business_date)::text
+           FROM ops.company_daily_kpi_store_sales sales
+           JOIN ops.company_daily_kpi_component_outcome outcome
+             ON outcome.component_outcome_id = sales.component_outcome_id
+           WHERE sales.store_id = s.store_id AND outcome.status = 'succeeded') AS last_successful_kpi_date
+      ) ingest ON TRUE
+    `;
     const totalResult = await this.databaseService.query<{ total_count: string }>(
       `
         SELECT COUNT(*)::text AS total_count
@@ -144,8 +200,21 @@ export class KpiImportStoreReadRepository {
       region_manager_user_id: string | null;
       region_manager_name: string | null;
       updated_at: string;
+      contact_emails: Array<{ emailAddress: string; label: string | null; isPrimary: boolean }>;
+      ingest_status: string;
+      matched_source_count: number;
+      active_source_count: number;
+      last_successful_kpi_date: string | null;
     }>(
       `
+        WITH store_page AS MATERIALIZED (
+          SELECT s.store_id, s.store_name, s.store_code
+          ${fromClause}
+          ${whereClause}
+          ORDER BY s.store_name ASC, s.store_code ASC
+          LIMIT $${params.length + 1}
+          OFFSET $${params.length + 2}
+        )
         SELECT
           s.store_id::text AS store_id,
           s.store_code,
@@ -157,12 +226,25 @@ export class KpiImportStoreReadRepository {
           r.region_name,
           region_manager.region_manager_user_id,
           region_manager.region_manager_name,
+          contacts.contact_emails,
+          CASE
+            WHEN s.kpi_import_enabled = FALSE THEN 'disabled'
+            WHEN s.status <> 'active' THEN 'inactive'
+            WHEN ingest.active_source_count = 0 THEN 'no_source'
+            WHEN ingest.matched_source_count = ingest.active_source_count THEN 'ready'
+            WHEN ingest.matched_source_count > 0 THEN 'partial'
+            ELSE 'unmatched'
+          END AS ingest_status,
+          ingest.matched_source_count,
+          ingest.active_source_count,
+          ingest.last_successful_kpi_date,
           s.updated_at::text AS updated_at
-        ${fromClause}
-        ${whereClause}
-        ORDER BY s.store_name ASC, s.store_code ASC
-        LIMIT $${params.length + 1}
-        OFFSET $${params.length + 2}
+        FROM store_page page
+        JOIN ops.store s ON s.store_id = page.store_id
+        LEFT JOIN ops.region r ON r.region_id = s.region_id
+        ${managerClause}
+        ${enrichmentClause}
+        ORDER BY page.store_name ASC, page.store_code ASC
       `,
       listParams,
     );

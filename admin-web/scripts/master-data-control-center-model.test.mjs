@@ -71,12 +71,19 @@ test('master data workbench adapters map store and personnel records', () => {
     regionName: 'Onur Kaytan Bölgesi',
     status: 'active',
     kpiImportEnabled: true,
+    contactEmails: [{ emailAddress: 'store@example.com', label: 'Main', isPrimary: true }],
+    ingestStatus: 'ready',
+    matchedSourceCount: 1,
+    activeSourceCount: 1,
+    lastSuccessfulKpiDate: '2026-06-29',
     storeManagerName: 'Mert Alcan',
     updatedAt: '2026-06-30T12:00:00.000Z',
   })
   assert.equal(store.title, 'Balıkesir 10 Burda AVM')
   assert.equal(store.typeLabel, 'Şirket mağazası')
-  assert.equal(store.kpiLabel, 'KPI aktarımı açık')
+  assert.equal(store.kpiLabel, 'Kaynak eşleşti · 1/1 kaynak')
+  assert.equal(store.primaryEmailLabel, 'store@example.com')
+  assert.equal(store.lastKpiDateLabel, '2026-06-29')
 
   const personnel = model.mapPersonnelMasterToWorkbenchRow({
     employeeId: 'employee-1',

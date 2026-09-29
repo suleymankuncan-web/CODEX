@@ -188,3 +188,11 @@ export function applyMasterDataResponseSchemas(paths: Record<string, unknown>) {
     "PersonnelMasterCommandResponse",
   );
 }
+
+export function applyMasterDataRequestSchemas(schemas: Record<string, unknown>) {
+  for (const schemaName of ["CreateStoreMasterDto", "UpdateStoreMasterDto"]) {
+    const schema = schemas[schemaName] as { properties?: Record<string, Record<string, unknown>> } | undefined;
+    const contactEmails = schema?.properties?.contactEmails;
+    if (contactEmails) contactEmails.maxItems = 10;
+  }
+}

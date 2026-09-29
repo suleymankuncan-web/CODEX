@@ -37,6 +37,7 @@ import {
   type PersonnelMasterPatch,
   type StoreMasterPatch,
 } from './master-data-bootstrap-model'
+import { validateStoreContactEmails } from './master-data-store-transition'
 import { getMasterDataImpactModules } from './master-data-impact-rules'
 import type {
   MasterDataAuditRow,
@@ -171,6 +172,7 @@ function StoreDetail(input: {
     entityType: 'store',
     changedFields: Object.keys(input.draft),
   })
+  const contactEmailError = validateStoreContactEmails(effective.contactEmails)
 
   return (
     <DetailFrame
@@ -183,6 +185,8 @@ function StoreDetail(input: {
         <MiniCard label="Tip" value={input.store.typeLabel} />
         <MiniCard label="Bölge" value={input.store.region} />
         <MiniCard label="KPI" value={input.store.kpiLabel} />
+        <MiniCard label="Son KPI verisi" value={input.store.lastKpiDateLabel} />
+        <MiniCard label="Birincil e-posta" value={input.store.primaryEmailLabel} />
         <MiniCard label="Güncelleme" value={formatDate(input.store.updatedAt)} />
       </div>
       <div className="master-data-control-center__form">
@@ -283,12 +287,17 @@ function StoreDetail(input: {
           />
           <span>KPI aktarımına dahil</span>
         </label>
+        <div className="grid gap-3">
+          <div className="flex items-center justify-between"><strong>Mağaza e-posta adresleri</strong><Button disabled={effective.contactEmails.length >= 10} type="button" size="sm" variant="outline" onClick={() => input.onUpdate(input.store!.id, { contactEmails: [...effective.contactEmails, { clientId: crypto.randomUUID(), emailAddress: '', label: '', isPrimary: effective.contactEmails.length === 0 }] })}>E-posta ekle</Button></div>
+          {effective.contactEmails.map((email, index) => <div className="grid gap-2 rounded-lg border p-3 md:grid-cols-[1fr_0.7fr_auto_auto]" key={'clientId' in email ? String(email.clientId) : `existing-${index}`}><Input aria-label={`Mağaza e-posta adresi ${index + 1}`} type="email" value={email.emailAddress} onChange={(event) => input.onUpdate(input.store!.id, { contactEmails: effective.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, emailAddress: event.target.value } : item) })} /><Input aria-label={`E-posta etiketi ${index + 1}`} value={email.label ?? ''} onChange={(event) => input.onUpdate(input.store!.id, { contactEmails: effective.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} /><label className="flex items-center gap-2"><Checkbox aria-label={`Birincil e-posta ${index + 1}`} checked={email.isPrimary} onCheckedChange={(checked) => checked === true && input.onUpdate(input.store!.id, { contactEmails: effective.contactEmails.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index })) })} /> Birincil</label><Button aria-label={`E-posta ${index + 1} adresini kaldır`} type="button" size="sm" variant="ghost" onClick={() => { const next = effective.contactEmails.filter((_, itemIndex) => itemIndex !== index); input.onUpdate(input.store!.id, { contactEmails: next.length > 0 && !next.some((item) => item.isPrimary) ? next.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === 0 })) : next }) }}>Kaldır</Button></div>)}
+          {contactEmailError ? <p className="text-sm text-destructive" role="alert">{contactEmailError}</p> : null}
+        </div>
         <Textarea aria-label="Not" placeholder="Kontrol notu" />
       </div>
       <ImpactList modules={modules} />
       <SaveBar
         conflictMessage={input.conflictMessage}
-        disabled={input.unsavedCount === 0 || input.isSaving}
+        disabled={input.unsavedCount === 0 || input.isSaving || Boolean(contactEmailError)}
         isSaving={input.isSaving}
         unsavedCount={input.unsavedCount}
         onSave={input.onSave}

@@ -134,6 +134,11 @@ export function mapStoreMaster(item: {
   region_manager_user_id?: string | null;
   region_manager_name?: string | null;
   updated_at?: string;
+  contact_emails?: Array<{ emailAddress: string; label: string | null; isPrimary: boolean }>;
+  ingest_status?: string;
+  matched_source_count?: number;
+  active_source_count?: number;
+  last_successful_kpi_date?: string | null;
 }) {
   return {
     storeId: item.store_id,
@@ -146,6 +151,11 @@ export function mapStoreMaster(item: {
     regionName: item.region_name,
     regionManagerUserId: item.region_manager_user_id ?? null,
     regionManagerName: item.region_manager_name ?? null,
+    contactEmails: item.contact_emails ?? [],
+    ingestStatus: item.ingest_status ?? (item.kpi_import_enabled ? "unmatched" : "disabled"),
+    matchedSourceCount: item.matched_source_count ?? 0,
+    activeSourceCount: item.active_source_count ?? 0,
+    lastSuccessfulKpiDate: item.last_successful_kpi_date ?? null,
     updatedAt: item.updated_at ?? null,
   };
 }

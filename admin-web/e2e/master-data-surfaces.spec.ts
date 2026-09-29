@@ -70,6 +70,23 @@ test('master data management stays mobile-safe', async ({ page }) => {
   await expectNoHorizontalOverflow(page)
 })
 
+test('store contact rows keep focus while typing and remain removable', async ({ page }) => {
+  await page.goto('/admin/master-data')
+  await page.getByRole('button', { name: 'Accepted personnel baseline mağazasını düzenle' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Mağazayı düzenle' })
+  const existingEmail = dialog.getByLabel('Mağaza e-posta adresi 1')
+  await existingEmail.fill('')
+  await existingEmail.pressSequentially('typed@example.com')
+  await expect(existingEmail).toBeFocused()
+  await expect(existingEmail).toHaveValue('typed@example.com')
+  await dialog.getByRole('button', { name: 'E-posta ekle' }).click()
+  const secondEmail = dialog.getByLabel('Mağaza e-posta adresi 2')
+  await secondEmail.pressSequentially('ops@example.com')
+  await expect(secondEmail).toBeFocused()
+  await dialog.getByRole('button', { name: /E-posta 2 adresini kaldır/ }).click()
+  await expect(dialog.getByLabel('Mağaza e-posta adresi 2')).toHaveCount(0)
+})
+
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))

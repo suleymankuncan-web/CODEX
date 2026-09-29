@@ -18,7 +18,7 @@ import {
   setJsonResponseSchema,
 } from "./openapi-schema-helpers";
 import {
-  applyMasterDataResponseSchemas,
+  applyMasterDataResponseSchemas, applyMasterDataRequestSchemas,
   createMasterDataCommandResponseSchemas,
   masterDataQualityAuditItemSchema,
   masterDataQualityIssueEntitySummarySchema, masterDataQualityIssueItemSchema,
@@ -4851,8 +4851,7 @@ async function generateOpenApi(): Promise<void> {
     "Integration lookup options for admin import and source management screens.",
     "IntegrationLookups",
   );
-
-  applyMasterDataResponseSchemas(document.paths);
+  applyMasterDataRequestSchemas(document.components.schemas); applyMasterDataResponseSchemas(document.paths);
 
   setJsonResponseSchema(
     document.paths,

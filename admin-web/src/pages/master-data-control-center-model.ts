@@ -57,6 +57,8 @@ export type MasterDataStoreWorkbenchRow = {
   typeLabel: string
   statusLabel: string
   kpiLabel: string
+  primaryEmailLabel: string
+  lastKpiDateLabel: string
   updatedAt: string | null
   record: StoreMasterItem
 }
@@ -267,10 +269,16 @@ export function mapStoreMasterToWorkbenchRow(store: StoreMasterItem): MasterData
     region: store.regionName ?? 'Bölge seçilmedi',
     typeLabel: formatStoreTypeLabel(normalizeStoreType(store.storeType)),
     statusLabel: formatStoreStatusLabel(normalizeStoreStatus(store.status)),
-    kpiLabel: store.kpiImportEnabled ? 'KPI aktarımı açık' : 'KPI aktarımı kapalı',
+    kpiLabel: `${formatIngestStatus(store.ingestStatus)} · ${store.matchedSourceCount}/${store.activeSourceCount} kaynak`,
+    primaryEmailLabel: store.contactEmails.find((email) => email.isPrimary)?.emailAddress ?? 'E-posta yok',
+    lastKpiDateLabel: store.lastSuccessfulKpiDate ?? 'Henüz veri yok',
     updatedAt: store.updatedAt,
     record: store,
   }
+}
+
+function formatIngestStatus(status: string) {
+  return ({ ready: 'Kaynak eşleşti', partial: 'Kısmi kaynak eşleşmesi', unmatched: 'Kaynak eşleşmedi', no_source: 'Aktif kaynak yok', disabled: 'KPI kapalı', inactive: 'Mağaza pasif' } as Record<string, string>)[status] ?? status
 }
 
 export function mapPersonnelMasterToWorkbenchRow(

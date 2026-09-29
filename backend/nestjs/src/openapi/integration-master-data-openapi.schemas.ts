@@ -31,11 +31,28 @@ export const storeMasterItemSchema = {
   type: "object",
   required: [
     "storeId", "storeCode", "storeName", "storeType", "status", "kpiImportEnabled", "regionId",
-    "regionName", "regionManagerUserId", "regionManagerName", "updatedAt",
+    "regionName", "regionManagerUserId", "regionManagerName", "contactEmails", "ingestStatus",
+    "matchedSourceCount", "activeSourceCount", "lastSuccessfulKpiDate", "updatedAt",
   ],
   properties: {
     ...stringProperties(["storeId", "storeCode", "storeName", "storeType", "status"]),
     kpiImportEnabled: { type: "boolean" },
+    contactEmails: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["emailAddress", "label", "isPrimary"],
+        properties: {
+          emailAddress: { type: "string", format: "email" },
+          label: { type: "string", nullable: true },
+          isPrimary: { type: "boolean" },
+        },
+      },
+    },
+    ingestStatus: { type: "string", enum: ["disabled", "inactive", "no_source", "ready", "partial", "unmatched"] },
+    matchedSourceCount: { type: "integer", minimum: 0 },
+    activeSourceCount: { type: "integer", minimum: 0 },
+    lastSuccessfulKpiDate: { type: "string", format: "date", nullable: true },
     ...nullableStringProperties([
       "regionId", "regionName", "regionManagerUserId", "regionManagerName", "updatedAt",
     ]),

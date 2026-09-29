@@ -4,7 +4,8 @@ import test from 'node:test'
 
 const specPath = 'docs/plans/database-invariant-preflight-spec-v1.md'
 const queryPath = 'db/preflight/database-invariant-preflight-v1.sql'
-const runnerPath = 'backend/nestjs/scripts/database-invariant-preflight.ts'
+const runnerPath = 'backend/nestjs/scripts/database-invariant-preflight-v3.ts'
+const legacyRunnerPath = 'backend/nestjs/scripts/database-invariant-preflight.ts'
 const runnerConfigPath = 'backend/nestjs/scripts/database-invariant-preflight-config.ts'
 const fixtureSmokePath = 'backend/nestjs/scripts/database-invariant-preflight-fixture-smoke.ts'
 const smokePath = 'scripts/database-invariant-preflight-smoke.mjs'
@@ -28,6 +29,7 @@ test('database invariant preflight specification freezes the no-mutation boundar
 test('database invariant preflight implementation files exist', () => {
   assert.equal(existsSync(queryPath), true, `Missing ${queryPath}`)
   assert.equal(existsSync(runnerPath), true, `Missing ${runnerPath}`)
+  assert.equal(existsSync(legacyRunnerPath), true, `Missing ${legacyRunnerPath}`)
   assert.equal(existsSync(runnerConfigPath), true, `Missing ${runnerConfigPath}`)
   assert.equal(existsSync(fixtureSmokePath), true, `Missing ${fixtureSmokePath}`)
   assert.equal(existsSync(smokePath), true, `Missing ${smokePath}`)
@@ -119,6 +121,8 @@ test('database invariant preflight SQL is read only and covers every required ch
     // User capability scope is additive and checked by the versioned,
     // read-only user-permission-assignment-invariants-v1.sql overlay.
     'ops.user_permission_assignment',
+    // Store contact scope has a dedicated versioned read-only invariant overlay.
+    'ops.store_contact_email',
   ])
   const scopeBearingTables = [...schema.matchAll(
     /CREATE TABLE(?: IF NOT EXISTS)?\s+([a-z_]+\.[a-z_]+)\s*\(([\s\S]*?)\n\);/g,
@@ -142,10 +146,32 @@ test('user permission scope has an additive read-only invariant overlay', () => 
   assert.match(sql, /ops\.user_permission_assignment/)
   assert.match(sql, /ops\.user_role_assignment/)
   assert.match(sql, /USER-PERM-01/)
+  assert.match(sql, /'authorization' AS category/)
+  assert.match(sql, /\)\[1:5\]/)
   assert.doesNotMatch(
     stripSqlComments(sql),
     /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i,
   )
+})
+
+test('store contact email scope has an additive read-only invariant overlay', () => {
+  const sql = readFileSync('db/preflight/store-contact-email-invariants-v1.sql', 'utf8')
+  assert.match(sql, /ops\.store_contact_email/)
+  assert.match(sql, /STORE-EMAIL-01/)
+  assert.match(sql, /'organization' AS category/)
+  assert.match(sql, /\)\[1:5\]/)
+  assert.doesNotMatch(stripSqlComments(sql), /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i)
+})
+
+test('operational database invariant command executes additive overlays', () => {
+  const packageJson = JSON.parse(readFileSync('backend/nestjs/package.json', 'utf8'))
+  const runner = readFileSync('backend/nestjs/scripts/database-invariant-preflight-v3.ts', 'utf8')
+  assert.match(packageJson.scripts['preflight:database:invariants'], /database-invariant-preflight-v3\.ts/)
+  assert.match(runner, /REPEATABLE READ READ ONLY/)
+  assert.match(runner, /user-permission-assignment-invariants-v1\.sql/)
+  assert.match(runner, /store-contact-email-invariants-v1\.sql/)
+  assert.match(runner, /database_invariant_preflight\.completed/)
+  assert.doesNotMatch(runner, /INSERT INTO|UPDATE ops\.|DELETE FROM|ALTER TABLE|DROP TABLE|writeFile/i)
 })
 
 test('no-sales alert company/store scope is enforced without changing immutable V1 diagnostics', () => {
@@ -161,7 +187,7 @@ test('database invariant runner proves read-only mode and keeps output sanitized
   const runner = readFileSync(runnerPath, 'utf8')
   const runnerConfig = readFileSync(runnerConfigPath, 'utf8')
 
-  assert.match(runner, /BEGIN READ ONLY/)
+  assert.match(runner, /BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY/)
   assert.match(runner, /SHOW transaction_read_only/)
   assert.match(runner, /ROLLBACK/)
   assert.match(runner, /statement_timeout/)

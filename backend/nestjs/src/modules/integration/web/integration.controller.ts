@@ -218,7 +218,7 @@ export class IntegrationController {
       storeType: body.storeType,
       regionId: body.regionId, regionManagerUserId: body.regionManagerUserId,
       status: body.status,
-      kpiImportEnabled: body.kpiImportEnabled,
+      kpiImportEnabled: body.kpiImportEnabled, contactEmails: body.contactEmails,
     });
   }
 
@@ -291,7 +291,7 @@ export class IntegrationController {
       storeId, storeCode: body.storeCode, storeTypeEffectiveOn: body.storeTypeEffectiveOn, storeType: body.storeType,
       regionId: body.regionId, regionManagerUserId: body.regionManagerUserId,
       status: body.status,
-      kpiImportEnabled: body.kpiImportEnabled,
+      kpiImportEnabled: body.kpiImportEnabled, contactEmails: body.contactEmails,
       actorUserId: request.user.userId, expectedUpdatedAt: body.expectedUpdatedAt,
     });
   }

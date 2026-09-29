@@ -403,6 +403,7 @@ export async function updateStoreMasterData(input: {
   regionManagerUserId?: string
   status: 'active' | 'inactive' | 'closed'
   kpiImportEnabled: boolean
+  contactEmails?: Array<{ emailAddress: string; label?: string; isPrimary: boolean }>
   expectedUpdatedAt?: string
 }): Promise<StoreMasterUpdateResponse> {
   return sendOpenApiJson('/api/integrations/store-master/{storeId}', {
@@ -416,6 +417,7 @@ export async function updateStoreMasterData(input: {
       ...(input.regionManagerUserId ? { regionManagerUserId: input.regionManagerUserId } : {}),
       status: input.status,
       kpiImportEnabled: input.kpiImportEnabled,
+      ...(input.contactEmails !== undefined ? { contactEmails: input.contactEmails } : {}),
       ...(input.expectedUpdatedAt ? { expectedUpdatedAt: input.expectedUpdatedAt } : {}),
     },
   })
