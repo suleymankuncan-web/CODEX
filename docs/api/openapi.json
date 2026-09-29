@@ -33315,8 +33315,7 @@
             "format": "date-time"
           },
           "roleAssignmentId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "permissionCode": {
             "type": "string",
@@ -33332,16 +33331,13 @@
             "type": "string"
           },
           "companyId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "regionId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "storeId": {
-            "type": "string",
-            "format": "uuid"
+            "type": "string"
           },
           "reason": {
             "type": "string",
