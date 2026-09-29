@@ -10,7 +10,7 @@ const fixtureNow = new Date('2026-05-20T12:00:00.000Z')
 type ChecklistRequestLog = {
   completes: Array<{ checklistInstanceId: string }>
   saves: Array<{
-    body: { commentText?: string; scoreValue: number; templateItemId: string }
+    body: { commentText?: string; responseValue?: string; scoreValue: number; templateItemId: string }
     checklistInstanceId: string
   }>
 }
@@ -77,6 +77,56 @@ test('draft close returns to the workflow while keeping the visit in progress', 
   await expect.poll(() => requests.saves.length).toBeGreaterThanOrEqual(1)
   await expect(workflowDialog.getByRole('button', { name: 'Devam et' })).toBeVisible()
   await expect(page.getByText('Başarıyla Tamamlandı')).toHaveCount(0)
+})
+
+test('N/A requires a saved reason and exempts the item from required photo evidence', async ({ page }) => {
+  const requests = createRequestLog()
+  await setupChecklistSessionPolicyPage(page, requests)
+  await page.route('**/api/mobile/checklists/today**', async (route) => {
+    const fixture = createMobileChecklistTodayFixture()
+    Object.assign(fixture.data.templates[0]!.items[0]!, { responseType: 'compliance', evidencePolicy: 'required' })
+    await route.fulfill({ json: fixture })
+  })
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: 'N/A', exact: true }).click()
+  await expect(dialog.getByText('1 N/A maddesi için gerekçe gerekli.')).toBeVisible()
+  const complete = dialog.getByRole('button', { name: 'Tamamla', exact: true })
+  await expect(complete).toBeDisabled()
+  const note = dialog.getByRole('textbox', { name: /Not/ })
+  await note.fill('   ')
+  await expect(complete).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'Notu kaydet' })).toBeDisabled()
+  await note.fill('Bu mağazada vitrin bulunmuyor')
+  await dialog.getByRole('button', { name: 'Notu kaydet' }).click()
+  await expect(dialog.getByText('Taslağa kaydedildi')).toBeVisible()
+  await expect(complete).toBeEnabled()
+  page.once('dialog', (confirm) => confirm.accept())
+  await complete.click()
+  await expect.poll(() => requests.completes).toEqual([{ checklistInstanceId }])
+  expect(requests.saves.length).toBeGreaterThan(0)
+  expect(requests.saves.every(({ body }) => body.responseValue === 'not_applicable' && body.commentText?.trim())).toBe(true)
+})
+
+test('historical scored N/A drafts still require applicable photo evidence', async ({ page }) => {
+  const requests = createRequestLog()
+  await setupChecklistSessionPolicyPage(page, requests)
+  await page.route('**/api/mobile/checklists/today**', async (route) => {
+    const fixture = createMobileChecklistTodayFixture()
+    fixture.data.templates[0]!.items[0]!.evidencePolicy = 'required'
+    await route.fulfill({ json: { ...fixture, data: { ...fixture.data,
+      activeInstances: fixture.data.activeInstances.map((instance) => ({ ...instance,
+        responses: [{ templateItemId, scoreValue: 4, responseValue: 'not_applicable', commentText: null }],
+      })),
+    } } })
+  })
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('1 zorunlu madde için fotoğraf kanıtı eksik.')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Tamamla', exact: true })).toBeDisabled()
+  expect(requests.completes).toEqual([])
 })
 
 test('checklist session modal keeps footer usable on mobile width', async ({ page }) => {
@@ -191,10 +241,10 @@ async function setupChecklistSessionPolicyPage(page: Page, requests: ChecklistRe
           checklistInstance: {
             checklist_instance_id: match?.[1] ?? checklistInstanceId,
             completed_at: '2026-05-20T12:30:00.000Z',
-            compliance_rate: '1.0000',
+            compliance_rate: requests.saves.at(-1)?.body.responseValue === 'not_applicable' ? null : '1.0000',
             locked_at: '2026-05-20T12:30:00.000Z',
             status: 'completed',
-            total_score: '80.00',
+            total_score: requests.saves.at(-1)?.body.responseValue === 'not_applicable' ? null : '80.00',
           },
         },
       },
@@ -257,6 +307,14 @@ async function routeChecklistCommandShell(page: Page) {
     const url = new URL(route.request().url())
     if (url.pathname.endsWith('/visit-plans/regions')) {
       await route.fulfill({ json: { data: { view: 'region_manager', capabilities: { canMaintainWeeklyVisitPlan: true }, items: [{ regionId, regionName: 'Marmara' }], page: { total: 1, limit: 20, offset: 0, hasMore: false } } } })
+      return
+    }
+    if (url.pathname.endsWith('/visit-plans')) {
+      await route.fulfill({ json: { data: {
+        planId: null, regionId: null, regionName: 'Sorumlu mağazalar', weekStart: url.searchParams.get('weekStart'),
+        revision: 0, scopeRevision: 'a'.repeat(64), revisedAt: null, view: 'region_manager',
+        capabilities: { canMaintainWeeklyVisitPlan: true }, items: [],
+      } } })
       return
     }
     if (url.pathname === '/api/checklists/command-canvas') {

@@ -13,14 +13,14 @@ type Input = {
 };
 
 export function resolveChecklistVisitPlanScope(input: Input): ChecklistVisitPlanScope | null {
-  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
-    return scope("report_viewer", input.roleScopes?.REPORT_VIEWER, false, "company");
-  }
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
     // Region Manager planning is authorized by the direct action-store
     // portfolio. Legacy/route region ids are only selectors and must never
     // become a grant through this scope resolver.
     return scope("region_manager", input.roleScopes?.REGION_MANAGER, true, "store");
+  }
+  if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+    return scope("report_viewer", input.roleScopes?.REPORT_VIEWER, false, "company");
   }
   if (input.actorRoleCodes.includes("STORE_MANAGER")) {
     return scope("store_manager", input.roleScopes?.STORE_MANAGER, false, "store");

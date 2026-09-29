@@ -27,7 +27,8 @@ export function StoreChecklistsPage(input: {
   const requestedCanvasView = routeParams.get('canvasView')
   const legacyStandalonePlan = routeParams.get('tab') === 'plan' && !routeParams.has('storeId')
   const overlayTriggerRef = useRef<HTMLElement | null>(null)
-  const isReportViewer = usesStoreReportViewerView(input.authSummary)
+  const isRegionManagerSession = input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false
+  const isReportViewer = usesStoreReportViewerView(input.authSummary) && !isRegionManagerSession
 
   useEffect(() => {
     if (isReportViewer || !['regionManager', 'storeManager', 'visualMerchandiser', 'admin'].includes(persona) || !workflowRoute.shouldReplace) return
@@ -38,7 +39,7 @@ export function StoreChecklistsPage(input: {
   }, [isReportViewer, location.pathname, navigate, persona, workflowRoute.normalizedSearch, workflowRoute.shouldReplace])
 
   useEffect(() => {
-    if (persona !== 'regionManager' || (!legacyStandalonePlan && requestedCanvasView !== 'records' && requestedCanvasView !== 'plan')) return
+    if (!isRegionManagerSession || (!legacyStandalonePlan && requestedCanvasView !== 'records' && requestedCanvasView !== 'plan')) return
     const params = new URLSearchParams(location.search)
     params.delete('tab')
     params.delete('canvasView')
@@ -46,7 +47,7 @@ export function StoreChecklistsPage(input: {
       { pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' },
       { replace: true },
     )
-  }, [legacyStandalonePlan, location.pathname, location.search, navigate, persona, requestedCanvasView])
+  }, [isRegionManagerSession, legacyStandalonePlan, location.pathname, location.search, navigate, requestedCanvasView])
 
   if (isReportViewer) {
     return (
@@ -81,7 +82,7 @@ export function StoreChecklistsPage(input: {
     )
   }
 
-  if (persona === 'regionManager') {
+  if (isRegionManagerSession) {
     return (
       <>
         <RegionManagerChecklistCommandPage

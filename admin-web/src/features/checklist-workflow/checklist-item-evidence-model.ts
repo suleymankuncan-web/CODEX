@@ -1,9 +1,12 @@
 export function countMissingRequiredChecklistEvidence(
-  items: Array<{ templateItemId: string; evidencePolicy: 'none' | 'optional' | 'required' }>,
+  items: Array<{ templateItemId: string; responseType: string; evidencePolicy: 'none' | 'optional' | 'required' }>,
   evidenceCounts: Record<string, number>,
+  responseValues: Record<string, string | undefined>,
 ): number {
   return items.filter(
-    (item) => item.evidencePolicy === 'required' && (evidenceCounts[item.templateItemId] ?? 0) < 1,
+    (item) => item.evidencePolicy === 'required'
+      && !(item.responseType === 'compliance' && responseValues[item.templateItemId] === 'not_applicable')
+      && (evidenceCounts[item.templateItemId] ?? 0) < 1,
   ).length
 }
 

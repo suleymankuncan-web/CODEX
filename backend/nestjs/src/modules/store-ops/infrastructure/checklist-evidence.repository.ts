@@ -2,6 +2,7 @@ import { BadRequestException } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { checklistCompletionSql } from "./checklist-completion.sql";
 
 export class ChecklistEvidenceRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -604,8 +605,8 @@ export class ChecklistEvidenceRepository {
       const result = await client.query<{
         checklist_instance_id: string;
         status: string;
-        total_score: string;
-        compliance_rate: string;
+        total_score: string | null;
+        compliance_rate: string | null;
         completed_at: string;
         locked_at: string;
       }>(
@@ -679,70 +680,17 @@ export class ChecklistEvidenceRepository {
     checklistInstanceId: string,
   ) {
     const result = await client.query<{
-      total_score: string;
-      compliance_rate: string;
+      total_score: string | null;
+      compliance_rate: string | null;
       missing_mandatory_count: string;
       missing_required_evidence_count: string;
     }>(
-      `
-        SELECT
-          CASE
-            WHEN COUNT(*) FILTER (WHERE cti.response_type = 'compliance') > 0 THEN
-              COALESCE(
-                (
-                  SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight)
-                    FILTER (WHERE cr.response_value IS DISTINCT FROM 'not_applicable')
-                  / NULLIF(
-                      SUM(cti.weight)
-                        FILTER (WHERE cr.response_value IS DISTINCT FROM 'not_applicable'),
-                      0
-                    )
-                ) * 100,
-                0
-              )
-            ELSE COALESCE(
-              SUM((COALESCE(cr.score_value, 0) / NULLIF(cti.max_score, 0)) * cti.weight),
-              0
-            )
-          END::numeric(12,2)::text AS total_score,
-          COALESCE(
-            AVG(
-              CASE
-                WHEN cr.response_value = 'not_applicable' THEN NULL
-                WHEN COALESCE(cr.score_value, 0) > 0 THEN 1
-                ELSE 0
-              END
-            ),
-            0
-          )::numeric(7,4)::text AS compliance_rate,
-          COUNT(*) FILTER (WHERE cti.is_mandatory = TRUE AND cr.response_id IS NULL)::text AS missing_mandatory_count
-          ,COUNT(*) FILTER (
-            WHERE policy.evidence_policy = 'required'
-              AND NOT EXISTS (
-                SELECT 1 FROM ops.checklist_response_media media
-                JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
-                WHERE media.checklist_instance_id = ci.checklist_instance_id
-                  AND media.template_item_id = cti.template_item_id
-                  AND media.unlinked_at IS NULL
-                  AND asset.state = 'ready'
-              )
-          )::text AS missing_required_evidence_count
-        FROM ops.checklist_template_item cti
-        LEFT JOIN ops.checklist_response cr
-          ON cr.template_item_id = cti.template_item_id
-         AND cr.checklist_instance_id = $1::uuid
-        INNER JOIN ops.checklist_instance ci
-          ON ci.checklist_template_id = cti.checklist_template_id
-        LEFT JOIN ops.checklist_instance_item_policy policy
-          ON policy.checklist_instance_id = ci.checklist_instance_id
-         AND policy.template_item_id = cti.template_item_id
-        WHERE ci.checklist_instance_id = $1::uuid
-      `,
+      checklistCompletionSql,
       [checklistInstanceId],
     );
     const row = result.rows[0] ?? {
-      total_score: "0.00",
-      compliance_rate: "0.0000",
+      total_score: null,
+      compliance_rate: null,
       missing_mandatory_count: "0",
       missing_required_evidence_count: "0",
     };

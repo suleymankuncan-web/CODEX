@@ -25,18 +25,6 @@ const BOTH_VISIT_TYPES = ["BM_STORE_VISIT", "VM_STORE_VISIT"] as const;
 export function resolveChecklistCommandReadScope(
   input: ResolveChecklistCommandReadScopeInput,
 ): ChecklistCommandReadScope | null {
-  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
-  if (reportRole) {
-    return {
-      view: "report_viewer",
-      companyIds: storeReportViewerCompanyIds(input, reportRole),
-      regionIds: [],
-      storeIds: [],
-      allowedTemplateTypes: [...BOTH_VISIT_TYPES],
-      executionTemplateTypes: [...BOTH_VISIT_TYPES],
-    };
-  }
-
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
     const roleScope = input.roleScopes?.REGION_MANAGER;
     return {
@@ -46,6 +34,18 @@ export function resolveChecklistCommandReadScope(
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: [...BOTH_VISIT_TYPES],
       executionTemplateTypes: ["BM_STORE_VISIT"],
+    };
+  }
+
+  const reportRole = resolveStoreReportViewerRole(input.actorRoleCodes);
+  if (reportRole) {
+    return {
+      view: "report_viewer",
+      companyIds: storeReportViewerCompanyIds(input, reportRole),
+      regionIds: [],
+      storeIds: [],
+      allowedTemplateTypes: [...BOTH_VISIT_TYPES],
+      executionTemplateTypes: [...BOTH_VISIT_TYPES],
     };
   }
 

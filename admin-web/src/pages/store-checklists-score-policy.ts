@@ -46,6 +46,10 @@ export function isChecklistLowScoreNoteMissing(input: {
   )
 }
 
+export function isChecklistNotApplicableReasonMissing(responseValue: string | undefined, commentText: string | undefined) {
+  return responseValue === 'not_applicable' && !commentText?.trim()
+}
+
 export function parseChecklistScoreInput(value: string, item: ChecklistScorePolicyInput) {
   if (value === '') return null
   const parsed = Number(value)

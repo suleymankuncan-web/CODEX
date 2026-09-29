@@ -1,6 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { checklistCompletionSql } from "./checklist-completion.sql";
+import { isChecklistScoreNonCompliant } from "../application/checklist-low-score-policy";
+import { parseChecklistScorePolicy } from "../application/checklist-score-policy";
 
 @Injectable()
 export class StoreOpsRepository {
@@ -320,6 +323,53 @@ export class StoreOpsRepository {
     actorUserId: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const guard = await client.query<{ response_type: string; max_score: string; expected_value: string | null }>(`
+        SELECT item.response_type, item.max_score, item.expected_value
+        FROM ops.checklist_instance instance
+        JOIN ops.checklist_template_item item
+          ON item.checklist_template_id=instance.checklist_template_id
+         AND item.template_item_id=$2::uuid
+        WHERE instance.checklist_instance_id=$1::uuid
+          AND instance.status IN ('planned','in_progress')
+        FOR UPDATE OF instance
+      `, [input.checklistInstanceId, input.templateItemId]);
+      const item = guard.rows[0];
+      if (!item) throw new BadRequestException("Checklist item is not active for this instance");
+      let responseValue = input.responseValue ?? null;
+      let scoreValue = input.scoreValue ?? null;
+      let isNonCompliant = input.isNonCompliant ?? false;
+      const commentText = input.commentText?.trim() || null;
+      if (item.response_type === "compliance") {
+        const maxScore = Number(item.max_score);
+        if (responseValue === "compliant") { scoreValue = maxScore; isNonCompliant = false; }
+        else if (responseValue === "partially_compliant") { scoreValue = maxScore / 2; isNonCompliant = true; }
+        else if (responseValue === "non_compliant") { scoreValue = 0; isNonCompliant = true; }
+        else if (responseValue === "not_applicable") {
+          if (!commentText) throw new BadRequestException("not_applicable_reason_required");
+          scoreValue = 0; isNonCompliant = false;
+        }
+        else throw new BadRequestException("Checklist compliance response value is invalid");
+      } else {
+        if (responseValue === "not_applicable") {
+          throw new BadRequestException("N/A is only valid for compliance checklist items");
+        }
+        responseValue = null;
+        const scored = ["score", "yes_no", "partial", "boolean", "text"].includes(item.response_type);
+        if (!scored && (Number(item.max_score) > 0 || scoreValue !== null)) {
+          throw new BadRequestException("Unsupported checklist score response type");
+        }
+        if (scored && (
+          scoreValue === null || !Number.isFinite(scoreValue) || scoreValue < 0 || scoreValue > Number(item.max_score)
+        )) throw new BadRequestException("Checklist score is outside the item range");
+        if (item.response_type === "score") {
+          const minScore = parseChecklistScorePolicy(item.expected_value).minScore ?? 0;
+          if ((scoreValue ?? 0) < minScore) throw new BadRequestException("Checklist score is below item min score");
+        }
+        isNonCompliant = scoreValue === null ? false : isChecklistScoreNonCompliant({
+          expectedValue: item.expected_value,
+          scoreValue,
+        });
+      }
       const responseResult = await client.query<{
         response_id: string;
         responded_at: string;
@@ -346,10 +396,10 @@ export class StoreOpsRepository {
         [
           input.checklistInstanceId,
           input.templateItemId,
-          input.responseValue ?? null,
-          input.scoreValue ?? null,
-          input.isNonCompliant ?? false,
-          input.commentText ?? null,
+          responseValue,
+          scoreValue,
+          isNonCompliant,
+          commentText,
         ],
       );
 
@@ -409,54 +459,29 @@ export class StoreOpsRepository {
         throw new Error("Checklist instance cannot be completed");
       }
 
-      const evidence = await client.query<{ missing_required_evidence_count: string }>(
-        `SELECT COUNT(*)::text AS missing_required_evidence_count
-         FROM ops.checklist_instance_item_policy policy
-         WHERE policy.checklist_instance_id = $1::uuid
-           AND policy.evidence_policy = 'required'
-           AND NOT EXISTS (
-             SELECT 1 FROM ops.checklist_response_media media
-             JOIN ops.media_asset asset ON asset.media_asset_id = media.media_asset_id
-             WHERE media.checklist_instance_id = policy.checklist_instance_id
-               AND media.template_item_id = policy.template_item_id
-               AND media.unlinked_at IS NULL
-               AND asset.state = 'ready'
-           )`,
-        [input.checklistInstanceId],
-      );
-      if (Number(evidence.rows[0]?.missing_required_evidence_count ?? 0) > 0) {
-        throw new Error("missing_required_evidence");
-      }
-
       const aggregateResult = await client.query<{
-        total_score: string;
-        compliance_rate: string;
-      }>(
-        `
-          SELECT
-            COALESCE(SUM(COALESCE(cr.score_value, 0)), 0)::numeric(12,2) AS total_score,
-            COALESCE(
-              AVG(
-                CASE
-                  WHEN cr.is_non_compliant = TRUE THEN 0
-                  ELSE 1
-                END
-              ),
-              0
-            )::numeric(7,4) AS compliance_rate
-          FROM ops.checklist_response cr
-          WHERE cr.checklist_instance_id = $1::uuid
-        `,
-        [input.checklistInstanceId],
-      );
+        total_score: string | null;
+        compliance_rate: string | null;
+        missing_mandatory_count: string;
+        missing_required_evidence_count: string;
+      }>(checklistCompletionSql, [input.checklistInstanceId]);
 
-      const aggregates = aggregateResult.rows[0];
+      const aggregates = aggregateResult.rows[0] ?? {
+        total_score: null, compliance_rate: null,
+        missing_mandatory_count: "0", missing_required_evidence_count: "0",
+      };
+      if (Number(aggregates?.missing_mandatory_count ?? 0) > 0) {
+        throw new BadRequestException("missing_mandatory_response");
+      }
+      if (Number(aggregates?.missing_required_evidence_count ?? 0) > 0) {
+        throw new BadRequestException("missing_required_evidence");
+      }
 
       const checklistResult = await client.query<{
         checklist_instance_id: string;
         status: string;
-        total_score: string;
-        compliance_rate: string;
+        total_score: string | null;
+        compliance_rate: string | null;
       }>(
         `
           UPDATE ops.checklist_instance

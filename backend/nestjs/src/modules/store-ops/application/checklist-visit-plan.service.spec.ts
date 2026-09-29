@@ -36,6 +36,32 @@ describe("ChecklistVisitPlanService", () => {
     expect(repository.getWeeklyPlan).not.toHaveBeenCalled();
   });
 
+  it("keeps dual-role weekly reads and writes on the Region Manager portfolio", async () => {
+    const dualActor = {
+      ...assignedActor,
+      actorRoleCodes: ["REPORT_VIEWER", "REGION_MANAGER"],
+      roleScopes: {
+        REPORT_VIEWER: { ...empty, companyIds: ["company-1"] },
+        REGION_MANAGER: assignedActor.roleScopes.REGION_MANAGER,
+      },
+    };
+    repository.getAssignedWeeklyPlan.mockResolvedValue({ regionId: null, scopeRevision: "a".repeat(64), items: [] });
+    repository.saveAssignedWeeklyPlan.mockResolvedValue({ regionId: null, revision: 2, items: [] });
+    await service.getWeeklyPlan({ ...dualActor, weekStart: "2026-09-21" });
+    await service.saveWeeklyPlan({
+      ...dualActor,
+      weekStart: "2026-09-21",
+      expectedRevision: 1,
+      expectedScopeRevision: "a".repeat(64),
+      idempotencyKey: "44444444-4444-4444-8444-444444444444",
+      items: [],
+    });
+    expect(repository.getAssignedWeeklyPlan).toHaveBeenCalled();
+    expect(repository.saveAssignedWeeklyPlan).toHaveBeenCalled();
+    expect(repository.getManagerWeeklyPlan).not.toHaveBeenCalled();
+    expect(repository.saveWeeklyPlan).not.toHaveBeenCalled();
+  });
+
   it("requires a portfolio revision for atomic assigned-store writes", async () => {
     const input = { ...assignedActor, weekStart: "2026-09-21", expectedRevision: 0,
       idempotencyKey: "44444444-4444-4444-8444-444444444444", items: [] };
