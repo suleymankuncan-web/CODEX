@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T02:48:25.551Z",
+  "generatedAt": "2026-09-29T07:22:56.760Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2793,7 +2793,7 @@
       "exportedFunction": "updateStoreMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 408
+        "line": 409
       }
     },
     {
@@ -2808,7 +2808,7 @@
       "exportedFunction": "getPersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 446
+        "line": 448
       }
     },
     {
@@ -2823,7 +2823,7 @@
       "exportedFunction": "getPersonnelMasterLookups",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 450
+        "line": 452
       }
     },
     {
@@ -2838,7 +2838,7 @@
       "exportedFunction": "createPersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 456
+        "line": 458
       }
     },
     {
@@ -2853,7 +2853,7 @@
       "exportedFunction": "terminatePersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 466
+        "line": 468
       }
     },
     {
@@ -2868,7 +2868,7 @@
       "exportedFunction": "updatePersonnelMasterData",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 487
+        "line": 489
       }
     },
     {
@@ -2883,7 +2883,7 @@
       "exportedFunction": "getMasterDataBootstrapBatches",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 532
+        "line": 534
       }
     },
     {
@@ -2898,7 +2898,7 @@
       "exportedFunction": "getMasterDataBootstrapBatchDetail",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 536
+        "line": 538
       }
     },
     {
@@ -2913,7 +2913,7 @@
       "exportedFunction": "getMasterDataBootstrapPromotionReadiness",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 542
+        "line": 544
       }
     },
     {
@@ -2928,7 +2928,7 @@
       "exportedFunction": "validateMasterDataBootstrapBatch",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 549
+        "line": 551
       }
     },
     {
@@ -2943,7 +2943,7 @@
       "exportedFunction": "promoteMasterDataBootstrapStores",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 556
+        "line": 558
       }
     },
     {
@@ -2958,7 +2958,7 @@
       "exportedFunction": "promoteMasterDataBootstrapPersonnel",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 563
+        "line": 565
       }
     },
     {
@@ -2973,7 +2973,7 @@
       "exportedFunction": "getPersonnelObservations",
       "source": {
         "file": "admin-web/src/features/integrations/api.ts",
-        "line": 586
+        "line": 588
       }
     },
     {
