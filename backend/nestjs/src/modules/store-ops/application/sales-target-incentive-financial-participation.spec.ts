@@ -12,7 +12,7 @@ const participant: SalesTargetIncentiveParticipantProjection = {
     personnelSalesSourceBatchId: null, personnelSalesImportBatchId: null },
   calculation: { status: "projected", payableAmount: "110.00", rawEarnedAmount: "110.000000", rate: "0.0100",
     achievementPct: "110.00", storeAchievementPct: "110.00", storeGatePassed: true, blockedReason: null,
-    rateTableVersion: "personnel-sales-target-v1.0.0", ruleVersionCode: "sales-target-incentive-v1.0.0",
+    rateTableVersion: "personnel-sales-target-v1.0.0", ruleVersionCode: "sales-target-incentive-v2.0.0",
     excludedReason: null, positionCode: "SALES_ASSOCIATE", normalizedFromPositionCode: null, personalRateBeforeGate: "0.0100" },
 };
 const summary: SalesTargetIncentiveAdjustmentSummaryRow = {

@@ -22,7 +22,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
       expect(result).toEqual(
         expect.objectContaining({
           status: "projected",
-          ruleVersionCode: "sales-target-incentive-v1.0.0",
+          ruleVersionCode: "sales-target-incentive-v2.0.0",
           rateTableVersion: "manager-sales-target-v1.0.0",
           achievementPct: "115.0000",
           rate: "0.0100",
@@ -81,13 +81,13 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "6000000.00",
         storeActualNetSales: "3750000.00",
         personnelTarget: "1500000.00",
-        personnelActualPositiveSales: "2000000.00",
+        personnelActualNetSales: "2000000.00",
       });
 
       expect(result).toEqual(
         expect.objectContaining({
           status: "projected",
-          ruleVersionCode: "sales-target-incentive-v1.0.0",
+          ruleVersionCode: "sales-target-incentive-v2.0.0",
           rateTableVersion: "personnel-sales-target-v1.0.0",
           storeAchievementPct: "62.5000",
           storeGatePassed: false,
@@ -124,7 +124,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.0000",
         storeActualNetSales: "100.0000",
         personnelTarget: "100.0000",
-        personnelActualPositiveSales: actual,
+        personnelActualNetSales: actual,
       });
 
       expect(result.achievementPct).toBe(actual);
@@ -139,7 +139,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.00",
         storeActualNetSales: "100.00",
         personnelTarget: "100.00",
-        personnelActualPositiveSales: "100.00",
+        personnelActualNetSales: "100.00",
       });
 
       expect(result.positionCode).toBe("ASSISTANT_MANAGER");
@@ -154,7 +154,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.00",
         storeActualNetSales: "100.00",
         personnelTarget: "100.00",
-        personnelActualPositiveSales: "100.00",
+        personnelActualNetSales: "100.00",
       });
       const franchise = service.calculatePersonnel({
         storeOwnershipType: "franchise",
@@ -162,7 +162,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.00",
         storeActualNetSales: "100.00",
         personnelTarget: "100.00",
-        personnelActualPositiveSales: "100.00",
+        personnelActualNetSales: "100.00",
       });
 
       expect(cashier).toEqual(
@@ -188,7 +188,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.00",
         storeActualNetSales: "100.00",
         personnelTarget: "100.00",
-        personnelActualPositiveSales: "100.00",
+        personnelActualNetSales: "100.00",
       });
 
       expect(result).toEqual(
@@ -239,7 +239,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
       ],
       [
         "personnel missing source",
-        { personnelActualPositiveSales: null },
+        { personnelActualNetSales: null },
         "no_source",
         "missing_personnel_sales_source",
       ],
@@ -250,7 +250,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.00",
         storeActualNetSales: "100.00",
         personnelTarget: "100.00",
-        personnelActualPositiveSales: "100.00",
+        personnelActualNetSales: "100.00",
         ...overrides,
       });
 
@@ -271,7 +271,7 @@ describe("SalesTargetIncentiveCalculatorService", () => {
         storeTarget: "100.00",
         storeActualNetSales: "-10.00",
         personnelTarget: "100.00",
-        personnelActualPositiveSales: "200.00",
+        personnelActualNetSales: "200.00",
       });
 
       expect(zero).toEqual(

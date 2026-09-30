@@ -38,7 +38,7 @@ const personnelSource = {
   store_net_sales_import_batch_id: "00000000-0000-4000-8000-000000000601",
   personnel_target_reference_id: "target-ref-1",
   personnel_target_amount: "200000.0000",
-  personnel_positive_sales_amount: "240000.0000",
+  personnel_net_sales_amount: "240000.0000",
   personnel_sales_source_batch_id: "batch-personnel-1",
   personnel_sales_import_batch_id: "00000000-0000-4000-8000-000000000602",
   personnel_sales_source_payload_hash: "hash-personnel-1",
@@ -207,7 +207,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
         {
           ...personnelSource,
           store_net_sales_amount: null,
-          personnel_positive_sales_amount: null,
+          personnel_net_sales_amount: null,
           personnel_sales_source_batch_id: null,
           personnel_sales_import_batch_id: null,
         },
@@ -440,7 +440,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
           store_target_request_id: null,
           personnel_target_reference_id: null,
           personnel_target_amount: null,
-          personnel_positive_sales_amount: null,
+          personnel_net_sales_amount: null,
           personnel_sales_source_batch_id: null,
           personnel_sales_import_batch_id: null,
         },
@@ -551,7 +551,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
     const { service } = createService({
       personnelRows: [{
         ...personnelSource,
-        personnel_positive_sales_amount: null,
+        personnel_net_sales_amount: null,
         personnel_sales_source_batch_id: null,
         personnel_sales_import_batch_id: null,
       }],

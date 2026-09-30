@@ -57,7 +57,7 @@ const participant = {
     status: "projected" as const,
     blockedReason: null,
     excludedReason: null,
-    ruleVersionCode: "sales-target-incentive-v1.0.0" as const,
+    ruleVersionCode: "sales-target-incentive-v2.0.0" as const,
     rateTableVersion: "personnel-sales-target-v1.0.0" as const,
     positionCode: "SALES_ASSOCIATE" as const,
     normalizedFromPositionCode: null,
@@ -127,6 +127,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     expect(query.mock.calls[4][1][20]).toEqual([]);
     expect(query.mock.calls[5][1][15]).toEqual([]);
     expect(String(query.mock.calls[6][0])).toContain("FROM ops.sales_target_incentive_adjustment adjustment");
+    expect(String(query.mock.calls[6][0])).toContain("adjustment_rule.rule_version_code = 'sales-target-incentive-v2.0.0'");
     expect(String(query.mock.calls[7][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(query.mock.calls[7][1]).toEqual(
       expect.arrayContaining([

@@ -78,7 +78,7 @@ function createIncentiveDatabaseMock() {
       };
     }
 
-    if (sql.includes("personnel_positive_sales_amount")) {
+    if (sql.includes("personnel_net_sales_amount")) {
       incentiveQueries.push({ sql, params });
 
       if (!hasPrimaryScope(params)) {
@@ -101,7 +101,8 @@ function createIncentiveDatabaseMock() {
             store_net_sales_import_batch_id: storeImportBatchId,
             personnel_target_reference_id: employeeTargetReferenceId,
             personnel_target_amount: "200000.0000",
-            personnel_positive_sales_amount: "240000.0000",
+            personnel_net_sales_amount: "240000.0000",
+            personnel_positive_sales_amount: "300000.0000",
             personnel_sales_source_batch_id: employeeSourceBatchId,
             personnel_sales_import_batch_id: employeeImportBatchId,
             personnel_sales_source_payload_hash: "hash-personnel-1",
@@ -130,7 +131,7 @@ function createIncentiveDatabaseMock() {
             store_net_sales_import_batch_id: storeImportBatchId,
             personnel_target_reference_id: otherEmployeeTargetReferenceId,
             personnel_target_amount: "200000.0000",
-            personnel_positive_sales_amount: "210000.0000",
+            personnel_net_sales_amount: "210000.0000",
             personnel_sales_source_batch_id: otherEmployeeSourceBatchId,
             personnel_sales_import_batch_id: otherEmployeeImportBatchId,
             personnel_sales_source_payload_hash: "hash-personnel-2",
@@ -164,7 +165,7 @@ function createIncentiveDatabaseMock() {
         rows: [
           {
             rule_version_id: ruleVersionId,
-            rule_version_code: "sales-target-incentive-v1.0.0",
+            rule_version_code: "sales-target-incentive-v2.0.0",
           },
         ],
       };
@@ -421,10 +422,13 @@ describe("Sales target incentive read API integration", () => {
     expect(response.status).toBe(200);
     expect(response.body.data.roleScope).toBe("own");
     expect(response.body.data.projections).toHaveLength(1);
+    expect(response.body.data.projections[0].ruleVersionId).toBe("sales-target-incentive-v2.0.0");
     expect(response.body.data.projections[0].rows).toEqual([
       expect.objectContaining({
         employeeId,
         participantType: "personnel",
+        actualPositiveSales: "240000.0000",
+        achievementPct: "120.0000",
         payableAmount: "3960.00",
       }),
     ]);
@@ -576,6 +580,11 @@ describe("Sales target incentive read API integration", () => {
       }),
     ]);
     expect(withTransaction).toHaveBeenCalledTimes(1);
+    const personnelFinalRow = databaseService.query.mock.calls.find(([sql, params]) =>
+      sql.includes("INSERT INTO rpt.sales_target_incentive_final_row") && params?.[2] === employeeId,
+    );
+    expect(personnelFinalRow?.[1]?.[10]).toBe("240000.0000");
+    expect(personnelFinalRow?.[1]?.[15]).toBe("3960.00");
     expect(incentiveQueries).toHaveLength(4);
     expect(incentiveQueries.every((call) =>
       call.sql.includes("COALESCE(ib.finished_at, ib.started_at) <="),

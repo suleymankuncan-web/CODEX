@@ -1,3 +1,19 @@
+import type {
+  SalesTargetIncentiveRoleScope,
+  SalesTargetIncentiveApiRow,
+  SalesTargetIncentiveApiProjection,
+  SalesTargetIncentiveApiResponse,
+  SalesTargetIncentiveCloseStatusResponse,
+  SalesTargetIncentiveCloseRunResponse,
+} from "./sales-target-incentive-api.contract";
+export type {
+  SalesTargetIncentiveRoleScope,
+  SalesTargetIncentiveApiRow,
+  SalesTargetIncentiveApiProjection,
+  SalesTargetIncentiveApiResponse,
+  SalesTargetIncentiveCloseStatusResponse,
+  SalesTargetIncentiveCloseRunResponse,
+} from "./sales-target-incentive-api.contract";
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
@@ -7,7 +23,6 @@ import {
 } from "./sales-target-incentive-calculator.service";
 import {
   SalesTargetIncentiveReadModelService,
-  type SalesTargetIncentiveCloseReadiness,
   type SalesTargetIncentiveParticipantProjection,
   type SalesTargetIncentiveProjectionReadModel,
   type SalesTargetIncentiveProjectionStore,
@@ -25,10 +40,7 @@ import {
 import {
   correctionKey,
   SalesTargetIncentiveRegionWorkflowService,
-  type SalesTargetIncentiveRegionCorrectionApiState,
-  type SalesTargetIncentiveRegionWorkflowApiState,
   type SalesTargetIncentiveRegionWorkflowContext,
-  type SalesTargetIncentiveStoreReviewApiState,
 } from "./sales-target-incentive-region-workflow.service";
 import {
   SalesTargetIncentiveAdminPackageWorkflowService,
@@ -37,98 +49,6 @@ import {
 } from "./sales-target-incentive-admin-package-workflow.service";
 import { formatMoney2, isZeroMoney, resolveFinalAmount } from "./sales-target-incentive-money";
 import { definedParticipationReviewInput, effectiveParticipationAmount } from "./sales-target-incentive-participation-adapter";
-
-export type SalesTargetIncentiveRoleScope =
-  | "own"
-  | "store"
-  | "region"
-  | "admin";
-
-export type SalesTargetIncentiveApiRow = {
-  employeeId: string;
-  displayName: string;
-  participantType: "store_manager" | "personnel";
-  positionCode: "STORE_MANAGER" | "ASSISTANT_MANAGER" | "SENIOR_SALES_CONSULTANT" | "SALES_ASSOCIATE";
-  normalizedFromPositionCode: "SHIFT_LEAD" | null;
-  target: string | null;
-  actualPositiveSales: string | null;
-  achievementPct: string | null;
-  storeAchievementPct: string | null;
-  storeGatePassed: boolean | null;
-  rate: string | null;
-  rawEarnedAmount: string | null;
-  payableAmount: string | null;
-  correctionAmount: string | null;
-  adjustmentAmount: string | null;
-  finalAmount: string | null;
-  calculatedFinalAmount?: string | null;
-  participation?: SalesTargetIncentiveAdjustmentSummaryRow["participation"];
-  status: Exclude<SalesTargetIncentiveCalculationStatus, "excluded"> | "corrected" | "adjusted";
-  blockedReason: string | null;
-  rateTableVersion: string;
-  explanation: string;
-  regionCorrection: SalesTargetIncentiveRegionCorrectionApiState | null;
-};
-
-export type SalesTargetIncentiveApiProjection = {
-  period: string;
-  periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
-  closeCutoffAt: string | null;
-  ruleVersionId: typeof SALES_TARGET_INCENTIVE_RULE_VERSION;
-  regionId: string;
-  storeId: string;
-  storeName: string;
-  storeOwnershipType: "company";
-  roleScope: SalesTargetIncentiveRoleScope;
-  storeTarget: string | null;
-  storeActualNetSales: string | null;
-  storeAchievementPct: string | null;
-  storeGatePassed: boolean | null;
-  calculationState: Exclude<SalesTargetIncentiveCalculationStatus, "excluded">;
-  blockedReason: string | null;
-  lastImportAt: string | null;
-  review: SalesTargetIncentiveStoreReviewApiState | null;
-  rows: SalesTargetIncentiveApiRow[];
-};
-
-export type SalesTargetIncentiveApiResponse = {
-  data: {
-    period: string;
-    periodStart: string;
-    periodEnd: string;
-    periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
-    roleScope: SalesTargetIncentiveRoleScope;
-    regionWorkflow: SalesTargetIncentiveRegionWorkflowApiState | null;
-    regionPackages?: SalesTargetIncentiveAdminRegionPackageSummary[];
-    projections: SalesTargetIncentiveApiProjection[];
-  };
-};
-
-export type SalesTargetIncentiveCloseStatusResponse = {
-  data: {
-    period: string;
-    periodStart: string;
-    periodEnd: string;
-    periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
-    closeCutoffAt: string;
-    readiness: SalesTargetIncentiveCloseReadiness;
-    closeRuns: SalesTargetIncentiveCloseRunSummary[];
-  };
-};
-
-export type SalesTargetIncentiveCloseRunResponse = {
-  data: {
-    period: string;
-    periodStart: string;
-    periodEnd: string;
-    periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
-    closeCutoffAt: string;
-    readiness: SalesTargetIncentiveCloseReadiness;
-    closeRuns: SalesTargetIncentiveCloseRunSummary[];
-    finalSnapshotCount: number;
-    finalRowCount: number;
-  };
-};
 
 @Injectable()
 export class SalesTargetIncentiveApiService {
@@ -575,7 +495,8 @@ export class SalesTargetIncentiveApiService {
       period,
       periodTimezone: SALES_TARGET_INCENTIVE_TIMEZONE,
       closeCutoffAt: null,
-      ruleVersionId: SALES_TARGET_INCENTIVE_RULE_VERSION,
+      ruleVersionId: adjustmentSummaries.find(summary => summary.store_id === store.storeId && summary.final_snapshot_id)?.rule_version_code
+        ?? SALES_TARGET_INCENTIVE_RULE_VERSION,
       regionId: store.regionId,
       storeId: store.storeId,
       storeName: store.storeName,

@@ -5757,3 +5757,28 @@ CREATE TABLE IF NOT EXISTS ops.company_daily_kpi_return (
 );
 CREATE INDEX IF NOT EXISTS idx_company_daily_return_store_day
     ON ops.company_daily_kpi_return (store_id, business_date);
+
+-- New projections preserve V1's gross column and all frozen financial history.
+ALTER TABLE ops.sales_target_incentive_projection_row
+    ADD COLUMN IF NOT EXISTS personnel_net_sales_amount NUMERIC(18,4);
+ALTER TABLE rpt.sales_target_incentive_final_row
+    DROP CONSTRAINT IF EXISTS sales_target_incentive_final_row_actual_sales_amount_check;
+
+CREATE OR REPLACE FUNCTION ops.guard_incentive_signed_net_v2()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.actual_sales_amount < 0 AND NOT EXISTS (
+        SELECT 1 FROM rpt.sales_target_incentive_final_snapshot snapshot
+        JOIN ops.sales_target_incentive_rule_version rule
+          ON rule.sales_target_incentive_rule_version_id = snapshot.rule_version_id
+        WHERE snapshot.sales_target_incentive_final_snapshot_id = NEW.final_snapshot_id
+          AND snapshot.rule_version_code = 'sales-target-incentive-v2.0.0'
+          AND rule.rule_version_code = snapshot.rule_version_code
+    ) THEN
+        RAISE EXCEPTION 'Signed incentive sales require the V2 net rule' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS incentive_signed_net_rule ON rpt.sales_target_incentive_final_row;
+CREATE TRIGGER incentive_signed_net_rule BEFORE INSERT OR UPDATE OF actual_sales_amount, final_snapshot_id
+    ON rpt.sales_target_incentive_final_row FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_signed_net_v2();

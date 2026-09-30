@@ -86,7 +86,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
-    expect(text).toContain("transition_store_sales");
+    expect(text).toContain("current_store_sales");
     expect(text).toContain("ops.store_type_as_of(s.store_id, ka.period_start) = 'company'");
     expect(params).toEqual([
       "2026-05-01",
@@ -112,7 +112,9 @@ describe("SalesTargetIncentiveReadRepository", () => {
       expect(sql).toContain("s.company_id = ANY(ib.company_ids)");
       expect(sql).not.toContain("ka.period_type = 'monthly'");
     }
-    expect(personnelSql).toContain("'personnel_gross_sales'");
+    expect(personnelSql).toContain("outcome.return_attribution_version = 2");
+    expect(personnelSql).toContain("ROUND(facts.net_amount_try, 4) = ka.actual_value");
+    expect(personnelSql).toContain("BOOL_AND(attribution.valid)");
     expect(query.mock.calls[0][1]).toEqual([
       "2026-05-01", "2026-05-31", "2026-05-10",
       "2026-06-01T02:00:00Z", scopeInput.companyIds,
@@ -219,14 +221,14 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.employee_id = assignment.employee_id");
     expect(text).toContain("ka.store_id = assignment.store_id");
     expect(text).toContain("FROM stg.kpi_raw kr");
-    expect(text).toContain("ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'");
+    expect(text).not.toContain("ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'");
     expect(text).toContain(
       "employee_map.internal_id = assignment.employee_id",
     );
     expect(text).toContain("store_map.internal_id = assignment.store_id");
     expect(text).toContain("kr.payload_json ->> 'scopeType' = 'employee'");
     expect(text).toContain(
-      "kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'",
+      "kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_net_sales'",
     );
     expect(text.match(/ka\.period_type = 'monthly'/g)).toHaveLength(2);
     expect(text).toContain("ka.period_start = $1::date");
@@ -240,7 +242,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
-    expect(text).toContain("transition_personnel_sales");
+    expect(text).toContain("current_personnel_sales");
     expect(params).toEqual([
       "2026-05-01",
       "2026-05-31",

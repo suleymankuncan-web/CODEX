@@ -53,7 +53,7 @@ function databaseHarness() {
         }],
       };
     }
-    if (sql.includes("personnel_positive_sales_amount")) return { rowCount: 0, rows: [] };
+    if (sql.includes("personnel_net_sales_amount")) return { rowCount: 0, rows: [] };
     if (sql.includes("region_manager.display_name AS region_manager_name")) {
       return { rowCount: 1, rows: [{ company_id: companyId, region_id: regionId, region_name: "Marmara", region_manager_user_id: "00000000-0000-4000-8000-000000000902", region_manager_name: "Eda Kaya", store_id: storeId, store_code: "MP" }] };
     }

@@ -1,5 +1,5 @@
 export const SALES_TARGET_INCENTIVE_RULE_VERSION =
-  "sales-target-incentive-v1.0.0";
+  "sales-target-incentive-v2.0.0";
 export const MANAGER_RATE_TABLE_VERSION = "manager-sales-target-v1.0.0";
 export const PERSONNEL_RATE_TABLE_VERSION = "personnel-sales-target-v1.0.0";
 export const SALES_TARGET_INCENTIVE_TIMEZONE = "Europe/Istanbul";
@@ -71,7 +71,7 @@ export type SalesTargetIncentivePersonnelInput = {
   storeTarget: string | null;
   storeActualNetSales: string | null;
   personnelTarget: string | null;
-  personnelActualPositiveSales: string | null;
+  personnelActualNetSales: string | null;
 };
 
 export type SalesTargetIncentivePeriodResolution =
@@ -241,7 +241,7 @@ export class SalesTargetIncentiveCalculatorService {
       return personnelTargetValidation.result;
     }
 
-    if (input.personnelActualPositiveSales === null) {
+    if (input.personnelActualNetSales === null) {
       return this.noSourceResult({
         reason: "missing_personnel_sales_source",
         rateTableVersion: PERSONNEL_RATE_TABLE_VERSION,
@@ -251,8 +251,8 @@ export class SalesTargetIncentiveCalculatorService {
     }
 
     const storeActualNetSales = parseDecimal(input.storeActualNetSales);
-    const personnelActualPositiveSales = parseDecimal(
-      input.personnelActualPositiveSales,
+    const personnelActualNetSales = parseDecimal(
+      input.personnelActualNetSales,
     );
     const storeGatePassed = isAchievementAtLeast({
       actual: storeActualNetSales,
@@ -260,14 +260,14 @@ export class SalesTargetIncentiveCalculatorService {
       thresholdPct: "80.0000",
     });
     const personalRateBeforeGate = selectRateByAchievement({
-      actual: personnelActualPositiveSales,
+      actual: personnelActualNetSales,
       target: personnelTargetValidation.decimal,
       brackets: PERSONNEL_RATE_BRACKETS,
     });
     const rate = storeGatePassed ? personalRateBeforeGate : "0.0000";
     const rawEarnedAmount = storeGatePassed
       ? multiplyDecimalToMinimumScale({
-          multiplicand: personnelActualPositiveSales,
+          multiplicand: personnelActualNetSales,
           multiplier: parseDecimal(rate),
           minimumOutputScale: 6,
         })
@@ -284,7 +284,7 @@ export class SalesTargetIncentiveCalculatorService {
       }),
       storeGatePassed,
       achievementPct: formatAchievementPct({
-        actual: personnelActualPositiveSales,
+        actual: personnelActualNetSales,
         target: personnelTargetValidation.decimal,
       }),
       personalRateBeforeGate,

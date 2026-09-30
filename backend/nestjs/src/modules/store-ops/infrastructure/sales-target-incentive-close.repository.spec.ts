@@ -54,7 +54,7 @@ const storeProjection: SalesTargetIncentiveProjectionStore = {
       status: "projected",
       blockedReason: null,
       excludedReason: null,
-      ruleVersionCode: "sales-target-incentive-v1.0.0",
+      ruleVersionCode: "sales-target-incentive-v2.0.0",
       rateTableVersion: "manager-sales-target-v1.0.0",
       positionCode: "STORE_MANAGER",
       normalizedFromPositionCode: null,
@@ -93,7 +93,7 @@ const storeProjection: SalesTargetIncentiveProjectionStore = {
         status: "projected",
         blockedReason: null,
         excludedReason: null,
-        ruleVersionCode: "sales-target-incentive-v1.0.0",
+        ruleVersionCode: "sales-target-incentive-v2.0.0",
         rateTableVersion: "personnel-sales-target-v1.0.0",
         positionCode: "SALES_ASSOCIATE",
         normalizedFromPositionCode: null,
@@ -194,7 +194,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         rows: [
           {
             rule_version_id: ruleVersionId,
-            rule_version_code: "sales-target-incentive-v1.0.0",
+            rule_version_code: "sales-target-incentive-v2.0.0",
           },
         ],
       })
@@ -210,6 +210,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
@@ -254,8 +255,10 @@ describe("SalesTargetIncentiveCloseRepository", () => {
     expect(query.mock.calls[1][1]).toEqual([["sales_target_incentive_close", companyId, "2026-05"].join(":")]);
     expect(String(query.mock.calls[2][0])).toContain("FROM ops.sales_target_incentive_close_run run");
     expect(query.mock.calls[2][1]).toEqual([companyId, "2026-05", [storeId]]);
-    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO ops.sales_target_incentive_close_run");
-    expect(query.mock.calls[6][1]).toEqual(
+    expect(String(query.mock.calls[6][0])).toContain("ib.import_batch_id::text = ka.source_batch_id");
+    expect(query.mock.calls[6][1]).toEqual([companyId, [storeId], "2026-05-01", "2026-05-31", "2026-06-01T02:00:00.000+03:00"]);
+    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO ops.sales_target_incentive_close_run");
+    expect(query.mock.calls[7][1]).toEqual(
       expect.arrayContaining([
         companyId,
         "2026-05",
@@ -265,7 +268,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         [storeImportBatchId, personnelImportBatchId],
       ]),
     );
-    expect(JSON.parse(String((query.mock.calls[6][1] as unknown[])[9]))).toEqual(
+    expect(JSON.parse(String((query.mock.calls[7][1] as unknown[])[9]))).toEqual(
       expect.objectContaining({
         sourceType: "admin_period_close",
         sourceMode: "historical_imported_backfill",
@@ -276,9 +279,9 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         storeIds: [storeId],
       }),
     );
-    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_rule_snapshot");
-    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
-    expect(query.mock.calls[8][1]).toEqual(
+    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_rule_snapshot");
+    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
+    expect(query.mock.calls[9][1]).toEqual(
       expect.arrayContaining([
         storeProjection.storeTargetRequestId,
         storeProjection.storeTargetAmount,
@@ -287,8 +290,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         true,
       ]),
     );
-    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
-    expect(query.mock.calls[9][1]).toEqual(
+    expect(String(query.mock.calls[10][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(query.mock.calls[10][1]).toEqual(
       expect.arrayContaining([
         managerEmployeeId,
         storeProjection.manager?.assignmentId,
@@ -296,8 +299,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         "2026-05-01",
       ]),
     );
-    expect(String(query.mock.calls[10][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(query.mock.calls[10][1]).toEqual(
+    expect(String(query.mock.calls[11][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(query.mock.calls[11][1]).toEqual(
       expect.arrayContaining([
         managerAssignmentSnapshotId,
         managerEmployeeId,
@@ -306,8 +309,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         "11500.00",
       ]),
     );
-    expect(String(query.mock.calls[12][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(query.mock.calls[12][1]).toEqual(
+    expect(String(query.mock.calls[13][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(query.mock.calls[13][1]).toEqual(
       expect.arrayContaining([
         personnelAssignmentSnapshotId,
         personnelEmployeeId,
@@ -316,7 +319,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         "3960.00",
       ]),
     );
-    expect(String(query.mock.calls[13][0])).toContain("SET status = 'succeeded'");
+    expect(String(query.mock.calls[14][0])).toContain("SET status = 'succeeded'");
     expect(result).toEqual(
       expect.objectContaining({
         closeRunId,
@@ -454,7 +457,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         rows: [
           {
             rule_version_id: ruleVersionId,
-            rule_version_code: "sales-target-incentive-v1.0.0",
+            rule_version_code: "sales-target-incentive-v2.0.0",
           },
         ],
       })
@@ -470,6 +473,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
@@ -508,19 +512,19 @@ describe("SalesTargetIncentiveCloseRepository", () => {
       stores: [importedTargetStore],
     });
 
-    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
-    expect(query.mock.calls[8][1]).toEqual(
+    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
+    expect(query.mock.calls[9][1]).toEqual(
       expect.arrayContaining([
         null,
         importedTargetStore.storeTargetAmount,
         importedTargetStore.storeNetSalesAmount,
       ]),
     );
-    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
-    expect(String(query.mock.calls[10][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(String(query.mock.calls[11][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
-    expect(String(query.mock.calls[12][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    const personnelFinalRowArgs = query.mock.calls[12][1] as unknown[];
+    expect(String(query.mock.calls[10][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(String(query.mock.calls[11][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(String(query.mock.calls[12][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(String(query.mock.calls[13][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    const personnelFinalRowArgs = query.mock.calls[13][1] as unknown[];
     expect(personnelFinalRowArgs).toEqual(
       expect.arrayContaining([
         personnelAssignmentSnapshotId,
@@ -542,8 +546,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         importedHistoricalPersonnelTargetMissing: true,
       }),
     );
-    expect(String(query.mock.calls[13][0])).toContain("SET status = 'succeeded'");
-    expect(query).toHaveBeenCalledTimes(14);
+    expect(String(query.mock.calls[14][0])).toContain("SET status = 'succeeded'");
+    expect(query).toHaveBeenCalledTimes(15);
     expect(result).toEqual(
       expect.objectContaining({
         closeRunId,
@@ -593,10 +597,11 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         rows: [
           {
             rule_version_id: ruleVersionId,
-            rule_version_code: "sales-target-incentive-v1.0.0",
+            rule_version_code: "sales-target-incentive-v2.0.0",
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })

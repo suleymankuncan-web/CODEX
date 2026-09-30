@@ -74,7 +74,7 @@ export type SalesTargetIncentivePersonnelSourceRow = {
   store_net_sales_import_batch_id: string | null;
   personnel_target_reference_id: string | null;
   personnel_target_amount: string | null;
-  personnel_positive_sales_amount: string | null;
+  personnel_net_sales_amount: string | null;
   personnel_sales_source_batch_id: string | null;
   personnel_sales_import_batch_id: string | null;
   personnel_sales_source_payload_hash: string | null;
@@ -184,7 +184,7 @@ export class SalesTargetIncentiveReadRepository {
              AND kd.kpi_code = 'NET_SALES'
              AND kd.is_active = TRUE
             INNER JOIN stg.import_batch ib
-              ON ib.source_batch_id = ka.source_batch_id
+              ON (ib.source_batch_id = ka.source_batch_id OR ib.import_batch_id::text = ka.source_batch_id)
              AND ib.entity_type = 'kpi'
           )
           SELECT to_char(period_start, 'YYYY-MM') AS period_key
@@ -404,7 +404,7 @@ export class SalesTargetIncentiveReadRepository {
             store_sales.import_batch_id AS store_net_sales_import_batch_id,
             ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
             ptr.target_value::text AS personnel_target_amount,
-            personnel_sales.actual_value::text AS personnel_positive_sales_amount,
+            personnel_sales.actual_value::text AS personnel_net_sales_amount,
             personnel_sales.source_batch_id AS personnel_sales_source_batch_id,
             personnel_sales.import_batch_id AS personnel_sales_import_batch_id,
             personnel_sales.source_payload_hash AS personnel_sales_source_payload_hash,
@@ -729,8 +729,9 @@ function monthlyStoreSalesJoin(closeCutoffClause: string) {
     FROM ops.kpi_actual ka
     INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
       AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
-    INNER JOIN stg.import_batch ib ON ib.source_batch_id = ka.source_batch_id
-      AND ib.entity_type = 'kpi' ${closeCutoffClause}
+    INNER JOIN stg.import_batch ib ON (ib.source_batch_id = ka.source_batch_id OR ib.import_batch_id::text = ka.source_batch_id)
+      AND ib.entity_type = 'kpi' AND ib.status = 'completed' AND ib.error_count = 0
+      AND s.company_id = ANY(ib.company_ids) ${closeCutoffClause}
     WHERE ka.store_id = s.store_id AND ka.scope_type = 'store'
       AND ka.period_type = 'monthly' AND ka.period_start = $1::date
       AND ka.period_end = $2::date AND ka.source_type = 'integration'
@@ -741,19 +742,19 @@ function monthlyStoreSalesJoin(closeCutoffClause: string) {
     ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
     LIMIT 1
   ) monthly_store_sales ON TRUE
-  ${dailyStoreSalesJoin(closeCutoffClause, "transition_store_sales", true)}
+  ${dailyStoreSalesJoin(closeCutoffClause, "current_store_sales")}
   LEFT JOIN LATERAL (
-    SELECT COALESCE(transition_store_sales.actual_value, monthly_store_sales.actual_value) AS actual_value,
-      COALESCE(transition_store_sales.source_batch_id, monthly_store_sales.source_batch_id) AS source_batch_id,
-      COALESCE(transition_store_sales.import_batch_id, monthly_store_sales.import_batch_id) AS import_batch_id,
-      COALESCE(transition_store_sales.source_payload_hash, monthly_store_sales.source_payload_hash) AS source_payload_hash,
-      COALESCE(transition_store_sales.last_synced_at, monthly_store_sales.last_synced_at) AS last_synced_at
+    SELECT COALESCE(current_store_sales.actual_value, monthly_store_sales.actual_value) AS actual_value,
+      COALESCE(current_store_sales.source_batch_id, monthly_store_sales.source_batch_id) AS source_batch_id,
+      COALESCE(current_store_sales.import_batch_id, monthly_store_sales.import_batch_id) AS import_batch_id,
+      COALESCE(current_store_sales.source_payload_hash, monthly_store_sales.source_payload_hash) AS source_payload_hash,
+      COALESCE(current_store_sales.last_synced_at, monthly_store_sales.last_synced_at) AS last_synced_at
   ) store_sales ON TRUE`;
 }
 
 // The daily facts are additive. The latest source row supplies display lineage;
 // close-run lineage separately records every contributing import batch.
-function dailyStoreSalesJoin(closeCutoffClause: string, alias = "store_sales", transitionOnly = false) {
+function dailyStoreSalesJoin(closeCutoffClause: string, alias = "store_sales") {
   return `LEFT JOIN LATERAL (
     SELECT SUM(ka.actual_value) AS actual_value,
       (ARRAY_AGG(ka.source_batch_id ORDER BY ka.period_start DESC))[1] AS source_batch_id,
@@ -766,7 +767,7 @@ function dailyStoreSalesJoin(closeCutoffClause: string, alias = "store_sales", t
     INNER JOIN LATERAL (
       SELECT ib.import_batch_id, ib.finished_at, ib.started_at
       FROM stg.import_batch ib
-      WHERE ib.source_batch_id = ka.source_batch_id AND ib.entity_type = 'kpi'
+      WHERE (ib.source_batch_id = ka.source_batch_id OR ib.import_batch_id::text = ka.source_batch_id) AND ib.entity_type = 'kpi'
         AND ib.status = 'completed' AND ib.error_count = 0
         AND s.company_id = ANY(ib.company_ids) ${closeCutoffClause}
       ORDER BY ib.finished_at DESC NULLS LAST, ib.import_batch_id DESC
@@ -777,9 +778,6 @@ function dailyStoreSalesJoin(closeCutoffClause: string, alias = "store_sales", t
       AND ka.period_start BETWEEN $1::date AND $2::date
       AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
       AND ops.store_type_as_of(s.store_id, ka.period_start) = 'company'
-      ${transitionOnly ? `AND EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
-        WHERE ownership.store_id = s.store_id
-          AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)` : ""}
   ) ${alias} ON TRUE`;
 }
 
@@ -791,8 +789,9 @@ function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
     FROM ops.kpi_actual ka
     INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
       AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
-    INNER JOIN stg.import_batch ib ON ib.source_batch_id = ka.source_batch_id
-      AND ib.entity_type = 'kpi' ${closeCutoffClause}
+    INNER JOIN stg.import_batch ib ON (ib.source_batch_id = ka.source_batch_id OR ib.import_batch_id::text = ka.source_batch_id)
+      AND ib.entity_type = 'kpi' AND ib.status = 'completed' AND ib.error_count = 0
+      AND s.company_id = ANY(ib.company_ids) ${closeCutoffClause}
     WHERE ka.store_id = assignment.store_id
       AND ka.employee_id = assignment.employee_id
       AND ka.scope_type = 'employee' AND ka.period_type = 'monthly'
@@ -802,8 +801,7 @@ function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
         WHERE ownership.store_id = s.store_id
           AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)
       AND (
-        ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'
-        OR EXISTS (
+        EXISTS (
           SELECT 1 FROM stg.kpi_raw kr
           INNER JOIN stg.external_id_map employee_map
             ON employee_map.integration_source_id = ib.integration_source_id
@@ -821,25 +819,25 @@ function monthlyPersonnelSalesJoin(closeCutoffClause: string) {
             AND kr.source_metric_id = 'NET_SALES'
             AND kr.period_start = ka.period_start AND kr.period_end = ka.period_end
             AND kr.payload_json ->> 'scopeType' = 'employee'
-            AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
+            AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_net_sales'
         )
       )
     ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
     LIMIT 1
   ) monthly_personnel_sales ON TRUE
-  ${dailyPersonnelSalesJoin(closeCutoffClause, "transition_personnel_sales", true)}
+  ${dailyPersonnelSalesJoin(closeCutoffClause, "current_personnel_sales")}
   LEFT JOIN LATERAL (
-    SELECT COALESCE(transition_personnel_sales.actual_value, monthly_personnel_sales.actual_value) AS actual_value,
-      COALESCE(transition_personnel_sales.source_batch_id, monthly_personnel_sales.source_batch_id) AS source_batch_id,
-      COALESCE(transition_personnel_sales.import_batch_id, monthly_personnel_sales.import_batch_id) AS import_batch_id,
-      COALESCE(transition_personnel_sales.source_payload_hash, monthly_personnel_sales.source_payload_hash) AS source_payload_hash,
-      COALESCE(transition_personnel_sales.last_synced_at, monthly_personnel_sales.last_synced_at) AS last_synced_at
+    SELECT CASE WHEN current_personnel_sales.source_batch_id IS NOT NULL THEN current_personnel_sales.actual_value ELSE monthly_personnel_sales.actual_value END AS actual_value,
+      COALESCE(current_personnel_sales.source_batch_id, monthly_personnel_sales.source_batch_id) AS source_batch_id,
+      COALESCE(current_personnel_sales.import_batch_id, monthly_personnel_sales.import_batch_id) AS import_batch_id,
+      COALESCE(current_personnel_sales.source_payload_hash, monthly_personnel_sales.source_payload_hash) AS source_payload_hash,
+      COALESCE(current_personnel_sales.last_synced_at, monthly_personnel_sales.last_synced_at) AS last_synced_at
   ) personnel_sales ON TRUE`;
 }
 
-function dailyPersonnelSalesJoin(closeCutoffClause: string, alias = "personnel_sales", transitionOnly = false) {
+function dailyPersonnelSalesJoin(closeCutoffClause: string, alias = "personnel_sales") {
   return `LEFT JOIN LATERAL (
-    SELECT SUM(ka.actual_value) AS actual_value,
+    SELECT CASE WHEN BOOL_AND(attribution.valid) THEN SUM(ka.actual_value) END AS actual_value,
       (ARRAY_AGG(ka.source_batch_id ORDER BY ka.period_start DESC))[1] AS source_batch_id,
       (ARRAY_AGG(ib.import_batch_id::text ORDER BY ka.period_start DESC))[1] AS import_batch_id,
       (ARRAY_AGG(ka.source_payload_hash ORDER BY ka.period_start DESC))[1] AS source_payload_hash,
@@ -850,40 +848,35 @@ function dailyPersonnelSalesJoin(closeCutoffClause: string, alias = "personnel_s
     INNER JOIN LATERAL (
       SELECT ib.import_batch_id, ib.integration_source_id, ib.finished_at, ib.started_at
       FROM stg.import_batch ib
-      WHERE ib.source_batch_id = ka.source_batch_id AND ib.entity_type = 'kpi'
-        AND ib.status = 'completed' AND ib.error_count = 0
+      WHERE (ib.source_batch_id = ka.source_batch_id OR ib.import_batch_id::text = ka.source_batch_id)
+        AND ib.entity_type = 'kpi' AND ib.status = 'completed' AND ib.error_count = 0
         AND s.company_id = ANY(ib.company_ids) ${closeCutoffClause}
       ORDER BY ib.finished_at DESC NULLS LAST, ib.import_batch_id DESC
       LIMIT 1
     ) ib ON TRUE
+    CROSS JOIN LATERAL (
+      SELECT EXISTS (
+        SELECT 1 FROM ops.company_daily_kpi_employee_sales facts
+        JOIN ops.company_daily_kpi_component_outcome outcome USING (component_outcome_id)
+        WHERE facts.employee_id = ka.employee_id AND facts.store_id = ka.store_id
+          AND facts.business_date = ka.period_start
+          AND outcome.integration_source_id = ib.integration_source_id
+          AND outcome.status = 'succeeded' AND outcome.return_attribution_version = 2
+          AND ROUND(facts.net_amount_try, 4) = ka.actual_value
+          AND NOT EXISTS (SELECT 1 FROM ops.company_daily_kpi_return unresolved
+            JOIN ops.company_daily_kpi_component_outcome unresolved_outcome
+              ON unresolved_outcome.component_outcome_id = unresolved.component_outcome_id
+            WHERE unresolved_outcome.integration_source_id = outcome.integration_source_id
+              AND unresolved_outcome.status = 'succeeded'
+              AND unresolved.business_date BETWEEN $1::date AND $2::date
+              AND unresolved.store_id = ka.store_id AND unresolved.return_kind = 'unresolved')
+      ) AS valid
+    ) attribution
     WHERE ka.store_id = assignment.store_id
       AND ka.employee_id = assignment.employee_id AND ka.scope_type = 'employee'
       AND ka.period_type = 'daily' AND ka.period_start = ka.period_end
       AND ka.period_start BETWEEN $1::date AND $2::date
       AND ka.source_type = 'integration' AND ka.source_batch_id IS NOT NULL
       AND ops.store_type_as_of(s.store_id, ka.period_start) = 'company'
-      ${transitionOnly ? `AND EXISTS (SELECT 1 FROM ops.store_ownership_transition ownership
-        WHERE ownership.store_id = s.store_id
-          AND ownership.effective_on > $1::date AND ownership.effective_on <= $2::date)` : ""}
-      AND EXISTS (
-        SELECT 1 FROM stg.kpi_raw kr
-        INNER JOIN stg.external_id_map employee_map
-          ON employee_map.integration_source_id = ib.integration_source_id
-         AND employee_map.entity_type = 'employee'
-         AND employee_map.external_id = kr.employee_external_ref
-         AND employee_map.internal_id = assignment.employee_id
-         AND employee_map.is_active = TRUE
-        INNER JOIN stg.external_id_map store_map
-          ON store_map.integration_source_id = ib.integration_source_id
-         AND store_map.entity_type = 'store'
-         AND store_map.external_id = kr.store_external_ref
-         AND store_map.internal_id = assignment.store_id
-         AND store_map.is_active = TRUE
-        WHERE kr.import_batch_id = ib.import_batch_id
-          AND kr.source_metric_id = 'NET_SALES'
-          AND kr.period_start = ka.period_start AND kr.period_end = ka.period_end
-          AND kr.payload_json ->> 'scopeType' = 'employee'
-          AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
-      )
   ) ${alias} ON TRUE`;
 }

@@ -11,7 +11,7 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - The prior nine PRs are merged. Owner authorized six ordered returns/net-prim/auth
   PRs: targeted local tests and repeated self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
-  repair. [V2 attribution/activation](docs/contracts/company-daily-kpi-returns-v2.md).
+  repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md).
 - Primler retains company-month seals, SD → HR → GM, final-money authority,
   payroll seals and legacy history; Auth/Master retains bounded scroll/focus.
   [Scope and verification](docs/ui/incentives-local-preview.md).

@@ -64,7 +64,7 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
           status: "projected",
           blockedReason: null,
           excludedReason: null,
-          ruleVersionCode: "sales-target-incentive-v1.0.0",
+          ruleVersionCode: "sales-target-incentive-v2.0.0",
           rateTableVersion: "manager-sales-target-v1.0.0",
           positionCode: "STORE_MANAGER",
           normalizedFromPositionCode: null,
@@ -103,7 +103,7 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
             status: "projected",
             blockedReason: null,
             excludedReason: null,
-            ruleVersionCode: "sales-target-incentive-v1.0.0",
+            ruleVersionCode: "sales-target-incentive-v2.0.0",
             rateTableVersion: "personnel-sales-target-v1.0.0",
             positionCode: "SALES_ASSOCIATE",
             normalizedFromPositionCode: null,
@@ -895,6 +895,8 @@ describe("SalesTargetIncentiveApiService", () => {
         correction_amount: "0",
         adjustment_amount: "0",
         final_amount: "3450.00",
+        final_snapshot_id: "00000000-0000-4000-8000-000000000903",
+        rule_version_code: "sales-target-incentive-v1.0.0",
       },
     ]);
 
@@ -904,6 +906,7 @@ describe("SalesTargetIncentiveApiService", () => {
     });
 
     const row = result.data.projections[0].rows.find((candidate) => candidate.employeeId === employeeId);
+    expect(result.data.projections[0].ruleVersionId).toBe("sales-target-incentive-v1.0.0");
     expect(row).toMatchObject({
       target: "210000.0000",
       actualPositiveSales: "230000.0000",
