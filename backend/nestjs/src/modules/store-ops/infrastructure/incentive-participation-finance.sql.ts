@@ -43,6 +43,6 @@ export function legacyParticipationSelect(storeSql: string, snapshotSql: string,
       AND participation.final_snapshot_id = ${snapshotSql}) AS participation`;
 }
 
-export const legacyAdjustmentParticipationSelect = legacyParticipationSelect("adjustment_summary.store_id",
+export const legacyAdjustmentParticipationSelect = legacyParticipationSelect("adjustment_summary.store_id::text",
   "COALESCE(adjustment_summary.final_snapshot_id, (SELECT sales_target_incentive_final_snapshot_id::text FROM latest_final_snapshot WHERE store_id::text = adjustment_summary.store_id))",
-  "adjustment_summary.employee_id");
+  "adjustment_summary.employee_id::text");

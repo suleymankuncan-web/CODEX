@@ -11,6 +11,7 @@ const body = { period: "2026-09", regionPackageId: packageId, submittedAt };
 describe("individual final approval HTTP boundary", () => {
   let app: Awaited<ReturnType<typeof createIntegrationApp>>;
   const query = jest.fn(async (sql: string) => {
+    if (sql.includes("AS frozen_total_amount")) return { rows: [{ package_id: packageId, company_id: companyId, submitted_at: submittedAt, frozen_total_amount: "0.00", store_snapshots: [] }] };
     if (sql.includes("FOR SHARE OF role_assignment")) return { rows: [{ user_role_assignment_id: packageId }] };
     if (sql.includes("package_status = 'submitted'") && sql.includes("FOR UPDATE")) return { rows: [{ sales_target_incentive_region_package_id: packageId, company_id: companyId, region_id: null, manager_user_id: managerUserId, package_scope: "manager_assignment", submitted_by_user_id: managerUserId, submitted_at: submittedAt }] };
     if (sql.includes("WITH package_stores")) return { rows: [{ stale: false }] };
