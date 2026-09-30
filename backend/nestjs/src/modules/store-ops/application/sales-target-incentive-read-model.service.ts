@@ -92,6 +92,7 @@ export type SalesTargetIncentiveCloseReadiness = {
     | "blocked_by_imports"
     | "blocked_by_target_revision"
     | "blocked_by_calculation";
+  blockingSalesDays?: Array<{ storeId: string; businessDate: string }>;
   blockingImports: SalesTargetIncentiveCloseBlockingImportRow[];
   blockingTargetRevisions: SalesTargetIncentiveCloseBlockingTargetRevisionRow[];
 };
@@ -266,8 +267,13 @@ export class SalesTargetIncentiveReadModelService {
     });
 
     const closeCandidateStores = projection.stores.filter(isCloseReadinessStoreCandidate);
+    const missingSalesDays = await this.repository.listMissingDailySalesDays({
+      companyIds: input.companyIds, storeIds: closeCandidateStores.map(store=>store.storeId),
+      periodStart: period.periodStart, periodEnd: period.periodEnd,
+      closeCutoffAt: input.closeCutoffAt, forceDaily: input.salesSource === "daily",
+    });
     if (
-      closeCandidateStores.length === 0 ||
+      missingSalesDays.length > 0 || closeCandidateStores.length === 0 ||
       (input.salesSource === "daily" && closeCandidateStores.some((store) =>
         Number(store.storeNetSalesAmount ?? 0) > 0 &&
         store.personnel.length > 0 &&
@@ -281,6 +287,7 @@ export class SalesTargetIncentiveReadModelService {
         periodEnd: period.periodEnd,
         canClose: false,
         status: "blocked_by_calculation",
+        ...(missingSalesDays.length ? { blockingSalesDays: missingSalesDays.map(day=>({storeId:day.store_id,businessDate:day.business_date})) } : {}),
         blockingImports,
         blockingTargetRevisions,
       };

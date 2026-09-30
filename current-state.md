@@ -8,13 +8,13 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
-- The prior nine PRs are merged. Owner authorized six ordered returns/net-prim/auth
-  PRs: targeted local tests and repeated self-review until GO, required full GitHub
+- Nine prior PRs are merged. Six returns/net-prim/auth PRs are authorized: targeted local tests and repeated self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
-  repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md).
+  repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md),
+  [scoped returns](docs/contracts/store-returns-read-v1.md).
 - Primler retains company-month seals, SD → HR → GM, final-money authority,
   payroll seals and legacy history; Auth/Master retains bounded scroll/focus.
-  [Scope and verification](docs/ui/incentives-local-preview.md).
+  [Verification](docs/ui/incentives-local-preview.md).
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
@@ -23,7 +23,7 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
   on 18 September. Selected-day sales use whole monthly targets; published admin
   HG weight applies directly. Other KPI scales and closed snapshots are preserved.
   [Contract and rollback](docs/plans/rankings-monthly-achievement-v1.md).
-  Deployment of this change is not established by that merge evidence.
+  Deployment of this change is not established by merge.
 - Ranking daily-facts Redis cache is opt-in/default-off; company names, permissions,
   targets and scoring stay fresh. Hosted activation is unverified.
   [Measurement](docs/evidence/performance/2026-09-16-rankings-cache.md).

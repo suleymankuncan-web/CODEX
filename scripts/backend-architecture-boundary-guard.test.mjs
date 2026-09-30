@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
-
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' })
 }
@@ -237,6 +236,7 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-hr-handoff.module.ts', { controllers: 1, providers: 3, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-projection.module.ts', { controllers: 0, providers: 3, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workflow.module.ts', { imports: 2, controllers: 0, providers: 1, exports: 1 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops-returns-read.module.ts', { imports: 0, controllers: 1, providers: 3, exports: 1 }], ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workspace-data.module.ts', { imports: 2, controllers: 0, providers: 0, exports: 2 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workspace.module.ts', { imports: 1, controllers: 1, providers: 3, exports: 0 }],
   // Participation writes have their own two-provider boundary; the read workspace budget stays frozen.
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-participation.module.ts', { imports: 1, controllers: 0, providers: 2, exports: 2 }],

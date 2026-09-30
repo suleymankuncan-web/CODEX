@@ -11302,6 +11302,90 @@
           "IncentiveCompanyCycle"
         ]
       }
+    },
+    "/api/reports/store-returns": {
+      "get": {
+        "operationId": "StoreReturnsController_getLedger",
+        "parameters": [
+          {
+            "name": "storeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodStart",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodEnd",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "inside",
+              "type": "string",
+              "enum": [
+                "inside",
+                "other"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50,
+              "type": "number"
+            }
+          },
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scoped daily return ledger with canonical received totals and explicit coverage.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreReturnsLedgerResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreReturns"
+        ]
+      }
     }
   },
   "info": {
@@ -29170,6 +29254,23 @@
               "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCorrection"
             }
           },
+          "activity": {
+            "type": "object",
+            "required": [
+              "coveredDays",
+              "noPositiveSales15Days"
+            ],
+            "properties": {
+              "coveredDays": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15
+              },
+              "noPositiveSales15Days": {
+                "type": "boolean"
+              }
+            }
+          },
           "participation": {
             "type": "object",
             "required": [
@@ -29331,6 +29432,49 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SalesTargetIncentiveOutOfRosterReturn"
+            }
+          },
+          "positiveSellers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "employeeId",
+                "personnelCode",
+                "displayName",
+                "saleAmount",
+                "netAmount",
+                "lastPositiveDate"
+              ],
+              "properties": {
+                "employeeId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
+                "personnelCode": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "displayName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "saleAmount": {
+                  "type": "string",
+                  "nullable": false,
+                  "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                },
+                "netAmount": {
+                  "type": "string",
+                  "nullable": true,
+                  "pattern": "^-?\\d+(?:\\.\\d+)?$"
+                },
+                "lastPositiveDate": {
+                  "type": "string",
+                  "format": "date"
+                }
+              }
             }
           }
         }
@@ -30097,6 +30241,12 @@
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
           },
           "movementTracking": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          },
+          "positiveSellers": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          },
+          "personnelActivity": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
           }
         }
@@ -34152,6 +34302,224 @@
           "sealHash",
           "decision"
         ]
+      },
+      "StoreReturnRow": {
+        "type": "object",
+        "required": [
+          "returnId",
+          "businessDate",
+          "direction",
+          "category",
+          "personnelCode",
+          "employeeId",
+          "displayName",
+          "receivingStoreCode",
+          "receivingStoreName",
+          "originalStoreCode",
+          "originalStoreName",
+          "signedAmount",
+          "invoiceCount"
+        ],
+        "properties": {
+          "returnId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "businessDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "received",
+              "external"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "in_store",
+              "out_of_norm",
+              "cross_store",
+              "review_required"
+            ]
+          },
+          "personnelCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "employeeId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "receivingStoreCode": {
+            "type": "string"
+          },
+          "receivingStoreName": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalStoreCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalStoreName": {
+            "type": "string",
+            "nullable": true
+          },
+          "signedAmount": {
+            "type": "string",
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "invoiceCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "StoreReturnsLedger": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "periodStart",
+          "periodEnd",
+          "timezone",
+          "totals",
+          "coverage",
+          "rows",
+          "page"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "totals": {
+            "type": "object",
+            "required": [
+              "receivedSignedAmount",
+              "receivedInvoiceCount",
+              "externalSignedAmount",
+              "netSales"
+            ],
+            "properties": {
+              "receivedSignedAmount": {
+                "type": "string",
+                "pattern": "^-?\\d+(?:\\.\\d+)?$",
+                "nullable": true
+              },
+              "receivedInvoiceCount": {
+                "type": "integer",
+                "minimum": 0,
+                "nullable": true
+              },
+              "externalSignedAmount": {
+                "type": "string",
+                "pattern": "^-?\\d+(?:\\.\\d+)?$"
+              },
+              "netSales": {
+                "type": "string",
+                "pattern": "^-?\\d+(?:\\.\\d+)?$",
+                "nullable": true
+              }
+            }
+          },
+          "coverage": {
+            "type": "object",
+            "required": [
+              "expectedDays",
+              "coveredDays",
+              "missingDates",
+              "status",
+              "unresolvedRows"
+            ],
+            "properties": {
+              "expectedDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "coveredDays": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "missingDates": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "date"
+                }
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "partial",
+                  "no_data"
+                ]
+              },
+              "unresolvedRows": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoreReturnRow"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "StoreReturnsLedgerResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StoreReturnsLedger"
+          }
+        }
       }
     }
   },

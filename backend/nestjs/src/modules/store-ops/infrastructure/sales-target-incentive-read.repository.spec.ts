@@ -43,7 +43,10 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(sql).toContain("company_daily_kpi_employee_sales");
     expect(sql).toContain("company_daily_kpi_unmapped_personnel_sales");
     expect(sql).toContain("SUM(signed_return_amount_try)");
-    expect(sql).toContain("SUM(net_amount_try)");
+    expect(sql).toContain("SUM(ROUND(net_amount_try,4))");
+    expect(sql).toContain("return_attribution_version = 2");
+    expect(sql).toContain("actual.actual_value=ROUND(movements.net_amount_try,4)");
+    expect(sql).toContain("movement.return_kind='unresolved'");
     expect(sql).toContain("assignment.assignment_status = 'active'");
     expect(sql).toContain("current_employee.employment_status = 'active'");
     expect(sql).toContain("AS is_active_roster");

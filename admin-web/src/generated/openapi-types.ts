@@ -3114,6 +3114,10 @@ export type components = {
       "status": "projected" | "blocked" | "no_source" | "corrected" | "adjusted"
       "correction": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"] | null
       "correctionRecords": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"][]
+      "activity"?: {
+        "coveredDays": number
+        "noPositiveSales15Days": boolean
+      }
       "participation"?: {
         "included": boolean
         "reasonNote": string | null
@@ -3128,6 +3132,8 @@ export type components = {
       "rateMetadata": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
       "correctionActors": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
       "movementTracking": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
+      "positiveSellers"?: components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
+      "personnelActivity"?: components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
     }
     "SalesTargetIncentiveWorkspaceStore": {
       "storeId": string
@@ -3156,6 +3162,14 @@ export type components = {
       }
       "rows": components['schemas']["SalesTargetIncentiveWorkspaceRow"][]
       "outOfRosterReturns": components['schemas']["SalesTargetIncentiveOutOfRosterReturn"][]
+      "positiveSellers"?: Array<{
+          "employeeId": string | null
+          "personnelCode": string | null
+          "displayName": string | null
+          "saleAmount": string
+          "netAmount": string | null
+          "lastPositiveDate": string
+        }>
     }
     "SaveAssignedChecklistVisitPlanRequest": {
       "expectedRevision": number

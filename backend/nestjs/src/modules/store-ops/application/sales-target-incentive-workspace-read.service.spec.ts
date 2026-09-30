@@ -16,7 +16,9 @@ function harness() {
     listWorkflowAudit: jest.fn().mockResolvedValue({ reviews: [], corrections: [], packages: [] }),
     listCorrectionActors: jest.fn().mockResolvedValue([]),
   };
+  const positiveSellers = { list: jest.fn().mockResolvedValue([]), listActivity: jest.fn().mockResolvedValue([]) };
   return {
+    positiveSellers,
     readModel,
     corrections,
     repository,
@@ -24,6 +26,7 @@ function harness() {
       readModel as never,
       corrections as never,
       repository as never,
+      positiveSellers as never,
     ),
   };
 }
