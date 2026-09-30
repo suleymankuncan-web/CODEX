@@ -22,12 +22,10 @@ export function isDepartedIncentiveRow(row: IncentiveRow, today = getBusinessDat
 }
 
 export function personnelMovementDisplay(store: IncentiveStore, available: boolean) {
-  // Presentation only: keep all rows in the workspace for frozen totals,
-  // corrections and audit, while listing only selected-month target holders.
-  const visibleRows = store.rows.filter(row => hasAssignedIncentiveTarget(row, store.storeTarget))
-  const excludedTargetlessCount = store.rows.length - visibleRows.length
+  const visibleRows = store.rows
+  const targetlessCount = store.rows.filter(row => !hasAssignedIncentiveTarget(row, store.storeTarget)).length
 
-  if (!available) return { visibleRows, excludedTargetlessCount, returns: [], returnsTotal: null }
+  if (!available) return { visibleRows, targetlessCount, returns: [], returnsTotal: null }
 
   const candidates: ReturnMovement[] = [
     ...(store.outOfRosterReturns ?? []),
@@ -51,5 +49,5 @@ export function personnelMovementDisplay(store: IncentiveStore, available: boole
     if (!returnsByPerson.has(key)) returnsByPerson.set(key, item)
   })
   const returns = [...returnsByPerson.values()]
-  return { visibleRows, excludedTargetlessCount, returns, returnsTotal: returns.length ? sumMoney(returns.map(item => item.returnAmount)) : '0.00' }
+  return { visibleRows, targetlessCount, returns, returnsTotal: returns.length ? sumMoney(returns.map(item => item.returnAmount)) : '0.00' }
 }

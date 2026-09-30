@@ -14,11 +14,16 @@ export function applyIncentiveFinalApprovalOpenApi(document: Document) {
     reviewedAt: { ...nullable, format: "date-time" }, reviewNote: nullable,
     status: { type: "string", enum: ["not_submitted", "submitted", "admin_approved", "admin_returned"] },
     ...Object.fromEntries(["storeCount", "reviewedStoreCount", "submittedStoreCount", "draftCorrectionCount", "submittedCorrectionCount"].map(key => [key, { type: "integer", minimum: 0 }])),
+    frozenTotalAmount: { type: "string", nullable: true },
+    financialVersion: { type: "string", pattern: "^[a-f0-9]{64}$", nullable: true },
+    storeSnapshots: { type: "array", items: object({ storeId: uuid, finalSnapshotId: uuid, participationRevisionNo: { type: "integer", minimum: 0 },
+      exclusions: { type: "array", items: object({ employeeId: uuid, displayName: { type: "string" }, positionCode: { type: "string" }, reasonNote: { type: "string" } }) },
+    }) },
   };
   schemas.IncentiveFinalApprovalPackages = object({ items: { type: "array", items: object(properties) } });
   schemas.IncentiveFinalApprovalResult = object({ data: object({ regionPackageId: uuid, status: { type: "string", enum: ["admin_approved", "admin_returned"] }, reviewedAt: { type: "string", format: "date-time", nullable: true } }) });
   schemas.SubmitSalesTargetIncentiveRegionPackageDto = { type: "object", required: ["period"], properties: { period: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }, companyId: uuid, submissionNote: { type: "string", minLength: 1, maxLength: 1000 } } };
-  schemas.ApproveFinalIncentivePackageDto = { type: "object", required: ["period", "regionPackageId", "submittedAt"], properties: { period: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }, regionPackageId: uuid, submittedAt: { type: "string", format: "date-time" }, decision: { type: "string", enum: ["approve", "return"] }, reviewNote: { type: "string", maxLength: 1000 } } };
+  schemas.ApproveFinalIncentivePackageDto = { type: "object", required: ["period", "regionPackageId", "submittedAt"], properties: { period: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }, regionPackageId: uuid, submittedAt: { type: "string", format: "date-time" }, expectedFinancialVersion: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Required for packages with recorded participation; any supplied version must match the current frozen financial summary." }, decision: { type: "string", enum: ["approve", "return"] }, reviewNote: { type: "string", maxLength: 1000 } } };
   const path = "/api/store/incentives/final-approval";
   setJsonResponseSchema(document.paths, path, "get", "Company-scoped packages for explicitly authorized Report Viewers.", "IncentiveFinalApprovalPackages");
   setJsonResponseSchema(document.paths, path, "post", "Approve or return the exact submitted package. Return requires a note; omitted decision preserves approval behavior.", "IncentiveFinalApprovalResult", "201");
@@ -35,6 +40,8 @@ export function applyIncentiveFinalApprovalOpenApi(document: Document) {
   setQueryParameters(document.paths, hrPath, "get", [{ name: "period", in: "query", required: false, schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } }]);
   setJsonResponseSchema(document.paths, "/api/auth/role-assignments/{assignmentId}/incentive-approval", "patch", "Individual Report Viewer incentive approval permission updated.", "AuthRoleAssignmentCommandResponse");
   for (const name of ["AuthRoleAssignmentsResponse", "AuthRoleAssignmentCommandResponse"]) addIndividualGrant(schemas[name]);
+  const review = schemas.MarkSalesTargetIncentiveStoreReviewDto as { properties: Record<string, unknown> };
+  if (review?.properties) Object.assign(review.properties, { expectedParticipationRevision: { type: "integer", minimum: 0 }, expectedSnapshotId: uuid });
 }
 
 function addIndividualGrant(value: unknown) {

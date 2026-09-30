@@ -52,6 +52,12 @@ export const hrPackagesSql = `
       account.username, account.email, 'Atanmamış') AS manager_name,
     ARRAY(SELECT store_id::text FROM ops.sales_target_incentive_region_package_store
       WHERE region_package_id = package.sales_target_incentive_region_package_id ORDER BY store_id) AS store_ids,
+    (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'storeId', ps.store_id::text, 'finalSnapshotId', ps.final_snapshot_id::text,
+      'participationRevisionNo', ps.participation_revision_no,
+      'exclusions', ps.participation_exclusions_json) ORDER BY ps.store_id), '[]'::jsonb)
+      FROM ops.sales_target_incentive_region_package_store ps
+      WHERE ps.region_package_id = package.sales_target_incentive_region_package_id) AS frozen_participation,
     (SELECT COUNT(*)::int FROM (
       SELECT ps.store_id FROM ops.sales_target_incentive_region_package_store ps
       LEFT JOIN latest_final_snapshot latest ON latest.store_id = ps.store_id
@@ -102,6 +108,8 @@ export const hrRowsSql = `
     AND correction.final_row_id = row.sales_target_incentive_final_row_id AND correction.correction_status = 'admin_approved'
   WHERE package.period_key = $1 AND package.company_id = ANY($2::uuid[])
     AND package.package_status = 'admin_approved'
+    AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(ps.participation_exclusions_json) exclusion
+      WHERE exclusion->>'employeeId' = row.employee_id::text)
   ORDER BY package.company_id, manager_user_id, ps.store_id, row.sales_target_incentive_final_row_id
 `;
 

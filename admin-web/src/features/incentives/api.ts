@@ -38,6 +38,8 @@ export type SalesTargetIncentiveRow = {
   correctionAmount: string | null
   adjustmentAmount: string | null
   finalAmount: string | null
+  participation?: { included: boolean; reasonNote: string | null; revisionNo: number; finalSnapshotId: string; source: 'draft' | 'approved' }
+  calculatedFinalAmount?: string | null
   status: SalesTargetIncentiveStatus
   blockedReason: string | null
   rateTableVersion: string
@@ -181,6 +183,8 @@ export type StoreSalesTargetIncentiveReviewInput = {
   period: string
   storeId: string
   reviewStatus: 'pending_review' | 'reviewed'
+  expectedParticipationRevision?: number
+  expectedSnapshotId?: string
 }
 
 export type StoreSalesTargetIncentiveRegionCorrectionInput = {

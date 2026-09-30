@@ -224,10 +224,7 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-vm-reference.module.ts', { imports: 1, controllers: 3, providers: 6, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-store-action.module.ts', { imports: 1, controllers: 1, providers: 5, exports: 2 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-competition.module.ts', { controllers: 1, providers: 6, exports: 1 }],
-  [
-    'backend/nestjs/src/modules/store-ops/store-ops-incentive.module.ts',
-    { controllers: 2, providers: 6, exports: 1 },
-  ],
+  ['backend/nestjs/src/modules/store-ops/store-ops-incentive.module.ts', { controllers: 2, providers: 6, exports: 1 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-incentive-approval.module.ts',
     { controllers: 0, providers: 1, exports: 1 },
@@ -241,6 +238,8 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-projection.module.ts', { controllers: 0, providers: 3, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workflow.module.ts', { imports: 2, controllers: 0, providers: 1, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workspace.module.ts', { imports: 1, controllers: 1, providers: 3, exports: 0 }],
+  // Participation writes have their own two-provider boundary; the read workspace budget stays frozen.
+  ['backend/nestjs/src/modules/store-ops/store-ops-incentive-participation.module.ts', { imports: 1, controllers: 0, providers: 2, exports: 2 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-target-workspace.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-task-command-read.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   [

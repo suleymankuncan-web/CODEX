@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException } from "@nestjs/common";
 import { hrTestSnapshot } from "../application/incentive-hr-handoff.fixture";
-import { IncentiveHrHandoffRepository, hrSnapshotVersion } from "./incentive-hr-handoff.repository";
+import { IncentiveHrHandoffRepository, hrSnapshotReady, hrSnapshotVersion } from "./incentive-hr-handoff.repository";
 
 describe("atomic HR delivery claim", () => {
   let snapshot = hrTestSnapshot(); let granted = true;
@@ -53,5 +53,22 @@ describe("atomic HR delivery claim", () => {
     snapshot.packages[0].stale_stores = 1;
     await expect(claim()).rejects.toThrow(ConflictException);
     expect(query.mock.calls.some(call => call[0].includes("INSERT INTO"))).toBe(false);
+  });
+  it("versions frozen exclusions even for a person without a financial row", () => {
+    const frozen = { storeId: "store-a", finalSnapshotId: "snapshot-a", participationRevisionNo: 2,
+      exclusions: [{ employeeId: "no-row-person", displayName: "Person", positionCode: "CASHIER", reasonNote: "Excluded" }] };
+    snapshot.packages[0].frozen_participation = [frozen];
+    const version = hrSnapshotVersion("2026-09", snapshot, config);
+    frozen.exclusions[0].reasonNote = "Updated reason";
+    expect(hrSnapshotVersion("2026-09", snapshot, config)).not.toBe(version);
+    const reasonVersion = hrSnapshotVersion("2026-09", snapshot, config);
+    frozen.participationRevisionNo++;
+    expect(hrSnapshotVersion("2026-09", snapshot, config)).not.toBe(reasonVersion);
+  });
+  it("does not require personnel or positive payments for a ready approved package", () => {
+    snapshot.rows = [];
+    expect(hrSnapshotReady(snapshot)).toBe(true);
+    snapshot.rows = [{ ...hrTestSnapshot().rows[0], final_amount: "0.00" }];
+    expect(hrSnapshotReady(snapshot)).toBe(true);
   });
 });

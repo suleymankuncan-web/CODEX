@@ -1,4 +1,4 @@
-import { IsIn, Matches } from "class-validator";
+import { IsIn, IsInt, IsOptional, Matches, Max, Min } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class MarkSalesTargetIncentiveStoreReviewDto {
@@ -10,4 +10,10 @@ export class MarkSalesTargetIncentiveStoreReviewDto {
 
   @IsIn(["pending_review", "reviewed"])
   reviewStatus!: "pending_review" | "reviewed";
+
+  @IsOptional() @IsInt() @Min(0) @Max(2147483647)
+  expectedParticipationRevision?: number;
+
+  @IsOptional() @IsPostgresUuid()
+  expectedSnapshotId?: string;
 }

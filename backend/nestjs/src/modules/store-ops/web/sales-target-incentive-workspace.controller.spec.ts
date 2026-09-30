@@ -6,7 +6,7 @@ import { SalesTargetIncentiveWorkspaceController } from "./sales-target-incentiv
 describe("SalesTargetIncentiveWorkspaceController", () => {
   it("delegates the additive workspace read with actor and period", async () => {
     const service = { getWorkspace: jest.fn().mockResolvedValue({ regions: [] }) };
-    const controller = new SalesTargetIncentiveWorkspaceController(service as never);
+    const controller = new SalesTargetIncentiveWorkspaceController(service as never, {} as never);
     const user = buildAuthenticatedUser({
       userId: "00000000-0000-4000-8000-000000000901",
       roleCodes: ["REPORT_VIEWER"],
@@ -30,5 +30,17 @@ describe("SalesTargetIncentiveWorkspaceController", () => {
       REQUIRED_SCOPE_KEY,
       SalesTargetIncentiveWorkspaceController.prototype.getWorkspace,
     )).toBe("authenticated");
+  });
+
+  it("keeps participation writes Region Manager-only and derives the actor from authentication", async () => {
+    const participation = { setParticipation: jest.fn().mockResolvedValue({ data: { revision: 1 } }) };
+    const controller = new SalesTargetIncentiveWorkspaceController({} as never, participation as never);
+    const user = buildAuthenticatedUser({ userId: "00000000-0000-4000-8000-000000000901", roleCodes: ["REGION_MANAGER"] });
+    const body = { period: "2026-05", storeId: "00000000-0000-4000-8000-000000000201", employeeId: "00000000-0000-4000-8000-000000000801", included: false,
+      reasonNote: "Approved exclusion", expectedRevision: 0, expectedSnapshotId: "00000000-0000-4000-8000-000000000401" };
+    await controller.setParticipation({ user }, body);
+    expect(participation.setParticipation).toHaveBeenCalledWith({ ...body, actor: user });
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controller.setParticipation)).toEqual(["REGION_MANAGER"]);
+    expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, controller.setParticipation)).toBe("authenticated");
   });
 });

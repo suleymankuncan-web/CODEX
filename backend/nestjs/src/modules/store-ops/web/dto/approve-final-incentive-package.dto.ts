@@ -8,6 +8,9 @@ export class ApproveFinalIncentivePackageDto {
   @IsDateString()
   submittedAt!: string;
   @IsOptional()
+  @Matches(/^[a-f0-9]{64}$/)
+  expectedFinancialVersion?: string;
+  @IsOptional()
   @IsIn(["approve", "return"])
   decision?: "approve" | "return";
   @IsOptional()

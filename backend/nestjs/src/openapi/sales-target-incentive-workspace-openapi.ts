@@ -95,6 +95,7 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
         status: { type: "string", enum: ["projected", "blocked", "no_source", "corrected", "adjusted"] },
         correction: { ...ref("SalesTargetIncentiveWorkspaceCorrection"), nullable: true },
         correctionRecords: arrayRef("SalesTargetIncentiveWorkspaceCorrection"),
+        participation: objectSchema(["included", "reasonNote"], { included: { type: "boolean" }, reasonNote: nullableString }),
       },
     ),
     SalesTargetIncentiveOutOfRosterReturn: objectSchema(
@@ -117,6 +118,8 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
           status: { type: "string", enum: ["pending_review", "reviewed"] },
           reviewedAt: { type: "string", format: "date-time", nullable: true },
           periodCloseStatus: { type: "string", enum: ["projection_only", "closed"] },
+          finalSnapshotId: { type: "string", format: "uuid", nullable: true },
+          participationRevision: { type: "integer", minimum: 0 },
         }),
         rows: arrayRef("SalesTargetIncentiveWorkspaceRow"),
         outOfRosterReturns: arrayRef("SalesTargetIncentiveOutOfRosterReturn"),
@@ -153,6 +156,14 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspaceResponse: objectSchema(["data"], { data: ref("SalesTargetIncentiveWorkspace") }),
+    SetIncentiveParticipationDto: objectSchema(["period", "storeId", "employeeId", "included", "expectedRevision", "expectedSnapshotId"], {
+      period: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }, storeId: { type: "string", format: "uuid" }, employeeId: { type: "string", format: "uuid" },
+      included: { type: "boolean" }, reasonNote: { type: "string", minLength: 3, maxLength: 1000, description: "A trimmed nonblank reason is mandatory when included is false." },
+      expectedRevision: { type: "integer", minimum: 0, maximum: 2147483646 }, expectedSnapshotId: { type: "string", format: "uuid" },
+    }),
+    IncentiveParticipationResponse: objectSchema(["data"], { data: objectSchema(["revision", "finalSnapshotId", "employeeId", "included"], {
+      revision: { type: "integer" }, finalSnapshotId: { type: "string", format: "uuid" }, employeeId: { type: "string", format: "uuid" }, included: { type: "boolean" },
+    }) }),
   };
 
   const path = "/api/store/incentives/workspace";
@@ -161,6 +172,12 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
     { name: "period", in: "query", required: false, schema: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } },
     { name: "throughDate", in: "query", required: false, schema: { type: "string", format: "date" } },
   ]);
+  document.paths[`${path}/participation`] = { post: {
+    operationId: "SalesTargetIncentiveWorkspaceController_setParticipation",
+    summary: "Assigned Region Manager changes a reasoned personnel participation revision.",
+    requestBody: { required: true, content: { "application/json": { schema: ref("SetIncentiveParticipationDto") } } },
+    responses: { "201": { description: "Source-bound decision recorded and store review reopened.", content: { "application/json": { schema: ref("IncentiveParticipationResponse") } } } },
+  } };
 }
 
 function objectSchema(required: string[], properties: Record<string, unknown>) {

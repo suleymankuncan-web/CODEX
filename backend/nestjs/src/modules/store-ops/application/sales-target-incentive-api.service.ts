@@ -36,6 +36,7 @@ import {
   type SalesTargetIncentiveAdminRegionPackageSummary,
 } from "./sales-target-incentive-admin-package-workflow.service";
 import { formatMoney2, isZeroMoney, resolveFinalAmount } from "./sales-target-incentive-money";
+import { definedParticipationReviewInput, effectiveParticipationAmount } from "./sales-target-incentive-participation-adapter";
 
 export type SalesTargetIncentiveRoleScope =
   | "own"
@@ -60,6 +61,8 @@ export type SalesTargetIncentiveApiRow = {
   correctionAmount: string | null;
   adjustmentAmount: string | null;
   finalAmount: string | null;
+  calculatedFinalAmount?: string | null;
+  participation?: SalesTargetIncentiveAdjustmentSummaryRow["participation"];
   status: Exclude<SalesTargetIncentiveCalculationStatus, "excluded"> | "corrected" | "adjusted";
   blockedReason: string | null;
   rateTableVersion: string;
@@ -438,9 +441,11 @@ export class SalesTargetIncentiveApiService {
     periodKey: string;
     storeId: string;
     reviewStatus: "pending_review" | "reviewed";
+    expectedParticipationRevision?: number;
+    expectedSnapshotId?: string;
   }) {
     return this.regionWorkflowService.markStoreReview({
-      ...input,
+      ...definedParticipationReviewInput(input),
       periodKey: this.resolvePeriodKey(input.periodKey),
     });
   }
@@ -495,6 +500,7 @@ export class SalesTargetIncentiveApiService {
         periodKey: input.projection.periodKey,
         storeIds: input.stores.map((store) => store.storeId),
         includeFinalRows: input.roleScope === "admin" || input.roleScope === "region",
+        participationMode: input.roleScope === "admin" || input.roleScope === "region" ? "draft" : "approved",
       }),
       this.regionWorkflowService.getWorkflowContext({
         periodKey: input.projection.periodKey,
@@ -596,7 +602,8 @@ export class SalesTargetIncentiveApiService {
     workflowContext: SalesTargetIncentiveRegionWorkflowContext,
   ): SalesTargetIncentiveApiRow {
     const calculation = participant.calculation;
-
+    const participation = adjustmentSummary?.participation;
+    if (adjustmentSummary?.participation_only) adjustmentSummary = null;
     if (calculation.status === "excluded") {
       throw new NotFoundException("Incentive projection is not available");
     }
@@ -659,7 +666,7 @@ export class SalesTargetIncentiveApiService {
       payableAmount: usesFinalSnapshot ? adjustmentSummary?.payable_amount ?? null : calculation.payableAmount,
       correctionAmount,
       adjustmentAmount,
-      finalAmount,
+      ...effectiveParticipationAmount(finalAmount, participation),
       status,
       blockedReason: usesFinalSnapshot ? null : calculation.blockedReason,
       rateTableVersion: usesFinalSnapshot
@@ -719,7 +726,7 @@ export class SalesTargetIncentiveApiService {
       payableAmount: adjustmentSummary.payable_amount ?? null,
       correctionAmount,
       adjustmentAmount,
-      finalAmount,
+      ...effectiveParticipationAmount(finalAmount, adjustmentSummary.participation),
       status: adjustmentAmount ? "adjusted" : correctionAmount ? "corrected" : "projected",
       blockedReason: null,
       rateTableVersion: adjustmentSummary.rate_table_version ?? SALES_TARGET_INCENTIVE_RULE_VERSION,

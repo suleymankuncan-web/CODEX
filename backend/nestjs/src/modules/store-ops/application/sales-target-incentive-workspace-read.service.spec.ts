@@ -8,6 +8,8 @@ function harness() {
   const readModel = { buildCurrentProjection: jest.fn(), listDailySalesTracking: jest.fn().mockResolvedValue([]), listMovementTracking: jest.fn().mockResolvedValue([]) };
   const corrections = { listApprovedAdjustmentSummaries: jest.fn() };
   const repository = {
+    listPersonnelRoster: jest.fn().mockResolvedValue([]),
+    listParticipationRevisions: jest.fn().mockResolvedValue([]),
     listStoreMetadata: jest.fn().mockResolvedValue([]),
     listClosedRateSnapshots: jest.fn().mockResolvedValue([]),
     listExactRateTables: jest.fn().mockResolvedValue([]),

@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
+import { mergeWorkspacePersonnel } from "./sales-target-incentive-workspace-personnel";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
   MANAGER_RATE_TABLE_VERSION,
@@ -18,6 +19,7 @@ import {
 import {
   SalesTargetIncentiveWorkspaceReadRepository,
   type SalesTargetIncentiveWorkspaceClosedRateSnapshotRow,
+  type SalesTargetIncentiveWorkspaceRosterRow,
 } from "../infrastructure/sales-target-incentive-workspace-read.repository";
 import type {
   SalesTargetIncentiveWorkspaceCorrection,
@@ -66,12 +68,14 @@ export class SalesTargetIncentiveWorkspaceReadService {
       return emptyWorkspace(period, scope.view, scope.capabilities, throughDate);
     }
 
+    const assignmentAsOfDate = clampDate(currentBusinessDate(), period.periodStart, period.periodEnd);
     const projection = await this.readModelService.buildCurrentProjection({
       periodKey: period.period,
       companyIds: projectionScope.companyIds,
       regionIds: projectionScope.regionIds,
       storeIds: projectionScope.storeIds,
       allowGlobalScope: false,
+      assignmentAsOfDate,
     });
     const storeIds = projection.stores.map((store) => store.storeId);
     if (storeIds.length === 0) {
@@ -82,7 +86,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         throughDate,
       );
     }
-    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult, movementResult] = await Promise.all([
+    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult, movementResult, roster, participation] = await Promise.all([
       optionalSection(this.repository.listStoreMetadata({ storeIds, periodEnd: projection.periodEnd }), [], "store_metadata", this.logger),
       this.repository.listClosedRateSnapshots({ periodKey: projection.periodKey, storeIds }),
       this.repository.listWorkflowAudit({ periodKey: projection.periodKey, storeIds }),
@@ -93,6 +97,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
       }),
       optionalSection(this.readModelService.listDailySalesTracking({ storeIds, periodStart: period.periodStart, throughDate }), [], "daily_sales", this.logger),
       optionalSection(this.readModelService.listMovementTracking({ storeIds, periodStart: period.periodStart, throughDate }), [], "sale_return_movements", this.logger),
+      this.repository.listPersonnelRoster({ storeIds, assignmentAsOfDate, periodStart: period.periodStart, periodEnd: period.periodEnd }),
+      this.repository.listParticipationRevisions({ periodKey: projection.periodKey, storeIds }),
     ]);
     const dailyStoreById = new Map(dailyResult.value.filter(row => row.scope_type === "store").map(row => [row.store_id, row]));
     const dailyEmployeeByKey = new Map(dailyResult.value.filter(row => row.scope_type === "employee" && row.employee_id).map(row => [`${row.store_id}:${row.employee_id}`, row]));
@@ -164,6 +170,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
       const canAct = actionableStoreIds.has(store.storeId);
       const workspaceStore = toWorkspaceStore({
         store,
+        roster: roster.filter((row) => row.store_id === store.storeId),
+        participation: participation.find((row) => row.store_id === store.storeId),
         dailyStore: dailyStoreById.get(store.storeId) ?? null,
         dailyEmployees: dailyEmployeeByKey,
         movementStore: movementStoreById.get(store.storeId) ?? null,
@@ -223,6 +231,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
 
 function toWorkspaceStore(input: {
   store: SalesTargetIncentiveProjectionStore;
+  roster: SalesTargetIncentiveWorkspaceRosterRow[];
+  participation: Awaited<ReturnType<SalesTargetIncentiveWorkspaceReadRepository["listParticipationRevisions"]>>[number] | undefined;
   dailyStore: SalesTargetIncentiveDailySalesRow | null;
   dailyEmployees: Map<string, SalesTargetIncentiveDailySalesRow>;
   movementStore: SalesTargetIncentiveMovementRow | null;
@@ -263,6 +273,8 @@ function toWorkspaceStore(input: {
       }
     }
   }
+  const effectiveParticipation = input.participation?.final_snapshot_id === finalSnapshotId ? input.participation : undefined;
+  mergeWorkspacePersonnel(rows, input.roster, effectiveParticipation?.exclusions_json ?? []);
   for (const row of rows) {
     const dailyAmount = row.participantType === "store_manager"
       ? input.dailyStore?.actual_amount ?? null
@@ -276,7 +288,7 @@ function toWorkspaceStore(input: {
   }
   const outOfRosterReturns = input.personnelMovements
     .filter(item => item.scope_type !== "store" && Number(item.sale_amount) <= 0 && Number(item.net_amount) < 0 &&
-      item.is_active_roster === false)
+      item.is_active_roster === false && !input.roster.some((person) => person.employee_id === item.employee_id))
     .map(item => ({
       employeeId: item.employee_id,
       personnelCode: item.personnel_code,
@@ -316,6 +328,8 @@ function toWorkspaceStore(input: {
       status: review?.review_status ?? "pending_review",
       reviewedAt: review?.reviewed_at ?? null,
       periodCloseStatus: periodClosed ? "closed" as const : "projection_only" as const,
+      finalSnapshotId,
+      participationRevision: effectiveParticipation?.revision_no ?? 0,
     },
     rows,
     outOfRosterReturns,

@@ -111,6 +111,8 @@ export class SalesTargetIncentiveApprovalRepository {
     store: SalesTargetIncentiveApprovalStore;
     actorUserId: string;
     reviewStatus: SalesTargetIncentiveStoreReviewStatus;
+    expectedParticipationRevision?: number;
+    expectedSnapshotId?: string;
   }): Promise<SalesTargetIncentiveStoreReviewRow> {
     return this.databaseService.withTransaction(async (client) => {
       await this.lockStoreReview(client, {
@@ -151,6 +153,10 @@ export class SalesTargetIncentiveApprovalRepository {
             ON snapshot.sales_target_incentive_final_snapshot_id = latest_snapshot.sales_target_incentive_final_snapshot_id
           WHERE snapshot.company_id = $3
             AND snapshot.region_id = $4
+            AND ($9::uuid IS NULL OR snapshot.sales_target_incentive_final_snapshot_id=$9::uuid)
+            AND COALESCE((SELECT revision_no FROM ops.sales_target_incentive_participation_revision
+              WHERE store_id=snapshot.store_id AND period_key=$1 AND final_snapshot_id=snapshot.sales_target_incentive_final_snapshot_id
+              ORDER BY revision_no DESC LIMIT 1),0)=$8
           ON CONFLICT (store_id, period_key) DO UPDATE SET
             company_id = EXCLUDED.company_id,
             region_id = EXCLUDED.region_id,
@@ -179,12 +185,14 @@ export class SalesTargetIncentiveApprovalRepository {
           SALES_TARGET_INCENTIVE_TIMEZONE,
           input.reviewStatus,
           input.actorUserId,
+          input.expectedParticipationRevision ?? 0,
+          input.expectedSnapshotId ?? null,
         ],
       );
 
       const row = result.rows[0];
       if (!row) {
-        throw new Error("Store review was not persisted");
+        throw new ConflictException("Store review source or participation changed; refresh the workspace");
       }
       return row;
     });
@@ -373,6 +381,10 @@ export class SalesTargetIncentiveApprovalRepository {
       });
       await this.ensureClosedSnapshotsExist(client, input);
       await this.ensureStoresReviewed(client, input);
+      await client.query(`DELETE FROM ops.sales_target_incentive_region_package_store package_store
+        USING ops.sales_target_incentive_region_package package
+        WHERE package_store.region_package_id=package.sales_target_incentive_region_package_id
+          AND package.region_id=$1::uuid AND package.period_key=$2 AND package.package_status='admin_returned'`, [input.regionId,input.periodKey]);
       const packageResult = await client.query<SalesTargetIncentiveRegionPackageRow>(
         `
           INSERT INTO ops.sales_target_incentive_region_package (
@@ -396,7 +408,7 @@ export class SalesTargetIncentiveApprovalRepository {
             reviewed_at = NULL,
             review_note = NULL,
             updated_at = NOW()
-          WHERE ops.sales_target_incentive_region_package.package_status <> 'admin_approved'
+          WHERE ops.sales_target_incentive_region_package.package_status = 'admin_returned'
           RETURNING *
         `,
         [
@@ -412,13 +424,6 @@ export class SalesTargetIncentiveApprovalRepository {
       if (!packageRow) {
         throw new ConflictException("Approved packages cannot be resubmitted");
       }
-      await client.query(
-        `
-          DELETE FROM ops.sales_target_incentive_region_package_store
-          WHERE region_package_id = $1
-        `,
-        [packageRow.sales_target_incentive_region_package_id],
-      );
       const storeSnapshotResult = await client.query(
         `
           WITH latest_final_snapshot AS (
@@ -441,7 +446,9 @@ export class SalesTargetIncentiveApprovalRepository {
             final_snapshot_id,
             period_key,
             reviewed_by_user_id,
-            reviewed_at
+            reviewed_at,
+            participation_revision_no,
+            participation_exclusions_json
           )
           SELECT
             $1,
@@ -452,12 +459,17 @@ export class SalesTargetIncentiveApprovalRepository {
             review.final_snapshot_id,
             review.period_key,
             review.reviewed_by_user_id,
-            review.reviewed_at
+            review.reviewed_at,
+            COALESCE(participation.revision_no,0),
+            COALESCE(participation.exclusions_json,'[]'::jsonb)
           FROM ops.sales_target_incentive_store_review review
           INNER JOIN latest_final_snapshot latest_snapshot
             ON latest_snapshot.store_id = review.store_id
             AND latest_snapshot.period_key = review.period_key
             AND latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id
+          LEFT JOIN LATERAL (SELECT revision_no,exclusions_json FROM ops.sales_target_incentive_participation_revision
+            WHERE store_id=review.store_id AND period_key=review.period_key AND final_snapshot_id=review.final_snapshot_id
+            ORDER BY revision_no DESC LIMIT 1) participation ON TRUE
           WHERE review.period_key = $2
             AND review.region_id = $3
             AND review.store_id = ANY($4::uuid[])

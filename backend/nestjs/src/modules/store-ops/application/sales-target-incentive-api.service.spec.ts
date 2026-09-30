@@ -389,6 +389,7 @@ describe("SalesTargetIncentiveApiService", () => {
       periodKey: "2026-05",
       storeIds: [storeId],
       includeFinalRows: true,
+      participationMode: "draft",
     });
     expect(regionWorkflowService.getWorkflowContext).toHaveBeenCalledWith({
       periodKey: "2026-05",
@@ -445,6 +446,7 @@ describe("SalesTargetIncentiveApiService", () => {
       periodKey: "2026-05",
       storeIds: [storeId],
       includeFinalRows: true,
+      participationMode: "draft",
     });
   });
 
@@ -942,6 +944,7 @@ describe("SalesTargetIncentiveApiService", () => {
       periodKey: "2026-05",
       storeIds: [storeId],
       includeFinalRows: false,
+      participationMode: "approved",
     });
     expect(result.data.projections[0].rows[0]).toMatchObject({
       payableAmount: "3960.00",

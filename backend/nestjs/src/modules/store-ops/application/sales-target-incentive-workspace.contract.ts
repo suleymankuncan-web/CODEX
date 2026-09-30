@@ -78,6 +78,7 @@ export type SalesTargetIncentiveWorkspaceRow = {
   status: "projected" | "blocked" | "no_source" | "corrected" | "adjusted";
   correction: SalesTargetIncentiveWorkspaceCorrection | null;
   correctionRecords: SalesTargetIncentiveWorkspaceCorrection[];
+  participation?: { included: boolean; reasonNote: string | null };
 };
 
 export type SalesTargetIncentiveOutOfRosterReturn = {
@@ -111,6 +112,8 @@ export type SalesTargetIncentiveWorkspaceStore = {
     status: "pending_review" | "reviewed";
     reviewedAt: string | null;
     periodCloseStatus: "projection_only" | "closed";
+    finalSnapshotId?: string | null;
+    participationRevision?: number;
   };
   rows: SalesTargetIncentiveWorkspaceRow[];
   outOfRosterReturns: SalesTargetIncentiveOutOfRosterReturn[];

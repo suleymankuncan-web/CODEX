@@ -4,7 +4,8 @@ import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { hrGrantSql, hrPackagesSql, hrRowsSql } from "./incentive-hr-handoff.sql";
 
-export type HrPackageRow = { company_id: string; company_name: string; manager_user_id: string | null; package_id: string | null; package_status: string | null; submitted_at: string | null; reviewed_at: string | null; manager_name: string; store_ids: string[]; stale_stores: number };
+export type HrFrozenParticipation = { storeId: string; finalSnapshotId: string; participationRevisionNo: number; exclusions: Array<{ employeeId: string; displayName: string; positionCode: string; reasonNote: string }> };
+export type HrPackageRow = { company_id: string; company_name: string; manager_user_id: string | null; package_id: string | null; package_status: string | null; submitted_at: string | null; reviewed_at: string | null; manager_name: string; store_ids: string[]; stale_stores: number; frozen_participation?: HrFrozenParticipation[] };
 export type HrExportRow = { company_id: string; manager_user_id: string; package_id: string; store_id: string; store_code: string; store_name: string; row_id: string; employee_id: string; display_name: string | null; position_code: string; target_amount: string | null; actual_sales_amount: string | null; achievement_pct: string | null; applied_rate: string | null; payable_amount: string; final_amount: string; reason_note: string | null };
 export type HrDeliveryRow = { company_id: string; delivery_id: string; status: "sending" | "sent" | "uncertain"; created_at: string; sent_at: string | null };
 export type HrSnapshot = { packages: HrPackageRow[]; rows: HrExportRow[]; deliveries: HrDeliveryRow[] };

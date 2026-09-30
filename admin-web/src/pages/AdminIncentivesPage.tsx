@@ -33,11 +33,11 @@ import { getErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import type { AppLocale } from '../lib/i18n'
 import {
+  buildAdminIncentiveExcelRows,
   formatMoneyValue,
   formatPercentValue,
-  getIncentivePositionLabel,
-  getIncentiveStatusLabel,
   getPrimaryEarnedAmount,
+  getEffectiveFinalAmount,
 } from './store-incentives-model'
 import {
   AdminOperationalActionRow as AdminActionRow,
@@ -352,7 +352,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
                           <AdjustmentAmountsCell row={item.row} locale={locale} t={t} />
                         </TableCell>
                         <TableCell className="tw:text-right tw:font-semibold">
-                          {formatAdminMoneyValue(item.row.finalAmount ?? item.row.payableAmount, locale, t)}
+                          {formatAdminMoneyValue(getEffectiveFinalAmount(item.row), locale, t)}
                         </TableCell>
                         <TableCell>
                           <AdminSurfaceBadge tone={statusTone[item.row.status]}>
@@ -464,7 +464,7 @@ function SelectedRowSummary(input: {
         <SummaryValue label={input.t('adminIncentives.column.achievement')} value={formatAdminPercentValue(input.item.row.achievementPct, input.locale, input.t)} />
         <SummaryValue label={input.t('adminIncentives.summary.rate')} value={input.item.row.rate ?? '0.0000'} />
         <SummaryValue label={input.t('adminIncentives.column.earned')} value={formatAdminMoneyValue(input.item.row.payableAmount, input.locale, input.t)} />
-        <SummaryValue label={input.t('adminIncentives.column.final')} value={formatAdminMoneyValue(input.item.row.finalAmount ?? input.item.row.payableAmount, input.locale, input.t)} />
+        <SummaryValue label={input.t('adminIncentives.column.final')} value={formatAdminMoneyValue(getEffectiveFinalAmount(input.item.row), input.locale, input.t)} />
       </div>
     </div>
   )
@@ -641,27 +641,7 @@ function exportAdminIncentiveRowsToExcel(input: {
 }) {
   if (input.rows.length === 0) return
 
-  const tableRows = input.rows.map((item) => ({
-    Dönem: input.periodLabel,
-    'Dönem kodu': input.period,
-    Mağaza: item.projection.storeName,
-    Personel: item.row.displayName,
-    Görev: getIncentivePositionLabel(item.row.positionCode),
-    'Katılımcı tipi': item.row.participantType === 'store_manager' ? 'Mağaza müdürü' : 'Satış personeli',
-    Hedef: formatMoneyValue(item.row.target, input.locale),
-    Satış: formatMoneyValue(item.row.actualPositiveSales, input.locale),
-    Gerçekleşme: formatPercentValue(item.row.achievementPct, input.locale),
-    'Mağaza gerçekleşmesi': formatPercentValue(item.row.storeAchievementPct, input.locale),
-    'Mağaza kapısı': item.row.storeGatePassed === null ? 'Uygulanmaz' : item.row.storeGatePassed ? 'Geçildi' : 'Bekliyor',
-    'Prim oranı': item.row.rate ?? '0.0000',
-    'Ham hak ediş': formatMoneyValue(item.row.rawEarnedAmount, input.locale),
-    'Hak ediş': formatMoneyValue(item.row.payableAmount, input.locale),
-    Düzeltme: formatMoneyValue(item.row.correctionAmount, input.locale),
-    'Kapanış düzeltmesi': formatMoneyValue(item.row.adjustmentAmount, input.locale),
-    Nihai: formatMoneyValue(item.row.finalAmount ?? item.row.payableAmount, input.locale),
-    Durum: getIncentiveStatusLabel(item.row.status),
-    Açıklama: item.row.explanation,
-  }))
+  const tableRows = buildAdminIncentiveExcelRows(input)
   const headers = Object.keys(tableRows[0] ?? {})
   const cells = tableRows.map((row) =>
     `<tr>${headers.map((header) => `<td>${escapeHtml(String(row[header as keyof typeof row]))}</td>`).join('')}</tr>`,

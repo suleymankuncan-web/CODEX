@@ -57,6 +57,8 @@ export class StoreSalesTargetIncentiveController {
       periodKey: body.period,
       storeId: body.storeId,
       reviewStatus: body.reviewStatus,
+      ...(body.expectedParticipationRevision !== undefined ? { expectedParticipationRevision: body.expectedParticipationRevision } : {}),
+      ...(body.expectedSnapshotId !== undefined ? { expectedSnapshotId: body.expectedSnapshotId } : {}),
     });
   }
 

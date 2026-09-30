@@ -11,6 +11,7 @@ export type components = {
       "period": string
       "regionPackageId": string
       "submittedAt": string
+      "expectedFinancialVersion"?: string
       "decision"?: "approve" | "return"
       "reviewNote"?: string
     }
@@ -1395,6 +1396,19 @@ export type components = {
           "submittedStoreCount": number
           "draftCorrectionCount": number
           "submittedCorrectionCount": number
+          "frozenTotalAmount": string | null
+          "financialVersion": string | null
+          "storeSnapshots": Array<{
+              "storeId": string
+              "finalSnapshotId": string
+              "participationRevisionNo": number
+              "exclusions": Array<{
+                  "employeeId": string
+                  "displayName": string
+                  "positionCode": string
+                  "reasonNote": string
+                }>
+            }>
         }>
     }
     "IncentiveFinalApprovalResult": {
@@ -1422,6 +1436,14 @@ export type components = {
           "status": "not_sent" | "sending" | "sent" | "uncertain"
           "sentAt": string | null
         }>
+    }
+    "IncentiveParticipationResponse": {
+      "data": {
+        "revision": number
+        "finalSnapshotId": string
+        "employeeId": string
+        "included": boolean
+      }
     }
     "IntegrationLookups": {
       "entityTypes": string[]
@@ -1474,6 +1496,8 @@ export type components = {
       "period": string
       "storeId": string
       "reviewStatus": "pending_review" | "reviewed"
+      "expectedParticipationRevision"?: number
+      "expectedSnapshotId"?: string
     }
     "MasterDataBootstrapBatchDetailResponse": {
       "summary": {
@@ -3022,6 +3046,10 @@ export type components = {
       "status": "projected" | "blocked" | "no_source" | "corrected" | "adjusted"
       "correction": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"] | null
       "correctionRecords": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"][]
+      "participation"?: {
+        "included": boolean
+        "reasonNote": string | null
+      }
     }
     "SalesTargetIncentiveWorkspaceSectionStatus": {
       "status": "complete" | "unavailable"
@@ -3055,6 +3083,8 @@ export type components = {
         "status": "pending_review" | "reviewed"
         "reviewedAt": string | null
         "periodCloseStatus": "projection_only" | "closed"
+        "finalSnapshotId"?: string | null
+        "participationRevision"?: number
       }
       "rows": components['schemas']["SalesTargetIncentiveWorkspaceRow"][]
       "outOfRosterReturns": components['schemas']["SalesTargetIncentiveOutOfRosterReturn"][]
@@ -3082,6 +3112,15 @@ export type components = {
     "SendIncentiveHrDto": {
       "period": string
       "version": string
+    }
+    "SetIncentiveParticipationDto": {
+      "period": string
+      "storeId": string
+      "employeeId": string
+      "included": boolean
+      "reasonNote"?: string
+      "expectedRevision": number
+      "expectedSnapshotId": string
     }
     "SnapshotNeedsActionResponse": {
       "items": Array<{
@@ -4364,6 +4403,22 @@ export type paths = {
         "201": {
           content: {
             'application/json': components['schemas']["IncentiveFinalApprovalResult"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/workspace/participation": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SetIncentiveParticipationDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["IncentiveParticipationResponse"]
           }
         }
       }

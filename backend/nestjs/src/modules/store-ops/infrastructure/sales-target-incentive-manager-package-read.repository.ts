@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import type { SalesTargetIncentiveRegionPackageStatus } from "./sales-target-incentive-approval.types";
+import { packageFinancialColumnsSql, packageFinancialVersion, type FrozenStoreFinancialSnapshot } from "./incentive-package-financial-version";
 
 export type IncentiveManagerPackageSummaryRow = {
   company_id: string;
@@ -21,6 +22,9 @@ export type IncentiveManagerPackageSummaryRow = {
   submitted_store_count: string;
   draft_correction_count: string;
   submitted_correction_count: string;
+  frozen_total_amount?: string | null;
+  store_snapshots?: FrozenStoreFinancialSnapshot[];
+  financial_version?: string | null;
 };
 
 @Injectable()
@@ -101,12 +105,13 @@ export class SalesTargetIncentiveManagerPackageReadRepository {
         entries.submitted_by_user_id::text AS submitted_by_user_id,
         COALESCE(NULLIF(TRIM(CONCAT(submitted_employee.first_name, ' ', submitted_employee.last_name)), ''),
           submitted_account.username, submitted_account.email) AS submitted_by_name,
-        entries.submitted_at, entries.reviewed_by_user_id::text AS reviewed_by_user_id,
+        to_char(entries.submitted_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS submitted_at, entries.reviewed_by_user_id::text AS reviewed_by_user_id,
         COALESCE(NULLIF(TRIM(CONCAT(reviewed_employee.first_name, ' ', reviewed_employee.last_name)), ''),
           reviewed_account.username, reviewed_account.email) AS reviewed_by_name,
         entries.reviewed_at, entries.review_note,
         entries.store_count, entries.reviewed_store_count, entries.submitted_store_count,
-        entries.draft_correction_count, entries.submitted_correction_count
+        entries.draft_correction_count, entries.submitted_correction_count,
+        ${packageFinancialColumnsSql("entries")}
       FROM entries
       JOIN ops.user_account manager ON manager.user_id = entries.manager_user_id
       LEFT JOIN ops.employee manager_employee ON manager_employee.employee_id = manager.employee_id
@@ -116,6 +121,6 @@ export class SalesTargetIncentiveManagerPackageReadRepository {
       LEFT JOIN ops.employee reviewed_employee ON reviewed_employee.employee_id = reviewed_account.employee_id
       ORDER BY manager_name ASC, entries.submitted_at DESC NULLS LAST, entries.package_id
     `, [input.periodKey, input.companyIds]);
-    return result.rows;
+    return result.rows.map(row => ({ ...row, financial_version: packageFinancialVersion(input.periodKey, row) }));
   }
 }

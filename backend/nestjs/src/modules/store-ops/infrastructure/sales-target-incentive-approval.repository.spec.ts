@@ -248,6 +248,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ closed_store_count: "2" }] })
       .mockResolvedValueOnce({ rows: [{ reviewed_store_count: "2" }] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -265,7 +266,6 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [], rowCount: 2 })
       .mockResolvedValueOnce({ rows: [] });
 
@@ -284,6 +284,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("review_status = 'reviewed'");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_package");
     expect(sql).toContain("DELETE FROM ops.sales_target_incentive_region_package_store");
+    expect(sql.indexOf("DELETE FROM ops.sales_target_incentive_region_package_store")).toBeLessThan(sql.indexOf("INSERT INTO ops.sales_target_incentive_region_package"));
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_package_store");
     expect(sql).toContain("RETURNING store_id");
     expect(sql).toContain("review.final_snapshot_id");

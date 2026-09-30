@@ -3,7 +3,7 @@ import { installGenericStoreApiFallbacks, installStoreContractSession } from './
 import { createIncentiveWorkspace, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
 
 for (const width of [1440, 390]) {
-  test(`incentive drawer shows selected-month target holders and an honest departure label at ${width}px`, async ({ page }) => {
+  test(`incentive drawer preserves targetless personnel and an honest departure label at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await installStoreContractSession(page, 'regionManager')
     await installGenericStoreApiFallbacks(page)
@@ -33,10 +33,10 @@ for (const width of [1440, 390]) {
     const personnel = drawer.getByRole('table', { name: 'Personel prim dağılımı' })
     await expect(personnel.getByText('Süleyman Öztürk', { exact: true })).toBeVisible()
     await expect(personnel.getByText('Derya Uslu', { exact: true })).toBeVisible()
-    await expect(personnel.getByText('Hedefsiz Satıcı', { exact: true })).toHaveCount(0)
-    await expect(personnel.getByText('İşten ayrıldı', { exact: true })).toHaveCount(1)
+    await expect(personnel.getByText('Hedefsiz Satıcı', { exact: true })).toBeVisible()
+    await expect(personnel.getByText('İşten ayrıldı', { exact: true })).toHaveCount(2)
     await expect(personnel.getByRole('row').filter({ hasText: 'Süleyman Öztürk' })).not.toContainText('İşten ayrıldı')
-    await expect(drawer).toContainText('1 hedefsiz kayıt')
+    await expect(drawer).toContainText('1 personelin onaylı hedefi yok')
     await expect(drawer.locator('.incentive-detail-totals')).toContainText('₺87.678,60')
 
     await drawer.getByRole('button', { name: 'Mağazalar Arası İade: Detay', exact: true }).click()

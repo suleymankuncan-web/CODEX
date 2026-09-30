@@ -26,4 +26,11 @@ describe("HR incentive Excel", () => {
     expect(sumHrMoney([])).toBe("0.00");
     expect(sumHrMoney(["-1.25"])).toBe("-1.25");
   });
+  it("exports an all-excluded package with its stores and zero payment total", () => {
+    const snapshot = hrTestSnapshot();
+    const workbook = XLSX.read(buildIncentiveHrWorkbook("2026-09", snapshot.packages, []), { type: "buffer" });
+    expect(workbook.Sheets["Müdür Özeti"].E3.v).toBe(0);
+    expect(workbook.Sheets["Müdür Özeti"].C3.v).toBe(2);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets["Personel Primleri"])).toEqual([]);
+  });
 });

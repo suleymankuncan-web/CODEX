@@ -77,7 +77,39 @@ export function getPersonnelRows(projection: SalesTargetIncentiveProjection) {
 }
 
 export function getPrimaryEarnedAmount(row: SalesTargetIncentiveRow | null) {
-  return row?.finalAmount ?? row?.payableAmount ?? row?.rawEarnedAmount ?? null
+  return getEffectiveFinalAmount(row) ?? row?.rawEarnedAmount ?? null
+}
+
+export function getEffectiveFinalAmount(row: SalesTargetIncentiveRow | null) {
+  if (row?.participation?.included === false) return '0.00'
+  return row?.finalAmount ?? row?.payableAmount ?? null
+}
+
+export function buildAdminIncentiveExcelRows(input: {
+  locale: AppLocale; period: string; periodLabel: string
+  rows: Array<{ projection: Pick<SalesTargetIncentiveProjection, 'storeName'>; row: SalesTargetIncentiveRow }>
+}) {
+  return input.rows.map((item) => ({
+    Dönem: input.periodLabel,
+    'Dönem kodu': input.period,
+    Mağaza: item.projection.storeName,
+    Personel: item.row.displayName,
+    Görev: getIncentivePositionLabel(item.row.positionCode),
+    'Katılımcı tipi': item.row.participantType === 'store_manager' ? 'Mağaza müdürü' : 'Satış personeli',
+    Hedef: formatMoneyValue(item.row.target, input.locale),
+    Satış: formatMoneyValue(item.row.actualPositiveSales, input.locale),
+    Gerçekleşme: formatPercentValue(item.row.achievementPct, input.locale),
+    'Mağaza gerçekleşmesi': formatPercentValue(item.row.storeAchievementPct, input.locale),
+    'Mağaza kapısı': item.row.storeGatePassed === null ? 'Uygulanmaz' : item.row.storeGatePassed ? 'Geçildi' : 'Bekliyor',
+    'Prim oranı': item.row.rate ?? '0.0000',
+    'Ham hak ediş': formatMoneyValue(item.row.rawEarnedAmount, input.locale),
+    'Hak ediş': formatMoneyValue(item.row.payableAmount, input.locale),
+    Düzeltme: formatMoneyValue(item.row.correctionAmount, input.locale),
+    'Kapanış düzeltmesi': formatMoneyValue(item.row.adjustmentAmount, input.locale),
+    Nihai: formatMoneyValue(getEffectiveFinalAmount(item.row), input.locale),
+    Durum: getIncentiveStatusLabel(item.row.status),
+    Açıklama: item.row.explanation,
+  }))
 }
 
 export function getRevisionLabel(projection: SalesTargetIncentiveProjection) {

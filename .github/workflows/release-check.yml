@@ -87,6 +87,7 @@ jobs:
           USER_PERMISSION_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           STORE_CONTACT_EMAIL_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
           CHECKLIST_SCORING_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+          INCENTIVE_PARTICIPATION_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
         run: node scripts/release-stage-ci.mjs backend-release
 
       - name: Preserve verified backend result

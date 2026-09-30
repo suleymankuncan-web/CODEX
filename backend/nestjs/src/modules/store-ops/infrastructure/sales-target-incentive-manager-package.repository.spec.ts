@@ -1,5 +1,6 @@
 import { ConflictException } from "@nestjs/common";
 import { SalesTargetIncentiveManagerPackageRepository } from "./sales-target-incentive-manager-package.repository";
+import { packageFinancialReadSql, packageFinancialTargetsSql } from "./incentive-package-financial-version";
 
 const companyId = "00000000-0000-4000-8000-000000000001";
 const managerId = "00000000-0000-4000-8000-000000000002";
@@ -37,6 +38,8 @@ describe("SalesTargetIncentiveManagerPackageRepository", () => {
         package_scope: "manager_assignment", package_status: "submitted",
       }] };
       if (sql.includes("Prim approval permission") || sql.includes("SELECT role_assignment.user_role_assignment_id")) return { rows: [{ user_role_assignment_id: "grant" }] };
+      if (sql === packageFinancialTargetsSql) return { rows: [] };
+      if (sql === packageFinancialReadSql) return { rows: [{ package_id: packageId, company_id: companyId, frozen_total_amount: "100.00", store_snapshots: [] }] };
       if (sql.includes("WITH package_stores AS")) return { rows: [{ stale: true }] };
       throw new Error(`Unexpected write or query: ${sql.slice(0, 80)}`);
     });
@@ -47,5 +50,32 @@ describe("SalesTargetIncentiveManagerPackageRepository", () => {
       actorUserId: approverId, companyIds: [companyId], decision: "admin_approved", reviewNote: null,
     })).rejects.toThrow(ConflictException);
     expect(query.mock.calls.some(([sql]) => String(sql).includes("UPDATE ops.sales_target_incentive_region_package"))).toBe(false);
+  });
+
+  it("deletes only the locked returned owner's copies before changing the parent to submitted", async () => {
+    let status = "admin_returned";
+    let deleted = false;
+    const query = jest.fn(async (sql: string, parameters?: unknown[]) => {
+      if (sql.includes("SELECT store.store_id::text AS store_id")) return { rows: [{ store_id: storeId }] };
+      if (sql.includes("SELECT * FROM ops.sales_target_incentive_region_package")) return { rows: [{
+        sales_target_incentive_region_package_id: packageId, package_status: status,
+      }] };
+      if (sql.includes("SELECT latest.store_id::text AS store_id")) return { rows: [{ store_id: storeId }] };
+      if (sql.includes("DELETE FROM ops.sales_target_incentive_region_package_store")) {
+        expect(status).toBe("admin_returned");
+        expect(parameters).toEqual([packageId]); deleted = true;
+      }
+      if (sql.includes("INSERT INTO ops.sales_target_incentive_region_package\n")) {
+        expect(deleted).toBe(true); status = "submitted";
+        return { rows: [{ sales_target_incentive_region_package_id: packageId, package_status: status }] };
+      }
+      if (sql.includes("INSERT INTO ops.sales_target_incentive_region_package_store")) {
+        expect(status).toBe("submitted"); return { rows: [{ store_id: storeId }] };
+      }
+      return { rows: [] };
+    });
+    await expect(repositoryWithQuery(query).submit({ companyId, periodKey: "2026-09", managerUserId: managerId,
+      storeIds: [storeId], submissionNote: null })).resolves.toMatchObject({ package_status: "submitted" });
+    expect(query.mock.calls.filter(([sql]) => sql.includes("DELETE FROM ops.sales_target_incentive_region_package_store"))).toHaveLength(1);
   });
 });
