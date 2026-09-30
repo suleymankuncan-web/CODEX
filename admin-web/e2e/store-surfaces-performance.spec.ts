@@ -420,6 +420,8 @@ test('store self-performance date filter uses the shared calendar without closed
 })
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
+  // The fixture and expected profile link belong to September in Istanbul.
+  await page.clock.setFixedTime(new Date('2026-09-30T20:00:00Z'))
   await page.unroute('**/api/reports/rankings**')
   await page.unroute('**/api/reports/store-kpi-highlights**')
   await page.route('**/api/reports/store-kpi-highlights**', async (route) => {

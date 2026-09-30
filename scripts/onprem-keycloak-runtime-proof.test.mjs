@@ -180,6 +180,24 @@ test('Keycloak bootstrap diagnostics classify only allowlisted safe markers', ()
   }
 })
 
+test('auth diagnostics retain only one exact bounded stage and status without provider text', () => {
+  const marker = 'on-prem Keycloak auth proof: auth contract failed (stage=managed-establish; status=503)'
+  assert.deepEqual(classifyKeycloakBootstrapDiagnostic({ status: 1, stderr: marker }),
+    { category: 'auth-contract', phase: 'managed-establish-503', exitCode: 1, signal: null })
+  for (const stderr of [
+    `${marker} arbitrary-provider-body`,
+    `${marker}\n${marker}`,
+    `${marker}\nkeycloak bootstrap: failed closed (realm settings reconciliation failed)`,
+    `${marker}\npassword=synthetic-sensitive-detail`,
+    marker.replace('managed-establish', 'unknown-stage'),
+    marker.replace('503', '999'),
+    marker.replace('503', '503; token=synthetic-sensitive-detail'),
+  ]) {
+    assert.deepEqual(classifyKeycloakBootstrapDiagnostic({ status: 1, stderr }),
+      { category: 'generic-failed-closed', phase: null, exitCode: 1, signal: null })
+  }
+})
+
 test('Keycloak bootstrap diagnostics report the last exact phase with its primary category', () => {
   assert.deepEqual(
     classifyKeycloakBootstrapDiagnostic({
