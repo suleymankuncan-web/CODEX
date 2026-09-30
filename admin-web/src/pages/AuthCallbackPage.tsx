@@ -140,13 +140,13 @@ export function AuthCallbackPage() {
             <StatusPill tone="danger">{t('authFlow.pkceError')}</StatusPill>
           </div>
           <p className="panel-copy">{visibleExchangeError}</p>
-          {callbackPayload.code ? <Button className="min-h-11" onClick={() => {
+          {callbackPayload.code ? <Button className="tw:min-h-11" onClick={() => {
             handledRef.current = false
             setExchangeError(null)
             setExchangeAttempt((current) => current + 1)
             if (bootstrapQuery.isError) void bootstrapQuery.refetch()
           }}>{t('authFlow.retry')}</Button> : null}
-          {bootstrapQuery.data?.provider.managedBrowserSession ? <Button className="min-h-11" variant="outline" onClick={() => {
+          {bootstrapQuery.data?.provider.managedBrowserSession ? <Button className="tw:min-h-11" variant="outline" onClick={() => {
             void buildRestartLoginUrl(bootstrapQuery.data!, callbackPayload.state).then((url) => {
               if (url) window.location.assign(url)
             }).catch(() => setExchangeError(t('authFlow.loginConfirmationUnavailable')))
