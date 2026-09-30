@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-09-30T06:06:58.733Z",
+  "generatedAt": "2026-09-30T16:46:11.793Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 279,
-    "backendEndpointsWithoutFrontendCallCount": 56,
-    "controllerCount": 42,
+    "backendEndpointCount": 280,
+    "backendEndpointsWithoutFrontendCallCount": 57,
+    "controllerCount": 43,
     "frontendApiCallCount": 224,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 224,
-    "openApiEndpointCount": 279,
+    "openApiEndpointCount": 280,
     "routeApiEdgeCount": 267,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0,
@@ -7112,6 +7112,20 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/reports/store-returns",
+      "method": "GET",
+      "path": "/api/reports/store-returns",
+      "rawControllerPath": "reports/store-returns",
+      "rawMethodPath": "",
+      "controller": "store-returns",
+      "domain": "reports",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-returns.controller.ts",
+        "line": 12
+      }
+    },
+    {
       "id": "endpoint:GET:/api/reports/store-score-breakdown",
       "method": "GET",
       "path": "/api/reports/store-score-breakdown",
@@ -9505,6 +9519,12 @@
       "id": "openapi:GET:/api/reports/store-monthly-package.xlsx",
       "method": "GET",
       "path": "/api/reports/store-monthly-package.xlsx",
+      "domain": "reports"
+    },
+    {
+      "id": "openapi:GET:/api/reports/store-returns",
+      "method": "GET",
+      "path": "/api/reports/store-returns",
       "domain": "reports"
     },
     {
@@ -12966,6 +12986,13 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:store-returns",
+        "controller": "store-returns",
+        "domain": "reports",
+        "endpointCount": 1,
+        "frontendCallCount": 0
       }
     ]
   },
@@ -13021,6 +13048,7 @@
       "endpoint:POST:/api/mobile/visual-campaigns/{assignmentId}/items/{referenceItemId}/reference-read-url",
       "endpoint:GET:/api/reports/leaderboards/closed",
       "endpoint:GET:/api/reports/store-monthly-package.xlsx",
+      "endpoint:GET:/api/reports/store-returns",
       "endpoint:GET:/api/snapshots/lookups",
       "endpoint:GET:/api/snapshots/runs",
       "endpoint:POST:/api/snapshots/runs",
