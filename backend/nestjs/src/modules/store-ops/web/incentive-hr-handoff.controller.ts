@@ -9,7 +9,7 @@ import { SendIncentiveHrDto } from "./dto/send-incentive-hr.dto";
 
 @Controller("store/incentives/hr-handoff")
 @RequireScope("authenticated")
-@RequireRoles("REPORT_VIEWER")
+@RequireRoles("REPORT_VIEWER", "HR_ADMIN")
 export class IncentiveHrHandoffController {
   constructor(private readonly service: IncentiveHrHandoffService) {}
 

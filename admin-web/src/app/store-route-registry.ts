@@ -1,4 +1,5 @@
 import type { AuthSessionSummary } from '../features/auth/api'
+import { canReadCompanyCycle } from '../features/incentives/command-workspace/company-cycle-permission'
 import {
   canListTargetDistributionRequests,
   canOpenStoreChecklists,
@@ -110,7 +111,7 @@ const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWE
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
-const storeIncentiveRoles = ['REPORT_VIEWER', 'REGION_MANAGER']
+const storeIncentiveRoles = ['REPORT_VIEWER', 'REGION_MANAGER', 'HR_ADMIN']
 const vmCampaignRoles = ['STORE_MANAGER', 'VISUAL_MERCHANDISER', 'REGION_MANAGER']
 
 function roleSet(authSummary: AuthSessionSummary | null) {
@@ -165,7 +166,7 @@ export function resolveStorePersona(authSummary: AuthSessionSummary | null): Sto
 }
 
 export function canOpenCompanyStoreIncentives(authSummary: AuthSessionSummary | null) {
-  return hasAnyRole(authSummary, storeIncentiveRoles)
+  return hasAnyRole(authSummary, ['REPORT_VIEWER', 'REGION_MANAGER']) || canReadCompanyCycle(authSummary)
 }
 
 export function canOpenStoreIncentives(authSummary: AuthSessionSummary | null) {

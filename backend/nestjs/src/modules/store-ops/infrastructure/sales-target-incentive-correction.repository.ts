@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
+import { assertStandaloneMoneyAllowed } from "./incentive-company-legacy-guard";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { legacyAdjustmentParticipationSelect, legacyParticipationCte, legacyParticipationSelect } from "./incentive-participation-finance.sql";
@@ -15,11 +16,9 @@ import {
 } from "../application/sales-target-incentive-calculator.service";
 
 type CorrectionClient = Pick<PoolClient, "query">;
-
 export type SalesTargetIncentiveCorrectionPhase =
   | "pre_close"
   | "post_close";
-
 export type SalesTargetIncentiveCorrectionResult = {
   adjustmentId: string;
   phase: SalesTargetIncentiveCorrectionPhase;
@@ -832,6 +831,7 @@ export class SalesTargetIncentiveCorrectionRepository {
       actorUserId: string;
     },
   ): Promise<SalesTargetIncentiveCorrectionResult> {
+    await assertStandaloneMoneyAllowed(client, input);
     const phase: SalesTargetIncentiveCorrectionPhase =
       input.adjustmentScope === "projection" ? "pre_close" : "post_close";
     const result = await client.query<{

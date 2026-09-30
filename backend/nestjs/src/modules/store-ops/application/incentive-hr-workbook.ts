@@ -36,6 +36,13 @@ export function buildIncentiveHrWorkbook(period: string, packages: HrPackageRow[
   for (let index = 2; index <= packages.length + 2; index++) summary[`E${index}`].z = '#,##0.00';
   XLSX.utils.book_append_sheet(workbook, summary, "Müdür Özeti");
   XLSX.utils.book_append_sheet(workbook, detail, "Personel Primleri");
+  const proof = XLSX.utils.aoa_to_sheet([
+    ["Dönem", "Onay Süreci", "Şirket Onay Kaydı", "Revizyon", "Mühür"],
+    ...packages.map(item => [period, item.approval_origin === "company_cycle" ? "Genel Müdür final onayı" : item.approval_origin === "legacy_approved" ? "Önceki süreçte onaylanmış kayıt" : "Belirtilmemiş",
+      item.final_cycle_id ?? "", item.final_revision_no ?? "", item.final_seal_hash ?? ""]),
+  ]);
+  proof["!cols"] = [14, 36, 40, 12, 68].map(wch => ({ wch }));
+  XLSX.utils.book_append_sheet(workbook, proof, "Onay Kaydı");
   return Buffer.from(XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }));
 }
 

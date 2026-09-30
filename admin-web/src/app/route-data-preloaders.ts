@@ -28,6 +28,7 @@ import {
   storeSalesTargetIncentiveWorkspaceQueryKey,
 } from '../features/incentives/api'
 import { getSalesTargetIncentiveWorkspaceQueryIdentity } from '../features/incentives/query-identity'
+import { canReadCompanyCycle } from '../features/incentives/command-workspace/company-cycle-permission'
 import {
   getImportOverview,
   getImportPayloadTemplate,
@@ -205,7 +206,7 @@ function getStoreIncentivesPrefetchTasks(authSummary: AuthSessionSummary | null)
     {
       queryKey: storeSalesTargetIncentiveWorkspaceQueryKey(undefined, incentivesQueryIdentity),
       queryFn: () => getStoreSalesTargetIncentiveWorkspace(),
-      enabled: canOpenStoreIncentives(authSummary),
+      enabled: canOpenStoreIncentives(authSummary) && !canReadCompanyCycle(authSummary),
     },
   ]
 }

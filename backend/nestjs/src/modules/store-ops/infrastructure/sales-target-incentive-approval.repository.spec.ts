@@ -2,6 +2,7 @@ import {
   SalesTargetIncentiveApprovalRepository,
   type SalesTargetIncentiveApprovalStore,
 } from "./sales-target-incentive-approval.repository";
+import { ConflictException } from "@nestjs/common";
 
 const companyId = "00000000-0000-4000-8000-000000000001";
 const regionId = "00000000-0000-4000-8000-000000000101";
@@ -22,7 +23,12 @@ const store: SalesTargetIncentiveApprovalStore = {
 
 function createHarness() {
   const query = jest.fn();
-  const withTransaction = jest.fn(async (callback) => callback({ query }));
+  const withTransaction = jest.fn(async (callback) => callback({ query: (sql: string, parameters: unknown[]) => {
+    if (sql.includes("SELECT assigned.user_id FROM ops.user_action_store_assignment")) return Promise.resolve({ rows: [{ user_id: actorUserId }] });
+    if (sql.includes("WITH returned AS")) return Promise.resolve({ rows: [] });
+    if (sql.includes("SELECT package_id FROM ops.incentive_legacy_approval")) return Promise.resolve({ rows: [] });
+    return query(sql, parameters);
+  } }));
   const databaseService = { query, withTransaction };
   const repository = new SalesTargetIncentiveApprovalRepository(
     databaseService as never,
@@ -217,7 +223,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
 
   it("voids only the requested draft correction id", async () => {
     const { query, repository } = createHarness();
-    query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
+    query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
       rows: [{ sales_target_incentive_region_correction_id: "current-draft" }],
     });
 
@@ -230,9 +236,9 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
       actorUserId,
     });
 
-    const sql = String(query.mock.calls[1][0]);
+    const sql = String(query.mock.calls[3][0]);
     expect(sql).toContain("sales_target_incentive_region_correction_id = $5");
-    expect(query.mock.calls[1][1]).toEqual([
+    expect(query.mock.calls[3][1]).toEqual([
       "2026-05",
       storeId,
       employeeId,
@@ -299,7 +305,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(result.package_status).toBe("submitted");
   });
 
-  it("converts submitted corrections into approved payable adjustments only on admin approve", async () => {
+  it("cannot convert pending company proposals into money using legacy admin approval", async () => {
     const { query, repository } = createHarness();
     query
       .mockResolvedValueOnce({ rows: [] })
@@ -343,29 +349,18 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
         ],
       });
 
-    const result = await repository.reviewRegionPackage({
+    await expect(repository.reviewRegionPackage({
       periodKey: "2026-05",
       regionId,
       actorUserId,
       packageStatus: "admin_approved",
-    });
+    })).rejects.toBeInstanceOf(ConflictException);
 
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");
-    expect(sql).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
-    expect(sql).toContain("package_store.final_snapshot_id");
-    expect(sql).toContain("FROM ops.sales_target_incentive_region_package_store");
-    expect(sql).toContain("package_store.store_id = correction.store_id");
-    expect(sql).toContain("sales_target_incentive_adjustment");
+    expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(sql).toContain("pg_advisory_xact_lock");
-    expect(sql).toContain("INSERT INTO audit.event_log");
-    expect(sql).toContain("sales_target_incentive_adjustment.approved");
-    expect(sql).toContain("'region_manager_package'");
-    expect(sql).toContain("FOR UPDATE OF final_row");
-    expect(sql).toContain("(correction.final_amount - correction.current_amount)::numeric(18,2)");
-    expect(sql).toContain("'rebasedFromAmount', correction.current_amount");
-    expect(sql).toContain("correction_status = 'admin_approved'");
-    expect(sql).toContain("UPDATE ops.sales_target_incentive_region_package");
-    expect(result.package_status).toBe("admin_approved");
+    expect(sql).not.toContain("INSERT INTO audit.event_log");
+    expect(sql).not.toContain("UPDATE ops.sales_target_incentive_region_package");
   });
 
   it("filters admin package visibility without shrinking package aggregates", async () => {
@@ -397,7 +392,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(query.mock.calls[0][1]).toEqual(["2026-05", [], [], []]);
   });
 
-  it("returns a package without creating payable adjustments", async () => {
+  it("requires company-cycle return rather than rewriting a pending package through legacy review", async () => {
     const { query, repository } = createHarness();
     query
       .mockResolvedValueOnce({ rows: [] })
@@ -437,17 +432,16 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
         ],
       });
 
-    const result = await repository.reviewRegionPackage({
+    await expect(repository.reviewRegionPackage({
       periodKey: "2026-05",
       regionId,
       actorUserId,
       packageStatus: "admin_returned",
       reviewNote: "Not tekrar kontrol edilecek",
-    });
+    })).rejects.toBeInstanceOf(ConflictException);
 
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");
-    expect(sql).toContain("correction_status = 'admin_returned'");
+    expect(sql).not.toContain("correction_status = 'admin_returned'");
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
-    expect(result.package_status).toBe("admin_returned");
   });
 });

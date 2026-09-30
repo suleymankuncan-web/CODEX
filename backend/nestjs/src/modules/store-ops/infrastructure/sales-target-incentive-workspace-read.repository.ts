@@ -319,7 +319,11 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
       ),
       this.databaseService.query<SalesTargetIncentiveRegionPackageRow & { store_ids: string[] }>(
         `${scopedStoreCte}
-        SELECT package.*, ARRAY_AGG(DISTINCT package_store.store_id::text) AS store_ids
+        SELECT package.*, CASE WHEN package.package_status='submitted' AND EXISTS (
+          SELECT 1 FROM ops.incentive_company_cycle cycle WHERE cycle.company_id=package.company_id
+            AND cycle.period_key=package.period_key AND cycle.stage='preparation' AND cycle.current_revision>0
+        ) THEN 'admin_returned' ELSE package.package_status END AS package_status,
+        ARRAY_AGG(DISTINCT package_store.store_id::text) AS store_ids
         FROM ops.sales_target_incentive_region_package package
         INNER JOIN ops.sales_target_incentive_region_package_store package_store
           ON package_store.region_package_id = package.sales_target_incentive_region_package_id

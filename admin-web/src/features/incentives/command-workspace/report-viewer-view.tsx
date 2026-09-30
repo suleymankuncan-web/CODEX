@@ -100,7 +100,7 @@ function ReportViewerRegionPackage(input: {
         <span className={`incentive-region-package-status is-${packageStatus}`}><span aria-hidden="true" />{statusLabel}</span>
         <ChevronDown aria-hidden="true" className="incentive-region-package-chevron" />
       </Button>
-      {input.approval.enabled && packageStatus === 'submitted' ? <div className="incentive-region-package-actions">
+       {input.approval.enabled && packageStatus === 'submitted' && eligiblePackage ? <div className="incentive-region-package-actions">
         <Button variant="outline" className="incentive-region-package-reject" disabled={!eligiblePackage || !input.approval.canAct || input.disabled} onClick={() => { if (eligiblePackage) input.approval.reject(eligiblePackage) }}><Undo2 aria-hidden="true" />{tr ? 'Reddet' : 'Return'}</Button>
         <Button className="incentive-region-package-approve" disabled={!eligiblePackage || !input.approval.canAct || input.disabled} onClick={() => { if (eligiblePackage) input.approval.approve([eligiblePackage]) }}><Check aria-hidden="true" />{tr ? 'Paketi onayla' : 'Approve package'}</Button>
       </div> : null}

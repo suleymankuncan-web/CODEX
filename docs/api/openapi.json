@@ -10589,7 +10589,7 @@
         },
         "responses": {
           "201": {
-            "description": "Approve or return the exact submitted package. Return requires a note; omitted decision preserves approval behavior.",
+            "description": "Legacy package endpoint. Pending packages require company-cycle stages; legacy grants cannot approve new-contract data.",
             "content": {
               "application/json": {
                 "schema": {
@@ -10649,7 +10649,7 @@
         },
         "responses": {
           "201": {
-            "description": "Send approved packages as company-separated Excel attachments to server-configured HR recipients exactly once per period.",
+            "description": "Deliver the General Manager final sealed company revision, or explicitly classified historical approvals, exactly once per company-period using the separate payroll transport version.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11208,6 +11208,99 @@
             }
           }
         }
+      }
+    },
+    "/api/store/incentives/company-cycle": {
+      "get": {
+        "operationId": "IncentiveCompanyCycleController_list",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveCompanyListDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveCompanyCycle"
+        ]
+      }
+    },
+    "/api/store/incentives/company-cycle/seal": {
+      "post": {
+        "operationId": "IncentiveCompanyCycleController_seal",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SealIncentiveCompanyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveCompanyCommandResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveCompanyCycle"
+        ]
+      }
+    },
+    "/api/store/incentives/company-cycle/decisions": {
+      "post": {
+        "operationId": "IncentiveCompanyCycleController_decide",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideIncentiveCompanyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveCompanyCommandResultDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "IncentiveCompanyCycle"
+        ]
       }
     }
   },
@@ -22267,6 +22360,37 @@
                 "type": "array",
                 "items": {
                   "type": "string"
+                }
+              },
+              "roleScopes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "required": [
+                    "companyIds",
+                    "regionIds",
+                    "storeIds"
+                  ],
+                  "properties": {
+                    "companyIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "regionIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "storeIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -33359,6 +33483,8 @@
                 "storeCount",
                 "personnelCount",
                 "totalAmount",
+                "approvalOrigin",
+                "finalProof",
                 "status",
                 "sentAt"
               ],
@@ -33391,6 +33517,36 @@
                 },
                 "totalAmount": {
                   "type": "string"
+                },
+                "approvalOrigin": {
+                  "type": "string",
+                  "enum": [
+                    "company_cycle",
+                    "legacy_approved",
+                    "legacy_pending"
+                  ]
+                },
+                "finalProof": {
+                  "type": "object",
+                  "required": [
+                    "cycleId",
+                    "revision",
+                    "sealHash"
+                  ],
+                  "properties": {
+                    "cycleId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "revision": {
+                      "type": "integer"
+                    },
+                    "sealHash": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "nullable": true
                 },
                 "status": {
                   "type": "string",
@@ -33715,6 +33871,287 @@
             }
           }
         }
+      },
+      "IncentiveCompanyStateDto": {
+        "type": "object",
+        "properties": {
+          "cycle_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "company_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_key": {
+            "type": "string"
+          },
+          "current_revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "preparation",
+              "sales_director",
+              "hr",
+              "general_manager",
+              "final"
+            ]
+          }
+        },
+        "required": [
+          "cycle_id",
+          "company_id",
+          "period_key",
+          "current_revision",
+          "stage"
+        ]
+      },
+      "IncentiveCompanyRevisionDto": {
+        "type": "object",
+        "properties": {
+          "revision_no": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "seal_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "sealed_at": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "revision_no",
+          "seal_hash",
+          "sealed_at",
+          "payload"
+        ]
+      },
+      "IncentiveCompanyDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision_id": {
+            "type": "string"
+          },
+          "revision_no": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "seal_hash": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          },
+          "actor_user_id": {
+            "type": "string"
+          },
+          "reason_note": {
+            "type": "string",
+            "nullable": true
+          },
+          "decided_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "revision_no",
+          "seal_hash",
+          "stage",
+          "decision",
+          "actor_user_id",
+          "decided_at"
+        ]
+      },
+      "IncentiveCompanyDetailDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "cycle": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IncentiveCompanyStateDto"
+              }
+            ]
+          },
+          "revisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncentiveCompanyRevisionDto"
+            }
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncentiveCompanyDecisionDto"
+            }
+          }
+        },
+        "required": [
+          "companyId",
+          "companyName",
+          "period",
+          "cycle",
+          "revisions",
+          "decisions"
+        ]
+      },
+      "IncentiveCompanyListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncentiveCompanyDetailDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "SealIncentiveCompanyDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "companyId",
+          "period",
+          "expectedRevision"
+        ]
+      },
+      "IncentiveCompanyCommandResultDto": {
+        "type": "object",
+        "properties": {
+          "cycleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "preparation",
+              "sales_director",
+              "hr",
+              "general_manager",
+              "final"
+            ]
+          },
+          "sealHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "total": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cycleId",
+          "companyId",
+          "period",
+          "revision",
+          "stage",
+          "sealHash",
+          "total"
+        ]
+      },
+      "DecideIncentiveCompanyDto": {
+        "type": "object",
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+          },
+          "cycleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "stage": {
+            "enum": [
+              "sales_director",
+              "hr",
+              "general_manager"
+            ],
+            "type": "string"
+          },
+          "sealHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "decision": {
+            "enum": [
+              "approve",
+              "return"
+            ],
+            "type": "string"
+          },
+          "reasonNote": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "companyId",
+          "period",
+          "cycleId",
+          "revision",
+          "stage",
+          "sealHash",
+          "decision"
+        ]
       }
     }
   },

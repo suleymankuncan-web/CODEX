@@ -8,6 +8,7 @@ import type { AppLocale } from '@/lib/i18n'
 import { fetchOpenApiJson, sendOpenApiJson } from '@/lib/openapi-client'
 import { actionToast } from '@/lib/action-toast'
 import { canApproveIncentives } from './final-incentive-approval-permission'
+import { companyStageCompanies } from './company-cycle-permission'
 import { formatIncentiveMoney, formatIncentivePeriod } from './format'
 import { sumMoney } from './model'
 import type { IncentiveApprovalPackage } from './final-incentive-approval'
@@ -15,14 +16,16 @@ import type { IncentiveApprovalPackage } from './final-incentive-approval'
 export function IncentiveHrHandoff(input: {
   packages: IncentiveApprovalPackage[]; auth: AuthSessionSummary | null
   period: string; locale: AppLocale; disabled: boolean; onBusyChange: (busy: boolean) => void
+  companyCycle?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const running = useRef(false)
   const client = useQueryClient()
   const tr = input.locale === 'tr'
-  const allApproved = input.packages.length > 0 && input.packages.every(item => item.status === 'admin_approved')
+  const deliveryAllowed = input.companyCycle ? companyStageCompanies(input.auth, 'payroll').length > 0 : canApproveIncentives(input.auth)
+  const allApproved = input.companyCycle || (input.packages.length > 0 && input.packages.every(item => item.status === 'admin_approved'))
   const queryKey = ['incentive-hr-handoff', input.auth?.user.userId, input.auth?.user.authorizationContextVersion, input.period]
-  const query = useQuery({ queryKey, queryFn: () => fetchOpenApiJson('/api/store/incentives/hr-handoff', { query: new URLSearchParams({ period: input.period }) }), enabled: allApproved && canApproveIncentives(input.auth), refetchOnWindowFocus: false })
+  const query = useQuery({ queryKey, queryFn: () => fetchOpenApiJson('/api/store/incentives/hr-handoff', { query: new URLSearchParams({ period: input.period }) }), enabled: allApproved && deliveryAllowed, refetchOnWindowFocus: false })
   const mutation = useMutation({
     mutationFn: (version: string) => sendOpenApiJson('/api/store/incentives/hr-handoff', { method: 'POST', body: { period: input.period, version } }), retry: 0,
     onSuccess: data => { client.setQueryData(queryKey, data); actionToast.success(tr ? 'Excel dosyası e-posta sunucusuna teslim edildi.' : 'The Excel attachment was accepted by the mail server.') },
@@ -36,14 +39,17 @@ export function IncentiveHrHandoff(input: {
   const uncertain = data?.companies.some(company => company.status === 'uncertain' || company.status === 'sending')
   const canSend = !input.disabled && allApproved && !query.isFetching && !query.isError && data?.canSend && !mutation.isPending
   return <div className="incentive-hr-action">
-    <Button className="incentive-primary-action" disabled={input.disabled || !allApproved || mutation.isPending} title={!allApproved ? (tr ? 'Önce tüm bölge paketlerini onaylayın.' : 'Approve every regional package first.') : undefined} onClick={() => { setOpen(true); void query.refetch() }}>{sent ? <Check aria-hidden="true" /> : <Send aria-hidden="true" />}{sent ? (tr ? 'İK’ya gönderildi' : 'Sent to HR') : (tr ? 'İK’ya gönder' : 'Send to HR')}</Button>
+    <Button className="incentive-primary-action" disabled={input.disabled || !allApproved || !deliveryAllowed || mutation.isPending || (input.companyCycle && !data?.allApproved)} title={!allApproved ? (tr ? 'Önce final onayı tamamlayın.' : 'Complete final approval first.') : undefined} onClick={() => { setOpen(true); void query.refetch() }}>{sent ? <Check aria-hidden="true" /> : <Send aria-hidden="true" />}{sent ? (tr ? 'Bordroya teslim edildi' : 'Delivered to payroll') : (tr ? 'Bordroya teslim et' : 'Deliver to payroll')}</Button>
     <Dialog open={open} onOpenChange={value => { if (!mutation.isPending) setOpen(value) }}>
       <DialogContent className="incentive-package-confirmation" showCloseButton={!mutation.isPending} onEscapeKeyDown={event => { if (mutation.isPending) event.preventDefault() }} onPointerDownOutside={event => { if (mutation.isPending) event.preventDefault() }}>
-        <DialogHeader><DialogTitle>{tr ? 'İK’ya gönderim özeti' : 'HR delivery summary'}</DialogTitle><DialogDescription>{formatIncentivePeriod(input.period, input.locale)} · {tr ? 'Tüm onaylı müdür paketleri Excel olarak gönderilir.' : 'Every approved manager package is included in the Excel delivery.'}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>{tr ? 'Final bordro teslim özeti' : 'Final payroll delivery summary'}</DialogTitle><DialogDescription>{formatIncentivePeriod(input.period, input.locale)} · {tr ? 'Final onaylı şirket listesi Excel olarak teslim edilir.' : 'The final approved company list is delivered as Excel.'}</DialogDescription></DialogHeader>
         {query.isPending ? <p role="status">{tr ? 'Gönderim özeti hazırlanıyor…' : 'Preparing delivery summary…'}</p> : query.isError ? <div role="alert"><p>{tr ? 'Gönderim özeti alınamadı.' : 'Could not load delivery summary.'}</p><Button variant="outline" onClick={() => void query.refetch()}>{tr ? 'Tekrar dene' : 'Retry'}</Button></div> : data ? <>
           <dl className="incentive-hr-summary"><div><dt>{tr ? 'Müdür paketi' : 'Manager packages'}</dt><dd>{data.companies.reduce((total, company) => total + company.managerPackageCount, 0)}</dd></div><div><dt>{tr ? 'Mağaza' : 'Stores'}</dt><dd>{data.companies.reduce((total, company) => total + company.storeCount, 0)}</dd></div><div><dt>{tr ? 'Personel' : 'People'}</dt><dd>{data.companies.reduce((total, company) => total + company.personnelCount, 0)}</dd></div><div><dt>{tr ? 'Toplam prim' : 'Total incentive'}</dt><dd>{formatIncentiveMoney(sumMoney(data.companies.map(company => company.totalAmount)), input.locale)}</dd></div></dl>
           <p className="incentive-confirm-copy"><FileSpreadsheet size={16} aria-hidden="true" /> {tr ? 'Müdür özeti ve personel primleri · Excel (.xlsx)' : 'Manager summary and personnel incentives · Excel (.xlsx)'}</p>
-          <div className="incentive-hr-recipients">{data.companies.map(company => <div key={company.companyId}><strong>{company.companyName} · {tr ? 'Alıcılar' : 'Recipients'}</strong>{company.recipients.length ? <ul>{company.recipients.map(email => <li key={email}>{email}</li>)}</ul> : <p>{tr ? 'İK alıcı adresleri henüz tanımlanmadı.' : 'HR recipient addresses are not configured yet.'}</p>}{company.status === 'sent' ? <p>{tr ? 'E-posta sunucusuna teslim edildi.' : 'Accepted by the mail server.'}</p> : null}</div>)}</div>
+          <div className="incentive-hr-recipients">{data.companies.map(company => <div key={company.companyId}><strong>{company.companyName} · {tr ? 'Alıcılar' : 'Recipients'}</strong>
+            {company.finalProof ? <p>{tr ? 'Genel Müdür final onayı' : 'General Manager final approval'} · {tr ? 'Revizyon' : 'Revision'} {company.finalProof.revision}</p>
+              : company.approvalOrigin === 'legacy_approved' ? <p>{tr ? 'Önceki süreçte onaylanmış kayıt. Dört aşamalı onay geçmişi yoktur.' : 'Approved in the previous workflow. No four-stage approval history is claimed.'}</p> : null}
+            {company.recipients.length ? <ul>{company.recipients.map(email => <li key={email}>{email}</li>)}</ul> : <p>{tr ? 'İK alıcı adresleri henüz tanımlanmadı.' : 'HR recipient addresses are not configured yet.'}</p>}{company.status === 'sent' ? <p>{tr ? 'E-posta sunucusuna teslim edildi.' : 'Accepted by the mail server.'}</p> : null}</div>)}</div>
           {!data.allApproved ? <p role="alert">{tr ? 'Onaylanmamış veya güncelliği değişmiş paket var. Gönderimden önce paketleri kontrol edin.' : 'Some packages are unapproved or stale. Review them before sending.'}</p> : null}
           {!data.mailConfigured ? <p role="status">{tr ? 'E-posta ayarları tamamlandığında gönderim açılacak.' : 'Sending will be available after email settings are configured.'}</p> : null}
           {uncertain ? <p role="alert">{tr ? 'Bu dönem için gönderim başlatılmış. Tekrar göndermeden önce posta sunucusu kayıtları kontrol edilmeli.' : 'Delivery has already been initiated. Check the mail server records before sending again.'}</p> : null}

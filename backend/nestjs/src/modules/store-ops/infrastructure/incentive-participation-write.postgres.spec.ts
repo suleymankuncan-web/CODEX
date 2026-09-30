@@ -44,6 +44,15 @@ describePostgres("participation append/freeze PostgreSQL proof", () => {
       CREATE TABLE ops.sales_target_incentive_store_review (store_id uuid,period_key char(7),review_status text,reviewed_by_user_id uuid,reviewed_at timestamptz,updated_at timestamptz);
       CREATE TABLE ops.sales_target_incentive_region_package (sales_target_incentive_region_package_id uuid PRIMARY KEY,period_key char(7),package_status text);
       CREATE TABLE ops.sales_target_incentive_region_package_store (region_package_id uuid REFERENCES ops.sales_target_incentive_region_package(sales_target_incentive_region_package_id) ON DELETE CASCADE,company_id uuid,region_id uuid,store_id uuid,final_snapshot_id uuid,period_key char(7));
+      -- Empty company-cycle preparation is an additional dependency; the original
+      -- append/freeze tests still exercise migration 094, with no returned cycle.
+      ALTER TABLE ops.sales_target_incentive_region_package ADD COLUMN company_id uuid,
+        ADD COLUMN package_scope text, ADD COLUMN reviewed_by_user_id uuid,
+        ADD COLUMN reviewed_at timestamptz, ADD COLUMN review_note text, ADD COLUMN updated_at timestamptz;
+      CREATE TABLE ops.incentive_company_cycle (cycle_id uuid,company_id uuid,period_key char(7),stage text,current_revision int);
+      CREATE TABLE ops.incentive_company_decision (cycle_id uuid,revision_no int,decision text,actor_user_id uuid,reason_note text);
+      CREATE TABLE ops.sales_target_incentive_region_correction (region_package_id uuid,correction_status text,
+        reviewed_by_user_id uuid,reviewed_at timestamptz,review_note text,updated_at timestamptz);
       CREATE TABLE audit.event_log (actor_user_id uuid,event_type text,entity_name text,entity_id uuid,scope_type text,company_id uuid,store_id uuid,metadata_json jsonb);
       CREATE FUNCTION ops.store_was_company_during(uuid,date,date) RETURNS boolean LANGUAGE sql AS $$SELECT TRUE$$;
       INSERT INTO ops.company VALUES ('${id("1")}','active');

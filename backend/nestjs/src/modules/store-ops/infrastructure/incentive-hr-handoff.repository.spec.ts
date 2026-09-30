@@ -18,7 +18,7 @@ describe("atomic HR delivery claim", () => {
     });
   });
   it("reads required manager packages from the selected period and checks every assigned store", async () => {
-    await repository.read("2026-09", ["company-a"]);
+    await repository.read("2026-09", ["company-a"], "viewer");
     const sql = String(query.mock.calls.find(call => String(call[0]).includes("AS packages,"))?.[0]);
     expect(sql).toContain("FROM rpt.sales_target_incentive_final_snapshot snapshot");
     expect(sql).toContain("snapshot.period_key = $1");

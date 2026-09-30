@@ -194,6 +194,7 @@ export class AuthSessionController {
           user.permissionScopes,
         ),
         permissionScopes: user.permissionScopes ?? {},
+        roleScopes: user.roleScopes ?? {},
         scope: {
           companyIds: user.scope.companyIds,
           regionIds: user.scope.regionIds,
