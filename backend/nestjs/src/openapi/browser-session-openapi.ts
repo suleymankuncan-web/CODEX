@@ -33,6 +33,17 @@ export function applyBrowserSessionOpenApi(document: MutableOpenApiDocument) {
     },
   };
 
+  const bootstrap = document.components.schemas.AuthBootstrapResponse as {
+    properties?: { provider?: { properties?: Record<string, unknown> } };
+  } | undefined;
+  if (bootstrap?.properties?.provider?.properties) {
+    bootstrap.properties.provider.properties.managedBrowserSession = { type: "boolean" };
+  }
+  setJsonResponseSchema(document.paths, "/api/auth/browser-session/oidc", "post",
+    "Server-side PKCE session establishment. Provider credentials are never returned.", "BrowserSessionCreateResponse", "200");
+  const oidc = (document.paths["/api/auth/browser-session/oidc"] as MutablePathItem | undefined)?.post;
+  if (oidc) oidc.security = [];
+
   setJsonResponseSchema(
     document.paths,
     "/api/auth/browser-session",

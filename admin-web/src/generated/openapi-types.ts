@@ -116,6 +116,7 @@ export type components = {
         "tokenUrl": string | null
         "logoutUrl": string | null
         "postLogoutRedirectPath": string
+        "managedBrowserSession"?: boolean
       }
     }
     "AuthLookupsResponse": {
@@ -526,6 +527,12 @@ export type components = {
         "count": number
         "limit": number
       }
+    }
+    "BrowserSessionCreateResponse": {
+      "csrfToken": string
+      "expiresAt": string
+      "sessionId": string
+      "session": components['schemas']["AuthSessionResponse"]
     }
     "CancelStoreActionPlanRequest": {
       "cancelReason": string
@@ -988,6 +995,12 @@ export type components = {
       "storeIds": string[]
       "effectiveFrom"?: string
       "effectiveTo"?: string
+    }
+    "CreateOidcBrowserSessionDto": {
+      "code": string
+      "codeVerifier": string
+      "state": string
+      "redirectUri": string
     }
     "CreatePersonnelCorrectionDto": {
       "storeId": string
@@ -4383,6 +4396,22 @@ export type components = {
 }
 
 export type paths = {
+  "/api/auth/browser-session/oidc": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateOidcBrowserSessionDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["BrowserSessionCreateResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/reports/store-returns": {
     get: {
       responses: {

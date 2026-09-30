@@ -134,6 +134,9 @@ services:
       AUTH_LOGOUT_URL: https://${HR_AXIS_PUBLIC_HOST:?set the approved internal DNS name}/realms/store-ops/protocol/openid-connect/logout
       AUTH_CALLBACK_PATH: /auth/callback
       AUTH_POST_LOGOUT_REDIRECT_PATH: /auth/login
+      MANAGED_BROWSER_SESSION_ENABLED: "true"
+      MANAGED_BROWSER_SESSION_MAX_SECONDS: ${MANAGED_BROWSER_SESSION_MAX_SECONDS:-604800}
+      AUTH_SESSION_ENDPOINT_URL: http://keycloak:8080/realms/store-ops/protocol/openid-connect/token
       BROWSER_SESSION_COOKIE_ENABLED: "true"
       BROWSER_SESSION_TTL_SECONDS: ${BROWSER_SESSION_TTL_SECONDS:-900}
       BROWSER_SESSION_SECRET_FILE: /run/secrets/browser_session_secret

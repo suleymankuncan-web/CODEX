@@ -1,4 +1,6 @@
 import {
+  Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -19,6 +21,9 @@ import {
   serializeBrowserSessionCookie,
   serializeClearCookie,
 } from "../browser-session-cookie";
+import { ManagedSessionService } from "../managed-session/managed-session.service";
+import { assertBrowserSessionOrigin } from "../browser-session-origin";
+import { CreateOidcBrowserSessionDto } from "./dto/create-oidc-browser-session.dto";
 import { Public } from "../decorators/public.decorator";
 
 @Controller("auth")
@@ -27,6 +32,7 @@ export class AuthSessionController {
     private readonly appConfigService: AppConfigService,
     private readonly authContextService: AuthContextService,
     private readonly browserSessionService: BrowserSessionService,
+    private readonly managedSessionService?: ManagedSessionService,
   ) {}
 
   @Public()
@@ -44,6 +50,7 @@ export class AuthSessionController {
       authMode: this.appConfigService.authMode || "mock",
       provider: {
         configured: providerConfigured,
+        managedBrowserSession: Boolean(this.appConfigService.managedBrowserSessionEnabled),
         authorizationUrl:
           this.appConfigService.authAuthorizationUrl ?? null,
         clientId: this.appConfigService.authClientId ?? null,
@@ -115,6 +122,41 @@ export class AuthSessionController {
     };
   }
 
+  @Public()
+  @Post("browser-session/oidc")
+  @HttpCode(HttpStatus.OK)
+  async createOidcBrowserSession(
+    @Body() input: CreateOidcBrowserSessionDto,
+    @Req() request: { headers: Record<string, string | string[] | undefined> },
+    @Res({ passthrough: true }) response: { setHeader(name: string, value: string | string[]): void },
+  ) {
+    if (!this.appConfigService.managedBrowserSessionEnabled || !this.managedSessionService) {
+      throw new NotFoundException("Managed browser session transport is disabled");
+    }
+    const origin = assertBrowserSessionOrigin(request.headers, this.appConfigService.corsAllowedOrigins);
+    if (input.redirectUri !== new URL(this.appConfigService.authCallbackPath, origin).toString()) {
+      throw new BadRequestException("Invalid login callback");
+    }
+    const issued = await this.managedSessionService.create(input,
+      (token) => this.authContextService.resolveJwtBearerToken(token, true),
+      async (cookieValue) => {
+        const user = await this.authContextService.resolveUser({ headers: {
+          cookie: `${this.appConfigService.browserSessionCookieName}=${encodeURIComponent(cookieValue)}`,
+        } });
+        if (!user) throw new UnauthorizedException("Invalid browser session");
+        return user;
+      });
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("Set-Cookie", serializeBrowserSessionCookie({
+      httpOnly: true, maxAgeSeconds: Math.max(0, Math.floor((Date.parse(issued.expiresAt) - Date.now()) / 1000)),
+      name: this.appConfigService.browserSessionCookieName,
+      sameSite: this.appConfigService.browserSessionSameSite,
+      secure: this.appConfigService.browserSessionCookieSecure, value: issued.cookieValue,
+    }));
+    return { csrfToken: issued.csrfNonce, expiresAt: issued.expiresAt,
+      sessionId: issued.sessionId, session: this.buildSessionResponse(issued.user) };
+  }
+
   @Post("browser-session/csrf")
   @HttpCode(HttpStatus.OK)
   recoverBrowserSessionCsrf(
@@ -150,12 +192,26 @@ export class AuthSessionController {
 
   @Public()
   @Delete("browser-session")
-  clearBrowserSession(
+  async clearBrowserSession(
     @Res({ passthrough: true })
     response: {
       setHeader(name: string, value: string | string[]): void;
     },
+    @Req() request?: { headers: Record<string, string | string[] | undefined> },
   ) {
+    if (request) {
+      const cookieValue = parseCookieHeader(request.headers.cookie)[this.appConfigService.browserSessionCookieName];
+      if (cookieValue && this.appConfigService.managedBrowserSessionEnabled) {
+        let envelope;
+        try { envelope = this.browserSessionService.verifySession(cookieValue).envelope; }
+        catch { /* An expired cookie has no active app session to revoke. */ }
+        if (envelope?.v === 2) {
+          assertBrowserSessionOrigin(request.headers, this.appConfigService.corsAllowedOrigins);
+          if (!this.managedSessionService) throw new UnauthorizedException("Invalid browser session");
+          await this.managedSessionService.revoke(envelope);
+        }
+      }
+    }
     response.setHeader("Set-Cookie", [
       serializeClearCookie({
         httpOnly: true,

@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-09-30T17:53:28.113Z",
+  "generatedAt": "2026-09-30T20:19:38.621Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 280,
-    "backendEndpointsWithoutFrontendCallCount": 56,
+    "backendEndpointCount": 281,
+    "backendEndpointsWithoutFrontendCallCount": 57,
     "controllerCount": 43,
     "frontendApiCallCount": 225,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 225,
-    "openApiEndpointCount": 280,
+    "openApiEndpointCount": 281,
     "routeApiEdgeCount": 267,
     "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0,
@@ -4813,7 +4813,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 33
+        "line": 39
       }
     },
     {
@@ -4827,7 +4827,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 152
+        "line": 194
       }
     },
     {
@@ -4841,7 +4841,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 73
+        "line": 80
       }
     },
     {
@@ -4855,7 +4855,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 118
+        "line": 160
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/auth/browser-session/oidc",
+      "method": "POST",
+      "path": "/api/auth/browser-session/oidc",
+      "rawControllerPath": "auth",
+      "rawMethodPath": "browser-session/oidc",
+      "controller": "auth-session",
+      "domain": "auth",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
+        "line": 126
       }
     },
     {
@@ -5051,7 +5065,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 62
+        "line": 69
       }
     },
     {
@@ -8562,6 +8576,12 @@
       "id": "openapi:POST:/api/auth/browser-session/csrf",
       "method": "POST",
       "path": "/api/auth/browser-session/csrf",
+      "domain": "auth"
+    },
+    {
+      "id": "openapi:POST:/api/auth/browser-session/oidc",
+      "method": "POST",
+      "path": "/api/auth/browser-session/oidc",
       "domain": "auth"
     },
     {
@@ -12857,7 +12877,7 @@
         "id": "controller:auth-session",
         "controller": "auth-session",
         "domain": "auth",
-        "endpointCount": 5,
+        "endpointCount": 6,
         "frontendCallCount": 2
       },
       {
@@ -13025,6 +13045,7 @@
       "endpoint:DELETE:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session/csrf",
+      "endpoint:POST:/api/auth/browser-session/oidc",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",

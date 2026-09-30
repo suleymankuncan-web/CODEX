@@ -8,104 +8,15 @@ import { AppConfigService } from "../../shared/app-config.service";
 import { redactSensitiveLogValue } from "../../shared/structured-log";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 import { BrowserSessionService } from "./browser-session.service";
+import { ManagedSessionService } from "./managed-session/managed-session.service";
+import { assertBrowserSessionOrigin } from "./browser-session-origin";
 import { parseCookieHeader } from "./browser-session-cookie";
 import { JwtAuthProvider } from "./providers/jwt-auth.provider";
 import { MockAuthProvider } from "./providers/mock-auth.provider";
 
-export interface AuthenticatedUser {
-  userId: string;
-  employeeId?: string;
-  displayName?: string;
-  username?: string;
-  email?: string;
-  roleCodes: string[];
-  scope: AuthReadScope;
-  readScope: AuthReadScope;
-  actionScope: AuthActionScope;
-  assignedStoreIds: string[];
-  assignedStoreTypes?: string[];
-  roleScopes?: Record<string, AuthReadScope>;
-  permissionScopes?: Record<string, AuthReadScope>;
-}
-
-export interface AuthReadScope {
-  companyIds: string[];
-  regionIds: string[];
-  storeIds: string[];
-}
-
-export interface AuthActionScope {
-  assignedStoreIds: string[];
-  assignedStoreTypes?: string[];
-}
-
-export function buildAuthenticatedUser(input: {
-  userId: string;
-  employeeId?: string;
-  displayName?: string;
-  username?: string;
-  email?: string;
-  roleCodes: string[];
-  scope?: AuthReadScope;
-  readScope?: AuthReadScope;
-  actionScope?: AuthActionScope;
-  assignedStoreIds?: string[];
-  assignedStoreTypes?: string[];
-  roleScopes?: Record<string, AuthReadScope>;
-  permissionScopes?: Record<string, AuthReadScope>;
-}): AuthenticatedUser {
-  const readScope = normalizeReadScope(input.readScope ?? input.scope);
-  const assignedStoreIds = uniqueStrings(
-    input.actionScope?.assignedStoreIds ?? input.assignedStoreIds ?? [],
-  );
-  const assignedStoreTypes = uniqueStrings(
-    input.actionScope?.assignedStoreTypes ?? input.assignedStoreTypes ?? [],
-  );
-
-  return {
-    userId: input.userId,
-    ...(input.employeeId ? { employeeId: input.employeeId } : {}),
-    ...(input.displayName ? { displayName: input.displayName } : {}),
-    ...(input.username ? { username: input.username } : {}),
-    ...(input.email ? { email: input.email } : {}),
-    roleCodes: uniqueStrings(input.roleCodes),
-    scope: readScope,
-    readScope,
-    actionScope: {
-      assignedStoreIds,
-      ...(assignedStoreTypes.length > 0 ? { assignedStoreTypes } : {}),
-    },
-    assignedStoreIds,
-    ...(assignedStoreTypes.length > 0 ? { assignedStoreTypes } : {}),
-    ...(input.roleScopes
-      ? { roleScopes: normalizeRoleScopes(input.roleScopes) }
-      : {}),
-    ...(input.permissionScopes
-      ? { permissionScopes: normalizeRoleScopes(input.permissionScopes) }
-      : {}),
-  };
-}
-
-function normalizeReadScope(scope?: AuthReadScope): AuthReadScope {
-  return {
-    companyIds: uniqueStrings(scope?.companyIds ?? []),
-    regionIds: uniqueStrings(scope?.regionIds ?? []),
-    storeIds: uniqueStrings(scope?.storeIds ?? []),
-  };
-}
-
-function uniqueStrings(values: string[]) {
-  return [...new Set(values.filter(Boolean))];
-}
-
-function normalizeRoleScopes(roleScopes: Record<string, AuthReadScope>) {
-  return Object.fromEntries(
-    Object.entries(roleScopes).map(([roleCode, scope]) => [
-      roleCode,
-      normalizeReadScope(scope),
-    ]),
-  );
-}
+export { buildAuthenticatedUser } from "./authenticated-user";
+export type { AuthenticatedUser, AuthReadScope, AuthActionScope } from "./authenticated-user";
+import { buildAuthenticatedUser, uniqueStrings, type AuthenticatedUser, type AuthReadScope } from "./authenticated-user";
 
 @Injectable()
 export class AuthContextService {
@@ -117,9 +28,11 @@ export class AuthContextService {
     private readonly mockAuthProvider: MockAuthProvider,
     private readonly jwtAuthProvider: JwtAuthProvider,
     private readonly browserSessionService?: BrowserSessionService,
+    private readonly managedSessionService?: ManagedSessionService,
   ) {}
 
   async resolveUser(request: {
+    originalUrl?: string;
     headers: Record<string, string | string[] | undefined>;
   }): Promise<AuthenticatedUser | null> {
     const providerUser = await (async () => {
@@ -132,7 +45,7 @@ export class AuthContextService {
         };
       }
 
-      const browserSessionUser = this.resolveBrowserSessionUser(request);
+      const browserSessionUser = await this.resolveBrowserSessionUser(request);
       if (browserSessionUser) {
         return {
           mapProviderSubject: false,
@@ -173,7 +86,7 @@ export class AuthContextService {
     );
   }
 
-  async resolveJwtBearerToken(token: string): Promise<AuthenticatedUser> {
+  async resolveJwtBearerToken(token: string, requireMappedAccount = false): Promise<AuthenticatedUser> {
     if (this.appConfigService.authMode !== "jwt") {
       throw new UnauthorizedException("Unsupported auth mode");
     }
@@ -181,6 +94,8 @@ export class AuthContextService {
     return this.resolveAuthorizationContext(
       await this.jwtAuthProvider.resolveBearerToken(token),
       true,
+      false,
+      requireMappedAccount,
     );
   }
 
@@ -194,9 +109,10 @@ export class AuthContextService {
     return this.jwtAuthProvider.resolveUser(request);
   }
 
-  private resolveBrowserSessionUser(request: {
+  private async resolveBrowserSessionUser(request: {
+    originalUrl?: string;
     headers: Record<string, string | string[] | undefined>;
-  }): AuthenticatedUser | null {
+  }): Promise<AuthenticatedUser | null> {
     if (!this.appConfigService.browserSessionCookieEnabled) {
       return null;
     }
@@ -211,13 +127,21 @@ export class AuthContextService {
       return null;
     }
 
-    return this.browserSessionService.verifySession(cookieValue).user;
+    const verified = this.browserSessionService.verifySession(cookieValue);
+    if (verified.envelope.v === 2) {
+      if (!this.managedSessionService) throw new UnauthorizedException("Invalid browser session");
+      const recovery = request.originalUrl?.split("?")[0] === "/api/auth/browser-session/csrf";
+      if (recovery) assertBrowserSessionOrigin(request.headers, this.appConfigService.corsAllowedOrigins);
+      await this.managedSessionService.verify(verified.envelope, recovery);
+    }
+    return verified.user;
   }
 
   private async resolveAuthorizationContext(
     providerUser: AuthenticatedUser,
     mapProviderSubject: boolean,
     requireFreshAccount = false,
+    requireMappedAccount = false,
   ): Promise<AuthenticatedUser> {
     let appUser = providerUser;
 
@@ -237,6 +161,11 @@ export class AuthContextService {
         if (!account?.is_active) {
           throw new UnauthorizedException("User account is inactive or missing");
         }
+        appUser = buildAuthenticatedUser({ ...providerUser,
+          employeeId: account.employee_id === undefined ? providerUser.employeeId : account.employee_id ?? undefined,
+          displayName: account.display_name === undefined ? providerUser.displayName : account.display_name ?? undefined,
+          username: account.username ?? providerUser.username, email: account.email ?? providerUser.email,
+        });
       }
 
       if (
@@ -262,7 +191,7 @@ export class AuthContextService {
             username: mappedUser.username ?? providerUser.username,
             email: mappedUser.email ?? providerUser.email,
           });
-        } else if (this.appConfigService.isProduction) {
+        } else if (this.appConfigService.isProduction || requireMappedAccount) {
           throw new UnauthorizedException("User account is not mapped");
         }
       }
@@ -275,7 +204,7 @@ export class AuthContextService {
         throw error;
       }
 
-      if (this.appConfigService.isProduction) {
+      if (this.appConfigService.isProduction || requireFreshAccount || requireMappedAccount) {
         this.logger.error(
           `Failing closed because authorization lookup failed for provider user: ${this.safeErrorMessage(error)}`,
         );
@@ -305,7 +234,7 @@ export class AuthContextService {
     ]);
 
     if (assignments.length === 0) {
-      if (requireFreshAccount) {
+      if (requireFreshAccount || requireMappedAccount) {
         throw new UnauthorizedException(
           "User account has no active role assignments",
         );

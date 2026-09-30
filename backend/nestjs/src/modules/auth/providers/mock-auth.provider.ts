@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.service";
+import { AuthenticatedUser, buildAuthenticatedUser } from "../authenticated-user";
 import { AuthProvider } from "../interfaces/auth-provider.interface";
 
 @Injectable()

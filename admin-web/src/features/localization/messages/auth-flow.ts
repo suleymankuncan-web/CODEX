@@ -110,6 +110,9 @@ export const authFlowTr = {
   'authFlow.sendVerificationCode': 'Doğrulama kodu gönder',
 
   'authFlow.callbackEyebrow': 'Kimlik callback',
+  'authFlow.retry': 'Yeniden dene',
+  'authFlow.restartLogin': 'Kurumsal girişi yeniden başlat',
+  'authFlow.loginConfirmationUnavailable': 'Giriş tamamlanamadı. Yeniden deneyin veya kurumsal girişi yeniden başlatın.',
   'authFlow.callbackFailedTitle': 'Login callback başarısız oldu',
   'authFlow.providerError': 'Sağlayıcı hatası',
   'authFlow.providerReturnedError':
@@ -256,6 +259,9 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.sendVerificationCode': 'Send verification code',
 
   'authFlow.callbackEyebrow': 'Auth Callback',
+  'authFlow.retry': 'Retry',
+  'authFlow.restartLogin': 'Restart provider login',
+  'authFlow.loginConfirmationUnavailable': 'Login could not be confirmed. Retry or restart provider login.',
   'authFlow.callbackFailedTitle': 'Login callback failed',
   'authFlow.providerError': 'Provider error',
   'authFlow.providerReturnedError':

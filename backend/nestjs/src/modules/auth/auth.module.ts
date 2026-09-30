@@ -1,3 +1,6 @@
+import { ManagedSessionRepository } from "./managed-session/managed-session.repository";
+import { OidcSessionClient } from "./managed-session/oidc-session.client";
+import { ManagedSessionService } from "./managed-session/managed-session.service";
 import { Global, Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { AccessLifecycleRepository } from "./access-lifecycle.repository";
@@ -36,6 +39,9 @@ import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
 @Module({
   controllers: [AuthAdminController, AuthSessionController, MobileAuthController],
   providers: [
+    ManagedSessionRepository,
+    OidcSessionClient,
+    ManagedSessionService,
     AccessLifecycleRepository,
     AccessLifecycleService,
     AuthAdminAuditRepository,

@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { AppConfigService } from "../../../shared/app-config.service";
 import { BrowserSessionService } from "../browser-session.service";
+import { assertBrowserSessionOrigin } from "../browser-session-origin";
 import { parseCookieHeader } from "../browser-session-cookie";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -31,7 +32,7 @@ export class BrowserSessionCsrfGuard implements CanActivate {
       return true;
     }
 
-    if (this.isCsrfRecoveryEndpoint(request)) {
+    if (this.isCsrfRecoveryEndpoint(request) || (request.originalUrl ?? request.path ?? request.url ?? "").split("?")[0] === "/api/auth/browser-session/oidc") {
       this.assertCsrfRecoveryRequestMetadata(request.headers);
       return true;
     }
@@ -80,28 +81,10 @@ export class BrowserSessionCsrfGuard implements CanActivate {
   private assertCsrfRecoveryRequestMetadata(
     headers: Record<string, string | string[] | undefined>,
   ): void {
-    const origin = resolveExactHeader(headers.origin);
-    const fetchSite = resolveExactHeader(headers["sec-fetch-site"]);
-    const allowedOrigins = this.appConfigService.corsAllowedOrigins ?? [];
-
-    if (
-      !origin ||
-      !allowedOrigins.includes(origin) ||
-      fetchSite !== "same-origin"
-    ) {
-      throw new ForbiddenException("CSRF recovery request metadata is invalid");
-    }
+    assertBrowserSessionOrigin(headers, this.appConfigService.corsAllowedOrigins ?? []);
   }
 }
 
 function resolveHeader(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
-}
-
-function resolveExactHeader(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) {
-    return value.length === 1 ? value[0] : undefined;
-  }
-
-  return value;
 }

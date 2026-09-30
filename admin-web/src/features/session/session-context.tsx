@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react'
 import { isClerkSessionProviderAvailable } from '../auth/clerk-config'
-import { clearBrowserSessionCookie, createBrowserSession, recoverBrowserSessionAfterReload } from '../../lib/api'
+import { clearBrowserSessionCookie, createBrowserSession, recoverBrowserSessionAfterReload, type BrowserSessionCreateResponse } from '../../lib/api'
 import {
   SessionContext,
   type ProviderSessionStartOptions,
@@ -31,6 +31,8 @@ export function SessionProvider(input: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(() => readClientSession())
   const sessionRef = useRef(session)
   const browserSessionAuthorizationFingerprintRef = useRef('')
+  const [sessionRecoveryFailed, setSessionRecoveryFailed] = useState(false)
+  const [recoveryAttempt, setRecoveryAttempt] = useState(0)
   const [isProviderSessionHydrating, setProviderSessionHydrating] = useState(() =>
     isClerkSessionProviderAvailable() || (isCookieBrowserSession(session) && Boolean(session.browserSessionKey) && !isSessionReady(session)),
   )
@@ -49,17 +51,48 @@ export function SessionProvider(input: { children: ReactNode }) {
       !initial.browserSessionKey || isSessionReady(initial)) return
     const controller = new AbortController()
     let cancelled = false
-    const timeout = window.setTimeout(() => controller.abort(), 15_000)
-    void recoverBrowserSessionAfterReload(controller.signal).catch(() => null).then((nonce) => {
-      if (cancelled) return
-      setSession((current) => {
-        if (cancelled || !isCookieBrowserSession(current) || current.browserSessionKey !== initial.browserSessionKey) return current
-        writeBrowserSessionCsrfToken(nonce ?? '')
-        return normalizeSession({ ...current, browserSessionKey: nonce ? current.browserSessionKey : '' })
-      })
-      setProviderSessionHydrating(false)
-    }).finally(() => window.clearTimeout(timeout))
-    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout) }
+    const recover = async () => {
+      setSessionRecoveryFailed(false)
+      setProviderSessionHydrating(true)
+      for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
+        const timeout = window.setTimeout(() => controller.abort(), 15_000)
+        try {
+          const nonce = await recoverBrowserSessionAfterReload(controller.signal)
+          if (cancelled || sessionRef.current.browserSessionKey !== initial.browserSessionKey) return
+          writeBrowserSessionCsrfToken(nonce ?? '')
+          const next = normalizeSession({ ...sessionRef.current, browserSessionKey: nonce ? initial.browserSessionKey : '' })
+          sessionRef.current = next
+          persistClientSession(next)
+          setSession(next)
+          setProviderSessionHydrating(false)
+          return
+        } catch {
+          if (cancelled || sessionRef.current.browserSessionKey !== initial.browserSessionKey) return
+          if (controller.signal.aborted || attempt === 2) {
+            setSessionRecoveryFailed(true)
+            return
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 1000 * (attempt + 1)))
+        } finally { window.clearTimeout(timeout) }
+      }
+    }
+    void recover()
+    return () => { cancelled = true; controller.abort() }
+  }, [recoveryAttempt])
+
+  const retrySessionRecovery = useCallback(() => setRecoveryAttempt((current) => current + 1), [])
+
+  const startManagedSession = useCallback((browserSession: BrowserSessionCreateResponse) => {
+    writeBrowserSessionCsrfToken(browserSession.csrfToken)
+    clearClientBearerSession()
+    const next = normalizeSession({ ...sessionRef.current, mode: 'bearer', browserSessionTransport: 'cookie',
+      bearerToken: '', browserSessionKey: createBrowserSessionCacheKey() })
+    browserSessionAuthorizationFingerprintRef.current = createStableAuthorizationFingerprint(browserSession.session)
+    sessionRef.current = next
+    persistClientSession(next)
+    setSession(next)
+    setProviderSessionHydrating(false)
+    setSessionRecoveryFailed(false)
   }, [])
 
   const saveSession = useCallback(async (next: SessionState) => {
@@ -103,7 +136,6 @@ export function SessionProvider(input: { children: ReactNode }) {
     if (sessionRef.current.browserSessionTransport === 'cookie') {
       writeBrowserSessionCsrfToken('')
       clearClientBearerSession()
-      void clearBrowserSessionCookie().catch(() => undefined)
     } else {
       clearClientBearerSession()
     }
@@ -201,6 +233,9 @@ export function SessionProvider(input: { children: ReactNode }) {
   const value = useMemo<SessionContextValue>(
     () => ({
       session,
+      sessionRecoveryFailed,
+      retrySessionRecovery,
+      startManagedSession,
       isReady: isSessionReady(session),
       isProviderSessionHydrating,
       saveSession,
@@ -219,6 +254,9 @@ export function SessionProvider(input: { children: ReactNode }) {
       resetSession,
       saveSession,
       session,
+      sessionRecoveryFailed,
+      retrySessionRecovery,
+      startManagedSession,
       startBearerSession,
       startProviderSession,
       clearProviderSession,

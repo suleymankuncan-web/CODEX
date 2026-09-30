@@ -1,3 +1,4 @@
+import { createManagedBrowserSession } from '../../lib/api'
 import type { AuthBootstrap } from './api'
 import { sanitizeAuthReturnPath } from './return-path'
 
@@ -193,11 +194,17 @@ export async function exchangeAuthorizationCodeForToken(input: {
     throw new Error('PKCE token endpoint is not configured')
   }
 
-  const pkceState = consumePkceLoginState(input.state)
+  const pkceState = readPkceLoginState(input.state)
   const callbackUrl = resolveAbsoluteUrl(
     input.bootstrap?.provider.callbackPath ?? import.meta.env.VITE_OIDC_CALLBACK_PATH,
     DEFAULT_CALLBACK_PATH,
   )
+  if (input.bootstrap?.provider.managedBrowserSession) {
+    const browserSession = await createManagedBrowserSession({ code: input.code, state: pkceState.state,
+      codeVerifier: pkceState.codeVerifier, redirectUri: callbackUrl })
+    window.sessionStorage.removeItem(PKCE_STORAGE_KEY)
+    return { accessToken: '', idToken: null, browserSession, returnTo: pkceState.returnTo ?? '/' }
+  }
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     client_id: clientId,
@@ -228,11 +235,19 @@ export async function exchangeAuthorizationCodeForToken(input: {
     throw new Error('Token endpoint did not return an access_token')
   }
 
+  window.sessionStorage.removeItem(PKCE_STORAGE_KEY)
   return {
     accessToken,
     idToken,
+    browserSession: null,
     returnTo: pkceState.returnTo ?? '/',
   }
+}
+
+export async function buildRestartLoginUrl(bootstrap: AuthBootstrap, state: string | null) {
+  let returnTo: string | undefined
+  try { returnTo = readPkceLoginState(state).returnTo ?? undefined } catch { /* Start a new bounded login attempt. */ }
+  return buildProviderLoginUrl({ bootstrap, ...(returnTo ? { returnTo } : {}) })
 }
 
 async function createPkceLoginState(returnTo: string | null) {
@@ -258,14 +273,12 @@ async function createPkceLoginState(returnTo: string | null) {
   }
 }
 
-function consumePkceLoginState(state: string | null): PkceLoginState {
+function readPkceLoginState(state: string | null): PkceLoginState {
   if (typeof window === 'undefined') {
     throw new Error('PKCE callback requires a browser session')
   }
 
   const raw = window.sessionStorage.getItem(PKCE_STORAGE_KEY)
-  window.sessionStorage.removeItem(PKCE_STORAGE_KEY)
-
   if (!raw || !state) {
     throw new Error('PKCE login state is missing')
   }
@@ -280,7 +293,7 @@ function consumePkceLoginState(state: string | null): PkceLoginState {
     throw new Error('PKCE login state is invalid')
   }
 
-  if (typeof parsed.createdAt !== 'number' || Date.now() - parsed.createdAt > PKCE_MAX_AGE_MS) {
+  if (typeof parsed.createdAt !== 'number' || Date.now() < parsed.createdAt || Date.now() - parsed.createdAt > PKCE_MAX_AGE_MS) {
     throw new Error('PKCE login state expired')
   }
 

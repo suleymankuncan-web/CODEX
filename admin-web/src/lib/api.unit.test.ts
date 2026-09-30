@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchJson,
+  recoverBrowserSessionAfterReload,
   registerBearerTokenRefreshHandler,
   sendFormData,
   sendJson,
 } from './api'
 import {
   defaultSession,
+  readClientSession,
   persistClientSession,
   readBrowserSessionCsrfToken,
   writeBrowserSessionCsrfToken,
@@ -431,20 +433,20 @@ describe('API CSRF recovery', () => {
     }
   })
 
-  it('falls through session expiry when refresh succeeds without a CSRF nonce', async () => {
+  it.each(['provider', 'network', 'malformed'] as const)('blocks mutation replay without expiring the session on %s recovery failure', async (failure) => {
+    const before = readClientSession()
     const fetchMock = vi.mocked(fetch)
-    fetchMock
-      .mockResolvedValueOnce(createCsrfFailureResponse())
-      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+    fetchMock.mockResolvedValueOnce(createCsrfFailureResponse())
+    if (failure === 'network') fetchMock.mockRejectedValueOnce(new TypeError('network failed'))
+    else fetchMock.mockResolvedValueOnce(createJsonResponse({ ok: true }, failure === 'provider' ? 503 : 200))
 
     await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).rejects.toMatchObject({
-      status: 403,
-      message: 'CSRF token is required',
+      status: 503, message: 'Session recovery is temporarily unavailable',
     })
-
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(readBrowserSessionCsrfToken()).toBe('')
-    expect(testWindow.dispatchEvent).toHaveBeenCalledWith(
+    expect(readClientSession()).toEqual(before)
+    expect(readBrowserSessionCsrfToken()).toBe(staleCsrfToken)
+    expect(testWindow.dispatchEvent).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'store-ops-session-expired' }),
     )
   })
@@ -493,6 +495,53 @@ describe('API CSRF recovery', () => {
     expect(getRequestHeaders(fetchMock, 0)).toMatchObject({ Authorization: 'Bearer test-bearer' })
     expect(getRequestHeaders(fetchMock, 0)).not.toHaveProperty('X-CSRF-Token')
   })
+  it('retains identity and nonce on transient reload recovery but recognizes an expired cookie', async () => {
+    const before = readClientSession()
+    vi.mocked(fetch).mockResolvedValueOnce(createJsonResponse({ message: 'temporary' }, 503))
+    await expect(recoverBrowserSessionAfterReload(new AbortController().signal)).rejects.toMatchObject({ status: 503 })
+    expect(readClientSession()).toEqual(before)
+    expect(readBrowserSessionCsrfToken()).toBe(staleCsrfToken)
+    vi.mocked(fetch).mockResolvedValueOnce(createJsonResponse({}, 401))
+    await expect(recoverBrowserSessionAfterReload(new AbortController().signal)).resolves.toBeNull()
+  })
+
+  it('a retired in-flight 401 cannot clear the nonce or expire a replacement login', async () => {
+    let finish!: (response: Response) => void
+    vi.mocked(fetch).mockImplementation(() => new Promise((resolve) => { finish = resolve }))
+    const pending = fetchJson('/admin/retired-request')
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    persistClientSession({ ...readClientSession(), browserSessionKey: 'replacement-session' })
+    writeBrowserSessionCsrfToken(freshCsrfToken)
+    finish(createJsonResponse({ message: 'Unauthorized' }, 401))
+    await expect(pending).rejects.toMatchObject({ status: 401 })
+    expect(readClientSession().browserSessionKey).toBe('replacement-session')
+    expect(readBrowserSessionCsrfToken()).toBe(freshCsrfToken)
+    expect(testWindow.dispatchEvent).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'store-ops-session-expired' }))
+  })
+
+  it('a retired mutation cannot replay its body under a replacement cookie session', async () => {
+    let finish!: (response: Response) => void
+    vi.mocked(fetch).mockImplementation(() => new Promise((resolve) => { finish = resolve }))
+    const pending = sendJson('/admin/test', { method: 'POST', body: { owner: 'previous-session' } })
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    persistClientSession({ ...readClientSession(), browserSessionKey: 'replacement-session' })
+    writeBrowserSessionCsrfToken(freshCsrfToken)
+    finish(createCsrfFailureResponse())
+    await expect(pending).rejects.toMatchObject({ status: 403 })
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(readBrowserSessionCsrfToken()).toBe(freshCsrfToken)
+    expect(testWindow.dispatchEvent).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'store-ops-session-expired' }))
+  })
+
+  it('a temporary missing-nonce recovery failure blocks writes without expiring the session', async () => {
+    writeBrowserSessionCsrfToken('')
+    vi.mocked(fetch).mockResolvedValueOnce(createJsonResponse({}, 503))
+    await expect(sendJson('/admin/test', { method: 'POST', body: {} })).rejects.toThrow('temporarily unavailable')
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(readClientSession().browserSessionKey).toBe('test-session')
+    expect(testWindow.dispatchEvent).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'store-ops-session-expired' }))
+  })
+
 })
 
 function registerRefreshingHandler(refreshCalls: Array<{ skipCache?: boolean }> = []) {

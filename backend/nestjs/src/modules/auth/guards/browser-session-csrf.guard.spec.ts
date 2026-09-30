@@ -118,6 +118,14 @@ describe("BrowserSessionCsrfGuard", () => {
     ).toThrow(ForbiddenException);
   });
 
+  it("accepts older Safari without Fetch Metadata only with the exact configured Origin", () => {
+    const guard = new BrowserSessionCsrfGuard(config as never, {} as never);
+    for (const path of ["/api/auth/browser-session/csrf", "/api/auth/browser-session/oidc"]) {
+      expect(guard.canActivate(createContext({ headers: { origin: "https://app.example.invalid" }, method: "POST", originalUrl: path }))).toBe(true);
+      expect(() => guard.canActivate(createContext({ headers: { origin: "https://evil.example.invalid" }, method: "POST", originalUrl: path }))).toThrow(ForbiddenException);
+    }
+  });
+
   it("requires a matching CSRF token for unsafe cookie-authenticated requests", () => {
     const guard = new BrowserSessionCsrfGuard(config as never, {
       verifyCsrfToken: jest.fn((cookie, token) => cookie === "signed" && token === "nonce"),

@@ -660,6 +660,27 @@ export class AppConfigService {
     return this.readBoolean("BROWSER_SESSION_COOKIE_ENABLED", false);
   }
 
+  get managedBrowserSessionEnabled(): boolean {
+    const enabled = this.readBoolean("MANAGED_BROWSER_SESSION_ENABLED", false);
+    if (enabled && (!this.browserSessionCookieEnabled || this.authMode !== "jwt" || this.authResponseType !== "code" || !this.authSessionTokenUrl || !this.authClientId)) {
+      throw new Error("Managed browser sessions require JWT, cookie transport and a configured provider");
+    }
+    return enabled;
+  }
+
+  get managedBrowserSessionMaxSeconds(): number {
+    const value = this.readPositiveInteger("MANAGED_BROWSER_SESSION_MAX_SECONDS", "604800");
+    if (value > 604800) throw new Error("Managed browser session maximum cannot exceed seven days");
+    return value;
+  }
+
+  get authSessionTokenUrl(): string | undefined {
+    const value = this.readConfiguredString("AUTH_SESSION_ENDPOINT_URL") ?? this.authTokenUrl;
+    const internal = STRICT_LOCAL_KEYCLOAK_JWKS_URL.replace(/certs$/, "token");
+    if (this.isStrictLocal && value === internal) return value;
+    return this.requireProductionHttpsUrl("AUTH_SESSION_ENDPOINT_URL", value);
+  }
+
   get browserSessionCookieName(): string {
     return this.readString("BROWSER_SESSION_COOKIE_NAME", "hr_axis_browser_session");
   }
@@ -795,11 +816,14 @@ export class AppConfigService {
   }
 
   private assertBrowserSessionContract(): void {
+    this.managedBrowserSessionEnabled;
     if (!this.browserSessionCookieEnabled) {
       return;
     }
 
     this.browserSessionSecret;
+    this.managedBrowserSessionEnabled;
+    this.managedBrowserSessionMaxSeconds;
     this.browserSessionPreviousSecret;
     this.browserSessionTtlSeconds;
     this.browserSessionRenewalWindowSeconds;

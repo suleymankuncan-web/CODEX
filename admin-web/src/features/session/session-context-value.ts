@@ -1,4 +1,5 @@
 import { createContext, use } from 'react'
+import type { BrowserSessionCreateResponse } from '../../lib/api'
 import type { SessionState } from './session-storage'
 
 export type ProviderSessionStartOptions = {
@@ -8,6 +9,9 @@ export type ProviderSessionStartOptions = {
 export type SessionContextValue = {
   session: SessionState
   isReady: boolean
+  sessionRecoveryFailed: boolean
+  retrySessionRecovery: () => void
+  startManagedSession: (value: BrowserSessionCreateResponse) => void
   isProviderSessionHydrating: boolean
   saveSession: (next: SessionState) => Promise<void>
   resetSession: () => Promise<void>
