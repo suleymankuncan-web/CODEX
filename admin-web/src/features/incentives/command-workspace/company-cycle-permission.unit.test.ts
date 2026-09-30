@@ -26,7 +26,7 @@ describe('active company stage capability', () => {
   it('opens the HR route only for a capability in the same persona company', () => {
     const session = auth('HR_ADMIN', 'INCENTIVE_HR_APPROVAL')
     expect(canOpenStoreIncentives(session)).toBe(true)
-    session.user.permissionScopes!.INCENTIVE_HR_APPROVAL.companyIds = ['foreign']
+    session.user.permissionScopes!.INCENTIVE_HR_APPROVAL!.companyIds = ['foreign']
     expect(canOpenStoreIncentives(session)).toBe(false)
     expect(canOpenStoreIncentives(auth('HR_ADMIN', 'INCENTIVE_FINAL_APPROVAL'))).toBe(false)
   })

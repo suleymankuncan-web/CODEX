@@ -41,7 +41,7 @@ export function CompanyIncentiveCycleView(input: { auth: AuthSessionSummary | nu
     const fresh = current.data?.items.find(item => item.companyId === value.item.companyId)
     if (current.error || !fresh || JSON.stringify(fresh) !== JSON.stringify(value.item)) throw new Error('Onay bilgileri değişti. Güncel özeti kontrol edin.')
     return { item: fresh, decision: value.decision }
-  }, retry: 0, onSuccess: value => { setNote(''); setConfirmation(value) }, onError: error => actionToast.error(error, 'Onay özeti alınamadı.') })
+  }, retry: 0, onSuccess: value => { setNote(''); setConfirmation(value) }, onError: () => actionToast.error(null, tr ? 'Onay özeti alınamadı. Güncel listeyi kontrol edin.' : 'Approval summary could not be verified. Review the current list.') })
   const command = useMutation({ mutationFn: async (value: { item: Detail; action: 'seal' | 'approve' | 'return'; note?: string }) => {
     if (value.action === 'seal') return sendOpenApiJson('/api/store/incentives/company-cycle/seal', { method: 'POST', body: { companyId: value.item.companyId, period: input.period, expectedRevision: value.item.cycle?.current_revision ?? 0 } })
     const cycle = value.item.cycle
@@ -49,7 +49,7 @@ export function CompanyIncentiveCycleView(input: { auth: AuthSessionSummary | nu
     if (!cycle || !revision || !['sales_director', 'hr', 'general_manager'].includes(cycle.stage)) throw new Error('Onay aşaması değişti.')
     return sendOpenApiJson('/api/store/incentives/company-cycle/decisions', { method: 'POST', body: { companyId: value.item.companyId, period: input.period, cycleId: cycle.cycle_id,
       revision: revision.revision_no, stage: cycle.stage as 'sales_director' | 'hr' | 'general_manager', sealHash: revision.seal_hash, decision: value.action, ...(value.note ? { reasonNote: value.note } : {}) } })
-  }, retry: 0, onSuccess: () => { setConfirmation(null); actionToast.success('Prim onay durumu güncellendi.') }, onError: error => { setConfirmation(null); actionToast.error(error, 'Karar doğrulanamadı. Güncel durumu kontrol edin; işlem tekrarlanmadı.') },
+  }, retry: 0, onSuccess: () => { setConfirmation(null); actionToast.success('Prim onay durumu güncellendi.') }, onError: () => { setConfirmation(null); actionToast.error(null, tr ? 'Karar doğrulanamadı. Güncel durumu kontrol edin; işlem tekrarlanmadı.' : 'The decision could not be verified. Review the current status; the action was not retried.') },
   onSettled: async () => { await client.invalidateQueries({ queryKey: ['incentive-hr-handoff'] }); await query.refetch() } })
   const busy = command.isPending || refresh.isPending || sending
   const shown = confirmation?.item.revisions.find(r => r.revision_no === confirmation.item.cycle?.current_revision)
