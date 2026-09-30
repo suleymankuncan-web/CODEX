@@ -1,82 +1,66 @@
-import { expect, test, type Page } from './test-fixtures'
-import { companyId, createStoreContractSession, installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
-import { createIncentiveWorkspace, routeIncentiveManagerDirectory, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
+import { expect, test } from './test-fixtures'
+import { companyCycleFixture, installCompanyCycleSession, sealHash } from './incentive-company-cycle-fixture'
 
-test('package decision stays unavailable until the submitted package has been read', async ({ page }) => {
-  const item = await prepareAuthorizedViewer(page)
+test('company decision stays unavailable until the sealed revision has been read', async ({ page }) => {
+  await installCompanyCycleSession(page)
   let releaseResponse!: () => void
   const responseGate = new Promise<void>(resolve => { releaseResponse = resolve })
-  await page.route('**/api/store/incentives/final-approval**', async route => {
+  await page.route('**/api/store/incentives/company-cycle**', async route => {
     await responseGate
-    await route.fulfill({ json: { items: [item] } })
+    await route.fulfill({ json: { items: [companyCycleFixture()] } })
   })
   await page.goto('/store/incentives')
   try {
-    await expect(page.getByRole('button', { name: 'Paketi onayla', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('status').filter({ hasText: 'Onay bilgileri yükleniyor' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Aşamayı onayla', exact: true })).toHaveCount(0)
   } finally {
     releaseResponse()
   }
-  await expect(page.getByRole('button', { name: 'Paketi onayla', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Aşamayı onayla', exact: true })).toBeEnabled()
 })
 
-test('a replaced package explains the blocked confirmation and can be reviewed again', async ({ page }) => {
-  const item = await prepareAuthorizedViewer(page)
-  const requests: unknown[] = []
+test('a replaced seal explains the blocked confirmation and can be reviewed again', async ({ page }) => {
+  await installCompanyCycleSession(page)
+  const detail = companyCycleFixture()
+  const requests: Record<string, unknown>[] = []
   let replaced = false
-  await page.route('**/api/store/incentives/final-approval**', route => {
+  await page.route('**/api/store/incentives/company-cycle**', route => {
     if (route.request().method() === 'POST') {
       requests.push(route.request().postDataJSON())
       replaced = true
-      return route.fulfill({ status: 409, json: { message: 'Package changed' } })
+      return route.fulfill({ status: 409, json: { message: 'Seal changed' } })
     }
-    return route.fulfill({ json: { items: [{ ...item, submittedAt: replaced ? '2026-07-02T10:00:00.000Z' : item.submittedAt, financialVersion: replaced ? 'b'.repeat(64) : item.financialVersion }] } })
+    return route.fulfill({ json: { items: [{ ...detail,
+      cycle: { ...detail.cycle, current_revision: replaced ? 2 : 1 },
+      revisions: [{ ...detail.revisions[0], revision_no: replaced ? 2 : 1, seal_hash: replaced ? 'b'.repeat(64) : sealHash }],
+    }] } })
   })
   await page.goto('/store/incentives')
-  await page.getByRole('button', { name: 'Paketi onayla', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Prim final onayı', exact: true })
-  await dialog.getByRole('button', { name: 'Final onayı ver', exact: true }).click()
+  await page.getByRole('button', { name: 'Aşamayı onayla', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Şirket aşamasını onayla', exact: true })
+  await dialog.getByRole('button', { name: 'Onayla', exact: true }).click()
   await expect(page.getByText(/Karar doğrulanamadı/)).toBeVisible()
   expect(requests).toHaveLength(1)
-  await page.getByRole('button', { name: 'Paketi onayla', exact: true }).click()
-  await expect(dialog.getByRole('button', { name: 'Final onayı ver', exact: true })).toBeEnabled()
+  expect(requests[0]).toMatchObject({ revision: 1, sealHash })
+  await page.getByRole('button', { name: 'Aşamayı onayla', exact: true }).click()
+  await expect(dialog).toContainText('Revizyon 2')
+  await expect(dialog.getByRole('button', { name: 'Onayla', exact: true })).toBeEnabled()
+  expect(requests).toHaveLength(1)
 })
 
-test('package confirmation contains a maximum-length note on a narrow phone', async ({ page }, testInfo) => {
+test('company return confirmation contains a maximum-length note on a narrow phone', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 })
-  const item = await prepareAuthorizedViewer(page)
-  await page.route('**/api/store/incentives/final-approval**', route => route.fulfill({ json: { items: [item] } }))
+  await installCompanyCycleSession(page)
+  await page.route('**/api/store/incentives/company-cycle**', route => route.fulfill({ json: { items: [companyCycleFixture()] } }))
   await page.goto('/store/incentives')
   const note = 'A'.repeat(1000)
-  await page.getByRole('button', { name: 'Reddet', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Bölge paketini reddet', exact: true })
-  await dialog.getByRole('textbox', { name: 'Ret gerekçesi' }).fill(note)
-  await expect(dialog).toBeVisible()
+  await page.getByRole('button', { name: 'İade et', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Şirket listesini iade et', exact: true })
+  await dialog.getByRole('textbox', { name: 'İade gerekçesi' }).fill(note)
   expect(await dialog.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
-  const confirm = dialog.getByRole('button', { name: 'Paketi reddet', exact: true })
+  const confirm = dialog.getByRole('button', { name: 'Onayla', exact: true })
   await confirm.scrollIntoViewIfNeeded()
   await expect(confirm).toBeInViewport()
-  await expect(dialog.getByRole('textbox', { name: 'Ret gerekçesi' })).toHaveValue(note)
+  await expect(dialog.getByRole('textbox', { name: 'İade gerekçesi' })).toHaveValue(note)
   await page.screenshot({ path: testInfo.outputPath('confirmation-320.png') })
 })
-
-async function prepareAuthorizedViewer(page: Page) {
-  await installStoreContractSession(page, 'reportViewer')
-  await installGenericStoreApiFallbacks(page)
-  const session = createStoreContractSession('reportViewer')
-  await page.route('**/api/auth/session', route => route.fulfill({ json: {
-    ...session,
-    user: { ...session.user, authorizationContextVersion: 'incentives-ui-audit', permissionScopes: { INCENTIVE_FINAL_APPROVAL: { companyIds: [companyId], regionIds: [], storeIds: [] } } },
-  } }))
-  const workspace = createIncentiveWorkspace('report_viewer')
-  await routeIncentiveWorkspace(page, workspace)
-  await routeIncentiveManagerDirectory(page, workspace)
-  const region = workspace.data.managerGroups[0]!
-  return {
-    companyId: region.companyId, managerUserId: region.managerUserId, managerName: region.managerName,
-    submittedByName: region.managerName, submittedByUserId: 'region-manager',
-    regionPackageId: 'package-ui-audit', submittedAt: '2026-07-01T10:00:00.000Z',
-    status: 'submitted', storeCount: region.stores.length, submittedStoreCount: region.stores.length,
-    frozenTotalAmount: '93994.40', financialVersion: 'a'.repeat(64),
-    storeSnapshots: region.stores.map(store => ({ storeId: store.storeId, finalSnapshotId: `snapshot-${store.storeId}`, participationRevisionNo: 0, exclusions: [] })),
-  }
-}

@@ -123,4 +123,8 @@ export const hrGrantSql = `
     AND ura.scope_type = 'company' AND ura.incentive_approval
     AND account.is_active = TRUE AND company.status = 'active'
     AND ura.start_at <= clock_timestamp() AND (ura.end_at IS NULL OR ura.end_at > clock_timestamp())
+    AND NOT EXISTS (SELECT 1 FROM ops.incentive_company_cycle c WHERE c.company_id=ura.company_id AND c.period_key=$3)
+  UNION
+  SELECT company.company_id::text FROM ops.company company WHERE company.company_id=ANY($2::uuid[])
+    AND ops.incentive_stage_authorized($1::uuid,company.company_id,'payroll')
 `;

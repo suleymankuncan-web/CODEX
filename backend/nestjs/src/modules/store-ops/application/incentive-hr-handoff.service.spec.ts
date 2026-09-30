@@ -20,7 +20,7 @@ describe("HR email handoff", () => {
   });
   it("scopes the preview to explicit grants and counts all submitted stores", async () => {
     const preview = await service.preview(actor(), "2026-09");
-    expect(repository.read).toHaveBeenCalledWith("2026-09", ["company-a"]);
+    expect(repository.read).toHaveBeenCalledWith("2026-09", ["company-a"], "viewer");
     expect(preview.canSend).toBe(true);
     expect(preview.companies[0]).toMatchObject({ managerPackageCount: 1, storeCount: 2, personnelCount: 1, totalAmount: "1800.25" });
   });

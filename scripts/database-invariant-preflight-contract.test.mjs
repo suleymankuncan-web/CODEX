@@ -173,6 +173,7 @@ test('operational database invariant command executes additive overlays', () => 
   assert.match(runner, /user-permission-assignment-invariants-v1\.sql/)
   assert.match(runner, /store-contact-email-invariants-v1\.sql/)
   assert.match(runner, /incentive-participation-invariants-v1\.sql/)
+  assert.match(runner, /incentive-company-cycle-invariants-v1\.sql/)
   assert.match(runner, /database_invariant_preflight\.completed/)
   assert.doesNotMatch(runner, /INSERT INTO|UPDATE ops\.|DELETE FROM|ALTER TABLE|DROP TABLE|writeFile/i)
 })
@@ -186,6 +187,17 @@ test('participation scope and frozen copies have a sanitized read-only overlay',
   assert.match(sql, /INC-PART-02/)
   assert.match(sql, /substr\(md5\(violations\.record_id\),1,12\)/)
   assert.match(sql, /\)\[1:5\]/)
+  assert.doesNotMatch(stripSqlComments(sql), /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i)
+})
+
+test('company seals, stage order, applied proposals and payroll proofs have sanitized read-only checks', () => {
+  const sql = readFileSync('db/preflight/incentive-company-cycle-invariants-v1.sql', 'utf8')
+  for (const check of ['INC-CYCLE-01', 'INC-CYCLE-02', 'INC-CYCLE-03', 'INC-CYCLE-04']) assert.match(sql, new RegExp(check))
+  assert.match(sql, /digest\(r\.payload::text,'sha256'\)/)
+  assert.match(sql, /ops\.incentive_company_decision/)
+  assert.match(sql, /ops\.sales_target_incentive_adjustment/)
+  assert.match(sql, /delivery\.final_cycle_id/)
+  assert.match(sql, /substr\(md5\(violations\.record_id\),1,12\)/)
   assert.doesNotMatch(stripSqlComments(sql), /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i)
 })
 

@@ -73,7 +73,10 @@ const participant = {
 
 function createHarness() {
   const query = jest.fn();
-  const withTransaction = jest.fn(async (callback) => callback({ query }));
+  // These arithmetic fixtures explicitly exercise the allowed pre-close / legacy branch.
+  // Production classification and all new-contract denials run against PostgreSQL separately.
+  const withTransaction = jest.fn(async (callback) => callback({ query: (sql: string, parameters: unknown[]) =>
+    sql.includes("SELECT CASE WHEN $3::uuid IS NULL") ? Promise.resolve({ rows: [{ allowed: true }] }) : query(sql, parameters) }));
   const databaseService = { query, withTransaction };
   const repository = new SalesTargetIncentiveCorrectionRepository(databaseService as never);
 
@@ -183,7 +186,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
   });
 
-  it("writes post-close corrections as final snapshot adjustments", async () => {
+  it("writes legacy-approved post-close corrections as final snapshot adjustments", async () => {
     const { query, repository } = createHarness();
     const finalRowId = "00000000-0000-4000-8000-000000000714";
     query

@@ -8,12 +8,12 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
-- Owner approved sequential PRs and merges for monthly Store KPI daily aggregation,
-  the redesigned viewer/manager Primler workflow, and bounded Store/Admin UI fixes.
-  Primler retains regional packages, existing permissions and one store correction
-  note; production routes use real API data. The labs entry stays dev-only.
-  Return decisions require the matching backend deployment. Refresh GitHub for
-  current merge status; local verification does not establish live deployment.
+- Owner approved sequential PRs/merges for Store KPI, Primler and bounded UI.
+  Primler seals RM preparation per company-month: Sales Director → HR → GM.
+  Returns archive revisions and restart at Sales Director. Only GM final applies
+  money; payroll uses its seal. History remains legacy. Stage authority intersects
+  persona/company capability. Real API data; labs dev-only. Backend/schema deploy
+  is required; refresh GitHub for merge status. Local tests do not prove live deploy.
   [Scope and verification](docs/ui/incentives-local-preview.md).
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Broad production rollout: `No-Go`.

@@ -240,6 +240,7 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workspace.module.ts', { imports: 1, controllers: 1, providers: 3, exports: 0 }],
   // Participation writes have their own two-provider boundary; the read workspace budget stays frozen.
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-participation.module.ts', { imports: 1, controllers: 0, providers: 2, exports: 2 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops-incentive-company-cycle.module.ts', { imports: 0, controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-target-workspace.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-task-command-read.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   [

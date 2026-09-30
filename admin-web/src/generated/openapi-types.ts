@@ -394,6 +394,13 @@ export type components = {
           "assignedStoreTypes": Array<"company" | "franchise" | "operator">
         }
         "assignedStoreIds": string[]
+        "roleScopes"?: {
+          [key: string]: {
+            "companyIds": string[]
+            "regionIds": string[]
+            "storeIds": string[]
+          }
+        }
       }
       "scopeSummary": {
         "companyCount": number
@@ -1113,6 +1120,16 @@ export type components = {
     "DeactivateUserAccountDto": {
       "reason"?: string
     }
+    "DecideIncentiveCompanyDto": {
+      "companyId": string
+      "period": string
+      "cycleId": string
+      "revision": number
+      "stage": "sales_director" | "hr" | "general_manager"
+      "sealHash": string
+      "decision": "approve" | "return"
+      "reasonNote"?: string
+    }
     "ExternalIdMapCandidatesResponse": {
       "items": Array<{
           "entityType": "employee" | "store"
@@ -1377,6 +1394,51 @@ export type components = {
         [key: string]: unknown
       }
     }
+    "IncentiveCompanyCommandResultDto": {
+      "cycleId": string
+      "companyId": string
+      "period": string
+      "revision": number
+      "stage": "preparation" | "sales_director" | "hr" | "general_manager" | "final"
+      "sealHash": string
+      "total": string
+    }
+    "IncentiveCompanyDecisionDto": {
+      "decision_id": string
+      "revision_no": number
+      "seal_hash": string
+      "stage": string
+      "decision": string
+      "actor_user_id": string
+      "reason_note"?: string | null
+      "decided_at": string
+    }
+    "IncentiveCompanyDetailDto": {
+      "companyId": string
+      "companyName": string
+      "period": string
+      "cycle": components['schemas']["IncentiveCompanyStateDto"] | null
+      "revisions": components['schemas']["IncentiveCompanyRevisionDto"][]
+      "decisions": components['schemas']["IncentiveCompanyDecisionDto"][]
+    }
+    "IncentiveCompanyListDto": {
+      "items": components['schemas']["IncentiveCompanyDetailDto"][]
+    }
+    "IncentiveCompanyRevisionDto": {
+      "revision_no": number
+      "seal_hash": string
+      "sealed_at": string
+      "payload": {
+        [key: string]: unknown
+      }
+    }
+    "IncentiveCompanyStateDto": {
+      "cycle_id": string
+      "company_id": string
+      "period_key": string
+      "current_revision": number
+      "stage": "preparation" | "sales_director" | "hr" | "general_manager" | "final"
+    }
     "IncentiveFinalApprovalPackages": {
       "items": Array<{
           "companyId": string
@@ -1433,6 +1495,12 @@ export type components = {
           "storeCount": number
           "personnelCount": number
           "totalAmount": string
+          "approvalOrigin": "company_cycle" | "legacy_approved" | "legacy_pending"
+          "finalProof": ({
+            "cycleId": string
+            "revision": number
+            "sealHash": string
+          }) | null
           "status": "not_sent" | "sending" | "sent" | "uncertain"
           "sentAt": string | null
         }>
@@ -3108,6 +3176,11 @@ export type components = {
           "plannedDate": string
           "displayOrder": number
         }>
+    }
+    "SealIncentiveCompanyDto": {
+      "companyId": string
+      "period": string
+      "expectedRevision": number
     }
     "SendIncentiveHrDto": {
       "period": string
@@ -6156,6 +6229,49 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["SalesTargetIncentiveWorkspaceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/company-cycle": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["IncentiveCompanyListDto"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/company-cycle/seal": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SealIncentiveCompanyDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["IncentiveCompanyCommandResultDto"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/company-cycle/decisions": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["DecideIncentiveCompanyDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["IncentiveCompanyCommandResultDto"]
           }
         }
       }

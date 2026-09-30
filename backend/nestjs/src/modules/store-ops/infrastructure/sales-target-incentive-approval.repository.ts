@@ -8,6 +8,8 @@ import {
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
+import { openCompanyRemediation } from "./incentive-company-remediation";
+import { assertLegacyPackageReviewAllowed } from "./incentive-company-legacy-guard";
 import { SALES_TARGET_INCENTIVE_TIMEZONE } from "../application/sales-target-incentive-calculator.service";
 import {
   approveSubmittedCorrectionsSql,
@@ -122,6 +124,7 @@ export class SalesTargetIncentiveApprovalRepository {
       await this.ensureStorePeriodEditable(client, {
         periodKey: input.periodKey,
         storeId: input.store.storeId,
+        actorUserId: input.actorUserId,
       });
 
       const result = await client.query<SalesTargetIncentiveStoreReviewRow>(
@@ -211,6 +214,7 @@ export class SalesTargetIncentiveApprovalRepository {
       await this.ensureStorePeriodEditable(client, {
         periodKey: input.periodKey,
         storeId: input.store.storeId,
+        actorUserId: input.actorUserId,
       });
       await this.lockCorrectionTarget(client, {
         periodKey: input.periodKey,
@@ -320,6 +324,7 @@ export class SalesTargetIncentiveApprovalRepository {
     actorUserId: string;
   }): Promise<SalesTargetIncentiveRegionCorrectionRow> {
     return this.databaseService.withTransaction(async (client) => {
+      await this.ensureStorePeriodEditable(client, input);
       await this.lockCorrectionTarget(client, input);
       const result = await client.query<SalesTargetIncentiveRegionCorrectionRow>(
         `
@@ -537,7 +542,7 @@ export class SalesTargetIncentiveApprovalRepository {
       if (!packageRow) {
         throw new NotFoundException("Submitted package was not found");
       }
-
+      await assertLegacyPackageReviewAllowed(client, packageRow.sales_target_incentive_region_package_id);
       if (input.finalApproval) {
         if (!input.finalApproval.companyIds.includes(packageRow.company_id) || packageRow.submitted_by_user_id === input.actorUserId) {
           throw new ForbiddenException("Package is outside the approval scope or was submitted by the approver");
@@ -739,11 +744,12 @@ export class SalesTargetIncentiveApprovalRepository {
 
   private async ensureStorePeriodEditable(
     client: ApprovalClient,
-    input: { periodKey: string; storeId: string },
+    input: { periodKey: string; storeId: string; actorUserId: string },
   ): Promise<void> {
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", [
       `incentive-store-package:${input.periodKey}:${input.storeId}`,
     ]);
+    await openCompanyRemediation(client, input.periodKey, input.storeId, input.actorUserId);
     const result = await client.query<{ package_status: string }>(
       `
         SELECT package.package_status

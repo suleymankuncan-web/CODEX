@@ -30,7 +30,7 @@ describe("SalesTargetIncentiveManagerPackageRepository", () => {
     expect(query.mock.calls.some(([sql]) => String(sql).includes("INSERT INTO ops.sales_target_incentive_region_package"))).toBe(false);
   });
 
-  it("blocks final approval after a manager's store assignment changes", async () => {
+  it("blocks legacy final approval of pending company-cycle preparation", async () => {
     const query = jest.fn(async (sql: string) => {
       if (sql.includes("SELECT * FROM ops.sales_target_incentive_region_package")) return { rows: [{
         company_id: companyId, manager_user_id: managerId,
@@ -41,6 +41,7 @@ describe("SalesTargetIncentiveManagerPackageRepository", () => {
       if (sql === packageFinancialTargetsSql) return { rows: [] };
       if (sql === packageFinancialReadSql) return { rows: [{ package_id: packageId, company_id: companyId, frozen_total_amount: "100.00", store_snapshots: [] }] };
       if (sql.includes("WITH package_stores AS")) return { rows: [{ stale: true }] };
+      if (sql.includes("FROM ops.incentive_legacy_approval")) return { rows: [] };
       throw new Error(`Unexpected write or query: ${sql.slice(0, 80)}`);
     });
     const repository = repositoryWithQuery(query);

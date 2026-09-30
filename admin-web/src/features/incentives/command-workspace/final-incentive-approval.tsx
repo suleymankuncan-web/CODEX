@@ -67,7 +67,8 @@ export function FinalIncentiveApproval(input: {
     ...transientQueryRetryOptions,
   })
   const items = enabled && !query.isError ? query.data?.items ?? [] : []
-  const eligible = items.filter(item => input.managerGroupKeys.includes(`${item.companyId}:${item.managerUserId}`) && (input.statusFilter === 'all' || item.status === input.statusFilter) && item.status === 'submitted' && Boolean(item.regionPackageId && item.submittedAt) && item.frozenTotalAmount != null && item.storeSnapshots?.length === item.submittedStoreCount && item.submittedByUserId !== input.authSummary?.user.userId)
+  // Legacy proof is read-only. Pending submissions must use the company stages.
+  const eligible: IncentiveApprovalPackage[] = []
   const chosen = eligible.filter(item => selected.has(incentivePackageKey(item)))
   const mutation = useMutation({
     retry: 0,

@@ -12,6 +12,8 @@ import {
 import { getSalesTargetIncentiveWorkspaceQueryIdentity } from '@/features/incentives/query-identity'
 import { RegionManagerIncentivesOwner } from '@/features/incentives/command-workspace/region-manager-owner'
 import { ReportViewerIncentivesView } from '@/features/incentives/command-workspace/report-viewer-view'
+import { CompanyIncentiveCycleView } from '@/features/incentives/command-workspace/company-cycle-view'
+import { canReadCompanyCycle } from '@/features/incentives/command-workspace/company-cycle-permission'
 import type { IncentiveWorkspace } from '@/features/incentives/command-workspace/types'
 import { useLocalization } from '@/features/localization/useLocalization'
 import {
@@ -27,6 +29,7 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
   const { locale, t } = useLocalization()
   const [period, setPeriod] = useState<string | undefined>()
   const enabled = canOpenStoreIncentives(input.authSummary)
+  const companyCycle = canReadCompanyCycle(input.authSummary)
   const identity = useMemo(
     () => getSalesTargetIncentiveWorkspaceQueryIdentity(input.authSummary),
     [input.authSummary],
@@ -38,7 +41,7 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
   const query = useQuery({
     queryKey,
     queryFn: () => getStoreSalesTargetIncentiveWorkspace({ period }),
-    enabled,
+    enabled: enabled && !companyCycle,
     placeholderData: (previous) => previous,
     refetchOnWindowFocus: true,
     staleTime: 30_000,
@@ -54,6 +57,7 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
   if (!enabled) {
     return <IncentiveRouteError title={t('storeIncentives.routeUnavailableTitle')} description={t('storeIncentives.routeUnavailableCopy')} />
   }
+  if (companyCycle) return <CompanyIncentiveCycleView auth={input.authSummary} period={period ?? new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }).slice(0, 7)} onPeriodChange={setPeriod} locale={locale} />
   if (state.initialLoading || (!state.visibleData && !state.blockingError)) {
     return <IncentiveRouteLoading title={t('storeIncentives.loadingTitle')} description={t('storeIncentives.loadingCopy')} />
   }

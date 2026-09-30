@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
 import { latestFinalSnapshotCte } from "./sales-target-incentive-approval.sql";
+import { openCompanyRemediation } from "./incentive-company-remediation";
 
 export type IncentiveParticipationExclusion = { employeeId: string; displayName: string; positionCode: string; reasonNote: string };
 export type IncentiveParticipationRevision = {
@@ -34,6 +35,7 @@ export class SalesTargetIncentiveParticipationRepository {
         FOR SHARE OF account, role_assignment, assignment, store, company
       `, [input.actorUserId, input.storeId, input.period]);
       if (!grant.rows.length) throw new ForbiddenException("Assigned store permission is no longer active");
+      await openCompanyRemediation(client, input.period, input.storeId, input.actorUserId);
       const locked = await client.query(`
         SELECT package.package_status FROM ops.sales_target_incentive_region_package package
         JOIN ops.sales_target_incentive_region_package_store package_store

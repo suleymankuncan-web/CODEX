@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { PoolClient } from "pg";
+import { assertLegacyPackageReviewAllowed } from "./incentive-company-legacy-guard";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
 import { SALES_TARGET_INCENTIVE_TIMEZONE } from "../application/sales-target-incentive-calculator.service";
@@ -190,6 +191,7 @@ export class SalesTargetIncentiveManagerPackageRepository {
       `, [input.packageId, input.periodKey]);
       const row = found.rows[0];
       if (!row) throw new NotFoundException("Submitted package was not found");
+      await assertLegacyPackageReviewAllowed(client, input.packageId);
       if (!input.companyIds.includes(row.company_id) || row.submitted_by_user_id === input.actorUserId) {
         throw new ForbiddenException("Package is outside the approval scope or was submitted by the approver");
       }

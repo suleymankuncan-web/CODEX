@@ -38,6 +38,9 @@ function createIncentiveDatabaseMock() {
   const incentiveQueries: QueryCall[] = [];
   let assignmentSnapshotSequence = 0;
   const query = jest.fn(async (sql: string, params: unknown[] = []) => {
+    if (sql.includes("FOR SHARE OF assigned,account,ura,store,company")) {
+      return { rows: params[0] === actorUserId() && params[1] === storeId ? [{ user_id: actorUserId() }] : [] };
+    }
     if (sql.includes("manager_position_code")) {
       incentiveQueries.push({ sql, params });
 
@@ -521,7 +524,7 @@ describe("Sales target incentive read API integration", () => {
     await app.close();
   });
 
-  it("lets admins approve a submitted Region Manager incentive package", async () => {
+  it("blocks the admin package endpoint from bypassing company approval", async () => {
     const { databaseService, withTransaction } = createIncentiveDatabaseMock();
     const app = await createIntegrationApp({ databaseService });
 
@@ -536,15 +539,8 @@ describe("Sales target incentive read API integration", () => {
       .set("x-role-codes", "SUPER_ADMIN")
       .set("x-read-company-ids", companyId);
 
-    expect(response.status).toBe(201);
-    expect(response.body.data).toEqual(
-      expect.objectContaining({
-        period: "2026-05",
-        regionId,
-        status: "admin_approved",
-        reviewedByUserId: actorUserId(),
-      }),
-    );
+    expect(response.status).toBe(409);
+    expect(databaseService.query.mock.calls.some(([sql]) => sql.includes("UPDATE ops.sales_target_incentive_region_package"))).toBe(false);
     expect(withTransaction).toHaveBeenCalledTimes(1);
 
     await app.close();

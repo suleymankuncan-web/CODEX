@@ -4,6 +4,7 @@ import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import { IncentiveHrHandoffRepository, hrSnapshotReady, hrSnapshotVersion, type HrSnapshot, type HrDeliveryConfig } from "../infrastructure/incentive-hr-handoff.repository";
 import { IncentiveHrMailer } from "../infrastructure/incentive-hr-mailer";
 import { incentiveFinalApprovalCompanyIds } from "./incentive-final-approval-scope";
+import { incentiveStageCompanies } from "./incentive-company-cycle.service";
 import { buildIncentiveHrWorkbook, sumHrMoney } from "./incentive-hr-workbook";
 
 @Injectable()
@@ -11,14 +12,14 @@ export class IncentiveHrHandoffService {
   constructor(private readonly repository: IncentiveHrHandoffRepository, private readonly mailer: IncentiveHrMailer) {}
 
   async preview(actor: AuthenticatedUser, period: string) {
-    const companyIds = incentiveFinalApprovalCompanyIds(actor).sort();
-    const snapshot = await this.repository.read(period, companyIds);
+    const companyIds = payrollCompanies(actor);
+    const snapshot = await this.repository.read(period, companyIds, actor.userId);
     return this.summary(period, snapshot, this.deliveryConfig(snapshot));
   }
 
   async send(actor: AuthenticatedUser, period: string, version: string) {
-    const companyIds = incentiveFinalApprovalCompanyIds(actor).sort();
-    const snapshot = await this.repository.read(period, companyIds);
+    const companyIds = payrollCompanies(actor);
+    const snapshot = await this.repository.read(period, companyIds, actor.userId);
     const config = this.deliveryConfig(snapshot);
     const preview = this.summary(period, snapshot, config);
     if (preview.version !== version) throw new BadRequestException("Dönem veya alıcı bilgileri değişti. Özeti yeniden açın.");
@@ -61,9 +62,18 @@ export class IncentiveHrHandoffService {
         managerPackageCount: packages.length, approvedPackageCount: packages.filter(row => row.package_status === "admin_approved").length,
         storeCount: new Set(packages.flatMap(row => row.store_ids)).size, personnelCount: rows.length,
         totalAmount: sumHrMoney(rows.map(row => row.final_amount)),
+        approvalOrigin: packages.every(row => row.approval_origin === "company_cycle") ? "company_cycle" : packages.every(row => row.approval_origin === "legacy_approved") ? "legacy_approved" : "legacy_pending",
+        finalProof: packages[0].final_cycle_id ? { cycleId: packages[0].final_cycle_id, revision: packages[0].final_revision_no!, sealHash: packages[0].final_seal_hash! } : null,
         status: receipt?.status ?? "not_sent", sentAt: receipt?.sent_at ?? null };
     });
     const canSend = allApproved && mailConfigured && companies.length > 0 && companies.every(company => company.recipients.length > 0 && ["not_sent", "sent"].includes(company.status)) && companies.some(company => company.status === "not_sent");
     return { period, version: hrSnapshotVersion(period, snapshot, config), allApproved, mailConfigured, canSend, companies };
   }
+}
+
+function payrollCompanies(actor: AuthenticatedUser) {
+  const companies = incentiveStageCompanies(actor, "payroll");
+  if (companies.length) return companies;
+  // Historical delivery authority remains separate and cannot deliver a new cycle.
+  return incentiveFinalApprovalCompanyIds(actor).sort();
 }
