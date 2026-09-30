@@ -8,6 +8,13 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
+- Owner authorized the six-PR returns/net-incentive/auth train after the prior
+  nine PRs merged. V2 prepares original-store return attribution, store-aware
+  employee canonical keys and exact-decimal net projection.
+  [Attribution and coordinated activation](docs/contracts/company-daily-kpi-returns-v2.md).
+  Each slice requires targeted local tests and repeated self-review until GO,
+  then required GitHub CI and ordered squash merge. Local full runs, manual
+  proof/final packaging, deployment and live data repair are excluded.
 - Owner approved the nine-PR Store KPI/Primler hardening train and bounded UI.
   Primler seals RM preparation per company-month: Sales Director → HR → GM.
   Returns archive revisions and restart at Sales Director. Only GM final applies

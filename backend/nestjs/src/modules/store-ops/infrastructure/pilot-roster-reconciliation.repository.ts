@@ -592,8 +592,8 @@ export class PilotRosterReconciliationRepository {
         FROM ops.kpi_definition definition
         WHERE definition.kpi_code = $1
           AND definition.is_active = TRUE
-        ON CONFLICT (kpi_id, employee_id, period_type, period_start, period_end)
-        WHERE scope_type = 'employee' AND employee_id IS NOT NULL
+        ON CONFLICT (kpi_id, employee_id, store_id, period_type, period_start, period_end)
+        WHERE scope_type = 'employee' AND employee_id IS NOT NULL AND store_id IS NOT NULL
         DO UPDATE SET
           company_id = EXCLUDED.company_id,
           region_id = EXCLUDED.region_id,

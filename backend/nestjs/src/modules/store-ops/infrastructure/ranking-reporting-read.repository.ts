@@ -354,6 +354,9 @@ export class RankingReportingReadRepository {
       region_name: string | null;
       region_manager_user_id: string | null;
       region_manager_name: string | null;
+      position_code: string | null;
+      net_sales_value: string | null;
+      store_net_sales_value: string | null;
       kpi_code: string;
       kpi_name: string | null;
       actual_value: string | null;
@@ -403,7 +406,7 @@ export class RankingReportingReadRepository {
           INNER JOIN ops.kpi_definition net_kd
             ON net_kd.kpi_id = net_ka.kpi_id
            AND net_kd.kpi_code = 'NET_SALES'
-          WHERE net_ka.scope_type = 'employee'
+          WHERE net_ka.scope_type = 'store'
             AND net_ka.store_id = store.store_id
             AND net_ka.period_type = ka.period_type
             AND net_ka.period_start = ka.period_start
@@ -418,6 +421,7 @@ export class RankingReportingReadRepository {
            AND net_kd.kpi_code = 'NET_SALES'
           WHERE net_ka.scope_type = 'employee'
             AND net_ka.employee_id = ka.employee_id
+            AND net_ka.store_id IS NOT DISTINCT FROM ka.store_id
             AND net_ka.period_type = ka.period_type
             AND net_ka.period_start = ka.period_start
             AND net_ka.period_end = ka.period_end

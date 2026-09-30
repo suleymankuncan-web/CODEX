@@ -23,7 +23,6 @@ const contract = readText(contractPath)
 const sourceContract = readText('docs/contracts/company-daily-kpi-pull-contract-v1.md')
 const intake = readText('docs/plans/real-ingest-connector-contract-intake.md')
 const currentState = readText('current-state.md')
-const schema = readText('db/schema.sql')
 const materializationRepository = readText(
   'backend/nestjs/src/modules/integration/infrastructure/kpi-materialization.repository.ts',
 )
@@ -163,14 +162,14 @@ test('canonical projection does not create a second scoring path', () => {
   requireText(sourceContract, 'The source MUST NOT introduce a separate scoring, ranking, snapshot, or reporting path.')
 })
 
-test('repo evidence proves current persistence cannot be reused unchanged', () => {
+test('historical evidence and the current writer retain the explicit grain transition', () => {
   requireText(
-    schema,
+    readFileSync(new URL('../db/migrations/014_kpi_actual_live_sync_metadata.sql', import.meta.url), 'utf8'),
     'ON ops.kpi_actual (kpi_id, employee_id, period_type, period_start, period_end)',
   )
   requireText(
     materializationRepository,
-    'ON CONFLICT (kpi_id, employee_id, period_type, period_start, period_end)',
+    'kpi_id, employee_id, store_id, period_type, period_start, period_end',
   )
   requireText(normalizationService, 'const normalized = Number(String(value).replace(",", "."));')
   requireText(contract, 'existing employee KPI uniqueness key omits store')

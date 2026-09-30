@@ -102,7 +102,8 @@ export class KpiMaterializationService {
         const periodType = String(payload["periodType"] ?? "monthly");
         const periodStart = String(payload["periodStart"]);
         const periodEnd = String(payload["periodEnd"]);
-        const actualValue = Number(payload["actualValue"] ?? 0);
+        const actualValue = typeof payload["actualValue"] === "string"
+          ? payload["actualValue"] : Number(payload["actualValue"] ?? 0);
         const achievementRate =
           payload["achievementRate"] === null || payload["achievementRate"] === undefined
             ? null

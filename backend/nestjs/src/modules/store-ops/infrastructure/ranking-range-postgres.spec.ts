@@ -18,7 +18,7 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
   const employee = "00000000-0000-4000-8000-000000000003";
   function psql(sql: string, database = databaseName) {
     return execFileSync("docker", ["exec", "-i", container!, "sh", "-c",
-      `exec psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d ${database} -Atq`],
+      `exec psql -X -v ON_ERROR_STOP=1 -U "\${POSTGRES_USER:-postgres}" -d ${database} -Atq`],
       { input: sql, encoding: "utf8", windowsHide: true }).trim();
   }
   const literal = (value: unknown): string => value == null ? "NULL"
@@ -75,6 +75,21 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
   });
   afterAll(() => { if (created) psql(`DROP DATABASE ${databaseName}`, "postgres"); });
   const input = { companyIds: [company], periodStart: "2026-09-01", periodEnd: "2026-09-30", metricCodes: ["TARGET_ACHIEVEMENT", "ATV", "UPT", "CR", "gsm_approval"] };
+  it("does not repeat another store's seller net or replace store net with the personnel sum", async () => {
+    const second = "00000000-0000-4000-8000-000000000004";
+    psql(`INSERT INTO ops.store VALUES ('${second}','${company}',NULL,'Second Fixture',true);
+      DELETE FROM ops.kpi_actual;
+      INSERT INTO ops.kpi_actual VALUES
+        (1,'${store}','${employee}','${company}','employee','monthly','2026-09-01','2026-09-30',90,'company'),
+        (1,'${second}','${employee}','${company}','employee','monthly','2026-09-01','2026-09-30',70,'company'),
+        (1,'${store}',NULL,'${company}','store','monthly','2026-09-01','2026-09-30',80,'company'),
+        (1,'${second}',NULL,'${company}','store','monthly','2026-09-01','2026-09-30',50,'company');`);
+    const repository = new RankingReportingReadRepository(database as never);
+    const rows = await repository.listRankingPersonnelKpiRows({ ...input, metricCodes: ["NET_SALES"], periodType: "monthly" });
+    expect(rows).toHaveLength(2);
+    expect(rows.map(row => [row.store_id, Number(row.net_sales_value), Number(row.store_net_sales_value)]).sort())
+      .toEqual([[store, 90, 80], [second, 70, 50]]);
+  });
   it("uses observed month components against the full monthly target and preserves weighted ratios", async () => {
     const rows = await readRankingStoreRange(database as never, input);
     const metric = (code: string) => rows.find(row => row.kpi_code === code)!;

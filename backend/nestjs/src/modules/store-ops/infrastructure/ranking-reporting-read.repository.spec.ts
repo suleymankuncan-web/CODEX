@@ -247,6 +247,8 @@ describe("RankingReportingReadRepository source filters", () => {
     );
     expect(sql).toContain("AND net_kd.kpi_code = 'NET_SALES'");
     expect(sql).toContain("net_ka.employee_id = ka.employee_id");
+    expect(sql).toContain("net_ka.store_id IS NOT DISTINCT FROM ka.store_id");
+    expect(sql).toContain("WHERE net_ka.scope_type = 'store'");
     expect(sql).toContain("net_ka.store_id = store.store_id");
   });
 });
