@@ -40,6 +40,7 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
   participant_type: "store_manager" | "personnel";
   final_row_id?: string | null;
   final_snapshot_id?: string | null;
+  rule_version_code?: string | null;
   participation?: import("./incentive-participation-finance.sql").FinancialParticipation | null;
   participation_only?: boolean;
   employee_display_name?: string | null;
@@ -297,7 +298,7 @@ export class SalesTargetIncentiveCorrectionRepository {
             SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
               snapshot.sales_target_incentive_final_snapshot_id,
               snapshot.period_key,
-              snapshot.store_id, snapshot.company_id
+              snapshot.store_id, snapshot.company_id, snapshot.rule_version_code
             FROM rpt.sales_target_incentive_final_snapshot snapshot
             WHERE snapshot.period_key = $1
               AND snapshot.store_id = ANY($2::uuid[])
@@ -346,17 +347,25 @@ export class SalesTargetIncentiveCorrectionRepository {
                 AND adjustment.adjustment_type = 'manual_adjustment'
             ))::text AS latest_approved_adjustment_at,
             MAX(final_row.final_amount)::text AS final_amount,
-            MAX(final_row.final_snapshot_id::text) AS final_snapshot_id, FALSE AS participation_only
+            MAX(final_row.final_snapshot_id::text) AS final_snapshot_id, FALSE AS participation_only,
+            MAX(finalized_snapshot.rule_version_code)::text AS rule_version_code
           FROM ops.sales_target_incentive_adjustment adjustment
           LEFT JOIN ops.sales_target_incentive_projection_row projection_row
             ON projection_row.sales_target_incentive_projection_row_id = adjustment.projection_row_id
           LEFT JOIN rpt.sales_target_incentive_final_row final_row
             ON final_row.sales_target_incentive_final_row_id = adjustment.final_row_id
+          LEFT JOIN latest_final_snapshot finalized_snapshot
+            ON finalized_snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
           LEFT JOIN ops.employee employee
             ON employee.employee_id = adjustment.employee_id
           WHERE adjustment.period_key = $1
             AND adjustment.store_id = ANY($2::uuid[])
             AND adjustment.status = 'approved'
+            AND (adjustment.adjustment_scope = 'final_snapshot' OR EXISTS (
+              SELECT 1 FROM ops.sales_target_incentive_rule_version adjustment_rule
+              WHERE adjustment_rule.sales_target_incentive_rule_version_id = adjustment.rule_version_id
+                AND adjustment_rule.rule_version_code = '${SALES_TARGET_INCENTIVE_RULE_VERSION}'
+            ))
             AND (
               adjustment.adjustment_scope <> 'final_snapshot'
               OR final_row.final_snapshot_id IN (
@@ -408,7 +417,7 @@ export class SalesTargetIncentiveCorrectionRepository {
             adjustment_summary.latest_approved_adjustment_at,
             final_row.final_amount::text AS final_amount,
             final_row.final_snapshot_id::text AS final_snapshot_id,
-            ${input.includeFinalRows ? "FALSE" : "adjustment_summary.store_id IS NULL"} AS participation_only
+            ${input.includeFinalRows ? "FALSE" : "adjustment_summary.store_id IS NULL"} AS participation_only, snapshot.rule_version_code::text AS rule_version_code
             ${input.participationMode ? `, ${legacyParticipationSelect("snapshot.store_id::text", "final_row.final_snapshot_id::text", "final_row.employee_id::text")}` : ""}
           FROM rpt.sales_target_incentive_final_row final_row
           INNER JOIN latest_final_snapshot snapshot
@@ -577,6 +586,11 @@ export class SalesTargetIncentiveCorrectionRepository {
           AND adjustment.adjustment_type = $7
           AND adjustment.status = 'approved'
           AND ($8::uuid IS NULL OR adjustment.final_row_id = $8::uuid)
+          AND (adjustment.adjustment_scope = 'final_snapshot' OR EXISTS (
+            SELECT 1 FROM ops.sales_target_incentive_rule_version adjustment_rule
+            WHERE adjustment_rule.sales_target_incentive_rule_version_id = adjustment.rule_version_id
+              AND adjustment_rule.rule_version_code = '${SALES_TARGET_INCENTIVE_RULE_VERSION}'
+          ))
       `,
       [
         input.periodKey,
@@ -727,7 +741,7 @@ export class SalesTargetIncentiveCorrectionRepository {
           blocked_reason,
           personnel_target_reference_id,
           personnel_target_amount,
-          personnel_positive_sales_amount,
+          personnel_net_sales_amount,
           personnel_achievement_pct,
           personal_rate_before_gate,
           applied_rate,
@@ -765,7 +779,7 @@ export class SalesTargetIncentiveCorrectionRepository {
           blocked_reason = EXCLUDED.blocked_reason,
           personnel_target_reference_id = EXCLUDED.personnel_target_reference_id,
           personnel_target_amount = EXCLUDED.personnel_target_amount,
-          personnel_positive_sales_amount = EXCLUDED.personnel_positive_sales_amount,
+          personnel_net_sales_amount = EXCLUDED.personnel_net_sales_amount,
           personnel_achievement_pct = EXCLUDED.personnel_achievement_pct,
           personal_rate_before_gate = EXCLUDED.personal_rate_before_gate,
           applied_rate = EXCLUDED.applied_rate,

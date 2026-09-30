@@ -348,7 +348,7 @@ export class SalesTargetIncentiveReadModelService {
       storeTarget: row.store_target_amount,
       storeActualNetSales: row.store_net_sales_amount,
       personnelTarget: row.personnel_target_amount,
-      personnelActualPositiveSales: row.personnel_positive_sales_amount,
+      personnelActualNetSales: row.personnel_net_sales_amount,
     });
 
     if (calculation.positionCode === null) {
@@ -368,7 +368,7 @@ export class SalesTargetIncentiveReadModelService {
       normalizedFromPositionCode: calculation.normalizedFromPositionCode,
       targetReferenceId: row.personnel_target_reference_id,
       targetAmount: row.personnel_target_amount,
-      actualAmount: row.personnel_positive_sales_amount,
+      actualAmount: row.personnel_net_sales_amount,
       calculation,
       source: {
         storeTargetRequestId: row.store_target_request_id,

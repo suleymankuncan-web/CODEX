@@ -86,6 +86,10 @@ describePostgres("financial participation PostgreSQL boundaries", () => {
         ('${id(2)}','${id(10)}','2026-05',NULL,'${id(31)}','final_snapshot','manual_adjustment',20,'approved','2026-06-03'),
         ('${id(2)}','${id(10)}','2026-05',NULL,'${id(31)}','final_snapshot','manual_adjustment',-5,'approved','2026-06-04'),
         ('${id(2)}','${id(10)}','2026-05',NULL,'${id(30)}','final_snapshot','manual_adjustment',500,'approved','2026-06-04');
+      ALTER TABLE rpt.sales_target_incentive_final_snapshot ADD COLUMN rule_version_code text DEFAULT 'synthetic-v1';
+      ALTER TABLE ops.sales_target_incentive_adjustment ADD COLUMN rule_version_id uuid DEFAULT '${id(60)}';
+      CREATE TABLE ops.sales_target_incentive_rule_version(sales_target_incentive_rule_version_id uuid,rule_version_code text);
+      INSERT INTO ops.sales_target_incentive_rule_version VALUES('${id(60)}','sales-target-incentive-v2.0.0');
     `);
   });
 
@@ -149,7 +153,7 @@ describePostgres("financial participation PostgreSQL boundaries", () => {
         userId: null, assignmentId: null, assignmentStartedOn: null, assignmentEndedOn: null, positionId: null,
         normalizedFromPositionCode: null, targetReferenceId: null, targetAmount: "1000", actualAmount: "1000",
         source: { storeTargetRequestId: null, storeNetSalesSourceBatchId: null, storeNetSalesImportBatchId: null, personnelSalesSourceBatchId: null, personnelSalesImportBatchId: null },
-        calculation: { status: "projected", blockedReason: null, excludedReason: null, ruleVersionCode: "sales-target-incentive-v1.0.0",
+        calculation: { status: "projected", blockedReason: null, excludedReason: null, ruleVersionCode: "sales-target-incentive-v2.0.0",
           rateTableVersion: "personnel-sales-target-v1.0.0", positionCode: "SALES_ASSOCIATE", normalizedFromPositionCode: null,
           storeAchievementPct: "100", storeGatePassed: true, achievementPct: "100", personalRateBeforeGate: "0.01", rate: "0.01", rawEarnedAmount: "100.000000", payableAmount: "100.00" },
       };
@@ -239,7 +243,7 @@ describePostgres("financial participation PostgreSQL boundaries", () => {
 
   it("isolates frozen choices by store even when the same employee has another store's final row", async () => {
     await pool.query(`INSERT INTO ops.store VALUES ('${id(6)}','${id(1)}','S2','Second synthetic store','active');
-      INSERT INTO rpt.sales_target_incentive_final_snapshot VALUES ('${id(22)}','${id(1)}','${id(6)}','2026-05','2026-06-02','${id(5)}');
+      INSERT INTO rpt.sales_target_incentive_final_snapshot (sales_target_incentive_final_snapshot_id,company_id,store_id,period_key,close_cutoff_at,close_run_id) VALUES ('${id(22)}','${id(1)}','${id(6)}','2026-05','2026-06-02','${id(5)}');
       INSERT INTO rpt.sales_target_incentive_final_row SELECT '${id(33)}','${id(22)}',employee_id,participant_type,position_code,
         normalized_from_position_code,rate_table_version,target_amount,actual_sales_amount,achievement_pct,applied_rate,
         raw_earned_amount,payable_amount,50,correction_amount,calculation_status

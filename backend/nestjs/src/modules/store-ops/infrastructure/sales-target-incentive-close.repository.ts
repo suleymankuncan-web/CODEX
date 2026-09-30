@@ -101,7 +101,7 @@ export class SalesTargetIncentiveCloseRepository {
        AND actual.period_end = $2::date
        AND actual.source_type = 'integration'
       INNER JOIN stg.import_batch batch
-        ON batch.source_batch_id = actual.source_batch_id
+        ON (batch.source_batch_id = actual.source_batch_id OR batch.import_batch_id::text = actual.source_batch_id)
        AND batch.entity_type = 'kpi'
        AND store.company_id = ANY(batch.company_ids)
       WHERE ops.store_was_company_during(store.store_id, ($1::text || '-01')::date,
@@ -206,9 +206,7 @@ export class SalesTargetIncentiveCloseRepository {
       const rateBrackets = await this.listRateBrackets(client, ruleVersion.rule_version_id);
       const sourceImportBatchIds = uniqueStrings([
         ...input.stores.flatMap((store) => collectStoreSourceImportBatchIds(store)),
-        ...(input.sourceType === "automatic_period_close"
-          ? await this.listDailyCloseImportBatchIds(client, input)
-          : []),
+        ...await this.listDailyCloseImportBatchIds(client, input),
       ]);
 
       const closeRunId = await this.insertCloseRun(client, {
@@ -337,7 +335,7 @@ export class SalesTargetIncentiveCloseRepository {
       FROM ops.kpi_actual ka
       INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id
         AND kd.kpi_code = 'NET_SALES' AND kd.is_active = TRUE
-      INNER JOIN stg.import_batch ib ON ib.source_batch_id = ka.source_batch_id
+      INNER JOIN stg.import_batch ib ON (ib.source_batch_id = ka.source_batch_id OR ib.import_batch_id::text = ka.source_batch_id)
         AND ib.entity_type = 'kpi' AND ib.status = 'completed'
         AND ib.error_count = 0 AND $1::uuid = ANY(ib.company_ids)
       WHERE ka.store_id = ANY($2::uuid[])

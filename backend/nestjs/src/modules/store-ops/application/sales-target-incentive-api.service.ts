@@ -74,7 +74,7 @@ export type SalesTargetIncentiveApiProjection = {
   period: string;
   periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
   closeCutoffAt: string | null;
-  ruleVersionId: typeof SALES_TARGET_INCENTIVE_RULE_VERSION;
+  ruleVersionId: string;
   regionId: string;
   storeId: string;
   storeName: string;
@@ -575,7 +575,8 @@ export class SalesTargetIncentiveApiService {
       period,
       periodTimezone: SALES_TARGET_INCENTIVE_TIMEZONE,
       closeCutoffAt: null,
-      ruleVersionId: SALES_TARGET_INCENTIVE_RULE_VERSION,
+      ruleVersionId: adjustmentSummaries.find(summary => summary.store_id === store.storeId && summary.final_snapshot_id)?.rule_version_code
+        ?? SALES_TARGET_INCENTIVE_RULE_VERSION,
       regionId: store.regionId,
       storeId: store.storeId,
       storeName: store.storeName,

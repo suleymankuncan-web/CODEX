@@ -26,6 +26,16 @@ describe("HR incentive Excel", () => {
     expect(sumHrMoney([])).toBe("0.00");
     expect(sumHrMoney(["-1.25"])).toBe("-1.25");
   });
+  it("exports frozen signed net and zero payment without reusing gross sales", () => {
+    const snapshot = hrTestSnapshot();
+    snapshot.rows[0] = { ...snapshot.rows[0], actual_sales_amount: "-20000.1234", achievement_pct: "-20.0001",
+      applied_rate: "0.0000", payable_amount: "0.00", final_amount: "0.00" };
+    const workbook = XLSX.read(buildIncentiveHrWorkbook("2026-09", snapshot.packages, snapshot.rows), { type: "buffer" });
+    const detail = workbook.Sheets["Personel Primleri"];
+    expect(detail.H2.v).toBe(-20000.1234); expect(detail.I2.v).toBe(-20.0001);
+    expect(detail.K2.v).toBe(0); expect(detail.L2.v).toBe(0);
+    expect(workbook.Sheets["Müdür Özeti"].E3.v).toBe(0);
+  });
   it.each(["company_cycle", "legacy_approved"] as const)("exports %s approval origin without fabricating a seal", approval_origin => {
     const snapshot = hrTestSnapshot();
     snapshot.packages[0] = { ...snapshot.packages[0], approval_origin,
