@@ -142,4 +142,24 @@ describePostgres("participation append/freeze PostgreSQL proof", () => {
     await expect(pool.query("DELETE FROM ops.sales_target_incentive_region_package_store")).resolves.toMatchObject({ rowCount: 1 });
     expect((await pool.query("SELECT COUNT(*) FROM ops.sales_target_incentive_participation_revision")).rows[0].count).toBe("1");
   });
+
+  it("read-only invariant overlay accepts exact copies and diagnoses sanitized mismatches", async () => {
+    await repository.setParticipation(input);
+    await pool.query("INSERT INTO ops.sales_target_incentive_region_package VALUES ($1,'2026-05','submitted')",[id("601")]);
+    await pool.query(`INSERT INTO ops.sales_target_incentive_region_package_store
+      (region_package_id,company_id,region_id,store_id,final_snapshot_id,period_key,participation_revision_no,participation_exclusions_json)
+      SELECT $1,company_id,$2,store_id,final_snapshot_id,period_key,revision_no,exclusions_json FROM ops.sales_target_incentive_participation_revision`,[id("601"),id("101")]);
+    const sql = readFileSync(resolve(process.cwd(),"../../db/preflight/incentive-participation-invariants-v1.sql"),"utf8");
+    expect((await pool.query(sql)).rows.map(row => row.violation_count)).toEqual(["0","0"]);
+    await pool.query("ALTER TABLE ops.sales_target_incentive_region_package_store DISABLE TRIGGER guard_incentive_package_participation_copy");
+    try {
+      await pool.query("UPDATE ops.sales_target_incentive_region_package_store SET participation_exclusions_json='[]'");
+      const rows = (await pool.query(sql)).rows;
+      expect(rows[1].violation_count).toBe("1");
+      expect(rows[1].sample_refs).toHaveLength(1);
+      expect(rows[1].sample_refs[0]).toMatch(/^[0-9a-f]{12}$/);
+    } finally {
+      await pool.query("ALTER TABLE ops.sales_target_incentive_region_package_store ENABLE TRIGGER guard_incentive_package_participation_copy");
+    }
+  });
 });

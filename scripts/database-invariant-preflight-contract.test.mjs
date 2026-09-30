@@ -123,6 +123,8 @@ test('database invariant preflight SQL is read only and covers every required ch
     'ops.user_permission_assignment',
     // Store contact scope has a dedicated versioned read-only invariant overlay.
     'ops.store_contact_email',
+    // Closed-source and copied participation scopes have a dedicated read-only overlay.
+    'ops.sales_target_incentive_participation_revision',
   ])
   const scopeBearingTables = [...schema.matchAll(
     /CREATE TABLE(?: IF NOT EXISTS)?\s+([a-z_]+\.[a-z_]+)\s*\(([\s\S]*?)\n\);/g,
@@ -170,8 +172,21 @@ test('operational database invariant command executes additive overlays', () => 
   assert.match(runner, /REPEATABLE READ READ ONLY/)
   assert.match(runner, /user-permission-assignment-invariants-v1\.sql/)
   assert.match(runner, /store-contact-email-invariants-v1\.sql/)
+  assert.match(runner, /incentive-participation-invariants-v1\.sql/)
   assert.match(runner, /database_invariant_preflight\.completed/)
   assert.doesNotMatch(runner, /INSERT INTO|UPDATE ops\.|DELETE FROM|ALTER TABLE|DROP TABLE|writeFile/i)
+})
+
+test('participation scope and frozen copies have a sanitized read-only overlay', () => {
+  const sql = readFileSync('db/preflight/incentive-participation-invariants-v1.sql', 'utf8')
+  assert.match(sql, /ops\.sales_target_incentive_participation_revision/)
+  assert.match(sql, /rpt\.sales_target_incentive_final_snapshot/)
+  assert.match(sql, /ops\.sales_target_incentive_region_package_store/)
+  assert.match(sql, /INC-PART-01/)
+  assert.match(sql, /INC-PART-02/)
+  assert.match(sql, /substr\(md5\(violations\.record_id\),1,12\)/)
+  assert.match(sql, /\)\[1:5\]/)
+  assert.doesNotMatch(stripSqlComments(sql), /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i)
 })
 
 test('no-sales alert company/store scope is enforced without changing immutable V1 diagnostics', () => {
