@@ -387,6 +387,11 @@
 }
 .incentive-store-period-notice { margin: 0 24px 20px; color: var(--muted-foreground); font-size: 12px; }
 .incentive-person-departed { color: var(--destructive); font-weight: 600; }
+.incentive-participation-control { display: grid; gap: 6px; margin-top: 8px; min-width: 0; max-width: 230px; font-size: 11px; }
+.incentive-participation-toggle { display: flex; align-items: flex-start; gap: 6px; font-weight: 500; }
+.incentive-participation-control textarea { min-height: 64px; font-size: 12px; }
+.incentive-participation-control button { min-height: 36px; }
+.incentive-participation-note { color: var(--muted-foreground); overflow-wrap: anywhere; }
 .incentive-personnel-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-left: auto; }
 .incentive-sales-basis-note { margin: 0; padding: 8px 24px 16px; color: var(--muted-foreground); font-size: 11px; line-height: 1.5; }
 .incentive-returns-dialog[data-slot='dialog-content'] { width: min(720px,calc(100dvw - 32px)); max-width: calc(100dvw - 32px); max-height: calc(100dvh - 32px); overflow: hidden; display: flex; flex-direction: column; gap: 12px; }

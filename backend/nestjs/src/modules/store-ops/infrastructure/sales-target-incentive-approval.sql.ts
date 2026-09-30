@@ -104,11 +104,16 @@ export const ensurePackageStoresCurrentSql = `
     COUNT(*) FILTER (
       WHERE latest_snapshot.sales_target_incentive_final_snapshot_id IS NULL
         OR latest_snapshot.sales_target_incentive_final_snapshot_id <> package_store.final_snapshot_id
+        OR package_store.participation_revision_no IS DISTINCT FROM COALESCE(participation.revision_no,0)
+        OR package_store.participation_exclusions_json IS DISTINCT FROM COALESCE(participation.exclusions_json,'[]'::jsonb)
     )::text AS stale_store_count
   FROM package_store
   LEFT JOIN latest_final_snapshot latest_snapshot
     ON latest_snapshot.period_key = package_store.period_key
     AND latest_snapshot.store_id = package_store.store_id
+  LEFT JOIN LATERAL (SELECT revision_no,exclusions_json FROM ops.sales_target_incentive_participation_revision
+    WHERE store_id=package_store.store_id AND period_key=package_store.period_key AND final_snapshot_id=package_store.final_snapshot_id
+    ORDER BY revision_no DESC LIMIT 1) participation ON TRUE
 `;
 
 export const approveSubmittedCorrectionsSql = `

@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { latestFinalSnapshotCte } from "./sales-target-incentive-approval.sql";
+import type { IncentiveParticipationExclusion } from "./sales-target-incentive-participation.repository";
 import type {
   SalesTargetIncentiveRegionCorrectionRow,
   SalesTargetIncentiveRegionPackageRow,
@@ -48,9 +50,73 @@ export type SalesTargetIncentiveWorkspaceCorrectionActorRow = {
   role_code: "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null;
 };
 
+export type SalesTargetIncentiveWorkspaceRosterRow = {
+  store_id: string;
+  employee_id: string;
+  assignment_id: string;
+  display_name: string;
+  position_code: string;
+  current_employment_status: "active" | "inactive" | "terminated";
+  termination_date: string | null;
+  target_amount: string | null;
+};
+
 @Injectable()
 export class SalesTargetIncentiveWorkspaceReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async listParticipationRevisions(input: { periodKey: string; storeIds: string[] }) {
+    if (!input.storeIds.length) return [];
+    const result = await this.databaseService.query<{
+      store_id: string; final_snapshot_id: string; revision_no: number; exclusions_json: IncentiveParticipationExclusion[];
+    }>(`${latestFinalSnapshotCte}
+      SELECT latest.store_id::text, revision.final_snapshot_id::text, revision.revision_no, revision.exclusions_json
+      FROM latest_final_snapshot latest JOIN LATERAL (
+        SELECT final_snapshot_id, revision_no, exclusions_json FROM ops.sales_target_incentive_participation_revision
+        WHERE store_id=latest.store_id AND period_key=latest.period_key
+          AND final_snapshot_id=latest.sales_target_incentive_final_snapshot_id
+        ORDER BY revision_no DESC LIMIT 1
+      ) revision ON TRUE`, [input.periodKey, input.storeIds]);
+    return result.rows;
+  }
+
+  async listPersonnelRoster(input: { storeIds: string[]; assignmentAsOfDate: string; periodStart: string; periodEnd: string }) {
+    if (input.storeIds.length === 0) return [];
+    const result = await this.databaseService.query<SalesTargetIncentiveWorkspaceRosterRow>(`
+      SELECT DISTINCT ON (assignment.store_id, assignment.employee_id)
+        assignment.store_id::text, assignment.employee_id::text, assignment.assignment_id::text,
+        COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
+          employee.external_employee_ref, employee.employee_id::text) AS display_name,
+        position.position_code, employee.employment_status AS current_employment_status,
+        employee.termination_date::text, target.target_value::text AS target_amount
+      FROM ops.employee_assignment_history assignment
+      JOIN ops.store store ON store.store_id = assignment.store_id
+      JOIN ops.employee employee ON employee.employee_id = assignment.employee_id
+      JOIN ops.position position ON position.position_id = assignment.position_id
+      LEFT JOIN LATERAL (
+        SELECT request.target_distribution_request_id
+        FROM ops.target_distribution_request request
+        WHERE request.company_id = store.company_id AND request.region_id = store.region_id
+          AND request.store_id = store.store_id AND request.request_month = $3::date AND request.request_status = 'approved'
+        ORDER BY request.approved_at DESC NULLS LAST, request.updated_at DESC, request.created_at DESC,
+          request.target_distribution_request_id DESC LIMIT 1
+      ) request ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT reference.target_value
+        FROM ops.personnel_target_reference reference
+        WHERE reference.employee_id = employee.employee_id AND reference.store_id = store.store_id
+          AND reference.source_request_id = request.target_distribution_request_id
+          AND reference.period_start = $3::date AND reference.period_end = $4::date
+          AND reference.target_type = 'monthly_sales_target' AND reference.status = 'approved'
+        ORDER BY reference.personnel_target_reference_id DESC LIMIT 1
+      ) target ON TRUE
+      WHERE assignment.store_id = ANY($1::uuid[]) AND assignment.is_primary_assignment
+        AND assignment.start_date <= $2::date AND (assignment.end_date IS NULL OR assignment.end_date >= $2::date)
+      ORDER BY assignment.store_id, assignment.employee_id, assignment.start_date DESC,
+        assignment.created_at DESC, assignment.assignment_id DESC
+    `, [input.storeIds, input.assignmentAsOfDate, input.periodStart, input.periodEnd]);
+    return result.rows;
+  }
 
   async listStoreMetadata(input: {
     storeIds: string[];

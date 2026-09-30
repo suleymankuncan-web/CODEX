@@ -15,6 +15,9 @@ async function prepare(page: Page, granted: boolean) {
 const item = {
   companyId, managerUserId: incentiveManagerA, managerName: 'Süleyman Öztürk', submittedByName: 'Süleyman Öztürk', submittedByUserId: 'region-manager',
   regionPackageId: 'package-1', submittedAt: '2026-07-01T10:00:00.000Z', status: 'submitted', storeCount: 2, submittedStoreCount: 2,
+  frozenTotalAmount: '93994.40',
+  financialVersion: 'a'.repeat(64),
+  storeSnapshots: createIncentiveWorkspace('report_viewer').data.managerGroups[0]!.stores.map(store => ({ storeId: store.storeId, finalSnapshotId: `snapshot-${store.storeId}`, participationRevisionNo: 0, exclusions: [] })),
 }
 
 for (const width of [1440, 390]) {
@@ -53,7 +56,7 @@ for (const width of [1440, 390]) {
     await dialog.getByRole('button', { name: 'Final onayı ver', exact: true }).click()
     await expect(page.locator('.incentive-region-package-status.is-admin_approved')).toHaveText('Onaylandı')
     await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
-    expect(bodies).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision: 'approve' }])
+    expect(bodies).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, expectedFinancialVersion: item.financialVersion, decision: 'approve' }])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 }
@@ -83,6 +86,7 @@ test('authorized viewer can approve the visible submitted packages in one confir
     ...item, companyId, managerUserId: region.managerUserId, managerName: region.managerName,
     regionPackageId: `package-${index + 1}`,
     submittedStoreCount: region.stores.length,
+    storeSnapshots: region.stores.map(store => ({ storeId: store.storeId, finalSnapshotId: `snapshot-${store.storeId}`, participationRevisionNo: 0, exclusions: [] })),
   }))
   const requests: Array<{ regionPackageId: string }> = []
   await page.route('**/api/store/incentives/final-approval**', route => {
@@ -153,7 +157,7 @@ test('package header approves only its submitted region after confirmation', asy
   await expect(dialog).toContainText('2 mağaza')
   expect(requests).toHaveLength(0)
   await dialog.getByRole('button', { name: 'Final onayı ver' }).click()
-  await expect.poll(() => requests).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision: 'approve' }])
+  await expect.poll(() => requests).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, expectedFinancialVersion: item.financialVersion, decision: 'approve' }])
 })
 
 for (const width of [1440, 390]) {
@@ -186,7 +190,7 @@ for (const width of [1440, 390]) {
     await expect(dialog).toHaveCount(0)
     await expect(page.locator('.incentive-region-package-status.is-admin_returned')).toHaveText('Reddedildi')
     await expect(page.locator('.incentive-region-package-actions')).toHaveCount(0)
-    expect(requests).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, decision: 'return', reviewNote: 'Mağaza prim oranlarını yeniden kontrol edin.' }])
+    expect(requests).toEqual([{ period: '2026-06', regionPackageId: item.regionPackageId, submittedAt: item.submittedAt, expectedFinancialVersion: item.financialVersion, decision: 'return', reviewNote: 'Mağaza prim oranlarını yeniden kontrol edin.' }])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 }

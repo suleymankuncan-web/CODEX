@@ -12,7 +12,7 @@ import { actionToast } from '@/lib/action-toast'
 import { canApproveIncentives } from './final-incentive-approval-permission'
 import { formatIncentiveMoney, formatIncentivePeriod } from './format'
 import { sumMoney } from './model'
-import { incentiveManagerGroupKey, incentivePackageKey } from './package-presentation'
+import { incentivePackageKey } from './package-presentation'
 import type { IncentiveWorkspace } from './types'
 
 export type IncentiveApprovalPackage = ApiGetResponse<'/api/store/incentives/final-approval'>['items'][number]
@@ -67,7 +67,7 @@ export function FinalIncentiveApproval(input: {
     ...transientQueryRetryOptions,
   })
   const items = enabled && !query.isError ? query.data?.items ?? [] : []
-  const eligible = items.filter(item => input.managerGroupKeys.includes(`${item.companyId}:${item.managerUserId}`) && (input.statusFilter === 'all' || item.status === input.statusFilter) && item.status === 'submitted' && Boolean(item.regionPackageId && item.submittedAt) && item.submittedByUserId !== input.authSummary?.user.userId)
+  const eligible = items.filter(item => input.managerGroupKeys.includes(`${item.companyId}:${item.managerUserId}`) && (input.statusFilter === 'all' || item.status === input.statusFilter) && item.status === 'submitted' && Boolean(item.regionPackageId && item.submittedAt) && item.frozenTotalAmount != null && item.storeSnapshots?.length === item.submittedStoreCount && item.submittedByUserId !== input.authSummary?.user.userId)
   const chosen = eligible.filter(item => selected.has(incentivePackageKey(item)))
   const mutation = useMutation({
     retry: 0,
@@ -78,7 +78,7 @@ export function FinalIncentiveApproval(input: {
         if (!mounted.current) return { completed, decision, failed: null, remaining: packages.length - completed.length }
         try {
           await sendOpenApiJson('/api/store/incentives/final-approval', {
-            method: 'POST', body: { period: input.period, regionPackageId: item.regionPackageId!, submittedAt: item.submittedAt!, decision, ...(reviewNote ? { reviewNote } : {}) },
+            method: 'POST', body: { period: input.period, regionPackageId: item.regionPackageId!, submittedAt: item.submittedAt!, expectedFinancialVersion: item.financialVersion!, decision, ...(reviewNote ? { reviewNote } : {}) },
           })
           completed.push(item.managerName || (tr ? 'Bölge müdürü' : 'Regional manager'))
           if (mounted.current) setProgress(completed.length)
@@ -98,8 +98,23 @@ export function FinalIncentiveApproval(input: {
     },
     onSettled: () => { running.current = false },
   })
-  const canAct = enabled && !input.disabled && !query.isFetching && !query.isError && !mutation.isPending
-  const confirmationCurrent = Boolean(confirmation?.length && confirmation.every(item => eligible.some(current => incentivePackageKey(current) === incentivePackageKey(item))))
+  const confirmationRefresh = useMutation({
+    retry: 0,
+    mutationFn: async ({ packages, nextDecision }: { packages: IncentiveApprovalPackage[]; nextDecision: PackageDecision }) => {
+      const refreshed = await query.refetch()
+      if (refreshed.isError || !refreshed.data || !mounted.current) throw new Error('Current financial packages unavailable')
+      const fresh = packages.map(item => refreshed.data.items.find(current => incentivePackageKey(current) === incentivePackageKey(item)))
+      if (fresh.some(item => !item || item.status !== 'submitted' || !item.financialVersion || item.frozenTotalAmount === null || item.storeSnapshots.length !== item.submittedStoreCount)) throw new Error('Submitted version changed')
+      return { packages: fresh as IncentiveApprovalPackage[], decision: nextDecision }
+    },
+    onSuccess: refreshed => {
+      if (mounted.current) { setDecision(refreshed.decision); setReviewNote(''); setConfirmation(refreshed.packages) }
+    },
+    onError: () => { if (mounted.current) actionToast.error(null, tr ? 'Güncel finansal revizyon doğrulanamadı. Paketleri yeniden yükleyin.' : 'Current financial revision could not be verified. Reload the packages.') },
+  })
+  const canAct = enabled && !input.disabled && !query.isFetching && !query.isError && !mutation.isPending && !confirmationRefresh.isPending
+  const confirmationCurrent = Boolean(confirmation?.length && confirmation.every(item => eligible.some(current => incentivePackageKey(current) === incentivePackageKey(item)
+    && Boolean(item.financialVersion) && current.financialVersion === item.financialVersion)))
   const noteValid = decision === 'approve' || Boolean(reviewNote.trim())
   const confirm = () => {
     if (!canAct || !confirmationCurrent || !confirmation || !noteValid || running.current) return
@@ -107,24 +122,23 @@ export function FinalIncentiveApproval(input: {
     setProgress(0); setResult(null)
     mutation.mutate({ packages: confirmation, decision, reviewNote: reviewNote.trim() })
   }
-  const confirmationGroups = input.workspace.managerGroups.filter(group => confirmation?.some(item => incentiveManagerGroupKey(group) === `${item.companyId}:${item.managerUserId}`))
-  const completeTotal = confirmation?.every(item => confirmationGroups.find(group => incentiveManagerGroupKey(group) === `${item.companyId}:${item.managerUserId}`)?.stores.length === item.submittedStoreCount)
+  const completeTotal = confirmation?.every(item => item.frozenTotalAmount !== null && item.frozenTotalAmount !== undefined && item.storeSnapshots?.length === item.submittedStoreCount)
   return <>
     {input.children({
-      enabled, items, eligible, chosen, busy: mutation.isPending, canAct, result,
+      enabled, items, eligible, chosen, busy: mutation.isPending || confirmationRefresh.isPending, canAct, result,
       loading: enabled && query.isPending, error: enabled && query.isError,
       retry: () => { void query.refetch() },
       resetSelection: () => { setSelected(new Set()); setConfirmation(null) },
       toggle: (item, checked) => setSelected(current => { const next = new Set(current); if (checked) next.add(incentivePackageKey(item)); else next.delete(incentivePackageKey(item)); return next }),
       toggleAll: () => setSelected(chosen.length === eligible.length ? new Set() : new Set(eligible.map(incentivePackageKey))),
-      approve: packages => { if (canAct && packages.length) { setDecision('approve'); setReviewNote(''); setConfirmation(packages) } },
-      reject: item => { if (canAct) { setDecision('return'); setReviewNote(''); setConfirmation([item]) } },
+      approve: packages => { if (canAct && packages.length) confirmationRefresh.mutate({ packages, nextDecision: 'approve' }) },
+      reject: item => { if (canAct) confirmationRefresh.mutate({ packages: [item], nextDecision: 'return' }) },
     })}
     <Dialog open={Boolean(confirmation)} onOpenChange={open => { if (!open && !mutation.isPending) setConfirmation(null) }}>
       <DialogContent className="incentive-package-confirmation" showCloseButton={!mutation.isPending} closeLabel={tr ? 'Kapat' : 'Close'} onEscapeKeyDown={event => { if (mutation.isPending) event.preventDefault() }} onPointerDownOutside={event => { if (mutation.isPending) event.preventDefault() }}>
         <DialogHeader><DialogTitle>{decision === 'return' ? (tr ? 'Bölge paketini reddet' : 'Return regional package') : (tr ? 'Prim final onayı' : 'Final incentive approval')}</DialogTitle><DialogDescription>{formatIncentivePeriod(input.period, input.locale)} · {confirmation?.length} {tr ? 'bölge paketi. Karar, seçili paketlerin tüm mağazalarını kapsar.' : 'regional packages. This decision includes every store in the selected packages.'}</DialogDescription></DialogHeader>
         <ul className="incentive-confirm-packages">{confirmation?.map(item => <li key={incentivePackageKey(item)}><span><strong>{item.managerName}</strong></span><Badge variant="secondary">{item.submittedStoreCount} {tr ? 'mağaza' : 'stores'}</Badge></li>)}</ul>
-        {completeTotal ? <p className="incentive-confirm-copy">{tr ? 'Toplam prim' : 'Total incentive'}: <strong>{formatIncentiveMoney(sumMoney(confirmationGroups.flatMap(group => group.stores.flatMap(store => store.rows.map(row => row.finalAmount)))), input.locale)}</strong></p> : <p className="incentive-confirm-copy">{tr ? 'Paketlerin bazı mağazaları bu listede yer almıyor. Karar, yukarıdaki mağaza sayısının tamamını kapsar.' : 'Some package stores are absent from this list. The decision covers the entire store count shown above.'}</p>}
+         {completeTotal ? <p className="incentive-confirm-copy">{tr ? 'Gönderilen paketin toplam primi' : 'Submitted package total'}: <strong>{formatIncentiveMoney(sumMoney(confirmation!.map(item => item.frozenTotalAmount)), input.locale)}</strong></p> : <p className="incentive-confirm-copy">{tr ? 'Gönderilen finansal revizyonun tamamı doğrulanamadı. Güncel paketi yeniden yükleyin.' : 'The complete submitted financial revision could not be verified. Reload the package.'}</p>}
         <p className="incentive-confirm-copy">{decision === 'return' ? (tr ? 'Paket, gerekçenizle birlikte bölge müdürüne düzeltme için geri gönderilir.' : 'The package and your reason will be returned to the regional manager for correction.') : (tr ? 'Onaydan sonra bölge müdürü paketi değiştiremez. Bir onay başarısız olursa kalan paketlere işlem yapılmaz.' : 'Approved packages cannot be edited by the regional manager. Processing stops if an approval fails.')}</p>
         {decision === 'return' ? <div className="incentive-package-rejection-note"><label htmlFor="incentive-package-rejection-note">{tr ? 'Ret gerekçesi' : 'Reason for return'}</label><Textarea id="incentive-package-rejection-note" value={reviewNote} maxLength={1000} required disabled={mutation.isPending} onChange={event => setReviewNote(event.target.value)} placeholder={tr ? 'Düzeltilmesini istediğiniz noktaları yazın.' : 'Describe what needs to be corrected.'} /></div> : null}
         {mutation.isPending ? <p role="status">{tr ? 'Kaydediliyor' : 'Saving'}: {progress}/{confirmation?.length}</p> : confirmationCurrent ? null : <p role="alert">{tr ? 'Paket bilgileri değişti. Pencereyi kapatıp güncel paketleri seçin.' : 'Package details changed. Close this dialog and select the current packages.'}</p>}

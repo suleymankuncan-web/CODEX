@@ -1,6 +1,20 @@
 import { SalesTargetIncentiveWorkspaceReadRepository } from "./sales-target-incentive-workspace-read.repository";
 
 describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
+  it("reads all assigned store positions without requiring an approved target or broadening the store scope", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const repository = new SalesTargetIncentiveWorkspaceReadRepository({ query } as never);
+    await repository.listPersonnelRoster({ storeIds: ["store-a"], assignmentAsOfDate: "2026-05-31", periodStart: "2026-05-01", periodEnd: "2026-05-31" });
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain("assignment.store_id = ANY($1::uuid[])");
+    expect(sql).not.toContain("position.job_family =");
+    expect(sql).toContain("LEFT JOIN LATERAL");
+    expect(sql).toContain("reference.source_request_id = request.target_distribution_request_id");
+    expect(sql).not.toContain("position.position_code IN");
+    expect(sql).not.toContain("employee.employment_status = 'active'");
+    expect(params).toEqual([["store-a"], "2026-05-31", "2026-05-01", "2026-05-31"]);
+  });
+
   it("keeps store metadata bounded to the already-authorized store ids", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new SalesTargetIncentiveWorkspaceReadRepository({ query } as never);
@@ -122,6 +136,7 @@ describe("SalesTargetIncentiveWorkspaceReadRepository", () => {
     await expect(repository.listCorrectionActors({ events: [] })).resolves.toEqual([]);
     await expect(repository.listClosedRateSnapshots({ periodKey: "2026-05", storeIds: [] })).resolves.toEqual([]);
     await expect(repository.listWorkflowAudit({ periodKey: "2026-05", storeIds: [] })).resolves.toEqual({ reviews: [], corrections: [], packages: [] });
+    await expect(repository.listPersonnelRoster({ storeIds: [], assignmentAsOfDate: "2026-05-31", periodStart: "2026-05-01", periodEnd: "2026-05-31" })).resolves.toEqual([]);
     expect(query).not.toHaveBeenCalled();
   });
 });

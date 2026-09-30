@@ -154,15 +154,34 @@ incentive_state AS (
   SELECT
     scoped.store_id,
     MAX(close_run.status) AS incentive_status,
-    SUM(final_row.final_amount)::text AS incentive_total_amount
+    SUM(CASE WHEN EXISTS (
+      SELECT 1 FROM ops.sales_target_incentive_region_package approved_package
+      JOIN ops.sales_target_incentive_region_package_store ps
+        ON ps.region_package_id = approved_package.sales_target_incentive_region_package_id
+      CROSS JOIN LATERAL jsonb_array_elements(ps.participation_exclusions_json) exclusion
+      WHERE approved_package.package_status = 'admin_approved'
+        AND approved_package.company_id = scoped.company_id
+        AND approved_package.period_key = TO_CHAR($1::date, 'YYYY-MM')
+        AND ps.store_id = scoped.store_id
+        AND ps.final_snapshot_id = final_snapshot.sales_target_incentive_final_snapshot_id
+        AND exclusion->>'employeeId' = final_row.employee_id::text
+    ) THEN 0 ELSE final_row.final_amount + COALESCE(adjustments.amount, 0) END)::text AS incentive_total_amount
   FROM scoped_stores scoped
-  LEFT JOIN rpt.sales_target_incentive_final_snapshot final_snapshot
-    ON final_snapshot.store_id = scoped.store_id
-   AND final_snapshot.period_key = TO_CHAR($1::date, 'YYYY-MM')
+  LEFT JOIN LATERAL (
+    SELECT snapshot.* FROM rpt.sales_target_incentive_final_snapshot snapshot
+    WHERE snapshot.store_id = scoped.store_id AND snapshot.company_id = scoped.company_id
+      AND snapshot.period_key = TO_CHAR($1::date, 'YYYY-MM')
+    ORDER BY snapshot.close_cutoff_at DESC, snapshot.sales_target_incentive_final_snapshot_id DESC LIMIT 1
+  ) final_snapshot ON TRUE
   LEFT JOIN ops.sales_target_incentive_close_run close_run
     ON close_run.sales_target_incentive_close_run_id = final_snapshot.close_run_id
   LEFT JOIN rpt.sales_target_incentive_final_row final_row
     ON final_row.final_snapshot_id = final_snapshot.sales_target_incentive_final_snapshot_id
+  LEFT JOIN LATERAL (
+    SELECT SUM(adjustment_amount) AS amount FROM ops.sales_target_incentive_adjustment
+    WHERE final_row_id = final_row.sales_target_incentive_final_row_id
+      AND adjustment_scope = 'final_snapshot' AND status = 'approved'
+  ) adjustments ON TRUE
   GROUP BY scoped.store_id
 ),
 workforce_norm_state AS (

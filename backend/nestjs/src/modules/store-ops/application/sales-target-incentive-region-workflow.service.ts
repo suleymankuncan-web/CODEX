@@ -158,6 +158,8 @@ export class SalesTargetIncentiveRegionWorkflowService {
     periodKey: string;
     storeId: string;
     reviewStatus: SalesTargetIncentiveStoreReviewStatus;
+    expectedParticipationRevision?: number;
+    expectedSnapshotId?: string;
   }) {
     const store = await this.resolveAssignedStore(input);
     await this.ensureClosedStores({
@@ -170,6 +172,8 @@ export class SalesTargetIncentiveRegionWorkflowService {
       store,
       actorUserId: input.actor.userId,
       reviewStatus: input.reviewStatus,
+      ...(input.expectedParticipationRevision !== undefined ? { expectedParticipationRevision: input.expectedParticipationRevision } : {}),
+      ...(input.expectedSnapshotId !== undefined ? { expectedSnapshotId: input.expectedSnapshotId } : {}),
     });
     return { data: this.toStoreReviewCommand(review) };
   }

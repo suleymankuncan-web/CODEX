@@ -11181,6 +11181,34 @@
           "AuthAdmin"
         ]
       }
+    },
+    "/api/store/incentives/workspace/participation": {
+      "post": {
+        "operationId": "SalesTargetIncentiveWorkspaceController_setParticipation",
+        "summary": "Assigned Region Manager changes a reasoned personnel participation revision.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetIncentiveParticipationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Source-bound decision recorded and store review reopened.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncentiveParticipationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "info": {
@@ -26290,6 +26318,14 @@
               "reviewed"
             ],
             "type": "string"
+          },
+          "expectedParticipationRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedSnapshotId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -29009,6 +29045,22 @@
             "items": {
               "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCorrection"
             }
+          },
+          "participation": {
+            "type": "object",
+            "required": [
+              "included",
+              "reasonNote"
+            ],
+            "properties": {
+              "included": {
+                "type": "boolean"
+              },
+              "reasonNote": {
+                "type": "string",
+                "nullable": true
+              }
+            }
           }
         }
       },
@@ -29133,6 +29185,15 @@
                   "projection_only",
                   "closed"
                 ]
+              },
+              "finalSnapshotId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "participationRevision": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           },
@@ -32938,6 +32999,11 @@
             "type": "string",
             "format": "date-time"
           },
+          "expectedFinancialVersion": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "description": "Required for packages with recorded participation; any supplied version must match the current frozen financial summary."
+          },
           "decision": {
             "type": "string",
             "enum": [
@@ -32978,7 +33044,10 @@
                 "reviewedStoreCount",
                 "submittedStoreCount",
                 "draftCorrectionCount",
-                "submittedCorrectionCount"
+                "submittedCorrectionCount",
+                "frozenTotalAmount",
+                "financialVersion",
+                "storeSnapshots"
               ],
               "properties": {
                 "companyId": {
@@ -33055,6 +33124,68 @@
                 "submittedCorrectionCount": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "frozenTotalAmount": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "financialVersion": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$",
+                  "nullable": true
+                },
+                "storeSnapshots": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "storeId",
+                      "finalSnapshotId",
+                      "participationRevisionNo",
+                      "exclusions"
+                    ],
+                    "properties": {
+                      "storeId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "finalSnapshotId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "participationRevisionNo": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "exclusions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "required": [
+                            "employeeId",
+                            "displayName",
+                            "positionCode",
+                            "reasonNote"
+                          ],
+                          "properties": {
+                            "employeeId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "positionCode": {
+                              "type": "string"
+                            },
+                            "reasonNote": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -33508,6 +33639,82 @@
           "emailAddress",
           "isPrimary"
         ]
+      },
+      "SetIncentiveParticipationDto": {
+        "type": "object",
+        "required": [
+          "period",
+          "storeId",
+          "employeeId",
+          "included",
+          "expectedRevision",
+          "expectedSnapshotId"
+        ],
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "included": {
+            "type": "boolean"
+          },
+          "reasonNote": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000,
+            "description": "A trimmed nonblank reason is mandatory when included is false."
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483646
+          },
+          "expectedSnapshotId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "IncentiveParticipationResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "revision",
+              "finalSnapshotId",
+              "employeeId",
+              "included"
+            ],
+            "properties": {
+              "revision": {
+                "type": "integer"
+              },
+              "finalSnapshotId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "employeeId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "included": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
       }
     }
   },

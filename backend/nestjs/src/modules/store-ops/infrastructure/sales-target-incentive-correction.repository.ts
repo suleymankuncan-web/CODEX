@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { legacyAdjustmentParticipationSelect, legacyParticipationCte, legacyParticipationSelect } from "./incentive-participation-finance.sql";
 import type {
   SalesTargetIncentiveParticipantProjection,
   SalesTargetIncentiveProjectionStore,
@@ -39,6 +40,9 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
   employee_id: string;
   participant_type: "store_manager" | "personnel";
   final_row_id?: string | null;
+  final_snapshot_id?: string | null;
+  participation?: import("./incentive-participation-finance.sql").FinancialParticipation | null;
+  participation_only?: boolean;
   employee_display_name?: string | null;
   current_employment_status?: "active" | "inactive" | "terminated" | null;
   termination_date?: string | null;
@@ -283,29 +287,27 @@ export class SalesTargetIncentiveCorrectionRepository {
   async listApprovedAdjustmentSummaries(input: {
     periodKey: string;
     storeIds: string[];
-    includeFinalRows?: boolean;
+    includeFinalRows?: boolean; participationMode?: "draft" | "approved";
   }) {
     if (input.storeIds.length === 0) {
       return [];
     }
-
-    const result =
-      await this.databaseService.query<SalesTargetIncentiveAdjustmentSummaryRow>(
+    const result = await this.databaseService.query<SalesTargetIncentiveAdjustmentSummaryRow>(
         `
           WITH latest_final_snapshot AS (
             SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
               snapshot.sales_target_incentive_final_snapshot_id,
               snapshot.period_key,
-              snapshot.store_id
+              snapshot.store_id, snapshot.company_id
             FROM rpt.sales_target_incentive_final_snapshot snapshot
             WHERE snapshot.period_key = $1
               AND snapshot.store_id = ANY($2::uuid[])
             ORDER BY
-              snapshot.period_key,
-              snapshot.store_id,
+              snapshot.period_key, snapshot.store_id,
               snapshot.close_cutoff_at DESC,
               snapshot.sales_target_incentive_final_snapshot_id DESC
-          ),
+          )
+          ${input.participationMode ? legacyParticipationCte : ""},
           adjustment_summary AS (
           SELECT
             adjustment.store_id::text AS store_id,
@@ -344,7 +346,8 @@ export class SalesTargetIncentiveCorrectionRepository {
               WHERE adjustment.adjustment_scope = 'final_snapshot'
                 AND adjustment.adjustment_type = 'manual_adjustment'
             ))::text AS latest_approved_adjustment_at,
-            MAX(final_row.final_amount)::text AS final_amount
+            MAX(final_row.final_amount)::text AS final_amount,
+            MAX(final_row.final_snapshot_id::text) AS final_snapshot_id, FALSE AS participation_only
           FROM ops.sales_target_incentive_adjustment adjustment
           LEFT JOIN ops.sales_target_incentive_projection_row projection_row
             ON projection_row.sales_target_incentive_projection_row_id = adjustment.projection_row_id
@@ -364,7 +367,7 @@ export class SalesTargetIncentiveCorrectionRepository {
             )
           GROUP BY adjustment.store_id, adjustment.employee_id, COALESCE(projection_row.participant_type, final_row.participant_type)
           )
-          SELECT *
+          SELECT * ${input.participationMode ? `, ${legacyAdjustmentParticipationSelect}` : ""}
           FROM adjustment_summary
           ${input.includeFinalRows ? `
           WHERE NOT EXISTS (
@@ -377,7 +380,7 @@ export class SalesTargetIncentiveCorrectionRepository {
               AND latest_row.participant_type = adjustment_summary.participant_type
           )
           ` : ""}
-          ${input.includeFinalRows ? `
+          ${input.includeFinalRows || input.participationMode ? `
           UNION ALL
           SELECT
             snapshot.store_id::text AS store_id,
@@ -404,7 +407,10 @@ export class SalesTargetIncentiveCorrectionRepository {
             COALESCE(adjustment_summary.adjustment_amount, '0') AS adjustment_amount,
             COALESCE(adjustment_summary.approved_adjustment_count, 0)::int AS approved_adjustment_count,
             adjustment_summary.latest_approved_adjustment_at,
-            final_row.final_amount::text AS final_amount
+            final_row.final_amount::text AS final_amount,
+            final_row.final_snapshot_id::text AS final_snapshot_id,
+            ${input.includeFinalRows ? "FALSE" : "adjustment_summary.store_id IS NULL"} AS participation_only
+            ${input.participationMode ? `, ${legacyParticipationSelect("snapshot.store_id::text", "final_row.final_snapshot_id::text", "final_row.employee_id::text")}` : ""}
           FROM rpt.sales_target_incentive_final_row final_row
           INNER JOIN latest_final_snapshot snapshot
             ON snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
@@ -414,11 +420,11 @@ export class SalesTargetIncentiveCorrectionRepository {
             ON adjustment_summary.store_id = snapshot.store_id::text
            AND adjustment_summary.employee_id = final_row.employee_id::text
            AND adjustment_summary.participant_type = final_row.participant_type
+          ${input.includeFinalRows ? "" : "WHERE adjustment_summary.store_id IS NULL"}
           ` : ""}
         `,
-        [input.periodKey, input.storeIds],
+        input.participationMode ? [input.periodKey, input.storeIds, input.participationMode] : [input.periodKey, input.storeIds],
       );
-
     return result.rows;
   }
 

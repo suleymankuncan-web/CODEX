@@ -8,5 +8,9 @@ describe("individual incentive approval API contract", () => {
     expect(assignment.properties).toHaveProperty("incentiveApproval", expect.objectContaining({ type: "boolean", default: false }));
     expect(document.paths["/api/store/incentives/final-approval"].post).toHaveProperty("responses.201.content.application/json.schema.$ref", "#/components/schemas/IncentiveFinalApprovalResult");
     expect(document.paths["/api/store/incentives/final-approval"].get).toHaveProperty("parameters", [expect.objectContaining({ name: "period", schema: expect.objectContaining({ pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }) })]);
+    expect(document.components.schemas).toHaveProperty("IncentiveFinalApprovalPackages.properties.items.items.properties.financialVersion",
+      { type: "string", pattern: "^[a-f0-9]{64}$", nullable: true });
+    expect(document.components.schemas).toHaveProperty("ApproveFinalIncentivePackageDto.properties.expectedFinancialVersion.pattern", "^[a-f0-9]{64}$");
+    expect(document.components.schemas).toHaveProperty("ApproveFinalIncentivePackageDto.required", ["period", "regionPackageId", "submittedAt"]);
   });
 });

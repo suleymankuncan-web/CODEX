@@ -118,10 +118,13 @@ export class SalesTargetIncentiveAdminPackageWorkflowService {
       submittedStoreCount: Number(row.submitted_store_count),
       draftCorrectionCount: Number(row.draft_correction_count),
       submittedCorrectionCount: Number(row.submitted_correction_count),
+      frozenTotalAmount: row.frozen_total_amount ?? null,
+      financialVersion: row.financial_version ?? null,
+      storeSnapshots: row.store_snapshots ?? [],
     }));
   }
 
-  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionPackageId: string; submittedAt: string; decision?: "approve" | "return"; reviewNote?: string }) {
+  async approveFinalPackage(input: { actor: AuthenticatedUser; periodKey: string; regionPackageId: string; submittedAt: string; expectedFinancialVersion?: string; decision?: "approve" | "return"; reviewNote?: string }) {
     const companyIds = incentiveFinalApprovalCompanyIds(input.actor);
     const reviewNote = input.reviewNote?.trim() || null;
     if (input.decision === "return" && !reviewNote) throw new BadRequestException("Return note is required");
@@ -130,6 +133,7 @@ export class SalesTargetIncentiveAdminPackageWorkflowService {
       submittedAt: input.submittedAt, actorUserId: input.actor.userId,
       companyIds, decision: input.decision === "return" ? "admin_returned" : "admin_approved",
       reviewNote,
+      ...(input.expectedFinancialVersion !== undefined ? { expectedFinancialVersion: input.expectedFinancialVersion } : {}),
     });
     return { data: { regionPackageId: row.sales_target_incentive_region_package_id, status: row.package_status, reviewedAt: row.reviewed_at } };
   }

@@ -66,6 +66,36 @@ function admin() {
 }
 
 describe("SalesTargetIncentiveAdminPackageWorkflowService", () => {
+  it.each(["approve", "return"] as const)("passes financial version to the locked %s repository path", async decision => {
+    const review = jest.fn(async () => ({ sales_target_incentive_region_package_id: packageId, package_status: "admin_approved", reviewed_at: null }));
+    const service = new SalesTargetIncentiveAdminPackageWorkflowService({} as never, {} as never, { review } as never, {} as never);
+    const actor = buildAuthenticatedUser({ userId: "viewer", roleCodes: ["REPORT_VIEWER"], readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      roleScopes: { REPORT_VIEWER: { companyIds: [companyId], regionIds: [], storeIds: [] } },
+      permissionScopes: { INCENTIVE_FINAL_APPROVAL: { companyIds: [companyId], regionIds: [], storeIds: [] } },
+    });
+    await service.approveFinalPackage({ actor, periodKey: "2026-05", regionPackageId: packageId, submittedAt: "2026-06-03T00:00:00Z",
+      expectedFinancialVersion: "a".repeat(64), decision, reviewNote: " Review note " });
+    expect(review).toHaveBeenCalledWith({ periodKey: "2026-05", packageId, submittedAt: "2026-06-03T00:00:00Z", actorUserId: "viewer",
+      companyIds: [companyId], decision: decision === "return" ? "admin_returned" : "admin_approved", reviewNote: "Review note", expectedFinancialVersion: "a".repeat(64) });
+  });
+  it("passes authoritative submitted totals and exact frozen store revisions through without recomputation", async () => {
+    const storeSnapshots = [{ storeId, finalSnapshotId: "snapshot", participationRevisionNo: 4,
+      exclusions: [{ employeeId: "no-row-person", displayName: "Person", positionCode: "CASHIER", reasonNote: "Excluded" }] }];
+    const managerPackageReadRepository = { list: jest.fn(async () => [{
+      company_id: companyId, manager_user_id: "manager", package_id: packageId, package_status: "submitted",
+      submitted_at: "2026-06-01T08:00:00.000Z", frozen_total_amount: "0.00", financial_version: "a".repeat(64), store_snapshots: storeSnapshots,
+      store_count: "1", reviewed_store_count: "1", submitted_store_count: "1", draft_correction_count: "0", submitted_correction_count: "1",
+    }]) };
+    const service = new SalesTargetIncentiveAdminPackageWorkflowService({} as never, {} as never, {} as never, managerPackageReadRepository as never);
+    const actor = buildAuthenticatedUser({ userId: "viewer", roleCodes: ["REPORT_VIEWER"],
+      readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      roleScopes: { REPORT_VIEWER: { companyIds: [companyId], regionIds: [], storeIds: [] } },
+      permissionScopes: { INCENTIVE_FINAL_APPROVAL: { companyIds: [companyId], regionIds: [], storeIds: [] } },
+    });
+    expect((await service.listFinalApprovalPackages({ actor, periodKey: "2026-05" }))[0])
+      .toMatchObject({ regionPackageId: packageId, frozenTotalAmount: "0.00", financialVersion: "a".repeat(64), storeSnapshots });
+    expect(managerPackageReadRepository.list).toHaveBeenCalledWith({ periodKey: "2026-05", companyIds: [companyId] });
+  });
   it("lists admin-visible region package summaries from read scope", async () => {
     const { adminPackageReadRepository, service } = createService();
 

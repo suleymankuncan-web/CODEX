@@ -45,7 +45,10 @@ export function RegionManagerIncentivesOwner(input: {
         })
       }
       if (!mounted.current) throw new Error('Review interrupted')
-      await markStoreSalesTargetIncentiveReview({ period: input.workspace.period, storeId: store.storeId, reviewStatus: 'reviewed' })
+      await markStoreSalesTargetIncentiveReview({ period: input.workspace.period, storeId: store.storeId, reviewStatus: 'reviewed',
+        ...(store.review.participationRevision !== undefined ? { expectedParticipationRevision: store.review.participationRevision } : {}),
+        ...(store.review.finalSnapshotId ? { expectedSnapshotId: store.review.finalSnapshotId } : {}),
+      })
       actionToast.success(input.locale === 'tr' ? 'Mağaza kontrolü tamamlandı.' : 'Store review completed.')
     } finally {
       try { await invalidate() } finally { running.current = false; if (mounted.current) setSavingStore(null) }

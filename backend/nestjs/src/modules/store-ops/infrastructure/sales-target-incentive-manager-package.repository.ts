@@ -9,6 +9,7 @@ import {
   ensureSubmittedCorrectionsApprovableSql,
 } from "./sales-target-incentive-approval.sql";
 import type { SalesTargetIncentiveRegionPackageRow } from "./sales-target-incentive-approval.types";
+import { packageFinancialReadSql, packageFinancialTargetsSql, packageFinancialVersion, type PackageFinancialRow } from "./incentive-package-financial-version";
 
 type Client = Pick<PoolClient, "query">;
 type Decision = "admin_approved" | "admin_returned";
@@ -108,6 +109,9 @@ export class SalesTargetIncentiveManagerPackageRepository {
           AND review.final_snapshot_id = latest.snapshot_id AND review.review_status = 'reviewed'
       `, [input.periodKey, input.companyId, storeIds]);
       if (ready.rows.length !== storeIds.length) throw new BadRequestException("All assigned stores must have a reviewed closed snapshot");
+      if (existing.rows[0]?.package_status === "admin_returned") {
+        await client.query(`DELETE FROM ops.sales_target_incentive_region_package_store WHERE region_package_id = $1::uuid`, [existing.rows[0].sales_target_incentive_region_package_id]);
+      }
 
       const inserted = await client.query<SalesTargetIncentiveRegionPackageRow>(`
         INSERT INTO ops.sales_target_incentive_region_package
@@ -133,7 +137,6 @@ export class SalesTargetIncentiveManagerPackageRepository {
         WHERE region_package_id = $1::uuid AND store_id <> ALL($2::uuid[])
           AND correction_status = 'admin_returned'
       `, [packageRow.sales_target_incentive_region_package_id, storeIds]);
-      await client.query(`DELETE FROM ops.sales_target_incentive_region_package_store WHERE region_package_id = $1::uuid`, [packageRow.sales_target_incentive_region_package_id]);
       const snapshots = await client.query<{ store_id: string }>(`
         WITH latest AS (
           SELECT DISTINCT ON (store_id) store_id, sales_target_incentive_final_snapshot_id AS snapshot_id
@@ -143,13 +146,16 @@ export class SalesTargetIncentiveManagerPackageRepository {
         )
         INSERT INTO ops.sales_target_incentive_region_package_store
           (region_package_id, store_review_id, company_id, region_id, store_id,
-           final_snapshot_id, period_key, reviewed_by_user_id, reviewed_at)
+           final_snapshot_id, period_key, reviewed_by_user_id, reviewed_at, participation_revision_no, participation_exclusions_json)
         SELECT $1::uuid, review.sales_target_incentive_store_review_id, review.company_id,
           review.region_id, review.store_id, review.final_snapshot_id, review.period_key,
-          review.reviewed_by_user_id, review.reviewed_at
+          review.reviewed_by_user_id, review.reviewed_at, COALESCE(participation.revision_no,0), COALESCE(participation.exclusions_json,'[]'::jsonb)
         FROM latest JOIN ops.sales_target_incentive_store_review review
           ON review.store_id = latest.store_id AND review.final_snapshot_id = latest.snapshot_id
           AND review.period_key = $2 AND review.review_status = 'reviewed'
+        LEFT JOIN LATERAL (SELECT revision_no,exclusions_json FROM ops.sales_target_incentive_participation_revision
+          WHERE store_id=review.store_id AND period_key=review.period_key AND final_snapshot_id=review.final_snapshot_id
+          ORDER BY revision_no DESC LIMIT 1) participation ON TRUE
         RETURNING store_id::text
       `, [packageRow.sales_target_incentive_region_package_id, input.periodKey, input.companyId, storeIds]);
       if (snapshots.rows.length !== storeIds.length) throw new ConflictException("Submitted package store snapshot is incomplete");
@@ -173,6 +179,7 @@ export class SalesTargetIncentiveManagerPackageRepository {
     companyIds: string[];
     decision: Decision;
     reviewNote: string | null;
+    expectedFinancialVersion?: string;
   }): Promise<SalesTargetIncentiveRegionPackageRow> {
     return this.databaseService.withTransaction(async (client) => {
       const found = await client.query<SalesTargetIncentiveRegionPackageRow>(`
@@ -189,6 +196,10 @@ export class SalesTargetIncentiveManagerPackageRepository {
       if (input.submittedAt && new Date(row.submitted_at).getTime() !== new Date(input.submittedAt).getTime()) {
         throw new ConflictException("The package changed; refresh before approving");
       }
+      const targets = await client.query<{ store_id: string; employee_id: string; participant_type: string }>(packageFinancialTargetsSql, [input.packageId]);
+      for (const target of targets.rows) {
+        await lock(client, ["sales_target_incentive_adjustment", input.periodKey, target.store_id, target.employee_id, target.participant_type, "final_snapshot"].join(":"));
+      }
       const grant = await client.query(`
         SELECT role_assignment.user_role_assignment_id
         FROM ops.user_role_assignment role_assignment
@@ -204,6 +215,12 @@ export class SalesTargetIncentiveManagerPackageRepository {
         FOR SHARE OF role_assignment
       `, [input.actorUserId, row.company_id]);
       if (!grant.rows.length) throw new ForbiddenException("Prim approval permission is no longer active");
+      const financial = (await client.query<PackageFinancialRow>(packageFinancialReadSql, [input.packageId])).rows[0];
+      const versionRequired = financial?.store_snapshots?.some(store => store.participationRevisionNo > 0 || store.exclusions.length > 0);
+      if (!financial || (versionRequired && !input.expectedFinancialVersion) ||
+        (input.expectedFinancialVersion !== undefined && input.expectedFinancialVersion !== packageFinancialVersion(input.periodKey, financial))) {
+        throw new ConflictException("Package financial amounts changed; refresh the confirmation before reviewing");
+      }
       if (row.package_scope === "manager_assignment" && input.decision === "admin_approved") {
         const assignment = await client.query<{ stale: boolean }>(`
           WITH package_stores AS (

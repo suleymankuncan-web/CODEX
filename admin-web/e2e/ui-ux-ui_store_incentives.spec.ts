@@ -29,7 +29,7 @@ test('a replaced package explains the blocked confirmation and can be reviewed a
       replaced = true
       return route.fulfill({ status: 409, json: { message: 'Package changed' } })
     }
-    return route.fulfill({ json: { items: [{ ...item, submittedAt: replaced ? '2026-07-02T10:00:00.000Z' : item.submittedAt }] } })
+    return route.fulfill({ json: { items: [{ ...item, submittedAt: replaced ? '2026-07-02T10:00:00.000Z' : item.submittedAt, financialVersion: replaced ? 'b'.repeat(64) : item.financialVersion }] } })
   })
   await page.goto('/store/incentives')
   await page.getByRole('button', { name: 'Paketi onayla', exact: true }).click()
@@ -76,5 +76,7 @@ async function prepareAuthorizedViewer(page: Page) {
     submittedByName: region.managerName, submittedByUserId: 'region-manager',
     regionPackageId: 'package-ui-audit', submittedAt: '2026-07-01T10:00:00.000Z',
     status: 'submitted', storeCount: region.stores.length, submittedStoreCount: region.stores.length,
+    frozenTotalAmount: '93994.40', financialVersion: 'a'.repeat(64),
+    storeSnapshots: region.stores.map(store => ({ storeId: store.storeId, finalSnapshotId: `snapshot-${store.storeId}`, participationRevisionNo: 0, exclusions: [] })),
   }
 }

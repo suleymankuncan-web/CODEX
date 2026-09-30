@@ -13,7 +13,7 @@ const store = (rows: IncentiveRow[], storeTarget: string | null = '1000'): Incen
   trackedSaleAmount: '100', trackedReturnAmount: '-150', trackedNetAmount: '-50',
 } as unknown as IncentiveStore)
 
-describe('incentive personnel presentation uses selected-month targets', () => {
+describe('incentive personnel presentation preserves all assigned personnel', () => {
   it('shows target holders independently of positive, zero or unavailable movement data', () => {
     const input = store([
       person('positive', '100', '50'),
@@ -23,24 +23,24 @@ describe('incentive personnel presentation uses selected-month targets', () => {
     ])
     const before = structuredClone(input)
     const result = personnelMovementDisplay(input, true)
-    expect(result.visibleRows.map(row => row.employeeId)).toEqual(['positive', 'zero', 'unknown'])
-    expect(result.excludedTargetlessCount).toBe(1)
+    expect(result.visibleRows.map(row => row.employeeId)).toEqual(['positive', 'zero', 'unknown', 'targetless-seller'])
+    expect(result.targetlessCount).toBe(1)
     expect(input).toEqual(before)
   })
 
   it('uses the selected-month store target for the manager instead of a personal movement target', () => {
     const manager = { ...person('manager', null, null), participantType: 'store_manager' as const }
     expect(personnelMovementDisplay(store([manager], '1000'), false).visibleRows).toEqual([manager])
-    expect(personnelMovementDisplay(store([manager], null), false).visibleRows).toEqual([])
+    expect(personnelMovementDisplay(store([manager], null), false).visibleRows).toEqual([manager])
   })
 
-  it('keeps frozen targetless rows in totals while filtering only their presentation', () => {
+  it('keeps frozen targetless rows visible and preserves their immutable amounts', () => {
     const targetless = person('historical', null, '0', '-20', '-20')
     targetless.finalAmount = '75.00'
     const input = store([targetless, person('targeted', '100', '0')])
     input.review.periodCloseStatus = 'closed'
     const result = personnelMovementDisplay(input, true)
-    expect(result.visibleRows.map(row => row.employeeId)).toEqual(['targeted'])
+    expect(result.visibleRows.map(row => row.employeeId)).toEqual(['historical', 'targeted'])
     expect(input.rows[0]?.finalAmount).toBe('75.00')
   })
 

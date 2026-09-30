@@ -29,6 +29,7 @@ async function main() {
   const overlayQueries = [
     "user-permission-assignment-invariants-v1.sql",
     "store-contact-email-invariants-v1.sql",
+    "incentive-participation-invariants-v1.sql",
   ].map((file) => readFileSync(join(__dirname, "..", "..", "..", "db", "preflight", file), "utf8"));
   const pool = new Pool(
     buildDatabaseInvariantPreflightPoolConfig(targetClass, connectionString),
