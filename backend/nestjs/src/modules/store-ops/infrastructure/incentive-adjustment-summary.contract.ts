@@ -26,4 +26,3 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
   latest_approved_adjustment_at?: string | null;
   final_amount: string | null;
 };
-

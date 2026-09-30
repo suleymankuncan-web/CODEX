@@ -96,4 +96,3 @@ export type SalesTargetIncentiveCloseRunResponse = {
     finalRowCount: number;
   };
 };
-
