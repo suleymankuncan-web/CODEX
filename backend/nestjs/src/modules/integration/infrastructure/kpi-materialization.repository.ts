@@ -85,7 +85,7 @@ export class KpiMaterializationRepository {
     periodType: string;
     periodStart: string;
     periodEnd: string;
-    actualValue: number;
+    actualValue: number | string;
     achievementRate: number | null;
     batchEnvelope: KpiBatchEnvelope;
   }) {
@@ -246,7 +246,7 @@ export class KpiMaterializationRepository {
     periodType: string;
     periodStart: string;
     periodEnd: string;
-    actualValue: number;
+    actualValue: number | string;
     achievementRate: number | null;
     batchEnvelope: KpiBatchEnvelope;
   }) {
@@ -290,8 +290,8 @@ export class KpiMaterializationRepository {
           COALESCE($13::timestamptz, NOW()),
           'integration'
         )
-        ON CONFLICT (kpi_id, employee_id, period_type, period_start, period_end)
-        WHERE scope_type = 'employee' AND employee_id IS NOT NULL
+        ON CONFLICT (${input.storeId ? 'kpi_id, employee_id, store_id, period_type, period_start, period_end' : 'kpi_id, employee_id, period_type, period_start, period_end'})
+        WHERE scope_type = 'employee' AND employee_id IS NOT NULL AND store_id IS ${input.storeId ? 'NOT NULL' : 'NULL'}
         DO UPDATE SET
           company_id = EXCLUDED.company_id,
           region_id = EXCLUDED.region_id,

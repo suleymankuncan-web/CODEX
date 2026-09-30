@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
+import { assertReturnFacts, insertReturnFacts, type CompanyDailyReturnFact } from "./company-daily-kpi-return.persistence";
 import { DatabaseService } from "../../../shared/database/database.service";
 
 type CommonReplacement = {
@@ -57,6 +58,8 @@ export type CompanyDailyKpiComponentReplacement =
       employeeSales: EmployeeSalesFact[];
       storeSales: StoreSalesFact[];
       unmappedPersonnelSales?: UnmappedPersonnelSalesFact[];
+      returnFacts?: CompanyDailyReturnFact[];
+      returnAttributionVersion?: 2;
     })
   | (CommonReplacement & {
       operation: "footfall";
@@ -124,9 +127,10 @@ export class CompanyDailyKpiComponentRepository {
             aggregate_count,
             retry_count,
             safe_reason_code,
-            sanitized_set_digest
+            sanitized_set_digest,
+            return_attribution_version
           )
-          VALUES ($1::uuid, $2::date, $3, 'succeeded', $4, $5, $6, $7)
+          VALUES ($1::uuid, $2::date, $3, 'succeeded', $4, $5, $6, $7, $8)
           RETURNING component_outcome_id
         `,
         [
@@ -137,6 +141,7 @@ export class CompanyDailyKpiComponentRepository {
           input.retryCount,
           input.safeReasonCode ?? null,
           input.sanitizedSetDigest,
+          input.operation === "sales" ? input.returnAttributionVersion ?? 1 : 1,
         ],
       );
       const componentOutcomeId = outcome.rows[0]?.component_outcome_id;
@@ -145,6 +150,7 @@ export class CompanyDailyKpiComponentRepository {
       }
 
       await this.insertTypedFacts(client, componentOutcomeId, input);
+      if (input.operation === "sales") await insertReturnFacts(client, componentOutcomeId, input.businessDate, input.returnFacts ?? []);
 
       return {
         componentOutcomeId,
@@ -407,6 +413,11 @@ export class CompanyDailyKpiComponentRepository {
 
     if (input.operation === "sales") {
       this.assertSalesFacts(input.employeeSales, input.storeSales, input.unmappedPersonnelSales ?? []);
+      if ((input.returnAttributionVersion !== undefined && input.returnAttributionVersion !== 2) ||
+        (input.returnFacts !== undefined && input.returnAttributionVersion !== 2) ||
+        (input.returnAttributionVersion === 2 && !Array.isArray(input.returnFacts)))
+        throw new BadRequestException("company_daily_kpi_invalid_return_version");
+      assertReturnFacts(input.returnFacts ?? [], input.businessDate);
       if (
         input.aggregateCount !==
         input.employeeSales.length + input.storeSales.length + (input.unmappedPersonnelSales?.length ?? 0)
@@ -559,6 +570,7 @@ export class CompanyDailyKpiComponentRepository {
             ...input.storeSales.map((fact) => fact.storeId),
             ...input.employeeSales.map((fact) => fact.storeId),
             ...(input.unmappedPersonnelSales ?? []).map((fact) => fact.storeId),
+            ...(input.returnFacts ?? []).map((fact) => fact.storeId),
           ]
         : input.operation === "footfall"
           ? input.storeFootfall.map((fact) => fact.storeId)

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { prepareCompanyDailyReturns, type ReturnDailyAggregate } from "./company-daily-kpi-return-adapter";
 
 export type ISODate = string;
 export type DecimalText = string;
@@ -9,6 +10,7 @@ export type NeutralSalesLine = {
   personnelCode: string;
   displayName?: string;
   storeCode: string;
+  originalStoreCode?: string | null;
   isReturn: boolean;
   quantity: DecimalText;
   amountTry: DecimalText;
@@ -72,6 +74,7 @@ export type StoreGsmDailyAggregate = {
 
 export type CompanyDailySafeReasonCode =
   | "invalid_component_input"
+  | "unresolved_return_origin"
   | "source_date_mismatch"
   | "invalid_decimal"
   | "invalid_return_sign"
@@ -86,6 +89,8 @@ export type SanitizedComponentSet<TAggregate> = {
   businessDate: ISODate;
   status: "succeeded" | "failed" | "missed";
   aggregates: TAggregate[];
+  returnAggregates?: ReturnDailyAggregate[];
+  returnAttributionVersion?: 2;
   aggregateCount: number;
   retryCount: number;
   sanitizedSetDigest?: string;
@@ -133,15 +138,22 @@ const ISTANBUL_TIME_ZONE = "Europe/Istanbul";
 const ZERO_DECIMAL: DecimalValue = { units: 0n, scale: 0 };
 
 export function normalizeCompanyDailySales(
-  input: NormalizeComponentInput<NeutralSalesLine>,
+  input: NormalizeComponentInput<NeutralSalesLine> & {
+    returnAttributionVersion?: 2;
+    allowedStoreCodes?: ReadonlySet<string>;
+    storeAliases?: Readonly<Record<string, string>>;
+  },
 ): SanitizedComponentSet<SalesDailyAggregate> {
   assertCommonInput(input);
 
   const employeeSales = new Map<string, MutableEmployeeSales>();
   const storeSales = new Map<string, MutableStoreSales>();
   let excludedMissingPersonnel = false;
+  const attributed = input.returnAttributionVersion === 2 || input.rows.some(row => row.originalStoreCode !== undefined)
+    ? prepareCompanyDailyReturns(input) : null;
+  if (attributed?.error) return failedSet(input, "sales", attributed.error);
 
-  for (const row of input.rows) {
+  for (const row of attributed?.rows ?? input.rows) {
     if (resolveIstanbulDate(row.sourceDateToken) !== input.businessDate) {
       return failedSet(input, "sales", "source_date_mismatch");
     }
@@ -194,6 +206,7 @@ export function normalizeCompanyDailySales(
 
     storeSales.set(row.storeCode, store);
 
+    if (attributed && row.isReturn && row.originalStoreCode !== row.storeCode) continue;
     if (!isRequiredCode(row.personnelCode)) {
       excludedMissingPersonnel = true;
       continue;
@@ -270,12 +283,14 @@ export function normalizeCompanyDailySales(
       ),
     }));
 
-  return succeededSet(
-    input,
-    "sales",
-    [...employeeAggregates, ...storeAggregates],
-    excludedMissingPersonnel ? "excluded_missing_personnel_code" : undefined,
-  );
+  const result = succeededSet(input, "sales", [...employeeAggregates, ...storeAggregates],
+    attributed?.returns.some(row => row.returnKind === "unresolved") ? "unresolved_return_origin" :
+      excludedMissingPersonnel ? "excluded_missing_personnel_code" : undefined);
+  if (!attributed) return result;
+  const identity = { sourceCode: input.sourceCode, operation: "sales", businessDate: input.businessDate,
+    aggregates: result.aggregates, returnAggregates: attributed.returns, returnAttributionVersion: 2 };
+  return { ...result, returnAggregates: attributed.returns, returnAttributionVersion: 2,
+    sanitizedSetDigest: createHash("sha256").update(JSON.stringify(identity)).digest("hex") };
 }
 
 export function normalizeCompanyDailyFootfall(
