@@ -1,0 +1,120 @@
+[data-admin-dialog][data-slot="dialog-content"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
+  padding: 0;
+}
+
+[data-admin-dialog] > [data-slot="dialog-header"],
+[data-admin-dialog] > [data-slot="dialog-footer"] {
+  flex-shrink: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border-color: var(--border);
+}
+
+[data-admin-dialog] > [data-slot="dialog-header"] {
+  padding-right: 4rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+
+[data-admin-dialog] [data-slot="dialog-title"] {
+  line-height: 1.4;
+}
+
+[data-admin-dialog] > [data-admin-dialog-body] {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  gap: 1rem;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+
+[data-admin-dialog] [data-admin-field],
+[data-admin-dialog] [data-admin-dialog-body] > *,
+[data-admin-dialog] [data-slot="select-value"] {
+  min-width: 0;
+}
+
+[data-admin-dialog] [data-slot="dialog-header"],
+[data-admin-dialog] [data-slot="dialog-footer"],
+[data-admin-dialog] [data-admin-field],
+[data-admin-dialog] [aria-label="Seçilen mağazalar"] {
+  overflow-wrap: anywhere;
+}
+
+[data-admin-dialog] input,
+[data-admin-dialog] button:not([role="checkbox"]) {
+  min-height: 44px;
+}
+
+[data-admin-dialog] [data-slot="select-trigger"],
+[data-admin-dialog] [data-slot="select-value"] {
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+}
+
+[data-admin-dialog] [data-slot="select-value"] {
+  display: block;
+  text-align: left;
+}
+
+[data-admin-dialog] button[data-slot="dialog-close"] {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+}
+
+[data-admin-dialog] [data-slot="dialog-footer"] button,
+[data-admin-dialog] [aria-label="Seçilen mağazalar"] button {
+  height: auto;
+  max-width: 100%;
+  white-space: normal;
+}
+
+[data-admin-dialog] [data-slot="dialog-footer"] {
+  flex-wrap: wrap;
+}
+
+[data-admin-dialog] [data-admin-dialog-body] label:has([role="checkbox"]) {
+  min-height: 44px;
+}
+
+[data-admin-select] {
+  max-width: calc(100vw - 2rem);
+}
+
+[data-admin-select] [data-slot="select-item"] {
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  [data-admin-dialog] > [data-slot="dialog-header"],
+  [data-admin-dialog] > [data-slot="dialog-footer"],
+  [data-admin-dialog] > [data-admin-dialog-body] {
+    padding: 1.5rem;
+  }
+
+  [data-admin-dialog] > [data-slot="dialog-header"] {
+    padding-right: 4rem;
+  }
+
+  [data-admin-dialog] input,
+  [data-admin-dialog] button:not([role="checkbox"]):not([data-slot="dialog-close"]),
+  [data-admin-select] [data-slot="select-item"] {
+    min-height: 40px;
+  }
+}
