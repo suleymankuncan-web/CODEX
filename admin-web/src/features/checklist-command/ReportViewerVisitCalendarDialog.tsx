@@ -5,7 +5,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import type { AuthSessionSummary } from '../auth/api'
 import { formatChecklistCommandPeriodLabel } from './checklist-command-period'
-import { getChecklistPeriodWeekStart } from './model'
+import { getIstanbulWeekStart } from './model'
 import { ReportViewerWeeklyVisitPlan } from './ReportViewerWeeklyVisitPlan'
 
 export type ReportViewerManagerOption = {
@@ -40,7 +40,7 @@ function CalendarDialogContent(input: {
 }) {
   const copy = input.locale === 'tr' ? trCopy : enCopy
   const [selectedManagerKey, setSelectedManagerKey] = useState(input.initialManagerKey ?? input.managers[0]?.key ?? '')
-  const [weekStart, setWeekStart] = useState(() => getChecklistPeriodWeekStart(input.period))
+  const [weekStart, setWeekStart] = useState(() => getIstanbulWeekStart())
   const selectedManager = input.managers.find((manager) => manager.key === selectedManagerKey) ?? input.managers[0]
 
   return (
@@ -57,7 +57,7 @@ function CalendarDialogContent(input: {
         <div className="tw:flex tw:flex-col tw:gap-2.5 tw:border-b tw:border-border tw:bg-accent/35 tw:px-4 tw:py-3 tw:sm:flex-row tw:sm:items-end tw:sm:justify-between">
           <label className="tw:grid tw:w-full tw:gap-1 tw:sm:max-w-xs">
             <span className="tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.12em] tw:text-muted-foreground">{copy.manager}</span>
-            <Select value={selectedManager?.key ?? ''} onValueChange={(value) => { setSelectedManagerKey(value); setWeekStart(getChecklistPeriodWeekStart(input.period)) }}>
+            <Select value={selectedManager?.key ?? ''} onValueChange={setSelectedManagerKey}>
               <SelectTrigger aria-label={copy.manager} className="tw:h-8 tw:w-full tw:bg-card tw:text-xs"><SelectValue placeholder={copy.chooseManager} /></SelectTrigger>
               <SelectContent>
                 <SelectGroup>
@@ -66,7 +66,7 @@ function CalendarDialogContent(input: {
               </SelectContent>
             </Select>
           </label>
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{formatChecklistCommandPeriodLabel(input.period, input.locale)}</span>
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{formatChecklistCommandPeriodLabel(weekStart.slice(0, 7), input.locale)}</span>
         </div>
 
         <div className="tw:p-3 tw:sm:p-4">

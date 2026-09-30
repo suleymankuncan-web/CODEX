@@ -17,6 +17,7 @@ import type { StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 import { formatMetricValue, resolveLocalizedKpiScoreReference } from './store-kpi-highlights-formatters'
 import { toHundredPointLiveStoreScore } from './store-kpis-command-contract'
 import { personnelStoreScoreImpact } from './store-kpis-personnel-impact'
+import { StoreKpisReturnsSummary } from './store-kpis-returns-summary'
 import { StoreKpisPeriodEmpty } from './store-kpis-period-empty'
 import { StoreEmptyState, StoreErrorState, StoreLoadingState } from './store-surface-primitives'
 import './store-kpis-region-command-canvas.css'
@@ -119,6 +120,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     </header>
     {backgroundError}
     {!showPeople ? <>
+    <StoreKpisReturnsSummary model={model} />
     <div className="region-performance-metrics" role="group" aria-label={tr ? 'Mağaza KPI özeti' : 'Store KPI summary'}>
       {cards.map(({ code, label, value: cardValue, icon: Icon }) => <Card key={label} size="sm" onClick={() => setSelectedKpi(code)}><CardHeader><CardTitle><Icon aria-hidden="true" /><span>{label}</span></CardTitle></CardHeader><CardContent><Button variant="link" className="manager-metric-trigger" aria-label={`${label} detaylarını aç`} onClick={() => setSelectedKpi(code)}><strong>{cardValue}</strong></Button></CardContent></Card>)}
     </div>

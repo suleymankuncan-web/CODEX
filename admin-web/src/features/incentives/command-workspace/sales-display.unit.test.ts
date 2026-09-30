@@ -8,9 +8,18 @@ describe('signed sales presentation does not alter the incentive basis', () => {
     expect(netAchievement(undefined, '1000')).toBeNull()
     expect(netAchievement('500', '0')).toBeNull()
   })
-  it('shows own sales even when the manager incentive uses store turnover', () => {
-    const row = { trackedSaleAmount: '500', trackedReturnAmount: '-700', trackedNetAmount: '-200', target: '1000', actual: '10000', dailyActualNetSales: '9000', achievementPct: '1000.00' } as IncentiveRow
+  it('shows personnel net while preserving the recorded incentive basis', () => {
+    const row = { participantType: 'personnel', trackedSaleAmount: '500', trackedReturnAmount: '-700', trackedNetAmount: '-200', target: '1000', actual: '10000', dailyActualNetSales: '9000', achievementPct: '1000.00' } as IncentiveRow
     expect(personnelSalesDisplay(row)).toEqual({ sale: '500', returns: '-700', net: '-200', achievement: '-20.00', incentiveAchievement: '1000.00' })
+  })
+  it('uses store net for managers without overwriting recorded financial amounts', () => {
+    const row = { participantType: 'store_manager', trackedNetAmount: '-200', dailyActualNetSales: '9000', target: '10000', actual: '10000', achievementPct: '100.00' } as IncentiveRow
+    expect(personnelSalesDisplay(row).net).toBe('9000')
+    expect(personnelSalesDisplay(row).achievement).toBe('90.00')
+    expect(personnelSalesDisplay(row).incentiveAchievement).toBe('100.00')
+    expect(row.actual).toBe('10000')
+    expect(personnelSalesDisplay({ ...row, dailyActualNetSales: null }, '-500').net).toBe('-500')
+    expect(personnelSalesDisplay({ ...row, dailyActualNetSales: null }, null).net).toBeNull()
   })
   it('never substitutes store turnover or zero for missing personnel movements', () => {
     const row = { target: '1000', actual: '10000', dailyActualNetSales: '9000' } as IncentiveRow

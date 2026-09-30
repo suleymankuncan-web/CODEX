@@ -14,12 +14,12 @@ export function storeSalesDisplay(store: IncentiveStore, workspace: IncentiveWor
   }
 }
 
-export function personnelSalesDisplay(row: IncentiveRow) {
-  // A manager's dailyActualNetSales is the STORE calculation base, not their own sales.
-  // Missing movement detail must not be replaced with a fabricated zero or store turnover.
+export function personnelSalesDisplay(row: IncentiveRow, managerStoreNet?: string | null) {
+  // Managers use store net sales. The recorded financial calculation remains separate.
+  const net = row.participantType === 'store_manager' ? row.dailyActualNetSales ?? managerStoreNet : row.trackedNetAmount
   return {
-    sale: row.trackedSaleAmount, returns: row.trackedReturnAmount, net: row.trackedNetAmount,
-    achievement: netAchievement(row.trackedNetAmount, row.target),
+    sale: row.trackedSaleAmount, returns: row.trackedReturnAmount, net,
+    achievement: netAchievement(net, row.target),
     incentiveAchievement: row.achievementPct ?? netAchievement(row.actual, row.target),
   }
 }

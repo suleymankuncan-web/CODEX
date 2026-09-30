@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { StoreReturnsScopeProvider } from '@/features/returns/scope'
 import { useQuery } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,10 @@ import { getUserFacingErrorMessage } from '@/lib/format'
 import { transientQueryRetryOptions } from '@/lib/query-retry'
 
 export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | null }) {
+  return <StoreReturnsScopeProvider authSummary={input.authSummary}><StoreIncentivesContent {...input} /></StoreReturnsScopeProvider>
+}
+
+function StoreIncentivesContent(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
   const [period, setPeriod] = useState<string | undefined>()
   const enabled = canOpenStoreIncentives(input.authSummary)

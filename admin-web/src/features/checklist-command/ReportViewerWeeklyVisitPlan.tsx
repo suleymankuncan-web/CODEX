@@ -45,7 +45,9 @@ export function ReportViewerWeeklyVisitPlan(input: {
   const mobileDayIndex = mobileDaySelection?.weekStart === input.weekStart ? mobileDaySelection.index : defaultMobileDayIndex
   const firstDay = days[0]
   const lastDay = days.at(-1)
-  const weekLabel = firstDay && lastDay ? `${firstDay.dateLabel} – ${lastDay.dateLabel} ${plan.weekStart.slice(0, 4)}` : plan.weekStart
+  const weekLabel = firstDay && lastDay ? (firstDay.isoDate.slice(0, 4) === lastDay.isoDate.slice(0, 4)
+    ? `${firstDay.dateLabel} – ${lastDay.dateLabel} ${plan.weekStart.slice(0, 4)}`
+    : `${firstDay.dateLabel} ${firstDay.isoDate.slice(0, 4)} – ${lastDay.dateLabel} ${lastDay.isoDate.slice(0, 4)}`) : plan.weekStart
 
   return (
     <section className="report-viewer-week" aria-label={copy.weeklyPlan}>
