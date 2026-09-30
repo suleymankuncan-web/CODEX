@@ -3558,6 +3558,49 @@ export type components = {
           "regionName": string
         }>
     }
+    "StoreReturnRow": {
+      "returnId": string
+      "businessDate": string
+      "direction": "received" | "external"
+      "category": "in_store" | "out_of_norm" | "cross_store" | "review_required"
+      "personnelCode": string | null
+      "employeeId": string | null
+      "displayName": string | null
+      "receivingStoreCode": string
+      "receivingStoreName": string | null
+      "originalStoreCode": string | null
+      "originalStoreName": string | null
+      "signedAmount": string
+      "invoiceCount": number
+    }
+    "StoreReturnsLedger": {
+      "storeId": string
+      "periodStart": string
+      "periodEnd": string
+      "timezone": string
+      "totals": {
+        "receivedSignedAmount": string | null
+        "receivedInvoiceCount": number | null
+        "externalSignedAmount": string
+        "netSales": string | null
+      }
+      "coverage": {
+        "expectedDays": number
+        "coveredDays": number
+        "missingDates": string[]
+        "status": "complete" | "partial" | "no_data"
+        "unresolvedRows": number
+      }
+      "rows": components['schemas']["StoreReturnRow"][]
+      "page": {
+        "total": number
+        "limit": number
+        "offset": number
+      }
+    }
+    "StoreReturnsLedgerResponse": {
+      "data": components['schemas']["StoreReturnsLedger"]
+    }
     "StoreTargetingPersonnelResponse": {
       "items": Array<{
           "employeeId": string
@@ -4340,6 +4383,17 @@ export type components = {
 }
 
 export type paths = {
+  "/api/reports/store-returns": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreReturnsLedgerResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/role-assignments/{assignmentId}/incentive-approval": {
     patch: {
       requestBody: {

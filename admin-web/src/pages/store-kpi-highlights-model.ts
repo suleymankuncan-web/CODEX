@@ -511,6 +511,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   }
 
   return {
+    authSummary: input.authSummary,
     kpiDateRangeEnd, setKpiDateRange,
     activeSnapshotRun,
     activeStoreName,

@@ -19,6 +19,31 @@ test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-08-31T12:00:00.000Z'))
 })
 
+test('visit calendar starts in the current Istanbul week and preserves manual navigation across managers', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-12-27T21:01:00.000Z'))
+  await installStoreContractSession(page, 'reportViewer')
+  await routeReportViewerRecords(page)
+  const weeks: string[] = []
+  page.on('request', request => {
+    const url = new URL(request.url())
+    if (url.pathname === '/api/checklists/command-canvas/visit-plans') weeks.push(url.searchParams.get('weekStart')!)
+  })
+  await page.goto('/store/checklists?period=2026-07')
+  await page.getByRole('button', { name: 'Ziyaret Takvimi' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ziyaret Takvimi' })
+  await expect.poll(() => weeks[0]).toBe('2026-12-28')
+  await expect(dialog).toContainText('Planlanmış ziyaret yok')
+  await dialog.getByRole('button', { name: 'Önceki hafta' }).click()
+  await expect.poll(() => weeks.at(-1)).toBe('2026-12-21')
+  await dialog.getByRole('combobox', { name: 'Bölge müdürü' }).click()
+  await page.getByRole('option', { name: /Derya Aydın/ }).click()
+  await expect.poll(() => weeks.length).toBe(3)
+  expect(weeks.at(-1)).toBe('2026-12-21')
+  await dialog.getByRole('button', { name: 'Ziyaret takvimini kapat' }).click()
+  await page.getByRole('button', { name: 'Ziyaret Takvimi' }).click()
+  await expect(dialog.locator('.report-viewer-week-nav')).toContainText('28 Ara 2026 – 2 Oca 2027')
+})
+
 test('Report Viewer keeps manager selection, visit plan, stores, and history in a dedicated read-only workspace', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'reportViewer')
@@ -79,12 +104,17 @@ test('Report Viewer keeps manager selection, visit plan, stores, and history in 
   const visitCalendar = page.getByRole('dialog', { name: 'Ziyaret Takvimi' })
   await expect(visitCalendar).toBeVisible()
   await expect(visitCalendar.getByText('HAFTALIK PLAN', { exact: true })).toBeVisible()
+  await expect(visitCalendar.getByText('Planlanmış ziyaret yok').first()).toBeVisible()
+  for (let week = 0; week < 7; week += 1) {
+    await visitCalendar.getByRole('button', { name: 'Önceki hafta' }).click()
+    await expect.poll(() => requests.plans).toBe(week + 2)
+  }
   await expect(visitCalendar.getByText('Ziyaret Tamamlandı').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Checklist Başlat|Devam et/ })).toHaveCount(0)
   await expect.poll(() => requests.stores).toBe(2)
   await expect.poll(() => requests.histories).toBe(0)
-  await expect.poll(() => requests.plans).toBe(1)
-  expect(requests.planManagerUserIds).toEqual([reportViewerManagers[0].managerUserId])
+  await expect.poll(() => requests.plans).toBe(8)
+  expect(requests.planManagerUserIds).toEqual(Array.from({ length: 8 }, () => reportViewerManagers[0].managerUserId))
   await page.screenshot({ path: checklistEvidenceOutputPath(testInfo, 'checklist-command-cutover-v2/p5/report-viewer-calendar-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: 'Ziyaret takvimini kapat' }).click()
 
@@ -530,7 +560,8 @@ test('Report Viewer preserves nested reads and retries plan, store-page, and his
   await expect(page.getByText('Ziyaret planı yüklenemedi.').first()).toBeVisible()
   planFails = false
   await page.getByRole('button', { name: 'Tekrar dene' }).first().click()
-  await expect(page.getByText('Ziyaret Tamamlandı').first()).toBeVisible()
+  await expect(page.getByText('Planlanmış ziyaret yok').first()).toBeVisible()
+  await expect(page.getByText('Ziyaret planı yüklenemedi.', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Ziyaret takvimini kapat' }).click()
 
   await page.getByRole('button', { name: 'Sonraki sayfa', exact: true }).click()
@@ -750,18 +781,19 @@ async function routeReportViewerRecords(page: Page, options: { delayedManagerUse
     })
   })
   await page.route('**/api/checklists/command-canvas/visit-plans?**', async (route) => {
+    const requestedWeek = new URL(route.request().url()).searchParams.get('weekStart')!
     await route.fulfill({
       json: {
         data: {
           planId: null,
           regionId,
           regionName: 'Marmara',
-          weekStart: '2026-07-13',
+          weekStart: requestedWeek,
           revision: 0,
           revisedAt: null,
           view: 'report_viewer',
           capabilities: { canMaintainWeeklyVisitPlan: false },
-          items: [{ planItemId: '44444444-4444-4444-8444-444444444444', storeId, storeCode: 'MP-01', storeName: 'Marmara Park', plannedDate: '2026-07-14', displayOrder: 0, status: 'completed', checklistInstanceId: '55555555-5555-4555-8555-555555555555', completedAt: '2026-07-14T10:00:00.000Z' }],
+          items: requestedWeek !== '2026-07-13' ? [] : [{ planItemId: '44444444-4444-4444-8444-444444444444', storeId, storeCode: 'MP-01', storeName: 'Marmara Park', plannedDate: '2026-07-14', displayOrder: 0, status: 'completed', checklistInstanceId: '55555555-5555-4555-8555-555555555555', completedAt: '2026-07-14T10:00:00.000Z' }],
         },
       },
     })

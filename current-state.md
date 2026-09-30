@@ -11,7 +11,7 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - Nine prior PRs are merged. Six returns/net-prim/auth PRs are authorized: targeted local tests and repeated self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
   repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md),
-  [scoped returns](docs/contracts/store-returns-read-v1.md).
+  [scoped returns and shared UI](docs/contracts/store-returns-read-v1.md); report-viewer calendars open on the current Istanbul week.
 - Primler retains company-month seals, SD → HR → GM, final-money authority,
   payroll seals and legacy history; Auth/Master retains bounded scroll/focus.
   [Verification](docs/ui/incentives-local-preview.md).
@@ -30,7 +30,7 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - Checklist PDF/comments and account-only manager resolution are on merged main
   through #1165. LUFIAN heading, document-date regional manager, handwritten store
   manager, retained historical template/score and mobile session-dismissal fixes
-  remain. The earlier closed #1118 is historical, not an active prohibition.
+  remain.
 - Hosted Clerk and private Keycloak share the approved login shell; their auth
   behavior stays separate. [Login contract](docs/plans/keycloak-login-studio-v1.md).
 

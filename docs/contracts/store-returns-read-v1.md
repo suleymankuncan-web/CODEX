@@ -60,3 +60,23 @@ workspace data module combines participation and return-read dependencies;
 existing architecture/file-size caps are unchanged. OpenAPI and the generated
 frontend client publish the neutral fields. No provider payload, live replay,
 deployment or data repair is part of this read contract.
+
+## Shared presentation
+
+KPI store detail and the incentive drawer share the dated return ledger. The
+initial filter shows norm in-store returns; the toggle shows outside-norm,
+cross-store, external information and unresolved records. Receiver invoice
+totals are authoritative and independent of page/filter; grouped row counts
+are never summed. Live KPI net uses the verified canonical ledger NET_SALES
+for the exact selected highlight interval; closed results retain recorded
+NET_SALES or an unavailable value, never a current-data replacement.
+Personnel tables show net without duplicating ordinary return columns; managers
+show their store net basis. Financial calculations, exclusion decisions and
+sealed amounts remain authoritative. Unknown sellers have informational rows
+without invented identity or payment actions. Cache keys bind authorization,
+store, dates, category and page; protected errors hide stale ledger data.
+
+The report-viewer visit calendar opens at the current Europe/Istanbul Monday,
+independent of the parent reporting month. Manual week selection survives
+manager changes; reopening restores the current week. The manager planner is
+unchanged. Year-crossing week labels show both years.

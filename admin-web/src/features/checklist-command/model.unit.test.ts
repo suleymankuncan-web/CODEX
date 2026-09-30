@@ -57,6 +57,9 @@ describe('checklist command canvas model', () => {
 
   it('resolves the Istanbul business week to Monday and exposes Monday through Saturday', () => {
     expect(getIstanbulWeekStart(new Date('2026-07-14T21:30:00.000Z'))).toBe('2026-07-13')
+    expect(getIstanbulWeekStart(new Date('2026-12-27T20:59:00.000Z'))).toBe('2026-12-21')
+    expect(getIstanbulWeekStart(new Date('2026-12-27T21:01:00.000Z'))).toBe('2026-12-28')
+    expect(getIstanbulWeekStart(new Date('2027-01-03T21:01:00.000Z'))).toBe('2027-01-04')
     expect(getChecklistPeriodWeekStart('2026-08')).toBe('2026-08-03')
 
     expect(buildChecklistPlanningDays('2026-07-13', 'tr')).toEqual([

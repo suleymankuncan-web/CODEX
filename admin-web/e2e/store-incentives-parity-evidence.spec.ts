@@ -58,7 +58,7 @@ for (const view of ['region_manager', 'report_viewer'] as const) {
       await expect(panel.getByText('₺8.200.000,00', { exact: true }).first()).toBeVisible()
       await expect(panel.getByText('₺8.721.540,00', { exact: true }).first()).toBeVisible()
       await page.screenshot({ path: testInfo.outputPath(`store-drawer-${view}-${width}.png`) })
-      await expect(panel.getByRole('button', { name: 'Mağazalar Arası İade: Detay', exact: true })).toBeVisible()
+      await expect(panel.getByRole('button', { name: 'İadeler', exact: true })).toBeVisible()
       await expect(panel.getByText('Mağaza Müdürü', { exact: true })).toBeVisible()
       await expect(panel.getByText('Satış Danışmanı', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Mağaza detayını kapat', exact: true }).click()
