@@ -128,6 +128,9 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `AUTH_CALLBACK_PATH` | Auth owner | Render backend env | Public | Must match the frontend/provider callback registration. | `/auth/callback` |
 | `AUTH_POST_LOGOUT_REDIRECT_PATH` | Auth owner | Render backend env | Public | Must match provider post-logout registration. | `/auth/login` |
 | `BROWSER_SESSION_COOKIE_ENABLED` | Auth owner | Render backend env | Internal | Enables backend-owned browser app-session cookies only after the session contract PRs land. | `false` |
+| `MANAGED_BROWSER_SESSION_ENABLED` | Auth/Platform owner | On-prem API env | Internal | Opt-in server-managed V2 session; requires JWT/code/cookie transport and configured provider. | `false`; on-prem compose enables it. |
+| `MANAGED_BROWSER_SESSION_MAX_SECONDS` | Auth owner | On-prem API env | Internal | Fixed app maximum, positive integer at most seven days; provider idle/max remains separately enforced. | `604800` |
+| `AUTH_SESSION_ENDPOINT_URL` | Auth/Platform owner | On-prem API env | Internal | Server-side grant endpoint; HTTPS in production except the exact approved strict-local Keycloak endpoint. Public issuer/callback remain HTTPS. | Empty; falls back to configured public token endpoint. |
 | `BROWSER_SESSION_COOKIE_NAME` | Auth owner | Render backend env | Internal | Stable host-only HttpOnly app-session cookie name; do not add a cookie `Domain` attribute without owner approval. | `hr_axis_browser_session` |
 | `BROWSER_SESSION_CSRF_COOKIE_NAME` | Auth owner | Render backend env | Internal | Optional same-host CSRF nonce compatibility cookie name; current staging/production uses response nonce transport instead. | `hr_axis_csrf_nonce` |
 | `BROWSER_SESSION_SECRET` | Auth owner | Render backend env | Secret | Required and non-default when cookie sessions are enabled in production-like backends. | Empty placeholder. |

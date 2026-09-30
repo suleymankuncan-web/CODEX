@@ -1,3 +1,4 @@
+import { assertBrowserSessionConfiguration, assertDatabaseNumericConfiguration, readManagedSessionMaximum, readManagedSessionEnabled } from "./app-config-contracts";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
@@ -33,8 +34,8 @@ const FILE_BACKED_SETTINGS = new Set([
 @Injectable()
 export class AppConfigService {
   constructor(private readonly configService: ConfigService) {
-    this.assertBrowserSessionContract();
-    this.assertDatabaseNumericContract();
+    assertBrowserSessionConfiguration(this);
+    assertDatabaseNumericConfiguration(this);
     this.assertStrictLocalContract();
   }
 
@@ -661,17 +662,11 @@ export class AppConfigService {
   }
 
   get managedBrowserSessionEnabled(): boolean {
-    const enabled = this.readBoolean("MANAGED_BROWSER_SESSION_ENABLED", false);
-    if (enabled && (!this.browserSessionCookieEnabled || this.authMode !== "jwt" || this.authResponseType !== "code" || !this.authSessionTokenUrl || !this.authClientId)) {
-      throw new Error("Managed browser sessions require JWT, cookie transport and a configured provider");
-    }
-    return enabled;
+    return readManagedSessionEnabled(this.readBoolean("MANAGED_BROWSER_SESSION_ENABLED", false), this);
   }
 
   get managedBrowserSessionMaxSeconds(): number {
-    const value = this.readPositiveInteger("MANAGED_BROWSER_SESSION_MAX_SECONDS", "604800");
-    if (value > 604800) throw new Error("Managed browser session maximum cannot exceed seven days");
-    return value;
+    return readManagedSessionMaximum(this.readString("MANAGED_BROWSER_SESSION_MAX_SECONDS", "604800"));
   }
 
   get authSessionTokenUrl(): string | undefined {
@@ -815,29 +810,6 @@ export class AppConfigService {
     return this.isProduction || this.authMode === "jwt";
   }
 
-  private assertBrowserSessionContract(): void {
-    this.managedBrowserSessionEnabled;
-    if (!this.browserSessionCookieEnabled) {
-      return;
-    }
-
-    this.browserSessionSecret;
-    this.managedBrowserSessionEnabled;
-    this.managedBrowserSessionMaxSeconds;
-    this.browserSessionPreviousSecret;
-    this.browserSessionTtlSeconds;
-    this.browserSessionRenewalWindowSeconds;
-    this.browserSessionSameSite;
-  }
-
-  private assertDatabaseNumericContract(): void {
-    this.dbPoolMax;
-    this.dbConnectionTimeoutMs;
-    this.dbIdleTimeoutMs;
-    this.dbStatementTimeoutMs;
-    this.redisOperationTimeoutMs;
-    this.dailyClosurePollMinutes;
-  }
 
   private readDatabaseSslCa(): string | undefined {
     const value = this.readOptionalString("DB_SSL_CA");
