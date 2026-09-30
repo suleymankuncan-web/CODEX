@@ -8,20 +8,12 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
-- Owner authorized the six-PR returns/net-incentive/auth train after the prior
-  nine PRs merged. V2 prepares original-store return attribution, store-aware
-  employee canonical keys and exact-decimal net projection.
-  [Attribution and coordinated activation](docs/contracts/company-daily-kpi-returns-v2.md).
-  Each slice requires targeted local tests and repeated self-review until GO,
-  then required GitHub CI and ordered squash merge. Local full runs, manual
-  proof/final packaging, deployment and live data repair are excluded.
-- Owner approved the nine-PR Store KPI/Primler hardening train and bounded UI.
-  Primler seals RM preparation per company-month: Sales Director → HR → GM.
-  Returns archive revisions and restart at Sales Director. Only GM final applies
-  money; payroll uses its seal. History remains legacy. Stage authority intersects
-  persona/company capability. Auth/Master forms use bounded body scroll, fixed
-  actions and focus restoration. Real API data; labs dev-only. Backend/schema
-  deploy is separate; manual on-prem proof/final packaging deferred by owner.
+- The prior nine PRs are merged. Owner authorized six ordered returns/net-prim/auth
+  PRs: targeted local tests and repeated self-review until GO, required full GitHub
+  CI, then squash merge. No local full run, manual proof/package, deploy or live
+  repair. [V2 attribution/activation](docs/contracts/company-daily-kpi-returns-v2.md).
+- Primler retains company-month seals, SD → HR → GM, final-money authority,
+  payroll seals and legacy history; Auth/Master retains bounded scroll/focus.
   [Scope and verification](docs/ui/incentives-local-preview.md).
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Broad production rollout: `No-Go`.
