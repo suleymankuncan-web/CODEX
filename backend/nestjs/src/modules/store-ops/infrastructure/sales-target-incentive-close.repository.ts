@@ -1,3 +1,4 @@
+import { incentiveDailySalesCoverageSql, dailySalesCoverageParams, type IncentiveMissingSalesDay } from "./incentive-daily-sales-coverage.sql";
 import { ConflictException, Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
@@ -200,6 +201,14 @@ export class SalesTargetIncentiveCloseRepository {
         throw new ConflictException(
           "Store ownership changed while the incentive close projection was being prepared",
         );
+      }
+
+      const missingSalesDays = await client.query<IncentiveMissingSalesDay>(incentiveDailySalesCoverageSql,
+        dailySalesCoverageParams({ companyIds:[input.companyId],storeIds:canonicalStoreIds,
+          periodStart:input.periodStart,periodEnd:input.periodEnd,closeCutoffAt:input.closeCutoffAt,
+          forceDaily:input.sourceType === "automatic_period_close" }));
+      if (missingSalesDays.rows.length) {
+        throw new ConflictException("Daily net sales coverage is incomplete at the incentive close cutoff");
       }
 
       const ruleVersion = await this.resolveRuleVersion(client);

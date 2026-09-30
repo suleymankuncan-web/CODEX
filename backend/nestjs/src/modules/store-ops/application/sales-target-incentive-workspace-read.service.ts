@@ -1,5 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from "@nestjs/common";
-import { mergeWorkspacePersonnel } from "./sales-target-incentive-workspace-personnel";
+import { mergeWorkspacePersonnel, mergePositiveSellers } from "./sales-target-incentive-workspace-personnel";
+import { StorePositiveSellersReadRepository } from "../infrastructure/store-positive-sellers-read.repository";
+import type { StorePositiveSeller } from "./store-returns.contract";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
   MANAGER_RATE_TABLE_VERSION,
@@ -40,6 +42,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
     private readonly readModelService: SalesTargetIncentiveReadModelService,
     private readonly correctionRepository: SalesTargetIncentiveCorrectionRepository,
     private readonly repository: SalesTargetIncentiveWorkspaceReadRepository,
+    private readonly positiveSellersRepository: StorePositiveSellersReadRepository,
   ) {}
 
   async getWorkspace(input: {
@@ -86,7 +89,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         throughDate,
       );
     }
-    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult, movementResult, roster, participation] = await Promise.all([
+    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries, dailyResult, movementResult, roster, participation, positiveSellersResult, activityResult] = await Promise.all([
       optionalSection(this.repository.listStoreMetadata({ storeIds, periodEnd: projection.periodEnd }), [], "store_metadata", this.logger),
       this.repository.listClosedRateSnapshots({ periodKey: projection.periodKey, storeIds }),
       this.repository.listWorkflowAudit({ periodKey: projection.periodKey, storeIds }),
@@ -99,6 +102,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
       optionalSection(this.readModelService.listMovementTracking({ storeIds, periodStart: period.periodStart, throughDate }), [], "sale_return_movements", this.logger),
       this.repository.listPersonnelRoster({ storeIds, assignmentAsOfDate, periodStart: period.periodStart, periodEnd: period.periodEnd }),
       this.repository.listParticipationRevisions({ periodKey: projection.periodKey, storeIds }),
+      optionalSection(this.positiveSellersRepository.list({ storeIds, periodStart: period.periodStart, throughDate }), [], "positive_sellers", this.logger),
+      optionalSection(this.positiveSellersRepository.listActivity({storeIds,throughDate}), [], "personnel_activity", this.logger),
     ]);
     const dailyStoreById = new Map(dailyResult.value.filter(row => row.scope_type === "store").map(row => [row.store_id, row]));
     const dailyEmployeeByKey = new Map(dailyResult.value.filter(row => row.scope_type === "employee" && row.employee_id).map(row => [`${row.store_id}:${row.employee_id}`, row]));
@@ -172,6 +177,7 @@ export class SalesTargetIncentiveWorkspaceReadService {
         store,
         roster: roster.filter((row) => row.store_id === store.storeId),
         participation: participation.find((row) => row.store_id === store.storeId),
+        positiveSellers: positiveSellersResult.value.filter(row => row.store_id === store.storeId),
         dailyStore: dailyStoreById.get(store.storeId) ?? null,
         dailyEmployees: dailyEmployeeByKey,
         movementStore: movementStoreById.get(store.storeId) ?? null,
@@ -185,6 +191,10 @@ export class SalesTargetIncentiveWorkspaceReadService {
         actorByCorrectionId,
         packageStatus: packageState.status,
       });
+      for (const row of workspaceStore.rows) {
+        const activity=activityResult.value.find(item=>item.store_id===store.storeId && item.employee_id===row.employeeId);
+        if (activity) row.activity={coveredDays:activity.covered_days,noPositiveSales15Days:activity.no_positive_sales_15_days};
+      }
       managerGroup.stores.push(workspaceStore);
       capabilities.canMarkStoreReview ||= workspaceStore.capabilities.canMarkStoreReview;
       capabilities.canCreateCorrection ||= workspaceStore.capabilities.canCreateCorrection;
@@ -221,6 +231,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
         rateMetadata: { status: exactRateRowsResult.status },
         correctionActors: { status: actorRowsResult.status },
         movementTracking: { status: movementResult.status },
+        positiveSellers: { status: positiveSellersResult.status },
+        personnelActivity: { status: activityResult.status },
       },
       rateMetadata,
       managerGroups: resolvedGroups
@@ -237,6 +249,7 @@ function toWorkspaceStore(input: {
   dailyEmployees: Map<string, SalesTargetIncentiveDailySalesRow>;
   movementStore: SalesTargetIncentiveMovementRow | null;
   personnelMovements: SalesTargetIncentiveMovementRow[];
+  positiveSellers: StorePositiveSeller[];
   canAct: boolean;
   storeCode: string | null;
   finalSnapshot: SalesTargetIncentiveWorkspaceClosedRateSnapshotRow | null;
@@ -286,17 +299,18 @@ function toWorkspaceStore(input: {
     row.trackedReturnAmount = movement?.return_amount ?? null;
     row.trackedNetAmount = movement?.net_amount ?? null;
   }
+  mergePositiveSellers(rows, input.positiveSellers);
   const outOfRosterReturns = input.personnelMovements
     .filter(item => item.scope_type !== "store" && Number(item.sale_amount) <= 0 && Number(item.net_amount) < 0 &&
       item.is_active_roster === false && !input.roster.some((person) => person.employee_id === item.employee_id))
-    .map(item => ({
+    .flatMap(item => item.net_amount === null ? [] : [{
       employeeId: item.employee_id,
       personnelCode: item.personnel_code,
       displayName: item.display_name || item.personnel_code || "Bilinmeyen personel",
       saleAmount: item.sale_amount,
       returnAmount: item.return_amount,
       netAmount: item.net_amount,
-    }));
+    }]);
   const primary = input.store.manager?.calculation ?? input.store.personnel[0]?.calculation;
   const storeTarget = input.finalSnapshot?.store_target_amount ?? (periodClosed ? null : input.store.storeTargetAmount);
   const storeActualNetSales = input.finalSnapshot?.store_net_sales_amount ?? (periodClosed ? null : input.store.storeNetSalesAmount);
@@ -333,6 +347,10 @@ function toWorkspaceStore(input: {
     },
     rows,
     outOfRosterReturns,
+    positiveSellers: input.positiveSellers.map(seller => ({
+      employeeId: seller.employee_id, personnelCode: seller.personnel_code, displayName: seller.display_name,
+      saleAmount: seller.sale_amount, netAmount: seller.net_amount, lastPositiveDate: seller.last_positive_date,
+    })),
   };
 }
 
@@ -594,6 +612,8 @@ function completeWorkspaceSections() {
     rateMetadata: { status: "complete" as const },
     correctionActors: { status: "complete" as const },
     movementTracking: { status: "complete" as const },
+    positiveSellers: { status: "complete" as const },
+    personnelActivity: { status: "complete" as const },
   };
 }
 

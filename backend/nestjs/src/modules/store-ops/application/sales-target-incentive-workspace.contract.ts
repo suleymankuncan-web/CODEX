@@ -12,6 +12,8 @@ export type SalesTargetIncentiveWorkspaceSections = {
   rateMetadata: SalesTargetIncentiveWorkspaceSectionStatus;
   correctionActors: SalesTargetIncentiveWorkspaceSectionStatus;
   movementTracking: SalesTargetIncentiveWorkspaceSectionStatus;
+  positiveSellers?: SalesTargetIncentiveWorkspaceSectionStatus;
+  personnelActivity?: SalesTargetIncentiveWorkspaceSectionStatus;
 };
 
 export type SalesTargetIncentiveWorkspaceRateBracket = {
@@ -79,6 +81,7 @@ export type SalesTargetIncentiveWorkspaceRow = {
   correction: SalesTargetIncentiveWorkspaceCorrection | null;
   correctionRecords: SalesTargetIncentiveWorkspaceCorrection[];
   participation?: { included: boolean; reasonNote: string | null };
+  activity?: { coveredDays: number; noPositiveSales15Days: boolean };
 };
 
 export type SalesTargetIncentiveOutOfRosterReturn = {
@@ -117,6 +120,10 @@ export type SalesTargetIncentiveWorkspaceStore = {
   };
   rows: SalesTargetIncentiveWorkspaceRow[];
   outOfRosterReturns: SalesTargetIncentiveOutOfRosterReturn[];
+  positiveSellers?: Array<{
+    employeeId: string | null; personnelCode: string | null; displayName: string | null;
+    saleAmount: string; netAmount: string | null; lastPositiveDate: string;
+  }>;
 };
 
 export type SalesTargetIncentiveWorkspaceManagerGroup = {

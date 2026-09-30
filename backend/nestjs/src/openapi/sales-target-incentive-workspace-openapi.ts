@@ -25,6 +25,8 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
         rateMetadata: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
         correctionActors: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
         movementTracking: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+        positiveSellers: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+        personnelActivity: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
       },
     ),
     SalesTargetIncentiveWorkspaceCapabilities: objectSchema(
@@ -95,6 +97,7 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
         status: { type: "string", enum: ["projected", "blocked", "no_source", "corrected", "adjusted"] },
         correction: { ...ref("SalesTargetIncentiveWorkspaceCorrection"), nullable: true },
         correctionRecords: arrayRef("SalesTargetIncentiveWorkspaceCorrection"),
+        activity: objectSchema(["coveredDays", "noPositiveSales15Days"], {coveredDays:{type:"integer",minimum:0,maximum:15},noPositiveSales15Days:{type:"boolean"}}),
         participation: objectSchema(["included", "reasonNote"], { included: { type: "boolean" }, reasonNote: nullableString }),
       },
     ),
@@ -123,6 +126,10 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
         }),
         rows: arrayRef("SalesTargetIncentiveWorkspaceRow"),
         outOfRosterReturns: arrayRef("SalesTargetIncentiveOutOfRosterReturn"),
+        positiveSellers: {type:"array",items:objectSchema(["employeeId","personnelCode","displayName","saleAmount","netAmount","lastPositiveDate"],{
+          employeeId:{type:"string",format:"uuid",nullable:true},personnelCode:nullableString,displayName:nullableString,
+          saleAmount:{...decimal,nullable:false},netAmount:decimal,lastPositiveDate:{type:"string",format:"date"},
+        })},
       },
     ),
     SalesTargetIncentiveWorkspaceManagerGroup: objectSchema(

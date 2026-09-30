@@ -21,16 +21,42 @@ function harness(closed = false) {
     listDailySalesTracking: jest.fn().mockResolvedValue([]),
     listMovementTracking: jest.fn().mockResolvedValue([{ scope_type: "store", store_id: "store-a", sale_amount: "1400.00", return_amount: "-200.00", net_amount: "1200.00" }]),
   };
-  const service = new SalesTargetIncentiveWorkspaceReadService(readModel as never, corrections as never, repository as never);
+  const positiveSellers = { list: jest.fn().mockResolvedValue([]), listActivity: jest.fn().mockResolvedValue([]) };
+  const service = new SalesTargetIncentiveWorkspaceReadService(readModel as never, corrections as never, repository as never, positiveSellers as never);
   const get = () => service.getWorkspace({ periodKey: "2026-05", actor: {
     userId: "manager-a", roleCodes: ["REGION_MANAGER"], readScope: { companyIds: ["company-a"], regionIds: [], storeIds: [] },
     roleScopes: { REGION_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-a"] } },
     actionScope: { assignedStoreIds: ["store-a"] },
   } as never });
-  return { get, repository, corrections, readModel };
+  return { get, repository, corrections, readModel, positiveSellers };
 }
 
 describe("incentive norm roster visibility", () => {
+  it.each([false,true])("unions positive sellers with norms while preserving payout and identity; closed=%p",async closed=>{
+    const {get,positiveSellers,corrections,repository}=harness(closed);
+    const seller={store_id:"store-a",employee_id:"seller-a",personnel_code:"SELLER-A",display_name:"Positive seller",
+      position_code:null,current_employment_status:"active",termination_date:null,sale_amount:"100.00",
+      return_amount:"-150.00",net_amount:"-50.00",last_positive_date:"2026-05-20",covered_days:15,no_positive_sales_15_days:false};
+    positiveSellers.list.mockResolvedValue([seller,{...seller,employee_id:null,personnel_code:"UNKNOWN-A"},
+      {...seller,employee_id:"cashier-a"}] as never);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue(closed?[{store_id:"store-a",employee_id:"cashier-a",participant_type:"personnel",
+      final_row_id:"final-a",payable_amount:"12.00",final_amount:"12.00",adjustment_amount:"0.00",actual_sales_amount:"1200.00"}]:[]);
+    repository.listParticipationRevisions.mockResolvedValue([{store_id:"store-a",final_snapshot_id:closed?"snapshot-a":null,
+      exclusions_json:[{employeeId:"cashier-a",displayName:"Cashier",positionCode:"CASHIER",reasonNote:"Prime dahil değildir"}]}] as never);
+    const store=(await get()).managerGroups[0]!.stores[0]!;
+    expect(store.rows.map(row=>row.employeeId)).toEqual(["cashier-a","seller-a"]);
+    expect(store.rows[1]).toMatchObject({status:"blocked",target:null,actual:null,calculatedAmount:null,finalAmount:null,trackedNetAmount:"-50.00"});
+    expect(store.rows[0]).toMatchObject({participation:{included:false},finalAmount:"0.00",actual:closed?"1200.00":null});
+    expect(store.positiveSellers?.find(row=>row.personnelCode==="UNKNOWN-A")?.employeeId).toBeNull();
+  });
+  it("preserves the workspace and exposes an unavailable positive-seller section on query failure",async()=>{
+    const {get,positiveSellers}=harness();
+    positiveSellers.list.mockRejectedValueOnce(new Error("bounded read failed"));
+    const result=await get();
+    expect(result.sections.positiveSellers).toEqual({status:"unavailable"});
+    expect(result.managerGroups[0]!.stores[0]!.rows).toHaveLength(1);
+  });
+
   it.each([false, true])("shows assigned targetless personnel without fabricating payout or changing store sales; closed=%p", async (closed) => {
     const { get, repository } = harness(closed);
     const result = await get();

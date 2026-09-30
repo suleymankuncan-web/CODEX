@@ -1,3 +1,4 @@
+import { incentiveDailySalesCoverageSql } from "./incentive-daily-sales-coverage.sql";
 import type { SalesTargetIncentiveProjectionStore } from "../application/sales-target-incentive-read-model.service";
 import { SalesTargetIncentiveCloseRepository } from "./sales-target-incentive-close.repository";
 
@@ -111,11 +112,13 @@ const storeProjection: SalesTargetIncentiveProjectionStore = {
 
 function createHarness() {
   const query = jest.fn();
-  const withTransaction = jest.fn(async (callback) => callback({ query }));
+  const coverageQuery = jest.fn().mockResolvedValue({rows:[]});
+  const withTransaction = jest.fn(async (callback) => callback({query:(sql:string,params:unknown[]) =>
+    sql===incentiveDailySalesCoverageSql ? coverageQuery(sql,params) : query(sql,params)}));
   const databaseService = { query, withTransaction };
   const repository = new SalesTargetIncentiveCloseRepository(databaseService as never);
 
-  return { query, withTransaction, repository };
+  return { query, coverageQuery, withTransaction, repository };
 }
 
 describe("SalesTargetIncentiveCloseRepository", () => {
@@ -181,6 +184,19 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         finalRowCount: 2,
       }),
     ]);
+  });
+
+  it("rechecks daily coverage inside the locked transaction before writing a close",async()=>{
+    const {query,coverageQuery,repository}=createHarness();
+    query.mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[]}).mockResolvedValueOnce({rows:[]})
+      .mockResolvedValueOnce({rows:[{revision:"ownership-revision-1"}]});
+    coverageQuery.mockResolvedValueOnce({rows:[{store_id:storeId,business_date:"2026-05-15"}]});
+    await expect(repository.createSucceededCloseRun({companyId,periodKey:"2026-05",periodStart:"2026-05-01",
+      periodEnd:"2026-05-31",closeCutoffAt:"2026-06-01T02:00:00.000+03:00",actorUserId,
+      expectedOwnershipRevision:"ownership-revision-1",stores:[storeProjection]})).rejects.toThrow("Daily net sales coverage is incomplete");
+    expect(coverageQuery).toHaveBeenCalledWith(incentiveDailySalesCoverageSql,[
+      [companyId],[storeId],"2026-05-01","2026-05-31","2026-06-01T02:00:00.000+03:00",false]);
+    expect(query.mock.calls.some(call=>String(call[0]).includes("INSERT INTO"))).toBe(false);
   });
 
   it("creates a succeeded close run with rule, assignment, store, and final-row snapshots", async () => {

@@ -62,6 +62,7 @@ function createService(input?: {
   closeBlockingTargetRevisions?: unknown[];
 }) {
   const repository = {
+    listMissingDailySalesDays: jest.fn(async () => [] as Array<{store_id:string;business_date:string}>),
     listStoreProjectionSources: jest.fn(async () => input?.storeRows ?? [storeSource]),
     listPersonnelProjectionSources: jest.fn(async () => input?.personnelRows ?? [personnelSource]),
     listCloseBlockingKpiImports: jest.fn(
@@ -81,6 +82,14 @@ function createService(input?: {
 }
 
 describe("SalesTargetIncentiveReadModelService", () => {
+  it("reports the exact missing sales day and refuses an otherwise payable close",async()=>{
+    const {repository,service}=createService();
+    repository.listMissingDailySalesDays.mockResolvedValueOnce([{store_id:storeSource.store_id,business_date:"2026-05-15"}]);
+    const result=await service.getCloseReadiness({periodKey:"2026-05",companyIds:[storeSource.company_id],
+      nowIso:"2026-06-04T00:00:00Z",closeCutoffAt:"2026-06-04T00:00:00Z"});
+    expect(result).toMatchObject({canClose:false,status:"blocked_by_calculation",
+      blockingSalesDays:[{storeId:storeSource.store_id,businessDate:"2026-05-15"}]});
+  });
   it("builds manager and personnel projections from approved target and sales sources", async () => {
     const { repository, service } = createService();
 

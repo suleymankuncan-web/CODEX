@@ -1,3 +1,4 @@
+import { incentiveDailySalesCoverageSql, dailySalesCoverageParams, type IncentiveMissingSalesDay } from "./incentive-daily-sales-coverage.sql";
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import type {
@@ -21,7 +22,7 @@ export type SalesTargetIncentiveDailySalesRow = {
   scope_type: "store" | "employee";
   store_id: string;
   employee_id: string | null;
-  actual_amount: string;
+  actual_amount: string | null;
   last_day: string;
 };
 
@@ -33,7 +34,7 @@ export type SalesTargetIncentiveMovementRow = {
   display_name: string | null;
   sale_amount: string;
   return_amount: string;
-  net_amount: string;
+  net_amount: string | null;
   is_active_roster: boolean;
 };
 
@@ -494,12 +495,12 @@ export class SalesTargetIncentiveReadRepository {
       WITH accepted AS (
         SELECT component_outcome_id
         FROM ops.company_daily_kpi_component_outcome
-        WHERE operation = 'sales' AND status = 'succeeded'
+        WHERE operation = 'sales' AND status = 'succeeded' AND return_attribution_version = 2
           AND business_date BETWEEN $2::date AND $3::date
       ), movements AS (
         SELECT 'store'::text AS scope_type, sales.store_id, NULL::uuid AS employee_id,
           NULL::text AS personnel_code, NULL::text AS display_name,
-          sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
+          sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try, sales.component_outcome_id
         FROM ops.company_daily_kpi_store_sales sales
         INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
         WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
@@ -507,7 +508,7 @@ export class SalesTargetIncentiveReadRepository {
         UNION ALL
         SELECT 'employee', sales.store_id, sales.employee_id, employee.external_employee_ref,
           concat_ws(' ', employee.first_name, employee.last_name),
-          sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
+          sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try, sales.component_outcome_id
         FROM ops.company_daily_kpi_employee_sales sales
         INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
         INNER JOIN ops.employee employee ON employee.employee_id = sales.employee_id
@@ -515,7 +516,7 @@ export class SalesTargetIncentiveReadRepository {
           AND ops.store_type_as_of(sales.store_id, sales.business_date) = 'company'
         UNION ALL
         SELECT 'unmapped', sales.store_id, NULL::uuid, sales.personnel_code,
-          NULL::text, sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try
+          NULL::text, sales.sale_amount_try, sales.signed_return_amount_try, sales.net_amount_try, sales.component_outcome_id
         FROM ops.company_daily_kpi_unmapped_personnel_sales sales
         INNER JOIN accepted ON accepted.component_outcome_id = sales.component_outcome_id
         WHERE sales.store_id = ANY($1::uuid[]) AND sales.business_date BETWEEN $2::date AND $3::date
@@ -525,7 +526,26 @@ export class SalesTargetIncentiveReadRepository {
         personnel_code, display_name,
         SUM(sale_amount_try)::text AS sale_amount,
         SUM(signed_return_amount_try)::text AS return_amount,
-        SUM(net_amount_try)::text AS net_amount,
+        CASE WHEN BOOL_AND(scope_type='unmapped' OR EXISTS (
+          SELECT 1 FROM ops.kpi_actual actual JOIN ops.kpi_definition definition USING(kpi_id)
+          JOIN ops.company_daily_kpi_component_outcome outcome
+            ON outcome.component_outcome_id=movements.component_outcome_id
+          JOIN stg.import_batch batch ON batch.integration_source_id=outcome.integration_source_id
+            AND (batch.source_batch_id=actual.source_batch_id OR batch.import_batch_id::text=actual.source_batch_id)
+            AND batch.status='completed' AND batch.error_count=0 AND batch.entity_type='kpi'
+          JOIN ops.store store ON store.store_id=movements.store_id AND store.company_id=ANY(batch.company_ids)
+          WHERE actual.store_id=movements.store_id AND actual.scope_type=movements.scope_type
+            AND (movements.employee_id IS NULL OR actual.employee_id=movements.employee_id)
+            AND actual.period_type='daily' AND actual.period_start=outcome.business_date
+            AND actual.period_end=outcome.business_date AND actual.source_type='integration'
+            AND definition.kpi_code='NET_SALES' AND definition.is_active
+            AND actual.actual_value=ROUND(movements.net_amount_try,4)
+        )) AND (scope_type='store' OR NOT EXISTS (
+          SELECT 1 FROM ops.company_daily_kpi_return movement
+          JOIN ops.company_daily_kpi_component_outcome outcome USING(component_outcome_id)
+          WHERE movement.store_id=movements.store_id AND movement.business_date BETWEEN $2::date AND $3::date
+            AND movement.return_kind='unresolved' AND outcome.status='succeeded'
+        )) THEN SUM(ROUND(net_amount_try,4))::text END AS net_amount,
         EXISTS (
           SELECT 1 FROM ops.employee_assignment_history assignment
           INNER JOIN ops.employee current_employee ON current_employee.employee_id = assignment.employee_id
@@ -551,7 +571,32 @@ export class SalesTargetIncentiveReadRepository {
         SELECT ka.scope_type, ka.store_id,
           CASE WHEN ka.scope_type = 'employee' THEN ka.employee_id ELSE NULL END AS employee_id,
           ka.period_start AS day,
-          MAX(ka.actual_value) AS actual_amount
+          CASE WHEN BOOL_AND(ka.source_type='integration'
+          AND EXISTS (
+            SELECT 1 FROM stg.import_batch batch
+            JOIN ops.company_daily_kpi_component_outcome outcome
+              ON outcome.integration_source_id=batch.integration_source_id
+              AND outcome.business_date=ka.period_start AND outcome.operation='sales'
+              AND outcome.status='succeeded' AND outcome.return_attribution_version=2
+            WHERE (batch.source_batch_id=ka.source_batch_id OR batch.import_batch_id::text=ka.source_batch_id)
+              AND batch.entity_type='kpi' AND batch.status='completed' AND batch.error_count=0
+              AND s.company_id=ANY(batch.company_ids)
+              AND ((ka.scope_type='store' AND EXISTS (
+                SELECT 1 FROM ops.company_daily_kpi_store_sales facts
+                WHERE facts.component_outcome_id=outcome.component_outcome_id AND facts.store_id=ka.store_id
+                  AND facts.business_date=ka.period_start AND ROUND(facts.net_amount_try,4)=ka.actual_value
+              )) OR (ka.scope_type='employee' AND EXISTS (
+                SELECT 1 FROM ops.company_daily_kpi_employee_sales facts
+                WHERE facts.component_outcome_id=outcome.component_outcome_id AND facts.store_id=ka.store_id
+                  AND facts.employee_id=ka.employee_id AND facts.business_date=ka.period_start
+                  AND ROUND(facts.net_amount_try,4)=ka.actual_value
+              ) AND NOT EXISTS (
+                SELECT 1 FROM ops.company_daily_kpi_return movement
+                JOIN ops.company_daily_kpi_component_outcome accepted USING(component_outcome_id)
+                WHERE movement.store_id=ka.store_id AND movement.business_date BETWEEN $2::date AND $3::date
+                  AND movement.return_kind='unresolved' AND accepted.status='succeeded'
+              )))
+          )) THEN MAX(ka.actual_value) END AS actual_amount
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd ON kd.kpi_id = ka.kpi_id AND kd.kpi_code = 'NET_SALES'
         INNER JOIN ops.store s ON s.store_id = ka.store_id AND s.kpi_import_enabled = TRUE
@@ -569,10 +614,19 @@ export class SalesTargetIncentiveReadRepository {
           ka.period_start
       )
       SELECT scope_type, store_id::text AS store_id, employee_id::text AS employee_id,
-        SUM(actual_amount)::text AS actual_amount, MAX(day)::text AS last_day
+        CASE WHEN BOOL_AND(actual_amount IS NOT NULL) THEN SUM(actual_amount)::text END AS actual_amount, MAX(day)::text AS last_day
       FROM daily
       GROUP BY scope_type, store_id, employee_id
     `, [input.storeIds, input.periodStart, input.throughDate]);
+    return result.rows;
+  }
+
+  async listMissingDailySalesDays(input: {
+    companyIds: string[]; storeIds: string[]; periodStart: string; periodEnd: string;
+    closeCutoffAt: string; forceDaily: boolean;
+  }) {
+    const result=await this.databaseService.query<IncentiveMissingSalesDay>(
+      incentiveDailySalesCoverageSql,dailySalesCoverageParams(input));
     return result.rows;
   }
 

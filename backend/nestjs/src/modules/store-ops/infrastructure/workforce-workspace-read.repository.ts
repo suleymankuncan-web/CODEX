@@ -286,7 +286,8 @@ export class WorkforceWorkspaceReadRepository {
                   ON outcome.component_outcome_id = employee_sales.component_outcome_id
                  AND outcome.status = 'succeeded' AND outcome.operation = 'sales'
                 WHERE employee_sales.employee_id = page.employee_id
-                  AND employee_sales.business_date BETWEEN clock.business_today - 15 AND clock.business_today - 1
+                  AND employee_sales.store_id = $${storeIndex}::uuid
+                  AND employee_sales.business_date BETWEEN clock.business_today - 15 AND clock.business_today
                   AND employee_sales.sale_invoice_count > 0
                   AND employee_sales.sale_amount_try > 0
               )) AS no_positive_sales_15_days

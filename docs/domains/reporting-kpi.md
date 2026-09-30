@@ -17,6 +17,8 @@ must be preserved before changing reporting behavior.
 
 Use these first:
 
+- [Scoped return ledger and coverage](../contracts/store-returns-read-v1.md)
+
 - `docs/plans/monthly-ranking-score-source-contract-v1.md`
 - `docs/plans/kpi-source-semantics-v1.md`
 - `docs/plans/kpi-interpretation-governance-v1.md`
