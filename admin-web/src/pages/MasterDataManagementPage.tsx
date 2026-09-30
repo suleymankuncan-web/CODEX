@@ -18,21 +18,24 @@ import {
   UserMinus,
   UsersRound,
 } from 'lucide-react'
+import {
+  AdminDialogContent as DialogContent,
+  AdminDialogHeader as DialogHeader,
+  AdminDialogFooter as DialogFooter,
+  AdminDialogBody as DialogBody,
+  AdminSelectContent as SelectContent,
+} from '../components/admin/admin-dialog'
+import { AdminFormField as Field } from '../components/admin/admin-form-field'
 import { Button } from '../components/ui/button'
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
 import { Checkbox } from '../components/ui/checkbox'
-import { Label } from '../components/ui/label'
 import {
   Select,
-  SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -605,9 +608,9 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
     /^[A-Z][A-Z0-9_-]{1,79}$/.test(draft.storeCode) && !validationError)
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="tw:flex tw:max-h-[90vh] tw:flex-col tw:gap-0 tw:overflow-hidden tw:p-0 tw:sm:max-w-xl" closeLabel="Kapat">
-        <DialogHeader className="tw:shrink-0 tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4 tw:pr-14"><DialogTitle>{item === 'new' ? 'Mağaza ekle' : 'Mağazayı düzenle'}</DialogTitle><DialogDescription>Mağaza bilgilerini ve sorumlu bölge müdürünü yönetin.</DialogDescription></DialogHeader>
-        <div className="tw:grid tw:min-h-0 tw:flex-1 tw:gap-4 tw:overflow-y-auto tw:p-5 tw:sm:grid-cols-2">
+      <DialogContent className="tw:sm:max-w-xl" closeLabel="Kapat">
+        <DialogHeader><DialogTitle>{item === 'new' ? 'Mağaza ekle' : 'Mağazayı düzenle'}</DialogTitle><DialogDescription>Mağaza bilgilerini ve sorumlu bölge müdürünü yönetin.</DialogDescription></DialogHeader>
+        <DialogBody className="tw:sm:grid-cols-2">
           <Field label="Mağaza adı"><Input aria-label="Mağaza adı" disabled={item !== 'new'} value={draft.storeName} onChange={(e) => setDraft({ ...draft, storeName: e.target.value })} /></Field>
           <Field label="Mağaza kodu"><Input aria-label="Mağaza kodu" autoCapitalize="characters" maxLength={80} spellCheck={false} value={draft.storeCode} onChange={(e) => setDraft({ ...draft, storeCode: e.target.value.toUpperCase() })} /></Field>
           <Field className="tw:sm:col-span-2" label="Bölge müdürü">
@@ -620,14 +623,14 @@ function StoreEditorDialog({ item, managers, onOpenChange, onSave, pending }: {
           <Field label="Durum"><Select value={draft.status} onValueChange={(value) => setDraft({ ...draft, status: value as StoreDraft['status'] })}><SelectTrigger aria-label="Mağaza durumu" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Aktif</SelectItem><SelectItem value="inactive">Pasif</SelectItem><SelectItem value="closed">Kapalı</SelectItem></SelectContent></Select></Field>
           <label className="tw:flex tw:items-start tw:gap-3 tw:rounded-lg tw:border tw:p-3 tw:sm:col-span-2"><Checkbox aria-label="KPI aktarımına dahil" checked={draft.kpiImportEnabled} onCheckedChange={(checked) => setDraft({ ...draft, kpiImportEnabled: checked === true })} /><span><span className="tw:block tw:text-sm tw:font-medium">KPI aktarımına dahil</span><span className="tw:block tw:text-xs tw:text-muted-foreground">Kapalı olduğunda mağaza günlük KPI aktarımına alınmaz.</span></span></label>
           <div className="tw:grid tw:gap-3 tw:sm:col-span-2">
-            <div className="tw:flex tw:items-center tw:justify-between"><Label>Mağaza e-posta adresleri</Label><Button disabled={draft.contactEmails.length >= 10} type="button" size="sm" variant="outline" onClick={() => setDraft({ ...draft, contactEmails: [...draft.contactEmails, { clientId: crypto.randomUUID(), emailAddress: '', label: '', isPrimary: draft.contactEmails.length === 0 }] })}><Plus aria-hidden="true" /> E-posta ekle</Button></div>
-            {draft.contactEmails.map((email, index) => <div className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:p-3 tw:sm:grid-cols-[1fr_0.7fr_auto_auto]" key={email.clientId}><Input aria-label={`Mağaza e-posta adresi ${index + 1}`} type="email" value={email.emailAddress} onChange={(event) => setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, emailAddress: event.target.value } : item) })} placeholder="magaza@firma.com" /><Input aria-label={`E-posta etiketi ${index + 1}`} value={email.label ?? ''} onChange={(event) => setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} placeholder="Operasyon" /><label className="tw:flex tw:items-center tw:gap-2 tw:text-sm"><Checkbox aria-label={`Birincil e-posta ${index + 1}`} checked={email.isPrimary} onCheckedChange={(checked) => checked === true && setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index })) })} /> Birincil</label><Button aria-label={`E-posta ${index + 1} adresini kaldır`} type="button" size="sm" variant="ghost" onClick={() => { const next = draft.contactEmails.filter((_, itemIndex) => itemIndex !== index); setDraft({ ...draft, contactEmails: next.length > 0 && !next.some((item) => item.isPrimary) ? next.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === 0 })) : next }) }}>Kaldır</Button></div>)}
-            {contactEmailError ? <p className="tw:text-sm tw:text-destructive" role="alert">{contactEmailError}</p> : null}
+            <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3"><span className="tw:text-sm tw:font-medium">Mağaza e-posta adresleri</span><Button disabled={draft.contactEmails.length >= 10} type="button" size="sm" variant="outline" onClick={() => setDraft({ ...draft, contactEmails: [...draft.contactEmails, { clientId: crypto.randomUUID(), emailAddress: '', label: '', isPrimary: draft.contactEmails.length === 0 }] })}><Plus aria-hidden="true" /> E-posta ekle</Button></div>
+            {draft.contactEmails.map((email, index) => <div className="tw:grid tw:grid-cols-2 tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:p-3" key={email.clientId}><Field className="tw:col-span-2 tw:sm:col-span-1" label={`E-posta adresi ${index + 1}`}><Input aria-describedby={contactEmailError ? 'store-contact-email-error' : undefined} aria-label={`Mağaza e-posta adresi ${index + 1}`} type="email" value={email.emailAddress} onChange={(event) => setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, emailAddress: event.target.value } : item) })} placeholder="magaza@firma.com" /></Field><Field className="tw:col-span-2 tw:sm:col-span-1" label={`E-posta etiketi ${index + 1}`}><Input aria-label={`E-posta etiketi ${index + 1}`} value={email.label ?? ''} onChange={(event) => setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item) })} placeholder="Operasyon" /></Field><label className="tw:flex tw:items-center tw:gap-2 tw:text-sm"><Checkbox aria-label={`Birincil e-posta ${index + 1}`} checked={email.isPrimary} onCheckedChange={(checked) => checked === true && setDraft({ ...draft, contactEmails: draft.contactEmails.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index })) })} /> Birincil</label><Button aria-label={`E-posta ${index + 1} adresini kaldır`} type="button" size="sm" variant="ghost" onClick={() => { const next = draft.contactEmails.filter((_, itemIndex) => itemIndex !== index); setDraft({ ...draft, contactEmails: next.length > 0 && !next.some((item) => item.isPrimary) ? next.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === 0 })) : next }) }}>Kaldır</Button></div>)}
+            {contactEmailError ? <p className="tw:text-sm tw:text-destructive" id="store-contact-email-error" role="alert">{contactEmailError}</p> : null}
           </div>
           {item && item !== 'new' && draft.storeType !== item.storeType ? <Field className="tw:sm:col-span-2" label="Mağaza tipi geçiş tarihi"><Input aria-label="Mağaza tipi geçiş tarihi" type="date" max={today} value={draft.storeTypeEffectiveOn} onChange={(e) => setDraft({ ...draft, storeTypeEffectiveOn: e.target.value })} /></Field> : null}
           {validationError ? <p className="tw:sm:col-span-2 tw:text-sm tw:text-destructive" role="alert">{validationError}</p> : null}
-        </div>
-        <DialogFooter className="tw:shrink-0 tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4"><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => onSave(draft)}><BadgePlus aria-hidden="true" /> {pending ? 'Kaydediliyor' : 'Kaydet'}</Button></DialogFooter>
+        </DialogBody>
+        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => onSave(draft)}><BadgePlus aria-hidden="true" /> {pending ? 'Kaydediliyor' : 'Kaydet'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -647,12 +650,12 @@ function PersonnelEntryDialog({ open, stores, positions, onOpenChange, onSave, p
   const valid = Boolean(draft.firstName.trim() && draft.lastName.trim() && nationalIdValid && phoneNumberValid && /^[a-zA-Z0-9._-]{3,80}$/.test(draft.username.trim()) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim()) && draft.hireDate && draft.storeId && draft.positionId)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="tw:max-h-[calc(100dvh-2rem)] tw:gap-0 tw:overflow-y-auto tw:p-0 tw:sm:max-w-2xl" closeLabel="Kapat">
-        <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-3 tw:pr-14"><DialogTitle>Personel girişi</DialogTitle><DialogDescription className="tw:sr-only">Personel kaydı ve ilk mağaza ataması.</DialogDescription></DialogHeader>
-        <div className="tw:grid tw:gap-3 tw:px-5 tw:pt-3 tw:pb-4 tw:sm:grid-cols-2">
+      <DialogContent className="tw:sm:max-w-2xl" closeLabel="Kapat">
+        <DialogHeader><DialogTitle>Personel girişi</DialogTitle><DialogDescription className="tw:sr-only">Personel kaydı ve ilk mağaza ataması.</DialogDescription></DialogHeader>
+        <DialogBody className="tw:sm:grid-cols-2">
           <Field label="Ad"><Input aria-label="Ad" autoCapitalize="words" autoComplete="given-name" className="tw:normal-case" value={draft.firstName} onChange={(e) => setDraft({ ...draft, firstName: e.target.value })} /></Field>
           <Field label="Soyad"><Input aria-label="Soyad" autoCapitalize="words" autoComplete="family-name" className="tw:normal-case" value={draft.lastName} onChange={(e) => setDraft({ ...draft, lastName: e.target.value })} /></Field>
-          <Field label="T.C. kimlik numarası">
+          <Field label="T.C. kimlik numarası" description="11 haneli T.C. kimlik numarası." error={draft.nationalId.length > 0 && !nationalIdValid ? 'Geçerli bir T.C. kimlik numarası girin.' : undefined}>
             <Input
               aria-invalid={draft.nationalId.length > 0 && !nationalIdValid}
               aria-label="T.C. kimlik numarası"
@@ -664,7 +667,7 @@ function PersonnelEntryDialog({ open, stores, positions, onOpenChange, onSave, p
               value={draft.nationalId}
             />
           </Field>
-          <Field label="Telefon numarası">
+          <Field label="Telefon numarası" description="Ülke kodu ile telefon numarası." error={draft.phoneNumber.length > 0 && !phoneNumberValid ? 'Geçerli bir telefon numarası girin.' : undefined}>
             <Input
               aria-invalid={draft.phoneNumber.length > 0 && !phoneNumberValid}
               aria-label="Telefon numarası"
@@ -682,8 +685,8 @@ function PersonnelEntryDialog({ open, stores, positions, onOpenChange, onSave, p
           <Field label="İşe giriş tarihi"><Input aria-label="İşe giriş tarihi" max={today} type="date" value={draft.hireDate} onChange={(e) => setDraft({ ...draft, hireDate: e.target.value })} /></Field>
           <Field label="Mağaza"><MasterDataStoreCombobox stores={stores} value={draft.storeId} onValueChange={(value) => setDraft({ ...draft, storeId: value })} /></Field>
           <Field label="Pozisyon"><Select value={draft.positionId} onValueChange={(value) => setDraft({ ...draft, positionId: value })}><SelectTrigger aria-label="Pozisyon" className="tw:w-full"><SelectValue placeholder="Pozisyon seçin" /></SelectTrigger><SelectContent>{positions.map((position) => <SelectItem key={position.positionId} value={position.positionId}>{position.positionName}</SelectItem>)}</SelectContent></Select></Field>
-        </div>
-        <DialogFooter className="tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-3"><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => {
+        </DialogBody>
+        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!valid || pending} onClick={() => {
           const { externalEmployeeRef, ...requiredDraft } = draft
           onSave({
             ...requiredDraft,
@@ -747,16 +750,16 @@ function PersonnelEditorDialog({ item, stores, positions, onOpenChange, onSave, 
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="tw:max-h-[calc(100dvh-2rem)] tw:gap-0 tw:overflow-y-auto tw:p-0 tw:sm:max-w-2xl" closeLabel="Kapat">
-        <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-3 tw:pr-14">
+      <DialogContent className="tw:sm:max-w-2xl" closeLabel="Kapat">
+        <DialogHeader>
           <DialogTitle>Personel bilgilerini düzenle</DialogTitle>
           <DialogDescription className="tw:sr-only">Personel bilgileri ve mağaza ataması.</DialogDescription>
         </DialogHeader>
-        <div className="tw:grid tw:gap-3 tw:px-5 tw:pt-3 tw:pb-4 tw:sm:grid-cols-2">
+        <DialogBody className="tw:sm:grid-cols-2">
           <Field label="Ad"><Input aria-label="Ad" autoCapitalize="words" autoComplete="given-name" className="tw:normal-case" value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
           <Field label="Soyad"><Input aria-label="Soyad" autoCapitalize="words" autoComplete="family-name" className="tw:normal-case" value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
           <Field label="T.C. (değiştirilemez)"><Input aria-label="T.C. (değiştirilemez)" disabled value={formatMaskedNationalId(item?.nationalIdLast4 ?? null)} /></Field>
-          <Field label="Telefon numarası"><Input aria-invalid={draft.phoneNumber.length > 0 && !phoneNumberValid} aria-label="Telefon numarası" autoComplete="tel" inputMode="tel" maxLength={20} value={draft.phoneNumber} onChange={(event) => setDraft({ ...draft, phoneNumber: event.target.value })} /></Field>
+          <Field label="Telefon numarası" description="Ülke kodu ile telefon numarası." error={draft.phoneNumber.length > 0 && !phoneNumberValid ? 'Geçerli bir telefon numarası girin.' : undefined}><Input aria-invalid={draft.phoneNumber.length > 0 && !phoneNumberValid} aria-label="Telefon numarası" autoComplete="tel" inputMode="tel" maxLength={20} value={draft.phoneNumber} onChange={(event) => setDraft({ ...draft, phoneNumber: event.target.value })} /></Field>
           <Field label="Sicil numarası"><Input aria-label="Sicil numarası" value={draft.externalEmployeeRef} onChange={(event) => setDraft({ ...draft, externalEmployeeRef: event.target.value })} /></Field>
           <Field label="Personel durumu"><Select value={draft.employmentStatus} onValueChange={(value) => setDraft({ ...draft, employmentStatus: value as 'active' | 'inactive' })}><SelectTrigger aria-label="Personel durumu" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Aktif</SelectItem><SelectItem value="inactive">Pasif</SelectItem></SelectContent></Select></Field>
           <Field label="Çalışma tipi"><Select value={draft.employmentType} onValueChange={(value) => setDraft({ ...draft, employmentType: value as PersonnelEditDraft['employmentType'] })}><SelectTrigger aria-label="Çalışma tipi" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="full_time">Tam zamanlı</SelectItem><SelectItem value="part_time">Yarı zamanlı</SelectItem><SelectItem value="temporary">Geçici</SelectItem></SelectContent></Select></Field>
@@ -764,8 +767,8 @@ function PersonnelEditorDialog({ item, stores, positions, onOpenChange, onSave, 
           <Field label="Mağaza"><MasterDataStoreCombobox stores={stores} value={draft.storeId} onValueChange={(value) => setDraft({ ...draft, storeId: value })} /></Field>
           <Field label="Pozisyon"><Select value={draft.positionId} onValueChange={(value) => setDraft({ ...draft, positionId: value })}><SelectTrigger aria-label="Pozisyon" className="tw:w-full"><SelectValue placeholder="Pozisyon seçin" /></SelectTrigger><SelectContent>{positions.map((position) => <SelectItem key={position.positionId} value={position.positionId}>{position.positionName}</SelectItem>)}</SelectContent></Select></Field>
           <Field className="tw:sm:col-span-2" label="Mağaza atama başlangıcı"><Input aria-label="Mağaza atama başlangıcı" max={today} type="date" value={draft.assignmentStartDate} onChange={(event) => setDraft({ ...draft, assignmentStartDate: event.target.value })} /></Field>
-        </div>
-        <DialogFooter className="tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-3">
+        </DialogBody>
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button>
           <Button disabled={!valid || pending} onClick={() => {
             if (!item) return
@@ -797,20 +800,16 @@ function PersonnelExitDialog({ item, onOpenChange, onSave, pending }: { item: Pe
   const [reason, setReason] = useState('')
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="tw:gap-0 tw:overflow-hidden tw:p-0 tw:sm:max-w-md" closeLabel="Kapat">
-        <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4 tw:pr-14"><DialogTitle>Personel çıkışı</DialogTitle><DialogDescription>{item?.displayName} için çıkış tamamlandığında bağlı kullanıcı erişimi ve aktif yetkiler de kapatılır.</DialogDescription></DialogHeader>
-        <div className="tw:grid tw:gap-4 tw:p-5">
+      <DialogContent className="tw:sm:max-w-md" closeLabel="Kapat">
+        <DialogHeader><DialogTitle>Personel çıkışı</DialogTitle><DialogDescription>{item?.displayName} için çıkış tamamlandığında bağlı kullanıcı erişimi ve aktif yetkiler de kapatılır.</DialogDescription></DialogHeader>
+        <DialogBody>
           <Field label="Çıkış tarihi"><Input aria-label="Çıkış tarihi" max={today} type="date" value={terminationDate} onChange={(e) => setTerminationDate(e.target.value)} /></Field>
           <Field label="Çıkış nedeni"><Input aria-label="Çıkış nedeni" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Kısa ve denetlenebilir bir açıklama" /></Field>
-        </div>
-        <DialogFooter className="tw:border-t tw:border-border tw:bg-muted/35 tw:px-5 tw:py-4"><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={reason.trim().length < 2 || pending} onClick={() => onSave({ terminationDate, reason: reason.trim(), ...(item?.updatedAt ? { expectedUpdatedAt: item.updatedAt } : {}) })} variant="destructive"><LogOut aria-hidden="true" /> {pending ? 'Kapatılıyor' : 'Çıkışı tamamla'}</Button></DialogFooter>
+        </DialogBody>
+        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={reason.trim().length < 2 || pending} onClick={() => onSave({ terminationDate, reason: reason.trim(), ...(item?.updatedAt ? { expectedUpdatedAt: item.updatedAt } : {}) })} variant="destructive"><LogOut aria-hidden="true" /> {pending ? 'Kapatılıyor' : 'Çıkışı tamamla'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
-}
-
-function Field({ children, className, label }: { children: React.ReactNode; className?: string; label: string }) {
-  return <div className={className}><Label className="tw:mb-1.5">{label}</Label>{children}</div>
 }
 
 function StatusBadge({ status }: { status: string }) {

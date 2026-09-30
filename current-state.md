@@ -2,24 +2,24 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-09-22
+Last verified: 2026-09-30
 Use when: recovering current scope, blockers and next action
 Do not use when: inferring live deployment or selecting a branch from old PR notes
 
 ## Now
 
-- Owner approved sequential PRs/merges for Store KPI, Primler and bounded UI.
+- Owner approved the nine-PR Store KPI/Primler hardening train and bounded UI.
   Primler seals RM preparation per company-month: Sales Director → HR → GM.
   Returns archive revisions and restart at Sales Director. Only GM final applies
   money; payroll uses its seal. History remains legacy. Stage authority intersects
-  persona/company capability. Real API data; labs dev-only. Backend/schema deploy
-  is required; refresh GitHub for merge status. Local tests do not prove live deploy.
+  persona/company capability. Auth/Master forms use bounded body scroll, fixed
+  actions and focus restoration. Real API data; labs dev-only. Backend/schema
+  deploy is separate; manual on-prem proof/final packaging deferred by owner.
   [Scope and verification](docs/ui/incentives-local-preview.md).
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
-- Process work: bounded task-based reading and progressive skills replace blanket
-  manual loading. Verification, data integrity and activation gates are unchanged.
+- Process: task-based reading; verification, integrity and activation gates remain.
 - Ranking monthly HG is merged in PR #1167 (`2db36bd1`), verified from GitHub/main
   on 18 September. Selected-day sales use whole monthly targets; published admin
   HG weight applies directly. Other KPI scales and closed snapshots are preserved.

@@ -17,22 +17,26 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
+import {
+  AdminDialogContent as DialogContent,
+  AdminDialogHeader as DialogHeader,
+  AdminDialogFooter as DialogFooter,
+  AdminDialogBody as DialogBody,
+  AdminSelectContent as SelectContent,
+} from '../components/admin/admin-dialog'
+import { AdminFormField as Field } from '../components/admin/admin-form-field'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import {
   Select,
-  SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -436,17 +440,16 @@ function CreateUserDialog({ open, onOpenChange, onSave, pending }: {
         <DialogTitle>Kullanıcı ekle</DialogTitle>
         <DialogDescription>Ad ve soyadı ayrı girin. Keycloak hesabı otomatik oluşturulur; davet bağlantısı e-posta adresine gönderilir.</DialogDescription>
       </DialogHeader>
-      <div className="tw:grid tw:gap-3">
+      <DialogBody>
         <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2">
           <Field label="Ad"><Input aria-label="Ad" autoComplete="given-name" maxLength={120} value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
           <Field label="Soyad"><Input aria-label="Soyad" autoComplete="family-name" maxLength={120} value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
         </div>
-        <Field label="Kullanıcı adı"><Input aria-label="Kullanıcı adı" autoComplete="off" maxLength={120} value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} /></Field>
-        <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Giriş adı boşluk içermez; harf, rakam, nokta, kısa çizgi ve alt çizgi kullanın.</p>
+        <Field label="Kullanıcı adı" description="Giriş adı boşluk içermez; harf, rakam, nokta, kısa çizgi ve alt çizgi kullanın."><Input aria-label="Kullanıcı adı" autoComplete="off" maxLength={120} value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} /></Field>
         <Field label="E-posta"><Input aria-label="E-posta" autoComplete="email" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></Field>
         <Field label="Kimlik sağlayıcı"><Select value={draft.authProvider} onValueChange={(value) => setDraft({ ...draft, authProvider: value as CreateUserAccountInput['authProvider'], providerSubject: '' })}><SelectTrigger aria-label="Kimlik sağlayıcı" className="tw:w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="oidc">Keycloak / OIDC</SelectItem><SelectItem value="clerk">Clerk</SelectItem><SelectItem value="sso">SSO</SelectItem><SelectItem value="local">Yerel</SelectItem></SelectContent></Select></Field>
         {draft.authProvider !== 'oidc' ? <Field label="Sağlayıcı kullanıcı kimliği"><Input aria-label="Sağlayıcı kullanıcı kimliği" value={draft.providerSubject} onChange={(event) => setDraft({ ...draft, providerSubject: event.target.value })} placeholder="Örn. user_..." /></Field> : null}
-      </div>
+      </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button>
         <Button disabled={!canSave} onClick={() => onSave({
@@ -485,16 +488,15 @@ function EditUserDialog({ user, open, onOpenChange, onSave, pending }: {
         <DialogTitle>Kullanıcı bilgilerini düzenle</DialogTitle>
         <DialogDescription>Giriş adı, ad soyad ve e-posta bilgilerini güncelleyin.</DialogDescription>
       </DialogHeader>
-      <div className="tw:grid tw:gap-3">
+      <DialogBody>
         <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2">
           <Field label="Ad"><Input aria-label="Ad" autoComplete="given-name" disabled={!nameEditable} maxLength={120} value={draft.firstName} onChange={(event) => setDraft({ ...draft, firstName: event.target.value })} /></Field>
           <Field label="Soyad"><Input aria-label="Soyad" autoComplete="family-name" disabled={!nameEditable} maxLength={120} value={draft.lastName} onChange={(event) => setDraft({ ...draft, lastName: event.target.value })} /></Field>
         </div>
         {!nameEditable ? <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Ad ve soyad personel sicilinden güncellenir.</p> : null}
-        <Field label="Kullanıcı adı"><Input aria-label="Kullanıcı adı" autoComplete="off" maxLength={120} value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} /></Field>
-        <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Giriş adı boşluk içermez; harf, rakam, nokta, kısa çizgi ve alt çizgi kullanın.</p>
+        <Field label="Kullanıcı adı" description="Giriş adı boşluk içermez; harf, rakam, nokta, kısa çizgi ve alt çizgi kullanın."><Input aria-label="Kullanıcı adı" autoComplete="off" maxLength={120} value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} /></Field>
         <Field label="E-posta"><Input aria-label="E-posta" autoComplete="email" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></Field>
-      </div>
+      </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button>
         <Button disabled={!canSave} onClick={() => onSave({
@@ -516,7 +518,7 @@ function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave,
   const selectedStore = stores.find((store) => store.storeId === scopeId)
   const selectedRegion = regions.find((region) => region.regionId === scopeId)
   const companyId = selectedStore?.companyId ?? selectedRegion?.companyId ?? stores[0]?.companyId
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Rol ekle</DialogTitle><DialogDescription>{roleCode === 'REGION_MANAGER' ? `${user?.username} Bölge Müdürü olarak tanımlanacak. Sorumlu mağazaları Mağaza erişimi bölümünden seçin.` : `${user?.username} için rol ve yetki alanı seçin.`}</DialogDescription></DialogHeader><div className="tw:grid tw:gap-3">{unavailable ? <AssignmentAvailabilityState kind="role" isError={unavailableByError} /> : null}<Field label="Rol"><Select value={roleCode} onValueChange={(value) => { setRoleCode(value); setScopeId('') }}><SelectTrigger aria-label="Rol" className="tw:w-full"><SelectValue placeholder="Rol seçin" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.roleCode} value={role.roleCode}>{roleDisplayName(role)}</SelectItem>)}</SelectContent></Select></Field>{scopeType === 'region' ? <Field label="Bölge"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol bölgesi" className="tw:w-full"><SelectValue placeholder="Bölge seçin" /></SelectTrigger><SelectContent>{regions.map((region) => <SelectItem key={region.regionId} value={region.regionId}>{region.regionName}</SelectItem>)}</SelectContent></Select></Field> : null}{scopeType === 'store' ? <Field label="Mağaza"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol mağazası" className="tw:w-full"><SelectValue placeholder="Mağaza seçin" /></SelectTrigger><SelectContent>{stores.map((store) => <SelectItem key={store.storeId} value={store.storeId}>{store.storeName}</SelectItem>)}</SelectContent></Select></Field> : null}</div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || !roleCode || !companyId || (scopeType !== 'company' && !scopeId) || pending || unavailable} onClick={() => !unavailable && user && companyId && onSave({ userId: user.userId, roleCode: roleCode as Parameters<typeof onSave>[0]['roleCode'], scopeType, companyId, ...(scopeType === 'region' ? { regionId: scopeId } : {}), ...(scopeType === 'store' ? { storeId: scopeId } : {}) })}><ShieldCheck aria-hidden="true" /> Rolü ata</Button></DialogFooter></DialogContent></Dialog>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Rol ekle</DialogTitle><DialogDescription>{roleCode === 'REGION_MANAGER' ? `${user?.username} Bölge Müdürü olarak tanımlanacak. Sorumlu mağazaları Mağaza erişimi bölümünden seçin.` : `${user?.username} için rol ve yetki alanı seçin.`}</DialogDescription></DialogHeader><DialogBody>{unavailable ? <AssignmentAvailabilityState kind="role" isError={unavailableByError} /> : null}<Field label="Rol"><Select value={roleCode} onValueChange={(value) => { setRoleCode(value); setScopeId('') }}><SelectTrigger aria-label="Rol" className="tw:w-full"><SelectValue placeholder="Rol seçin" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.roleCode} value={role.roleCode}>{roleDisplayName(role)}</SelectItem>)}</SelectContent></Select></Field>{scopeType === 'region' ? <Field label="Bölge"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol bölgesi" className="tw:w-full"><SelectValue placeholder="Bölge seçin" /></SelectTrigger><SelectContent>{regions.map((region) => <SelectItem key={region.regionId} value={region.regionId}>{region.regionName}</SelectItem>)}</SelectContent></Select></Field> : null}{scopeType === 'store' ? <Field label="Mağaza"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol mağazası" className="tw:w-full"><SelectValue placeholder="Mağaza seçin" /></SelectTrigger><SelectContent>{stores.map((store) => <SelectItem key={store.storeId} value={store.storeId}>{store.storeName}</SelectItem>)}</SelectContent></Select></Field> : null}</DialogBody><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || !roleCode || !companyId || (scopeType !== 'company' && !scopeId) || pending || unavailable} onClick={() => !unavailable && user && companyId && onSave({ userId: user.userId, roleCode: roleCode as Parameters<typeof onSave>[0]['roleCode'], scopeType, companyId, ...(scopeType === 'region' ? { regionId: scopeId } : {}), ...(scopeType === 'store' ? { storeId: scopeId } : {}) })}><ShieldCheck aria-hidden="true" /> Rolü ata</Button></DialogFooter></DialogContent></Dialog>
 }
 
 function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, user, onSave, pending, unavailable, unavailableByError }: { assignedStoreIds: string[]; open: boolean; onOpenChange: (open: boolean) => void; stores: Array<{ storeId: string; storeName: string; storeCode: string }>; user: UserAccount | null; onSave: (draft: { userId: string; storeIds: string[] }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
@@ -530,15 +532,15 @@ function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, u
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="tw:gap-0 tw:overflow-hidden tw:p-0 tw:sm:max-w-2xl" closeLabel="Kapat">
-        <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/40 tw:px-5 tw:py-4 tw:pr-14">
+      <DialogContent className="tw:sm:max-w-2xl" closeLabel="Kapat">
+        <DialogHeader>
           <DialogTitle>Mağaza erişimi ekle</DialogTitle>
           <DialogDescription>{user?.username} için bir veya birden fazla mağaza seçin.</DialogDescription>
         </DialogHeader>
-        <div className="tw:grid tw:gap-4 tw:p-5">
+        <DialogBody>
           {unavailable ? <AssignmentAvailabilityState kind="store" isError={unavailableByError} /> : null}
           <div className="tw:relative"><Search className="tw:absolute tw:top-1/2 tw:left-3 tw:size-4 tw:-translate-y-1/2 tw:text-muted-foreground" aria-hidden="true" /><Input aria-label="Mağaza ara" className="tw:h-11 tw:pl-9" onChange={(event) => setQuery(event.target.value)} placeholder="Mağaza adı veya kodu" value={query} /></div>
-          {selectedStores.length ? <div aria-label="Seçilen mağazalar" className="tw:flex tw:flex-wrap tw:gap-2">{selectedStores.map((store) => <button className="tw:flex tw:appearance-none tw:items-center tw:gap-1.5 tw:rounded-full tw:border-0 tw:bg-accent/35 tw:px-3 tw:py-1.5 tw:text-xs tw:font-semibold tw:text-primary tw:shadow-none" key={store.storeId} onClick={() => toggleStore(store.storeId)} type="button">{store.storeName}<span aria-hidden="true">×</span></button>)}</div> : <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Henüz mağaza seçilmedi.</p>}
+          {selectedStores.length ? <div aria-label="Seçilen mağazalar" className="tw:flex tw:max-h-40 tw:flex-wrap tw:gap-2 tw:overflow-y-auto">{selectedStores.map((store) => <button className="tw:flex tw:appearance-none tw:items-center tw:gap-1.5 tw:rounded-full tw:border-0 tw:bg-accent/35 tw:px-3 tw:py-1.5 tw:text-xs tw:font-semibold tw:text-primary tw:shadow-none" key={store.storeId} onClick={() => toggleStore(store.storeId)} type="button">{store.storeName}<span aria-hidden="true">×</span></button>)}</div> : <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Henüz mağaza seçilmedi.</p>}
           <div aria-label="Mağaza seçim listesi" className="tw:max-h-72 tw:overflow-y-auto tw:rounded-2xl tw:border tw:border-border tw:bg-background tw:p-1.5">
             {filteredStores.length ? filteredStores.map((store) => {
               const selected = selectedStoreIds.includes(store.storeId)
@@ -546,8 +548,8 @@ function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, u
               return <button aria-pressed={selected} className={`tw:flex tw:w-full tw:appearance-none tw:items-center tw:gap-3 tw:rounded-xl tw:border-0 tw:px-3 tw:py-2.5 tw:text-left tw:shadow-none tw:transition ${selected ? 'tw:bg-accent/25' : 'tw:bg-transparent tw:hover:bg-muted/40'}`} disabled={alreadyAssigned} key={store.storeId} onClick={() => toggleStore(store.storeId)} type="button"><span className={`tw:grid tw:size-5 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border ${selected ? 'tw:border-primary tw:bg-primary tw:text-primary-foreground' : 'tw:border-border tw:bg-background tw:text-transparent'}`}><Check className="tw:size-3.5" aria-hidden="true" /></span><span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:truncate tw:text-sm tw:font-semibold">{store.storeName}</span><span className="tw:block tw:text-xs tw:text-muted-foreground">{store.storeCode}</span></span>{alreadyAssigned ? <span className="tw:text-[10px] tw:font-semibold tw:text-emerald-700">Zaten atanmış</span> : null}</button>
             }) : <p className="tw:m-0 tw:px-3 tw:py-8 tw:text-center tw:text-sm tw:text-muted-foreground">Aramayla eşleşen mağaza yok.</p>}
           </div>
-        </div>
-        <DialogFooter className="tw:border-t tw:border-border tw:bg-muted/40 tw:px-5 tw:py-4"><span className="tw:mr-auto tw:text-xs tw:font-semibold tw:text-muted-foreground">{selectedStoreIds.length} mağaza seçildi</span><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || selectedStoreIds.length === 0 || pending || unavailable} onClick={() => !unavailable && user && onSave({ userId: user.userId, storeIds: selectedStoreIds })}><Building2 aria-hidden="true" /> {pending ? 'Erişim veriliyor' : 'Seçilenlere erişim ver'}</Button></DialogFooter>
+        </DialogBody>
+        <DialogFooter><span className="tw:mr-auto tw:text-xs tw:font-semibold tw:text-muted-foreground">{selectedStoreIds.length} mağaza seçildi</span><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || selectedStoreIds.length === 0 || pending || unavailable} onClick={() => !unavailable && user && onSave({ userId: user.userId, storeIds: selectedStoreIds })}><Building2 aria-hidden="true" /> {pending ? 'Erişim veriliyor' : 'Seçilenlere erişim ver'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -591,12 +593,12 @@ function CapabilityAssignmentDialog({ open, onOpenChange, roleAssignments, roles
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="tw:sm:max-w-xl" closeLabel="Kapat">
       <DialogHeader><DialogTitle>Kişisel yetki ekle</DialogTitle><DialogDescription>{user?.username} için rol kapsamını aşmayan, süreli veya süresiz bir capability seçin.</DialogDescription></DialogHeader>
-      <div className="tw:grid tw:gap-4">
+      <DialogBody>
         <Field label="Bağlı rol"><Select value={roleAssignmentId} onValueChange={(value) => { const next = eligibleAssignments.find((item) => item.assignmentId === value); setRoleAssignmentId(value); setPermissionCode(''); setStartsAt(''); setEndsAt(toDateTimeLocal(next?.effectiveTo)) }}><SelectTrigger aria-label="Yetkinin bağlı olduğu rol" className="tw:w-full"><SelectValue placeholder="Rol ataması seçin" /></SelectTrigger><SelectContent>{eligibleAssignments.map((item) => <SelectItem key={item.assignmentId} value={item.assignmentId}>{roleNames[item.roleCode] ?? item.roleCode} · {scopeLabel(item)}{item.effectiveTo ? ` · ${new Date(item.effectiveTo).toLocaleDateString('tr-TR')} tarihine kadar` : ''}</SelectItem>)}</SelectContent></Select></Field>
         <Field label="Yetki"><Select disabled={!assignment} value={permissionCode} onValueChange={setPermissionCode}><SelectTrigger aria-label="Kişisel yetki" className="tw:w-full"><SelectValue placeholder="Yetki seçin" /></SelectTrigger><SelectContent>{visiblePermissions.map((permission) => <SelectItem key={permission.permissionCode} value={permission.permissionCode}>{permissionDisplayName(permission.permissionCode)}</SelectItem>)}</SelectContent></Select></Field>
         <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2"><Field label="Başlangıç (opsiyonel)"><Input aria-label="Yetki başlangıcı" min={toDateTimeLocal(assignment?.effectiveFrom)} max={toDateTimeLocal(assignment?.effectiveTo)} type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} /></Field><Field label="Bitiş"><Input aria-label="Yetki bitişi" min={startsAt || toDateTimeLocal(assignment?.effectiveFrom)} max={toDateTimeLocal(assignment?.effectiveTo)} type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} /></Field></div>
         <Field label="Gerekçe"><Input aria-label="Yetki gerekçesi" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Bu yetkinin neden verildiğini yazın" /></Field>
-      </div>
+      </DialogBody>
       <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!canSave} onClick={() => assignment?.companyId && onSave({ roleAssignmentId: assignment.assignmentId, permissionCode, scopeType: assignment.scopeType as 'company' | 'region' | 'store', companyId: assignment.companyId, ...(assignment.regionId ? { regionId: assignment.regionId } : {}), ...(assignment.storeId ? { storeId: assignment.storeId } : {}), startsAt: startsAt ? new Date(startsAt).toISOString() : new Date(dialogNow).toISOString(), ...(endsAt ? { endsAt: new Date(endsAt).toISOString() } : {}), reason: reason.trim() })}>{pending ? 'Ekleniyor' : 'Yetkiyi ekle'}</Button></DialogFooter>
     </DialogContent>
   </Dialog>
@@ -609,7 +611,7 @@ function CapabilityRevokeDialog({ assignment, onOpenChange, onConfirm, pending }
   pending: boolean
 }) {
   const [reason, setReason] = useState('')
-  return <Dialog open={Boolean(assignment)} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Kişisel yetki kaldırılsın mı?</DialogTitle><DialogDescription>{assignment ? permissionDisplayName(assignment.permissionCode) : ''} yetkisi geçmiş kanıtı korunarak kapatılır.</DialogDescription></DialogHeader><Field label="Kaldırma gerekçesi"><Input aria-label="Yetki kaldırma gerekçesi" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></Field><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={pending || reason.trim().length < 3} onClick={() => onConfirm(reason.trim())}>{pending ? 'Kaldırılıyor' : 'Yetkiyi kaldır'}</Button></DialogFooter></DialogContent></Dialog>
+  return <Dialog open={Boolean(assignment)} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Kişisel yetki kaldırılsın mı?</DialogTitle><DialogDescription>{assignment ? permissionDisplayName(assignment.permissionCode) : ''} yetkisi geçmiş kanıtı korunarak kapatılır.</DialogDescription></DialogHeader><DialogBody><Field label="Kaldırma gerekçesi"><Input aria-label="Yetki kaldırma gerekçesi" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></Field></DialogBody><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={pending || reason.trim().length < 3} onClick={() => onConfirm(reason.trim())}>{pending ? 'Kaldırılıyor' : 'Yetkiyi kaldır'}</Button></DialogFooter></DialogContent></Dialog>
 }
 
 function AssignmentAvailabilityState({ kind, isError }: { kind: 'role' | 'store'; isError: boolean }) {
@@ -621,7 +623,6 @@ function ConfirmDialog({ open, title, copy, confirmLabel, onOpenChange, onConfir
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{copy}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={pending} onClick={onConfirm}>{pending ? 'Kaydediliyor' : confirmLabel}</Button></DialogFooter></DialogContent></Dialog>
 }
 
-function Field({ children, label }: { children: React.ReactNode; label: string }) { return <div><Label className="tw:mb-1.5">{label}</Label>{children}</div> }
 const roleNames: Record<string, string> = {
   SUPER_ADMIN: 'Sistem yöneticisi',
   HR_ADMIN: 'İnsan kaynakları yöneticisi',

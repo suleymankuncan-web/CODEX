@@ -17,10 +17,14 @@ function normalizeSearch(value: string) {
 }
 
 export function MasterDataStoreCombobox({
+  id,
+  'aria-describedby': describedBy,
   onValueChange,
   stores,
   value,
 }: {
+  id?: string
+  'aria-describedby'?: string
   onValueChange: (value: string) => void
   stores: StoreOption[]
   value: string
@@ -61,6 +65,8 @@ export function MasterDataStoreCombobox({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
+          aria-describedby={describedBy}
           aria-controls={listId}
           aria-expanded={open}
           aria-label="Mağaza seç"
@@ -96,7 +102,7 @@ export function MasterDataStoreCombobox({
               aria-controls={listId}
               aria-expanded={open}
               aria-label="Mağaza ara"
-              className="tw:bg-background tw:pl-9"
+              className="tw:h-11 tw:bg-background tw:pl-9"
               onChange={(event) => {
                 setQuery(event.target.value)
                 setActiveIndex(0)
