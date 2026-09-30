@@ -9,8 +9,9 @@ import { SalesTargetIncentiveApprovalRepository } from "./sales-target-incentive
 import { SalesTargetIncentiveCorrectionRepository } from "./sales-target-incentive-correction.repository";
 import { cycleDatabase, cycleId as id, cyclePeriod as period, seedCompanyCycle } from "./incentive-company-cycle.postgres-fixture";
 import { packageFinancialReadSql } from "./incentive-package-financial-version";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { resolveMigrationSql } from "../../../shared/database/migration.service";
 
 const url = process.env.INCENTIVE_PARTICIPATION_POSTGRES_URL;
 const describePostgres = url ? describe : describe.skip;
@@ -28,6 +29,33 @@ describePostgres("sealed company approval PostgreSQL boundary", () => {
   });
   beforeEach(async () => seedCompanyCycle(pool));
   afterAll(async () => { await pool?.end(); if(created) await admin.query(`DROP DATABASE ${name} WITH (FORCE)`); await admin?.end(); });
+
+  it("applies migration 095 after the fresh canonical baseline without duplicate objects", async () => {
+    await pool.query("DROP SCHEMA ops,rpt,stg,audit CASCADE");
+    await pool.query(readFileSync(resolve(process.cwd(),"../../db/schema.sql"),"utf8"));
+    await pool.query(readFileSync(resolve(process.cwd(),"../../db/migrations/095_incentive_company_cycle_v1.sql"),"utf8"));
+    expect((await pool.query("SELECT count(*)::int AS count FROM ops.incentive_legacy_approval")).rows[0].count).toBe(0);
+    expect((await pool.query("SELECT count(*)::int AS count FROM pg_trigger WHERE tgname='incentive_decision_guard'")).rows[0].count).toBe(1);
+  });
+
+  it("applies the production migration tree on an empty disposable database", async () => {
+    await pool.query("DROP SCHEMA ops,rpt,stg,audit CASCADE");
+    const directory=resolve(process.cwd(),"../../db/migrations");
+    for (const file of readdirSync(directory).filter(file=>file.endsWith(".sql")).sort()) {
+      await pool.query(resolveMigrationSql(resolve(directory,file)));
+    }
+    expect((await pool.query("SELECT count(*)::int AS count FROM ops.incentive_company_cycle")).rows[0].count).toBe(0);
+    expect((await pool.query("SELECT count(*)::int AS count FROM pg_trigger WHERE tgname='incentive_payroll_final_proof'")).rows[0].count).toBe(1);
+  });
+
+  it("does not reclassify GM approvals or mutate seals when migration is reapplied", async () => {
+    const sealed=await seal(); await decide(sealed,"sales_director"); await decide(sealed,"hr"); await decide(sealed,"general_manager");
+    const evidence=(await repo().read(id(1),period,id(25)));
+    await pool.query(readFileSync(resolve(process.cwd(),"../../db/migrations/095_incentive_company_cycle_v1.sql"),"utf8"));
+    expect(await repo().read(id(1),period,id(25))).toEqual(evidence);
+    expect((await pool.query("SELECT count(*)::int AS count FROM ops.incentive_legacy_approval")).rows[0].count).toBe(2);
+    await expect(pool.query("DELETE FROM ops.incentive_company_decision WHERE cycle_id=$1::uuid",[sealed.cycleId])).rejects.toThrow("append-only");
+  });
 
   it("seals every manager/store with complete included norm roster and binds ordered decisions to one hash", async () => {
     const sealed=await seal(); expect(sealed.total).toBe("225.00");

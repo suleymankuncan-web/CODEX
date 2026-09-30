@@ -1,3 +1,7 @@
+-- Company incentive cycle v1.
+DO $incentive_legacy_classification$
+BEGIN
+  IF to_regclass('ops.incentive_legacy_approval') IS NULL THEN
 CREATE TABLE ops.incentive_legacy_approval (
     package_id UUID PRIMARY KEY REFERENCES ops.sales_target_incentive_region_package(sales_target_incentive_region_package_id),
     package_scope TEXT NOT NULL CHECK (package_scope IN ('legacy_region','manager_assignment')),
@@ -8,7 +12,10 @@ INSERT INTO ops.incentive_legacy_approval (package_id,package_scope)
 SELECT sales_target_incentive_region_package_id,package_scope
 FROM ops.sales_target_incentive_region_package WHERE package_status='admin_approved';
 
-CREATE TABLE ops.incentive_company_cycle (
+  END IF;
+END $incentive_legacy_classification$;
+
+CREATE TABLE IF NOT EXISTS ops.incentive_company_cycle (
     cycle_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES ops.company(company_id),
     period_key CHAR(7) NOT NULL CHECK (period_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$'),
@@ -16,7 +23,7 @@ CREATE TABLE ops.incentive_company_cycle (
     stage TEXT NOT NULL DEFAULT 'preparation' CHECK (stage IN ('preparation','sales_director','hr','general_manager','final')),
     UNIQUE (company_id,period_key), UNIQUE (cycle_id,company_id,period_key)
 );
-CREATE TABLE ops.incentive_company_revision (
+CREATE TABLE IF NOT EXISTS ops.incentive_company_revision (
     cycle_id UUID NOT NULL REFERENCES ops.incentive_company_cycle(cycle_id),
     revision_no INTEGER NOT NULL CHECK (revision_no > 0),
     seal_hash TEXT NOT NULL CHECK (seal_hash ~ '^[a-f0-9]{64}$'),
@@ -25,7 +32,7 @@ CREATE TABLE ops.incentive_company_revision (
     sealed_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     PRIMARY KEY (cycle_id,revision_no), UNIQUE (cycle_id,revision_no,seal_hash)
 );
-CREATE TABLE ops.incentive_company_decision (
+CREATE TABLE IF NOT EXISTS ops.incentive_company_decision (
     decision_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cycle_id UUID NOT NULL,
     revision_no INTEGER NOT NULL,
@@ -40,28 +47,40 @@ CREATE TABLE ops.incentive_company_decision (
     UNIQUE (cycle_id,revision_no,stage),
     CHECK (decision<>'return' OR NULLIF(BTRIM(reason_note),'') IS NOT NULL)
 );
-ALTER TABLE ops.incentive_hr_delivery ADD COLUMN final_cycle_id UUID,
-    ADD COLUMN final_revision_no INTEGER, ADD COLUMN final_seal_hash TEXT,
-    ADD CONSTRAINT incentive_hr_final_proof_fk FOREIGN KEY (final_cycle_id,final_revision_no,final_seal_hash)
-      REFERENCES ops.incentive_company_revision(cycle_id,revision_no,seal_hash),
-    ADD CONSTRAINT incentive_hr_final_proof_complete CHECK (
-      (final_cycle_id IS NULL AND final_revision_no IS NULL AND final_seal_hash IS NULL) OR
-      (final_cycle_id IS NOT NULL AND final_revision_no IS NOT NULL AND final_seal_hash IS NOT NULL));
+ALTER TABLE ops.incentive_hr_delivery ADD COLUMN IF NOT EXISTS final_cycle_id UUID,
+    ADD COLUMN IF NOT EXISTS final_revision_no INTEGER, ADD COLUMN IF NOT EXISTS final_seal_hash TEXT;
+DO $incentive_payroll_constraints$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='ops.incentive_hr_delivery'::regclass AND conname='incentive_hr_final_proof_fk') THEN
+      ALTER TABLE ops.incentive_hr_delivery ADD CONSTRAINT incentive_hr_final_proof_fk
+        FOREIGN KEY (final_cycle_id,final_revision_no,final_seal_hash)
+        REFERENCES ops.incentive_company_revision(cycle_id,revision_no,seal_hash);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='ops.incentive_hr_delivery'::regclass AND conname='incentive_hr_final_proof_complete') THEN
+      ALTER TABLE ops.incentive_hr_delivery ADD CONSTRAINT incentive_hr_final_proof_complete CHECK (
+        (final_cycle_id IS NULL AND final_revision_no IS NULL AND final_seal_hash IS NULL) OR
+        (final_cycle_id IS NOT NULL AND final_revision_no IS NOT NULL AND final_seal_hash IS NOT NULL));
+    END IF;
+END $incentive_payroll_constraints$;
 
-CREATE FUNCTION ops.guard_incentive_company_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_company_append_only() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     RAISE EXCEPTION 'Company incentive evidence is append-only' USING ERRCODE='23514';
 END $$;
+DROP TRIGGER IF EXISTS incentive_legacy_immutable ON ops.incentive_legacy_approval;
 CREATE TRIGGER incentive_legacy_immutable BEFORE INSERT OR UPDATE OR DELETE ON ops.incentive_legacy_approval
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_append_only();
+DROP TRIGGER IF EXISTS incentive_revision_immutable ON ops.incentive_company_revision;
 CREATE TRIGGER incentive_revision_immutable BEFORE UPDATE OR DELETE ON ops.incentive_company_revision
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_append_only();
+DROP TRIGGER IF EXISTS incentive_decision_immutable ON ops.incentive_company_decision;
 CREATE TRIGGER incentive_decision_immutable BEFORE UPDATE OR DELETE ON ops.incentive_company_decision
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_append_only();
+DROP TRIGGER IF EXISTS incentive_cycle_no_delete ON ops.incentive_company_cycle;
 CREATE TRIGGER incentive_cycle_no_delete BEFORE DELETE ON ops.incentive_company_cycle
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_append_only();
 
-CREATE FUNCTION ops.incentive_stage_authorized(actor UUID,company UUID,stage_value TEXT) RETURNS boolean
+CREATE OR REPLACE FUNCTION ops.incentive_stage_authorized(actor UUID,company UUID,stage_value TEXT) RETURNS boolean
 LANGUAGE sql VOLATILE AS $$
     SELECT EXISTS (
       SELECT 1 FROM ops.user_permission_assignment grant_row
@@ -82,7 +101,7 @@ LANGUAGE sql VOLATILE AS $$
     )
 $$;
 
-CREATE FUNCTION ops.incentive_responsibility_current(payload JSONB,at_time TIMESTAMPTZ) RETURNS boolean
+CREATE OR REPLACE FUNCTION ops.incentive_responsibility_current(payload JSONB,at_time TIMESTAMPTZ) RETURNS boolean
 LANGUAGE sql VOLATILE AS $$
     SELECT jsonb_typeof(payload->'responsibility')='array' AND jsonb_array_length(payload->'responsibility')>0
       AND (SELECT jsonb_agg(store_id::text ORDER BY store_id) FROM ops.store WHERE company_id::text=payload->>'companyId' AND status='active'
@@ -102,7 +121,7 @@ LANGUAGE sql VOLATILE AS $$
     )
 $$;
 
-CREATE FUNCTION ops.guard_incentive_company_decision() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_company_decision() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cycle ops.incentive_company_cycle; sealed JSONB;
 BEGIN
     SELECT * INTO STRICT cycle FROM ops.incentive_company_cycle WHERE cycle_id=NEW.cycle_id FOR UPDATE;
@@ -135,10 +154,11 @@ BEGIN
     END IF;
     RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS incentive_decision_guard ON ops.incentive_company_decision;
 CREATE TRIGGER incentive_decision_guard BEFORE INSERT ON ops.incentive_company_decision
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_decision();
 
-CREATE FUNCTION ops.guard_incentive_company_revision() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_company_revision() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cycle ops.incentive_company_cycle;
 BEGIN
     SELECT * INTO STRICT cycle FROM ops.incentive_company_cycle WHERE cycle_id=NEW.cycle_id FOR UPDATE;
@@ -154,10 +174,11 @@ BEGIN
     END IF;
     RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS incentive_revision_guard ON ops.incentive_company_revision;
 CREATE TRIGGER incentive_revision_guard BEFORE INSERT ON ops.incentive_company_revision
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_revision();
 
-CREATE FUNCTION ops.guard_incentive_company_state() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_company_state() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF ROW(OLD.cycle_id,OLD.company_id,OLD.period_key) IS DISTINCT FROM ROW(NEW.cycle_id,NEW.company_id,NEW.period_key) THEN
       RAISE EXCEPTION 'Company cycle identity is immutable' USING ERRCODE='23514';
@@ -170,10 +191,11 @@ BEGIN
           CASE OLD.stage WHEN 'sales_director' THEN 'hr' WHEN 'hr' THEN 'general_manager' WHEN 'general_manager' THEN 'final' ELSE '' END))) THEN RETURN NEW; END IF;
     RAISE EXCEPTION 'Company stages require the exact revision decision' USING ERRCODE='23514';
 END $$;
+DROP TRIGGER IF EXISTS incentive_company_state ON ops.incentive_company_cycle;
 CREATE TRIGGER incentive_company_state BEFORE UPDATE ON ops.incentive_company_cycle
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_state();
 
-CREATE FUNCTION ops.guard_incentive_new_package_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_new_package_approval() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF TG_OP='UPDATE' AND OLD.package_status='admin_approved' AND to_jsonb(OLD) IS DISTINCT FROM to_jsonb(NEW) THEN
       RAISE EXCEPTION 'Approved package proof is immutable' USING ERRCODE='23514';
@@ -190,20 +212,22 @@ BEGIN
     END IF;
     RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS incentive_new_package_approval ON ops.sales_target_incentive_region_package;
 CREATE TRIGGER incentive_new_package_approval BEFORE INSERT OR UPDATE ON ops.sales_target_incentive_region_package
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_new_package_approval();
 
-CREATE FUNCTION ops.guard_incentive_approved_copy_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_approved_copy_insert() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     PERFORM 1 FROM ops.sales_target_incentive_region_package WHERE sales_target_incentive_region_package_id=NEW.region_package_id
       AND package_status='admin_approved' FOR SHARE;
     IF FOUND THEN RAISE EXCEPTION 'Approved package store evidence is immutable' USING ERRCODE='23514'; END IF;
     RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS incentive_approved_copy_insert ON ops.sales_target_incentive_region_package_store;
 CREATE TRIGGER incentive_approved_copy_insert BEFORE INSERT ON ops.sales_target_incentive_region_package_store
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_approved_copy_insert();
 
-CREATE FUNCTION ops.guard_incentive_company_money() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_company_money() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE proposal JSONB; cycle ops.incentive_company_cycle;
 BEGIN
     IF TG_OP<>'INSERT' AND OLD.status='approved' THEN
@@ -245,13 +269,14 @@ BEGIN
     END IF;
     RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS incentive_company_money ON ops.sales_target_incentive_adjustment;
 CREATE TRIGGER incentive_company_money BEFORE INSERT OR UPDATE OR DELETE ON ops.sales_target_incentive_adjustment
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_company_money();
-CREATE UNIQUE INDEX incentive_company_proposal_once ON ops.sales_target_incentive_adjustment
+CREATE UNIQUE INDEX IF NOT EXISTS incentive_company_proposal_once ON ops.sales_target_incentive_adjustment
     ((evidence->>'companySealHash'),(evidence->>'regionCorrectionId'))
     WHERE status='approved' AND evidence ? 'companySealHash';
 
-CREATE FUNCTION ops.guard_incentive_payroll_final_proof() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE OR REPLACE FUNCTION ops.guard_incentive_payroll_final_proof() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF TG_OP='UPDATE' THEN
       IF ROW(NEW.company_id,NEW.period_key,NEW.final_cycle_id,NEW.final_revision_no,NEW.final_seal_hash)
@@ -278,5 +303,6 @@ BEGIN
     END IF;
     RETURN NEW;
 END $$;
+DROP TRIGGER IF EXISTS incentive_payroll_final_proof ON ops.incentive_hr_delivery;
 CREATE TRIGGER incentive_payroll_final_proof BEFORE INSERT OR UPDATE ON ops.incentive_hr_delivery
     FOR EACH ROW EXECUTE FUNCTION ops.guard_incentive_payroll_final_proof();

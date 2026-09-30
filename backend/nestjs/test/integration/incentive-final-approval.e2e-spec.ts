@@ -48,10 +48,10 @@ describe("individual final approval HTTP boundary", () => {
     expect((await request(app.getHttpServer()).post("/api/store/incentives/final-approval").set("x-test-grant", "true").send({ ...body, regionPackageId: "bad", submittedAt: "bad" })).status).toBe(400);
     expect(query).not.toHaveBeenCalled();
   });
-  it("allows the granted viewer through the locked existing approval workflow", async () => {
+  it("does not let the legacy grant advance a pending package past the company cycle", async () => {
     const response = await request(app.getHttpServer()).post("/api/store/incentives/final-approval").set("x-test-grant", "true").send(body);
-    expect(response.status).toBe(201);
-    expect(response.body.data.status).toBe("admin_approved");
+    expect(response.status).toBe(409);
+    expect(query.mock.calls.some(([sql]) => sql.includes("UPDATE ops.sales_target_incentive_region_package"))).toBe(false);
   });
   it("does not allow viewers to grant themselves the permission", async () => {
     expect((await request(app.getHttpServer()).patch(`/api/auth/role-assignments/${packageId}/incentive-approval`).send({ enabled: true })).status).toBe(403);

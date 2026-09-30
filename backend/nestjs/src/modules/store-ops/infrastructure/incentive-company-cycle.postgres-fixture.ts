@@ -26,7 +26,7 @@ export function cycleDatabase(pool: Pool, hooks?: { beforeQuery?: (sql: string, 
 export async function seedCompanyCycle(pool: Pool, options?: { legacyEvidence?: boolean }) {
   const schema = readFileSync(resolve(process.cwd(),"../../db/schema.sql"),"utf8");
   await pool.query("DROP SCHEMA IF EXISTS ops,rpt,stg,audit CASCADE");
-  await pool.query(schema.slice(0,schema.indexOf("CREATE TABLE ops.incentive_legacy_approval")));
+  await pool.query(schema.slice(0,schema.indexOf("-- Company incentive cycle v1.")));
   const id = cycleId;
   await pool.query(`
     INSERT INTO ops.company(company_id,company_code,company_name) VALUES ('${id(1)}','SYNTHETIC','Synthetic Company'),('${id(9)}','OTHER','Other Synthetic');

@@ -6,7 +6,7 @@ describe("HR incentive Excel", () => {
   it("exports approved totals, names, original rates and notes without formula execution", () => {
     const snapshot = hrTestSnapshot();
     const workbook = XLSX.read(buildIncentiveHrWorkbook("2026-09", snapshot.packages, snapshot.rows), { type: "buffer" });
-    expect(workbook.SheetNames).toEqual(["Müdür Özeti", "Personel Primleri"]);
+    expect(workbook.SheetNames).toEqual(["Müdür Özeti", "Personel Primleri", "Onay Kaydı"]);
     const summary = workbook.Sheets["Müdür Özeti"];
     const detail = workbook.Sheets["Personel Primleri"];
     expect(summary.C3.v).toBe(2); // Includes the submitted store with no personnel.
@@ -25,6 +25,15 @@ describe("HR incentive Excel", () => {
     expect(sumHrMoney(["0.10", "0.20", "-0.01"])).toBe("0.29");
     expect(sumHrMoney([])).toBe("0.00");
     expect(sumHrMoney(["-1.25"])).toBe("-1.25");
+  });
+  it.each(["company_cycle", "legacy_approved"] as const)("exports %s approval origin without fabricating a seal", approval_origin => {
+    const snapshot = hrTestSnapshot();
+    snapshot.packages[0] = { ...snapshot.packages[0], approval_origin,
+      ...(approval_origin === "company_cycle" ? { final_cycle_id: "synthetic-cycle", final_revision_no: 2, final_seal_hash: "a".repeat(64) } : {}) };
+    const workbook = XLSX.read(buildIncentiveHrWorkbook("2026-09", snapshot.packages, snapshot.rows), { type: "buffer" });
+    const proof = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets["Onay Kaydı"], { header: 1 });
+    expect(proof[1]).toEqual(["2026-09", approval_origin === "company_cycle" ? "Genel Müdür final onayı" : "Önceki süreçte onaylanmış kayıt",
+      approval_origin === "company_cycle" ? "synthetic-cycle" : "", approval_origin === "company_cycle" ? 2 : "", approval_origin === "company_cycle" ? "a".repeat(64) : ""]);
   });
   it("exports an all-excluded package with its stores and zero payment total", () => {
     const snapshot = hrTestSnapshot();
