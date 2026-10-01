@@ -10,6 +10,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 - [Personnel/checklist reads](docs/plans/personnel-checklist-read-audit-v1.md):
   monthly visit bounds, range references and scoped sales detail; local only.
+- [Mail rendering](docs/ui/email-visual-language-v1.md): shared app/Keycloak;
+  runtime rollout unverified.
 
 - Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
@@ -37,11 +39,10 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Next
 
-Refresh branch/worktree, relevant PR head/checks and runtime evidence for the user's
-next task. Do not infer live PASS from merged code. Address observed product issues
-within their scope; the historic multi-PR plans do not authorize unrelated work.
-Cloudflare Workers Static Assets owns the active frontend; Vercel is retired there.
-Read [AGENTS.md](AGENTS.md#reading-map) for task-specific execution requirements.
+Refresh branch/worktree, PR head/checks and runtime evidence per task.
+Merged code does not establish live PASS; old plans do not authorize unrelated
+work. Cloudflare Workers Static Assets owns the frontend; Vercel is retired.
+[AGENTS.md](AGENTS.md#reading-map) routes task-specific reading.
 
 ## Active Evidence Gates
 
