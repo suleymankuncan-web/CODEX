@@ -1,9 +1,11 @@
+import { companySalesEvidence } from "./incentive-company-sales-evidence";
 import { ConflictException, ForbiddenException, Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { RequestContextStore } from "../../../shared/request-context";
 import { approveSubmittedCorrectionsSql } from "./sales-target-incentive-approval.sql";
 import { companyPayloadSql, companyReadinessSql, companyResponsibilitySql, companyStoresSql } from "./incentive-company-seal.sql";
+import { enqueueApprovalMail } from "./incentive-approval-mail-event";
 
 type Client = Pick<PoolClient, "query">;
 export type CompanyStage = "sales_director" | "hr" | "general_manager";
@@ -64,7 +66,7 @@ export class IncentiveCompanyCycleRepository {
       if (!revision) throw new ConflictException("The confirmed company seal changed");
       const packageIds = revision.payload.packages.map(p => p.sales_target_incentive_region_package_id);
       if (input.decision === "approve") {
-        const live = await this.preparePayload(client, input.companyId, input.period);
+        const live = await this.preparePayload(client, input.companyId, input.period, Object.hasOwn(revision.payload,"sales"));
         if (live.seal_hash !== input.sealHash) throw new ConflictException("Sealed source content changed; return and reseal");
       } else {
         // A stale source must still be returnable. Only the archived revision is decided.
@@ -88,11 +90,16 @@ export class IncentiveCompanyCycleRepository {
       }
       const next = input.decision === "return" ? "preparation" : input.stage === "sales_director" ? "hr" : input.stage === "hr" ? "general_manager" : "final";
       await client.query("UPDATE ops.incentive_company_cycle SET stage=$2 WHERE cycle_id=$1::uuid", [input.cycleId, next]);
+      if (input.decision === "approve") await enqueueApprovalMail(client, {
+        key: `decision:${input.cycleId}:${input.revision}:${input.stage}`, companyId: input.companyId,
+        period: input.period, stage: input.stage, actorId: input.actorId,
+        cycleId: input.cycleId, revision: input.revision, sealHash: input.sealHash,
+      });
       return { cycleId: input.cycleId, companyId: input.companyId, period: input.period, revision: input.revision, stage: next, sealHash: input.sealHash, total: revision.payload.total };
     });
   }
 
-  private async preparePayload(client: Client, companyId: string, period: string): Promise<{ payload: SealPayload; seal_hash: string; payload_text: string }> {
+  private async preparePayload(client: Client, companyId: string, period: string, captureSales=true): Promise<{ payload: SealPayload; seal_hash: string; payload_text: string }> {
     await lock(client, `sales_target_incentive_ownership:${companyId}`);
     const ids = (await client.query<{ store_id: string }>(companyStoresSql, [companyId, period])).rows.map(s => s.store_id);
     if (!ids.length) throw new ConflictException("Company preparation has no owned stores");
@@ -136,11 +143,12 @@ export class IncentiveCompanyCycleRepository {
     // Readiness is read again after package/money waits; never authorize a pre-wait snapshot.
     const refreshed = (await client.query(companyReadinessSql, [companyId, period, ids])).rows;
     if (JSON.stringify(refreshed) !== JSON.stringify(ready)) throw new ConflictException("Company sources changed during preparation");
+    const sales=captureSales ? await companySalesEvidence(client,ids,period) : null;
     const currentOwners = (await client.query(companyResponsibilitySql, [companyId, period])).rows;
     if (JSON.stringify(currentOwners) !== JSON.stringify(responsibilities)) throw new ConflictException("Live responsibility changed while waiting");
     // Hash before JSON crosses the JS decimal boundary. The exact text is also persisted without reparsing.
     const sealed = (await client.query<{ payload: SealPayload; seal_hash: string; payload_text: string }>(`SELECT payload,payload::text AS payload_text,
-      encode(digest(payload::text,'sha256'),'hex') AS seal_hash FROM (${companyPayloadSql}) archived`, [companyId, period, packages, JSON.stringify(responsibilities)])).rows[0];
+      encode(digest(payload::text,'sha256'),'hex') AS seal_hash FROM (${companyPayloadSql}) archived`, [companyId, period, packages, JSON.stringify(responsibilities), sales ? JSON.stringify(sales) : null])).rows[0];
     const payload = sealed.payload;
     const proposalCount = (await client.query<{ count: number }>("SELECT COUNT(*)::int AS count FROM ops.sales_target_incentive_region_correction WHERE region_package_id=ANY($1::uuid[]) AND correction_status='submitted'", [packages])).rows[0].count;
     if (payload.proposals.length !== proposalCount || payload.proposals.some(p => p.company_id !== companyId || p.period_key !== period ||

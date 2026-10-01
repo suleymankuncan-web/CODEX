@@ -1,3 +1,4 @@
+import { incentiveManagerRoleScopeSql } from "./incentive-manager-role-scope";
 import type { PoolClient } from "pg";
 import { ForbiddenException } from "@nestjs/common";
 
@@ -11,6 +12,7 @@ export async function openCompanyRemediation(client: Pick<PoolClient, "query">, 
     WHERE assigned.user_id=$1::uuid AND assigned.store_id=$2::uuid
       AND assigned.start_at<=clock_timestamp() AND (assigned.end_at IS NULL OR assigned.end_at>clock_timestamp())
       AND ura.start_at<=clock_timestamp() AND (ura.end_at IS NULL OR ura.end_at>clock_timestamp())
+      AND ${incentiveManagerRoleScopeSql("store")}
       AND ops.store_was_company_during(store.store_id,($3::text||'-01')::date,(($3::text||'-01')::date+INTERVAL '1 month - 1 day')::date)
     FOR SHARE OF assigned,account,ura,store,company`, [actorId,storeId,period]);
   if (!grant.rows.length) throw new ForbiddenException("Current assigned manager authority is required for preparation remediation");
@@ -27,9 +29,11 @@ export async function openCompanyRemediation(client: Pick<PoolClient, "query">, 
         JOIN ops.user_account account ON account.user_id=a.user_id AND account.is_active
         JOIN ops.user_role_assignment ura ON ura.user_id=account.user_id
         JOIN ops.role role ON role.role_id=ura.role_id AND role.role_code='REGION_MANAGER'
+        JOIN ops.store store ON store.store_id=a.store_id
         WHERE a.store_id=ps.store_id AND a.user_id=$3::uuid AND a.start_at<=clock_timestamp()
           AND (a.end_at IS NULL OR a.end_at>clock_timestamp()) AND ura.start_at<=clock_timestamp()
-          AND (ura.end_at IS NULL OR ura.end_at>clock_timestamp()))
+          AND (ura.end_at IS NULL OR ura.end_at>clock_timestamp())
+          AND ${incentiveManagerRoleScopeSql("store")})
     FOR UPDATE OF p
   ), opened AS (
     UPDATE ops.sales_target_incentive_region_package p SET package_status='admin_returned',

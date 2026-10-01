@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { inboxTabFromMail } from '../features/mail/workflow-mail-link'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, CheckCircle2, Inbox, ReceiptText, RefreshCw } from 'lucide-react'
 import { Button } from '../components/ui/button'
@@ -177,7 +178,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
     <div className="admin-inbox-metrics" aria-label={t('adminInbox.summary')}>
       {metrics.map(metric => <div key={metric.id} className="admin-inbox-metric" data-testid={`admin-metric-${metric.id}`}><metric.icon aria-hidden="true" /><div><h2>{metric.label}</h2>{inboxQuery.isPending ? <Skeleton className="tw:h-7 tw:w-10" /> : <strong>{inboxQuery.isError ? t('adminInbox.unavailableValue') : metric.value}</strong>}</div></div>)}
     </div>
-    <div className="admin-inbox-board"><Tabs defaultValue="workflow">
+    <div className="admin-inbox-board"><Tabs defaultValue={inboxTabFromMail(window.location.search, sellerCodeEnabled)}>
       <TabsList aria-label={t('adminInbox.queues')} className="admin-inbox-tabs">
         <TabsTrigger value="workflow">{t('adminInbox.workflowTab')}</TabsTrigger>
         {sellerCodeEnabled ? <><TabsTrigger value="seller-code">{t('adminInbox.sellerCode')}</TabsTrigger><TabsTrigger value="offboarding">{t('adminInbox.offboarding')}</TabsTrigger><TabsTrigger value="corrections">{t('adminInbox.correctionsTab')}</TabsTrigger></> : null}

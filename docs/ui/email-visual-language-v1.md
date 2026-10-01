@@ -34,11 +34,10 @@ subjects and other account messages; generated HTML preserves real links,
 required actions and provider-formatted expiry. Setup means VERIFY_EMAIL plus
 UPDATE_PASSWORD; other action sets retain the provider's own content.
 
-Contract Impact: intentionally changed for shared mail rendering and exact SMTP
-recipient acceptance checks. Approval order, financial calculations, API response shapes,
+Contract Impact: intentionally changed for approval notifications and automatic
+GM-final HR delivery. Approval order, financial calculations, API response shapes,
 user account actions and live role/capability boundaries remain unchanged.
-Approval-event outboxes, automatic final delivery and operational schedules are
-separate follow-up work. This slice provides their content renderers only.
+See [the approval mail contract](../contracts/incentive-approval-mail-v1.md).
 No preview disclaimer or fabricated expiry is added to real mail content.
 The private daily supervisor needs a separate rollout to consume the failure template.
 
@@ -47,14 +46,6 @@ escaping/HTTPS actions, SMTP outcomes and attachments, generated-theme drift,
 transaction rollback, exact final seals, recipient routing and revocation, targeted
 backend/frontend lint/build, real PostgreSQL/FreeMarker and responsive layouts.
 No local full run. Code changes alone do not update live mails. Backend/frontend/
-Keycloak image publication and realm reconciliation are rollout steps. No new
-schema migration, recurring mail activation or live realm update is in this slice.
-
-Local self-review GO:32 targeted rendering/SMTP cases,7 month-link unit cases,
-103 on-prem/Keycloak/content contract cases and39 architecture/size/handoff cases
-passed. Backend/frontend builds, affected-file ESLint and generated-theme drift
-passed. Actual FreeMarker setup/reset/other-action/missing-context cases ran in an
-air-gapped temporary container using the existing runtime, with no image build
-or live provider mutation. Required GitHub CI remains the merge gate.
+Keycloak image publication, migration and realm reconciliation are rollout steps.
 
 PR #1219 CI follow-up: Keycloak’s required `password-reset.ftl` filename is pinned in the existing reviewed-content registry by exact image path and SHA-256. Existing credential/content scanning remains active. The 23 targeted image-content cases pass, including modified bytes, embedded credentials, neighboring paths, wrong image kind and symlink rejection. No gate is waived.

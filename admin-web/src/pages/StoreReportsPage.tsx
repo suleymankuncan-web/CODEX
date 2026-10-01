@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { reportPeriodFromMail } from '../features/mail/workflow-mail-link'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart3, CheckCircle2, Download, FileSpreadsheet, Layers3, ShieldCheck } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -23,7 +24,7 @@ const metricIcons = { 'period-package': FileSpreadsheet, scope: Layers3, 'detail
 
 export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) {
   const { locale, t } = useLocalization()
-  const [period, setPeriod] = useState(() => getCurrentReportPeriod())
+  const [period, setPeriod] = useState(() => reportPeriodFromMail(window.location.search, getCurrentReportPeriod()))
   const [managerId, setManagerId] = useState('all')
   const [downloading, setDownloading] = useState(false)
   const actorId = authSummary?.user.userId ?? 'anonymous'

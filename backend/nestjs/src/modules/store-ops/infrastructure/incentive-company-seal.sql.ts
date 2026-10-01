@@ -1,3 +1,4 @@
+import { incentiveManagerRoleScopeSql } from "./incentive-manager-role-scope";
 // $1 company, $2 period. Responsibility is live authority; roster dates are data scope.
 export const companyStoresSql = `SELECT store_id::text FROM ops.store
   WHERE company_id=$1::uuid AND status='active'
@@ -14,6 +15,7 @@ export const companyResponsibilitySql = `SELECT s.store_id::text,
     WHERE assigned.store_id=s.store_id AND assigned.start_at<=clock_timestamp()
       AND (assigned.end_at IS NULL OR assigned.end_at>clock_timestamp())
       AND ura.start_at<=clock_timestamp() AND (ura.end_at IS NULL OR ura.end_at>clock_timestamp())
+      AND ${incentiveManagerRoleScopeSql("s")}
     FOR SHARE OF assigned,account,ura
   ) a ON TRUE
   WHERE s.company_id=$1::uuid AND s.status='active'
@@ -120,4 +122,5 @@ SELECT jsonb_build_object('contract','incentive-company-seal-v1','companyId',$1:
     'adjustment_amount',f.adjustment_amount::text) ORDER BY f.store_id,f.employee_id,f.participant_type),'[]'::jsonb) FROM financial f),
   'proposals',(SELECT COALESCE(jsonb_agg(to_jsonb(p)||jsonb_build_object('before_amount',p.before_amount::text,'final_amount',p.final_amount::text)
     ORDER BY p.sales_target_incentive_region_correction_id),'[]'::jsonb) FROM proposals p),
-  'total',(SELECT COALESCE(SUM(effective_contribution::numeric),0)::numeric(18,2)::text FROM financial)) AS payload`;
+  'total',(SELECT COALESCE(SUM(effective_contribution::numeric),0)::numeric(18,2)::text FROM financial))
+  || CASE WHEN $5::jsonb IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('sales',$5::jsonb) END AS payload`;

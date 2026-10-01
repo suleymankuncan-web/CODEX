@@ -21,6 +21,16 @@ describe("HR incentive Excel", () => {
       expect(detail[key].v).toMatch(/^=/);
     }
   });
+  it("includes frozen package notes, signed returns, exact change amount and separately excluded personnel",()=>{
+    const snapshot=hrTestSnapshot();snapshot.packages[0]={...snapshot.packages[0],submission_note:"=Literal BM note",
+      store_details:[{storeId:"store-a",storeCode:"S1",storeName:"Store",target:"2000000",gross:"2050000",returns:"-100000",net:"1950000",achievement:"97.5"}],
+      frozen_participation:[{storeId:"store-a",finalSnapshotId:"snapshot",participationRevisionNo:1,exclusions:[{employeeId:"person",displayName:"Excluded",positionCode:"SALES_ASSOCIATE",reasonNote:"=Literal exclusion"}]}]};
+    snapshot.rows[0]={...snapshot.rows[0],raw_baseline:"1650.00",proposed_amount:"1800.25",gross_sales:"120000.00",signed_returns:"-10000.00"};
+    const book=XLSX.read(buildIncentiveHrWorkbook("2026-09",snapshot.packages,snapshot.rows),{type:"buffer"});
+    expect(book.Sheets["Personel Primleri"].O2.v).toBe(150.25);expect(book.Sheets["Personel Primleri"].P2.v).toBe(120000);expect(book.Sheets["Personel Primleri"].Q2.v).toBe(-10000);
+    expect(book.Sheets["Mağaza Özeti"].H2.v).toBe(1950000);expect(book.Sheets["Prime Dahil Değildir"].H2.v).toBe(0);
+    for(const [sheet,cell] of [["Paket Notları","C2"],["Prime Dahil Değildir","G2"]]) {expect(book.Sheets[sheet][cell].t).toBe("s");expect(book.Sheets[sheet][cell].f).toBeUndefined();}
+  });
   it("adds money in cents without binary rounding drift", () => {
     expect(sumHrMoney(["0.10", "0.20", "-0.01"])).toBe("0.29");
     expect(sumHrMoney([])).toBe("0.00");

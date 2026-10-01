@@ -1,3 +1,4 @@
+import { incentiveManagerRoleScopeSql } from "./incentive-manager-role-scope";
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { assertLegacyPackageReviewAllowed } from "./incentive-company-legacy-guard";
@@ -11,6 +12,7 @@ import {
 } from "./sales-target-incentive-approval.sql";
 import type { SalesTargetIncentiveRegionPackageRow } from "./sales-target-incentive-approval.types";
 import { packageFinancialReadSql, packageFinancialTargetsSql, packageFinancialVersion, type PackageFinancialRow } from "./incentive-package-financial-version";
+import { enqueueApprovalMail } from "./incentive-approval-mail-event";
 
 type Client = Pick<PoolClient, "query">;
 type Decision = "admin_approved" | "admin_returned";
@@ -53,6 +55,7 @@ export class SalesTargetIncentiveManagerPackageRepository {
           AND store.status = 'active'
           AND role_assignment.start_at <= clock_timestamp()
           AND (role_assignment.end_at IS NULL OR role_assignment.end_at > clock_timestamp())
+          AND ${incentiveManagerRoleScopeSql("store","role_assignment")}
           AND assigned.start_at <= clock_timestamp()
           AND (assigned.end_at IS NULL OR assigned.end_at > clock_timestamp())
         FOR SHARE OF role_assignment, assigned
@@ -67,11 +70,13 @@ export class SalesTargetIncentiveManagerPackageRepository {
         JOIN ops.user_account account ON account.user_id = assignment.user_id AND account.is_active = TRUE
         JOIN ops.user_role_assignment role_assignment ON role_assignment.user_id = account.user_id
         JOIN ops.role role ON role.role_id = role_assignment.role_id AND role.role_code = 'REGION_MANAGER'
+        JOIN ops.store store ON store.store_id=assignment.store_id
         WHERE assignment.store_id = ANY($1::uuid[])
           AND assignment.start_at <= clock_timestamp()
           AND (assignment.end_at IS NULL OR assignment.end_at > clock_timestamp())
           AND role_assignment.start_at <= clock_timestamp()
           AND (role_assignment.end_at IS NULL OR role_assignment.end_at > clock_timestamp())
+          AND ${incentiveManagerRoleScopeSql("store","role_assignment")}
         GROUP BY assignment.store_id
         HAVING COUNT(DISTINCT account.user_id) > 1
       `, [storeIds]);
@@ -168,6 +173,11 @@ export class SalesTargetIncentiveManagerPackageRepository {
         WHERE period_key = $3 AND store_id = ANY($4::uuid[])
           AND correction_status IN ('draft', 'admin_returned')
       `, [packageRow.sales_target_incentive_region_package_id, input.managerUserId, input.periodKey, storeIds]);
+      await enqueueApprovalMail(client, {
+        key: `submission:${packageRow.sales_target_incentive_region_package_id}:${packageRow.submitted_at}`,
+        companyId: input.companyId, period: input.periodKey, stage: "region_manager", actorId: input.managerUserId,
+        packageId: packageRow.sales_target_incentive_region_package_id,
+      });
       return packageRow;
     });
   }
@@ -243,17 +253,20 @@ export class SalesTargetIncentiveManagerPackageRepository {
               AND (assignment.end_at IS NULL OR assignment.end_at > clock_timestamp())
               AND role_assignment.start_at <= clock_timestamp()
               AND (role_assignment.end_at IS NULL OR role_assignment.end_at > clock_timestamp())
+          AND ${incentiveManagerRoleScopeSql("store","role_assignment")}
           ), ambiguous AS (
             SELECT assignment.store_id
             FROM ops.user_action_store_assignment assignment
             JOIN ops.user_account account ON account.user_id = assignment.user_id AND account.is_active = TRUE
             JOIN ops.user_role_assignment role_assignment ON role_assignment.user_id = account.user_id
             JOIN ops.role role ON role.role_id = role_assignment.role_id AND role.role_code = 'REGION_MANAGER'
+            JOIN ops.store store ON store.store_id=assignment.store_id
             WHERE assignment.store_id IN (SELECT store_id FROM package_stores)
               AND assignment.start_at <= clock_timestamp()
               AND (assignment.end_at IS NULL OR assignment.end_at > clock_timestamp())
               AND role_assignment.start_at <= clock_timestamp()
               AND (role_assignment.end_at IS NULL OR role_assignment.end_at > clock_timestamp())
+          AND ${incentiveManagerRoleScopeSql("store","role_assignment")}
             GROUP BY assignment.store_id HAVING COUNT(DISTINCT account.user_id) > 1
           )
           SELECT EXISTS(SELECT store_id FROM package_stores EXCEPT SELECT store_id FROM assigned_stores)

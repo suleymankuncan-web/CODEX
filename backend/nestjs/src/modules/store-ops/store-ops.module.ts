@@ -12,6 +12,8 @@ import { StoreOpsStoreActionModule } from "./store-ops-store-action.module";
 import { StoreOpsTargetWorkspaceModule } from "./store-ops-target-workspace.module";
 import { StoreOpsVmReferenceModule } from "./store-ops-vm-reference.module";
 import { StoreOpsReturnsReadModule } from "./store-ops-returns-read.module";
+import { StoreOpsOperationalMailModule } from "./store-ops-operational-mail.module";
+import { StoreOpsIncentiveApprovalMailModule } from "./store-ops-incentive-approval-mail.module";
 
 const storeOpsInternalModules = [
   StoreOpsReportingModule,
@@ -32,6 +34,8 @@ const storeOpsInternalModules = [
     StoreOpsPhotoMediaModule,
     StoreOpsVmReferenceModule,
     StoreOpsReturnsReadModule,
+    StoreOpsOperationalMailModule,
+    StoreOpsIncentiveApprovalMailModule,
   ],
   exports: storeOpsInternalModules,
 })
