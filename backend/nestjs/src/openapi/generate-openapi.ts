@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs"; import { applyRegionManagerDirectoryOpenApi } from "./region-manager-directory-openapi"; import { applyIncentiveFinalApprovalOpenApi } from "./incentive-final-approval-openapi";
+import { applyAccountSecurityOpenApi } from "./account-security-openapi"; import { mkdirSync, writeFileSync } from "node:fs"; import { applyRegionManagerDirectoryOpenApi } from "./region-manager-directory-openapi"; import { applyIncentiveFinalApprovalOpenApi } from "./incentive-final-approval-openapi";
 import { dirname, resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -1305,7 +1305,7 @@ const authUserAccountSchema = {
     authProvider: { type: "string" },
     providerSubject: { type: "string", nullable: true },
     isActive: { type: "boolean" },
-    lastLoginAt: { type: "string", nullable: true },
+    lastLoginAt: { type: "string", nullable: true }, lastActiveAt: { type: "string", format: "date-time", nullable: true },
     createdAt: { type: "string" },
     deactivatedAt: { type: "string", nullable: true },
     deactivationReason: { type: "string", nullable: true },
@@ -4886,7 +4886,7 @@ async function generateOpenApi(): Promise<void> {
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
-  preserveOpenApiBaselineFromFile(document, outputPath); applyStoreReturnsOpenApi(document); applyTaskCommandWorkspaceOpenApi(document); applyVmReferenceManagementOpenApi(document); applyPersonnelCorrectionOpenApi(document); applyIncentiveFinalApprovalOpenApi(document); applyRegionManagerDirectoryOpenApi(document);
+  preserveOpenApiBaselineFromFile(document, outputPath); applyAccountSecurityOpenApi(document); applyStoreReturnsOpenApi(document); applyTaskCommandWorkspaceOpenApi(document); applyVmReferenceManagementOpenApi(document); applyPersonnelCorrectionOpenApi(document); applyIncentiveFinalApprovalOpenApi(document); applyRegionManagerDirectoryOpenApi(document);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
 

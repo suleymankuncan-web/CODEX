@@ -51,7 +51,7 @@ export class ManagedSessionService implements OnModuleInit, OnModuleDestroy {
         code_verifier: input.codeVerifier, redirect_uri: input.redirectUri });
       const user = await resolveUser(grant.accessToken);
       const active = await this.repository.activate(row.session_id, user.userId, grant.issuer, grant.subject,
-        this.encrypt(grant.refreshToken, row.session_id), grant.expiresAt);
+        this.encrypt(grant.refreshToken, row.session_id), grant.expiresAt, this.config.authProviderKey ?? "oidc");
       if (!active) throw new UnauthorizedException("Login attempt has ended");
       return { ...this.issue(active, user), user, created: true };
     } catch (error) {

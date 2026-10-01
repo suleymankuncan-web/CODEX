@@ -261,7 +261,7 @@ function mapUserRow(input: {
     status,
     statusLabel: status === 'active' ? 'Aktif' : 'Pasif',
     tone: status === 'active' ? 'mint' : 'rose',
-    lastActivityLabel: user.lastLoginAt ?? user.createdAt,
+    lastActivityLabel: user.lastActiveAt ?? '',
     roleCount: input.roleCount,
     storeCount: input.storeCount,
     auditCount: input.auditCount,
@@ -368,7 +368,7 @@ function compareUsers(a: AuthWorkbenchUserRow, b: AuthWorkbenchUserRow) {
     return a.status === 'active' ? -1 : 1
   }
 
-  const dateCompare = Date.parse(b.lastActivityLabel) - Date.parse(a.lastActivityLabel)
+  const dateCompare = (Date.parse(b.lastActivityLabel) || 0) - (Date.parse(a.lastActivityLabel) || 0)
   if (Number.isFinite(dateCompare) && dateCompare !== 0) return dateCompare
 
   return a.displayName.localeCompare(b.displayName, 'tr')

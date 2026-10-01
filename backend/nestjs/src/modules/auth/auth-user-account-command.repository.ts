@@ -67,6 +67,7 @@ type UserAccountCommandRow = {
   provider_subject: string | null;
   is_active: boolean;
   last_login_at: string | null;
+  last_active_at?: string | null;
   created_at: string;
   deactivated_at?: string | null;
   deactivation_reason?: string | null;
@@ -150,6 +151,7 @@ export class AuthUserAccountCommandRepository {
             provider_subject,
             is_active,
             last_login_at,
+            last_active_at,
             created_at
         `,
         [
@@ -288,6 +290,7 @@ export class AuthUserAccountCommandRepository {
             provider_subject,
             is_active,
             last_login_at,
+            last_active_at,
             created_at,
             deactivated_at,
             deactivation_reason,
@@ -365,6 +368,7 @@ export class AuthUserAccountCommandRepository {
             provider_subject,
             is_active,
             last_login_at,
+            last_active_at,
             created_at
         `,
         [
@@ -558,6 +562,7 @@ export class AuthUserAccountCommandRepository {
             provider_subject,
             is_active,
             last_login_at,
+            last_active_at,
             created_at
         `,
         [input.userId],

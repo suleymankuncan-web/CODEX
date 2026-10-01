@@ -1,3 +1,5 @@
+import { AccountSecurityTabs } from '../features/auth/AccountSecurityTabs'
+import { accountTimestamp } from '../features/auth/account-security-format'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -242,7 +244,7 @@ export function AuthManagementPage() {
                   type="button"
                 >
                   <span className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-[11px] tw:font-bold tw:text-primary tw:group-aria-current:bg-primary tw:group-aria-current:text-primary-foreground">{initials(userDisplayName(user))}</span>
-                  <span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:truncate tw:text-sm tw:font-semibold">{userDisplayName(user)}</span><span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{user.email}</span></span>
+                  <span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:truncate tw:text-sm tw:font-semibold">{userDisplayName(user)}</span><span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{user.email}</span><span className="tw:mt-1 tw:block tw:text-[11px] tw:text-muted-foreground">Son aktif: {accountTimestamp(user.lastActiveAt, false)}</span></span>
                   <AccountStatusBadge user={user} compact />
                 </button>
               ))}
@@ -277,6 +279,7 @@ export function AuthManagementPage() {
                   <span>Sağlayıcı: <strong className="tw:text-foreground">{selectedUser.authProvider}</strong></span>
                 </div>
               </header>
+              <AccountSecurityTabs key={selectedUser.userId} user={selectedUser}>
               <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-5 tw:xl:grid-cols-2">
                 {lookupsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void lookupsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} className="tw:xl:col-span-2" description="Rol ve mağaza seçenekleri alınamadığı için yeni atamalar geçici olarak kapalı." tone="danger" title="Atama seçenekleri alınamadı" /> : null}
                 <AccessBlock icon={<Shield aria-hidden="true" />} title="Roller" action={<Button disabled={roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setRoleOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Rol ekle</Button>}>
@@ -298,6 +301,7 @@ export function AuthManagementPage() {
                    )) : <EmptyAccess copy="Kişiye özel yetki yok" />}
                  </AccessBlock>
               </div>
+              </AccountSecurityTabs>
             </section>
           ) : <AdminStatePanel title="Kullanıcı seçin" description="Yetkileri düzenlemek için soldan bir kullanıcı seçin." />}
         </div>

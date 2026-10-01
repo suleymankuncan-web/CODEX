@@ -11418,6 +11418,90 @@
         ],
         "security": []
       }
+    },
+    "/api/auth/users/{userId}/security": {
+      "get": {
+        "operationId": "AccountSecurityController_read",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded cached account metadata and password-link history. Never contacts the provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSecurity"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AccountSecurity"
+        ]
+      }
+    },
+    "/api/auth/users/{userId}/password-links": {
+      "post": {
+        "operationId": "AccountSecurityController_send",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Queue an audited password link. Sending is distinct from verified password change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLinkQueued"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AccountSecurity"
+        ]
+      }
+    },
+    "/api/auth/activity": {
+      "post": {
+        "operationId": "AccountSecurityController_activity",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AccountSecurity"
+        ]
+      }
     }
   },
   "info": {
@@ -21100,6 +21184,11 @@
                     "type": "string",
                     "nullable": true
                   },
+                  "lastActiveAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
                   "createdAt": {
                     "type": "string"
                   },
@@ -21215,6 +21304,11 @@
                   },
                   "lastLoginAt": {
                     "type": "string",
+                    "nullable": true
+                  },
+                  "lastActiveAt": {
+                    "type": "string",
+                    "format": "date-time",
                     "nullable": true
                   },
                   "createdAt": {
@@ -21334,6 +21428,11 @@
                 },
                 "lastLoginAt": {
                   "type": "string",
+                  "nullable": true
+                },
+                "lastActiveAt": {
+                  "type": "string",
+                  "format": "date-time",
                   "nullable": true
                 },
                 "createdAt": {
@@ -21903,6 +22002,11 @@
                       },
                       "lastLoginAt": {
                         "type": "string",
+                        "nullable": true
+                      },
+                      "lastActiveAt": {
+                        "type": "string",
+                        "format": "date-time",
                         "nullable": true
                       },
                       "createdAt": {
@@ -34588,6 +34692,155 @@
           "state",
           "redirectUri"
         ]
+      },
+      "PasswordLinkDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "setup",
+              "reset"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "kind"
+        ]
+      },
+      "AccountSecurity": {
+        "type": "object",
+        "required": [
+          "passwordState",
+          "passwordSetAt",
+          "observedAt",
+          "lastLoginAt",
+          "lastActiveAt",
+          "requests"
+        ],
+        "properties": {
+          "passwordState": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "absent",
+              "present"
+            ]
+          },
+          "passwordSetAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastActiveAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "requests": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "required": [
+                "requestId",
+                "kind",
+                "state",
+                "requestedAt",
+                "sentAt",
+                "expiresAt",
+                "completedObservedAt",
+                "verifiedPasswordSetAt",
+                "errorCode"
+              ],
+              "properties": {
+                "requestId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "setup",
+                    "reset"
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "queued",
+                    "sending",
+                    "sent",
+                    "failed",
+                    "unconfirmed",
+                    "completed",
+                    "expired"
+                  ]
+                },
+                "requestedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "sentAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "completedObservedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "verifiedPasswordSetAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "errorCode": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "PasswordLinkQueued": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "state"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
       }
     }
   },

@@ -12,6 +12,7 @@ export type AuthAdminUserAccountRow = {
   provider_subject: string | null;
   is_active: boolean;
   last_login_at: string | null;
+  last_active_at?: string | null;
   created_at: string;
   deactivated_at?: string | null;
   deactivation_reason?: string | null;
@@ -88,6 +89,7 @@ export class AuthAdminUserAccountReadRepository {
           ua.provider_subject,
           ua.is_active,
           ua.last_login_at,
+          ua.last_active_at,
           ua.created_at,
           ua.deactivated_at,
           ua.deactivation_reason,
@@ -102,7 +104,7 @@ export class AuthAdminUserAccountReadRepository {
         LEFT JOIN LATERAL (
           SELECT operation, status, last_error_code
           FROM ops.identity_lifecycle_job
-          WHERE user_id = ua.user_id
+          WHERE user_id = ua.user_id AND operation <> 'password_link'
           ORDER BY created_at DESC, identity_lifecycle_job_id DESC
           LIMIT 1
         ) identity_job ON TRUE
@@ -133,6 +135,7 @@ export class AuthAdminUserAccountReadRepository {
           ua.provider_subject,
           ua.is_active,
           ua.last_login_at,
+          ua.last_active_at,
           ua.created_at,
           ua.deactivated_at,
           ua.deactivation_reason,
@@ -147,7 +150,7 @@ export class AuthAdminUserAccountReadRepository {
         LEFT JOIN LATERAL (
           SELECT operation, status, last_error_code
           FROM ops.identity_lifecycle_job
-          WHERE user_id = ua.user_id
+          WHERE user_id = ua.user_id AND operation <> 'password_link'
           ORDER BY created_at DESC, identity_lifecycle_job_id DESC
           LIMIT 1
         ) identity_job ON TRUE

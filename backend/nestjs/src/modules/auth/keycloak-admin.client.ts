@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { AppConfigService } from "../../shared/app-config.service";
 import type { IdentityUserSnapshot } from "./identity-lifecycle.repository";
+import type { PasswordMetadata } from "./account-security.repository";
 
 type KeycloakUser = {
   id: string;
   username?: string;
   email?: string;
   attributes?: Record<string, string[]>;
+  federationLink?: string;
 };
 type KeycloakRole = { id: string; name: string };
 type KeycloakAdminOperation =
@@ -52,7 +54,7 @@ export class KeycloakAdminClient {
     return Boolean(this.config.keycloakAdminBaseUrl && this.config.keycloakAdminClientSecret);
   }
 
-  async provision(user: IdentityUserSnapshot): Promise<string> {
+  async provision(user: IdentityUserSnapshot, options = { sendSetupEmail: true }): Promise<string> {
     const existing = await this.findExactUser(user.username);
     if (existing && existing.email?.toLowerCase() !== user.email.toLowerCase()) {
       throw new Error("keycloak_username_conflict");
@@ -63,7 +65,7 @@ export class KeycloakAdminClient {
     const subject = existing?.id ?? await this.createDisabledUser(user);
     await this.updateUser(subject, user, true);
     await this.replaceRealmRoles(subject, user.role_codes);
-    await this.sendSetupEmail(subject);
+    if (options.sendSetupEmail) await this.sendPasswordLink(subject, "setup");
     return subject;
   }
 
@@ -162,18 +164,30 @@ export class KeycloakAdminClient {
     );
   }
 
-  private async sendSetupEmail(subject: string) {
-    const publicOrigin = this.config.corsAllowedOrigins[0];
+  async sendPasswordLink(subject: string, kind: "setup" | "reset") {
     const query = new URLSearchParams({
       client_id: this.config.authClientId ?? "store-ops-admin-web",
-      redirect_uri: `${publicOrigin}/auth/callback`,
       lifespan: "86400",
     });
     await this.request(
       `/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}/execute-actions-email?${query}`,
-      { method: "PUT", body: JSON.stringify(["VERIFY_EMAIL", "UPDATE_PASSWORD"]) },
+      { method: "PUT", body: JSON.stringify(kind === "setup" ? ["VERIFY_EMAIL", "UPDATE_PASSWORD"] : ["UPDATE_PASSWORD"]) },
       "send_setup_email",
     );
+  }
+
+  async passwordMetadata(subject: string, ownerId: string, email: string): Promise<PasswordMetadata> {
+    const path = `/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}`;
+    const user = await this.json<KeycloakUser>(path, "find_user");
+    if (user.id !== subject || user.attributes?.hr_axis_user_id?.[0] !== ownerId ||
+      user.email?.toLowerCase() !== email.toLowerCase()) throw new Error("keycloak_identity_owner_conflict");
+    const credentials = await this.json<unknown>(`${path}/credentials`, "find_user");
+    if (!Array.isArray(credentials) || credentials.length > 200) throw new Error("keycloak_credentials_invalid");
+    const passwords = credentials.filter(value => isRecord(value) && value.type === "password");
+    if (!passwords.length) return { state: user.federationLink ? "unknown" : "absent", setAt: null };
+    const dates = passwords.map(value => isRecord(value) ? value.createdDate : null);
+    const valid = dates.every(value => typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= Date.now() + 60_000);
+    return { state: "present", setAt: valid ? Math.max(...dates as number[]) : null };
   }
 
   private async findExactUser(username: string) {

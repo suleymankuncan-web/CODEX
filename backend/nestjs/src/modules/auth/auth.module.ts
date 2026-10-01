@@ -34,12 +34,17 @@ import { AuthAdminController } from "./web/auth-admin.controller";
 import { AuthSessionController } from "./web/auth-session.controller";
 import { MobileAuthController } from "./web/mobile-auth.controller";
 import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
+import { AccountSecurityService } from "./account-security.service";
+import { AccountSecurityRepository } from "./account-security.repository";
+import { AccountSecurityController } from "./web/account-security.controller";
 
 @Global()
 @Module({
-  controllers: [AuthAdminController, AuthSessionController, MobileAuthController],
+  controllers: [AuthAdminController, AuthSessionController, MobileAuthController, AccountSecurityController],
   providers: [
     ManagedSessionRepository,
+    AccountSecurityRepository,
+    AccountSecurityService,
     OidcSessionClient,
     ManagedSessionService,
     AccessLifecycleRepository,

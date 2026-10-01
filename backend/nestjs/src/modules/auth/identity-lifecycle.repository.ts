@@ -1,8 +1,9 @@
 import { ConflictException, Injectable } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../shared/database/database.service";
+import { enqueuePasswordLink } from "./account-security.repository";
 
-export type IdentityOperation = "provision" | "enable" | "disable" | "update_profile";
+export type IdentityOperation = "provision" | "enable" | "disable" | "update_profile" | "password_link";
 
 type IdentityJobRow = {
   identity_lifecycle_job_id: string;
@@ -175,6 +176,7 @@ export class IdentityLifecycleRepository {
         `UPDATE ops.user_account SET provider_subject = $2, is_active = TRUE, deactivation_reason = NULL, deactivated_at = NULL, deactivated_by_user_id = NULL, updated_at = NOW() WHERE user_id = $1::uuid`,
         [userId, subject],
       );
+      await enqueuePasswordLink(client, { userId, requestId: jobId, kind: "setup", automatic: true });
       return true;
     });
   }

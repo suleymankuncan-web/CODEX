@@ -6,17 +6,7 @@ describe("Auth user accounts", () => {
   const secondAssignmentId = "22222222-2222-4222-8222-222222222222";
   const actionStoreAssignmentId = "33333333-3333-4333-8333-333333333333";
   const adminUserId = "90000000-0000-4000-8000-000000000001";
-  const reportUserId = "90000000-0000-4000-8000-000000000002";
-  const snapshotUserId = "90000000-0000-4000-8000-000000000003";
   const createdUserId = "90000000-0000-4000-8000-000000000004";
-  const pilotUserId = "90000000-0000-4000-8000-000000000101";
-  const pilotEmployeeId = "70000000-0000-4000-8000-000000000101";
-  const pilotProviderSubject = "2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22";
-  const pilotRoleAssignmentId = "11111111-2222-4333-8444-555555555555";
-  const pilotActionStoreAssignmentId = "22222222-3333-4444-8555-666666666666";
-  const companyId = "10000000-0000-4000-8000-000000000001";
-  const regionId = "10000000-0000-4000-8000-000000000011";
-  const storeId = "10000000-0000-4000-8000-000000000021";
 
   it("creates a user account", async () => {
     const query = jest.fn(async (sql: string) => {
@@ -86,7 +76,7 @@ describe("Auth user accounts", () => {
       authProvider: "oidc",
       providerSubject: null,
       isActive: false,
-      lastLoginAt: null,
+      lastLoginAt: null, lastActiveAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });
 
@@ -174,7 +164,7 @@ describe("Auth user accounts", () => {
         authProvider: "oidc",
         providerSubject: null,
         isActive: true,
-        lastLoginAt: null,
+        lastLoginAt: null, lastActiveAt: null,
         createdAt: "2026-04-17T22:15:00.000Z",
       },
     ]);
@@ -415,7 +405,7 @@ describe("Auth user accounts", () => {
       authProvider: "oidc",
       providerSubject: null,
       isActive: true,
-      lastLoginAt: null,
+      lastLoginAt: null, lastActiveAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
       deactivatedAt: null,
       deactivationReason: null,
@@ -581,7 +571,7 @@ describe("Auth user accounts", () => {
       authProvider: "oidc",
       providerSubject: null,
       isActive: false,
-      lastLoginAt: null,
+      lastLoginAt: null, lastActiveAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });
     expect(response.body.data.accessClosure).toEqual({
@@ -795,7 +785,7 @@ describe("Auth user accounts", () => {
       authProvider: "oidc",
       providerSubject: null,
       isActive: false,
-      lastLoginAt: null,
+      lastLoginAt: null, lastActiveAt: null,
       createdAt: "2026-04-17T22:15:00.000Z",
     });
     expect(
