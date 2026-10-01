@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react'
 import {
   ChartNoAxesColumnIncreasing,
-  Database,
   LineChart,
   Package,
   ShoppingBag,
@@ -12,15 +11,6 @@ import { KpiScoreChart } from '@/components/kpi-score-chart'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
-
-type TodayAction = {
-  badge: string
-  copy: string
-  icon: 'data' | 'metric' | 'rhythm' | 'target'
-  id: string
-  title: string
-  variant: 'default' | 'secondary' | 'outline' | 'destructive'
-}
 
 type MetricCard = {
   actionValueAvailable: boolean
@@ -60,7 +50,7 @@ type StoreMyPerformancePlumDashboardProps = {
   remainingTargetLabel: string
   samePeriodScoreDelta: string | null
   scoreConfidence: string
-  scoreValue: number
+  scoreValue: number | null
   regionPopulationLabel: string
   regionRankLabel: string
   storePopulationLabel: string
@@ -69,7 +59,6 @@ type StoreMyPerformancePlumDashboardProps = {
   targetProgressPercent: number
   targetSalesLabel: string
   targetStatusLabel: string
-  todayActions: TodayAction[]
   turkeyPopulationLabel: string
   turkeyRankLabel: string
 }
@@ -80,13 +69,6 @@ type StoreMeTrendChartPoint = {
   scoreLabel: string
   scoreValue: number | null
   trendLabel: string | null
-}
-
-const actionIconById: Record<TodayAction['icon'], LucideIcon> = {
-  data: Database,
-  metric: ChartNoAxesColumnIncreasing,
-  rhythm: LineChart,
-  target: Target,
 }
 
 const metricIconByCode: Record<string, LucideIcon> = {
@@ -172,14 +154,14 @@ function compactChartLabel(label: string) {
   return trimmed.slice(0, 8)
 }
 
-function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallbackLabel: string) {
+function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number | null, fallbackLabel: string) {
   const usableRows = rows
   const chartRows = usableRows.length
     ? usableRows
     : [{
         key: 'current',
         label: fallbackLabel,
-        scoreLabel: String(fallbackScore),
+        scoreLabel: fallbackScore === null ? '—' : String(fallbackScore),
         scoreValue: fallbackScore,
         trendLabel: null,
       }]
@@ -368,7 +350,6 @@ export function StoreMyPerformancePlumDashboard({
   targetProgressPercent,
   targetSalesLabel,
   targetStatusLabel,
-  todayActions,
   turkeyPopulationLabel,
   turkeyRankLabel,
 }: StoreMyPerformancePlumDashboardProps) {
@@ -378,6 +359,7 @@ export function StoreMyPerformancePlumDashboard({
   const targetMetric = getMetric(metricCards, 'TARGET_ACHIEVEMENT')
   const hasTargetProgress = targetMetric?.actionValueAvailable === true
   const unavailableTargetLabel = targetMetric?.displayValue ?? t('storeMe.noData')
+  const scoreLabel = scoreValue === null ? t('storeMe.noData') : scoreValue.toLocaleString(locale)
   const chart = buildTrendChart(monthlyDetailRows, scoreValue, t('storeMe.currentPeriod'))
   const breakdownRows = metricCards.map((metric) => ({
     ...metric,
@@ -389,11 +371,11 @@ export function StoreMyPerformancePlumDashboard({
     <section className="store-me-plum-dashboard" aria-label={t('storeMe.performanceSummary')}>
       <section className="store-me-kpi-grid" aria-label={t('storeMe.kpiDetails')}>
         <article className="store-me-plum-card store-me-kpi-card store-me-kpi-score">
-          <KpiCardHead Icon={ChartNoAxesColumnIncreasing} label={t('storeMe.performanceScore')} value={scoreValue} />
+          <KpiCardHead Icon={ChartNoAxesColumnIncreasing} label={t('storeMe.performanceScore')} value={scoreLabel} />
           <div className="store-me-kpi-body store-me-kpi-copy">
             <p>{isPartial ? `${t('storeMe.incompleteData')} · ${scoreConfidence}` : scoreConfidence}</p>
           </div>
-          <KpiProgress label={t('storeMe.performanceScore')} value={scoreValue / 140 * 100} displayValue={`${scoreValue} / 140`} />
+          <KpiProgress label={t('storeMe.performanceScore')} value={(scoreValue ?? 0) / 140 * 100} isAvailable={scoreValue !== null} displayValue={scoreValue === null ? scoreLabel : `${scoreValue} / 140`} />
           <RankStrip
             regionPopulationLabel={regionPopulationLabel}
             regionRankLabel={regionRankLabel}
@@ -487,7 +469,7 @@ export function StoreMyPerformancePlumDashboard({
             </span>
             <span>
               <small>{t('storeMe.currentScore')}</small>
-              <strong>{scoreValue.toLocaleString(locale)}</strong>
+              <strong>{scoreLabel}</strong>
               <em>{samePeriodScoreDelta ?? t('storeMe.noTrendData')}</em>
             </span>
             <span>
@@ -498,46 +480,13 @@ export function StoreMyPerformancePlumDashboard({
           </div>
         </article>
 
-        <article id="store-me-actions" className="store-me-plum-card store-me-actions-card" aria-label={t('storeMe.todayCoaching')}>
-          <div className="store-me-section-head">
-            <div>
-              <h2>{t('storeMe.todayCoaching')}</h2>
-              <p>{t('storeMe.todayCoachingCopy')}</p>
-            </div>
-          </div>
-          <div className="store-me-action-list">
-            {todayActions.length > 0 ? (
-              todayActions.map((action) => {
-                const Icon = actionIconById[action.icon]
-
-                return (
-                  <div className="store-me-action-row" key={action.id}>
-                    <span className="store-me-action-icon" aria-hidden="true">
-                      <Icon />
-                    </span>
-                    <span>
-                      <strong>{action.title}</strong>
-                      <small>{action.copy}</small>
-                    </span>
-                    <Badge variant={action.variant}>{action.badge}</Badge>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="store-me-action-empty">
-                <strong>{t('storeMe.todayActionsEmptyTitle')}</strong>
-                <small>{t('storeMe.todayActionsEmptyCopy')}</small>
-              </div>
-            )}
-          </div>
-        </article>
       </section>
 
       <section className="store-me-bottom-grid">
         <article className="store-me-plum-card store-me-breakdown-card store-me-score-breakdown">
           <div className="store-me-donut" style={donutStyle(breakdownRows)} aria-label={t('storeMe.performanceScore')}>
             <span>
-              <strong>{scoreValue}</strong>
+              <strong>{scoreLabel}</strong>
               <small>{t('storeMe.performanceScore')}</small>
             </span>
           </div>
@@ -559,7 +508,7 @@ export function StoreMyPerformancePlumDashboard({
               </span>
               <span>
                 <small>{t('storeMe.scored')}</small>
-                <strong>{scoreValue}</strong>
+                <strong>{scoreLabel}</strong>
               </span>
             </div>
             <div className="store-me-contribution-list">

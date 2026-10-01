@@ -138,17 +138,6 @@ const mockMonthlyRows = [
   },
 ]
 
-const mockTodayActions = [
-  {
-    badge: 'Takip',
-    copy: 'ATV ortalamanın üstünde; ancak önceki aya göre geriledi. Sepet ritmini kaybetmemeye odaklan.',
-    icon: 'metric' as const,
-    id: 'atv-regression',
-    title: 'ATV düşüşünü izle',
-    variant: 'outline' as const,
-  },
-]
-
 function StoreMeCompactHeader(input: {
   locale: ReturnType<typeof useLocalization>['locale']
   onOpenShareCard: () => void
@@ -332,7 +321,6 @@ function StoreMeProductMirrorSurface() {
               targetProgressPercent={136}
               targetSalesLabel="1.500.000 TL"
               targetStatusLabel={t('storeMe.approvedTarget')}
-              todayActions={mockTodayActions}
               turkeyPopulationLabel="842 kişi içinde"
               turkeyRankLabel="#50"
             />

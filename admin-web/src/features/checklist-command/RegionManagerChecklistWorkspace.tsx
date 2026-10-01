@@ -228,7 +228,7 @@ function MobileFact({ emphasis = false, label, value }: { emphasis?: boolean; la
 }
 
 function formatVisitDate(value: string | null, locale: 'tr' | 'en') {
-  if (!value) return locale === 'tr' ? 'Henüz yok' : 'Not yet'
+  if (!value) return locale === 'tr' ? 'Checklist yapılmadı' : 'Checklist not completed'
   return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }).format(new Date(value))
 }
 

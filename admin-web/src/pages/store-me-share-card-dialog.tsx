@@ -1,8 +1,10 @@
-import { forwardRef, useRef, useState } from 'react'
+import { buildPerformanceCardFile, canSharePerformanceCard, downloadPerformanceCard } from './store-me-share-card-export'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 import {
   Award,
   Crown,
   Download,
+  Share2,
   Medal,
   ShieldCheck,
   Target,
@@ -36,22 +38,6 @@ const badgeIconByName: Record<StoreMePerformanceBadgeIcon, typeof Trophy> = {
   target: Target,
   trophy: Trophy,
   'trending-up': TrendingUp,
-}
-
-function slugifyFilePart(input: string) {
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('tr')
-    .replace(/ı/g, 'i')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'personel'
-}
-
-function buildShareCardFileName(card: StoreMeShareCardViewModel) {
-  const periodPart = card.periodKey.slice(0, 7) || 'donem'
-  return `lufian-performans-karti-${slugifyFilePart(card.employeeName)}-${periodPart}.png`
 }
 
 export const StoreMeShareCardPreview = forwardRef<HTMLElement, {
@@ -116,41 +102,57 @@ export function StoreMeShareCardDialog({
   onClose,
   t,
 }: StoreMeShareCardDialogProps) {
-  const cardRef = useRef<HTMLElement | null>(null)
+  const [cardElement, setCardElement] = useState<HTMLElement | null>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const downloadAttemptRef = useRef(0)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [downloadState, setDownloadState] = useState<'idle' | 'working' | 'success' | 'error'>('idle')
 
   function closeDialog() {
     downloadAttemptRef.current += 1
     setDownloadState('idle')
+    setImageFile(null)
     onClose()
   }
 
-  async function downloadPng() {
-    if (!cardRef.current || !card.isAvailable || downloadState === 'working') {
-      return
-    }
-
-    const cardElement = cardRef.current
+  useEffect(() => {
+    if (!isOpen || !card.isAvailable || !cardElement) return
+    const element = cardElement
     const attempt = ++downloadAttemptRef.current
+    void (async () => {
+      try {
+        const { toBlob } = await import('html-to-image')
+        if (attempt !== downloadAttemptRef.current) return
+        setImageFile(null)
+        setDownloadState('working')
+        const blob = await toBlob(element, { cacheBust: true, pixelRatio: 3, backgroundColor: '#050711' })
+        if (attempt !== downloadAttemptRef.current) return
+        if (!blob) throw new Error('PNG image unavailable')
+        setImageFile(buildPerformanceCardFile(blob, card.employeeName, card.periodKey))
+        setDownloadState('idle')
+      } catch {
+        if (attempt === downloadAttemptRef.current) setDownloadState('error')
+      }
+    })()
+    return () => { downloadAttemptRef.current += 1 }
+  }, [isOpen, card, cardElement])
+
+  function downloadPng() {
+    if (!imageFile || downloadState === 'working') return
+    downloadPerformanceCard(imageFile)
+    setDownloadState('success')
+  }
+
+  async function shareImage() {
+    if (!imageFile || downloadState === 'working') return
+    // Image generation completed before this click, preserving native user activation.
+    const attempt = downloadAttemptRef.current
     setDownloadState('working')
     try {
-      const { toPng } = await import('html-to-image')
-      if (attempt !== downloadAttemptRef.current) return
-      const dataUrl = await toPng(cardElement, {
-        cacheBust: true,
-        pixelRatio: 3,
-        backgroundColor: '#050711',
-      })
-      if (attempt !== downloadAttemptRef.current) return
-      const link = document.createElement('a')
-      link.download = buildShareCardFileName(card)
-      link.href = dataUrl
-      link.click()
-      setDownloadState('success')
-    } catch {
-      if (attempt === downloadAttemptRef.current) setDownloadState('error')
+      await navigator.share({ files: [imageFile] })
+      if (attempt === downloadAttemptRef.current) setDownloadState('idle')
+    } catch (error) {
+      if (attempt === downloadAttemptRef.current) setDownloadState(error instanceof DOMException && error.name === 'AbortError' ? 'idle' : 'error')
     }
   }
 
@@ -184,7 +186,7 @@ export function StoreMeShareCardDialog({
 
         {card.isAvailable ? (
           <div className="store-me-share-preview-shell">
-            <StoreMeShareCardPreview card={card} t={t} ref={cardRef} />
+            <StoreMeShareCardPreview card={card} t={t} ref={setCardElement} />
           </div>
         ) : (
           <div className="store-me-share-unavailable" role="status">
@@ -195,6 +197,7 @@ export function StoreMeShareCardDialog({
 
         <div className="store-me-share-actions">
           <span aria-live="polite">
+            {downloadState === 'working' && !imageFile ? t('storeMe.shareCardPreparing') : null}
             {downloadState === 'success' ? t('storeMe.shareCardDownloadSuccess') : null}
             {downloadState === 'error' ? t('storeMe.shareCardDownloadError') : null}
           </span>
@@ -203,13 +206,15 @@ export function StoreMeShareCardDialog({
           </Button>
           <Button
             type="button"
-            disabled={!card.isAvailable || downloadState === 'working'}
+            disabled={!imageFile || downloadState === 'working'}
             onClick={downloadPng}
           >
             <Download data-icon="inline-start" />
             {t('storeMe.shareCardDownloadPng')}
           </Button>
+          {imageFile && canSharePerformanceCard(imageFile) ? <Button type="button" disabled={downloadState === 'working'} onClick={shareImage}><Share2 data-icon="inline-start" />{t('storeMe.shareCardShareImage')}</Button> : null}
         </div>
+        {card.isAvailable ? <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">{t('storeMe.shareCardSavePhotoHint')}</p> : null}
       </DialogContent>
     </Dialog>
   )

@@ -56,7 +56,7 @@ function getTrustedTargetAchievementPercent(
 }
 
 function getRoundedScore(performance: MyPerformanceSummary) {
-  return Number.isFinite(performance.score.value) ? Math.round(performance.score.value) : null
+  return performance.score.matchedMetrics > 0 && Number.isFinite(performance.score.value) ? Math.round(performance.score.value) : null
 }
 
 export function buildStoreMeShareCardViewModel(input: StoreMeShareCardModelInput): StoreMeShareCardViewModel {

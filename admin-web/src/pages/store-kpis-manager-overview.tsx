@@ -16,8 +16,6 @@ import { matchesKpiMetricCode } from '../features/kpi/score-profiles'
 import type { StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 import { formatMetricValue, resolveLocalizedKpiScoreReference } from './store-kpi-highlights-formatters'
 import { toHundredPointLiveStoreScore } from './store-kpis-command-contract'
-import { personnelStoreScoreImpact } from './store-kpis-personnel-impact'
-import { StoreKpisReturnsSummary } from './store-kpis-returns-summary'
 import { StoreKpisPeriodEmpty } from './store-kpis-period-empty'
 import { StoreEmptyState, StoreErrorState, StoreLoadingState } from './store-surface-primitives'
 import './store-kpis-region-command-canvas.css'
@@ -38,8 +36,8 @@ const storeColumns = [
   ['TARGET_ACHIEVEMENT', 'HG%'], ['ATV', 'ATV'], ['UPT', 'UPT'], ['CR', 'CR'],
   ['gsm_approval', 'GSM'], ['BM_CHECKLIST', 'BM'], ['VM_CHECKLIST', 'VM'],
 ] as const
-const peopleColumns = [['score', 'Skor'], ['TARGET_ACHIEVEMENT', 'HG%'], ['ATV', 'ATV'], ['UPT', 'UPT'], ['storeScoreImpact', 'Mağaza Skor Etkisi']] as const
-type PeopleSort = (typeof peopleColumns)[number][0]
+const personnelColumns = [['grossSales', 'Brüt Toplam Satış', 'Gross Total Sales'], ['signedReturns', 'İade Tutarı', 'Return Amount'], ['netSales', 'Net Satış', 'Net Sales'], ['TARGET_ACHIEVEMENT', 'HG%', 'HG%'], ['ATV', 'ATV', 'ATV'], ['UPT', 'UPT', 'UPT']] as const
+type PeopleSort = (typeof personnelColumns)[number][0]
 
 export function StoreKpisManagerOverview({ model, personnel, backgroundError }: {
   model: StoreKpiHighlightsPageModel
@@ -47,6 +45,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   backgroundError: ReactNode
 }) {
   const tr = model.locale === 'tr'
+  const peopleColumns = personnelColumns.map(([code, label, english]) => [code, tr ? label : english] as const)
   const [params, setParams] = useSearchParams()
   const showPeople = params.get('view') === 'personnel'
   const overviewParams = new URLSearchParams(params)
@@ -56,7 +55,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   const switchView = () => { const next = new URLSearchParams(params); if (showPeople) next.delete('view'); else next.set('view', 'personnel'); setParams(next) }
   const { search } = personnel
   const [selectedKpi, setSelectedKpi] = useState<string | null>(null)
-  const [sort, setSort] = useState<{ key: PeopleSort; ascending: boolean }>({ key: 'score', ascending: false })
+  const [sort, setSort] = useState<{ key: PeopleSort; ascending: boolean }>({ key: 'netSales', ascending: false })
   const noData = model.t('storeKpis.noData')
   const metric = (code: string) => model.rows.find(row => row.kpiCode.toLowerCase() === code.toLowerCase())
   const value = (code: string) => {
@@ -70,8 +69,6 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     ? model.liveSummary?.score.matchedMetrics ? finite(model.liveSummary.score.value) : null
     : model.weightedScore.coveredWeight > 0 ? model.weightedScore.scoreValue : null
   const score = scoreValue === null ? noData : numeric(toHundredPointLiveStoreScore(scoreValue), model.locale, 1)
-  const storeScorePoints = toHundredPointLiveStoreScore(scoreValue)
-  const displayedStoreScore = storeScorePoints === null ? null : Math.round(storeScorePoints * 10) / 10
   const cards = [
     { code: 'score', label: tr ? 'Mağaza Skoru' : 'Store Score', value: score, icon: BarChart3 },
     { code: 'ATV', label: tr ? 'Mağaza ATV' : 'Store ATV', value: value('ATV'), icon: ReceiptText },
@@ -84,19 +81,18 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   const periodStart = (model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart).slice(0, 10)
   const scope = `${model.effectiveStoreId}|${periodStart}|${model.kpiDateRangeEnd}|${model.viewMode}`
   const people = useMemo(() => [...personnel.rows].sort((a, b) => {
-    const left = personMetric(a, sort.key, model.effectiveStoreId, displayedStoreScore)
-    const right = personMetric(b, sort.key, model.effectiveStoreId, displayedStoreScore)
+    const left = personMetric(a, sort.key)
+    const right = personMetric(b, sort.key)
     if (left === null) return right === null ? 0 : 1
     if (right === null) return -1
     return (left - right) * (sort.ascending ? 1 : -1)
-  }), [personnel.rows, sort, model.effectiveStoreId, displayedStoreScore])
+  }), [personnel.rows, sort])
   const SortIcon = sort.ascending ? ArrowUp : ArrowDown
   const protectedPersonnelError = personnel.query.error instanceof ApiError && (personnel.query.error.status === 401 || personnel.query.error.status === 403)
   const personValue = (row: PersonnelRankingRow, code: PeopleSort) => {
-    const actual = personMetric(row, code, model.effectiveStoreId, displayedStoreScore)
-    if (code === 'storeScoreImpact') return actual === null ? (tr ? 'Hesaplanamadı' : 'Unavailable') : `${numeric(actual, model.locale, 2)} ${tr ? 'puan' : 'pts'}`
+    const actual = personMetric(row, code)
     if (actual === null) return code === 'TARGET_ACHIEVEMENT' && finite(row.metrics?.find(metric => metric.code === code)?.actualValue) !== null ? model.t('storeKpis.targetWaiting') : noData
-    if (code === 'ATV') return new Intl.NumberFormat(model.locale, { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(actual)
+    if (['ATV', 'grossSales', 'signedReturns', 'netSales'].includes(code)) return new Intl.NumberFormat(model.locale, { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(actual)
     if (code === 'TARGET_ACHIEVEMENT') return `%${numeric(actual * 100, model.locale, 1)}`
     return numeric(actual, model.locale, code === 'UPT' ? 2 : 1)
   }
@@ -120,7 +116,6 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     </header>
     {backgroundError}
     {!showPeople ? <>
-    <StoreKpisReturnsSummary model={model} />
     <div className="region-performance-metrics" role="group" aria-label={tr ? 'Mağaza KPI özeti' : 'Store KPI summary'}>
       {cards.map(({ code, label, value: cardValue, icon: Icon }) => <Card key={label} size="sm" onClick={() => setSelectedKpi(code)}><CardHeader><CardTitle><Icon aria-hidden="true" /><span>{label}</span></CardTitle></CardHeader><CardContent><Button variant="link" className="manager-metric-trigger" aria-label={`${label} detaylarını aç`} onClick={() => setSelectedKpi(code)}><strong>{cardValue}</strong></Button></CardContent></Card>)}
     </div>
@@ -140,13 +135,12 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
         : <>
           {personnel.query.isError ? <Alert variant="destructive"><AlertDescription>{model.t('storeKpis.backgroundError')}<Button variant="outline" onClick={() => void personnel.query.refetch()}>{model.t('storeKpis.retry')}</Button></AlertDescription></Alert> : null}
           <Table><TableHeader><TableRow><TableHead>{personnelSearch}</TableHead>{peopleColumns.map(([code, label]) => <TableHead key={code} aria-sort={sort.key === code ? sort.ascending ? 'ascending' : 'descending' : 'none'}><Button variant="ghost" size="sm" onClick={() => setSort({ key: code, ascending: sort.key === code ? !sort.ascending : false })}>{label}{sort.key === code ? <SortIcon aria-hidden="true" /> : null}</Button></TableHead>)}<TableHead><span className="tw:sr-only">{tr ? 'Detay' : 'Details'}</span></TableHead></TableRow></TableHeader>
-            <TableBody>{people.map(row => <TableRow key={row.employeeId}><TableCell><strong>{row.displayName}</strong></TableCell>{peopleColumns.map(([code, label]) => <TableCell key={code} data-label={label} className={code === 'storeScoreImpact' ? 'manager-performance-contribution' : undefined}>{personValue(row, code)}</TableCell>)}<TableCell>{detail(row)}</TableCell></TableRow>)}</TableBody>
+            <TableBody>{people.map(row => <TableRow key={row.employeeId}><TableCell><strong>{row.displayName}</strong></TableCell>{peopleColumns.map(([code, label]) => <TableCell key={code} data-label={label} >{personValue(row, code)}</TableCell>)}<TableCell>{detail(row)}</TableCell></TableRow>)}</TableBody>
           </Table>
           {!people.length ? <StoreEmptyState title={search ? (tr ? 'Personel bulunamadı' : 'No matching personnel') : model.t('storeKpis.personnelKpiEmptyTitle')} description={search ? (tr ? 'Aramanızı değiştirerek tekrar deneyin.' : 'Try a different search.') : model.t('storeKpis.personnelKpiEmptyCopy')} /> : null}
           {personnel.total > personnel.pageSize ? <nav className="region-performance-pager" aria-label={model.t('storeKpis.personnelPaginationLabel')}><Button variant="outline" disabled={personnel.page === 0 || personnel.query.isFetching} onClick={() => personnel.onPageChange(personnel.page - 1)}>{model.t('storeKpis.companyPrevious')}</Button><span>{personnel.page + 1} / {Math.ceil(personnel.total / personnel.pageSize)}</span><Button variant="outline" disabled={(personnel.page + 1) * personnel.pageSize >= personnel.total || personnel.query.isFetching} onClick={() => personnel.onPageChange(personnel.page + 1)}>{model.t('storeKpis.companyNext')}</Button></nav> : null}
         </>}
     </section>
-    <Alert className="manager-performance-checklist-note"><Info aria-hidden="true" /><AlertTitle>{tr ? 'Mağaza Skor Etkisi nasıl hesaplanır?' : 'How is store score impact allocated?'}</AlertTitle><AlertDescription><span>{tr ? `Mağaza skoru (${score} puan), net satış × personel KPI skoru oranında satış ekibine paylaştırılır. Ortak GSM ve checklist sonuçları da bu toplamın içindedir; kişisel olarak ölçülmüş başarı anlamına gelmez. Eksik veriyle hesap yapılmaz. Negatif net satışın payı sıfırdır; yuvarlama nedeniyle toplamda küçük farklar olabilir.` : `The store score (${score} points) is allocated across the sales team in proportion to net sales × personnel KPI score. Shared GSM and checklist outcomes are included in that total; this is not individually measured or causal impact. Missing inputs remain unavailable. Negative net sales receive zero share; rounding can cause small total differences.`}</span></AlertDescription></Alert>
     </>}
     {selectedKpi ? <StoreManagerMetricDialog model={model} code={selectedKpi} onClose={() => setSelectedKpi(null)} rankings={personnel.query.data} rankingLoading={personnel.query.isLoading} rankingError={personnel.query.isError} retryRankings={() => void personnel.query.refetch()} /> : null}
   </CommandCanvasPage>
@@ -161,9 +155,8 @@ function numeric(value: unknown, locale: string, decimals: number) {
   const number = finite(value)
   return number === null ? '—' : new Intl.NumberFormat(locale, { minimumFractionDigits: decimals === 2 ? 2 : 0, maximumFractionDigits: decimals }).format(number)
 }
-function personMetric(row: PersonnelRankingRow, code: PeopleSort, storeId?: string, storeScore: number | null = null) {
-  if (code === 'storeScoreImpact') return personnelStoreScoreImpact(row, storeId, storeScore)
-  if (code === 'score') return finite(row.scoreValue)
+function personMetric(row: PersonnelRankingRow, code: PeopleSort) {
+  if (code === 'grossSales' || code === 'signedReturns' || code === 'netSales') return row.visibility === 'detail' ? finite(row.sales?.[code]) : null
   const metric = row.metrics?.find(metric => metric.code === code)
   const actual = finite(metric?.actualValue)
   if (code !== 'TARGET_ACHIEVEMENT') return actual

@@ -65,7 +65,7 @@ test('store manager uses shadcn chart and opens every KPI with scoped ranks and 
   expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(390)
   await expectNoCriticalAxeViolations(page)
 })
-test('personnel store score allocation uses server shares, survives filtering and follows the selected period', async ({ page }) => {
+test('personnel financial columns use server prim facts, survive filtering and follow the selected period', async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')
   await installGenericStoreApiFallbacks(page)
   await routeKpiContractApi(page)
@@ -78,25 +78,26 @@ test('personnel store score allocation uses server shares, survives filtering an
     const fixture = createPersonnelRankingsFixture()
     const params = new URL(route.request().url()).searchParams
     const daily = params.get('periodType') === 'daily'
-    const first = { ...fixture.personnelLeaderboard.items[0], storeScoreShare: daily ? 0.25 : 43 / 95 }
-    const rows = [first, { ...first, employeeId: 'employee-2', displayName: 'Ece Demo', storeScoreShare: daily ? 0.75 : 52 / 95 }]
+    const first = { ...fixture.personnelLeaderboard.items[0], sales: { grossSales: daily ? '1200' : '1500', signedReturns: '-500', netSales: daily ? '700' : '1000' } }
+    const rows = [first, { ...first, employeeId: 'employee-2', displayName: 'Ece Demo', sales: { grossSales: '2000', signedReturns: '-100', netSales: '1900' } }]
     const search = params.get('search')?.trim().toLocaleLowerCase('tr-TR') ?? ''
     const matchingRows = search ? rows.filter(row => row.displayName.toLocaleLowerCase('tr-TR').includes(search)) : rows
     await route.fulfill({ json: { ...fixture, personnelLeaderboard: { ...fixture.personnelLeaderboard, items: matchingRows, managedStorePersonnel: matchingRows, managedStorePersonnelMeta: { limit: 50, offset: 0, total: matchingRows.length } } } })
   })
   await page.goto('/store/kpis?periodStart=2026-07-01&view=personnel')
   const people = page.getByRole('region', { name: 'Personel KPI', exact: true })
-  await expect(people.getByRole('columnheader', { name: 'Mağaza Skor Etkisi' })).toBeVisible()
-  await expect(people.getByRole('row', { name: /Süleyman Öztürk/ })).toContainText('43,00 puan')
-  await expect(people.getByRole('row', { name: /Ece Demo/ })).toContainText('52,00 puan')
+  for (const name of ['Brüt Toplam Satış', 'İade Tutarı', 'Net Satış', 'HG%', 'ATV', 'UPT']) await expect(people.getByRole('columnheader', { name, exact: true })).toBeVisible()
+  await expect(people.getByRole('columnheader', { name: 'Mağaza Skor Etkisi' })).toHaveCount(0)
+  await expect(people.getByRole('row', { name: /Süleyman Öztürk/ })).toContainText('₺1.000')
+  await expect(people.getByRole('row', { name: /Ece Demo/ })).toContainText('₺1.900')
   await people.getByRole('textbox', { name: 'Personel ara', exact: true }).fill('Süleyman')
   await expect(people.locator('tbody tr')).toHaveCount(1)
-  await expect(people.locator('tbody tr')).toContainText('43,00 puan')
+  await expect(people.locator('tbody tr')).toContainText('₺1.000')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/store/kpis?periodStart=2026-07-05&periodEnd=2026-07-10&periodType=daily&view=personnel')
-  await expect(people.getByRole('row', { name: /Süleyman Öztürk/ })).toContainText('20,00 puan')
-  await expect(people.getByRole('row', { name: /Ece Demo/ })).toContainText('60,00 puan')
-  await expect(page.getByText('Mağaza Skor Etkisi nasıl hesaplanır?')).toBeVisible()
+  await expect(people.getByRole('row', { name: /Süleyman Öztürk/ })).toContainText('₺700')
+  await expect(people.getByRole('row', { name: /Ece Demo/ })).toContainText('₺1.900')
+  await expect(page.getByText('Mağaza Skor Etkisi nasıl hesaplanır?')).toHaveCount(0)
   await expectNoCriticalAxeViolations(page)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   const profileReads: string[] = []
@@ -513,7 +514,7 @@ test('SH-FR-014 personnel null metrics stay unavailable instead of becoming zero
   await showPersonnel(page)
   const row = page.getByRole('row', { name: /Süleyman Öztürk/ })
   await expect(row).toBeVisible()
-  await expect(row.getByRole('cell', { name: 'Veri yok', exact: true })).toHaveCount(3)
+  await expect(row.getByRole('cell', { name: 'Veri yok', exact: true })).toHaveCount(6)
   await expect(row).not.toContainText('₺0')
 })
 
