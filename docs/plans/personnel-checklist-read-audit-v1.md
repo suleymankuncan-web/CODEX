@@ -42,3 +42,8 @@ branch introduced no hidden mail/UI dependency. Inline adversarial self-review
 found no remaining actionable issue in this slice. The selector requests the
 full release gate; per the owner's explicit instruction that gate runs in GitHub,
 while local verification remains targeted. No required CI check is waived.
+
+First CI found that the added handoff exceeded its existing6500-character bound.
+The handoff entry was shortened and redundant policy prose removed; the bound
+was preserved. The two affected contract files passed8 cases locally before
+the correction push. No application-source failure was hidden by this change.

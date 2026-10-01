@@ -8,10 +8,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
-- [Personnel/checklist read corrections](docs/plans/personnel-checklist-read-audit-v1.md)
-  fix monthly last-visit bounds and range benchmark reads, with optional detail-only
-  personnel gross/attributed return/net amounts. Local source changes do not
-  establish deployment; related Store presentation and mail work follow separately.
+- [Personnel/checklist reads](docs/plans/personnel-checklist-read-audit-v1.md):
+  monthly visit bounds, range references and scoped sales detail; local only.
 
 - Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
@@ -24,7 +22,6 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - Controlled staging/internal pilot: `Conditional Go / Continue`.
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
-- Process: task-based reading; verification, integrity and activation gates remain.
 - Ranking monthly HG #1167 (`2db36bd1`) uses monthly targets and published HG
   weight for selected-day sales; other scales/closed snapshots are preserved.
   [Contract/rollback](docs/plans/rankings-monthly-achievement-v1.md). Deployment of this change is not established by merge.
