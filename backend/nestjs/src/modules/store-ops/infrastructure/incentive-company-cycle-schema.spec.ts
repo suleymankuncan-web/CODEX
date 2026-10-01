@@ -15,6 +15,16 @@ describe("company-cycle canonical schema mirror",()=>{
     const start=migration.indexOf("-- New projections preserve V1");
     const end=migration.indexOf("INSERT INTO ops.sales_target_incentive_rule_version",start);
     expect(start).toBeGreaterThanOrEqual(0); expect(end).toBeGreaterThan(start);
-    expect(schema.slice(schema.indexOf("-- New projections preserve V1")).trim()).toBe(migration.slice(start,end).trim());
+    const expected=migration.slice(start,end).trim();
+    const schemaStart=schema.indexOf("-- New projections preserve V1");
+    expect(schemaStart).toBeGreaterThanOrEqual(0);
+    expect(schema.slice(schemaStart,schemaStart+expected.length)).toBe(expected);
+  });
+  it.each(['100_incentive_approval_mail_v1.sql','101_operational_mail_pilot_v1.sql','102_incentive_manager_scope_v1.sql'])('mirrors additive mail migration %s exactly',file=>{
+    const schema=readFileSync(resolve(process.cwd(),'../../db/schema.sql'),'utf8');
+    const migration=readFileSync(resolve(process.cwd(),'../../db/migrations',file),'utf8').trim();
+    const start=schema.indexOf(migration.split('\n')[0]);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(schema.slice(start,start+migration.length)).toBe(migration);
   });
 });
