@@ -1,6 +1,21 @@
 import { ChecklistCommandReadRepository } from "./checklist-command-read.repository";
 
 describe("ChecklistCommandReadRepository", () => {
+  it("bounds last visit to the selected Istanbul month and excludes live drafts from closed history", async () => {
+    const query = jest.fn(async () => ({ rows: [] }));
+    const repository = new ChecklistCommandReadRepository({ query } as never);
+    await repository.list({ companyIds: ["company-1"], regionIds: [], storeIds: [], allowedTemplateTypes: ["BM_STORE_VISIT"], executionTemplateTypes: ["BM_STORE_VISIT"], period: "2026-09", status: "all", sort: "last_visit_desc", limit: 20, offset: 0 });
+    await repository.listRegions({ companyIds: ["company-1"], period: "2026-09", signal: "all", sort: "manager_asc", limit: 20, offset: 0 });
+    for (const call of query.mock.calls as unknown as [string][]) {
+      const sql = call[0];
+      const completed = sql.split("latest_completed AS (")[1].split("active_checklists AS (")[0];
+      expect(completed).toContain("ci.completed_at >= (pb.period_start::timestamp AT TIME ZONE 'Europe/Istanbul')");
+      expect(completed).toContain("ci.completed_at < ((pb.period_start + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')");
+      const active = sql.split("active_checklists AS (")[1].split("AS (")[0];
+      expect(active).toContain("pb.period_start >= date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date");
+    }
+  });
+
   it("returns one bounded company-scoped region aggregate without region N+1 queries", async () => {
     const query = jest.fn().mockResolvedValueOnce({
       rows: [{

@@ -378,7 +378,7 @@ export function maskPersonnelRow(
     };
   }
 
-  const { metrics: _metrics, storeScoreShare: _storeScoreShare, ...summary } = row;
+  const { metrics: _metrics, storeScoreShare: _storeScoreShare, sales: _sales, ...summary } = row;
   return {
     ...summary,
     visibility,

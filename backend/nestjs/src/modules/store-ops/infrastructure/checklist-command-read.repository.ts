@@ -179,9 +179,12 @@ export class ChecklistCommandReadRepository {
           INNER JOIN scoped_stores ss ON ss.store_id = ci.store_id
           INNER JOIN ops.checklist_template ct
             ON ct.checklist_template_id = ci.checklist_template_id
+          CROSS JOIN period_bounds pb
           WHERE ci.status = 'completed'
             AND ci.completed_at IS NOT NULL
             AND ct.template_type = ANY($4::text[])
+            AND ci.completed_at >= (pb.period_start::timestamp AT TIME ZONE 'Europe/Istanbul')
+            AND ci.completed_at < ((pb.period_start + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')
           GROUP BY ci.store_id
         ),
         active_checklists AS (
@@ -196,8 +199,10 @@ export class ChecklistCommandReadRepository {
           INNER JOIN scoped_stores ss ON ss.store_id = ci.store_id
           INNER JOIN ops.checklist_template ct
             ON ct.checklist_template_id = ci.checklist_template_id
+          CROSS JOIN period_bounds pb
           WHERE ci.status IN ('planned', 'in_progress')
             AND ct.template_type = ANY($4::text[])
+            AND pb.period_start >= date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
           GROUP BY ci.store_id
         ),
         pending_acknowledgements AS (
@@ -465,9 +470,12 @@ export class ChecklistCommandReadRepository {
           INNER JOIN scoped_stores ss ON ss.store_id = ci.store_id
           INNER JOIN ops.checklist_template ct
             ON ct.checklist_template_id = ci.checklist_template_id
+          CROSS JOIN period_bounds pb
           WHERE ci.status = 'completed'
             AND ci.completed_at IS NOT NULL
             AND ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')
+            AND ci.completed_at >= (pb.period_start::timestamp AT TIME ZONE 'Europe/Istanbul')
+            AND ci.completed_at < ((pb.period_start + INTERVAL '1 month') AT TIME ZONE 'Europe/Istanbul')
           GROUP BY ci.store_id
         ),
         active_checklists AS (
@@ -476,8 +484,10 @@ export class ChecklistCommandReadRepository {
           INNER JOIN scoped_stores ss ON ss.store_id = ci.store_id
           INNER JOIN ops.checklist_template ct
             ON ct.checklist_template_id = ci.checklist_template_id
+          CROSS JOIN period_bounds pb
           WHERE ci.status IN ('planned', 'in_progress')
             AND ct.template_type IN ('BM_STORE_VISIT', 'VM_STORE_VISIT')
+            AND pb.period_start >= date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
           GROUP BY ci.store_id
         ),
         action_stats AS (

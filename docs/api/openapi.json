@@ -19379,6 +19379,30 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "sales": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": false,
+                      "required": [
+                        "grossSales",
+                        "signedReturns",
+                        "netSales"
+                      ],
+                      "properties": {
+                        "grossSales": {
+                          "type": "string"
+                        },
+                        "signedReturns": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "netSales": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "description": "Verified prim V2 gross, same-store attributed returns and net for the selected store/dates. Null when unavailable; omitted for summary rows."
+                    },
                     "scoreValue": {
                       "type": "number"
                     },
@@ -19509,6 +19533,30 @@
                   "storePopulation": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "sales": {
+                    "type": "object",
+                    "nullable": true,
+                    "additionalProperties": false,
+                    "required": [
+                      "grossSales",
+                      "signedReturns",
+                      "netSales"
+                    ],
+                    "properties": {
+                      "grossSales": {
+                        "type": "string"
+                      },
+                      "signedReturns": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "netSales": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "description": "Verified prim V2 gross, same-store attributed returns and net for the selected store/dates. Null when unavailable; omitted for summary rows."
                   },
                   "scoreValue": {
                     "type": "number"
@@ -19642,6 +19690,30 @@
                     "storePopulation": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "sales": {
+                      "type": "object",
+                      "nullable": true,
+                      "additionalProperties": false,
+                      "required": [
+                        "grossSales",
+                        "signedReturns",
+                        "netSales"
+                      ],
+                      "properties": {
+                        "grossSales": {
+                          "type": "string"
+                        },
+                        "signedReturns": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "netSales": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "description": "Verified prim V2 gross, same-store attributed returns and net for the selected store/dates. Null when unavailable; omitted for summary rows."
                     },
                     "scoreValue": {
                       "type": "number"

@@ -32,8 +32,10 @@ describe("personnel store score allocation", () => {
   });
 
   it("never exposes an allocation share in masked personnel summaries", () => {
-    const personnel = { employeeId: "x", storeScoreShare: 0.4, metrics: [] } as unknown as PersonnelRankingRow;
+    const personnel = { employeeId: "x", storeScoreShare: 0.4, metrics: [], sales: { grossSales: "1500", signedReturns: "-500", netSales: "1000" } } as unknown as PersonnelRankingRow;
     expect(maskPersonnelRow(personnel, "summary")).not.toHaveProperty("storeScoreShare");
+    expect(maskPersonnelRow(personnel, "summary")).not.toHaveProperty("sales");
+    expect(maskPersonnelRow(personnel, "detail").sales).toEqual(personnel.sales);
     expect(maskPersonnelRow(personnel, "detail").storeScoreShare).toBe(0.4);
   });
 });

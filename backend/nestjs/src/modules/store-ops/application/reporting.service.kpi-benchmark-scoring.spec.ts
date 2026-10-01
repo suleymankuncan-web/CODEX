@@ -580,6 +580,7 @@ describe("ReportingService KPI benchmark scoring", () => {
 
     expect(getEmployeeTurkeyBenchmarkValues).toHaveBeenCalledTimes(2);
     expect(getEmployeeTurkeyBenchmarkValues).toHaveBeenLastCalledWith({
+      isRange: false,
       companyId: undefined,
       periodType: "monthly",
       periodStart: "2026-03-01",

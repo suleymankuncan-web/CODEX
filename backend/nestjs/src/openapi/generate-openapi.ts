@@ -1,3 +1,4 @@
+import { personnelRankingDetailProperties } from "./personnel-ranking-detail-openapi.schemas";
 import { applyAccountSecurityOpenApi } from "./account-security-openapi"; import { mkdirSync, writeFileSync } from "node:fs"; import { applyRegionManagerDirectoryOpenApi } from "./region-manager-directory-openapi"; import { applyIncentiveFinalApprovalOpenApi } from "./incentive-final-approval-openapi";
 import { dirname, resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
@@ -3084,8 +3085,7 @@ const reportingPersonnelRankingRowSchema = {
     population: { type: "integer", minimum: 0 },
     storeRank: { type: "integer", nullable: true },
     storePopulation: { type: "integer", minimum: 0 },
-    scoreValue: { type: "number" }, storeScoreShare: { type: "number", nullable: true, minimum: 0, maximum: 1, description: "Net sales × personnel KPI score share within the store before pagination. Null when allocation inputs are incomplete; omitted for summary rows. This is an allocation, not causal impact." },
-    canOpenProfile: { type: "boolean" },
+    ...personnelRankingDetailProperties,
     visibility: { type: "string", enum: ["summary", "detail"] },
     metrics: {
       type: "array",
