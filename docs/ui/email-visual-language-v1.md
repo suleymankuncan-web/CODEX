@@ -56,3 +56,5 @@ passed. Backend/frontend builds, affected-file ESLint and generated-theme drift
 passed. Actual FreeMarker setup/reset/other-action/missing-context cases ran in an
 air-gapped temporary container using the existing runtime, with no image build
 or live provider mutation. Required GitHub CI remains the merge gate.
+
+PR #1219 CI follow-up: Keycloak’s required `password-reset.ftl` filename is pinned in the existing reviewed-content registry by exact image path and SHA-256. Existing credential/content scanning remains active. The 23 targeted image-content cases pass, including modified bytes, embedded credentials, neighboring paths, wrong image kind and symlink rejection. No gate is waived.

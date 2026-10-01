@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { generateKeyPairSync } from 'node:crypto'
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { rootCertificates } from 'node:tls'
@@ -336,11 +336,11 @@ test('content guard rejects traversal roots instead of silently skipping Keycloa
 
 test('Keycloak approved-content classifier requires the exact CI path and SHA-256 pair', () => {
   const entries = Object.entries(KEYCLOAK_APPROVED_CONTENT_HASHES)
-  assert.equal(entries.length, 13)
+  assert.equal(entries.length, 14)
   for (const [pathname, sha256] of entries) {
     assert.equal(typeof classifyKeycloakApprovedContent(pathname, sha256), 'string')
     assert.equal(classifyKeycloakApprovedContent(pathname, `${sha256.slice(0, -1)}0`), null)
-    assert.equal(classifyKeycloakApprovedContent(pathname.replace(/\.jar$|\.pem$|\.crt$|\.template$/, ''), sha256), null)
+    assert.equal(classifyKeycloakApprovedContent(pathname.replace(/\.jar$|\.pem$|\.crt$|\.template$|\.ftl$/, ''), sha256), null)
   }
   assert.equal(
     classifyKeycloakApprovedContent('opt/keycloak/lib/lib/main/io.quarkus.quarkus-credentials-3.33.2.1.jar', entries[0][1]),
@@ -411,6 +411,32 @@ test('content guard CLI accepts keycloak kind and rejects unknown kinds', () => 
       () => execFileSync(process.execPath, [guard, '--rootfs', root, '--kind', 'default'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }),
       (error) => error.status === 2 && String(error.stderr).includes('--kind must be frontend, backend, or keycloak'),
     )
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+
+test('password reset mail template requires exact public bytes, path and Keycloak image kind', () => {
+  const root = keycloakFixture()
+  const pathname = 'opt/keycloak/themes/hr-axis/email/html/password-reset.ftl'
+  const template = readFileSync(new URL('../infra/onprem/core/keycloak/themes/hr-axis/email/html/password-reset.ftl', import.meta.url), 'utf8')
+  try {
+    writeFixtureFile(root, pathname, template)
+    assert.equal(inspectImageContent(root, KEYCLOAK_OPTIONS).ok, true)
+    assert.equal(inspectImageContent(root, { kind: 'backend', applicationRoots: ['/opt/keycloak'] }).ok, false)
+    writeFixtureFile(root, `${pathname}.bak`, template)
+    assert.ok(inspectImageContent(root, KEYCLOAK_OPTIONS).violations.some(item => item.path === `${pathname}.bak`))
+    rmSync(join(root, `${pathname}.bak`))
+    writeFixtureFile(root, pathname, template + '\nDATABASE_PASSWORD=real-password-value\n')
+    const changed = inspectImageContent(root, KEYCLOAK_OPTIONS)
+    assert.ok(changed.violations.some(item => item.path === pathname && item.detail.includes('SHA-256 mismatch')))
+    assert.ok(changed.violations.some(item => item.path === pathname && item.code === 'secret-content'))
+    writeFixtureFile(root, pathname, template + ' ')
+    assert.equal(inspectImageContent(root, KEYCLOAK_OPTIONS).ok, false)
+    rmSync(join(root, pathname))
+    symlinkSync('/etc/passwd', join(root, pathname))
+    assert.equal(inspectImageContent(root, KEYCLOAK_OPTIONS).ok, false)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
