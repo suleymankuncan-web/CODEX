@@ -8,6 +8,7 @@
     "start:workers": "ts-node src/workers.ts",
     "db:migrate": "ts-node scripts/run-migrations.ts",
     "build": "nest build",
+    "mail:theme": "ts-node scripts/generate-mail-theme.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "openapi:generate": "nest build && node scripts/run-openapi-generator.mjs",
     "verify:tref-postgres": "npm run build && node scripts/verify-target-reference-supersession-postgres.mjs",

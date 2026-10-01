@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { incentivePeriodFromMailLink } from '../features/incentives/mail-link'
 import { StoreReturnsScopeProvider } from '@/features/returns/scope'
 import { useQuery } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
@@ -32,7 +33,7 @@ export function StoreIncentivesPage(input: { authSummary: AuthSessionSummary | n
 
 function StoreIncentivesContent(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
-  const [period, setPeriod] = useState<string | undefined>()
+  const [period, setPeriod] = useState<string | undefined>(() => incentivePeriodFromMailLink(window.location.search))
   const enabled = canOpenStoreIncentives(input.authSummary)
   const companyCycle = canReadCompanyCycle(input.authSummary)
   const identity = useMemo(

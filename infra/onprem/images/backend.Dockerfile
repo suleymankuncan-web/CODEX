@@ -33,6 +33,7 @@ LABEL org.opencontainers.image.revision=$SOURCE_REVISION \
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=production-dependencies /workspace/backend/dist ./dist
+COPY backend/nestjs/src/shared/mail/assets/ ./dist/src/shared/mail/assets/
 COPY --from=production-dependencies /workspace/backend/node_modules ./node_modules
 COPY db/schema.sql /app/db/schema.sql
 COPY db/migrations/ /app/db/migrations/
