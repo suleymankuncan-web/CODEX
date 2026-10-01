@@ -89,12 +89,13 @@ describePg('synthetic four-role package flow with actual PostgreSQL, services an
     expect(hrSnapshotReady(await snapshot())).toBe(true);
     await pool.query("UPDATE ops.company_daily_kpi_employee_sales SET sale_amount_try=1500,signed_return_amount_try=-300 WHERE component_outcome_id=$1",[id(413)]);
     const archived=await snapshot();expect(archived.rows.find(r=>r.employee_id===id(10))).toMatchObject({gross_sales:'1400.000000000000',signed_returns:'-200.000000000000',actual_sales_amount:'1200.0000'});
-    const book=XLSX.read(workbooks[0].attachment,{type:'buffer'});expect(book.SheetNames).toEqual(['Müdür Özeti','Personel Primleri','Onay Kaydı','Paket Notları','Mağaza Özeti']);
+    const book=XLSX.read(workbooks[0].attachment,{type:'buffer'});expect(book.SheetNames).toEqual(['Personel Primleri']);
     const rows=XLSX.utils.sheet_to_json<unknown[]>(book.Sheets['Personel Primleri'],{header:1});
     expect(JSON.stringify(rows)).toContain('Synthetic proposal');
-    expect(JSON.stringify(XLSX.utils.sheet_to_json(book.Sheets['Paket Notları'],{header:1}))).toContain('Synthetic BM note');
-    expect(book.Sheets['Personel Primleri'].P2.v).toBe(1400);expect(book.Sheets['Personel Primleri'].Q2.v).toBe(-200);
-    expect(book.Sheets['Personel Primleri'].N2.v).toBe(100);expect(book.Sheets['Personel Primleri'].O2.v).toBe(25);
+    expect(JSON.stringify(rows)).toContain('Synthetic BM note');
+    expect(book.Sheets['Personel Primleri'].F2.v).toBe(1400);expect(book.Sheets['Personel Primleri'].G2.v).toBe(-200);
+    expect(book.Sheets['Personel Primleri'].K2.v).toBe(100);expect(book.Sheets['Personel Primleri'].L2.v).toBe(125);
+    expect(book.Sheets['Personel Primleri'].M2.v).toContain('Tutar değişikliği: +25.00 TL');
     expect((await pool.query("SELECT final_amount::text FROM ops.sales_target_incentive_region_correction WHERE sales_target_incentive_region_correction_id=$1",[id(90)])).rows[0].final_amount).toBe('125.00');
     expect((await pool.query("SELECT COUNT(*)::int AS count FROM ops.sales_target_incentive_adjustment")).rows[0].count).toBe(1);
     await expect(service().decide(gm,{...command,stage:'general_manager'})).rejects.toBeInstanceOf(ConflictException);

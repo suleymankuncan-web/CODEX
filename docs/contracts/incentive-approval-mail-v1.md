@@ -43,14 +43,10 @@ Final recipient sets/proof/origin are immutable. Known non-HR, inactive,
 BM/SD/GM accounts cannot be final workbook recipients even if misconfigured.
 An unregistered group mailbox is accepted only from trusted company HR mapping.
 
-The payroll Excel includes package notes, archived store targets/net sales,
-frozen excluded personnel and the exact change amount against the original
-baseline. Gross sales and returns are supplemental accepted V2 evidence captured
-in the seal transaction; they appear only when their net amount matches the
-approved row/store net amount. Final exports never reread mutable sales facts.
-Historic seals without this supplemental evidence remain usable; unavailable
-gross/return values stay blank. They are not invented from net sales. Adding
-this evidence does not change the approved payout or require legacy resealing.
+The payroll Excel has exactly one sheet, `Personel Primleri`, with columns in this owner-approved order:
+Bölge Müdürü, Mağaza, İlgili Kişi, Pozisyon, Hedef, Toplam Satış, Toplam İade, Net Satış, HG%, Hakediş Oranı, Hesaplanan Tutar, Final Tutar, Yorum.
+The comments cell combines archived row notes, package notes and the exact signed proposal change amount. Frozen excluded personnel are rows on the same sheet with zero payment and “Prime dahil değildir” plus their reason in Yorum. Missing archived per-person amounts stay blank. No extra manager/store/proof/notes sheets are emitted; approval provenance remains in immutable database records. HG and rates use Excel percentage formats.
+Gross and signed return amounts reuse accepted V2 evidence sealed with the revision and appear only when their net matches the approved person/store net. This does not change approved payout or reseal legacy history.
 
 SMTP verification runs before claims. A definite pre-DATA notification rejection
 returns to pending. An ambiguous outcome or abandoned claim becomes uncertain
