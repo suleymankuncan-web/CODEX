@@ -26,6 +26,21 @@ describePg("approval notification PostgreSQL boundary",()=>{
   beforeEach(async()=>seedCompanyCycle(pool));
   afterAll(async()=>{await pool?.end(); if(admin){await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);await admin.end();}});
 
+  it("diagnoses approval cycle company and period drift without changing valid seals",async()=>{
+    await pool.query(readFileSync(resolve(process.cwd(),'../../db/migrations/101_operational_mail_pilot_v1.sql'),'utf8'));
+    const query=readFileSync(resolve(process.cwd(),'../../db/preflight/mail-event-scope-invariants-v1.sql'),'utf8');
+    const sealed=await cycle().seal({companyId:id(1),period,actorId:id(22),expectedRevision:0});
+    await approve('sales_director',sealed);
+    expect((await pool.query(query)).rows.map(row=>row.violation_count)).toEqual(['0','0']);
+    await pool.query(`INSERT INTO ops.incentive_approval_mail_event(event_key,company_id,period_key,stage,actor_user_id,approver_name,company_name,cycle_id,revision_no,seal_hash)
+      VALUES('wrong-cycle-company',$1,$2,'sales_director',$3,'Fixture','Fixture',$4,$5,$6),
+      ('wrong-cycle-period',$7,'2026-06','sales_director',$3,'Fixture','Fixture',$4,$5,$6)`,
+    [id(9),period,id(22),sealed.cycleId,sealed.revision,sealed.sealHash,id(1)]);
+    const rows=(await pool.query(query)).rows;
+    expect(rows[0].violation_count).toBe('0');expect(rows[1].violation_count).toBe('2');
+    expect(rows[1].sample_refs).toHaveLength(2);
+    for(const sample of rows[1].sample_refs) expect(sample).toMatch(/^[a-f0-9]{12}$/);
+  });
   it("persists only approved decisions; rollback/return cannot emit mail",async()=>{
     const sealed=await cycle().seal({companyId:id(1),period,actorId:id(22),expectedRevision:0});
     const broken=new IncentiveCompanyCycleRepository(cycleDatabase(pool,{beforeCommit:async()=>{throw new Error("rollback");}}) as never);

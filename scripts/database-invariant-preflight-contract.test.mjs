@@ -123,6 +123,8 @@ test('database invariant preflight SQL is read only and covers every required ch
     'ops.user_permission_assignment',
     // Store contact scope has a dedicated versioned read-only invariant overlay.
     'ops.store_contact_email',
+    // New mail events use the executed, read-only mail-event scope overlay.
+    'ops.operational_mail_event',
     // Closed-source and copied participation scopes have a dedicated read-only overlay.
     'ops.sales_target_incentive_participation_revision',
   ])
@@ -174,6 +176,7 @@ test('operational database invariant command executes additive overlays', () => 
   assert.match(runner, /store-contact-email-invariants-v1\.sql/)
   assert.match(runner, /incentive-participation-invariants-v1\.sql/)
   assert.match(runner, /incentive-company-cycle-invariants-v1\.sql/)
+  assert.match(runner, /mail-event-scope-invariants-v1\.sql/)
   assert.match(runner, /database_invariant_preflight\.completed/)
   assert.doesNotMatch(runner, /INSERT INTO|UPDATE ops\.|DELETE FROM|ALTER TABLE|DROP TABLE|writeFile/i)
 })
@@ -290,4 +293,20 @@ test('personnel correction has an additive read-only scope diagnostic and negati
   const proof = readFileSync('backend/nestjs/scripts/verify-personnel-correction-postgres.cjs', 'utf8')
   assert.ok(proof.includes('personnel-correction-invariants-v1.sql'))
   assert.ok(proof.includes('scope drift must be detected'))
+})
+
+test('mail event scopes have an executed sanitized read-only overlay and native negative proof', () => {
+  const sql = readFileSync('db/preflight/mail-event-scope-invariants-v1.sql', 'utf8')
+  for (const table of ['ops.operational_mail_event', 'ops.incentive_approval_mail_event', 'ops.store', 'ops.sales_target_incentive_region_package', 'ops.incentive_company_cycle']) assert.ok(sql.includes(table))
+  for (const check of ['MAIL-EVENT-01', 'MAIL-EVENT-02']) assert.ok(sql.includes(check))
+  assert.match(sql, /event\.company_id IS DISTINCT FROM store\.company_id/)
+  assert.match(sql, /package\.period_key IS DISTINCT FROM event\.period_key/)
+  assert.match(sql, /cycle\.company_id IS DISTINCT FROM event\.company_id/)
+  assert.match(sql, /substr\(md5\(violations\.record_id\),1,12\)/)
+  assert.match(sql, /\)\[1:5\]/)
+  assert.doesNotMatch(stripSqlComments(sql), /\b(?:INSERT|UPDATE|DELETE|MERGE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|CALL|DO)\b/i)
+  const proof = readFileSync('backend/nestjs/src/modules/store-ops/infrastructure/operational-mail.postgres.spec.ts', 'utf8')
+  assert.ok(proof.includes('mail-event-scope-invariants-v1.sql'))
+  assert.ok(proof.includes('REPEATABLE READ READ ONLY'))
+  assert.ok(proof.includes("violation_count: '7'"))
 })

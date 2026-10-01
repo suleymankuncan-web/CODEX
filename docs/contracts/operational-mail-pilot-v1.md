@@ -100,3 +100,5 @@ Rollback: disable the relevant switches, retaining accepted/uncertain receipts.
 No live migration, deployment, account/provider change or production activation
 is part of local verification. Relevant unit, workbook and disposable PostgreSQL
 checks are targeted; no local full suite or manual image proof.
+
+Scope diagnostics: the operational V3 invariant command executes `db/preflight/mail-event-scope-invariants-v1.sql` alongside its existing overlays. It detects store/company mismatches and approval package/cycle company/period mismatches in a read-only transaction, returning counts and at most five hashed references. Global personnel events legitimately have no store/company scope. The immutable V1 diagnostic query remains unchanged.

@@ -44,6 +44,30 @@ describePg('operational mail native PostgreSQL',()=>{
         VALUES('${id(200)}','${id(1)}','FIXTURE','Store visit','fixture',1,'2020-01-01','${id(20)}','active');`);
   });
   afterAll(async()=>{await pool?.end();if(admin){await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH(FORCE)`);await admin.end();}});
+  it('diagnoses mail scope drift read-only with bounded hashes and valid global events',async()=>{
+    const query=readFileSync(resolve(process.cwd(),'../../db/preflight/mail-event-scope-invariants-v1.sql'),'utf8');
+    await checklist();
+    await pool.query(`INSERT INTO ops.operational_mail_event(event_key,kind,company_id) VALUES('global','personnel_roster',NULL),('company','weekly_report',$1)`,[id(1)]);
+    await pool.query(`INSERT INTO ops.incentive_approval_mail_event(event_key,company_id,period_key,stage,actor_user_id,approver_name,company_name,package_id)
+      VALUES('valid',$1,'2026-05','region_manager',$2,'Fixture','Fixture',$3)`,[id(1),id(20),id(80)]);
+    expect((await pool.query(query)).rows.map(row=>row.violation_count)).toEqual(['0','0']);
+    for(let index=0;index<7;index++) await pool.query(`INSERT INTO ops.operational_mail_event(event_key,kind,company_id,store_id)
+      VALUES($1,'checklist_completed',$2,$3)`,[`bad-${index}`,index===0 ? null : id(9),id(2)]);
+    await pool.query(`INSERT INTO ops.incentive_approval_mail_event(event_key,company_id,period_key,stage,actor_user_id,approver_name,company_name,package_id)
+      VALUES('wrong-company',$1,'2026-05','region_manager',$2,'Fixture','Fixture',$3),
+      ('wrong-period',$4,'2026-06','region_manager',$2,'Fixture','Fixture',$3)`,[id(9),id(20),id(80),id(1)]);
+    const count=async()=> (await pool.query('SELECT count(*) FROM ops.operational_mail_event')).rows[0].count;
+    const before=await count();const client=await pool.connect();
+    try {
+      await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      expect((await client.query('SHOW transaction_read_only')).rows[0].transaction_read_only).toBe('on');
+      const rows=(await client.query(query)).rows;
+      expect(rows).toMatchObject([{check_id:'MAIL-EVENT-01',violation_count: '7'}, {check_id:'MAIL-EVENT-02',violation_count:'2'}]);
+      expect(rows[0].sample_refs).toHaveLength(5);expect(rows[1].sample_refs).toHaveLength(2);
+      for(const row of rows) for(const sample of row.sample_refs) expect(sample).toMatch(/^[a-f0-9]{12}$/);
+    } finally {await client.query('ROLLBACK');client.release();}
+    expect(await count()).toBe(before);
+  });
   it('captures completion transactionally, resolves exactly three audiences, and dedupes the same mailbox',async()=>{
     const client=await pool.connect();try {await client.query('BEGIN');await client.query(`INSERT INTO ops.checklist_instance(checklist_template_id,store_id,status,completed_at) VALUES($1,$2,'completed',clock_timestamp())`,[id(200),id(2)]);await client.query('ROLLBACK');} finally {client.release();}
     expect(await repo().events(['operational'])).toEqual([]);
