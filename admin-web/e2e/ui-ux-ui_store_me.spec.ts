@@ -83,13 +83,17 @@ test('share dialog resets failed download feedback and both dialogs return keybo
   await expect(detailsTrigger).toBeFocused()
 
   await page.evaluate(() => {
-    HTMLCanvasElement.prototype.toDataURL = () => { throw new Error('Expected export failure') }
+    const original = HTMLCanvasElement.prototype.toBlob
+    HTMLCanvasElement.prototype.toBlob = function () {
+      HTMLCanvasElement.prototype.toBlob = original
+      throw new Error('Expected preparation failure')
+    }
   })
   const shareTrigger = page.getByRole('button', { name: 'Performans Kartı Oluştur', exact: true })
   await shareTrigger.click()
   const dialog = page.getByRole('dialog', { name: 'Performans Kartı Oluştur' })
-  await dialog.getByRole('button', { name: 'PNG indir' }).click()
   await expect(dialog.getByText('Performans kartı oluşturulamadı.')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'PNG indir' })).toBeDisabled()
   await dialog.getByRole('button', { name: 'Kapat', exact: true }).first().click()
   await expect(shareTrigger).toBeFocused()
   await shareTrigger.click()
