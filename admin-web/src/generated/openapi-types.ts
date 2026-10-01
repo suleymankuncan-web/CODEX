@@ -4,6 +4,24 @@
 
 export type components = {
   schemas: {
+    "AccountSecurity": {
+      "passwordState": "unknown" | "absent" | "present"
+      "passwordSetAt": string | null
+      "observedAt": string | null
+      "lastLoginAt": string | null
+      "lastActiveAt": string | null
+      "requests": Array<{
+          "requestId": string
+          "kind": "setup" | "reset"
+          "state": "queued" | "sending" | "sent" | "failed" | "unconfirmed" | "completed" | "expired"
+          "requestedAt": string | null
+          "sentAt": string | null
+          "expiresAt": string | null
+          "completedObservedAt": string | null
+          "verifiedPasswordSetAt": string | null
+          "errorCode": string | null
+        }>
+    }
     "AcknowledgeChecklistInstanceDto": {
       "acknowledgementNote"?: string
     }
@@ -222,6 +240,7 @@ export type components = {
             "providerSubject": string | null
             "isActive": boolean
             "lastLoginAt": string | null
+            "lastActiveAt"?: string | null
             "createdAt": string
             "deactivatedAt"?: string | null
             "deactivationReason"?: string | null
@@ -442,6 +461,7 @@ export type components = {
           "providerSubject": string | null
           "isActive": boolean
           "lastLoginAt": string | null
+          "lastActiveAt"?: string | null
           "createdAt": string
           "deactivatedAt"?: string | null
           "deactivationReason"?: string | null
@@ -465,6 +485,7 @@ export type components = {
           "providerSubject": string | null
           "isActive": boolean
           "lastLoginAt": string | null
+          "lastActiveAt"?: string | null
           "createdAt": string
           "deactivatedAt"?: string | null
           "deactivationReason"?: string | null
@@ -498,6 +519,7 @@ export type components = {
           "providerSubject": string | null
           "isActive": boolean
           "lastLoginAt": string | null
+          "lastActiveAt"?: string | null
           "createdAt": string
           "deactivatedAt"?: string | null
           "deactivationReason"?: string | null
@@ -1835,6 +1857,14 @@ export type components = {
             "averageScore": number | null
           }>
       }
+    }
+    "PasswordLinkDto": {
+      "requestId": string
+      "kind": "setup" | "reset"
+    }
+    "PasswordLinkQueued": {
+      "requestId": string
+      "state": string
     }
     "PersonnelCorrection": {
       "request_id": string
@@ -4396,6 +4426,42 @@ export type components = {
 }
 
 export type paths = {
+  "/api/auth/users/{userId}/security": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AccountSecurity"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/users/{userId}/password-links": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["PasswordLinkDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': components['schemas']["PasswordLinkQueued"]
+          }
+        }
+      }
+    }
+  }
+  "/api/auth/activity": {
+    post: {
+      responses: {
+        "204": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
   "/api/auth/browser-session/oidc": {
     post: {
       requestBody: {

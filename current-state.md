@@ -2,16 +2,17 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-09-30
+Last verified: 2026-10-01
 Use when: recovering current scope, blockers and next action
 Do not use when: inferring live deployment or selecting a branch from old PR notes
 
 ## Now
 
-- Nine PRs merged. Six returns/net-prim/auth PRs are authorized: targeted local tests and repeated self-review until GO, required full GitHub
+- Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
   repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md),
-  [shared returns UI/current-week calendar](docs/contracts/store-returns-read-v1.md) and [managed sessions](docs/contracts/managed-browser-session-v2.md).
+  [shared returns UI/current-week calendar](docs/contracts/store-returns-read-v1.md) and [managed sessions](docs/contracts/managed-browser-session-v2.md),
+  [account security/activity](docs/auth-account-security-v1.md).
 - Primler retains company-month seals, SD → HR → GM, final-money authority,
   payroll seals and legacy history; Auth/Master retains scroll/focus.
   [Verification](docs/ui/incentives-local-preview.md).
@@ -19,11 +20,9 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - Broad production rollout: `No-Go`.
 - Separate mobile app: discovery/planning only; implementation is not active.
 - Process: task-based reading; verification, integrity and activation gates remain.
-- Ranking monthly HG is merged in PR #1167 (`2db36bd1`), verified from GitHub/main
-  on 18 September. Selected-day sales use whole monthly targets; published admin
-  HG weight applies directly. Other KPI scales and closed snapshots are preserved.
-  [Contract and rollback](docs/plans/rankings-monthly-achievement-v1.md).
-  Deployment of this change is not established by merge.
+- Ranking monthly HG #1167 (`2db36bd1`) uses monthly targets and published HG
+  weight for selected-day sales; other scales/closed snapshots are preserved.
+  [Contract/rollback](docs/plans/rankings-monthly-achievement-v1.md). Deployment of this change is not established by merge.
 - Ranking daily-facts Redis cache is opt-in/default-off; company names, permissions,
   targets and scoring stay fresh. Hosted activation is unverified.
   [Measurement](docs/evidence/performance/2026-09-16-rankings-cache.md).

@@ -38,12 +38,17 @@ export class ManagedSessionRepository {
   }
 
   async activate(sessionId: string, userId: string, issuer: string, subject: string,
-    ciphertext: string, accessExpiresAt: number) {
+    ciphertext: string, accessExpiresAt: number, providerKey = "oidc") {
     const result = await this.database.query<ManagedSessionRow>(`
-      UPDATE ops.managed_browser_session SET status='active',user_id=$2,issuer=$3,subject=$4,
+      WITH activated AS (UPDATE ops.managed_browser_session SET status='active',user_id=$2,issuer=$3,subject=$4,
         refresh_ciphertext=$5,access_expires_at=to_timestamp($6),refreshed_at=clock_timestamp()
-      WHERE session_id=$1 AND status='creating' AND expires_at>NOW() RETURNING *`,
-    [sessionId, userId, issuer, subject, ciphertext, accessExpiresAt]);
+      WHERE session_id=$1 AND status='creating' AND expires_at>NOW()
+        AND EXISTS(SELECT 1 FROM ops.user_account WHERE user_id=$2::uuid AND is_active
+          AND auth_provider=$7 AND provider_subject=$4) RETURNING *),
+      recorded AS (UPDATE ops.user_account SET last_login_at=GREATEST(last_login_at,clock_timestamp())
+        WHERE user_id=$2::uuid AND EXISTS(SELECT 1 FROM activated) RETURNING user_id)
+      SELECT * FROM activated`,
+    [sessionId, userId, issuer, subject, ciphertext, accessExpiresAt, providerKey]);
     return result.rows[0];
   }
 

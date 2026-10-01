@@ -82,6 +82,7 @@ export function mapAuthUser(item: {
   provider_subject?: string | null;
   is_active: boolean;
   last_login_at: string | null;
+  last_active_at?: string | null;
   created_at: string;
   deactivated_at?: string | null;
   deactivation_reason?: string | null;
@@ -102,6 +103,7 @@ export function mapAuthUser(item: {
     providerSubject: item.provider_subject ?? null,
     isActive: item.is_active,
     lastLoginAt: item.last_login_at,
+    lastActiveAt: item.last_active_at ?? null,
     createdAt: item.created_at,
     ...("deactivated_at" in item ? { deactivatedAt: item.deactivated_at ?? null } : {}),
     ...(item.deactivation_reason !== undefined

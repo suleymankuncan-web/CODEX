@@ -19,6 +19,7 @@ import {
   useAuthorizationCacheBoundary,
 } from './features/session/authorization-cache-boundary'
 import { useLocalization } from './features/localization/useLocalization'
+import { useForegroundActivity } from './features/session/use-foreground-activity'
 import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
@@ -132,6 +133,7 @@ function App() {
   }, [currentReturnPath, expireSession, navigate, session.browserSessionKey])
 
   const authSummary = sessionQuery.data ?? null
+  useForegroundActivity(isReady && sessionQuery.isSuccess && authSummary?.authMode !== 'mock' && !isProviderSessionHydrating && !isPrototypeRoute ? authSummary?.user.userId : undefined)
   const previousBearerSessionRef = useRef({
     token: session.bearerToken,
     sessionKey: bearerSessionKey,

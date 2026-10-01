@@ -72,6 +72,7 @@ type UserAccountRow = {
   provider_subject: string | null;
   is_active: boolean;
   last_login_at: string | null;
+  last_active_at?: string | null;
   created_at: string;
   deactivated_at?: string | null;
   deactivation_reason?: string | null;
@@ -104,6 +105,7 @@ export class AuthAdminRepository {
           ua.provider_subject,
           ua.is_active,
           ua.last_login_at,
+          ua.last_active_at,
           ua.created_at
         FROM ops.user_account ua
         WHERE ua.auth_provider = $1

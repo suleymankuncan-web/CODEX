@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { IdentityLifecycleRepository } from "./identity-lifecycle.repository";
 import { KeycloakAdminClient } from "./keycloak-admin.client";
+import { AccountSecurityWorkerService } from "./account-security-worker.service";
 
 @Injectable()
 export class IdentityLifecycleWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -11,6 +12,7 @@ export class IdentityLifecycleWorkerService implements OnModuleInit, OnModuleDes
   constructor(
     private readonly repository: IdentityLifecycleRepository,
     private readonly keycloak: KeycloakAdminClient,
+    private readonly security?: AccountSecurityWorkerService,
   ) {}
 
   onModuleInit() {
@@ -37,15 +39,20 @@ export class IdentityLifecycleWorkerService implements OnModuleInit, OnModuleDes
         try {
           const user = await this.repository.getUserSnapshot(job.user_id);
           if (!user) throw new Error("identity_user_missing");
-          if (job.operation === "provision") {
-            const subject = await this.keycloak.provision(user);
+          if (job.operation === "password_link") {
+            if (!this.security) throw new Error("password_link_worker_missing");
+            await this.security.send(job.identity_lifecycle_job_id);
+            await this.repository.complete(job.identity_lifecycle_job_id);
+          } else if (job.operation === "provision") {
+            const subject = await this.keycloak.provision(user, { sendSetupEmail: false });
             const completed = await this.repository.completeProvision(job.identity_lifecycle_job_id, user.user_id, subject);
             if (!completed) await this.keycloak.disable(subject);
           } else {
             if (!user.provider_subject) throw new Error("identity_subject_missing");
             if (job.operation === "disable") await this.keycloak.disable(user.provider_subject);
             else if (job.operation === "update_profile") await this.keycloak.updateProfile(user.provider_subject, user);
-            else await this.keycloak.enable(user.provider_subject, user);
+            else if (job.operation === "enable") await this.keycloak.enable(user.provider_subject, user);
+            else throw new Error("identity_operation_unknown");
             const completed = job.operation === "enable"
               ? await this.repository.completeEnable(job.identity_lifecycle_job_id, user.user_id)
               : await this.repository.complete(job.identity_lifecycle_job_id);
@@ -57,6 +64,9 @@ export class IdentityLifecycleWorkerService implements OnModuleInit, OnModuleDes
           this.logger.warn(`Identity lifecycle job ${terminal ? "failed" : "retry scheduled"}: ${code}`);
         }
       }
+      await this.security?.poll();
+    } catch {
+      this.logger.warn("Identity lifecycle drain temporarily unavailable");
     } finally {
       this.running = false;
     }

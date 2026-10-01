@@ -36,7 +36,7 @@ postgres("managed browser sessions: real PostgreSQL locking and migration", () =
     if (target.hostname !== "127.0.0.1" || target.port !== "55437" || target.pathname !== "/postgres") throw new Error("isolated managed-session fixture required");
     admin = new Pool({ connectionString: url }); await admin.query(`CREATE DATABASE ${name}`); created = true;
     target.pathname = `/${name}`; pool = new Pool({ connectionString: target.toString() });
-    await pool.query("CREATE SCHEMA ops; CREATE TABLE ops.user_account(user_id UUID PRIMARY KEY,is_active BOOLEAN NOT NULL DEFAULT TRUE,auth_provider TEXT NOT NULL DEFAULT 'oidc',provider_subject TEXT NOT NULL DEFAULT 'provider-subject')");
+    await pool.query("CREATE SCHEMA ops; CREATE TABLE ops.user_account(user_id UUID PRIMARY KEY,is_active BOOLEAN NOT NULL DEFAULT TRUE,auth_provider TEXT NOT NULL DEFAULT 'oidc',provider_subject TEXT NOT NULL DEFAULT 'provider-subject',last_login_at TIMESTAMPTZ)");
     await pool.query("INSERT INTO ops.user_account(user_id) VALUES($1)", [userId]);
     await migrate(); await migrate();
     repository = new ManagedSessionRepository(new DatabaseService(pool));
@@ -58,6 +58,16 @@ postgres("managed browser sessions: real PostgreSQL locking and migration", () =
     const rows = await pool.query("SELECT * FROM ops.managed_browser_session WHERE session_id=$1", [first.sessionId]);
     expect(JSON.stringify(rows.rows)).not.toContain("synthetic-refresh");
     expect(JSON.stringify(rows.rows)).not.toContain(code);
+  });
+
+  it("records login once on activation and never on replay or provider renewal", async () => {
+    const code = randomUUID(), first = await create(code);
+    const stamp = (await pool.query("SELECT last_login_at FROM ops.user_account WHERE user_id=$1", [userId])).rows[0].last_login_at;
+    expect(stamp).toBeInstanceOf(Date);
+    await create(code);
+    await pool.query("UPDATE ops.managed_browser_session SET access_expires_at=NOW() WHERE session_id=$1", [first.sessionId]);
+    await service.verify(browser.verifySession(first.cookieValue).envelope);
+    expect((await pool.query("SELECT last_login_at FROM ops.user_account WHERE user_id=$1", [userId])).rows[0].last_login_at).toEqual(stamp);
   });
 
   it("serializes twenty expired-lease requests across distinct services into one rotating grant", async () => {

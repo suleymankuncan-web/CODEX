@@ -305,7 +305,7 @@ export function AuthAccessWorkbenchView(props: AuthAccessWorkbenchViewProps) {
                 <div className="auth-profile-facts">
                   <Fact label="Kimlik" value={selectedUser.providerLabel} />
                   <Fact label="Personel" value={selectedUser.employeeLabel} />
-                  <Fact label="Son hareket" value={formatActivity(selectedUser.lastActivityLabel)} />
+                  <Fact label="Son aktif" value={formatActivity(selectedUser.lastActivityLabel)} />
                   <Fact label="Mağaza" value={String(selectedUser.storeCount)} />
                 </div>
 
@@ -612,11 +612,14 @@ function initialOf(label: string) {
 
 function formatActivity(input: string) {
   const parsed = Date.parse(input)
-  if (!Number.isFinite(parsed)) return input
+  if (!Number.isFinite(parsed)) return 'Henüz kayıt yok'
 
   return new Intl.DateTimeFormat('tr-TR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Istanbul',
   }).format(new Date(parsed))
 }
