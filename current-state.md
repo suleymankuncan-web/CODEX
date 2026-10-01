@@ -8,6 +8,11 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
+- [Personnel/checklist read corrections](docs/plans/personnel-checklist-read-audit-v1.md)
+  fix monthly last-visit bounds and range benchmark reads, with optional detail-only
+  personnel gross/attributed return/net amounts. Local source changes do not
+  establish deployment; related Store presentation and mail work follow separately.
+
 - Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
   repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md),

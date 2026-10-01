@@ -1,3 +1,6 @@
+import { readRankingPersonnelBenchmarks } from "./personnel-performance-benchmarks";
+import { createPersonnelDetailMapper } from "./personnel-financial-display";
+import { StorePositiveSellersReadRepository } from "../infrastructure/store-positive-sellers-read.repository";
 import { Injectable } from "@nestjs/common";
 import { buildCurrentStoreComparisons } from "./ranking-store-comparisons";
 import { resolveRankingDateRange, resolveRequestedRankingPeriodEnd } from "./ranking-date-range";
@@ -125,6 +128,7 @@ export class RankingService {
     private readonly kpiConfigRepository: KpiConfigRepository,
     private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository,
     private readonly rankingReportingReadRepository: RankingReportingReadRepository,
+    private readonly positiveSellersRepository?: StorePositiveSellersReadRepository,
   ) {}
 
   async getRankings(input: GetRankingsInput): Promise<RankingResponse> {
@@ -223,7 +227,7 @@ export class RankingService {
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      this.getPersonnelBenchmarks({
+      readRankingPersonnelBenchmarks(this.reportingRepository, {
         isRange: aggregateDaily,
         companyId: input.companyIds[0],
         periodType: latestPeriod.period_type,
@@ -382,11 +386,14 @@ export class RankingService {
       assignedStoreIds: input.assignedStoreIds,
       assignmentByEmployeeId,
     });
-    const withProfileAccess = (
-      row: PersonnelRankingRow & { metrics?: RankingMetricValue[] },
-    ) => ({
-      ...row,
-      canOpenProfile: personnelProfileAccess.get(row.employeeId) ?? false,
+    const withProfileAccess = await createPersonnelDetailMapper({
+      repository: this.positiveSellersRepository,
+      period: latestPeriod,
+      access,
+      selectedRows: selectedPersonnelRows,
+      managedRows: managedPersonnelPage.items,
+      currentEmployee,
+      profileAccess: personnelProfileAccess,
     });
 
     const storeItems = selectGlobalRows(sortedStoreRows, access).map((row) =>
@@ -602,25 +609,6 @@ export class RankingService {
 
     if (input.companyId && !this.hasUsableBenchmarkRows(rows)) {
       rows = await this.storePerformanceReportingReadRepository.getStoreTurkeyBenchmarkValues({
-        ...input,
-        companyId: undefined,
-      });
-    }
-
-    return rows;
-  }
-
-  private async getPersonnelBenchmarks(input: {
-    isRange?: boolean;
-    companyId?: string;
-    periodType: string;
-    periodStart: string;
-    periodEnd: string;
-  }) {
-    let rows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues(input);
-
-    if (input.companyId && !this.hasUsableBenchmarkRows(rows)) {
-      rows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
         ...input,
         companyId: undefined,
       });

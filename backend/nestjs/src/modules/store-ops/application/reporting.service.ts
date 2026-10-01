@@ -1,3 +1,4 @@
+import { readPersonnelPerformanceBenchmarks } from "./personnel-performance-benchmarks";
 import { resolveRankingDateRange } from "./ranking-date-range";
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
@@ -9,7 +10,7 @@ import { ClosedRankingService } from "./closed-ranking.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { ReportingStoreKpiReadService } from "./reporting-store-kpi-read.service";
-import { buildLiveMetricRanks, formatEmployeeAssignmentName, getProfileMetricCodes, hasUsableBenchmarkRows, mapClosedMetricRankRows, mapEmployeeAssignmentIdentity, mapEmployeeAvailablePeriods } from "./reporting-performance.helpers";
+import { buildLiveMetricRanks, formatEmployeeAssignmentName, getProfileMetricCodes, mapClosedMetricRankRows, mapEmployeeAssignmentIdentity, mapEmployeeAvailablePeriods } from "./reporting-performance.helpers";
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
@@ -665,21 +666,13 @@ export class ReportingService {
     });
     const fallbackAssignment =
       employeeRows[0] ? null : await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
-    let benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
+    const benchmarkRows = await readPersonnelPerformanceBenchmarks(this.reportingRepository, {
+      isRange: Boolean(dateRange),
       companyId: input.companyIds[0] ?? undefined,
       periodType: latestPeriod.period_type ?? input.periodType,
       periodStart: latestPeriod.period_start,
       periodEnd: latestPeriod.period_end,
     });
-
-    if (!hasUsableBenchmarkRows(benchmarkRows)) {
-      benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
-        companyId: undefined,
-        periodType: latestPeriod.period_type ?? input.periodType,
-        periodStart: latestPeriod.period_start,
-        periodEnd: latestPeriod.period_end,
-      });
-    }
     let turkeyRows = rangeRows ?? await this.reportingRepository.getPeerEmployeePerformanceRows({
       metricCodes,
       companyId: input.companyIds[0] ?? undefined,

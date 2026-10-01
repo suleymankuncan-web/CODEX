@@ -53,6 +53,8 @@ export type PersonnelRankingRow = {
   scoreValue: number;
   /** Sales × personnel score share within the store; omitted for summary visibility. */
   storeScoreShare?: number | null;
+  /** Verified prim V2 facts for the selected store and dates; detail visibility only. */
+  sales?: { grossSales: string; signedReturns: string | null; netSales: string | null } | null;
   canOpenProfile: boolean;
   visibility: RankingVisibility;
   metrics?: RankingMetricValue[];

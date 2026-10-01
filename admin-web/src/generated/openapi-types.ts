@@ -2697,6 +2697,11 @@ export type components = {
             "population": number
             "storeRank": number | null
             "storePopulation": number
+            "sales"?: ({
+              "grossSales": string
+              "signedReturns": string | null
+              "netSales": string | null
+            }) | null
             "scoreValue": number
             "storeScoreShare"?: number | null
             "canOpenProfile": boolean
@@ -2724,6 +2729,11 @@ export type components = {
           "population": number
           "storeRank": number | null
           "storePopulation": number
+          "sales"?: ({
+            "grossSales": string
+            "signedReturns": string | null
+            "netSales": string | null
+          }) | null
           "scoreValue": number
           "storeScoreShare"?: number | null
           "canOpenProfile": boolean
@@ -2751,6 +2761,11 @@ export type components = {
             "population": number
             "storeRank": number | null
             "storePopulation": number
+            "sales"?: ({
+              "grossSales": string
+              "signedReturns": string | null
+              "netSales": string | null
+            }) | null
             "scoreValue": number
             "storeScoreShare"?: number | null
             "canOpenProfile": boolean
