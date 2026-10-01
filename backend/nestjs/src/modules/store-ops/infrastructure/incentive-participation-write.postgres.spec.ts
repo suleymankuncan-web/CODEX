@@ -31,10 +31,10 @@ describePostgres("participation append/freeze PostgreSQL proof", () => {
     await pool.query(`
       CREATE SCHEMA ops; CREATE SCHEMA rpt; CREATE SCHEMA audit;
       CREATE TABLE ops.company (company_id uuid PRIMARY KEY,status text);
-      CREATE TABLE ops.store (store_id uuid PRIMARY KEY,company_id uuid,status text,store_type text);
+      CREATE TABLE ops.store (store_id uuid PRIMARY KEY,company_id uuid,status text,store_type text,region_id uuid);
       CREATE TABLE ops.user_account (user_id uuid PRIMARY KEY,is_active boolean);
       CREATE TABLE ops.role (role_id uuid PRIMARY KEY,role_code text);
-      CREATE TABLE ops.user_role_assignment (user_id uuid,role_id uuid,start_at timestamptz,end_at timestamptz);
+      CREATE TABLE ops.user_role_assignment (user_id uuid,role_id uuid,start_at timestamptz,end_at timestamptz,scope_type text,company_id uuid,region_id uuid,store_id uuid);
       CREATE TABLE ops.user_action_store_assignment (user_id uuid,store_id uuid,start_at timestamptz,end_at timestamptz);
       CREATE TABLE ops.employee (employee_id uuid PRIMARY KEY,first_name text,last_name text,external_employee_ref text);
       CREATE TABLE ops.position (position_id uuid PRIMARY KEY,position_code text);
@@ -56,10 +56,10 @@ describePostgres("participation append/freeze PostgreSQL proof", () => {
       CREATE TABLE audit.event_log (actor_user_id uuid,event_type text,entity_name text,entity_id uuid,scope_type text,company_id uuid,store_id uuid,metadata_json jsonb);
       CREATE FUNCTION ops.store_was_company_during(uuid,date,date) RETURNS boolean LANGUAGE sql AS $$SELECT TRUE$$;
       INSERT INTO ops.company VALUES ('${id("1")}','active');
-      INSERT INTO ops.store VALUES ('${id("201")}','${id("1")}','active','company');
+      INSERT INTO ops.store VALUES ('${id("201")}','${id("1")}','active','company','${id("101")}');
       INSERT INTO ops.user_account VALUES ('${id("901")}',TRUE);
       INSERT INTO ops.role VALUES ('${id("301")}','REGION_MANAGER');
-      INSERT INTO ops.user_role_assignment VALUES ('${id("901")}','${id("301")}',NOW()-INTERVAL '1 day',NULL);
+      INSERT INTO ops.user_role_assignment VALUES ('${id("901")}','${id("301")}',NOW()-INTERVAL '1 day',NULL,'company','${id("1")}',NULL,NULL);
       INSERT INTO ops.user_action_store_assignment VALUES ('${id("901")}','${id("201")}',NOW()-INTERVAL '1 day',NULL);
       INSERT INTO ops.position VALUES ('${id("501")}','CASHIER');
       INSERT INTO ops.employee VALUES ('${id("801")}','Assigned','Cashier','staff-a'),('${id("802")}','Foreign','Person','staff-b');
@@ -71,13 +71,25 @@ describePostgres("participation append/freeze PostgreSQL proof", () => {
     await pool.query(`TRUNCATE ops.sales_target_incentive_participation_revision,audit.event_log,ops.sales_target_incentive_region_package_store,ops.sales_target_incentive_region_package,
       ops.sales_target_incentive_store_review,rpt.sales_target_incentive_final_row,rpt.sales_target_incentive_final_snapshot;
       UPDATE ops.user_action_store_assignment SET end_at=NULL;
-      UPDATE ops.user_role_assignment SET end_at=NULL;
+      UPDATE ops.user_role_assignment SET end_at=NULL,scope_type='company',company_id='${id("1")}',region_id=NULL,store_id=NULL;
       UPDATE ops.employee_assignment_history SET end_date=NULL;
       INSERT INTO rpt.sales_target_incentive_final_snapshot VALUES ('${id("401")}','${id("1")}','${id("201")}','2026-05','2026-06-01');
       INSERT INTO ops.sales_target_incentive_store_review VALUES ('${id("201")}','2026-05','reviewed','${id("901")}',NOW(),NOW());`);
   });
   afterAll(async () => { if (pool) await pool.end(); if (created) await admin.query(`DROP DATABASE ${name}`); if (admin) await admin.end(); });
 
+  it.each(['company','region','store'])('rejects a %s role outside the actual assigned store scope',async scope=>{
+    await pool.query('UPDATE ops.user_role_assignment SET scope_type=$1,company_id=$2,region_id=$3,store_id=$4',
+      [scope,id('2'),id('102'),id('202')]);
+    await expect(repository.setParticipation(input)).rejects.toThrow('Current assigned manager authority is required for preparation remediation');
+    expect((await pool.query('SELECT count(*) FROM ops.sales_target_incentive_participation_revision')).rows[0].count).toBe('0');
+    expect((await pool.query('SELECT count(*) FROM audit.event_log')).rows[0].count).toBe('0');
+  });
+  it.each(['region','store'])('accepts a current %s role covering the assigned store',async scope=>{
+    await pool.query('UPDATE ops.user_role_assignment SET scope_type=$1,company_id=$2,region_id=$3,store_id=$4',
+      [scope,id('1'),id('101'),scope==='store' ? id('201') : null]);
+    await expect(repository.setParticipation(input)).resolves.toMatchObject({revision:1,included:false});
+  });
   it("records a targetless person's reason/revision and reopens review without inventing financial rows", async () => {
     await expect(repository.setParticipation(input)).resolves.toMatchObject({ revision: 1, included: false });
     expect((await pool.query("SELECT exclusions_json FROM ops.sales_target_incentive_participation_revision")).rows[0].exclusions_json).toEqual([{ employeeId: id("801"), displayName: "Assigned Cashier", positionCode: "CASHIER", reasonNote: "Approved exclusion" }]);

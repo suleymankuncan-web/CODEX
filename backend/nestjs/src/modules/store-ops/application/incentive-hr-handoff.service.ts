@@ -6,10 +6,13 @@ import { IncentiveHrMailer } from "../infrastructure/incentive-hr-mailer";
 import { incentiveFinalApprovalCompanyIds } from "./incentive-final-approval-scope";
 import { incentiveStageCompanies } from "./incentive-company-cycle.service";
 import { buildIncentiveHrWorkbook, sumHrMoney } from "./incentive-hr-workbook";
+import { ConfigService } from "@nestjs/config";
+import { incentiveApprovalContent } from "../../../shared/mail/operational.templates";
+import { incentiveMailOrigin, incentiveMailLink } from "../../../shared/mail/incentive-mail-link";
 
 @Injectable()
 export class IncentiveHrHandoffService {
-  constructor(private readonly repository: IncentiveHrHandoffRepository, private readonly mailer: IncentiveHrMailer) {}
+  constructor(private readonly repository: IncentiveHrHandoffRepository, private readonly mailer: IncentiveHrMailer, private readonly config?: ConfigService) {}
 
   async preview(actor: AuthenticatedUser, period: string) {
     const companyIds = payrollCompanies(actor);
@@ -34,7 +37,11 @@ export class IncentiveHrHandoffService {
     for (const delivery of claimed) {
       const attachment = attachments.find(item => item.companyId === delivery.company_id)!;
       try {
-        const messageId = await this.mailer.send({ recipients: config.find(item => item.companyId === delivery.company_id)!.recipients, filename: `Primler-${period}.xlsx`, attachment: attachment.buffer, period, companyName: attachment.companyName, deliveryId: delivery.delivery_id });
+        const approval = snapshot.packages.find(p=>p.company_id===delivery.company_id)?.final_approver_name;
+        const origin = this.config ? incentiveMailOrigin(this.config) : null;
+        const content = approval && origin ? incentiveApprovalContent({stage:"general-manager",approverName:approval,
+          period:new Intl.DateTimeFormat("tr-TR",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(`${period}-01T12:00:00Z`)),detailUrl:incentiveMailLink(origin,period)}) : undefined;
+        const messageId = await this.mailer.send({ companyId:delivery.company_id, recipients: config.find(item => item.companyId === delivery.company_id)!.recipients, filename: `Primler-${period}.xlsx`, attachment: attachment.buffer, period, companyName: attachment.companyName, deliveryId: delivery.delivery_id, content });
         await this.repository.finish(delivery.delivery_id, "sent", messageId);
       } catch {
         // A timeout or partial SMTP acceptance can already have delivered the attachment.

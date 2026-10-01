@@ -8,10 +8,10 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Now
 
-- [Personnel/checklist reads](docs/plans/personnel-checklist-read-audit-v1.md):
-  monthly visit bounds, range references and scoped sales detail; local only.
-- [Mail rendering](docs/ui/email-visual-language-v1.md): shared app/Keycloak;
-  runtime rollout unverified.
+- [Read fixes](docs/plans/personnel-checklist-read-audit-v1.md) and
+  [Store UI](docs/plans/store-personnel-checklist-corrections-v1.md) preserve month/scope.
+- [Mail audit](docs/plans/mail-personnel-package-audit-20261001.md): four-role prim,
+  CRM/HR day1 09:00 Istanbul roster; streams default-off, rollout unverified.
 
 - Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
@@ -27,8 +27,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - Ranking monthly HG #1167 (`2db36bd1`) uses monthly targets and published HG
   weight for selected-day sales; other scales/closed snapshots are preserved.
   [Contract/rollback](docs/plans/rankings-monthly-achievement-v1.md). Deployment of this change is not established by merge.
-- Ranking daily-facts Redis cache is opt-in/default-off; company names, permissions,
-  targets and scoring stay fresh. Hosted activation is unverified.
+- Ranking daily-facts Redis cache stays default-off; permissions/targets/scoring
+  remain fresh. Hosted activation is unverified.
   [Measurement](docs/evidence/performance/2026-09-16-rankings-cache.md).
 - Checklist PDF/comments and account-only manager resolution are on merged main
   through #1165. LUFIAN heading, document-date regional manager, handwritten store
@@ -39,9 +39,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 ## Next
 
-Refresh branch/worktree, PR head/checks and runtime evidence per task.
-Merged code does not establish live PASS; old plans do not authorize unrelated
-work. Cloudflare Workers Static Assets owns the frontend; Vercel is retired.
+Refresh branch/worktree, PR checks and runtime evidence per task.
+Merge is not live PASS; old plans do not authorize unrelated work. Cloudflare Workers Static Assets owns the frontend; Vercel is retired.
 [AGENTS.md](AGENTS.md#reading-map) routes task-specific reading.
 
 ## Active Evidence Gates

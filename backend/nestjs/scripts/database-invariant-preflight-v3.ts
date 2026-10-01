@@ -31,6 +31,7 @@ async function main() {
     "store-contact-email-invariants-v1.sql",
     "incentive-participation-invariants-v1.sql",
     "incentive-company-cycle-invariants-v1.sql",
+    "mail-event-scope-invariants-v1.sql",
   ].map((file) => readFileSync(join(__dirname, "..", "..", "..", "db", "preflight", file), "utf8"));
   const pool = new Pool(
     buildDatabaseInvariantPreflightPoolConfig(targetClass, connectionString),

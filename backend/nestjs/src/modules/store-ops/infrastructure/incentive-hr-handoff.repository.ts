@@ -6,8 +6,8 @@ import { hrGrantSql, hrPackagesSql, hrRowsSql } from "./incentive-hr-handoff.sql
 import { companyPayrollPackagesSql, companyPayrollRowsSql } from "./incentive-company-payroll.sql";
 
 export type HrFrozenParticipation = { storeId: string; finalSnapshotId: string; participationRevisionNo: number; exclusions: Array<{ employeeId: string; displayName: string; positionCode: string; reasonNote: string }> };
-export type HrPackageRow = { company_id: string; company_name: string; manager_user_id: string | null; package_id: string | null; package_status: string | null; submitted_at: string | null; reviewed_at: string | null; manager_name: string; store_ids: string[]; stale_stores: number; frozen_participation?: HrFrozenParticipation[]; approval_origin?: string; final_cycle_id?: string | null; final_revision_no?: number | null; final_seal_hash?: string | null };
-export type HrExportRow = { company_id: string; manager_user_id: string; package_id: string; store_id: string; store_code: string; store_name: string; row_id: string; employee_id: string; display_name: string | null; position_code: string; target_amount: string | null; actual_sales_amount: string | null; achievement_pct: string | null; applied_rate: string | null; payable_amount: string; final_amount: string; reason_note: string | null };
+export type HrPackageRow = { company_id: string; company_name: string; manager_user_id: string | null; package_id: string | null; package_status: string | null; submitted_at: string | null; reviewed_at: string | null; manager_name: string; final_approver_name?: string | null; submission_note?: string | null; store_details?: Array<{storeId:string;storeCode:string;storeName:string;target:string|null;net:string|null;gross:string|null;returns:string|null;achievement:string|null}>; store_ids: string[]; stale_stores: number; frozen_participation?: HrFrozenParticipation[]; approval_origin?: string; final_cycle_id?: string | null; final_revision_no?: number | null; final_seal_hash?: string | null };
+export type HrExportRow = { company_id: string; manager_user_id: string; package_id: string; store_id: string; store_code: string; store_name: string; row_id: string; employee_id: string; display_name: string | null; position_code: string; target_amount: string | null; actual_sales_amount: string | null; achievement_pct: string | null; applied_rate: string | null; payable_amount: string; final_amount: string; reason_note: string | null; raw_baseline?:string|null; proposed_amount?:string|null; gross_sales?:string|null; signed_returns?:string|null };
 export type HrDeliveryRow = { company_id: string; delivery_id: string; status: "sending" | "sent" | "uncertain"; created_at: string; sent_at: string | null };
 export type HrSnapshot = { packages: HrPackageRow[]; rows: HrExportRow[]; deliveries: HrDeliveryRow[] };
 export type HrDeliveryConfig = { companyId: string; recipients: string[] };
@@ -82,13 +82,15 @@ export class IncentiveHrHandoffRepository {
     const result = await client.query<HrSnapshot>(`SELECT
       (SELECT COALESCE(json_agg(p), '[]'::json) FROM (
         SELECT legacy.*,CASE WHEN approved.package_id IS NOT NULL THEN 'legacy_approved' ELSE 'legacy_pending' END AS approval_origin,
-          NULL::text AS final_cycle_id,NULL::integer AS final_revision_no,NULL::text AS final_seal_hash
+          NULL::text AS final_cycle_id,NULL::integer AS final_revision_no,NULL::text AS final_seal_hash,NULL::text AS final_approver_name,
+          (SELECT p.submission_note FROM ops.sales_target_incentive_region_package p WHERE p.sales_target_incentive_region_package_id::text=legacy.package_id) AS submission_note,
+          NULL::jsonb AS store_details
         FROM (${hrPackagesSql}) legacy LEFT JOIN ops.incentive_legacy_approval approved ON approved.package_id::text=legacy.package_id
         WHERE NOT EXISTS (SELECT 1 FROM ops.incentive_company_cycle c WHERE c.company_id::text=legacy.company_id AND c.period_key=$1)
         UNION ALL SELECT * FROM (${companyPayrollPackagesSql}) company_packages
       ) p) AS packages,
       (SELECT COALESCE(json_agg(r), '[]'::json) FROM (
-        SELECT legacy.* FROM (${hrRowsSql}) legacy JOIN ops.incentive_legacy_approval approved ON approved.package_id::text=legacy.package_id
+        SELECT legacy.*,NULL::text AS raw_baseline,NULL::text AS proposed_amount,NULL::text AS gross_sales,NULL::text AS signed_returns FROM (${hrRowsSql}) legacy JOIN ops.incentive_legacy_approval approved ON approved.package_id::text=legacy.package_id
         WHERE NOT EXISTS (SELECT 1 FROM ops.incentive_company_cycle c WHERE c.company_id::text=legacy.company_id AND c.period_key=$1)
         UNION ALL SELECT * FROM (${companyPayrollRowsSql}) company_rows
       ) r) AS rows,

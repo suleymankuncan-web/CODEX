@@ -1,3 +1,4 @@
+import { reportWeeklyMetrics } from "./report-weekly-metrics";
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import {
@@ -95,15 +96,15 @@ checklist_month_scores AS (
     scoped.store_id,
     AVG(checklist_instance.total_score) FILTER (
       WHERE checklist_template.template_type = 'BM_STORE_VISIT'
-        AND checklist_instance.completed_at::date BETWEEN $1::date AND $2::date
+        AND (checklist_instance.completed_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $1::date AND $2::date
     )::text AS bm_checklist_score,
     AVG(checklist_instance.total_score) FILTER (
       WHERE checklist_template.template_type <> 'BM_STORE_VISIT'
-        AND checklist_instance.completed_at::date BETWEEN $1::date AND $2::date
+        AND (checklist_instance.completed_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $1::date AND $2::date
     )::text AS vm_checklist_score,
     COUNT(*) FILTER (
       WHERE checklist_instance.status = 'completed'
-        AND checklist_instance.completed_at::date BETWEEN $1::date AND $2::date
+        AND (checklist_instance.completed_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $1::date AND $2::date
         AND checklist_acknowledgement.checklist_acknowledgement_id IS NULL
     )::text AS pending_ack_count
   FROM scoped_stores scoped
@@ -119,13 +120,14 @@ checklist_month_scores AS (
 latest_visit AS (
   SELECT
     scoped.store_id,
-    MAX(checklist_instance.completed_at::date)::text AS last_visit_date,
-    ($2::date - MAX(checklist_instance.completed_at::date))::text AS days_since_visit
+    MAX((checklist_instance.completed_at AT TIME ZONE 'Europe/Istanbul')::date)::text AS last_visit_date,
+    ($2::date - MAX((checklist_instance.completed_at AT TIME ZONE 'Europe/Istanbul')::date))::text AS days_since_visit
   FROM scoped_stores scoped
   LEFT JOIN ops.checklist_instance checklist_instance
     ON checklist_instance.store_id = scoped.store_id
    AND checklist_instance.status = 'completed'
-   AND checklist_instance.completed_at::date <= $2::date
+   AND checklist_instance.completed_at >= ($1::date::timestamp AT TIME ZONE 'Europe/Istanbul')
+   AND checklist_instance.completed_at < (($2::date + 1)::timestamp AT TIME ZONE 'Europe/Istanbul')
   GROUP BY scoped.store_id
 ),
 action_state AS (
@@ -320,13 +322,18 @@ export class StoreMonthlyReportPackageRepository {
     storeIds: string[];
     regionManagerUserId?: string;
     selectedStoreIds?: string[];
+    weeklyContext?: boolean;
   }): Promise<StoreMonthlyReportPackageRow[]> {
     if (!this.hasStoreScope(input) || input.selectedStoreIds?.length === 0) {
       return [];
     }
 
     const result = await this.databaseService.query<StoreMonthlyReportPackageRow>(
-      STORE_MONTHLY_REPORT_PACKAGE_SQL,
+      input.weeklyContext ? STORE_MONTHLY_REPORT_PACKAGE_SQL
+        .replaceAll("TO_CHAR($1::date, 'YYYY-MM')", "TO_CHAR($2::date, 'YYYY-MM')")
+        .replace("DATE_TRUNC('month', $1::date)", "DATE_TRUNC('month', $2::date)")
+        .replace("norm_plan.period_end >= $1::date", "norm_plan.period_end >= $2::date")
+        : STORE_MONTHLY_REPORT_PACKAGE_SQL,
       [
         input.periodStart,
         input.periodEnd,
@@ -339,6 +346,13 @@ export class StoreMonthlyReportPackageRepository {
     );
 
     return result.rows;
+  }
+
+  async getStoreWeeklyReportPackageRows(input: Parameters<StoreMonthlyReportPackageRepository["getStoreMonthlyReportPackageRows"]>[0]) {
+    const rows=await this.getStoreMonthlyReportPackageRows({...input,weeklyContext:true});
+    const metrics=await reportWeeklyMetrics(this.databaseService,{start:input.periodStart,end:input.periodEnd,storeIds:rows.map(r=>r.store_id)});
+    const byStore=new Map(metrics.map(m=>[m.store_id,m]));
+    return rows.map(row=>({...row,score_value:null,upt_value:null,atv_value:null,cr_value:null,hg_value:null,gsm_value:null,...byStore.get(row.store_id)}));
   }
 
   private hasStoreScope(input: StoreMonthlyReportPackageScope): boolean {

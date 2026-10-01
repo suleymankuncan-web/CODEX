@@ -101,4 +101,7 @@ export async function seedCompanyCycle(pool: Pool, options?: { legacyEvidence?: 
       VALUES('${id(1)}','2026-04','${id(22)}',repeat('c',64),ARRAY['historical@example.test'],repeat('b',64),'uncertain','2026-05-03');
   `);
   await pool.query(readFileSync(resolve(process.cwd(),"../../db/migrations/095_incentive_company_cycle_v1.sql"),"utf8"));
+  await pool.query(readFileSync(resolve(process.cwd(),"../../db/migrations/096_store_aware_kpi_returns_v2.sql"),"utf8"));
+  await pool.query(readFileSync(resolve(process.cwd(),"../../db/migrations/100_incentive_approval_mail_v1.sql"),"utf8"));
+  await pool.query(readFileSync(resolve(process.cwd(),"../../db/migrations/102_incentive_manager_scope_v1.sql"),"utf8"));
 }

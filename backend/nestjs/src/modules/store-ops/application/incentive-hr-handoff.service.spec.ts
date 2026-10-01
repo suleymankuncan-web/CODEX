@@ -78,7 +78,7 @@ describe("HR email handoff", () => {
     expect(messages.map(message => message.recipients)).toEqual([["hr@company-a.example"], ["hr@company-b.example"]]);
     const sheet = XLSX.read(messages[0].attachment, { type: "buffer" }).Sheets["Personel Primleri"];
     expect(sheet["!ref"]).toBe("A1:M2");
-    expect(sheet.E2.v).not.toBe("Other company employee");
+    expect(sheet.C2.v).not.toBe("Other company employee");
     expect(repository.finish).toHaveBeenCalledWith("delivery-b", "sent", "smtp-id");
   });
 });

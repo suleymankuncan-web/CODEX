@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 import type { StorePositiveSeller } from "../application/store-returns.contract";
 
 @Injectable()
 export class StorePositiveSellersReadRepository {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly databaseService: Pick<DatabaseService,"query">) {}
 
   async listActivity(input: { storeIds: string[]; throughDate: string }) {
     if (!input.storeIds.length) return [];

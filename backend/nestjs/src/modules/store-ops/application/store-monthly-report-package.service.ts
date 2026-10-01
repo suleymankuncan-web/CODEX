@@ -1,3 +1,4 @@
+import { validateClosedWeek } from "../../../shared/mail/pilot-periods";
 import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import * as XLSX from "xlsx-js-style";
 import { RankingService } from "./ranking.service";
@@ -193,8 +194,29 @@ export class StoreMonthlyReportPackageService {
     };
   }
 
+  async buildWeeklyWorkbook(input: StoreMonthlyReportPackageInput & {periodStart:string;periodEnd:string}):Promise<StoreMonthlyReportWorkbook> {
+    validateClosedWeek(input.periodStart,input.periodEnd,input.today);
+    const rows=await this.storeMonthlyReportPackageRepository.getStoreWeeklyReportPackageRows({
+      periodStart:input.periodStart,periodEnd:input.periodEnd,companyIds:input.companyIds,regionIds:input.regionIds,
+      storeIds:input.storeIds,regionManagerUserId:input.regionManagerUserId,
+    });
+    const scores=await this.getRankingScoresByStoreId({input,periodStart:input.periodStart,periodEnd:input.periodEnd,storeIds:rows.map(r=>r.store_id)});
+    const periodLabel="Haftalık rapor"; const coverageLabel=`${input.periodStart} – ${input.periodEnd}`;
+    const items=rows.map(row=>({...toPackageItem({row,periodLabel,coverageLabel,scoreValue:scores.get(row.store_id) ?? null}),
+      hg:row.hg_value===null ? EMPTY_VALUE : `%${formatNumber(row.hg_value)}`,
+      cr:row.cr_value===null ? EMPTY_VALUE : `%${formatNumber(Number(row.cr_value)*100)}`,
+      gsm:row.gsm_value===null ? EMPTY_VALUE : `%${formatNumber(Number(row.gsm_value)*100)}`,
+    }));
+    for(const item of items) item.dataNote += `; Hedef/prim durumu: ${input.periodEnd.slice(0,7)}; HG aylık hedef üzerinden; turnover yılbaşından itibaren`;
+    return this.workbook({period:input.periodStart,periodLabel,coverageLabel,isCurrentPeriod:false,storeCount:items.length,
+      sections:buildSections({periodLabel,storeCount:items.length}),items},`magaza-izleyis-haftalik-${input.periodStart}-${input.periodEnd}.xlsx`);
+  }
+
   async buildWorkbook(input: StoreMonthlyReportPackageInput): Promise<StoreMonthlyReportWorkbook> {
-    const summary = await this.getSummary(input);
+    return this.workbook(await this.getSummary(input),`magaza-izleyis-${input.period}.xlsx`);
+  }
+
+  private workbook(summary:StoreMonthlyReportPackageSummary,fileName:string):StoreMonthlyReportWorkbook {
     const worksheetRows = [
       STORE_MONTHLY_REPORT_PACKAGE_HEADERS,
       ...summary.items.map((item) => [
@@ -234,7 +256,7 @@ export class StoreMonthlyReportPackageService {
       buffer: Buffer.from(
         XLSX.write(workbook, { bookType: "xlsx", cellStyles: true, type: "buffer" }),
       ),
-      fileName: `magaza-izleyis-${input.period}.xlsx`,
+      fileName,
     };
   }
 
@@ -247,6 +269,7 @@ export class StoreMonthlyReportPackageService {
   private async getRankingScoresByStoreId(input: {
     input: StoreMonthlyReportPackageInput;
     periodStart: string;
+    periodEnd?: string;
     storeIds: string[];
   }) {
     const scopedStoreIds = new Set(input.storeIds);
@@ -266,8 +289,9 @@ export class StoreMonthlyReportPackageService {
       regionIds: input.input.rankingContext.regionIds,
       storeIds: input.input.rankingContext.storeIds,
       assignedStoreIds: input.input.rankingContext.assignedStoreIds,
-      periodType: "monthly",
+      periodType: input.periodEnd ? "daily" : "monthly",
       periodStart: input.periodStart,
+      ...(input.periodEnd ? {periodEnd:input.periodEnd} : {}),
       limit: 500,
       offset: 0,
     });
@@ -427,7 +451,7 @@ function toPackageItem(input: {
     normFiili,
     missingDays,
     turnover,
-    lastVisit: formatDate(input.row.last_visit_date),
+    lastVisit: input.row.last_visit_date ? formatDate(input.row.last_visit_date) : "Checklist yapılmadı",
     daysSinceVisit: formatDaysSinceVisit(input.row.days_since_visit),
     dataNote: dataNotes.length > 0 ? dataNotes.join("; ") : "Tamam",
   };

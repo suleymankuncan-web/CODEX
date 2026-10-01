@@ -2,6 +2,11 @@
 export const storeOpsModuleGraphLimits = new Map([
   // Group existing cache/returns read ownership without growing the ranking service graph.
   ['backend/nestjs/src/modules/store-ops/store-ops-ranking-read-dependencies.module.ts', { imports: 2, controllers: 0, providers: 0, exports: 2 }],
+  // Isolated notification polling owns only delivery services; business-cycle graph stays fixed.
+  ['backend/nestjs/src/modules/store-ops/store-ops-incentive-approval-mail.module.ts', { imports: 0, controllers: 0, providers: 4, exports: 0 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops-operational-mail.module.ts', { imports: 1, controllers: 0, providers: 5, exports: 0 }],
+  // One bounded workbook owner is shared by the monthly controller and report mail.
+  ['backend/nestjs/src/modules/store-ops/store-ops-report-workbook.module.ts', { imports: 1, controllers: 0, providers: 3, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-personnel-correction.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   ['backend/nestjs/src/modules/store-ops/store-ops.module.ts', { controllers: 0, providers: 0, exports: 5 }],
   [
