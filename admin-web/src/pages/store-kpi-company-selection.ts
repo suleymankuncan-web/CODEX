@@ -74,6 +74,7 @@ export function useReportViewerStoreSelection(input: {
     companyStoreQuery,
     effectiveStoreId: selection.effectiveStoreId,
     isReportViewer,
+    requestedStoreId: rawSelectedStoreId,
     selectedStoreId: selection.selectedStoreId,
     setSelectedStoreId,
     storeOptions: selection.options,

@@ -6,6 +6,7 @@ import type {
   RankingSummary,
 } from '../features/reports/api'
 import { formatDate, formatNumber as formatIntlNumber } from '../lib/format'
+import { getBusinessMonthInputValue } from '../lib/business-date'
 import type { AppLocale } from '../lib/i18n'
 
 export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
@@ -15,8 +16,7 @@ export const personnelMetricCodes = ['TARGET_ACHIEVEMENT', 'ATV', 'UPT'] as cons
 export const rankingPageSize = 100
 
 export function currentRankingPeriod() {
-  const today = new Date()
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+  return `${getBusinessMonthInputValue()}-01`
 }
 
 export type ActiveRankingList = 'stores' | 'personnel'
@@ -47,6 +47,7 @@ export type StoreRankingsTextFilter =
   | 'search'
 
 export type StoreRankingsPageAction =
+  | { type: 'hydrateLocation'; searchParams: URLSearchParams }
   | { type: 'setFilter'; field: StoreRankingsTextFilter; value: string }
   | { type: 'setPeriod'; periodStart: string; dayOfMonth: string; rangeStart?: string; rangeEnd?: string }
   | { type: 'setOffset'; value: number }
@@ -327,6 +328,8 @@ export function storeRankingsPageReducer(
   action: StoreRankingsPageAction,
 ): StoreRankingsPageState {
   switch (action.type) {
+    case 'hydrateLocation':
+      return createInitialStoreRankingsPageState(action.searchParams)
     case 'setPeriod':
       return { ...state, periodStart: action.periodStart, dayOfMonth: action.dayOfMonth, rangeStart: action.rangeStart ?? '', rangeEnd: action.rangeEnd ?? '', offset: 0 }
     case 'setFilter':

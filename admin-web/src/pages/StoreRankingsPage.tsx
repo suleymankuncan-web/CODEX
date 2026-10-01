@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -61,6 +61,8 @@ export function StoreRankingsPage(input: {
     sortDirection,
   } = pageState
   const [debouncedSearch, setDebouncedSearch] = useState(search)
+  const observedSearch = useRef(searchParams.toString())
+  const pendingOwnSearch = useRef<string | null>(null)
   const limit = rankingPageSize
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
   const requestedPeriod = getRequestedRankingPeriod(periodStart, dayOfMonth, rangeStart, rangeEnd)
@@ -72,10 +74,22 @@ export function StoreRankingsPage(input: {
   }, [search, debouncedSearch])
 
   useEffect(() => {
-    const nextParams = buildStoreRankingsSearchParams(pageState)
     const current = new URLSearchParams(location.search).toString()
+    if (current !== observedSearch.current) {
+      observedSearch.current = current
+      const ownNavigation = current === pendingOwnSearch.current
+      pendingOwnSearch.current = null
+      if (!ownNavigation) {
+        const incoming = new URLSearchParams(current)
+        dispatchPageState({ type: 'hydrateLocation', searchParams: incoming })
+        setDebouncedSearch(createInitialStoreRankingsPageState(incoming).search)
+        return
+      }
+    }
+    const nextParams = buildStoreRankingsSearchParams(pageState)
     const next = nextParams.toString()
     if (current !== next) {
+      pendingOwnSearch.current = next
       setSearchParams(nextParams, { replace: true })
     }
   }, [location.search, pageState, setSearchParams])
