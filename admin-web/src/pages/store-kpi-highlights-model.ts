@@ -97,15 +97,15 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     searchParams,
     setSearchParams,
   })
-  const { companyStoreQuery, effectiveStoreId, isReportViewer, selectedStoreId, storeOptions, storeSelectionReady } = storeSelection
+  const { companyStoreQuery, effectiveStoreId, isReportViewer, requestedStoreId, selectedStoreId, storeOptions, storeSelectionReady } = storeSelection
   const routePeriodStart = getQueryValue(searchParams, 'periodStart')
   const { livePeriodType, activeLivePeriodStart: requestedLivePeriodStart, setLivePeriodType, setLivePeriodFilter } =
     buildStoreKpiLivePeriodControls(searchParams, setSearchParams)
   const ownsStoreView = Boolean(input.authSummary?.user.roleCodes.includes('STORE_MANAGER')) && !isReportViewer && !hasGlobalStoreDetailDefault(input.authSummary) && !input.authSummary?.user.roleCodes.includes('REGION_MANAGER')
   const regionStoreView = !isReportViewer && selectedStoreId.length > 0 && Boolean(input.authSummary?.user.roleCodes.includes('REGION_MANAGER'))
   const activeLivePeriodStart = requestedLivePeriodStart || (ownsStoreView || regionStoreView ? (livePeriodType === 'monthly' ? `${getBusinessDateInputValue().slice(0, 7)}-01` : getBusinessDateInputValue()) : '')
-  const isReportViewerOverview = isReportViewer && selectedStoreId.length === 0
-  const isReportViewerStoreDetail = isReportViewer && selectedStoreId.length > 0
+  const isReportViewerOverview = isReportViewer && requestedStoreId.length === 0
+  const isReportViewerStoreDetail = isReportViewer && requestedStoreId.length > 0
   const hasRegionManagerRole = !isReportViewer && (input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false)
   const regionManagerUserId = input.authSummary?.user.userId ?? ''
   const hasDetailDefault = hasStoreDetailDefault(input.authSummary)

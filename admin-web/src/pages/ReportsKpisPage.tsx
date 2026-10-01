@@ -36,11 +36,13 @@ import {
 } from './admin-operational-primitives'
 
 function toNumber(input: string | null) {
+  if (input === null) return null
   const parsed = Number(input)
-  return Number.isFinite(parsed) ? parsed : 0
+  return Number.isFinite(parsed) ? parsed : null
 }
 
-function formatMetric(input: number, locale: AppLocale) {
+function formatMetric(input: number | null, locale: AppLocale) {
+  if (input === null) return '—'
   return formatNumber(input, locale, {
     minimumFractionDigits: Number.isInteger(input) ? 0 : 2,
     maximumFractionDigits: 2,
@@ -48,7 +50,8 @@ function formatMetric(input: number, locale: AppLocale) {
 }
 
 function formatPercent(input: string | null, locale: AppLocale) {
-  return `${formatMetric(toNumber(input) * 100, locale)}%`
+  const value = toNumber(input)
+  return value === null ? '—' : `${formatMetric(value * 100, locale)}%`
 }
 
 function mapStatusBandTone(input: string | null): AdminSurfaceTone {
@@ -114,15 +117,24 @@ export function ReportsKpisPage() {
     if (sortBy === 'status') {
       return items.sort((left, right) => (left.statusBand ?? '').localeCompare(right.statusBand ?? ''))
     }
-    return items.sort((left, right) => toNumber(right.achievementRate) - toNumber(left.achievementRate))
+    return items.sort((left, right) => {
+      const leftRate = toNumber(left.achievementRate)
+      const rightRate = toNumber(right.achievementRate)
+      if (leftRate === null) return rightRate === null ? 0 : 1
+      if (rightRate === null) return -1
+      return rightRate - leftRate
+    })
   }, [filteredRows, sortBy])
 
   const totals = useMemo(() => {
     return sortedRows.reduce(
       (accumulator, row) => {
-        accumulator.target += toNumber(row.targetValue)
-        accumulator.actual += toNumber(row.actualValue)
-        accumulator.achievement += toNumber(row.achievementRate)
+        const target = toNumber(row.targetValue)
+        const actual = toNumber(row.actualValue)
+        const achievement = toNumber(row.achievementRate)
+        if (target !== null) { accumulator.target += target; accumulator.targetSamples += 1 }
+        if (actual !== null) { accumulator.actual += actual; accumulator.actualSamples += 1 }
+        if (achievement !== null) { accumulator.achievement += achievement; accumulator.achievementSamples += 1 }
         if (row.statusBand === 'on_track') accumulator.onTrack += 1
         if (row.statusBand === 'at_risk') accumulator.atRisk += 1
         if (row.statusBand === 'off_track') accumulator.offTrack += 1
@@ -132,6 +144,9 @@ export function ReportsKpisPage() {
         target: 0,
         actual: 0,
         achievement: 0,
+        targetSamples: 0,
+        actualSamples: 0,
+        achievementSamples: 0,
         onTrack: 0,
         atRisk: 0,
         offTrack: 0,
@@ -139,7 +154,8 @@ export function ReportsKpisPage() {
     )
   }, [sortedRows])
 
-  const averageAchievement = sortedRows.length > 0 ? totals.achievement / sortedRows.length : 0
+  const averageAchievement = totals.achievementSamples > 0 ? totals.achievement / totals.achievementSamples : null
+  const averageAchievementDisplay = formatPercent(averageAchievement === null ? null : String(averageAchievement), locale)
 
   if (!snapshotRunId) {
     return (
@@ -196,7 +212,7 @@ export function ReportsKpisPage() {
         items={[
           { id: 'snapshot-run', label: t('reportsKpis.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
           { id: 'rows-in-view', label: t('reportsKpis.rowsInView'), value: filteredRows.length, tone: 'cyan' },
-          { id: 'avg-achievement', label: t('reportsKpis.avgAchievement'), value: formatPercent(String(averageAchievement), locale), tone: 'accent' },
+          { id: 'avg-achievement', label: t('reportsKpis.avgAchievement'), value: averageAchievementDisplay, tone: 'accent' },
         ]}
       />
 
@@ -214,7 +230,7 @@ export function ReportsKpisPage() {
           {
             id: 'target-total',
             label: t('reportsKpis.targetTotalTitle'),
-            value: Math.round(totals.target),
+            value: totals.targetSamples > 0 ? Math.round(totals.target) : '—',
             description: t('reportsKpis.targetTotalNote'),
             icon: <Target size={18} />,
             tone: 'accent',
@@ -222,7 +238,7 @@ export function ReportsKpisPage() {
           {
             id: 'actual-total',
             label: t('reportsKpis.actualTotalTitle'),
-            value: Math.round(totals.actual),
+            value: totals.actualSamples > 0 ? Math.round(totals.actual) : '—',
             description: t('reportsKpis.actualTotalNote'),
             icon: <Gauge size={18} />,
             tone: 'success',
@@ -239,7 +255,7 @@ export function ReportsKpisPage() {
             id: 'off-track',
             label: t('reportsKpis.offTrackTitle'),
             value: totals.offTrack,
-            description: t('reportsKpis.offTrackNote', { value: formatPercent(String(averageAchievement), locale) }),
+            description: t('reportsKpis.offTrackNote', { value: averageAchievementDisplay }),
             icon: <Activity size={18} />,
             tone: totals.offTrack === 0 ? 'neutral' : 'danger',
           },

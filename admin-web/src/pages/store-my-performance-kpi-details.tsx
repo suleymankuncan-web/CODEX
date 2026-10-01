@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { getMyPerformance, getPersonnelPerformance, type MyPerformanceSummary } from '../features/reports/api'
 import { metricGrowth } from './store-kpis-manager-insights-utils'
+import { fetchPerformanceWithDailyMonthFallback } from './store-my-performance-monthly-fallback'
 import './store-my-performance-kpi-details.css'
 
 type Props = {
@@ -23,15 +24,18 @@ export function StoreMyPerformanceKpiDetails({ performance, profileEmployeeId, l
   const tr = locale === 'tr'
   const currentYear = performance.period?.periodStart.slice(0, 4) ?? String(new Date().getFullYear())
   const [year, setYear] = useState(currentYear)
-  const available = new Set(performance.availablePeriods.filter(p => p.periodType === 'monthly').map(p => p.periodStart.slice(0, 10)))
+  const available = new Set(performance.availablePeriods
+    .filter(p => p.periodType === 'monthly' || p.periodType === 'daily')
+    .map(p => `${p.periodStart.slice(0, 7)}-01`))
   const years = [...new Set([currentYear, ...[...available].map(p => p.slice(0, 4))])].sort().reverse()
   const months = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}-01`)
   const periods = [...new Set(months.flatMap(month => [month, previousMonth(month), `${Number(year) - 1}${month.slice(4)}`]))]
   const queries = useQueries({ queries: periods.map(periodStart => ({
     queryKey: [...(profileEmployeeId ? ['personnel-performance', profileEmployeeId] : ['my-performance']), 'live', 'monthly', periodStart, ''],
-    queryFn: () => profileEmployeeId
-      ? getPersonnelPerformance(profileEmployeeId, { mode: 'live', periodType: 'monthly', periodStart })
-      : getMyPerformance({ mode: 'live', periodType: 'monthly', periodStart }),
+    queryFn: () => fetchPerformanceWithDailyMonthFallback(
+      { mode: 'live', periodType: 'monthly', periodStart },
+      request => profileEmployeeId ? getPersonnelPerformance(profileEmployeeId, request) : getMyPerformance(request),
+    ),
     enabled: available.has(periodStart), staleTime: 60_000,
   })) })
   const queryByMonth = new Map(periods.map((month, i) => [month, queries[i]!]))

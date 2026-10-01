@@ -76,8 +76,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState(() => resolveCurrentPeriodKey())
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
-  const [adjustmentAmount, setAdjustmentAmount] = useState('')
-  const [reasonNote, setReasonNote] = useState('')
+  const [correctionDraft, setCorrectionDraft] = useState<{ key: string; amount: string; reason: string } | null>(null)
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
   const [returnNotes, setReturnNotes] = useState<Record<string, string>>({})
   const queryIdentity = useMemo(
@@ -91,9 +90,8 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
   })
   const correctionMutation = useMutation({
     mutationFn: createAdminSalesTargetIncentiveCorrection,
-    onSuccess: async () => {
-      setAdjustmentAmount('')
-      setReasonNote('')
+    onSuccess: async (_response, variables) => {
+      setCorrectionDraft(current => current?.key === `${variables.period}:${variables.storeId}:${variables.employeeId}:${variables.participantType}` ? null : current)
       actionToast.success(t('adminIncentives.toast.correctionSaved'))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
@@ -126,6 +124,10 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
   const payableTotal = sumMoney(rows.map((item) => getPrimaryEarnedAmount(item.row)))
   const blockedCount = rows.filter((item) => item.row.status === 'blocked' || item.row.status === 'no_source').length
   const displayedPeriod = data?.period ?? period
+  const correctionKey = selectedRow ? `${displayedPeriod}:${selectedRow.id}` : ''
+  const { amount: adjustmentAmount, reason: reasonNote } = correctionDraft && correctionDraft.key === correctionKey ? correctionDraft : { amount: '', reason: '' }
+  const correctionVariables = correctionMutation.variables
+  const correctionMatchesSelection = correctionVariables && `${correctionVariables.period}:${correctionVariables.storeId}:${correctionVariables.employeeId}:${correctionVariables.participantType}` === correctionKey
   const displayedPeriodLabel = formatPeriodLabel(displayedPeriod, locale)
   const displayedPeriodRange = data
     ? formatDateRangeLabel(data.periodStart, data.periodEnd, locale)
@@ -145,8 +147,6 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
       reasonNote: reasonNote.trim(),
     })
   }
-
-
 
   function exportRows() {
     exportAdminIncentiveRowsToExcel({
@@ -394,7 +394,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
                     <Input
                       id="admin-incentive-adjustment-amount"
                       inputMode="decimal"
-                      onChange={(event) => setAdjustmentAmount(event.target.value)}
+                      onChange={(event) => setCorrectionDraft({ key: correctionKey, amount: event.target.value, reason: reasonNote })}
                       placeholder={t('adminIncentives.adjustmentPlaceholder')}
                       required
                       value={adjustmentAmount}
@@ -404,20 +404,20 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
                     {t('adminIncentives.reason')}
                     <Textarea
                       id="admin-incentive-reason-note"
-                      onChange={(event) => setReasonNote(event.target.value)}
+                      onChange={(event) => setCorrectionDraft({ key: correctionKey, amount: adjustmentAmount, reason: event.target.value })}
                       placeholder={t('adminIncentives.reasonPlaceholder')}
                       required
                       value={reasonNote}
                     />
                   </label>
-                  {correctionMutation.isError ? (
+                  {correctionMutation.isError && correctionMatchesSelection ? (
                     <AdminStatePanel
                       title={t('adminIncentives.correctionErrorTitle')}
                       description={getErrorMessage(correctionMutation.error)}
                       tone="danger"
                     />
                   ) : null}
-                  {correctionMutation.isSuccess ? (
+                  {correctionMutation.isSuccess && correctionMatchesSelection ? (
                     <AdminStatePanel
                       title={t('adminIncentives.correctionSuccessTitle')}
                       description={t('adminIncentives.correctionSuccessCopy')}

@@ -51,7 +51,7 @@ export function StoreKpiHighlightsPage(input: {
     )
   }
 
-  if (model.isReportViewerStoreDetail && model.companyStoreQuery.isSuccess && model.storeOptions.length === 0) {
+  if (model.isReportViewerStoreDetail && model.companyStoreQuery.isSuccess && !model.effectiveStoreId) {
     return (
       <StoreSurfacePage ariaLabel={t('storeKpis.companyStoresEmptyTitle')}>
         <StoreErrorState
