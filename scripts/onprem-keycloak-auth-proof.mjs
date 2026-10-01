@@ -170,9 +170,9 @@ function buildAuthorizationRequest({ host, verifier, state }) {
   return { authorizationPath, challenge, redirectUri }
 }
 
-function cookieJar() {
+function cookieJar(initialCookies = []) {
   const values = new Map()
-  return {
+  const jar = {
     ingest(headers) {
       for (const value of headers ?? []) {
         const first = value.split(';', 1)[0]
@@ -191,6 +191,8 @@ function cookieJar() {
       return new Map(values)
     },
   }
+  jar.ingest(initialCookies)
+  return jar
 }
 
 function setCookieHeaders(headers) {
@@ -737,7 +739,7 @@ async function run(options) {
       actionDeniedStatus = actionDenied.status
       if (actionDenied.status !== 403) throw new Error(`${account.accountKey} role/action scope denial returned ${actionDenied.status}`)
     }
-    const retiredJar = { header: () => browser.sessionCookie }
+    const retiredJar = cookieJar([browser.sessionCookie])
     const logout = await jsonRequest(options.host, '/api/auth/browser-session', { method: 'DELETE', headers: { Accept: 'application/json', Origin: `https://${options.host}`, 'Sec-Fetch-Site': 'same-origin' }, jar: browser.jar })
     if (logout.status !== 200) throw authContractFailure('session-logout', logout.status)
     const clearCookieContract = assertBrowserSessionClearContract(logout.headers)
@@ -847,6 +849,7 @@ export {
   classifyLoginCodeFailure,
   classifyRealmLogoutFailure,
   configureAuthorizationClient,
+  cookieJar,
   createBrowserSession,
   decodeHtmlAttribute,
   jsonRequest,

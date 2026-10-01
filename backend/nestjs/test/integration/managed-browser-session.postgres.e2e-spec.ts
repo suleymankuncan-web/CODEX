@@ -16,7 +16,8 @@ const secret = "synthetic-managed-http-signing";
 
 postgres("managed browser session HTTP with canonical PostgreSQL", () => {
   const databaseName = `managed_http_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
-  const userId = randomUUID(), companyId = randomUUID(), roleId = randomUUID();
+  const userId = randomUUID(), companyId = randomUUID();
+  const roleId = "60000000-0000-0000-0000-000000000005";
   const previousAuthMode = process.env.AUTH_MODE, previousJwtSecret = process.env.JWT_SECRET;
   let app: INestApplication, admin: Pool, pool: Pool, created = false;
   let fetchSpy: jest.SpyInstance, accessToken: string;
@@ -104,5 +105,31 @@ postgres("managed browser session HTTP with canonical PostgreSQL", () => {
     await request(app.getHttpServer()).delete("/api/auth/browser-session")
       .set("Origin", origin).set("Cookie", sessionCookie).expect(200);
     await request(app.getHttpServer()).get("/api/auth/session").set("Cookie", sessionCookie).expect(401);
+  });
+
+  it("matches synthetic manager authorization and denies cross-store writes without a write delta", async () => {
+    for (const name of ["001_reference_seed.sql", "002_onprem_keycloak_personas.sql"]) {
+      await pool.query(readFileSync(resolve(process.cwd(), "../../db/seeds", name), "utf8"));
+    }
+    await pool.query(`UPDATE ops.user_account SET auth_provider='oidc',provider_subject='synthetic-manager'
+      WHERE username='onprem.store-manager'`);
+    accessToken = await new SignJWT({ roles: ["STORE_MANAGER"], preferred_username: "onprem.store-manager" })
+      .setProtectedHeader({ alg: "HS256" }).setSubject("synthetic-manager").setIssuer(issuer)
+      .setAudience("store-ops-api").setExpirationTime("5m").sign(new TextEncoder().encode(secret));
+    const first = await establish().expect(200), sessionCookie = cookie(first);
+    const storeId = "00000000-0000-0000-0000-000000000100";
+    const body = (employeeId: string) => ({ storeId, requestMonth: "2026-08-01",
+      targetLabel: "synthetic-managed-scope", totalTargetValue: 1,
+      allocations: [{ employeeId, assigneeLabel: "synthetic", targetValue: 1 }] });
+    const write = (employeeId: string) => request(app.getHttpServer()).post("/api/target-distributions/requests")
+      .set("Cookie", sessionCookie).set("X-CSRF-Token", first.body.csrfToken).send(body(employeeId));
+    await write("00000000-0000-0000-0000-000000000201").expect(201);
+    await request(app.getHttpServer()).post("/api/target-distributions/requests")
+      .set("Cookie", sessionCookie).set("X-CSRF-Token", first.body.csrfToken)
+      .send({ ...body("00000000-0000-0000-0000-000000000201"),
+        storeId: "00000000-0000-0000-0000-000000000999" }).expect(403);
+    const count = await pool.query(`SELECT COUNT(*)::int AS count FROM ops.target_distribution_request
+      WHERE target_label='synthetic-managed-scope'`);
+    expect(count.rows[0].count).toBe(1);
   });
 });

@@ -3,8 +3,47 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { EventEmitter } from 'node:events'
+import https from 'node:https'
+import { syncBuiltinESMExports } from 'node:module'
 
-import { assertAccessTokenContract, assertBrowserSessionClearContract, assertBrowserSessionCookieContract, buildAuthorizationRequest, classifyAuthorizationEntryFailure, classifyBrowserSessionCreateFailure, classifyLoginCodeFailure, classifyRealmLogoutFailure, configureAuthorizationClient, createBrowserSession, decodeHtmlAttribute, jsonRequest, loginPersona, parseArgs, readAccounts, readPhotoProofAccount, requestRaw, resolveAuthorizationTransport } from './onprem-keycloak-auth-proof.mjs'
+import { assertAccessTokenContract, assertBrowserSessionClearContract, assertBrowserSessionCookieContract, buildAuthorizationRequest, classifyAuthorizationEntryFailure, classifyBrowserSessionCreateFailure, classifyLoginCodeFailure, classifyRealmLogoutFailure, configureAuthorizationClient, cookieJar, createBrowserSession, decodeHtmlAttribute, jsonRequest, loginPersona, parseArgs, readAccounts, readPhotoProofAccount, requestRaw, resolveAuthorizationTransport } from './onprem-keycloak-auth-proof.mjs'
+
+test('retired-session request retains the captured cookie and consumes a real response without crashing', async (context) => {
+  const browser = cookieJar(['hr_axis_browser_session=captured-session; Path=/; Secure; HttpOnly'])
+  const retired = cookieJar([browser.header()])
+  browser.ingest(['hr_axis_browser_session=; Max-Age=0; Path=/'])
+  let observedCookie
+  context.mock.method(https, 'request', (options, receive) => {
+    observedCookie = options.headers.Cookie
+    const outgoing = new EventEmitter()
+    outgoing.setTimeout = () => outgoing
+    outgoing.end = () => {
+      const incoming = new EventEmitter()
+      incoming.statusCode = 401
+      incoming.headers = {}
+      receive(incoming)
+      incoming.emit('data', Buffer.from('{"statusCode":401}'))
+      incoming.emit('end')
+    }
+    return outgoing
+  })
+  syncBuiltinESMExports()
+  try {
+    await assert.rejects(jsonRequest('onprem-proof.example.invalid', '/api/auth/session', {
+      jar: { header: () => retired.header() },
+    }), /ingest is not a function/)
+    const response = await jsonRequest('onprem-proof.example.invalid', '/api/auth/session', { jar: retired })
+    assert.equal(observedCookie, 'hr_axis_browser_session=captured-session')
+    assert.equal(response.status, 401)
+    assert.deepEqual(response.json, { statusCode: 401 })
+    assert.equal(browser.header(), '')
+    assert.equal(retired.header(), observedCookie)
+  } finally {
+    context.mock.restoreAll()
+    syncBuiltinESMExports()
+  }
+})
 
 const rows = [
   'onprem.store-manager|onprem.store-manager|synthetic-password-store-manager',
