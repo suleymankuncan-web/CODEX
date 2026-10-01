@@ -38,9 +38,11 @@ test('unsafe cookie requests fail fast when CSRF memory is unavailable', () => {
   )
   assert.match(
     api,
-    /window\.dispatchEvent\([\s\S]*?new CustomEvent<SessionExpiredDetail>\(SESSION_EXPIRED_EVENT[\s\S]*?status: 401[\s\S]*?throw new ApiError\(401, message\)/,
+    /dispatchSessionExpired\(path, message, 401, session\)[\s\S]*?throw new ApiError\(401, message\)/,
     'missing CSRF memory must fail closed with a session-expired event and 401 ApiError',
   )
+  assert.match(api, /function dispatchSessionExpired\([\s\S]*?if \(!isCurrentSession\(session\)\) return[\s\S]*?clearClientBearerSession\(\)[\s\S]*?writeBrowserSessionCsrfToken\(''\)[\s\S]*?new CustomEvent<SessionExpiredDetail>\(SESSION_EXPIRED_EVENT[\s\S]*?status,[\s\S]*?sessionKey: session\.browserSessionKey/,
+    'expiry must clear only the owning current session and preserve the 401 status and identity in its event')
 })
 
 test('persisted cookie sessions are not ready without CSRF memory', () => {

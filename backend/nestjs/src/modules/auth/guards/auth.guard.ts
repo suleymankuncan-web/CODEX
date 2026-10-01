@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { AuthContextService } from "../auth-context.service";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
@@ -23,6 +23,9 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     request.user = await this.authContextService.resolveUser(request);
+    if (!request.user && request.originalUrl?.split("?")[0] === "/api/auth/browser-session/csrf") {
+      throw new UnauthorizedException("Browser session has ended");
+    }
     RequestContextStore.setActorUserId(request.user?.userId ?? null);
     return request.user !== null;
   }

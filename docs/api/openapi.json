@@ -11386,6 +11386,38 @@
           "StoreReturns"
         ]
       }
+    },
+    "/api/auth/browser-session/oidc": {
+      "post": {
+        "operationId": "AuthSessionController_createOidcBrowserSession",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOidcBrowserSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-side PKCE session establishment. Provider credentials are never returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserSessionCreateResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AuthSession"
+        ],
+        "security": []
+      }
     }
   },
   "info": {
@@ -22262,6 +22294,9 @@
               },
               "postLogoutRedirectPath": {
                 "type": "string"
+              },
+              "managedBrowserSession": {
+                "type": "boolean"
               }
             }
           }
@@ -34520,6 +34555,39 @@
             "$ref": "#/components/schemas/StoreReturnsLedger"
           }
         }
+      },
+      "CreateOidcBrowserSessionDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "codeVerifier": {
+            "type": "string",
+            "minLength": 43,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._~-]+$"
+          },
+          "state": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 256,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "redirectUri": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "code",
+          "codeVerifier",
+          "state",
+          "redirectUri"
+        ]
       }
     }
   },

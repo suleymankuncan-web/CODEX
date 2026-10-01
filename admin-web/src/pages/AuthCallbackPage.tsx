@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '../components/ui/button'
 import { useNavigate } from 'react-router'
 import { EmptyState, ScreenState, StatusPill } from '../components/dashboard-primitives'
 import { getAuthBootstrap } from '../features/auth/api'
 import {
   clearManualTokenCallbackFromAddressBar,
+  buildRestartLoginUrl,
   exchangeAuthorizationCodeForToken,
   isManualTokenCallbackAllowed,
   readCallbackPayload,
@@ -14,10 +16,11 @@ import { useSession } from '../features/session/session-context-value'
 
 export function AuthCallbackPage() {
   const { t } = useLocalization()
-  const { startProviderSession } = useSession()
+  const { startProviderSession, startManagedSession } = useSession()
   const navigate = useNavigate()
   const [exchangeError, setExchangeError] = useState<string | null>(null)
   const handledRef = useRef(false)
+  const [exchangeAttempt, setExchangeAttempt] = useState(0)
   const callbackPayload = useMemo(
     () =>
       readCallbackPayload({
@@ -72,6 +75,11 @@ export function AuthCallbackPage() {
       bootstrap: bootstrapQuery.data,
     })
       .then((result) => {
+        if (result.browserSession) {
+          startManagedSession(result.browserSession)
+          navigate(result.returnTo, { replace: true })
+          return
+        }
         return startProviderSession(result.accessToken, result.idToken).then(() => {
           navigate(result.returnTo, { replace: true })
         })
@@ -80,6 +88,7 @@ export function AuthCallbackPage() {
         setExchangeError(error instanceof Error ? error.message : String(error))
       })
   }, [
+    exchangeAttempt,
     bootstrapQuery.data,
     bootstrapQuery.isError,
     callbackPayload.code,
@@ -89,6 +98,7 @@ export function AuthCallbackPage() {
     manualTokenCallbackRejected,
     navigate,
     startProviderSession,
+    startManagedSession,
     token,
   ])
 
@@ -130,6 +140,17 @@ export function AuthCallbackPage() {
             <StatusPill tone="danger">{t('authFlow.pkceError')}</StatusPill>
           </div>
           <p className="panel-copy">{visibleExchangeError}</p>
+          {callbackPayload.code ? <Button className="tw:min-h-11" onClick={() => {
+            handledRef.current = false
+            setExchangeError(null)
+            setExchangeAttempt((current) => current + 1)
+            if (bootstrapQuery.isError) void bootstrapQuery.refetch()
+          }}>{t('authFlow.retry')}</Button> : null}
+          {bootstrapQuery.data?.provider.managedBrowserSession ? <Button className="tw:min-h-11" variant="outline" onClick={() => {
+            void buildRestartLoginUrl(bootstrapQuery.data!, callbackPayload.state).then((url) => {
+              if (url) window.location.assign(url)
+            }).catch(() => setExchangeError(t('authFlow.loginConfirmationUnavailable')))
+          }}>{t('authFlow.restartLogin')}</Button> : null}
         </div>
       </section>
     )

@@ -43,7 +43,7 @@ function createDatabaseService(
   },
 ) {
   const query = jest.fn(async (sql: string, params?: unknown[]) => {
-    if (sql.includes("FROM ops.user_account") && sql.includes("WHERE user_id")) {
+    if (sql.includes("FROM ops.user_account") && sql.includes("WHERE account.user_id")) {
       expect(params).toEqual([APP_USER_ID]);
       if (!accountState.exists) {
         return { rowCount: 0, rows: [] };

@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseAuthContractFailure } from './onprem-keycloak-auth-proof.mjs'
 
 import { collectFirewallEvidence, validateFirewallRules } from './onprem-core-firewall-verify.mjs'
 import { isConfidentialRuntimeSecretName } from './onprem-core-runtime-proof.mjs'
@@ -221,6 +222,16 @@ function extractAllowlistedBootstrapCategories(value) {
     const trimmed = line.trim()
     if (!trimmed) continue
     const withoutComposePrefix = trimmed.replace(KEYCLOAK_BOOTSTRAP_LOG_PREFIX, '')
+    const authPhase = parseAuthContractFailure(withoutComposePrefix)
+    if (authPhase) {
+      categories.add('auth-contract')
+      phases.push(authPhase)
+      continue
+    }
+    if (withoutComposePrefix.startsWith('on-prem Keycloak auth proof: auth contract failed')) {
+      malformed = true
+      continue
+    }
     const phaseMarker = withoutComposePrefix.match(KEYCLOAK_BOOTSTRAP_PHASE_MARKER)
     if (phaseMarker) {
       if (Object.hasOwn(KEYCLOAK_BOOTSTRAP_PHASES, phaseMarker[1])) phases.push(phaseMarker[1])
@@ -246,8 +257,8 @@ function extractAllowlistedBootstrapCategories(value) {
 }
 
 /**
- * Return a bounded, secret-free classification for a failed Keycloak bootstrap
- * child process. Only exact markers emitted by the approved bootstrap script
+ * Return a bounded, secret-free classification for a failed Keycloak child
+ * process. Only exact bootstrap markers or a finite auth stage/status marker
  * can select a category; zero, multiple, malformed, or secret-bearing markers
  * fail closed to the generic category while unrelated log noise is ignored.
  * Exact phase markers are independent and report only the last bounded phase
@@ -277,7 +288,7 @@ export function classifyKeycloakBootstrapDiagnostic({
   const malformed = stdoutCategories.malformed || stderrCategories.malformed
   const phases = [...stdoutCategories.phases, ...stderrCategories.phases]
   const lastPhase = phases.length > 0 ? phases[phases.length - 1] : null
-  if (malformed || categories.size > 1) {
+  if (malformed || categories.size > 1 || (categories.has('auth-contract') && phases.length !== 1)) {
     return {
       category: KEYCLOAK_BOOTSTRAP_DIAGNOSTIC_CATEGORIES.GENERIC_FAILED_CLOSED,
       phase: null,

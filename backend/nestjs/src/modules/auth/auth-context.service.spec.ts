@@ -807,7 +807,7 @@ describe("AuthContextService", () => {
     }
   });
 
-  it("fails closed when a production cookie-session account lookup throws", async () => {
+  it.each([true, false])("fails closed when a cookie-session account lookup throws (production=%s)", async (production) => {
     const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
     const repository = buildAuthorizationRepository({
       accountStatusErrorMessage: "db failed password=secret-value",
@@ -822,13 +822,14 @@ describe("AuthContextService", () => {
         allowMockAuth: false,
         browserSessionCookieEnabled: true,
         browserSessionCookieName: "hr_axis_browser_session",
-        isProduction: true,
+        isProduction: production,
       } as never,
       repository,
       { resolveUser: jest.fn() } as never,
       jwtAuthProvider as never,
       {
         verifySession: jest.fn(() => ({
+          envelope: { v: 1 },
           user: {
             userId: "90000000-0000-4000-8000-000000000099",
             roleCodes: ["REPORT_VIEWER"],

@@ -1,3 +1,5 @@
+import { ApiError } from './api-error'
+import { recoverManagedBrowserSession, establishManagedBrowserSession } from './api-browser-session'
 import {
   buildSessionHeaders,
   clearClientBearerSession,
@@ -33,27 +35,20 @@ type ApiRequestContext = {
   durationMs: number
   requestAttempt: number
 }
-type BrowserSessionCreateResponse = {
+export type BrowserSessionCreateResponse = {
   csrfToken: string
   expiresAt: string
   sessionId: string
   session: unknown
 }
 
-export class ApiError extends Error {
-  status: number
-
-  constructor(status: number, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-  }
-}
+export { ApiError } from './api-error'
 
 export type SessionExpiredDetail = {
   path: string
   message: string
   status: number
+  sessionKey?: string
 }
 
 export const SESSION_EXPIRED_EVENT = 'store-ops-session-expired'
@@ -69,13 +64,16 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     buildJsonRequest(method, prepared.session, prepared.headers, body, input?.signal),
   )
   let response = attempt.response
+  let responseSession = prepared.session
 
-  if (response.status === 401 && prepared.session.mode === 'bearer') {
+  if (response.status === 401 && prepared.session.mode === 'bearer' && isCurrentSession(prepared.session)) {
     const retryHeaders = await prepareRefreshedHeaders(path, input?.body !== undefined, method, { skipCache: true })
-    if (retryHeaders) {
+    if (retryHeaders && (!isCookieBrowserSession(prepared.session) || isCurrentSession(prepared.session))) {
+      const retrySession = readClientSession()
+      responseSession = retrySession
       attempt = await performFetchAttempt(
         path,
-        buildJsonRequest(method, readClientSession(), retryHeaders, body, input?.signal),
+        buildJsonRequest(method, retrySession, retryHeaders, body, input?.signal),
         2,
       )
       response = attempt.response
@@ -83,6 +81,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
   } else if (
     isUnsafeMethod(method) &&
     isCookieBrowserSession(prepared.session) &&
+    isCurrentSession(prepared.session) &&
     (await isCanonicalCsrfFailureResponse(response))
   ) {
     const retryHeaders = await prepareCsrfRecoveryHeaders(
@@ -92,7 +91,8 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
     )
     if (retryHeaders) {
       const retrySession = readClientSession()
-      if (isCookieBrowserSession(retrySession)) {
+      if (isCookieBrowserSession(retrySession) && isCurrentSession(prepared.session)) {
+        responseSession = retrySession
         attempt = await performFetchAttempt(
           path,
           buildJsonRequest(method, retrySession, retryHeaders, body, input?.signal),
@@ -104,7 +104,7 @@ async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?
   }
 
   if (!response.ok) {
-    await throwApiError(response, path, prepared.session, {
+    await throwApiError(response, path, responseSession, {
       method,
       durationMs: attempt.durationMs,
       requestAttempt: attempt.requestAttempt,
@@ -134,11 +134,13 @@ async function requestFormData<T>(
     ...(isCookieBrowserSession(prepared.session) ? { credentials: 'include' as const } : {}),
   })
   let response = attempt.response
+  let responseSession = prepared.session
 
-  if (response.status === 401 && prepared.session.mode === 'bearer') {
+  if (response.status === 401 && prepared.session.mode === 'bearer' && isCurrentSession(prepared.session)) {
     const retryHeaders = await prepareRefreshedHeaders(path, false, input.method, { skipCache: true })
-    if (retryHeaders) {
+    if (retryHeaders && (!isCookieBrowserSession(prepared.session) || isCurrentSession(prepared.session))) {
       const retrySession = readClientSession()
+      responseSession = retrySession
       attempt = await performFetchAttempt(
         path,
         {
@@ -154,12 +156,14 @@ async function requestFormData<T>(
   } else if (
     isUnsafeMethod(input.method) &&
     isCookieBrowserSession(prepared.session) &&
+    isCurrentSession(prepared.session) &&
     (await isCanonicalCsrfFailureResponse(response))
   ) {
     const retryHeaders = await prepareCsrfRecoveryHeaders(false, input.method, prepared.headers['X-CSRF-Token'])
     if (retryHeaders) {
       const retrySession = readClientSession()
-      if (isCookieBrowserSession(retrySession)) {
+      if (isCookieBrowserSession(retrySession) && isCurrentSession(prepared.session)) {
+        responseSession = retrySession
         attempt = await performFetchAttempt(
           path,
           {
@@ -176,7 +180,7 @@ async function requestFormData<T>(
   }
 
   if (!response.ok) {
-    await throwApiError(response, path, prepared.session, {
+    await throwApiError(response, path, responseSession, {
       method: input.method,
       durationMs: attempt.durationMs,
       requestAttempt: attempt.requestAttempt,
@@ -203,11 +207,13 @@ async function requestBlob(path: string): Promise<Blob> {
     },
   )
   let response = attempt.response
+  let responseSession = prepared.session
 
-  if (response.status === 401 && prepared.session.mode === 'bearer') {
+  if (response.status === 401 && prepared.session.mode === 'bearer' && isCurrentSession(prepared.session)) {
     const retryHeaders = await prepareRefreshedHeaders(path, false, method, { skipCache: true })
-    if (retryHeaders) {
+    if (retryHeaders && (!isCookieBrowserSession(prepared.session) || isCurrentSession(prepared.session))) {
       const retrySession = readClientSession()
+      responseSession = retrySession
       attempt = await performFetchAttempt(
         path,
         {
@@ -222,7 +228,7 @@ async function requestBlob(path: string): Promise<Blob> {
   }
 
   if (!response.ok) {
-    await throwApiError(response, path, prepared.session, {
+    await throwApiError(response, path, responseSession, {
       method,
       durationMs: attempt.durationMs,
       requestAttempt: attempt.requestAttempt,
@@ -325,16 +331,12 @@ function resolveApiBaseUrl() {
   return configuredApiBaseUrl
 }
 
-// Initial same-origin recovery returns a nonce to the owning session transition.
-// It does not mutate CSRF memory before that transition confirms it is current.
-export async function recoverBrowserSessionAfterReload(signal: AbortSignal): Promise<string | null> {
-  if (!isSameOriginApi(resolveApiBaseUrl)) return null
-  const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session/csrf`, {
-    method: 'POST', headers: { Accept: 'application/json' }, credentials: 'include', signal,
-  })
-  if (!response.ok) return null
-  const payload = await response.json() as { csrfToken?: unknown }
-  return typeof payload.csrfToken === 'string' ? payload.csrfToken.trim() || null : null
+export function recoverBrowserSessionAfterReload(signal: AbortSignal) {
+  return recoverManagedBrowserSession(resolveApiBaseUrl(), signal)
+}
+
+export function createManagedBrowserSession(input: { code: string; codeVerifier: string; state: string; redirectUri: string }) {
+  return establishManagedBrowserSession(resolveApiBaseUrl(), input)
 }
 
 export async function createBrowserSession(providerToken: string) {
@@ -466,7 +468,7 @@ async function prepareCsrfRecoveryHeaders(
 
     return buildRequestHeaders(recoveredSession, hasJsonBody, method)
   } catch {
-    return null
+    throw new ApiError(503, 'Session recovery is temporarily unavailable')
   }
 }
 
@@ -482,13 +484,14 @@ async function throwApiError(
   emitResponseFailureDiagnostic(response, path, context, 'http', `Request failed with status ${response.status}`)
 
   if (shouldRecoverSessionFromApiError(response.status, session, message)) {
-    dispatchSessionExpired(path, message, response.status)
+    dispatchSessionExpired(path, message, response.status, session)
   }
 
   throw new ApiError(response.status, message)
 }
 
-function dispatchSessionExpired(path: string, message: string, status: number) {
+function dispatchSessionExpired(path: string, message: string, status: number, session: SessionState) {
+  if (!isCurrentSession(session)) return
   clearClientBearerSession()
   writeBrowserSessionCsrfToken('')
   window.dispatchEvent(
@@ -497,6 +500,7 @@ function dispatchSessionExpired(path: string, message: string, status: number) {
         path,
         message,
         status,
+        sessionKey: session.browserSessionKey,
       },
     }),
   )
@@ -570,20 +574,7 @@ function assertBrowserSessionCsrfAvailable(session: SessionState, path: string, 
     }
 
     const message = 'Cookie session requires a fresh CSRF token. Sign in again and retry the request.'
-    clearClientBearerSession()
-    writeBrowserSessionCsrfToken('')
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
-          detail: {
-            path,
-            message,
-            status: 401,
-          },
-        }),
-      )
-    }
+    dispatchSessionExpired(path, message, 401, session)
 
     throw new ApiError(401, message)
   })()
@@ -591,4 +582,10 @@ function assertBrowserSessionCsrfAvailable(session: SessionState, path: string, 
 
 function isUnsafeMethod(method: JsonMethod) {
   return method !== 'GET'
+}
+
+export function isCurrentSession(session: SessionState) {
+  const current = readClientSession()
+  return current.mode === session.mode && current.browserSessionTransport === session.browserSessionTransport &&
+    current.browserSessionKey === session.browserSessionKey && current.bearerToken === session.bearerToken
 }

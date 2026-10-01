@@ -26,5 +26,7 @@ The company operator may set both `KEYCLOAK_SSO_IDLE_REMEMBER_ME_SECONDS` and
 `KEYCLOAK_SSO_MAX_REMEMBER_ME_SECONDS` to `604800` for the approved seven-day
 Remember Me policy. Both default to `0`, which leaves the normal realm SSO
 limits unchanged; bootstrap rejects partial, nonnumeric, or out-of-range
-settings. `BROWSER_SESSION_TTL_SECONDS=3600` reduces app-session redirects but
-does not store a password or grant access after the Keycloak SSO session ends.
+settings. The on-prem V2 transport stores encrypted refresh credentials on the
+server; its fixed `MANAGED_BROWSER_SESSION_MAX_SECONDS` app cap does not override
+Keycloak idle/max limits. `BROWSER_SESSION_TTL_SECONDS` governs legacy V1 only.
+See [managed-session contract](../../../../docs/contracts/managed-browser-session-v2.md).

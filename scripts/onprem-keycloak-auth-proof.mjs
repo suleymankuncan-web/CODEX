@@ -19,6 +19,21 @@ const PERSONAS = new Map([
   ['onprem.visual-merchandiser', { role: 'VISUAL_MERCHANDISER', scope: 'store' }],
 ])
 
+const AUTH_CONTRACT_STAGES = new Set(['managed-establish', 'managed-confirm', 'managed-credentials',
+  'managed-envelope', 'session-read', 'csrf-denial', 'csrf-renewal', 'csrf-stability', 'scope-denial',
+  'session-logout', 'retired-session'])
+
+function authContractFailure(stage, status = 0) {
+  if (!AUTH_CONTRACT_STAGES.has(stage) || !Number.isInteger(status) ||
+    (status !== 0 && (status < 100 || status > 599))) return new Error('auth contract failed')
+  return new Error(`auth contract failed (stage=${stage}; status=${status})`)
+}
+
+export function parseAuthContractFailure(line) {
+  const match = String(line).trim().match(/^on-prem Keycloak auth proof: auth contract failed \(stage=([a-z-]+); status=(0|[1-5][0-9]{2})\)$/)
+  return match && AUTH_CONTRACT_STAGES.has(match[1]) ? `${match[1]}-${match[2]}` : null
+}
+
 function resolveAuthorizationTransport({ connectHost, connectPort }) {
   const port = Number(connectPort)
   const approved = (connectHost === '127.0.0.1' && port === 443)
@@ -155,9 +170,9 @@ function buildAuthorizationRequest({ host, verifier, state }) {
   return { authorizationPath, challenge, redirectUri }
 }
 
-function cookieJar() {
+function cookieJar(initialCookies = []) {
   const values = new Map()
-  return {
+  const jar = {
     ingest(headers) {
       for (const value of headers ?? []) {
         const first = value.split(';', 1)[0]
@@ -176,6 +191,8 @@ function cookieJar() {
       return new Map(values)
     },
   }
+  jar.ingest(initialCookies)
+  return jar
 }
 
 function setCookieHeaders(headers) {
@@ -369,7 +386,7 @@ function classifyLoginCodeFailure(response) {
     : 'unexpected-login-response'
 }
 
-async function loginPersona(host, account) {
+async function loginPersona(host, account, { managed = false } = {}) {
   const jar = cookieJar()
   const verifier = base64url(requireRandom(32))
   const state = base64url(requireRandom(24))
@@ -392,6 +409,25 @@ async function loginPersona(host, account) {
   if (!codeLocation) throw new Error(`Keycloak login did not return an authorization code (${classifyLoginCodeFailure(loginResult)})`)
   const callback = new URL(codeLocation, `https://${host}`)
   if (callback.searchParams.get('state') !== state) throw new Error('OIDC state did not round-trip')
+  if (managed) {
+    const browserJar = cookieJar()
+    const established = await jsonRequest(host, '/api/auth/browser-session/oidc', {
+      method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Origin: `https://${host}`, 'Sec-Fetch-Site': 'same-origin' },
+      body: JSON.stringify({ code: callback.searchParams.get('code'), codeVerifier: verifier, state, redirectUri }), jar: browserJar,
+    })
+    if (established.status !== 200 || !established.json?.csrfToken) throw authContractFailure('managed-establish', established.status)
+    const replay = await jsonRequest(host, '/api/auth/browser-session/oidc', {
+      method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Origin: `https://${host}` },
+      body: JSON.stringify({ redirectUri, state, codeVerifier: verifier, code: callback.searchParams.get('code') }), jar: browserJar,
+    })
+    if (replay.status !== 200 || replay.json?.sessionId !== established.json.sessionId || replay.json?.csrfToken !== established.json.csrfToken) throw authContractFailure('managed-confirm', replay.status)
+    if ('access_token' in established.json || 'refresh_token' in established.json || 'id_token' in established.json) throw authContractFailure('managed-credentials')
+    const envelope = JSON.parse(Buffer.from(decodeURIComponent(browserJar.header().split('=')[1]).split('.')[0], 'base64url').toString('utf8'))
+    if (envelope.v !== 2) throw authContractFailure('managed-envelope')
+    const browser = { jar: browserJar, csrfToken: established.json.csrfToken, sessionCookie: browserJar.header(),
+      cookieContract: assertBrowserSessionCookieContract(established.headers) }
+    return { browser, jar }
+  }
   const tokenBody = new URLSearchParams({
     grant_type: 'authorization_code',
     client_id: 'store-ops-admin-web',
@@ -636,10 +672,10 @@ async function run(options) {
   const personaResults = []
   let expectedActionCountAfterAll = null
   for (const account of accounts) {
-    const { token, jar: oidcJar } = await loginPersona(options.host, account)
-    const browser = await createBrowserSession(options.host, token)
+    const { token } = await loginPersona(options.host, account)
+    const { browser, jar: oidcJar } = await loginPersona(options.host, account, { managed: true })
     const session = await jsonRequest(options.host, '/api/auth/session', { headers: { Accept: 'application/json' }, jar: browser.jar })
-    if (session.status !== 200) throw new Error(`${account.accountKey} session endpoint returned ${session.status}`)
+    if (session.status !== 200) throw authContractFailure('session-read', session.status)
     assertSession(session, account)
     const assignedBody = JSON.stringify({
       storeId: '00000000-0000-0000-0000-000000000100',
@@ -651,18 +687,20 @@ async function run(options) {
     const csrfDenied = await jsonRequest(options.host, '/api/target-distributions/requests', {
       method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: assignedBody, jar: browser.jar,
     })
-    if (csrfDenied.status !== 403) throw new Error(`${account.accountKey} missing-CSRF request returned ${csrfDenied.status}`)
+    if (csrfDenied.status !== 403) throw authContractFailure('csrf-denial', csrfDenied.status)
+    await new Promise((resolve) => setTimeout(resolve, 1100))
     const csrfRecovery = await jsonRequest(options.host, '/api/auth/browser-session/csrf', {
       method: 'POST', headers: { Accept: 'application/json', Origin: `https://${options.host}`, 'Sec-Fetch-Site': 'same-origin' }, jar: browser.jar,
     })
-    if (csrfRecovery.status !== 200) throw new Error(`${account.accountKey} CSRF recovery returned ${csrfRecovery.status}`)
+    if (csrfRecovery.status !== 200) throw authContractFailure('csrf-renewal', csrfRecovery.status)
+    if (csrfRecovery.json.csrfToken !== browser.csrfToken) throw authContractFailure('csrf-stability')
     const deniedStoreId = account.scope === 'store'
       ? '00000000-0000-0000-0000-000000000999'
       : '00000000-0000-0000-0000-000000000100'
     const scopeDenied = await jsonRequest(options.host, `/api/target-distributions/store-personnel?storeId=${deniedStoreId}`, {
       headers: { Accept: 'application/json' }, jar: browser.jar,
     })
-    if (scopeDenied.status !== 403) throw new Error(`${account.accountKey} cross-scope/action request returned ${scopeDenied.status}`)
+    if (scopeDenied.status !== 403) throw authContractFailure('scope-denial', scopeDenied.status)
     const providerSignedOverbroadClaims = account.overbroadReadStoreClaims
       ? { accountKey: account.accountKey, claimStoreIds: account.providerClaims.readStoreIds, dbDeniedStatus: scopeDenied.status, subordinateToDbAuthorization: scopeDenied.status === 403 }
       : null
@@ -701,10 +739,13 @@ async function run(options) {
       actionDeniedStatus = actionDenied.status
       if (actionDenied.status !== 403) throw new Error(`${account.accountKey} role/action scope denial returned ${actionDenied.status}`)
     }
-    const logout = await jsonRequest(options.host, '/api/auth/browser-session', { method: 'DELETE', headers: { Accept: 'application/json' }, jar: browser.jar })
-    if (logout.status !== 200) throw new Error(`${account.accountKey} logout returned ${logout.status}`)
+    const retiredJar = cookieJar([browser.sessionCookie])
+    const logout = await jsonRequest(options.host, '/api/auth/browser-session', { method: 'DELETE', headers: { Accept: 'application/json', Origin: `https://${options.host}`, 'Sec-Fetch-Site': 'same-origin' }, jar: browser.jar })
+    if (logout.status !== 200) throw authContractFailure('session-logout', logout.status)
     const clearCookieContract = assertBrowserSessionClearContract(logout.headers)
     if (browser.jar.header()) throw new Error(`${account.accountKey} logout did not clear browser cookie state`)
+    const retiredSession = await jsonRequest(options.host, '/api/auth/session', { headers: { Accept: 'application/json' }, jar: retiredJar })
+    if (retiredSession.status !== 401) throw authContractFailure('retired-session', retiredSession.status)
     const afterLogout = await jsonRequest(options.host, '/api/auth/session', { headers: { Accept: 'application/json' }, jar: browser.jar })
     if (![401, 403].includes(afterLogout.status)) throw new Error(`${account.accountKey} logout did not invalidate the session`)
     const realmLogout = await endSessionLogout(options.host, oidcJar)
@@ -808,6 +849,7 @@ export {
   classifyLoginCodeFailure,
   classifyRealmLogoutFailure,
   configureAuthorizationClient,
+  cookieJar,
   createBrowserSession,
   decodeHtmlAttribute,
   jsonRequest,

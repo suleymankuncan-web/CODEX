@@ -39,10 +39,15 @@ export async function refreshSession(input?: { skipCache?: boolean }) {
   }
 
   if (!bearerTokenRefreshPromise) {
+    const initial = readClientSession()
     bearerTokenRefreshPromise = bearerTokenRefreshHandler({ skipCache: Boolean(input?.skipCache) })
       .then((result) => {
         const session = readClientSession()
         const normalized = normalizeRefreshResult(result)
+        if (session.mode !== initial.mode || session.browserSessionTransport !== initial.browserSessionTransport ||
+          session.browserSessionKey !== initial.browserSessionKey ||
+          (!isCookieBrowserSession(session) && session.bearerToken !== initial.bearerToken &&
+            session.bearerToken !== normalized.bearerToken)) return false
 
         if (!normalized.refreshed) {
           return false
@@ -93,30 +98,27 @@ export async function recoverBrowserSessionCsrfToken(resolveApiBaseUrl: () => st
 }
 
 async function performBrowserSessionCsrfRecovery(resolveApiBaseUrl: () => string) {
-  try {
-    const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session/csrf`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-      },
-      credentials: 'include',
-    })
+  const initial = readClientSession()
+  const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session/csrf`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+    },
+    credentials: 'include', signal: AbortSignal.timeout(15_000),
+  })
 
-    if (!response.ok) {
-      return false
-    }
+  if (response.status === 401) return false
+  if (!response.ok) throw new Error('Session recovery is temporarily unavailable')
 
-    const payload = (await response.json()) as Partial<BrowserSessionCsrfResponse>
-    const csrfToken = typeof payload.csrfToken === 'string' ? payload.csrfToken.trim() : ''
-    if (!csrfToken) {
-      return false
-    }
+  const payload = (await response.json()) as Partial<BrowserSessionCsrfResponse>
+  const csrfToken = typeof payload.csrfToken === 'string' ? payload.csrfToken.trim() : ''
+  if (!csrfToken) throw new Error('Session recovery response is unavailable')
+  const current = readClientSession()
+  if (current.browserSessionKey !== initial.browserSessionKey || current.bearerToken !== initial.bearerToken) return false
 
-    writeBrowserSessionCsrfToken(csrfToken)
-    return true
-  } catch {
-    return false
-  }
+  writeBrowserSessionCsrfToken(csrfToken)
+  return true
+
 }
 
 export async function recoverCrossOriginBrowserSessionCsrf() {

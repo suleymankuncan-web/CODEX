@@ -1,8 +1,8 @@
-import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { createRemoteJWKSet, jwtVerify, JWTVerifyGetKey } from "jose";
 import { AppConfigService } from "../../../shared/app-config.service";
 import { redactSensitiveLogValue } from "../../../shared/structured-log";
-import { AuthenticatedUser, buildAuthenticatedUser } from "../auth-context.service";
+import { AuthenticatedUser, buildAuthenticatedUser } from "../authenticated-user";
 import { AuthProvider } from "../interfaces/auth-provider.interface";
 
 const APP_ROLE_CODES = new Set([
@@ -115,7 +115,19 @@ export class JwtAuthProvider implements AuthProvider {
     });
   }
 
-  private async verifyToken(token: string) {
+  async resolveVerifiedIdentity(token: string) {
+    const { payload } = await this.verifyToken(token, true);
+    const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    if (payload.iss !== this.appConfigService.jwtIssuer || typeof payload.sub !== "string" || !payload.sub ||
+      !Number.isFinite(payload.exp) || payload.exp! <= Math.floor(Date.now() / 1000) ||
+      !audiences.some((audience) => Boolean(audience) &&
+        (audience === this.appConfigService.authClientId || audience === this.appConfigService.jwtAudience))) {
+      throw new UnauthorizedException("Invalid provider session identity");
+    }
+    return { issuer: payload.iss, subject: payload.sub, expiresAt: payload.exp! };
+  }
+
+  private async verifyToken(token: string, managed = false) {
     try {
       const audiences = [
         this.appConfigService.jwtAudience,
@@ -161,6 +173,10 @@ export class JwtAuthProvider implements AuthProvider {
         verificationOptions,
       );
     } catch (error) {
+      if (managed && (error instanceof TypeError || (error instanceof Error &&
+        "code" in error && error.code === "ERR_JWKS_TIMEOUT"))) {
+        throw new ServiceUnavailableException("Session provider keys are temporarily unavailable");
+      }
       this.logger.warn(
         `JWT verification failed: ${String(
           redactSensitiveLogValue(error instanceof Error ? error.message : String(error)),
@@ -198,6 +214,7 @@ export class JwtAuthProvider implements AuthProvider {
 
     try {
       const response = await fetch(`${payload.iss}/protocol/openid-connect/userinfo`, {
+        signal: AbortSignal.timeout(8_000),
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",

@@ -7,6 +7,7 @@ import {
 } from './api'
 import {
   defaultSession,
+  readClientSession,
   persistClientSession,
   readBrowserSessionCsrfToken,
   writeBrowserSessionCsrfToken,
@@ -431,20 +432,20 @@ describe('API CSRF recovery', () => {
     }
   })
 
-  it('falls through session expiry when refresh succeeds without a CSRF nonce', async () => {
+  it.each(['provider', 'network', 'malformed'] as const)('blocks mutation replay without expiring the session on %s recovery failure', async (failure) => {
+    const before = readClientSession()
     const fetchMock = vi.mocked(fetch)
-    fetchMock
-      .mockResolvedValueOnce(createCsrfFailureResponse())
-      .mockResolvedValueOnce(createJsonResponse({ ok: true }))
+    fetchMock.mockResolvedValueOnce(createCsrfFailureResponse())
+    if (failure === 'network') fetchMock.mockRejectedValueOnce(new TypeError('network failed'))
+    else fetchMock.mockResolvedValueOnce(createJsonResponse({ ok: true }, failure === 'provider' ? 503 : 200))
 
     await expect(sendJson('/admin/test', { method: 'POST', body: { ok: true } })).rejects.toMatchObject({
-      status: 403,
-      message: 'CSRF token is required',
+      status: 503, message: 'Session recovery is temporarily unavailable',
     })
-
     expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(readBrowserSessionCsrfToken()).toBe('')
-    expect(testWindow.dispatchEvent).toHaveBeenCalledWith(
+    expect(readClientSession()).toEqual(before)
+    expect(readBrowserSessionCsrfToken()).toBe(staleCsrfToken)
+    expect(testWindow.dispatchEvent).not.toHaveBeenCalledWith(
       expect.objectContaining({ type: 'store-ops-session-expired' }),
     )
   })
@@ -493,6 +494,7 @@ describe('API CSRF recovery', () => {
     expect(getRequestHeaders(fetchMock, 0)).toMatchObject({ Authorization: 'Bearer test-bearer' })
     expect(getRequestHeaders(fetchMock, 0)).not.toHaveProperty('X-CSRF-Token')
   })
+
 })
 
 function registerRefreshingHandler(refreshCalls: Array<{ skipCache?: boolean }> = []) {

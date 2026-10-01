@@ -1,3 +1,4 @@
+import { assertBrowserSessionConfiguration, assertDatabaseNumericConfiguration, readManagedSessionMaximum, readManagedSessionEnabled } from "./app-config-contracts";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
@@ -33,8 +34,8 @@ const FILE_BACKED_SETTINGS = new Set([
 @Injectable()
 export class AppConfigService {
   constructor(private readonly configService: ConfigService) {
-    this.assertBrowserSessionContract();
-    this.assertDatabaseNumericContract();
+    assertBrowserSessionConfiguration(this);
+    assertDatabaseNumericConfiguration(this);
     this.assertStrictLocalContract();
   }
 
@@ -660,6 +661,21 @@ export class AppConfigService {
     return this.readBoolean("BROWSER_SESSION_COOKIE_ENABLED", false);
   }
 
+  get managedBrowserSessionEnabled(): boolean {
+    return readManagedSessionEnabled(this.readBoolean("MANAGED_BROWSER_SESSION_ENABLED", false), this);
+  }
+
+  get managedBrowserSessionMaxSeconds(): number {
+    return readManagedSessionMaximum(this.readString("MANAGED_BROWSER_SESSION_MAX_SECONDS", "604800"));
+  }
+
+  get authSessionTokenUrl(): string | undefined {
+    const value = this.readConfiguredString("AUTH_SESSION_ENDPOINT_URL") ?? this.authTokenUrl;
+    const internal = STRICT_LOCAL_KEYCLOAK_JWKS_URL.replace(/certs$/, "token");
+    if (this.isStrictLocal && value === internal) return value;
+    return this.requireProductionHttpsUrl("AUTH_SESSION_ENDPOINT_URL", value);
+  }
+
   get browserSessionCookieName(): string {
     return this.readString("BROWSER_SESSION_COOKIE_NAME", "hr_axis_browser_session");
   }
@@ -794,26 +810,6 @@ export class AppConfigService {
     return this.isProduction || this.authMode === "jwt";
   }
 
-  private assertBrowserSessionContract(): void {
-    if (!this.browserSessionCookieEnabled) {
-      return;
-    }
-
-    this.browserSessionSecret;
-    this.browserSessionPreviousSecret;
-    this.browserSessionTtlSeconds;
-    this.browserSessionRenewalWindowSeconds;
-    this.browserSessionSameSite;
-  }
-
-  private assertDatabaseNumericContract(): void {
-    this.dbPoolMax;
-    this.dbConnectionTimeoutMs;
-    this.dbIdleTimeoutMs;
-    this.dbStatementTimeoutMs;
-    this.redisOperationTimeoutMs;
-    this.dailyClosurePollMinutes;
-  }
 
   private readDatabaseSslCa(): string | undefined {
     const value = this.readOptionalString("DB_SSL_CA");

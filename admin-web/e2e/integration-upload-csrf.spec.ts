@@ -40,6 +40,9 @@ test('admin Power BI upload routes stale cookie-session CSRF failures to session
 
   await installCookieSession(page)
   await routeAuthSession(page)
+  await page.route('**/api/auth/browser-session/csrf', async (route) => {
+    await route.fulfill({ status: 401, json: { message: 'Browser session has ended' } })
+  })
   await page.route('**/api/auth/browser-session', async (route) => {
     await route.fulfill({ json: { cleared: true } })
   })
@@ -138,6 +141,45 @@ test('admin Power BI upload success stays in the same document', async ({ page }
     )
     .toBe('same-document')
   expect(navigationCount).toBe(0)
+})
+
+test('temporary upload CSRF recovery keeps the session and allows a later retry', async ({ page }) => {
+  let recoveryCount = 0, uploadCount = 0
+  await installCookieSession(page)
+  await routeAuthSession(page)
+  await page.route('**/api/auth/browser-session/csrf', async (route) => {
+    recoveryCount += 1
+    await route.fulfill(recoveryCount === 1
+      ? { status: 503, json: { message: 'Temporarily unavailable' } }
+      : { json: { csrfToken: 'fresh-upload-csrf-token' } })
+  })
+  await page.route('**/api/integrations/power-bi-export-upload', async (route) => {
+    uploadCount += 1
+    await route.fulfill(route.request().headers()['x-csrf-token'] === 'fresh-upload-csrf-token'
+      ? { json: createUploadSuccessResponse() }
+      : { status: 403, json: { message: 'CSRF token is required' } })
+  })
+  await page.goto('/admin/integrations')
+  await page.evaluate(() => {
+    const state = window as Window & { __uploadExpiryEvents?: number }
+    state.__uploadExpiryEvents = 0
+    window.addEventListener('store-ops-session-expired', () => { state.__uploadExpiryEvents! += 1 })
+  })
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name: 'personnel.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: Buffer.from('safe-test-upload'),
+  })
+  await page.getByRole('button', { name: /Power BI export/i }).click()
+  await expect(page.getByText('Session recovery is temporarily unavailable', { exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/admin\/integrations$/)
+  expect(uploadCount).toBe(1)
+  expect(await page.evaluate(() => (window as Window & { __uploadExpiryEvents?: number }).__uploadExpiryEvents)).toBe(0)
+  expect(await page.evaluate(() => window.__storeOpsBrowserSessionCsrfToken)).toBe(csrfToken)
+  await page.getByRole('button', { name: /Power BI export/i }).click()
+  await expect(page.getByText('Power BI upload accepted')).toBeVisible()
+  expect(uploadCount).toBe(3)
+  expect(recoveryCount).toBe(2)
+  await expect(page).toHaveURL(/\/admin\/integrations$/)
 })
 
 async function installCookieSession(page: Page) {

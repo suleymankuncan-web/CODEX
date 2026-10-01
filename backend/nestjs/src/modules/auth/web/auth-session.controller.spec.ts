@@ -32,6 +32,7 @@ describe("AuthSessionController", () => {
       authMode: "jwt",
       provider: {
         configured: true,
+        managedBrowserSession: false,
         authorizationUrl: "https://idp.example.com/oauth/authorize",
         clientId: "store-ops-admin-web",
         scope: "openid profile email",

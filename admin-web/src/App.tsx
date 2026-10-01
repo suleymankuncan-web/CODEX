@@ -22,6 +22,7 @@ import { useLocalization } from './features/localization/useLocalization'
 import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
+import { SessionRecoveryState } from './features/session/session-recovery-state'
 import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
 import { StoreChecklistSessionModalV1Prototype } from './prototypes/store-checklist-session-modal-v1'
 import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
@@ -59,7 +60,7 @@ function App() {
     isAdminMasterDataPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
+  const { session, isReady, isProviderSessionHydrating, expireSession, sessionRecoveryFailed, retrySessionRecovery } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
@@ -116,6 +117,7 @@ function App() {
   useLayoutEffect(() => {
     const handleSessionExpired = (event: Event) => {
       const detail = (event as CustomEvent<SessionExpiredDetail>).detail
+      if (detail?.sessionKey !== undefined && detail.sessionKey !== session.browserSessionKey) return
       expireSession()
       setSessionNotice(
         detail?.message
@@ -127,7 +129,7 @@ function App() {
 
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
-  }, [currentReturnPath, expireSession, navigate])
+  }, [currentReturnPath, expireSession, navigate, session.browserSessionKey])
 
   const authSummary = sessionQuery.data ?? null
   const previousBearerSessionRef = useRef({
@@ -252,6 +254,10 @@ function App() {
 
   if (isAdminMasterDataPrototype) {
     return <AdminMasterDataCommandV1Prototype />
+  }
+
+  if (sessionRecoveryFailed && !pathname.startsWith('/auth')) {
+    return <SessionRecoveryState onRetry={retrySessionRecovery} />
   }
 
   if (pathname.startsWith('/auth')) {

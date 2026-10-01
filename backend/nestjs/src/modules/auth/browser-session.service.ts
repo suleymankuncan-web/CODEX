@@ -26,7 +26,7 @@ export interface BrowserSessionEnvelope {
     username?: string;
     userId: string;
   };
-  v: typeof SESSION_VERSION;
+  v: 1 | 2;
 }
 
 export interface BrowserSessionIssueResult {
@@ -46,16 +46,22 @@ export interface BrowserSessionCsrfRecoveryResult {
 export class BrowserSessionService {
   constructor(private readonly appConfigService: AppConfigService) {}
 
-  issueSession(user: AuthenticatedUser, now = Date.now()): BrowserSessionIssueResult {
+  issueManagedSession(user: AuthenticatedUser, sessionId: string, issuedAt: number, expiresAt: number) {
+    return this.issueSession(user, issuedAt, { sessionId, expiresAt });
+  }
+
+  issueSession(user: AuthenticatedUser, now = Date.now(), managed?: {
+    sessionId: string; expiresAt: number;
+  }): BrowserSessionIssueResult {
     const signingSecret = this.requireSigningSecret();
     const issuedAt = Math.floor(now / 1000);
-    const expiresAt = issuedAt + this.appConfigService.browserSessionTtlSeconds;
+    const expiresAt = managed ? Math.floor(managed.expiresAt / 1000) : issuedAt + this.appConfigService.browserSessionTtlSeconds;
     const envelope: BrowserSessionEnvelope = {
       alg: SIGNING_ALGORITHM,
       csrfHash: "",
       exp: expiresAt,
       iat: issuedAt,
-      sid: randomBytes(16).toString("base64url"),
+      sid: managed?.sessionId ?? randomBytes(16).toString("base64url"),
       user: {
         actionScope: {
           assignedStoreIds: user.actionScope.assignedStoreIds,
@@ -69,7 +75,7 @@ export class BrowserSessionService {
         username: user.username,
         userId: user.userId,
       },
-      v: SESSION_VERSION,
+      v: managed ? 2 : SESSION_VERSION,
     };
     const csrfNonce = this.deriveCsrfRecoveryNonce(envelope, signingSecret);
     envelope.csrfHash = this.hashCsrfNonce(csrfNonce);
@@ -182,7 +188,7 @@ export class BrowserSessionService {
     }
 
     if (
-      parsed.v !== SESSION_VERSION ||
+      (parsed.v !== SESSION_VERSION && parsed.v !== 2) ||
       parsed.alg !== SIGNING_ALGORITHM ||
       typeof parsed.exp !== "number" ||
       typeof parsed.iat !== "number" ||
