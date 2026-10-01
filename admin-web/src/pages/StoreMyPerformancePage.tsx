@@ -462,7 +462,6 @@ function StoreMyPerformancePageExperience({
     targetProgressPercent,
     targetSalesLabel,
     targetStatusLabel,
-    todayActions,
     turkeyPopulationLabel,
     turkeyRankLabel,
   } = viewModel
@@ -532,7 +531,6 @@ function StoreMyPerformancePageExperience({
             targetProgressPercent={targetProgressPercent}
             targetSalesLabel={targetSalesLabel}
             targetStatusLabel={targetStatusLabel}
-            todayActions={todayActions}
             turkeyPopulationLabel={turkeyPopulationLabel}
             turkeyRankLabel={turkeyRankLabel}
           />

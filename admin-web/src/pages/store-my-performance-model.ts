@@ -7,7 +7,6 @@ import type { MyPerformanceMetric, MyPerformanceSummary, ReportingSnapshotRun } 
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
-import { buildStoreMyPerformanceTodayActions } from './store-my-performance-actions'
 import { buildStoreMeShareCardViewModel } from './store-me-share-card-model'
 import { formatPopulation, formatRank, formatRegionRankLabels } from './store-my-performance-rank-labels'
 
@@ -880,7 +879,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     const previousPerformance = monthPerformance ? matchingPreviousPerformance(monthPerformance,
       monthlyPerformanceData.find(data => data?.period?.periodStart.slice(0, 10) === previousPeriod?.periodStart) ?? undefined) : undefined
     const metrics = monthPerformance?.metrics.filter(isPersonnelMetric) ?? []
-    const scoreValue = monthPerformance?.score.value ?? null
+    const scoreValue = monthPerformance && monthPerformance.score.matchedMetrics > 0 ? monthPerformance.score.value : null
 
     return {
       key: getPeriodDateKey(period.periodStart) || period.periodStart,
@@ -948,7 +947,6 @@ export function buildStoreMyPerformanceViewModel(input: {
       turkeyRankLabel: formatRank(metricRank?.turkeyRank, input.t),
     }
   })
-  const todayActions = buildStoreMyPerformanceTodayActions({ metricCards, partial, pendingNormalizationLabels, samePeriodScoreDelta, samePeriodScoreDeltaValue, t: input.t, targetProgressPercent })
   const targetMetric = findMetric(personnelMetrics, 'TARGET_ACHIEVEMENT')
   const targetSalesValue = typeof targetMetric?.targetValue === 'number' && Number.isFinite(targetMetric.targetValue) && targetMetric.targetValue > 0 ? targetMetric.targetValue : null
   const remainingTargetValue = targetSalesValue !== null && supporting.netSalesValue !== null ? Math.max(0, targetSalesValue - supporting.netSalesValue) : null
@@ -997,7 +995,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     samePeriodScoreDelta,
     scoreDeltaLabel: samePeriodScoreDelta ?? input.t('storeMe.noTrendData'),
     scoreMeaning,
-    scoreValue: Math.round(input.performance.score.value),
+    scoreValue: input.performance.score.matchedMetrics > 0 && Number.isFinite(input.performance.score.value) ? Math.round(input.performance.score.value) : null,
     shareCard,
     ...formatRegionRankLabels(input.performance.rankings, input.t),
     selectedPeriodLabel: periodLabelWithSource,
@@ -1006,7 +1004,6 @@ export function buildStoreMyPerformanceViewModel(input: {
     targetProgressPercent,
     targetSalesLabel: formatCurrency(input.locale, input.t, targetSalesValue),
     targetStatusLabel: targetSalesValue !== null ? input.t('storeMe.approvedTarget') : input.t('storeMe.targetPending'),
-    todayActions,
     trendPoints,
     turkeyPopulationLabel: formatPopulation(input.performance.rankings.turkeyPopulation, input.t),
     turkeyRankLabel: formatRank(input.performance.rankings.turkeyRank, input.t),

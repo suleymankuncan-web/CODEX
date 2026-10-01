@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test } from './test-fixtures'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
 import { myPerformanceFixture } from './store-surfaces-profile-fixtures'
@@ -13,6 +14,10 @@ test('store me exposes the performance card action and compact month picker', as
   await page.goto('/store/me')
 
   await expect(page.getByRole('button', { name: 'Performans Kartı Oluştur' })).toBeVisible()
+  await expect(page.locator('#store-me-actions')).toHaveCount(0)
+  const chart = await page.locator('.store-me-trend-card').boundingBox()
+  const grid = await page.locator('.store-me-main-grid').boundingBox()
+  expect(Math.abs(chart!.width - grid!.width)).toBeLessThan(2)
   const dateFilter = page.getByRole('button', { name: 'Tarih filtresi' })
   await expect(dateFilter).toBeVisible()
   await dateFilter.click()
@@ -100,4 +105,38 @@ test('self KPI details distinguish failed reads from missing history and reject 
   await expect(dialog.getByRole('region', { name: 'Mart 2026', exact: true })).toContainText('Veri yok')
   await expect(dialog.getByRole('region', { name: 'Mart 2026', exact: true }).locator('table')).toHaveCount(0)
   await expect(row.locator('[data-direction]')).toHaveCount(0)
+})
+
+
+test('performance card downloads a PNG image and shares the prepared image file', async ({ page }) => {
+  await installStoreContractSession(page, 'storePersonnel')
+  await installGenericStoreApiFallbacks(page)
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: ({ files }: { files: File[] }) => files.length === 1 && files[0].type === 'image/png' })
+    Object.defineProperty(navigator, 'share', { configurable: true, value: async ({ files }: { files: File[] }) => {
+      document.documentElement.dataset.sharedImage = `${files[0].type}|${files[0].name}|${navigator.userActivation.isActive}`
+    } })
+  })
+  await page.goto('/store/me')
+  await page.getByRole('button', { name: 'Performans Kartı Oluştur' }).click()
+  const downloadButton = page.getByRole('button', { name: 'PNG indir', exact: true })
+  await expect(downloadButton).toBeEnabled({ timeout: 20000 })
+  const [download] = await Promise.all([page.waitForEvent('download'), downloadButton.click()])
+  expect(download.suggestedFilename()).toMatch(/\.png$/)
+  const bytes = await readFile((await download.path())!)
+  expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+  await page.getByRole('button', { name: 'Görseli paylaş' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-shared-image', /^image\/png\|.*\.png\|true$/)
+})
+
+test('reported metrics without a scored reference show unavailable rather than zero', async ({ page }) => {
+  await installStoreContractSession(page, 'storePersonnel')
+  await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/reports/my-performance**', route => route.fulfill({ json: {
+    ...myPerformanceFixture, score: { value: 0, matchedMetrics: 0, totalMetrics: 3 },
+    metrics: myPerformanceFixture.metrics.map(metric => ({ ...metric, scoreStatus: 'missing_reference', contributionValue: 0 })),
+  } }))
+  await page.goto('/store/me')
+  await expect(page.locator('.store-me-kpi-score .store-me-kpi-head strong')).toHaveText('Veri yok')
+  await expect(page.locator('.store-me-summary-strip strong').nth(1)).toHaveText('Veri yok')
 })

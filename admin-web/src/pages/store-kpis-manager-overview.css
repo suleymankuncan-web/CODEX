@@ -43,6 +43,7 @@
 .manager-performance th:last-child, .manager-performance td:last-child { padding-right: 20px; }
 .manager-performance tbody tr:last-child td { border-bottom: 0; }
 .store-command-app .manager-performance th button { min-height: 32px; padding: 0; font-size: 12px; border: 0; background: transparent; box-shadow: none; gap: 4px; }
+.manager-performance-people th button { white-space: normal; height: auto; text-align: center; }
 .manager-performance-people-toolbar { display: none; padding: 12px 20px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--primary) 9%, var(--card)); }
 .manager-performance-details { padding: 0 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
 .manager-performance-details [data-slot='accordion-content'] > div { min-width: 0; }

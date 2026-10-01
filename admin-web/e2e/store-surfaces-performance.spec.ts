@@ -37,9 +37,8 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Mağaza', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Bölge', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Türkiye', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Bugün Yapılacaklar')).toBeVisible()
-  await expect(page.locator('#store-me-actions').getByText(/HG% çizgisini kapat|Bugün için net aksiyon yok/)).toBeVisible()
-  await expect(page.locator('#store-me-actions')).not.toContainText('Ritmi koru')
+  await expect(page.getByText('Bugün Yapılacaklar')).toHaveCount(0)
+  await expect(page.locator('#store-me-actions')).toHaveCount(0)
   await expect(page.getByText('Gelişim çizgisi')).toBeVisible()
   await expect(page.getByText('Hedef Gerçekleştirme')).toBeVisible()
   await expect(page.getByText('Skor kırılımı')).toBeVisible()
@@ -302,9 +301,8 @@ test('store self-performance switches to English copy and persists locale', asyn
   await expect(page.locator('.store-me-kpi-grid')).toBeVisible()
   await expect(page.locator('.store-me-score-chart [data-slot="chart"]')).toBeVisible()
   await expect(page.locator('.store-me-score-breakdown')).toBeVisible()
-  await expect(page.getByText("Today's Actions")).toBeVisible()
-  await expect(page.locator('#store-me-actions').getByText(/Close the HG% gap|No clear action for today/)).toBeVisible()
-  await expect(page.locator('#store-me-actions')).not.toContainText('Maintain the rhythm')
+  await expect(page.getByText("Today's Actions")).toHaveCount(0)
+  await expect(page.locator('#store-me-actions')).toHaveCount(0)
   await expect(page.getByText('Progress line')).toBeVisible()
   await expect(page.locator('[data-testid="store-me-target-progress-card"]').getByText('Target achievement', { exact: true })).toBeVisible()
   await expect(page.getByText('Score breakdown')).toBeVisible()
@@ -524,14 +522,17 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await page.getByRole('button', { name: /Personel Performansı/ }).click()
 
   await expect(page.getByRole('region', { name: 'Personel KPI' })).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Mağaza Skor Etkisi' })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Mağaza Skor Etkisi' })).toHaveCount(0)
+  for (const name of ['Brüt Toplam Satış', 'İade Tutarı', 'Net Satış', 'HG%', 'ATV', 'UPT']) {
+    await expect(page.getByRole('columnheader', { name, exact: true })).toBeVisible()
+  }
   await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('Hedef bekleniyor')
   await expect(page.getByRole('row', { name: /Store Personnel - 1/ }).getByRole('link', { name: /Detay/ })).toHaveAttribute(
     'href',
     new RegExp(`/store/personnel/${demoEmployeeId}\\?mode=live&periodType=monthly&periodStart=2026-09-01`),
   )
   await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
-  await expect(page.getByText('Mağaza Skor Etkisi nasıl hesaplanır?')).toBeVisible()
+  await expect(page.getByText('Mağaza Skor Etkisi nasıl hesaplanır?')).toHaveCount(0)
   await expect(page.getByText('Store KPI Highlights')).toHaveCount(0)
   await expect(page.getByText('Store skor yorumu')).toHaveCount(0)
   await expect(page.getByText('Weighted Score Summary')).toHaveCount(0)
@@ -838,7 +839,10 @@ test('store KPI highlights switches to English copy and persists locale', async 
   await expect(page.getByRole('columnheader', { name: 'Score Contribution' })).toBeVisible()
   await expect(page.getByText('Checklist score contribution')).toBeVisible()
   await page.getByRole('button', { name: /Personnel Performance/ }).click()
-  await expect(page.getByText('How is store score impact allocated?')).toBeVisible()
+  await expect(page.getByText('How is store score impact allocated?')).toHaveCount(0)
+  for (const name of ['Gross Total Sales', 'Return Amount', 'Net Sales', 'HG%', 'ATV', 'UPT']) {
+    await expect(page.getByRole('columnheader', { name, exact: true })).toBeVisible()
+  }
   await expect(page.getByText("Mağaza KPI'ları")).toHaveCount(0)
   await expect(page.getByText('Mağaza skor özeti')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')

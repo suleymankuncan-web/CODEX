@@ -52,7 +52,9 @@ test('store me action metrics reject missing or unscorable KPI values', () => {
 test('store me production surface keeps compact primitives and the shared KPI chart', () => {
   assert.match(dashboardSource, /import \{ KpiScoreChart \}/u)
   assert.match(dashboardSource, /function KpiCardHead/u)
-  assert.match(dashboardSource, /todayActionsEmptyTitle/u)
+  assert.doesNotMatch(dashboardSource, /todayActions|store-me-today-actions/u)
+  assert.doesNotMatch(modelSource, /buildStoreMyPerformanceTodayActions/u)
+  assert.match(dashboardCssSource, /\.store-me-main-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/u)
   assert.match(dashboardSource, /<KpiScoreChart data=\{chart\.chartPoints\.map/u)
   assert.doesNotMatch(dashboardSource, /<svg[\s\S]*store-me-line-chart/u)
   assert.match(storeMeCssSource, /\.store-me-kpi-head/u)

@@ -1,9 +1,19 @@
 import { expect, test } from './test-fixtures'
-import { installGenericStoreApiFallbacks, installStoreContractSession, storeIds } from './store-page-contract-fixtures'
+import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
+import type { Page } from '@playwright/test'
+import { createIncentiveWorkspace, incentiveStoreA, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
 import { routeReturns, returnRow } from './store-returns-fixtures'
 
+async function openPrimDrawer(page: Page) {
+  await installStoreContractSession(page, 'regionManager')
+  await routeIncentiveWorkspace(page, createIncentiveWorkspace('region_manager'))
+  await page.goto('/store/incentives')
+  await page.getByLabel('Mall of İstanbul: Prim ayrıntılarını aç').filter({ visible: true }).click()
+  return page.getByRole('dialog', { name: 'Mall of İstanbul', exact: true })
+}
+
 for (const width of [1440, 1024, 390, 360]) {
-  test(`KPI shows canonical net and shared dated returns at ${width}px`, async ({ page }) => {
+  test(`KPI hides its returns panel while prim keeps shared dated returns at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await installStoreContractSession(page, 'storeManager')
     await installGenericStoreApiFallbacks(page)
@@ -13,10 +23,12 @@ for (const width of [1440, 1024, 390, 360]) {
       returnRow({ returnId: 'external', direction: 'external', receivingStoreCode: 'SYN-EXTERNAL', receivingStoreName: null }),
     ] })
     await page.goto('/store/kpis')
-    const summary = page.getByRole('region', { name: 'İadeler sonrası satış özeti' })
-    await expect(summary).toContainText('₺1.950,00')
-    await expect(summary).toContainText('-₺650,00')
-    const trigger = summary.getByRole('button', { name: 'İadeler', exact: true })
+    await expect(page.getByRole('heading', { name: /İstanbul MOI/ }).first()).toBeVisible()
+    await expect(page.getByRole('region', { name: 'İadeler sonrası satış özeti' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'İadeler', exact: true })).toHaveCount(0)
+    expect(reads).toHaveLength(0)
+    const drawer = await openPrimDrawer(page)
+    const trigger = drawer.getByRole('button', { name: 'İadeler', exact: true })
     await trigger.click()
     const dialog = page.getByRole('dialog', { name: /İadeler ·/ })
     await expect(dialog.getByRole('switch')).not.toBeChecked()
@@ -29,7 +41,7 @@ for (const width of [1440, 1024, 390, 360]) {
     await expect(dialog.getByText('Dış mağazada iade · Bilgi', { exact: true })).toBeVisible()
     await expect(dialog.getByText('-₺650,00', { exact: true })).toBeVisible()
     await expect.poll(() => dialog.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(2)
-    expect(reads.every(url => url.searchParams.get('storeId') === storeIds[0] && url.searchParams.get('periodStart') === '2026-07-01' && url.searchParams.get('periodEnd') === '2026-07-31')).toBe(true)
+    expect(reads.every(url => url.searchParams.get('storeId') === incentiveStoreA && url.searchParams.get('periodStart') === '2026-06-01' && url.searchParams.get('periodEnd') === '2026-06-30')).toBe(true)
     expect(reads.every(url => [...url.searchParams.keys()].every(key => ['storeId', 'periodStart', 'periodEnd', 'category', 'offset', 'limit'].includes(key)))).toBe(true)
     await dialog.getByRole('button', { name: 'İadeleri kapat' }).click()
     await expect(trigger).toBeFocused()
@@ -41,14 +53,14 @@ test('return paging and missing-day evidence retain independent totals', async (
   await installGenericStoreApiFallbacks(page)
   const reads = await routeReturns(page, {
     inside: Array.from({ length: 51 }, (_, index) => returnRow({ returnId: `row-${index}`, displayName: `Satıcı ${index + 1}` })),
-    ledger: { coverage: { expectedDays: 31, coveredDays: 30, missingDates: ['2026-07-12'], status: 'partial', unresolvedRows: 1 } },
+    ledger: { coverage: { expectedDays: 30, coveredDays: 29, missingDates: ['2026-06-12'], status: 'partial', unresolvedRows: 1 } },
   })
-  await page.goto('/store/kpis')
-  await page.getByRole('button', { name: 'İadeler', exact: true }).click()
+  const drawer = await openPrimDrawer(page)
+  await drawer.getByRole('button', { name: 'İadeler', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: /İadeler ·/ })
   await expect(dialog).toContainText('Bazı günlerin verisi eksik')
   await dialog.getByText('Eksik günler', { exact: false }).click()
-  await expect(dialog).toContainText('12 Tem 2026')
+  await expect(dialog).toContainText('12 Haz 2026')
   await expect(dialog.locator('[data-return-id]')).toHaveCount(50)
   await dialog.getByRole('button', { name: 'Sonraki', exact: true }).click()
   await expect(dialog.getByText('Satıcı 51', { exact: true })).toBeVisible()
@@ -61,8 +73,8 @@ test('a forbidden filtered response hides cached return records and totals', asy
   await installStoreContractSession(page, 'storeManager')
   await installGenericStoreApiFallbacks(page)
   await routeReturns(page)
-  await page.goto('/store/kpis')
-  await page.getByRole('button', { name: 'İadeler', exact: true }).click()
+  const drawer = await openPrimDrawer(page)
+  await drawer.getByRole('button', { name: 'İadeler', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: /İadeler ·/ })
   await expect(dialog.getByText('Norm Satıcısı', { exact: true })).toBeVisible()
   await page.route('**/api/reports/store-returns?**', route => route.fulfill({ status: 403, json: { message: 'Forbidden' } }))
