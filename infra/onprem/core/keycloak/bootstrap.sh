@@ -520,6 +520,7 @@ fi
 kcadm_quiet update "realms/$realm" \
   -s enabled=true \
   -s loginTheme=hr-axis \
+  -s emailTheme=hr-axis \
   -s internationalizationEnabled=true \
   -s 'supportedLocales=["tr"]' \
   -s defaultLocale=tr \

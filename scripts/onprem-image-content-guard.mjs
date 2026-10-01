@@ -55,6 +55,12 @@ const BINARY_SCAN_BYTES = 64 * 1024
 const BINARY_SCAN_OVERLAP_BYTES = 8 * 1024
 
 const KEYCLOAK_APPROVED_CONTENT = Object.freeze({
+  // Keycloak requires this provider filename. Pin the reviewed public template,
+  // retain content scanning, and reject any edited bytes or neighboring path.
+  'opt/keycloak/themes/hr-axis/email/html/password-reset.ftl': Object.freeze({
+    sha256: 'abcb8b4cab99aa5be0b780e7730bb036c2f18fb297859a3e0214e31c1f6dae9c',
+    kind: 'mail-template',
+  }),
   'etc/java/java-21-openjdk/java-21-openjdk-21.0.12.1.1-1.2.el9.x86_64/conf/management/jmxremote.password.template': Object.freeze({
     sha256: '0273b6a6b9e20e6ce54c5aee70164028e0395063b2b7d39060a40b6495543dbf',
     kind: 'jmx-template',
@@ -303,7 +309,7 @@ function validateKeycloakArtifactContent(kind, probe, absolute) {
       ? certificateContentReason(probe.content)
       : 'certificate-must-be-text'
   }
-  if (kind === 'jmx-template') {
+  if (kind === 'jmx-template' || kind === 'mail-template') {
     if (probe.kind === 'oversized-text') return 'template-is-oversized'
     if (probe.kind !== 'text') return 'template-must-be-text'
     return secretContentReason(probe.content, { includeAssignments: true })

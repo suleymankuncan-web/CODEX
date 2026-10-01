@@ -5,6 +5,7 @@ import { isEmail } from "class-validator";
 import * as nodemailer from "nodemailer";
 import { readFileBackedSetting } from "../../../shared/secret-file-config";
 import type { ClaimedNoSalesAlert } from "./no-positive-sales-alert.repository";
+import { renderNoPositiveSales } from "../../../shared/mail/notification.templates";
 
 /** SMTP rejected the recipient before accepting a message; resubmission is safe. */
 export class DefiniteNoSalesSmtpRejection extends Error {}
@@ -41,22 +42,13 @@ export class NoPositiveSalesAlertMailer {
     const deliveryKey = createHash("sha256").update(alerts.map(item => item.delivery_id).sort().join(":"), "utf8").digest("hex").slice(0, 32);
     const transport = this.transport(settings);
     try {
+      const template = renderNoPositiveSales(alerts);
       const receipt = await transport.sendMail({
           from: settings.from,
           to: recipient,
           messageId: `<no-sales-${deliveryKey}@${settings.from.split("@")[1]}>`,
           subject: "HR Axis | 15 gündür pozitif satış görülmeyen personel",
-          text: [
-            "Merhaba,",
-            "",
-            "Aşağıdaki aktif personel için son 15 tamamlanmış takvim gününde pozitif satış görülmedi.",
-            "Yalnız başarılı günlük yüklemeler değerlendirilmiştir. İadeler süreyi sıfırlamaz.",
-            "Bu bildirim kadrodan çıkarma veya prim kesintisi oluşturmaz.",
-            "",
-            ...alerts.map(item => `${item.store_name} | ${item.display_name} | Son yükleme: ${item.business_date}`),
-            "",
-            "HR Axis",
-          ].join("\n"),
+          html: template.html, text: template.text, attachments: template.attachments,
       }).catch((error: unknown) => {
         const code = (error as { code?: unknown }).code;
         if (code === "EAUTH" || code === "EENVELOPE") {
@@ -67,7 +59,7 @@ export class NoPositiveSalesAlertMailer {
       if (receipt.accepted.length === 0 && receipt.rejected.length > 0) {
         throw new DefiniteNoSalesSmtpRejection("no_sales_smtp_recipient_not_accepted");
       }
-      if (receipt.rejected.length > 0 || receipt.accepted.length !== 1) throw new Error("no_sales_smtp_delivery_uncertain");
+      if (receipt.rejected.length > 0 || receipt.accepted.length !== 1 || String(receipt.accepted[0]).toLowerCase() !== recipient.toLowerCase()) throw new Error("no_sales_smtp_delivery_uncertain");
       return String(receipt.messageId);
     } finally { transport.close(); }
   }
