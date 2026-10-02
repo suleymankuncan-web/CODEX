@@ -6,7 +6,7 @@ import type { OperationalDelivery, OperationalMailEvent, OperationalRecipient } 
 @Injectable()
 export class OperationalMailRepository {
   constructor(private readonly db:DatabaseService) {}
-  async activate(stream:"operational"|"weekly"|"monthly"|"personnel") {
+  async activate(stream:"operational"|"weekly"|"monthly"|"personnel"|"visit_plans") {
     await this.db.query("INSERT INTO ops.operational_mail_activation(stream) VALUES($1) ON CONFLICT DO NOTHING",[stream]);
   }
   async enqueue(input: {key:string;kind:OperationalMailEvent["kind"];companyId?:string;storeId?:string;entityId?:string;payload:Record<string,unknown>}) {
@@ -17,7 +17,7 @@ export class OperationalMailRepository {
   async events(streams:string[]) {
     return (await this.db.query<OperationalMailEvent>(`SELECT event.* FROM ops.operational_mail_event event
       JOIN ops.operational_mail_activation activation ON activation.stream=CASE event.kind
-        WHEN 'personnel_roster' THEN 'personnel' WHEN 'weekly_report' THEN 'weekly' WHEN 'monthly_report' THEN 'monthly' ELSE 'operational' END
+        WHEN 'visit_plan_created' THEN 'visit_plans' WHEN 'personnel_roster' THEN 'personnel' WHEN 'weekly_report' THEN 'weekly' WHEN 'monthly_report' THEN 'monthly' ELSE 'operational' END
       WHERE activation.stream=ANY($1::text[]) AND event.created_at>=activation.activated_at
         AND event.available_at<=clock_timestamp() AND (event.expanded_at IS NULL OR EXISTS(
           SELECT 1 FROM ops.operational_mail_delivery delivery WHERE delivery.event_id=event.event_id AND delivery.status='pending'))

@@ -8,7 +8,7 @@ export function workflowMailOrigin(config:ConfigService) {
   try {const url=new URL(explicit);return url.protocol==='https:' && url.pathname==='/' && !url.username && !url.password && !url.search && !url.hash ? url.origin : null;} catch {return null;}
 }
 export function workflowMailLink(origin:string,event:{kind:WorkflowMailKind;payload:Record<string,unknown>}) {
-  const route=event.kind==='checklist_completed' ? '/store/checklists' : event.kind.includes('action') ? '/store/tasks'
+  const route=event.kind==='visit_plan_created' ? '/store/checklists' : event.kind==='checklist_completed' ? '/store/checklists' : event.kind.includes('action') ? '/store/tasks'
     : event.kind.endsWith('requested') ? '/admin/inbox' : event.kind.includes('report') ? '/store/reports' : '/store/targets';
   const url=new URL(route,origin);
   if(event.kind==='checklist_completed') {url.searchParams.set('overlay','result');url.searchParams.set('checklistInstanceId',String(event.payload.checklistId));}

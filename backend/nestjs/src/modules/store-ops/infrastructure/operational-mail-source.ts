@@ -1,3 +1,4 @@
+import { readVisitPlanMail,visitPlanRecipient,type VisitPlanMailData } from "./visit-plan-mail-read";
 import { personnelRosterRecipients } from "../../../shared/mail/personnel-roster-recipients";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -9,7 +10,7 @@ import { operationalReportManagers, operationalRoleScopeSql, operationalStoreRol
 import type { OperationalMailEvent, OperationalRecipient, OperationalReportManager } from "./operational-mail.types";
 
 type ContentInput=Parameters<typeof workflowMailContent>[0];
-export type OperationalSource={recipients:OperationalRecipient[];complete:boolean;content:Omit<ContentInput,"url">;reportManager?:OperationalReportManager};
+export type OperationalSource={recipients:OperationalRecipient[];complete:boolean;content:Omit<ContentInput,"url">;reportManager?:OperationalReportManager;visitPlan?:VisitPlanMailData};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const missingTargetSql=`NOT EXISTS(SELECT 1 FROM ops.target_distribution_request target
   WHERE target.store_id=store.store_id AND target.company_id=store.company_id
@@ -22,6 +23,11 @@ export class OperationalMailSource {
   constructor(private readonly db:DatabaseService,private readonly config:ConfigService) {}
   async resolve(event:OperationalMailEvent,now=new Date()):Promise<OperationalSource|null> {
     const content:OperationalSource["content"]={kind:event.kind};
+    if(event.kind==='visit_plan_created') {
+      const visitPlan=await readVisitPlanMail(this.db,event,now);if(!visitPlan)return null;
+      return {...this.result([{recipient:visitPlanRecipient,audience:'visit_plan',user_id:null}],true,
+        {kind:event.kind,name:visitPlan.managerName,range:visitPlan.weekStart}),visitPlan};
+    }
     if(event.kind==='personnel_roster') {
       const period=String(event.payload.period ?? '');if(period!==istanbulClock(now).date.slice(0,7))return null;
       return this.result(personnelRosterRecipients.map(recipient=>({recipient,audience:'personnel_roster',user_id:null})),true,{kind:event.kind,period});

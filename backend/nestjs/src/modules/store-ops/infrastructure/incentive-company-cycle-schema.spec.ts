@@ -20,7 +20,7 @@ describe("company-cycle canonical schema mirror",()=>{
     expect(schemaStart).toBeGreaterThanOrEqual(0);
     expect(schema.slice(schemaStart,schemaStart+expected.length)).toBe(expected);
   });
-  it.each(['100_incentive_approval_mail_v1.sql','101_operational_mail_pilot_v1.sql','102_incentive_manager_scope_v1.sql'])('mirrors additive mail migration %s exactly',file=>{
+  it.each(['100_incentive_approval_mail_v1.sql','101_operational_mail_pilot_v1.sql','102_incentive_manager_scope_v1.sql','103_visit_plan_created_mail_v1.sql'])('mirrors additive mail migration %s exactly',file=>{
     const schema=readFileSync(resolve(process.cwd(),'../../db/schema.sql'),'utf8');
     const migration=readFileSync(resolve(process.cwd(),'../../db/migrations',file),'utf8').trim();
     const start=schema.indexOf(migration.split('\n')[0]);
