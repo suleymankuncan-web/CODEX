@@ -3,6 +3,14 @@ import { renderBaseTemplate } from './base.template';
 import { workflowMailLink,workflowMailOrigin } from './workflow-mail-link';
 import { ConfigService } from '@nestjs/config';
 describe('operational mail content',()=>{
+  it('uses the approved short planning notification and the implemented workspace link',()=>{
+    const url=workflowMailLink('https://hr.example',{kind:'visit_plan_created',payload:{weekStart:'2026-09-28'}});
+    expect(url).toBe('https://hr.example/store/checklists');
+    const content=workflowMailContent({kind:'visit_plan_created',name:'Fixture BM',range:'2026-09-28',url});
+    expect(content.title).toBe('Fixture BM haftalık shiftini oluşturdu');
+    expect(renderBaseTemplate(content).text).toContain('Ziyaret planını görüntüle');
+    expect(content.paragraphs[0]).not.toContain('tamamlanan ziyaret');
+  });
   it('escapes actual names and includes a real HTTPS detail CTA without mock labels',()=>{
     const rendered=renderBaseTemplate(workflowMailContent({kind:'checklist_completed',storeName:'A <script>',checklistName:'BM ziyareti',date:'01.10.2026',url:'https://hr.example/store/checklists?overlay=result&checklistInstanceId=123'}));
     expect(rendered.html).toContain('A &lt;script&gt;');expect(rendered.html).not.toContain('Şablon görünümü');

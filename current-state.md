@@ -13,6 +13,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 - [Mail audit](docs/plans/mail-personnel-package-audit-20261001.md): four-role prim,
   CRM/HR day1 09:00 Istanbul roster; streams default-off, rollout unverified.
 
+- [BM planning notification](docs/contracts/visit-plan-created-mail-v1.md): saved weekly plan Excel to the owner-approved mailbox; independent default-off stream, deployment/activation unverified.
+
 - Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
   repair. [Returns V2](docs/contracts/company-daily-kpi-returns-v2.md), [net prim V2](docs/contracts/incentive-net-sales-v2.md),

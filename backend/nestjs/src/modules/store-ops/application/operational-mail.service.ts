@@ -1,3 +1,4 @@
+import { buildVisitPlanMailWorkbook } from "./visit-plan-mail-workbook";
 import { assertOperationalMailAttachment } from "../infrastructure/operational-mail-attachment";
 import { buildPersonnelRosterMailWorkbook } from "./personnel-roster-mail-workbook";
 import { istanbulClock } from "../../../shared/mail/pilot-periods";
@@ -22,7 +23,7 @@ export class OperationalMailService implements OnModuleInit,OnModuleDestroy {
     private readonly scheduler:OperationalMailScheduler,private readonly reports:StoreMonthlyReportPackageService,
     private readonly mailer:OperationalMailer,private readonly config:ConfigService) {}
   private streams() {
-    return ([['OPERATIONAL_MAIL_ENABLED','operational'],['OPERATIONAL_WEEKLY_REPORT_EMAIL_ENABLED','weekly'],['OPERATIONAL_MONTHLY_REPORT_EMAIL_ENABLED','monthly'],['OPERATIONAL_PERSONNEL_ROSTER_EMAIL_ENABLED','personnel']])
+    return ([['OPERATIONAL_MAIL_ENABLED','operational'],['OPERATIONAL_WEEKLY_REPORT_EMAIL_ENABLED','weekly'],['OPERATIONAL_MONTHLY_REPORT_EMAIL_ENABLED','monthly'],['OPERATIONAL_PERSONNEL_ROSTER_EMAIL_ENABLED','personnel'],['OPERATIONAL_VISIT_PLAN_EMAIL_ENABLED','visit_plans']])
       .filter(([key])=>this.config.get<string>(key)==='true').map(([,stream])=>stream);
   }
   onModuleInit() {if(!this.streams().length) return;this.timer=setInterval(()=>void this.runOnce(),60_000);this.timer.unref?.();void this.runOnce();}
@@ -32,7 +33,7 @@ export class OperationalMailService implements OnModuleInit,OnModuleDestroy {
     if(this.running || !streams.length) return;
     this.running=true;
     try {
-      for(const stream of streams) await this.repository.activate(stream as 'operational'|'weekly'|'monthly'|'personnel');
+      for(const stream of streams) await this.repository.activate(stream as 'operational'|'weekly'|'monthly'|'personnel'|'visit_plans');
       await this.scheduler.schedule(streams);
       if(!origin || !this.mailer.ready()) {this.logger.warn('operational_mail.configuration_incomplete');return;}
       try {await this.mailer.verify();} catch {this.logger.warn('operational_mail.smtp_preflight_failed');return;}
@@ -48,13 +49,15 @@ export class OperationalMailService implements OnModuleInit,OnModuleDestroy {
     await this.repository.expand(event,initial.recipients,initial.complete);
     if(!initial.complete) this.logger.warn('operational_mail.recipient_configuration_incomplete');
     const roster=event.kind==='personnel_roster' ? buildPersonnelRosterMailWorkbook(await this.repository.personnelRoster(istanbulClock().date),String(event.payload.period)) : undefined;
+    const visitPlan=initial.visitPlan ? buildVisitPlanMailWorkbook(initial.visitPlan) : undefined;
     for(const delivery of await this.repository.pending(event.event_id)) {
       let current=await this.source.resolve(event);
       if(!current?.recipients.some(r=>r.recipient===delivery.recipient && r.audience===delivery.audience && r.user_id===delivery.user_id)) {
         await this.repository.finish(delivery.delivery_id,'cancelled');continue;
       }
-      const report=roster ?? (current.reportManager ? await this.report(event,current) : undefined);
-      if(report && !roster) {
+      if(visitPlan && current.visitPlan?.scopeRevision!==initial.visitPlan!.scopeRevision) throw new Error('operational_visit_scope_changed');
+      const report=visitPlan ?? roster ?? (current.reportManager ? await this.report(event,current) : undefined);
+      if(report && !roster && !visitPlan) {
         const before=current.reportManager!;current=await this.source.resolve(event);
         if(!current?.reportManager || current.reportManager.email!==delivery.recipient
           || current.reportManager.store_ids.join(',')!==before.store_ids.join(',')) {await this.repository.finish(delivery.delivery_id,'cancelled');continue;}

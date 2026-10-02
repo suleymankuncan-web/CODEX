@@ -1,7 +1,7 @@
 import type { MailContent } from "./base.template";
 import { trMonth } from "./pilot-periods";
 
-export type WorkflowMailKind = "checklist_completed"|"actions_assigned"|"action_closed"|"action_reminder"|"entry_requested"|"exit_requested"|"target_submitted"|"target_missing"|"target_missing_digest"|"weekly_report"|"monthly_report"|"personnel_roster";
+export type WorkflowMailKind = "checklist_completed"|"actions_assigned"|"action_closed"|"action_reminder"|"entry_requested"|"exit_requested"|"target_submitted"|"target_missing"|"target_missing_digest"|"weekly_report"|"monthly_report"|"personnel_roster"|"visit_plan_created";
 export function workflowMailContent(input:{kind:WorkflowMailKind;storeName?:string;name?:string;period?:string;
   checklistName?:string;actionCount?:number;daysLeft?:number;reviewPending?:boolean;date?:string;code?:string;range?:string;url:string;missingStores?:string[];rosterTotal?:number;rosterActive?:number;rosterPassive?:number}):MailContent {
   const store=input.storeName ?? "";
@@ -20,6 +20,7 @@ export function workflowMailContent(input:{kind:WorkflowMailKind;storeName?:stri
     case "target_submitted": title=`${store} hedeflerini gönderdi`;text=`${month} hedefleri bölge müdürü onayına gönderilmiştir.`;action="Hedefleri görüntüle";break;
     case "target_missing": title=`${month} hedefleri henüz girilmedi`;text=`${store} için gönderilmiş hedef bulunmuyor.`;action="Hedefleri aç";break;
     case "target_missing_digest": title=`${month} hedefleri eksik`;text=`${input.missingStores?.length ?? 0} mağazanın hedefleri henüz gönderilmedi.`;action="Hedefleri aç";break;
+    case "visit_plan_created":title=`${input.name} haftalık shiftini oluşturdu`;text=`🗓️ ${input.range} tarihinde başlayan haftanın ziyaret planı ekte.`;action="Ziyaret planını görüntüle";break;
     case "weekly_report":title="Geçen hafta bölgenizde durum nasıldı?";text=`${input.range} haftasının mağaza raporu ekte. Ayrıntıları raporlar ekranından inceleyebilirsiniz.`;action="Raporları aç";break;
     case "personnel_roster":title=`${month} aylık personel listesi`;text="Mağaza, pozisyon, ad, soyad, telefon ve işe giriş bilgilerini içeren personel listesi ekte.";break;
     case "monthly_report":title=`${month} aylık bölge raporu`;text="Ayın kapanışı tamamlandı. Mağazalarınızın aylık raporu ekte.";action="Raporları aç";break;
