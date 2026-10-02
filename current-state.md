@@ -10,10 +10,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
 
 - [Read fixes](docs/plans/personnel-checklist-read-audit-v1.md) and
   [Store UI](docs/plans/store-personnel-checklist-corrections-v1.md) preserve month/scope.
-- [Mail audit](docs/plans/mail-personnel-package-audit-20261001.md): four-role prim,
-  CRM/HR day1 09:00 Istanbul roster; streams default-off, rollout unverified.
-
-- [BM planning notification](docs/contracts/visit-plan-created-mail-v1.md): saved weekly plan Excel to the owner-approved mailbox; independent default-off stream, deployment/activation unverified.
+- Mail: [audit](docs/plans/mail-personnel-package-audit-20261001.md),
+  [BM plan](docs/contracts/visit-plan-created-mail-v1.md); streams default-off, activation unverified.
 
 - Returns/net-prim/auth work uses targeted local tests and self-review until GO, required full GitHub
   CI, then squash merge. No local full run, manual proof/package, deploy or live
