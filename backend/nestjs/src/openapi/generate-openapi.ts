@@ -29,7 +29,7 @@ import {
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyStoreReturnsOpenApi } from "./store-returns-openapi"; import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi"; import { applyWorkforceWorkspaceOpenApi } from "./workforce-workspace-openapi"; import { applyTaskCommandWorkspaceOpenApi } from "./task-command-workspace-openapi"; import { applyRankingOpenApi } from "./ranking-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi"; import { applyVmReferenceManagementOpenApi } from "./vm-reference-management-openapi";
-import { applyWorkforceOpenApi } from "./workforce-openapi"; import { applyPersonnelCorrectionOpenApi } from "./personnel-correction-openapi";
+import { applyWorkforceOpenApi, workforceSellerCodeReferenceResponseSchema } from "./workforce-openapi"; import { applyPersonnelCorrectionOpenApi } from "./personnel-correction-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
 import {
   personnelMasterItemSchema,
@@ -2130,16 +2130,6 @@ const workflowInboxResponseSchema = {
 
 const requestCenterResponseSchema = requestCenterOpenApi.createRequestCenterResponseSchema(listResponseMetaSchema);
 
-const workforceSellerCodeReferenceResponseSchema = {
-  type: "object",
-  required: ["storeType", "prefix", "lastSellerCode", "nextSellerCodePreview"],
-  properties: {
-    storeType: { type: "string", enum: ["franchise"] },
-    prefix: { type: "string", enum: ["FM"] },
-    lastSellerCode: { type: "string", nullable: true },
-    nextSellerCodePreview: { type: "string", nullable: true },
-  },
-};
 
 const workforcePositionOptionSchema = {
   type: "object",

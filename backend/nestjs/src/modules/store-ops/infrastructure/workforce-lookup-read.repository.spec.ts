@@ -5,6 +5,17 @@ import {
 } from "./repository-test-helpers";
 
 describe("WorkforceLookupReadRepository", () => {
+  it("bounds the shared franchise namespace history to ten distinct numeric codes", async () => {
+    const query = createRepositoryQueryMock([{ seller_code: "FM1000" }, { seller_code: "FM999" }]);
+    const repository = new WorkforceLookupReadRepository({ query } as never);
+    await expect(repository.getRecentFranchiseSellerCodes()).resolves.toEqual(["FM1000", "FM999"]);
+    const executed = getExecutedQuery(query);
+    expect(executed.params).toEqual([10]);
+    expect(executed.sql).toContain("UNION");
+    expect(executed.sql).not.toContain("UNION ALL");
+    expect(executed.sql).toContain("request_status = 'approved'");
+    expect(executed.sql).toContain("::numeric DESC, seller_code DESC");
+  });
   it("orders numeric seller-code suffixes without overflowing PostgreSQL integer", async () => {
     const query = createRepositoryQueryMock([{ seller_code: "FM9260908140111" }]);
     const repository = new WorkforceLookupReadRepository({ query } as never);
@@ -14,7 +25,8 @@ describe("WorkforceLookupReadRepository", () => {
     );
 
     const executed = getExecutedQuery(query);
-    expect(executed.sql).toContain("SUBSTRING(seller_code FROM 3)::bigint DESC");
+    expect(executed.sql).toContain("SUBSTRING(seller_code FROM 3)::numeric DESC");
+    expect(executed.params).toEqual([1]);
     expect(executed.sql).not.toContain("SUBSTRING(seller_code FROM 3)::integer DESC");
   });
 

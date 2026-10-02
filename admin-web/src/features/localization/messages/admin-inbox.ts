@@ -52,6 +52,7 @@ export const adminInboxTr = {
   'adminInbox.sellerQueueCopy':
     'Franchise kodları manuel kalır. Son FM kodu referans olarak gösterilir, onaylanan kodu HR girer.',
   'adminInbox.lastFranchiseCode': 'Son franchise kodu',
+  'adminInbox.recentSellerCodes': 'Son 10 satış sicili',
   'adminInbox.noFmCode': 'FM kodu yok',
   'adminInbox.nextPreview': 'Sıradaki ön izleme',
   'adminInbox.notAvailable': 'yok',
@@ -155,6 +156,7 @@ export const adminInboxEn: Record<keyof typeof adminInboxTr, string> = {
   'adminInbox.sellerQueueCopy':
     'Franchise codes stay manual. The latest FM code is shown as a reference, then HR enters the approved code.',
   'adminInbox.lastFranchiseCode': 'Last franchise code',
+  'adminInbox.recentSellerCodes': 'Last 10 seller codes',
   'adminInbox.noFmCode': 'No FM code',
   'adminInbox.nextPreview': 'Next preview',
   'adminInbox.notAvailable': 'n/a',

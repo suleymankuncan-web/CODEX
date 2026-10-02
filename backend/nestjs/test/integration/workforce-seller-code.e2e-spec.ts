@@ -37,12 +37,17 @@ describe("Workforce seller code requests", () => {
   const email = "ayse.yilmaz@example.com";
   const hireDate = "2026-05-01";
 
-  it("returns the latest franchise FM seller code reference", async () => {
-    const query = jest.fn(async (sql: string) => {
+  it("returns the latest ten franchise FM seller codes with the next reference", async () => {
+    const recentSellerCodes = [
+      "FM8375", "FM8374", "FM8373", "FM8372", "FM8371",
+      "FM8370", "FM8369", "FM8368", "FM8367", "FM8366",
+    ];
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("seller_code_candidates") && sql.includes("'FM'")) {
+        expect(params).toEqual([10]);
         return {
-          rowCount: 1,
-          rows: [{ seller_code: "FM8375" }],
+          rowCount: recentSellerCodes.length,
+          rows: recentSellerCodes.map(seller_code => ({ seller_code })),
         };
       }
 
@@ -65,6 +70,7 @@ describe("Workforce seller code requests", () => {
       storeType: "franchise",
       prefix: "FM",
       lastSellerCode: "FM8375",
+      recentSellerCodes,
       nextSellerCodePreview: "FM8376",
     });
 

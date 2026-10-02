@@ -62,3 +62,7 @@
   .admin-inbox-table [data-slot=button], .admin-inbox-sheet [data-slot=button] { min-height: 44px; min-width: 44px; }
   .admin-inbox-review [data-slot=button] { width: 100%; }
 }
+
+.admin-inbox-recent-codes { flex: 1 1 100%; min-width: 0; display: grid; gap: 8px; }
+.admin-inbox-recent-codes ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.admin-inbox-recent-codes li { max-width: 100%; overflow-wrap: anywhere; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--foreground); font-variant-numeric: tabular-nums; }

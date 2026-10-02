@@ -32,7 +32,14 @@ export function SellerCodeQueuePanel(input: {
     {input.referenceLoading || input.requestsLoading ? <AdminStatePanel title={t('adminInbox.loadingSellerRequests')} isLoading />
       : input.referenceError || input.requestsError ? <InboxQueueError error={input.referenceError ?? input.requestsError} onRetry={input.onRetry} />
       : <>
-        <div className="admin-inbox-reference"><span>{t('adminInbox.lastFranchiseCode')} <strong>{input.reference?.lastSellerCode ?? t('adminInbox.noFmCode')}</strong></span><span>{t('adminInbox.nextPreview')} <strong>{input.reference?.nextSellerCodePreview ?? t('adminInbox.notAvailable')}</strong></span></div>
+        <div className="admin-inbox-reference">
+          <div className="admin-inbox-recent-codes"><span>{t('adminInbox.recentSellerCodes')}</span>
+            {(input.reference?.recentSellerCodes ?? (input.reference?.lastSellerCode ? [input.reference.lastSellerCode] : [])).length ? <ol aria-label={t('adminInbox.recentSellerCodes')}>
+              {(input.reference?.recentSellerCodes ?? (input.reference?.lastSellerCode ? [input.reference.lastSellerCode] : [])).map(code => <li key={code}>{code}</li>)}
+            </ol> : <strong>{t('adminInbox.noFmCode')}</strong>}
+          </div>
+          <span>{t('adminInbox.nextPreview')} <strong>{input.reference?.nextSellerCodePreview ?? t('adminInbox.notAvailable')}</strong></span>
+        </div>
         {input.requests.length ? <InboxRecords title={t('adminInbox.sellerQueueTitle')} records={input.requests.map(item => ({
           id: item.requestId,
           title: `${item.firstName} ${item.lastName}`.trim(),

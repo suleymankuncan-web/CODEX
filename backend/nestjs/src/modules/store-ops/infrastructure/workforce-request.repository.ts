@@ -57,6 +57,10 @@ export class WorkforceRequestRepository {
     return this.lookupReadRepository.getLatestFranchiseSellerCode();
   }
 
+  async getRecentFranchiseSellerCodes() {
+    return this.lookupReadRepository.getRecentFranchiseSellerCodes();
+  }
+
   async getStoreForSellerCodeRequest(storeId: string) {
     return this.lookupReadRepository.getStoreForSellerCodeRequest(storeId);
   }

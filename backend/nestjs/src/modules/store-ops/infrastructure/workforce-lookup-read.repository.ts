@@ -39,6 +39,14 @@ export class WorkforceLookupReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async getLatestFranchiseSellerCode() {
+    return (await this.readFranchiseSellerCodes(1))[0] ?? null;
+  }
+
+  async getRecentFranchiseSellerCodes() {
+    return this.readFranchiseSellerCodes(10);
+  }
+
+  private async readFranchiseSellerCodes(limit: 1 | 10) {
     const result = await this.databaseService.query<{ seller_code: string }>(
       `
         WITH seller_code_candidates AS (
@@ -46,7 +54,7 @@ export class WorkforceLookupReadRepository {
           FROM ops.employee e
           WHERE e.external_employee_ref ~* '^FM[0-9]+$'
 
-          UNION ALL
+          UNION
 
           SELECT UPPER(scr.approved_seller_code) AS seller_code
           FROM ops.seller_code_request scr
@@ -56,12 +64,13 @@ export class WorkforceLookupReadRepository {
         SELECT seller_code
         FROM seller_code_candidates
         WHERE LEFT(seller_code, 2) = 'FM'
-        ORDER BY SUBSTRING(seller_code FROM 3)::bigint DESC
-        LIMIT 1
+        ORDER BY SUBSTRING(seller_code FROM 3)::numeric DESC, seller_code DESC
+        LIMIT $1
       `,
+      [limit],
     );
 
-    return result.rows[0]?.seller_code ?? null;
+    return result.rows.map(row => row.seller_code);
   }
 
   async getStoreForSellerCodeRequest(storeId: string) {
