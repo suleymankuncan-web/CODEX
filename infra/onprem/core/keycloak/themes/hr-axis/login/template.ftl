@@ -8,6 +8,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8fa">
   <title>Axis Lufian</title>
+  <#if pageId == "login" && client?? && client.clientId == "store-ops-admin-web">
+    <script src="${url.resourcesPath}/js/login-address.js"></script>
+  </#if>
   <link rel="icon" type="image/png" href="${url.resourcesPath}/img/axis-lufian-favicon.png">
   <script>
     // Continue the same presentation timeline after the React handoff.
