@@ -219,6 +219,7 @@ export const storeKpisTr = {
   'storeKpis.metric.upt': 'Fiş başı ürün',
   'storeKpis.metric.cr': 'CR',
   'storeKpis.metric.gsmOnay': 'GSM Onayı',
+  'storeKpis.managerGsm': 'Mağaza GSM',
   'storeKpis.metric.bmChecklist': 'BM checklist',
   'storeKpis.metric.vmChecklist': 'VM checklist',
 
@@ -502,6 +503,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.metric.upt': 'Units per ticket',
   'storeKpis.metric.cr': 'CR',
   'storeKpis.metric.gsmOnay': 'GSM approval',
+  'storeKpis.managerGsm': 'Store GSM',
   'storeKpis.metric.bmChecklist': 'BM checklist',
   'storeKpis.metric.vmChecklist': 'VM checklist',
 

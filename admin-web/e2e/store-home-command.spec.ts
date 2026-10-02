@@ -147,7 +147,8 @@ test('store home production route renders the approved command surface for regio
   await expect(page.getByRole('heading', { name: 'Bugünün gündemi', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Çalışma alanları', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Duyurular', exact: true })).toHaveCount(0)
-  await expect(page.getByTestId('store-home-dashboard').getByText('Bölge müdürü', { exact: true })).toBeVisible()
+  await expect(page.locator('.sh-dashboard-context [data-slot="badge"]')).toHaveCount(0)
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('Bölge Müdürü')
 })
 
 test('store home keeps manager actions role-aware inside the command surface', async ({ page }) => {
@@ -156,7 +157,8 @@ test('store home keeps manager actions role-aware inside the command surface', a
   await page.goto('/store/home')
 
   await expect(page.getByTestId('store-home-command')).toBeVisible()
-  await expect(page.getByTestId('store-home-dashboard').getByText('Mağaza müdürü', { exact: true })).toBeVisible()
+  await expect(page.locator('.sh-dashboard-context [data-slot="badge"]')).toHaveCount(0)
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('Mağaza Müdürü')
   await expect(page.getByText('Görevler').first()).toBeVisible()
   await expect(page.getByText('Bölge portföyü')).toHaveCount(0)
 })

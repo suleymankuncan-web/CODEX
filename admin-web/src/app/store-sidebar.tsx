@@ -26,11 +26,10 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { resolveUserDisplayLabel } from '../lib/display-labels'
 import {
   getRoleAwareStoreNavigation,
-  getStorePersonaLabelKey,
-  resolveStorePersona,
   type StoreNavIconId,
 } from './store-navigation'
 import { preloadRoute } from './route-preloaders'
+import { getStoreRoleLabel } from './store-role-label'
 
 const iconById: Record<StoreNavIconId, LucideIcon> = {
   approvals: ReceiptText,
@@ -59,10 +58,9 @@ export function StoreSidebar(input: {
 }) {
   const { t } = useLocalization()
   const queryClient = useQueryClient()
-  const persona = resolveStorePersona(input.authSummary)
-  const personaLabel = t(getStorePersonaLabelKey(persona))
+  const roleLabel = getStoreRoleLabel(input.authSummary, t)
   const navItems = getRoleAwareStoreNavigation(input.authSummary)
-  const identityLabel = getIdentityLabel(input.authSummary, personaLabel)
+  const identityLabel = getIdentityLabel(input.authSummary, roleLabel)
   const warmStoreRoute = (path: string) => {
     preloadRoute({
       authSummary: input.authSummary,
@@ -86,15 +84,10 @@ export function StoreSidebar(input: {
           compact
           identity={{
             displayName: identityLabel,
-            detail: personaLabel,
+            detail: roleLabel,
             email: input.authSummary?.user.email ?? null,
           }}
         />
-      </div>
-
-      <div className="store-command-rail-context" aria-label={personaLabel}>
-        <span>{t('storeHome.sidebar.workspace')}</span>
-        <strong>{personaLabel}</strong>
       </div>
 
       <nav className="store-command-nav" aria-label={t('storeHome.sidebar.navAria')}>
@@ -129,7 +122,7 @@ export function StoreSidebar(input: {
           authSummary={input.authSummary}
           identity={{
             displayName: identityLabel,
-            detail: personaLabel,
+            detail: roleLabel,
             email: input.authSummary?.user.email ?? null,
           }}
         />

@@ -21,11 +21,12 @@ test.beforeEach(async ({ page }) => {
 test('admin KPI config page shows latest version metadata', async ({ page }) => {
   await page.goto('/admin/kpi-config')
 
-  await expect(page.getByText('Sürümlü şema')).toBeVisible()
+  await page.getByRole('tab', { name: 'Yayın ve geçmiş' }).click()
+  await expect(page.getByText('Sürüm takibi')).toBeVisible()
   await expect(page.getByText('Aktif', { exact: true })).toBeVisible()
   await expect(page.getByText('Son sürüm')).toBeVisible()
   await expect(page.getByText('v7')).toBeVisible()
-  await expect(page.getByText('V1 için geri dönüş aktif değil')).toBeVisible()
+  await expect(page.getByText('Önceki sürüme dönüş kullanılamıyor')).toBeVisible()
 })
 
 test('snapshot runs page localizes KPI config version reporting context', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import type { UseQueryResult } from '@tanstack/react-query'
-import { BarChart3, ReceiptText, ShoppingBag, RefreshCw, ClipboardCheck, Search, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, UsersRound, Info } from 'lucide-react'
+import { BarChart3, ReceiptText, ShoppingBag, RefreshCw, Smartphone, ClipboardCheck, Search, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, UsersRound, Info } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -57,7 +57,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
   const [selectedKpi, setSelectedKpi] = useState<string | null>(null)
   const [sort, setSort] = useState<{ key: PeopleSort; ascending: boolean }>({ key: 'netSales', ascending: false })
   const noData = model.t('storeKpis.noData')
-  const metric = (code: string) => model.rows.find(row => row.kpiCode.toLowerCase() === code.toLowerCase())
+  const metric = (code: string) => model.rows.find(row => matchesKpiMetricCode({ code: row.kpiCode }, code))
   const value = (code: string) => {
     const row = metric(code)
     if (!row || row.actualValue === null) return noData
@@ -74,6 +74,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     { code: 'ATV', label: tr ? 'Mağaza ATV' : 'Store ATV', value: value('ATV'), icon: ReceiptText },
     { code: 'UPT', label: tr ? 'Mağaza UPT' : 'Store UPT', value: value('UPT'), icon: ShoppingBag },
     { code: 'CR', label: tr ? 'Mağaza CR' : 'Store CR', value: value('CR'), icon: RefreshCw },
+    { code: 'gsm_approval', label: model.t('storeKpis.managerGsm'), value: value('gsm_approval'), icon: Smartphone },
   ]
   const storeMetricLabels: Record<string, string> = tr
     ? { TARGET_ACHIEVEMENT: 'Hedef Gerçekleşme', ATV: 'Ortalama Fiş Tutarı', UPT: 'Fiş Başına Ürün', CR: 'Dönüşüm Oranı', gsm_approval: 'GSM Onayı', BM_CHECKLIST: 'Bölge Müdürü Checklist', VM_CHECKLIST: 'VM Checklist' }
@@ -117,7 +118,7 @@ export function StoreKpisManagerOverview({ model, personnel, backgroundError }: 
     {backgroundError}
     {!showPeople ? <>
     <div className="region-performance-metrics" role="group" aria-label={tr ? 'Mağaza KPI özeti' : 'Store KPI summary'}>
-      {cards.map(({ code, label, value: cardValue, icon: Icon }) => <Card key={label} size="sm" onClick={() => setSelectedKpi(code)}><CardHeader><CardTitle><Icon aria-hidden="true" /><span>{label}</span></CardTitle></CardHeader><CardContent><Button variant="link" className="manager-metric-trigger" aria-label={`${label} detaylarını aç`} onClick={() => setSelectedKpi(code)}><strong>{cardValue}</strong></Button></CardContent></Card>)}
+      {cards.map(({ code, label, value: cardValue, icon: Icon }) => <Card key={label} size="sm" onClick={() => setSelectedKpi(code)}><CardHeader><CardTitle><Icon aria-hidden="true" /><span>{label}</span></CardTitle></CardHeader><CardContent><Button variant="link" className="manager-metric-trigger" aria-haspopup="dialog" aria-label={`${label} ${tr ? 'detaylarını aç' : 'details'}`} onClick={() => setSelectedKpi(code)}><strong>{cardValue}</strong></Button></CardContent></Card>)}
     </div>
     {model.viewMode === 'live' && model.liveKpiQuery.isSuccess && !model.rows.some(row => row.actualValue !== null) ? <StoreKpisPeriodEmpty locale={model.locale} start={model.livePeriodStart} end={model.kpiDateRangeEnd || (model.livePeriodType === 'daily' ? model.livePeriodStart : undefined)} /> : null}
     <section className="region-performance-stores manager-performance-store" aria-label={tr ? 'Mağaza KPI değerleri' : 'Store KPI values'}>

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './test-fixtures'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
 import { myPerformanceFixture } from './store-surfaces-profile-fixtures'
+import { setStoredLocale } from './locale-test-utils'
 import { createEmptyRankingsFixture } from './store-kpis-empty-rankings-fixture'
 import {
   installGenericStoreApiFallbacks,
@@ -26,6 +27,13 @@ test('store manager uses shadcn chart and opens every KPI with scoped ranks and 
     await route.fulfill({json: {...fixture,storeLeaderboard:{...fixture.storeLeaderboard,currentStoreComparisons:['score','TARGET_ACHIEVEMENT','ATV','UPT','CR','gsm_approval','BM_CHECKLIST','VM_CHECKLIST'].map(code=>({code,region:{rank:2,population:11},turkey:{rank:5,population:19}}))}}})
   })
   await page.goto('/store/kpis?periodStart=2026-07-01')
+  const summary = page.getByRole('group', { name: 'Mağaza KPI özeti', exact: true })
+  await expect(summary.locator('[data-slot="card"]')).toHaveCount(5)
+  await expect(summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('%40')
+  await summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toContainText('GSM onayı veren müşteri / toplam müşteri × 100.')
+  await page.getByRole('button', { name: 'Kapat', exact: true }).click()
   await expect(page.getByRole('columnheader',{name:'Gerçekleşme Oranı',exact:true})).toBeVisible()
   const chart = page.getByLabel('Aylık mağaza skorları')
   await expect(chart.locator('[data-slot=chart]')).toBeVisible()
@@ -65,6 +73,54 @@ test('store manager uses shadcn chart and opens every KPI with scoped ranks and 
   expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(390)
   await expectNoCriticalAxeViolations(page)
 })
+test('GSM summary keeps the actual percentage and accessible details across Store viewports and languages', async ({ page }, testInfo) => {
+  await installStoreContractSession(page, 'storeManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeKpiContractApi(page)
+  await page.route('**/api/reports/store-kpi-highlights**', async route => {
+    const fixture = createStoreKpiHighlightsFixture()
+    await route.fulfill({ json: { ...fixture, metrics: fixture.metrics.map(metric => metric.code === 'gsm_approval' ? { ...metric, actualValue: 40.25 } : metric) } })
+  })
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const summary = page.getByRole('group', { name: 'Mağaza KPI özeti', exact: true })
+  for (const [width, height] of [[1440, 900], [1024, 768], [390, 844], [360, 800]]) {
+    await page.setViewportSize({ width, height })
+    await expect(summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('%40,25')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    if (width >= 768) {
+      if (width === 1024) await expect(page.getByRole('columnheader', { name: 'Gerçekleşen', exact: true })).toHaveCSS('text-transform', 'none')
+      const actualCell = page.getByRole('region', { name: 'Mağaza KPI değerleri', exact: true }).getByRole('row', { name: /Hedef Gerçekleşme/ }).getByRole('cell').nth(1)
+      const cellBounds = await actualCell.boundingBox()
+      const valueBounds = await actualCell.getByRole('button').boundingBox()
+      expect(valueBounds!.x).toBeGreaterThanOrEqual(cellBounds!.x)
+      expect(valueBounds!.x + valueBounds!.width).toBeLessThanOrEqual(cellBounds!.x + cellBounds!.width)
+    }
+    await page.screenshot({ path: testInfo.outputPath(`store-kpi-gsm-${width}.png`), fullPage: true })
+  }
+  await expectNoCriticalAxeViolations(page)
+  await setStoredLocale(page, 'en')
+  const englishSummary = page.getByRole('group', { name: 'Store KPI summary', exact: true })
+  await expect(englishSummary.getByRole('button', { name: 'Store GSM details', exact: true })).toHaveText('%40.25')
+  await englishSummary.getByRole('button', { name: 'Store GSM details', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('GSM summary and details preserve legacy versioned metric codes without inventing a score', async ({ page }) => {
+  await installStoreContractSession(page, 'storeManager')
+  await installGenericStoreApiFallbacks(page)
+  const fixture = createStoreKpiHighlightsFixture()
+  await routeKpiContractApi(page, { highlightResponse: { ...fixture, metrics: fixture.metrics.map(metric => metric.code === 'gsm_approval' ? { ...metric, code: 'GSM_ONAY' } : metric) } })
+  await page.goto('/store/kpis?periodStart=2026-07-01')
+  const summary = page.getByRole('group', { name: 'Mağaza KPI özeti', exact: true })
+  await expect(summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('%40')
+  await expect(page.getByRole('row', { name: /GSM Onayı/ })).toContainText('2,00 puan')
+  await summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true }).click()
+  await expect(page.getByRole('dialog').locator('.manager-kpi-summary [data-slot="card-title"]').first()).toHaveText('%40')
+})
+
 test('personnel financial columns use server prim facts, survive filtering and follow the selected period', async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')
   await installGenericStoreApiFallbacks(page)
@@ -534,6 +590,7 @@ test('KPI-FR-002 missing sources keep all seven locked rows in order', async ({ 
   })
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
+  await expect(page.getByRole('group', { name: 'Mağaza KPI özeti' }).getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('Veri yok')
   await openCalculation(page)
   await expect(page.getByRole('region', { name: 'Mağaza KPI değerleri', exact: true })).toBeVisible()
   const rows = await page.locator('.manager-performance-store table tbody tr').allTextContents()

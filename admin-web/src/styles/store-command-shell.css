@@ -109,30 +109,7 @@
   color: color-mix(in srgb, var(--store-command-surface-strong) 66%, transparent);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.store-command-rail-context {
-  display: grid;
-  gap: 2px;
-  margin: 5px 4px 3px;
-  border-top: 1px solid color-mix(in srgb, var(--store-command-surface-strong) 18%, transparent);
-  padding: 14px 6px 2px;
-}
-.store-command-rail-context span {
-  color: color-mix(in srgb, var(--store-command-surface-strong) 56%, transparent);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.store-command-rail-context strong {
-  overflow: hidden;
-  color: var(--store-command-surface-strong);
-  font-size: 12px;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  letter-spacing: 0;
 }
 .store-command-persona-chip {
   display: inline-flex;
@@ -525,12 +502,12 @@
 .store-command-identity-text small {
   display: block;
   margin-top: 3px;
-  overflow: hidden;
   color: var(--store-command-muted);
   font-size: 11px;
   font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .store-command-main {
   display: block;
@@ -595,10 +572,6 @@
   }
 
   .store-command-persona-chip {
-    display: none;
-  }
-
-  .store-command-rail-context {
     display: none;
   }
 

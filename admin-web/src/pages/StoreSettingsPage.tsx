@@ -27,7 +27,7 @@ import '../features/account/store-account.css'
 import { useLocalization } from '../features/localization/useLocalization'
 import { appLocales, type AppLocale } from '../lib/i18n'
 import { resolveUserDisplayLabel } from '../lib/display-labels'
-import { getStorePersonaLabelKey, resolveStorePersona } from '../app/store-navigation'
+import { getStoreRoleLabel, getStoreRoleLabels } from '../app/store-role-label'
 import { StoreSurfacePage } from './store-surface-primitives'
 import './store-settings.css'
 
@@ -65,9 +65,9 @@ export function StoreSettingsPage(input: { authSummary: AuthSessionSummary | nul
   const { locale, setLocale, t } = useLocalization()
   const [searchParams, setSearchParams] = useSearchParams()
   const section = parseSection(searchParams.get('section'))
-  const persona = resolveStorePersona(input.authSummary)
-  const personaLabel = t(getStorePersonaLabelKey(persona))
-  const displayName = resolveUserDisplayLabel(input.authSummary?.user, personaLabel)
+  const roleLabel = getStoreRoleLabel(input.authSummary, t)
+  const allRoleLabels = getStoreRoleLabels(input.authSummary, t).join(', ')
+  const displayName = resolveUserDisplayLabel(input.authSummary?.user, roleLabel)
   const email = input.authSummary?.user.email?.trim() || null
   const scopeLabel = resolveScopeLabel(input.authSummary, t)
 
@@ -77,14 +77,14 @@ export function StoreSettingsPage(input: { authSummary: AuthSessionSummary | nul
 
   return (
     <StoreSurfacePage ariaLabelledBy="store-settings-title" className="store-settings-page" testId="store-settings-page">
-      <StoreOperationsHeader title={t('storeHome.settings.title')} titleId="store-settings-title" eyebrow={personaLabel} description={t('storeHome.settings.copy')} icon={Settings2} />
+      <StoreOperationsHeader title={t('storeHome.settings.title')} titleId="store-settings-title" description={t('storeHome.settings.copy')} icon={Settings2} />
 
       <div className="store-settings-layout">
         <Card className="store-settings-identity" aria-labelledby="store-settings-identity-title">
           <CardHeader>
             <StoreAccountAvatar displayName={displayName} />
             <CardTitle><h2 id="store-settings-identity-title">{displayName}</h2></CardTitle>
-            <CardDescription><Badge variant="secondary">{personaLabel}</Badge></CardDescription>
+            <CardDescription><Badge variant="secondary">{roleLabel}</Badge></CardDescription>
           </CardHeader>
           <CardContent>
             <div className="store-settings-scope"><Building2 aria-hidden="true" /><div><span>{t('storeHome.settings.scopeLabel')}</span><strong>{scopeLabel}</strong></div></div>
@@ -112,7 +112,7 @@ export function StoreSettingsPage(input: { authSummary: AuthSessionSummary | nul
                 <dl className="store-settings-profile-details">
                   <div><dt><UserRound aria-hidden="true" />{t('storeHome.settings.nameLabel')}</dt><dd>{displayName}</dd></div>
                   <div><dt><Mail aria-hidden="true" />{t('storeHome.settings.emailLabel')}</dt><dd>{email ?? t('storeHome.settings.noEmail')}</dd></div>
-                  <div><dt><ShieldCheck aria-hidden="true" />{t('storeHome.settings.roleLabel')}</dt><dd>{personaLabel}</dd></div>
+                  <div><dt><ShieldCheck aria-hidden="true" />{t('storeHome.settings.roleLabel')}</dt><dd>{allRoleLabels}</dd></div>
                   <div><dt><Building2 aria-hidden="true" />{t('storeHome.settings.scopeLabel')}</dt><dd>{scopeLabel}</dd></div>
                 </dl>
               </CardContent>

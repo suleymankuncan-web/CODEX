@@ -92,6 +92,11 @@
 .manager-performance-kpi-row:hover, .manager-performance-kpi-row:focus-within { background: var(--accent); }
 
 .manager-performance-store .manager-performance-contribution { color: var(--primary); font-weight: 600; white-space: nowrap; }
+@media (min-width: 768px) and (max-width: 1100px) {
+  .store-command-app .manager-performance .manager-performance-store th { font-size: 11px; letter-spacing: 0; text-transform: none; }
+  .manager-performance-store td,
+  .manager-performance-store td:nth-child(2) { font-size: 12px; }
+}
 .manager-performance .manager-performance-checklist-note { background: color-mix(in srgb, var(--primary) 5%, var(--card)); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .manager-performance-checklist-note [data-slot='alert-title'] { font-size: 13px; color: var(--primary); margin-bottom: 4px; }
 .manager-performance-checklist-note [data-slot='alert-description'] { font-size: 12px; line-height: 1.65; color: var(--muted-foreground); }

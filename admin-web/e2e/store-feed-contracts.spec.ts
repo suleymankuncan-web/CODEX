@@ -12,6 +12,7 @@ test('region manager can compose a plain feed post for assigned stores', async (
   await page.goto('/store/feed')
 
   await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toBeVisible()
+  await expect(page.locator('.operations-header .operations-eyebrow')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Sabitle' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Paylaş' })).toBeVisible()
 })
@@ -25,4 +26,5 @@ test('store manager reads feed posts without composer controls', async ({ page }
   await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Paylaş' })).toHaveCount(0)
   await expect(page.getByTestId('store-feed-post-row').first()).toBeVisible()
+  await expect(page.locator('.operations-header .operations-eyebrow')).toHaveCount(0)
 })
