@@ -19,7 +19,8 @@ export class AuthAuthorizationRepository {
     }>(
       `
         SELECT account.is_active,account.employee_id,account.username,account.email,
-          NULLIF(CONCAT_WS(' ',employee.first_name,employee.last_name),'') AS display_name
+          NULLIF(CONCAT_WS(' ',COALESCE(employee.first_name,account.first_name),
+            COALESCE(employee.last_name,account.last_name)),'') AS display_name
         FROM ops.user_account account
         LEFT JOIN ops.employee employee ON employee.employee_id=account.employee_id
         WHERE account.user_id = $1::uuid
@@ -47,7 +48,8 @@ export class AuthAuthorizationRepository {
         SELECT
           ua.user_id,
           ua.employee_id,
-          NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), '') AS display_name,
+          NULLIF(CONCAT_WS(' ', COALESCE(e.first_name, ua.first_name),
+            COALESCE(e.last_name, ua.last_name)), '') AS display_name,
           ua.username,
           ua.email,
           ua.is_active

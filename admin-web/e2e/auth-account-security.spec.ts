@@ -78,7 +78,7 @@ test('expired and unconfirmed history preserves unknown password state and disab
   await page.getByRole('tab', { name: 'Hesap ve güvenlik' }).click()
   await expect(page.getByText('Gönderim doğrulanamadı', { exact: true })).toBeVisible()
   await expect(page.getByText('Takip süresi doldu', { exact: true })).toBeVisible()
-  await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /inactive.user/ }).click()
+  await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /Ece Demir/ }).click()
   await expect(page.getByRole('tab', { name: 'Erişim', exact: true })).toHaveAttribute('data-state', 'active')
   await page.getByRole('tab', { name: 'Hesap ve güvenlik' }).click()
   await expect(page.getByRole('button', { name: 'Tekrar gönder', exact: true })).toBeDisabled()

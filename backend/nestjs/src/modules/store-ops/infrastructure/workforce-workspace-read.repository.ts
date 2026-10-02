@@ -130,7 +130,7 @@ export class WorkforceWorkspaceReadRepository {
           LEFT JOIN active_assignment ON active_assignment.store_id = scoped_store.store_id
           LEFT JOIN norm_plan ON norm_plan.store_id = scoped_store.store_id
           LEFT JOIN LATERAL (
-            SELECT COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), account.username, account.email, account.user_id::text) AS display_name
+            SELECT COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(account.first_name), ''), NULLIF(BTRIM(account.last_name), ''))), ''), CASE WHEN account.user_id IS NOT NULL THEN 'Kullanıcı' END) AS display_name
             FROM ops.user_role_assignment role_assignment
             INNER JOIN ops.role role ON role.role_id = role_assignment.role_id AND role.role_code = 'REGION_MANAGER'
             INNER JOIN ops.user_account account ON account.user_id = role_assignment.user_id AND account.is_active = TRUE

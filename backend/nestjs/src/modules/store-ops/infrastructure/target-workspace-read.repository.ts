@@ -115,9 +115,8 @@ export class TargetWorkspaceReadRepository {
             TRUE AS assignment_exists,
             COALESCE(
               NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-              account.username,
-              account.email,
-              account.user_id::text
+              NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(account.first_name), ''), NULLIF(BTRIM(account.last_name), ''))), ''),
+              'Kullanıcı'
             ) AS display_name
           FROM ops.user_action_store_assignment manager_store
           INNER JOIN ops.store manager_assigned_store
@@ -272,9 +271,8 @@ export class TargetWorkspaceReadRepository {
         LEFT JOIN LATERAL (
           SELECT COALESCE(
             NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-            account.username,
-            account.email,
-            account.user_id::text
+            NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(account.first_name), ''), NULLIF(BTRIM(account.last_name), ''))), ''),
+            'Kullanıcı'
           ) AS display_name
           FROM ops.user_action_store_assignment manager_store
           INNER JOIN ops.user_role_assignment role_assignment

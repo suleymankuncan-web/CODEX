@@ -20,7 +20,7 @@ export const companyPayrollPackagesSql = `WITH sealed AS (SELECT cycle.*,revisio
     CASE WHEN s.stage='final' THEN 0 ELSE 1 END AS stale_stores,
     'company_cycle' AS approval_origin,s.cycle_id::text AS final_cycle_id,s.current_revision AS final_revision_no,s.seal_hash AS final_seal_hash,
     (SELECT COALESCE(NULLIF(BTRIM(CONCAT_WS(' ',account.first_name,account.last_name)),''),
-        NULLIF(BTRIM(CONCAT_WS(' ',employee.first_name,employee.last_name)),''),account.username)
+        NULLIF(BTRIM(CONCAT_WS(' ',employee.first_name,employee.last_name)),''),'Kullanıcı')
       FROM ops.incentive_company_decision d JOIN ops.user_account account ON account.user_id=d.actor_user_id
         LEFT JOIN ops.employee employee ON employee.employee_id=account.employee_id
       WHERE d.cycle_id=s.cycle_id AND d.revision_no=s.current_revision AND d.stage='general_manager' AND d.decision='approve') AS final_approver_name,p->>'submission_note' AS submission_note,

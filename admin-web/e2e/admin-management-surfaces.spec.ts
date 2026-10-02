@@ -272,7 +272,7 @@ test('auth management keeps users and global role permissions explicit', async (
   const main = page.getByRole('main')
 
   await expect(main.getByRole('heading', { name: 'Kullanıcılar ve yetkiler' })).toBeVisible()
-  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('store.manager')
+  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('Ada Yılmaz')
   await expect(main.getByText('Mağaza erişimi', { exact: true })).toBeVisible()
   await main.getByRole('button', { name: 'Mağaza ekle' }).click()
   const storeDialog = page.getByRole('dialog', { name: 'Mağaza erişimi ekle' })
@@ -324,7 +324,7 @@ test('management workspaces remain usable without horizontal overflow on mobile'
 
   const authMain = page.getByRole('main')
   await expect(authMain.getByRole('heading', { name: 'Kullanıcılar ve yetkiler' })).toBeVisible()
-  await expect(authMain.getByLabel('Kullanıcı listesi')).toContainText('store.manager')
+  await expect(authMain.getByLabel('Kullanıcı listesi')).toContainText('Ada Yılmaz')
   await expect(page.locator('html')).toHaveJSProperty('scrollWidth', 390)
   await page.screenshot({ path: testInfo.outputPath('auth-users-mobile.png'), fullPage: true })
   await authMain.getByRole('button', { name: 'Mağaza ekle' }).click()
@@ -366,7 +366,7 @@ const authSessionFixture = {
 
 const authUsersFixture = {
   items: [
-    { userId: 'user-1', employeeId: null, username: 'store.manager', email: 'store.manager@example.com', authProvider: 'clerk', providerSubject: 'user_store', isActive: true, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
+    { userId: 'user-1', employeeId: null, username: 'store.manager', firstName: 'Ada', lastName: 'Yılmaz', email: 'store.manager@example.com', authProvider: 'clerk', providerSubject: 'user_store', isActive: true, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
     { userId: 'user-2', employeeId: null, username: 'admin.user', email: 'admin@example.com', authProvider: 'clerk', providerSubject: 'user_admin', isActive: true, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
   ],
   meta: { count: 2, total: 2, limit: 100, offset: 0 },

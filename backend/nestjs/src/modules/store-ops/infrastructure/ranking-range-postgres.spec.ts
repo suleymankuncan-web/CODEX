@@ -35,7 +35,7 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
   });
   beforeEach(() => {
     psql(`SET client_min_messages = warning; DROP SCHEMA IF EXISTS ops CASCADE; CREATE SCHEMA ops;
-      CREATE TABLE ops.store(store_id uuid, company_id uuid, region_id uuid, store_name text, kpi_import_enabled boolean);
+      CREATE TABLE ops.store(store_id uuid, company_id uuid, region_id uuid, store_name text, kpi_import_enabled boolean, status text DEFAULT 'active');
       CREATE TABLE ops.region(region_id uuid, region_name text);
       CREATE TABLE ops.kpi_definition(kpi_id int, kpi_code text, kpi_name text);
       CREATE TABLE ops.kpi_actual(kpi_id int, store_id uuid, employee_id uuid, company_id uuid, scope_type text, period_type text, period_start date, period_end date, actual_value numeric, source_type text, achievement_rate numeric, region_id uuid);
@@ -45,7 +45,7 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
       CREATE TABLE ops.user_action_store_assignment(store_id uuid, user_id uuid, start_at timestamptz, end_at timestamptz);
       CREATE TABLE ops.user_role_assignment(user_id uuid, role_id int, start_at timestamptz, end_at timestamptz);
       CREATE TABLE ops.role(role_id int, role_code text);
-      CREATE TABLE ops.user_account(user_id uuid, employee_id uuid, username text, email text, is_active boolean);
+      CREATE TABLE ops.user_account(user_id uuid, employee_id uuid, username text, email text, is_active boolean, first_name text, last_name text);
       CREATE TABLE ops.employee(employee_id uuid, first_name text, last_name text);
       CREATE TABLE ops.employee_assignment_history(employee_id uuid, position_id int, assignment_status text, is_primary_assignment boolean, start_date date, store_id uuid, region_id uuid);
       CREATE TABLE ops.position(position_id int, position_code text);
@@ -89,6 +89,27 @@ integration("ranking daily physical aggregation (PostgreSQL)", () => {
     expect(rows).toHaveLength(2);
     expect(rows.map(row => [row.store_id, Number(row.net_sales_value), Number(row.store_net_sales_value)]).sort())
       .toEqual([[store, 90, 80], [second, 70, 50]]);
+  });
+  it("uses account full names for unlinked managers across Store rankings and report filters", async () => {
+    const manager = "00000000-0000-4000-8000-000000000020";
+    psql(`INSERT INTO ops.user_account VALUES ('${manager}',NULL,'onurkaytan','onur@example.test',TRUE,' Onur ',' Kaytan ');
+      INSERT INTO ops.role VALUES (1,'REGION_MANAGER');
+      INSERT INTO ops.user_role_assignment VALUES ('${manager}',1,'2020-01-01',NULL);
+      INSERT INTO ops.user_action_store_assignment VALUES ('${store}','${manager}','2020-01-01',NULL);`);
+    const repository = new RankingReportingReadRepository(database as never);
+    for (const rows of [await readRankingStoreRange(database as never, input),
+      await readRankingPersonnelRange(database as never, input),
+      await repository.listRankingStoreKpiRows({ ...input, periodType: "daily", isRange: true }),
+      await repository.listRankingPersonnelKpiRows({ ...input, periodType: "daily", isRange: true })]) {
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every(row => row.region_manager_name === "Onur Kaytan")).toBe(true);
+    }
+    expect(await repository.listRegionManagerDirectory({ companyIds: [company] }))
+      .toEqual([{ id: manager, label: "Onur Kaytan", storeIds: [store] }]);
+    psql(`UPDATE ops.user_account SET first_name=NULL,last_name=NULL WHERE user_id='${manager}'`);
+    expect((await repository.listRegionManagerDirectory({ companyIds: [company] }))[0].label).toBe("Kullanıcı");
+    psql(`UPDATE ops.user_account SET employee_id='${employee}',first_name='Wrong',last_name='Account' WHERE user_id='${manager}'`);
+    expect((await repository.listRegionManagerDirectory({ companyIds: [company] }))[0].label).toBe("Fixture Employee");
   });
   it("uses observed month components against the full monthly target and preserves weighted ratios", async () => {
     const rows = await readRankingStoreRange(database as never, input);

@@ -4,8 +4,8 @@ import { AuthContextService } from "../auth-context.service";
 describe("managed recovery fresh account authority", () => {
   const user = buildAuthenticatedUser({ userId: "80000000-0000-0000-0000-000000000001",
     employeeId: "old-employee", username: "old-name", email: "old-email", roleCodes: ["SUPER_ADMIN"] });
-  const setup = () => {
-    const account = { is_active: true, employee_id: null, display_name: null, username: "current-name", email: "current-email" };
+  const setup = (displayName: string | null = null) => {
+    const account = { is_active: true, employee_id: null, display_name: displayName, username: "current-name", email: "current-email" };
     const verify = jest.fn(async () => undefined);
     const getUserAccountStatusById = jest.fn(async () => account);
     const repository = { getUserAccountStatusById,
@@ -30,6 +30,12 @@ describe("managed recovery fresh account authority", () => {
     await expect(service.resolveUser({ originalUrl: "/api/auth/browser-session/csrf",
       headers: { cookie: "session=signed", origin: "https://evil.invalid" } })).rejects.toThrow("metadata is invalid");
     expect(verify).not.toHaveBeenCalled(); expect(getUserAccountStatusById).not.toHaveBeenCalled();
+  });
+  it("refreshes the saved full name of a management account without a personnel binding", async () => {
+    const { service } = setup("Ada Yılmaz");
+    const current = await service.resolveUser({ headers: { cookie: "session=signed" } });
+    expect(current).toMatchObject({ displayName: "Ada Yılmaz", username: "current-name", roleCodes: ["REPORT_VIEWER"] });
+    expect(current).not.toHaveProperty("employeeId");
   });
   it("forces provider validation for an exact-origin recovery even without Fetch Metadata", async () => {
     const { service, verify } = setup();

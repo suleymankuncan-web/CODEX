@@ -142,7 +142,8 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
     expect(sql).toContain("region.company_id = s.company_id");
     const signatorySql = sql.slice(sql.indexOf("SELECT role.role_code"), sql.indexOf(") signatories ON TRUE"));
     expect(signatorySql).toContain("LEFT JOIN ops.employee employee ON employee.employee_id = account.employee_id");
-    expect(signatorySql).toContain("NULLIF(BTRIM(account.username), '')");
+    expect(signatorySql).toContain("NULLIF(BTRIM(account.first_name), '')");
+    expect(signatorySql).not.toContain("account.username");
     expect(signatorySql).not.toContain("account.email");
     expect(params).toEqual([["store-1"], ["VM_STORE_VISIT"], 50, 0]);
     expect(result.items[0]).toMatchObject({

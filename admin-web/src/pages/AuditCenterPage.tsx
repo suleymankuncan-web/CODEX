@@ -1,3 +1,4 @@
+import { resolveUserDisplayLabel } from '../lib/display-labels'
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { ArrowRight, DatabaseZap, Layers3, RefreshCw, ShieldCheck } from 'lucide-react'
@@ -391,7 +392,7 @@ function AuditSourceGrid(input: {
   return (
     <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
       <AuditUsersPanel users={input.users} unavailable={input.unavailable.users} />
-      <AuditAssignmentsPanel assignments={input.assignments} unavailable={input.unavailable.assignments} />
+      <AuditAssignmentsPanel users={input.users} assignments={input.assignments} unavailable={input.unavailable.assignments} />
       <AuditImportBatchesPanel batches={input.batches} unavailable={input.unavailable.batches} />
       <AuditSnapshotRunsPanel runs={input.runs} unavailable={input.unavailable.runs} />
     </section>
@@ -415,7 +416,7 @@ function AuditUsersPanel(input: { users: UserAccount[]; unavailable: boolean }) 
           {input.users.slice(0, 6).map((user) => (
             <AuthLinkRow key={user.userId} to={`/admin/audit/users/${user.userId}/audit`}>
               <AuthRowHead>
-                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{user.username}</strong>
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{resolveUserDisplayLabel(user, 'Kullanıcı')}</strong>
                 <AdminSurfaceBadge tone={user.isActive ? 'success' : 'danger'}>
                   {formatAuditActiveState(user.isActive, t)}
                 </AdminSurfaceBadge>
@@ -435,7 +436,7 @@ function AuditUsersPanel(input: { users: UserAccount[]; unavailable: boolean }) 
   )
 }
 
-function AuditAssignmentsPanel(input: { assignments: RoleAssignment[]; unavailable: boolean }) {
+function AuditAssignmentsPanel(input: { users: UserAccount[]; assignments: RoleAssignment[]; unavailable: boolean }) {
   const { locale, t } = useLocalization()
 
   return (
@@ -461,7 +462,7 @@ function AuditAssignmentsPanel(input: { assignments: RoleAssignment[]; unavailab
                 </AdminSurfaceBadge>
               </AuthRowHead>
               <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-                {assignment.username} - {assignment.scopeType}
+                {resolveUserDisplayLabel(input.users.find((user) => user.userId === assignment.userId), 'Kullanıcı')} - {assignment.scopeType}
               </p>
               <AuthMuted>
                 {t('adminAudit.createdAt', {

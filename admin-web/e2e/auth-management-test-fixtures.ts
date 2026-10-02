@@ -32,8 +32,8 @@ const sessionFixture = {
 
 export const usersFixture = {
   items: [
-    { userId: 'user-active', employeeId: null, username: 'store.manager', email: 'store.manager@example.com', authProvider: 'clerk', providerSubject: 'user_store', isActive: true, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
-    { userId: 'user-inactive', employeeId: null, username: 'inactive.user', email: 'inactive@example.com', authProvider: 'clerk', providerSubject: 'user_inactive', isActive: false, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
+    { userId: 'user-active', employeeId: null, username: 'store.manager', firstName: 'Ada', lastName: 'Yılmaz', email: 'store.manager@example.com', authProvider: 'clerk', providerSubject: 'user_store', isActive: true, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
+    { userId: 'user-inactive', employeeId: null, username: 'inactive.user', firstName: 'Ece', lastName: 'Demir', email: 'inactive@example.com', authProvider: 'clerk', providerSubject: 'user_inactive', isActive: false, lastLoginAt: null, createdAt: '2026-08-01T09:00:00.000Z' },
   ],
   meta: { count: 2, total: 2, limit: 10, offset: 0 },
 }

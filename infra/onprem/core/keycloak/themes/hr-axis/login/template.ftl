@@ -7,7 +7,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8fa">
-  <title>${title!"HR Axis"}</title>
+  <title>Axis Lufian</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/axis-lufian-favicon.png">
   <script>
     // Continue the same presentation timeline after the React handoff.
     // This timestamp never contains identity, credential or OIDC state data.

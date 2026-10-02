@@ -16,7 +16,7 @@ export async function enqueueApprovalMail(client: Pick<PoolClient, "query">, inp
     (event_key,company_id,period_key,stage,actor_user_id,approver_name,company_name,package_id,cycle_id,revision_no,seal_hash)
     SELECT $1,$2::uuid,$3,$4,account.user_id,
       COALESCE(NULLIF(BTRIM(CONCAT_WS(' ',account.first_name,account.last_name)),''),
-        NULLIF(BTRIM(CONCAT_WS(' ',employee.first_name,employee.last_name)),''),account.username),
+        NULLIF(BTRIM(CONCAT_WS(' ',employee.first_name,employee.last_name)),''),'Kullanıcı'),
       company.company_name,$6::uuid,$7::uuid,$8,$9
     FROM ops.user_account account JOIN ops.company company ON company.company_id=$2::uuid
       LEFT JOIN ops.employee employee ON employee.employee_id=account.employee_id

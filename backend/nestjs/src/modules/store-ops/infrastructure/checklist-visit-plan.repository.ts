@@ -680,7 +680,7 @@ function readManagerPlanSql() {
     WITH manager_scope AS (
       SELECT
         ua.user_id AS manager_user_id,
-        COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), ua.username) AS manager_name,
+        COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''), NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''), CASE WHEN ua.user_id IS NOT NULL THEN 'Kullanıcı' END) AS manager_name,
         store.store_id,
         store.store_code,
         store.store_name,

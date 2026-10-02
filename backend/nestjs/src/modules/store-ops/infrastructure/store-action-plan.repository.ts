@@ -122,8 +122,8 @@ const STORE_ACTION_PLAN_READ_COLUMNS = `
   p.owner_user_id,
   COALESCE(
     NULLIF(BTRIM(CONCAT_WS(' ', owner_employee.first_name, owner_employee.last_name)), ''),
-    NULLIF(owner_account.username, ''),
-    NULLIF(owner_account.email, '')
+    NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(owner_account.first_name), ''), NULLIF(BTRIM(owner_account.last_name), ''))), ''),
+    CASE WHEN owner_account.user_id IS NOT NULL THEN 'Kullanıcı' END
   ) AS owner_display_name,
   p.created_by_user_id,
   p.source_type,

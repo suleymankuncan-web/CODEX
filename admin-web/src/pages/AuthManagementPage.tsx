@@ -1,3 +1,4 @@
+import { resolveUserDisplayLabel } from '../lib/display-labels'
 import { AccountSecurityTabs } from '../features/auth/AccountSecurityTabs'
 import { accountTimestamp } from '../features/auth/account-security-format'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
@@ -100,6 +101,7 @@ export function AuthManagementPage() {
   const usersQuery = useQuery({
     queryKey: ['auth-management', 'users', deferredQuery, userPage],
     queryFn: () => getUserAccounts({ ...(deferredQuery ? { q: deferredQuery } : {}), limit: 10, offset: userPage * 10 }),
+    refetchInterval: (query) => query.state.data?.items.some(identityJobPending) ? 5_000 : false,
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[2] === deferredQuery ? previousData : undefined,
   })
@@ -150,7 +152,7 @@ export function AuthManagementPage() {
   })
   const updateUserMutation = useMutation({
     mutationFn: ({ userId, changes }: { userId: string; changes: UpdateUserAccountInput }) => updateUserAccount(userId, changes),
-    onSuccess: async () => { await invalidate(); setEditOpen(false); actionToast.success('Kullanıcı bilgileri kaydedildi.') },
+    onSuccess: async () => { await invalidate(); await queryClient.invalidateQueries({ queryKey: ['shell-session'] }); setEditOpen(false); actionToast.success('Kullanıcı bilgileri kaydedildi.') },
     onError: (error) => actionToast.error(error, 'Kullanıcı bilgileri kaydedilemedi.'),
   })
   const accountMutation = useMutation({
@@ -269,6 +271,7 @@ export function AuthManagementPage() {
                   </div>
                   <div className="tw:flex tw:flex-wrap tw:gap-2 tw:self-start">
                     <Button onClick={() => setEditOpen(true)} size="sm" variant="outline"><Pencil aria-hidden="true" /> Bilgileri düzenle</Button>
+                    {selectedUser.identityOperation === 'update_profile' && selectedUser.identityStatus === 'failed' ? <Button disabled={updateUserMutation.isPending} onClick={() => updateUserMutation.mutate({ userId: selectedUser.userId, changes: { username: selectedUser.username } })} size="sm" variant="outline">Keycloak eşitlemesini yeniden dene</Button> : null}
                     <Button disabled={identityJobPending(selectedUser)} onClick={() => setAccountAction(selectedUser)} size="sm" variant="outline">{selectedUser.isActive ? 'Devre dışı bırak' : selectedUser.identityStatus === 'failed' ? 'Yeniden dene' : identityJobPending(selectedUser) ? 'İşleniyor' : 'Yeniden etkinleştir'}</Button>
                   </div>
                 </div>
@@ -408,7 +411,7 @@ function identityJobPending(user: UserAccount) {
 
 function AccountStatusBadge({ user, compact = false }: { user: UserAccount; compact?: boolean }) {
   if (identityJobPending(user)) {
-    const label = user.identityOperation === 'disable' ? 'Kapatılıyor' : user.identityOperation === 'enable' ? 'Açılıyor' : 'Hazırlanıyor'
+    const label = user.identityOperation === 'disable' ? 'Kapatılıyor' : user.identityOperation === 'enable' ? 'Açılıyor' : user.identityOperation === 'update_profile' ? 'Güncelleniyor' : 'Hazırlanıyor'
     return <Badge className="tw:border-amber-200 tw:bg-amber-50 tw:text-amber-800" variant="outline">{compact ? label : `${label} (Keycloak)`}</Badge>
   }
   if (user.identityStatus === 'failed') {
@@ -422,7 +425,7 @@ const loginNamePattern = /^[a-z0-9][a-z0-9._-]{2,119}$/i
 function validLoginName(value: string) { return loginNamePattern.test(value.trim()) }
 function validPersonName(value: string) { return value.trim().length > 0 && value.trim().length <= 120 }
 function userDisplayName(user: UserAccount) {
-  return user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username
+  return resolveUserDisplayLabel(user, 'Kullanıcı')
 }
 
 function CreateUserDialog({ open, onOpenChange, onSave, pending }: {
@@ -522,7 +525,7 @@ function RoleAssignmentDialog({ open, onOpenChange, roles, stores, user, onSave,
   const selectedStore = stores.find((store) => store.storeId === scopeId)
   const selectedRegion = regions.find((region) => region.regionId === scopeId)
   const companyId = selectedStore?.companyId ?? selectedRegion?.companyId ?? stores[0]?.companyId
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Rol ekle</DialogTitle><DialogDescription>{roleCode === 'REGION_MANAGER' ? `${user?.username} Bölge Müdürü olarak tanımlanacak. Sorumlu mağazaları Mağaza erişimi bölümünden seçin.` : `${user?.username} için rol ve yetki alanı seçin.`}</DialogDescription></DialogHeader><DialogBody>{unavailable ? <AssignmentAvailabilityState kind="role" isError={unavailableByError} /> : null}<Field label="Rol"><Select value={roleCode} onValueChange={(value) => { setRoleCode(value); setScopeId('') }}><SelectTrigger aria-label="Rol" className="tw:w-full"><SelectValue placeholder="Rol seçin" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.roleCode} value={role.roleCode}>{roleDisplayName(role)}</SelectItem>)}</SelectContent></Select></Field>{scopeType === 'region' ? <Field label="Bölge"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol bölgesi" className="tw:w-full"><SelectValue placeholder="Bölge seçin" /></SelectTrigger><SelectContent>{regions.map((region) => <SelectItem key={region.regionId} value={region.regionId}>{region.regionName}</SelectItem>)}</SelectContent></Select></Field> : null}{scopeType === 'store' ? <Field label="Mağaza"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol mağazası" className="tw:w-full"><SelectValue placeholder="Mağaza seçin" /></SelectTrigger><SelectContent>{stores.map((store) => <SelectItem key={store.storeId} value={store.storeId}>{store.storeName}</SelectItem>)}</SelectContent></Select></Field> : null}</DialogBody><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || !roleCode || !companyId || (scopeType !== 'company' && !scopeId) || pending || unavailable} onClick={() => !unavailable && user && companyId && onSave({ userId: user.userId, roleCode: roleCode as Parameters<typeof onSave>[0]['roleCode'], scopeType, companyId, ...(scopeType === 'region' ? { regionId: scopeId } : {}), ...(scopeType === 'store' ? { storeId: scopeId } : {}) })}><ShieldCheck aria-hidden="true" /> Rolü ata</Button></DialogFooter></DialogContent></Dialog>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent closeLabel="Kapat"><DialogHeader><DialogTitle>Rol ekle</DialogTitle><DialogDescription>{roleCode === 'REGION_MANAGER' ? `${resolveUserDisplayLabel(user, 'Kullanıcı')} Bölge Müdürü olarak tanımlanacak. Sorumlu mağazaları Mağaza erişimi bölümünden seçin.` : `${resolveUserDisplayLabel(user, 'Kullanıcı')} için rol ve yetki alanı seçin.`}</DialogDescription></DialogHeader><DialogBody>{unavailable ? <AssignmentAvailabilityState kind="role" isError={unavailableByError} /> : null}<Field label="Rol"><Select value={roleCode} onValueChange={(value) => { setRoleCode(value); setScopeId('') }}><SelectTrigger aria-label="Rol" className="tw:w-full"><SelectValue placeholder="Rol seçin" /></SelectTrigger><SelectContent>{roles.map((role) => <SelectItem key={role.roleCode} value={role.roleCode}>{roleDisplayName(role)}</SelectItem>)}</SelectContent></Select></Field>{scopeType === 'region' ? <Field label="Bölge"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol bölgesi" className="tw:w-full"><SelectValue placeholder="Bölge seçin" /></SelectTrigger><SelectContent>{regions.map((region) => <SelectItem key={region.regionId} value={region.regionId}>{region.regionName}</SelectItem>)}</SelectContent></Select></Field> : null}{scopeType === 'store' ? <Field label="Mağaza"><Select value={scopeId} onValueChange={setScopeId}><SelectTrigger aria-label="Rol mağazası" className="tw:w-full"><SelectValue placeholder="Mağaza seçin" /></SelectTrigger><SelectContent>{stores.map((store) => <SelectItem key={store.storeId} value={store.storeId}>{store.storeName}</SelectItem>)}</SelectContent></Select></Field> : null}</DialogBody><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || !roleCode || !companyId || (scopeType !== 'company' && !scopeId) || pending || unavailable} onClick={() => !unavailable && user && companyId && onSave({ userId: user.userId, roleCode: roleCode as Parameters<typeof onSave>[0]['roleCode'], scopeType, companyId, ...(scopeType === 'region' ? { regionId: scopeId } : {}), ...(scopeType === 'store' ? { storeId: scopeId } : {}) })}><ShieldCheck aria-hidden="true" /> Rolü ata</Button></DialogFooter></DialogContent></Dialog>
 }
 
 function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, user, onSave, pending, unavailable, unavailableByError }: { assignedStoreIds: string[]; open: boolean; onOpenChange: (open: boolean) => void; stores: Array<{ storeId: string; storeName: string; storeCode: string }>; user: UserAccount | null; onSave: (draft: { userId: string; storeIds: string[] }) => void; pending: boolean; unavailable: boolean; unavailableByError: boolean }) {
@@ -539,7 +542,7 @@ function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, u
       <DialogContent className="tw:sm:max-w-2xl" closeLabel="Kapat">
         <DialogHeader>
           <DialogTitle>Mağaza erişimi ekle</DialogTitle>
-          <DialogDescription>{user?.username} için bir veya birden fazla mağaza seçin.</DialogDescription>
+          <DialogDescription>{resolveUserDisplayLabel(user, 'Kullanıcı')} için bir veya birden fazla mağaza seçin.</DialogDescription>
         </DialogHeader>
         <DialogBody>
           {unavailable ? <AssignmentAvailabilityState kind="store" isError={unavailableByError} /> : null}
@@ -596,7 +599,7 @@ function CapabilityAssignmentDialog({ open, onOpenChange, roleAssignments, roles
   )
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="tw:sm:max-w-xl" closeLabel="Kapat">
-      <DialogHeader><DialogTitle>Kişisel yetki ekle</DialogTitle><DialogDescription>{user?.username} için rol kapsamını aşmayan, süreli veya süresiz bir capability seçin.</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>Kişisel yetki ekle</DialogTitle><DialogDescription>{resolveUserDisplayLabel(user, 'Kullanıcı')} için rol kapsamını aşmayan, süreli veya süresiz bir capability seçin.</DialogDescription></DialogHeader>
       <DialogBody>
         <Field label="Bağlı rol"><Select value={roleAssignmentId} onValueChange={(value) => { const next = eligibleAssignments.find((item) => item.assignmentId === value); setRoleAssignmentId(value); setPermissionCode(''); setStartsAt(''); setEndsAt(toDateTimeLocal(next?.effectiveTo)) }}><SelectTrigger aria-label="Yetkinin bağlı olduğu rol" className="tw:w-full"><SelectValue placeholder="Rol ataması seçin" /></SelectTrigger><SelectContent>{eligibleAssignments.map((item) => <SelectItem key={item.assignmentId} value={item.assignmentId}>{roleNames[item.roleCode] ?? item.roleCode} · {scopeLabel(item)}{item.effectiveTo ? ` · ${new Date(item.effectiveTo).toLocaleDateString('tr-TR')} tarihine kadar` : ''}</SelectItem>)}</SelectContent></Select></Field>
         <Field label="Yetki"><Select disabled={!assignment} value={permissionCode} onValueChange={setPermissionCode}><SelectTrigger aria-label="Kişisel yetki" className="tw:w-full"><SelectValue placeholder="Yetki seçin" /></SelectTrigger><SelectContent>{visiblePermissions.map((permission) => <SelectItem key={permission.permissionCode} value={permission.permissionCode}>{permissionDisplayName(permission.permissionCode)}</SelectItem>)}</SelectContent></Select></Field>

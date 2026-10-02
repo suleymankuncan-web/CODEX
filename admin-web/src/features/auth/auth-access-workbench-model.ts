@@ -1,4 +1,4 @@
-import { normalizeDisplayLabel } from '../../lib/display-labels'
+import { normalizeDisplayLabel, resolveUserDisplayLabel } from '../../lib/display-labels'
 import type {
   ActionStoreAssignment,
   AuditEvent,
@@ -254,7 +254,7 @@ function mapUserRow(input: {
 
   return {
     userId: user.userId,
-    displayName: normalizeDisplayLabel(user.username ?? user.email, 'Kullanıcı'),
+    displayName: resolveUserDisplayLabel(user, 'Kullanıcı'),
     email: normalizeDisplayLabel(user.email, 'E-posta yok'),
     employeeLabel: user.employeeId ? 'Personel bağlı' : 'Personel yok',
     providerLabel: providerLabel(user.authProvider),

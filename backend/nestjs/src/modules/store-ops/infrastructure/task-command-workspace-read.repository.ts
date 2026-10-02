@@ -199,8 +199,11 @@ export class TaskCommandWorkspaceReadRepository {
             event.event_type,
             event.occurred_at,
             COALESCE(
-              NULLIF(event.metadata_json ->> 'actorDisplayName', ''),
               NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
+              NULLIF(BTRIM(CONCAT_WS(' ', account.first_name, account.last_name)), ''),
+              CASE WHEN event.metadata_json ->> 'actorDisplayName' IS DISTINCT FROM account.username
+                AND event.metadata_json ->> 'actorDisplayName' IS DISTINCT FROM account.email
+                THEN NULLIF(event.metadata_json ->> 'actorDisplayName', '') END,
               'Operasyon kullanıcısı'
             ) AS actor_display_name,
             COALESCE(

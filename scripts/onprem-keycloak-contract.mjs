@@ -295,7 +295,7 @@ export function validateOnpremKeycloakContract(input) {
   fail(realmFixture?.['x-hr-axis-authoritative'] === false && realmFixture?.['x-hr-axis-fixture-authority'] === 'non-authoritative-bootstrap-parity', 'realm fixture must explicitly remain non-authoritative')
   if (realmFixture) {
     const expectedClient = realmFixture.clients?.find((client) => client.clientId === 'store-ops-admin-web')
-    fail(realmFixture.realm === KEYCLOAK_REALM && realmFixture.enabled === true && realmFixture.sslRequired === 'external' && realmFixture.registrationAllowed === false && realmFixture.loginWithEmailAllowed === true && realmFixture.resetPasswordAllowed === true && realmFixture.verifyEmail === true, 'realm fixture settings must match the bootstrap contract')
+    fail(realmFixture.realm === KEYCLOAK_REALM && realmFixture.enabled === true && realmFixture.sslRequired === 'external' && realmFixture.registrationAllowed === false && realmFixture.editUsernameAllowed === true && realmFixture.loginWithEmailAllowed === true && realmFixture.resetPasswordAllowed === true && realmFixture.verifyEmail === true, 'realm fixture settings must match the bootstrap contract')
     fail(Boolean(expectedClient) && expectedClient.publicClient === true && expectedClient.standardFlowEnabled === true && expectedClient.implicitFlowEnabled === false && expectedClient.directAccessGrantsEnabled === false && expectedClient.serviceAccountsEnabled === false, 'realm browser client fixture must match the bootstrap contract')
     const expectedDefaultScopes = ['web-origins', 'profile', 'roles', 'email', 'basic']
     const fixtureDefaultScopes = expectedClient?.defaultClientScopes

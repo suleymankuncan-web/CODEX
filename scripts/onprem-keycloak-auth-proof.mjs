@@ -2,6 +2,7 @@ import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto'
 import { lstatSync, readFileSync } from 'node:fs'
 import { request as httpsRequest } from 'node:https'
 import { fileURLToPath } from 'node:url'
+import { axisLoginIconPath, assertAxisLoginIcon } from './keycloak-browser-branding.mjs'
 
 let trustedCa = null
 let authorizationTransport = Object.freeze({ hostname: '127.0.0.1', port: 443 })
@@ -407,6 +408,8 @@ async function loginPersona(host, account, { managed = false, pushed = false } =
     ? await requestFollow(host, buildPushedAuthorizationPath(par), { jar })
     : await requestRaw(host, authorizationPath, { jar })
   if (loginPage.status !== 200) throw new Error(`authorization endpoint rejected request (${classifyAuthorizationEntryFailure(loginPage, host)})`)
+  const icon = await requestRaw(host, axisLoginIconPath(loginPage.body, host))
+  assertAxisLoginIcon(icon, readFileSync(new URL('../admin-web/src/assets/hr-axis-06-mark-transparent.png', import.meta.url)))
   const formAction = loginPage.body.match(/<form\b[^>]*action\s*=\s*["']([^"']+)["']/i)?.[1]
   const decodedFormAction = formAction ? decodeHtmlAttribute(formAction) : ''
   if (!decodedFormAction) throw new Error('Keycloak login form was not rendered')
