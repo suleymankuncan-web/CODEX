@@ -6,6 +6,7 @@ const path = '/realms/store-ops/login-actions/authenticate'
 const theme = new URL('../../infra/onprem/core/keycloak/themes/hr-axis/login/resources/js/', import.meta.url)
 const address = readFileSync(new URL('login-address.js', theme), 'utf8')
 const expiry = readFileSync(new URL('login-expiry.js', theme), 'utf8')
+const styles = readFileSync(new URL('../css/keycloak-form.css', theme), 'utf8')
 const data = Buffer.from(JSON.stringify({ st: 'fixture-state' })).toString('base64url')
 const action = `${origin}${path}?client_id=store-ops-admin-web&client_data=${data}&session_code=native`
 
@@ -19,13 +20,13 @@ async function provider(page: import('@playwright/test').Page, state = 'fixture-
       attempts += 1
       return route.fulfill({ contentType: 'text/html', body: '<h1>Fresh login</h1>' })
     }
-    await route.fulfill({ contentType: 'text/html', body: `<!doctype html><style>[hidden]{display:none!important}</style>
+    await route.fulfill({ contentType: 'text/html', body: `<!doctype html><style>${styles}</style>
       <script>sessionStorage.setItem('store-ops-admin-pkce-login',JSON.stringify({state:${JSON.stringify(state)},createdAt:Date.now(),authorizationExpiresAt:Date.now()+3000}));</script>
       <script>${address}</script><script defer src="${origin}/expiry.js"></script>
       <form id="kc-form-login" action="${action.replaceAll('&', '&amp;')}" method="post">
       <label>Username<input name="username"></label><label>Password<input name="password" type="password"></label><button>Sign in</button></form>
       <div id="axis-login-expired" role="alert" hidden>Session expired<a href="/auth/login">Restart sign in</a></div>
-      <a id="axis-login-restart" href="/auth/login">Restart sign in</a>` })
+      <a id="axis-login-restart" class="axis-login-restart" href="/auth/login">Restart sign in</a>` })
   })
   await page.route(origin + '/expiry.js', (route) => route.fulfill({ contentType: 'text/javascript', body: expiry }))
   return { posts: () => posts, attempts: () => attempts }
@@ -38,6 +39,10 @@ for (const mobile of [false, true]) {
     const observed = await provider(page)
     await page.goto(action)
     await expect(page).toHaveURL(origin + '/auth/login')
+    const restartBounds = await page.locator('#axis-login-restart').boundingBox()
+    expect(restartBounds!.height).toBeGreaterThanOrEqual(44)
+    expect(restartBounds!.x).toBeGreaterThanOrEqual(0)
+    expect(restartBounds!.x + restartBounds!.width).toBeLessThanOrEqual(mobile ? 390 : 1440)
     await page.getByLabel('Password').fill('synthetic-password')
     await page.clock.fastForward(3001)
     await expect(page.getByRole('alert')).toBeVisible()

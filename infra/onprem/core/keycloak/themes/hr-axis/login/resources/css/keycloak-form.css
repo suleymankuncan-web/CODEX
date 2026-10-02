@@ -44,7 +44,7 @@ a { color: #3159ae; }
 #kc-login:hover, .axis-primary:hover { background-color: #254991; }
 #kc-login:disabled { opacity: .65; cursor: wait; }
 .axis-login-return { box-sizing: border-box; display: flex; align-items: center; justify-content: center; margin-top: 20px; text-decoration: none; }
-.axis-login-restart { display: block; margin-top: 16px; text-align: center; font-size: 12px; }
+.axis-login-restart { display: flex; min-height: 44px; align-items: center; justify-content: center; margin-top: 8px; font-size: 12px; }
 .axis-secondary { display: inline-flex; padding: 10px 16px; border: 1px solid #c9cfd8; border-radius: 7px; text-decoration: none; font-size: 12px; }
 .axis-form-buttons { display: grid; gap: 12px; }
 .inline-notice button { display: grid; place-items: center; width: 32px; height: 32px; }
