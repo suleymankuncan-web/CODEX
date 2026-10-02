@@ -1,4 +1,5 @@
 import { ApiError } from './api-error'
+import { apiErrorFromResponse, assertApiRateLimitReady } from './api-rate-limit'
 import { recoverManagedBrowserSession, establishManagedBrowserSession } from './api-browser-session'
 import {
   buildSessionHeaders,
@@ -55,6 +56,7 @@ export const SESSION_EXPIRED_EVENT = 'store-ops-session-expired'
 export { registerBearerTokenRefreshHandler } from './api-session-recovery'
 
 async function requestJson<T>(path: string, input?: { method?: JsonMethod; body?: unknown; signal?: AbortSignal }): Promise<T> {
+  assertApiRateLimitReady(input?.signal)
   const body = input?.body !== undefined ? JSON.stringify(input.body) : undefined
   const method = input?.method ?? 'GET'
   const prepared = await prepareHeaders(path, input?.body !== undefined, method)
@@ -125,6 +127,7 @@ async function requestFormData<T>(
     body: FormData
   },
 ): Promise<T> {
+  assertApiRateLimitReady()
   const prepared = await prepareHeaders(path, false, input.method)
 
   let attempt = await performFetchAttempt(path, {
@@ -195,6 +198,7 @@ async function requestFormData<T>(
 }
 
 async function requestBlob(path: string): Promise<Blob> {
+  assertApiRateLimitReady()
   const method = 'GET'
   const prepared = await prepareHeaders(path, false, method)
 
@@ -292,6 +296,7 @@ async function performFetchAttempt(
   request: RequestInit & { method: JsonMethod },
   requestAttempt = 1,
 ) {
+  assertApiRateLimitReady(request.signal)
   const startedAt = getCurrentTimeMs()
 
   try {
@@ -340,6 +345,7 @@ export function createManagedBrowserSession(input: { code: string; codeVerifier:
 }
 
 export async function createBrowserSession(providerToken: string) {
+  assertApiRateLimitReady()
   const token = providerToken.trim()
   if (!token) {
     throw new ApiError(401, 'Bearer token is required')
@@ -355,7 +361,7 @@ export async function createBrowserSession(providerToken: string) {
   })
 
   if (!response.ok) {
-    throw new ApiError(response.status, await response.text())
+    throw apiErrorFromResponse(response, await response.text())
   }
 
   const payload = (await response.json()) as BrowserSessionCreateResponse
@@ -365,6 +371,7 @@ export async function createBrowserSession(providerToken: string) {
 }
 
 export async function clearBrowserSessionCookie() {
+  assertApiRateLimitReady()
   const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session`, {
     method: 'DELETE',
     headers: {
@@ -374,7 +381,7 @@ export async function clearBrowserSessionCookie() {
   })
 
   if (!response.ok) {
-    throw new ApiError(response.status, await response.text())
+    throw apiErrorFromResponse(response, await response.text())
   }
 
   writeBrowserSessionCsrfToken('')
@@ -467,7 +474,8 @@ async function prepareCsrfRecoveryHeaders(
     }
 
     return buildRequestHeaders(recoveredSession, hasJsonBody, method)
-  } catch {
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 429) throw error
     throw new ApiError(503, 'Session recovery is temporarily unavailable')
   }
 }
@@ -487,7 +495,7 @@ async function throwApiError(
     dispatchSessionExpired(path, message, response.status, session)
   }
 
-  throw new ApiError(response.status, message)
+  throw apiErrorFromResponse(response, message)
 }
 
 function dispatchSessionExpired(path: string, message: string, status: number, session: SessionState) {

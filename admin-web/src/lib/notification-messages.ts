@@ -1,3 +1,5 @@
+import { getRateLimitErrorMessage } from './api-rate-limit'
+
 const messages: Record<string, string> = {
   'Checklist visit started': 'Checklist ziyareti başlatıldı.',
   'Checklist instance acknowledged': 'Checklist sonucu kabul edildi.',
@@ -45,5 +47,7 @@ export function translatedNotificationMessage(message: string): string | undefin
 }
 
 export function notificationErrorMessage(error: unknown, fallback: string): string {
+  const rateLimit = getRateLimitErrorMessage(error)
+  if (rateLimit) return rateLimit
   return error instanceof Error ? translatedNotificationMessage(error.message) ?? fallback : fallback
 }

@@ -10,6 +10,7 @@ export type SessionContextValue = {
   session: SessionState
   isReady: boolean
   sessionRecoveryFailed: boolean
+  sessionRecoveryError?: unknown
   retrySessionRecovery: () => void
   startManagedSession: (value: BrowserSessionCreateResponse) => void
   isProviderSessionHydrating: boolean

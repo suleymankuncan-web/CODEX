@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ApiError } from './api-error'
 import {
   createQueryClientDefaultOptions,
   PLAYWRIGHT_BUILD_PROFILE,
@@ -16,8 +17,11 @@ describe('query client defaults', () => {
     for (const marker of [undefined, null, '', 'production', 'playwright-e2e-unknown', 0]) {
       const options = createQueryClientDefaultOptions(marker)
 
-      expect(options).toEqual(productionDefaults)
-      expect('retry' in options.queries).toBe(false)
+      expect(options.queries).toMatchObject(productionDefaults.queries)
+      expect(options.queries.retry(0, new ApiError(429, 'limited'))).toBe(false)
+      expect(options.queries.retry(0, new Error('network'))).toBe(true)
+      expect(options.queries.retry(2, new ApiError(503, 'temporary'))).toBe(true)
+      expect(options.queries.retry(3, new ApiError(503, 'temporary'))).toBe(false)
       expect('retryDelay' in options.queries).toBe(false)
     }
   })
@@ -25,14 +29,15 @@ describe('query client defaults', () => {
   it('removes only the retry delay for the exact Playwright marker', () => {
     const options = createQueryClientDefaultOptions(PLAYWRIGHT_BUILD_PROFILE)
 
-    expect(options).toEqual({
+    expect(options).toMatchObject({
       ...productionDefaults,
       queries: {
         ...productionDefaults.queries,
         retryDelay: 0,
       },
     })
-    expect('retry' in options.queries).toBe(false)
+    expect(options.queries.retry(0, new ApiError(429, 'limited'))).toBe(false)
+    expect(options.queries.retry(3, new Error('network'))).toBe(false)
     expect(options.queries.retryDelay).toBe(0)
   })
 })

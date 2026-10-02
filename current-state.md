@@ -2,8 +2,8 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-10-01
-Use when: recovering current scope, blockers and next action
+Last verified: 2026-10-02
+Use when: recover scope, blockers and next step
 Do not use when: inferring live deployment or selecting a branch from old PR notes
 
 ## Now
@@ -34,12 +34,13 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
   through #1165. LUFIAN heading, document-date regional manager, handwritten store
   manager, retained historical template/score and mobile session-dismissal fixes
   remain.
-- Clerk/Keycloak auth stays separate: [shell](docs/plans/keycloak-login-studio-v1.md),
-  [address/setup](docs/plans/keycloak-clean-login-address-v1.md).
+- Clerk/Keycloak separate: [shell](docs/plans/keycloak-login-studio-v1.md),
+  [login](docs/plans/keycloak-clean-login-address-v1.md),
+  [rate recovery](docs/plans/rate-limit-recovery-v1.md).
 
 ## Next
 
-Refresh branch/worktree, PR checks and runtime evidence per task.
+Refresh Git/worktree, PR checks and runtime evidence.
 Merge is not live PASS; old plans do not authorize unrelated work. Cloudflare Workers Static Assets owns the frontend; Vercel is retired.
 [AGENTS.md](AGENTS.md#reading-map) routes task-specific reading.
 

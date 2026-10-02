@@ -4,7 +4,7 @@ const TRANSIENT_QUERY_RETRY_LIMIT = 2
 
 function shouldRetryTransientQuery(failureCount: number, error: unknown) {
   if (error instanceof ApiError) {
-    const isTransientStatus = error.status === 408 || error.status === 429 || error.status >= 500
+    const isTransientStatus = error.status === 408 || error.status >= 500
     return isTransientStatus && failureCount < TRANSIENT_QUERY_RETRY_LIMIT
   }
 

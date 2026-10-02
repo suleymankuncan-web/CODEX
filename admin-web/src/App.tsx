@@ -24,6 +24,7 @@ import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 import { SessionRecoveryState } from './features/session/session-recovery-state'
+import { canRetrySessionRead } from './features/session/session-recovery-policy'
 import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
 import { StoreChecklistSessionModalV1Prototype } from './prototypes/store-checklist-session-modal-v1'
 import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
@@ -61,7 +62,7 @@ function App() {
     isAdminMasterDataPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { session, isReady, isProviderSessionHydrating, expireSession, sessionRecoveryFailed, retrySessionRecovery } = useSession()
+  const { session, isReady, isProviderSessionHydrating, expireSession, sessionRecoveryFailed, sessionRecoveryError, retrySessionRecovery } = useSession()
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
@@ -259,7 +260,7 @@ function App() {
   }
 
   if (sessionRecoveryFailed && !pathname.startsWith('/auth')) {
-    return <SessionRecoveryState onRetry={retrySessionRecovery} />
+    return <SessionRecoveryState onRetry={retrySessionRecovery} error={sessionRecoveryError} />
   }
 
   if (pathname.startsWith('/auth')) {
@@ -268,6 +269,10 @@ function App() {
 
   if (!protectedShellReady) {
     return <AuthorizationCacheTransitionState />
+  }
+
+  if (sessionQuery.isError && canRetrySessionRead(sessionQuery.error)) {
+    return <SessionRecoveryState onRetry={() => { void sessionQuery.refetch() }} error={sessionQuery.error} />
   }
 
   if (pathname.startsWith('/store')) {

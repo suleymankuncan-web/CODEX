@@ -60,6 +60,7 @@ export function createRateLimitMiddleware(input: {
     res.setHeader("X-RateLimit-Reset", new Date(state.resetAt).toISOString());
 
     if (state.count > input.max) {
+      res.setHeader("Retry-After", String(Math.max(1, Math.ceil((state.resetAt - now) / 1000))));
       res.status(HttpStatus.TOO_MANY_REQUESTS).json(
         buildStandardErrorResponse({
           errorCode: "RATE_LIMIT_EXCEEDED",
