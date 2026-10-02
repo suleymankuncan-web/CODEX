@@ -5,7 +5,7 @@ import { useLocalization } from '../localization/useLocalization'
 import { AuthLoginStudio } from './auth-login-studio'
 import { AuthLoginNotice } from './auth-login-notice'
 
-export function AuthLoginTransition({ failed = false }: { failed?: boolean }) {
+export function AuthLoginTransition({ failed = false, failureCopy }: { failed?: boolean; failureCopy?: string }) {
   const { t } = useLocalization()
 
   return (
@@ -31,7 +31,7 @@ export function AuthLoginTransition({ failed = false }: { failed?: boolean }) {
           <span>{failed ? t('authFlow.retrySignIn') : 'Giriş yap'}</span><ArrowRight aria-hidden="true" />
         </Button>
         {failed ? (
-          <AuthLoginNotice>{t('authFlow.loginTemporarilyUnavailable')}</AuthLoginNotice>
+          <AuthLoginNotice>{failureCopy ?? t('authFlow.loginTemporarilyUnavailable')}</AuthLoginNotice>
         ) : (
           <p role="status" className="sr-only">{t('authFlow.loginPreparing')}</p>
         )}

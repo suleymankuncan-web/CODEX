@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { useLocalization } from '../localization/useLocalization'
 import { actionToast } from '../../lib/action-toast'
+import { getRateLimitErrorMessage } from '../../lib/api-rate-limit'
 import { accountTimestamp, linkState } from './account-security-format'
 import { getAccountSecurity, requestPasswordLink } from './account-security-api'
 import type { UserAccount } from './api'
@@ -29,6 +30,7 @@ function AccountSecurityPanel({ user }: { user: UserAccount }) {
   const client = useQueryClient()
   const [openedAt] = useState(() => Date.now())
   const retryRequest = useRef<{ requestId: string; kind: 'setup' | 'reset' } | null>(null)
+  const sending = useRef(false)
   const key = ['auth-management', 'security', user.userId]
   const query = useQuery({ queryKey: key, queryFn: () => getAccountSecurity(user.userId),
     refetchOnWindowFocus: false,
@@ -41,12 +43,16 @@ function AccountSecurityPanel({ user }: { user: UserAccount }) {
       await client.invalidateQueries({ queryKey: key })
       actionToast.success(english ? 'Link request queued.' : 'Bağlantı isteği kuyruğa alındı.')
     },
-    onError: () => actionToast.error(null, english ? 'Request could not be confirmed. Retry or refresh.' : 'İstek doğrulanamadı. Yeniden deneyin veya yenileyin.'),
+    onError: (error) => actionToast.error(null, getRateLimitErrorMessage(error, english ? 'en' : 'tr') ?? (english ? 'Request could not be confirmed. Retry or refresh.' : 'İstek doğrulanamadı. Yeniden deneyin veya yenileyin.')),
+    onSettled: () => { sending.current = false },
   })
   const latest = query.data?.requests[0]
   const processing = latest && ['queued', 'sending'].includes(latest.state)
   const kind = query.data?.passwordState === 'absent' ? 'setup' : 'reset'
+  const canSend = user.isActive && user.authProvider === 'oidc' && Boolean(user.providerSubject) && !query.isError && !query.isFetching && !mutation.isPending && !processing
   const send = () => {
+    if (!canSend || sending.current) return
+    sending.current = true
     retryRequest.current ??= { requestId: crypto.randomUUID(), kind }
     mutation.mutate(retryRequest.current)
   }
@@ -56,7 +62,7 @@ function AccountSecurityPanel({ user }: { user: UserAccount }) {
       <Button className="tw:min-h-11" variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}><RefreshCw aria-hidden="true" />{english ? 'Refresh' : 'Yenile'}</Button>
     </div>
     {query.isPending ? <p role="status">{english ? 'Loading account information…' : 'Hesap bilgileri yükleniyor…'}</p> : null}
-    {query.isError ? <p role="alert" className="tw:text-sm tw:text-destructive">{english ? 'Account information could not be updated. Refresh to retry.' : 'Hesap bilgileri güncellenemedi. Yenileyerek tekrar deneyin.'}</p> : null}
+    {query.isError ? <p role="alert" className="tw:text-sm tw:text-destructive">{getRateLimitErrorMessage(query.error, english ? 'en' : 'tr') ?? (english ? 'Account information could not be updated. Refresh to retry.' : 'Hesap bilgileri güncellenemedi. Yenileyerek tekrar deneyin.')}</p> : null}
     {query.data ? <>
       <dl className="tw:m-0 tw:grid tw:gap-3 tw:sm:grid-cols-2">
         <AccountFact label={english ? 'Password' : 'Şifre'} value={query.data.passwordState === 'present' ? (english ? 'Password exists' : 'Şifre mevcut') : query.data.passwordState === 'absent' ? (english ? 'Password not created' : 'Şifre oluşturulmamış') : (english ? 'Not verified yet' : 'Henüz doğrulanmadı')} />
@@ -67,7 +73,7 @@ function AccountSecurityPanel({ user }: { user: UserAccount }) {
       <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">{english ? 'Last verified' : 'Son doğrulama'}: {accountTimestamp(query.data.observedAt, english)} · Europe/Istanbul</p>
       <div className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
         <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3"><p className="tw:m-0 tw:text-sm tw:font-medium">{english ? 'Send a password link by email' : 'E-postayla şifre bağlantısı gönder'}</p>
-          <Button className="tw:min-h-11" onClick={send} disabled={!user.isActive || user.authProvider !== 'oidc' || !user.providerSubject || query.isError || mutation.isPending || Boolean(processing)}><Mail aria-hidden="true" />{mutation.isPending || processing ? (english ? 'Processing' : 'İşleniyor') : mutation.isError ? (english ? 'Retry request' : 'İsteği yeniden dene') : latest ? (english ? 'Send again' : 'Tekrar gönder') : (english ? 'Send link' : 'Bağlantı gönder')}</Button>
+          <Button className="tw:min-h-11" onClick={send} disabled={!canSend}><Mail aria-hidden="true" />{mutation.isPending || processing ? (english ? 'Processing' : 'İşleniyor') : mutation.isError ? (english ? 'Retry request' : 'İsteği yeniden dene') : latest ? (english ? 'Send again' : 'Tekrar gönder') : (english ? 'Send link' : 'Bağlantı gönder')}</Button>
         </div>
         <p className="tw:mt-2 tw:mb-0 tw:text-xs tw:leading-5 tw:text-muted-foreground">{english ? 'Sent means the email service accepted the request. A verified password change is shown separately; it does not prove which link was clicked.' : 'Gönderildi, e-posta servisinin isteği kabul ettiği anlamına gelir. Doğrulanan şifre değişimi ayrıca gösterilir; hangi bağlantıya tıklandığını kanıtlamaz.'}</p>
       </div>

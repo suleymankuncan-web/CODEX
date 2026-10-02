@@ -15,12 +15,15 @@ import {
 } from '../features/auth/auth-flow'
 import { useLocalization } from '../features/localization/useLocalization'
 import { useSession } from '../features/session/session-context-value'
+import { BrowserLoginUnavailableError } from '../lib/browser-login-error'
+import { getRateLimitErrorMessage } from '../lib/api-rate-limit'
 
 export function AuthCallbackPage() {
-  const { t } = useLocalization()
+  const { t, locale } = useLocalization()
   const { startProviderSession, startManagedSession } = useSession()
   const navigate = useNavigate()
   const [exchangeError, setExchangeError] = useState<string | null>(null)
+  const [browserLoginUnavailable, setBrowserLoginUnavailable] = useState(false)
   const handledRef = useRef(false)
   const [exchangeAttempt, setExchangeAttempt] = useState(0)
   const callbackPayload = useMemo(
@@ -87,13 +90,18 @@ export function AuthCallbackPage() {
         })
       })
       .catch((error: unknown) => {
+        if (error instanceof BrowserLoginUnavailableError) {
+          setBrowserLoginUnavailable(true)
+          setExchangeError(t(error.kind === 'cookie' ? 'authFlow.browserCookieUnavailable' : 'authFlow.browserStorageUnavailable'))
+          return
+        }
         if (error instanceof UnavailablePkceLoginStateError &&
           isDirectOidcLoginEnabled() && bootstrapQuery.data?.provider.managedBrowserSession) {
           // Reopening an old callback starts a fresh handshake; never redeem its old code.
           navigate('/auth/login', { replace: true })
           return
         }
-        setExchangeError(error instanceof Error ? error.message : String(error))
+        setExchangeError(getRateLimitErrorMessage(error, locale) ?? (error instanceof Error ? error.message : String(error)))
       })
   }, [
     exchangeAttempt,
@@ -108,6 +116,8 @@ export function AuthCallbackPage() {
     startProviderSession,
     startManagedSession,
     token,
+    t,
+    locale,
   ])
 
   if (callbackPayload.error) {
@@ -136,7 +146,7 @@ export function AuthCallbackPage() {
   const visibleExchangeError =
     exchangeError ??
     (callbackPayload.code && bootstrapQuery.isError
-      ? t('authFlow.bootstrapUnavailable')
+      ? getRateLimitErrorMessage(bootstrapQuery.error, locale) ?? t('authFlow.bootstrapUnavailable')
       : null)
 
   if (visibleExchangeError) {
@@ -151,13 +161,13 @@ export function AuthCallbackPage() {
             <StatusPill tone="danger">{t('authFlow.pkceError')}</StatusPill>
           </div>
           <p className="panel-copy">{visibleExchangeError}</p>
-          {callbackPayload.code ? <Button className="tw:min-h-11" onClick={() => {
+          {callbackPayload.code && !browserLoginUnavailable ? <Button className="tw:min-h-11" onClick={() => {
             handledRef.current = false
             setExchangeError(null)
             setExchangeAttempt((current) => current + 1)
             if (bootstrapQuery.isError) void bootstrapQuery.refetch()
           }}>{t('authFlow.retry')}</Button> : null}
-          {bootstrapQuery.data?.provider.managedBrowserSession ? <Button className="tw:min-h-11" variant="outline" onClick={() => {
+          {browserLoginUnavailable ? <Button asChild className="tw:min-h-11"><a href="/auth/login">{t('authFlow.restartLogin')}</a></Button> : bootstrapQuery.data?.provider.managedBrowserSession ? <Button className="tw:min-h-11" variant="outline" onClick={() => {
             void buildRestartLoginUrl(bootstrapQuery.data!, callbackPayload.state).then((url) => {
               if (url) window.location.assign(url)
             }).catch(() => setExchangeError(t('authFlow.loginConfirmationUnavailable')))

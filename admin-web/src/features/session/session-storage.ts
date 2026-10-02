@@ -220,7 +220,12 @@ export function persistClientSession(session: SessionState) {
     bearerToken: '',
   }
 
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persisted))
+  try {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persisted))
+  } catch {
+    // This is a non-secret preference/reload hint, never authentication proof.
+    // Cookie/nonce and bearer-token checks still decide whether access is ready.
+  }
 }
 
 export function isCookieBrowserSession(session: Pick<SessionState, 'mode' | 'browserSessionTransport'>) {

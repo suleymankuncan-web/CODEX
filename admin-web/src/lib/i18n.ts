@@ -18,7 +18,11 @@ export function readStoredAppLocale(): AppLocale {
     return defaultAppLocale
   }
 
-  return normalizeAppLocale(window.localStorage.getItem(appLocaleStorageKey))
+  try {
+    return normalizeAppLocale(window.localStorage.getItem(appLocaleStorageKey))
+  } catch {
+    return defaultAppLocale
+  }
 }
 
 export function writeStoredAppLocale(locale: AppLocale) {
@@ -26,7 +30,9 @@ export function writeStoredAppLocale(locale: AppLocale) {
     return
   }
 
-  window.localStorage.setItem(appLocaleStorageKey, locale)
+  try {
+    window.localStorage.setItem(appLocaleStorageKey, locale)
+  } catch { /* Locale preferences are optional; blocked storage must not break sign-in. */ }
 }
 
 export function getIntlLocale(input: AppLocale = defaultAppLocale) {
