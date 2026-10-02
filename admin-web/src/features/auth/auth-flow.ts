@@ -1,6 +1,7 @@
 import { createManagedBrowserSession } from '../../lib/api'
 import type { AuthBootstrap } from './api'
 import { sanitizeAuthReturnPath } from './return-path'
+import { buildPushedAuthorizationLoginUrl } from './pushed-authorization'
 
 const DEFAULT_CALLBACK_PATH = '/auth/callback'
 const DEFAULT_LOGOUT_PATH = '/auth/login'
@@ -8,6 +9,8 @@ const DEFAULT_RESPONSE_TYPE = 'code'
 const DEFAULT_SCOPE = 'openid profile email'
 const PKCE_STORAGE_KEY = 'store-ops-admin-pkce-login'
 const PKCE_MAX_AGE_MS = 10 * 60 * 1000
+
+export class UnavailablePkceLoginStateError extends Error {}
 
 export function isDirectOidcLoginEnabled() {
   return import.meta.env.VITE_OIDC_AUTO_REDIRECT === 'true' &&
@@ -107,6 +110,12 @@ export async function buildProviderLoginUrl(input?: {
     url.searchParams.set('state', returnTo)
   }
 
+  if (import.meta.env.VITE_OIDC_PAR_ENABLED === 'true') {
+    const loginUrl = await buildPushedAuthorizationLoginUrl(url)
+    // A slower request must not navigate using a superseded same-tab verifier.
+    readPkceLoginState(url.searchParams.get('state'))
+    return loginUrl
+  }
   return url.toString()
 }
 
@@ -279,8 +288,11 @@ function readPkceLoginState(state: string | null): PkceLoginState {
   }
 
   const raw = window.sessionStorage.getItem(PKCE_STORAGE_KEY)
-  if (!raw || !state) {
-    throw new Error('PKCE login state is missing')
+  if (!raw) {
+    throw new UnavailablePkceLoginStateError('PKCE login state is missing')
+  }
+  if (!state) {
+    throw new Error('PKCE login state is invalid')
   }
 
   const parsed = JSON.parse(raw) as Partial<PkceLoginState>
@@ -293,8 +305,11 @@ function readPkceLoginState(state: string | null): PkceLoginState {
     throw new Error('PKCE login state is invalid')
   }
 
-  if (typeof parsed.createdAt !== 'number' || Date.now() < parsed.createdAt || Date.now() - parsed.createdAt > PKCE_MAX_AGE_MS) {
-    throw new Error('PKCE login state expired')
+  if (typeof parsed.createdAt !== 'number' || !Number.isFinite(parsed.createdAt) || Date.now() < parsed.createdAt) {
+    throw new Error('PKCE login state is invalid')
+  }
+  if (Date.now() - parsed.createdAt > PKCE_MAX_AGE_MS) {
+    throw new UnavailablePkceLoginStateError('PKCE login state expired')
   }
 
   return {
