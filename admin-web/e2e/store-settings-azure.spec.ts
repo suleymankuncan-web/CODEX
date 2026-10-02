@@ -24,6 +24,9 @@ for (const persona of ['regionManager', 'storeManager', 'reportViewer'] as const
       await expect(surface.getByRole('textbox')).toHaveCount(0)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
       await expect(surface.locator('.operations-header')).toBeVisible()
+      await expect(surface.locator('.operations-eyebrow')).toHaveCount(0)
+      const roleLabels = { regionManager: 'Bölge Müdürü', storeManager: 'Mağaza Müdürü', reportViewer: 'Rapor Görüntüleyici' }
+      await expect(surface.locator('.store-settings-profile-details').getByText(roleLabels[persona], { exact: true })).toBeVisible()
       const accessibility = await new AxeBuilder({ page }).include('[data-testid="store-settings-page"]').analyze()
       expect(accessibility.violations).toEqual([])
       await surface.getByRole('tab', { name: 'Tercihler', exact: true }).click()
@@ -43,6 +46,22 @@ for (const persona of ['regionManager', 'storeManager', 'reportViewer'] as const
     })
   }
 }
+
+test('settings retains all assigned app roles without stretching the compact identity or mobile layout', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer', { roleCodes: ['STORE_PERSONNEL', 'STORE_MANAGER', 'SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER', 'VISUAL_MERCHANDISER', 'offline_access'] })
+  await installGenericStoreApiFallbacks(page)
+  await page.goto('/store/settings')
+  const surface = page.getByTestId('store-settings-page')
+  await expect(surface.locator('.store-settings-identity [data-slot="badge"]')).toHaveText('Admin')
+  const roles = surface.locator('.store-settings-profile-details dd').nth(2)
+  await expect(roles).toHaveText('Admin, Rapor Görüntüleyici, Bölge Müdürü, İK Admin, Mağaza Müdürü, Mağaza Personeli, Görsel Mağazacılık')
+  await expect(surface).not.toContainText('offline_access')
+  for (const width of [1440, 360, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(roles).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
 
 test('settings deep links keep accessible keyboard tabs and unknown sections fall back to profile', async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')

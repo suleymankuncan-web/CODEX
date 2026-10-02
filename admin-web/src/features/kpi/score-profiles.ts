@@ -1,7 +1,7 @@
 import type { KpiScoreProfileMetric } from '../reports/api'
 
 export function matchesKpiMetricCode(
-  metric: KpiScoreProfileMetric,
+  metric: Pick<KpiScoreProfileMetric, 'code' | 'aliases'>,
   candidateCode: string,
 ) {
   if (normalizeMetricCode(metric.code) === normalizeMetricCode(candidateCode)) {

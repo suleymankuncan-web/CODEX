@@ -1,6 +1,6 @@
 import { useId, useState, type Dispatch, type SetStateAction } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Settings2, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Button } from '../components/ui/button'
 import {
   getKpiConfigEditor,
@@ -21,7 +21,7 @@ import type { TranslateFunction, TranslationKey } from '../features/localization
 import { useLocalization } from '../features/localization/useLocalization'
 import type { AppLocale } from '../lib/i18n'
 import { actionToast } from '../lib/action-toast'
-import { formatDateTime, getErrorMessage } from '../lib/format'
+import { formatDateTime } from '../lib/format'
 import {
   AdminActionRow,
   AdminKeyValue,
@@ -30,14 +30,19 @@ import {
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
   AdminSurfaceSection,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
-import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage } from './admin-operational-primitives'
+import { kpiAuditEventLabel, kpiBandDisplayName, kpiMetricDisplayName, kpiProfileDisplayText } from '../features/reports/kpi-config-display'
+import './admin-kpi-settings.css'
 import {
   KpiConfigEditorRow,
   KpiConfigFieldGrid,
   KpiConfigMutedText,
   KpiConfigRowList,
+  KpiConfigRowSummary,
+  MultiChoiceField,
   NumberField,
   SelectField,
   TextField,
@@ -136,26 +141,26 @@ export function AdminKpiConfigPage() {
 
   if (configQuery.isLoading) {
     return (
-      <AdminOperationalPage ariaLabel={t('adminKpiConfig.loadingTitle')}>
+      <AdminSurfacePage ariaLabel={t('adminKpiConfig.loadingTitle')} className="admin-kpi-settings tw:text-sm">
         <AdminStatePanel
           title={t('adminKpiConfig.loadingTitle')}
           description={t('adminKpiConfig.loadingCopy')}
           isLoading
         />
-      </AdminOperationalPage>
+      </AdminSurfacePage>
     )
   }
 
   if (configQuery.isError || !draft) {
     return (
-      <AdminOperationalPage ariaLabel={t('adminKpiConfig.errorTitle')}>
+      <AdminSurfacePage ariaLabel={t('adminKpiConfig.errorTitle')} className="admin-kpi-settings tw:text-sm">
         <AdminStatePanel
           title={t('adminKpiConfig.errorTitle')}
-          description={getErrorMessage(configQuery.error)}
+          description={t('adminKpiConfig.loadErrorCopy')}
           tone="danger"
           action={<Button type="button" variant="outline" size="sm" onClick={() => void configQuery.refetch()}>{t('reportsSummary.retry')}</Button>}
         />
-      </AdminOperationalPage>
+      </AdminSurfacePage>
     )
   }
 
@@ -183,147 +188,168 @@ export function AdminKpiConfigPage() {
   })
 
   return (
-    <AdminOperationalPage ariaLabel={t('adminKpiConfig.heroTitle')}>
-      <AdminKpiConfigHero
-        draft={draft}
-        editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
-        t={t}
+    <AdminSurfacePage ariaLabel={t('adminKpiConfig.heroTitle')} className="admin-kpi-settings tw:text-sm">
+      <AdminSurfaceHeader
+        variant="flat"
+        title={t('adminKpiConfig.heroTitle')}
+        description={t('adminKpiConfig.heroCopy')}
+        meta={<AdminSurfaceBadge tone={configQuery.data?.hasUnpublishedChanges ? 'warning' : 'success'}>
+          {t(configQuery.data?.hasUnpublishedChanges ? 'adminKpiConfig.draftDirty' : 'adminKpiConfig.publishedInSync')}
+        </AdminSurfaceBadge>}
       />
+      <Tabs defaultValue="store" className="tw:gap-4">
+        <TabsList aria-label={t('adminKpiConfig.sections')} className="tw:grid tw:h-auto tw:grid-cols-3 tw:gap-0 tw:px-0 tw:sm:grid-cols-5">
+          <TabsTrigger value="store" className="tw:min-w-0">{t('adminKpiConfig.section.store')}</TabsTrigger>
+          <TabsTrigger value="personnel" className="tw:min-w-0">{t('adminKpiConfig.section.personnel')}</TabsTrigger>
+          <TabsTrigger value="ownership" className="tw:min-w-0">{t('adminKpiConfig.section.ownership')}</TabsTrigger>
+          <TabsTrigger value="grading" className="tw:min-w-0">{t('adminKpiConfig.section.grading')}</TabsTrigger>
+          <TabsTrigger value="publication" className="tw:min-w-0 tw:col-span-2 tw:sm:col-span-1">{t('adminKpiConfig.section.publication')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="store">
+          <ProfileEditor
+            t={t}
+            title={t('adminKpiConfig.profile.storeTitle')}
+            configuredTitle={draft.storeProfile.title}
+            summary={draft.storeProfile.summary}
+            futureMetricRule={draft.storeProfile.futureMetricRule}
+            metrics={draft.storeProfile.metrics}
+            weightTone={isExactWeightTotal(storeWeightTotal) ? 'calm' : 'warning'}
+            weightLabel={t('adminKpiConfig.weightTotal', {
+              total: formatWeightTotalValue(storeWeightTotal, t),
+            })}
+            weightGuidance={storeWeightGuidance}
+            onMetricChange={(index, next) =>
+              updateDraft((current) => ({
+                ...current,
+                storeProfile: {
+                  ...current.storeProfile,
+                  metrics: current.storeProfile.metrics.map((metric, metricIndex) =>
+                    metricIndex === index ? next : metric,
+                  ),
+                },
+              }))
+            }
+            onAddMetric={() =>
+              updateDraft((current) => ({
+                ...current,
+                storeProfile: {
+                  ...current.storeProfile,
+                  metrics: [...current.storeProfile.metrics, createEmptyMetric()],
+                },
+              }))
+            }
+            onRemoveMetric={(index) =>
+              updateDraft((current) => ({
+                ...current,
+                storeProfile: {
+                  ...current.storeProfile,
+                  metrics: current.storeProfile.metrics.filter(
+                    (_metric, metricIndex) => metricIndex !== index,
+                  ),
+                },
+              }))
+            }
+          />
 
-      <KpiConfigMetricSummary
-        draft={draft}
-        storeWeightGuidance={storeWeightGuidance}
-        storeWeightTotal={storeWeightTotal}
-        personnelWeightGuidance={personnelWeightGuidance}
-        personnelWeightTotal={personnelWeightTotal}
-        editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
-        t={t}
-      />
+        </TabsContent>
+        <TabsContent value="personnel">
+          <ProfileEditor
+            t={t}
+            title={t('adminKpiConfig.profile.personnelTitle')}
+            configuredTitle={draft.personnelProfile.title}
+            summary={draft.personnelProfile.summary}
+            futureMetricRule={draft.personnelProfile.futureMetricRule}
+            metrics={draft.personnelProfile.metrics}
+            weightTone={isExactWeightTotal(personnelWeightTotal) ? 'calm' : 'warning'}
+            weightLabel={t('adminKpiConfig.weightTotal', {
+              total: formatWeightTotalValue(personnelWeightTotal, t),
+            })}
+            weightGuidance={personnelWeightGuidance}
+            onMetricChange={(index, next) =>
+              updateDraft((current) => ({
+                ...current,
+                personnelProfile: {
+                  ...current.personnelProfile,
+                  metrics: current.personnelProfile.metrics.map((metric, metricIndex) =>
+                    metricIndex === index ? next : metric,
+                  ),
+                },
+              }))
+            }
+            onAddMetric={() =>
+              updateDraft((current) => ({
+                ...current,
+                personnelProfile: {
+                  ...current.personnelProfile,
+                  metrics: [...current.personnelProfile.metrics, createEmptyMetric()],
+                },
+              }))
+            }
+            onRemoveMetric={(index) =>
+              updateDraft((current) => ({
+                ...current,
+                personnelProfile: {
+                  ...current.personnelProfile,
+                  metrics: current.personnelProfile.metrics.filter(
+                    (_metric, metricIndex) => metricIndex !== index,
+                  ),
+                },
+              }))
+            }
+          />
 
-      <KpiConfigDraftLivePanel
-        draft={draft}
-        published={published}
-        storeWeightTotal={storeWeightTotal}
-        personnelWeightTotal={personnelWeightTotal}
-        publishedStoreWeightTotal={publishedStoreWeightTotal}
-        publishedPersonnelWeightTotal={publishedPersonnelWeightTotal}
-        editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
-        t={t}
-      />
+        </TabsContent>
+        <TabsContent value="ownership">
+          <OwnershipMatrixPanel
+            draft={draft}
+            rows={ownershipRows}
+            setDraft={setDraft}
+            t={t}
+            updateDraft={updateDraft}
+          />
 
-      <KpiConfigGovernancePreviewPanel
-        governancePreview={governancePreview}
-        latestPublishedVersion={latestPublishedVersion}
-        locale={locale}
-        t={t}
-      />
+        </TabsContent>
+        <TabsContent value="grading">
+          <GradingBandsPanel
+            draft={draft}
+            rows={gradingBands}
+            setDraft={setDraft}
+            t={t}
+            updateDraft={updateDraft}
+          />
 
-      <ProfileEditor
-        t={t}
-        title={draft.storeProfile.title}
-        summary={draft.storeProfile.summary}
-        futureMetricRule={draft.storeProfile.futureMetricRule}
-        metrics={draft.storeProfile.metrics}
-        weightTone={isExactWeightTotal(storeWeightTotal) ? 'calm' : 'warning'}
-        weightLabel={t('adminKpiConfig.weightTotal', {
-          total: formatWeightTotalValue(storeWeightTotal, t),
-        })}
-        weightGuidance={storeWeightGuidance}
-        onMetricChange={(index, next) =>
-          updateDraft((current) => ({
-            ...current,
-            storeProfile: {
-              ...current.storeProfile,
-              metrics: current.storeProfile.metrics.map((metric, metricIndex) =>
-                metricIndex === index ? next : metric,
-              ),
-            },
-          }))
-        }
-        onAddMetric={() =>
-          updateDraft((current) => ({
-            ...current,
-            storeProfile: {
-              ...current.storeProfile,
-              metrics: [...current.storeProfile.metrics, createEmptyMetric()],
-            },
-          }))
-        }
-        onRemoveMetric={(index) =>
-          updateDraft((current) => ({
-            ...current,
-            storeProfile: {
-              ...current.storeProfile,
-              metrics: current.storeProfile.metrics.filter(
-                (_metric, metricIndex) => metricIndex !== index,
-              ),
-            },
-          }))
-        }
-      />
+        </TabsContent>
+        <TabsContent value="publication" className="tw:grid tw:gap-4">
+          <KpiConfigDraftLivePanel
+            draft={draft}
+            published={published}
+            storeWeightTotal={storeWeightTotal}
+            personnelWeightTotal={personnelWeightTotal}
+            publishedStoreWeightTotal={publishedStoreWeightTotal}
+            publishedPersonnelWeightTotal={publishedPersonnelWeightTotal}
+            editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
+            t={t}
+          />
 
-      <ProfileEditor
-        t={t}
-        title={draft.personnelProfile.title}
-        summary={draft.personnelProfile.summary}
-        futureMetricRule={draft.personnelProfile.futureMetricRule}
-        metrics={draft.personnelProfile.metrics}
-        weightTone={isExactWeightTotal(personnelWeightTotal) ? 'calm' : 'warning'}
-        weightLabel={t('adminKpiConfig.weightTotal', {
-          total: formatWeightTotalValue(personnelWeightTotal, t),
-        })}
-        weightGuidance={personnelWeightGuidance}
-        onMetricChange={(index, next) =>
-          updateDraft((current) => ({
-            ...current,
-            personnelProfile: {
-              ...current.personnelProfile,
-              metrics: current.personnelProfile.metrics.map((metric, metricIndex) =>
-                metricIndex === index ? next : metric,
-              ),
-            },
-          }))
-        }
-        onAddMetric={() =>
-          updateDraft((current) => ({
-            ...current,
-            personnelProfile: {
-              ...current.personnelProfile,
-              metrics: [...current.personnelProfile.metrics, createEmptyMetric()],
-            },
-          }))
-        }
-        onRemoveMetric={(index) =>
-          updateDraft((current) => ({
-            ...current,
-            personnelProfile: {
-              ...current.personnelProfile,
-              metrics: current.personnelProfile.metrics.filter(
-                (_metric, metricIndex) => metricIndex !== index,
-              ),
-            },
-          }))
-        }
-      />
+          <KpiConfigGovernancePreviewPanel
+            governancePreview={governancePreview}
+            latestPublishedVersion={latestPublishedVersion}
+            locale={locale}
+            t={t}
+          />
 
-      <OwnershipMatrixPanel
-        draft={draft}
-        rows={ownershipRows}
-        setDraft={setDraft}
-        t={t}
-        updateDraft={updateDraft}
-      />
-
-      <GradingBandsPanel
-        draft={draft}
-        rows={gradingBands}
-        setDraft={setDraft}
-        t={t}
-        updateDraft={updateDraft}
-      />
-
+          <KpiConfigAuditPanel
+            auditState={{
+              items: auditQuery.data?.items ?? [],
+              loading: auditQuery.isLoading,
+              showError: auditQuery.isError,
+            }}
+            locale={locale}
+            t={t}
+          />
+        </TabsContent>
+      </Tabs>
       <KpiConfigPersistPanel
-        draft={draft}
         onPublish={() => publishMutation.mutate()}
         onSave={() => saveMutation.mutate(draft)}
         status={{
@@ -335,17 +361,7 @@ export function AdminKpiConfigPage() {
         t={t}
       />
 
-      <KpiConfigAuditPanel
-        auditState={{
-          error: auditQuery.error,
-          items: auditQuery.data?.items ?? [],
-          loading: auditQuery.isLoading,
-          showError: auditQuery.isError,
-        }}
-        locale={locale}
-        t={t}
-      />
-    </AdminOperationalPage>
+    </AdminSurfacePage>
   )
 }
 
@@ -364,90 +380,6 @@ function toSurfaceTone(tone: KpiSurfaceTone): AdminSurfaceTone {
   return tone === 'calm' ? 'success' : tone
 }
 
-function AdminKpiConfigHero(input: {
-  draft: KpiConfig
-  editorState: KpiConfigEditorStatus
-  t: TranslateFunction
-}) {
-  return (
-    <AdminOperationalHeader
-      icon={<SlidersHorizontal size={20} />}
-      eyebrow={input.t('adminKpiConfig.heroEyebrow')}
-      title={input.t('adminKpiConfig.heroTitle')}
-      description={input.t('adminKpiConfig.heroCopy')}
-      meta={
-        <>
-          <AdminSurfaceBadge tone="cyan">
-            {input.t('adminKpiConfig.storeMetrics')}: {input.draft.storeProfile.metrics.length}
-          </AdminSurfaceBadge>
-          <AdminSurfaceBadge tone="accent">
-            {input.t('adminKpiConfig.ownershipRows')}: {input.draft.ownershipMatrix.length}
-          </AdminSurfaceBadge>
-          <AdminSurfaceBadge tone="neutral">
-            {input.t('adminKpiConfig.gradingBandsMetric')}: {input.draft.gradingBands.length}
-          </AdminSurfaceBadge>
-          <AdminSurfaceBadge tone={input.editorState.hasUnpublishedChanges ? 'warning' : 'success'}>
-            {input.editorState.hasUnpublishedChanges
-              ? input.t('adminKpiConfig.draftDirty')
-              : input.t('adminKpiConfig.publishedInSync')}
-          </AdminSurfaceBadge>
-        </>
-      }
-    />
-  )
-}
-
-function KpiConfigMetricSummary(input: {
-  draft: KpiConfig
-  editorState: KpiConfigEditorStatus
-  storeWeightGuidance: string
-  storeWeightTotal: number
-  personnelWeightGuidance: string
-  personnelWeightTotal: number
-  t: TranslateFunction
-}) {
-  return (
-    <AdminOperationalMetrics
-      items={[
-        {
-          id: 'store-weight-total',
-          label: input.t('adminKpiConfig.storeWeightTotal'),
-          value: formatWeightTotalValue(input.storeWeightTotal, input.t),
-          description: input.storeWeightGuidance,
-          icon: <SlidersHorizontal size={18} />,
-          tone: isExactWeightTotal(input.storeWeightTotal) ? 'success' : 'warning',
-        },
-        {
-          id: 'personnel-weight-total',
-          label: input.t('adminKpiConfig.personnelWeightTotal'),
-          value: formatWeightTotalValue(input.personnelWeightTotal, input.t),
-          description: input.personnelWeightGuidance,
-          icon: <Settings2 size={18} />,
-          tone: isExactWeightTotal(input.personnelWeightTotal) ? 'success' : 'warning',
-        },
-        {
-          id: 'task-candidates',
-          label: input.t('adminKpiConfig.taskCandidates'),
-          value: input.draft.ownershipMatrix.filter((row) => row.taskCandidate).length,
-          description: input.t('adminKpiConfig.taskCandidatesNote'),
-          icon: <ShieldCheck size={18} />,
-          tone: 'accent',
-        },
-        {
-          id: 'publish-state',
-          label: input.t('adminKpiConfig.publishState'),
-          value: input.t(input.editorState.hasUnpublishedChanges ? 'adminKpiConfig.reviewBeforePublish' : 'adminKpiConfig.noDraftDelta'),
-          description: input.editorState.hasUnpublishedChanges
-            ? input.t('adminKpiConfig.draftDiffersFromLive')
-            : input.t('adminKpiConfig.draftMatchesLive'),
-          icon: <ShieldCheck size={18} />,
-          tone: input.editorState.hasUnpublishedChanges ? 'warning' : 'success',
-        },
-      ]}
-    />
-  )
-}
-
 function KpiConfigDraftLivePanel(input: {
   draft: KpiConfig
   published: KpiConfig | null
@@ -460,7 +392,6 @@ function KpiConfigDraftLivePanel(input: {
 }) {
   return (
     <AdminSurfaceSection
-      eyebrow={input.t('adminKpiConfig.publishModel')}
       title={input.t('adminKpiConfig.draftVsLiveTitle')}
       badge={
         <AdminSurfaceBadge tone={input.editorState.hasUnpublishedChanges ? 'warning' : 'success'}>
@@ -509,7 +440,6 @@ function KpiConfigGovernancePreviewPanel(input: {
   return (
     <AdminSurfaceSection
       ariaLabel={input.t('adminKpiConfig.governancePreview')}
-      eyebrow={input.t('adminKpiConfig.governancePreview')}
       title={input.t('adminKpiConfig.publishDecisionPreview')}
       badge={
         <AdminSurfaceBadge tone={toSurfaceTone(input.governancePreview.tone)}>
@@ -578,7 +508,6 @@ function OwnershipMatrixPanel(input: {
 }) {
   return (
     <AdminSurfaceSection
-      eyebrow={input.t('adminKpiConfig.ownershipMatrix')}
       title={input.t('adminKpiConfig.ownershipTitle')}
       badge={<AdminSurfaceBadge tone="accent">{input.t('adminKpiConfig.editable')}</AdminSurfaceBadge>}
     >
@@ -592,6 +521,8 @@ function OwnershipMatrixPanel(input: {
             return (
               <KpiConfigEditorRow
                 aria-label={`${input.t('adminKpiConfig.ownershipMatrix')}: ${rowReference}`}
+                summary={<KpiConfigRowSummary title={kpiMetricDisplayName(row.code, row.label, input.t)} detail={formatOwnerRole(row.operationalOwner, input.t)} />}
+                initiallyOpen={!row.code && !row.label}
                 actions={
                   <Button
                     aria-label={`${input.t('adminKpiConfig.removeRow')}: ${rowReference}`}
@@ -638,25 +569,19 @@ function OwnershipMatrixPanel(input: {
                       })
                     }
                   />
-                  <TextField
+                  <MultiChoiceField
                     label={input.t('adminKpiConfig.field.visibleTo')}
-                    value={row.visibleTo.join(', ')}
-                    onChange={(next) =>
-                      updateOwnershipRow(input.setDraft, input.draft, index, {
-                        ...row,
-                        visibleTo: splitCsv(next) as KpiOwnerRole[],
-                      })
-                    }
+                    value={row.visibleTo}
+                    options={ownerRoleOptions}
+                    optionLabel={(option) => formatOwnerRole(option as KpiOwnerRole, input.t)}
+                    onChange={(next) => updateOwnershipRow(input.setDraft, input.draft, index, { ...row, visibleTo: next as KpiOwnerRole[] })}
                   />
-                  <TextField
+                  <MultiChoiceField
                     label={input.t('adminKpiConfig.field.contributesTo')}
-                    value={row.contributesTo.join(', ')}
-                    onChange={(next) =>
-                      updateOwnershipRow(input.setDraft, input.draft, index, {
-                        ...row,
-                        contributesTo: splitCsv(next) as Array<'store' | 'personnel'>,
-                      })
-                    }
+                    value={row.contributesTo}
+                    options={['store', 'personnel']}
+                    optionLabel={(option) => input.t(option === 'store' ? 'adminKpiConfig.profile.store' : 'adminKpiConfig.profile.personnel')}
+                    onChange={(next) => updateOwnershipRow(input.setDraft, input.draft, index, { ...row, contributesTo: next as Array<'store' | 'personnel'> })}
                   />
                   <SelectField
                     label={input.t('adminKpiConfig.field.taskCandidate')}
@@ -703,10 +628,10 @@ function GradingBandsPanel(input: {
 }) {
   return (
     <AdminSurfaceSection
-      eyebrow={input.t('adminKpiConfig.gradingBands')}
       title={input.t('adminKpiConfig.gradingBandsTitle')}
       badge={<AdminSurfaceBadge tone="accent">{input.t('adminKpiConfig.editable')}</AdminSurfaceBadge>}
     >
+      {input.rows.length === 0 ? <AdminSurfaceEmpty copy={input.t('adminKpiConfig.noGradingBands')} /> : null}
       <KpiConfigRowList>
         {input.rows.map(({ item: band, key }, index) => {
           const rowReference = formatEditorRowReference(band.code, band.label, index)
@@ -714,6 +639,8 @@ function GradingBandsPanel(input: {
           return (
             <KpiConfigEditorRow
               aria-label={`${input.t('adminKpiConfig.gradingBands')}: ${rowReference}`}
+              summary={<KpiConfigRowSummary title={`${band.code} ${kpiBandDisplayName(band.label, input.t)}`} detail={formatToneOption(band.tone, input.t)} value={`${input.t('adminKpiConfig.field.minScore')}: ${band.minScore}`} />}
+              initiallyOpen={!band.code && !band.label}
               actions={
                 <Button
                   aria-label={`${input.t('adminKpiConfig.removeBand')}: ${rowReference}`}
@@ -805,83 +732,40 @@ type KpiConfigPersistStatus = {
 }
 
 function KpiConfigPersistPanel(input: {
-  draft: KpiConfig
   onPublish: () => void
   onSave: () => void
   status: KpiConfigPersistStatus
   t: TranslateFunction
 }) {
   return (
-    <AdminSurfaceSection
-      eyebrow={input.t('adminKpiConfig.saveEyebrow')}
-      title={input.t('adminKpiConfig.persistTitle')}
-      badge={
-        <AdminSurfaceBadge
-          tone={input.status.savePending || input.status.publishPending || !input.status.weightTotalsValid ? 'warning' : 'success'}
-        >
+    <div aria-label={input.t('adminKpiConfig.persistTitle')} className="admin-kpi-settings-actionbar tw:sticky tw:bottom-0 tw:z-20 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border tw:bg-card tw:px-4 tw:py-3">
+      <div className="tw:grid tw:gap-1">
+        <span className="tw:text-sm tw:font-medium">
           {input.status.savePending ? input.t('adminKpiConfig.saving') : input.status.publishPending ? input.t('adminKpiConfig.publishPending') : input.status.weightTotalsValid ? input.t('adminKpiConfig.ready') : input.t('adminKpiConfig.needsWeightBalance')}
-        </AdminSurfaceBadge>
-      }
-    >
-      <AdminKeyValueGrid>
-        <AdminKeyValue
-          label={input.t('adminKpiConfig.saveStoreProfile')}
-          value={input.draft.storeProfile.title}
-        />
-        <AdminKeyValue
-          label={input.t('adminKpiConfig.savePersonnelProfile')}
-          value={input.draft.personnelProfile.title}
-        />
-        <AdminKeyValue
-          label={input.t('adminKpiConfig.matrixRows')}
-          value={String(input.draft.ownershipMatrix.length)}
-        />
-        <AdminKeyValue
-          label={input.t('adminKpiConfig.gradingBands')}
-          value={String(input.draft.gradingBands.length)}
-        />
-      </AdminKeyValueGrid>
-      {!input.status.weightTotalsValid ? (
-        <KpiConfigMutedText>{input.t('adminKpiConfig.weightSaveBlocked')}</KpiConfigMutedText>
-      ) : null}
-      <AdminActionRow>
-        <Button
-          type="button"
-          variant="outline"
+        </span>
+        <span className="tw:text-xs tw:text-muted-foreground">
+          {input.status.weightTotalsValid ? input.t('adminKpiConfig.publishSavedDraft') : input.t('adminKpiConfig.weightSaveBlocked')}
+        </span>
+      </div>
+      <AdminActionRow className="tw:w-full tw:sm:w-auto">
+        <Button type="button" variant="outline" className="tw:min-h-11 tw:flex-1 tw:sm:flex-none"
           aria-busy={input.status.savePending}
-          disabled={
-            input.status.savePending ||
-            input.status.publishPending ||
-            !input.status.weightTotalsValid
-          }
-          onClick={input.onSave}
-        >
-          {input.status.savePending
-            ? input.t('adminKpiConfig.saveDraftPending')
-            : input.t('adminKpiConfig.saveDraft')}
+          disabled={input.status.savePending || input.status.publishPending || !input.status.weightTotalsValid}
+          onClick={input.onSave}>
+          {input.status.savePending ? input.t('adminKpiConfig.saveDraftPending') : input.t('adminKpiConfig.saveDraft')}
         </Button>
-        <Button
-          type="button"
+        <Button type="button" className="tw:min-h-11 tw:flex-1 tw:sm:flex-none"
           aria-busy={input.status.publishPending}
-          disabled={
-            input.status.publishPending ||
-            input.status.savePending ||
-            !input.status.weightTotalsValid ||
-            !input.status.hasUnpublishedChanges
-          }
-          onClick={input.onPublish}
-        >
-          {input.status.publishPending
-            ? input.t('adminKpiConfig.publishPending')
-            : input.t('adminKpiConfig.publishLiveConfig')}
+          disabled={input.status.publishPending || input.status.savePending || !input.status.weightTotalsValid || !input.status.hasUnpublishedChanges}
+          onClick={input.onPublish}>
+          {input.status.publishPending ? input.t('adminKpiConfig.publishPending') : input.t('adminKpiConfig.publishLiveConfig')}
         </Button>
       </AdminActionRow>
-    </AdminSurfaceSection>
+    </div>
   )
 }
 
 type KpiConfigAuditState = {
-  error: unknown
   items: AuditEvent[]
   loading: boolean
   showError: boolean
@@ -894,7 +778,6 @@ function KpiConfigAuditPanel(input: {
 }) {
   return (
     <AdminSurfaceSection
-      eyebrow={input.t('adminKpiConfig.recentChanges')}
       title={input.t('adminKpiConfig.auditTrailTitle')}
       badge={
         <AdminSurfaceBadge tone={input.auditState.loading ? 'warning' : 'accent'}>
@@ -905,7 +788,7 @@ function KpiConfigAuditPanel(input: {
       {input.auditState.loading ? (
         <KpiConfigMutedText>{input.t('adminKpiConfig.loading')}</KpiConfigMutedText>
       ) : input.auditState.showError ? (
-        <KpiConfigMutedText>{getErrorMessage(input.auditState.error)}</KpiConfigMutedText>
+        <KpiConfigMutedText>{input.t('adminKpiConfig.auditErrorCopy')}</KpiConfigMutedText>
       ) : input.auditState.items.length > 0 ? (
         <KpiConfigRowList>
           {input.auditState.items.map((item) => (
@@ -1059,17 +942,16 @@ function KpiConfigAuditRow(input: { item: AuditEvent; locale: AppLocale; t: Tran
 
   return (
     <KpiConfigEditorRow
-      aria-label={input.item.eventType}
+      aria-label={kpiAuditEventLabel(input.item.eventType, input.t)}
       actions={
         <AdminSurfaceBadge tone="accent">{formatDateTime(input.item.occurredAt, input.locale)}</AdminSurfaceBadge>
       }
     >
       <h4 className="tw:m-0 tw:text-sm tw:font-semibold tw:tracking-normal tw:text-foreground">
-        {input.item.eventType}
+        {kpiAuditEventLabel(input.item.eventType, input.t)}
       </h4>
       <p>
         {input.t('adminKpiConfig.auditSummary', {
-          actor: input.item.actorUserId ?? input.t('adminKpiConfig.unknown'),
           storeMetricCount: String(
             input.item.metadata.storeMetricCount ?? input.t('adminKpiConfig.notAvailable'),
           ),
@@ -1117,7 +999,7 @@ function formatDiffSummary(
   const removed = Array.isArray(input.removed) ? input.removed.length : 0
   const changed = Array.isArray(input.changed) ? input.changed.length : 0
 
-  return `+${added} / ~${changed} / -${removed}`
+  return t('adminKpiConfig.diffSummary', { added, changed, removed })
 }
 
 function formatKpiConfigVersion(
@@ -1141,6 +1023,7 @@ function useStableDraftRows<T>(items: T[], prefix: string) {
 function ProfileEditor(input: {
   t: TranslateFunction
   title: string
+  configuredTitle: string
   summary: string
   futureMetricRule: string
   metrics: KpiScoreProfileMetric[]
@@ -1155,12 +1038,11 @@ function ProfileEditor(input: {
 
   return (
     <AdminSurfaceSection
-      eyebrow={input.t('adminKpiConfig.scoreProfile')}
       title={input.title}
       badge={<AdminSurfaceBadge tone={toSurfaceTone(input.weightTone)}>{input.weightLabel}</AdminSurfaceBadge>}
     >
-      <KpiConfigMutedText>{input.summary}</KpiConfigMutedText>
       <KpiConfigMutedText>{input.weightGuidance}</KpiConfigMutedText>
+      {metricRows.length === 0 ? <AdminSurfaceEmpty copy={input.t('adminKpiConfig.noMetrics')} /> : null}
       <KpiConfigRowList>
         {metricRows.map(({ item: metric, key }, index) => {
           const rowReference = formatEditorRowReference(metric.code, metric.label, index)
@@ -1168,6 +1050,8 @@ function ProfileEditor(input: {
           return (
             <KpiConfigEditorRow
               aria-label={`${input.title} ${input.t('adminKpiConfig.metricRow')} ${rowReference}`}
+              summary={<KpiConfigRowSummary title={kpiMetricDisplayName(metric.code, metric.label, input.t)} detail={formatOwnerRole(metric.ownerRole, input.t)} value={Number.isFinite(metric.weightPercent) ? `${metric.weightPercent}%` : input.t('adminKpiConfig.invalidWeightValue')} />}
+              initiallyOpen={!metric.code && !metric.label}
               actions={
                 <Button
                   aria-label={`${input.t('adminKpiConfig.removeMetric')}: ${input.title} ${rowReference}`}
@@ -1248,7 +1132,11 @@ function ProfileEditor(input: {
           {input.t('adminKpiConfig.addMetric')}
         </Button>
       </AdminActionRow>
-      <KpiConfigMutedText>{input.futureMetricRule}</KpiConfigMutedText>
+      <KpiConfigEditorRow aria-label={input.t('adminKpiConfig.profile.details')} summary={<KpiConfigRowSummary title={input.t('adminKpiConfig.profile.details')} />}>
+        <KpiConfigMutedText>{/^(Store|Personnel) (score profile|Score)$/.test(input.configuredTitle) ? input.title : input.configuredTitle}</KpiConfigMutedText>
+        <AdminKeyValue label={input.t('adminKpiConfig.profile.description')} value={kpiProfileDisplayText(input.summary, input.t)} />
+        <AdminKeyValue label={input.t('adminKpiConfig.profile.futureMetricRule')} value={kpiProfileDisplayText(input.futureMetricRule, input.t)} />
+      </KpiConfigEditorRow>
     </AdminSurfaceSection>
   )
 }

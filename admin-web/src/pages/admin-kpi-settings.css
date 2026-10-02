@@ -1,0 +1,29 @@
+/* The admin shell's overflow:hidden creates an intermediate scroll container.
+   Clip only this route so its sticky command boundary follows the viewport. */
+.admin-command-app:has(.admin-kpi-settings) {
+  overflow-x: clip;
+}
+
+/* Keep the existing feedback action away from save / publish. */
+.admin-command-app:has(.admin-kpi-settings) .pilot-feedback-control {
+  top: 32px;
+  bottom: auto;
+}
+
+.admin-kpi-settings h1 {
+  padding-inline-end: 48px;
+}
+
+@media (max-width: 760px) {
+  .admin-command-app:has(.admin-kpi-settings) .pilot-feedback-control {
+    top: 88px;
+  }
+
+  .admin-kpi-settings [data-slot='button'] {
+    min-height: 44px;
+  }
+
+  body:has(.admin-kpi-settings) {
+    --hr-axis-toast-mobile-bottom: max(9rem, calc(env(safe-area-inset-bottom) + 9rem));
+  }
+}

@@ -33,7 +33,6 @@ export function StoreHomeCommandView(input: { model: StoreHomeCommandModel }) {
             <p>{input.model.identityLabel} için bugünün çalışma özeti.</p>
           </div>
           <div className="sh-dashboard-context" aria-label="Sayfa bağlamı">
-            <Badge variant="secondary">{input.model.personaLabel}</Badge>
             <span>
               <CalendarDays size={15} aria-hidden="true" />
               {input.model.periodLabel}

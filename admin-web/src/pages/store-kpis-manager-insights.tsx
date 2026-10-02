@@ -14,6 +14,7 @@ import type { StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 import { formatMetricValue, resolveLocalizedKpiScoreReference } from './store-kpi-highlights-formatters'
 import { toHundredPointLiveStoreScore } from './store-kpis-command-contract'
 import { comparisonPeriod, metricGrowth } from './store-kpis-manager-insights-utils'
+import { matchesKpiMetricCode } from '../features/kpi/score-profiles'
 
 const names: Record<string, string> = { score: 'Mağaza Skoru', TARGET_ACHIEVEMENT: 'Hedef Gerçekleşme', ATV: 'Ortalama Fiş Tutarı', UPT: 'Fiş Başına Ürün', CR: 'Dönüşüm Oranı', gsm_approval: 'GSM Onayı', BM_CHECKLIST: 'Bölge Müdürü Checklist', VM_CHECKLIST: 'VM Checklist' }
 const formulas: Record<string, string> = { score: 'Mağaza skoru, KPI katkılarının tanımlı ağırlıkları ve üst sınırları ile hesaplanır.', TARGET_ACHIEVEMENT: 'Net satış / satış hedefi × 100. Sıralama ve büyüme, hedef gerçekleşme oranı üzerinden hesaplanır.', ATV: 'Net satış / fiş sayısı. Tarih aralığında satış ve fiş toplamları kullanılır.', UPT: 'Satılan ürün adedi / fiş sayısı. Tarih aralığında ürün ve fiş toplamları kullanılır.', CR: 'Fiş sayısı / ziyaretçi sayısı × 100.', gsm_approval: 'GSM onayı veren müşteri / toplam müşteri × 100.', BM_CHECKLIST: 'Seçilen dönemdeki bölge müdürü checklist sonuçları.', VM_CHECKLIST: 'Seçilen dönemdeki görsel mağazacılık checklist sonuçları.' }
@@ -21,7 +22,7 @@ const formulas: Record<string, string> = { score: 'Mağaza skoru, KPI katkılar�
 function summaryMetric(summary: StoreKpiHighlightsSummary | undefined, code: string) {
   if (!summary) return null
   if (code === 'score') return summary.score.matchedMetrics > 0 && summary.score.value !== null ? toHundredPointLiveStoreScore(Number(summary.score.value)) : null
-  const metric = summary.metrics.find(row => row.code === code)
+  const metric = summary.metrics.find(row => matchesKpiMetricCode(row, code))
   if (metric?.actualValue == null) return null
   if (code === 'TARGET_ACHIEVEMENT') return metric.targetValue ? Number(metric.actualValue) / Math.abs(Number(metric.targetValue)) : null
   const value = Number(metric.actualValue)
@@ -64,7 +65,7 @@ export function StoreManagerMetricDialog({ model, code, onClose, rankings, ranki
     enabled: model.reportingAllowed && Boolean(model.effectiveStoreId), staleTime: 60_000,
   })) })
   const actual = summaryMetric(model.liveSummary, code)
-  const row = model.rows.find(metric => metric.kpiCode === code)
+  const row = model.rows.find(metric => matchesKpiMetricCode({ code: metric.kpiCode }, code))
   const reference = row ? resolveLocalizedKpiScoreReference(model.t, { targetValue: row.targetValue, ...(row.benchmarkValue === undefined ? {} : { benchmarkValue: row.benchmarkValue }), benchmarkSource: row.benchmarkSource ?? null }) : null
   const rank = rankings?.storeLeaderboard.currentStoreComparisons?.find(item => item.code === code)
   const formatted = (value: number | null) => {

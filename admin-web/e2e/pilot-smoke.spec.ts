@@ -94,7 +94,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/kpi-config',
       urlPattern: /\/admin\/kpi-config$/,
-      heading: page.getByRole('heading', { name: /Skor profilleri/ }),
+      heading: page.getByRole('heading', { name: 'KPI ayarları', exact: true }),
     },
   ]
 

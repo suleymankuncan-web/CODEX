@@ -29,6 +29,12 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
 
   const storeNav = page.locator('.store-command-nav')
   const storeSidebar = page.locator('.store-command-sidebar')
+  await expect(storeSidebar.locator('.store-command-brand-text strong')).toHaveText('LUFIAN')
+  await expect(storeSidebar.locator('.store-command-brand-text small')).toHaveText('Axis Home')
+  await expect(storeSidebar.locator('.store-command-brand-text small')).toHaveCSS('text-transform', 'none')
+  await expect(storeSidebar.locator('.store-command-rail-context')).toHaveCount(0)
+  await expect(storeSidebar.locator('.store-command-sidebar-footer small')).toHaveText('Mağaza Müdürü')
+  await expect(page.locator('.sh-dashboard-context [data-slot="badge"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/checklists"]')).toBeVisible()
   await expect(storeNav.locator('a[href="/store/targets"]')).toBeVisible()
   await expect(storeNav.locator('a[href="/store/reports"]')).toBeVisible()
@@ -364,7 +370,8 @@ test('store home dashboard actions follow role-aware navigation for admin landin
 
   await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Operasyon Paneli' })).toBeVisible()
-  await expect(page.getByTestId('store-home-dashboard').getByText('Admin görünümü', { exact: true })).toBeVisible()
+  await expect(page.getByText('Admin görünümü', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('İK Admin')
   await expect(page.locator('.sh-dashboard-heading')).toContainText('store-me-smoke-user')
   await expect(page.getByText('Bölge özet dashboard')).toHaveCount(0)
   await expect(page.locator('a[href="/store/feed"]').first()).toBeVisible()

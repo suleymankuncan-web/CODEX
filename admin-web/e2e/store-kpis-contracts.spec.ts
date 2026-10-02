@@ -2,6 +2,7 @@ import { expect, test, type Page } from './test-fixtures'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
 import { myPerformanceFixture } from './store-surfaces-profile-fixtures'
 import { createEmptyRankingsFixture } from './store-kpis-empty-rankings-fixture'
+import { createStoreKpiHighlightsFixture, routeKpiContractApi } from './store-kpis-contract-fixtures'
 import {
   installGenericStoreApiFallbacks,
   installStoreContractSession,
@@ -26,6 +27,13 @@ test('store manager uses shadcn chart and opens every KPI with scoped ranks and 
     await route.fulfill({json: {...fixture,storeLeaderboard:{...fixture.storeLeaderboard,currentStoreComparisons:['score','TARGET_ACHIEVEMENT','ATV','UPT','CR','gsm_approval','BM_CHECKLIST','VM_CHECKLIST'].map(code=>({code,region:{rank:2,population:11},turkey:{rank:5,population:19}}))}}})
   })
   await page.goto('/store/kpis?periodStart=2026-07-01')
+  const summary = page.getByRole('group', { name: 'Mağaza KPI özeti', exact: true })
+  await expect(summary.locator('[data-slot="card"]')).toHaveCount(5)
+  await expect(summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('%40')
+  await summary.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true }).focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toContainText('GSM onayı veren müşteri / toplam müşteri × 100.')
+  await page.getByRole('button', { name: 'Kapat', exact: true }).click()
   await expect(page.getByRole('columnheader',{name:'Gerçekleşme Oranı',exact:true})).toBeVisible()
   const chart = page.getByLabel('Aylık mağaza skorları')
   await expect(chart.locator('[data-slot=chart]')).toBeVisible()
@@ -373,7 +381,8 @@ for (const scenario of [
     await expect(detail.locator('.manager-performance-store tbody tr')).toHaveCount(7)
     await expect(detail.getByLabel('Aylık mağaza skorları')).toBeVisible()
     const values = detail.locator('.region-performance-metrics strong')
-    await expect(values).toHaveCount(4)
+    await expect(values).toHaveCount(5)
+    await expect(detail.getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('%40')
     const sizes = await values.evaluateAll(nodes => nodes.map(node => Number.parseFloat(getComputedStyle(node).fontSize)))
     expect(sizes.every(size => size <= (scenario.width < 768 ? 20 : 22))).toBe(true)
     if (role === 'SUPER_ADMIN') await page.screenshot({ path: testInfo.outputPath(`admin-store-${scenario.width}.png`), fullPage: true })
@@ -534,6 +543,7 @@ test('KPI-FR-002 missing sources keep all seven locked rows in order', async ({ 
   })
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
+  await expect(page.getByRole('group', { name: 'Mağaza KPI özeti' }).getByRole('button', { name: 'Mağaza GSM detaylarını aç', exact: true })).toHaveText('Veri yok')
   await openCalculation(page)
   await expect(page.getByRole('region', { name: 'Mağaza KPI değerleri', exact: true })).toBeVisible()
   const rows = await page.locator('.manager-performance-store table tbody tr').allTextContents()
@@ -847,95 +857,6 @@ async function expectStableKpiMetricGeometry(page: Page) {
   await metrics.first().click()
 }
 
-async function routeKpiContractApi(
-  page: Page,
-  options: {
-    highlightResponse?: ReturnType<typeof createStoreKpiHighlightsFixture>
-    onHighlightRead?: () => void
-  } = {},
-) {
-  await page.route('**/api/reports/kpi-config', async (route) => {
-    await route.fulfill({ json: createKpiConfigFixture() })
-  })
-  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
-    options.onHighlightRead?.()
-    await route.fulfill({ json: options.highlightResponse ?? createStoreKpiHighlightsFixture() })
-  })
-  await page.route('**/api/reports/rankings**', async (route) => {
-    await route.fulfill({ json: createEmptyRankingsFixture() })
-  })
-}
-
-function createKpiConfigFixture() {
-  const metrics = [
-    profileMetric('TARGET_ACHIEVEMENT', 'Hedef gerçekleşme', 35, ['STORE_SALES', 'SALES_TARGET_ACHIEVEMENT']),
-    profileMetric('UPT', 'Fiş başı ürün', 15),
-    profileMetric('ATV', 'Ortalama sepet', 15),
-    profileMetric('CR', 'CR', 20),
-    profileMetric('GSM_ONAY', 'GSM Onayı', 5, ['gsm_approval']),
-    profileMetric('BM_CHECKLIST', 'BM Checklist', 5),
-    profileMetric('VM_CHECKLIST', 'VM Checklist', 5),
-  ]
-
-  return {
-    gradingBands: [
-      { code: 'strong', emoji: '', label: 'Güçlü', minScore: 80, tone: 'calm' },
-    ],
-    metadata: {
-      effectiveFrom: null,
-      effectiveTo: null,
-      kpiConfigVersionId: null,
-      publishedAt: null,
-      publishedBy: null,
-      versionNo: null,
-    },
-    ownershipMatrix: [],
-    personnelProfile: {
-      futureMetricRule: 'Yeni metrikler katalog üzerinden eklenir.',
-      metrics: [],
-      profileCode: 'personnel',
-      summary: 'Personel skoru',
-      title: 'Personel skoru',
-    },
-    storeProfile: {
-      futureMetricRule: 'Yeni metrikler katalog üzerinden eklenir.',
-      metrics,
-      profileCode: 'store',
-      summary: 'Mağaza skoru',
-      title: 'Mağaza skoru',
-    },
-  }
-}
-
-function createStoreKpiHighlightsFixture() {
-  return {
-    availablePeriods: [
-      { periodEnd: '2026-06-30', periodStart: '2026-06-01', periodType: 'monthly' },
-      { periodEnd: '2026-07-31', periodStart: '2026-07-01', periodType: 'monthly' },
-    ],
-    metrics: [
-      metricRow('TARGET_ACHIEVEMENT', 'Hedef gerçekleşme', 3_049_207.79, 2_750_000, 1.1088, 38.8),
-      metricRow('UPT', 'Fiş başı ürün', 4.15, 3.09, 1.34, 18),
-      metricRow('ATV', 'Ortalama sepet', 5503.99, 3628.54, 1.52, 18),
-      metricRow('CR', 'CR', 0.1834, 0.1405, 1.31, 24),
-      metricRow('gsm_approval', 'GSM Onayı', 40, 56.2, 0.4, 2, { targetValue: null }),
-      metricRow('BM_CHECKLIST', 'BM Checklist', 80, 100, 0.8, 4),
-      metricRow('VM_CHECKLIST', 'VM Checklist', 90, 100, 0.9, 4.5),
-    ],
-    partial: {
-      isPartial: false,
-      missingMetricCodes: [],
-      missingMetricLabels: [],
-      pendingNormalizationCodes: [],
-      pendingNormalizationLabels: [],
-    },
-    period: { periodEnd: '2026-07-31', periodStart: '2026-07-01' },
-    score: { matchedMetrics: 7, totalMetrics: 7, value: 92 },
-    source: { mode: 'live', periodType: 'monthly', snapshotDate: null, snapshotRunId: null },
-    store: { storeId: storeIds[0], storeName: 'İstanbul MOI AVM' },
-  }
-}
-
 function createCompanyRankingsFixture() {
   const stores = [
     {
@@ -1047,54 +968,6 @@ function createPersonnelRankingsFixture(options: { nullMetrics?: boolean } = {})
     },
   }
 }
-
-function profileMetric(code: string, label: string, weightPercent: number, aliases: string[] = []) {
-  return {
-    aliases,
-    benchmarkSource: code.includes('CHECKLIST') ? 'CHECKLIST_SCORE' : code === 'TARGET_ACHIEVEMENT' ? 'TARGET' : 'TURKEY_AVERAGE',
-    capRatio: 1.2,
-    code,
-    direction: 'HIGHER_IS_BETTER',
-    label,
-    ownerRole: 'STORE_MANAGER',
-    scoreBehavior: code === 'GSM_ONAY' ? 'warning_first' : 'task_candidate',
-    weightPercent,
-  }
-}
-
-function metricRow(
-  code: string,
-  label: string,
-  actualValue: number,
-  benchmarkValue: number,
-  achievementRate: number,
-  scoreContribution: number,
-  options: { targetValue?: number | null } = {},
-) {
-  const targetValue = Object.prototype.hasOwnProperty.call(options, 'targetValue')
-    ? options.targetValue
-    : benchmarkValue
-
-  return {
-    achievementRate,
-    actualRatio: achievementRate,
-    actualValue,
-    benchmarkSource: code.includes('CHECKLIST') ? 'CHECKLIST_SCORE' : 'TURKEY_AVERAGE',
-    benchmarkValue,
-    capRatio: 1.2,
-    code,
-    dataStatus: 'reported',
-    isCapped: false,
-    label,
-    scoredRatio: achievementRate,
-    scoreContribution,
-    scoreStatus: 'scored',
-    statusBand: 'on_track',
-    targetValue,
-    weightPercent: code === 'TARGET_ACHIEVEMENT' ? 35 : code === 'CR' ? 20 : code === 'GSM_ONAY' || code === 'gsm_approval' || code.includes('CHECKLIST') ? 5 : 15,
-  }
-}
-
 
 test('daily KPI selection binds store and personnel reads to the same day and survives reload', async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')

@@ -30,14 +30,17 @@ test.beforeEach(async ({ page }) => {
   await routeAdminKpiConfigSurfaceApi(page)
 })
 
-test('admin KPI config renders on AdminSurface primitives without legacy remnants', async ({ page }) => {
+test('admin KPI config renders on AdminSurface primitives without legacy remnants', async ({ page }, testInfo) => {
   await page.goto('/admin/kpi-config')
 
-  await expect(page.getByRole('heading', { name: 'Skor profilleri ve KPI sahipliği için admin yüzeyi.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'KPI ayarları' })).toBeVisible()
   await expect(page.locator(legacySelectors)).toHaveCount(0)
-  await expect(page.locator('[data-testid^="admin-metric-"]')).toHaveCount(4)
-  await expect(page.getByRole('group', { name: /Store Score .* TARGET_ACHIEVEMENT/ })).toBeVisible()
-  await expect(page.getByRole('group', { name: /Personnel Score .* TARGET_ACHIEVEMENT/ })).toBeVisible()
+  await expect(page.locator('[data-testid^="admin-metric-"]')).toHaveCount(0)
+  await expect(page.getByRole('tab')).toHaveCount(5)
+  await expect(page.getByRole('group', { name: /Mağaza puan ağırlıkları .* TARGET_ACHIEVEMENT/ })).toBeVisible()
+  await expect(page.getByText('Hedef gerçekleşme', { exact: true })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Görünen ad' })).toHaveCount(0)
+  await expect(page.getByRole('group', { name: /Personel puan ağırlıkları .* TARGET_ACHIEVEMENT/ })).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('/admin/kpi-config')
   await expect(page.locator('body')).not.toContainText('ops.kpi_score_profile_config')
   await expect(page.locator('body')).not.toContainText('korelasyon')
@@ -50,7 +53,76 @@ test('admin KPI config renders on AdminSurface primitives without legacy remnant
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
   )
   expect(hasNoHorizontalOverflow).toBe(true)
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 360, height: 800 }]) {
+    await page.setViewportSize(viewport)
+    await expect(page.getByRole('heading', { name: 'KPI ayarları' })).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`kpi-settings-${viewport.width}x${viewport.height}.png`), fullPage: true, animations: 'disabled' })
+  }
 })
+
+for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }, { width: 360, height: 800 }]) {
+  test(`seven KPI settings remain bounded and usable at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
+    await page.setViewportSize(viewport)
+    const denseConfig = { ...publishedConfig, storeProfile: { ...publishedConfig.storeProfile, metrics: [
+      { ...publishedConfig.storeProfile.metrics[0], weightPercent: 35 },
+      { ...publishedConfig.storeProfile.metrics[0], code: 'CR', label: 'CR', weightPercent: 20 },
+      { ...publishedConfig.storeProfile.metrics[1], code: 'ATV', label: 'ATV', weightPercent: 15 },
+      { ...publishedConfig.storeProfile.metrics[1], weightPercent: 15 },
+      { ...publishedConfig.storeProfile.metrics[0], code: 'BM_CHECKLIST', label: 'BM Checklist', weightPercent: 5 },
+      { ...publishedConfig.storeProfile.metrics[0], code: 'VM_CHECKLIST', label: 'VM Checklist', weightPercent: 5 },
+      { ...publishedConfig.storeProfile.metrics[1], code: 'gsm_approval', label: 'GSM Onayı', weightPercent: 5 },
+    ] } }
+    await page.route('**/api/reports/kpi-config/editor', route => route.fulfill({ json: {
+      ...kpiConfigEditorFixture, draftConfig: denseConfig, publishedConfig: denseConfig,
+    } }))
+    await page.route('**/api/reports/kpi-config', route => route.fulfill({ json: { ...kpiConfigEditorFixture, draftConfig: denseConfig, publishedConfig: denseConfig } }))
+    await page.goto('/admin/kpi-config')
+    await expect(page.getByRole('heading', { name: 'KPI ayarları' })).toBeVisible()
+    await expect(page.getByText('Görsel düzen kontrol listesi', { exact: true })).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight, clientWidth: document.documentElement.clientWidth }))
+    expect(dimensions.width).toBeLessThanOrEqual(dimensions.clientWidth)
+    expect(dimensions.height).toBeLessThan(1400)
+    const save = page.getByRole('button', { name: 'Taslağı kaydet' })
+    const saveBox = await save.boundingBox()
+    expect(saveBox?.y).toBeLessThan(viewport.height)
+    expect(saveBox?.height).toBeGreaterThanOrEqual(44)
+    const feedbackBox = await page.getByRole('button', { name: 'Pilot feedback' }).boundingBox()
+    const publishBox = await page.getByRole('button', { name: 'Ayarları yayınla' }).boundingBox()
+    expect(feedbackBox!.y + feedbackBox!.height).toBeLessThan(publishBox!.y)
+    await page.screenshot({ path: testInfo.outputPath(`kpi-settings-dense-${viewport.width}x${viewport.height}.png`), fullPage: true, animations: 'disabled' })
+    await page.getByRole('group', { name: /Mağaza puan ağırlıkları .* CR/ }).getByRole('button').first().click()
+    await expect(page.getByRole('textbox', { name: 'Görünen ad' })).toHaveValue('CR')
+    await page.screenshot({ path: testInfo.outputPath(`kpi-settings-editor-${viewport.width}x${viewport.height}.png`), fullPage: true, animations: 'disabled' })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+    await page.getByRole('tab', { name: 'Sorumlular', exact: true }).click()
+    await page.getByRole('group', { name: 'KPI sorumluları: TARGET_ACHIEVEMENT' }).getByRole('button').first().click()
+    for (const role of ['Genel müdür yardımcısı', 'Bölge müdürü', 'Mağaza müdürü', 'Mağaza personeli', 'Görsel ekip']) {
+      await expect(page.getByRole('checkbox', { name: role, exact: true })).toBeVisible()
+    }
+    await expect(page.getByRole('checkbox', { name: 'Mağaza müdürü', exact: true })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: 'Mağaza personeli', exact: true })).toBeChecked()
+    await page.getByRole('tab', { name: 'Puan aralıkları', exact: true }).click()
+    await page.getByRole('group', { name: 'Puan aralıkları: A' }).getByRole('button').first().click()
+    await expect(page.getByRole('spinbutton', { name: 'Alt puan sınırı' })).toHaveValue('1')
+    await page.getByRole('tab', { name: 'Yayın ve geçmiş' }).click()
+    await expect(page.getByText('v3')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Ayarlar yayınlandı' })).toBeVisible()
+    await expect(page.getByRole('main')).not.toContainText('kpi_config.published')
+    await page.screenshot({ path: testInfo.outputPath(`kpi-settings-publication-${viewport.width}x${viewport.height}.png`), fullPage: true, animations: 'disabled' })
+    await save.click()
+    const toast = page.getByText('Taslak kaydedildi', { exact: true })
+    await expect(toast).toBeVisible()
+    await expect.poll(async () => {
+      const toastBox = await toast.boundingBox()
+      const actionbarBox = await page.locator('.admin-kpi-settings-actionbar').boundingBox()
+      return Boolean(toastBox && actionbarBox && toastBox.y + toastBox.height < actionbarBox.y)
+    }).toBe(true)
+    await page.screenshot({ path: testInfo.outputPath(`kpi-settings-toast-${viewport.width}x${viewport.height}.png`), fullPage: true, animations: 'disabled' })
+  })
+}
 
 async function routeAdminKpiConfigSurfaceApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
@@ -67,7 +139,7 @@ async function routeAdminKpiConfigSurfaceApi(page: Page) {
         items: [
           {
             eventLogId: 'event-1',
-            eventType: 'kpi_config_published',
+            eventType: 'kpi_config.published',
             actorUserId: 'admin',
             occurredAt: '2026-05-20T08:00:00.000Z',
             correlationId: 'correlation-hidden',

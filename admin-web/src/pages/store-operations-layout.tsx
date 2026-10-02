@@ -9,9 +9,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { AppLocale } from '@/lib/i18n'
 import './store-operations-layout.css'
 
-export function StoreOperationsHeader(input: { title: string; titleId: string; eyebrow: string; description: string; icon: LucideIcon; actions?: ReactNode }) {
+export function StoreOperationsHeader(input: { title: string; titleId: string; eyebrow?: string; description: string; icon: LucideIcon; actions?: ReactNode }) {
   const Icon = input.icon
-  return <header className="operations-header"><div className="operations-heading"><span className="operations-header-icon"><Icon aria-hidden="true" /></span><div><p className="operations-eyebrow">{input.eyebrow}</p><h1 id={input.titleId}>{input.title}</h1><p>{input.description}</p></div></div><div className="operations-header-actions">{input.actions}</div></header>
+  return <header className="operations-header"><div className="operations-heading"><span className="operations-header-icon"><Icon aria-hidden="true" /></span><div>{input.eyebrow ? <p className="operations-eyebrow">{input.eyebrow}</p> : null}<h1 id={input.titleId}>{input.title}</h1><p>{input.description}</p></div></div><div className="operations-header-actions">{input.actions}</div></header>
 }
 
 export function OperationsPeriod(input: { value: string; locale: AppLocale; onChange: (value: string) => void; label: string; allowAll?: boolean; monthOnly?: boolean }) {

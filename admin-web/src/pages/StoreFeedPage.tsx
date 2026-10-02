@@ -256,7 +256,7 @@ function StoreFeedSurface(input: { authSummary: AuthSessionSummary | null }) {
 
   return (
     <CommandCanvasPage className="store-feed-azure" ariaLabelledBy="feed-production-title">
-      <StoreOperationsHeader title={t('storeFeed.heroEyebrow')} titleId="feed-production-title" eyebrow={roleLabel}
+      <StoreOperationsHeader title={t('storeFeed.heroEyebrow')} titleId="feed-production-title"
         description={t('storeFeed.productionDescription')} icon={Megaphone}
         actions={<Button variant="outline" size="sm" className="operations-period" disabled={feedQuery.isFetching} onClick={() => void feedQuery.refetch()}><RefreshCcw data-icon="inline-start" />{t('storeFeed.refresh')}</Button>} />
 

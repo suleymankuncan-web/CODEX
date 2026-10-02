@@ -31,7 +31,7 @@ export const storeHomeTr = {
   'storeHome.nav.competitions': 'Yarışmalar',
   'storeHome.nav.settings': 'Ayarlar / Profil',
   'storeHome.sidebar.aria': 'Store navigasyonu',
-  'storeHome.sidebar.brandArea': 'Store Home',
+  'storeHome.sidebar.brandArea': 'Axis Home',
   'storeHome.sidebar.workspace': 'Çalışma alanı',
   'storeHome.sidebar.expand': 'Menüyü aç',
   'storeHome.sidebar.collapse': 'Menüyü daralt',
@@ -263,13 +263,13 @@ export const storeHomeTr = {
   'storeHome.governanceStaysCopy':
     'Import operasyonları, snapshot orkestrasyonu, oturum yönetimi, kayıt incelemesi ve mağazalar arası platform kontrolleri mağaza kullanıcılarını desteklese bile admin alanında kalmalı.',
 
-  'storeHome.role.STORE_MANAGER': 'Mağaza müdürü',
-  'storeHome.role.STORE_PERSONNEL': 'Mağaza personeli',
-  'storeHome.role.SUPER_ADMIN': 'Süper admin',
-  'storeHome.role.REPORT_VIEWER': 'Rapor okuyucu',
-  'storeHome.role.REGION_MANAGER': 'Bölge müdürü',
-  'storeHome.role.HR_ADMIN': 'HR admin',
-  'storeHome.role.VISUAL_MERCHANDISER': 'Görsel düzenleme ekibi',
+  'storeHome.role.STORE_MANAGER': 'Mağaza Müdürü',
+  'storeHome.role.STORE_PERSONNEL': 'Mağaza Personeli',
+  'storeHome.role.SUPER_ADMIN': 'Admin',
+  'storeHome.role.REPORT_VIEWER': 'Rapor Görüntüleyici',
+  'storeHome.role.REGION_MANAGER': 'Bölge Müdürü',
+  'storeHome.role.HR_ADMIN': 'İK Admin',
+  'storeHome.role.VISUAL_MERCHANDISER': 'Görsel Mağazacılık',
 } as const
 
 export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
@@ -305,7 +305,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.nav.competitions': 'Competitions',
   'storeHome.nav.settings': 'Settings / Profile',
   'storeHome.sidebar.aria': 'Store navigation',
-  'storeHome.sidebar.brandArea': 'Store Home',
+  'storeHome.sidebar.brandArea': 'Axis Home',
   'storeHome.sidebar.workspace': 'Workspace',
   'storeHome.sidebar.expand': 'Expand menu',
   'storeHome.sidebar.collapse': 'Collapse menu',
@@ -537,7 +537,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
 
   'storeHome.role.STORE_MANAGER': 'Store manager',
   'storeHome.role.STORE_PERSONNEL': 'Store personnel',
-  'storeHome.role.SUPER_ADMIN': 'Super admin',
+  'storeHome.role.SUPER_ADMIN': 'Admin',
   'storeHome.role.REPORT_VIEWER': 'Report viewer',
   'storeHome.role.REGION_MANAGER': 'Region manager',
   'storeHome.role.HR_ADMIN': 'HR admin',

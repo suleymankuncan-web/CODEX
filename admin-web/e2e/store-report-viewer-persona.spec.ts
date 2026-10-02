@@ -47,6 +47,7 @@ test('Super Admin opens the Report Viewer checklist presentation without another
   await gotoReportViewerRoute(page, '/store/checklists')
 
   await expect(page.getByRole('heading', { name: 'Checklist Raporları' })).toBeVisible()
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('Admin')
   await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toHaveCount(0)
   await expect(page.getByText('Sayfa geçişi tamamlanamadı')).toHaveCount(0)
   expect(await page.evaluate(() => window.location.pathname)).toBe('/store/checklists')
@@ -120,6 +121,8 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
 
   const nav = page.locator('.store-command-nav')
   await gotoReportViewerRoute(page, '/store/home')
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('Rapor Görüntüleyici')
+  await expect(page.getByText('Admin görünümü', { exact: true })).toHaveCount(0)
   for (const href of [
     '/store/home',
     '/store/checklists',

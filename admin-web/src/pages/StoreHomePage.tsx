@@ -28,12 +28,12 @@ import {
 import { useLocalization } from '../features/localization/useLocalization'
 import {
   getRoleAwareStoreNavigation,
-  getStorePersonaLabelKey,
   resolveStorePersona,
   type StorePersona,
 } from '../app/store-navigation'
 import { getWorkflowInbox } from '../features/workflow/api'
 import { resolveUserDisplayLabel } from '../lib/display-labels'
+import { getStoreRoleLabel } from '../app/store-role-label'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   buildStoreHomeCommandModel,
@@ -135,7 +135,7 @@ export function StoreHomePage(input: {
         t,
       })
     : null
-  const personaLabel = t(getStorePersonaLabelKey(persona))
+  const personaLabel = getStoreRoleLabel(input.authSummary, t)
   const identityLabel = resolveUserDisplayLabel(input.authSummary?.user, personaLabel)
   const periodLabel = formatStoreHomePeriod()
   const commandModel = buildStoreHomeCommandModel({
