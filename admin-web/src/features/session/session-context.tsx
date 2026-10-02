@@ -26,12 +26,15 @@ import {
   type SessionState,
 } from './session-storage'
 import { resolveSessionSaveTransition } from './session-save-transition'
+import { ApiError } from '../../lib/api-error'
+import { getRateLimitRemainingSeconds } from '../../lib/api-rate-limit'
 
 export function SessionProvider(input: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(() => readClientSession())
   const sessionRef = useRef(session)
   const browserSessionAuthorizationFingerprintRef = useRef('')
   const [sessionRecoveryFailed, setSessionRecoveryFailed] = useState(false)
+  const [sessionRecoveryError, setSessionRecoveryError] = useState<unknown>(null)
   const [recoveryAttempt, setRecoveryAttempt] = useState(0)
   const [isProviderSessionHydrating, setProviderSessionHydrating] = useState(() =>
     isClerkSessionProviderAvailable() || (isCookieBrowserSession(session) && Boolean(session.browserSessionKey) && !isSessionReady(session)),
@@ -53,6 +56,7 @@ export function SessionProvider(input: { children: ReactNode }) {
     let cancelled = false
     const recover = async () => {
       setSessionRecoveryFailed(false)
+      setSessionRecoveryError(null)
       setProviderSessionHydrating(true)
       for (let attempt = 0; attempt < 3 && !cancelled; attempt += 1) {
         const timeout = window.setTimeout(() => controller.abort(), 15_000)
@@ -66,10 +70,12 @@ export function SessionProvider(input: { children: ReactNode }) {
           setSession(next)
           setProviderSessionHydrating(false)
           return
-        } catch {
+        } catch (error) {
           if (cancelled || sessionRef.current.browserSessionKey !== initial.browserSessionKey) return
-          if (controller.signal.aborted || attempt === 2) {
+          if ((error instanceof ApiError && error.status === 429) || controller.signal.aborted || attempt === 2) {
+            setSessionRecoveryError(error)
             setSessionRecoveryFailed(true)
+            setProviderSessionHydrating(false)
             return
           }
           await new Promise((resolve) => window.setTimeout(resolve, 1000 * (attempt + 1)))
@@ -80,7 +86,10 @@ export function SessionProvider(input: { children: ReactNode }) {
     return () => { cancelled = true; controller.abort() }
   }, [recoveryAttempt])
 
-  const retrySessionRecovery = useCallback(() => setRecoveryAttempt((current) => current + 1), [])
+  const retrySessionRecovery = useCallback(() => {
+    if (getRateLimitRemainingSeconds(sessionRecoveryError) > 0) return
+    setRecoveryAttempt((current) => current + 1)
+  }, [sessionRecoveryError])
 
   const startManagedSession = useCallback((browserSession: BrowserSessionCreateResponse) => {
     writeBrowserSessionCsrfToken(browserSession.csrfToken)
@@ -93,6 +102,7 @@ export function SessionProvider(input: { children: ReactNode }) {
     setSession(next)
     setProviderSessionHydrating(false)
     setSessionRecoveryFailed(false)
+    setSessionRecoveryError(null)
   }, [])
 
   const saveSession = useCallback(async (next: SessionState) => {
@@ -234,6 +244,7 @@ export function SessionProvider(input: { children: ReactNode }) {
     () => ({
       session,
       sessionRecoveryFailed,
+      sessionRecoveryError,
       retrySessionRecovery,
       startManagedSession,
       isReady: isSessionReady(session),
@@ -255,6 +266,7 @@ export function SessionProvider(input: { children: ReactNode }) {
       saveSession,
       session,
       sessionRecoveryFailed,
+      sessionRecoveryError,
       retrySessionRecovery,
       startManagedSession,
       startBearerSession,

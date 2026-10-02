@@ -1,3 +1,4 @@
+import { apiErrorFromResponse, assertApiRateLimitReady } from './api-rate-limit'
 import {
   clearClientBearerSession,
   isCookieBrowserSession,
@@ -98,6 +99,7 @@ export async function recoverBrowserSessionCsrfToken(resolveApiBaseUrl: () => st
 }
 
 async function performBrowserSessionCsrfRecovery(resolveApiBaseUrl: () => string) {
+  assertApiRateLimitReady()
   const initial = readClientSession()
   const response = await fetch(`${resolveApiBaseUrl()}/auth/browser-session/csrf`, {
     method: 'POST',
@@ -108,7 +110,7 @@ async function performBrowserSessionCsrfRecovery(resolveApiBaseUrl: () => string
   })
 
   if (response.status === 401) return false
-  if (!response.ok) throw new Error('Session recovery is temporarily unavailable')
+  if (!response.ok) throw apiErrorFromResponse(response, 'Session recovery is temporarily unavailable')
 
   const payload = (await response.json()) as Partial<BrowserSessionCsrfResponse>
   const csrfToken = typeof payload.csrfToken === 'string' ? payload.csrfToken.trim() : ''

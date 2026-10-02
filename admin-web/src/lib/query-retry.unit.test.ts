@@ -3,11 +3,11 @@ import { ApiError } from './api'
 import { transientQueryRetryOptions } from './query-retry'
 
 describe('transient query retry policy', () => {
-  it.each([401, 403])('does not retry terminal permission status %s', (status) => {
+  it.each([401, 403, 429])('does not retry permission or rate-limited status %s', (status) => {
     expect(transientQueryRetryOptions.retry(0, new ApiError(status, 'permission denied'))).toBe(false)
   })
 
-  it.each([408, 429, 500, 503])('retries transient HTTP status %s', (status) => {
+  it.each([408, 500, 503])('retries transient HTTP status %s', (status) => {
     expect(transientQueryRetryOptions.retry(0, new ApiError(status, 'temporary failure'))).toBe(true)
   })
 

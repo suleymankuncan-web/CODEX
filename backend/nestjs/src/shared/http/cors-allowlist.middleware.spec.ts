@@ -43,6 +43,7 @@ describe("createCorsAllowlistMiddleware", () => {
     );
     expect(headers["access-control-allow-origin"]).toBe("https://app.example.com");
     expect(headers["access-control-allow-credentials"]).toBe("true");
+    expect(headers["access-control-expose-headers"]).toBe("Retry-After,X-RateLimit-Reset,Date");
   });
 
   it("preserves explicit local mock-auth headers without reflecting arbitrary headers", () => {

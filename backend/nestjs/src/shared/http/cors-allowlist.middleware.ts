@@ -63,6 +63,7 @@ export function createCorsAllowlistMiddleware(allowedOrigins: string[]) {
 
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Expose-Headers", "Retry-After,X-RateLimit-Reset,Date");
     res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
     res.setHeader(
       "Access-Control-Allow-Headers",

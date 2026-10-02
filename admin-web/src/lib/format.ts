@@ -1,4 +1,5 @@
 import { translatedNotificationMessage } from './notification-messages'
+import { getRateLimitErrorMessage } from './api-rate-limit'
 import type { Tone } from '../components/dashboard-primitives'
 import { defaultAppLocale, getIntlLocale, type AppLocale } from './i18n'
 
@@ -27,6 +28,8 @@ export function formatState(input: string) {
 }
 
 export function getErrorMessage(error: unknown) {
+  const rateLimit = getRateLimitErrorMessage(error)
+  if (rateLimit) return rateLimit
   return error instanceof Error ? error.message : 'Unexpected error'
 }
 
