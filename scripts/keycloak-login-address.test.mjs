@@ -58,9 +58,9 @@ test('a form response or back/forward restoration reapplies the short address on
   assert.deepEqual(calls, Array.from({ length: 3 }, () => [state, '', '/auth/login']))
 })
 
-test('only the native password login for the application loads the address helper before rendering', () => {
+test('only application native login/error pages load the guarded address helper before rendering', () => {
   const template = readFileSync(new URL('template.ftl', theme), 'utf8')
-  assert.match(template, /<#if pageId == "login" && client\?\? && client\.clientId == "store-ops-admin-web">\s*<script src="\$\{url\.resourcesPath\}\/js\/login-address\.js"><\/script>\s*<\/#if>/)
+  assert.match(template, /<#if \(pageId == "login" \|\| pageId == "error"\) && client\?\? && client\.clientId == "store-ops-admin-web">\s*<script src="\$\{url\.resourcesPath\}\/js\/login-address\.js"><\/script>/)
   assert.ok(template.indexOf('/js/login-address.js') < template.indexOf('properties.styles'))
   assert.match(template, /action="\$\{url\.loginAction\}" method="post"/)
   assert.match(template, /startSessionPolling\(\$\{url\.ssoLoginInOtherTabsUrl\?c\}\)/)
@@ -82,4 +82,15 @@ test('account completion is restricted to finished successful application action
   const tr = readFileSync(new URL('messages/messages_tr.properties', theme), 'utf8')
   assert.match(tr, /^axisAccountCompleteTitle=İşlemler tamamlandı$/m)
   assert.match(tr, /^axisAccountCompleteLogin=Giriş yap$/m)
+})
+
+test('native errors retain support tracing, sanitization, skip-link and other-client continuations', () => {
+  const error = readFileSync(new URL('error.ftl', theme), 'utf8')
+  assert.match(error, /kcSanitize\(message\.summary\)/)
+  assert.match(error, /<#if traceId\?\?>/)
+  assert.match(error, /msg\("traceIdSupportMessage", traceId\)/)
+  assert.match(error, /<#if !skipLink\?\?>/)
+  assert.match(error, /client\.clientId == "store-ops-admin-web"/)
+  assert.match(error, /id="axis-error-login-return"[^>]*href="\/auth\/login"/)
+  assert.match(error, /id="backToApplication" href="\$\{client\.baseUrl\}"/)
 })

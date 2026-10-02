@@ -125,6 +125,9 @@ export function AuthCallbackPage() {
             {callbackPayload.errorDescription ??
               t('authFlow.providerReturnedError', { error: callbackPayload.error })}
           </p>
+          <Button asChild className="tw:min-h-11">
+            <a href="/auth/login">{t('authFlow.restartLogin')}</a>
+          </Button>
         </div>
       </section>
     )

@@ -18,6 +18,7 @@ export async function buildPushedAuthorizationLoginUrl(authorization: URL) {
   }
 
   const controller = new AbortController()
+  const requestStartedAt = Date.now()
   const timeout = setTimeout(() => controller.abort(), 15000)
   try {
     const endpoint = new URL(PAR_PATH, authorization.origin)
@@ -41,7 +42,11 @@ export async function buildPushedAuthorizationLoginUrl(authorization: URL) {
     const login = new URL(AUTHORIZATION_PATH, authorization.origin)
     login.searchParams.set('client_id', clientId)
     login.searchParams.set('request_uri', payload.request_uri)
-    return login.toString()
+    // Account for transport time and provider second-resolution expiry. This is
+    // a presentation deadline; Keycloak remains the authorization authority.
+    const expiresAt = requestStartedAt + payload.expires_in * 1000 - Math.min(5000, payload.expires_in * 200)
+    if (Date.now() >= expiresAt) throw new Error('Short login reference expired before navigation')
+    return { url: login.toString(), expiresAt }
   } finally {
     clearTimeout(timeout)
   }

@@ -31,6 +31,7 @@ type PkceLoginState = {
   codeVerifier: string
   returnTo: string | null
   createdAt: number
+  authorizationExpiresAt?: number
 }
 
 type TokenResponse = {
@@ -111,10 +112,13 @@ export async function buildProviderLoginUrl(input?: {
   }
 
   if (import.meta.env.VITE_OIDC_PAR_ENABLED === 'true') {
-    const loginUrl = await buildPushedAuthorizationLoginUrl(url)
+    const pushed = await buildPushedAuthorizationLoginUrl(url)
     // A slower request must not navigate using a superseded same-tab verifier.
-    readPkceLoginState(url.searchParams.get('state'))
-    return loginUrl
+    const pkceState = readPkceLoginState(url.searchParams.get('state'))
+    window.sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify({
+      ...pkceState, authorizationExpiresAt: pushed.expiresAt,
+    } satisfies PkceLoginState))
+    return pushed.url
   }
   return url.toString()
 }
@@ -257,6 +261,21 @@ export async function buildRestartLoginUrl(bootstrap: AuthBootstrap, state: stri
   let returnTo: string | undefined
   try { returnTo = readPkceLoginState(state).returnTo ?? undefined } catch { /* Start a new bounded login attempt. */ }
   return buildProviderLoginUrl({ bootstrap, ...(returnTo ? { returnTo } : {}) })
+}
+
+export function readPendingLoginReturnPath() {
+  try {
+    const raw = window.sessionStorage.getItem(PKCE_STORAGE_KEY)
+    if (!raw) return null
+    const stored: unknown = JSON.parse(raw)
+    if (!stored || typeof stored !== 'object' || !('state' in stored) ||
+      typeof stored.state !== 'string') return null
+    // Recover only the destination of a valid same-tab attempt. A fresh login
+    // still creates its own verifier and state, even after a native-page refresh.
+    return readPkceLoginState(stored.state).returnTo
+  } catch {
+    return null
+  }
 }
 
 async function createPkceLoginState(returnTo: string | null) {

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { preloadRouteModule } from '../app/route-preloaders'
 import { getAuthBootstrap } from '../features/auth/api'
-import { buildProviderLoginUrl, hasProviderLoginConfig, isDirectOidcLoginEnabled } from '../features/auth/auth-flow'
+import { buildProviderLoginUrl, hasProviderLoginConfig, isDirectOidcLoginEnabled, readPendingLoginReturnPath } from '../features/auth/auth-flow'
 import { AuthLoginTransition } from '../features/auth/auth-login-transition'
 import { AuthLoginStudio } from '../features/auth/auth-login-studio'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
@@ -19,9 +19,10 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
     url: string | null
     error: string | null
   }>({ url: null, error: null })
-  const returnTo = searchParams.get('returnTo') ?? location.state?.returnTo ?? '/store'
   const clerkReady = isClerkSessionProviderAvailable()
   const directOidcLogin = isDirectOidcLoginEnabled()
+  const [pendingReturnTo] = useState(() => directOidcLogin && !clerkReady ? readPendingLoginReturnPath() : null)
+  const returnTo = searchParams.get('returnTo') ?? location.state?.returnTo ?? pendingReturnTo ?? '/store'
   const bootstrapQuery = useQuery({
     queryKey: ['auth-bootstrap'],
     queryFn: getAuthBootstrap,
