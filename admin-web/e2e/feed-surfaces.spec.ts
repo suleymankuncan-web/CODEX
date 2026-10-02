@@ -154,7 +154,8 @@ test('store feed renders prototype-parity read-only surface for store personnel'
   await page.goto('/store/feed')
 
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
-  await expect(page.getByText('Personel', { exact: true })).toBeVisible()
+  await expect(page.locator('.operations-header .operations-eyebrow')).toHaveCount(0)
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('Mağaza Personeli')
   await expect(page.getByText('Görünür duyuru')).toBeVisible()
   await expect(page.getByText('Sabitlenen')).toBeVisible()
   await expect(page.getByText('Bugün paylaşılan')).toBeVisible()

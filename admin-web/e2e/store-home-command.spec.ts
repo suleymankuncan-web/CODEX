@@ -169,7 +169,8 @@ test('store home keeps personnel away from manager-only command items', async ({
   await page.goto('/store/home')
 
   await expect(page.getByTestId('store-home-command')).toBeVisible()
-  await expect(page.getByTestId('store-home-dashboard').getByText('Mağaza personeli', { exact: true })).toBeVisible()
+  await expect(page.locator('.sh-dashboard-context [data-slot="badge"]')).toHaveCount(0)
+  await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('Mağaza Personeli')
   await expect(page.getByText('Hedef kararı')).toHaveCount(0)
   await expect(page.getByText('Prim paketi')).toHaveCount(0)
 })
