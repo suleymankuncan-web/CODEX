@@ -115,9 +115,9 @@ export async function buildProviderLoginUrl(input?: {
     const pushed = await buildPushedAuthorizationLoginUrl(url)
     // A slower request must not navigate using a superseded same-tab verifier.
     const pkceState = readPkceLoginState(url.searchParams.get('state'))
-    window.sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify({
+    savePkceLoginState({
       ...pkceState, authorizationExpiresAt: pushed.expiresAt,
-    } satisfies PkceLoginState))
+    })
     return pushed.url
   }
   return url.toString()
@@ -293,12 +293,16 @@ async function createPkceLoginState(returnTo: string | null) {
     createdAt: Date.now(),
   }
 
-  window.sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify(storageValue))
+  savePkceLoginState(storageValue)
 
   return {
     state,
     codeChallenge,
   }
+}
+
+function savePkceLoginState(storageValue: PkceLoginState) {
+  window.sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify(storageValue))
 }
 
 function readPkceLoginState(state: string | null): PkceLoginState {
