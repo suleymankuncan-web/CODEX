@@ -9,7 +9,7 @@
         <p class="instruction" id="traceId">${msg("traceIdSupportMessage", traceId)}</p>
       </#if>
       <#if !skipLink??>
-        <#if client?? && client.clientId == "store-ops-admin-web">
+        <#if (client?? && client.clientId == "store-ops-admin-web") || (!client?? && realm.name == "store-ops")>
           <a id="axis-error-login-return" class="axis-button axis-primary axis-login-return" href="/auth/login">${msg("axisRestartLogin")}</a>
         <#elseif client?? && (client.baseUrl)?has_content>
           <p><a id="backToApplication" href="${client.baseUrl}">${msg("backToApplication")}</a></p>

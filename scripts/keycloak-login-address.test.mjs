@@ -91,6 +91,7 @@ test('native errors retain support tracing, sanitization, skip-link and other-cl
   assert.match(error, /msg\("traceIdSupportMessage", traceId\)/)
   assert.match(error, /<#if !skipLink\?\?>/)
   assert.match(error, /client\.clientId == "store-ops-admin-web"/)
+  assert.match(error, /!client\?\? && realm\.name == "store-ops"/)
   assert.match(error, /id="axis-error-login-return"[^>]*href="\/auth\/login"/)
   assert.match(error, /id="backToApplication" href="\$\{client\.baseUrl\}"/)
 })

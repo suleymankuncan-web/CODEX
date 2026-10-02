@@ -61,7 +61,10 @@ The 60-second provider window remains a usability constraint; increasing securit
 lifetimes or removing PAR is outside this fix. External entry/storage failure
 retains provider validation and a visible restart; other clients are unaffected.
 Native errors without a client base URL and callback provider errors also get an
-explicit application restart. Missing or mismatched callback state stays rejected.
+explicit application restart. An actually expired invitation can fail verification
+before Keycloak resolves its client; only client-less `store-ops` errors get the
+same safe entry link, still honoring skip-link and rejecting the old action.
+Missing or mismatched callback state stays rejected.
 Clean-page refresh carries only a sanitized, valid pending destination into a new
 state/verifier. Tests cover expiration without credential POST, new attempt login,
 wrong password crossing expiry, independent tabs, invitations and destination

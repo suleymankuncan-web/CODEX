@@ -15,6 +15,7 @@ postgres("V2 net incentive PostgreSQL boundaries", () => {
     await client.query("BEGIN"); await client.query(readFileSync(resolve(process.cwd(), `../../db/migrations/${file}`), "utf8"));
     await client.query("COMMIT");
   } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); } };
+  // Full schema and repeated migration setup can exceed Jest's default hook budget under CI load.
   beforeAll(async () => {
     const target = new URL(url!);
     if (target.hostname !== "127.0.0.1" || !["5432", "55437"].includes(target.port) || target.pathname !== "/postgres")
@@ -29,7 +30,7 @@ postgres("V2 net incentive PostgreSQL boundaries", () => {
     await pool.query(historicalMigration.slice(seedStart, seedEnd));
     await migrate("096_store_aware_kpi_returns_v2.sql");
     await migrate("097_incentive_net_sales_v2.sql"); await migrate("097_incentive_net_sales_v2.sql");
-  });
+  }, 30_000);
   afterAll(async () => { if (pool) await pool.end(); if (created) await admin.query(`DROP DATABASE ${name}`); if (admin) await admin.end(); });
 
   it("retains all rates and immutable historical net/version after reapplication", async () => {
