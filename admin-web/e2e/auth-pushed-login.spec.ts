@@ -80,3 +80,46 @@ test('a mismatched callback stays rejected instead of silently starting another 
   expect(observed.exchangeCount()).toBe(0)
   expect(observed.requests).toHaveLength(0)
 })
+
+test('refreshing the native clean address keeps the destination and completes a fresh handshake', async ({ page }) => {
+  await provider(page)
+  await page.goto('/auth/login?returnTo=%2Fstore%2Fme')
+  if (!direct) await page.locator('a.auth-login-primary').click()
+  await expect(page.getByRole('heading', { name: 'Provider sign in' })).toBeVisible()
+  const previous = await page.evaluate(() => JSON.parse(sessionStorage.getItem('store-ops-admin-pkce-login')!))
+  // The native-address helper is exercised separately against native POSTs.
+  await page.evaluate(() => history.replaceState(history.state, '', '/auth/login'))
+  await page.reload()
+  if (!direct) await page.locator('a.auth-login-primary').click()
+  await expect(page.getByRole('heading', { name: 'Provider sign in' })).toBeVisible()
+  const next = await page.evaluate(() => JSON.parse(sessionStorage.getItem('store-ops-admin-pkce-login')!))
+  expect(next.returnTo).toBe(direct ? '/store/me' : '/store')
+  expect(next.state).not.toBe(previous.state)
+  expect(next.codeVerifier).not.toBe(previous.codeVerifier)
+  // Hosted/manual entry has no masked native page and retains its default
+  // destination behavior; completion below belongs to the direct flow.
+  if (!direct) return
+  const scope = { companyIds: ['00000000-0000-0000-0000-000000000001'], regionIds: [], storeIds: [] }
+  const session = { authMode: 'jwt', authenticated: true, user: {
+    userId: '80000000-0000-0000-0000-000000000001', employeeId: null, roleCodes: ['HR_ADMIN'],
+    scope, readScope: scope, actionScope: { assignedStoreIds: [] }, assignedStoreIds: [],
+  }, scopeSummary: { companyCount: 1, regionCount: 0, storeCount: 0, assignedStoreCount: 0 } }
+  const issued = { csrfToken: 'synthetic-csrf', sessionId: 'synthetic-session', expiresAt: '2099-01-01T00:00:00Z', session }
+  await page.route('**/api/auth/browser-session/oidc', async (route) => {
+    expect(route.request().postDataJSON()).toMatchObject({ state: next.state, codeVerifier: next.codeVerifier })
+    await route.fulfill({ json: issued })
+  })
+  await page.route('**/api/auth/browser-session/csrf', (route) => route.fulfill({ json: issued }))
+  await page.route('**/api/auth/session', (route) => route.fulfill({ json: session }))
+  await page.goto(`/auth/callback?code=synthetic-code&state=${encodeURIComponent(next.state)}`)
+  await expect(page).toHaveURL(/\/store\/me$/)
+})
+
+test('a provider error has an explicit fresh-login recovery', async ({ page }) => {
+  await provider(page)
+  await page.goto('/auth/callback?error=temporarily_unavailable&error_description=Sign-in+expired')
+  await expect(page.getByText('Sign-in expired', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Kurumsal girişi yeniden başlat' }).click()
+  if (!direct) await page.locator('a.auth-login-primary').click()
+  await expect(page.getByRole('heading', { name: 'Provider sign in' })).toBeVisible()
+})

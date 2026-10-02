@@ -3,7 +3,7 @@ import type { AuthBootstrap } from './api'
 
 const api = vi.hoisted(() => ({ createManagedBrowserSession: vi.fn() }))
 vi.mock('../../lib/api', () => api)
-import { buildProviderLoginUrl, exchangeAuthorizationCodeForToken, UnavailablePkceLoginStateError } from './auth-flow'
+import { buildProviderLoginUrl, exchangeAuthorizationCodeForToken, readPendingLoginReturnPath, UnavailablePkceLoginStateError } from './auth-flow'
 
 const origin = 'https://axis.example.test'
 const reference = 'urn:ietf:params:oauth:request_uri:1234567890abcdefghijklmnopqrstuv'
@@ -24,7 +24,7 @@ beforeEach(() => {
       setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) },
   })
   vi.stubGlobal('fetch', fetchMock)
-  fetchMock.mockResolvedValue(new Response(JSON.stringify({ request_uri: reference, expires_in: 60 }), { status: 201 }))
+  fetchMock.mockImplementation(async () => new Response(JSON.stringify({ request_uri: reference, expires_in: 60 }), { status: 201 }))
 })
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); fetchMock.mockReset(); api.createManagedBrowserSession.mockReset() })
 
@@ -40,6 +40,8 @@ it('keeps the verifier in the same tab and redeems the callback through the mana
   expect(body.get('code_challenge_method')).toBe('S256')
   expect(body.has('code_verifier')).toBe(false)
   expect(saved.returnTo).toBe('/store/me')
+  expect(saved.authorizationExpiresAt).toBeGreaterThan(saved.createdAt)
+  expect(saved.authorizationExpiresAt).toBeLessThanOrEqual(saved.createdAt + 60_000)
   api.createManagedBrowserSession.mockResolvedValue({ sessionId: 'synthetic-session' })
   const result = await exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: saved.state, bootstrap })
   expect(api.createManagedBrowserSession).toHaveBeenCalledWith({ code: 'synthetic-code', state: saved.state,
@@ -64,8 +66,10 @@ it('rejects a slow PAR response after a newer same-tab login has replaced its ve
   await vi.waitFor(() => expect(finishFirst).toBeDefined())
   const second = await buildProviderLoginUrl({ bootstrap, returnTo: '/store/me' })
   expect(second).toContain('request_uri=')
+  const latest = storage.get('store-ops-admin-pkce-login')
   finishFirst!(new Response(JSON.stringify({ request_uri: reference, expires_in: 60 }), { status: 201 }))
   await rejected
+  expect(storage.get('store-ops-admin-pkce-login')).toBe(latest)
   expect(JSON.parse(storage.get('store-ops-admin-pkce-login')!).returnTo).toBe('/store/me')
 })
 
@@ -109,4 +113,50 @@ it('rejects stale same-tab callbacks without changing session lifetime', async (
   storage.set(key, JSON.stringify({ ...saved, createdAt: Date.now() - 11 * 60 * 1000 }))
   await expect(exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: saved.state, bootstrap })).rejects.toThrow('expired')
   expect(api.createManagedBrowserSession).not.toHaveBeenCalled()
+})
+
+it('preserves a native refresh destination while creating a fresh verifier and state', async () => {
+  await buildProviderLoginUrl({ bootstrap, returnTo: '/store/me' })
+  const previous = JSON.parse(storage.get('store-ops-admin-pkce-login')!)
+  const returnTo = readPendingLoginReturnPath()
+  expect(returnTo).toBe('/store/me')
+  expect(JSON.parse(storage.get('store-ops-admin-pkce-login')!)).toEqual(previous)
+  await buildProviderLoginUrl({ bootstrap, returnTo: returnTo! })
+  const next = JSON.parse(storage.get('store-ops-admin-pkce-login')!)
+  expect(next.returnTo).toBe('/store/me')
+  expect(next.state).not.toBe(previous.state)
+  expect(next.codeVerifier).not.toBe(previous.codeVerifier)
+})
+
+it.each([
+  { createdAt: Date.now() - 11 * 60 * 1000 },
+  { createdAt: Date.now() + 60_000 },
+  { createdAt: null },
+  { state: null },
+  { codeVerifier: '' },
+  { returnTo: '//outside.example/path' },
+  { returnTo: '/auth/callback?code=old-code' },
+])('ignores an invalid pending destination: %j', async (overrides) => {
+  await buildProviderLoginUrl({ bootstrap, returnTo: '/store/me' })
+  const key = 'store-ops-admin-pkce-login'
+  storage.set(key, JSON.stringify({ ...JSON.parse(storage.get(key)!), ...overrides }))
+  expect(readPendingLoginReturnPath()).toBeNull()
+})
+
+it('tolerates absent, malformed or restricted storage while checking the pending destination', () => {
+  expect(readPendingLoginReturnPath()).toBeNull()
+  storage.set('store-ops-admin-pkce-login', 'not-json')
+  expect(readPendingLoginReturnPath()).toBeNull()
+  vi.spyOn(window.sessionStorage, 'getItem').mockImplementation(() => { throw new Error('Storage restricted') })
+  expect(readPendingLoginReturnPath()).toBeNull()
+})
+
+it('does not use the presentation deadline to reject a valid PKCE callback', async () => {
+  await buildProviderLoginUrl({ bootstrap })
+  const key = 'store-ops-admin-pkce-login'
+  const saved = JSON.parse(storage.get(key)!)
+  storage.set(key, JSON.stringify({ ...saved, authorizationExpiresAt: Date.now() - 1000 }))
+  api.createManagedBrowserSession.mockResolvedValue({ sessionId: 'synthetic-session' })
+  await exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: saved.state, bootstrap })
+  expect(api.createManagedBrowserSession).toHaveBeenCalledTimes(1)
 })

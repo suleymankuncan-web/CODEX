@@ -34,8 +34,8 @@ Do not use when: inferring live deployment or selecting a branch from old PR not
   through #1165. LUFIAN heading, document-date regional manager, handwritten store
   manager, retained historical template/score and mobile session-dismissal fixes
   remain.
-- Hosted Clerk and private Keycloak share the approved login shell; their auth
-  behavior stays separate. [Login contract](docs/plans/keycloak-login-studio-v1.md).
+- Clerk/Keycloak auth stays separate: [shell](docs/plans/keycloak-login-studio-v1.md),
+  [address/setup](docs/plans/keycloak-clean-login-address-v1.md).
 
 ## Next
 

@@ -24,7 +24,11 @@ describe('short PAR login', () => {
 
   it('posts the unchanged PKCE request and navigates with only the client and reference', async () => {
     const original = authorization()
-    const result = new URL(await buildPushedAuthorizationLoginUrl(original))
+    const started = Date.now()
+    const pushed = await buildPushedAuthorizationLoginUrl(original)
+    const result = new URL(pushed.url)
+    expect(pushed.expiresAt).toBeGreaterThanOrEqual(started + 55000)
+    expect(pushed.expiresAt).toBeLessThanOrEqual(Date.now() + 55000)
     expect(result.origin).toBe(origin)
     expect(result.pathname).toBe('/realms/store-ops/protocol/openid-connect/auth')
     expect([...result.searchParams.keys()]).toEqual(['client_id', 'request_uri'])
@@ -82,6 +86,18 @@ describe('short PAR login', () => {
     const assertion = expect(buildPushedAuthorizationLoginUrl(authorization())).rejects.toThrow('aborted')
     await vi.advanceTimersByTimeAsync(15000)
     await assertion
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('rejects a reference whose usable lifetime was consumed by transport', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2500))
+      return new Response(JSON.stringify({ request_uri: reference, expires_in: 2 }), { status: 201 })
+    })
+    const rejected = expect(buildPushedAuthorizationLoginUrl(authorization())).rejects.toThrow('expired before navigation')
+    await vi.advanceTimersByTimeAsync(2500)
+    await rejected
     expect(vi.getTimerCount()).toBe(0)
   })
 })

@@ -8,6 +8,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f8fa">
   <title>Axis Lufian</title>
+  <#if (pageId == "login" || pageId == "error") && client?? && client.clientId == "store-ops-admin-web">
+    <script src="${url.resourcesPath}/js/login-address.js"></script>
+    <#if pageId == "login"><script src="${url.resourcesPath}/js/login-expiry.js" defer></script></#if>
+  </#if>
   <link rel="icon" type="image/png" href="${url.resourcesPath}/img/axis-lufian-favicon.png">
   <script>
     // Continue the same presentation timeline after the React handoff.
@@ -113,6 +117,13 @@
             </#if>
             <#-- The inherited form owns loginAction, credentialId, field errors, rememberMe, reset and passkeys. -->
             <#nested "form">
+            <#if pageId == "login" && client?? && client.clientId == "store-ops-admin-web">
+              <div id="axis-login-expired" class="axis-message axis-message-warning" role="alert" hidden>
+                <p>${msg("axisLoginExpired")}</p>
+                <a class="axis-button axis-primary axis-login-return" href="/auth/login">${msg("axisRestartLogin")}</a>
+              </div>
+              <a id="axis-login-restart" class="axis-login-restart" href="/auth/login">${msg("axisRestartLogin")}</a>
+            </#if>
             <span id="axis-caps-lock" class="field-error" role="status" hidden>${msg("axisCapsLock")}</span>
             <#if auth?has_content && auth.showTryAnotherWayLink()>
               <form id="kc-select-try-another-way-form" action="${url.loginAction}" method="post">
