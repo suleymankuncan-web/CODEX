@@ -4,6 +4,7 @@ import type { AuthBootstrap } from './api'
 const api = vi.hoisted(() => ({ createManagedBrowserSession: vi.fn() }))
 vi.mock('../../lib/api', () => api)
 import { buildProviderLoginUrl, exchangeAuthorizationCodeForToken, readPendingLoginReturnPath, UnavailablePkceLoginStateError } from './auth-flow'
+import { BrowserLoginUnavailableError } from '../../lib/browser-login-error'
 
 const origin = 'https://axis.example.test'
 const reference = 'urn:ietf:params:oauth:request_uri:1234567890abcdefghijklmnopqrstuv'
@@ -158,5 +159,35 @@ it('does not use the presentation deadline to reject a valid PKCE callback', asy
   storage.set(key, JSON.stringify({ ...saved, authorizationExpiresAt: Date.now() - 1000 }))
   api.createManagedBrowserSession.mockResolvedValue({ sessionId: 'synthetic-session' })
   await exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: saved.state, bootstrap })
+  expect(api.createManagedBrowserSession).toHaveBeenCalledTimes(1)
+})
+
+it('does not contact the provider when the PKCE verifier cannot be saved', async () => {
+  vi.spyOn(window.sessionStorage, 'setItem').mockImplementation(() => { throw new DOMException('Restricted', 'SecurityError') })
+  await expect(buildProviderLoginUrl({ bootstrap })).rejects.toBeInstanceOf(BrowserLoginUnavailableError)
+  expect(fetchMock).not.toHaveBeenCalled()
+  expect(api.createManagedBrowserSession).not.toHaveBeenCalled()
+})
+
+it('a blocked storage getter stops the callback without exchange or automatic recovery', async () => {
+  Object.defineProperty(window, 'sessionStorage', { configurable: true, get: () => { throw new DOMException('Restricted', 'SecurityError') } })
+  const error = await exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: 'expected-state', bootstrap }).catch((error: unknown) => error)
+  expect(error).toBeInstanceOf(BrowserLoginUnavailableError)
+  expect(error).not.toBeInstanceOf(UnavailablePkceLoginStateError)
+  expect(api.createManagedBrowserSession).not.toHaveBeenCalled()
+})
+
+it.each(['null', '[]', '"unexpected"', '{"codeVerifier":"private-verifier",bad'])('rejects malformed stored state without revealing its contents: %s', async (raw) => {
+  storage.set('store-ops-admin-pkce-login', raw)
+  await expect(exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: 'expected-state', bootstrap })).rejects.toThrow('PKCE login state is invalid')
+  expect(api.createManagedBrowserSession).not.toHaveBeenCalled()
+})
+
+it('does not report a completed exchange as usable when the verifier cannot be cleared', async () => {
+  await buildProviderLoginUrl({ bootstrap })
+  const saved = JSON.parse(storage.get('store-ops-admin-pkce-login')!)
+  api.createManagedBrowserSession.mockResolvedValue({ sessionId: 'synthetic-session' })
+  vi.spyOn(window.sessionStorage, 'removeItem').mockImplementation(() => { throw new DOMException('Restricted', 'SecurityError') })
+  await expect(exchangeAuthorizationCodeForToken({ code: 'synthetic-code', state: saved.state, bootstrap })).rejects.toBeInstanceOf(BrowserLoginUnavailableError)
   expect(api.createManagedBrowserSession).toHaveBeenCalledTimes(1)
 })

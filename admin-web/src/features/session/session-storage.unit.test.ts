@@ -88,6 +88,29 @@ describe('readClientSession', () => {
 })
 
 describe('cookie session reload readiness', () => {
+  it('does not recover bearer credentials from an unavailable preference store', async () => {
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_AUTH_MODE', 'bearer')
+    vi.stubEnv('VITE_BROWSER_SESSION_TRANSPORT', 'bearer')
+    const { defaultSession, persistClientSession, readClientSession, isSessionReady } = await import('./session-storage')
+    vi.stubGlobal('window', { get localStorage() { throw new DOMException('Restricted', 'SecurityError') }, sessionStorage: new MemoryStorage() })
+    expect(() => persistClientSession({ ...defaultSession, bearerToken: 'synthetic-token' })).not.toThrow()
+    expect(readClientSession().bearerToken).toBe('')
+    expect(isSessionReady(readClientSession())).toBe(false)
+  })
+  it('does not crash a verified cookie session when the optional local reload hint cannot be saved', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'bearer')
+    vi.stubEnv('VITE_BROWSER_SESSION_TRANSPORT', 'cookie')
+    const { defaultSession, persistClientSession, isSessionReady, readClientSession, writeBrowserSessionCsrfToken } = await import('./session-storage')
+    vi.stubGlobal('window', { get localStorage() { throw new DOMException('Restricted', 'SecurityError') }, sessionStorage: new MemoryStorage() })
+    const session = { ...defaultSession, browserSessionKey: 'non-secret-cache-key' }
+    expect(() => persistClientSession(session)).not.toThrow()
+    expect(isSessionReady(readClientSession())).toBe(false)
+    writeBrowserSessionCsrfToken('server-recovered-nonce')
+    expect(isSessionReady(readClientSession())).toBe(true)
+    writeBrowserSessionCsrfToken('')
+    expect(isSessionReady(readClientSession())).toBe(false)
+  })
   it('requires a recovered in-memory nonce even when a persisted cache key exists', async () => {
     vi.stubEnv('VITE_AUTH_MODE', 'bearer')
     vi.stubEnv('VITE_BROWSER_SESSION_TRANSPORT', 'cookie')

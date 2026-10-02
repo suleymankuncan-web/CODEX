@@ -2,6 +2,7 @@ import { ApiError } from './api-error'
 import { apiErrorFromResponse, assertApiRateLimitReady } from './api-rate-limit'
 import { isSameOriginApi } from './api-session-recovery'
 import type { BrowserSessionCreateResponse } from './api'
+import { BrowserLoginUnavailableError } from './browser-login-error'
 
 // Initial same-origin recovery returns a nonce to the owning session transition.
 // It does not mutate CSRF memory before that transition confirms it is current.
@@ -32,5 +33,10 @@ export async function establishManagedBrowserSession(apiBaseUrl: string, input: 
     typeof payload.expiresAt !== 'string' || !Number.isFinite(Date.parse(payload.expiresAt)) ||
     !payload.session || typeof payload.session !== 'object' || !('authenticated' in payload.session) ||
     payload.session.authenticated !== true) throw new ApiError(503, 'Login response is unavailable')
+  // A successful exchange does not prove the browser accepted the new cookie.
+  // Confirm its nonce before entering protected pages, including when an older
+  // account's cookie is still present. Never replay the exchange on this failure.
+  const nonce = await recoverManagedBrowserSession(apiBaseUrl, AbortSignal.timeout(15_000))
+  if (!nonce || nonce !== payload.csrfToken) throw new BrowserLoginUnavailableError('cookie')
   return payload
 }

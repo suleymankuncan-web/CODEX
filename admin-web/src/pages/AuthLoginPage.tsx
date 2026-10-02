@@ -9,6 +9,7 @@ import { AuthLoginStudio } from '../features/auth/auth-login-studio'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLoginActions, type ClerkLoginShellMode } from '../features/auth/clerk-session'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
+import { BrowserLoginUnavailableError } from '../lib/browser-login-error'
 import { useLocalization } from '../features/localization/useLocalization'
 
 export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
@@ -57,14 +58,15 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setProviderLogin({ url: null, error: error instanceof Error ? error.message : String(error) })
+          setProviderLogin({ url: null, error: error instanceof BrowserLoginUnavailableError
+            ? t('authFlow.browserStorageUnavailable') : t('authFlow.loginTemporarilyUnavailable') })
         }
       })
 
     return () => {
       cancelled = true
     }
-  }, [bootstrapQuery.data, clerkReady, returnTo])
+  }, [bootstrapQuery.data, clerkReady, returnTo, t])
 
   useEffect(() => {
     // The on-premises Keycloak page contains the complete sign-in form.
@@ -76,7 +78,7 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
   if (directOidcLogin) {
     const failed = Boolean(providerLogin.error) || bootstrapQuery.isError ||
       (!bootstrapQuery.isPending && !providerReady)
-    return <AuthLoginTransition failed={failed} />
+    return <AuthLoginTransition failed={failed} {...(providerLogin.error ? { failureCopy: providerLogin.error } : {})} />
   }
 
   if (clerkReady) {
@@ -108,15 +110,15 @@ export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
                 {t('authFlow.loginTitle')}
               </a>
             ) : (
-              <button className="auth-login-primary" type="button" disabled>
-                {providerLoading ? t('authFlow.loginPreparing') : t('authFlow.loginUnavailableButton')}
+              <button className="auth-login-primary" type="button" disabled={!providerLogin.error} onClick={() => window.location.reload()}>
+                {providerLogin.error ? t('authFlow.retrySignIn') : providerLoading ? t('authFlow.loginPreparing') : t('authFlow.loginUnavailableButton')}
               </button>
             )}
           </div>
 
           {providerLogin.error || !providerReady ? (
             <p className="auth-login-message" role={providerLogin.error ? 'alert' : undefined}>
-              {t('authFlow.loginTemporarilyUnavailable')}
+              {providerLogin.error ?? t('authFlow.loginTemporarilyUnavailable')}
             </p>
           ) : null}
         </section>

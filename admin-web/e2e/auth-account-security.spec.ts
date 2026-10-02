@@ -97,3 +97,47 @@ test('unavailable metadata offers recovery without enabling a password command',
   await expect(page.getByText('Henüz doğrulanmadı', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Bağlantı gönder', exact: true })).toBeEnabled()
 })
+
+test('a limited link request reports the wait and retries explicitly with the original request identifier', async ({ page }) => {
+  await page.clock.install()
+  await setup(page)
+  const bodies: Array<{ requestId: string; kind: string }> = []
+  await page.route('**/api/auth/users/*/password-links', route => {
+    const body = route.request().postDataJSON() as { requestId: string; kind: string }
+    bodies.push(body)
+    return route.fulfill(bodies.length === 1 ? { status: 429, headers: { 'Retry-After': '2' }, json: { message: 'Rate limit exceeded' } } : { status: 201, json: { requestId: body.requestId, state: 'queued' } })
+  })
+  await page.goto('/admin/auth')
+  await page.getByRole('tab', { name: 'Hesap ve güvenlik' }).click()
+  await page.getByRole('button', { name: 'Bağlantı gönder', exact: true }).click()
+  await expect(page.locator('[data-sonner-toast]')).toContainText('Kısa sürede çok fazla işlem yapıldı.')
+  await page.getByRole('button', { name: 'İsteği yeniden dene', exact: true }).click()
+  expect(bodies).toHaveLength(1)
+  await page.clock.fastForward(3000)
+  expect(bodies).toHaveLength(1)
+  await page.getByRole('button', { name: 'İsteği yeniden dene', exact: true }).click()
+  await expect(page.getByText('Bağlantı isteği kuyruğa alındı.')).toBeVisible()
+  expect(bodies).toHaveLength(2)
+  expect(bodies[1]).toEqual(bodies[0])
+})
+
+test('pending and inactive-account handlers cannot issue duplicate password links', async ({ page }) => {
+  await setup(page)
+  let writes = 0
+  let release = () => {}
+  const held = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/api/auth/users/*/password-links', async route => { writes += 1; await held; await route.fulfill({ status: 201, json: { requestId: route.request().postDataJSON().requestId, state: 'queued' } }) })
+  await page.goto('/admin/auth')
+  await page.getByRole('tab', { name: 'Hesap ve güvenlik' }).click()
+  try {
+    await page.getByRole('button', { name: 'Bağlantı gönder', exact: true }).click()
+    await expect.poll(() => writes).toBe(1)
+    await page.getByRole('button', { name: 'İşleniyor', exact: true }).dispatchEvent('click')
+    expect(writes).toBe(1)
+  } finally { release() }
+  await expect(page.getByText('Bağlantı isteği kuyruğa alındı.')).toBeVisible()
+  await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /Ece Demir/ }).click()
+  await page.getByRole('tab', { name: 'Hesap ve güvenlik' }).click()
+  await page.getByRole('button', { name: 'Bağlantı gönder', exact: true }).dispatchEvent('click')
+  expect(writes).toBe(1)
+})

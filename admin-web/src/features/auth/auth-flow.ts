@@ -2,6 +2,7 @@ import { createManagedBrowserSession } from '../../lib/api'
 import type { AuthBootstrap } from './api'
 import { sanitizeAuthReturnPath } from './return-path'
 import { buildPushedAuthorizationLoginUrl } from './pushed-authorization'
+import { BrowserLoginUnavailableError } from '../../lib/browser-login-error'
 
 const DEFAULT_CALLBACK_PATH = '/auth/callback'
 const DEFAULT_LOGOUT_PATH = '/auth/login'
@@ -215,7 +216,7 @@ export async function exchangeAuthorizationCodeForToken(input: {
   if (input.bootstrap?.provider.managedBrowserSession) {
     const browserSession = await createManagedBrowserSession({ code: input.code, state: pkceState.state,
       codeVerifier: pkceState.codeVerifier, redirectUri: callbackUrl })
-    window.sessionStorage.removeItem(PKCE_STORAGE_KEY)
+    clearPkceLoginState()
     return { accessToken: '', idToken: null, browserSession, returnTo: pkceState.returnTo ?? '/' }
   }
   const body = new URLSearchParams({
@@ -248,7 +249,7 @@ export async function exchangeAuthorizationCodeForToken(input: {
     throw new Error('Token endpoint did not return an access_token')
   }
 
-  window.sessionStorage.removeItem(PKCE_STORAGE_KEY)
+  clearPkceLoginState()
   return {
     accessToken,
     idToken,
@@ -302,7 +303,19 @@ async function createPkceLoginState(returnTo: string | null) {
 }
 
 function savePkceLoginState(storageValue: PkceLoginState) {
-  window.sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify(storageValue))
+  try {
+    window.sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify(storageValue))
+  } catch {
+    throw new BrowserLoginUnavailableError('storage')
+  }
+}
+
+function clearPkceLoginState() {
+  try {
+    window.sessionStorage.removeItem(PKCE_STORAGE_KEY)
+  } catch {
+    throw new BrowserLoginUnavailableError('storage')
+  }
 }
 
 function readPkceLoginState(state: string | null): PkceLoginState {
@@ -310,7 +323,12 @@ function readPkceLoginState(state: string | null): PkceLoginState {
     throw new Error('PKCE callback requires a browser session')
   }
 
-  const raw = window.sessionStorage.getItem(PKCE_STORAGE_KEY)
+  let raw: string | null
+  try {
+    raw = window.sessionStorage.getItem(PKCE_STORAGE_KEY)
+  } catch {
+    throw new BrowserLoginUnavailableError('storage')
+  }
   if (!raw) {
     throw new UnavailablePkceLoginStateError('PKCE login state is missing')
   }
@@ -318,7 +336,14 @@ function readPkceLoginState(state: string | null): PkceLoginState {
     throw new Error('PKCE login state is invalid')
   }
 
-  const parsed = JSON.parse(raw) as Partial<PkceLoginState>
+  let parsed: Partial<PkceLoginState>
+  try {
+    const value: unknown = JSON.parse(raw)
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid state')
+    parsed = value as Partial<PkceLoginState>
+  } catch {
+    throw new Error('PKCE login state is invalid')
+  }
 
   if (
     parsed.state !== state ||

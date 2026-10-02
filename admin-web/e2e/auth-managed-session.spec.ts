@@ -70,6 +70,7 @@ test('managed PKCE retries confirmation without consuming local state or exposin
     await route.fulfill(exchanges === 1 ? { status: 503, json: { message: 'temporary' } } : { json: issued })
   })
   await page.route('**/api/auth/session', (route) => route.fulfill({ json: auth }))
+  await page.route('**/api/auth/browser-session/csrf', (route) => route.fulfill({ json: issued }))
   await page.goto(`/auth/callback?code=synthetic-code&state=${state}`)
   await expect(page.getByRole('button', { name: 'Yeniden dene' })).toBeVisible()
   expect((await page.getByRole('button', { name: 'Yeniden dene' }).boundingBox())!.height).toBeGreaterThanOrEqual(44)

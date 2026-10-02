@@ -1,7 +1,8 @@
 import { resolveUserDisplayLabel } from '../lib/display-labels'
 import { AccountSecurityTabs } from '../features/auth/AccountSecurityTabs'
 import { accountTimestamp } from '../features/auth/account-security-format'
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { getRateLimitErrorMessage } from '../lib/api-rate-limit'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Building2,
@@ -90,6 +91,8 @@ export function AuthManagementPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [storeOpen, setStoreOpen] = useState(false)
+  const storeAccessBusy = useRef(false)
+  const roleRemovalBusy = useRef(false)
   const [capabilityOpen, setCapabilityOpen] = useState(false)
   const [capabilityRevoke, setCapabilityRevoke] = useState<{ assignmentId: string; permissionCode: string } | null>(null)
   const renderedAt = useClock(60_000)
@@ -174,16 +177,31 @@ export function AuthManagementPage() {
     mutationFn: deactivateRoleAssignment,
     onSuccess: async () => { await invalidate(); actionToast.success('Rol ataması kaldırıldı.') },
     onError: (error) => actionToast.error(error, 'Rol ataması kaldırılamadı.'),
+    onSettled: () => { roleRemovalBusy.current = false },
   })
   const createStoreMutation = useMutation({
     mutationFn: (input: { userId: string; storeIds: string[] }) => createActionStoreAssignmentsBatch(input),
-    onSuccess: async () => { await invalidate(); setStoreOpen(false); actionToast.success('Mağaza erişimi eklendi.') },
-    onError: async (error) => { await invalidate(); actionToast.error(error, 'Bazı mağaza erişimleri eklenemedi. Güncel listeyi kontrol edin.') },
+    onSuccess: async (_response, input) => {
+      await queryClient.invalidateQueries({ queryKey: ['auth-management', 'store-assignments', input.userId], exact: true })
+      setStoreOpen(false); actionToast.success('Mağaza erişimi eklendi.')
+    },
+    onError: async (error, input) => {
+      if (!getRateLimitErrorMessage(error)) await queryClient.invalidateQueries({ queryKey: ['auth-management', 'store-assignments', input.userId], exact: true })
+      actionToast.error(error, 'Bazı mağaza erişimleri eklenemedi. Güncel listeyi kontrol edin.')
+    },
+    onSettled: () => { storeAccessBusy.current = false },
   })
   const removeStoreMutation = useMutation({
-    mutationFn: deactivateActionStoreAssignment,
-    onSuccess: async () => { await invalidate(); actionToast.success('Mağaza erişimi kaldırıldı.') },
-    onError: (error) => actionToast.error(error, 'Mağaza erişimi kaldırılamadı.'),
+    mutationFn: ({ assignmentId }: { assignmentId: string; userId: string }) => deactivateActionStoreAssignment(assignmentId),
+    onSuccess: async (_response, input) => {
+      await queryClient.invalidateQueries({ queryKey: ['auth-management', 'store-assignments', input.userId], exact: true })
+      actionToast.success('Mağaza erişimi kaldırıldı.')
+    },
+    onError: async (error, input) => {
+      if (!getRateLimitErrorMessage(error)) await queryClient.invalidateQueries({ queryKey: ['auth-management', 'store-assignments', input.userId], exact: true })
+      actionToast.error(error, 'Mağaza erişimi kaldırılamadı.')
+    },
+    onSettled: () => { storeAccessBusy.current = false },
   })
   const grantCapabilityMutation = useMutation({
     mutationFn: grantUserPermission,
@@ -200,6 +218,22 @@ export function AuthManagementPage() {
     onSuccess: async () => { await invalidate(); setPermissionAction(null); actionToast.success('Rol yetkileri güncellendi.') },
     onError: (error) => actionToast.error(error, 'Yetki güncellenemedi.'),
   })
+
+  const removeStoreAssignment = (assignmentId: string) => {
+    if (storeAccessBusy.current || createStoreMutation.isPending || storeAssignmentsUnavailable || !selectedUser) return
+    storeAccessBusy.current = true
+    removeStoreMutation.mutate({ assignmentId, userId: selectedUser.userId })
+  }
+  const removeRoleAssignment = (assignmentId: string) => {
+    if (roleRemovalBusy.current || createRoleMutation.isPending || roleAssignmentsUnavailable) return
+    roleRemovalBusy.current = true
+    removeRoleMutation.mutate(assignmentId)
+  }
+  const assignStores = (input: { userId: string; storeIds: string[] }) => {
+    if (storeAccessBusy.current || removeStoreMutation.isPending || lookupsUnavailable || storeAssignmentsUnavailable || input.userId !== selectedUser?.userId) return
+    storeAccessBusy.current = true
+    createStoreMutation.mutate(input)
+  }
 
   return (
     <AdminSurfacePage ariaLabel="Erişim yönetimi" className="tw:max-w-none tw:gap-5 tw:font-sans">
@@ -285,17 +319,17 @@ export function AuthManagementPage() {
               <AccountSecurityTabs key={selectedUser.userId} user={selectedUser}>
               <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-5 tw:xl:grid-cols-2">
                 {lookupsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void lookupsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} className="tw:xl:col-span-2" description="Rol ve mağaza seçenekleri alınamadığı için yeni atamalar geçici olarak kapalı." tone="danger" title="Atama seçenekleri alınamadı" /> : null}
-                <AccessBlock icon={<Shield aria-hidden="true" />} title="Roller" action={<Button disabled={roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setRoleOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Rol ekle</Button>}>
+                <AccessBlock icon={<Shield aria-hidden="true" />} title="Roller" action={<Button disabled={roleAssignmentsUnavailable || lookupsUnavailable || removeRoleMutation.isPending || createRoleMutation.isPending} onClick={() => setRoleOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Rol ekle</Button>}>
                   {roleAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Roller yükleniyor" /> : roleAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void roleAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Roller alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (roleAssignmentsQuery.data?.items ?? []).length ? roleAssignmentsQuery.data?.items.map((assignment) => (
                     <div key={assignment.assignmentId}>
-                       <AccessRow label={roleDisplayName(assignment)} meta={scopeLabel(assignment)} onRemove={() => removeRoleMutation.mutate(assignment.assignmentId)} />
+                       <AccessRow label={roleDisplayName(assignment)} meta={scopeLabel(assignment)} disabled={removeRoleMutation.isPending || createRoleMutation.isPending || roleAssignmentsUnavailable} pending={removeRoleMutation.isPending && removeRoleMutation.variables === assignment.assignmentId} onRemove={() => removeRoleAssignment(assignment.assignmentId)} />
                        {assignment.incentiveApproval ? <div className="tw:px-3 tw:pb-4"><p className="tw:text-xs tw:font-semibold tw:text-amber-700">Eski prim final onayı · yalnız kaldırılabilir</p><IncentiveApprovalCheckbox checked disabled={legacyIncentiveApprovalMutation.isPending} onChange={(enabled) => !enabled && legacyIncentiveApprovalMutation.mutate(assignment.assignmentId)} /></div> : null}
                     </div>
                   )) : <EmptyAccess copy="Rol ataması yok" />}
                 </AccessBlock>
-                 <AccessBlock icon={<Building2 aria-hidden="true" />} title="Mağaza erişimi" action={<Button disabled={storeAssignmentsUnavailable || lookupsUnavailable} onClick={() => setStoreOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Mağaza ekle</Button>}>
-                  {storeAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Mağaza erişimi yükleniyor" /> : storeAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void storeAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Mağaza erişimi alınamadı" description="Bağlantınızı kontrol edip yeniden deneyin." /> : (storeAssignmentsQuery.data?.items ?? []).length ? storeAssignmentsQuery.data?.items.map((assignment) => (
-                    <AccessRow key={assignment.assignmentId} label={assignment.storeName} meta={assignment.storeCode} onRemove={() => removeStoreMutation.mutate(assignment.assignmentId)} />
+                 <AccessBlock icon={<Building2 aria-hidden="true" />} title="Mağaza erişimi" action={<Button disabled={storeAssignmentsUnavailable || lookupsUnavailable || removeStoreMutation.isPending || createStoreMutation.isPending} onClick={() => setStoreOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Mağaza ekle</Button>}>
+                  {storeAssignmentsQuery.isLoading ? <AdminStatePanel isLoading title="Mağaza erişimi yükleniyor" /> : storeAssignmentsQuery.isError ? <AdminStatePanel action={<Button onClick={() => void storeAssignmentsQuery.refetch()} size="sm" variant="outline">Yeniden dene</Button>} tone="danger" title="Mağaza erişimi alınamadı" description={getRateLimitErrorMessage(storeAssignmentsQuery.error) ?? 'Bağlantınızı kontrol edip yeniden deneyin.'} /> : (storeAssignmentsQuery.data?.items ?? []).length ? storeAssignmentsQuery.data?.items.map((assignment) => (
+                    <AccessRow key={assignment.assignmentId} label={assignment.storeName} meta={assignment.storeCode} disabled={removeStoreMutation.isPending || createStoreMutation.isPending || storeAssignmentsUnavailable} pending={removeStoreMutation.isPending && removeStoreMutation.variables?.assignmentId === assignment.assignmentId} onRemove={() => removeStoreAssignment(assignment.assignmentId)} />
                   )) : <EmptyAccess copy="Doğrudan mağaza erişimi yok" />}
                  </AccessBlock>
                  <AccessBlock icon={<KeyRound aria-hidden="true" />} title="Kişisel yetkiler" action={<Button disabled={capabilityAssignmentsUnavailable || roleAssignmentsUnavailable || lookupsUnavailable} onClick={() => setCapabilityOpen(true)} size="sm" variant="outline"><Plus aria-hidden="true" /> Yetki ekle</Button>}>
@@ -331,8 +365,8 @@ export function AuthManagementPage() {
 
       <CreateUserDialog key={createOpen ? 'open' : 'closed'} open={createOpen} onOpenChange={setCreateOpen} onSave={(draft) => createUserMutation.mutate(draft)} pending={createUserMutation.isPending} />
       {selectedUser ? <EditUserDialog key={`${selectedUser.userId}-${editOpen ? 'open' : 'closed'}`} user={selectedUser} open={editOpen} onOpenChange={setEditOpen} onSave={(changes) => updateUserMutation.mutate({ userId: selectedUser.userId, changes })} pending={updateUserMutation.isPending} /> : null}
-      <RoleAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${roleOpen ? 'open' : 'closed'}`} open={roleOpen} onOpenChange={setRoleOpen} roles={lookupsQuery.data?.roles ?? []} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createRoleMutation.mutate(draft)} pending={createRoleMutation.isPending} unavailable={roleAssignmentsUnavailable || lookupsUnavailable} unavailableByError={roleAssignmentsQuery.isError || lookupsQuery.isError} />
-      <StoreAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${storeOpen ? 'open' : 'closed'}`} assignedStoreIds={(storeAssignmentsQuery.data?.items ?? []).map((item) => item.storeId)} open={storeOpen} onOpenChange={setStoreOpen} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createStoreMutation.mutate(draft)} pending={createStoreMutation.isPending} unavailable={storeAssignmentsUnavailable || lookupsUnavailable} unavailableByError={storeAssignmentsQuery.isError || lookupsQuery.isError} />
+      <RoleAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${roleOpen ? 'open' : 'closed'}`} open={roleOpen} onOpenChange={setRoleOpen} roles={lookupsQuery.data?.roles ?? []} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={(draft) => createRoleMutation.mutate(draft)} pending={createRoleMutation.isPending} unavailable={roleAssignmentsUnavailable || lookupsUnavailable || removeRoleMutation.isPending} unavailableByError={roleAssignmentsQuery.isError || lookupsQuery.isError} />
+      <StoreAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${storeOpen ? 'open' : 'closed'}`} assignedStoreIds={(storeAssignmentsQuery.data?.items ?? []).map((item) => item.storeId)} open={storeOpen} onOpenChange={setStoreOpen} stores={lookupsQuery.data?.stores ?? []} user={selectedUser} onSave={assignStores} pending={createStoreMutation.isPending} unavailable={storeAssignmentsUnavailable || lookupsUnavailable} unavailableByError={storeAssignmentsQuery.isError || lookupsQuery.isError} />
       <CapabilityAssignmentDialog key={`${selectedUser?.userId ?? 'none'}-${capabilityOpen ? 'open' : 'closed'}`} open={capabilityOpen} onOpenChange={setCapabilityOpen} roleAssignments={roleAssignmentsQuery.data?.items ?? []} roles={rolesQuery.data?.items ?? []} permissions={permissionsQuery.data?.items ?? []} user={selectedUser} onSave={(draft) => grantCapabilityMutation.mutate(draft)} pending={grantCapabilityMutation.isPending} />
       <CapabilityRevokeDialog key={capabilityRevoke?.assignmentId ?? 'closed'} assignment={capabilityRevoke} onOpenChange={(open) => !open && setCapabilityRevoke(null)} onConfirm={(reason) => capabilityRevoke && revokeCapabilityMutation.mutate({ assignmentId: capabilityRevoke.assignmentId, reason })} pending={revokeCapabilityMutation.isPending} />
       <ConfirmDialog open={Boolean(accountAction)} title={accountAction?.isActive ? 'Hesap devre dışı bırakılsın mı?' : 'Hesap yeniden etkinleştirilsin mi?'} copy={accountAction?.isActive ? 'Aktif rol, mağaza erişimi ve mobil oturumlar kapatılır.' : 'Hesap açılır; eski rol ve mağaza atamaları otomatik geri gelmez.'} confirmLabel={accountAction?.isActive ? 'Devre dışı bırak' : 'Etkinleştir'} onOpenChange={(open) => !open && setAccountAction(null)} onConfirm={() => accountAction && accountMutation.mutate(accountAction)} pending={accountMutation.isPending} />
@@ -399,8 +433,8 @@ function AccessBlock({ action, children, icon, title }: { action: React.ReactNod
   return <section className="tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-background"><header className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:border-b tw:border-border tw:p-3.5"><div className="tw:flex tw:items-center tw:gap-2 tw:font-semibold tw:text-foreground">{icon}{title}</div>{action}</header><div className="tw:divide-y tw:divide-border">{children}</div></section>
 }
 
-function AccessRow({ label, meta, onRemove }: { label: string; meta: string; onRemove?: () => void }) {
-  return <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:p-3"><div><div className="tw:text-sm tw:font-medium">{label}</div><div className="tw:text-xs tw:text-muted-foreground">{meta}</div></div>{onRemove ? <Button onClick={onRemove} size="sm" variant="ghost">Kaldır</Button> : null}</div>
+function AccessRow({ label, meta, onRemove, disabled = false, pending = false }: { label: string; meta: string; onRemove?: () => void; disabled?: boolean; pending?: boolean }) {
+  return <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:p-3"><div><div className="tw:text-sm tw:font-medium">{label}</div><div className="tw:text-xs tw:text-muted-foreground">{meta}</div></div>{onRemove ? <Button disabled={disabled} aria-busy={pending} onClick={onRemove} size="sm" variant="ghost">{pending ? 'Kaldırılıyor' : 'Kaldır'}</Button> : null}</div>
 }
 
 function EmptyAccess({ copy }: { copy: string }) { return <div className="tw:p-4 tw:text-sm tw:text-muted-foreground">{copy}</div> }
@@ -534,7 +568,8 @@ function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, u
   const assigned = new Set(assignedStoreIds)
   const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
   const filteredStores = stores.filter((store) => !normalizedQuery || `${store.storeName} ${store.storeCode}`.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
-  const selectedStores = selectedStoreIds.map((storeId) => stores.find((store) => store.storeId === storeId)).filter((store): store is (typeof stores)[number] => Boolean(store))
+  const actionableStoreIds = selectedStoreIds.filter(storeId => !assigned.has(storeId) && stores.some(store => store.storeId === storeId))
+  const selectedStores = actionableStoreIds.map((storeId) => stores.find((store) => store.storeId === storeId)).filter((store): store is (typeof stores)[number] => Boolean(store))
   const toggleStore = (storeId: string) => setSelectedStoreIds((current) => current.includes(storeId) ? current.filter((id) => id !== storeId) : [...current, storeId])
 
   return (
@@ -550,13 +585,13 @@ function StoreAssignmentDialog({ assignedStoreIds, open, onOpenChange, stores, u
           {selectedStores.length ? <div aria-label="Seçilen mağazalar" className="tw:flex tw:max-h-40 tw:flex-wrap tw:gap-2 tw:overflow-y-auto">{selectedStores.map((store) => <button className="tw:flex tw:appearance-none tw:items-center tw:gap-1.5 tw:rounded-full tw:border-0 tw:bg-accent/35 tw:px-3 tw:py-1.5 tw:text-xs tw:font-semibold tw:text-primary tw:shadow-none" key={store.storeId} onClick={() => toggleStore(store.storeId)} type="button">{store.storeName}<span aria-hidden="true">×</span></button>)}</div> : <p className="tw:m-0 tw:text-xs tw:text-muted-foreground">Henüz mağaza seçilmedi.</p>}
           <div aria-label="Mağaza seçim listesi" className="tw:max-h-72 tw:overflow-y-auto tw:rounded-2xl tw:border tw:border-border tw:bg-background tw:p-1.5">
             {filteredStores.length ? filteredStores.map((store) => {
-              const selected = selectedStoreIds.includes(store.storeId)
+              const selected = actionableStoreIds.includes(store.storeId)
               const alreadyAssigned = assigned.has(store.storeId)
               return <button aria-pressed={selected} className={`tw:flex tw:w-full tw:appearance-none tw:items-center tw:gap-3 tw:rounded-xl tw:border-0 tw:px-3 tw:py-2.5 tw:text-left tw:shadow-none tw:transition ${selected ? 'tw:bg-accent/25' : 'tw:bg-transparent tw:hover:bg-muted/40'}`} disabled={alreadyAssigned} key={store.storeId} onClick={() => toggleStore(store.storeId)} type="button"><span className={`tw:grid tw:size-5 tw:shrink-0 tw:place-items-center tw:rounded-md tw:border ${selected ? 'tw:border-primary tw:bg-primary tw:text-primary-foreground' : 'tw:border-border tw:bg-background tw:text-transparent'}`}><Check className="tw:size-3.5" aria-hidden="true" /></span><span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:truncate tw:text-sm tw:font-semibold">{store.storeName}</span><span className="tw:block tw:text-xs tw:text-muted-foreground">{store.storeCode}</span></span>{alreadyAssigned ? <span className="tw:text-[10px] tw:font-semibold tw:text-emerald-700">Zaten atanmış</span> : null}</button>
             }) : <p className="tw:m-0 tw:px-3 tw:py-8 tw:text-center tw:text-sm tw:text-muted-foreground">Aramayla eşleşen mağaza yok.</p>}
           </div>
         </DialogBody>
-        <DialogFooter><span className="tw:mr-auto tw:text-xs tw:font-semibold tw:text-muted-foreground">{selectedStoreIds.length} mağaza seçildi</span><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || selectedStoreIds.length === 0 || pending || unavailable} onClick={() => !unavailable && user && onSave({ userId: user.userId, storeIds: selectedStoreIds })}><Building2 aria-hidden="true" /> {pending ? 'Erişim veriliyor' : 'Seçilenlere erişim ver'}</Button></DialogFooter>
+        <DialogFooter><span className="tw:mr-auto tw:text-xs tw:font-semibold tw:text-muted-foreground">{actionableStoreIds.length} mağaza seçildi</span><Button variant="outline" onClick={() => onOpenChange(false)}>Vazgeç</Button><Button disabled={!user || actionableStoreIds.length === 0 || pending || unavailable} onClick={() => !unavailable && user && actionableStoreIds.length > 0 && onSave({ userId: user.userId, storeIds: actionableStoreIds })}><Building2 aria-hidden="true" /> {pending ? 'Erişim veriliyor' : 'Seçilenlere erişim ver'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
