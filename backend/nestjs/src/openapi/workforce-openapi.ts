@@ -9,7 +9,7 @@ export function applyWorkforceOpenApi(document: MutableOpenApiDocument) {
     document.paths,
     "/api/workforce/seller-code-reference",
     "get",
-    "Latest franchise seller code reference and next preview.",
+    "Ten latest unique franchise seller codes, the latest reference and next preview.",
     "WorkforceSellerCodeReferenceResponse",
   );
 
@@ -73,3 +73,15 @@ function workforceRequestStatusQueryParameter() {
     enum: ["pending_hr_approval", "approved", "rejected"],
   });
 }
+
+export const workforceSellerCodeReferenceResponseSchema = {
+  type: "object",
+  required: ["storeType", "prefix", "lastSellerCode", "nextSellerCodePreview"],
+  properties: {
+    storeType: { type: "string", enum: ["franchise"] },
+    prefix: { type: "string", enum: ["FM"] },
+    lastSellerCode: { type: "string", nullable: true },
+    recentSellerCodes: { type: "array", maxItems: 10, uniqueItems: true, items: { type: "string", pattern: "^FM[0-9]+$" } },
+    nextSellerCodePreview: { type: "string", nullable: true },
+  },
+};

@@ -896,7 +896,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Latest franchise seller code reference and next preview.",
+            "description": "Ten latest unique franchise seller codes, the latest reference and next preview.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15588,6 +15588,15 @@
           "lastSellerCode": {
             "type": "string",
             "nullable": true
+          },
+          "recentSellerCodes": {
+            "type": "array",
+            "maxItems": 10,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^FM[0-9]+$"
+            }
           },
           "nextSellerCodePreview": {
             "type": "string",

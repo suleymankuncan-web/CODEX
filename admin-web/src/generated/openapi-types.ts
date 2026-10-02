@@ -4298,6 +4298,7 @@ export type components = {
       "storeType": "franchise"
       "prefix": "FM"
       "lastSellerCode": string | null
+      "recentSellerCodes"?: string[]
       "nextSellerCodePreview": string | null
     }
     "WorkforceSellerCodeRequestsResponse": {

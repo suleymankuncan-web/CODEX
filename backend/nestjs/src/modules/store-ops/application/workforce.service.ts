@@ -53,12 +53,14 @@ export class WorkforceService {
   }
 
   async getSellerCodeReference(storeType: "franchise") {
-    const lastSellerCode = await this.workforceRequestRepository.getLatestFranchiseSellerCode();
+    const recentSellerCodes = await this.workforceRequestRepository.getRecentFranchiseSellerCodes();
+    const lastSellerCode = recentSellerCodes[0] ?? null;
 
     return {
       storeType,
       prefix: "FM",
       lastSellerCode,
+      recentSellerCodes,
       nextSellerCodePreview: this.getNextFmCode(lastSellerCode),
     };
   }
@@ -684,7 +686,7 @@ export class WorkforceService {
       return null;
     }
 
-    return `FM${Number(match[1]) + 1}`;
+    return `FM${BigInt(match[1]) + 1n}`;
   }
 
   private hashNationalId(nationalId: string) {

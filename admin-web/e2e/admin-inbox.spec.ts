@@ -123,8 +123,8 @@ test('admin inbox renders item detail, due, escalation, and source action signal
   await page.getByRole('dialog').getByRole('button', { name: 'Kapat', exact: true }).click()
   await page.getByRole('tab', { name: 'Satıcı kodu', exact: true }).click()
   const sellerList = page.getByRole('region', { name: 'Satıcı kodu onay kuyruğu', exact: true })
-  await expect(sellerList.getByText('Son franchise kodu')).toBeVisible()
-  await expect(sellerList.getByText('FM8375', { exact: true })).toBeVisible()
+  await expect(sellerList.getByText('Son 10 satış sicili')).toBeVisible()
+  await expect(sellerList.getByRole('list', { name: 'Son 10 satış sicili' }).getByRole('listitem')).toHaveText(Array.from({ length: 10 }, (_, index) => `FM${8375 - index}`))
   const sellerQueue = await openInboxRecord(page, 'Ayse Yilmaz')
   await expect(sellerQueue.getByText('Ayse Yilmaz')).toBeVisible()
   await expect(sellerQueue.getByText('TC son 4')).toBeVisible()
@@ -456,6 +456,7 @@ const sellerCodeReferenceFixture = {
   storeType: 'franchise',
   prefix: 'FM',
   lastSellerCode: 'FM8375',
+  recentSellerCodes: Array.from({ length: 10 }, (_, index) => `FM${8375 - index}`),
   nextSellerCodePreview: 'FM8376',
 }
 
