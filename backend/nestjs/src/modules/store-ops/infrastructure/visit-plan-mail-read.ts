@@ -14,7 +14,7 @@ export async function readVisitPlanMail(db:DatabaseService,event:OperationalMail
   const result=await db.query<{manager_name:string;current_store_ids:string[];items:VisitPlanMailData['items']}>(`WITH scope AS (
     SELECT * FROM ops.visit_plan_mail_scope_v1($1::uuid)
   ) SELECT COALESCE(NULLIF(BTRIM(CONCAT_WS(' ',account.first_name,account.last_name)),''),
-      NULLIF(BTRIM(CONCAT_WS(' ',employee.first_name,employee.last_name)),''),account.username) AS manager_name,
+      NULLIF(BTRIM(CONCAT_WS(' ',employee.first_name,employee.last_name)),''),'Kullanıcı') AS manager_name,
     ARRAY(SELECT store_id::text FROM scope ORDER BY store_id) AS current_store_ids,
     COALESCE((SELECT jsonb_agg(jsonb_build_object('plannedDate',to_char(item.planned_date,'DD.MM.YYYY'),
       'storeCode',store.store_code,'storeName',store.store_name) ORDER BY item.planned_date,item.display_order,store.store_name,item.store_id)

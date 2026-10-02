@@ -11,6 +11,7 @@
   "defaultLocale": "tr",
   "sslRequired": "external",
   "registrationAllowed": false,
+  "editUsernameAllowed": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,

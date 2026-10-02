@@ -20,6 +20,8 @@ export function resolveUserDisplayLabel(
   user:
     | {
         displayName?: string | null
+        firstName?: string | null
+        lastName?: string | null
         username?: string | null
         email?: string | null
         userId?: string | null
@@ -28,8 +30,8 @@ export function resolveUserDisplayLabel(
     | undefined,
   fallback: string,
 ) {
-  return normalizeDisplayLabel(
-    user?.displayName ?? user?.username ?? user?.email ?? user?.userId,
-    fallback,
-  )
+  const fullName = [user?.firstName?.trim(), user?.lastName?.trim()].filter(Boolean).join(' ')
+  const displayName = user?.displayName?.trim()
+  const identifier = [user?.username, user?.email, user?.userId].some(value => value?.trim().toLowerCase() === displayName?.toLowerCase())
+  return normalizeDisplayLabel(!identifier && displayName ? displayName : fullName, fallback)
 }

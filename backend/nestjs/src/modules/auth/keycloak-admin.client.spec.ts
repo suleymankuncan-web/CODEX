@@ -30,6 +30,54 @@ describe("KeycloakAdminClient", () => {
 
   afterEach(() => jest.restoreAllMocks());
 
+  it.each([undefined, "user-1"])("updates only the mapped profile, retaining verification for unchanged email (owner %s)", async (owner) => {
+    const responses = [jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse({ id: "subject-1", email: user.email.toUpperCase(), attributes: owner ? { hr_axis_user_id: [owner] } : {} }),
+      new Response(null, { status: 204 })];
+    const fetchMock = jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+    await new KeycloakAdminClient(config).updateProfile("subject-1", { ...user, provider_subject: "subject-1" });
+    const body = JSON.parse(String(fetchMock.mock.calls[2][1]?.body));
+    expect(body).toEqual({ username: user.username, email: user.email, firstName: "Ada", lastName: "Lovelace" });
+    expect(body).not.toHaveProperty("enabled");
+    expect(body).not.toHaveProperty("attributes");
+    expect(body).not.toHaveProperty("requiredActions");
+  });
+
+  it("revokes old email verification only when the mapped profile email changes", async () => {
+    const responses = [jsonResponse({ access_token: "token", expires_in: 60 }),
+      jsonResponse({ id: "subject-1", email: "old@example.test" }), new Response(null, { status: 204 })];
+    const fetchMock = jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+    await new KeycloakAdminClient(config).updateProfile("subject-1", { ...user, provider_subject: "subject-1" });
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body)).emailVerified).toBe(false);
+  });
+
+  it.each([
+    { id: "wrong-subject" },
+    { id: "subject-1", attributes: { hr_axis_user_id: ["another-user"] } },
+  ])("rejects profile ownership conflicts before any write", async (existing) => {
+    const responses = [jsonResponse({ access_token: "token", expires_in: 60 }), jsonResponse(existing)];
+    const fetchMock = jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+    await expect(new KeycloakAdminClient(config).updateProfile("subject-1", { ...user, provider_subject: "subject-1" }))
+      .rejects.toThrow("keycloak_identity_owner_conflict");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not update a provider subject that differs from the current app binding", async () => {
+    const responses = [jsonResponse({ access_token: "token", expires_in: 60 }), jsonResponse({ id: "subject-1" })];
+    const fetchMock = jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+    await expect(new KeycloakAdminClient(config).updateProfile("subject-1", { ...user, provider_subject: "subject-2" }))
+      .rejects.toThrow("keycloak_identity_owner_conflict");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("classifies Keycloak's single-field read-only response without retaining personal values", async () => {
+    const responses = [jsonResponse({ access_token: "token", expires_in: 60 }), jsonResponse({ id: "subject-1", email: user.email }),
+      badRequest({ field: "username", errorMessage: "error-user-attribute-read-only", params: ["private-value"] })];
+    jest.spyOn(global, "fetch").mockImplementation(async () => responses.shift()!);
+    await expect(new KeycloakAdminClient(config).updateProfile("subject-1", { ...user, provider_subject: "subject-1" }))
+      .rejects.toThrow("keycloak_http_400_update_profile_profile_username");
+  });
+
   it("creates a disabled identity, applies scope and role, then sends setup actions", async () => {
     const responses = [
       jsonResponse({ access_token: "token", expires_in: 60 }),

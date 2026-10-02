@@ -38,7 +38,7 @@ export async function readRankingPersonnelRange(database: DatabaseService, input
     LEFT JOIN ops.position position USING (position_id)
     ${rankingMonthlyTargetJoinSql({ store: "s", employee: "e", startParameter: 1, endParameter: 2 })}
     LEFT JOIN LATERAL (
-      SELECT ua.user_id::text, COALESCE(NULLIF(TRIM(CONCAT(me.first_name,' ',me.last_name)),''),ua.username,ua.email,ua.user_id::text) AS display_name
+      SELECT ua.user_id::text, COALESCE(NULLIF(TRIM(CONCAT(me.first_name,' ',me.last_name)),''),NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''), CASE WHEN ua.user_id IS NOT NULL THEN 'Kullanıcı' END) AS display_name
       FROM ops.user_action_store_assignment manager_store
       JOIN ops.user_role_assignment ura ON ura.user_id=manager_store.user_id
         AND ura.start_at<=NOW() AND (ura.end_at IS NULL OR ura.end_at>=NOW())

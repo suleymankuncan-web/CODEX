@@ -141,9 +141,8 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
           SELECT MIN(user_account.user_id::text) AS user_id,
             MIN(COALESCE(
             NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-            user_account.username,
-            user_account.email,
-            user_account.user_id::text
+            NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(user_account.first_name), ''), NULLIF(BTRIM(user_account.last_name), ''))), ''),
+            'Kullanıcı'
           )) AS display_name
           FROM ops.user_role_assignment role_assignment
           INNER JOIN ops.role role
@@ -364,7 +363,8 @@ export class SalesTargetIncentiveWorkspaceReadRepository {
         )
         SELECT
           requested.correction_id::text AS correction_id,
-          NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), '') AS display_name,
+          COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
+            NULLIF(BTRIM(CONCAT_WS(' ', user_account.first_name, user_account.last_name)), '')) AS display_name,
           actor_role.role_code
         FROM requested
         LEFT JOIN ops.user_account user_account

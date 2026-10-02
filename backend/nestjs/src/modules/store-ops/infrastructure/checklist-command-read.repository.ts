@@ -245,7 +245,7 @@ export class ChecklistCommandReadRepository {
                 'displayName',
                 COALESCE(
                   NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
-                  NULLIF(TRIM(ua.username), ''),
+                  NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''),
                   'Bilinmiyor'
                 )
               )
@@ -523,7 +523,7 @@ export class ChecklistCommandReadRepository {
             ura.user_id AS manager_user_id,
             COALESCE(
               NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''),
-              NULLIF(TRIM(ua.username), ''),
+              NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''),
               'Bilinmiyor'
             ) AS display_name
           FROM ops.user_role_assignment ura

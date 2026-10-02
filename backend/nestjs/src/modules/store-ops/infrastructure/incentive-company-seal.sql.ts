@@ -107,7 +107,7 @@ export const companyPayloadSql = `WITH packages AS (
 SELECT jsonb_build_object('contract','incentive-company-seal-v1','companyId',$1::text,'period',$2::text,
   'companyName',(SELECT company_name FROM ops.company WHERE company_id=$1::uuid),
   'managerNames',(SELECT COALESCE(jsonb_object_agg(p.manager_user_id::text,
-    COALESCE(NULLIF(BTRIM(CONCAT(e.first_name,' ',e.last_name)),''),a.username,a.user_id::text)),'{}'::jsonb)
+    COALESCE(NULLIF(BTRIM(CONCAT(e.first_name,' ',e.last_name)),''),NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(a.first_name), ''), NULLIF(BTRIM(a.last_name), ''))), ''), CASE WHEN a.user_id IS NOT NULL THEN 'Kullanıcı' END)),'{}'::jsonb)
     FROM packages p JOIN ops.user_account a ON a.user_id=p.manager_user_id LEFT JOIN ops.employee e ON e.employee_id=a.employee_id),
   'responsibility',$4::jsonb,
   'packages',(SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.sales_target_incentive_region_package_id),'[]'::jsonb) FROM packages p),

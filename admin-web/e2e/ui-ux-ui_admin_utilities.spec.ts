@@ -44,7 +44,8 @@ test('audit center keeps available sections visible and retries a failed primary
   await main.getByRole('button', { name: 'Try again' }).click()
 
   await expect(main.getByText('Some audit sources could not be loaded')).toHaveCount(0)
-  await expect(main.getByText('super.admin', { exact: true })).toBeVisible()
+  await expect(main.getByText('Ayşe Yılmaz', { exact: true })).toBeVisible()
+  await expect(main.getByText('super.admin', { exact: true })).toHaveCount(0)
   expect(userAttempts).toBe(5)
 })
 
@@ -129,6 +130,8 @@ const userFixture = {
   userId: 'user-1',
   employeeId: null,
   username: 'super.admin',
+  firstName: 'Ayşe',
+  lastName: 'Yılmaz',
   email: 'super.admin@example.com',
   authProvider: 'mock',
   providerSubject: 'user-1',

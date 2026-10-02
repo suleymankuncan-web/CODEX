@@ -269,9 +269,9 @@ export class ChecklistAcknowledgementRepository {
         LEFT JOIN LATERAL (
           SELECT COALESCE(
             NULLIF(BTRIM(CONCAT_WS(' ', completed_employee.first_name, completed_employee.last_name)), ''),
-            NULLIF(BTRIM(CONCAT_WS(' ', auditor_employee.first_name, auditor_employee.last_name)), ''),
-            NULLIF(BTRIM(completed_user.username), ''),
-            NULLIF(BTRIM(completed_user.email), '')
+            NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(completed_user.first_name), ''), NULLIF(BTRIM(completed_user.last_name), ''))), ''),
+            CASE WHEN completed_user.user_id IS NOT NULL THEN 'Kullanıcı' END,
+            NULLIF(BTRIM(CONCAT_WS(' ', auditor_employee.first_name, auditor_employee.last_name)), '')
           ) AS completed_by_display_name
         ) completed_identity ON TRUE
         ${includeResponses ? `LEFT JOIN LATERAL (
@@ -284,7 +284,8 @@ export class ChecklistAcknowledgementRepository {
             SELECT role.role_code,
               COALESCE(
                 NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
-                NULLIF(BTRIM(account.username), '')
+                NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(account.first_name), ''), NULLIF(BTRIM(account.last_name), ''))), ''),
+                'Kullanıcı'
               ) AS display_name
             FROM ops.user_action_store_assignment assigned
             JOIN ops.user_account account ON account.user_id = assigned.user_id AND account.is_active = TRUE

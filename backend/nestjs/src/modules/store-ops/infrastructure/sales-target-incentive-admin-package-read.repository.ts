@@ -184,9 +184,8 @@ export class SalesTargetIncentiveAdminPackageReadRepository {
               user_account.user_id::text AS user_id,
               COALESCE(
                 NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-                user_account.username,
-                user_account.email,
-                user_account.user_id::text
+                NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(user_account.first_name), ''), NULLIF(BTRIM(user_account.last_name), ''))), ''),
+                'Kullanıcı'
               ) AS display_name
             FROM ops.user_role_assignment role_assignment
             INNER JOIN ops.role role
@@ -233,9 +232,8 @@ function userDisplayNameSql(tableAlias: string, columnName: string) {
       user_account.user_id::text AS user_id,
       COALESCE(
         NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-        user_account.username,
-        user_account.email,
-        user_account.user_id::text
+        NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(user_account.first_name), ''), NULLIF(BTRIM(user_account.last_name), ''))), ''),
+        'Kullanıcı'
       ) AS display_name
     FROM ops.user_account user_account
     LEFT JOIN ops.employee employee

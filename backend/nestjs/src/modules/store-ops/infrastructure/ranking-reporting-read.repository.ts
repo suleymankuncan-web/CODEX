@@ -174,9 +174,8 @@ export class RankingReportingReadRepository {
             ua.user_id::text AS user_id,
             COALESCE(
               NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-              ua.username,
-              ua.email,
-              ua.user_id::text
+              NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''),
+              'Kullanıcı'
             ) AS display_name
           FROM ops.user_action_store_assignment manager_store
           INNER JOIN ops.user_role_assignment ura
@@ -270,9 +269,8 @@ export class RankingReportingReadRepository {
             ua.user_id::text AS user_id,
             COALESCE(
               NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-              ua.username,
-              ua.email,
-              ua.user_id::text
+              NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''),
+              'Kullanıcı'
             ) AS display_name
           FROM ops.user_action_store_assignment manager_store
           INNER JOIN ops.user_role_assignment ura
@@ -433,9 +431,8 @@ export class RankingReportingReadRepository {
             ua.user_id::text AS user_id,
             COALESCE(
               NULLIF(TRIM(CONCAT(manager_employee.first_name, ' ', manager_employee.last_name)), ''),
-              ua.username,
-              ua.email,
-              ua.user_id::text
+              NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''),
+              'Kullanıcı'
             ) AS display_name
           FROM ops.user_action_store_assignment manager_store
           INNER JOIN ops.user_role_assignment ura
@@ -479,9 +476,8 @@ export class RankingReportingReadRepository {
           ua.user_id::text AS id,
           COALESCE(
             NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-            ua.username,
-            ua.email,
-            ua.user_id::text
+            NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''),
+              'Kullanıcı'
           ) AS label,
           COALESCE(
             ARRAY_AGG(DISTINCT assigned_store.store_id::text)
@@ -512,7 +508,9 @@ export class RankingReportingReadRepository {
           employee.first_name,
           employee.last_name,
           ua.username,
-          ua.email
+          ua.email,
+          ua.first_name,
+          ua.last_name
         ORDER BY label ASC
       `,
       regionManagerParams,

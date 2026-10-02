@@ -380,7 +380,8 @@ test('Super Admin Report Viewer presentation opens the store timeline and checkl
           category: 'BM',
           storeId,
           storeName: 'Marmara Park',
-          completedByUserId: '10000000-0000-4000-8000-000000000001',
+          completedByUserId: 'onurkaytan',
+          completedByDisplayName: 'Onur Kaytan',
           completedAt: '2026-07-14T10:00:00.000Z',
           status: 'completed',
           totalScore: 88,
@@ -401,6 +402,10 @@ test('Super Admin Report Viewer presentation opens the store timeline and checkl
   await expect(drawer.getByText('Denetim tamamlandı').first()).toBeVisible()
   await expect(drawer.getByLabel('Checklist puanı: 88 puan')).toBeVisible()
   await expect(drawer.getByRole('button', { name: 'Sonucu Gör' }).first()).toBeVisible()
+  await drawer.getByRole('button', { name: 'Sonucu Gör' }).first().click()
+  const result = page.getByRole('dialog', { name: 'BM Store Visit', exact: true })
+  await expect(result).toContainText('Onur Kaytan')
+  await expect(result).not.toContainText('onurkaytan')
 })
 
 test('Region Manager opens store history from the persistent Results action', async ({ page }, testInfo) => {

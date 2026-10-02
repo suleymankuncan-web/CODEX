@@ -71,7 +71,7 @@ export async function readRankingStoreRange(
     CROSS JOIN ops.kpi_definition kd
     LEFT JOIN gsm ON gsm.store_id = s.store_id
     LEFT JOIN LATERAL (
-      SELECT ua.user_id::text, COALESCE(NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''), ua.username, ua.email, ua.user_id::text) AS display_name
+      SELECT ua.user_id::text, COALESCE(NULLIF(TRIM(CONCAT(e.first_name, ' ', e.last_name)), ''), NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(ua.first_name), ''), NULLIF(BTRIM(ua.last_name), ''))), ''), CASE WHEN ua.user_id IS NOT NULL THEN 'Kullanıcı' END) AS display_name
       FROM ops.user_action_store_assignment manager_store
       JOIN ops.user_role_assignment ura ON ura.user_id = manager_store.user_id
         AND ura.start_at <= NOW() AND (ura.end_at IS NULL OR ura.end_at >= NOW())

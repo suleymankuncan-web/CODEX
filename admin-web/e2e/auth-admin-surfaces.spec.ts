@@ -22,14 +22,14 @@ test('auth management keeps the current user and permission workspaces explicit'
 
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { name: 'Kullanıcılar ve yetkiler' })).toBeVisible()
-  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('store.manager')
+  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('Ada Yılmaz')
   await expect(main.getByText('Mağaza erişimi', { exact: true })).toBeVisible()
   await expect(main.getByRole('button', { name: 'Kullanıcı ekle' })).toBeVisible()
 
   const search = main.getByLabel('Kullanıcı ara')
   await search.fill('inactive')
   await expect(search).toBeFocused()
-  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('inactive.user')
+  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('Ece Demir')
 
   await main.getByRole('button', { name: 'Rol yetkileri' }).click()
   await expect(main.getByRole('heading', { name: 'Rol yetkileri' })).toBeVisible()
@@ -135,7 +135,7 @@ test('HR admin deactivates and reactivates accounts through confirmations', asyn
   await deactivateDialog.getByRole('button', { name: 'Devre dışı bırak' }).click()
   expect(deactivationBody).toEqual({ reason: 'Admin yönetim ekranından devre dışı bırakıldı' })
 
-  await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /inactive\.user/ }).click()
+  await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /Ece Demir/ }).click()
   await page.getByRole('button', { name: 'Yeniden etkinleştir' }).click()
   const reactivateDialog = page.getByRole('dialog', { name: 'Hesap yeniden etkinleştirilsin mi?' })
   await reactivateDialog.getByRole('button', { name: 'Etkinleştir' }).click()
@@ -165,7 +165,7 @@ test('role assignment dialog resets across users and close cycles', async ({ pag
   await roleDialog.getByRole('button', { name: 'Vazgeç' }).click()
   await expect(roleDialog).toBeHidden()
 
-  await main.getByLabel('Kullanıcı listesi').getByRole('button', { name: /inactive\.user/ }).click()
+  await main.getByLabel('Kullanıcı listesi').getByRole('button', { name: /Ece Demir/ }).click()
   await main.getByRole('button', { name: 'Rol ekle' }).click()
   const reopenedDialog = page.getByRole('dialog', { name: 'Rol ekle' })
   await expect(reopenedDialog.getByLabel('Rol')).toContainText('Rol seçin')

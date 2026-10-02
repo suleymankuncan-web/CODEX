@@ -42,9 +42,8 @@ region_manager_names AS (
     scoped.store_id,
     STRING_AGG(DISTINCT COALESCE(
       NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-      user_account.username,
-      user_account.email,
-      user_account.user_id::text
+      NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(user_account.first_name), ''), NULLIF(BTRIM(user_account.last_name), ''))), ''),
+      'Kullanıcı'
     ), ', ') AS region_manager_name
   FROM scoped_stores scoped
   INNER JOIN ops.user_action_store_assignment manager_store

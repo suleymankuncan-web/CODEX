@@ -526,6 +526,7 @@ kcadm_quiet update "realms/$realm" \
   -s defaultLocale=tr \
   -s sslRequired=external \
   -s registrationAllowed=false \
+  -s editUsernameAllowed=true \
   -s loginWithEmailAllowed=true \
   -s duplicateEmailsAllowed=false \
   -s resetPasswordAllowed=true \
@@ -690,6 +691,7 @@ printf '%s' "$realm_compact" | grep -Fq '"realm":"store-ops"' || die 'realm pari
 printf '%s' "$realm_compact" | grep -Fq '"enabled":true' || die 'realm parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"sslRequired":"external"' || die 'realm parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"registrationAllowed":false' || die 'realm parity mismatch'
+printf '%s' "$realm_compact" | grep -Fq '"editUsernameAllowed":true' || die 'username editing parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"loginWithEmailAllowed":true' || die 'realm parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"resetPasswordAllowed":true' || die 'realm parity mismatch'
 printf '%s' "$realm_compact" | grep -Fq '"verifyEmail":true' || die 'realm parity mismatch'

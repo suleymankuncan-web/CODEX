@@ -352,6 +352,7 @@ test('store home dashboard actions follow role-aware navigation for admin landin
         ...authSessionFixture,
         user: {
           ...authSessionFixture.user,
+          displayName: 'Ayşe Yılmaz',
           roleCodes: ['HR_ADMIN'],
           actionScope: {
             assignedStoreIds: [],
@@ -372,7 +373,8 @@ test('store home dashboard actions follow role-aware navigation for admin landin
   await expect(page.getByRole('heading', { name: 'Operasyon Paneli' })).toBeVisible()
   await expect(page.getByText('Admin görünümü', { exact: true })).toHaveCount(0)
   await expect(page.locator('.store-command-sidebar-footer small')).toHaveText('İK Admin')
-  await expect(page.locator('.sh-dashboard-heading')).toContainText('store-me-smoke-user')
+  await expect(page.locator('.sh-dashboard-heading')).toContainText('Ayşe Yılmaz')
+  await expect(page.locator('body')).not.toContainText('store-me-smoke-user')
   await expect(page.getByText('Bölge özet dashboard')).toHaveCount(0)
   await expect(page.locator('a[href="/store/feed"]').first()).toBeVisible()
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)

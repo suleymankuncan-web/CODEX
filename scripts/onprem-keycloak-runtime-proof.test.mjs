@@ -103,6 +103,8 @@ test('Keycloak auth proof bind sources are absolute for Docker', () => {
   assert.match(authContainer, /'--network', authProofNetwork/)
   assert.match(authContainer, /'--connect-host', 'caddy', '--connect-port', '8443'/)
   assert.match(authContainer, /'node', '\/opt\/onprem-keycloak-auth-proof\.mjs'/)
+  assert.ok(authContainer.includes('${process.cwd()}/scripts/keycloak-browser-branding.mjs:/opt/keycloak-browser-branding.mjs:ro'))
+  assert.ok(authContainer.includes('${process.cwd()}/admin-web/src/assets/hr-axis-06-mark-transparent.png:/admin-web/src/assets/hr-axis-06-mark-transparent.png:ro'))
 })
 
 test('Keycloak auth proof joins only the release-bound private edge network', () => {

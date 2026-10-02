@@ -49,7 +49,7 @@ export const hrPackagesSql = `
     package.sales_target_incentive_region_package_id::text AS package_id,
     package.package_status, package.submitted_at::text, package.reviewed_at::text,
     COALESCE(NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-      account.username, account.email, 'Atanmamış') AS manager_name,
+      NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(account.first_name), ''), NULLIF(BTRIM(account.last_name), ''))), ''), CASE WHEN account.user_id IS NOT NULL THEN 'Kullanıcı' END, 'Atanmamış') AS manager_name,
     ARRAY(SELECT store_id::text FROM ops.sales_target_incentive_region_package_store
       WHERE region_package_id = package.sales_target_incentive_region_package_id ORDER BY store_id) AS store_ids,
     (SELECT COALESCE(jsonb_agg(jsonb_build_object(

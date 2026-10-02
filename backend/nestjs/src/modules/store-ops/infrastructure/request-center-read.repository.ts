@@ -348,9 +348,8 @@ export class RequestCenterReadRepository {
               account.user_id::text AS user_id,
               COALESCE(
                 NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
-                account.username,
-                account.email,
-                account.user_id::text
+                NULLIF(BTRIM(CONCAT_WS(' ', NULLIF(BTRIM(account.first_name), ''), NULLIF(BTRIM(account.last_name), ''))), ''),
+                'Kullanıcı'
               ) AS display_name
             FROM ops.user_action_store_assignment manager_store
             INNER JOIN ops.user_role_assignment assignment
@@ -418,8 +417,8 @@ export class RequestCenterReadRepository {
             event.event_log_id::text AS event_id,
             event.event_type,
             event.occurred_at,
-            NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '')
-              AS actor_display_name,
+            COALESCE(NULLIF(BTRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), ''),
+              NULLIF(BTRIM(CONCAT_WS(' ', account.first_name, account.last_name)), '')) AS actor_display_name,
             COUNT(*) OVER (PARTITION BY event.entity_name, event.entity_id)::text
               AS event_total,
             ROW_NUMBER() OVER (

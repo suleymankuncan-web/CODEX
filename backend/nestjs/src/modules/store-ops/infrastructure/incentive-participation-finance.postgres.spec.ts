@@ -42,7 +42,7 @@ describePostgres("financial participation PostgreSQL boundaries", () => {
       CREATE TABLE ops.company (company_id uuid PRIMARY KEY, company_name text, status text);
       CREATE TABLE ops.store (store_id uuid PRIMARY KEY, company_id uuid, store_code text, store_name text, status text);
       CREATE TABLE ops.employee (employee_id uuid PRIMARY KEY, first_name text, last_name text, employment_status text, termination_date date);
-      CREATE TABLE ops.user_account (user_id uuid PRIMARY KEY, employee_id uuid, username text, email text, is_active boolean);
+      CREATE TABLE ops.user_account (user_id uuid PRIMARY KEY, employee_id uuid, username text, email text, is_active boolean, first_name text, last_name text);
       CREATE TABLE ops.role (role_id uuid PRIMARY KEY, role_code text);
       CREATE TABLE ops.user_role_assignment (user_id uuid, role_id uuid, start_at timestamptz, end_at timestamptz);
       CREATE TABLE ops.user_action_store_assignment (user_id uuid, store_id uuid, start_at timestamptz, end_at timestamptz);
@@ -70,7 +70,7 @@ describePostgres("financial participation PostgreSQL boundaries", () => {
       INSERT INTO ops.company VALUES ('${id(1)}','Synthetic company','active');
       INSERT INTO ops.store VALUES ('${id(2)}','${id(1)}','S1','Synthetic store','active');
       INSERT INTO ops.employee VALUES ('${id(10)}','First','Person','active',NULL), ('${id(11)}','Second','Person','active',NULL);
-      INSERT INTO ops.user_account VALUES ('${id(3)}',NULL,'manager','manager@example.test',TRUE);
+      INSERT INTO ops.user_account VALUES ('${id(3)}',NULL,'manager','manager@example.test',TRUE,'Fixture','Manager');
       INSERT INTO ops.role VALUES ('${id(4)}','REGION_MANAGER');
       INSERT INTO ops.user_role_assignment VALUES ('${id(3)}','${id(4)}','2020-01-01',NULL);
       INSERT INTO ops.user_action_store_assignment VALUES ('${id(3)}','${id(2)}','2020-01-01',NULL);

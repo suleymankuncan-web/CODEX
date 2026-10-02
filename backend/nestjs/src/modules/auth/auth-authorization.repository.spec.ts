@@ -1,6 +1,21 @@
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
 
 describe("AuthAuthorizationRepository", () => {
+  it("reads management names from the account while retaining personnel name priority for both login and cookie refresh", async () => {
+    const databaseService = { query: jest.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [{
+      is_active: true, user_id: "80000000-0000-0000-0000-000000000900", employee_id: null,
+      display_name: "Ada Yılmaz", username: "ada.yilmaz", email: "ada@example.test",
+    }] })) };
+    const repository = new AuthAuthorizationRepository(databaseService as never);
+    const mapped = await repository.getUserAccountByProviderSubject({ authProvider: "oidc", providerSubject: "subject-one" });
+    const refreshed = await repository.getUserAccountStatusById("80000000-0000-0000-0000-000000000900");
+    expect(mapped?.display_name).toBe("Ada Yılmaz");
+    expect(refreshed?.display_name).toBe("Ada Yılmaz");
+    expect(databaseService.query.mock.calls[0][0]).toContain("COALESCE(e.first_name, ua.first_name)");
+    expect(databaseService.query.mock.calls[1][0]).toContain("COALESCE(employee.first_name,account.first_name)");
+    expect(databaseService.query.mock.calls[0][1]).toEqual(["oidc", "subject-one"]);
+    expect(databaseService.query.mock.calls[1][1]).toEqual(["80000000-0000-0000-0000-000000000900"]);
+  });
   it("queries role assignments for deterministic seed UUIDs accepted by Postgres", async () => {
     const databaseService = {
       query: jest.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] })),

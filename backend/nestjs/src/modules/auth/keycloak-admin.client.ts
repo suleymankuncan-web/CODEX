@@ -75,9 +75,17 @@ export class KeycloakAdminClient {
   }
 
   async updateProfile(subject: string, user: IdentityUserSnapshot) {
-    await this.request(`/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}`, {
+    const path = `/admin/realms/${this.realm}/users/${encodeURIComponent(subject)}`;
+    const existing = await this.json<KeycloakUser>(path, "find_user");
+    const ownerId = existing.attributes?.hr_axis_user_id?.[0];
+    if (subject !== user.provider_subject || existing.id !== subject ||
+      (ownerId !== undefined && ownerId !== user.user_id)) {
+      throw new Error("keycloak_identity_owner_conflict");
+    }
+    await this.request(path, {
       method: "PUT",
-      body: JSON.stringify({ username: user.username, email: user.email, emailVerified: false,
+      body: JSON.stringify({ username: user.username, email: user.email,
+        ...(existing.email?.toLowerCase() !== user.email.toLowerCase() ? { emailVerified: false } : {}),
         firstName: user.first_name ?? undefined, lastName: user.last_name ?? undefined }),
     }, "update_profile");
   }
@@ -266,7 +274,8 @@ async function classifyKeycloakBadRequest(response: Response): Promise<string> {
 
   const errors = Array.isArray(payload)
     ? payload
-    : isRecord(payload) && Array.isArray(payload.errors) ? payload.errors : [];
+    : isRecord(payload) && Array.isArray(payload.errors) ? payload.errors
+      : isRecord(payload) && typeof payload.field === "string" ? [payload] : [];
   if (errors.length > 0) {
     const field = errors.find((entry: unknown) => isRecord(entry) && typeof entry.field === "string")?.field;
     const safeField = typeof field === "string" ? profileFieldCode(field) : null;
