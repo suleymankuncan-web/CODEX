@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchBlob, fetchJson, sendFormData, sendJson, SESSION_EXPIRED_EVENT } from './api'
+import { clearBrowserSessionCookie, fetchBlob, fetchJson, sendFormData, sendJson, SESSION_EXPIRED_EVENT } from './api'
 import { assertApiRateLimitReady } from './api-rate-limit'
 import { defaultSession, persistClientSession, readBrowserSessionCsrfToken, readClientSession, writeBrowserSessionCsrfToken } from '../features/session/session-storage'
 
@@ -43,5 +43,21 @@ describe('API rate-limit recovery without losing authentication or replaying wri
     await expect(fetchJson('/synthetic/other')).resolves.toEqual({ recovered: true })
     expect(mocked).toHaveBeenCalledTimes(2)
     expect(mocked.mock.calls[1]?.[1]?.method).toBe('GET')
+  })
+
+  it('preserves the CSRF nonce when logout is rate-limited and clears it only after a successful DELETE', async () => {
+    const mocked = vi.mocked(fetch)
+    mocked.mockResolvedValueOnce(new Response('', { status: 429, headers: { 'Retry-After': '2' } }))
+    await expect(clearBrowserSessionCookie()).rejects.toMatchObject({ status: 429, retryAt: Date.now() + 2000 })
+    expect(readBrowserSessionCsrfToken()).toBe('synthetic-existing-csrf')
+    expect(mocked.mock.calls[0]?.[1]?.method).toBe('DELETE')
+    await expect(clearBrowserSessionCookie()).rejects.toMatchObject({ status: 429 })
+    expect(mocked).toHaveBeenCalledTimes(1)
+    vi.advanceTimersByTime(2000)
+    mocked.mockResolvedValueOnce(new Response(null, { status: 204 }))
+    await clearBrowserSessionCookie()
+    expect(readBrowserSessionCsrfToken()).toBe('')
+    expect(mocked).toHaveBeenCalledTimes(2)
+    expect(mocked.mock.calls[1]?.[1]?.method).toBe('DELETE')
   })
 })

@@ -381,7 +381,8 @@ export async function clearBrowserSessionCookie() {
   })
 
   if (!response.ok) {
-    throw apiErrorFromResponse(response, await response.text())
+    const error = apiErrorFromResponse(response, await response.text())
+    throw new ApiError(error.status, error.message, error.retryAt)
   }
 
   writeBrowserSessionCsrfToken('')
