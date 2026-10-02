@@ -9,6 +9,8 @@ import {
   buildRestartLoginUrl,
   exchangeAuthorizationCodeForToken,
   isManualTokenCallbackAllowed,
+  isDirectOidcLoginEnabled,
+  UnavailablePkceLoginStateError,
   readCallbackPayload,
 } from '../features/auth/auth-flow'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -85,6 +87,12 @@ export function AuthCallbackPage() {
         })
       })
       .catch((error: unknown) => {
+        if (error instanceof UnavailablePkceLoginStateError &&
+          isDirectOidcLoginEnabled() && bootstrapQuery.data?.provider.managedBrowserSession) {
+          // Reopening an old callback starts a fresh handshake; never redeem its old code.
+          navigate('/auth/login', { replace: true })
+          return
+        }
         setExchangeError(error instanceof Error ? error.message : String(error))
       })
   }, [

@@ -386,12 +386,26 @@ function classifyLoginCodeFailure(response) {
     : 'unexpected-login-response'
 }
 
-async function loginPersona(host, account, { managed = false } = {}) {
+export function buildPushedAuthorizationPath(response) {
+  const { request_uri: reference, expires_in: expires } = response?.json ?? {}
+  if (response?.status !== 201 || typeof reference !== 'string' ||
+    !/^urn:ietf:params:oauth:request_uri:[A-Za-z0-9_-]{16,128}$/.test(reference) ||
+    !Number.isInteger(expires) || expires < 1 || expires > 600) throw new Error('PAR reference contract failed')
+  return `/realms/store-ops/protocol/openid-connect/auth?${new URLSearchParams({ client_id: 'store-ops-admin-web', request_uri: reference })}`
+}
+
+async function loginPersona(host, account, { managed = false, pushed = false } = {}) {
   const jar = cookieJar()
   const verifier = base64url(requireRandom(32))
   const state = base64url(requireRandom(24))
   const { authorizationPath, redirectUri } = buildAuthorizationRequest({ host, verifier, state })
-  const loginPage = await requestRaw(host, authorizationPath, { jar })
+  const par = pushed ? await jsonRequest(host, '/realms/store-ops/protocol/openid-connect/ext/par/request', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: authorizationPath.split('?')[1],
+  }) : null
+  const loginPage = pushed
+    ? await requestFollow(host, buildPushedAuthorizationPath(par), { jar })
+    : await requestRaw(host, authorizationPath, { jar })
   if (loginPage.status !== 200) throw new Error(`authorization endpoint rejected request (${classifyAuthorizationEntryFailure(loginPage, host)})`)
   const formAction = loginPage.body.match(/<form\b[^>]*action\s*=\s*["']([^"']+)["']/i)?.[1]
   const decodedFormAction = formAction ? decodeHtmlAttribute(formAction) : ''
@@ -673,7 +687,7 @@ async function run(options) {
   let expectedActionCountAfterAll = null
   for (const account of accounts) {
     const { token } = await loginPersona(options.host, account)
-    const { browser, jar: oidcJar } = await loginPersona(options.host, account, { managed: true })
+    const { browser, jar: oidcJar } = await loginPersona(options.host, account, { managed: true, pushed: true })
     const session = await jsonRequest(options.host, '/api/auth/session', { headers: { Accept: 'application/json' }, jar: browser.jar })
     if (session.status !== 200) throw authContractFailure('session-read', session.status)
     assertSession(session, account)
