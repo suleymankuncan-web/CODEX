@@ -66,6 +66,30 @@ test('full proof upload contract rejects action name and ordered path drift', ()
   )), /upload contract changed/)
 })
 
+test('failure-only license diagnostics are validated but excluded from release uploads', () => {
+  const plan = extractFullProofPlan(workflow)
+  assert.equal(plan.uploads.length, 4)
+  assert.ok(plan.uploads.every((upload) => !upload.artifactName.includes('diagnostics')))
+  const start = workflow.indexOf('      - name: Upload failed Keycloak license diagnostics\n')
+  const end = workflow.indexOf('      - name: Generate sanitized Keycloak image manifest', start)
+  assert.ok(start >= 0 && end > start)
+  const diagnostic = workflow.slice(start, end)
+  const mutations = [
+    diagnostic.replace('failure()', 'always()'),
+    diagnostic.replace(" && github.event_name != 'pull_request'", ''),
+    diagnostic.replace('proof/keycloak-license-evidence.tar', 'proof/**'),
+    diagnostic.replace('inputs.expected_sha', 'github.sha'),
+    diagnostic.replace('if-no-files-found: warn', 'if-no-files-found: error'),
+    diagnostic.replace('retention-days: 3', 'retention-days: 30'),
+    diagnostic.replace('ea165f8d65b6e75b540449e92b4886f43607fa02', 'a'.repeat(40)),
+    diagnostic.replace('        with:', '        env:\n          UNAPPROVED: value\n        with:'),
+  ]
+  for (const changed of mutations) {
+    assert.notEqual(changed, diagnostic)
+    assert.throws(() => extractFullProofPlan(workflow.replace(diagnostic, changed)), /diagnostic|condition|contract/)
+  }
+})
+
 test('CLI requires fresh absolute paths and this canonical checkout', () => {
   const root = mkdtempSync(join(tmpdir(), 'onprem-local-contract-'))
   try {

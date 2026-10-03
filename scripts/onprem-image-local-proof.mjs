@@ -285,7 +285,9 @@ function parseStepSection(lines) {
     if (!['run', 'uses', 'if', 'env', 'with', 'id', 'name'].includes(property)) fail(`unsupported workflow step property: ${property}`)
   }
   const condition = lines.find((line) => /^        if:/.test(line))?.replace(/^        if:\s*/, '').trim() ?? null
-  if (condition !== null && !["inputs.proof_mode == 'full'", "inputs.proof_mode == 'full' && github.event_name != 'pull_request'"].includes(condition)) fail(`unsupported workflow condition in ${name}`)
+  const diagnosticCondition = name === 'Upload failed Keycloak license diagnostics'
+    && condition === "failure() && inputs.proof_mode == 'full' && github.event_name != 'pull_request'"
+  if (condition !== null && !diagnosticCondition && !["inputs.proof_mode == 'full'", "inputs.proof_mode == 'full' && github.event_name != 'pull_request'"].includes(condition)) fail(`unsupported workflow condition in ${name}`)
   for (const line of lines) {
     if (!line.includes('${{')) continue
     // Action inputs include runner.temp for upload paths.  They are resolved
@@ -363,7 +365,37 @@ function splitStepSections(jobLines) {
 export function extractFullProofPlan(source) {
   assertString(source, 'workflow source', { allowNewlines: true })
   const job = findJobSection(source, 'proof')
-  const parsed = splitStepSections(job).map(parseStepSection)
+  const allSteps = splitStepSections(job).map(parseStepSection)
+  const diagnostics = allSteps.filter((step) => step.name === 'Upload failed Keycloak license diagnostics')
+  if (diagnostics.length !== 1) fail('Keycloak license diagnostic contract changed')
+  const diagnostic = diagnostics[0]
+  const expectedDiagnostic = {
+    name: 'Upload failed Keycloak license diagnostics',
+    body: null,
+    uses: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+    env: {},
+    with: {
+      name: 'onprem-keycloak-license-diagnostics-${{ inputs.expected_sha }}',
+      'if-no-files-found': 'warn',
+      'retention-days': '3',
+      path: [
+        'proof/keycloak-sbom.spdx.json',
+        'proof/keycloak-license-inventory.json',
+        'proof/keycloak-LICENSE.txt',
+        'proof/keycloak-license-paths.txt',
+        'proof/keycloak-license-evidence.tar',
+      ].join('\n'),
+    },
+    condition: "failure() && inputs.proof_mode == 'full' && github.event_name != 'pull_request'",
+  }
+  const diagnosticIndex = allSteps.indexOf(diagnostic)
+  if (JSON.stringify(diagnostic) !== JSON.stringify(expectedDiagnostic)
+    || allSteps[diagnosticIndex - 1]?.name !== 'Generate production license inventories and notices'
+    || allSteps[diagnosticIndex + 1]?.name !== 'Generate sanitized Keycloak image manifest') {
+    fail('Keycloak license diagnostic contract changed')
+  }
+  // GitHub-only failure evidence must never become a successful local release upload.
+  const parsed = allSteps.filter((step) => step !== diagnostic)
   const names = parsed.map((step) => step.name)
   const duplicate = names.find((name, index) => names.indexOf(name) !== index)
   if (duplicate) fail(`duplicate workflow step: ${duplicate}`)
