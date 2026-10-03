@@ -282,6 +282,26 @@ export function validateOnpremKeycloakContract(input) {
 
   fail(!/"users"\s*:/.test(input.realmConfig), 'sanitized realm configuration must not contain a users import')
   fail(realmFixture?.['x-hr-axis-authoritative'] === false && realmFixture?.['x-hr-axis-fixture-authority'] === 'non-authoritative-bootstrap-parity', 'realm fixture must explicitly remain non-authoritative')
+  const apiAudiencePolicy = {
+    clientId: 'store-ops-api', enabled: true, protocol: 'openid-connect',
+    publicClient: false, bearerOnly: true, standardFlowEnabled: false,
+    implicitFlowEnabled: false, directAccessGrantsEnabled: false,
+    serviceAccountsEnabled: false, fullScopeAllowed: false,
+    redirectUris: [], webOrigins: [], defaultClientScopes: [], optionalClientScopes: [],
+  }
+  const matchesApiAudiencePolicy = (client) => Boolean(client) && client.secret === undefined
+    && Object.entries(apiAudiencePolicy).every(([key, value]) => JSON.stringify(client[key]) === JSON.stringify(value))
+  const apiAudienceClients = realmFixture?.clients?.filter((client) => client.clientId === 'store-ops-api') ?? []
+  fail(apiAudienceClients.length === 1 && matchesApiAudiencePolicy(apiAudienceClients[0]), 'realm API audience target must be enabled and bearer-only with every grant flow disabled')
+  const apiAudienceHelper = input.bootstrapScript.match(/^reconcile_api_audience_client\(\) \{[\s\S]*?^\}/m)?.[0] ?? ''
+  let apiAudienceDefinition = null
+  try { apiAudienceDefinition = JSON.parse(apiAudienceHelper.match(/<<'JSON'\n([^\n]+)\nJSON/)?.[1] ?? '') } catch { /* bounded contract error below */ }
+  const apiAudienceInvocation = input.bootstrapScript.indexOf('\nreconcile_api_audience_client\n')
+  const apiAudienceMapperCreation = input.bootstrapScript.indexOf('\ncreate_or_update_mapper store-ops-api-audience ')
+  fail(matchesApiAudiencePolicy(apiAudienceDefinition) && apiAudienceInvocation > 0 && apiAudienceInvocation < apiAudienceMapperCreation
+    && /kcadm_quiet create clients -r "\$realm" -f "\$api_client_file"/.test(apiAudienceHelper)
+    && !/kcadm_quiet\s+(?:update|delete)\b/.test(apiAudienceHelper)
+    && apiAudienceHelper.includes('API audience client parity mismatch'), 'bootstrap API audience reconciliation must create only a missing no-grant target and verify existing identities before issuing tokens')
   if (realmFixture) {
     const expectedClient = realmFixture.clients?.find((client) => client.clientId === 'store-ops-admin-web')
     fail(realmFixture.realm === KEYCLOAK_REALM && realmFixture.enabled === true && realmFixture.sslRequired === 'external' && realmFixture.registrationAllowed === false && realmFixture.editUsernameAllowed === true && realmFixture.loginWithEmailAllowed === true && realmFixture.resetPasswordAllowed === true && realmFixture.verifyEmail === true, 'realm fixture settings must match the bootstrap contract')
